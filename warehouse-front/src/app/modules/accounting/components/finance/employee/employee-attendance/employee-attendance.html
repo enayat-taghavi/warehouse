@@ -1,13 +1,13 @@
 <div class="min-h-screen bg-slate-50/50 p-2 md:p-5 space-y-4 max-w-[1550px] mx-auto pb-32" dir="rtl">
 
   <!-- Remote Conflict Alert Banner -->
-  <div *ngIf="hasRemoteConflict" class="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-amber-900 text-xs font-bold shadow-xs animate-pulse">
+  <div *ngIf="hasRemoteConflict" class="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-amber-900 text-xs font-bold shadow-sm animate-pulse">
     <div class="flex items-center gap-2">
       <span class="text-lg">⚠️</span>
       <span>اطلاعات کارکرد پرسنل توسط همکار دیگری در سرور تغییر کرده است. شما تغییرات ذخیره‌نشده دارید.</span>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" (click)="reloadWithRemote()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs">
+      <button type="button" (click)="reloadWithRemote()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm">
         🔄 دریافت آخرین نسخه از سرور
       </button>
       <button type="button" (click)="dismissRemoteConflict()" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold transition-all cursor-pointer">
@@ -109,7 +109,7 @@
   <div *ngIf="activeMode === 'daily'" class="space-y-3">
 
     <!-- Sequential Top Bar: Date Navigator & Status Badge -->
-    <div class="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+    <div class="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
       
       <!-- Date Navigator (RTL Flow: Right = Prev Day, Left = Next Day) -->
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1 relative">
@@ -152,15 +152,15 @@
 
       <!-- 3-State Smart Day Status Badge -->
       <div class="flex items-center gap-2">
-        <div *ngIf="attendanceRegistrationState.status === 'full'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+        <div *ngIf="attendanceRegistrationState.status === 'full'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span>{{ attendanceRegistrationState.label }}</span>
         </div>
-        <div *ngIf="attendanceRegistrationState.status === 'partial'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-sky-50 text-sky-800 border border-sky-300 shadow-2xs">
+        <div *ngIf="attendanceRegistrationState.status === 'partial'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-sky-50 text-sky-800 border border-sky-300 shadow-sm">
           <span class="w-2 h-2 rounded-full bg-sky-500"></span>
           <span>{{ attendanceRegistrationState.label }}</span>
         </div>
-        <div *ngIf="attendanceRegistrationState.status === 'none'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs animate-pulse">
+        <div *ngIf="attendanceRegistrationState.status === 'none'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-amber-50 text-amber-900 border border-amber-300 shadow-sm animate-pulse">
           <span class="w-2 h-2 rounded-full bg-amber-500"></span>
           <span>{{ attendanceRegistrationState.label }}</span>
         </div>
@@ -172,7 +172,7 @@
     </div>
 
     <!-- Bulk Actions Toolbar -->
-    <div class="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-2">
+    <div class="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-1">
         <span class="text-xs font-black text-slate-700 ml-1 flex items-center gap-1">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="zap-path"></svg>
@@ -318,8 +318,8 @@
                 <div class="leading-tight">
                   <div class="text-xs font-black text-slate-800 flex items-center gap-1.5 flex-wrap">
                     <span>{{ row.full_name }}</span>
-                    <span *ngIf="row.is_active === false" class="px-1.5 py-0.2 bg-rose-50 text-rose-700 border border-rose-200/80 rounded text-[9px] font-bold shrink-0" title="پرسنل غیرفعال / ترک‌کار">غیرفعال</span>
-                    <span *ngIf="!row.is_existing" class="px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200/80 rounded text-[9px] font-bold shrink-0" title="این سطر هنوز در سرور ذخیره نشده است">پیش‌نویس</span>
+                    <span *ngIf="row.is_active === false" class="px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200/80 rounded text-[9px] font-bold shrink-0" title="پرسنل غیرفعال / ترک‌کار">غیرفعال</span>
+                    <span *ngIf="!row.is_existing" class="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/80 rounded text-[9px] font-bold shrink-0" title="این سطر هنوز در سرور ذخیره نشده است">پیش‌نویس</span>
                   </div>
                   <div class="text-[11px] text-slate-400 font-mono font-medium mt-0.5">{{ row.national_code }}</div>
                 </div>
@@ -329,27 +329,27 @@
               <td class="p-2 w-72">
                 <div class="flex items-center justify-center gap-1">
                   <!-- حاضر -->
-                  <button [id]="'btn-status-PRESENT_10H-' + idx" type="button" (click)="setAttendanceStatus(row, 'PRESENT_10H')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'PRESENT_10H', row)" [ngClass]="row.status === 'PRESENT_10H' ? 'bg-emerald-600 text-white font-black shadow-xs ring-2 ring-emerald-400/50' : 'bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <button [id]="'btn-status-PRESENT_10H-' + idx" type="button" (click)="setAttendanceStatus(row, 'PRESENT_10H')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'PRESENT_10H', row)" [ngClass]="row.status === 'PRESENT_10H' ? 'bg-emerald-600 text-white font-black shadow-sm ring-2 ring-emerald-400/50' : 'bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     حاضر
                   </button>
 
                   <!-- نیمه‌وقت -->
-                  <button [id]="'btn-status-HALF_5H-' + idx" type="button" (click)="setAttendanceStatus(row, 'HALF_5H')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'HALF_5H', row)" [ngClass]="row.status === 'HALF_5H' ? 'bg-blue-600 text-white font-black shadow-xs ring-2 ring-blue-400/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <button [id]="'btn-status-HALF_5H-' + idx" type="button" (click)="setAttendanceStatus(row, 'HALF_5H')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'HALF_5H', row)" [ngClass]="row.status === 'HALF_5H' ? 'bg-blue-600 text-white font-black shadow-sm ring-2 ring-blue-400/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
                     نیمه‌وقت
                   </button>
 
                   <!-- مرخصی -->
-                  <button [id]="'btn-status-LEAVE-' + idx" type="button" (click)="setAttendanceStatus(row, 'LEAVE')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'LEAVE', row)" [ngClass]="row.status === 'LEAVE' ? 'bg-cyan-600 text-white font-black shadow-xs ring-2 ring-cyan-400/50' : 'bg-slate-100 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                  <button [id]="'btn-status-LEAVE-' + idx" type="button" (click)="setAttendanceStatus(row, 'LEAVE')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'LEAVE', row)" [ngClass]="row.status === 'LEAVE' ? 'bg-cyan-600 text-white font-black shadow-sm ring-2 ring-cyan-400/50' : 'bg-slate-100 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500">
                     مرخصی
                   </button>
 
                   <!-- ماموریت -->
-                  <button [id]="'btn-status-MISSION-' + idx" type="button" (click)="setAttendanceStatus(row, 'MISSION')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'MISSION', row)" [ngClass]="row.status === 'MISSION' ? 'bg-amber-600 text-white font-black shadow-xs ring-2 ring-amber-400/50' : 'bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  <button [id]="'btn-status-MISSION-' + idx" type="button" (click)="setAttendanceStatus(row, 'MISSION')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'MISSION', row)" [ngClass]="row.status === 'MISSION' ? 'bg-amber-600 text-white font-black shadow-sm ring-2 ring-amber-400/50' : 'bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500">
                     ماموریت
                   </button>
 
                   <!-- غایب -->
-                  <button [id]="'btn-status-ABSENT-' + idx" type="button" (click)="setAttendanceStatus(row, 'ABSENT')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'ABSENT', row)" [ngClass]="row.status === 'ABSENT' ? 'bg-rose-600 text-white font-black shadow-xs ring-2 ring-rose-400/50' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500">
+                  <button [id]="'btn-status-ABSENT-' + idx" type="button" (click)="setAttendanceStatus(row, 'ABSENT')" (keydown)="onAttendanceGridKeydown($event, 'status', idx, 'ABSENT', row)" [ngClass]="row.status === 'ABSENT' ? 'bg-rose-600 text-white font-black shadow-sm ring-2 ring-rose-400/50' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200/60'" class="px-2 py-1 rounded-lg text-[11px] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500">
                     غایب
                   </button>
                 </div>
@@ -395,26 +395,26 @@
 
     <!-- Mobile Touch-Friendly Card View -->
     <div class="block md:hidden space-y-3">
-      <div *ngIf="isAttendanceLoading" class="p-8 bg-white rounded-2xl border border-slate-200/80 text-center text-slate-400 font-bold shadow-xs">
+      <div *ngIf="isAttendanceLoading" class="p-8 bg-white rounded-2xl border border-slate-200/80 text-center text-slate-400 font-bold shadow-sm">
         <div class="flex items-center justify-center gap-2">
           <span class="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></span>
           <span class="text-xs">در حال بارگذاری کارکرد روزانه...</span>
         </div>
       </div>
 
-      <div *ngIf="!isAttendanceLoading && filteredAttendanceRows.length === 0" class="p-8 bg-white rounded-2xl border border-slate-200/80 text-center text-slate-400 text-xs font-medium shadow-xs">
+      <div *ngIf="!isAttendanceLoading && filteredAttendanceRows.length === 0" class="p-8 bg-white rounded-2xl border border-slate-200/80 text-center text-slate-400 text-xs font-medium shadow-sm">
         هیچ پرسنلی در این بخش ثبت نشده است.
       </div>
 
-      <div *ngFor="let row of filteredAttendanceRows; let idx = index" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs space-y-3 transition-all" [class.border-indigo-400]="isRowSelected(row.personnel_id)" [class.bg-indigo-50/10]="isRowSelected(row.personnel_id)">
+      <div *ngFor="let row of filteredAttendanceRows; let idx = index" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-sm space-y-3 transition-all" [class.border-indigo-400]="isRowSelected(row.personnel_id)" [class.bg-indigo-50/10]="isRowSelected(row.personnel_id)">
         <div class="flex items-start justify-between gap-2">
           <div class="flex items-center gap-2.5">
             <input [id]="'m-chk-' + idx" type="checkbox" [checked]="isRowSelected(row.personnel_id)" (change)="toggleRowSelection(row.personnel_id)" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4" />
             <div>
               <div class="text-xs font-black text-slate-800 flex items-center gap-1.5 flex-wrap">
                 <span>{{ row.full_name }}</span>
-                <span *ngIf="row.is_active === false" class="px-1.5 py-0.2 bg-rose-50 text-rose-700 border border-rose-200/80 rounded text-[9px] font-bold shrink-0">غیرفعال</span>
-                <span *ngIf="!row.is_existing" class="px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200/80 rounded text-[9px] font-bold shrink-0">پیش‌نویس</span>
+                <span *ngIf="row.is_active === false" class="px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200/80 rounded text-[9px] font-bold shrink-0">غیرفعال</span>
+                <span *ngIf="!row.is_existing" class="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/80 rounded text-[9px] font-bold shrink-0">پیش‌نویس</span>
               </div>
               <div class="text-[10px] text-slate-400 font-mono font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
                 <span>{{ row.national_code }}</span>
@@ -433,19 +433,19 @@
 
         <!-- 4 Large Status Buttons -->
         <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
-          <button [id]="'m-btn-status-PRESENT_10H-' + idx" type="button" (click)="setAttendanceStatus(row, 'PRESENT_10H')" [ngClass]="row.status === 'PRESENT_10H' ? 'bg-emerald-600 text-white font-black shadow-xs ring-2 ring-emerald-400/50' : 'bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
+          <button [id]="'m-btn-status-PRESENT_10H-' + idx" type="button" (click)="setAttendanceStatus(row, 'PRESENT_10H')" [ngClass]="row.status === 'PRESENT_10H' ? 'bg-emerald-600 text-white font-black shadow-sm ring-2 ring-emerald-400/50' : 'bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
             <span>حاضر</span>
             <span class="text-[9px] opacity-75">۱۰س</span>
           </button>
-          <button [id]="'m-btn-status-HALF_5H-' + idx" type="button" (click)="setAttendanceStatus(row, 'HALF_5H')" [ngClass]="row.status === 'HALF_5H' ? 'bg-blue-600 text-white font-black shadow-xs ring-2 ring-blue-400/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
+          <button [id]="'m-btn-status-HALF_5H-' + idx" type="button" (click)="setAttendanceStatus(row, 'HALF_5H')" [ngClass]="row.status === 'HALF_5H' ? 'bg-blue-600 text-white font-black shadow-sm ring-2 ring-blue-400/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
             <span>نیمه‌وقت</span>
             <span class="text-[9px] opacity-75">۵س</span>
           </button>
-          <button [id]="'m-btn-status-LEAVE-' + idx" type="button" (click)="setAttendanceStatus(row, 'LEAVE')" [ngClass]="row.status === 'LEAVE' ? 'bg-cyan-600 text-white font-black shadow-xs ring-2 ring-cyan-400/50' : 'bg-slate-100 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
+          <button [id]="'m-btn-status-LEAVE-' + idx" type="button" (click)="setAttendanceStatus(row, 'LEAVE')" [ngClass]="row.status === 'LEAVE' ? 'bg-cyan-600 text-white font-black shadow-sm ring-2 ring-cyan-400/50' : 'bg-slate-100 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
             <span>مرخصی</span>
             <span class="text-[9px] opacity-75">۰س</span>
           </button>
-          <button [id]="'m-btn-status-ABSENT-' + idx" type="button" (click)="setAttendanceStatus(row, 'ABSENT')" [ngClass]="row.status === 'ABSENT' ? 'bg-rose-600 text-white font-black shadow-xs ring-2 ring-rose-400/50' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
+          <button [id]="'m-btn-status-ABSENT-' + idx" type="button" (click)="setAttendanceStatus(row, 'ABSENT')" [ngClass]="row.status === 'ABSENT' ? 'bg-rose-600 text-white font-black shadow-sm ring-2 ring-rose-400/50' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-slate-200/60'" class="py-2 rounded-xl text-[11px] font-bold transition-all text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer">
             <span>غایب</span>
             <span class="text-[9px] opacity-75">۰س</span>
           </button>
@@ -652,7 +652,7 @@
     </div>
 
     <!-- Anomaly Alerts Banner -->
-    <div *ngIf="anomalies && anomalies.length > 0" class="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 text-xs shadow-xs transition-all">
+    <div *ngIf="anomalies && anomalies.length > 0" class="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-3 text-xs shadow-sm transition-all">
       <div class="flex items-center justify-between font-bold text-amber-900 cursor-pointer" (click)="showAnomalies = !showAnomalies">
         <div class="flex items-center gap-2">
           <span class="p-1 rounded-lg bg-amber-100 text-amber-700 text-sm leading-none">⚠️</span>
@@ -665,7 +665,7 @@
       </div>
 
       <div *ngIf="showAnomalies" class="mt-3 pt-3 border-t border-amber-200/80 max-h-56 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-        <div *ngFor="let anom of anomalies" (click)="focusAnomaly(anom)" class="bg-white/95 border border-amber-200 hover:border-amber-400 rounded-xl p-2.5 flex items-start gap-2 text-[11px] shadow-2xs cursor-pointer transition-all hover:bg-amber-50/50">
+        <div *ngFor="let anom of anomalies" (click)="focusAnomaly(anom)" class="bg-white/95 border border-amber-200 hover:border-amber-400 rounded-xl p-2.5 flex items-start gap-2 text-[11px] shadow-sm cursor-pointer transition-all hover:bg-amber-50/50">
           <span class="text-amber-500 font-bold text-base leading-none mt-0.5">•</span>
           <div class="flex-1">
             <span class="font-bold text-slate-800">{{ anom.full_name }}: </span>
@@ -716,7 +716,7 @@
               <td class="p-2 sticky right-10 bg-white z-10 border-l border-slate-100 font-bold text-slate-800">
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span class="truncate">{{ row.full_name }}</span>
-                  <span *ngIf="row.is_active === false" class="px-1.5 py-0.2 bg-rose-50 text-rose-700 border border-rose-200/80 rounded text-[9px] font-bold shrink-0" title="پرسنل غیرفعال / ترک‌کار">غیرفعال</span>
+                  <span *ngIf="row.is_active === false" class="px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200/80 rounded text-[9px] font-bold shrink-0" title="پرسنل غیرفعال / ترک‌کار">غیرفعال</span>
                 </div>
               </td>
               
@@ -747,7 +747,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- MODAL ۱: اعمال گروهی ساعت کارکرد (Bulk Hours Modal) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isBulkHoursModalOpen" (keydown.escape)="isBulkHoursModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  <div *ngIf="isBulkHoursModalOpen" (keydown.escape)="isBulkHoursModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">تنظیم گروهی ساعات کارکرد</h3>
@@ -796,7 +796,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- MODAL ۲: پیست هوشمند از اکسل (Excel Paste Modal) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isExcelPasteModalOpen" (keydown.escape)="isExcelPasteModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  <div *ngIf="isExcelPasteModalOpen" (keydown.escape)="isExcelPasteModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
@@ -828,7 +828,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- MODAL ۳: ویرایش جزییات روز پرسنل در تقویم (Day Detail Modal) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isDayDetailModalOpen" (keydown.escape)="isDayDetailModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  <div *ngIf="isDayDetailModalOpen" (keydown.escape)="isDayDetailModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
@@ -878,7 +878,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- MODAL ۴: اعمال کارکرد در بازه زمانی (Date Range Modal) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isRangeModalOpen" (keydown.escape)="isRangeModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  <div *ngIf="isRangeModalOpen" (keydown.escape)="isRangeModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2">
@@ -1079,7 +1079,7 @@
   </div>
 
   <!-- MODAL بارگذاری اکسل تقویم کارکرد -->
-  <div *ngIf="isExcelImportModalOpen" (keydown.escape)="closeExcelImportModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  <div *ngIf="isExcelImportModalOpen" (keydown.escape)="closeExcelImportModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">بارگذاری فایل اکسل تقویم کارکرد</h3>
@@ -1107,7 +1107,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- مودال ارسال دوره به واحد مالی جهت بررسی و تایید -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isSubmitModalOpen" (keydown.escape)="isSubmitModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  <div *ngIf="isSubmitModalOpen" (keydown.escape)="isSubmitModalOpen = false" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">ارسال کارکرد به واحد مالی</h3>

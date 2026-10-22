@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-surface-canvas/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون انتخاب بخش و کپسول زیرتب‌های ناوگان مدیر -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -345,7 +345,7 @@
   </div>
 
   <!-- ── مودال تایید و تصویب مدیر (تسک ۱۰.۱ و ۱۰.۲) ── -->
-  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
     <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
         <h3 class="text-sm font-black text-fg">{{ approvalTarget?.title }}</h3>
@@ -369,7 +369,7 @@
               خودروی سازمانی / شرکتی (فاقد بار مالی اجاره/سرویس)
             </span>
             <span *ngIf="isVehiclePayable() && getCostDeviationPercentage() !== null"
-                  class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm"
                   [ngClass]="getCostDeviationPercentage()! <= 0
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : (getCostDeviationPercentage()! <= 15
@@ -388,21 +388,21 @@
 
         <!-- کارت‌های ریز محاسبات مالی -->
         <div *ngIf="!isLoadingCostAnalysis && isVehiclePayable()" class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-          <div class="bg-surface p-2 rounded-xl border border-line shadow-2xs">
+          <div class="bg-surface p-2 rounded-xl border border-line shadow-sm">
             <div class="text-fg-muted text-[10px]">نرخ روزانه / سرویس</div>
             <div class="font-mono font-black text-fg mt-0.5">
               {{ getVehicleDailyRate() !== null ? (getVehicleDailyRate() | number) : '—' }}
               <span class="text-[9px] text-fg-subtle font-normal">ریال</span>
             </div>
           </div>
-          <div class="bg-surface p-2 rounded-xl border border-line shadow-2xs">
+          <div class="bg-surface p-2 rounded-xl border border-line shadow-sm">
             <div class="text-fg-muted text-[10px]">بار مالی ماهانه (۲۶ روز)</div>
             <div class="font-mono font-black text-indigo-700 mt-0.5">
               {{ getVehicleMonthlyStandardCost() !== null ? (getVehicleMonthlyStandardCost() | number) : '—' }}
               <span class="text-[9px] text-fg-subtle font-normal">ریال</span>
             </div>
           </div>
-          <div class="bg-surface p-2 rounded-xl border border-line shadow-2xs">
+          <div class="bg-surface p-2 rounded-xl border border-line shadow-sm">
             <div class="text-fg-muted text-[10px]">میانگین هم‌تیپ‌ها در پروژه</div>
             <div class="font-mono font-black text-fg/80 mt-0.5">
               {{ getVehicleAvgDailyRate() !== null ? (getVehicleAvgDailyRate() | number) : '—' }}
@@ -412,7 +412,7 @@
         </div>
 
         <!-- سطر برآورد سالانه -->
-        <div *ngIf="!isLoadingCostAnalysis && isVehiclePayable()" class="flex items-center justify-between text-[11px] bg-surface px-3 py-2 rounded-xl border border-line shadow-2xs">
+        <div *ngIf="!isLoadingCostAnalysis && isVehiclePayable()" class="flex items-center justify-between text-[11px] bg-surface px-3 py-2 rounded-xl border border-line shadow-sm">
           <span class="text-fg-muted font-bold">برآورد بار مالی سالانه (۱۲ ماه استاندارد):</span>
           <span class="font-mono font-black text-fg">
             {{ getVehicleYearlyStandardCost() !== null ? (getVehicleYearlyStandardCost() | number) + ' ریال' : '—' }}
@@ -449,7 +449,7 @@
   </div>
 
   <!-- ── مودال رد پرونده یا عودت (تسک ۱۰.۲) ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
     <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
         <h3 class="text-sm font-black text-rose-700">
@@ -510,7 +510,7 @@
   </div>
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Modal) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
     <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-xl w-full p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
         <h3 class="text-sm font-black text-fg">
@@ -554,8 +554,8 @@
   </div>
 
   <!-- ── مودال قطع همکاری ناوگان (تسک ۱۰.۳) ── -->
-  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4 fade-in zoom-in duration-150">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
         <h3 class="text-sm font-black text-amber-800 flex items-center gap-1.5">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" class="w-4 h-4"></svg>
@@ -624,8 +624,8 @@
   </app-smart-delete-modal>
 
   <!-- ── استعلام سابقه و مسدودسازی حذف پروندهٔ خودروی دارای سابقه (تسک ۱۰.۳) ── -->
-  <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2" class="w-4 h-4 text-rose-600"></svg> حذف پرونده خودرو: {{ deleteTargetVehicle?.plate_number }} ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})

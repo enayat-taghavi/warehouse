@@ -1,9 +1,9 @@
 <div dir="rtl" class="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-right">
 
   <!-- نوار عنوان مرکز پایش کلاینت‌ها و تداخل با تم روشن سازمانی -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
     <div class="flex items-start sm:items-center gap-3.5">
-      <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 shadow-xs text-2xl">
+      <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm text-2xl">
         🔄
       </div>
       <div>
@@ -33,7 +33,7 @@
         *ngIf="conflictSimulator"
         type="button"
         (click)="simulateConflictScenario()"
-        class="min-h-[40px] px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs"
+        class="min-h-[40px] px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm"
         title="شبیه‌سازی یک تداخل برای تست موتور حل اختلاف"
       >
         <svg appIcon="status-warning" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
@@ -65,7 +65,7 @@
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
     
     <!-- کارت ۱: صف ارسال کلاینت جاری -->
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
+    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
       <div>
         <span class="text-xs text-slate-500">عمق صف آفلاین مرورگر (syncQueue):</span>
         <div class="text-xl font-black text-indigo-600 font-mono mt-1">
@@ -81,7 +81,7 @@
     </div>
 
     <!-- کارت ۲: تداخل‌های همگام‌سازی حل‌نشده (کد ۴۰۹) -->
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
+    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
       <div>
         <span class="text-xs text-slate-500">تداخل‌های نیازمند داوری (409 Conflict):</span>
         <div class="text-xl font-black font-mono mt-1" [ngClass]="conflictErrors().length > 0 ? 'text-amber-600' : 'text-emerald-600'">
@@ -97,7 +97,7 @@
     </div>
 
     <!-- کارت ۳: وضعیت اتصال و مدل دستگاه -->
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
+    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
       <div class="min-w-0 pr-2">
         <span class="text-xs text-slate-500">مشخصات دستگاه و پایانه جاری:</span>
         <div class="text-xs font-bold text-slate-800 mt-1 truncate max-w-[200px]" [title]="currentDeviceModel()">
@@ -114,7 +114,7 @@
   </div>
 
   <!-- بخش اول: رصد ناوگان تبلت‌ها و کلاینت‌های فعال (Tablet Fleet Telemetry) -->
-  <div class="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
       <div class="flex items-center gap-2">
         <h2 class="text-xs sm:text-sm font-black text-slate-900">ناوگان تبلت‌ها و پایانه‌های متصل به هاب عملیات</h2>
@@ -212,7 +212,7 @@
 
             <!-- ۱۰. عملیات ابطال -->
             <td class="py-3 px-4 text-center">
-              <span *ngIf="isSupervisorSession(t)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs" title="نشست سرپرستان و مدیران مصون از ابطال نظارتی است">
+              <span *ngIf="isSupervisorSession(t)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-sm" title="نشست سرپرستان و مدیران مصون از ابطال نظارتی است">
                 <svg appIcon="shield" class="w-3.5 h-3.5 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
                 <span>مصون از ابطال</span>
               </span>
@@ -221,7 +221,7 @@
                 type="button"
                 (click)="revokeDeviceSession(t.sessionId, t.deviceModel)"
                 [disabled]="isRevoking() === t.sessionId"
-                class="min-h-[40px] sm:min-h-[28px] px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                class="min-h-[40px] sm:min-h-[28px] px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 inline-flex items-center justify-center gap-1"
                 title="ابطال این نشست و خروج اجباری دستگاه از حساب کاربری"
               >
                 <svg appIcon="x-circle" class="w-3.5 h-3.5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
@@ -238,7 +238,7 @@
   </div>
 
   <!-- بخش دوم: مرکز بصری حل اختلاف و مدیریت تداخل‌ها (Visual Conflict Resolution Center & 3-Way Merge) -->
-  <div class="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
       <div class="flex items-center gap-2">
         <h2 class="text-xs sm:text-sm font-black text-slate-900">مرکز بصری حل اختلاف داده‌ها (3-Way Merge & Conflict Lab)</h2>

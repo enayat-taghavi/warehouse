@@ -12,9 +12,9 @@ export type PhotoThumbAccent = 'indigo' | 'blue';
  * کلاسِ ساخته‌شده در زمان اجرا را هرگز در CSS خروجی نمی‌گذارد.
  */
 const SIZE_CLASSES: Record<PhotoThumbSize, string> = {
-  xs: 'w-8 h-8 rounded-lg shadow-2xs hover:scale-110',
-  sm: 'w-10 h-10 rounded-xl shadow-xs hover:scale-105',
-  md: 'w-11 h-11 rounded-xl shadow-xs hover:scale-105',
+  xs: 'w-8 h-8 rounded-lg shadow-sm hover:scale-110',
+  sm: 'w-10 h-10 rounded-xl shadow-sm hover:scale-105',
+  md: 'w-11 h-11 rounded-xl shadow-sm hover:scale-105',
   lg: 'w-12 h-12 rounded-2xl shadow-sm hover:scale-105',
 };
 
@@ -130,7 +130,7 @@ export class ItemPhotoThumbComponent {
 
   get badgeClass(): string {
     return [
-      'absolute bottom-0 right-0 text-white font-black shadow-xs leading-tight',
+      'absolute bottom-0 right-0 text-white font-black shadow-sm leading-tight',
       BADGE_CLASSES[this.size],
       ACCENT_BADGE_CLASSES[this.accent],
     ].join(' ');

@@ -116,7 +116,7 @@ const TAB_INDICATOR_CLASSES: Record<'emerald' | 'amber' | 'rose', string> = {
           (keydown)="onKeydown($event, idx)"
           class="relative inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs md:text-sm whitespace-nowrap cursor-pointer transition-all duration-150 select-none min-h-[40px] md:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           [ngClass]="tab.id === active()
-            ? 'bg-white text-indigo-700 shadow-xs font-black'
+            ? 'bg-white text-indigo-700 shadow-sm font-black'
             : 'text-slate-600 hover:text-slate-900 font-bold'"
         >
           @if (tab.icon) {

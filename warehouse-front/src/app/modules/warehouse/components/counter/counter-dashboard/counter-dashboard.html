@@ -5,7 +5,7 @@
     <div class="flex-1 p-4 md:p-6 pb-6">
       
       <!-- Mobile UX Header -->
-      <header class="mb-4 flex flex-wrap items-center justify-between gap-3 relative z-20 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+      <header class="mb-4 flex flex-wrap items-center justify-between gap-3 relative z-20 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
         <!-- Title & Icon -->
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shadow-indigo-600/30">
@@ -76,7 +76,7 @@
           <!-- Case 1: Contextual Action Bar (When items are selected) -->
           <div 
             *ngIf="selectedTasks.size > 0"
-            class="flex items-center justify-between gap-2 p-2 mb-3 bg-slate-900 text-white rounded-2xl shadow-md animate-in fade-in zoom-in-95 duration-150 border border-slate-800">
+            class="flex items-center justify-between gap-2 p-2 mb-3 bg-slate-900 text-white rounded-2xl shadow-md fade-in zoom-in-95 duration-150 border border-slate-800">
             
             <!-- Right: Cancel Button + Counter -->
             <div class="flex items-center gap-2 pr-1">
@@ -164,7 +164,7 @@
                 [ngClass]="statusFilter === 'pending' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border border-slate-200/80'" 
                 class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1">
                 <span>در انتظار</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'pending' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'">{{statusCounts.pending}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'pending' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'">{{statusCounts.pending}}</span>
               </button>
 
               <!-- 2. Recount (Conditional: only if > 0 or active) -->
@@ -172,9 +172,9 @@
                 *ngIf="statusCounts.recount > 0 || statusFilter === 'recount'"
                 (click)="setStatusFilter('recount')" 
                 [ngClass]="statusFilter === 'recount' ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-slate-600 border border-slate-200/80'" 
-                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 animate-in fade-in duration-150">
+                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 fade-in duration-150">
                 <span>بررسی مجدد</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'recount' ? 'bg-rose-400 text-white' : 'bg-rose-50 text-rose-700'">{{statusCounts.recount}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'recount' ? 'bg-rose-400 text-white' : 'bg-rose-50 text-rose-700'">{{statusCounts.recount}}</span>
               </button>
 
               <!-- 3. Ready to submit / Initial (Conditional: only if > 0 or active) -->
@@ -182,9 +182,9 @@
                 *ngIf="statusCounts.initial > 0 || statusFilter === 'initial'"
                 (click)="setStatusFilter('initial')" 
                 [ngClass]="statusFilter === 'initial' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border border-indigo-200/80'" 
-                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 animate-in fade-in duration-150">
+                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 fade-in duration-150">
                 <span>آماده ارسال</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'initial' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700'">{{statusCounts.initial}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'initial' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700'">{{statusCounts.initial}}</span>
               </button>
 
               <!-- 4. Completed (Always visible) -->
@@ -193,7 +193,7 @@
                 [ngClass]="statusFilter === 'completed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border border-slate-200/80'" 
                 class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1">
                 <span>ارسال شده</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700'">{{statusCounts.completed}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700'">{{statusCounts.completed}}</span>
               </button>
 
               <!-- 5. All (Always visible) -->
@@ -202,7 +202,7 @@
                 [ngClass]="statusFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border border-slate-200/80'" 
                 class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1">
                 <span>همه موارد</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'">{{statusCounts.all}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'">{{statusCounts.all}}</span>
               </button>
             </div>
 
@@ -220,7 +220,7 @@
                   <select 
                     [ngModel]="locationFilter" 
                     (ngModelChange)="setLocationFilter($event)"
-                    class="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold rounded-lg px-2 py-1 outline-none focus:border-indigo-500 shadow-xs cursor-pointer">
+                    class="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold rounded-lg px-2 py-1 outline-none focus:border-indigo-500 shadow-sm cursor-pointer">
                     <option value="all">همه لوکیشن‌ها ({{availableLocations.length}})</option>
                     <option *ngFor="let loc of availableLocations" [value]="loc">{{loc}}</option>
                   </select>
@@ -255,7 +255,7 @@
                 <!-- Sort Popover Menu -->
                 <div 
                   *ngIf="isSortMenuOpen" 
-                  class="absolute left-0 mt-1.5 w-52 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 text-xs font-bold text-slate-700 animate-in fade-in zoom-in-95 duration-100">
+                  class="absolute left-0 mt-1.5 w-52 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 text-xs font-bold text-slate-700 fade-in zoom-in-95 duration-100">
                   <div class="px-3 py-1.5 text-[10px] text-slate-400 border-b border-slate-100 flex items-center justify-between">
                     <span>مرتب‌سازی بر اساس:</span>
                     <span class="text-[9px] text-indigo-500 font-normal">کلیک مجدد = تغییر جهت</span>
@@ -518,7 +518,7 @@
       <ng-container *ngIf="currentTab === 'pool'">
         <!-- Sticky Pool Contextual Top Action Bar -->
         <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-2 pb-3 mb-4 -mx-4 px-4 md:-mx-6 md:px-6 border-b border-slate-200/60 transition-all" *ngIf="selectedPoolTasks.size > 0">
-          <div class="flex items-center justify-between gap-2 p-2 bg-slate-900 text-white rounded-2xl shadow-md animate-in fade-in zoom-in-95 duration-150 border border-slate-800">
+          <div class="flex items-center justify-between gap-2 p-2 bg-slate-900 text-white rounded-2xl shadow-md fade-in zoom-in-95 duration-150 border border-slate-800">
             <!-- Right: Cancel + Count -->
             <div class="flex items-center gap-2 pr-1">
               <button 
@@ -565,7 +565,7 @@
           </div>
           <h3 class="text-slate-800 font-bold text-sm mb-1">موردی یافت نشد</h3>
           <p class="text-slate-500 text-xs">هیچ کالایی در مخزن با عبارت «{{searchQuery}}» مطابقت ندارد.</p>
-          <button (click)="clearSearch()" type="button" aria-label="پاک کردن جستجو" class="mt-2.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer min-h-[40px] sm:min-h-0">
+          <button (click)="clearSearch()" type="button" aria-label="پاک کردن جستجو" class="mt-2.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1 cursor-pointer min-h-[40px] sm:min-h-0">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
             <span>پاک کردن جستجو</span>
           </button>
@@ -730,7 +730,7 @@
             </div>
           </button>
 
-          <div *ngIf="isHistoryOpen" class="mt-4 pt-4 border-t border-slate-100 space-y-4 relative before:absolute before:inset-0 before:mr-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent animate-in fade-in duration-200">
+          <div *ngIf="isHistoryOpen" class="mt-4 pt-4 border-t border-slate-100 space-y-4 relative before:absolute before:inset-0 before:mr-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent fade-in duration-200">
             <div *ngFor="let record of selectedTask.history; let i = index" class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
               <!-- Icon -->
               <div class="flex items-center justify-center w-8 h-8 rounded-full border border-white bg-slate-50 text-slate-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10"
@@ -782,7 +782,7 @@
                 type="button"
                 (click)="stepQty(-1)"
                 title="کاهش یک واحد"
-                class="w-12 h-14 sm:h-16 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 font-black text-base sm:text-lg border-2 border-slate-200 rounded-2xl flex items-center justify-center transition-all shadow-xs cursor-pointer select-none shrink-0">
+                class="w-12 h-14 sm:h-16 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 font-black text-base sm:text-lg border-2 border-slate-200 rounded-2xl flex items-center justify-center transition-all shadow-sm cursor-pointer select-none shrink-0">
                 -۱
               </button>
 
@@ -810,7 +810,7 @@
                 type="button"
                 (click)="stepQty(1)"
                 title="افزایش یک واحد"
-                class="w-12 h-14 sm:h-16 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 font-black text-base sm:text-lg border-2 border-indigo-200 rounded-2xl flex items-center justify-center transition-all shadow-xs cursor-pointer select-none shrink-0">
+                class="w-12 h-14 sm:h-16 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 font-black text-base sm:text-lg border-2 border-indigo-200 rounded-2xl flex items-center justify-center transition-all shadow-sm cursor-pointer select-none shrink-0">
                 +۱
               </button>
 
@@ -820,7 +820,7 @@
                 type="button"
                 (click)="stepQty(10)"
                 title="افزایش ۱۰ واحد"
-                class="px-2.5 h-14 sm:h-16 bg-indigo-50/70 hover:bg-indigo-100 active:scale-95 text-indigo-700 font-black text-xs sm:text-sm border-2 border-indigo-200 rounded-2xl flex items-center justify-center transition-all shadow-xs cursor-pointer select-none shrink-0">
+                class="px-2.5 h-14 sm:h-16 bg-indigo-50/70 hover:bg-indigo-100 active:scale-95 text-indigo-700 font-black text-xs sm:text-sm border-2 border-indigo-200 rounded-2xl flex items-center justify-center transition-all shadow-sm cursor-pointer select-none shrink-0">
                 +۱۰
               </button>
             </div>

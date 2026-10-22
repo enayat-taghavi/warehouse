@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون بخش، سال و ماه مالی و تب‌های فرعی -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -67,42 +67,42 @@
   <!-- ── ۲. کارت‌های شاخص‌های کلیدی مدیریت (Executive KPI Cards) ── -->
   <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
     <!-- کل بودجه مصوب -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
       <div class="text-[11px] font-bold text-slate-500 mb-1">کل بودجه مصوب ماه</div>
       <div class="text-base md:text-lg font-black font-mono text-slate-900">{{ (kpiSummary.totalBudget / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
       <div class="text-[10px] text-slate-400 mt-1">سقف تخصیص سازمانی</div>
     </div>
 
     <!-- مجموع هزینه‌کرد واقعی -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
       <div class="text-[11px] font-bold text-slate-500 mb-1">مجموع هزینه‌کرد واقعی</div>
       <div class="text-base md:text-lg font-black font-mono text-purple-700">{{ (kpiSummary.totalExpenses / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
       <div class="text-[10px] font-bold text-purple-600 mt-1">{{ kpiSummary.consumptionPercent }}% جذب بودجه</div>
     </div>
 
     <!-- هزینه حقوق و دستمزد -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
       <div class="text-[11px] font-bold text-slate-500 mb-1">حقوق و دستمزد پرسنل</div>
       <div class="text-base md:text-lg font-black font-mono text-blue-700">{{ (kpiSummary.totalPayrollCost / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
       <div class="text-[10px] text-slate-500 mt-1">{{ kpiSummary.activePersonnelCount }} نفر پرسنل فعال</div>
     </div>
 
     <!-- هزینه ناوگان و ترابری -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
       <div class="text-[11px] font-bold text-slate-500 mb-1">کارکرد ناوگان و ماشین‌آلات</div>
       <div class="text-base md:text-lg font-black font-mono text-amber-700">{{ (kpiSummary.totalFleetCost / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
       <div class="text-[10px] text-slate-500 mt-1">{{ kpiSummary.activeFleetCount }} دستگاه ناوگان</div>
     </div>
 
     <!-- فاکتورهای جاری -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
       <div class="text-[11px] font-bold text-slate-500 mb-1">فاکتورها و تن‌خواه</div>
       <div class="text-base md:text-lg font-black font-mono text-emerald-700">{{ (kpiSummary.totalInvoicesCost / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
       <div class="text-[10px] text-slate-500 mt-1">تدارکات و تعمیرات</div>
     </div>
 
     <!-- ساعات اضافه‌کاری -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
       <div class="text-[11px] font-bold text-slate-500 mb-1">مجموع اضافه‌کاری</div>
       <div class="text-base md:text-lg font-black font-mono text-rose-700">{{ kpiSummary.overtimeHoursTotal | number }} <span class="text-[10px] font-normal text-slate-500">ساعت</span></div>
       <div class="text-[10px] text-slate-500 mt-1">ضریب ۱.۴ پایه ۱۰ ساعته</div>
@@ -191,7 +191,7 @@
 
   <!-- تب دوم: هشدارهای نیازمند اقدام فوری -->
   <div *ngIf="activeSubTab === 'urgent_alerts'" class="space-y-3">
-    <div *ngFor="let alert of urgentAlerts" class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div *ngFor="let alert of urgentAlerts" class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div class="flex items-start gap-3">
         <span class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
               [ngClass]="alert.type === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : (alert.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200')">

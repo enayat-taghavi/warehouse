@@ -7,7 +7,7 @@
   >
     <!-- سربرگ سایدبار مرکز عملیات (در بالاترین نقطه سمت راست صفحه) -->
     <div class="p-4 border-b border-slate-800 flex items-center gap-3 h-[70px] shrink-0">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-indigo-600 flex items-center justify-center text-white text-xl shadow-xs shrink-0">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-indigo-600 flex items-center justify-center text-white text-xl shadow-sm shrink-0">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white" appIcon="shield"></svg>
       </div>
       <div *ngIf="!isSidebarCollapsed()" class="flex-1 min-w-0">
@@ -30,7 +30,7 @@
         (click)="navigateTo(item.route)"
         class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-right group relative overflow-hidden"
         [ngClass]="activeRoute() === item.id
-          ? 'bg-indigo-600 text-white shadow-xs'
+          ? 'bg-indigo-600 text-white shadow-sm'
           : 'text-slate-400 hover:text-white hover:bg-slate-800/80'"
         [title]="item.label"
       >
@@ -87,7 +87,7 @@
   <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-slate-50 relative overflow-hidden">
 
     <!-- نوار بالای صفحه با تم رسمی و اداری یکپارچه کل سیستم (Unified Enterprise Header) -->
-    <header class="bg-white border-b border-slate-200 p-4 h-[70px] flex items-center justify-between shadow-xs relative z-[45] shrink-0 transition-all">
+    <header class="bg-white border-b border-slate-200 p-4 h-[70px] flex items-center justify-between shadow-sm relative z-[45] shrink-0 transition-all">
 
       <!-- Right Side (RTL Start): Mobile Toggle, Desktop Toggle, User Menu, Chat, Network Badge -->
       <div class="flex items-center gap-2 md:gap-4 flex-1 justify-start shrink-0">
@@ -150,13 +150,13 @@
         <app-role-switcher class="shrink-0" />
 
         <!-- ─── History Navigation Segmented Pill (انتهای سمت چپ) ─── -->
-        <div class="hidden sm:flex items-center bg-slate-100/90 hover:bg-slate-200/60 p-0.5 rounded-xl border border-slate-200/90 shadow-xs transition-all shrink-0 select-none" dir="rtl">
+        <div class="hidden sm:flex items-center bg-slate-100/90 hover:bg-slate-200/60 p-0.5 rounded-xl border border-slate-200/90 shadow-sm transition-all shrink-0 select-none" dir="rtl">
           <!-- Back Button (صفحه قبل) -->
           <button
             type="button"
             (click)="navHistory.back()"
             [disabled]="!navHistory.canGoBack()"
-            class="p-1.5 rounded-lg text-slate-600 hover:text-cyan-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
+            class="p-1.5 rounded-lg text-slate-600 hover:text-cyan-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-sm disabled:shadow-none"
             title="صفحه قبل (Alt + راست)"
             aria-label="صفحه قبل">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-back"></svg>
@@ -170,7 +170,7 @@
             type="button"
             (click)="navHistory.forward()"
             [disabled]="!navHistory.canGoForward()"
-            class="p-1.5 rounded-lg text-slate-600 hover:text-cyan-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
+            class="p-1.5 rounded-lg text-slate-600 hover:text-cyan-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-sm disabled:shadow-none"
             title="صفحه بعد (Alt + چپ)"
             aria-label="صفحه بعد">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-forward"></svg>
@@ -189,7 +189,7 @@
   <!-- دراور منوی موبایل -->
   <div
     *ngIf="isMobileMenuOpen()"
-    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs lg:hidden"
+    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm lg:hidden"
     (click)="closeMobileMenu()"
   >
     <div

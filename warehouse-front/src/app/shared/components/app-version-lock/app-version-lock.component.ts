@@ -23,7 +23,7 @@ export const EMERGENCY_SEND_ERROR_TEXT = 'خطا در ارسال اطلاعات 
         class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
         <div id="version-lock-dialog" class="w-full max-w-md bg-surface rounded-3xl p-6 shadow-2xl border border-line-subtle flex flex-col items-center text-center my-auto fade-in">
           <!-- آیکون وضعیت قفل -->
-          <div class="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center mb-4 shadow-xs">
+          <div class="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center mb-4 shadow-sm">
             <svg
               appIcon="lock"
               class="w-8 h-8 text-rose-600"
@@ -75,7 +75,7 @@ export const EMERGENCY_SEND_ERROR_TEXT = 'خطا در ارسال اطلاعات 
               (click)="onUpdate()"
               title="دریافت و نصب نسخه جدید برنامه"
               aria-label="به‌روزرسانی برنامه"
-              class="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition cursor-pointer">
+              class="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition cursor-pointer">
               <svg
                 appIcon="download"
                 class="w-4 h-4 text-white"
@@ -149,7 +149,7 @@ export const EMERGENCY_SEND_ERROR_TEXT = 'خطا در ارسال اطلاعات 
               (click)="onUpdate()"
               title="دریافت نسخه جدید"
               aria-label="به‌روزرسانی برنامه"
-              class="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-900 shadow-2xs">
+              class="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-900 shadow-sm">
               <svg
                 appIcon="download"
                 class="w-3.5 h-3.5 text-white"

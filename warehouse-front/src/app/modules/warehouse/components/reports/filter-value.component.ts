@@ -53,7 +53,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
         <div class="flex flex-wrap gap-1 max-w-sm p-1 bg-slate-50/70 border border-slate-200/80 rounded-xl">
           @for (c of field!.choices; track c) {
             <button type="button" (click)="toggleChoice(c)"
-                    class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-2xs min-h-[40px] min-w-[40px] inline-flex items-center justify-center tap-target"
+                    class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-sm min-h-[40px] min-w-[40px] inline-flex items-center justify-center tap-target"
                     [class.bg-indigo-600]="isChoiceSelected(c)"
                     [class.text-white]="isChoiceSelected(c)"
                     [class.border-indigo-600]="isChoiceSelected(c)"

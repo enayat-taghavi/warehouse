@@ -57,7 +57,7 @@
   <!-- تب ۱: پرونده‌های جدید پرسنل در انتظار تایید سرپرست -->
   <div *ngIf="activeSubTab === 'new'" class="space-y-3">
     <!-- نوار ابزار تایید گروهی پرونده‌ها -->
-    <div *ngIf="selectedPersonnelIds.size > 0" class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs animate-in fade-in duration-150">
+    <div *ngIf="selectedPersonnelIds.size > 0" class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm fade-in duration-150">
       <div class="flex items-center gap-2">
         <span class="text-sm font-black text-indigo-900">⚡ {{ getSelectedCount() }} پرونده پرسنلی انتخاب شده است</span>
       </div>
@@ -87,7 +87,7 @@
     </div>
 
     <!-- نمای جدول دسکتاپ -->
-    <div *ngIf="newPersonnelList.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="newPersonnelList.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -199,7 +199,7 @@
 
     <!-- نمای کارت‌های موبایل ارگونومیک (بدون اسکرول افقی) -->
     <div *ngIf="newPersonnelList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let item of newPersonnelList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs space-y-3" [class.border-indigo-300]="isPersonnelSelected(item.id)">
+      <div *ngFor="let item of newPersonnelList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-sm space-y-3" [class.border-indigo-300]="isPersonnelSelected(item.id)">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
           <div class="flex items-center gap-2">
             <input
@@ -292,7 +292,7 @@
     </div>
 
     <!-- جدول دسکتاپ کارکرد -->
-    <div *ngIf="attendanceList.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="attendanceList.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -343,7 +343,7 @@
 
     <!-- نمای کارت‌های موبایل کارکرد -->
     <div *ngIf="attendanceList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let item of attendanceList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs space-y-2.5">
+      <div *ngFor="let item of attendanceList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-sm space-y-2.5">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <div class="font-bold text-sm text-slate-800">{{ item.personnel_name }}</div>
@@ -384,7 +384,7 @@
     </div>
 
     <!-- جدول دسکتاپ تغییرات -->
-    <div *ngIf="changeRequestsList.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="changeRequestsList.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -436,7 +436,7 @@
 
     <!-- نمای کارت‌های موبایل تغییرات -->
     <div *ngIf="changeRequestsList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let cr of changeRequestsList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs space-y-2.5">
+      <div *ngFor="let cr of changeRequestsList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-sm space-y-2.5">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <div class="font-bold text-sm text-slate-800">{{ cr.personnel_name }}</div>
@@ -472,7 +472,7 @@
   <!-- تب ۴: همه پرسنل بخش -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
     <!-- جدول دسکتاپ همه پرسنل -->
-    <div class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -519,7 +519,7 @@
 
     <!-- نمای کارت‌های موبایل همه پرسنل -->
     <div *ngIf="allPersonnelList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let p of allPersonnelList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-2xs space-y-2.5">
+      <div *ngFor="let p of allPersonnelList" class="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-sm space-y-2.5">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <div class="font-bold text-sm text-slate-800">{{ p.first_name }} {{ p.last_name }}</div>
@@ -555,8 +555,8 @@
   </div>
 
   <!-- ── مودال ۱: ثبت تایید و یادداشت (Approval Modal) ── -->
-  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50/80 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-900">{{ approvalTarget?.title }}</h3>
         <button type="button" appAction="close" display="icon" (click)="closeApproveModal()"></button>
@@ -591,8 +591,8 @@
   </div>
 
   <!-- ── مودال ۲: ثبت علت عودت به بازنگری یا رد با هشدار Purge هوشمند ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50/80 border-amber-100 text-amber-900' : 'bg-rose-50/80 border-rose-100 text-rose-900'">
         <h3 class="text-sm font-black">{{ rejectTarget?.title }}</h3>
@@ -652,8 +652,8 @@
   </div>
 
   <!-- ── مودال ۳: مقایسه تفاوت‌ها (Diff Viewer Modal) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌ها (Diff): {{ selectedDiffCR?.personnel_name }}
@@ -707,8 +707,8 @@
   </div>
 
   <!-- ── مودال ۴: تایید گروهی پرونده‌های پرسنلی (Batch Approval Modal) ── -->
-  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50/90 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-900">
           تایید گروهی {{ getSelectedCount() }} پرونده پرسنلی
@@ -750,8 +750,8 @@
   </div>
 
   <!-- ── مودال ۵: مشاهده کامل پرونده پرسنلی (Profile Viewer Modal) ── -->
-  <div *ngIf="isViewProfileModalOpen && selectedViewProfile" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isViewProfileModalOpen && selectedViewProfile" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] fade-in zoom-in duration-150">
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div class="flex items-center gap-2">

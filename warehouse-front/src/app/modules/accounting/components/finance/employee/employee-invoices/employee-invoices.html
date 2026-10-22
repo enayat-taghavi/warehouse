@@ -67,7 +67,7 @@
           type="text"
           [(ngModel)]="invoiceSearch"
           placeholder="جستجوی شماره فاکتور، طرف‌حساب، شرح..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 shadow-2xs font-medium placeholder:text-slate-400" />
+          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
         <button
           *ngIf="invoiceSearch"
           type="button"
@@ -174,7 +174,7 @@
             <!-- وضعیت -->
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
               <span [ngClass]="getStatusBadgeClass(inv.status)"
-                    class="px-2.5 py-1 rounded-full text-[10px] font-bold border inline-block shadow-2xs">
+                    class="px-2.5 py-1 rounded-full text-[10px] font-bold border inline-block shadow-sm">
                 {{ getStatusLabel(inv.status) }}
               </span>
             </td>
@@ -250,7 +250,7 @@
   <!-- مودال ۱: ثبت فاکتور هزینه جدید (Guardian G2: Draft Invariant)       -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in max-h-[92vh] flex flex-col">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden fade-in max-h-[92vh] flex flex-col">
       
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -418,7 +418,7 @@
   <!-- مودال ۲: تعریف سریع طرف‌حساب جدید                                       -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isQuickCounterpartyModalOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in flex flex-col">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden fade-in flex flex-col">
       
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">

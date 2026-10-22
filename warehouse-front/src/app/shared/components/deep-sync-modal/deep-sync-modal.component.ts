@@ -28,18 +28,18 @@ interface AccentClasses {
 const ACCENT_CLASSES: Record<string, AccentClasses> = {
   indigo: {
     iconColor: 'text-indigo-600',
-    tabActive: 'bg-white text-indigo-600 shadow-xs',
+    tabActive: 'bg-white text-indigo-600 shadow-sm',
     tabCountActive: 'bg-indigo-100 text-indigo-700',
     selectAllActive: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100',
-    cardSelected: 'border-indigo-500 bg-indigo-50/40 shadow-xs',
+    cardSelected: 'border-indigo-500 bg-indigo-50/40 shadow-sm',
     radioSelected: 'border-indigo-600 bg-indigo-600',
   },
   emerald: {
     iconColor: 'text-emerald-600',
-    tabActive: 'bg-white text-emerald-600 shadow-xs',
+    tabActive: 'bg-white text-emerald-600 shadow-sm',
     tabCountActive: 'bg-emerald-100 text-emerald-700',
     selectAllActive: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100',
-    cardSelected: 'border-emerald-500 bg-emerald-50/40 shadow-xs',
+    cardSelected: 'border-emerald-500 bg-emerald-50/40 shadow-sm',
     radioSelected: 'border-emerald-600 bg-emerald-600',
   },
 };
@@ -56,7 +56,7 @@ type LegacySelection = (() => number[]) & { set: (ids: number[]) => void };
       <div class="px-6 py-4 flex flex-col gap-4 max-h-[72vh] overflow-y-auto" dir="rtl">
 
         <!-- Header Banner & Info -->
-        <div class="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-l from-indigo-50/80 to-blue-50/40 border border-indigo-100 shadow-xs">
+        <div class="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-l from-indigo-50/80 to-blue-50/40 border border-indigo-100 shadow-sm">
           <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="action-refresh"></svg>
           </div>
@@ -74,10 +74,10 @@ type LegacySelection = (() => number[]) & { set: (ids: number[]) => void };
             type="button"
             (click)="activeOpsTab.set('all')"
             class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
-            [ngClass]="activeOpsTab() === 'all' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
+            [ngClass]="activeOpsTab() === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
           >
             <span>کل سازمان</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'">
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'">
               {{ totalSelectedCount() }}
             </span>
           </button>
@@ -90,7 +90,7 @@ type LegacySelection = (() => number[]) & { set: (ids: number[]) => void };
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" [appIcon]="sec.icon"></svg>
               <span>{{ sec.tabLabel }}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === sec.scope ? accentOf(sec).tabCountActive : 'bg-slate-200 text-slate-600'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === sec.scope ? accentOf(sec).tabCountActive : 'bg-slate-200 text-slate-600'">
                 {{ idsOf(sec.scope).length }}/{{ itemsOf(sec).length }}
               </span>
             </button>

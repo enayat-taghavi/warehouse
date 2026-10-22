@@ -29,7 +29,7 @@ function faCount(n: number | null | undefined): string {
     } @else {
       <div class="flex items-center gap-1.5">
         <span class="text-slate-400 text-[10px]">پروژه‌ها:</span>
-        <span class="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded-full text-[10px] inline-flex items-center gap-1">
+        <span class="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="briefcase"></svg>
           <span>{{ fa(company?.projects_count) }}</span>
         </span>

@@ -53,7 +53,7 @@ export interface NotificationItem {
       <!-- Dropdown Popover -->
       <div
         *ngIf="isOpen()"
-        class="absolute left-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 transition-all animate-in fade-in slide-in-from-top-2 duration-150"
+        class="absolute left-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
         <div class="px-4 py-3 bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
@@ -93,7 +93,7 @@ export interface NotificationItem {
             [ngClass]="{'bg-indigo-50/30 dark:bg-indigo-950/20': !item.is_read}"
           >
             <div
-              class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs shadow-2xs mt-0.5"
+              class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs shadow-sm mt-0.5"
               [ngClass]="item.is_read ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
@@ -111,7 +111,7 @@ export interface NotificationItem {
               *ngIf="!item.is_read"
               type="button"
               (click)="markAsRead(item, $event)"
-              class="shrink-0 p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors rounded-lg hover:bg-white dark:hover:bg-slate-700 shadow-2xs cursor-pointer"
+              class="shrink-0 p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors rounded-lg hover:bg-white dark:hover:bg-slate-700 shadow-sm cursor-pointer"
               title="علامت‌گذاری به عنوان خوانده‌شده"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>

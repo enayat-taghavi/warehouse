@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 
 const ROW_CONTAINER_CLASSES: Record<'md' | 'lg', string> = {
-  md: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-3',
-  lg: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:flex-wrap lg:items-center justify-between gap-3',
+  md: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-3',
+  lg: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:flex-wrap lg:items-center justify-between gap-3',
 };
 
 const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {

@@ -37,7 +37,7 @@ const OVERFLOW_LABEL_CLASSES: Record<
 };
 
 const TONE_CLASSES: Record<ActionTone, string> = {
-  primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs border border-transparent',
+  primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm border border-transparent',
   indigo: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80',
   emerald: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100/80',
   rose: 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100/80',

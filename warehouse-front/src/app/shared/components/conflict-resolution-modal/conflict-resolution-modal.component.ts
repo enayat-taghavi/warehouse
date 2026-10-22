@@ -115,14 +115,14 @@ const IGNORED_COMPARE_KEYS = new Set([
             <button
               type="button"
               (click)="selectAllServer()"
-              class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+              class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold transition-all cursor-pointer shadow-sm"
             >
               انتخاب کل نسخه سرور
             </button>
             <button
               type="button"
               (click)="selectAllLocal()"
-              class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+              class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold transition-all cursor-pointer shadow-sm"
             >
               انتخاب کل تغییرات من
             </button>
@@ -133,7 +133,7 @@ const IGNORED_COMPARE_KEYS = new Set([
         <div class="space-y-3 max-h-[40vh] overflow-y-auto px-0.5 py-1">
           <div
             *ngFor="let c of conflicts"
-            class="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-2xs space-y-2.5 transition-all"
+            class="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm space-y-2.5 transition-all"
           >
             <!-- Field Title -->
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
@@ -150,7 +150,7 @@ const IGNORED_COMPARE_KEYS = new Set([
                 (click)="c.choice = 'local'"
                 class="p-2.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between"
                 [ngClass]="c.choice === 'local' 
-                  ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 shadow-xs' 
+                  ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 shadow-sm' 
                   : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'"
               >
                 <div class="flex items-center justify-between mb-1.5">
@@ -177,7 +177,7 @@ const IGNORED_COMPARE_KEYS = new Set([
                 (click)="c.choice = 'server'"
                 class="p-2.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between"
                 [ngClass]="c.choice === 'server' 
-                  ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 shadow-xs' 
+                  ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 shadow-sm' 
                   : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'"
               >
                 <div class="flex items-center justify-between mb-1.5">

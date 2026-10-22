@@ -723,7 +723,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       const colspanTotal = isOperationsContext ? 2 : 1;
 
       const htmlContent = `
-        <div class="mt-4 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
+        <div class="mt-4 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
           <table class="w-full text-xs">
             <thead class="bg-slate-100/90 text-slate-600 border-b border-slate-200">
               ${tableHeaderHtml}

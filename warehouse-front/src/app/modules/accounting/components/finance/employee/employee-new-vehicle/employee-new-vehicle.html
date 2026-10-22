@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-surface-canvas/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: انتخابگر بخش فعال و ناوبری زیرتب‌ها در کپسول محصور -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -18,7 +18,7 @@
           </button>
           <button
             type="button"
-            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-surface text-indigo-700 shadow-2xs cursor-default">
+            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-surface text-indigo-700 shadow-sm cursor-default">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
             <span>تعریف خودرو</span>
           </button>
@@ -115,7 +115,7 @@
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange()"
           placeholder="جستجوی پلاک، راننده، شماره تماس، کد ملی..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-surface border border-line rounded-xl focus:outline-none focus:border-indigo-500 shadow-2xs font-medium placeholder:text-fg-subtle" />
+          class="w-full pr-8 pl-8 py-1.5 text-xs bg-surface border border-line rounded-xl focus:outline-none focus:border-indigo-500 shadow-sm font-medium placeholder:text-fg-subtle" />
         <button
           *ngIf="searchQuery"
           type="button"
@@ -162,7 +162,7 @@
             <!-- شماره پلاک ملی با دکمه کپی سریع -->
             <td class="py-2.5 px-3 whitespace-nowrap">
               <div class="flex items-center gap-1.5">
-                <div class="inline-flex items-center bg-neutral-900 text-white rounded-lg px-2 py-1 font-mono text-xs font-bold border border-neutral-800 shadow-2xs gap-1.5" dir="ltr">
+                <div class="inline-flex items-center bg-neutral-900 text-white rounded-lg px-2 py-1 font-mono text-xs font-bold border border-neutral-800 shadow-sm gap-1.5" dir="ltr">
                   <span class="text-sky-400 font-black text-[10px]">IR</span>
                   <span class="tracking-wider">{{ v.plate_number }}</span>
                 </div>
@@ -245,7 +245,7 @@
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
               <div class="inline-flex flex-col items-center gap-1">
                 <span [ngClass]="getStatusBadgeClass(v.approval_status)"
-                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-2xs"
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-sm"
                       [title]="getFullStatusDescription(v.approval_status)">
                   <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="getStatusIcon(v.approval_status)" [attr.aria-label]="getStatusLabel(v.approval_status)"></svg>
                   <span>{{ getStatusLabel(v.approval_status) }}</span>
@@ -254,7 +254,7 @@
                 <!-- برچسب تغییرات معلق (Pending Changes) -->
                 <span *ngIf="v.has_pending_changes || v.pending_change_request"
                       (click)="openPendingDiffModal(v)"
-                      class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300 text-[9px] font-bold cursor-pointer hover:bg-amber-200 transition-colors inline-flex items-center gap-1"
+                      class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 text-[9px] font-bold cursor-pointer hover:bg-amber-200 transition-colors inline-flex items-center gap-1"
                       title="مشاهده مقایسه تغییرات ارسال شده">
                   <svg class="w-3 h-3 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
                   <span>تغییرات معلق</span>
@@ -380,7 +380,7 @@
           <!-- ردیف خالی -->
           <tr *ngIf="filteredVehicles.length === 0 && !isLoadingVehicles">
             <td colspan="8" class="py-12 text-center text-fg-subtle">
-              <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100/80 flex items-center justify-center text-2xl mb-3 shadow-2xs">
+              <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100/80 flex items-center justify-center text-2xl mb-3 shadow-sm">
                 <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
               </div>
               <p class="font-black text-fg/80 text-xs">هیچ خودرویی با فیلتر جاری یافت نشد</p>
@@ -418,7 +418,7 @@
             <span class="font-black text-xs text-indigo-950">{{ getVehicleTypeLabel(v.vehicle_type) }}</span>
             <span class="text-[10px] text-indigo-800/80 font-medium">({{ getOwnershipTypeLabel(v.ownership_type) }})</span>
           </div>
-          <div class="inline-flex items-center bg-neutral-900 text-white rounded-lg px-2 py-0.5 font-mono text-xs font-bold border border-neutral-800 shadow-2xs" dir="ltr">
+          <div class="inline-flex items-center bg-neutral-900 text-white rounded-lg px-2 py-0.5 font-mono text-xs font-bold border border-neutral-800 shadow-sm" dir="ltr">
             <span class="text-sky-400 font-black text-[9px] mr-1">IR</span>
             <span>{{ v.plate_number }}</span>
           </div>
@@ -431,7 +431,7 @@
             <span *ngIf="v.driver_national_code" class="text-[10px] text-fg-muted font-mono">({{ v.driver_national_code }})</span>
           </div>
           <span [ngClass]="getStatusBadgeClass(v.approval_status)"
-                class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-2xs">
+                class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-sm">
             <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="getStatusIcon(v.approval_status)" [attr.aria-label]="getStatusLabel(v.approval_status)"></svg>
             <span>{{ getStatusLabel(v.approval_status) }}</span>
           </span>
@@ -547,9 +547,9 @@
        aria-modal="true"
        aria-labelledby="newVehicleModalTitle"
        (click)="closeNewVehicleModal()"
-       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden">
+       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm overflow-hidden">
     <div (click)="$event.stopPropagation()"
-         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-3xl w-full border border-line shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[94vh] sm:max-h-[92vh]">
+         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-3xl w-full border border-line shadow-2xl overflow-hidden slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[94vh] sm:max-h-[92vh]">
       
       <!-- هدر مودال -->
       <div class="p-3.5 md:p-4 border-b border-line-subtle flex items-center justify-between bg-surface-muted">
@@ -666,7 +666,7 @@
                   [(ngModel)]="platePart1"
                   (input)="onPlatePart1Input($event)"
                   placeholder="12"
-                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-surface-muted disabled:text-fg-muted" />
+                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-sm disabled:bg-surface-muted disabled:text-fg-muted" />
                 <span class="block text-center text-[9px] text-fg-subtle mt-1">۲ رقم</span>
               </div>
 
@@ -677,7 +677,7 @@
                   [disabled]="isReadOnlyMode"
                   [(ngModel)]="platePart2"
                   (change)="onPlatePart2Change()"
-                  class="w-full py-2 text-center text-sm font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs cursor-pointer disabled:bg-surface-muted disabled:text-fg-muted">
+                  class="w-full py-2 text-center text-sm font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-sm cursor-pointer disabled:bg-surface-muted disabled:text-fg-muted">
                   <option *ngFor="let l of plateLetters" [value]="l">{{ l }}</option>
                 </select>
                 <span class="block text-center text-[9px] text-fg-subtle mt-1">حرف</span>
@@ -694,7 +694,7 @@
                   (input)="onPlatePart3Input($event)"
                   (keydown)="onPlateKeydown($event, 3)"
                   placeholder="345"
-                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-surface-muted disabled:text-fg-muted" />
+                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-sm disabled:bg-surface-muted disabled:text-fg-muted" />
                 <span class="block text-center text-[9px] text-fg-subtle mt-1">۳ رقم</span>
               </div>
 
@@ -709,14 +709,14 @@
                   (input)="onPlatePart4Input($event)"
                   (keydown)="onPlateKeydown($event, 4)"
                   placeholder="63"
-                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-surface-muted disabled:text-fg-muted" />
+                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-sm disabled:bg-surface-muted disabled:text-fg-muted" />
                 <span class="block text-center text-[9px] text-fg-subtle mt-1">ایران (کد)</span>
               </div>
             </div>
 
             <!-- پیش‌نمایش گرافیکی پلاک ملی -->
             <div class="flex justify-center pt-1" dir="ltr">
-              <div class="inline-flex items-stretch border-2 border-neutral-900 rounded-lg overflow-hidden bg-surface shadow-xs">
+              <div class="inline-flex items-stretch border-2 border-neutral-900 rounded-lg overflow-hidden bg-surface shadow-sm">
                 <!-- نوار آبی سمت چپ -->
                 <div class="bg-blue-800 text-white px-2 py-1 flex flex-col items-center justify-between text-[8px] font-mono leading-none">
                   <span class="font-bold tracking-tighter">I.R.</span>
@@ -966,7 +966,7 @@
                   dir="ltr"
                   class="w-full bg-transparent border-0 text-left font-mono font-bold tracking-wider text-xs px-3 py-2 pr-12 focus:outline-none text-fg" />
                 <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button *ngIf="newVehicle.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-7 h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-2xs'" title="کپی شماره شبا">
+                  <button *ngIf="newVehicle.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-7 h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-sm'" title="کپی شماره شبا">
                     <svg *ngIf="!isShebaCopied" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
                     <svg *ngIf="isShebaCopied" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                   </button>
@@ -1036,11 +1036,11 @@
                     class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-fg placeholder:text-fg-subtle" 
                   />
                   <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button *ngIf="newVehicle.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-2xs'" title="کپی شماره حساب">
+                    <button *ngIf="newVehicle.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-sm'" title="کپی شماره حساب">
                       <svg *ngIf="!isAccountCopied" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
                       <svg *ngIf="isAccountCopied" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                     </button>
-                    <button *ngIf="newVehicle.account_number && newVehicle.bank_name" type="button" (click)="convertAccountToShebaNow()" class="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all flex items-center justify-center cursor-pointer shadow-2xs text-xs font-bold" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
+                    <button *ngIf="newVehicle.account_number && newVehicle.bank_name" type="button" (click)="convertAccountToShebaNow()" class="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all flex items-center justify-center cursor-pointer shadow-sm text-xs font-bold" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
                       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
                     </button>
                   </div>
@@ -1054,7 +1054,7 @@
                 type="button"
                 (click)="addCurrentAsNewAccount()"
                 [disabled]="!newVehicle.sheba_number || !shebaValidationResult?.isValid"
-                class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-2xs flex items-center gap-1">
+                class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-create"></svg>
                 <span>ثبت و افزودن این حساب به پرونده</span>
               </button>
@@ -1339,9 +1339,9 @@
        aria-modal="true"
        aria-labelledby="pendingDiffModalTitle"
        (click)="closePendingDiffModal()"
-       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden">
+       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm overflow-hidden">
     <div (click)="$event.stopPropagation()"
-         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-line shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-line shadow-2xl overflow-hidden slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
       <div class="p-4 md:p-5 border-b border-line-subtle flex items-center justify-between bg-amber-50/70">
         <div>
           <h3 id="pendingDiffModalTitle" class="text-sm font-black text-amber-900 flex items-center gap-2">
@@ -1416,9 +1416,9 @@
        aria-modal="true"
        aria-labelledby="timelineModalTitle"
        (click)="closeTimelineModal()"
-       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden">
+       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm overflow-hidden">
     <div (click)="$event.stopPropagation()"
-         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-line shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-line shadow-2xl overflow-hidden slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
       
       <div class="p-4 md:p-5 border-b border-line-subtle flex items-center justify-between bg-surface-muted">
         <div>
@@ -1454,7 +1454,7 @@
         <div *ngIf="!isLoadingTimeline && timelineLogs.length > 0" class="relative border-r-2 border-indigo-100 pr-4 space-y-4 mr-2">
           <div *ngFor="let log of timelineLogs" class="relative">
             <!-- نقطه شاخص تایملاین -->
-            <span class="absolute -right-[23px] top-1.5 w-3 h-3 rounded-full bg-indigo-600 border-2 border-surface shadow-2xs"></span>
+            <span class="absolute -right-[23px] top-1.5 w-3 h-3 rounded-full bg-indigo-600 border-2 border-surface shadow-sm"></span>
             
             <div class="bg-surface-muted p-3 rounded-2xl border border-line space-y-1">
               <div class="flex items-center justify-between gap-2">
@@ -1497,7 +1497,7 @@
        role="dialog"
        aria-modal="true"
        (click)="closeLightbox()"
-       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm fade-in duration-200">
     <div (click)="$event.stopPropagation()" class="max-w-3xl max-h-[90vh] bg-surface rounded-3xl overflow-hidden shadow-2xl flex flex-col">
       <div class="p-3.5 bg-neutral-900 text-white flex items-center justify-between">
         <span class="text-xs font-bold">{{ lightboxTitle }}</span>

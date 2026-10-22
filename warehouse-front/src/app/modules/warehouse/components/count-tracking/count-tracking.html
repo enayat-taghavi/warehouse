@@ -405,11 +405,11 @@
   <!-- ════════════════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isDrawerOpen" class="fixed inset-0 z-[220] overflow-hidden" dir="rtl">
     <!-- Backdrop Blur -->
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-300" (click)="closeDrawer()"></div>
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity fade-in duration-300" (click)="closeDrawer()"></div>
 
     <!-- Slide-Over Drawer Container -->
     <div class="fixed inset-y-0 left-0 max-w-full flex pl-0 sm:pl-10 z-10 pointer-events-none">
-      <div class="w-screen max-w-lg bg-white shadow-2xl border-r border-slate-200 pointer-events-auto flex flex-col h-full transform transition-transform duration-300 ease-in-out animate-in slide-in-from-left">
+      <div class="w-screen max-w-lg bg-white shadow-2xl border-r border-slate-200 pointer-events-auto flex flex-col h-full transform transition-transform duration-300 ease-in-out slide-in-from-left">
         
         <!-- Drawer Header -->
         <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between flex-none">
@@ -436,21 +436,21 @@
           <!-- Key Metrics Grid -->
           <div class="grid grid-cols-3 gap-2.5">
             <!-- System Balance -->
-            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs text-center">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-center">
               <span class="text-[10px] font-bold text-slate-400 block mb-1">موجودی سیستم</span>
               <span class="text-sm font-black text-slate-700">
                 {{ selectedTaskForDrawer?._system_balance !== undefined && selectedTaskForDrawer?._system_balance !== null ? selectedTaskForDrawer?._system_balance : '-' }}
               </span>
             </div>
             <!-- Counted Balance -->
-            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs text-center">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-center">
               <span class="text-[10px] font-bold text-slate-400 block mb-1">شمارش شده</span>
               <span class="text-sm font-black" [ngClass]="getBalanceColorClass(selectedTaskForDrawer)">
                 {{ selectedTaskForDrawer?.counted_balance !== null ? selectedTaskForDrawer?.counted_balance : '-' }}
               </span>
             </div>
             <!-- Discrepancy -->
-            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs text-center">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-center">
               <span class="text-[10px] font-bold text-slate-400 block mb-1">میزان مغایرت</span>
               <span class="text-sm font-black" 
                     [class.text-emerald-600]="selectedTaskForDrawer?._discrepancy === 0"
@@ -466,7 +466,7 @@
           </div>
 
           <!-- Warehouse & Location Info Box -->
-          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between text-xs">
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
             <div class="flex items-center gap-2">
               <span class="text-slate-400 font-bold text-[11px]">انبار:</span>
               <span class="font-black text-slate-800">{{ selectedTaskForDrawer?.item_details?.warehouse_name || '-' }}</span>
@@ -496,12 +496,12 @@
             <div *ngIf="selectedTaskForDrawer?.history && selectedTaskForDrawer.history.length > 0; else emptyTimeline" class="relative pr-6 space-y-4 before:absolute before:top-2 before:bottom-2 before:right-2.5 before:w-0.5 before:bg-slate-200">
               <div *ngFor="let h of selectedTaskForDrawer.history; let idx = index" class="relative group">
                 <!-- Timeline Dot -->
-                <div class="absolute -right-6 top-1.5 w-5 h-5 rounded-full bg-white border-2 border-indigo-600 shadow-xs flex items-center justify-center">
+                <div class="absolute -right-6 top-1.5 w-5 h-5 rounded-full bg-white border-2 border-indigo-600 shadow-sm flex items-center justify-center">
                   <div class="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
                 </div>
 
                 <!-- Event Card -->
-                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2 hover:border-indigo-200 transition-colors">
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2 hover:border-indigo-200 transition-colors">
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-black" [class]="getActionBadgeClass(h.action_type)">
                       {{ getActionTypeName(h.action_type) }}
@@ -598,9 +598,9 @@
   <!-- Team Performance Modal (مودال خلاصه عملکرد و راندمان افراد تیم)               -->
   <!-- ════════════════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isPerformanceModalOpen" class="fixed inset-0 z-[210] flex items-center justify-center p-4" dir="rtl">
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" (click)="closePerformanceModal()"></div>
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" (click)="closePerformanceModal()"></div>
 
-    <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+    <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh] fade-in zoom-in-95 duration-200">
       
       <!-- Modal Header -->
       <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-none">
@@ -706,7 +706,7 @@
 
         <!-- TAB 2: COUNTERS PRODUCTIVITY -->
         <div *ngIf="performanceActiveTab === 'counters'" class="space-y-4">
-          <div class="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+          <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <table class="w-full text-right text-xs">
               <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] font-black">
                 <tr>
@@ -763,7 +763,7 @@
 
         <!-- TAB 3: SUPERVISORS EFFICIENCY -->
         <div *ngIf="performanceActiveTab === 'supervisors'" class="space-y-4">
-          <div class="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+          <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <table class="w-full text-right text-xs">
               <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] font-black">
                 <tr>

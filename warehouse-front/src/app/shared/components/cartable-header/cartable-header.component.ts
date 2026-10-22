@@ -79,7 +79,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
         <!-- Case 1: Contextual Multi-Select Bar -->
         <div 
           *ngIf="selectedCount > 0"
-          class="flex items-center justify-between gap-2 p-2 mb-3 bg-slate-900 text-white rounded-2xl shadow-md animate-in fade-in zoom-in-95 duration-150 border border-slate-800"
+          class="flex items-center justify-between gap-2 p-2 mb-3 bg-slate-900 text-white rounded-2xl shadow-md fade-in zoom-in-95 duration-150 border border-slate-800"
         >
           <!-- Right: Cancel & Count -->
           <div class="flex items-center gap-2 pr-1">
@@ -155,7 +155,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1"
             >
               <span>{{ getStatusLabel('pending') }}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="activeStatus === 'pending' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="activeStatus === 'pending' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'">
                 {{ statusCounts.pending }}
               </span>
             </button>
@@ -165,10 +165,10 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               *ngIf="statusCounts.recount > 0 || activeStatus === 'recount'"
               (click)="onStatusChange('recount')" 
               [ngClass]="activeStatus === 'recount' ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-slate-600 border border-slate-200/80'" 
-              class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 animate-in fade-in duration-150"
+              class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 fade-in duration-150"
             >
               <span>{{ getStatusLabel('recount') }}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="activeStatus === 'recount' ? 'bg-rose-400 text-white' : 'bg-rose-50 text-rose-700'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="activeStatus === 'recount' ? 'bg-rose-400 text-white' : 'bg-rose-50 text-rose-700'">
                 {{ statusCounts.recount }}
               </span>
             </button>
@@ -178,10 +178,10 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               *ngIf="statusCounts.initial > 0 || activeStatus === 'initial'"
               (click)="onStatusChange('initial')" 
               [ngClass]="activeStatus === 'initial' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border border-indigo-200/80'" 
-              class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 animate-in fade-in duration-150"
+              class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 fade-in duration-150"
             >
               <span>{{ getStatusLabel('initial') }}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="activeStatus === 'initial' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="activeStatus === 'initial' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700'">
                 {{ statusCounts.initial }}
               </span>
             </button>
@@ -193,7 +193,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1"
             >
               <span>{{ getStatusLabel('completed') }}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="activeStatus === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="activeStatus === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700'">
                 {{ statusCounts.completed }}
               </span>
             </button>
@@ -205,7 +205,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1"
             >
               <span>{{ getStatusLabel('all') }}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="activeStatus === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'">
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="activeStatus === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'">
                 {{ statusCounts.all }}
               </span>
             </button>

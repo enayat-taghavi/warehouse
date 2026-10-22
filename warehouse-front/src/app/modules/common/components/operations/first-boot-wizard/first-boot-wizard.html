@@ -1,5 +1,5 @@
 <div *ngIf="companyService.isFirstBoot$ | async" class="first-boot-overlay fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-all select-none" dir="rtl">
-  <div class="first-boot-card bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+  <div class="first-boot-card bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] fade-in zoom-in-95 duration-200">
     
     <!-- سربرگ گرادیانی ویزارد -->
     <div class="p-6 bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 text-white relative shrink-0">
@@ -30,7 +30,7 @@
       </div>
 
       <!-- پیام خطا در صورت وجود -->
-      <div *ngIf="errorMessage" class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-bold flex items-center gap-2 animate-in fade-in">
+      <div *ngIf="errorMessage" class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-bold flex items-center gap-2 fade-in">
         <svg appIcon="status-error" class="w-4 h-4 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
         <span class="flex-1">{{ errorMessage }}</span>
       </div>
@@ -131,7 +131,7 @@
           <div class="flex items-center gap-3 min-w-0">
             <div
               [ngClass]="formData.has_warehouse_module ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'"
-              class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors shadow-2xs"
+              class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors shadow-sm"
             >
               <svg appIcon="package" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
             </div>

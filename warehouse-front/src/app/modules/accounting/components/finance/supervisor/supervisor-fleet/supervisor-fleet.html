@@ -64,7 +64,7 @@
 
   <!-- نوار عملیات گروهی (Batch Action Floating Bar) -->
   <div *ngIf="activeSubTab === 'new' && selectedVehicleIds.size > 0"
-       class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 animate-in fade-in duration-150">
+       class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 fade-in duration-150">
     <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" class="w-4 h-4 text-indigo-600"></svg>
       <span>{{ selectedVehicleIds.size }} پرونده خودرو جهت تایید گروهی انتخاب شده است.</span>
@@ -97,7 +97,7 @@
     </div>
 
     <!-- جدول دسکتاپ -->
-    <div *ngIf="newVehiclesList.length > 0" class="hidden md:block bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div *ngIf="newVehiclesList.length > 0" class="hidden md:block bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -191,7 +191,7 @@
 
     <!-- کارت‌های موبایل (تسک ۸.۵) -->
     <div *ngIf="newVehiclesList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let item of newVehiclesList" class="bg-surface rounded-2xl p-4 border border-line shadow-xs space-y-3">
+      <div *ngFor="let item of newVehiclesList" class="bg-surface rounded-2xl p-4 border border-line shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <input
@@ -272,7 +272,7 @@
       <p class="font-bold text-sm">هیچ رکورد کارکرد ماشین‌آلاتی در این تاریخ ثبت نشده است.</p>
     </div>
 
-    <div *ngIf="workLogsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div *ngIf="workLogsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -333,7 +333,7 @@
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای ناوگان وجود ندارد.</p>
     </div>
 
-    <div *ngIf="changeRequestsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div *ngIf="changeRequestsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -386,7 +386,7 @@
 
   <!-- تب ۴: کل ناوگان -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
-    <div class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -433,8 +433,8 @@
   </div>
 
   <!-- ── مودال ۱: ثبت یادداشت تایید (Approval Modal) ── -->
-  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50/80 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-900">{{ approvalTarget?.title }}</h3>
         <button
@@ -474,8 +474,8 @@
   </div>
 
   <!-- ── مودال ۲: تایید گروهی سرپرست (Batch Approve Modal) ── -->
-  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-950">تایید گروهی {{ selectedVehicleIds.size }} خودرو</h3>
         <button
@@ -518,8 +518,8 @@
   </div>
 
   <!-- ── مودال ۳: ثبت علت رد یا عودت (با هشدار Purge مشروط) ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50/80 border-amber-100 text-amber-900' : 'bg-rose-50/80 border-rose-100 text-rose-900'">
         <h3 class="text-sm font-black">{{ rejectTarget?.title }}</h3>
@@ -615,8 +615,8 @@
 
   <!-- ── مودال ۴: مشاهده کامل پرونده خودرو (Vehicle Profile Viewer) ── -->
   <div *ngIf="isViewVehicleModalOpen && selectedViewVehicle"
-       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 md:p-6">
-    <div class="bg-surface w-full max-w-3xl rounded-3xl shadow-2xl border border-line overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-150">
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 md:p-6">
+    <div class="bg-surface w-full max-w-3xl rounded-3xl shadow-2xl border border-line overflow-hidden flex flex-col max-h-[90vh] fade-in zoom-in duration-150">
       
       <!-- هدر مودال پرونده -->
       <div class="p-4 bg-surface-alt border-b border-line flex items-center justify-between">
@@ -826,8 +826,8 @@
   </div>
 
   <!-- ── مودال ۵: مقایسه تفاوت‌ها (Diff Viewer) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌های ناوگان (Diff): {{ selectedDiffCR?.plate_number }}

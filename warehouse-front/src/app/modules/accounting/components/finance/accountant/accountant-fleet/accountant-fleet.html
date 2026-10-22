@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-surface/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون انتخاب بخش و کپسول زیرتب‌های ناوگان -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -108,7 +108,7 @@
 
   <!-- نوار عملیات گروهی تایید مالی (Batch Approval Floating Bar) -->
   <div *ngIf="activeSubTab === 'new' && selectedVehicleIds.size > 0"
-       class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 animate-in fade-in duration-150">
+       class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 fade-in duration-150">
     <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" class="w-4 h-4 text-indigo-600"></svg>
       <span>{{ selectedVehicleIds.size }} خودرو واجد شرایط تایید مالی انتخاب شده است.</span>
@@ -141,7 +141,7 @@
     </div>
 
     <!-- جدول دسکتاپ -->
-    <div *ngIf="newVehiclesList.length > 0" class="hidden md:block bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div *ngIf="newVehiclesList.length > 0" class="hidden md:block bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -255,7 +255,7 @@
 
     <!-- کارت‌های موبایل (تسک ۹.۶) -->
     <div *ngIf="newVehiclesList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let item of newVehiclesList" class="bg-surface rounded-2xl p-4 border border-line shadow-xs space-y-3">
+      <div *ngFor="let item of newVehiclesList" class="bg-surface rounded-2xl p-4 border border-line shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <input
@@ -335,19 +335,19 @@
   <div *ngIf="activeSubTab === 'settlement'" class="space-y-3">
     <!-- شاخص‌های تسویه و فایل پرداخت بانکی -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+      <div class="bg-surface rounded-2xl border border-line shadow-sm p-3 flex flex-col gap-1 min-w-0">
         <span class="text-[11px] font-bold text-muted">کل خودروها</span>
         <span class="text-base font-black text-fg tabular-nums">{{ settlementSummary ? ((settlementSummary.total_vehicles_count || 0) | number) : '—' }}</span>
       </div>
-      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+      <div class="bg-surface rounded-2xl border border-line shadow-sm p-3 flex flex-col gap-1 min-w-0">
         <span class="text-[11px] font-bold text-muted">رانندگان مشمول تسویه</span>
         <span class="text-base font-black text-indigo-700 tabular-nums">{{ settlementSummary ? ((settlementSummary.active_contractor_count || 0) | number) : '—' }}</span>
       </div>
-      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+      <div class="bg-surface rounded-2xl border border-line shadow-sm p-3 flex flex-col gap-1 min-w-0">
         <span class="text-[11px] font-bold text-muted">کل سرویس‌ها</span>
         <span class="text-base font-black text-indigo-700 tabular-nums">{{ settlementSummary ? ((settlementSummary.total_fleet_trips || 0) | number) : '—' }}</span>
       </div>
-      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+      <div class="bg-surface rounded-2xl border border-line shadow-sm p-3 flex flex-col gap-1 min-w-0">
         <span class="text-[11px] font-bold text-muted">جمع قابل پرداخت (ریال)</span>
         <span class="text-base font-black text-emerald-700 tabular-nums">{{ settlementSummary ? ((settlementSummary.total_payable_settlement || 0) | number) : '—' }}</span>
       </div>
@@ -388,7 +388,7 @@
       <p class="font-bold text-sm">هیچ صورت‌وضعیت تسویه‌حسابی برای ناوگان در این دوره ثبت نشده است.</p>
     </div>
 
-    <div *ngIf="settlementItems.length > 0" class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div *ngIf="settlementItems.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -434,7 +434,7 @@
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای ناوگان وجود ندارد.</p>
     </div>
 
-    <div *ngIf="changeRequests.length > 0" class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div *ngIf="changeRequests.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -492,7 +492,7 @@
 
   <!-- زیرتب ۴: همه ناوگان -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
-    <div class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
@@ -526,8 +526,8 @@
   </div>
 
   <!-- ── تسک ۹.۲ و ۹.۳: مودال تنظیم نرخ کرایه و شبا ناوگان + شاخص هم‌تیپ‌ها ── -->
-  <div *ngIf="isVehicleModalOpen && editingVehicle" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isVehicleModalOpen && editingVehicle" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-line overflow-hidden fade-in zoom-in duration-150">
       
       <div class="p-4 bg-surface-alt border-b border-line flex items-center justify-between">
         <div>
@@ -616,7 +616,7 @@
                 (click)="convertAccountToShebaNow()"
                 title="تولید شماره شبا از حساب و بانک"
                 aria-label="تولید شماره شبا"
-                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs flex items-center justify-center active:scale-95">
+                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm flex items-center justify-center active:scale-95">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap" class="w-4 h-4"></svg>
               </button>
             </div>
@@ -708,7 +708,7 @@
                   *ngIf="!acc.is_primary"
                   type="button"
                   (click)="setPrimaryBankAccount(acc)"
-                  class="px-2.5 py-1 rounded-lg bg-surface hover:bg-indigo-50 border border-line hover:border-indigo-300 text-indigo-700 font-bold text-[11px] cursor-pointer shadow-2xs transition-colors">
+                  class="px-2.5 py-1 rounded-lg bg-surface hover:bg-indigo-50 border border-line hover:border-indigo-300 text-indigo-700 font-bold text-[11px] cursor-pointer shadow-sm transition-colors">
                   تعیین به عنوان حساب اصلی
                 </button>
               </div>
@@ -740,8 +740,8 @@
   </div>
 
   <!-- ── تسک ۹.۵: مودال ثبت علت رد یا عودت با انتخاب مقصد عودت ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
         <h3 class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده خودرو' : 'رد قطعی پرونده' }}</h3>
@@ -810,8 +810,8 @@
   </div>
 
   <!-- ── تسک ۹.۶: مودال تایید گروهی حسابدار ── -->
-  <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-950">تایید مالی گروهی {{ selectedVehicleIds.size }} خودرو</h3>
         <button
@@ -853,8 +853,8 @@
   </div>
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Viewer) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-    <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌های ناوگان (Diff): {{ selectedDiffCR?.plate_number }}

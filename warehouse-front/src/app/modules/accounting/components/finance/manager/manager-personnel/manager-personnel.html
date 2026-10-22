@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون انتخاب بخش و کپسول زیرتب‌های مدیر -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -60,7 +60,7 @@
       <p class="font-bold text-sm">هیچ پرونده پرسنلی معلق برای تصویب نهایی مدیر در این بخش وجود ندارد.</p>
     </div>
 
-    <div *ngIf="pendingManagerList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="pendingManagerList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -126,7 +126,7 @@
       <p class="font-bold text-sm">هیچ قرارداد یا حکم استخدامی در انتظار تایید وجود ندارد.</p>
     </div>
 
-    <div *ngIf="contractsList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="contractsList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -163,7 +163,7 @@
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای تصویب مدیر وجود ندارد.</p>
     </div>
 
-    <div *ngIf="changeRequests.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="changeRequests.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -215,7 +215,7 @@
 
   <!-- تب ۴: پرسنل فعال -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -273,8 +273,8 @@
   </div>
 
   <!-- ── مودال تصویب و یادداشت مدیر (تسک ۱۰.۱ و ۱۰.۲) ── -->
-  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
           <span>👑</span> {{ approvalTarget?.title }}
@@ -291,7 +291,7 @@
             </span>
             <span
               *ngIf="getCostDeviationPercentage(approvalTarget?.item) !== null"
-              class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs"
+              class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm"
               [ngClass]="getCostDeviationPercentage(approvalTarget?.item)! <= 0
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : (getCostDeviationPercentage(approvalTarget?.item)! <= 15
@@ -305,21 +305,21 @@
 
           <!-- کارت‌های ریز محاسبات مالی -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm">
               <div class="text-slate-500 text-[10px]">ناخالص برآوردی پرسنل</div>
               <div class="font-mono font-black text-slate-800 mt-0.5">
                 {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getPersonnelGrossMonthly(approvalTarget?.item) !== null ? (getPersonnelGrossMonthly(approvalTarget?.item) | number) : '—') }}
                 <span class="text-[9px] text-slate-400 font-normal">ریال</span>
               </div>
             </div>
-            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm">
               <div class="text-slate-500 text-[10px]">سهم بیمه کارفرما و بیکاری</div>
               <div class="font-mono font-black text-amber-700 mt-0.5">
                 {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getEmployerInsuranceShare(approvalTarget?.item).cost !== null ? (getEmployerInsuranceShare(approvalTarget?.item).cost | number) : '—') }}
                 <span class="text-[9px] text-slate-400 font-normal">ریال</span>
               </div>
             </div>
-            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm">
               <div class="text-slate-500 text-[10px]">کل هزینه ماهانه کارفرما</div>
               <div class="font-mono font-black text-indigo-700 mt-0.5">
                 {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getTotalEmployerMonthlyCost(approvalTarget?.item) !== null ? (getTotalEmployerMonthlyCost(approvalTarget?.item) | number) : '—') }}
@@ -329,7 +329,7 @@
           </div>
 
           <!-- سطر هزینه کل سالانه -->
-          <div class="flex items-center justify-between text-[11px] bg-white px-3 py-2 rounded-xl border border-slate-200/80 shadow-2xs">
+          <div class="flex items-center justify-between text-[11px] bg-white px-3 py-2 rounded-xl border border-slate-200/80 shadow-sm">
             <span class="text-slate-600 font-bold">برآورد بار مالی سالانه (۱۲ ماه):</span>
             <span class="font-mono font-black text-slate-900">
               {{ getTotalEmployerYearlyCost(approvalTarget?.item) !== null ? (getTotalEmployerYearlyCost(approvalTarget?.item) | number) + ' ریال' : '—' }}
@@ -366,8 +366,8 @@
   </div>
 
   <!-- ── مودال عودت یا رد پرونده توسط مدیر (تسک ۱۰.۲) ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
           <span>⚠️</span> تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
@@ -423,8 +423,8 @@
   </div>
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Viewer) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌ها (Diff): {{ selectedDiffCR?.personnel_name }}
@@ -466,9 +466,9 @@
   </div>
 
   <!-- ── مودال قطع همکاری پرسنل دارای سابقه (DEF-18) ── -->
-  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
        role="dialog" aria-modal="true" aria-labelledby="end-collab-title">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
         <h3 id="end-collab-title" class="text-sm font-black text-amber-950">
           قطع همکاری: {{ endCollaborationTarget?.first_name }} {{ endCollaborationTarget?.last_name }}
@@ -509,8 +509,8 @@
   </app-smart-delete-modal>
 
   <!-- ── استعلام سابقه و مسدودسازی حذف پروندهٔ دارای سابقه (تسک ۱۰.۳) ── -->
-  <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2" class="w-4 h-4 text-rose-600 inline-block"></svg>

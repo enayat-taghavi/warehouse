@@ -1,7 +1,7 @@
 <div class="p-4 space-y-3">
 
   <!-- ═══ سربرگ صفحه چسبان (Sticky Action Bar) ═══ -->
-  <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 -mx-4 -mt-4 px-4 py-3 shadow-xs flex items-center justify-between flex-wrap gap-2 transition-all">
+  <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 -mx-4 -mt-4 px-4 py-3 shadow-sm flex items-center justify-between flex-wrap gap-2 transition-all">
     <div class="flex items-center gap-3">
       <div>
         <h1 class="text-base font-black text-slate-800">گزارش‌ساز پویا</h1>
@@ -103,7 +103,7 @@
         <div class="text-xs font-black text-slate-800 mb-2">۱. منبع داده</div>
         <div class="flex items-center gap-2 flex-wrap">
           <select [ngModel]="store.entityKey()" (ngModelChange)="onEntityChange($event)"
-                  class="text-xs px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 bg-white min-w-44 shadow-xs custom-select">
+                  class="text-xs px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 bg-white min-w-44 shadow-sm custom-select">
             <option [ngValue]="null" disabled>انتخاب موجودیت…</option>
             @for (e of store.entities(); track e.key) {
               <option [ngValue]="e.key" [title]="e.key">{{ e.label }}</option>
@@ -112,7 +112,7 @@
 
           <select [ngModel]="store.warehouseId()"
                   (ngModelChange)="onWarehouseChange($event)"
-                  class="text-xs px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 bg-white min-w-44 shadow-xs custom-select">
+                  class="text-xs px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 bg-white min-w-44 shadow-sm custom-select">
             <option [ngValue]="null">همه انبارهای مجاز</option>
             @for (w of warehouses(); track w.id) {
               <option [ngValue]="w.id">{{ w.name }}</option>
@@ -135,7 +135,7 @@
               @for (jm of store.joinsMeta(); track jm.key) {
                 @if (activeJoins().find(j => j.to === jm.key); as active) {
                   <!-- JOIN فعال -->
-                  <div class="flex items-center gap-1.5 bg-violet-50 border border-violet-200 rounded-xl px-2.5 py-1 shadow-xs"
+                  <div class="flex items-center gap-1.5 bg-violet-50 border border-violet-200 rounded-xl px-2.5 py-1 shadow-sm"
                        [title]="jm.target">
                     <span class="text-xs font-bold text-violet-700">{{ jm.label }}</span>
                     <select [ngModel]="active.type" (ngModelChange)="updateJoinType(jm.key, $event)"
@@ -180,7 +180,7 @@
             <div class="relative flex items-center">
               <input type="text" [ngModel]="fieldSearch()" (ngModelChange)="fieldSearch.set($event)"
                      placeholder="مثلاً: کد یکتا، fa_unic_code، دیسیپلین…"
-                     class="text-xs pr-7 pl-6 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 w-56 bg-slate-50/50 focus:bg-white transition-all shadow-2xs">
+                     class="text-xs pr-7 pl-6 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 w-56 bg-slate-50/50 focus:bg-white transition-all shadow-sm">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="action-search"></svg>
               @if (fieldSearch()) {
                 <button type="button" (click)="fieldSearch.set('')" class="absolute left-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer" title="پاک‌کردن جستجو">✕</button>
@@ -196,7 +196,7 @@
               @for (f of visibleFields(); track f.key) {
                 <button type="button" (click)="toggleField(f.key)" [disabled]="store.grouped()"
                         [title]="f.key"
-                        class="text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-2xs"
+                        class="text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-sm"
                         [class.bg-indigo-600]="store.selectedFields().includes(f.key)"
                         [class.text-white]="store.selectedFields().includes(f.key)"
                         [class.border-indigo-600]="store.selectedFields().includes(f.key)"
@@ -220,7 +220,7 @@
                   @for (f of group.fields; track f.key) {
                     <button type="button" (click)="toggleJoinField(f.key)" [disabled]="store.grouped()"
                             [title]="f.key"
-                            class="text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-2xs"
+                            class="text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-sm"
                             [class.bg-violet-600]="isJoinFieldSelected(f.key)"
                             [class.text-white]="isJoinFieldSelected(f.key)"
                             [class.border-violet-600]="isJoinFieldSelected(f.key)"
@@ -240,7 +240,7 @@
               <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
                 <span class="text-[11px] font-bold text-slate-500 ml-1">ترتیب ستون‌ها:</span>
                 @for (key of store.selectedFields(); track key; let i = $index) {
-                  <span class="inline-flex items-center gap-1.5 text-[11px] font-bold bg-slate-100/90 text-slate-800 rounded-xl px-2.5 py-1 border border-slate-200/80 shadow-2xs group"
+                  <span class="inline-flex items-center gap-1.5 text-[11px] font-bold bg-slate-100/90 text-slate-800 rounded-xl px-2.5 py-1 border border-slate-200/80 shadow-sm group"
                         [title]="key">
                     <button type="button" (click)="moveField(key, -1)" class="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer text-xs font-black" title="جابجایی به سمت راست">›</button>
                     <span>{{ getFieldLabel(key) }}</span>
@@ -282,7 +282,7 @@
             @for (f of groupableFields(); track f.key) {
               <button type="button" (click)="toggleGroupBy(f.key)"
                       [title]="f.key"
-                      class="text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer shadow-2xs active:scale-95"
+                      class="text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer shadow-sm active:scale-95"
                       [class.bg-amber-500]="store.groupBy().includes(f.key)"
                       [class.text-white]="store.groupBy().includes(f.key)"
                       [class.border-amber-500]="store.groupBy().includes(f.key)"
@@ -299,17 +299,17 @@
             <div class="pt-2.5 border-t border-slate-100 space-y-2">
               <div class="text-[11px] font-black text-slate-700">توابع تجمیعی روی ستون‌ها:</div>
               @for (agg of store.aggregations(); track $index; let i = $index) {
-                <div class="flex items-center gap-2 flex-wrap bg-slate-50/70 p-2 rounded-xl border shadow-2xs transition-all"
+                <div class="flex items-center gap-2 flex-wrap bg-slate-50/70 p-2 rounded-xl border shadow-sm transition-all"
                      [class.border-rose-300]="isRowAliasHasError(agg.alias, i)"
                      [class.border-slate-200/80]="!isRowAliasHasError(agg.alias, i)">
                   <select [ngModel]="agg.fn" (ngModelChange)="updateAggregation(i, { fn: $event })"
-                          class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-2xs custom-select">
+                          class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-sm custom-select">
                     @for (fn of aggFns; track fn.value) {
                       <option [ngValue]="fn.value" [disabled]="fn.value !== 'count' && isFieldCountOnly(agg.field)">{{ fn.label }}</option>
                     }
                   </select>
                   <select [ngModel]="agg.field" (ngModelChange)="updateAggregation(i, { field: $event })"
-                          class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-2xs custom-select">
+                          class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-sm custom-select">
                     @for (f of (agg.fn === 'count' ? allSelectableFields() : aggregatableFields()); track f.key) {
                       <option [ngValue]="f.key" [title]="f.key">{{ f.label }}</option>
                     }
@@ -319,7 +319,7 @@
                     <input type="text" [ngModel]="agg.label" (ngModelChange)="updateAggregation(i, { label: $event })"
                            maxlength="60"
                            placeholder="عنوان ستون (مثال: جمع موجودی)"
-                           class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-44 bg-white shadow-2xs">
+                           class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-44 bg-white shadow-sm">
                   </div>
                   <!-- شناسه انگلیسی ستون (SQL Alias) -->
                   <div class="relative flex items-center">
@@ -328,7 +328,7 @@
                            dir="ltr"
                            [class.border-rose-400]="isRowAliasHasError(agg.alias, i)"
                            [class.bg-rose-50/40]="isRowAliasHasError(agg.alias, i)"
-                           class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-36 bg-white shadow-2xs font-mono">
+                           class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-36 bg-white shadow-sm font-mono">
                     @if (isRowAliasConflict(agg.alias, i)) {
                       <span class="text-[10px] text-rose-600 font-bold mr-1.5">تداخل شناسه تکراری!</span>
                     } @else if (isRowAliasInvalidFormat(agg.alias)) {
@@ -341,7 +341,7 @@
                 </div>
               }
               <button type="button" (click)="addAggregation()"
-                      class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-200 rounded-xl px-2.5 py-1 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50">
+                      class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-200 rounded-xl px-2.5 py-1 transition-all cursor-pointer shadow-sm hover:bg-indigo-50">
                 + افزودن تابع تجمیعی
               </button>
 
@@ -349,15 +349,15 @@
               <div class="pt-2.5 border-t border-slate-100 space-y-2">
                 <div class="text-[11px] font-black text-slate-700">شرط روی نتایج تجمیع (HAVING):</div>
                 @for (h of store.having(); track $index; let i = $index) {
-                  <div class="flex items-center gap-2 flex-wrap bg-slate-50/70 p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+                  <div class="flex items-center gap-2 flex-wrap bg-slate-50/70 p-2 rounded-xl border border-slate-200/80 shadow-sm">
                     <select [ngModel]="h.alias" (ngModelChange)="updateHaving(i, { alias: $event })"
-                            class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-2xs custom-select">
+                            class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-sm custom-select">
                       @for (a of store.aggAliases(); track a) {
                         <option [ngValue]="a" [title]="a">{{ aliasLabel(a) }}</option>
                       }
                     </select>
                     <select [ngModel]="h.operator" (ngModelChange)="updateHaving(i, { operator: $event })"
-                            class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-2xs custom-select">
+                            class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-sm custom-select">
                       @for (op of havingOps; track op.value) {
                         <option [ngValue]="op.value">{{ op.label }}</option>
                       }
@@ -365,14 +365,14 @@
                     @if (h.operator === 'between') {
                       <input type="number" [ngModel]="havingBetweenVal(h.value, 0)"
                              (ngModelChange)="updateHavingBetween(i, 0, $event)" placeholder="از: 100" dir="ltr"
-                             class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-24 text-left bg-white shadow-2xs">
+                             class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-24 text-left bg-white shadow-sm">
                       <input type="number" [ngModel]="havingBetweenVal(h.value, 1)"
                              (ngModelChange)="updateHavingBetween(i, 1, $event)" placeholder="تا: 500" dir="ltr"
-                             class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-24 text-left bg-white shadow-2xs">
+                             class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-24 text-left bg-white shadow-sm">
                     } @else {
                       <input type="number" [ngModel]="h.value" (ngModelChange)="updateHaving(i, { value: $event })"
                              placeholder="مثال: 1000" dir="ltr"
-                             class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-28 text-left bg-white shadow-2xs">
+                             class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 w-28 text-left bg-white shadow-sm">
                     }
                     <button type="button" (click)="removeHaving(i)"
                             title="حذف شرط HAVING"
@@ -381,7 +381,7 @@
                 }
                 <button type="button" (click)="addHaving()" [disabled]="!store.aggAliases().length || store.having().length >= 10"
                         title="{{ store.having().length >= 10 ? 'حداکثر ۱۰ شرط مجاز است' : 'افزودن شرط روی نتیجه تجمیع' }}"
-                        class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-200 rounded-xl px-2.5 py-1 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                        class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-200 rounded-xl px-2.5 py-1 transition-all cursor-pointer shadow-sm hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed">
                   + افزودن شرط روی نتایج
                 </button>
               </div>
@@ -405,7 +405,7 @@
                 <div class="flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/80">
                   <button type="button" (click)="setTableDensity('standard')"
                           [class.bg-white]="tableDensity() === 'standard'"
-                          [class.shadow-2xs]="tableDensity() === 'standard'"
+                          [class.shadow-sm]="tableDensity() === 'standard'"
                           [class.text-indigo-700]="tableDensity() === 'standard'"
                           [class.text-slate-600]="tableDensity() !== 'standard'"
                           class="px-2 py-0.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer">
@@ -413,7 +413,7 @@
                   </button>
                   <button type="button" (click)="setTableDensity('compact')"
                           [class.bg-white]="tableDensity() === 'compact'"
-                          [class.shadow-2xs]="tableDensity() === 'compact'"
+                          [class.shadow-sm]="tableDensity() === 'compact'"
                           [class.text-indigo-700]="tableDensity() === 'compact'"
                           [class.text-slate-600]="tableDensity() !== 'compact'"
                           class="px-2 py-0.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer">
@@ -475,7 +475,7 @@
                 <div class="text-xs font-black text-slate-800">۶. نمودار تحلیلی</div>
 
                 <select [ngModel]="store.chart()?.type ?? ''" (ngModelChange)="setChart({ type: $event })"
-                        class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-2xs">
+                        class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-sm">
                   <option value="" disabled>نوع نمودار…</option>
                   @for (t of chartTypes; track t.value) {
                     <option [ngValue]="t.value">{{ t.label }}</option>
@@ -483,7 +483,7 @@
                 </select>
 
                 <select [ngModel]="store.chart()?.x ?? ''" (ngModelChange)="setChart({ x: $event })"
-                        class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-2xs">
+                        class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-sm">
                   <option value="" disabled>محور دسته‌ها…</option>
                   @for (g of store.groupBy(); track g) {
                     <option [ngValue]="g" [title]="g">{{ store.fieldByKey().get(g)?.label || g }}</option>
@@ -491,7 +491,7 @@
                 </select>
 
                 <select [ngModel]="store.chart()?.y ?? ''" (ngModelChange)="setChart({ y: $event })"
-                        class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-2xs">
+                        class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-sm">
                   <option value="" disabled>محور مقادیر…</option>
                   @for (a of store.aggAliases(); track a) {
                     <option [ngValue]="a" [title]="'شناسه ستون: ' + a">{{ aliasLabel(a) }}</option>
@@ -535,12 +535,12 @@
 
   <!-- ═══ مودال ذخیره قالب ═══ -->
   @if (isSaveModalOpen()) {
-    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[70] flex items-center justify-center p-4" (click)="closeSaveModal()">
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4" (click)="closeSaveModal()">
       <div #saveModalContainer (keydown)="onDialogKeyDown($event, saveModalContainer)" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="save-modal-title" class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4 border border-slate-100 outline-none" (click)="$event.stopPropagation()">
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
+            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-save"></svg>
             </div>
             <div>
@@ -554,13 +554,13 @@
         <div>
           <label class="text-[11px] font-bold text-slate-700 block mb-1">نام قالب گزارش <span class="text-rose-500">*</span></label>
           <input #saveNameInput id="save-template-name-input" type="text" [(ngModel)]="saveName" placeholder="مثلاً: موجودی کالاها به تفکیک انبار"
-                 class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all bg-white shadow-2xs">
+                 class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all bg-white shadow-sm">
         </div>
 
         <div>
           <label class="text-[11px] font-bold text-slate-700 block mb-1">توضیحات (اختیاری)</label>
           <textarea [(ngModel)]="saveDescription" rows="2" placeholder="توضیح مختصری درباره اهداف این گزارش بنویسید..."
-                    class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-none bg-white shadow-2xs"></textarea>
+                    class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-none bg-white shadow-sm"></textarea>
         </div>
 
         <!-- Toggle switch for public sharing -->
@@ -600,8 +600,8 @@
 
   <!-- ═══ مودال راهنمای جامع گزارش‌ساز و سناریوهای کاربردی ═══ -->
   @if (isHelpModalOpen()) {
-    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-[70] flex items-center justify-center p-4" (click)="closeHelpModal()">
-      <div #helpModalContainer (keydown)="onDialogKeyDown($event, helpModalContainer)" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="help-modal-title" class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 outline-none" (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4" (click)="closeHelpModal()">
+      <div #helpModalContainer (keydown)="onDialogKeyDown($event, helpModalContainer)" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="help-modal-title" class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-100 overflow-hidden fade-in zoom-in-95 duration-200 outline-none" (click)="$event.stopPropagation()">
         
         <!-- Modal Header -->
         <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-l from-purple-50/50 to-white">
@@ -770,7 +770,7 @@
 
         <!-- Modal Footer -->
         <div class="p-3 sm:p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
-          <button type="button" (click)="closeHelpModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95">
+          <button type="button" (click)="closeHelpModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-5 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95">
             متوجه شدم
           </button>
         </div>

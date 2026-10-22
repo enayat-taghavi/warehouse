@@ -90,19 +90,19 @@
     </div>
   }
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-1.5 min-w-0">
       <span class="text-[11px] font-bold text-fg-muted">دوره‌های آماده پرداخت</span>
       <span class="text-base xl:text-lg font-black text-blue-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.ready_periods_count | number) + ' دوره' }}</span>
     </div>
-    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-1.5 min-w-0">
       <span class="text-[11px] font-bold text-fg-muted">حقوق آماده واریز (ریال)</span>
       <span class="text-base xl:text-lg font-black text-emerald-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.total_payroll_amount | number) }}</span>
     </div>
-    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-1.5 min-w-0">
       <span class="text-[11px] font-bold text-fg-muted">مطالبات ناوگان (ریال)</span>
       <span class="text-base xl:text-lg font-black text-purple-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.total_fleet_amount | number) }}</span>
     </div>
-    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-1.5 min-w-0">
       <span class="text-[11px] font-bold text-fg-muted">کل صف واریز (ریال)</span>
       <span class="text-base xl:text-lg font-black text-amber-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.total_disbursement_queue | number) }}</span>
     </div>
@@ -283,7 +283,7 @@
   </div>
 
   <!-- ── ۳. مودال ثبت انتقال وجه و شماره پیگیری ── -->
-  <div *ngIf="isPayModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isPayModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
     <div class="bg-white w-full max-w-md rounded-3xl border border-slate-200 shadow-xl p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-900">ثبت پرداخت وجه و رهگیری بانک</h3>

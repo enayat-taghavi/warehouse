@@ -4,10 +4,10 @@
     type="button" 
     (click)="toggleDropdown($event)"
     [title]="isMultiCompanyUser ? (companyService.activeCompany ? 'شرکت کاری فعال: ' + companyService.activeCompany.name + ' (کلیک برای تغییر)' : 'انتخاب شرکت کاری') : (companyService.activeCompany ? 'شرکت کاری: ' + companyService.activeCompany.name : 'شرکت کاری')"
-    class="flex items-center justify-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 rounded-xl border transition-all shadow-xs group cursor-pointer active:scale-95"
+    class="flex items-center justify-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 rounded-xl border transition-all shadow-sm group cursor-pointer active:scale-95"
     [ngClass]="companyService.activeCompany ? 'bg-indigo-50/70 hover:bg-indigo-100/70 border-indigo-200/90 text-indigo-950' : 'bg-slate-100 hover:bg-slate-200/80 border-slate-300 text-slate-700'">
     
-    <div class="w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 shadow-2xs relative"
+    <div class="w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 shadow-sm relative"
          [ngClass]="companyService.activeCompany ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
       <!-- Status dot on mobile right over the icon -->
@@ -20,7 +20,7 @@
       <div class="flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full" [ngClass]="companyService.activeCompany ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'"></span>
         <span class="text-[9px] text-slate-500 font-bold leading-tight">شرکت کاری</span>
-        <span *ngIf="companyService.activeCompany?.code" class="text-[8px] font-mono font-bold bg-white/80 px-1 py-0.2 rounded text-indigo-600 border border-indigo-100">
+        <span *ngIf="companyService.activeCompany?.code" class="text-[8px] font-mono font-bold bg-white/80 px-1 py-0.5 rounded text-indigo-600 border border-indigo-100">
           {{ companyService.activeCompany?.code }}
         </span>
       </div>
@@ -36,7 +36,7 @@
   <!-- Dropdown Menu -->
   <div 
     *ngIf="isOpen && isMultiCompanyUser" 
-    class="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+    class="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 fade-in zoom-in-95 duration-150">
     
     <div class="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-400 flex items-center justify-between">
       <span>شرکت‌های مجاز شما</span>

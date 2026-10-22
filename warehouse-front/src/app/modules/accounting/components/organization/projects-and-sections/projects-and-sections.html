@@ -271,7 +271,7 @@
   <div *ngIf="activeSubTab === 'assignments'" class="space-y-4">
 
     <!-- نوار فیلتر، جستجو و ابزارهای نما -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
       <!-- سمت راست: جستجوی سریع و فیلترها -->
       <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
         <!-- فیلتر جستجوی آنی -->
@@ -415,22 +415,22 @@
         </div>
 
         <!-- بدنه ماتریس نقش‌های پنج‌گانه بخش (تنها در حالت باز بودن کارت) -->
-        <div *ngIf="!isSectionCollapsed(sGroup.section.id!)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-1 animate-in fade-in duration-150">
-          <div *ngFor="let r of sGroup.roles; trackBy: trackByRoleKey" [ngClass]="r.roleDef.bgClass + ' ' + r.roleDef.borderClass" class="rounded-2xl border p-3 flex flex-col justify-between space-y-2.5 transition-all hover:shadow-xs">
+        <div *ngIf="!isSectionCollapsed(sGroup.section.id!)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-1 fade-in duration-150">
+          <div *ngFor="let r of sGroup.roles; trackBy: trackByRoleKey" [ngClass]="r.roleDef.bgClass + ' ' + r.roleDef.borderClass" class="rounded-2xl border p-3 flex flex-col justify-between space-y-2.5 transition-all hover:shadow-sm">
             <!-- سربرگ نقش -->
             <div class="flex items-center justify-between border-b border-black/5 pb-2">
               <div class="flex items-center gap-1.5">
                 <span class="text-sm">{{ r.roleDef.icon }}</span>
                 <span class="text-xs font-black" [ngClass]="r.roleDef.textClass">{{ r.roleDef.shortLabel }}</span>
               </div>
-              <span [ngClass]="r.assignments.length > 1 ? 'bg-indigo-600 text-white font-black' : 'bg-white/80 text-slate-600 font-bold'" class="px-1.5 py-0.5 rounded-full text-[10px] font-mono border border-black/5 shadow-2xs" title="تعداد همکاران موازی این سمت">
+              <span [ngClass]="r.assignments.length > 1 ? 'bg-indigo-600 text-white font-black' : 'bg-white/80 text-slate-600 font-bold'" class="px-1.5 py-0.5 rounded-full text-[10px] font-mono border border-black/5 shadow-sm" title="تعداد همکاران موازی این سمت">
                 {{ r.assignments.length }} نفر
               </span>
             </div>
 
             <!-- محتوای چیپ‌های کاربری منتسب به این نقش -->
             <div class="space-y-1.5 flex-1 min-h-[50px]">
-              <div *ngFor="let a of r.assignments; trackBy: trackByAssignmentId" class="group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/95 border border-slate-200/80 shadow-2xs hover:border-indigo-300 transition-colors" [ngClass]="{'opacity-60 bg-slate-50': !a.is_active}">
+              <div *ngFor="let a of r.assignments; trackBy: trackByAssignmentId" class="group flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/95 border border-slate-200/80 shadow-sm hover:border-indigo-300 transition-colors" [ngClass]="{'opacity-60 bg-slate-50': !a.is_active}">
                 <div class="flex items-center gap-1.5 truncate">
                   <span class="w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 font-mono" [ngClass]="a.is_active ? 'bg-slate-100 text-slate-700' : 'bg-slate-200 text-slate-400'">
                     {{ getUserInitials(a.user_full_name, a.username) }}
@@ -590,7 +590,7 @@
   </div>
 
   <!-- ── مدال انتساب سریع کاربر به بخش و سمت سازمانی ── -->
-  <div *ngIf="quickAssignState.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+  <div *ngIf="quickAssignState.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in duration-150">
     <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-lg w-full border border-slate-100 space-y-4">
       <!-- هدر مدال -->
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -679,7 +679,7 @@
           <div
             *ngFor="let u of availableUsersForQuickAssign; trackBy: trackByUserId"
             (click)="toggleUserSelection(u.id)"
-            [ngClass]="isUserSelected(u.id) ? 'bg-indigo-50/90 border-indigo-300 text-indigo-950 font-bold shadow-2xs ring-1 ring-indigo-200' : 'bg-white hover:bg-slate-100/80 border-slate-200/80 text-slate-700'"
+            [ngClass]="isUserSelected(u.id) ? 'bg-indigo-50/90 border-indigo-300 text-indigo-950 font-bold shadow-sm ring-1 ring-indigo-200' : 'bg-white hover:bg-slate-100/80 border-slate-200/80 text-slate-700'"
             class="p-2.5 rounded-xl border cursor-pointer flex items-center justify-between transition-all text-xs select-none"
           >
             <div class="flex items-center gap-2.5">
@@ -760,8 +760,8 @@
   ></app-excel-import-modal>
 
   <!-- ── مدال تایید اختصاصی درون‌برنامه‌ای (جایگزین کامل confirm مرورگر) ── -->
-  <div *ngIf="confirmModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-md w-full border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150" dir="rtl">
+  <div *ngIf="confirmModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in duration-150">
+    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-md w-full border border-slate-100 space-y-5 zoom-in-95 duration-150" dir="rtl">
       <!-- آیکون و هدر مدال -->
       <div class="flex items-start gap-3">
         <div [ngClass]="confirmModal.isDanger ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'" class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-lg">
@@ -798,8 +798,8 @@
   </div>
 
   <!-- ── مدال اختصاصی تکثیر/کپی چارت سازمانی (Clone Assignments Modal) ── -->
-  <div *ngIf="cloneModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-lg w-full border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150" dir="rtl">
+  <div *ngIf="cloneModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm fade-in duration-150">
+    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-lg w-full border border-slate-100 space-y-5 zoom-in-95 duration-150" dir="rtl">
       <!-- هدر مدال -->
       <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
         <div class="flex items-center gap-3">
@@ -859,7 +859,7 @@
       </div>
 
       <!-- پیش‌نمایش آماری انتساب‌های مبدأ -->
-      <div *ngIf="cloneModal.sourceSectionId" class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5 animate-in fade-in duration-150">
+      <div *ngIf="cloneModal.sourceSectionId" class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5 fade-in duration-150">
         <div class="flex items-center justify-between">
           <span class="text-xs font-black text-slate-700">خلاصه پرسنل قابل کپی:</span>
           <span class="text-xs font-mono font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
@@ -911,8 +911,8 @@
   </div>
 
   <!-- ── مدال اختصاصی ویرایش انتساب نقش سازمانی ── -->
-  <div *ngIf="editAssignmentModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-md w-full border border-slate-100 space-y-4 animate-in zoom-in-95 duration-150" dir="rtl">
+  <div *ngIf="editAssignmentModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in duration-150">
+    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-md w-full border border-slate-100 space-y-4 zoom-in-95 duration-150" dir="rtl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-xs font-black text-slate-800 flex items-center gap-2">
           <span>✏️</span>

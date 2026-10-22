@@ -1,11 +1,11 @@
 <div class="max-w-7xl mx-auto flex flex-col gap-6 text-right" dir="rtl">
 
   <!-- بنر خوش‌آمدگویی و کارت وضعیت کلی اتاق فرماندهی (Enterprise Light Hero Banner) -->
-  <div class="relative rounded-2xl p-6 sm:p-8 bg-white border border-slate-200 shadow-xs overflow-hidden">
+  <div class="relative rounded-2xl p-6 sm:p-8 bg-white border border-slate-200 shadow-sm overflow-hidden">
     <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
       
       <div class="flex items-start gap-4">
-        <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs shrink-0">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="server"></svg>
         </div>
         <div>
@@ -55,7 +55,7 @@
   </div>
 
   <!-- ویجت پایش سررسید مدارک و روزنامه‌های رسمی هلدینگ -->
-  <div *ngIf="isAccountingInstalled" class="rounded-2xl p-5 bg-white border border-slate-200 shadow-xs" [class.border-amber-300]="expiringDocs().length > 0">
+  <div *ngIf="isAccountingInstalled" class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm" [class.border-amber-300]="expiringDocs().length > 0">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold"
@@ -96,7 +96,7 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="text-xs font-black text-slate-800">{{ doc.company_name }}</span>
-              <span class="text-[10px] text-slate-500 font-bold bg-slate-200/80 px-2 py-0.2 rounded-md">{{ doc.document_type_display }}</span>
+              <span class="text-[10px] text-slate-500 font-bold bg-slate-200/80 px-2 py-0.5 rounded-md">{{ doc.document_type_display }}</span>
             </div>
             <div class="text-[11px] text-slate-600 mt-0.5">{{ doc.title }}</div>
           </div>
@@ -113,7 +113,7 @@
           <button 
             type="button" 
             (click)="navigateTo('/app/operations/companies')" 
-            class="min-h-[40px] sm:min-h-[28px] px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 text-[11px] font-bold text-indigo-700 shadow-2xs transition-colors cursor-pointer flex items-center">
+            class="min-h-[40px] sm:min-h-[28px] px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 text-[11px] font-bold text-indigo-700 shadow-sm transition-colors cursor-pointer flex items-center">
             اقدام سریع
           </button>
         </div>
@@ -127,7 +127,7 @@
     <!-- کارت ۱: اسنپ‌شات‌ها و بازیابی اضطراری -->
     <a 
       [routerLink]="['/app/operations/snapshots']"
-      class="group relative rounded-2xl p-6 bg-white hover:border-indigo-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+      class="group relative rounded-2xl p-6 bg-white hover:border-indigo-300 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
@@ -155,7 +155,7 @@
     <!-- کارت ۲: ماتریس پایش سلامت زنده -->
     <a 
       [routerLink]="['/app/operations/health']"
-      class="group relative rounded-2xl p-6 bg-white hover:border-emerald-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      class="group relative rounded-2xl p-6 bg-white hover:border-emerald-300 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
@@ -183,7 +183,7 @@
     <!-- کارت ۳: ممیزی امنیتی و سد رویدادها -->
     <a 
       [routerLink]="['/app/operations/audit']"
-      class="group relative rounded-2xl p-6 bg-white hover:border-rose-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+      class="group relative rounded-2xl p-6 bg-white hover:border-rose-300 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
@@ -211,7 +211,7 @@
     <!-- کارت ۴: مانیتورینگ کلاینت‌های آفلاین و تداخل -->
     <a 
       [routerLink]="['/app/operations/sync-monitor']"
-      class="group relative rounded-2xl p-6 bg-white hover:border-amber-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+      class="group relative rounded-2xl p-6 bg-white hover:border-amber-300 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
@@ -239,7 +239,7 @@
     <!-- کارت ۵: حاکمیت کاربران و مجوزهای حساس -->
     <a 
       [routerLink]="['/app/operations/rbac-governance']"
-      class="group relative rounded-2xl p-6 bg-white hover:border-purple-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+      class="group relative rounded-2xl p-6 bg-white hover:border-purple-300 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
@@ -267,7 +267,7 @@
     <!-- کارت ۶: مدیریت کاربران و نقش‌ها (سورس واحد) -->
     <a 
       [routerLink]="['/app/operations/users']"
-      class="group relative rounded-2xl p-6 bg-white hover:border-indigo-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+      class="group relative rounded-2xl p-6 bg-white hover:border-indigo-300 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
     >
       <div>
         <div class="flex items-start justify-between mb-4">

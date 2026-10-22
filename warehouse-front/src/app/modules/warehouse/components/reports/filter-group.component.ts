@@ -23,7 +23,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
   standalone: true,
   imports: [CommonModule, FormsModule, FilterValueComponent, ActionButtonComponent],
   template: `
-    <div class="rounded-2xl border p-3 space-y-2.5 shadow-2xs transition-all"
+    <div class="rounded-2xl border p-3 space-y-2.5 shadow-sm transition-all"
          [class.border-rose-300]="group.not"
          [class.border-indigo-200]="!group.not && group.op === 'AND'"
          [class.bg-indigo-50/20]="group.op === 'AND'"
@@ -31,7 +31,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
          [class.bg-amber-50/20]="group.op === 'OR'">
 
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="flex rounded-xl overflow-hidden border border-slate-200 bg-white shadow-2xs">
+        <div class="flex rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm">
           <button type="button" (click)="setOp('AND')"
                   class="px-3 py-1 text-[11px] font-black transition-colors cursor-pointer min-h-[40px] sm:min-h-0 flex items-center"
                   [class.bg-indigo-600]="group.op === 'AND'" [class.text-white]="group.op === 'AND'"
@@ -99,7 +99,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
             (removeSelf)="removeChild($index)"
             (changed)="changed.emit()" />
         } @else {
-          <div class="flex items-center gap-2 flex-wrap bg-white rounded-xl border p-2 shadow-2xs transition-all"
+          <div class="flex items-center gap-2 flex-wrap bg-white rounded-xl border p-2 shadow-sm transition-all"
                [class.border-rose-300]="asCond(child).not"
                [class.border-slate-200]="!asCond(child).not">
             <!-- نقیض شرط -->
@@ -113,7 +113,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
 
             <!-- فیلد -->
             <select [ngModel]="asCond(child).field" (ngModelChange)="setField(asCond(child), $event)"
-                    class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-2xs custom-select">
+                    class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 min-w-36 bg-white shadow-sm custom-select">
               <option value="" disabled>انتخاب فیلد…</option>
               @for (f of fields; track f.key) {
                 <option [value]="f.key" [title]="f.key">{{ f.label }}</option>
@@ -122,7 +122,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
 
             <!-- اپراتور -->
             <select [ngModel]="asCond(child).operator" (ngModelChange)="setOperator(asCond(child), $event)"
-                    class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-2xs custom-select">
+                    class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none focus:border-indigo-400 bg-white shadow-sm custom-select">
               @for (op of operatorsFor(asCond(child).field); track op) {
                 <option [value]="op">{{ opLabel(op) }}</option>
               }

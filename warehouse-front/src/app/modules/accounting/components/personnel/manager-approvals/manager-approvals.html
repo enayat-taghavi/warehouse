@@ -21,7 +21,7 @@
 
     <!-- Quick Stats & Actions -->
     <div class="flex items-center gap-2">
-      <div class="px-3.5 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
+      <div class="px-3.5 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center gap-1.5 shadow-sm">
         <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
         <span>موارد نیازمند اقدام:</span>
         <span class="font-mono font-black text-amber-700 text-sm">{{ pendingPersonnelCount + pendingFleetCount + pendingCRCount }}</span>
@@ -581,7 +581,7 @@
           <span>تاریخچه گردش کار و ممیزی (Audit Trail)</span>
         </h4>
         <div class="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-          <div *ngFor="let log of diffAuditLogs" class="text-[11px] p-2 rounded-xl bg-white border border-slate-200/60 flex items-center justify-between shadow-2xs">
+          <div *ngFor="let log of diffAuditLogs" class="text-[11px] p-2 rounded-xl bg-white border border-slate-200/60 flex items-center justify-between shadow-sm">
             <div class="flex items-center gap-2">
               <span class="font-bold text-slate-800">{{ log.actor_name || 'کاربر سیستم' }}</span>
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold"

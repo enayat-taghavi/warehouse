@@ -45,7 +45,7 @@
   <!-- ── فرم ثبت و ویرایش طرف‌حساب مالی (مطابق ساختار و عرض‌های استاندارد پروژه‌ها و بخش‌ها) ── -->
   <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
     <!-- نوار وضعیت ویرایش (تنها در صورت فعال بودن حالت ویرایش نمایش داده می‌شود) -->
-    <div *ngIf="editingCounterparty" class="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded-2xl text-xs font-bold text-amber-800 animate-in fade-in">
+    <div *ngIf="editingCounterparty" class="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded-2xl text-xs font-bold text-amber-800 fade-in">
       <div class="flex items-center gap-2">
         <span>✏️</span>
         <span>در حال ویرایش طرف‌حساب: <strong>{{ editingCounterparty.name }}</strong></span>
@@ -407,7 +407,7 @@
                 type="button"
                 (click)="toggleCounterpartyStatus(cp, $event)"
                 [ngClass]="cp.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'"
-                class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold cursor-pointer hover:shadow-2xs transition-all tap-target"
+                class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold cursor-pointer hover:shadow-sm transition-all tap-target"
                 [title]="cp.is_active ? 'کلیک جهت غیرفعال‌سازی' : 'کلیک جهت فعال‌سازی'"
                 [attr.aria-label]="cp.is_active ? 'غیرفعال‌سازی طرف‌حساب' : 'فعال‌سازی طرف‌حساب'"
               >
@@ -444,7 +444,7 @@
     <div *ngIf="viewMode === 'cards'" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         *ngFor="let cp of filteredCounterparties"
-        class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3 hover:border-indigo-200 transition-colors"
+        class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 shadow-sm space-y-3 hover:border-indigo-200 transition-colors"
         [class.opacity-65]="!cp.is_active"
       >
         <!-- هدر کارت -->
@@ -483,7 +483,7 @@
         </div>
 
         <!-- شماره شبا (برجسته در نمای کارت) -->
-        <div *ngIf="cp.sheba_number" class="bg-white p-2.5 rounded-xl border border-indigo-100 shadow-2xs flex items-center justify-between text-[11px] font-mono">
+        <div *ngIf="cp.sheba_number" class="bg-white p-2.5 rounded-xl border border-indigo-100 shadow-sm flex items-center justify-between text-[11px] font-mono">
           <span class="text-slate-800 dir-ltr font-black">IR{{ cp.sheba_number }}</span>
           <button
             type="button"
@@ -531,7 +531,7 @@
   ></app-excel-import-modal>
 
   <!-- ── مدال تایید اختصاصی ── -->
-  <div *ngIf="confirmModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+  <div *ngIf="confirmModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in duration-150">
     <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full border border-slate-100 space-y-4 text-center">
       <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center text-2xl" [ngClass]="confirmModal.isDanger ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'">
         {{ confirmModal.isDanger ? '⚠️' : 'ℹ️' }}

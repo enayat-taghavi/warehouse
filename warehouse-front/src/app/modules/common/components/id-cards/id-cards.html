@@ -54,7 +54,7 @@
             <input type="checkbox" [checked]="isUserSelected(u.id)" (click)="toggleUserSelect(u.id, $event)" class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
             
             <!-- تصویر آواتار با حفظ رنگ نقش سازمانی -->
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-xs overflow-hidden shrink-0 shadow-2xs" [style.background]="getUserRole(u).color || '#4f46e5'">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-xs overflow-hidden shrink-0 shadow-sm" [style.background]="getUserRole(u).color || '#4f46e5'">
               <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
               <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
             </div>
@@ -62,7 +62,7 @@
             <div class="overflow-hidden">
               <p class="text-xs font-black text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{{u.first_name}} {{u.last_name}}</p>
               <div class="flex items-center gap-1.5 mt-0.5">
-                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded text-indigo-700 bg-indigo-100/60 truncate">{{getUserRole(u).title}}</span>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded text-indigo-700 bg-indigo-100/60 truncate">{{getUserRole(u).title}}</span>
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@
       <!-- بار کنترلی بالای بوم -->
       <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2">
-          <span class="px-2.5 py-1 bg-white rounded-lg border border-slate-200 text-[10px] font-black text-slate-700 shadow-xs flex items-center gap-1.5">
+          <span class="px-2.5 py-1 bg-white rounded-lg border border-slate-200 text-[10px] font-black text-slate-700 shadow-sm flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full" [ngClass]="isCardFlipped ? 'bg-purple-500' : 'bg-emerald-500'"></span>
             {{isCardFlipped ? 'نمای پشت کارت (Back)' : 'نمای روی کارت (Front)'}}
           </span>
@@ -159,7 +159,7 @@
                     <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(activeUser))"></div>
                     <span class="font-mono text-[8px] font-black text-slate-700 mt-0.5">{{getUserPersonnelCode(activeUser)}}</span>
                   </div>
-                  <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-14 h-14 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
+                  <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-14 h-14 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                     <div class="w-full h-full" [innerHTML]="getQrCodeSvg(getUserPersonnelCode(activeUser))"></div>
                   </div>
                 </div>
@@ -218,7 +218,7 @@
                   <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(activeUser))"></div>
                   <span class="font-mono text-[8px] font-black text-slate-700 mt-0.5">{{getUserPersonnelCode(activeUser)}}</span>
                 </div>
-                <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-14 h-14 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
+                <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-14 h-14 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                   <div class="w-full h-full" [innerHTML]="getQrCodeSvg(getUserPersonnelCode(activeUser))"></div>
                 </div>
               </div>
@@ -264,7 +264,7 @@
                 <!-- بدنه میانی: عکس پرسنلی، مشخصات، زون QR Code -->
                 <div class="flex-1 flex gap-2.5 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
                   <!-- تصویر پرسنلی -->
-                  <div *ngIf="idCardSettings.fields.photo" class="w-16 h-20 bg-slate-100 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-xl overflow-hidden shrink-0">
+                  <div *ngIf="idCardSettings.fields.photo" class="w-16 h-20 bg-slate-100 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-400 text-xl overflow-hidden shrink-0">
                     <img *ngIf="activeUser.avatar" [src]="activeUser.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                     <span *ngIf="!activeUser.avatar">{{getUserAvatarInitial(activeUser)}}</span>
                   </div>
@@ -288,7 +288,7 @@
 
                   <!-- زون اختصاصی و بزرگ QR Code -->
                   <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'front' || idCardSettings.barcodePlacement === 'both') && idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5 shrink-0">
-                    <div class="w-16 h-16 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center shrink-0 overflow-hidden">
+                    <div class="w-16 h-16 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
                       <div class="w-14 h-14 flex items-center justify-center" [innerHTML]="getQrCodeSvg(activeUser)"></div>
                     </div>
                     <span class="text-[7px] font-bold text-slate-500">استعلام اصالت</span>
@@ -321,7 +321,7 @@
                   <div *ngIf="idCardSettings.barcodeType === '1d'" class="bg-white rounded border border-slate-200 px-1.5 h-7 w-24 flex items-center justify-center">
                     <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(activeUser))"></div>
                   </div>
-                  <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center shrink-0 overflow-hidden">
+                  <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
                     <div class="w-14 h-14 flex items-center justify-center" [innerHTML]="getQrCodeSvg(activeUser)"></div>
                   </div>
                   <span class="text-[7px] font-bold text-slate-500">استعلام اصالت</span>
@@ -439,12 +439,12 @@
             <div class="bg-indigo-50/60 p-2 rounded-xl border border-indigo-100">
               <label class="block text-[10px] font-black text-indigo-900 mb-1.5">نوع بارکد امنیتی</label>
               <div class="grid grid-cols-2 gap-2">
-                <button (click)="setBarcodeType('1d')" [ngClass]="idCardSettings.barcodeType === '1d' ? 'bg-indigo-600 text-white font-black shadow-xs' : 'bg-white text-slate-700 border border-slate-200 font-bold'" class="py-1.5 px-2 rounded-lg text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer">
+                <button (click)="setBarcodeType('1d')" [ngClass]="idCardSettings.barcodeType === '1d' ? 'bg-indigo-600 text-white font-black shadow-sm' : 'bg-white text-slate-700 border border-slate-200 font-bold'" class="py-1.5 px-2 rounded-lg text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer">
                   <span>||||||</span>
                   <span>تک‌بعدی (Code 39)</span>
                 </button>
 
-                <button (click)="setBarcodeType('2d')" [ngClass]="idCardSettings.barcodeType === '2d' ? 'bg-indigo-600 text-white font-black shadow-xs' : 'bg-white text-slate-700 border border-slate-200 font-bold'" class="py-1.5 px-2 rounded-lg text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer">
+                <button (click)="setBarcodeType('2d')" [ngClass]="idCardSettings.barcodeType === '2d' ? 'bg-indigo-600 text-white font-black shadow-sm' : 'bg-white text-slate-700 border border-slate-200 font-bold'" class="py-1.5 px-2 rounded-lg text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer">
                   <span>▣</span>
                   <span>دوبعدی (QR Code)</span>
                 </button>
@@ -558,7 +558,7 @@
               tone="amber"
               [label]="'بازنشانی متن‌ها به حالت پیش‌فرض'"
               (click)="resetToDefaultTexts()"
-              class="w-full justify-center shadow-2xs"
+              class="w-full justify-center shadow-sm"
             ></button>
           </div>
 
@@ -834,7 +834,7 @@
                 <div class="flex-1 flex flex-col px-3 pt-1 pb-1" [ngClass]="idCardSettings.photoPosition === 'right' ? 'text-right' : idCardSettings.photoPosition === 'left' ? 'text-left' : 'items-center text-center'">
                   <h2 class="font-black text-slate-900 text-xs leading-tight w-full truncate">{{u.first_name}} {{u.last_name}}</h2>
                   <div *ngIf="idCardSettings.fields.role" class="mt-0.5 w-full">
-                    <span class="text-[8px] font-black px-1.5 py-0.2 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
+                    <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
                   </div>
 
                   <div class="w-full mt-auto space-y-0.5 border-t border-slate-100 pt-1 text-[8px] text-right">
@@ -853,7 +853,7 @@
                       <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                       <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
                     </div>
-                    <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                    <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                       <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                     </div>
                   </div>
@@ -882,7 +882,7 @@
                   </div>
 
                   <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
-                    <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
+                    <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
                       <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                       <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                     </div>
@@ -894,7 +894,7 @@
                       </div>
 
                       <div *ngIf="idCardSettings.fields.role">
-                        <span class="text-[8px] font-black px-1.5 py-0.2 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
+                        <span class="text-[8px] font-black px-1.5 py-0.5 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
                       </div>
 
                       <div *ngIf="idCardSettings.fields.projects" class="text-[7px] text-slate-600 font-semibold" [title]="getWarehouseFullText(u)">
@@ -905,7 +905,7 @@
 
                     <!-- زون اختصاصی و بزرگ QR Code -->
                     <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'front' || idCardSettings.barcodePlacement === 'both') && idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5 shrink-0">
-                      <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                      <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                         <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                       </div>
                       <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -950,12 +950,12 @@
 
                 <!-- زون بزرگ QR Code در پیش‌نمایش پشت کارت عمودی -->
                 <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'back' || idCardSettings.barcodePlacement === 'both')" class="my-auto py-1 flex flex-col items-center justify-center">
-                  <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.2 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
+                  <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.5 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
                     <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                     <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
                   </div>
                   <div *ngIf="idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5">
-                    <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
+                    <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                       <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                     </div>
                     <span class="text-[5px] font-bold text-slate-500">استعلام اصالت دیجیتال</span>
@@ -980,7 +980,7 @@
                     <span class="text-[9px] font-black text-slate-800 block">{{idCardSettings.customTexts.backHeaderTitle}}</span>
                     <span class="text-[6px] text-slate-400 font-bold uppercase">{{idCardSettings.customTexts.backHeaderSub}}</span>
                   </div>
-                  <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.2 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
+                  <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
                 </div>
 
                 <div class="flex-1 flex gap-2 items-center py-1">
@@ -989,7 +989,7 @@
                     <div *ngIf="idCardSettings.barcodeType === '1d'" class="bg-white rounded border border-slate-200 px-1 h-6 w-20 flex items-center justify-center">
                       <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                     </div>
-                    <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                    <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                       <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                     </div>
                     <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -1048,7 +1048,7 @@
                   <div class="flex-1 flex flex-col px-3 pt-1 pb-1" [ngClass]="idCardSettings.photoPosition === 'right' ? 'text-right' : idCardSettings.photoPosition === 'left' ? 'text-left' : 'items-center text-center'">
                     <h2 class="font-black text-slate-900 text-xs leading-tight w-full truncate">{{u.first_name}} {{u.last_name}}</h2>
                     <div *ngIf="idCardSettings.fields.role" class="mt-0.5 w-full">
-                      <span class="text-[8px] font-black px-1.5 py-0.2 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
+                      <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
                     </div>
 
                     <div class="w-full mt-auto space-y-0.5 border-t border-slate-100 pt-1 text-[8px] text-right">
@@ -1067,7 +1067,7 @@
                         <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                         <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
                       </div>
-                      <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                      <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                         <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                       </div>
                     </div>
@@ -1096,7 +1096,7 @@
                     </div>
 
                     <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
-                      <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
+                      <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
                         <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                         <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                       </div>
@@ -1108,7 +1108,7 @@
                         </div>
 
                         <div *ngIf="idCardSettings.fields.role">
-                          <span class="text-[8px] font-black px-1.5 py-0.2 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
+                          <span class="text-[8px] font-black px-1.5 py-0.5 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
                         </div>
 
                         <div *ngIf="idCardSettings.fields.projects" class="text-[7px] text-slate-600 font-semibold" [title]="getWarehouseFullText(u)">
@@ -1118,7 +1118,7 @@
                       </div>
 
                       <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'front' || idCardSettings.barcodePlacement === 'both') && idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5 shrink-0">
-                        <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                        <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                           <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                         </div>
                         <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -1156,12 +1156,12 @@
                   </div>
 
                   <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'back' || idCardSettings.barcodePlacement === 'both')" class="my-auto py-1 flex flex-col items-center justify-center">
-                    <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.2 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
+                    <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.5 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
                       <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                       <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
                     </div>
                     <div *ngIf="idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5">
-                      <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
+                      <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                         <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                       </div>
                       <span class="text-[5px] font-bold text-slate-500">استعلام اصالت دیجیتال</span>
@@ -1186,7 +1186,7 @@
                       <span class="text-[9px] font-black text-slate-800 block">{{idCardSettings.customTexts.backHeaderTitle}}</span>
                       <span class="text-[6px] text-slate-400 font-bold uppercase">{{idCardSettings.customTexts.backHeaderSub}}</span>
                     </div>
-                    <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.2 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
+                    <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
                   </div>
 
                   <div class="flex-1 flex gap-2 items-center py-1">
@@ -1194,7 +1194,7 @@
                       <div *ngIf="idCardSettings.barcodeType === '1d'" class="bg-white rounded border border-slate-200 px-1 h-6 w-20 flex items-center justify-center">
                         <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                       </div>
-                      <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                      <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                         <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                       </div>
                       <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -1289,7 +1289,7 @@
           <div class="flex-1 flex flex-col px-3 pt-1 pb-1" [ngClass]="idCardSettings.photoPosition === 'right' ? 'text-right' : idCardSettings.photoPosition === 'left' ? 'text-left' : 'items-center text-center'">
             <h2 class="font-black text-slate-900 text-xs leading-tight w-full truncate">{{u.first_name}} {{u.last_name}}</h2>
             <div *ngIf="idCardSettings.fields.role" class="mt-0.5 w-full">
-              <span class="text-[8px] font-black px-1.5 py-0.2 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
+              <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
             </div>
 
             <div class="w-full mt-auto space-y-0.5 border-t border-slate-100 pt-1 text-[8px] text-right">
@@ -1308,7 +1308,7 @@
                 <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                 <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
               </div>
-              <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+              <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                 <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
               </div>
             </div>
@@ -1337,7 +1337,7 @@
             </div>
 
             <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
-              <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
+              <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
                 <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                 <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
               </div>
@@ -1349,7 +1349,7 @@
                 </div>
 
                 <div *ngIf="idCardSettings.fields.role">
-                  <span class="text-[8px] font-black px-1.5 py-0.2 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
+                  <span class="text-[8px] font-black px-1.5 py-0.5 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
                 </div>
 
                 <div *ngIf="idCardSettings.fields.projects" class="text-[7px] text-slate-600 font-semibold" [title]="getWarehouseFullText(u)">
@@ -1360,7 +1360,7 @@
 
               <!-- زون اختصاصی و بزرگ QR Code -->
               <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'front' || idCardSettings.barcodePlacement === 'both') && idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5 shrink-0">
-                <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                   <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                 </div>
                 <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -1405,12 +1405,12 @@
 
           <!-- زون بزرگ QR Code در چاپ پشت کارت عمودی -->
           <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'back' || idCardSettings.barcodePlacement === 'both')" class="my-auto py-1 flex flex-col items-center justify-center">
-            <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.2 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
+            <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.5 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
               <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
               <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
             </div>
             <div *ngIf="idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5">
-              <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
+              <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                 <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
               </div>
               <span class="text-[5px] font-bold text-slate-500">استعلام اصالت دیجیتال</span>
@@ -1435,7 +1435,7 @@
               <span class="text-[9px] font-black text-slate-800 block">{{idCardSettings.customTexts.backHeaderTitle}}</span>
               <span class="text-[6px] text-slate-400 font-bold uppercase">{{idCardSettings.customTexts.backHeaderSub}}</span>
             </div>
-            <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.2 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
+            <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
           </div>
 
           <div class="flex-1 flex gap-2 items-center py-1">
@@ -1444,7 +1444,7 @@
               <div *ngIf="idCardSettings.barcodeType === '1d'" class="bg-white rounded border border-slate-200 px-1 h-6 w-20 flex items-center justify-center">
                 <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
               </div>
-              <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+              <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                 <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
               </div>
               <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -1504,7 +1504,7 @@
             <div class="flex-1 flex flex-col px-3 pt-1 pb-1" [ngClass]="idCardSettings.photoPosition === 'right' ? 'text-right' : idCardSettings.photoPosition === 'left' ? 'text-left' : 'items-center text-center'">
               <h2 class="font-black text-slate-900 text-xs leading-tight w-full truncate">{{u.first_name}} {{u.last_name}}</h2>
               <div *ngIf="idCardSettings.fields.role" class="mt-0.5 w-full">
-                <span class="text-[8px] font-black px-1.5 py-0.2 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
+                <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full inline-block truncate max-w-full" [style.background]="effectiveCardColor + '18'" [style.color]="effectiveCardColor" [style.border]="'0.5pt solid ' + effectiveCardColor + '50'">{{getUserRole(u).title}}</span>
               </div>
 
               <div class="w-full mt-auto space-y-0.5 border-t border-slate-100 pt-1 text-[8px] text-right">
@@ -1523,7 +1523,7 @@
                   <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                   <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
                 </div>
-                <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-12 h-12 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                   <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                 </div>
               </div>
@@ -1552,7 +1552,7 @@
               </div>
 
               <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
-                <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
+                <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
                   <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                   <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                 </div>
@@ -1564,7 +1564,7 @@
                   </div>
 
                   <div *ngIf="idCardSettings.fields.role">
-                    <span class="text-[8px] font-black px-1.5 py-0.2 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
+                    <span class="text-[8px] font-black px-1.5 py-0.5 rounded text-indigo-700 bg-indigo-50 border border-indigo-100 inline-block truncate max-w-full">{{getUserRole(u).title}}</span>
                   </div>
 
                   <div *ngIf="idCardSettings.fields.projects" class="text-[7px] text-slate-600 font-semibold" [title]="getWarehouseFullText(u)">
@@ -1574,7 +1574,7 @@
                 </div>
 
                 <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'front' || idCardSettings.barcodePlacement === 'both') && idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5 shrink-0">
-                  <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                  <div class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                     <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                   </div>
                   <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>
@@ -1612,12 +1612,12 @@
             </div>
 
             <div *ngIf="idCardSettings.fields.barcode && (idCardSettings.barcodePlacement === 'back' || idCardSettings.barcodePlacement === 'both')" class="my-auto py-1 flex flex-col items-center justify-center">
-              <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.2 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
+              <div *ngIf="idCardSettings.barcodeType === '1d'" class="w-full px-1 py-0.5 flex flex-col items-center justify-center bg-white rounded border border-slate-200 h-6">
                 <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                 <span class="font-mono text-[6px] font-black text-slate-700 mt-0.2">{{getUserPersonnelCode(u)}}</span>
               </div>
               <div *ngIf="idCardSettings.barcodeType === '2d'" class="flex flex-col items-center gap-0.5">
-                <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
+                <div class="w-20 h-20 bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                   <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                 </div>
                 <span class="text-[5px] font-bold text-slate-500">استعلام اصالت دیجیتال</span>
@@ -1642,7 +1642,7 @@
                 <span class="text-[9px] font-black text-slate-800 block">{{idCardSettings.customTexts.backHeaderTitle}}</span>
                 <span class="text-[6px] text-slate-400 font-bold uppercase">{{idCardSettings.customTexts.backHeaderSub}}</span>
               </div>
-              <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.2 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
+              <span *ngIf="idCardSettings.fields.nationalCode" class="font-mono text-[8px] font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">کد ملی: {{u.national_code || '---'}}</span>
             </div>
 
             <div class="flex-1 flex gap-2 items-center py-1">
@@ -1650,7 +1650,7 @@
                 <div *ngIf="idCardSettings.barcodeType === '1d'" class="bg-white rounded border border-slate-200 px-1 h-6 w-20 flex items-center justify-center">
                   <div class="w-full h-full" [innerHTML]="getBarcodeSvg(getUserPersonnelCode(u))"></div>
                 </div>
-                <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                <div *ngIf="idCardSettings.barcodeType === '2d'" class="w-16 h-16 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
                   <div class="w-full h-full" [innerHTML]="getQrCodeSvg(u)"></div>
                 </div>
                 <span class="text-[5px] font-bold text-slate-500">استعلام اصالت</span>

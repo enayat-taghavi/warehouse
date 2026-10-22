@@ -161,6 +161,18 @@ def test_icon_registry():
     else:
         print("✅ بند ۵: همهٔ svgهای دارای appIcon ویژگی viewBox و fill دارند.")
 
+    # بند ۶: کلاس‌های Tailwind 4 که در Tailwind 3.4 ساخته نمی‌شوند و اثری ندارند (طرح مجوزهای شرکت، F3)
+    tw4 = re.compile(r"(?<![\w-])(shadow-2?xs|backdrop-blur-xs|border-3|py-0\.2|animate-in|animate-fade-in|bg-linear-to-\w+)(?![\w.-])")
+    tw4_hits = []
+    for path, text, _owner in templates():
+        for m in tw4.finditer(text):
+            tw4_hits.append(f"{path.relative_to(APP_DIR)}:{m.group(1)}")
+    if tw4_hits:
+        errors.append("بند ۶")
+        print(f"❌ بند ۶: کلاس بی‌اثر Tailwind 4 ({len(tw4_hits)}): {tw4_hits[:10]}")
+    else:
+        print("✅ بند ۶: کلاس بی‌اثر Tailwind 4 در قالب‌ها نیست.")
+
     print("=" * 74)
     if errors:
         print(f"❌ نگهبان ۵۲ شکست خورد: {', '.join(errors)}")

@@ -78,7 +78,7 @@
           <!-- Case 1: Contextual Action Bar (When items are selected) -->
           <div 
             *ngIf="selectedTasks.size > 0"
-            class="flex items-center justify-between gap-2 p-2 mb-3 bg-slate-900 text-white rounded-2xl shadow-md animate-in fade-in zoom-in-95 duration-150 border border-slate-800">
+            class="flex items-center justify-between gap-2 p-2 mb-3 bg-slate-900 text-white rounded-2xl shadow-md fade-in zoom-in-95 duration-150 border border-slate-800">
             
             <!-- Right: Cancel Button + Counter -->
             <div class="flex items-center gap-2 pr-1">
@@ -159,7 +159,7 @@
                 [ngClass]="statusFilter === 'untouched' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border border-slate-200/80'" 
                 class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1">
                 <span>در انتظار</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'untouched' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'">{{statusCounts.untouched}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'untouched' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-700'">{{statusCounts.untouched}}</span>
               </button>
 
               <!-- 2. Re-review / Rejected (Conditional: only if > 0 or active) -->
@@ -167,9 +167,9 @@
                 *ngIf="statusCounts.rejected > 0 || statusFilter === 'rejected'"
                 (click)="setStatusFilter('rejected')" 
                 [ngClass]="statusFilter === 'rejected' ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-rose-700 border border-rose-200/80'" 
-                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 animate-in fade-in duration-150">
+                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 fade-in duration-150">
                 <span>بررسی مجدد</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'rejected' ? 'bg-rose-400 text-white' : 'bg-rose-50 text-rose-700'">{{statusCounts.rejected}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'rejected' ? 'bg-rose-400 text-white' : 'bg-rose-50 text-rose-700'">{{statusCounts.rejected}}</span>
               </button>
 
               <!-- 3. Ready to submit (Conditional: only if > 0 or active) -->
@@ -177,9 +177,9 @@
                 *ngIf="statusCounts.ready > 0 || statusFilter === 'ready'"
                 (click)="setStatusFilter('ready')" 
                 [ngClass]="statusFilter === 'ready' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border border-indigo-200/80'" 
-                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 animate-in fade-in duration-150">
+                class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1 fade-in duration-150">
                 <span>آماده ارسال</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'ready' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700'">{{statusCounts.ready}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'ready' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700'">{{statusCounts.ready}}</span>
               </button>
 
               <!-- 4. Completed / Sent (Always visible) -->
@@ -188,7 +188,7 @@
                 [ngClass]="statusFilter === 'completed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border border-slate-200/80'" 
                 class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1">
                 <span>ارسال شده</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700'">{{statusCounts.completed}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700'">{{statusCounts.completed}}</span>
               </button>
 
               <!-- 5. All (Always visible) -->
@@ -197,7 +197,7 @@
                 [ngClass]="statusFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border border-slate-200/80'" 
                 class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors shadow-sm flex items-center gap-1">
                 <span>همه موارد</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full" [ngClass]="statusFilter === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'">{{statusCounts.all}}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full" [ngClass]="statusFilter === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'">{{statusCounts.all}}</span>
               </button>
             </div>
 
@@ -215,7 +215,7 @@
                   *ngIf="availableLocations.length > 0"
                   [ngModel]="locationFilter"
                   (ngModelChange)="setLocationFilter($event)"
-                  class="bg-white text-slate-700 border border-slate-200/90 rounded-lg px-2 py-1 text-[10px] font-bold shadow-xs focus:outline-none focus:border-indigo-500 cursor-pointer">
+                  class="bg-white text-slate-700 border border-slate-200/90 rounded-lg px-2 py-1 text-[10px] font-bold shadow-sm focus:outline-none focus:border-indigo-500 cursor-pointer">
                   <option value="all">همه لوکیشن‌ها</option>
                   <option *ngFor="let loc of availableLocations" [value]="loc">لوکیشن {{ loc }}</option>
                 </select>
@@ -249,7 +249,7 @@
                 <!-- Sort Popover Menu -->
                 <div 
                   *ngIf="isSortMenuOpen" 
-                  class="absolute left-0 mt-1.5 w-52 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 text-xs font-bold text-slate-700 animate-in fade-in zoom-in-95 duration-100">
+                  class="absolute left-0 mt-1.5 w-52 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 text-xs font-bold text-slate-700 fade-in zoom-in-95 duration-100">
                   <div class="px-3 py-1.5 text-[10px] text-slate-400 border-b border-slate-100 flex items-center justify-between">
                     <span>مرتب‌سازی بر اساس:</span>
                     <span class="text-[9px] text-indigo-500 font-normal">کلیک مجدد = تغییر جهت</span>
@@ -459,7 +459,7 @@
                     type="button"
                     (click)="quickSubmitTask(task, $event)"
                     title="ارسال مستقیم به سرپرست"
-                    class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg text-[11px] font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer">
+                    class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-send"></svg>
                     <span>ارسال</span>
                   </button>
@@ -522,7 +522,7 @@
       <ng-container *ngIf="currentTab === 'pool'">
         <!-- Sticky Pool Contextual Top Action Bar (When items selected) -->
         <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-2 pb-3 mb-4 -mx-4 px-4 md:-mx-6 md:px-6 border-b border-slate-200/60 transition-all" *ngIf="selectedPoolTasks.size > 0">
-          <div class="flex items-center justify-between gap-2 p-2 bg-slate-900 text-white rounded-2xl shadow-md animate-in fade-in zoom-in-95 duration-150 border border-slate-800">
+          <div class="flex items-center justify-between gap-2 p-2 bg-slate-900 text-white rounded-2xl shadow-md fade-in zoom-in-95 duration-150 border border-slate-800">
             <!-- Right: Cancel + Count -->
             <div class="flex items-center gap-2 pr-1">
               <button 
@@ -686,7 +686,7 @@
         </div>
 
         <!-- Rejection Notice Banner (If rejected by supervisor or manager) -->
-        <div *ngIf="isRejected(selectedTask)" class="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-900 text-xs shadow-sm animate-in fade-in duration-200">
+        <div *ngIf="isRejected(selectedTask)" class="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-900 text-xs shadow-sm fade-in duration-200">
           <div class="flex items-center gap-2 mb-1.5 font-black text-rose-800">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
             <span>{{ getRejectionTitle(selectedTask) }}</span>
@@ -972,7 +972,7 @@
   <!--  Export Excel Modal                            -->
   <!-- ══════════════════════════════════════════════ -->
   <div *ngIf="isExportModalOpen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 fade-in zoom-in-95 duration-200">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -1088,7 +1088,7 @@
   <!--  Batch Scan Preview Modal                      -->
   <!-- ══════════════════════════════════════════════ -->
   <div *ngIf="isScanBatchModalOpen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white rounded-3xl max-w-7xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+    <div class="bg-white rounded-3xl max-w-7xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
@@ -1162,7 +1162,7 @@
       </div>
 
       <!-- Pool Warning Alert Banner -->
-      <div *ngIf="(scanBatchSummary?.poolCount || 0) > 0" class="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-2xl flex items-center gap-2.5 text-xs text-purple-900 shrink-0 animate-in fade-in duration-200">
+      <div *ngIf="(scanBatchSummary?.poolCount || 0) > 0" class="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-2xl flex items-center gap-2.5 text-xs text-purple-900 shrink-0 fade-in duration-200">
         <div class="w-6 h-6 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center shrink-0 font-bold">!</div>
         <div class="leading-relaxed">
           <strong class="font-bold">تخصیص خودکار از استخر اسناد:</strong>

@@ -284,8 +284,8 @@ export class Users implements OnInit, OnDestroy {
   /** دسته‌های قالب نقش ماژول‌های در دسترس، با شمار قالب‌های هر دسته */
   get presetCategories(): Array<{ key: string; labelFa: string; icon: IconName; activeClass: string; hoverClass: string; countFa: string }> {
     const tones: Record<string, { activeClass: string; hoverClass: string }> = {
-      sky: { activeClass: 'bg-sky-600 text-white shadow-2xs', hoverClass: 'text-slate-600 hover:text-sky-600 hover:bg-slate-100/70' },
-      emerald: { activeClass: 'bg-emerald-600 text-white shadow-2xs', hoverClass: 'text-slate-600 hover:text-emerald-600 hover:bg-slate-100/70' },
+      sky: { activeClass: 'bg-sky-600 text-white shadow-sm', hoverClass: 'text-slate-600 hover:text-sky-600 hover:bg-slate-100/70' },
+      emerald: { activeClass: 'bg-emerald-600 text-white shadow-sm', hoverClass: 'text-slate-600 hover:text-emerald-600 hover:bg-slate-100/70' },
     };
     return this.moduleUsersExts()
       .filter(e => !!e.ext.presetCategory && this.isUsersExtAvailable(e.ext))
@@ -328,13 +328,13 @@ export class Users implements OnInit, OnDestroy {
 
   roleScopeTabClass(tone: string, active: boolean): string {
     if (!active) return 'text-slate-500 hover:text-slate-800';
-    return tone === 'emerald' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'bg-white text-sky-700 shadow-xs font-black';
+    return tone === 'emerald' ? 'bg-white text-emerald-700 shadow-sm font-black' : 'bg-white text-sky-700 shadow-sm font-black';
   }
 
   roleScopeCountClass(tone: string): string {
     return tone === 'emerald'
-      ? 'px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black border border-emerald-200'
-      : 'px-1.5 py-0.2 rounded-full bg-sky-100 text-sky-700 text-[9px] font-black border border-sky-200';
+      ? 'px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black border border-emerald-200'
+      : 'px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 text-[9px] font-black border border-sky-200';
   }
 
   /** برچسب کوتاه نشان سامانه (اندازهٔ عادی یا ریز) */

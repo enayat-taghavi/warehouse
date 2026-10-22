@@ -4,11 +4,11 @@
   <!-- ۱. هدر مرکز فرماندهی چسبان (Unified Sticky Command Center Standard)        -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: عنوان و نشان دسترسی کاربر -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xl shadow-xs">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xl shadow-sm">
           📑
         </div>
         <div>
@@ -55,7 +55,7 @@
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۲. انتخابگر شرکت‌های تحت اختیار کاربر (Multi-Company Selector)              -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="companies.length > 0" class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
+  <div *ngIf="companies.length > 0" class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm space-y-2">
     <div class="flex items-center justify-between text-xs">
       <span class="font-bold text-slate-700">انتخاب شرکت جهت بررسی و دسترسی به اسناد:</span>
       <span class="text-[11px] font-mono text-slate-400">
@@ -70,7 +70,7 @@
         type="button"
         (click)="selectCompany(c)"
         class="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap tap-target"
-        [ngClass]="selectedCompanyId === c.id ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
+        [ngClass]="selectedCompanyId === c.id ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
         <span class="w-2 h-2 rounded-full" [ngClass]="selectedCompanyId === c.id ? 'bg-indigo-600' : 'bg-slate-400'"></span>
         <span>{{ c.name }}</span>
         <span class="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-white/80 border border-slate-200 text-slate-500">
@@ -81,7 +81,7 @@
   </div>
 
   <!-- هشدار در صورتی که کاربر به هیچ شرکتی دسترسی اسناد ندارد -->
-  <div *ngIf="!isLoadingCompanies && companies.length === 0" class="p-8 text-center bg-white rounded-3xl border border-dashed border-slate-200 shadow-xs space-y-3">
+  <div *ngIf="!isLoadingCompanies && companies.length === 0" class="p-8 text-center bg-white rounded-3xl border border-dashed border-slate-200 shadow-sm space-y-3">
     <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold mx-auto">
       ⚠️
     </div>
@@ -116,7 +116,7 @@
           [(ngModel)]="searchQuery" 
           (ngModelChange)="onSearchChange()"
           placeholder="جستجو در عنوان یا شرح مدرک..." 
-          class="w-full pl-8 pr-9 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium shadow-2xs"
+          class="w-full pl-8 pr-9 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium shadow-sm"
         />
         <button 
           *ngIf="searchQuery" 
@@ -176,7 +176,7 @@
                   <div>
                     <div class="font-black text-slate-800 flex items-center gap-1.5">
                       <span>{{ doc.title }}</span>
-                      <span *ngIf="doc.is_confidential" class="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.2 rounded-md font-bold">
+                      <span *ngIf="doc.is_confidential" class="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md font-bold">
                         محرمانه
                       </span>
                     </div>
@@ -266,7 +266,7 @@
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۵. مودال بارگذاری مدرک رسمی جدید                                          -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="uploadModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-all">
+  <div *ngIf="uploadModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
       
       <!-- Header -->
@@ -451,7 +451,7 @@
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۶. مودال پیش‌نمایش درجا (In-Place Preview Modal)                         -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="previewModal.isOpen" (click)="closePreview()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs transition-all">
+  <div *ngIf="previewModal.isOpen" (click)="closePreview()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm transition-all">
     <div (click)="$event.stopPropagation()" class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[90vh]">
       
       <!-- Header -->
@@ -504,7 +504,7 @@
             [href]="previewModal.fileUrl" 
             [appExternalLink]="previewModal.fileUrl" 
             target="_blank" 
-            class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs">
+            class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm">
             دانلود مستقیم فایل
           </a>
         </div>

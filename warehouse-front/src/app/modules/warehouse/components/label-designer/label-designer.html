@@ -2,7 +2,7 @@
 
   <!-- Loading State -->
   <div *ngIf="isLoading" class="flex items-center justify-center p-12">
-    <span class="animate-spin w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full"></span>
+    <span class="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full"></span>
   </div>
 
   <div *ngIf="!isLoading" class="space-y-4">
@@ -508,7 +508,7 @@
           </div>
           <iframe *ngIf="!isGeneratingPreview && pdfPreviewUrl" [src]="pdfPreviewUrl" class="w-full flex-1 border-0 rounded" style="min-height: 0;" title="PDF Preview"></iframe>
           <div *ngIf="!isGeneratingPreview && !pdfPreviewUrl" class="flex flex-col items-center text-slate-400">
-            <span class="animate-spin w-6 h-6 border-3 border-slate-300 border-t-indigo-500 rounded-full mb-2"></span>
+            <span class="animate-spin w-6 h-6 border-2 border-slate-300 border-t-indigo-500 rounded-full mb-2"></span>
             <p class="text-sm font-bold">در حال بارگذاری پیش‌نمایش...</p>
           </div>
         </div>

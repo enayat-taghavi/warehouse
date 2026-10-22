@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون انتخاب بخش و کپسول زیرتب‌های پرسنل -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -72,7 +72,7 @@
   <!-- زیرتب ۱: احکام و مدارک مالی در انتظار تایید حسابدار (تسک‌های ۹.۲، ۹.۵، ۹.۷، ۹.۸) -->
   <div *ngIf="activeSubTab === 'new'" class="space-y-3">
     <!-- نوار عملیات گروهی حسابدار (تسک ۹.۷) -->
-    <div *ngIf="selectedCount() > 0" class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in">
+    <div *ngIf="selectedCount() > 0" class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm fade-in">
       <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
         <span class="text-xs font-black text-indigo-900">{{ selectedCount() }} پرونده جهت تایید گروهی انتخاب شده است</span>
@@ -101,7 +101,7 @@
     </div>
 
     <!-- جدول دسکتاپ (md:block) -->
-    <div *ngIf="personnelItems.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="personnelItems.length > 0" class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -194,7 +194,7 @@
                   <span class="px-2 py-0.5 rounded-md text-[11px] font-black bg-amber-100 text-amber-900">
                     در انتظار تایید حسابدار
                   </span>
-                  <span *ngIf="!canSendToManager(item)" class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md flex items-center gap-1" [title]="getMissingFieldsSummary(item).join('، ')">
+                  <span *ngIf="!canSendToManager(item)" class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md flex items-center gap-1" [title]="getMissingFieldsSummary(item).join('، ')">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
                     <span>نقص مدارک</span>
                   </span>
@@ -239,7 +239,7 @@
 
     <!-- نمای ارگونومیک کارت‌های موبایل (md:hidden - تسک ۹.۷) -->
     <div *ngIf="personnelItems.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let item of personnelItems" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 space-y-3">
+      <div *ngFor="let item of personnelItems" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 space-y-3">
         <!-- هدر کارت -->
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -355,7 +355,7 @@
       <p class="font-bold text-sm">هیچ رکورد حقوقی آماده ممیزی برای سال مالی {{ fiscalYear }} در این بخش یافت نشد.</p>
     </div>
 
-    <div *ngIf="payrollRecords.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="payrollRecords.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -395,7 +395,7 @@
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای پرسنل وجود ندارد.</p>
     </div>
 
-    <div *ngIf="changeRequests.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="changeRequests.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -453,7 +453,7 @@
 
   <!-- زیرتب ۴: همه پرسنل -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
@@ -487,8 +487,8 @@
   </div>
 
   <!-- ── مودال جامع احکام مالی، بیمه و شبا (Financial Wage & Documents Modal) ── -->
-  <div *ngIf="isPersonnelModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isPersonnelModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] fade-in zoom-in duration-150">
       
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -679,7 +679,7 @@
                   type="button"
                   (click)="selectJobCode(c)"
                   class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer"
-                  [ngClass]="editingPersonnel.job_code === c ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'">
+                  [ngClass]="editingPersonnel.job_code === c ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'">
                   {{ c }}
                 </button>
               </div>
@@ -791,7 +791,7 @@
                   type="button"
                   (click)="convertAccountToShebaNow()"
                   title="تولید خودکار شبا با الگوریتم ISO 7064"
-                  class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs flex items-center gap-1">
+                  class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm flex items-center gap-1">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
                   <span>تبدیل شبا</span>
                 </button>
@@ -858,8 +858,8 @@
   </div>
 
   <!-- ── مودال علت رد یا عودت (تسک ۹.۶: رادیوباتن انتخاب مقصد عودت) ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
         <h3 class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده به بازنگری' : 'رد قطعی پرونده' }}</h3>
@@ -920,8 +920,8 @@
   </div>
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Viewer) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌ها (Diff): {{ selectedDiffCR?.personnel_name }}
@@ -1026,8 +1026,8 @@
   }
 
   <!-- ── مودال تایید گروهی حسابدار (تسک ۹.۷) ── -->
-  <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+  <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between text-emerald-900">
         <h3 class="text-sm font-black">تایید مالی گروهی پرسنل</h3>
         <button

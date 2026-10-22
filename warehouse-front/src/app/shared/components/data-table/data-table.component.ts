@@ -351,14 +351,14 @@ export interface PageEvent {
                               }
                               <div class="text-[10px] font-bold text-slate-600 mb-1">از تاریخ:</div>
                               <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="customDateStart = $event.gregorian" class="w-full relative block">
-                                <input type="text" [formControl]="customDateStartControl" class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 outline-none mb-1 shadow-2xs" placeholder="انتخاب تاریخ">
+                                <input type="text" [formControl]="customDateStartControl" class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 outline-none mb-1 shadow-sm" placeholder="انتخاب تاریخ">
                               </ng-persian-datepicker>
                               <div class="text-[10px] font-bold text-slate-600 mb-1">تا تاریخ:</div>
                               <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="customDateEnd = $event.gregorian" class="w-full relative block">
-                                <input type="text" [formControl]="customDateEndControl" class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 outline-none mb-2 shadow-2xs" placeholder="انتخاب تاریخ">
+                                <input type="text" [formControl]="customDateEndControl" class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 outline-none mb-2 shadow-sm" placeholder="انتخاب تاریخ">
                               </ng-persian-datepicker>
                               <div class="flex items-center gap-1.5 pt-1">
-                                <button (click)="applyCustomDateRange(col.key)" class="flex-1 bg-indigo-600 text-white text-xs font-bold py-1.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-xs">اعمال</button>
+                                <button (click)="applyCustomDateRange(col.key)" class="flex-1 bg-indigo-600 text-white text-xs font-bold py-1.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">اعمال</button>
                                 <button (click)="clearCustomDateRange(col.key)" class="flex-1 bg-slate-100 text-rose-600 text-xs font-bold py-1.5 rounded-lg hover:bg-rose-50 transition-colors">پاک کردن</button>
                               </div>
                             </div>
@@ -539,7 +539,7 @@ export interface PageEvent {
           <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" (click)="cancelUpdate()"></div>
           
           <!-- Modal Content -->
-          <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-save"></svg>
@@ -566,7 +566,7 @@ export interface PageEvent {
         <div class="fixed inset-0 z-[100] flex items-center justify-center">
           <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" (click)="cancelRevert()"></div>
           
-          <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg>

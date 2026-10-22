@@ -165,7 +165,7 @@ function panelScope(raw: string): string {
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- Tier 1: PostgreSQL Database -->
-          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-xs min-h-[145px] flex flex-col justify-between" [ngClass]="getCardBorder(server?.components?.database?.status)">
+          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-sm min-h-[145px] flex flex-col justify-between" [ngClass]="getCardBorder(server?.components?.database?.status)">
             <div>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
@@ -194,7 +194,7 @@ function panelScope(raw: string): string {
           </div>
 
           <!-- Tier 2: Redis In-Memory Cache -->
-          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-xs min-h-[145px] flex flex-col justify-between" [ngClass]="getCardBorder(server?.components?.redis?.status)">
+          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-sm min-h-[145px] flex flex-col justify-between" [ngClass]="getCardBorder(server?.components?.redis?.status)">
             <div>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
@@ -223,7 +223,7 @@ function panelScope(raw: string): string {
           </div>
 
           <!-- Tier 3: WebSocket Channel Layer -->
-          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-xs min-h-[145px] flex flex-col justify-between" [ngClass]="getCardBorder(server?.components?.websocket?.status)">
+          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-sm min-h-[145px] flex flex-col justify-between" [ngClass]="getCardBorder(server?.components?.websocket?.status)">
             <div>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
@@ -252,7 +252,7 @@ function panelScope(raw: string): string {
           </div>
 
           <!-- Tier 4: Client Offline IndexedDB Databases -->
-          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-xs min-h-[145px] flex flex-col justify-between border-slate-200 dark:border-slate-800">
+          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-sm min-h-[145px] flex flex-col justify-between border-slate-200 dark:border-slate-800">
             <div>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
@@ -281,7 +281,7 @@ function panelScope(raw: string): string {
           </div>
 
           <!-- Tier 5: Session & Tab Isolation Engine -->
-          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-xs min-h-[145px] flex flex-col justify-between border-slate-200 dark:border-slate-800">
+          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-sm min-h-[145px] flex flex-col justify-between border-slate-200 dark:border-slate-800">
             <div>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
@@ -310,7 +310,7 @@ function panelScope(raw: string): string {
           </div>
 
           <!-- Tier 6: 3-Way Merge & Conflict Resolver Engine -->
-          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-xs min-h-[145px] flex flex-col justify-between border-slate-200 dark:border-slate-800">
+          <div class="p-4 rounded-2xl border bg-white dark:bg-slate-900 transition-all shadow-sm min-h-[145px] flex flex-col justify-between border-slate-200 dark:border-slate-800">
             <div>
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
@@ -363,7 +363,7 @@ function panelScope(raw: string): string {
           <button
             type="button"
             (click)="navigateToBackupSettings()"
-            class="min-h-[40px] px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+            class="min-h-[40px] px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <span>مدیریت اسنپ‌شات‌ها و بازگشت</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
@@ -402,7 +402,7 @@ function panelScope(raw: string): string {
                 *ngFor="let lvl of [20, 30, 50, 100]"
                 (click)="selectedConcurrency = lvl"
                 class="min-h-[40px] sm:min-h-[32px] py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-center"
-                [ngClass]="selectedConcurrency === lvl ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
+                [ngClass]="selectedConcurrency === lvl ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
               >
                 {{ lvl }}
               </button>

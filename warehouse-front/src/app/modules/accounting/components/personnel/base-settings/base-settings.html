@@ -11,7 +11,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۱. هدر اصلی تنظیمات پایه (Base Settings Header) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="bg-white rounded-2xl p-3 md:p-4 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3 flex-wrap">
+  <div class="bg-white rounded-2xl p-3 md:p-4 border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 flex-wrap">
     <!-- راست: کنترل‌های دامنه، سال و نسخه -->
     <div class="flex items-center gap-2.5 flex-wrap">
       <!-- انتخاب دامنه پروژه -->
@@ -65,7 +65,7 @@
   </div>
 
   <!-- بنر وضعیت ارث‌بری مقادیر برای پروژه انتخابی -->
-  <div *ngIf="selectedProjectId && !isCurrentSettingSpecificToProject" class="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-xs">
+  <div *ngIf="selectedProjectId && !isCurrentSettingSpecificToProject" class="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-sm">
     <div class="flex items-center gap-2.5 text-amber-900 font-bold">
       <span class="text-base">ℹ️</span>
       <span>برای این پروژه هنوز تنظیمات اختصاصی ثبت نشده است و مقادیر فعلی از <strong>«تنظیمات عمومی سازمان»</strong> خوانده می‌شوند.</span>
@@ -74,7 +74,7 @@
   </div>
 
   <!-- بنر تایید تنظیمات اختصاصی فعال -->
-  <div *ngIf="yearlySettings?.project" class="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-3.5 flex items-center justify-between text-xs text-indigo-950 font-bold shadow-xs">
+  <div *ngIf="yearlySettings?.project" class="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-3.5 flex items-center justify-between text-xs text-indigo-950 font-bold shadow-sm">
     <div class="flex items-center gap-2">
       <span class="text-base">🏢</span>
       <span>تنظیمات اختصاصی پروژه فعال است: <strong>{{ yearlySettings?.project_name }}</strong></span>
@@ -458,7 +458,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۹. مودال ثبت نسخه جدید در میانه سال (Mid-Year Version Modal) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="showCreateVersionModal" (click)="closeCreateVersionModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="showCreateVersionModal" (click)="closeCreateVersionModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
     <div (click)="$event.stopPropagation()" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl max-w-md w-full space-y-5" dir="rtl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2 text-purple-700">
@@ -502,7 +502,7 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۱۰. مودال ایجاد سال مالی جدید (Create Fiscal Year Modal) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div *ngIf="showCreateYearModal" (click)="closeCreateYearModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="showCreateYearModal" (click)="closeCreateYearModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
     <div (click)="$event.stopPropagation()" class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl max-w-md w-full space-y-5" dir="rtl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2 text-indigo-700">

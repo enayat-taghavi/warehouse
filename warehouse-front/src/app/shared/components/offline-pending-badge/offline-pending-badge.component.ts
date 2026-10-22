@@ -42,7 +42,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
       <button
         type="button"
         (click)="togglePopover($event)"
-        class="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 whitespace-nowrap tap-target sm:min-h-[36px]"
+        class="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-sm cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 whitespace-nowrap tap-target sm:min-h-[36px]"
         [ngClass]="pillClasses"
         [title]="tooltipText"
         [attr.aria-label]="pillAriaLabel"
@@ -75,7 +75,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
         <!-- 4. ادغام زنگوله/هشدار خطای همگام‌سازی (Integrated Sync Error Chip) -->
         <span
           *ngIf="errorCount > 0"
-          class="hidden sm:inline-flex items-center gap-1 mr-0.5 px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black shadow-xs animate-pulse"
+          class="hidden sm:inline-flex items-center gap-1 mr-0.5 px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black shadow-sm animate-pulse"
           title="{{ errorCount }} خطای ارسال نیازمند بررسی"
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" appIcon="bell"></svg>
@@ -121,13 +121,13 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
             (click)="activeTab = 'queue'"
             class="flex-1 py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] tap-target"
             [ngClass]="activeTab === 'queue' 
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black' 
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm font-black' 
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
           >
             <span>صف ارسال</span>
             <span
               *ngIf="pendingCount > 0"
-              class="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold"
+              class="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold"
               [ngClass]="activeTab === 'queue' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'"
             >
               {{ pendingCount }}
@@ -138,7 +138,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
             (click)="activeTab = 'status'"
             class="flex-1 py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-center transition-all cursor-pointer text-[11px] flex items-center justify-center tap-target"
             [ngClass]="activeTab === 'status' 
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black' 
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm font-black' 
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
           >
             سلامت و شبکه
@@ -148,13 +148,13 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
             (click)="activeTab = 'errors'"
             class="flex-1 py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] tap-target"
             [ngClass]="activeTab === 'errors' 
-              ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs font-black' 
+              ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-sm font-black' 
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
           >
             <span>خطاها</span>
             <span
               *ngIf="errorCount > 0"
-              class="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-rose-500 text-white"
+              class="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500 text-white"
             >
               {{ errorCount }}
             </span>
@@ -167,7 +167,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
           <!-- ─── TAB 1: سلامت و شبکه (Live Health Matrix & Sync) ─── -->
           <div *ngIf="activeTab === 'status'" class="space-y-2 fade-in">
             <!-- Health Score Mini Widget -->
-            <div class="p-2.5 rounded-xl bg-slate-900 text-white border border-slate-800 flex items-center justify-between shadow-xs">
+            <div class="p-2.5 rounded-xl bg-slate-900 text-white border border-slate-800 flex items-center justify-between shadow-sm">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full" [ngClass]="healthScore >= 85 ? 'bg-emerald-400 animate-ping' : healthScore >= 60 ? 'bg-amber-400' : 'bg-rose-500'"></span>
                 <span class="text-[11px] font-bold text-slate-300">نمره سلامت زیرساخت:</span>
@@ -176,7 +176,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
                 <span class="font-mono font-black text-sm" [ngClass]="healthScore >= 85 ? 'text-emerald-400' : healthScore >= 60 ? 'text-amber-400' : 'text-rose-400'">
                   {{ healthScore }}٪
                 </span>
-                <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                   {{ healthScore >= 85 ? 'پایدار' : healthScore >= 60 ? 'هشدار' : 'خطا' }}
                 </span>
               </div>
@@ -259,7 +259,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
                 type="button"
                 (click)="onManualSync()"
                 [disabled]="isSyncing || networkState !== 'online'"
-                class="py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-[10px] font-bold text-white transition-all flex items-center justify-center gap-1 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer tap-target"
+                class="py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-[10px] font-bold text-white transition-all flex items-center justify-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer tap-target"
                 [ngClass]="networkState === 'online' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-400'"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isSyncing" appIcon="action-refresh"></svg>
@@ -298,12 +298,12 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
             </div>
 
             <!-- Queue Items List -->
-            <div *ngFor="let item of queueEntries" class="p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-800/80 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 space-y-2 transition-all">
+            <div *ngFor="let item of queueEntries" class="p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-800/80 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 space-y-2 transition-all">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-2.5 min-w-0 flex-1">
                   <!-- Human Action Icon Badge -->
                   <div
-                    class="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold shadow-2xs"
+                    class="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold shadow-sm"
                     [ngClass]="getHumanActionBadgeClass(item)"
                   >
                     {{ getHumanActionIcon(item) }}
@@ -328,7 +328,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
                 <button
                   type="button"
                   (click)="onCancelQueueItem(item)"
-                  class="min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs flex items-center justify-center gap-1 tap-target"
+                  class="min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm flex items-center justify-center gap-1 tap-target"
                   title="لغو این عملیات و جلوگیری از ارسال آن به سرور"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
@@ -399,7 +399,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
                   *ngIf="isConflictError(err)"
                   type="button"
                   (click)="openConflictResolver(err)"
-                  class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 animate-pulse tap-target"
+                  class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95 animate-pulse tap-target"
                   title="مقایسه بصری نسخه‌ها و حل تداخل خوش‌بینانه"
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="git-pull-request"></svg>

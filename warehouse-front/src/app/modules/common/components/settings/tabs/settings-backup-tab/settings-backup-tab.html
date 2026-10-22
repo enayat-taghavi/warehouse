@@ -252,7 +252,7 @@
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div *ngFor="let comp of systemGDrive.backup_companies" class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-2 shadow-2xs">
+                <div *ngFor="let comp of systemGDrive.backup_companies" class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-2 shadow-sm">
                   <div>
                     <div class="flex items-center gap-1.5">
                       <span class="w-2 h-2 rounded-full" [ngClass]="comp.sync_backups ? 'bg-emerald-500' : 'bg-slate-300'"></span>
