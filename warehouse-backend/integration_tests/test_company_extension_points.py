@@ -8,7 +8,7 @@ from platform_core.registry import contributions
 from companies.models import Company, UserCompanyAccess
 from companies.permissions import has_structure_write_permission
 from warehouses.models import Warehouse
-from personnel.models import FinancialProject, ProjectSection, UserSectionAssignment
+from personnel.models import Project, ProjectSection, SectionAssignment
 
 User = get_user_model()
 
@@ -41,7 +41,7 @@ class CompanyExtensionPointsTests(TestCase):
         """سوپریوزر نمی‌تواند شرکتی را که پروژه دارد حذف کند و خطای 400 دریافت می‌کند."""
         admin = User.objects.create_superuser(username='admin_prj_test', password='password123', phone_number='09170001002')
         comp = Company.objects.create(code='CMP_PRJ_TEST', name='شرکت دارای پروژه')
-        FinancialProject.objects.create(company=comp, code='PRJ_TEST_101', name='پروژه تست')
+        Project.objects.create(company=comp, code='PRJ_TEST_101', name='پروژه تست')
 
         self.client.force_authenticate(admin)
         res = self.client.delete(f'/api/org/companies/{comp.id}/')
@@ -65,10 +65,10 @@ class CompanyExtensionPointsTests(TestCase):
         comp1 = Company.objects.create(code='DIR_CMP_1', name='شرکت تشکیلات یک')
         comp2 = Company.objects.create(code='DIR_CMP_2', name='شرکت تشکیلات دو')
 
-        prj1 = FinancialProject.objects.create(company=comp1, code='DIR_PRJ_1', name='پروژه شرکت یک')
+        prj1 = Project.objects.create(company=comp1, code='DIR_PRJ_1', name='پروژه شرکت یک')
         sec1 = ProjectSection.objects.create(project=prj1, code='DIR_SEC_1', name='بخش پروژه یک')
 
-        prj2 = FinancialProject.objects.create(company=comp2, code='DIR_PRJ_2', name='پروژه شرکت دو')
+        prj2 = Project.objects.create(company=comp2, code='DIR_PRJ_2', name='پروژه شرکت دو')
         sec2 = ProjectSection.objects.create(project=prj2, code='DIR_SEC_2', name='بخش پروژه دو')
 
         org_admin = User.objects.create_user(username='org_admin_tester', password='password123', phone_number='09170001004')
@@ -78,10 +78,10 @@ class CompanyExtensionPointsTests(TestCase):
         grant_membership(org_admin, comp1)
 
         member_comp1 = User.objects.create_user(username='member_comp1_user', password='password123', phone_number='09170001005')
-        UserSectionAssignment.objects.create(user=member_comp1, section=sec1, is_active=True)
+        SectionAssignment.objects.create(user=member_comp1, section=sec1, is_active=True)
 
         member_comp2 = User.objects.create_user(username='member_comp2_user', password='password123', phone_number='09170001006')
-        UserSectionAssignment.objects.create(user=member_comp2, section=sec2, is_active=True)
+        SectionAssignment.objects.create(user=member_comp2, section=sec2, is_active=True)
 
         self.client.force_authenticate(org_admin)
         res = self.client.get('/api/accounts/users/')
@@ -100,10 +100,10 @@ class CompanyExtensionPointsTests(TestCase):
         comp1 = Company.objects.create(code='DIR_CMP_N1', name='شرکت محدودسازی یک')
         comp2 = Company.objects.create(code='DIR_CMP_N2', name='شرکت محدودسازی دو')
 
-        prj1 = FinancialProject.objects.create(company=comp1, code='DIR_PRJ_N1', name='پروژه فیلتر یک')
+        prj1 = Project.objects.create(company=comp1, code='DIR_PRJ_N1', name='پروژه فیلتر یک')
         sec1 = ProjectSection.objects.create(project=prj1, code='DIR_SEC_N1', name='بخش فیلتر یک')
 
-        prj2 = FinancialProject.objects.create(company=comp2, code='DIR_PRJ_N2', name='پروژه فیلتر دو')
+        prj2 = Project.objects.create(company=comp2, code='DIR_PRJ_N2', name='پروژه فیلتر دو')
         sec2 = ProjectSection.objects.create(project=prj2, code='DIR_SEC_N2', name='بخش فیلتر دو')
 
         org_admin = User.objects.create_user(username='org_admin_nar_tester', password='password123', phone_number='09170001007')
@@ -115,10 +115,10 @@ class CompanyExtensionPointsTests(TestCase):
         grant_membership(org_admin, comp2)
 
         member_comp1 = User.objects.create_user(username='member_nar_comp1', password='password123', phone_number='09170001008')
-        UserSectionAssignment.objects.create(user=member_comp1, section=sec1, is_active=True)
+        SectionAssignment.objects.create(user=member_comp1, section=sec1, is_active=True)
 
         member_comp2 = User.objects.create_user(username='member_nar_comp2', password='password123', phone_number='09170001009')
-        UserSectionAssignment.objects.create(user=member_comp2, section=sec2, is_active=True)
+        SectionAssignment.objects.create(user=member_comp2, section=sec2, is_active=True)
 
         self.client.force_authenticate(org_admin)
 

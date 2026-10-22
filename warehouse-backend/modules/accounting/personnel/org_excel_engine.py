@@ -20,7 +20,7 @@ from django.db.models import Count, Q
 import jdatetime
 
 from django.contrib.auth import get_user_model
-from .models import FinancialProject, ProjectSection, Counterparty, UserSectionAssignment
+from .models import Project, ProjectSection, Counterparty, SectionAssignment
 from common.date_utils import normalize_digits
 
 User = get_user_model()
@@ -145,7 +145,7 @@ def export_projects_excel(company_ids=None):
     align_text = Alignment(horizontal='right', vertical='center')
 
     # بهینه‌سازی N+1 کوئری با Count('sections')
-    projects = FinancialProject.objects.annotate(sections_count=Count('sections'))
+    projects = Project.objects.annotate(sections_count=Count('sections'))
     if company_ids is not None:
         projects = projects.filter(Q(company_id__in=company_ids) | Q(company__isnull=True))
     for row_idx, p in enumerate(projects.order_by('code'), 3):
@@ -295,7 +295,7 @@ def export_assignments_excel(project_id=None, role=None, company_ids=None):
     ws.title = 'ماتریس انتساب‌های سازمانی'
     _apply_2row_header(ws, ASSIGNMENT_COLUMNS, header_bg='6366F1')
 
-    qs = UserSectionAssignment.objects.select_related('user', 'section', 'section__project').all()
+    qs = SectionAssignment.objects.select_related('user', 'section', 'section__project').all()
     if company_ids is not None:
         qs = qs.filter(Q(section__project__company_id__in=company_ids) | Q(section__project__company__isnull=True))
     if project_id:
@@ -311,7 +311,8 @@ def export_assignments_excel(project_id=None, role=None, company_ids=None):
     align_data = Alignment(horizontal='center', vertical='center')
     align_text = Alignment(horizontal='right', vertical='center')
 
-    role_map = dict(UserSectionAssignment.ROLE_CHOICES)
+    from companies.models import section_role_choices
+    role_map = dict(section_role_choices())
 
     for row_idx, a in enumerate(qs, 3):
         u = a.user
@@ -634,7 +635,7 @@ def import_projects_from_excel(file_obj, dry_run=False, company_id=None):
         if company_id is not None:
             lookup['company_id'] = company_id
         try:
-            exists = FinancialProject.objects.filter(**lookup).exists()
+            exists = Project.objects.filter(**lookup).exists()
             if dry_run:
                 if exists:
                     updated += 1
@@ -642,7 +643,7 @@ def import_projects_from_excel(file_obj, dry_run=False, company_id=None):
                     created += 1
             else:
                 with transaction.atomic():
-                    p, is_new = FinancialProject.objects.update_or_create(
+                    p, is_new = Project.objects.update_or_create(
                         **lookup,
                         defaults={'name': name, 'description': desc or None, 'is_active': is_active}
                     )
@@ -693,7 +694,7 @@ def import_sections_from_excel(file_obj, dry_run=False, company_id=None):
         if not proj_code or str(proj_code).strip() == '':
             continue
         proj_code = normalize_digits(str(proj_code)).strip().upper()
-        proj_qs = FinancialProject.objects.filter(code=proj_code)
+        proj_qs = Project.objects.filter(code=proj_code)
         if company_id is not None:
             proj_qs = proj_qs.filter(company_id=company_id)
         proj = proj_qs.first()
@@ -832,7 +833,7 @@ def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, memb
         is_active = active_val not in ['خیر', 'false', '0', 'no']
 
         try:
-            exists = UserSectionAssignment.objects.filter(user=user, section=sec, role=role).exists()
+            exists = SectionAssignment.objects.filter(user=user, section=sec, role=role).exists()
             if dry_run:
                 if exists:
                     updated += 1
@@ -840,7 +841,7 @@ def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, memb
                     created += 1
             else:
                 with transaction.atomic():
-                    a, is_new = UserSectionAssignment.objects.update_or_create(
+                    a, is_new = SectionAssignment.objects.update_or_create(
                         user=user,
                         section=sec,
                         role=role,

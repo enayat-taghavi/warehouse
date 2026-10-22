@@ -21,7 +21,7 @@ class PayrollYearlySettings(models.Model):
         verbose_name="شرکت متبوع"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.PROTECT,
         null=True,
         blank=True,

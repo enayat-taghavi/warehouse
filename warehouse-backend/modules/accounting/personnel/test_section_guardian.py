@@ -3,9 +3,9 @@ from django.contrib.auth import get_user_model
 from decimal import Decimal
 from rest_framework.test import APIClient
 from personnel.models import (
-    FinancialProject,
+    Project,
     ProjectSection,
-    UserSectionAssignment,
+    SectionAssignment,
     Counterparty,
     ExpenseInvoice,
     PersonnelProfile,
@@ -36,7 +36,7 @@ class SectionGuardianPhase1Tests(TestCase):
             first_name='مهندس',
             last_name='احمدی'
         )
-        self.project = FinancialProject.objects.create(
+        self.project = Project.objects.create(
             code='PRJ-SHIRAZ',
             name='پروژه انبار مرکزی شیراز',
             description='انبار لجستیک جنوب کشور'
@@ -61,7 +61,7 @@ class SectionGuardianPhase1Tests(TestCase):
 
     def test_user_section_assignment(self):
         """تست انتساب کاربر به بخش با نقش‌های مجاز"""
-        assignment = UserSectionAssignment.objects.create(
+        assignment = SectionAssignment.objects.create(
             user=self.user,
             section=self.section,
             role='employee'
@@ -189,7 +189,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_api_counterparty_and_invoice(self):
         """تست تعریف طرف‌حساب و صدور فاکتور هزینه با قفل draft"""
-        proj = FinancialProject.objects.create(code='PRJ-ISFAHAN', name='پروژه اصفهان')
+        proj = Project.objects.create(code='PRJ-ISFAHAN', name='پروژه اصفهان')
         sec = ProjectSection.objects.create(project=proj, code='SEC-FLEET', name='ناوگان اصفهان')
 
         # تعریف طرف‌حساب
@@ -216,18 +216,18 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_clone_assignments_api(self):
         """تست اختصاصی تکثیر و کپی چارت سازمانی از بخش مبدأ به مقصد"""
-        proj = FinancialProject.objects.create(code='PRJ-CLONE', name='پروژه تکثیر چارت')
+        proj = Project.objects.create(code='PRJ-CLONE', name='پروژه تکثیر چارت')
         sec_source = ProjectSection.objects.create(project=proj, code='SEC-SRC', name='بخش الگو')
         sec_target = ProjectSection.objects.create(project=proj, code='SEC-TGT', name='بخش مقصد')
 
         # انتساب کاربر به بخش مبدأ
-        UserSectionAssignment.objects.create(
+        SectionAssignment.objects.create(
             user=self.admin_user,
             section=sec_source,
             role='manager',
             is_active=True
         )
-        UserSectionAssignment.objects.create(
+        SectionAssignment.objects.create(
             user=self.employee_user,
             section=sec_source,
             role='employee',
@@ -242,7 +242,7 @@ class SectionGuardianPhase2APITests(TestCase):
         self.assertEqual(res.data['copied_count'], 2)
 
         # بررسی وجود انتساب‌ها در بخش مقصد
-        target_assignments = UserSectionAssignment.objects.filter(section=sec_target)
+        target_assignments = SectionAssignment.objects.filter(section=sec_target)
         self.assertEqual(target_assignments.count(), 2)
         roles = set(target_assignments.values_list('role', flat=True))
         self.assertEqual(roles, {'manager', 'employee'})
@@ -279,7 +279,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_bulk_assign_api(self):
         """تست اختصاصی انتساب دسته‌جمعی چند کاربر به یک بخش و نقش"""
-        proj = FinancialProject.objects.create(code='PRJ-BULK', name='پروژه تست گروهی')
+        proj = Project.objects.create(code='PRJ-BULK', name='پروژه تست گروهی')
         sec = ProjectSection.objects.create(project=proj, code='SEC-BLK', name='بخش انتساب چندگانه')
 
         # درخواست انتساب همزمان مدیر و کارمند
@@ -296,12 +296,12 @@ class SectionGuardianPhase2APITests(TestCase):
         self.assertTrue(all(a['section'] == sec.id for a in res.data))
 
         # بررسی در دیتابیس
-        count = UserSectionAssignment.objects.filter(section=sec, role='accountant', is_active=True).count()
+        count = SectionAssignment.objects.filter(section=sec, role='accountant', is_active=True).count()
         self.assertEqual(count, 2)
 
     def test_soft_deactivation_on_destroy_with_invoices(self):
         """تست عدم حذف فیزیکی و تبدیل به غیرفعال‌سازی نرم در صورت وجود فاکتور یا سند مالی"""
-        proj = FinancialProject.objects.create(code='PRJ-SAFE', name='پروژه حفاظت داده')
+        proj = Project.objects.create(code='PRJ-SAFE', name='پروژه حفاظت داده')
         sec = ProjectSection.objects.create(project=proj, code='SEC-SAFE', name='بخش امن')
         cp = Counterparty.objects.create(name='تأمین‌کننده قطعات امین')
         ExpenseInvoice.objects.create(
@@ -334,9 +334,9 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_reactivate_inactive_assignment_without_unique_error(self):
         """تست فعال‌سازی مجدد رکورد غیرفعال انتساب بدون خطای یکتایی دیتابیس"""
-        proj = FinancialProject.objects.create(code='PRJ-REACT', name='پروژه فعال‌سازی مجدد')
+        proj = Project.objects.create(code='PRJ-REACT', name='پروژه فعال‌سازی مجدد')
         sec = ProjectSection.objects.create(project=proj, code='SEC-REACT', name='بخش فعال‌سازی')
-        assignment = UserSectionAssignment.objects.create(
+        assignment = SectionAssignment.objects.create(
             user=self.employee_user,
             section=sec,
             role='supervisor',
@@ -378,7 +378,7 @@ class SectionGuardianPhase2APITests(TestCase):
         self.assertTrue(res['dry_run'])
         self.assertEqual(res['summary']['created'], 1)
         # اطمینان از عدم ایجاد در دیتابیس
-        self.assertFalse(FinancialProject.objects.filter(code='PRJ-DRY99').exists())
+        self.assertFalse(Project.objects.filter(code='PRJ-DRY99').exists())
 
     def test_counterparty_sheba_validation(self):
         """تست اعتبارسنجی سریالایزر طرف‌حساب برای شبا و کد ملی"""

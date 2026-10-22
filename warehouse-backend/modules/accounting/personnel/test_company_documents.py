@@ -9,7 +9,7 @@ from rest_framework import status
 
 from personnel.models import (
     Company, CompanyDocument, CompanyBankAccount, CompanyBoardMember, UserCompanyAccess,
-    FinancialProject, ProjectSection, UserSectionAssignment
+    Project, ProjectSection, SectionAssignment
 )
 from personnel.serializers import CompanySerializer
 from personnel.views import get_user_allowed_companies
@@ -532,7 +532,7 @@ class CompanyDocumentTests(TestCase):
 
     def test_section_assignment_does_not_grant_documents_access(self):
         """
-        صرف داشتن انتساب در بخش‌های تابعه (UserSectionAssignment) نباید دسترسی
+        صرف داشتن انتساب در بخش‌های تابعه (SectionAssignment) نباید دسترسی
         به بایگانی مدارک (docs_read و docs_write) را به کاربر اعطا کند.
         دسترسی به اسناد تنها بر اساس مجوز صریح UserCompanyAccess یا سوپریوزر است.
         """
@@ -542,7 +542,7 @@ class CompanyDocumentTests(TestCase):
             email='worker_sec@example.com'
         )
 
-        project = FinancialProject.objects.create(
+        project = Project.objects.create(
             company=self.company_b,
             code='PRJ_SEC_TEST',
             name='پروژه آزمایشی شرکت بتا'
@@ -554,7 +554,7 @@ class CompanyDocumentTests(TestCase):
             name='بخش عملیات کارگاهی'
         )
 
-        UserSectionAssignment.objects.create(
+        SectionAssignment.objects.create(
             user=worker,
             section=section,
             role='employee',

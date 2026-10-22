@@ -40,8 +40,8 @@ def get_effective_payroll_settings(year_month: str, project_id: int = None, comp
 
         # در صورت نبود تنظیمات پروژه، در صورت عدم ارسال صریح company_id، شرکت پروژه را می‌یابیم
         if not company_id:
-            from .models import FinancialProject
-            proj_company_id = FinancialProject.objects.filter(id=project_id).values_list('company_id', flat=True).first()
+            from .models import Project
+            proj_company_id = Project.objects.filter(id=project_id).values_list('company_id', flat=True).first()
             if proj_company_id:
                 company_id = proj_company_id
 

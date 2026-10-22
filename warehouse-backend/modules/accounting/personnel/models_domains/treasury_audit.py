@@ -68,7 +68,7 @@ class ExpenseInvoice(models.Model):
         ('rejected', 'رد شده'),
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.PROTECT,
         related_name='invoices',
         verbose_name="بخش پروژه"
@@ -164,7 +164,7 @@ class PettyCashAccount(models.Model):
     حساب / صندوق تنخواه‌گردان بخش پروژه منتسب به کارمند (تنخواه‌دار)
     """
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.CASCADE,
         related_name='petty_cash_accounts',
         verbose_name="بخش پروژه"
@@ -234,7 +234,7 @@ class PettyCashTransaction(models.Model):
         verbose_name="حساب تنخواه"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.PROTECT,
         related_name='petty_cash_transactions',
         verbose_name="بخش پروژه"

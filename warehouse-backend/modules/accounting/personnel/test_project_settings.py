@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from personnel.models import (
-    FinancialProject,
+    Project,
     PayrollYearlySettings,
     WorkshopInsuranceSettings,
     BankExportSettings,
@@ -62,7 +62,7 @@ class ProjectScopedSettingsTestCase(TestCase):
         )
 
         # Project 1: Shiraz
-        self.proj_shiraz, _ = FinancialProject.objects.get_or_create(
+        self.proj_shiraz, _ = Project.objects.get_or_create(
             code='PRJ-SHIRAZ',
             defaults={'name': 'پروژه انبار شیراز'}
         )

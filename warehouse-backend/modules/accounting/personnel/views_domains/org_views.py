@@ -16,6 +16,7 @@ from accounts.views import OptionalPageNumberPagination
 
 User = get_user_model()
 from companies.views import CompanyViewSet as CoreCompanyViewSet
+from companies.models import section_role_choices
 from companies.access import (
     get_user_allowed_companies,
     get_request_company_id,
@@ -28,9 +29,9 @@ from ..models import (
     CompanyBankAccount,
     CompanyBoardMember,
     CompanyFiscalPeriod,
-    FinancialProject,
+    Project,
     ProjectSection,
-    UserSectionAssignment,
+    SectionAssignment,
     DailyAttendance,
     ExpenseInvoice,
     PersonnelProfile,
@@ -500,7 +501,7 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
     """
     مدیریت پروژه‌های مالی و عملیاتی (مراکز هزینه مستقل)
     """
-    queryset = FinancialProject.objects.all().annotate(sections_count=Count('sections'))
+    queryset = Project.objects.all().annotate(sections_count=Count('sections'))
     serializer_class = FinancialProjectSerializer
     permission_classes = [permissions.IsAuthenticated, IsProjectStructureManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
@@ -778,7 +779,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
             if source_company_id != target_company_id:
                 raise PermissionDenied("کپی انتساب فقط بین بخش‌های یک شرکت مجاز است.")
 
-        source_assignments = UserSectionAssignment.objects.filter(section=source_section, is_active=True)
+        source_assignments = SectionAssignment.objects.filter(section=source_section, is_active=True)
         if not source_assignments.exists():
             return Response({'error': 'هیچ انتساب فعالی در بخش مبدأ جهت کپی وجود ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -790,14 +791,14 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
         skipped_count = 0
         with transaction.atomic():
             for sa in source_assignments:
-                existing_assignment = UserSectionAssignment.objects.filter(
+                existing_assignment = SectionAssignment.objects.filter(
                     user=sa.user,
                     section=target_section,
                     role=sa.role
                 ).first()
 
                 if not existing_assignment:
-                    UserSectionAssignment.objects.create(
+                    SectionAssignment.objects.create(
                         user=sa.user,
                         section=target_section,
                         role=sa.role,
@@ -834,7 +835,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
     """
     مدیریت انتساب کاربران به بخش‌ها و تعیین نقش‌های سازمانی
     """
-    queryset = UserSectionAssignment.objects.all().select_related('user', 'section', 'section__project')
+    queryset = SectionAssignment.objects.all().select_related('user', 'section', 'section__project')
     serializer_class = UserSectionAssignmentSerializer
     permission_classes = [permissions.IsAuthenticated, IsProjectStructureManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
@@ -904,7 +905,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
                 sections = sections.filter(project__company_id=target_company_id)
             return Response(ProjectSectionSerializer(sections, many=True).data)
 
-        assignments = UserSectionAssignment.objects.filter(
+        assignments = SectionAssignment.objects.filter(
             user=user,
             is_active=True,
             section__is_active=True,
@@ -939,7 +940,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
                 ensure_scoped_assignment(request.user, user_id_int, section)
 
         if user_id_int and sec_id_int:
-            existing = UserSectionAssignment.objects.filter(
+            existing = SectionAssignment.objects.filter(
                 user_id=user_id_int,
                 section_id=sec_id_int,
                 role=role
@@ -1044,7 +1045,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return Response({'error': 'شناسه بخش باید عددی باشد.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        valid_roles = dict(UserSectionAssignment.ROLE_CHOICES).keys()
+        valid_roles = dict(section_role_choices()).keys()
         if role not in valid_roles:
             return Response({'error': f'نقش ارسالی نامعتبر است. نقش‌های مجاز: {list(valid_roles)}'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1100,7 +1101,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
             for uid in valid_user_ids:
                 if uid not in existing_users:
                     continue
-                assignment, _ = UserSectionAssignment.objects.get_or_create(
+                assignment, _ = SectionAssignment.objects.get_or_create(
                     user_id=uid,
                     section=section,
                     role=role,
@@ -1116,7 +1117,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
         broadcast_org_structure_updated('assignment', 'bulk_create', None, f"{len(created_assignments)} کاربر", proj_id, tab_id, request.user.id)
 
         assign_ids = [a.id for a in created_assignments]
-        qs = UserSectionAssignment.objects.filter(id__in=assign_ids).select_related('user', 'section', 'section__project')
+        qs = SectionAssignment.objects.filter(id__in=assign_ids).select_related('user', 'section', 'section__project')
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

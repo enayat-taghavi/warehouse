@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import (
-    FinancialProject,
+    Project,
     ProjectSection,
-    UserSectionAssignment,
+    SectionAssignment,
     Counterparty,
     ExpenseInvoice,
     PettyCashAccount,
@@ -21,7 +21,7 @@ from .models import (
 )
 
 
-@admin.register(FinancialProject)
+@admin.register(Project)
 class FinancialProjectAdmin(admin.ModelAdmin):
     list_display = ('code', 'name', 'is_active', 'created_at')
     search_fields = ('code', 'name', 'description')
@@ -35,7 +35,7 @@ class ProjectSectionAdmin(admin.ModelAdmin):
     list_filter = ('project', 'is_active')
 
 
-@admin.register(UserSectionAssignment)
+@admin.register(SectionAssignment)
 class UserSectionAssignmentAdmin(admin.ModelAdmin):
     list_display = ('user', 'section', 'role', 'is_active', 'created_at')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'section__name')

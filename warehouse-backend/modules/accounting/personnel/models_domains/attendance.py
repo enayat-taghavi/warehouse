@@ -51,7 +51,7 @@ class MonthlyWorkPeriod(_WarehouseCompatMixin, models.Model):
         verbose_name="انبار مربوطه"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -59,7 +59,7 @@ class MonthlyWorkPeriod(_WarehouseCompatMixin, models.Model):
         verbose_name="پروژه مالی مربوطه"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -254,7 +254,7 @@ class DailyAttendance(_WarehouseCompatMixin, models.Model):
         verbose_name="انبار"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -262,7 +262,7 @@ class DailyAttendance(_WarehouseCompatMixin, models.Model):
         verbose_name="پروژه مالی/عملیاتی"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -410,7 +410,7 @@ class VehicleTripLog(_WarehouseCompatMixin, models.Model):
         verbose_name="انبار"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -418,7 +418,7 @@ class VehicleTripLog(_WarehouseCompatMixin, models.Model):
         verbose_name="پروژه مالی/عملیاتی"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

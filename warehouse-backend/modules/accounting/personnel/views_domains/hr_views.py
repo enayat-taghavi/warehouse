@@ -33,7 +33,7 @@ from ..models import (
     PersonnelDocument,
     WorkflowAuditLog,
     ProjectSection,
-    UserSectionAssignment,
+    SectionAssignment,
 )
 from ..serializers import (
     PersonnelProfileSerializer,
@@ -79,7 +79,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         if section_id:
             if not is_global_auditor and user and user.is_authenticated:
                 user_section_ids = list(
-                    UserSectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
+                    SectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
                 )
                 if str(section_id).isdigit() and int(section_id) not in user_section_ids:
                     return qs.none()
@@ -139,7 +139,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         section = serializer.validated_data.get('section')
         # گارد انتساب بخش: کاربر عادی باید انتساب فعال به بخش انتخاب‌شده داشته باشد
         if not is_mgr and section and user and user.is_authenticated:
-            is_assigned = UserSectionAssignment.objects.filter(user=user, section=section, is_active=True).exists()
+            is_assigned = SectionAssignment.objects.filter(user=user, section=section, is_active=True).exists()
             if not is_assigned:
                 raise PermissionDenied("شما انتساب فعال در این بخش برای معرفی پرسنل جدید ندارید.")
         # شرکت، بخش و پروژهٔ پرونده باید در قلمرو شرکت‌های مجاز کاربر باشند (حتی برای مدیر؛ عبور هوشمند هم پس از این است)
@@ -436,7 +436,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
     def _is_creator_or_co_section(user, instance) -> bool:
         if instance.created_by_id == user.id:
             return True
-        return bool(instance.section_id) and UserSectionAssignment.objects.filter(
+        return bool(instance.section_id) and SectionAssignment.objects.filter(
             user=user, section_id=instance.section_id, is_active=True
         ).exists()
 
@@ -896,7 +896,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if company_id is None or company_id not in allowed_ids:
                 raise PermissionDenied("بازگشایی فقط برای پرونده‌های شرکت‌های مجاز شما ممکن است.")
-            is_in_section = bool(instance.section_id) and UserSectionAssignment.objects.filter(user=user, section_id=instance.section_id, is_active=True).exists()
+            is_in_section = bool(instance.section_id) and SectionAssignment.objects.filter(user=user, section_id=instance.section_id, is_active=True).exists()
             from ..lifecycle_services import APPROVAL_STAGES, user_has_any_perm
             is_approver = any(user_has_any_perm(user, rule['perms']) for rule in APPROVAL_STAGES.values())
             if not (instance.created_by_id == user.id or is_in_section or is_approver):

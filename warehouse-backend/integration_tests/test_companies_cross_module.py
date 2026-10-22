@@ -17,10 +17,10 @@ class CompanyCrossModuleIntegrationTests(TestCase):
     def test_section_membership_grants_derived_access_when_accounting_installed(self):
         if not apps.is_installed('personnel'):
             self.skipTest('accounting module is not installed')
-        from personnel.models import FinancialProject, ProjectSection, UserSectionAssignment
-        project = FinancialProject.objects.create(company=self.c3, code='P1', name='پروژه')
+        from personnel.models import Project, ProjectSection, SectionAssignment
+        project = Project.objects.create(company=self.c3, code='P1', name='پروژه')
         section = ProjectSection.objects.create(project=project, code='S1', name='بخش')
-        UserSectionAssignment.objects.create(user=self.user, section=section)
+        SectionAssignment.objects.create(user=self.user, section=section)
 
         self.assertIn(self.c3.id, derived_company_ids(self.user))
         allowed = set(get_user_allowed_companies(self.user).values_list('id', flat=True))

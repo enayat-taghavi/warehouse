@@ -9,6 +9,34 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+class UnlessCoreOrgTables(migrations.SeparateDatabaseAndState):
+    """
+    Project, section and section-assignment tables now belong to core companies (migration
+    companies.0005_project_sections, same db_table). If core already created them (accounting installed after
+    another module), these operations only update the state; otherwise they run as before. Decided once per
+    migration run, before this migration creates any of the three tables.
+    """
+
+    def __init__(self, operation):
+        super().__init__(state_operations=[operation], database_operations=[operation])
+
+    @staticmethod
+    def _core_created(schema_editor):
+        if not hasattr(schema_editor, '_core_org_tables'):
+            schema_editor._core_org_tables = (
+                'personnel_financialproject' in schema_editor.connection.introspection.table_names()
+            )
+        return schema_editor._core_org_tables
+
+    def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        if not self._core_created(schema_editor):
+            super().database_forwards(app_label, schema_editor, from_state, to_state)
+
+    def database_backwards(self, app_label, schema_editor, from_state, to_state):
+        if not self._core_created(schema_editor):
+            super().database_backwards(app_label, schema_editor, from_state, to_state)
+
+
 class Migration(migrations.Migration):
 
     initial = True
@@ -428,7 +456,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-transaction_date_shamsi', '-created_at'],
             },
         ),
-        migrations.CreateModel(
+        UnlessCoreOrgTables(migrations.CreateModel(
             name='ProjectSection',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -443,7 +471,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'بخش\u200cهای پروژه',
                 'ordering': ['project', 'code'],
             },
-        ),
+        )),
         migrations.CreateModel(
             name='TaxRuleSettings',
             fields=[
@@ -463,7 +491,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'تنظیمات مالیات حقوق',
             },
         ),
-        migrations.CreateModel(
+        UnlessCoreOrgTables(migrations.CreateModel(
             name='UserSectionAssignment',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -476,7 +504,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'انتساب کاربر به بخش',
                 'verbose_name_plural': 'انتساب\u200cهای کاربران به بخش\u200cها',
             },
-        ),
+        )),
         migrations.CreateModel(
             name='VehicleBankAccount',
             fields=[
@@ -914,7 +942,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-invoice_date_shamsi', '-created_at'],
             },
         ),
-        migrations.CreateModel(
+        UnlessCoreOrgTables(migrations.CreateModel(
             name='FinancialProject',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -931,7 +959,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'پروژه\u200cهای مالی/عملیاتی',
                 'ordering': ['code'],
             },
-        ),
+        )),
         migrations.AddField(
             model_name='dailyattendance',
             name='project',
@@ -1212,11 +1240,11 @@ class Migration(migrations.Migration):
             name='custodian',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='petty_cash_transactions', to=settings.AUTH_USER_MODEL, verbose_name='تنخواه\u200cدار'),
         ),
-        migrations.AddField(
+        UnlessCoreOrgTables(migrations.AddField(
             model_name='projectsection',
             name='project',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sections', to='personnel.financialproject', verbose_name='پروژه'),
-        ),
+        )),
         migrations.AddField(
             model_name='pettycashtransaction',
             name='section',
@@ -1257,16 +1285,16 @@ class Migration(migrations.Migration):
             name='yearly_settings',
             field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='tax_settings', to='personnel.payrollyearlysettings', verbose_name='تنظیمات سال مالی'),
         ),
-        migrations.AddField(
+        UnlessCoreOrgTables(migrations.AddField(
             model_name='usersectionassignment',
             name='section',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='user_assignments', to='personnel.projectsection', verbose_name='بخش پروژه'),
-        ),
-        migrations.AddField(
+        )),
+        UnlessCoreOrgTables(migrations.AddField(
             model_name='usersectionassignment',
             name='user',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='section_assignments', to=settings.AUTH_USER_MODEL, verbose_name='کاربر سیستم'),
-        ),
+        )),
         migrations.AddField(
             model_name='vehiclechangerequest',
             name='accountant_reviewed_by',
@@ -1426,14 +1454,14 @@ class Migration(migrations.Migration):
             name='companyfiscalperiod',
             unique_together={('company', 'fiscal_year')},
         ),
-        migrations.AddConstraint(
+        UnlessCoreOrgTables(migrations.AddConstraint(
             model_name='financialproject',
             constraint=models.UniqueConstraint(condition=models.Q(('company__isnull', False)), fields=('company', 'code'), name='unique_company_project_code'),
-        ),
-        migrations.AddConstraint(
+        )),
+        UnlessCoreOrgTables(migrations.AddConstraint(
             model_name='financialproject',
             constraint=models.UniqueConstraint(condition=models.Q(('company__isnull', True)), fields=('code',), name='unique_global_project_code'),
-        ),
+        )),
         migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['company', 'status'], name='personnel_g_company_f971b0_idx'),
@@ -1482,10 +1510,10 @@ class Migration(migrations.Migration):
             model_name='monthlypayrollrecord',
             constraint=models.UniqueConstraint(fields=('period', 'personnel'), name='unique_period_personnel_payroll'),
         ),
-        migrations.AlterUniqueTogether(
+        UnlessCoreOrgTables(migrations.AlterUniqueTogether(
             name='projectsection',
             unique_together={('project', 'code')},
-        ),
+        )),
         migrations.AddIndex(
             model_name='pettycashtransaction',
             index=models.Index(fields=['section', 'custodian', 'transaction_date_shamsi'], name='personnel_p_section_d002e2_idx'),
@@ -1542,10 +1570,10 @@ class Migration(migrations.Migration):
             model_name='dailyattendance',
             index=models.Index(fields=['section', 'date_shamsi'], name='personnel_d_section_2c4afc_idx'),
         ),
-        migrations.AlterUniqueTogether(
+        UnlessCoreOrgTables(migrations.AlterUniqueTogether(
             name='usersectionassignment',
             unique_together={('user', 'section', 'role')},
-        ),
+        )),
         migrations.AddConstraint(
             model_name='vehicledriverprofile',
             constraint=models.CheckConstraint(check=models.Q(('default_service_rate__gte', 0)), name='vehicle_default_rate_gte_0'),

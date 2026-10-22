@@ -5,9 +5,9 @@ import io
 import openpyxl
 from personnel.models import (
     Company,
-    FinancialProject,
+    Project,
     ProjectSection,
-    UserSectionAssignment,
+    SectionAssignment,
     PersonnelProfile,
     PersonnelBankAccount,
     InsuranceJobTitle
@@ -23,7 +23,7 @@ class Phase5ExcelAndEndpointsTests(APITestCase):
             national_id="10100000001",
             economic_code="111111111111"
         )
-        self.project = FinancialProject.objects.create(
+        self.project = Project.objects.create(
             name="پروژه تست",
             company=self.company
         )
@@ -41,7 +41,7 @@ class Phase5ExcelAndEndpointsTests(APITestCase):
             email="op_p5@test.com",
             password="pass"
         )
-        UserSectionAssignment.objects.create(
+        SectionAssignment.objects.create(
             user=self.operator,
             section=self.section,
             is_active=True

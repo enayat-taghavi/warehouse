@@ -61,9 +61,9 @@ class SectionGuardian:
             from django.contrib.admin import site
             from django.db import connection
             from personnel.models import (
-                FinancialProject,
+                Project,
                 ProjectSection,
-                UserSectionAssignment,
+                SectionAssignment,
                 Counterparty,
                 ExpenseInvoice,
                 PersonnelProfile,
@@ -81,9 +81,9 @@ class SectionGuardian:
 
             # چک ۱: وجود مدل‌های جدید
             models_to_check = [
-                (FinancialProject, "FinancialProject (پروژه مالی/عملیاتی)"),
+                (Project, "Project (پروژه مالی/عملیاتی)"),
                 (ProjectSection, "ProjectSection (بخش/دپارتمان پروژه)"),
-                (UserSectionAssignment, "UserSectionAssignment (انتساب کاربر به بخش)"),
+                (SectionAssignment, "SectionAssignment (انتساب کاربر به بخش)"),
                 (Counterparty, "Counterparty (طرف‌حساب مالی)"),
                 (ExpenseInvoice, "ExpenseInvoice (فاکتور هزینه)")
             ]
@@ -94,11 +94,11 @@ class SectionGuardian:
                     checks.append((f"وجود مدل {label}", False, "مدل یافت نشد!"))
                     all_passed = False
 
-            # چک ۲: اعتبارسنجی فیلدهای FinancialProject
-            fp_fields = [f.name for f in FinancialProject._meta.get_fields()]
+            # چک ۲: اعتبارسنجی فیلدهای Project
+            fp_fields = [f.name for f in Project._meta.get_fields()]
             req_fp = ['code', 'name', 'description', 'is_active', 'created_at', 'updated_at', 'sections']
             fp_ok = all(f in fp_fields for f in req_fp)
-            checks.append(("فیلدهای FinancialProject", fp_ok, f"فیلدهای الزامی: {req_fp}"))
+            checks.append(("فیلدهای Project", fp_ok, f"فیلدهای الزامی: {req_fp}"))
             if not fp_ok:
                 all_passed = False
 
@@ -111,11 +111,12 @@ class SectionGuardian:
             if not (ps_ok and ps_unique):
                 all_passed = False
 
-            # چک ۴: نقش‌های معتبر در UserSectionAssignment
-            roles = [c[0] for c in UserSectionAssignment.ROLE_CHOICES]
+            # چک ۴: نقش‌های معتبر در SectionAssignment
+            from companies.models import section_role_choices
+            roles = [c[0] for c in section_role_choices()]
             req_roles = ['employee', 'supervisor', 'accountant', 'manager', 'treasury']
             roles_ok = all(r in roles for r in req_roles)
-            checks.append(("نقش‌های پنج‌گانه UserSectionAssignment", roles_ok, f"نقش‌ها: {roles}"))
+            checks.append(("نقش‌های پنج‌گانه SectionAssignment", roles_ok, f"نقش‌ها: {roles}"))
             if not roles_ok:
                 all_passed = False
 
@@ -179,7 +180,7 @@ class SectionGuardian:
                 all_passed = False
 
             # چک ۱۳: ثبت در ادمین جنگو
-            admin_registered = all(m in site._registry for m in [FinancialProject, ProjectSection, UserSectionAssignment, Counterparty, ExpenseInvoice])
+            admin_registered = all(m in site._registry for m in [Project, ProjectSection, SectionAssignment, Counterparty, ExpenseInvoice])
             checks.append(("ثبت مدل‌ها در پنل ادمین جنگو", admin_registered, "همه ۵ مدل در admin.site ثبت شده‌اند"))
             if not admin_registered:
                 all_passed = False
@@ -280,7 +281,7 @@ class SectionGuardian:
             
             with open(front_model_path, 'r', encoding='utf-8') as f:
                 model_content = f.read()
-            has_front_models = all(m in model_content for m in ['FinancialProject', 'ProjectSection', 'UserSectionAssignment', 'Counterparty', 'ExpenseInvoice'])
+            has_front_models = all(m in model_content for m in ['Project', 'ProjectSection', 'SectionAssignment', 'Counterparty', 'ExpenseInvoice'])
             checks.append(("مدل‌های تایپ‌اسکریپت فرانت‌اند", has_front_models, "اینترفیس‌های هر ۵ مدل در personnel.model.ts تعریف شده‌اند"))
             if not has_front_models:
                 all_passed = False
@@ -362,13 +363,13 @@ class SectionGuardian:
         checks = []
 
         try:
-            from personnel.models import PayrollYearlySettings, FinancialProject
+            from personnel.models import PayrollYearlySettings, Project
             from personnel.views import PayrollYearlySettingsViewSet, MonthlyPayrollViewSet
 
             # ۱. بررسی مدل و فیلد project
             pys_fields = [f.name for f in PayrollYearlySettings._meta.get_fields()]
             has_proj_field = 'project' in pys_fields
-            checks.append(("فیلد project در مدل PayrollYearlySettings", has_proj_field, "مدل تنظیمات سالانه حقوق دارای کلید خارجی به FinancialProject است"))
+            checks.append(("فیلد project در مدل PayrollYearlySettings", has_proj_field, "مدل تنظیمات سالانه حقوق دارای کلید خارجی به Project است"))
             if not has_proj_field:
                 all_passed = False
 
@@ -513,7 +514,7 @@ class SectionGuardian:
         try:
             from django.db import transaction
             from personnel.models import (
-                FinancialProject,
+                Project,
                 ProjectSection,
                 Counterparty,
                 ExpenseInvoice,
@@ -525,7 +526,7 @@ class SectionGuardian:
 
             with transaction.atomic():
                 # ایجاد داده‌های آزمایشی ایزوله
-                test_proj = FinancialProject.objects.create(
+                test_proj = Project.objects.create(
                     code="PRJ_GUARD_TEST",
                     name="پروژه آزمون نگهبان",
                     is_active=True

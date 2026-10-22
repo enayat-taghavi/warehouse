@@ -10,8 +10,8 @@ def section_derived_company_source(user):
     سهم حسابداری در دسترسی شرکت: بازگرداندن اطلاعات دسترسی مشتق برای انتساب‌های فعال در بخش‌های پروژه‌ها.
     این تابع به عنوان منبع دسترسی مشتق در `companies.access` ثبت می‌شود.
     """
-    from personnel.models import UserSectionAssignment
-    sec_assignments = UserSectionAssignment.objects.filter(
+    from personnel.models import SectionAssignment
+    sec_assignments = SectionAssignment.objects.filter(
         user=user, is_active=True, section__project__company__isnull=False
     ).select_related('section__project__company')
     details = []
@@ -41,6 +41,15 @@ def build_section_member_q(allowed_cids):
     from django.db.models import Q
     return Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)
 
+
+# نقش‌های انتساب به بخش که حسابداری به هسته اعلام می‌کند (contribute('section_roles', ...))
+SECTION_ROLES = (
+    ('employee', 'کارمند / اپراتور ثبت'),
+    ('supervisor', 'سرپرست بخش'),
+    ('accountant', 'حسابدار پروژه'),
+    ('manager', 'مدیر پروژه'),
+    ('treasury', 'خزانه‌دار کل'),
+)
 
 
 # ─── بخش‌های مجوز شرکت که ماژول حسابداری به رجیستری هسته می‌دهد (طرح مجوزهای بخش‌به‌بخش، §۵-۱) ───
@@ -74,9 +83,9 @@ COMPANY_FIELD_SECTIONS = {f: 'board' for f in (
 
 def section_member_sources(company_id):
     """{user_id: [برچسب منبع]} برای اعضای یک شرکت از راه انتساب فعال بخش‌ها (تب «دسترسی»)."""
-    from personnel.models import UserSectionAssignment
+    from personnel.models import SectionAssignment
     result = {}
-    for sa in (UserSectionAssignment.objects.filter(is_active=True, section__project__company_id=company_id)
+    for sa in (SectionAssignment.objects.filter(is_active=True, section__project__company_id=company_id)
                .select_related('section__project')):
         result.setdefault(sa.user_id, []).append(f"از بخش {sa.section.name} پروژهٔ {sa.section.project.name}")
     return result

@@ -3,7 +3,7 @@ from companies.testing import grant_membership
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from personnel.models import (
-    Company, FinancialProject, ProjectSection, UserSectionAssignment,
+    Company, Project, ProjectSection, SectionAssignment,
     UserCompanyAccess, PersonnelProfile, PayrollYearlySettings, emit_accounting_event
 )
 from personnel.payroll_engine import get_effective_payroll_settings
@@ -43,17 +43,17 @@ class CompanyMultiTenantTestCase(TestCase):
         )
 
         # پروژه‌ها
-        self.proj_dalan = FinancialProject.objects.create(
+        self.proj_dalan = Project.objects.create(
             company=self.company_pts,
             code='PRJ_DALAN',
             name='پروژه دالان'
         )
-        self.proj_parsian = FinancialProject.objects.create(
+        self.proj_parsian = Project.objects.create(
             company=self.company_pts,
             code='PRJ_PARSIAN',
             name='پروژه پارسیان'
         )
-        self.proj_anbar = FinancialProject.objects.create(
+        self.proj_anbar = Project.objects.create(
             company=self.company_fa,
             code='PRJ_ANBAR',
             name='پروژه انبارداری'
@@ -112,7 +112,7 @@ class CompanyMultiTenantTestCase(TestCase):
             code='SEC_LOGISTICS',
             name='بخش لجستیک انبار'
         )
-        UserSectionAssignment.objects.create(
+        SectionAssignment.objects.create(
             user=self.regular_user,
             section=sec_anbar,
             role='supervisor',
@@ -319,7 +319,7 @@ class CompanyMultiTenantTestCase(TestCase):
             module='finance',
             action='UPDATE',
             user=self.admin_user,
-            target_model='FinancialProject',
+            target_model='Project',
             target_object_id=self.proj_dalan.id,
             details={'info': 'تست لاگ دالان'},
             company_id=self.company_pts.id
@@ -331,7 +331,7 @@ class CompanyMultiTenantTestCase(TestCase):
             module='finance',
             action='UPDATE',
             user=self.admin_user,
-            target_model='FinancialProject',
+            target_model='Project',
             target_object_id=self.proj_anbar.id,
             details={'info': 'تست لاگ فارس عالیش'},
             company_id=self.company_fa.id

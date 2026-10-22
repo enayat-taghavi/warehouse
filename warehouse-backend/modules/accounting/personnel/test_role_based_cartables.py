@@ -12,7 +12,7 @@ from personnel.models import (
     PayrollYearlySettings,
     JobGradeTier,
     Company,
-    FinancialProject,
+    Project,
     ProjectSection
 )
 from personnel.sheba_utils import generate_sheba_from_account
@@ -30,7 +30,7 @@ class RoleBasedCartablesTestCase(TestCase):
         self.client.force_authenticate(user=self.admin)
 
         self.company = Company.objects.create(name='شرکت تست کارتابل', code='CMP-CR')
-        self.project = FinancialProject.objects.create(company=self.company, name='پروژه تست', code='PRJ-CR')
+        self.project = Project.objects.create(company=self.company, name='پروژه تست', code='PRJ-CR')
         self.section = ProjectSection.objects.create(project=self.project, name='بخش تست', code='SEC-CR')
 
         # Base Yearly Settings & Job Grades

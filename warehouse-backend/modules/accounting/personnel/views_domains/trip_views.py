@@ -23,7 +23,7 @@ from ..models import (
     VehicleDriverProfile,
     MonthlyWorkPeriod,
     ProjectSection,
-    FinancialProject,
+    Project,
 )
 from ..serializers import (
     VehicleTripLogSerializer,
@@ -71,7 +71,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 proj_id_int = int(project_id)
             except (ValueError, TypeError):
                 return Response({'error': 'شناسه پروژه نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
-            proj_obj = FinancialProject.objects.filter(id=proj_id_int).first()
+            proj_obj = Project.objects.filter(id=proj_id_int).first()
             if not proj_obj:
                 return Response({'error': 'پروژه مشخص‌شده یافت نشد.'}, status=status.HTTP_400_BAD_REQUEST)
             if not proj_obj.company_id:

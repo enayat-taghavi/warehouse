@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.test import TestCase
 from rest_framework.test import APIClient
 from accounts.models import CustomUser
-from personnel.models import FinancialProject, ProjectSection, PersonnelProfile, DailyAttendance
+from personnel.models import Project, ProjectSection, PersonnelProfile, DailyAttendance
 from personnel.sheba_utils import generate_sheba_from_account
 
 
@@ -17,7 +17,7 @@ class PersonnelFullCycleTests(TestCase):
             code="DALAN-CO",
             defaults={"name": "شرکت دالان", "is_active": True}
         )
-        self.project, _ = FinancialProject.objects.get_or_create(
+        self.project, _ = Project.objects.get_or_create(
             code="1",
             defaults={"name": "دالان", "company": self.company, "is_active": True}
         )
@@ -63,9 +63,9 @@ class PersonnelFullCycleTests(TestCase):
             if p:
                 self.manager.user_permissions.add(p)
 
-        from personnel.models import UserSectionAssignment
+        from personnel.models import SectionAssignment
         for u, r in [(self.operator, "employee"), (self.supervisor, "supervisor"), (self.accountant, "accountant"), (self.manager, "manager")]:
-            UserSectionAssignment.objects.get_or_create(user=u, section=self.section, defaults={"role": r, "is_active": True})
+            SectionAssignment.objects.get_or_create(user=u, section=self.section, defaults={"role": r, "is_active": True})
             UserCompanyAccess.objects.get_or_create(user=u, company=self.company, defaults={"is_default": True})
 
         self.client = APIClient()

@@ -123,3 +123,120 @@ class UserCompanyAccess(models.Model):
 
     def __str__(self):
         return f"{self.user} -> {self.company.name}"
+
+
+def section_role_choices() -> tuple:
+    """
+    نقش‌های انتساب به بخش، از ماژول‌های نصب‌شده (contribute('section_roles', [(کد, برچسب), ...])).
+    هسته خودش نقشی نمی‌شناسد (طرح Project_Section_To_Core، ت۱).
+    """
+    from platform_core.registry import contributions
+    seen, out = set(), []
+    for roles in contributions('section_roles'):
+        for code, label in roles:
+            if code not in seen:
+                seen.add(code)
+                out.append((code, label))
+    return tuple(out)
+
+
+class Project(models.Model):
+    """
+    پروژه زیر شرکت (شرکت ← پروژه ← بخش)؛ از personnel به هسته منتقل شده و جدولش همان است.
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='projects',
+        verbose_name="شرکت متبوع"
+    )
+    code = models.CharField(max_length=50, verbose_name="کد پروژه")
+    name = models.CharField(max_length=200, verbose_name="نام پروژه")
+    description = models.TextField(blank=True, null=True, verbose_name="توضیحات")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "پروژه مالی/عملیاتی"
+        verbose_name_plural = "پروژه‌های مالی/عملیاتی"
+        ordering = ['code']
+        db_table = 'personnel_financialproject'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['company', 'code'],
+                condition=models.Q(company__isnull=False),
+                name='unique_company_project_code'
+            ),
+            models.UniqueConstraint(
+                fields=['code'],
+                condition=models.Q(company__isnull=True),
+                name='unique_global_project_code'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class ProjectSection(models.Model):
+    """
+    بخش / دپارتمان تابعه پروژه
+    """
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='sections',
+        verbose_name="پروژه"
+    )
+    code = models.CharField(max_length=50, verbose_name="کد بخش")
+    name = models.CharField(max_length=200, verbose_name="نام بخش")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "بخش پروژه"
+        verbose_name_plural = "بخش‌های پروژه"
+        unique_together = ('project', 'code')
+        ordering = ['project', 'code']
+        db_table = 'personnel_projectsection'
+
+    def __str__(self):
+        return f"{self.project.name} - {self.name} ({self.code})"
+
+
+class SectionAssignment(models.Model):
+    """
+    انتساب کاربر به بخش با نقشی که یکی از ماژول‌ها اعلام کرده است (section_role_choices).
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='section_assignments',
+        verbose_name="کاربر سیستم"
+    )
+    section = models.ForeignKey(
+        ProjectSection,
+        on_delete=models.CASCADE,
+        related_name='user_assignments',
+        verbose_name="بخش پروژه"
+    )
+    role = models.CharField(max_length=30, default='employee', verbose_name="نقش در بخش")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "انتساب کاربر به بخش"
+        verbose_name_plural = "انتساب‌های کاربران به بخش‌ها"
+        unique_together = ('user', 'section', 'role')
+        db_table = 'personnel_usersectionassignment'
+
+    def get_role_display(self):
+        return dict(section_role_choices()).get(self.role, self.role)
+
+    def __str__(self):
+        return f"{self.user} -> {self.section.name} ({self.get_role_display()})"

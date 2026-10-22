@@ -24,7 +24,8 @@ class PersonnelConfig(AppConfig):
         from personnel.company_access import COMPANY_PERMISSION_SECTIONS, COMPANY_FIELD_SECTIONS
         _contribute('company_permission_sections', COMPANY_PERMISSION_SECTIONS)
         _contribute('company_field_sections', COMPANY_FIELD_SECTIONS)
-        from personnel.company_access import section_member_sources
+        from personnel.company_access import section_member_sources, SECTION_ROLES
+        _contribute('section_roles', SECTION_ROLES)
         _contribute('company_member_sources', section_member_sources)
         # مسیرهای بخش‌های شرکتِ حسابداری خودشان دروازهٔ بخش دارند؛ middleware برای آن‌ها «پیوند» را کافی می‌داند
         _contribute('company_link_api_prefixes', '/api/personnel/compan')

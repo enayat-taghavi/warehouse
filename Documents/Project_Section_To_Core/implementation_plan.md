@@ -80,4 +80,28 @@
 - **وضعیت:** طرح نوشته شد و **هیچ کدی تغییر نکرد**.
 - **گام بعد:** پاسخ کاربر به ت۱ تا ت۴ و تأیید صریح. سپس گام ۱ در جلسهٔ تازه.
 
+### گام ۱ (۱ آبان ۱۴۰۵): انجام شد
+
+- **تصمیم‌های کاربر:** ت۱=الف، ت۲=بخش تازهٔ `projects` و حذف `perm_manage_projects_sections`، ت۳=حذف صفحهٔ سراسری و هدایت به تب استودیو، ت۴=Claude.
+- **مدل‌ها:** `Project`، `ProjectSection` و `SectionAssignment` در `core/companies/models.py` با همان `db_table`ها.
+  - `personnel/models.py` آن‌ها را از هسته بازصادر می‌کند. همهٔ ارجاع‌ها (کد، آزمون‌ها، `integration_tests` و نگهبان 36) به نام تازه و `'companies.Project'`/`'companies.ProjectSection'` رفتند.
+  - نام serializerها و ViewSetها (`FinancialProjectSerializer`، `UserSectionAssignmentViewSet` و…) عمداً دست نخورد؛ در گام ۲ به هسته می‌روند.
+- **نقش‌ها (جلوتر از طرح، از گام ۲):** `role` در هسته `choices` ندارد. `section_role_choices()` در `companies/models.py` نقش‌ها را از `contribute('section_roles', ...)` می‌خواند. حسابداری `SECTION_ROLES` (همان پنج نقش) را در `personnel/company_access.py` اعلام می‌کند.
+  - `get_role_display()` روی مدل تعریف شد و `validate_role` به serializer انتساب اضافه شد.
+  - `default='employee'` روی مدل هسته ماند تا رفتار عوض نشود.
+- **مهاجرت‌ها:**
+  - `companies/0005_project_sections`: فقط state، به‌اضافهٔ `create_missing_tables`، که جدول‌ها را فقط در نصب بدون حسابداری می‌سازد.
+  - `personnel/0004_move_project_sections_to_core`: AlterField و DeleteModel فقط در state، به‌اضافهٔ `move_content_types`. این تابع content type و مجوزها را به `companies` می‌برد. اگر post_migrate زودتر نوع تازه را ساخته باشد، grantها را روی مجوز تازه کپی می‌کند. هیچ چیز حذف نمی‌شود.
+  - `personnel/0001_initial` ویرایش شد: عملیات سه مدل در `UnlessCoreOrgTables` پیچیده شدند تا حسابداری را بتوان پس از نصب «فقط انبار» نصب کرد. روی پایگاه‌های موجود اثری ندارد، چون 0001 پیش‌تر اجرا شده است.
+- **آزمون و بررسی:**
+  - `makemigrations --check`: بدون تغییر. نام مهاجرت‌ها با `django_migrations` برخورد ندارد.
+  - پشتیبان `backup_20261023_003532.dump` گرفته شد. `migrate` روی `app` بی‌خطا بود و ردیف‌ها همان ماندند (۴، ۶ و ۳۰). content type و مجوزها به `companies` منتقل شدند.
+  - آزمون‌های `companies personnel accounts`: ۴۳۲ مورد سبز.
+  - `integration_tests`: ۲۶۷ مورد، با یک شکست در `test_broadcast_query_count_independent_of_participants` (۲۴ کوئری). این شکست روی HEAD هم عیناً هست، پس پیش‌موجود است.
+  - شبیه‌سازی نصب: «فقط انبار» و سپس افزودن حسابداری روی پایگاه آزمون با `--keepdb` بی‌خطا بود و قیدهای FK و unique برقرار بودند.
+  - نگهبان‌های 29، 57 و 36 PASS شدند. فاز ۱ `section_guardian.py` هم سبز است؛ فازهای دیگرش روی مسیرهای فایل قدیمی و بی‌ربط شکست می‌خورند (پیش‌موجود).
+  - `data-loss-reviewer` یک یافتهٔ متوسط داشت: از دست رفتن grantها اگر post_migrate بین دو مهاجرت اجرا شود. رفع شد و شاخهٔ کپی در تراکنشِ برگشت‌خورده آزموده شد.
+- **باز:** ثبت مدل‌ها در `personnel/admin.py` و منبع عضویت (`company_access.py`) هنوز در حسابداری هستند و در گام ۲ به هسته می‌روند. انتشار روی `soft` نیاز به تأیید دارد.
+- **گام بعد:** گام ۲ (API، مجوز `projects`، منبع عضویت و `section_roles` در هسته) در جلسهٔ تازه.
+
 </div>

@@ -6,10 +6,10 @@ from rest_framework.test import APIClient
 
 from personnel.models import (
     Company,
-    FinancialProject,
+    Project,
     ProjectSection,
     UserCompanyAccess,
-    UserSectionAssignment,
+    SectionAssignment,
     PersonnelProfile,
     VehicleDriverProfile,
     PersonnelChangeRequest,
@@ -52,7 +52,7 @@ class CartableMultiTenantTestCase(TestCase):
         )
 
         # ۲. پروژه‌ها و بخش‌ها
-        self.proj_fa = FinancialProject.objects.create(
+        self.proj_fa = Project.objects.create(
             company=self.company_fa,
             code='PRJ_FA',
             name='پروژه انبار مرکزی فارس عالیش'
@@ -63,7 +63,7 @@ class CartableMultiTenantTestCase(TestCase):
             name='بخش انبارداری FA'
         )
 
-        self.proj_pts = FinancialProject.objects.create(
+        self.proj_pts = Project.objects.create(
             company=self.company_pts,
             code='PRJ_PTS',
             name='پروژه پایانه PTS'
@@ -221,7 +221,7 @@ class CartableMultiTenantTestCase(TestCase):
             company=company,
             is_default=True
         )
-        UserSectionAssignment.objects.create(
+        SectionAssignment.objects.create(
             user=u,
             section=section,
             role=role,

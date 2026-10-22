@@ -13,10 +13,10 @@ from accounts.middleware import get_user_valid_roles_for_app, resolve_effective_
 from personnel.models import (
     Company,
     Counterparty,
-    FinancialProject,
+    Project,
     ProjectSection,
     UserCompanyAccess,
-    UserSectionAssignment,
+    SectionAssignment,
 )
 
 User = get_user_model()
@@ -40,7 +40,7 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
             economic_code='411987654321',
             is_active=True
         )
-        self.project = FinancialProject.objects.create(company=self.company, code='PRJ_ORG', name='پروژه آزمون')
+        self.project = Project.objects.create(company=self.company, code='PRJ_ORG', name='پروژه آزمون')
         self.section = ProjectSection.objects.create(project=self.project, code='SEC_ORG', name='بخش آزمون')
         self.counterparty = Counterparty.objects.create(company=self.company, name='طرف‌حساب آزمون', counterparty_type='other')
 
@@ -145,11 +145,11 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.other_company = Company.objects.create(
             code='SCOPE_B', name='شرکت ب', national_id='14002222222', economic_code='411222222222', is_active=True
         )
-        self.project = FinancialProject.objects.create(company=self.company, code='PRJ_A', name='پروژه الف')
+        self.project = Project.objects.create(company=self.company, code='PRJ_A', name='پروژه الف')
         self.section = ProjectSection.objects.create(project=self.project, code='SEC_A', name='بخش الف')
-        self.other_project = FinancialProject.objects.create(company=self.other_company, code='PRJ_B', name='پروژه ب')
+        self.other_project = Project.objects.create(company=self.other_company, code='PRJ_B', name='پروژه ب')
         self.other_section = ProjectSection.objects.create(project=self.other_project, code='SEC_B', name='بخش ب')
-        self.global_project = FinancialProject.objects.create(company=None, code='PRJ_G', name='پروژه سراسری')
+        self.global_project = Project.objects.create(company=None, code='PRJ_G', name='پروژه سراسری')
         self.global_section = ProjectSection.objects.create(project=self.global_project, code='SEC_G', name='بخش سراسری')
         self.counterparty = Counterparty.objects.create(company=self.company, name='طرف‌حساب الف', counterparty_type='other')
         self.global_counterparty = Counterparty.objects.create(company=None, name='طرف‌حساب سراسری', counterparty_type='other')
@@ -209,7 +209,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(self.client.patch(f'{url}{self.project.id}/', {'name': 'نام تازه'}, format='json').status_code, 200)
         self.global_project.refresh_from_db()
         self.assertEqual(self.global_project.name, 'پروژه سراسری')
-        self.assertTrue(FinancialProject.objects.filter(pk=self.global_project.pk).exists())
+        self.assertTrue(Project.objects.filter(pk=self.global_project.pk).exists())
 
     # ─── راهبر: بخش ───
     def test_org_admin_section_writes_stay_inside_own_company(self):
@@ -230,7 +230,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(res.status_code, 403)
         res = self.client.post(f'{base}bulk-assign/', {'section_id': self.other_section.id, 'user_ids': [self.org_admin.id], 'role': 'manager'}, format='json')
         self.assertEqual(res.status_code, 403)
-        self.assertFalse(UserSectionAssignment.objects.filter(user=self.org_admin, section=self.other_section).exists())
+        self.assertFalse(SectionAssignment.objects.filter(user=self.org_admin, section=self.other_section).exists())
         self.assertNotIn(self.other_company.id, set(get_user_allowed_companies(self.org_admin).values_list('id', flat=True)))
 
     def test_org_admin_assigns_only_company_members_and_never_to_global_sections(self):
@@ -239,13 +239,13 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(self.client.post(base, {'user': self.outsider.id, 'section': self.section.id, 'role': 'employee'}, format='json').status_code, 403)
         res = self.client.post(f'{base}bulk-assign/', {'section_id': self.section.id, 'user_ids': [self.member.id, self.outsider.id], 'role': 'employee'}, format='json')
         self.assertEqual(res.status_code, 403)
-        self.assertFalse(UserSectionAssignment.objects.filter(section=self.section).exists())
+        self.assertFalse(SectionAssignment.objects.filter(section=self.section).exists())
         self.assertEqual(self.client.post(base, {'user': self.member.id, 'section': self.global_section.id, 'role': 'employee'}, format='json').status_code, 403)
         self.assertEqual(self.client.post(base, {'user': self.member.id, 'section': self.section.id, 'role': 'employee'}, format='json').status_code, 201)
 
     def test_org_admin_cannot_touch_other_company_assignments(self):
-        foreign = UserSectionAssignment.objects.create(user=self.outsider, section=self.other_section, role='employee', is_active=True)
-        own = UserSectionAssignment.objects.create(user=self.member, section=self.section, role='employee', is_active=True)
+        foreign = SectionAssignment.objects.create(user=self.outsider, section=self.other_section, role='employee', is_active=True)
+        own = SectionAssignment.objects.create(user=self.member, section=self.section, role='employee', is_active=True)
         self._as(self.org_admin)
         base = '/api/personnel/user-section-assignments/'
         # انتساب‌های شرکت دیگر اصلاً در فهرست او نیستند
@@ -260,14 +260,14 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(foreign.role, 'employee')
 
     def test_org_admin_cannot_clone_assignments_across_companies(self):
-        UserSectionAssignment.objects.create(user=self.outsider, section=self.other_section, role='employee', is_active=True)
+        SectionAssignment.objects.create(user=self.outsider, section=self.other_section, role='employee', is_active=True)
         self._as(self.org_admin)
         res = self.client.post(
             f'/api/personnel/project-sections/{self.section.id}/clone-assignments/',
             {'source_section_id': self.other_section.id}, format='json'
         )
         self.assertEqual(res.status_code, 403)
-        self.assertFalse(UserSectionAssignment.objects.filter(user=self.outsider, section=self.section).exists())
+        self.assertFalse(SectionAssignment.objects.filter(user=self.outsider, section=self.section).exists())
 
     # ─── درون‌ریزی اکسل شرکت‌محور ───
     def test_project_import_writes_only_inside_active_company(self):
@@ -282,9 +282,9 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(self.project.name, 'نام تازه الف')
         self.assertEqual(self.other_project.name, 'پروژه ب')
         self.assertEqual(self.global_project.name, 'پروژه سراسری')
-        self.assertTrue(FinancialProject.objects.filter(company=self.company, code='PRJ_B').exists())
-        self.assertTrue(FinancialProject.objects.filter(company=self.company, code='PRJ_G').exists())
-        self.assertFalse(FinancialProject.objects.filter(company__isnull=True).exclude(pk=self.global_project.pk).exists())
+        self.assertTrue(Project.objects.filter(company=self.company, code='PRJ_B').exists())
+        self.assertTrue(Project.objects.filter(company=self.company, code='PRJ_G').exists())
+        self.assertFalse(Project.objects.filter(company__isnull=True).exclude(pk=self.global_project.pk).exists())
         # شرکتی که کاربر به آن دسترسی ندارد
         self.assertEqual(self._import(url, [('PRJ_X', 'x')], self.other_company).status_code, 403)
 
@@ -307,9 +307,9 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
             (self.org_admin.username, '', 'PRJ_B', 'SEC_B', 'manager', '', 'بله'),
         ], self.company)
         self.assertEqual(res.status_code, 400)
-        self.assertTrue(UserSectionAssignment.objects.filter(user=self.member, section=self.section).exists())
-        self.assertFalse(UserSectionAssignment.objects.filter(user=self.outsider).exists())
-        self.assertFalse(UserSectionAssignment.objects.filter(section=self.other_section).exists())
+        self.assertTrue(SectionAssignment.objects.filter(user=self.member, section=self.section).exists())
+        self.assertFalse(SectionAssignment.objects.filter(user=self.outsider).exists())
+        self.assertFalse(SectionAssignment.objects.filter(section=self.other_section).exists())
 
     def test_counterparty_import_never_touches_global_or_other_company_records(self):
         other_cp = Counterparty.objects.create(company=self.other_company, name='طرف‌حساب ب', counterparty_type='other', phone='0211')
@@ -381,7 +381,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
     # ─── فهرست کاربران راهبر ───
     def test_org_admin_user_directory_is_scoped_and_minimal(self):
         derived_member = User.objects.create_user(username='scope_derived', password='password123', email='d@test.com')
-        UserSectionAssignment.objects.create(user=derived_member, section=self.section, role='employee', is_active=True)
+        SectionAssignment.objects.create(user=derived_member, section=self.section, role='employee', is_active=True)
         self._as(self.org_admin)
         res = self.client.get('/api/auth/users/')
         self.assertEqual(res.status_code, 200, res.content)
@@ -424,7 +424,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
 
     # ─── یافته‌های بازبینی دوم ───
     def test_reactivating_a_users_only_assignment_is_allowed(self):
-        own = UserSectionAssignment.objects.create(user=self.member, section=self.section, role='employee', is_active=True)
+        own = SectionAssignment.objects.create(user=self.member, section=self.section, role='employee', is_active=True)
         UserCompanyAccess.objects.filter(user=self.member).delete()  # تنها عضویت او همین انتساب است
         self._as(self.org_admin)
         base = '/api/personnel/user-section-assignments/'
@@ -456,7 +456,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(self.client.post(base, {'user': self.org_admin.id, 'section': self.section.id, 'role': 'manager'}, format='json').status_code, 403)
         res = self.client.post(f'{base}bulk-assign/', {'section_id': self.section.id, 'user_ids': [self.member.id, self.org_admin.id], 'role': 'manager'}, format='json')
         self.assertEqual(res.status_code, 403)
-        self.assertFalse(UserSectionAssignment.objects.filter(user=self.org_admin).exists())
+        self.assertFalse(SectionAssignment.objects.filter(user=self.org_admin).exists())
         self._as(self.manager)
         self.assertEqual(self.client.post(base, {'user': self.manager.id, 'section': self.section.id, 'role': 'manager'}, format='json').status_code, 201)
 
@@ -488,7 +488,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self._as(su)
         res = self._import('/api/personnel/financial-projects/import-excel/', [('PRJ_SU', 'پروژهٔ سوپریوزر')], self.company)
         self.assertEqual(res.status_code, 200, res.content)
-        self.assertEqual(FinancialProject.objects.get(code='PRJ_SU').company_id, self.company.id)
+        self.assertEqual(Project.objects.get(code='PRJ_SU').company_id, self.company.id)
 
     # ─── نویسندهٔ قدیمی: رفتار عادی در شرکت خودش دست نخورده است ───
     def test_legacy_structure_manager_still_writes_in_own_company(self):

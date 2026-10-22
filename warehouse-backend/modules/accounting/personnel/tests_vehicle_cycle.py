@@ -4,12 +4,12 @@ from django.contrib.auth.models import Permission
 from decimal import Decimal
 from accounts.models import CustomUser
 from personnel.models import (
-    FinancialProject,
+    Project,
     ProjectSection,
     VehicleDriverProfile,
     VehicleChangeRequest,
     VehicleTripLog,
-    UserSectionAssignment,
+    SectionAssignment,
 )
 from personnel.sheba_utils import generate_sheba_from_account
 
@@ -25,7 +25,7 @@ class VehicleLifecycleTests(TestCase):
             code="DALAN-CO",
             defaults={"name": "شرکت دالان", "is_active": True}
         )
-        self.project = FinancialProject.objects.create(code="1", name="پروژه دالان", company=self.company, is_active=True)
+        self.project = Project.objects.create(code="1", name="پروژه دالان", company=self.company, is_active=True)
         self.section_a = ProjectSection.objects.create(project=self.project, code="11", name="کارگاه دالان", is_active=True)
         self.section_b = ProjectSection.objects.create(project=self.project, code="12", name="انبار دالان", is_active=True)
 
@@ -51,10 +51,10 @@ class VehicleLifecycleTests(TestCase):
                 self.manager.user_permissions.add(p)
 
         # انتساب بخش A به کاربران مجاز
-        UserSectionAssignment.objects.create(user=self.operator, section=self.section_a, role="employee", is_active=True)
-        UserSectionAssignment.objects.create(user=self.supervisor, section=self.section_a, role="supervisor", is_active=True)
-        UserSectionAssignment.objects.create(user=self.accountant, section=self.section_a, role="accountant", is_active=True)
-        UserSectionAssignment.objects.create(user=self.manager, section=self.section_a, role="manager", is_active=True)
+        SectionAssignment.objects.create(user=self.operator, section=self.section_a, role="employee", is_active=True)
+        SectionAssignment.objects.create(user=self.supervisor, section=self.section_a, role="supervisor", is_active=True)
+        SectionAssignment.objects.create(user=self.accountant, section=self.section_a, role="accountant", is_active=True)
+        SectionAssignment.objects.create(user=self.manager, section=self.section_a, role="manager", is_active=True)
 
         self.client = APIClient()
 
@@ -257,7 +257,7 @@ class VehicleLifecycleTests(TestCase):
         p_del = Permission.objects.filter(codename="perm_delete_vehicle_nomovement").first()
         if p_del:
             user_deleter.user_permissions.add(p_del)
-        UserSectionAssignment.objects.create(user=user_deleter, section=self.section_a, role="supervisor", is_active=True)
+        SectionAssignment.objects.create(user=user_deleter, section=self.section_a, role="supervisor", is_active=True)
 
         v2 = VehicleDriverProfile.objects.create(
             plate_number="22ع222-22",
@@ -1074,7 +1074,7 @@ class VehicleLifecycleTests(TestCase):
 
         # شرکت و خودروی دیگر (نامربوط)
         other_co = Company.objects.create(code="OTHER-CO", name="شرکت دیگر")
-        other_proj = FinancialProject.objects.create(code="2", name="پروژه دیگر", company=other_co, is_active=True)
+        other_proj = Project.objects.create(code="2", name="پروژه دیگر", company=other_co, is_active=True)
         other_sec = ProjectSection.objects.create(project=other_proj, code="21", name="بخش دیگر", is_active=True)
         VehicleDriverProfile.objects.create(
             plate_number="88ص222ایران63",
@@ -1532,7 +1532,7 @@ class VehicleLifecycleTests(TestCase):
         """
         from personnel.models import Company
         other_company = Company.objects.create(code="OTHER-CO", name="شرکت دیگر", is_active=True)
-        other_project = FinancialProject.objects.create(code="99", name="پروژه دیگر", company=other_company, is_active=True)
+        other_project = Project.objects.create(code="99", name="پروژه دیگر", company=other_company, is_active=True)
         other_section = ProjectSection.objects.create(project=other_project, code="991", name="کارگاه دیگر", is_active=True)
 
         v_other = VehicleDriverProfile.objects.create(
@@ -1657,7 +1657,7 @@ class VehicleLifecycleTests(TestCase):
         """
         from personnel.models import Company
         company_other = Company.objects.create(code="CO-OTHER-SCOPE", name="شرکت بیگانه", is_active=True)
-        proj_other = FinancialProject.objects.create(code="998", name="پروژه بیگانه", company=company_other, is_active=True)
+        proj_other = Project.objects.create(code="998", name="پروژه بیگانه", company=company_other, is_active=True)
         sec_other = ProjectSection.objects.create(project=proj_other, code="9981", name="کارگاه بیگانه", is_active=True)
 
         v_other = VehicleDriverProfile.objects.create(

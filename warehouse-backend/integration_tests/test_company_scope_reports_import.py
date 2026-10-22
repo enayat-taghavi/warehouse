@@ -114,13 +114,13 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
 
         if apps.is_installed('personnel'):
             from personnel.models import (
-                FinancialProject, ProjectSection, PersonnelProfile,
+                Project, ProjectSection, PersonnelProfile,
                 MonthlyPayrollRecord, MonthlyWorkPeriod,
                 VehicleDriverProfile, VehicleTripLog
             )
-            self.proj_a = FinancialProject.objects.create(company=self.company_a, code='PA', name='پروژه الف')
+            self.proj_a = Project.objects.create(company=self.company_a, code='PA', name='پروژه الف')
             self.sec_a = ProjectSection.objects.create(project=self.proj_a, code='SA', name='بخش الف')
-            self.proj_b = FinancialProject.objects.create(company=self.company_b, code='PB', name='پروژه ب')
+            self.proj_b = Project.objects.create(company=self.company_b, code='PB', name='پروژه ب')
             self.sec_b = ProjectSection.objects.create(project=self.proj_b, code='SB', name='بخش ب')
 
             self.period_a = MonthlyWorkPeriod.objects.create(
@@ -205,9 +205,9 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             )
 
             # کاربر غیرممیز پرسنل فقط بخش‌های منتسب فعال خود را می‌بیند (همان قاعدهٔ صفحهٔ پرسنل)
-            from personnel.models import UserSectionAssignment
-            UserSectionAssignment.objects.create(user=self.user_a, section=self.sec_a, is_active=True)
-            UserSectionAssignment.objects.create(user=self.user_b, section=self.sec_b, is_active=True)
+            from personnel.models import SectionAssignment
+            SectionAssignment.objects.create(user=self.user_a, section=self.sec_a, is_active=True)
+            SectionAssignment.objects.create(user=self.user_b, section=self.sec_b, is_active=True)
 
     # -------------------------------------------------------------------------
     # ۱. run برای personnel_profiles: کاربر شرکت الف فقط الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ

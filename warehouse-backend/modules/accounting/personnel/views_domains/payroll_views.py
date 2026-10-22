@@ -26,7 +26,7 @@ from ..models import (
     WorkshopInsuranceSettings,
     MonthlyWorkPeriod,
     MonthlyPayrollRecord,
-    FinancialProject,
+    Project,
 )
 from ..serializers import (
     PayrollYearlySettingsSerializer,
@@ -172,7 +172,7 @@ class PayrollYearlySettingsViewSet(viewsets.ModelViewSet):
                 'settings': PayrollYearlySettingsSerializer(existing).data
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        project = FinancialProject.objects.filter(id=p_id).first() if p_id else None
+        project = Project.objects.filter(id=p_id).first() if p_id else None
 
         # پیدا کردن سال مبدأ
         source = None
@@ -303,7 +303,7 @@ class PayrollYearlySettingsViewSet(viewsets.ModelViewSet):
             return Response({'error': 'فرمت ماه شروع اعتبار باید YYYY/MM باشد (مثال: 1405/07).'}, status=status.HTTP_400_BAD_REQUEST)
 
         p_id = safe_int(project_id)
-        project = FinancialProject.objects.filter(id=p_id).first() if p_id else None
+        project = Project.objects.filter(id=p_id).first() if p_id else None
 
         existing = PayrollYearlySettings.objects.filter(
             fiscal_year=year,
@@ -408,7 +408,7 @@ class PayrollYearlySettingsViewSet(viewsets.ModelViewSet):
         if not p_id:
             return Response({'error': 'شناسه پروژه (project_id) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        project = FinancialProject.objects.filter(id=p_id).first()
+        project = Project.objects.filter(id=p_id).first()
         if not project:
             return Response({'error': 'پروژه مورد نظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -774,7 +774,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if not period:
             return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
-        project = FinancialProject.objects.filter(id=project_id).first()
+        project = Project.objects.filter(id=project_id).first()
         if not project:
             return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -884,7 +884,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if not period:
             return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
-        project = FinancialProject.objects.filter(id=project_id).first()
+        project = Project.objects.filter(id=project_id).first()
         if not project:
             return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -926,7 +926,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if not period:
             return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
-        project = FinancialProject.objects.filter(id=project_id).first()
+        project = Project.objects.filter(id=project_id).first()
         if not project:
             return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -971,7 +971,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if not period:
             return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
-        project = FinancialProject.objects.filter(id=project_id).first()
+        project = Project.objects.filter(id=project_id).first()
         if not project:
             return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 

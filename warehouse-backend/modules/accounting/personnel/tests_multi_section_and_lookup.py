@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 from accounts.models import CustomUser
 from personnel.models import (
     Company,
-    FinancialProject,
+    Project,
     ProjectSection,
     PersonnelProfile,
     DailyAttendance,
@@ -20,10 +20,10 @@ class MultiSectionAndLookupTests(TestCase):
 
         # شرکت و پروژه و بخش‌ها
         self.company = Company.objects.create(name="شرکت نفت و گاز پارسیان", national_id="10101010101")
-        self.project1 = FinancialProject.objects.create(name="پروژه ۱ دالان", code="PRJ01", company=self.company)
+        self.project1 = Project.objects.create(name="پروژه ۱ دالان", code="PRJ01", company=self.company)
         self.section1 = ProjectSection.objects.create(name="بخش کارگاه دالان", code="SEC01", project=self.project1)
 
-        self.project2 = FinancialProject.objects.create(name="پروژه ۲ پارسیان", code="PRJ02", company=self.company)
+        self.project2 = Project.objects.create(name="پروژه ۲ پارسیان", code="PRJ02", company=self.company)
         self.section2 = ProjectSection.objects.create(name="بخش ایستگاه پارسیان", code="SEC02", project=self.project2)
 
         # کاربر مدیر

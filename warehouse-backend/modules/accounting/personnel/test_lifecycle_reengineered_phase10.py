@@ -12,7 +12,7 @@ from personnel.models import (
     PersonnelChangeRequest,
     WorkflowAuditLog,
     ProjectSection,
-    FinancialProject,
+    Project,
     DailyAttendance,
     Company
 )
@@ -26,7 +26,7 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
 
         # ساخت شرکت و پروژه و بخش
         self.company = Company.objects.create(name="شرکت توسعه عمران آزمون", code="DEV-101")
-        self.project = FinancialProject.objects.create(company=self.company, name="پروژه فاز ۱۰", code="P10")
+        self.project = Project.objects.create(company=self.company, name="پروژه فاز ۱۰", code="P10")
         self.section = ProjectSection.objects.create(project=self.project, name="بخش مهندسی", code="SEC10")
 
         # کاربران نقش‌های ۴گانه
@@ -55,9 +55,9 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
         grant_perm(self.manager, "can_act_as_manager")
         grant_perm(self.manager, "perm_delete_personnel_nomovement")
 
-        from personnel.models import UserSectionAssignment
+        from personnel.models import SectionAssignment
         for u in [self.operator, self.supervisor, self.accountant, self.manager]:
-            UserSectionAssignment.objects.create(user=u, section=self.section, is_active=True)
+            SectionAssignment.objects.create(user=u, section=self.section, is_active=True)
 
     def test_full_successful_approval_cycle_and_audit(self):
         """

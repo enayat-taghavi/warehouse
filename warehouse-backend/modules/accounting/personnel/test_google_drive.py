@@ -10,7 +10,7 @@ from personnel.models import (
     GoogleDriveSyncQueue,
     CompanyDocument,
     CompanyBoardMember,
-    FinancialProject,
+    Project,
     ProjectSection,
     ExpenseInvoice,
     Counterparty,
@@ -196,7 +196,7 @@ class GoogleDriveCoreTestCase(TestCase):
 
     def test_expense_invoice_path_resolution(self):
         """تست استخراج دقیق شرکت و پروژه از فاکتور هزینه بدون وابستگی به فالبک"""
-        proj = FinancialProject.objects.create(
+        proj = Project.objects.create(
             company=self.company,
             code='PRJ_GDRIVE_01',
             name='پروژه آزادراه'
@@ -494,7 +494,7 @@ class GoogleDriveCoreTestCase(TestCase):
 
     def test_petty_cash_transaction_resolution(self):
         """تست نگاشت مسیر رسید تنخواه با شماره رسید، تاریخ شمسی و عنوان"""
-        proj = FinancialProject.objects.create(
+        proj = Project.objects.create(
             company=self.company,
             code='PRJ_GDRIVE_PETTY',
             name='پروژه بیمارستان'

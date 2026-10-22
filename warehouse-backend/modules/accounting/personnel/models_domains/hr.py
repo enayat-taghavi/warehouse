@@ -168,7 +168,7 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
         verbose_name="انبار تخصیص‌یافته"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -176,7 +176,7 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
         verbose_name="پروژه مالی/عملیاتی"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -581,13 +581,13 @@ class PersonnelSectionAssignment(models.Model):
         verbose_name="پرسنل"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.CASCADE,
         related_name='personnel_assignments',
         verbose_name="بخش/دپارتمان پروژه"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.CASCADE,
         null=True,
         blank=True,

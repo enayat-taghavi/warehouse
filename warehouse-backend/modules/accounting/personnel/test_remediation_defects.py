@@ -15,14 +15,14 @@ from rest_framework.test import APIClient
 
 from personnel.models import (
     Company,
-    FinancialProject,
+    Project,
     PersonnelBankAccount,
     PersonnelChangeRequest,
     PersonnelDocument,
     PersonnelProfile,
     ProjectSection,
     UserCompanyAccess,
-    UserSectionAssignment,
+    SectionAssignment,
     WorkflowAuditLog,
 )
 
@@ -46,8 +46,8 @@ class RemediationTestBase(TestCase):
         self.client = APIClient()
         self.c1 = Company.objects.create(name='شرکت الف', code='RM-A')
         self.c2 = Company.objects.create(name='شرکت ب', code='RM-B')
-        self.p1 = FinancialProject.objects.create(company=self.c1, name='پروژه الف', code='RPA')
-        self.p2 = FinancialProject.objects.create(company=self.c2, name='پروژه ب', code='RPB')
+        self.p1 = Project.objects.create(company=self.c1, name='پروژه الف', code='RPA')
+        self.p2 = Project.objects.create(company=self.c2, name='پروژه ب', code='RPB')
         self.s1 = ProjectSection.objects.create(project=self.p1, name='بخش الف', code='RSA')
         self.s2 = ProjectSection.objects.create(project=self.p2, name='بخش ب', code='RSB')
         self.emp = User.objects.create_user(username='rm_emp', password='p')
@@ -65,7 +65,7 @@ class RemediationTestBase(TestCase):
         grant(self.mgr, 'perm_approve_personnel_manager')
         grant(self.mgr, 'perm_delete_personnel_nomovement')
         for u in (self.emp, self.sup, self.acc, self.mgr):
-            UserSectionAssignment.objects.create(user=u, section=self.s1, is_active=True)
+            SectionAssignment.objects.create(user=u, section=self.s1, is_active=True)
             UserCompanyAccess.objects.create(user=u, company=self.c1)
 
     def as_user(self, user):
@@ -722,7 +722,7 @@ class Step2HighSeverityTests(RemediationTestBase):
     # ── DEF-27: انحراف‌های کوچک ──
     def test_def27_co_section_member_can_delete_draft(self):
         colleague = User.objects.create_user(username='rm_colleague', password='p')
-        UserSectionAssignment.objects.create(user=colleague, section=self.s1, is_active=True)
+        SectionAssignment.objects.create(user=colleague, section=self.s1, is_active=True)
         p = self.complete_profile('0098765434')
         self.as_user(colleague)
         r = self.client.delete(f'/api/personnel/profiles/{p.id}/')

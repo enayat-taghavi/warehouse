@@ -4,7 +4,7 @@ Barrel module for personnel models.
 Re-exports all models and helpers from models_domains subpackages by explicit name.
 """
 
-from companies.models import Company, UserCompanyAccess  # noqa: F401
+from companies.models import Company, UserCompanyAccess, Project, ProjectSection, SectionAssignment  # noqa: F401
 
 from .models_domains.base import (
     _WarehouseCompatQuerySet,
@@ -16,9 +16,6 @@ from .models_domains.organization import (
     CompanyBankAccount,
     CompanyBoardMember,
     CompanyFiscalPeriod,
-    FinancialProject,
-    ProjectSection,
-    UserSectionAssignment,
 )
 from .models_domains.hr import (
     InsuranceJobTitle,
@@ -71,9 +68,9 @@ __all__ = [
     'CompanyBankAccount',
     'CompanyBoardMember',
     'CompanyFiscalPeriod',
-    'FinancialProject',
+    'Project',
     'ProjectSection',
-    'UserSectionAssignment',
+    'SectionAssignment',
     'InsuranceJobTitle',
     'PersonnelProfile',
     'PersonnelBankAccount',

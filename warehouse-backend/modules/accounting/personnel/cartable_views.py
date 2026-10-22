@@ -38,8 +38,8 @@ from .models import (
     DailyAttendance,
     AttendanceAuditLog,
     ProjectSection,
-    FinancialProject,
-    UserSectionAssignment
+    Project,
+    SectionAssignment
 )
 from .serializers import (
     PersonnelProfileSerializer,

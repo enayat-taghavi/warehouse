@@ -94,7 +94,7 @@ class VehicleDriverProfile(_WarehouseCompatMixin, models.Model):
         verbose_name="انبار تخصیص‌یافته"
     )
     project = models.ForeignKey(
-        'personnel.FinancialProject',
+        'companies.Project',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -102,7 +102,7 @@ class VehicleDriverProfile(_WarehouseCompatMixin, models.Model):
         verbose_name="پروژه مالی/عملیاتی"
     )
     section = models.ForeignKey(
-        'personnel.ProjectSection',
+        'companies.ProjectSection',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

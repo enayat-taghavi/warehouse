@@ -30,7 +30,7 @@ from ..models import (
     PettyCashTransaction,
     WorkflowAuditLog,
     ProjectSection,
-    UserSectionAssignment,
+    SectionAssignment,
     PersonnelProfile,
     PersonnelChangeRequest,
 )
@@ -433,7 +433,7 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             qs = qs.filter(custodian_id=custodian_id)
         # کارمندان عادی فقط حساب تنخواه خود را مشاهده می‌کنند
         if not user.is_superuser:
-            is_manager = UserSectionAssignment.objects.filter(
+            is_manager = SectionAssignment.objects.filter(
                 user=user,
                 section_id=section_id,
                 is_active=True,
@@ -494,7 +494,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
 
         # اگر کاربر دسترسی مدیریتی نداشته باشد، فقط اسناد تنخواه خودش در بخش را می‌بیند
         if not user.is_superuser and not custodian_id:
-            is_manager = UserSectionAssignment.objects.filter(
+            is_manager = SectionAssignment.objects.filter(
                 user=user,
                 section_id=section_id,
                 is_active=True,
@@ -589,7 +589,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             )
 
         target_user_id = request.query_params.get('custodian_id')
-        if target_user_id and (request.user.is_superuser or UserSectionAssignment.objects.filter(
+        if target_user_id and (request.user.is_superuser or SectionAssignment.objects.filter(
             user=request.user, section_id=section_id, is_active=True, role__in=['supervisor', 'accountant', 'manager', 'treasury']
         ).exists()):
             custodian = get_user_model().objects.filter(id=target_user_id).first() or request.user

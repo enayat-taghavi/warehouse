@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import Company, CompanyBankAccount, CompanyDocument, UserSectionAssignment, UserCompanyAccess
+from .models import Company, CompanyBankAccount, CompanyDocument, SectionAssignment, UserCompanyAccess
 
 
 @receiver(post_save, sender=CompanyBankAccount)
@@ -85,7 +85,7 @@ def sync_company_core_documents(sender, instance, created, **kwargs):
             )
 
 
-@receiver(post_save, sender=UserSectionAssignment)
+@receiver(post_save, sender=SectionAssignment)
 def handle_user_section_assignment_saved(sender, instance, created, **kwargs):
     """
     همگام‌سازی بلادرنگ نام شرکت سازمانی کاربر بر مبنای بخش‌های پروژه انتساب‌یافته
@@ -100,7 +100,7 @@ def handle_user_section_assignment_saved(sender, instance, created, **kwargs):
             instance.user.save(update_fields=['company'])
 
 
-@receiver(post_delete, sender=UserSectionAssignment)
+@receiver(post_delete, sender=SectionAssignment)
 def handle_user_section_assignment_deleted(sender, instance, **kwargs):
     """
     بازبینی نام شرکت کاربر پس از حذف انتساب بخش
@@ -108,7 +108,7 @@ def handle_user_section_assignment_deleted(sender, instance, **kwargs):
     if not instance.user:
         return
     user = instance.user
-    remaining = UserSectionAssignment.objects.filter(
+    remaining = SectionAssignment.objects.filter(
         user=user, is_active=True, section__project__company__isnull=False
     ).select_related('section__project__company').first()
 

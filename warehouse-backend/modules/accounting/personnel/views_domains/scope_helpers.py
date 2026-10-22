@@ -21,8 +21,8 @@ from companies.access import (
 from companies.realtime import broadcast_org_structure_updated as core_broadcast_org_structure_updated
 from ..models import (
     UserCompanyAccess,
-    UserSectionAssignment,
-    FinancialProject,
+    SectionAssignment,
+    Project,
     MonthlyWorkPeriod,
     PayrollYearlySettings,
     JobGradeTier,
@@ -49,7 +49,7 @@ def user_belongs_to_company(user_id, company_id):
     return (
         # پیوند کاربر با شرکت (ت۸): ردیف UserCompanyAccess با هر سطح، کاربر را انتساب‌پذیر می‌کند
         UserCompanyAccess.objects.filter(user_id=user_id, company_id=company_id).exists()
-        or UserSectionAssignment.objects.filter(user_id=user_id, section__project__company_id=company_id).exists()
+        or SectionAssignment.objects.filter(user_id=user_id, section__project__company_id=company_id).exists()
     )
 
 def ensure_scoped_assignment(actor, target_user_id, section, final_active=True):
@@ -138,7 +138,7 @@ def scope_personnel_for_user(user, qs, company_id=None):
         return qs.none()
     if not is_personnel_global_auditor(user):
         user_section_ids = list(
-            UserSectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
+            SectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
         )
         qs = qs.filter(Q(section_id__in=user_section_ids) | Q(created_by=user))
 
@@ -202,7 +202,7 @@ def scope_vehicle_queryset(request, qs, prefix=''):
 
     if not is_vehicle_global_auditor(user):
         user_section_ids = list(
-            UserSectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
+            SectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
         )
         sec_field = f"{prefix}section_id__in"
         creator_field = f"{prefix}created_by" if prefix == '' else "requested_by"
@@ -612,7 +612,7 @@ def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=No
     cid = company_id
     if not cid and project_id:
         try:
-            cid = FinancialProject.objects.filter(id=project_id).values_list('company_id', flat=True).first()
+            cid = Project.objects.filter(id=project_id).values_list('company_id', flat=True).first()
         except Exception:
             pass
     core_broadcast_org_structure_updated(entity_type, action, entity_id, name, project_id, client_tab_id, sender_id, cid)

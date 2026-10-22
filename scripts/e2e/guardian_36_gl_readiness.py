@@ -19,7 +19,7 @@
      - وجود فیلدهای `source_model`, `source_id`, `event_type`, `occurred_at`, `payload`, `posted_at`.
      - کارکرد صحیح متد تراکنشی `emit_accounting_event()`.
   ۴) ابعاد حسابداری:
-     - اعلام `FinancialProject`/`ProjectSection` به‌عنوان بُعد مرکز هزینه.
+     - اعلام `Project`/`ProjectSection` به‌عنوان بُعد مرکز هزینه.
      - وجود فیلد رزرو `account_code` روی مدل `Counterparty` به‌عنوان بُعد تفصیلی.
   ۵) قفل دقت پول:
      - فیلدهای پولی روی `DecimalField(max_digits=15, decimal_places=0)` (ریال).
@@ -86,7 +86,7 @@ def test_gl_readiness():
     # ── ۳) بررسی مدل‌ها و پیاده‌سازی متدهای to_journal_lines ────────────
     from personnel.models import (
         ExpenseInvoice, MonthlyPayrollRecord, VehicleTripLog, MonthlyWorkPeriod,
-        Counterparty, ProjectSection, FinancialProject, AccountingEvent, emit_accounting_event
+        Counterparty, ProjectSection, Project, AccountingEvent, emit_accounting_event
     )
 
     models_to_check = [
