@@ -20,10 +20,9 @@ class Company(models.Model):
     ceo_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="نام مدیرعامل")
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, verbose_name="لوگوی شرکت")
     is_active = models.BooleanField(default=True, verbose_name="وضعیت فعال")
-    has_warehouse_module = models.BooleanField(
-        default=True,
-        verbose_name="دسترسی به سامانه انبارداری و انبارگردانی"
-    )
+    # کلید ماژول‌های خاموش در این شرکت (ت۸ طرح ۲.۱)؛ خالی یعنی همهٔ ماژول‌های نصب‌شده روشن‌اند.
+    # هسته نام هیچ ماژولی را نمی‌برد؛ کدها از رجیستری ماژول‌ها می‌آیند.
+    disabled_modules = models.JSONField(default=list, blank=True, verbose_name="ماژول‌های خاموش در این شرکت")
 
     # فیلدهای حقوقی و ثبتی تکمیلی
     company_type = models.CharField(
@@ -53,22 +52,8 @@ class Company(models.Model):
     authorized_signers = models.TextField(null=True, blank=True, verbose_name="صاحبان امضای مجاز و حدود اختیارات")
     board_term_expiry = models.DateField(null=True, blank=True, verbose_name="تاریخ انقضای دوره تصدی هیئت‌مدیره")
 
-    # تنظیمات کارگاهی بیمه تأمین اجتماعی (منطبق بر دیسکت DSKKAR00.DBF)
-    workshop_code = models.CharField(max_length=20, null=True, blank=True, verbose_name="کد کارگاه تأمین اجتماعی (۱۰ رقم)")
-    social_security_branch_code = models.CharField(max_length=20, null=True, blank=True, verbose_name="کد شعبه تأمین اجتماعی")
-    social_security_branch_name = models.CharField(max_length=100, null=True, blank=True, verbose_name="نام شعبه تأمین اجتماعی")
-    contract_row = models.CharField(max_length=20, null=True, blank=True, verbose_name="ردیف پیمان بیمه")
-    employer_name = models.CharField(max_length=150, null=True, blank=True, verbose_name="نام کارفرما در لیست بیمه")
-
-    # تنظیمات سامانه مودیان مالیاتی و نشانی قانونی
+    # نشانی قانونی (فیلدهای بیمه، مالیات و بانک اصلی از طرح ۲.۱ به ماژول صاحبشان رفته‌اند)
     postal_code = models.CharField(max_length=20, null=True, blank=True, verbose_name="کد پستی ۱۰ رقمی اقامتگاه قانونی")
-    tax_memory_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="شناسه یکتای حافظه مالیاتی (۶ کاراکتر)")
-    tax_economic_code = models.CharField(max_length=50, null=True, blank=True, verbose_name="کد اقتصادی جدید ۱۶ رقمی")
-
-    # اطلاعات خزانه‌داری، بانکی و تسویه پایا
-    primary_bank_name = models.CharField(max_length=100, null=True, blank=True, verbose_name="نام بانک اصلی")
-    primary_account_number = models.CharField(max_length=50, null=True, blank=True, verbose_name="شماره حساب رسمی")
-    primary_iban = models.CharField(max_length=34, null=True, blank=True, verbose_name="شماره شبا رسمی (IR...)")
 
     # دسترسی سریع به دو سند مادر
     articles_of_association = models.FileField(upload_to='company_core_docs/', null=True, blank=True, verbose_name="فایل اساسنامه")
@@ -85,6 +70,13 @@ class Company(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+    @property
+    def enabled_modules(self):
+        """کد ماژول‌های نصب‌شده که در این شرکت خاموش نشده‌اند (ت۸)."""
+        from platform_core.registry import installed_modules
+        disabled = set(self.disabled_modules or ())
+        return [code for code in installed_modules() if code not in disabled]
 
 
 class UserCompanyAccess(models.Model):
@@ -143,12 +135,11 @@ def section_role_choices() -> tuple:
 class Project(models.Model):
     """
     پروژه زیر شرکت (شرکت ← پروژه ← بخش)؛ از personnel به هسته منتقل شده و جدولش همان است.
+    هر پروژه حتماً شرکت دارد؛ پروژهٔ سراسری (بی‌شرکت) دیگر وجود ندارد (طرح ۲.۱، ت۲).
     """
     company = models.ForeignKey(
         Company,
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name='projects',
         verbose_name="شرکت متبوع"
     )
@@ -165,16 +156,7 @@ class Project(models.Model):
         ordering = ['code']
         db_table = 'personnel_financialproject'
         constraints = [
-            models.UniqueConstraint(
-                fields=['company', 'code'],
-                condition=models.Q(company__isnull=False),
-                name='unique_company_project_code'
-            ),
-            models.UniqueConstraint(
-                fields=['code'],
-                condition=models.Q(company__isnull=True),
-                name='unique_global_project_code'
-            )
+            models.UniqueConstraint(fields=['company', 'code'], name='unique_company_project_code'),
         ]
 
     def __str__(self):
@@ -208,9 +190,15 @@ class ProjectSection(models.Model):
         return f"{self.project.name} - {self.name} ({self.code})"
 
 
+ASSIGNMENT_LEVELS = ('company', 'project', 'section')
+
+
 class SectionAssignment(models.Model):
     """
-    انتساب کاربر به بخش با نقشی که یکی از ماژول‌ها اعلام کرده است (section_role_choices).
+    انتساب کاربر با نقشی که یکی از ماژول‌ها اعلام کرده است (section_role_choices)، در یکی از سه سطح
+    (طرح ۲.۱، ت۳): شرکت (برای همهٔ بخش‌های آن)، پروژه (برای همهٔ بخش‌های آن) یا یک بخش.
+    دقیقاً یکی از company، project و section پر است. پاسخ «چه کسی این نقش را در این بخش دارد» فقط از
+    `org_roles` می‌آید، نه از فیلتر مستقیم روی section.
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -218,9 +206,27 @@ class SectionAssignment(models.Model):
         related_name='section_assignments',
         verbose_name="کاربر سیستم"
     )
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='user_assignments',
+        verbose_name="شرکت (انتساب در سطح شرکت)"
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='user_assignments',
+        verbose_name="پروژه (انتساب در سطح پروژه)"
+    )
     section = models.ForeignKey(
         ProjectSection,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='user_assignments',
         verbose_name="بخش پروژه"
     )
@@ -232,11 +238,63 @@ class SectionAssignment(models.Model):
     class Meta:
         verbose_name = "انتساب کاربر به بخش"
         verbose_name_plural = "انتساب‌های کاربران به بخش‌ها"
-        unique_together = ('user', 'section', 'role')
         db_table = 'personnel_usersectionassignment'
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(company__isnull=False, project__isnull=True, section__isnull=True)
+                    | models.Q(company__isnull=True, project__isnull=False, section__isnull=True)
+                    | models.Q(company__isnull=True, project__isnull=True, section__isnull=False)
+                ),
+                name='section_assignment_single_target',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'role', 'company'], condition=models.Q(company__isnull=False),
+                name='unique_assignment_company_role',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'role', 'project'], condition=models.Q(project__isnull=False),
+                name='unique_assignment_project_role',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'role', 'section'], condition=models.Q(section__isnull=False),
+                name='unique_assignment_section_role',
+            ),
+        ]
+
+    @property
+    def level(self):
+        """سطح انتساب: 'company'، 'project' یا 'section'."""
+        if self.section_id:
+            return 'section'
+        if self.project_id:
+            return 'project'
+        return 'company'
+
+    @property
+    def target(self):
+        """شرکت، پروژه یا بخشی که انتساب روی آن است."""
+        if self.section_id:
+            return self.section
+        return self.project if self.project_id else self.company
+
+    @property
+    def target_project(self):
+        """پروژهٔ هدف (سطح پروژه، یا پروژهٔ بخش)؛ برای سطح شرکت None."""
+        if self.section_id:
+            return self.section.project
+        return self.project if self.project_id else None
+
+    @property
+    def target_company_id(self):
+        """شرکتی که انتساب در آن معتبر است، در هر سه سطح."""
+        if self.company_id:
+            return self.company_id
+        project = self.target_project
+        return project.company_id if project is not None else None
 
     def get_role_display(self):
         return dict(section_role_choices()).get(self.role, self.role)
 
     def __str__(self):
-        return f"{self.user} -> {self.section.name} ({self.get_role_display()})"
+        return f"{self.user} -> {getattr(self.target, 'name', '-')} ({self.get_role_display()})"

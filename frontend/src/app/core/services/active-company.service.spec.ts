@@ -38,14 +38,14 @@ describe('ActiveCompanyService (Tab Isolation & Multi-Tenant State)', () => {
     id: 1,
     name: 'شرکت آلفا',
     code: 'ALPHA',
-    has_warehouse_module: true,
+    enabled_modules: ['warehouse', 'accounting'],
   } as Company;
 
   const mockCompanyB: Company = {
     id: 2,
     name: 'شرکت بتا',
     code: 'BETA',
-    has_warehouse_module: true,
+    enabled_modules: ['warehouse', 'accounting'],
   } as Company;
 
   beforeEach(() => {
@@ -193,30 +193,25 @@ describe('ActiveCompanyService (Tab Isolation & Multi-Tenant State)', () => {
     });
   });
 
-  it('۸. ایزولاسیون تک‌ماژول: در صورت عدم نصب ماژول انبارداری، hasWarehouseModuleSignal و hasWarehouseModule$ باید false باشند حتی اگر شرکت has_warehouse_module=true داشته باشد', () => {
+  it('۸. isModuleEnabled هر ماژول را عمومی از enabled_modules شرکت فعال می‌خواند (پوسته نام ماژولی را نمی‌داند)', () => {
     const registry = TestBed.inject(ModuleRegistryService);
-    registry.setInstalledModules(['platform', 'accounting']);
+    registry.setInstalledModules(['warehouse', 'accounting']);
 
     service.selectCompany(mockCompanyA);
-    expect(mockCompanyA.has_warehouse_module).toBe(true);
-    expect(service.hasWarehouseModuleSignal()).toBe(false);
-    expect(service.hasWarehouseModule).toBe(false);
+    expect(service.isModuleEnabled('warehouse')).toBe(true);
+    expect(service.isModuleEnabled('accounting')).toBe(true);
 
-    let obsVal: boolean | null = null;
-    const sub = service.hasWarehouseModule$.subscribe(val => { obsVal = val; });
-    expect(obsVal).toBe(false);
-    sub.unsubscribe();
+    service.selectCompany({ ...mockCompanyA, id: 99, enabled_modules: ['accounting'] } as Company);
+    expect(service.isModuleEnabled('warehouse')).toBe(false);
+    expect(service.isModuleEnabled('accounting')).toBe(true);
+    // پوستهٔ عملیات ماژول نیست و هرگز با فهرست شرکت بسته نمی‌شود
+    expect(service.isModuleEnabled('operations')).toBe(true);
   });
 
-  it('۹. در صورت نصب ماژول انبارداری، hasWarehouseModuleSignal باید مقدار شرکت را منعکس کند', () => {
-    const registry = TestBed.inject(ModuleRegistryService);
-    registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
-
-    service.selectCompany(mockCompanyA);
-    expect(service.hasWarehouseModuleSignal()).toBe(true);
-
-    const mockCompanyWithoutWh = { ...mockCompanyA, id: 99, has_warehouse_module: false } as Company;
-    service.selectCompany(mockCompanyWithoutWh);
-    expect(service.hasWarehouseModuleSignal()).toBe(false);
+  it('۹. بی شرکت فعال یا با پاسخ قدیمی کش (بی enabled_modules) هیچ ماژولی بسته نمی‌شود', () => {
+    expect(service.isModuleEnabled('warehouse')).toBe(true);
+    service.selectCompany({ id: 5, name: 'قدیمی', code: 'OLD' } as Company);
+    expect(service.isModuleEnabled('warehouse')).toBe(true);
+    expect(service.isModuleEnabled('accounting')).toBe(true);
   });
 });

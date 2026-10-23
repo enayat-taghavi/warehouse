@@ -78,8 +78,8 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     };
 
     mockActiveCompany = {
-      activeCompany: { id: 1, name: 'شرکت اصلی', has_warehouse_module: true },
-      hasWarehouseModuleSignal: vi.fn().mockReturnValue(true),
+      activeCompany: { id: 1, name: 'شرکت اصلی', enabled_modules: ['warehouse', 'accounting'] },
+      isModuleEnabled: vi.fn().mockReturnValue(true),
       availableCompanies: [{ id: 1, name: 'شرکت اصلی' }],
       availableCompanies$: of([{ id: 1, name: 'شرکت اصلی' }]),
       loadAvailableCompanies: vi.fn().mockReturnValue(of([]))
@@ -145,7 +145,7 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
 
   it('پروفایل ۱: نصب کامل (هر دو ماژول انبار و مالی) — نمایش همزمان پیوندهای سایدبار به هر دو ماژول', () => {
     activeModuleCodes = ['warehouse', 'accounting'];
-    mockActiveCompany.hasWarehouseModuleSignal.mockReturnValue(true);
+    mockActiveCompany.isModuleEnabled.mockReturnValue(true);
 
     expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(true);
     expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(true);
@@ -161,7 +161,7 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
 
   it('پروفایل ۲: تک‌ماژول انبارداری (بدون مالی) — نمایش انحصاری پیوند انبار و عنوان سامانه متصل', () => {
     activeModuleCodes = ['warehouse'];
-    mockActiveCompany.hasWarehouseModuleSignal.mockReturnValue(true);
+    mockActiveCompany.isModuleEnabled.mockReturnValue(true);
 
     expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(true);
     expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(false);
@@ -171,12 +171,21 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
 
   it('پروفایل ۳: تک‌ماژول مالی (بدون انبار) — نمایش انحصاری پیوند مالی و حذف پیوند انبارداری', () => {
     activeModuleCodes = ['accounting'];
-    mockActiveCompany.hasWarehouseModuleSignal.mockReturnValue(false);
+    mockActiveCompany.isModuleEnabled.mockImplementation((code: string) => code !== 'warehouse');
 
     expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(false);
     expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(true);
     expect(component.hasMultipleConnectedModules).toBe(false);
     expect(component.hasAnyConnectedModule).toBe(true);
+  });
+
+  it('ماژولی که شرکت فعال خاموش کرده (enabled_modules) در پیوندهای پوسته دیده نمی‌شود؛ قاعده برای هر ماژول یکی است', () => {
+    activeModuleCodes = ['warehouse', 'accounting'];
+    mockActiveCompany.isModuleEnabled.mockImplementation((code: string) => code !== 'accounting');
+
+    expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(true);
+    expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(false);
+    expect(mockActiveCompany.isModuleEnabled).toHaveBeenCalledWith('accounting');
   });
 
   it('عملکرد منوی تاشو و نوار کناری در مرکز عملیات', () => {

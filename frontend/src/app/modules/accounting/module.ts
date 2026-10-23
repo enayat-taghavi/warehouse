@@ -187,6 +187,12 @@ export const MODULE: WhFrontendModule = {
       // تب‌های حسابداری استودیوی شرکت؛ کامپوننت‌ها تنبل‌اند تا وارد باندل اولیه نشوند
       studioTabs: [
         {
+          // بیمه و مالیات برای دیسکت حقوق (ت۵ طرح ۲.۱)؛ شناسهٔ تب همان `studio` حوزهٔ insurance_tax در سرور است
+          id: 'fiscal_insurance', labelFa: 'بیمه و مالیات', shortLabelFa: 'بیمه', icon: 'file-check', order: 20,
+          requiresSavedCompany: true, permissionSection: 'insurance_tax',
+          loadComponent: () => import('./components/companies-studio/company-insurance-tax-tab/company-insurance-tax-tab').then(m => m.CompanyInsuranceTaxTabComponent)
+        },
+        {
           id: 'treasury', labelFa: 'بانک و شبا', shortLabelFa: 'بانک', icon: 'database', order: 30,
           requiresSavedCompany: false, permissionSection: 'bank',
           loadComponent: () => import('./components/companies-studio/company-treasury-tab/company-treasury-tab').then(m => m.CompanyTreasuryTabComponent)
@@ -206,7 +212,7 @@ export const MODULE: WhFrontendModule = {
       // بخش‌های حسابداری در انتهای تب‌های هسته
       studioSections: [
         {
-          slot: 'fiscal_insurance', order: 10, permissionSection: 'fiscal',
+          slot: 'identity', order: 10, permissionSection: 'fiscal',
           loadComponent: () => import('./components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section').then(m => m.CompanyFiscalPeriodsSectionComponent)
         },
         {

@@ -313,7 +313,7 @@ class CompanyPermissionSectionsTests(TestCase):
         client.force_authenticate(User.objects.create_user(username='sec_u', password='x-pass-123', phone_number='09170000071'))
         body = client.get('/api/org/company-permission-sections/').json()
         keys = [s['key'] for s in body['sections']]
-        for k in ('identity', 'insurance_tax', 'founding_docs', 'user_access'):
+        for k in ('identity', 'founding_docs', 'user_access', 'projects', 'board'):
             self.assertIn(k, keys)
         sensitive = {s['key'] for s in body['sections'] if s['sensitive']}
         for t in body['templates']:
@@ -332,13 +332,117 @@ class CompanyRestrictedReadMaskTests(TestCase):
     """Step 8 tenant-scope-reviewer finding: a non-member sees only fields of readable sections."""
 
     def test_non_member_sees_only_readable_section_fields(self):
-        c = Company.objects.create(code='MASK-C1', name='mask', national_id='10100000001', workshop_code='123')
+        c = Company.objects.create(code='MASK-C1', name='mask', national_id='10100000001', board_chairman='رئیس')
         u = User.objects.create_user(username='mask_u', password='x-pass-123', phone_number='09170000061')
         UserCompanyAccess.objects.create(user=u, company=c, section_levels={'identity': 'read'})
         client = APIClient()
         client.force_authenticate(u)
         body = client.get(f'/api/org/companies/{c.id}/').json()
         self.assertEqual(body['national_id'], '10100000001')
-        self.assertNotIn('workshop_code', body)
-        self.assertNotIn('primary_iban', body)
+        self.assertNotIn('board_chairman', body)
+        self.assertNotIn('disabled_modules', body)
+        self.assertIn('enabled_modules', body)
         self.assertEqual(client.get('/api/org/companies/export-excel/').status_code, 403)
+
+
+class CoreBoardSectionTests(TestCase):
+    """ت۷ طرح ۲.۱: حوزهٔ board و فیلدهای هیئت‌مدیره در هسته‌اند و بی هیچ ماژولی کار می‌کنند."""
+
+    def setUp(self):
+        self.c = Company.objects.create(code='BRD-C1', name='شرکت هیئت', national_id='10100000002')
+        self.u = User.objects.create_user(username='brd_u', password='x-pass-123', phone_number='09170000081')
+        self.client = APIClient()
+        self.client.force_authenticate(self.u)
+
+    def _core_only(self):
+        from unittest import mock
+        from platform_core import registry
+        return mock.patch.dict(registry._CONTRIBUTIONS, {
+            'company_permission_sections': [], 'company_field_sections': [],
+        })
+
+    def test_board_section_and_fields_are_core(self):
+        from companies.permission_sections import field_sections, section_map, template_levels
+        with self._core_only():
+            self.assertIn('board', section_map())
+            self.assertEqual(field_sections()['authorized_signers'], 'board')
+            self.assertEqual(template_levels('manager')['board'], 'write')
+            self.assertEqual(template_levels('viewer')['board'], 'read')
+
+    def test_board_write_level_edits_board_fields_only(self):
+        UserCompanyAccess.objects.create(user=self.u, company=self.c, section_levels={'board': 'write'})
+        url = f'/api/org/companies/{self.c.id}/'
+        with self._core_only():
+            res = self.client.patch(url, {'board_chairman': 'رئیس تازه', 'authorized_signers': 'دو امضا'}, format='json')
+            self.assertEqual(res.status_code, 200, res.content)
+            self.assertEqual(res.json()['board_chairman'], 'رئیس تازه')
+            self.assertNotIn('national_id', res.json())
+            self.assertEqual(self.client.patch(url, {'name': 'x'}, format='json').status_code, 403)
+
+    def test_board_read_level_cannot_write(self):
+        UserCompanyAccess.objects.create(user=self.u, company=self.c, section_levels={'board': 'read'})
+        url = f'/api/org/companies/{self.c.id}/'
+        with self._core_only():
+            self.assertIn('board_chairman', self.client.get(url).json())
+            self.assertEqual(self.client.patch(url, {'board_chairman': 'x'}, format='json').status_code, 403)
+
+
+class CompanyModuleSwitchTests(TestCase):
+    """ت۸ طرح ۲.۱: کلید عمومی ماژول در هر شرکت (disabled_modules و enabled_modules)."""
+
+    def setUp(self):
+        from platform_core.registry import installed_modules
+        self.codes = list(installed_modules())
+        self.c = Company.objects.create(code='MOD-C1', name='شرکت ماژول')
+        self.admin = User.objects.create_superuser(username='mod_admin', password='x-pass-123', phone_number='09170000082')
+        self.u = User.objects.create_user(username='mod_u', password='x-pass-123', phone_number='09170000083')
+        UserCompanyAccess.objects.create(user=self.u, company=self.c, section_levels={'identity': 'write'})
+        self.url = f'/api/org/companies/{self.c.id}/'
+
+    def test_default_enables_every_installed_module(self):
+        from companies.access import company_module_enabled
+        self.assertEqual(self.c.enabled_modules, self.codes)
+        for code in self.codes:
+            self.assertTrue(company_module_enabled(self.c, code))
+            self.assertTrue(company_module_enabled(self.c.id, code))
+        self.assertFalse(company_module_enabled(self.c, 'no_such_module'))
+        self.assertFalse(company_module_enabled(999999, self.codes[0]))
+        self.assertFalse(company_module_enabled(None, self.codes[0]))
+
+    def test_disabled_module_is_off_only_in_that_company(self):
+        from companies.access import company_module_enabled
+        other = Company.objects.create(code='MOD-C2', name='شرکت دیگر')
+        self.c.disabled_modules = [self.codes[0]]
+        self.c.save(update_fields=['disabled_modules'])
+        self.assertFalse(company_module_enabled(self.c.id, self.codes[0]))
+        self.assertTrue(company_module_enabled(other.id, self.codes[0]))
+        self.assertNotIn(self.codes[0], self.c.enabled_modules)
+
+    def test_only_superuser_updates_switch(self):
+        client = APIClient()
+        client.force_authenticate(self.u)
+        res = client.patch(self.url, {'disabled_modules': [self.codes[0]]}, format='json')
+        self.assertEqual(res.status_code, 403)
+        self.c.refresh_from_db()
+        self.assertEqual(self.c.disabled_modules, [])
+        # کاربر عادی enabled_modules را می‌بیند (فیلد عمومی) و فیلدهای هویتی را ویرایش می‌کند
+        res = client.patch(self.url, {'name': 'نام تازه'}, format='json')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['enabled_modules'], self.codes)
+
+        client.force_authenticate(self.admin)
+        res = client.patch(self.url, {'disabled_modules': [self.codes[0], self.codes[0]]}, format='json')
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.json()['disabled_modules'], [self.codes[0]])
+        self.assertNotIn(self.codes[0], res.json()['enabled_modules'])
+        self.assertEqual(client.patch(self.url, {'disabled_modules': ['no_such_module']}, format='json').status_code, 400)
+        self.assertEqual(client.patch(self.url, {'disabled_modules': 'x'}, format='json').status_code, 400)
+
+    def test_public_fields_for_restricted_reader(self):
+        stranger = User.objects.create_user(username='mod_s', password='x-pass-123', phone_number='09170000084')
+        UserCompanyAccess.objects.create(user=stranger, company=self.c, section_levels={'founding_docs': 'read'})
+        client = APIClient()
+        client.force_authenticate(stranger)
+        body = client.get(self.url).json()
+        self.assertEqual(body['enabled_modules'], self.codes)
+        self.assertNotIn('disabled_modules', body)

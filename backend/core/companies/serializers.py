@@ -14,11 +14,26 @@ class CompanySerializer(serializers.ModelSerializer):
     """
     registration_date = ShamsiDateField(required=False, allow_null=True)
     board_term_expiry = ShamsiDateField(required=False, allow_null=True)
+    # ماژول‌های روشن این شرکت (نصب‌شده منهای disabled_modules)؛ پوستهٔ فرانت فقط همین را می‌خواند (ت۸)
+    enabled_modules = serializers.ListField(child=serializers.CharField(), read_only=True)
 
     class Meta:
         model = Company
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
+
+    def validate_disabled_modules(self, value):
+        """فهرست کد ماژول‌های شناخته‌شده در کاتالوگ؛ تکراری حذف می‌شود. تغییرش فقط برای superuser است (perform_update)."""
+        from platform_core.module_catalog import MODULE_CATALOG
+        if value in (None, ''):
+            return []
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            raise serializers.ValidationError("فهرست ماژول‌های خاموش باید فهرستی از کد ماژول‌ها باشد.")
+        codes = list(dict.fromkeys(v.strip() for v in value if v.strip()))
+        unknown = [c for c in codes if c not in MODULE_CATALOG]
+        if unknown:
+            raise serializers.ValidationError(f"کد ماژول ناشناخته: {', '.join(unknown)}")
+        return codes
 
     def validate_code(self, value):
         if not value:
@@ -54,7 +69,7 @@ class CompanySerializer(serializers.ModelSerializer):
 
 
 # فیلدهایی که هر دارندهٔ پیوند می‌بیند (فهرست و سربرگ استودیو)
-COMPANY_PUBLIC_FIELDS = {'id', 'code', 'name', 'company_type', 'is_active', 'logo', 'has_warehouse_module'}
+COMPANY_PUBLIC_FIELDS = {'id', 'code', 'name', 'company_type', 'is_active', 'logo', 'enabled_modules'}
 
 
 def mask_company_fields(ret, instance, request):

@@ -1,5 +1,6 @@
 """
-سهم حسابداری در لایهٔ شرکت هسته: نقش‌های انتساب به بخش، بخش‌های مجوز شرکت و فیلدهای هیئت‌مدیره.
+سهم حسابداری در لایهٔ شرکت هسته: نقش‌های انتساب به بخش و بخش‌های مجوز شرکت.
+حوزهٔ `board` (هیئت‌مدیره) از ۲.۱ در هسته است (ت۷).
 منبع عضویتِ «انتساب فعال به بخش» از گام ۲ طرح Project_Section_To_Core در هسته (`companies.org_membership`) است.
 """
 
@@ -17,10 +18,12 @@ SECTION_ROLES = (
 # ─── بخش‌های مجوز شرکت که ماژول حسابداری به رجیستری هسته می‌دهد (طرح مجوزهای بخش‌به‌بخش، §۵-۱) ───
 _MANAGER = {'viewer': 'read', 'manager': 'write'}
 COMPANY_PERMISSION_SECTIONS = (
+    # بیمه و مالیات (دیسکت حقوق) از ۲.۱ سهم حسابداری است؛ دادهٔ آن در CompanyPayrollProfile (ت۵).
+    # کلید همان کلید قبلی هسته است تا سطح‌های ذخیره‌شده در UserCompanyAccess.section_levels معتبر بمانند.
+    {'key': 'insurance_tax', 'label_fa': 'بیمه و مالیات', 'order': 20, 'kind': 'levels', 'sensitive': False,
+     'studio': 'fiscal_insurance', 'templates': _MANAGER},
     {'key': 'bank', 'label_fa': 'بانک و شبا', 'order': 110, 'kind': 'levels', 'sensitive': False,
      'studio': 'treasury', 'templates': _MANAGER},
-    {'key': 'board', 'label_fa': 'هیئت‌مدیره', 'order': 120, 'kind': 'levels', 'sensitive': False,
-     'studio': 'governance', 'templates': _MANAGER},
     {'key': 'fiscal', 'label_fa': 'دوره‌های مالی (ثبت، ویرایش و انجماد)', 'order': 130, 'kind': 'levels',
      'sensitive': False, 'studio': 'fiscal', 'templates': _MANAGER},
     {'key': 'docs_archive', 'label_fa': 'بایگانی مدارک', 'order': 140, 'kind': 'levels', 'sensitive': False,
@@ -35,9 +38,3 @@ COMPANY_PERMISSION_SECTIONS = (
     {'key': 'bank_sheba', 'label_fa': 'ثبت و تغییر شبا، و حساب اصلی', 'order': 230, 'kind': 'action',
      'sensitive': True, 'studio': 'treasury'},
 )
-
-# فیلدهای هیئت‌مدیرهٔ مدل Company (هسته) که در تب هیئت‌مدیرهٔ حسابداری ویرایش می‌شوند
-COMPANY_FIELD_SECTIONS = {f: 'board' for f in (
-    'board_chairman', 'board_vice_chairman', 'main_inspector', 'alternate_inspector',
-    'authorized_signers', 'board_term_expiry',
-)}

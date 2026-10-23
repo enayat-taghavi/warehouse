@@ -30,8 +30,8 @@ from ..models import (
     VehicleTripLog,
     WorkflowAuditLog,
     ProjectSection,
-    SectionAssignment,
 )
+from companies.org_roles import user_has_section_role, user_sections
 from ..serializers import (
     VehicleDriverProfileSerializer,
     VehicleChangeRequestSerializer,
@@ -80,10 +80,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         section_id = self.request.query_params.get('section_id')
         if section_id:
             if not is_vehicle_global_auditor(self.request.user) and self.request.user and self.request.user.is_authenticated:
-                user_section_ids = list(
-                    SectionAssignment.objects.filter(user=self.request.user, is_active=True).values_list('section_id', flat=True)
-                )
-                if str(section_id).isdigit() and int(section_id) not in user_section_ids:
+                if str(section_id).isdigit() and not user_has_section_role(self.request.user, int(section_id)):
                     return qs.none()
             qs = qs.filter(section_id=section_id)
         project_id = self.request.query_params.get('project_id')
@@ -145,8 +142,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         section = serializer.validated_data.get('section')
         # گارد انتساب بخش: کاربر عادی باید انتساب فعال به بخش انتخاب‌شده داشته باشد
         if not is_mgr and section and user and user.is_authenticated:
-            is_assigned = SectionAssignment.objects.filter(user=user, section=section, is_active=True).exists()
-            if not is_assigned:
+            if not user_has_section_role(user, section):
                 raise PermissionDenied("شما انتساب فعال در این بخش برای معرفی خودرو جدید ندارید.")
 
         # سنجش قلمرو شرکتی نوشتن (Task 0.3):
@@ -397,9 +393,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
     def _is_creator_or_co_section(user, instance) -> bool:
         if instance.created_by_id == user.id:
             return True
-        return bool(instance.section_id) and SectionAssignment.objects.filter(
-            user=user, section_id=instance.section_id, is_active=True
-        ).exists()
+        return bool(instance.section_id) and user_has_section_role(user, instance.section_id)
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -703,7 +697,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         user = request.user
         is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or has_permission_alias(user, 'manager_approver')
         if not is_mgr and target.created_by_id != user.id:
-            if not (target.section_id and SectionAssignment.objects.filter(user=user, section_id=target.section_id, is_active=True).exists()):
+            if not (target.section_id and user_has_section_role(user, target.section_id)):
                 raise PermissionDenied("شما دسترسی ارسال این پرونده به سرپرست را ندارید.")
 
         if target.approval_status not in ('draft', 'revision_required'):
@@ -1144,7 +1138,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             user.is_superuser
             or user_has_any_perm(user, FLEET_SUPERVISOR_STAGE_PERMS + FLEET_MANAGER_STAGE_PERMS)
             or target.created_by_id == user.id
-            or (target.section_id and SectionAssignment.objects.filter(user=user, section_id=target.section_id, is_active=True).exists())
+            or (target.section_id and user_has_section_role(user, target.section_id))
         )
         if not is_auth:
             raise PermissionDenied("شما دسترسی بازگشایی این پرونده را ندارید.")
@@ -1386,9 +1380,8 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             except (ValueError, TypeError):
                 pass
         if not target_section and not is_mgr and user and user.is_authenticated:
-            first_assign = SectionAssignment.objects.filter(user=user, is_active=True).select_related('section', 'section__project').first()
-            if first_assign:
-                target_section = first_assign.section
+            # نخستین بخش تحت پوشش کاربر؛ انتساب سطح شرکت یا پروژه هم بخش‌های زیرمجموعه را می‌دهد (طرح ۲.۱)
+            target_section = user_sections(user).select_related('project').order_by('id').first()
 
         # تعیین شرکت مقصد با resolve_import_company
         import_company_id = resolve_import_company(request)

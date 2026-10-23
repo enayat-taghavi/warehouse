@@ -99,7 +99,7 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
 
   it('۱. کامپوننت با موفقیت ایجاد می‌شود', () => {
     expect(component).toBeTruthy();
-    expect(component.formData.has_warehouse_module).toBe(true);
+    expect(component.formData.disabled_modules).toEqual([]);
     expect(component.formData.is_active).toBe(true);
   });
 
@@ -162,12 +162,15 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
     expect(mockCompanyApi.create).not.toHaveBeenCalled();
   });
 
-  it('۸. متد toggleWarehouseModule سوئیچ ماژول انبارداری را تغییر می‌دهد', () => {
-    expect(component.formData.has_warehouse_module).toBe(true);
-    component.toggleWarehouseModule();
-    expect(component.formData.has_warehouse_module).toBe(false);
-    component.toggleWarehouseModule();
-    expect(component.formData.has_warehouse_module).toBe(true);
+  it('۸. toggleModule هر ماژول را عمومی در disabled_modules خاموش و دوباره روشن می‌کند', () => {
+    expect(component.isModuleOn('warehouse')).toBe(true);
+    component.toggleModule('warehouse');
+    expect(component.isModuleOn('warehouse')).toBe(false);
+    expect(component.formData.disabled_modules).toEqual(['warehouse']);
+    component.toggleModule('accounting');
+    expect(component.formData.disabled_modules).toEqual(['warehouse', 'accounting']);
+    component.toggleModule('warehouse');
+    expect(component.formData.disabled_modules).toEqual(['accounting']);
   });
 
   it('۹. ثبت موفق اطلاعات: فراخوانی create، انتخاب شرکت فعال، بستن ویزارد و هدایت به مرکز عملیات', () => {
@@ -176,7 +179,7 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
     component.formData.national_id = '10101234567';
     component.formData.economic_code = '4111222333';
     component.formData.address = 'تهران، کیلومتر ۱۴ جاده مخصوص';
-    component.formData.has_warehouse_module = true;
+    component.toggleModule('warehouse');
 
     component.onSubmit();
     fixture.detectChanges();
@@ -187,7 +190,7 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
       national_id: '10101234567',
       economic_code: '4111222333',
       address: 'تهران، کیلومتر ۱۴ جاده مخصوص',
-      has_warehouse_module: true,
+      disabled_modules: ['warehouse'],
       is_active: true
     });
 
@@ -212,15 +215,13 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
     expect(mockActiveCompanyService.selectCompany).not.toHaveBeenCalled();
   });
 
-  it('۱۱. ایزولاسیون تک‌ماژول (فقط مالی): کارت فعال‌سازی انبارداری در DOM نمایش داده نمی‌شود و واژگان انبار نشت نمی‌کنند', () => {
+  it('۱۱. تک‌ماژول: با یک ماژول نصب‌شده فهرست کلید ماژول‌ها نمایش داده نمی‌شود و واژگان انبار نشت نمی‌کنند', () => {
     const registry = TestBed.inject(ModuleRegistryService);
     registry.setInstalledModules(['platform', 'accounting']);
     fixture.detectChanges();
 
-    const whCheckbox = fixture.nativeElement.querySelector('input[name="has_warehouse_module"]');
-    expect(whCheckbox).toBeNull();
-    // پیش‌فرض ذخیره‌سازی همچنان دست‌نخورده true می‌ماند
-    expect(component.formData.has_warehouse_module).toBe(true);
+    expect(fixture.nativeElement.querySelector('input[id^="fbw_module_"]')).toBeNull();
+    expect(component.formData.disabled_modules).toEqual([]);
 
     const cardText = fixture.nativeElement.textContent || '';
     expect(cardText).not.toContain('انبارداری پارس');
@@ -228,13 +229,18 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
     expect(cardText).not.toContain('دفتر مرکزی / انبار');
   });
 
-  it('۱۲. ایزولاسیون تک‌ماژول (فقط انبار): کارت فعال‌سازی انبارداری نمایش داده می‌شود و پیش‌فرض true است', () => {
+  it('۱۲. چند ماژول نصب‌شده: برای هر ماژول از رجیستری یک کلید روشن هست و خاموش کردن آن disabled_modules را پر می‌کند', () => {
     const registry = TestBed.inject(ModuleRegistryService);
-    registry.setInstalledModules(['platform', 'warehouse']);
+    registry.setInstalledModules(['warehouse', 'accounting']);
     fixture.detectChanges();
 
-    const whCheckbox = fixture.nativeElement.querySelector('input[name="has_warehouse_module"]');
-    expect(whCheckbox).not.toBeNull();
-    expect(component.formData.has_warehouse_module).toBe(true);
+    const boxes = Array.from(fixture.nativeElement.querySelectorAll('input[id^="fbw_module_"]') as NodeListOf<HTMLInputElement>);
+    expect(boxes.map(b => b.id).sort()).toEqual(['fbw_module_accounting', 'fbw_module_warehouse']);
+    expect(boxes.every(b => b.checked)).toBe(true);
+    expect(boxes.every(b => !!b.getAttribute('aria-label'))).toBe(true);
+
+    boxes.find(b => b.id === 'fbw_module_warehouse')!.click();
+    fixture.detectChanges();
+    expect(component.formData.disabled_modules).toEqual(['warehouse']);
   });
 });

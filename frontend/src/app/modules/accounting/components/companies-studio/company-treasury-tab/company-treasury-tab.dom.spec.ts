@@ -251,7 +251,8 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
 
       expect(mockCompanyApi.setPrimaryBankAccount).toHaveBeenCalledWith(5);
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('به عنوان حساب اصلی شرکت تنظیم شد'));
-      expect(applied).toEqual([{ companyId: 1, fields: { primary_bank_name: 'بانک تجارت', primary_account_number: '987654321', primary_iban: 'IR980180000000000987654321' } }]);
+      // حساب اصلی فقط is_primary همین حساب‌هاست (ت۶)؛ فیلدی در فرم شرکت وصله نمی‌شود
+      expect(applied).toEqual([]);
     });
 
     it('کپی شماره شبا به کلیپ‌بورد باید توست موفقیت‌آمیز نمایش دهد', async () => {

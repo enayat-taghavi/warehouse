@@ -4,9 +4,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { Router, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angular/router';
-import { 
-  WarehouseCompanyGuard, 
-  AuthGuard 
+import {
+  moduleCompanyGuard,
+  AuthGuard
 } from './auth.guard';
 import { AuthService } from './auth.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
@@ -37,8 +37,7 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
 
     activeCompanyMock = {
       activeCompany: null,
-      hasWarehouseModule: true,
-      hasWarehouseModuleSignal: vi.fn().mockReturnValue(true),
+      isModuleEnabled: vi.fn().mockReturnValue(true),
       hasCompanyDocumentsAccess: vi.fn().mockReturnValue(true)
     };
 
@@ -69,18 +68,28 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
     });
   });
 
-  describe('WarehouseCompanyGuard', () => {
+  describe('moduleCompanyGuard (enabled_modules شرکت فعال)', () => {
     it('should allow navigation when activeCompany is null', () => {
       activeCompanyMock.activeCompany = null;
-      const result = TestBed.runInInjectionContext(() => WarehouseCompanyGuard({} as any, {} as any));
+      const result = TestBed.runInInjectionContext(() => moduleCompanyGuard('warehouse')({} as any, {} as any));
       expect(result).toBe(true);
     });
 
-    it('should redirect to launcher ONLY when company explicitly disables warehouse module', () => {
-      activeCompanyMock.activeCompany = { id: 2, name: 'شرکت ۲', has_warehouse_module: false };
-      const result = TestBed.runInInjectionContext(() => WarehouseCompanyGuard({} as any, {} as any));
+    it('should allow navigation for an old cached company without enabled_modules', () => {
+      activeCompanyMock.activeCompany = { id: 1, name: 'شرکت ۱' };
+      const result = TestBed.runInInjectionContext(() => moduleCompanyGuard('warehouse')({} as any, {} as any));
+      expect(result).toBe(true);
+    });
+
+    it('should redirect to launcher ONLY when the module is not in the company enabled_modules', () => {
+      activeCompanyMock.activeCompany = { id: 2, name: 'شرکت ۲', enabled_modules: ['accounting'] };
+      const result = TestBed.runInInjectionContext(() => moduleCompanyGuard('warehouse')({} as any, {} as any));
       expect(result).toBe(false);
       expect(routerMock.navigate).toHaveBeenCalledWith(['/app/launcher']);
+      routerMock.navigate.mockClear();
+      const acc = TestBed.runInInjectionContext(() => moduleCompanyGuard('accounting')({} as any, {} as any));
+      expect(acc).toBe(true);
+      expect(routerMock.navigate).not.toHaveBeenCalled();
     });
   });
 

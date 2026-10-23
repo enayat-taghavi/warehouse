@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import type { ImportResult } from '../http/accounts-http.service';
-import { OrgProject, OrgProjectSection, OrgSectionAssignment } from '../models/company.model';
+import { OrgAssignmentLevel, OrgProject, OrgProjectSection, OrgSectionAssignment } from '../models/company.model';
 
 /** اندپوینت‌های ساختار سازمانی هسته (شرکت ← پروژه ← بخش) */
 export const ORG_PROJECTS_ENDPOINT = 'org/projects';
@@ -12,11 +12,20 @@ export const ORG_SECTIONS_ENDPOINT = 'org/project-sections';
 export const ORG_ASSIGNMENTS_ENDPOINT = 'org/section-assignments';
 
 export interface OrgAssignmentFilters {
+  /** فقط ردیف‌های مستقیم همان بخش */
   section_id?: number;
+  /** ردیف‌های سطح پروژه به‌علاوهٔ ردیف‌های بخش‌های همان پروژه */
   project_id?: number;
+  /** همهٔ ردیف‌هایی که بر بخش اثر دارند (مستقیم، از راه پروژه یا از راه شرکت) */
+  covering_section_id?: number;
+  level?: OrgAssignmentLevel;
   user_id?: number;
   role?: string;
+  is_active?: boolean;
 }
+
+/** مقصد انتساب گروهی: دقیقاً یکی از سه کلید */
+export type OrgAssignmentTarget = { section_id: number } | { project_id: number } | { company_id: number };
 
 /**
  * API پروژه‌ها، بخش‌ها و انتساب کاربر به بخش در هسته (/api/org/).
@@ -116,7 +125,8 @@ export class OrgStructureApiService {
     );
   }
 
-  bulkAssign(data: { section_id: number; user_ids: number[]; role: string }): Observable<OrgSectionAssignment[]> {
+  /** انتساب گروهی در سطح شرکت، پروژه یا بخش (`OrgAssignmentTarget`) */
+  bulkAssign(data: OrgAssignmentTarget & { user_ids: number[]; role: string }): Observable<OrgSectionAssignment[]> {
     return this.api.post<OrgSectionAssignment[]>(`${ORG_ASSIGNMENTS_ENDPOINT}/bulk-assign/`, data);
   }
 

@@ -66,16 +66,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   get isRestricted(): boolean {
     return this.route?.snapshot?.data?.['studioMode'] === 'restricted';
   }
-  /** فیلدهای فرم شرکت که در تب «بیمه و مالی» هستند؛ بقیه در تب هویتی‌اند (برای نشان خطای تب) */
-  private static readonly FISCAL_TAB_FIELDS = [
-    'workshop_code', 'economic_code', 'tax_memory_id', 'tax_economic_code', 'social_security_branch_code',
-    'social_security_branch_name', 'contract_row', 'employer_name', 'fiscal_year_start_month'
-  ];
   private static readonly CORE_DOC_MAX_BYTES = 20 * 1024 * 1024;
   /** فیلدهایی که زیرشان پیام خطا نمایش داده می‌شود */
   private static readonly FIELD_ERROR_KEYS = [
-    'code', 'name', 'national_id', 'registration_number', 'phone', 'postal_code', 'workshop_code',
-    'economic_code', 'tax_memory_id', 'tax_economic_code', 'social_security_branch_code', 'contract_row'
+    'code', 'name', 'national_id', 'registration_number', 'phone', 'postal_code', 'economic_code'
   ];
 
   private api = inject(CompanyApiService);
@@ -198,20 +192,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       alternate_inspector: string;
       authorized_signers: string;
       board_term_expiry: string;
-      workshop_code: string;
-      social_security_branch_code: string;
-      social_security_branch_name: string;
-      contract_row: string;
-      employer_name: string;
-      tax_memory_id: string;
-      tax_economic_code: string;
-      primary_bank_name: string;
-      primary_account_number: string;
-      primary_iban: string;
       articles_of_association?: string | null;
       latest_gazette?: string | null;
       is_active: boolean;
-      has_warehouse_module: boolean;
+      /** فقط حالت کامل مدیر کل: کد ماژول‌های خاموش این شرکت (کلید ماژول‌ها) */
+      disabled_modules?: string[];
       logo?: string | null;
     };
     errors: { [key: string]: string };
@@ -503,7 +488,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
     const q = this.normalizeSearchText(this.searchQuery);
     this.filteredCompanies = this.companies.filter((c) =>
-      [c.name, c.code, c.national_id, c.economic_code, c.ceo_name, c.workshop_code]
+      [c.name, c.code, c.national_id, c.economic_code, c.ceo_name]
         .some(field => this.normalizeSearchText(field).includes(q))
     );
     this.cdr.markForCheck();
@@ -533,14 +518,44 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  /** در نصب «فقط مالی» ستون‌ها، فیلدها و تب‌های انبارداری شرکت پنهان‌اند */
-  get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
+  /**
+   * ماژول‌های نصب‌شده‌ای که برای هر شرکت روشن و خاموش می‌شوند (ت۸ طرح ۲.۱)؛ پوستهٔ عملیات ماژول نیست.
+   * پوسته نام هیچ ماژولی را نمی‌داند: فهرست از رجیستری ماژول‌ها و وضعیت از `enabled_modules` شرکت می‌آید.
+   */
+  get switchableModules(): { code: string; titleFa: string; titleShortFa: string }[] {
+    return this.moduleRegistry.getInstalledModules()
+      .filter(m => !m.isSuperuserOnly)
+      .map(m => ({ code: m.code, titleFa: m.titleFa, titleShortFa: m.titleShortFa }));
   }
 
-  /** تعداد ستون‌های پویا: ۸ پایه + ستون‌های مشارکتی + ۱ انبار */
+  /** ستون «ماژول‌ها» فقط وقتی بیش از یک ماژول نصب است معنا دارد */
+  get showModulesColumn(): boolean {
+    return this.switchableModules.length > 1;
+  }
+
+  /** نام کوتاه ماژول‌های روشن یک شرکت در فهرست */
+  companyModuleState(company: Company): { code: string; titleShortFa: string; enabled: boolean }[] {
+    return this.switchableModules.map(m => ({
+      code: m.code, titleShortFa: m.titleShortFa, enabled: this.moduleRegistry.isModuleEnabledForCompany(m.code, company)
+    }));
+  }
+
+  /** کلید یک ماژول در فرم شرکت (مدیر کل): روشن یعنی در `disabled_modules` نیست */
+  isModuleSwitchOn(code: string): boolean {
+    return !(this.companyModal.data.disabled_modules || []).includes(code);
+  }
+
+  toggleModuleSwitch(code: string, on: boolean): void {
+    const current = new Set(this.companyModal.data.disabled_modules || []);
+    if (on) current.delete(code);
+    else current.add(code);
+    this.companyModal.data.disabled_modules = this.switchableModules.map(m => m.code).filter(c => current.has(c));
+    this.cdr.markForCheck();
+  }
+
+  /** تعداد ستون‌های پویا: ۸ پایه + ستون‌های مشارکتی + ۱ ماژول‌ها */
   get tableColspan(): number {
-    return 8 + this.listCells.length + (this.isWarehouseInstalled ? 1 : 0);
+    return 8 + this.listCells.length + (this.showModulesColumn ? 1 : 0);
   }
 
   private _listContribKey = '';
@@ -587,7 +602,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** جای تب‌های هسته؛ تب مشارکتی با `order` خودش میان آن‌ها می‌نشیند (§۵-۴) */
   private static readonly CORE_TAB_ORDER: Record<string, number> = {
-    identity: 10, fiscal_insurance: 20, documents: 50, projects: 55, access: 60
+    identity: 10, documents: 50, projects: 55, access: 60
   };
 
   private _contributedTabsKey = '';
@@ -613,7 +628,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   /** تب‌های هسته‌ای که جایگاه بخش مشارکتی دارند */
-  readonly sectionSlots: CompanyStudioSection['slot'][] = ['fiscal_insurance', 'documents'];
+  readonly sectionSlots: CompanyStudioSection['slot'][] = ['identity', 'documents'];
 
   /** بخش‌های مشارکتی یک تب هسته (studioSections) به ترتیب order؛ در حالت محدود بخشِ «هیچ» کنار می‌رود */
   sectionsFor(slot: CompanyStudioSection['slot']): CompanyStudioSection[] {
@@ -626,9 +641,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   // ─── حالت محدود (ق۳): تب و بخش بر پایهٔ سطح کاربر در بخش‌های مجوز شرکت ───
   private static readonly FORM_FIELD_KEYS = Object.keys(buildCompanyPayload({ code: '', name: '' }));
 
-  /** بخش مجوز هر تب هسته؛ تب‌های مدارک و بیمه بخش مشارکتی هم دارند */
+  /** حوزهٔ اطلاعات هر تب هسته؛ تب‌های هویتی و مدارک بخش مشارکتی هم دارند */
   private static readonly CORE_TAB_SECTION: Record<string, string> = {
-    identity: 'identity', fiscal_insurance: 'insurance_tax', documents: 'founding_docs', projects: 'projects', access: 'user_access'
+    identity: 'identity', documents: 'founding_docs', projects: 'projects', access: 'user_access'
   };
 
   canReadSection(key: string): boolean {
@@ -684,7 +699,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const now: Record<string, unknown> = buildCompanyPayload(this.companyModal.data);
     const changed = Object.keys(now).filter(k => JSON.stringify(now[k]) !== JSON.stringify(before[k]));
     if (changed.some(k => !this.canWriteField(k))) {
-      this.toast.error('برخی تغییرها در بخش‌هایی است که مجوز نوشتنش را ندارید؛ ذخیره انجام نشد.');
+      this.toast.error('برخی تغییرها در حوزه‌هایی است که مجوز نوشتنش را ندارید؛ ذخیره انجام نشد.');
       return null;
     }
     const logoChanged = !!this.selectedLogoFile || this.isLogoCleared;
@@ -804,7 +819,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const errorIndicator = { tone: 'rose' as const, label: 'دارای خطا' };
     const tabs: TabDef[] = [
       { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: this.icons.company, indicator: errorTabs.has('identity') ? errorIndicator : undefined },
-      { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check', indicator: errorTabs.has('fiscal_insurance') ? errorIndicator : undefined },
     ];
     tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: documentsCount });
     // ساختار سازمانی زیر شرکت (پروژه ← بخش) و انتساب کاربران؛ شمارنده و نشان خطا از کامپوننت تب می‌آید
@@ -840,8 +854,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return tabs;
   }
 
-  private tabForField(field: string): string {
-    if (CompaniesManagementComponent.FISCAL_TAB_FIELDS.includes(field)) return 'fiscal_insurance';
+  /** همهٔ فیلدهای فرم مشخصات شرکت در تب هویتی‌اند */
+  private tabForField(_field: string): string {
     return 'identity';
   }
 
@@ -1004,7 +1018,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.actorLevels = levels ? { ...levels } : {};
         this.studioContext.sectionLevels.set(restricted ? { ...this.actorLevels } : null);
         if (restricted && !Object.values(this.actorLevels).some(l => l !== 'none')) {
-          this.toast.error('به هیچ بخشی از این شرکت دسترسی ندارید.');
+          this.toast.error('به هیچ حوزه‌ای از اطلاعات این شرکت دسترسی ندارید.');
           this.router?.navigate([this.listUrl], { replaceUrl: true });
           return;
         }
@@ -1088,20 +1102,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       alternate_inspector: company.alternate_inspector || '',
       authorized_signers: company.authorized_signers || '',
       board_term_expiry: company.board_term_expiry || '',
-      workshop_code: company.workshop_code || '',
-      social_security_branch_code: company.social_security_branch_code || '',
-      social_security_branch_name: company.social_security_branch_name || '',
-      contract_row: company.contract_row || '',
-      employer_name: company.employer_name || '',
-      tax_memory_id: company.tax_memory_id || '',
-      tax_economic_code: company.tax_economic_code || '',
-      primary_bank_name: company.primary_bank_name || '',
-      primary_account_number: company.primary_account_number || '',
-      primary_iban: company.primary_iban || '',
       articles_of_association: company.articles_of_association || null,
       latest_gazette: company.latest_gazette || null,
       is_active: company.is_active,
-      has_warehouse_module: company.has_warehouse_module !== false,
+      // کلید ماژول‌ها فقط در حالت کامل مدیر کل فرستاده می‌شود (سرور برای دیگران 403 می‌دهد)
+      ...(this.isRestricted ? {} : { disabled_modules: [...(company.disabled_modules || [])] }),
       logo: company.logo || null
     };
   }
@@ -1272,14 +1277,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   /** فیلدهای شناسه‌ای: رقم فارسی و عربی هنگام تایپ لاتین می‌شود (ت۷) */
-  onDigitsInput(field: 'national_id' | 'economic_code' | 'registration_number' | 'phone' | 'postal_code' | 'workshop_code' | 'tax_economic_code' | 'social_security_branch_code' | 'contract_row', value: string): void {
+  onDigitsInput(field: 'national_id' | 'economic_code' | 'registration_number' | 'phone' | 'postal_code', value: string): void {
     this.companyModal.data[field] = normalizeDigits(value ?? '');
     this.clearFieldError(field);
-  }
-
-  onTaxMemoryIdInput(value: string): void {
-    this.companyModal.data.tax_memory_id = normalizeDigits(value ?? '').toUpperCase();
-    this.clearFieldError('tax_memory_id');
   }
 
   private clearFieldError(field: string): void {
@@ -1313,21 +1313,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const exactDigits: [keyof typeof d, number, string][] = [
       ['economic_code', 12, 'کد اقتصادی قدیم باید ۱۲ رقم باشد.'],
       ['postal_code', 10, 'کد پستی باید ۱۰ رقم باشد.'],
-      ['workshop_code', 10, 'کد کارگاه بیمه باید ۱۰ رقم باشد.'],
-      ['tax_economic_code', 16, 'کد اقتصادی جدید باید ۱۶ رقم باشد.'],
     ];
     for (const [field, len, msg] of exactDigits) {
       const v = val(d[field] as string);
       if (v && !new RegExp(`^\\d{${len}}$`).test(v)) errors[field as string] = msg;
     }
-    for (const field of ['social_security_branch_code', 'contract_row', 'registration_number'] as const) {
-      const v = val(d[field]);
-      if (v && !/^\d+$/.test(v)) errors[field] = 'فقط رقم وارد کنید.';
-    }
-    const memoryId = val(d.tax_memory_id);
-    if (memoryId && !/^[A-Za-z0-9]{6}$/.test(memoryId)) {
-      errors['tax_memory_id'] = 'شناسهٔ حافظهٔ مالیاتی باید ۶ حرف یا رقم لاتین باشد.';
-    }
+    const regNo = val(d.registration_number);
+    if (regNo && !/^\d+$/.test(regNo)) errors['registration_number'] = 'فقط رقم وارد کنید.';
     const phone = val(d.phone);
     if (phone) {
       const phoneDigits = phone.replace(/\D/g, '');
@@ -1899,7 +1891,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       return 'این کاربر کار حساس دارد؛ فقط مدیر کل سامانه تغییرش می‌دهد';
     }
     if (Object.entries(levels).some(([k, v]) => this.isLevelAboveActor(k, v))) {
-      return 'سطح این کاربر در بخشی از سطح شما بالاتر است';
+      return 'سطح این کاربر در حوزه‌ای از سطح شما بالاتر است';
     }
     return null;
   }
@@ -1974,8 +1966,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (!this.permissionSpec) return '—';
     const levels = acc.section_levels || {};
     const granted = this.permissionSections.filter(s => (levels[s.key] || 'none') !== 'none');
-    if (granted.length === 0) return 'فقط پیوند (بدون مجوز بخش)';
-    return `${this.fa(granted.length)} بخش از ${this.fa(this.permissionSections.length)}`;
+    if (granted.length === 0) return 'فقط پیوند (بدون مجوز حوزه)';
+    return `${this.fa(granted.length)} حوزه از ${this.fa(this.permissionSections.length)}`;
   }
 
   /** بخش حساس فقط با مدیر کل (ت۹) */
@@ -2048,7 +2040,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.savingLevels = false;
         this.studioAccesses = this.studioAccesses.map(a => a.id === acc.id ? { ...a, section_levels: updated.section_levels || this.editingLevels } : a);
         this.editingAccessId = null;
-        this.toast.success('مجوزهای بخش‌ها ذخیره شد.');
+        this.toast.success('مجوز حوزه‌ها ذخیره شد.');
         this.cdr.markForCheck();
         this.focusEditButton(acc.id ?? null);
       },
@@ -2107,20 +2099,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       alternate_inspector: '',
       authorized_signers: '',
       board_term_expiry: '',
-      workshop_code: '',
-      social_security_branch_code: '',
-      social_security_branch_name: '',
-      contract_row: '',
-      employer_name: '',
-      tax_memory_id: '',
-      tax_economic_code: '',
-      primary_bank_name: '',
-      primary_account_number: '',
-      primary_iban: '',
       articles_of_association: null,
       latest_gazette: null,
       is_active: true,
-      has_warehouse_module: true
+      disabled_modules: [] as string[]
     };
   }
 }

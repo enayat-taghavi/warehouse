@@ -47,17 +47,8 @@ export function buildCompanyPayload(d: any) {
     alternate_inspector: d.alternate_inspector?.trim() || null,
     authorized_signers: d.authorized_signers?.trim() || null,
     board_term_expiry: d.board_term_expiry || null,
-    workshop_code: text(d.workshop_code),
-    social_security_branch_code: text(d.social_security_branch_code),
-    social_security_branch_name: d.social_security_branch_name?.trim() || null,
-    contract_row: text(d.contract_row),
-    employer_name: d.employer_name?.trim() || null,
-    tax_memory_id: text(d.tax_memory_id),
-    tax_economic_code: text(d.tax_economic_code),
-    primary_bank_name: d.primary_bank_name?.trim() || null,
-    primary_account_number: d.primary_account_number?.trim() || null,
-    primary_iban: d.primary_iban?.trim() || null,
     is_active: d.is_active,
-    has_warehouse_module: d.has_warehouse_module
+    // فقط مدیر کل کلید ماژول‌ها را می‌فرستد (سرور برای دیگران 403 می‌دهد)
+    ...(Array.isArray(d.disabled_modules) ? { disabled_modules: [...d.disabled_modules] } : {})
   };
 }

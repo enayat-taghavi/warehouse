@@ -193,7 +193,7 @@
                 <input id="co-sec-code" name="code" type="text" dir="ltr" [(ngModel)]="newSection.code" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-mono font-bold text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="SEC-01" />
               </div>
               <div>
-                <label for="co-sec-name" class="block text-xs font-bold text-fg-muted mb-1">نام بخش یا دپارتمان</label>
+                <label for="co-sec-name" class="block text-xs font-bold text-fg-muted mb-1">نام بخش</label>
                 <input id="co-sec-name" name="name" type="text" [(ngModel)]="newSection.name" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="مثلاً بخش ترابری" />
               </div>
               <div class="flex items-end gap-3">
@@ -320,93 +320,23 @@
         </div>
       }
 
-      <!-- نمای ماتریس: کارت جمع‌شوندهٔ هر بخش با ستون هر نقش -->
+      <!-- نمای ماتریس: کارت سطح شرکت، کارت سطح هر پروژه و کارت جمع‌شوندهٔ هر بخش، با ستون هر نقش -->
       @if (assignmentViewMode === 'matrix') {
         <div class="space-y-3">
-          @for (g of groupedAssignmentsBySection; track g.section.id) {
-            <section class="bg-surface rounded-2xl border border-line shadow-sm p-3.5 space-y-3">
-              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-                <button type="button" class="flex items-center gap-2.5 text-start min-w-0 rounded-xl p-1 -m-1 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                  [attr.aria-expanded]="!isSectionCollapsed(g.section.id)" (click)="toggleSectionCollapse(g.section.id)">
-                  <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shrink-0">
-                    <svg [appIcon]="icons.sections" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                  </span>
-                  <span class="min-w-0">
-                    <span class="flex items-center gap-1.5 flex-wrap">
-                      <span class="text-xs font-black text-fg">{{ g.section.name }}</span>
-                      <bdi class="text-[10px] font-mono text-fg-muted bg-surface-muted px-1.5 py-0.5 rounded">{{ g.section.code }}</bdi>
-                      @if (!g.section.is_active) { <ng-container *ngTemplateOutlet="activeBadge; context: { active: false }"></ng-container> }
-                    </span>
-                    <span class="block text-[11px] text-fg-muted">پروژه: {{ g.section.project_name }}</span>
-                  </span>
-                  <svg [appIcon]="isSectionCollapsed(g.section.id) ? actionIcons.expand : actionIcons.collapse" class="w-4 h-4 text-fg-subtle shrink-0 ms-auto lg:ms-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                </button>
-                <div class="flex flex-wrap items-center gap-1.5">
-                  @for (r of g.roles; track r.role.key) {
-                    <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold inline-flex items-center gap-1 tabular-nums"
-                      [ngClass]="r.assignments.length > 0 ? roleTone(r.role).badge : 'bg-surface-muted text-fg-muted border-line'"
-                      [title]="r.role.labelFa + ': ' + fa(r.assignments.length) + ' نفر'">
-                      <svg [appIcon]="r.role.icon" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                      <span>{{ fa(r.assignments.length) }} {{ r.role.shortLabelFa }}</span>
-                    </span>
-                  }
-                  @for (w of g.missingWarnings; track w) {
-                    <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black inline-flex items-center gap-1">
-                      <svg [appIcon]="statusIcons.warning" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                      <span>{{ w }}</span>
-                    </span>
-                  }
-                  @if (canWrite) {
-                    <button type="button" appAction="copy" size="sm" label="کپی انتساب‌ها" (click)="openCloneModal(g.section)"></button>
-                  }
-                </div>
-              </div>
-
-              @if (!isSectionCollapsed(g.section.id)) {
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
-                  @for (r of g.roles; track r.role.key) {
-                    <div class="rounded-2xl border p-2.5 flex flex-col gap-2" [ngClass]="roleTone(r.role).panel">
-                      <div class="flex items-center justify-between gap-1 border-b border-line-subtle pb-1.5">
-                        <span class="flex items-center gap-1.5 text-xs font-black" [ngClass]="roleTone(r.role).text">
-                          <svg [appIcon]="r.role.icon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                          <span>{{ r.role.shortLabelFa }}</span>
-                        </span>
-                        <span class="px-1.5 py-0.5 rounded-full bg-surface text-fg-muted text-[10px] font-bold border border-line tabular-nums">{{ fa(r.assignments.length) }} نفر</span>
-                      </div>
-                      <ul class="space-y-1.5 flex-1">
-                        @for (a of r.assignments; track a.id) {
-                          <li class="flex flex-wrap items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-surface border border-line">
-                            <span class="flex items-center gap-1.5 min-w-0">
-                              <span class="w-6 h-6 rounded-full bg-surface-muted text-fg text-[10px] font-bold flex items-center justify-center shrink-0">{{ getUserInitials(a.user_full_name, a.username) }}</span>
-                              <span class="min-w-0">
-                                <span class="block text-xs font-bold text-fg truncate">{{ a.user_full_name || a.username }}@if (a._offlinePending) { <span class="text-[10px] text-amber-800"> · در صف</span> }</span>
-                                <bdi class="block text-[10px] text-fg-muted font-mono truncate">{{ a.username }}</bdi>
-                              </span>
-                            </span>
-                            @if (canWrite) {
-                              <span class="flex items-center gap-0.5 shrink-0 ms-auto">
-                                <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش انتساب ' + (a.user_full_name || a.username)" (click)="openEditAssignment(a)"></button>
-                                <button type="button" appAction="delete" display="icon" size="sm" [label]="'لغو انتساب ' + (a.user_full_name || a.username)" (click)="deleteAssignment(a)"></button>
-                              </span>
-                            }
-                          </li>
-                        } @empty {
-                          <li class="py-3 text-center text-[11px] text-fg-muted border border-dashed border-line rounded-xl bg-surface/60">بدون فرد منتسب</li>
-                        }
-                      </ul>
-                      @if (canWrite) {
-                        <button type="button" appAction="create" size="sm" class="w-full" [label]="'افزودن ' + r.role.shortLabelFa" [disabled]="usersLoadError" (click)="openQuickAssign(g.section, r.role)"></button>
-                      }
-                    </div>
-                  }
-                </div>
-              }
-            </section>
+          @if (levelGroups.length > 0) {
+            <h3 class="text-[11px] font-black text-fg-muted px-1">انتساب در سطح شرکت و پروژه (برای همهٔ بخش‌های زیر آن معتبر است)</h3>
+            @for (g of levelGroups; track g.key) {
+              <ng-container *ngTemplateOutlet="groupCard; context: { $implicit: g }"></ng-container>
+            }
+            <h3 class="text-[11px] font-black text-fg-muted px-1 pt-1">انتساب در سطح بخش</h3>
+          }
+          @for (g of groupedAssignmentsBySection; track g.key) {
+            <ng-container *ngTemplateOutlet="groupCard; context: { $implicit: g }"></ng-container>
           } @empty {
             @if (!loadError) {
             <div class="bg-surface rounded-2xl border border-line shadow-sm p-8 text-center space-y-2">
               @if (sections.length === 0) {
-                <p class="text-xs font-bold text-fg-muted">هنوز بخشی برای این شرکت تعریف نشده است؛ انتساب پس از تعریف بخش ممکن است.</p>
+                <p class="text-xs font-bold text-fg-muted">هنوز بخشی برای این شرکت تعریف نشده است؛ انتساب در سطح شرکت یا پروژه از کارت‌های بالا ممکن است.</p>
                 @if (canWrite) { <button type="button" appAction="create" display="label" label="تعریف بخش" (click)="switchSubTab('sections')"></button> }
               } @else {
                 <p class="text-xs font-bold text-fg-muted">بخشی مطابق جستجو یا فیلتر یافت نشد.</p>
@@ -432,7 +362,7 @@
                 <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line">
                   <tr>
                     <th scope="col" class="p-3 text-start">کاربر</th>
-                    <th scope="col" class="p-3 text-start">پروژه / بخش</th>
+                    <th scope="col" class="p-3 text-start">سطح و مقصد</th>
                     <th scope="col" class="p-3 text-center w-40">نقش</th>
                     <th scope="col" class="p-3 text-center w-24">وضعیت</th>
                     @if (canWrite) { <th scope="col" class="p-3 text-center w-44">عملیات</th> }
@@ -445,7 +375,12 @@
                         <span class="block font-bold text-fg">{{ a.user_full_name || '—' }}</span>
                         <bdi class="block text-[11px] font-mono text-fg-muted">{{ a.username }}</bdi>
                       </td>
-                      <td class="p-3 text-fg">{{ a.project_name }} <span class="text-fg-muted">/</span> {{ a.section_name }}</td>
+                      <td class="p-3 text-fg">
+                        <span class="flex flex-wrap items-center gap-1.5">
+                          <ng-container *ngTemplateOutlet="levelBadge; context: { $implicit: levelOf(a) }"></ng-container>
+                          <span>{{ targetLabel(a) }}</span>
+                        </span>
+                      </td>
                       <td class="p-3 text-center">
                         <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold inline-flex items-center gap-1" [ngClass]="roleTone(roleByKey(a.role)).badge">
                           @if (roleByKey(a.role); as rd) {
@@ -480,7 +415,10 @@
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
                       <p class="text-xs font-bold text-fg truncate">{{ a.user_full_name || a.username }}</p>
-                      <p class="text-[11px] text-fg-muted truncate">{{ a.project_name }} / {{ a.section_name }}</p>
+                      <p class="text-[11px] text-fg-muted flex flex-wrap items-center gap-1 min-w-0">
+                        <ng-container *ngTemplateOutlet="levelBadge; context: { $implicit: levelOf(a) }"></ng-container>
+                        <span class="truncate">{{ targetLabel(a) }}</span>
+                      </p>
                     </div>
                     <ng-container *ngTemplateOutlet="activeBadge; context: { active: a.is_active !== false, pending: a._offlinePending }"></ng-container>
                   </div>
@@ -512,6 +450,111 @@
   }
   }
 
+  <!-- نشان سطح انتساب: «سطح شرکت»، «سطح پروژه» یا «سطح بخش» -->
+  <ng-template #levelBadge let-level>
+    <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1" [ngClass]="levelBadgeClass(level)" data-level-badge>
+      <svg [appIcon]="level === 'company' ? icons.company : level === 'project' ? icons.projects : icons.sections" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>{{ levelLabel(level) }}</span>
+    </span>
+  </ng-template>
+
+  <!-- کارت یک مقصد انتساب (شرکت، پروژه یا بخش) با ستون هر نقش -->
+  <ng-template #groupCard let-g>
+    <section class="bg-surface rounded-2xl border shadow-sm p-3.5 space-y-3" [ngClass]="g.level === 'section' ? 'border-line' : 'border-indigo-200'" [attr.data-group]="g.key">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+        <button type="button" class="flex items-center gap-2.5 text-start min-w-0 rounded-xl p-1 -m-1 min-h-[40px] hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          [attr.aria-expanded]="!isGroupCollapsed(g)" [attr.aria-label]="g.title" (click)="toggleGroupCollapse(g)">
+          <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shrink-0">
+            <svg [appIcon]="g.level === 'company' ? icons.company : g.level === 'project' ? icons.projects : icons.sections" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          </span>
+          <span class="min-w-0">
+            <span class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-black text-fg">{{ g.title }}</span>
+              @if (g.code) { <bdi class="text-[10px] font-mono text-fg-muted bg-surface-muted px-1.5 py-0.5 rounded">{{ g.code }}</bdi> }
+              <ng-container *ngTemplateOutlet="levelBadge; context: { $implicit: g.level }"></ng-container>
+              @if (g.inactive) { <ng-container *ngTemplateOutlet="activeBadge; context: { active: false }"></ng-container> }
+            </span>
+            <span class="block text-[11px] text-fg-muted">{{ g.subtitle }}</span>
+          </span>
+          <svg [appIcon]="isGroupCollapsed(g) ? actionIcons.expand : actionIcons.collapse" class="w-4 h-4 text-fg-muted shrink-0 ms-auto lg:ms-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        </button>
+        <div class="flex flex-wrap items-center gap-1.5">
+          @for (r of g.roles; track r.role.key) {
+            <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold inline-flex items-center gap-1 tabular-nums"
+              [ngClass]="(r.assignments.length + r.inherited.length) > 0 ? roleTone(r.role).badge : 'bg-surface-muted text-fg-muted border-line'"
+              [title]="r.role.labelFa + ': ' + fa(r.assignments.length + r.inherited.length) + ' نفر' + (r.inherited.length ? ' (' + fa(r.inherited.length) + ' از سطح بالاتر)' : '')">
+              <svg [appIcon]="r.role.icon" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>{{ fa(r.assignments.length + r.inherited.length) }} {{ r.role.shortLabelFa }}</span>
+            </span>
+          }
+          @for (w of g.missingWarnings; track w) {
+            <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black inline-flex items-center gap-1" data-missing-warning>
+              <svg [appIcon]="statusIcons.warning" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>{{ w }}</span>
+            </span>
+          }
+          @if (canWrite && g.section) {
+            <button type="button" appAction="copy" size="sm" label="کپی انتساب‌ها" (click)="openCloneModal(g.section)"></button>
+          }
+        </div>
+      </div>
+
+      @if (!isGroupCollapsed(g)) {
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+          @for (r of g.roles; track r.role.key) {
+            <div class="rounded-2xl border p-2.5 flex flex-col gap-2" [ngClass]="roleTone(r.role).panel">
+              <div class="flex items-center justify-between gap-1 border-b border-line-subtle pb-1.5">
+                <span class="flex items-center gap-1.5 text-xs font-black" [ngClass]="roleTone(r.role).text">
+                  <svg [appIcon]="r.role.icon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>{{ r.role.shortLabelFa }}</span>
+                </span>
+                <span class="px-1.5 py-0.5 rounded-full bg-surface text-fg-muted text-[10px] font-bold border border-line tabular-nums">{{ fa(r.assignments.length + r.inherited.length) }} نفر</span>
+              </div>
+              <ul class="space-y-1.5 flex-1">
+                @for (a of r.assignments; track a.id) {
+                  <li class="flex flex-wrap items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-surface border border-line">
+                    <span class="flex items-center gap-1.5 min-w-0">
+                      <span class="w-6 h-6 rounded-full bg-surface-muted text-fg text-[10px] font-bold flex items-center justify-center shrink-0">{{ getUserInitials(a.user_full_name, a.username) }}</span>
+                      <span class="min-w-0">
+                        <span class="block text-xs font-bold text-fg truncate">{{ a.user_full_name || a.username }}@if (a._offlinePending) { <span class="text-[10px] text-amber-800"> · در صف</span> }</span>
+                        <bdi class="block text-[10px] text-fg-muted font-mono truncate">{{ a.username }}</bdi>
+                      </span>
+                    </span>
+                    @if (canWrite) {
+                      <span class="flex items-center gap-0.5 shrink-0 ms-auto">
+                        <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش انتساب ' + (a.user_full_name || a.username)" (click)="openEditAssignment(a)"></button>
+                        <button type="button" appAction="delete" display="icon" size="sm" [label]="'لغو انتساب ' + (a.user_full_name || a.username)" (click)="deleteAssignment(a)"></button>
+                      </span>
+                    }
+                  </li>
+                }
+                <!-- دارندگان ارث‌برده از سطح شرکت یا پروژه: فقط نمایش؛ ویرایش در کارت همان سطح -->
+                @for (h of r.inherited; track h.assignment.id) {
+                  <li class="flex flex-wrap items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-surface/70 border border-dashed border-line" data-inherited
+                    [title]="'این انتساب در ' + (h.source === 'company' ? 'سطح شرکت' : 'سطح پروژه') + ' ثبت شده و برای این بخش هم معتبر است؛ ویرایش آن در کارت همان سطح است.'">
+                    <span class="flex items-center gap-1.5 min-w-0">
+                      <span class="w-6 h-6 rounded-full bg-surface-muted text-fg-muted text-[10px] font-bold flex items-center justify-center shrink-0">{{ getUserInitials(h.assignment.user_full_name, h.assignment.username) }}</span>
+                      <span class="min-w-0">
+                        <span class="block text-xs font-bold text-fg-muted truncate">{{ h.assignment.user_full_name || h.assignment.username }}</span>
+                        <span class="block text-[10px] text-fg-muted">ارث از {{ h.source === 'company' ? 'سطح شرکت' : 'سطح پروژه' }}</span>
+                      </span>
+                    </span>
+                  </li>
+                }
+                @if (r.assignments.length === 0 && r.inherited.length === 0) {
+                  <li class="py-3 text-center text-[11px] text-fg-muted border border-dashed border-line rounded-xl bg-surface/60">بدون فرد منتسب</li>
+                }
+              </ul>
+              @if (canWrite) {
+                <button type="button" appAction="create" size="sm" class="w-full" [label]="'افزودن ' + r.role.shortLabelFa" [disabled]="usersLoadError" (click)="openQuickAssign(g, r.role)"></button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  </ng-template>
+
   <!-- نشان فعال / غیرفعال -->
   <ng-template #activeBadge let-active="active" let-pending="pending">
     @if (pending) {
@@ -527,11 +570,32 @@
     }
   </ng-template>
 
-  <!-- ── مودال انتساب چند کاربر به یک نقش در بخش ── -->
-  <app-modal [isOpen]="quickAssign.isOpen" [title]="'افزودن ' + (quickAssign.role?.shortLabelFa || '') + ' به ' + (quickAssign.section?.name || '')" (closed)="closeQuickAssign()">
+  <!-- ── مودال انتساب چند کاربر به یک نقش در سطح شرکت، پروژه یا بخش ── -->
+  <app-modal [isOpen]="quickAssign.isOpen" [title]="'افزودن ' + (quickAssign.role?.shortLabelFa || '') + ' — ' + (quickAssignTarget ? levelLabel(quickAssignTarget.level) : '')" (closed)="closeQuickAssign()">
     <div class="space-y-3">
       @if (quickAssign.role?.descriptionFa) {
-        <p class="p-3 rounded-2xl border text-[11px] leading-relaxed" [ngClass]="roleTone(quickAssign.role).panel">{{ quickAssign.role?.descriptionFa }} چند کاربر را می‌توان با یک نقش در یک بخش منتسب کرد.</p>
+        <p class="p-3 rounded-2xl border text-[11px] leading-relaxed" [ngClass]="roleTone(quickAssign.role).panel">{{ quickAssign.role?.descriptionFa }} چند کاربر را می‌توان با یک نقش منتسب کرد.</p>
+      }
+      @if (quickAssign.targets.length > 1) {
+        <fieldset class="space-y-1.5">
+          <legend class="block text-xs font-bold text-fg mb-1">سطح انتساب</legend>
+          @for (t of quickAssign.targets; track t.level) {
+            <label class="flex items-center gap-2 min-h-[40px] px-2.5 rounded-xl border cursor-pointer text-xs select-none"
+              [ngClass]="quickAssign.level === t.level ? 'bg-indigo-50 border-indigo-300 text-indigo-950 font-bold' : 'bg-surface border-line text-fg hover:bg-surface-muted'">
+              <input type="radio" name="co-qa-level" class="text-indigo-600 focus:ring-indigo-500 w-4 h-4 shrink-0" [value]="t.level" [checked]="quickAssign.level === t.level" (change)="onQuickAssignLevelChange(t.level)" />
+              <span class="min-w-0">{{ targetOptionLabel(t) }}</span>
+            </label>
+          }
+          <p class="text-[10px] text-fg-muted">انتساب در سطح بالاتر برای همهٔ بخش‌های زیر آن هم معتبر است.</p>
+          @if (isWideLevel(quickAssign.level)) {
+            <p role="note" class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">این انتساب همهٔ بخش‌های زیرمجموعهٔ {{ quickAssign.level === 'company' ? 'شرکت' : 'پروژه' }} را هم پوشش می‌دهد.</p>
+          }
+        </fieldset>
+      } @else if (quickAssignTarget) {
+        <p class="text-[11px] text-fg-muted flex flex-wrap items-center gap-1.5">
+          <ng-container *ngTemplateOutlet="levelBadge; context: { $implicit: quickAssignTarget.level }"></ng-container>
+          <span>{{ targetOptionLabel(quickAssignTarget) }}</span>
+        </p>
       }
       <div>
         <label for="co-qa-search" class="block text-xs font-bold text-fg mb-1">جستجوی کاربر</label>
@@ -560,7 +624,11 @@
             </label>
           </li>
         } @empty {
+          @if (usersLoading) {
+            <li class="p-2"><app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton></li>
+          } @else {
           <li class="p-5 text-center text-xs text-fg-muted">کاربری برای انتساب یافت نشد (یا همه پیش‌تر با این نقش منتسب شده‌اند).</li>
+          }
         }
       </ul>
     </div>
@@ -578,7 +646,12 @@
     <div class="space-y-3">
       <div class="bg-surface-muted border border-line rounded-2xl p-3 text-xs space-y-1">
         <p><span class="text-fg-muted font-bold">کاربر: </span><span class="font-black text-fg">{{ editAssignment.assignment?.user_full_name || editAssignment.assignment?.username }}</span></p>
-        <p><span class="text-fg-muted font-bold">بخش: </span><span class="font-bold text-fg">{{ editAssignment.assignment?.section_name }} ({{ editAssignment.assignment?.project_name }})</span></p>
+        @if (editAssignment.assignment; as ea) {
+          <p class="flex flex-wrap items-center gap-1.5"><span class="text-fg-muted font-bold">مقصد فعلی: </span>
+            <ng-container *ngTemplateOutlet="levelBadge; context: { $implicit: levelOf(ea) }"></ng-container>
+            <span class="font-bold text-fg">{{ targetLabel(ea) }}</span>
+          </p>
+        }
       </div>
       <div>
         <label for="co-ea-role" class="block text-xs font-bold text-fg mb-1">نقش</label>
@@ -586,7 +659,45 @@
           @for (r of roles; track r.key) { <option [value]="r.key">{{ r.labelFa }}</option> }
         </select>
       </div>
-      <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-fg py-1.5 min-h-[28px]">
+      <div>
+        <label for="co-ea-level" class="block text-xs font-bold text-fg mb-1">سطح انتساب</label>
+        <select id="co-ea-level" [ngModel]="editAssignment.level" (ngModelChange)="onEditLevelChange($event)"
+          [attr.aria-invalid]="editAssignment.errors['level'] ? true : null" [attr.aria-describedby]="editAssignment.errors['level'] ? 'co-ea-err-level' : null"
+          class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          @for (o of levelOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+        </select>
+        @if (editAssignment.errors['level']) { <span id="co-ea-err-level" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ editAssignment.errors['level'] }}</span> }
+        @if (isWideLevel(editAssignment.level)) {
+          <p role="note" class="mt-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">این انتساب همهٔ بخش‌های زیرمجموعهٔ {{ editAssignment.level === 'company' ? 'شرکت' : 'پروژه' }} را هم پوشش می‌دهد.</p>
+        }
+      </div>
+      @if (editAssignment.level !== 'company') {
+        <div>
+          <label for="co-ea-project" class="block text-xs font-bold text-fg mb-1">پروژه</label>
+          <select id="co-ea-project" [ngModel]="editAssignment.projectId" (ngModelChange)="onEditProjectChange($event)"
+            [attr.aria-invalid]="editAssignment.errors['project'] ? true : null" [attr.aria-describedby]="editAssignment.errors['project'] ? 'co-ea-err-project' : null"
+            class="w-full bg-surface-muted border rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="editAssignment.errors['project'] ? 'border-rose-300' : 'border-line'">
+            <option [ngValue]="null">انتخاب پروژه…</option>
+            @for (p of projects; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+          </select>
+          @if (editAssignment.errors['project']) { <span id="co-ea-err-project" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ editAssignment.errors['project'] }}</span> }
+        </div>
+      }
+      @if (editAssignment.level === 'section') {
+        <div>
+          <label for="co-ea-section" class="block text-xs font-bold text-fg mb-1">بخش</label>
+          <select id="co-ea-section" [(ngModel)]="editAssignment.sectionId" (ngModelChange)="editAssignment.errors = {}"
+            [attr.aria-invalid]="editAssignment.errors['section'] ? true : null" [attr.aria-describedby]="editAssignment.errors['section'] ? 'co-ea-err-section' : null"
+            class="w-full bg-surface-muted border rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="editAssignment.errors['section'] ? 'border-rose-300' : 'border-line'">
+            <option [ngValue]="null">انتخاب بخش…</option>
+            @for (s of editAssignmentSections; track s.id) { <option [ngValue]="s.id">{{ editSectionOptionLabel(s) }}</option> }
+          </select>
+          @if (editAssignment.errors['section']) { <span id="co-ea-err-section" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ editAssignment.errors['section'] }}</span> }
+        </div>
+      }
+      <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-fg py-1.5 min-h-[40px]">
         <input type="checkbox" [(ngModel)]="editAssignment.is_active" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
         <span>انتساب فعال است</span>
       </label>

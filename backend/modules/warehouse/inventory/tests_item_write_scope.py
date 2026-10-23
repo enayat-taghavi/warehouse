@@ -30,13 +30,11 @@ class ItemWriteScopeSecurityTests(TransactionTestCase):
             code="CO-A",
             name="شرکت الف",
             is_active=True,
-            has_warehouse_module=True,
         )
         self.company_b = Company.objects.create(
             code="CO-B",
             name="شرکت ب",
             is_active=True,
-            has_warehouse_module=True,
         )
 
         self.warehouse_a = Warehouse.objects.create(

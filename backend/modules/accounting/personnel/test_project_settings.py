@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from personnel.models import (
+    Company,
     Project,
     PayrollYearlySettings,
     WorkshopInsuranceSettings,
@@ -62,7 +63,9 @@ class ProjectScopedSettingsTestCase(TestCase):
         )
 
         # Project 1: Shiraz
+        self.company = Company.objects.create(code='CMP-SET', name='شرکت آزمون تنظیمات')
         self.proj_shiraz, _ = Project.objects.get_or_create(
+            company=self.company,
             code='PRJ-SHIRAZ',
             defaults={'name': 'پروژه انبار شیراز'}
         )

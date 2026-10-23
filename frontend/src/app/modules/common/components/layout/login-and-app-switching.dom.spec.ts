@@ -97,8 +97,8 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
     };
 
     mockActiveCompany = {
-      activeCompany: vi.fn().mockReturnValue({ id: 2, name: 'شرکت فارس عالیش', has_warehouse_module: true }),
-      hasWarehouseModule: true,
+      activeCompany: vi.fn().mockReturnValue({ id: 2, name: 'شرکت فارس عالیش', enabled_modules: ['warehouse', 'accounting'] }),
+      isModuleEnabled: () => true,
       hasCompanyDocumentsAccess: vi.fn().mockReturnValue(false)
     };
   });

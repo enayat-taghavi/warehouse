@@ -238,8 +238,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
               moduleCode: isAccountingInstalledFlag ? 'accounting' : 'warehouse',
               // تب‌ها، بخش‌ها، ستون‌ها و دکمهٔ ردیف همان ثبت واقعی ماژول حسابداری‌اند
               extension: {
-                ...(isAccountingInstalledFlag ? ACCOUNTING_MODULE.extensions?.companies : {}),
-                hasWarehouseModuleToggle: true
+                ...(isAccountingInstalledFlag ? ACCOUNTING_MODULE.extensions?.companies : {})
               }
             }
           ];
@@ -307,7 +306,8 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
     expect(headers).toContain('پروژه‌ها');
     expect(headers).toContain('سلامت مدارک');
-    expect(component.tableColspan).toBe(11);
+    // ۸ پایه + ۲ ستون مشارکتی حسابداری (ستون «ماژول‌ها» با یک ماژول نصب‌شده نیست)
+    expect(component.tableColspan).toBe(10);
 
     const firstRowText = el.querySelector('tbody tr:first-child')?.textContent || '';
     expect(firstRowText).toContain('۲ پروژه');
@@ -334,7 +334,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
 
     await setupTestBed(false);
     expect(fixture.nativeElement.querySelector('button[aria-label="گوگل‌درایو"]')).toBeNull();
-    expect(component.tableColspan).toBe(9);
+    expect(component.tableColspan).toBe(8);
   });
 
   it('با نصب حسابداری: باز کردن استودیو از طریق دکمه رندر شده، تب‌های treasury، governance و gdrive را نشان داده و زیرعنوان حسابداری است', async () => {
@@ -388,8 +388,9 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     const subtitle = el.querySelector('.sticky.top-0 p')?.textContent?.trim();
     expect(subtitle).toBe('شناسنامهٔ حقوقی، اسناد و دسترسی کاربران شرکت');
 
-    // A11: بخش دوره‌های مالی و بایگانی جامع در تب‌های هسته نیست
-    component.setModalTab('fiscal_insurance');
+    // A11: بخش دوره‌های مالی و بایگانی جامع در تب‌های هسته نیست؛ تب «بیمه و مالیات» هم مشارکت حسابداری است
+    expect(component.modalTabs.some(t => t.id === 'fiscal_insurance')).toBe(false);
+    component.setModalTab('identity');
     fixture.detectChanges();
     await flush();
     fixture.detectChanges();
@@ -437,8 +438,8 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     fixture.detectChanges();
     expect(el.querySelector('app-company-gdrive-tab')).toBeNull();
 
-    // ۴. بخش دوره‌های مالی در انتهای تب «بیمه و مالی» و بایگانی جامع در انتهای تب «مدارک»
-    component.setModalTab('fiscal_insurance');
+    // ۴. بخش دوره‌های مالی در انتهای تب هویتی و بایگانی جامع در انتهای تب «مدارک»
+    component.setModalTab('identity');
     fixture.detectChanges();
     const fiscalSection = el.querySelector('app-company-fiscal-periods-section') as HTMLElement;
     expect(fiscalSection.closest('[hidden]')).toBeNull();
@@ -460,7 +461,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     fixture.detectChanges();
 
     expect(component.modalTabs.some(t => t.id === 'gdrive')).toBe(false);
-    component.setModalTab('fiscal_insurance');
+    component.setModalTab('identity');
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('پس از ثبت اولیه مشخصات شرکت، امکان تعریف دوره‌های مالی');
@@ -517,8 +518,8 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(mockCompanyApi.getDocuments).toHaveBeenCalledTimes(1);
     expect(mockCompanyApi.getDocuments).toHaveBeenCalledWith({ company_id: 1 });
     expect(component.modalTabs.find(t => t.id === 'documents')?.count).toBe(1);
-    // گوگل‌درایو تا باز شدن تب هیچ درخواستی نمی‌زند
-    expect(mockHttp.get).not.toHaveBeenCalled();
+    // گوگل‌درایو تا باز شدن تب هیچ درخواستی نمی‌زند؛ تنها درخواست مستقیم، پروندهٔ بیمه و مالیات تب حسابداری است
+    expect(mockHttp.get.mock.calls.every((c: unknown[]) => String(c[0]).includes('payroll-profile'))).toBe(true);
 
     // جابه‌جایی تب دوباره دریافت نمی‌کند (A7)
     component.setModalTab('treasury');
@@ -529,7 +530,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     fixture.detectChanges();
     component.setModalTab('documents');
     fixture.detectChanges();
-    component.setModalTab('fiscal_insurance');
+    component.setModalTab('identity');
     fixture.detectChanges();
     expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledTimes(1);
     expect(mockCompanyApi.getDocuments).toHaveBeenCalledTimes(1);

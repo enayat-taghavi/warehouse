@@ -9,7 +9,7 @@ from rest_framework import status
 
 from personnel.models import (
     Company, CompanyDocument, CompanyBankAccount, CompanyBoardMember, UserCompanyAccess,
-    Project, ProjectSection, SectionAssignment
+    Project, ProjectSection, SectionAssignment, primary_bank_account
 )
 from personnel.serializers import CompanySerializer
 from personnel.views import get_user_allowed_companies
@@ -44,10 +44,6 @@ class CompanyDocumentTests(TestCase):
             name='شرکت آلفا',
             company_type='private_joint_stock',
             national_id='14001234567',
-            workshop_code='1234567890',
-            tax_memory_id='A1B2C3',
-            primary_iban='IR120120000000001234567890',
-            has_warehouse_module=True,
             is_active=True
         )
 
@@ -56,7 +52,6 @@ class CompanyDocumentTests(TestCase):
             name='شرکت بتا',
             company_type='holding',
             national_id='14009876543',
-            has_warehouse_module=False,
             is_active=True
         )
 
@@ -256,16 +251,13 @@ class CompanyDocumentTests(TestCase):
             'account_number': '1234567890',
             'sheba_number': sheba_mellat,
             'account_title': 'حساب حقوق پرسنل'
-        })
+        }, format='json')
         self.assertEqual(resp1.status_code, status.HTTP_201_CREATED)
         acc1_id = resp1.data['id']
         self.assertTrue(resp1.data['is_primary'])
 
-        # بررسی همگام‌سازی با شرکت
-        self.company_a.refresh_from_db()
-        self.assertEqual(self.company_a.primary_bank_name, 'بانک ملت')
-        self.assertEqual(self.company_a.primary_account_number, '1234567890')
-        self.assertEqual(self.company_a.primary_iban, sheba_mellat)
+        # حساب اصلی شرکت فقط از CompanyBankAccount خوانده می‌شود (ت۶ طرح ۲.۱)
+        self.assertEqual(primary_bank_account(self.company_a).sheba_number, sheba_mellat)
 
         # ۲. ثبت حساب دوم (ملی) بدون تعیین is_primary
         resp2 = self.client.post('/api/personnel/company-bank-accounts/', {
@@ -274,7 +266,7 @@ class CompanyDocumentTests(TestCase):
             'account_number': '9876543210',
             'sheba_number': sheba_melli,
             'account_title': 'حساب بازرگانی و فروش'
-        })
+        }, format='json')
         self.assertEqual(resp2.status_code, status.HTTP_201_CREATED)
         acc2_id = resp2.data['id']
         self.assertFalse(resp2.data['is_primary'])
@@ -288,11 +280,16 @@ class CompanyDocumentTests(TestCase):
         acc1 = CompanyBankAccount.objects.get(id=acc1_id)
         self.assertFalse(acc1.is_primary)
 
-        # فیلدهای شرکت A باید به حساب ملی به‌روز شده باشند
-        self.company_a.refresh_from_db()
-        self.assertEqual(self.company_a.primary_bank_name, 'بانک ملی ایران')
-        self.assertEqual(self.company_a.primary_account_number, '9876543210')
-        self.assertEqual(self.company_a.primary_iban, sheba_melli)
+        # حساب اصلی شرکت A اکنون حساب ملی است و فقط یک حساب اصلی دارد
+        primary = primary_bank_account(self.company_a)
+        self.assertEqual(primary.bank_name, 'بانک ملی ایران')
+        self.assertEqual(primary.account_number, '9876543210')
+        self.assertEqual(primary.sheba_number, sheba_melli)
+        self.assertEqual(CompanyBankAccount.objects.filter(company=self.company_a, is_primary=True).count(), 1)
+
+        # ۴. با حذف حساب اصلی، حساب باقی‌مانده اصلی می‌شود
+        CompanyBankAccount.objects.get(id=acc2_id).delete()
+        self.assertEqual(primary_bank_account(self.company_a).id, acc1_id)
 
     def test_company_bank_account_validation_and_isolation(self):
         """تست اعتبارسنجی شبا و ایزولاسیون شرکتی در حساب‌های بانکی"""

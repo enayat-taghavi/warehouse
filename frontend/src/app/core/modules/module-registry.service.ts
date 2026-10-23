@@ -6,6 +6,7 @@ import {
   ModuleNavItem
 } from './module-contract';
 import { INSTALLED_MODULES } from '../../modules/installed-modules';
+import { Company, companyHasModule } from '../models/company.model';
 
 export type { FrontendModuleSpec, WhFrontendModule, ExtensionMap, ModuleNavItem };
 
@@ -107,6 +108,16 @@ export class ModuleRegistryService {
     if (installed.includes(spec.code)) return true;
     if (spec.aliases?.some(a => installed.includes(a))) return true;
     return false;
+  }
+
+  /**
+   * آیا ماژول برای شرکت داده‌شده روشن است (فهرست `enabled_modules` شرکت)؟ پوستهٔ عملیات ماژول نیست و همیشه روشن است؛
+   * کد ناشناخته هم چیزی را مسدود نمی‌کند (نصب بودن را `isModuleInstalled` می‌سنجد).
+   */
+  public isModuleEnabledForCompany(code: string, company: Pick<Company, 'enabled_modules'> | null | undefined): boolean {
+    const spec = this.getSpec(code);
+    if (!spec || spec === OPERATIONS_SPEC) return true;
+    return companyHasModule(company, spec.code);
   }
 
   /**

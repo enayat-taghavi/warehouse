@@ -43,15 +43,14 @@ export class ActiveCompanyService {
   private isLoadingSubject = new BehaviorSubject<boolean>(false);
   public isLoading$ = this.isLoadingSubject.asObservable();
 
-  public hasWarehouseModuleSignal = computed<boolean>(() => {
-    const hasWh = this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
-    if (!hasWh) return false;
-    const c = this.activeCompanySignal();
-    if (!c) {
-      return true;
-    }
-    return c.has_warehouse_module !== false;
-  });
+  /**
+   * آیا ماژول با کد `code` برای شرکت فعال روشن است (فهرست عمومی `enabled_modules` شرکت)؟
+   * بی شرکت فعال روشن به حساب می‌آید؛ نصب بودن ماژول را `ModuleRegistryService` جداگانه می‌سنجد.
+   * چون سیگنال شرکت فعال را می‌خواند، در computed و قالب‌ها واکنش‌گراست.
+   */
+  isModuleEnabled(code: string): boolean {
+    return this.moduleRegistry.isModuleEnabledForCompany(code, this.activeCompanySignal());
+  }
 
   /**
    * کاربر دست‌کم در یک شرکت تب «مدارک» استودیو را می‌بیند: بخش هستهٔ اسناد مادر، یا بخش مشارکتی
@@ -124,14 +123,6 @@ export class ActiveCompanyService {
   get isSuperuser(): boolean {
     return this.isSuperuserSubject.value;
   }
-
-  get hasWarehouseModule(): boolean {
-    return this.hasWarehouseModuleSignal();
-  }
-
-  public hasWarehouseModule$ = this.activeCompany$.pipe(
-    map((c) => this.hasWarehouseModuleSignal() && !!c && c.has_warehouse_module !== false)
-  );
 
   /**
    * شرکت‌هایی که کاربر دست‌کم یک بخش آن‌ها را می‌خواند، با سطح هر بخش (حالت محدود استودیو و کاشی «شرکت‌ها»).

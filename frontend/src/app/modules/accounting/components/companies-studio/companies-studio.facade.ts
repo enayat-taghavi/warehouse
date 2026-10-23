@@ -1,15 +1,54 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CompanyApiService } from '../../../../core/api/company-api.service';
+import { ApiService } from '../../../../core/api/api.service';
 import { CompanyBankAccount, CompanyBoardMember, CompanyDocument, CompanyFiscalPeriod } from '../../../../core/models/company.model';
 
 /**
  * دسترسی دادهٔ تب‌ها و بخش‌های حسابداری استودیوی شرکت (C3).
  * نشانی‌ها از افزونهٔ `companyApiEndpoints` همین ماژول در CompanyApiService ساخته می‌شوند.
  */
+/** پروندهٔ بیمه و مالیات شرکت برای دیسکت حقوق (مدل حسابداری `CompanyPayrollProfile`؛ پیش از نخستین ذخیره همه null) */
+export interface CompanyPayrollProfile {
+  company?: number;
+  workshop_code: string | null;
+  social_security_branch_code: string | null;
+  social_security_branch_name: string | null;
+  contract_row: string | null;
+  employer_name: string | null;
+  tax_memory_id: string | null;
+  tax_economic_code: string | null;
+  updated_at?: string | null;
+  /** پاسخ خوش‌بینانهٔ صف آفلاین */
+  _offlinePending?: boolean;
+}
+
+export const PAYROLL_PROFILE_FIELDS = [
+  'workshop_code', 'social_security_branch_code', 'social_security_branch_name', 'contract_row',
+  'employer_name', 'tax_memory_id', 'tax_economic_code'
+] as const;
+
+export type PayrollProfileField = typeof PAYROLL_PROFILE_FIELDS[number];
+
 @Injectable()
 export class CompaniesStudioFacade {
   private api = inject(CompanyApiService);
+  private injector = inject(Injector);
+  /** تنبل: specهای تب‌های دیگر که فقط CompanyApiService را جایگزین می‌کنند به HttpClient نیاز پیدا نکنند */
+  private get http(): ApiService {
+    return this.injector.get(ApiService);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // بیمه و مالیات (پروندهٔ دیسکت حقوق؛ حوزهٔ insurance_tax)
+  // ═════════════════════════════════════════════════════════════════════
+  getPayrollProfile(companyId: number): Observable<CompanyPayrollProfile> {
+    return this.http.get<CompanyPayrollProfile>(`personnel/companies/${companyId}/payroll-profile`);
+  }
+
+  updatePayrollProfile(companyId: number, payload: Partial<CompanyPayrollProfile>): Observable<CompanyPayrollProfile> {
+    return this.http.patch<CompanyPayrollProfile>(`personnel/companies/${companyId}/payroll-profile`, payload);
+  }
 
   // ═════════════════════════════════════════════════════════════════════
   // حساب‌های بانکی و شبا (Bank Accounts & Sheba)

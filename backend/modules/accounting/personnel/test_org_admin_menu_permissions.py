@@ -153,8 +153,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.section = ProjectSection.objects.create(project=self.project, code='SEC_A', name='بخش الف')
         self.other_project = Project.objects.create(company=self.other_company, code='PRJ_B', name='پروژه ب')
         self.other_section = ProjectSection.objects.create(project=self.other_project, code='SEC_B', name='بخش ب')
-        self.global_project = Project.objects.create(company=None, code='PRJ_G', name='پروژه سراسری')
-        self.global_section = ProjectSection.objects.create(project=self.global_project, code='SEC_G', name='بخش سراسری')
+        # پروژه و بخش سراسری (بی‌شرکت) دیگر وجود ندارد (طرح ۲.۱، ت۲)
         self.counterparty = Counterparty.objects.create(company=self.company, name='طرف‌حساب الف', counterparty_type='other')
         self.global_counterparty = Counterparty.objects.create(company=None, name='طرف‌حساب سراسری', counterparty_type='other')
 
@@ -204,25 +203,22 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self._as(self.org_admin)
         url = '/api/org/projects/'
         self.assertEqual(self.client.post(url, {'company': self.other_company.id, 'code': 'PRJ_X1', 'name': 'x'}, format='json').status_code, 403)
-        self.assertEqual(self.client.post(url, {'code': 'PRJ_X2', 'name': 'x'}, format='json').status_code, 403)
-        self.assertEqual(self.client.patch(f'{url}{self.global_project.id}/', {'name': 'تغییر'}, format='json').status_code, 403)
-        self.assertEqual(self.client.delete(f'{url}{self.global_project.id}/').status_code, 403)
+        # پروژهٔ بی‌شرکت ممکن نیست: شرکت فیلد الزامی است (طرح ۲.۱، ت۲)
+        self.assertEqual(self.client.post(url, {'code': 'PRJ_X2', 'name': 'x'}, format='json').status_code, 400)
         self.assertEqual(self.client.patch(f'{url}{self.other_project.id}/', {'name': 'تغییر'}, format='json').status_code, 404)
-        self.assertEqual(self.client.patch(f'{url}{self.project.id}/', {'company': None}, format='json').status_code, 403)
+        self.assertEqual(self.client.delete(f'{url}{self.other_project.id}/').status_code, 404)
+        self.assertEqual(self.client.patch(f'{url}{self.project.id}/', {'company': None}, format='json').status_code, 400)
         self.assertEqual(self.client.patch(f'{url}{self.project.id}/', {'company': self.other_company.id}, format='json').status_code, 403)
         self.assertEqual(self.client.patch(f'{url}{self.project.id}/', {'name': 'نام تازه'}, format='json').status_code, 200)
-        self.global_project.refresh_from_db()
-        self.assertEqual(self.global_project.name, 'پروژه سراسری')
-        self.assertTrue(Project.objects.filter(pk=self.global_project.pk).exists())
+        self.other_project.refresh_from_db()
+        self.assertEqual(self.other_project.name, 'پروژه ب')
 
     # ─── راهبر: بخش ───
     def test_org_admin_section_writes_stay_inside_own_company(self):
         self._as(self.org_admin)
         url = '/api/org/project-sections/'
         self.assertEqual(self.client.post(url, {'project': self.other_project.id, 'code': 'S1', 'name': 'x'}, format='json').status_code, 403)
-        self.assertEqual(self.client.post(url, {'project': self.global_project.id, 'code': 'S2', 'name': 'x'}, format='json').status_code, 403)
-        self.assertEqual(self.client.patch(f'{url}{self.global_section.id}/', {'name': 'تغییر'}, format='json').status_code, 403)
-        self.assertEqual(self.client.patch(f'{url}{self.section.id}/', {'project': self.global_project.id}, format='json').status_code, 403)
+        self.assertEqual(self.client.patch(f'{url}{self.section.id}/', {'project': self.other_project.id}, format='json').status_code, 403)
         self.assertEqual(self.client.post(url, {'project': self.project.id, 'code': 'S3', 'name': 'بخش مجاز'}, format='json').status_code, 201)
 
     # ─── راهبر: انتساب (عضویت بخش خودش دسترسی شرکت می‌دهد) ───
@@ -237,14 +233,14 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertFalse(SectionAssignment.objects.filter(user=self.org_admin, section=self.other_section).exists())
         self.assertNotIn(self.other_company.id, set(get_user_allowed_companies(self.org_admin).values_list('id', flat=True)))
 
-    def test_org_admin_assigns_only_company_members_and_never_to_global_sections(self):
+    def test_org_admin_assigns_only_company_members_and_never_to_foreign_sections(self):
         self._as(self.org_admin)
         base = '/api/org/section-assignments/'
         self.assertEqual(self.client.post(base, {'user': self.outsider.id, 'section': self.section.id, 'role': 'employee'}, format='json').status_code, 403)
         res = self.client.post(f'{base}bulk-assign/', {'section_id': self.section.id, 'user_ids': [self.member.id, self.outsider.id], 'role': 'employee'}, format='json')
         self.assertEqual(res.status_code, 403)
         self.assertFalse(SectionAssignment.objects.filter(section=self.section).exists())
-        self.assertEqual(self.client.post(base, {'user': self.member.id, 'section': self.global_section.id, 'role': 'employee'}, format='json').status_code, 403)
+        self.assertEqual(self.client.post(base, {'user': self.member.id, 'section': self.other_section.id, 'role': 'employee'}, format='json').status_code, 403)
         self.assertEqual(self.client.post(base, {'user': self.member.id, 'section': self.section.id, 'role': 'employee'}, format='json').status_code, 201)
 
     def test_org_admin_cannot_touch_other_company_assignments(self):
@@ -278,17 +274,14 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self._as(self.org_admin)
         url = '/api/org/projects/import-excel/'
         # کد PRJ_B مال شرکت ب است؛ در شرکت الف پروژهٔ تازه ساخته می‌شود و پروژهٔ شرکت ب دست نمی‌خورد
-        res = self._import(url, [('PRJ_A', 'نام تازه الف'), ('PRJ_B', 'پروژهٔ تازه در الف'), ('PRJ_G', 'پروژهٔ هم‌کد سراسری')], self.company)
+        res = self._import(url, [('PRJ_A', 'نام تازه الف'), ('PRJ_B', 'پروژهٔ تازه در الف'), ('PRJ_G', 'پروژهٔ تازه دیگر')], self.company)
         self.assertEqual(res.status_code, 200, res.content)
         self.project.refresh_from_db()
         self.other_project.refresh_from_db()
-        self.global_project.refresh_from_db()
         self.assertEqual(self.project.name, 'نام تازه الف')
         self.assertEqual(self.other_project.name, 'پروژه ب')
-        self.assertEqual(self.global_project.name, 'پروژه سراسری')
         self.assertTrue(Project.objects.filter(company=self.company, code='PRJ_B').exists())
         self.assertTrue(Project.objects.filter(company=self.company, code='PRJ_G').exists())
-        self.assertFalse(Project.objects.filter(company__isnull=True).exclude(pk=self.global_project.pk).exists())
         # شرکتی که کاربر به آن دسترسی ندارد
         self.assertEqual(self._import(url, [('PRJ_X', 'x')], self.other_company).status_code, 403)
 
@@ -335,7 +328,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(self._import(url, [('x', 'other')], self.other_company).status_code, 403)
 
     # ─── خروجی اکسل ───
-    def test_excel_export_contains_only_permitted_companies_and_global_records(self):
+    def test_excel_export_contains_only_permitted_companies(self):
         import io
         import openpyxl
         self._as(self.org_admin)
@@ -343,7 +336,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         ws = openpyxl.load_workbook(io.BytesIO(res.content)).active
         codes = {ws.cell(row=r, column=1).value for r in range(3, ws.max_row + 1)}
-        self.assertEqual(codes, {'PRJ_A', 'PRJ_G'})
+        self.assertEqual(codes, {'PRJ_A'})
 
     # ─── نویسندهٔ قدیمی (مدیر) هم محدود به شرکت خودش است ───
     def test_legacy_manager_is_company_scoped_too(self):
@@ -352,7 +345,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertEqual(self.client.post(base, {'user': self.manager.id, 'section': self.other_section.id, 'role': 'manager'}, format='json').status_code, 403)
         res = self.client.post(f'{base}bulk-assign/', {'section_id': self.other_section.id, 'user_ids': [self.manager.id], 'role': 'manager'}, format='json')
         self.assertEqual(res.status_code, 403)
-        self.assertEqual(self.client.patch(f'/api/org/projects/{self.global_project.id}/', {'name': 'تغییر'}, format='json').status_code, 403)
+        self.assertEqual(self.client.patch(f'/api/org/projects/{self.other_project.id}/', {'name': 'تغییر'}, format='json').status_code, 404)
         self.assertEqual(self.client.patch(f'/api/personnel/counterparties/{self.global_counterparty.id}/', {'phone': '1'}, format='json').status_code, 403)
         self.assertEqual(self._import('/api/org/projects/import-excel/', [('PRJ_X', 'x')], self.other_company).status_code, 403)
 

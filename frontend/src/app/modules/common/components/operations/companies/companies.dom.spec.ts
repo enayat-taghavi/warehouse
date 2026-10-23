@@ -22,6 +22,7 @@ import { AccountsHttpService } from '../../../../../core/http/accounts-http.serv
 import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { Company } from '../../../../../core/models/company.model';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { buildCompanyPayload } from './companies.helpers';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { By } from '@angular/platform-browser';
@@ -583,17 +584,19 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     });
 
     it('خطای فیلدی سرور در تب دیگر نشان داده می‌شود و تب نخستین خطا باز می‌شود (A18)', () => {
-      mockCompanyApi.create.mockReturnValueOnce(throwError(() => ({ status: 400, error: { workshop_code: ['کد کارگاه تکراری است.'] } })));
+      mockCompanyApi.create.mockReturnValueOnce(throwError(() => ({ status: 400, error: { postal_code: ['کد پستی تکراری است.'] } })));
       component.openCreateModal();
+      component.activeModalTab = 'documents';
       component.companyModal.data.code = 'ERR';
       component.companyModal.data.name = 'شرکت خطادار';
 
       component.submitCompanyForm();
       fixture.detectChanges();
 
-      expect(component.companyModal.errors['workshop_code']).toBe('کد کارگاه تکراری است.');
-      expect(component.activeModalTab).toBe('fiscal_insurance');
-      expect(component.modalTabs.find(t => t.id === 'fiscal_insurance')?.indicator?.tone).toBe('rose');
+      expect(component.companyModal.errors['postal_code']).toBe('کد پستی تکراری است.');
+      // کد پستی و ماه شروع سال مالی از تب حذف‌شدهٔ «بیمه و مالی» به تب هویتی آمده‌اند (ت۵)
+      expect(component.activeModalTab).toBe('identity');
+      expect(component.modalTabs.find(t => t.id === 'identity')?.indicator?.tone).toBe('rose');
     });
   });
 
@@ -621,11 +624,11 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('فیلدهایی که تب مشارکتی روی سرور ثبت کرد (حساب اصلی) در فرم می‌آیند و تغییر ذخیره‌نشده حساب نمی‌شوند', () => {
       component.populateStudioData(sampleCompanies[0]);
-      component.studioContext.applyServerFields(2, { primary_bank_name: 'شرکت دیگر' });
-      expect(component.companyModal.data.primary_bank_name).not.toBe('شرکت دیگر');
-      component.studioContext.applyServerFields(1, { primary_bank_name: 'بانک تجارت', primary_iban: 'IR980180000000000987654321', unknown_field: 'x' } as any);
-      expect(component.companyModal.data.primary_bank_name).toBe('بانک تجارت');
-      expect(component.companyModal.data.primary_iban).toBe('IR980180000000000987654321');
+      component.studioContext.applyServerFields(2, { board_chairman: 'شرکت دیگر' });
+      expect(component.companyModal.data.board_chairman).not.toBe('شرکت دیگر');
+      component.studioContext.applyServerFields(1, { board_chairman: 'رئیس تازه', board_term_expiry: '1405/01/01', unknown_field: 'x' } as any);
+      expect(component.companyModal.data.board_chairman).toBe('رئیس تازه');
+      expect(component.companyModal.data.board_term_expiry).toBe('1405/01/01');
       expect((component.companyModal.data as any).unknown_field).toBeUndefined();
       expect(component.hasUnsavedChanges()).toBe(false);
     });
@@ -1269,34 +1272,34 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     const RESTRICTED_SPEC = { levels: ['none', 'read', 'write'], templates: [], sections: [
       { key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' },
-      { key: 'insurance_tax', label_fa: 'T', order: 20, kind: 'levels', sensitive: false, studio: 'fiscal_insurance' },
+      { key: 'board', label_fa: 'B', order: 20, kind: 'levels', sensitive: false, studio: 'governance' },
       { key: 'founding_docs', label_fa: 'F', order: 30, kind: 'levels', sensitive: false, studio: 'documents' },
       { key: 'user_access', label_fa: 'U', order: 40, kind: 'levels', sensitive: false, studio: 'access' }
-    ], fields: { name: 'identity', phone: 'identity', workshop_code: 'insurance_tax' } } as any;
+    ], fields: { name: 'identity', phone: 'identity', board_chairman: 'board' } } as any;
 
     it('حالت محدود: تب «هیچ» پنهان، تب «خواندن» فقط‌خواندنی و ذخیره فقط فیلدهای بخش نوشتنی (گام ۱۱)', () => {
       mockActiveCompanyService.isSuperuser = false;
       vi.spyOn(component, 'isRestricted', 'get').mockReturnValue(true);
       component.permissionSpec = RESTRICTED_SPEC;
-      component.actorLevels = { identity: 'read', insurance_tax: 'write' };
-      component.companyModal.data = { ...component.companyModal.data, id: 1, code: 'C1', name: 'N', phone: '02112345678', workshop_code: '1111111111' } as any;
+      component.actorLevels = { identity: 'read', board: 'write' };
+      component.companyModal.data = { ...component.companyModal.data, id: 1, code: 'C1', name: 'N', phone: '02112345678', board_chairman: 'old' } as any;
       (component as any).takeStudioSnapshot();
-      component.companyModal.data.workshop_code = '1234567890';
+      component.companyModal.data.board_chairman = 'new';
       const ids = component.modalTabs.map(t => t.id);
       expect(ids).toContain('identity');
-      expect(ids).toContain('fiscal_insurance');
+      // insurance/tax is no longer a core tab (T5)
+      expect(ids).not.toContain('fiscal_insurance');
       expect(ids).not.toContain('access');
       expect(ids).not.toContain('documents');
       expect(component.isCoreTabReadonly('identity')).toBe(true);
-      expect(component.isCoreTabReadonly('fiscal_insurance')).toBe(false);
       expect(component.canSaveCompany).toBe(true);
       component.companyModal.isEdit = true;
       component.submitCompanyForm();
       expect(mockCompanyApi.update).not.toHaveBeenCalled();
-      expect(mockCompanyApi.patch).toHaveBeenCalledWith(1, { workshop_code: '1234567890' });
+      expect(mockCompanyApi.patch).toHaveBeenCalledWith(1, { board_chairman: 'new' });
       // تغییر فیلدِ بخشِ فقط‌خواندنی بی‌صدا کنار نمی‌رود: ذخیره با پیام متوقف می‌شود
       mockCompanyApi.patch.mockClear();
-      component.companyModal.data = { ...component.companyModal.data, id: 1, code: 'C1', name: 'N', phone: '02112345678', workshop_code: '1234567890' } as any;
+      component.companyModal.data = { ...component.companyModal.data, id: 1, code: 'C1', name: 'N', phone: '02112345678', board_chairman: 'new' } as any;
       component.companyModal.isEdit = true;
       (component as any).takeStudioSnapshot();
       component.companyModal.data.phone = '02199999999';
@@ -1518,47 +1521,70 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
   });
 
   describe('۱۳. ایزولاسیون کامل تک‌ماژول (Single-Module Zero-Trace Isolation - T2.5)', () => {
-    it('در حالت فقط مالی (accounting-only): ستون سامانه انبار و چک‌باکس مودال شرکت باید پنهان باشند و tableColspan برابر ۱۰ باشد', () => {
+    it('نصب تک‌ماژول: ستون «ماژول‌ها» پنهان است و فرم مدیر کل فقط کلید همان ماژول را دارد', () => {
       const registry = TestBed.inject(ModuleRegistryService);
       registry.setInstalledModules(['platform', 'accounting']);
       fixture.detectChanges();
 
-      expect(component.isWarehouseInstalled).toBe(false);
+      expect(component.switchableModules.map(m => m.code)).toEqual(['accounting']);
+      expect(component.showModulesColumn).toBe(false);
       expect(component.tableColspan).toBe(10);
 
       const el: HTMLElement = fixture.nativeElement;
       const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
-      expect(headers).not.toContain('سامانه انبار');
+      expect(headers).not.toContain('ماژول‌ها');
 
-      // باز کردن مودال ثبت شرکت
       component.openCreateModal();
       fixture.detectChanges();
-
-      const whCheckbox = el.querySelector('#co_has_warehouse');
-      expect(whCheckbox).toBeNull();
-      // پیش‌فرض فرم همچنان دست‌نخورده true می‌ماند طبق قاعده ۱
-      expect(component.companyModal.data.has_warehouse_module).toBe(true);
+      expect(el.querySelector('#co_module_warehouse')).toBeNull();
+      expect(el.querySelector('#co_module_accounting')).not.toBeNull();
+      expect(component.companyModal.data.disabled_modules).toEqual([]);
     });
 
-    it('در حالت فقط انبار یا فول‌سوییت: ستون سامانه انبار و چک‌باکس مودال باید در DOM رندر شوند و tableColspan برابر ۱۱ باشد', () => {
+    it('چندماژولی: ستون «ماژول‌ها» وضعیت enabled_modules هر شرکت را نشان می‌دهد و کلیدها disabled_modules را ویرایش می‌کنند (ت۸)', () => {
       const registry = TestBed.inject(ModuleRegistryService);
       registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
+      component.companies = [{ ...sampleCompanies[0], enabled_modules: ['accounting'], disabled_modules: ['warehouse'] } as any];
+      component.filteredCompanies = component.companies;
       fixture.detectChanges();
 
-      expect(component.isWarehouseInstalled).toBe(true);
+      expect(component.showModulesColumn).toBe(true);
       expect(component.tableColspan).toBe(11);
-
       const el: HTMLElement = fixture.nativeElement;
       const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
-      expect(headers).toContain('سامانه انبار');
+      expect(headers).toContain('ماژول‌ها');
+      const state = component.companyModuleState(component.companies[0]);
+      expect(state.find(m => m.code === 'warehouse')?.enabled).toBe(false);
+      expect(state.find(m => m.code === 'accounting')?.enabled).toBe(true);
 
-      // باز کردن مودال ثبت شرکت
-      component.openCreateModal();
+      component.openEditModal(component.companies[0]);
+      component.setModalTab('identity');
+      component.companyModal.data.disabled_modules = ['warehouse'];
       fixture.detectChanges();
+      const wh = el.querySelector('#co_module_warehouse') as HTMLInputElement;
+      const acc = el.querySelector('#co_module_accounting') as HTMLInputElement;
+      expect(wh).not.toBeNull();
+      expect(wh.checked).toBe(false);
+      expect(acc.checked).toBe(true);
+      expect(wh.getAttribute('aria-label')).toContain('برای این شرکت');
 
-      const whCheckbox = el.querySelector('#co_has_warehouse');
-      expect(whCheckbox).not.toBeNull();
-      expect(component.companyModal.data.has_warehouse_module).toBe(true);
+      wh.checked = true;
+      wh.dispatchEvent(new Event('change'));
+      expect(component.companyModal.data.disabled_modules).toEqual([]);
+      acc.checked = false;
+      acc.dispatchEvent(new Event('change'));
+      expect(component.companyModal.data.disabled_modules).toEqual(['accounting']);
+      expect(buildCompanyPayload(component.companyModal.data)).toEqual(expect.objectContaining({ disabled_modules: ['accounting'] }));
+      expect(buildCompanyPayload(component.companyModal.data)).not.toHaveProperty('has_warehouse_module');
+    });
+
+    it('حالت محدود استودیو کلید ماژول‌ها را نه نمایش می‌دهد و نه در بدنه می‌فرستد', () => {
+      const registry = TestBed.inject(ModuleRegistryService);
+      registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
+      vi.spyOn(component, 'isRestricted', 'get').mockReturnValue(true);
+      component.populateStudioData({ ...sampleCompanies[0], disabled_modules: ['warehouse'] } as any);
+      expect(component.companyModal.data.disabled_modules).toBeUndefined();
+      expect(buildCompanyPayload(component.companyModal.data)).not.toHaveProperty('disabled_modules');
     });
   });
 
@@ -1577,32 +1603,22 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.companyModal.data.share_nominal_value).toBe(10000);
     });
 
-    it('ورودی‌های تکمیلی تأمین اجتماعی (کد و نام شعبه، ردیف پیمان، نام کارفرما) باید در تب ۲ رندر شوند', () => {
+    it('تب هسته «بیمه و مالی» حذف شده است؛ کد پستی و ماه شروع سال مالی در تب هویتی‌اند (ت۵)', () => {
       component.openCreateModal();
-      component.setModalTab('fiscal_insurance');
+      component.setModalTab('identity');
       fixture.detectChanges();
 
+      // تب fiscal_insurance دیگر تب هسته نیست؛ فقط ماژول حسابداری آن را مشارکت می‌دهد
+      expect((CompaniesManagementComponent as any).CORE_TAB_ORDER['fiscal_insurance']).toBeUndefined();
       const el: HTMLElement = fixture.nativeElement;
-      const branchCodeInput = el.querySelector('input[placeholder="22"]') as HTMLInputElement;
-      const branchNameInput = el.querySelector('input[placeholder="مثال: شعبه ۲ شیراز"]') as HTMLInputElement;
-      const contractRowInput = el.querySelector('input[placeholder="000"]') as HTMLInputElement;
-      const employerNameInput = el.querySelector('input[placeholder="نام مدیرعامل یا شرکت در دیسکت"]') as HTMLInputElement;
-
-      expect(branchCodeInput).not.toBeNull();
-      expect(branchNameInput).not.toBeNull();
-      expect(contractRowInput).not.toBeNull();
-      expect(employerNameInput).not.toBeNull();
-
-      component.companyModal.data.social_security_branch_code = '22';
-      component.companyModal.data.social_security_branch_name = 'شعبه ۲ شیراز';
-      component.companyModal.data.contract_row = '000';
-      component.companyModal.data.employer_name = 'شرکت پاینده توان ساینا';
-      fixture.detectChanges();
-
-      expect(component.companyModal.data.social_security_branch_code).toBe('22');
-      expect(component.companyModal.data.social_security_branch_name).toBe('شعبه ۲ شیراز');
-      expect(component.companyModal.data.contract_row).toBe('000');
-      expect(component.companyModal.data.employer_name).toBe('شرکت پاینده توان ساینا');
+      const panel = el.querySelector('#co-studio-panel-identity') as HTMLElement;
+      expect(panel).not.toBeNull();
+      expect(panel.querySelector('#co_fiscal_start')).not.toBeNull();
+      expect(panel.querySelector('input[placeholder="22"]')).toBeNull();
+      const payload = buildCompanyPayload(component.companyModal.data);
+      for (const k of ['workshop_code', 'social_security_branch_code', 'contract_row', 'employer_name', 'tax_memory_id', 'tax_economic_code', 'primary_iban', 'primary_bank_name', 'primary_account_number']) {
+        expect(payload).not.toHaveProperty(k);
+      }
     });
   });
 
@@ -1641,7 +1657,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('تب مشارکتی به ترتیب order میان تب‌های هسته می‌نشیند و تب هم‌نام هسته نادیده گرفته می‌شود', () => {
       component.setupStudioForNew();
-      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'fiscal_insurance', 'x_tab', 'documents', 'projects', 'access']);
+      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'x_tab', 'documents', 'projects', 'access']);
       expect(component.modalTabs.find(t => t.id === 'identity')?.label).toBe('مشخصات هویتی و ثبتی');
     });
 
@@ -1728,8 +1744,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
 
       const el: HTMLElement = fixture.nativeElement;
-      expect(el.textContent).toContain('بارگذاری این بخش انجام نشد.');
-      const retry = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('تلاش دوباره') && b.closest('[role="alert"]')?.textContent?.includes('بارگذاری این بخش')) as HTMLButtonElement;
+      expect(el.textContent).toContain('بارگذاری این قسمت انجام نشد.');
+      const retry = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('تلاش دوباره') && b.closest('[role="alert"]')?.textContent?.includes('بارگذاری این قسمت')) as HTMLButtonElement;
       retry.click();
       fixture.detectChanges();
       await flush();
@@ -1747,7 +1763,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const el: HTMLElement = fixture.nativeElement;
       const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
       expect(headers).toContain('ستون آزمایشی');
-      expect(component.tableColspan).toBe(9);
+      // ۸ پایه + ۱ ستون مشارکتی + ۱ ستون «ماژول‌ها» (نصب پیش‌فرض بیش از یک ماژول دارد)
+      expect(component.tableColspan).toBe(9 + (component.showModulesColumn ? 1 : 0));
       const cells = Array.from(el.querySelectorAll('.contrib-cell')).map(c => c.textContent?.trim());
       expect(cells).toContain('سلول PTS table');
       expect(cells).toContain('سلول PTS card');

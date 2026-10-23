@@ -1,0 +1,152 @@
+<div class="space-y-4" data-insurance-tax-tab>
+  @if (!companyId) {
+    <div class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
+      لطفاً ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید.
+    </div>
+  } @else if (isLoading && !loadError) {
+    <div role="status" aria-busy="true" aria-label="در حال بارگذاری اطلاعات بیمه و مالیات">
+      <app-loading-skeleton type="text" [lines]="4"></app-loading-skeleton>
+    </div>
+  } @else if (loadError) {
+    @if (loadForbidden) {
+      <div class="py-6 text-center border border-dashed border-line rounded-2xl bg-surface-muted text-xs font-bold text-fg-muted" role="status">
+        شما اجازهٔ مشاهدهٔ اطلاعات بیمه و مالیات این شرکت را ندارید.
+      </div>
+    } @else {
+      <div class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
+        <div class="text-xs font-bold text-fg-muted">
+          اطلاعات بیمه و مالیات دریافت نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}
+        </div>
+        <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="load()"></button>
+      </div>
+    }
+  } @else {
+    @if (!canWrite) {
+      <p class="p-3 text-[11px] font-bold text-fg-muted bg-surface-muted border border-line rounded-2xl" role="note">این حوزه برای شما فقط خواندنی است.</p>
+    }
+    @if (!isOnline) {
+      <p class="p-3 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2" role="status">
+        <svg appIcon="status-offline" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>آفلاین هستید؛ داده‌های آخرین دریافت نمایش داده می‌شود و ذخیره پس از اتصال فرستاده می‌شود.</span>
+      </p>
+    }
+    @if (pendingOffline) {
+      <p class="p-3 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">آخرین تغییر در صف ارسال است.</p>
+    }
+
+    <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed flex items-start gap-2">
+      <svg appIcon="info" class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>کد کارگاه مرکزی شرکت در تأمین اجتماعی و شناسه‌های سامانهٔ مودیان، برای دیسکت بیمه و فهرست حقوق. کد کارگاه و ردیف پیمان هر پروژه در تنظیمات همان پروژه است.</span>
+    </div>
+
+    <form (ngSubmit)="save()" novalidate class="space-y-4">
+      <fieldset [disabled]="!canWrite" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 min-w-0">
+        <legend class="sr-only">{{ canWrite ? 'بیمه و مالیات' : 'بیمه و مالیات (فقط خواندنی)' }}</legend>
+
+        <!-- کد کارگاه بیمهٔ شرکت -->
+        <div>
+          <label for="it_workshop_code" class="block text-xs font-bold text-fg mb-1">کد کارگاه بیمهٔ شرکت (۱۰ رقم)</label>
+          <input id="it_workshop_code" name="workshop_code" type="text" inputmode="numeric" dir="ltr" maxlength="10" placeholder="2398012345"
+            [ngModel]="form.workshop_code" (ngModelChange)="onFieldInput('workshop_code', $event)"
+            [attr.aria-invalid]="errors.workshop_code ? true : null" [attr.aria-describedby]="errors.workshop_code ? 'it-err-workshop_code' : 'it-hint-workshop_code'"
+            class="w-full px-3 py-2 text-xs border rounded-xl font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.workshop_code ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.workshop_code) {
+            <span id="it-err-workshop_code" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.workshop_code }}</span>
+          } @else {
+            <span id="it-hint-workshop_code" class="block text-[10px] text-fg-muted mt-1">کد ۱۰ رقمی کارگاه دفتر مرکزی در سازمان تأمین اجتماعی</span>
+          }
+        </div>
+
+        <!-- کد اقتصادی جدید سامانهٔ مودیان -->
+        <div>
+          <label for="it_tax_economic_code" class="block text-xs font-bold text-fg mb-1">کد اقتصادی جدید سامانهٔ مودیان (۱۶ رقم)</label>
+          <input id="it_tax_economic_code" name="tax_economic_code" type="text" inputmode="numeric" dir="ltr" maxlength="16" placeholder="1400812345600001"
+            [ngModel]="form.tax_economic_code" (ngModelChange)="onFieldInput('tax_economic_code', $event)"
+            [attr.aria-invalid]="errors.tax_economic_code ? true : null" [attr.aria-describedby]="errors.tax_economic_code ? 'it-err-tax_economic_code' : null"
+            class="w-full px-3 py-2 text-xs border rounded-xl font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.tax_economic_code ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.tax_economic_code) {
+            <span id="it-err-tax_economic_code" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.tax_economic_code }}</span>
+          }
+        </div>
+
+        <!-- شناسهٔ یکتای حافظهٔ مالیاتی -->
+        <div>
+          <label for="it_tax_memory_id" class="block text-xs font-bold text-fg mb-1">شناسهٔ یکتای حافظهٔ مالیاتی (۶ کاراکتر)</label>
+          <input id="it_tax_memory_id" name="tax_memory_id" type="text" dir="ltr" maxlength="6" placeholder="A12B34"
+            [ngModel]="form.tax_memory_id" (ngModelChange)="onFieldInput('tax_memory_id', $event)"
+            [attr.aria-invalid]="errors.tax_memory_id ? true : null" [attr.aria-describedby]="errors.tax_memory_id ? 'it-err-tax_memory_id' : null"
+            class="w-full px-3 py-2 text-xs border rounded-xl font-mono uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.tax_memory_id ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.tax_memory_id) {
+            <span id="it-err-tax_memory_id" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.tax_memory_id }}</span>
+          }
+        </div>
+
+        <!-- کد شعبهٔ تأمین اجتماعی -->
+        <div>
+          <label for="it_ss_branch_code" class="block text-xs font-bold text-fg mb-1">کد شعبهٔ تأمین اجتماعی</label>
+          <input id="it_ss_branch_code" name="social_security_branch_code" type="text" inputmode="numeric" dir="ltr" placeholder="22"
+            [ngModel]="form.social_security_branch_code" (ngModelChange)="onFieldInput('social_security_branch_code', $event)"
+            [attr.aria-invalid]="errors.social_security_branch_code ? true : null" [attr.aria-describedby]="errors.social_security_branch_code ? 'it-err-ss_branch_code' : null"
+            class="w-full px-3 py-2 text-xs border rounded-xl font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.social_security_branch_code ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.social_security_branch_code) {
+            <span id="it-err-ss_branch_code" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.social_security_branch_code }}</span>
+          }
+        </div>
+
+        <!-- نام شعبهٔ تأمین اجتماعی -->
+        <div>
+          <label for="it_ss_branch_name" class="block text-xs font-bold text-fg mb-1">نام شعبهٔ تأمین اجتماعی</label>
+          <input id="it_ss_branch_name" name="social_security_branch_name" type="text" placeholder="مثال: شعبه ۲ شیراز"
+            [ngModel]="form.social_security_branch_name" (ngModelChange)="onFieldInput('social_security_branch_name', $event)"
+            [attr.aria-invalid]="errors.social_security_branch_name ? true : null" [attr.aria-describedby]="errors.social_security_branch_name ? 'it-err-ss_branch_name' : null"
+            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.social_security_branch_name ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.social_security_branch_name) {
+            <span id="it-err-ss_branch_name" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.social_security_branch_name }}</span>
+          }
+        </div>
+
+        <!-- ردیف پیمان کارگاه مرکزی -->
+        <div>
+          <label for="it_contract_row" class="block text-xs font-bold text-fg mb-1">ردیف پیمان کارگاه مرکزی</label>
+          <input id="it_contract_row" name="contract_row" type="text" inputmode="numeric" dir="ltr" placeholder="000"
+            [ngModel]="form.contract_row" (ngModelChange)="onFieldInput('contract_row', $event)"
+            [attr.aria-invalid]="errors.contract_row ? true : null" [attr.aria-describedby]="errors.contract_row ? 'it-err-contract_row' : 'it-hint-contract_row'"
+            class="w-full px-3 py-2 text-xs border rounded-xl font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.contract_row ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.contract_row) {
+            <span id="it-err-contract_row" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.contract_row }}</span>
+          } @else {
+            <span id="it-hint-contract_row" class="block text-[10px] text-fg-muted mt-1">ردیف پیمان اختصاصی یا ۰۰۰ برای کارگاه مادر</span>
+          }
+        </div>
+
+        <!-- نام کارفرما در دیسکت بیمه -->
+        <div class="md:col-span-2">
+          <label for="it_employer_name" class="block text-xs font-bold text-fg mb-1">نام کارفرما در دیسکت بیمه</label>
+          <input id="it_employer_name" name="employer_name" type="text" placeholder="نام مدیرعامل یا شرکت در دیسکت"
+            [ngModel]="form.employer_name" (ngModelChange)="onFieldInput('employer_name', $event)"
+            [attr.aria-invalid]="errors.employer_name ? true : null" [attr.aria-describedby]="errors.employer_name ? 'it-err-employer_name' : null"
+            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="errors.employer_name ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'" />
+          @if (errors.employer_name) {
+            <span id="it-err-employer_name" class="text-[10px] text-rose-600 font-bold mt-1 block">{{ errors.employer_name }}</span>
+          }
+        </div>
+      </fieldset>
+
+      @if (canWrite) {
+        <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+          @if (isDirty) {
+            <button type="button" appAction="restore" display="label" label="بازگرداندن" [disabled]="isSaving" (click)="reset()"></button>
+          }
+          <button type="submit" appAction="save" display="label" label="ذخیرهٔ بیمه و مالیات" [busy]="isSaving" [disabled]="isSaving || !isDirty"></button>
+        </div>
+      }
+    </form>
+  }
+</div>

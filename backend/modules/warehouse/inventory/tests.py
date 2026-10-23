@@ -24,7 +24,7 @@ class BaseInventoryTestCase(TestCase):
         # ۱. ساخت یا دریافت شرکت تستی و انبارهای تستی (انبار اصلی و انبار دوم جهت تست ایزولاسیون)
         self.company, _ = Company.objects.get_or_create(
             code="TEST-CO",
-            defaults={"name": "شرکت تستی انبار", "has_warehouse_module": True}
+            defaults={"name": "شرکت تستی انبار"}
         )
         self.warehouse = Warehouse.objects.create(
             name="انبار مرکزی پروژه شیراز",

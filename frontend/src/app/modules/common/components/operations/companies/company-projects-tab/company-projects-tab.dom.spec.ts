@@ -280,4 +280,154 @@ describe('CompanyProjectsTabComponent (تب «پروژه‌ها و بخش‌ها
     expect(f.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('تلاش دوباره');
     f.destroy();
   });
+
+  describe('انتساب سه‌سطحی (ت۳ طرح ۲.۱)', () => {
+    const companyRow: OrgSectionAssignment = {
+      id: 51, user: 101, username: 'user_a', user_full_name: 'علی اکبری', role: 'manager', is_active: true,
+      level: 'company', company: 7, project: null, section: null, target_company_id: 7, company_name: 'شرکت آزمون',
+      project_id: null, project_name: null, section_name: null, section_code: null
+    };
+    const projectRow: OrgSectionAssignment = {
+      id: 52, user: 102, username: 'user_b', user_full_name: 'رضا بهرامی', role: 'employee', is_active: true,
+      level: 'project', company: null, project: 1, section: null, target_company_id: 7,
+      project_id: 1, project_name: 'پروژه مرکزی', section_name: null, section_code: null
+    };
+    const sectionRow: OrgSectionAssignment = {
+      id: 53, user: 102, username: 'user_b', user_full_name: 'رضا بهرامی', role: 'employee', is_active: true,
+      level: 'section', company: null, project: null, section: 1, target_company_id: 7,
+      project_id: 1, project_name: 'پروژه مرکزی', section_name: 'بخش عمران و توزیع', section_code: 'SEC-1'
+    };
+
+    async function withRows(rows: OrgSectionAssignment[]): Promise<ComponentFixture<CompanyProjectsTabComponent>> {
+      assignments = rows;
+      fixture.destroy();
+      const f = await create();
+      fixture = f;
+      component = f.componentInstance;
+      return f;
+    }
+
+    it('دارندهٔ سطح شرکت زیر هر بخش «ارث‌برده» دیده می‌شود و هشدار «فاقد مدیر» را برمی‌دارد', async () => {
+      const f = await withRows([companyRow]);
+      const card = component.groupedAssignmentsBySection[0];
+      expect(card.missingWarnings).toEqual([]);
+      const manager = card.roles.find(r => r.role.key === 'manager')!;
+      expect(manager.assignments.length).toBe(0);
+      expect(manager.inherited.map(h => [h.assignment.id, h.source])).toEqual([[51, 'company']]);
+      expect(card.totalAssignedUsers).toBe(1);
+      // انتساب سطح شرکت شمار مستقیم بخش را بالا نمی‌برد
+      expect(component.sectionAssignmentCount(1)).toBe(0);
+
+      component.switchSubTab('assignments');
+      component.expandAllSections();
+      f.detectChanges();
+      const el: HTMLElement = f.nativeElement;
+      expect(el.querySelectorAll('[data-inherited]').length).toBe(1);
+      expect(el.querySelector('[data-inherited]')?.textContent).toContain('علی اکبری');
+      const badges = Array.from(el.querySelectorAll('[data-level-badge]')).map(b => b.textContent?.trim());
+      expect(badges).toContain('سطح شرکت');
+    });
+
+    it('دارندهٔ سطح پروژه فقط زیر بخش‌های همان پروژه ارث می‌رسد و کارت سطح پروژه انتساب مستقیمش را دارد', async () => {
+      await withRows([projectRow, sectionRow]);
+      const projectCard = component.levelGroups.find(g => g.key === 'project:1')!;
+      expect(projectCard.level).toBe('project');
+      expect(projectCard.roles.find(r => r.role.key === 'employee')!.assignments.map(a => a.id)).toEqual([52]);
+      const sec = component.groupedAssignmentsBySection[0];
+      const employees = sec.roles.find(r => r.role.key === 'employee')!;
+      expect(employees.assignments.map(a => a.id)).toEqual([53]);
+      expect(employees.inherited.map(h => h.source)).toEqual(['project']);
+      // یک کاربر با انتساب مستقیم و ارث‌برده یک بار شمرده می‌شود
+      expect(sec.totalAssignedUsers).toBe(1);
+      // نقش «مدیر» نه مستقیم دارد نه ارث‌برده
+      expect(sec.missingWarnings).toEqual(['فاقد مدیر']);
+    });
+
+    it('ردیف‌های section: null با فیلتر پروژه، حذف بخش و برچسب مقصد درست رفتار می‌کنند', async () => {
+      await withRows([companyRow, projectRow, sectionRow]);
+      expect(component.levelOf(companyRow)).toBe('company');
+      expect(component.levelOf({ ...projectRow, level: undefined })).toBe('project');
+      expect(component.targetLabel(companyRow)).toBe('شرکت آزمون');
+      expect(component.targetLabel(projectRow)).toBe('پروژه مرکزی');
+      expect(component.targetLabel(sectionRow)).toBe('پروژه مرکزی / بخش عمران و توزیع');
+
+      component.assignmentProjectFilter = 1 as any;
+      component.onAssignmentFilterChange();
+      expect(component.filteredAssignments.map(a => a.id).sort()).toEqual([51, 52, 53]);
+      component.assignmentProjectFilter = 99 as any;
+      component.onAssignmentFilterChange();
+      // سطح شرکت برای همهٔ پروژه‌ها معتبر است
+      expect(component.filteredAssignments.map(a => a.id)).toEqual([51]);
+
+      api['deleteSection'].mockReturnValue(of({ id: 1, _offlinePending: true }));
+      await component.deleteSection(sections[0]);
+      expect(component.assignments.map(a => a.id).sort()).toEqual([51, 52]);
+    });
+
+    it('انتساب گروهی از کارت بخش: گزینه‌های بخش، پروژه و شرکت و فرستادن project_id یا company_id', async () => {
+      await withRows([]);
+      const sectionCard = component.groupedAssignmentsBySection[0];
+      const employeeRole = ROLES[1];
+      component.openQuickAssign(sectionCard, employeeRole);
+      expect(component.quickAssign.targets.map(t => t.level)).toEqual(['section', 'project', 'company']);
+      expect(component.quickAssign.level).toBe('section');
+
+      component.onQuickAssignLevelChange('project');
+      component.toggleUserSelection(101);
+      component.submitQuickAssign();
+      expect(api['bulkAssign']).toHaveBeenLastCalledWith({ project_id: 1, user_ids: [101], role: 'employee' });
+
+      component.openQuickAssign(component.levelGroups.find(g => g.level === 'company')!, employeeRole);
+      expect(component.quickAssign.targets.map(t => t.level)).toEqual(['company']);
+      component.toggleUserSelection(102);
+      component.submitQuickAssign();
+      expect(api['bulkAssign']).toHaveBeenLastCalledWith({ company_id: 7, user_ids: [102], role: 'employee' });
+    });
+
+    it('صف آفلاین انتساب سطح شرکت ردیف موقت section: null با نشان سطح می‌سازد', async () => {
+      await withRows([]);
+      api['bulkAssign'].mockReturnValue(of({ _offlinePending: true }));
+      component.openQuickAssign(component.levelGroups.find(g => g.level === 'company')!, ROLES[0]);
+      component.toggleUserSelection(101);
+      component.submitQuickAssign();
+      const pending = component.assignments.find(a => a._offlinePending)!;
+      expect(pending).toBeTruthy();
+      expect(pending.section).toBeNull();
+      expect(pending.level).toBe('company');
+      expect(pending.company).toBe(7);
+      // دارندهٔ در صف هم هشدار «فاقد مدیر» بخش را برمی‌دارد
+      expect(component.groupedAssignmentsBySection[0].missingWarnings).toEqual([]);
+    });
+
+    it('ویرایش انتساب: تغییر سطح هر سه کلید مقصد را می‌فرستد و نبود پروژه خطای فیلدی کنار فیلد می‌دهد', async () => {
+      await withRows([sectionRow]);
+      api['updateAssignment'].mockImplementation((id: number, p: any) => of({ ...sectionRow, ...p, id, level: 'company', company: 7, section: null }));
+      component.openEditAssignment(sectionRow);
+      expect(component.editAssignment.level).toBe('section');
+      expect(component.editAssignment.sectionId).toBe(1);
+
+      component.onEditLevelChange('project');
+      component.onEditProjectChange(null);
+      component.submitEditAssignment();
+      expect(api['updateAssignment']).not.toHaveBeenCalled();
+      expect(component.editAssignment.errors['project']).toBeTruthy();
+      fixture.detectChanges();
+      expect(document.getElementById('co-ea-err-project')?.textContent || fixture.nativeElement.querySelector('#co-ea-err-project')?.textContent).toContain('پروژه');
+
+      component.onEditLevelChange('company');
+      component.submitEditAssignment();
+      expect(api['updateAssignment']).toHaveBeenCalledWith(53, { role: 'employee', is_active: true, company: 7, project: null, section: null });
+      expect(component.assignments[0].level).toBe('company');
+    });
+
+    it('ویرایش بی تغییر مقصد فقط نقش و وضعیت را می‌فرستد', async () => {
+      await withRows([projectRow]);
+      api['updateAssignment'].mockImplementation((id: number, p: any) => of({ ...projectRow, ...p }));
+      component.openEditAssignment(projectRow);
+      expect(component.editAssignment.projectId).toBe(1);
+      component.editAssignment.is_active = false;
+      component.submitEditAssignment();
+      expect(api['updateAssignment']).toHaveBeenCalledWith(52, { role: 'employee', is_active: false });
+    });
+  });
 });

@@ -109,7 +109,9 @@ class ReportEngine:
             self.scope_id = None
         self.warehouse_id = self.scope_id  # سازگاری رو به عقب
 
-        self._check_scope_access()
+        from companies.access import request_module
+        with request_module(self.config.module_code):
+            self._check_scope_access()
         self.fields = self.config.allowed_fields(user, scope_id=self.scope_id, warehouse_id=self.warehouse_id)
 
         # پردازش JOINها و گسترش فضای فیلد

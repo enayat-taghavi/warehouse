@@ -16,6 +16,8 @@ from .models_domains.organization import (
     CompanyBankAccount,
     CompanyBoardMember,
     CompanyFiscalPeriod,
+    CompanyPayrollProfile,
+    primary_bank_account,
 )
 from .models_domains.hr import (
     InsuranceJobTitle,
@@ -68,6 +70,8 @@ __all__ = [
     'CompanyBankAccount',
     'CompanyBoardMember',
     'CompanyFiscalPeriod',
+    'CompanyPayrollProfile',
+    'primary_bank_account',
     'Project',
     'ProjectSection',
     'SectionAssignment',

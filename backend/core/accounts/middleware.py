@@ -1,4 +1,5 @@
 import contextvars
+from contextlib import contextmanager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,32 @@ def set_current_company(company_id):
 
 def get_allowed_companies_cache():
     return _current_allowed_companies_cache.get()
+
+
+# کلید کد ماژولِ مالک مسیر درخواست در کش درخواست (طرح ۲.۱، ت۸)
+MODULE_KEY = '__request_module__'
+
+
+def get_current_request_module():
+    """کد ماژولی که مسیر API درخواست جاری به آن تعلق دارد، یا None (مسیرهای هسته و بیرون از درخواست)."""
+    cache = _current_allowed_companies_cache.get()
+    return cache.get(MODULE_KEY) if cache else None
+
+
+@contextmanager
+def request_module(module_code):
+    """
+    کار هسته به نام یک ماژول (مثلاً گزارش‌ساز روی موجودیت آن ماژول): در این بازه شرکت‌هایی که ماژول در آن‌ها
+    خاموش است از دسترسی کنار می‌روند، با کش جدا تا نتیجهٔ بیرون از بازه آلوده نشود (طرح ۲.۱، ت۸).
+    """
+    if not module_code:
+        yield
+        return
+    token = _current_allowed_companies_cache.set({MODULE_KEY: module_code})
+    try:
+        yield
+    finally:
+        _current_allowed_companies_cache.reset(token)
 
 
 def get_user_allowed_apps(user) -> list[str]:
@@ -241,7 +268,22 @@ class AuditContextMiddleware:
                     'error': 'tenant_access_denied',
                     'company_id': company_id
                 }, status=403)
-        elif not company_id and user and user.is_authenticated and not user.is_superuser:
+        # کلید ماژول هر شرکت (طرح ۲.۱، ت۸): مسیر API ماژولی که در شرکتِ صریح درخواست خاموش است رد می‌شود،
+        # و در همین درخواست شرکت‌های خاموشِ آن ماژول از شرکت‌های مجاز کنار می‌روند (companies.access)
+        from platform_core.registry import module_for_path
+        path_module = module_for_path(request.path)
+        path_module_code = path_module.code if path_module is not None else None
+        if company_id and path_module_code and user and user.is_authenticated:
+            from companies.access import company_module_enabled
+            if not company_module_enabled(company_id, path_module_code):
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'detail': 'این سامانه برای این شرکت فعال نیست.',
+                    'error': 'module_disabled_for_company',
+                    'company_id': company_id,
+                }, status=403)
+
+        if not company_id and user and user.is_authenticated and not user.is_superuser:
             primary = getattr(user, 'primary_company', None)
             if primary:
                 company_id = primary.id
@@ -251,7 +293,7 @@ class AuditContextMiddleware:
         t_ua = _current_user_agent_var.set(ua)
         t_wh = _current_warehouse_var.set(warehouse_id)
         t_comp = _current_company_var.set(company_id)
-        t_cache = _current_allowed_companies_cache.set({})
+        t_cache = _current_allowed_companies_cache.set({MODULE_KEY: path_module_code} if path_module_code else {})
 
         try:
             response = self.get_response(request)

@@ -17,9 +17,9 @@ from companies.access import (
     get_request_company_id,
     validate_user_company_access,
 )
+from companies.org_roles import user_sections
 from companies.realtime import broadcast_org_structure_updated as core_broadcast_org_structure_updated
 from ..models import (
-    SectionAssignment,
     Project,
     MonthlyWorkPeriod,
     PayrollYearlySettings,
@@ -103,10 +103,8 @@ def scope_personnel_for_user(user, qs, company_id=None):
     if not user or not user.is_authenticated:
         return qs.none()
     if not is_personnel_global_auditor(user):
-        user_section_ids = list(
-            SectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
-        )
-        qs = qs.filter(Q(section_id__in=user_section_ids) | Q(created_by=user))
+        # بخش‌های تحت پوشش کاربر با انتساب در هر سطح (شرکت، پروژه یا بخش؛ طرح ۲.۱) به‌صورت زیرکوئری
+        qs = qs.filter(Q(section_id__in=user_sections(user, include_inactive=True).values('id')) | Q(created_by=user))
 
     cid = company_id
     if cid:
@@ -167,12 +165,9 @@ def scope_vehicle_queryset(request, qs, prefix=''):
         return qs.none()
 
     if not is_vehicle_global_auditor(user):
-        user_section_ids = list(
-            SectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
-        )
         sec_field = f"{prefix}section_id__in"
         creator_field = f"{prefix}created_by" if prefix == '' else "requested_by"
-        qs = qs.filter(Q(**{sec_field: user_section_ids}) | Q(**{creator_field: user}))
+        qs = qs.filter(Q(**{sec_field: user_sections(user, include_inactive=True).values('id')}) | Q(**{creator_field: user}))
 
     cid = validate_user_company_access(user, get_request_company_id(request))
     comp_field = f"{prefix}company_id"

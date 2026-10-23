@@ -3,9 +3,10 @@ API هستهٔ پروژه، بخش و انتساب کاربر به بخش (طر�
 /api/org/projects/، /api/org/project-sections/ و /api/org/section-assignments/.
 
 مجوز (ت۲): نوشتن با سطح «نوشتن» بخش `projects` در همان شرکت (`ensure_section`)؛ رکورد سراسری (بی‌شرکت)
-فقط با superuser. خواندن برای عضو شرکت (مصرف‌کنندگان ماژول‌ها، مثل فرم‌های کارکرد) یا دارندهٔ سطح «خواندن»
+وجود ندارد (طرح ۲.۱، ت۲). خواندن برای عضو شرکت (مصرف‌کنندگان ماژول‌ها، مثل فرم‌های کارکرد) یا دارندهٔ سطح «خواندن»
 بخش `projects` (حالت محدود استودیو). انتساب بخش خودش عضویت شرکت می‌دهد، پس فقط برای کاربرِ پیوندخورده با
 همان شرکت ممکن است و نویسنده خودش را منتسب نمی‌کند، مگر superuser یا نویسندهٔ قدیمی ساختار که از قبل عضو است.
+انتساب در سه سطح شرکت، پروژه یا بخش است (طرح ۲.۱، ت۳)؛ شرکتِ هدف هر سطح همان قاعده‌ها را می‌گذراند.
 """
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -19,12 +20,17 @@ from accounts.views import OptionalPageNumberPagination
 from common.date_utils import normalize_digits
 
 from .access import companies_with_section, ensure_section, get_request_company_id, get_user_allowed_companies
-from .models import Project, ProjectSection, SectionAssignment, section_role_choices
+from .models import Company, Project, ProjectSection, SectionAssignment, section_role_choices
 from .org_membership import user_belongs_to_company
+from .org_roles import assignments_in_companies_q, covering_section_q, user_sections
 from .org_serializers import (
+    SINGLE_TARGET_MESSAGE,
+    TARGET_FIELDS,
     ProjectSectionSerializer,
     ProjectSerializer,
     SectionAssignmentSerializer,
+    assignment_target_company_id,
+    final_assignment_target,
     validate_section_role,
 )
 from .permissions import has_structure_write_permission
@@ -33,7 +39,7 @@ from .realtime import broadcast_org_structure_updated
 User = get_user_model()
 
 SECTION = 'projects'
-GLOBAL_WRITE_MESSAGE = "پروژه و بخش سراسری (بی‌شرکت) را فقط مدیر کل سامانه تغییر می‌دهد."
+NO_COMPANY_MESSAGE = "هر پروژه، بخش و انتساب باید به یک شرکت تعلق داشته باشد."
 READ_DENIED_MESSAGE = "شما به پروژه‌ها و بخش‌های این شرکت دسترسی ندارید."
 
 
@@ -67,11 +73,9 @@ def ensure_read(user, company_id):
 
 
 def ensure_write(user, company_id, message=None):
-    """نوشتن پروژه، بخش یا انتساب در یک شرکت: سطح «نوشتن» بخش projects؛ رکورد سراسری فقط superuser."""
+    """نوشتن پروژه، بخش یا انتساب در یک شرکت: سطح «نوشتن» بخش projects؛ رکورد بی‌شرکت برای هیچ‌کس."""
     if company_id is None:
-        if not user.is_superuser:
-            raise PermissionDenied(GLOBAL_WRITE_MESSAGE)
-        return
+        raise PermissionDenied(NO_COMPANY_MESSAGE)
     ensure_section(user, company_id, SECTION, 'write',
                    message or "مجوز نوشتن «پروژه‌ها و بخش‌ها» را در این شرکت ندارید.")
 
@@ -91,39 +95,39 @@ def _section_company_id(section):
     return section.project.company_id if section is not None and section.project_id else None
 
 
-def ensure_assignment(actor, target_user_id, section, final_active=True, existing=None):
+ASSIGN_WRITE_MESSAGE = "انتساب فقط در شرکت‌ها، پروژه‌ها و بخش‌هایی ممکن است که «پروژه‌ها و بخش‌ها»ی شرکتشان را می‌نویسید."
+
+
+def ensure_assignment(actor, target_user_id, company_id, deactivating_existing=False):
     """
-    انتساب بخش: نوشتن projects در شرکتِ بخش، و (برای غیرsuperuser) کاربر هدف پیوندخورده با همان شرکت و نه
-    خودِ نویسنده. فقط غیرفعال‌سازی ردیف موجود بی‌تغییر کاربر و بخش این دو شرط را لازم ندارد؛ ردیف تازه، حتی
-    غیرفعال، سنجیده می‌شود، چون انتساب غیرفعال هم کاربر را «پیوندخورده» می‌کند و فعال‌سازی بعدی عضویت می‌دهد.
+    انتساب در هر سطح (شرکت، پروژه یا بخش): نوشتن projects در شرکتِ هدف، و (برای غیرsuperuser) کاربر هدف
+    پیوندخورده با همان شرکت و نه خودِ نویسنده. فقط غیرفعال‌سازی ردیف موجود بی‌تغییر کاربر و هدف این دو شرط را
+    لازم ندارد؛ ردیف تازه، حتی غیرفعال، سنجیده می‌شود، چون انتساب غیرفعال هم کاربر را «پیوندخورده» می‌کند و
+    فعال‌سازی بعدی عضویت می‌دهد.
     """
-    company_id = _section_company_id(section)
-    ensure_write(actor, company_id,
-                 "انتساب فقط در بخش‌های شرکت‌هایی ممکن است که «پروژه‌ها و بخش‌ها»ی آن را می‌نویسید.")
-    if actor.is_superuser:
-        return
-    deactivating_existing = (
-        existing is not None and not final_active
-        and existing.user_id == target_user_id and existing.section_id == getattr(section, 'id', None)
-    )
-    if deactivating_existing:
+    ensure_write(actor, company_id, ASSIGN_WRITE_MESSAGE)
+    if actor.is_superuser or deactivating_existing:
         return
     if target_user_id == actor.id and not _may_assign_self(actor, company_id):
-        raise PermissionDenied("انتساب خودتان به بخش را مدیر کل سامانه انجام می‌دهد.")
+        raise PermissionDenied("انتساب خودتان را مدیر کل سامانه انجام می‌دهد.")
     if not user_belongs_to_company(target_user_id, company_id):
-        raise PermissionDenied("این کاربر با شرکتِ این بخش پیوند ندارد. پیوند شرکت را تب «دسترسی» می‌دهد، نه انتساب بخش.")
+        raise PermissionDenied("این کاربر با شرکتِ این انتساب پیوند ندارد. پیوند شرکت را تب «دسترسی» می‌دهد، نه انتساب.")
 
 
-def resolve_import_company(request):
+def resolve_import_company(request, required=False):
     """
     شرکت مقصد درون‌ریزی اکسل. غیرsuperuser: شرکت فعال درخواست (company_id یا X-Company-ID) با سطح «نوشتن»
-    projects؛ بی‌شرکت فقط اگر تنها یک شرکت قابل نوشتن دارد. superuser: شرکت فعال اگر آمده، وگرنه کل جدول.
+    projects؛ بی‌شرکت فقط اگر تنها یک شرکت قابل نوشتن دارد. superuser: شرکت فعال اگر آمده، وگرنه کل جدول
+    (required=True، مثل درون‌ریزی پروژه که شرکت لازم دارد: بی شرکت فعال رد می‌شود).
     """
     user = request.user
     raw = request.data.get('company_id') if hasattr(request.data, 'get') else None
     raw = raw or get_request_company_id(request)
     if user.is_superuser:
-        return _int_or_none(raw)
+        cid = _int_or_none(raw)
+        if cid is None and required:
+            raise serializers.ValidationError({'error': 'شرکت فعال مشخص نیست؛ ابتدا شرکت را در سربرگ انتخاب کنید.'})
+        return cid
     if raw:
         cid = _int_or_none(raw)
         if cid is None:
@@ -137,11 +141,11 @@ def resolve_import_company(request):
 
 
 def _export_scope(request):
-    """(company_ids, include_global) خروجی اکسل: شرکت داده‌شده یا همهٔ شرکت‌های قابل خواندن به‌علاوهٔ سراسری."""
+    """شرکت‌های خروجی اکسل: شرکت داده‌شده یا همهٔ شرکت‌های قابل خواندن (None یعنی همه، برای superuser)."""
     raw = request.query_params.get('company_id')
     if raw:
-        return {ensure_read(request.user, raw)}, False
-    return readable_company_ids(request.user), True
+        return {ensure_read(request.user, raw)}
+    return readable_company_ids(request.user)
 
 
 def _has_outside_references(obj, skip_models=()):
@@ -194,7 +198,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if company_param and _int_or_none(company_param) is not None:
             qs = qs.filter(company_id=ensure_read(user, company_param))
         elif not user.is_superuser:
-            qs = qs.filter(Q(company_id__in=readable_company_ids(user)) | Q(company__isnull=True))
+            qs = qs.filter(company_id__in=readable_company_ids(user))
 
         is_active = _bool_param(self.request, 'is_active')
         if is_active is not None:
@@ -206,8 +210,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return qs.order_by('code')
 
     def perform_create(self, serializer):
-        company = serializer.validated_data.get('company')
-        ensure_write(self.request.user, company.id if company else None)
+        ensure_write(self.request.user, serializer.validated_data['company'].id)
         instance = serializer.save()
         _broadcast(self.request, 'project', 'create', instance.id, instance.name, None, instance.company_id)
 
@@ -216,17 +219,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
         current_company_id = serializer.instance.company_id
         ensure_write(user, current_company_id)
         if 'company' in serializer.validated_data:
-            new_company = serializer.validated_data.get('company')
-            # جابه‌جایی پروژه بین شرکت‌ها اعضای بخش‌هایش را عضو شرکت تازه می‌کند؛ فقط superuser
-            if (new_company.id if new_company else None) != current_company_id and not user.is_superuser:
-                raise PermissionDenied("انتقال پروژه به شرکت دیگر یا تبدیل آن به پروژهٔ سراسری را فقط مدیر کل سامانه انجام می‌دهد.")
+            # جابه‌جایی پروژه بین شرکت‌ها اعضای پروژه و بخش‌هایش را عضو شرکت تازه می‌کند؛ فقط superuser
+            if serializer.validated_data['company'].id != current_company_id and not user.is_superuser:
+                raise PermissionDenied("انتقال پروژه به شرکت دیگر را فقط مدیر کل سامانه انجام می‌دهد.")
         instance = serializer.save()
         _broadcast(self.request, 'project', 'update', instance.id, instance.name, None, instance.company_id)
 
     def perform_destroy(self, instance):
         ensure_write(self.request.user, instance.company_id)
         # پروژه‌ای که خودش یا یکی از بخش‌هایش در داده‌های ماژول‌ها به کار رفته، حذف فیزیکی نمی‌شود (غیرفعال‌سازی نرم)
-        in_use = _has_outside_references(instance, skip_models=(ProjectSection,)) or any(
+        in_use = _has_outside_references(instance, skip_models=(ProjectSection, SectionAssignment)) or any(
             _has_outside_references(sec, skip_models=(SectionAssignment,)) for sec in instance.sections.all()
         )
         if in_use:
@@ -241,8 +243,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         from .org_excel import export_projects_excel
-        company_ids, include_global = _export_scope(request)
-        return export_projects_excel(company_ids=company_ids, include_global=include_global)
+        return export_projects_excel(company_ids=_export_scope(request))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -252,7 +253,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         from .org_excel import import_projects_from_excel
-        company_id = resolve_import_company(request)
+        company_id = resolve_import_company(request, required=True)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'فایل اکسل بارگذاری نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -277,7 +278,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
         if company_param and _int_or_none(company_param) is not None:
             qs = qs.filter(project__company_id=ensure_read(user, company_param))
         elif not user.is_superuser:
-            qs = qs.filter(Q(project__company_id__in=readable_company_ids(user)) | Q(project__company__isnull=True))
+            qs = qs.filter(project__company_id__in=readable_company_ids(user))
 
         project_id = _int_or_none(self.request.query_params.get('project_id') or self.request.query_params.get('project'))
         if project_id is not None:
@@ -292,8 +293,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
         return qs.order_by('project__code', 'code')
 
     def perform_create(self, serializer):
-        project = serializer.validated_data.get('project')
-        company_id = project.company_id if project else None
+        company_id = serializer.validated_data['project'].company_id
         ensure_write(self.request.user, company_id)
         instance = serializer.save()
         _broadcast(self.request, 'section', 'create', instance.id, instance.name, instance.project_id, company_id)
@@ -303,8 +303,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
         current_company_id = _section_company_id(serializer.instance)
         ensure_write(user, current_company_id)
         if 'project' in serializer.validated_data:
-            new_project = serializer.validated_data.get('project')
-            new_company_id = new_project.company_id if new_project else None
+            new_company_id = serializer.validated_data['project'].company_id
             ensure_write(user, new_company_id, "انتقال بخش به پروژهٔ شرکتی که «پروژه‌ها و بخش‌ها»ی آن را نمی‌نویسید مجاز نیست.")
             # جابه‌جایی بخش بین شرکت‌ها اعضایش را عضو شرکت تازه می‌کند؛ فقط superuser
             if new_company_id != current_company_id and not user.is_superuser:
@@ -329,9 +328,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         from .org_excel import export_sections_excel
-        company_ids, include_global = _export_scope(request)
-        return export_sections_excel(request.query_params.get('project_id'), company_ids=company_ids,
-                                     include_global=include_global)
+        return export_sections_excel(request.query_params.get('project_id'), company_ids=_export_scope(request))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -351,7 +348,10 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='clone-assignments')
     def clone_assignments(self, request, pk=None):
-        """کپی دسته‌جمعی انتساب‌های فعال یک بخش مبدأ به این بخش (مقصد)."""
+        """
+        کپی دسته‌جمعی انتساب‌های فعال مستقیم یک بخش مبدأ به این بخش (مقصد). انتساب‌های سطح شرکت و پروژه کپی
+        نمی‌شوند، چون خودشان برای بخش مقصد هم (اگر در همان پروژه یا شرکت است) معتبرند.
+        """
         target_section = self.get_object()
         source_sec_id = _int_or_none(request.data.get('source_section_id'))
         if request.data.get('source_section_id') in (None, ''):
@@ -407,10 +407,42 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
-# ─── انتساب کاربر به بخش ──────────────────────────────────────────────────────
+# ─── انتساب کاربر در سطح شرکت، پروژه یا بخش ─────────────────────────────────────
+
+TARGET_MODELS = {'company': Company, 'project': Project, 'section': ProjectSection}
+TARGET_LABELS = {'company': 'شرکت', 'project': 'پروژه', 'section': 'بخش'}
+
+
+def _request_targets(data, accept_id_suffix=False):
+    """[(فیلد هدف, مقدار خام)] از بدنهٔ درخواست؛ accept_id_suffix: کلیدهای section_id، project_id و company_id هم."""
+    found = []
+    for field in TARGET_FIELDS:
+        raw = data.get(field)
+        if raw in (None, '') and accept_id_suffix:
+            raw = data.get(f'{field}_id')
+        if raw not in (None, ''):
+            found.append((field, raw))
+    return found
+
+
+def _load_target(field, target_id):
+    qs = TARGET_MODELS[field].objects.all()
+    if field == 'section':
+        qs = qs.select_related('project')
+    return qs.filter(id=target_id).first()
+
+
+def _broadcast_assignment(request, action_name, instance, name):
+    project = instance.target_project
+    _broadcast(request, 'assignment', action_name, instance.id, name,
+               project.id if project is not None else None, instance.target_company_id)
+
 
 class SectionAssignmentViewSet(viewsets.ModelViewSet):
-    """انتساب کاربران به بخش‌ها با نقش‌هایی که ماژول‌های نصب‌شده اعلام کرده‌اند."""
+    """
+    انتساب کاربران با نقش‌هایی که ماژول‌های نصب‌شده اعلام کرده‌اند، در سطح شرکت، پروژه یا بخش (طرح ۲.۱، ت۳).
+    بدنهٔ ساخت: user، role و دقیقاً یکی از company، project یا section (بدنهٔ قدیمی فقط با section همان کار را می‌کند).
+    """
     queryset = SectionAssignment.objects.all()
     serializer_class = SectionAssignmentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -418,22 +450,30 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = SectionAssignment.objects.select_related('user', 'section', 'section__project')
+        qs = SectionAssignment.objects.select_related(
+            'user', 'company', 'project__company', 'section__project__company'
+        )
         if not user.is_superuser:
-            # اعضای بخش‌های شرکت‌های دیگر دیده نمی‌شوند (بخش‌های سراسری و انتساب‌های خود کاربر می‌مانند)
-            qs = qs.filter(
-                Q(section__project__company_id__in=readable_company_ids(user))
-                | Q(section__project__company__isnull=True)
-                | Q(user=user)
-            )
+            # انتساب‌های شرکت‌های دیگر دیده نمی‌شوند (انتساب‌های خود کاربر می‌مانند)
+            qs = qs.filter(assignments_in_companies_q(readable_company_ids(user)) | Q(user=user))
         params = self.request.query_params
         company_id = params.get('company_id')
         if company_id:
-            qs = qs.filter(section__project__company_id=ensure_read(user, company_id))
-        for param, field in (('section_id', 'section_id'), ('project_id', 'section__project_id'), ('user_id', 'user_id')):
+            qs = qs.filter(assignments_in_companies_q([ensure_read(user, company_id)]))
+        for param, field in (('section_id', 'section_id'), ('user_id', 'user_id')):
             value = _int_or_none(params.get(param))
             if value is not None:
                 qs = qs.filter(**{field: value})
+        project_id = _int_or_none(params.get('project_id'))
+        if project_id is not None:
+            qs = qs.filter(Q(project_id=project_id) | Q(section__project_id=project_id))
+        # همهٔ انتساب‌هایی که برای یک بخش معتبرند (مستقیم، پروژهٔ آن و شرکت آن)
+        covering = _int_or_none(params.get('covering_section_id'))
+        if covering is not None:
+            qs = qs.filter(covering_section_q(covering))
+        level = params.get('level')
+        if level in TARGET_FIELDS:
+            qs = qs.filter(**{f'{level}__isnull': False})
         role = params.get('role')
         if role:
             qs = qs.filter(role=role)
@@ -444,7 +484,10 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='my-sections')
     def my_sections(self, request):
-        """بخش‌های فعال منتسب به کاربر جاری (فقط superuser: همهٔ بخش‌های فعال)."""
+        """
+        بخش‌های فعالی که کاربر جاری با انتساب فعال در هر سطح پوشش می‌دهد (انتساب شرکت یا پروژه همهٔ بخش‌های
+        آن را می‌دهد). فقط superuser: همهٔ بخش‌های فعال.
+        """
         user = request.user
         target_company_id = _int_or_none(get_request_company_id(request))
         if not user.is_superuser and target_company_id:
@@ -452,18 +495,13 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
                 return Response([], status=status.HTTP_200_OK)
 
         if user.is_superuser:
-            sections = ProjectSection.objects.filter(is_active=True, project__is_active=True).select_related('project')
+            sections = ProjectSection.objects.filter(is_active=True, project__is_active=True)
             if target_company_id:
                 sections = sections.filter(project__company_id=target_company_id)
-            return Response(ProjectSectionSerializer(sections, many=True).data)
-
-        assignments = SectionAssignment.objects.filter(
-            user=user, is_active=True, section__is_active=True, section__project__is_active=True
-        ).select_related('section', 'section__project')
-        if target_company_id:
-            assignments = assignments.filter(section__project__company_id=target_company_id)
-        unique_sections = {a.section.id: a.section for a in assignments}.values()
-        return Response(ProjectSectionSerializer(unique_sections, many=True).data)
+        else:
+            sections = user_sections(user, company_id=target_company_id)
+        sections = sections.select_related('project').order_by('project__code', 'code')
+        return Response(ProjectSectionSerializer(sections, many=True).data)
 
     def create(self, request, *args, **kwargs):
         """ایجاد انتساب یا فعال‌سازی دوبارهٔ رکورد غیرفعال قبلی، بدون خطای یکتایی."""
@@ -473,60 +511,65 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
         except serializers.ValidationError as exc:
             raise serializers.ValidationError({'role': exc.detail})
         user_id = _int_or_none(request.data.get('user'))
-        sec_id = _int_or_none(request.data.get('section'))
-        if user_id and sec_id:
-            section = ProjectSection.objects.select_related('project').filter(id=sec_id).first()
-            existing = SectionAssignment.objects.filter(user_id=user_id, section_id=sec_id, role=role).first()
-            if section is not None and existing is not None:
+        targets = _request_targets(request.data)
+        if user_id and len(targets) == 1:
+            field, raw = targets[0]
+            target_id = _int_or_none(raw)
+            target = _load_target(field, target_id) if target_id is not None else None
+            existing = (SectionAssignment.objects.filter(user_id=user_id, role=role, **{field: target}).first()
+                        if target is not None else None)
+            if existing is not None:
                 # پیش از مسیر فعال‌سازی دوباره هم مجوز نوشتن و شرط عضویت سنجیده می‌شود
-                ensure_assignment(request.user, user_id, section)
+                ensure_assignment(request.user, user_id, assignment_target_company_id(field, target))
                 if not existing.is_active:
                     existing.is_active = True
                     existing.save(update_fields=['is_active', 'updated_at'])
-                    _broadcast(request, 'assignment', 'create', existing.id, str(existing.user),
-                               section.project_id, _section_company_id(section))
+                    _broadcast_assignment(request, 'create', existing, str(existing.user))
                 return Response(self.get_serializer(existing).data, status=status.HTTP_201_CREATED)
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         target_user = serializer.validated_data.get('user')
-        section = serializer.validated_data.get('section')
+        field, target = final_assignment_target(serializer.validated_data)
         # ردیف تازه، فعال یا غیرفعال، همیشه شرط پیوند و انتساب خود را می‌گذراند
-        ensure_assignment(self.request.user, target_user.id if target_user else None, section)
+        ensure_assignment(self.request.user, target_user.id if target_user else None,
+                          assignment_target_company_id(field, target))
         instance = serializer.save()
-        _broadcast(self.request, 'assignment', 'create', instance.id, str(instance.user),
-                   instance.section.project_id, _section_company_id(instance.section))
+        _broadcast_assignment(self.request, 'create', instance, str(instance.user))
 
     def perform_update(self, serializer):
         current = serializer.instance
-        ensure_write(self.request.user, _section_company_id(current.section),
-                     "فقط انتساب‌های بخش‌های شرکت‌هایی را که «پروژه‌ها و بخش‌ها»ی آن را می‌نویسید ویرایش می‌کنید.")
+        current_company_id = current.target_company_id
+        ensure_write(self.request.user, current_company_id,
+                     "فقط انتساب‌های شرکت‌هایی را که «پروژه‌ها و بخش‌ها»ی آن را می‌نویسید ویرایش می‌کنید.")
+        field, target = final_assignment_target(serializer.validated_data, current)
+        final_company_id = assignment_target_company_id(field, target)
+        if not self.request.user.is_superuser and final_company_id != current_company_id:
+            raise PermissionDenied("انتقال انتساب به شرکت دیگر را فقط مدیر کل سامانه انجام می‌دهد.")
         final_user = serializer.validated_data.get('user', current.user)
-        final_section = serializer.validated_data.get('section', current.section)
-        if (not self.request.user.is_superuser
-                and _section_company_id(final_section) != _section_company_id(current.section)):
-            raise PermissionDenied("انتقال انتساب به بخش شرکت دیگر را فقط مدیر کل سامانه انجام می‌دهد.")
-        ensure_assignment(self.request.user, final_user.id if final_user else None, final_section,
-                          final_active=serializer.validated_data.get('is_active', current.is_active), existing=current)
+        final_active = serializer.validated_data.get('is_active', current.is_active)
+        deactivating_existing = (
+            not final_active and final_user.id == current.user_id
+            and getattr(current, f'{field}_id') == target.pk
+        )
+        ensure_assignment(self.request.user, final_user.id, final_company_id,
+                          deactivating_existing=deactivating_existing)
         instance = serializer.save()
-        _broadcast(self.request, 'assignment', 'update', instance.id, str(instance.user),
-                   instance.section.project_id, _section_company_id(instance.section))
+        _broadcast_assignment(self.request, 'update', instance, str(instance.user))
 
     def perform_destroy(self, instance):
-        company_id = _section_company_id(instance.section)
-        ensure_write(self.request.user, company_id,
-                     "فقط انتساب‌های بخش‌های شرکت‌هایی را که «پروژه‌ها و بخش‌ها»ی آن را می‌نویسید حذف می‌کنید.")
+        ensure_write(self.request.user, instance.target_company_id,
+                     "فقط انتساب‌های شرکت‌هایی را که «پروژه‌ها و بخش‌ها»ی آن را می‌نویسید حذف می‌کنید.")
         # غیرفعال‌سازی نرم برای حفظ ردپای حسابرسی و انتساب‌های تاریخی
         instance.is_active = False
         instance.save(update_fields=['is_active', 'updated_at'])
-        _broadcast(self.request, 'assignment', 'delete', instance.id, None, instance.section.project_id, company_id)
+        _broadcast_assignment(self.request, 'delete', instance, None)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         from .org_excel import export_assignments_excel
-        company_ids, include_global = _export_scope(request)
         return export_assignments_excel(request.query_params.get('project_id'), request.query_params.get('role'),
-                                        company_ids=company_ids, include_global=include_global)
+                                        company_ids=_export_scope(request))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -536,7 +579,7 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         from .org_excel import import_assignments_from_excel
-        # غیرsuperuser فقط بخش‌های شرکت فعالِ قابل نوشتن خودش را و فقط برای کاربران پیوندخورده با همان شرکت
+        # غیرsuperuser فقط شرکت فعالِ قابل نوشتن خودش (و پروژه‌ها و بخش‌هایش) و فقط برای کاربران پیوندخورده با آن
         company_id = resolve_import_company(request)
         file_obj = request.FILES.get('file')
         if not file_obj:
@@ -553,16 +596,22 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='bulk-assign')
     def bulk_assign(self, request):
-        """انتساب هم‌زمان چند کاربر به یک بخش و نقش، همه یا هیچ."""
-        section_id = request.data.get('section_id') or request.data.get('section')
+        """
+        انتساب هم‌زمان چند کاربر به یک هدف و نقش، همه یا هیچ. هدف: section_id، project_id یا company_id
+        (یا section، project و company)، دقیقاً یکی.
+        """
+        targets = _request_targets(request.data, accept_id_suffix=True)
         user_ids = request.data.get('user_ids') or []
         role = request.data.get('role', 'employee')
 
-        if not section_id:
-            return Response({'error': 'شناسه بخش الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        section_id_int = _int_or_none(section_id)
-        if section_id_int is None:
-            return Response({'error': 'شناسه بخش باید عددی باشد.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not targets:
+            return Response({'error': 'شناسهٔ بخش، پروژه یا شرکت الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(targets) > 1:
+            return Response({'error': SINGLE_TARGET_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+        field, raw_target = targets[0]
+        target_id = _int_or_none(raw_target)
+        if target_id is None:
+            return Response({'error': f'شناسهٔ {TARGET_LABELS[field]} باید عددی باشد.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             validate_section_role(role)
         except serializers.ValidationError as exc:
@@ -573,14 +622,13 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
         if not valid_user_ids:
             return Response({'error': 'هیچ شناسه کاربری معتبری ارسال نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        section = ProjectSection.objects.select_related('project').filter(id=section_id_int).first()
-        if not section:
-            return Response({'error': 'بخش سازمانی مورد نظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+        target = _load_target(field, target_id)
+        if target is None:
+            return Response({'error': f'{TARGET_LABELS[field]} مورد نظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
         existing_users = set(User.objects.filter(id__in=valid_user_ids).values_list('id', flat=True))
-        company_id = _section_company_id(section)
-        ensure_write(request.user, company_id,
-                     "انتساب فقط در بخش‌های شرکت‌هایی ممکن است که «پروژه‌ها و بخش‌ها»ی آن را می‌نویسید.")
+        company_id = assignment_target_company_id(field, target)
+        ensure_write(request.user, company_id, ASSIGN_WRITE_MESSAGE)
         if not request.user.is_superuser:
             # همه یا هیچ؛ کاربر ناموجود هم مثل کاربر بی‌پیوند گزارش می‌شود تا نام‌های کاربری بیرون از شرکت لو نرود
             rejected = []
@@ -589,18 +637,18 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
                     rejected.append(uid)
                     continue
                 try:
-                    ensure_assignment(request.user, uid, section)
+                    ensure_assignment(request.user, uid, company_id)
                 except PermissionDenied:
                     rejected.append(uid)
             if rejected:
                 # نام کاربری فقط برای کاربرانی که در شرکت‌های قابل خواندن نویسنده دیده می‌شوند (بقیه با شناسه)
                 visible = readable_company_ids(request.user)
+                visible_members = SectionAssignment.objects.filter(assignments_in_companies_q(visible)).values('user_id')
                 names = dict(User.objects.filter(id__in=rejected).filter(
-                    Q(company_accesses__company_id__in=visible)
-                    | Q(section_assignments__section__project__company_id__in=visible)
+                    Q(company_accesses__company_id__in=visible) | Q(id__in=visible_members)
                 ).distinct().values_list('id', 'username'))
                 labels = '، '.join(names.get(uid, f'#{uid}') for uid in rejected)
-                raise PermissionDenied(f"این کاربران را نمی‌توان در این بخش منتسب کرد (با شرکت این بخش پیوند ندارند یا انتساب خود است): {labels}. آن‌ها را از انتخاب بردارید.")
+                raise PermissionDenied(f"این کاربران را نمی‌توان در این {TARGET_LABELS[field]} منتسب کرد (با شرکت آن پیوند ندارند یا انتساب خود است): {labels}. آن‌ها را از انتخاب بردارید.")
 
         if not existing_users:
             return Response({'error': 'هیچ یک از کاربران ارسالی در سیستم یافت نشدند.'}, status=status.HTTP_404_NOT_FOUND)
@@ -611,13 +659,16 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
                 if uid not in existing_users:
                     continue
                 assignment, _ = SectionAssignment.objects.get_or_create(
-                    user_id=uid, section=section, role=role, defaults={'is_active': True}
+                    user_id=uid, role=role, **{field: target}, defaults={'is_active': True}
                 )
                 if not assignment.is_active:
                     assignment.is_active = True
                     assignment.save(update_fields=['is_active', 'updated_at'])
                 created_ids.append(assignment.id)
 
-        _broadcast(request, 'assignment', 'bulk_create', None, f"{len(created_ids)} کاربر", section.project_id, company_id)
-        qs = SectionAssignment.objects.filter(id__in=created_ids).select_related('user', 'section', 'section__project')
+        project_id = target.id if field == 'project' else (target.project_id if field == 'section' else None)
+        _broadcast(request, 'assignment', 'bulk_create', None, f"{len(created_ids)} کاربر", project_id, company_id)
+        qs = SectionAssignment.objects.filter(id__in=created_ids).select_related(
+            'user', 'company', 'project__company', 'section__project__company'
+        )
         return Response(self.get_serializer(qs, many=True).data, status=status.HTTP_201_CREATED)

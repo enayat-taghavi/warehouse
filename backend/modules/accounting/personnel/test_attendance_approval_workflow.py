@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from personnel.models import (
+    Company,
     PersonnelProfile,
     DailyAttendance,
     MonthlyWorkPeriod,
@@ -44,7 +45,8 @@ class AttendanceApprovalWorkflowTests(TestCase):
         self.client.force_authenticate(user=self.superuser)
 
         self.warehouse = Warehouse.objects.create(name='انبار مرکزی تست', is_active=True)
-        self.project = Project.objects.create(code='PRJ-01', name='پروژه عملیاتی تست', is_active=True)
+        self.company = Company.objects.create(code='CMP-ATT', name='شرکت آزمون کارکرد')
+        self.project = Project.objects.create(company=self.company, code='PRJ-01', name='پروژه عملیاتی تست', is_active=True)
         self.section = ProjectSection.objects.create(project=self.project, code='SEC-01', name='بخش سوله اصلی', is_active=True)
 
         self.personnel = PersonnelProfile.objects.create(

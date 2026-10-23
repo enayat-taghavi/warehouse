@@ -130,7 +130,8 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
+    // ماژولی که سوییچر محدودهٔ انبار پوسته را عرضه می‌کند نصب است (تصاویر کالا منبع همگام‌سازی همان ماژول است)
+    return this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.showWarehouseSwitcher);
   }
 
   // وضعیت‌های داده‌ای

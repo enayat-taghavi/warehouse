@@ -369,7 +369,7 @@ function createPersona(user: UserTestCase, sessionRole: string): AppPersonaServi
       {
         provide: ActiveCompanyService,
         useValue: {
-          hasWarehouseModule: true,
+          isModuleEnabled: () => true,
           hasCompanyDocumentsAccess: () => false,
           manageableCompanies: signal<any[]>(user.sectionLevels ? [{ id: 1, section_levels: user.sectionLevels }] : [])
         }

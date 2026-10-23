@@ -26,8 +26,11 @@ export class FirstBootWizardComponent {
 
   readonly branding = BRANDING;
 
-  get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
+  /** ماژول‌های نصب‌شده که برای شرکت تازه روشن یا خاموش می‌شوند (از رجیستری؛ پوسته نام ماژولی را نمی‌داند) */
+  get switchableModules(): { code: string; titleFa: string; descriptionFa: string; icon: string }[] {
+    return this.moduleRegistry.getInstalledModules()
+      .filter(m => !m.isSuperuserOnly)
+      .map(m => ({ code: m.code, titleFa: m.titleFa, descriptionFa: m.descriptionFa, icon: m.icon }));
   }
 
   public formData = {
@@ -36,15 +39,22 @@ export class FirstBootWizardComponent {
     national_id: '',
     economic_code: '',
     address: '',
-    has_warehouse_module: true,
+    /** کد ماژول‌هایی که برای این شرکت خاموش‌اند (پیش‌فرض: همه روشن) */
+    disabled_modules: [] as string[],
     is_active: true
   };
 
   public isSubmitting = false;
   public errorMessage: string | null = null;
 
-  toggleWarehouseModule(): void {
-    this.formData.has_warehouse_module = !this.formData.has_warehouse_module;
+  isModuleOn(code: string): boolean {
+    return !this.formData.disabled_modules.includes(code);
+  }
+
+  toggleModule(code: string): void {
+    this.formData.disabled_modules = this.isModuleOn(code)
+      ? [...this.formData.disabled_modules, code]
+      : this.formData.disabled_modules.filter(c => c !== code);
   }
 
   onSubmit(): void {
@@ -76,7 +86,7 @@ export class FirstBootWizardComponent {
       national_id: this.formData.national_id ? this.formData.national_id.trim() : null,
       economic_code: this.formData.economic_code ? this.formData.economic_code.trim() : null,
       address: this.formData.address ? this.formData.address.trim() : null,
-      has_warehouse_module: this.formData.has_warehouse_module,
+      disabled_modules: [...this.formData.disabled_modules],
       is_active: true
     };
 

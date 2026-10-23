@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
-import { OrgStructureApiService } from '../../../core/api/org-structure-api.service';
+import { OrgAssignmentFilters, OrgAssignmentTarget, OrgStructureApiService } from '../../../core/api/org-structure-api.service';
 import {
   ImportResult,
   PersonnelProfile,
@@ -126,13 +126,13 @@ export class TreasuryOrgApiService {
   }
 
   getUserSectionAssignments(
-    params?: { section_id?: number; project_id?: number; user_id?: number; role?: string },
+    params?: OrgAssignmentFilters,
     forceFresh: boolean = false
   ): Observable<UserSectionAssignment[]> {
     return this.org.getAssignments(params, forceFresh) as Observable<UserSectionAssignment[]>;
   }
 
-  bulkAssignUsersToSection(data: { section_id: number; user_ids: number[]; role: string }): Observable<UserSectionAssignment[]> {
+  bulkAssignUsersToSection(data: OrgAssignmentTarget & { user_ids: number[]; role: string }): Observable<UserSectionAssignment[]> {
     return this.org.bulkAssign(data) as Observable<UserSectionAssignment[]>;
   }
 

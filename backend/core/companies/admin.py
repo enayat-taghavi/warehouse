@@ -19,6 +19,7 @@ class ProjectSectionAdmin(admin.ModelAdmin):
 
 @admin.register(SectionAssignment)
 class SectionAssignmentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'section', 'role', 'is_active', 'created_at')
-    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'section__name')
-    list_filter = ('role', 'is_active', 'section__project')
+    list_display = ('user', 'company', 'project', 'section', 'role', 'is_active', 'created_at')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'section__name', 'project__name', 'company__name')
+    list_filter = ('role', 'is_active', 'company')
+    list_select_related = ('user', 'company', 'project', 'section__project')

@@ -19,6 +19,7 @@ from ..models import (
     CompanyBankAccount,
     CompanyBoardMember,
     CompanyFiscalPeriod,
+    CompanyPayrollProfile,
 )
 
 class CompanySerializer(CoreCompanySerializer):
@@ -159,6 +160,26 @@ class CompanyBoardMemberSerializer(serializers.ModelSerializer):
         if not val.isdigit() or len(val) != 10:
             raise serializers.ValidationError("کد ملی باید دقیقاً ۱۰ رقم عددی باشد.")
         return val
+
+class CompanyPayrollProfileSerializer(serializers.ModelSerializer):
+    """پروندهٔ بیمه و مالیات شرکت (ت۵ طرح ۲.۱)؛ شرکت از نشانی API می‌آید و تغییر نمی‌کند."""
+    DIGIT_FIELDS = ('workshop_code', 'social_security_branch_code', 'contract_row', 'tax_memory_id', 'tax_economic_code')
+
+    class Meta:
+        model = CompanyPayrollProfile
+        fields = ['company', *CompanyPayrollProfile.FIELDS, 'updated_at']
+        read_only_fields = ['company', 'updated_at']
+
+    def validate(self, attrs):
+        # ارقام فارسی و عربی کدها به لاتین؛ فاصله‌های دو سر همهٔ فیلدها حذف می‌شود
+        for field, value in list(attrs.items()):
+            if isinstance(value, str):
+                value = value.strip()
+                if field in self.DIGIT_FIELDS:
+                    value = normalize_digits(value)
+                attrs[field] = value or None
+        return attrs
+
 
 class CompanyBankAccountSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True)

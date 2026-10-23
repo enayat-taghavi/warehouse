@@ -110,12 +110,14 @@ def _level_ok(have, need):
 def company_section_level(user, company_id, section):
     if not user or not user.is_authenticated:
         return 'none'
-    if user.is_superuser:
-        return 'write'
     try:
         cid = int(company_id)
     except (TypeError, ValueError):
         return 'none'
+    if not _module_enabled_here(cid):
+        return 'none'
+    if user.is_superuser:
+        return 'write'
     return user_section_levels(user).get(cid, {}).get(section, 'none')
 
 
@@ -123,9 +125,9 @@ def companies_with_section(user, section, level='read'):
     if not user or not user.is_authenticated:
         return Company.objects.none()
     if user.is_superuser:
-        return Company.objects.filter(is_active=True)
+        return _without_disabled_module(Company.objects.filter(is_active=True))
     ids = [cid for cid, lv in user_section_levels(user).items() if _level_ok(lv.get(section), level)]
-    return Company.objects.filter(id__in=ids, is_active=True)
+    return _without_disabled_module(Company.objects.filter(id__in=ids, is_active=True))
 
 
 def companies_with_any_section(user):
@@ -133,9 +135,9 @@ def companies_with_any_section(user):
     if not user or not user.is_authenticated:
         return Company.objects.none()
     if user.is_superuser:
-        return Company.objects.filter(is_active=True)
+        return _without_disabled_module(Company.objects.filter(is_active=True))
     ids = [cid for cid, lv in user_section_levels(user).items() if any(_level_ok(v, 'read') for v in lv.values())]
-    return Company.objects.filter(id__in=ids, is_active=True)
+    return _without_disabled_module(Company.objects.filter(id__in=ids, is_active=True))
 
 
 def ensure_section(user, company_id, section, level='read', message=None):
@@ -159,7 +161,7 @@ def get_user_allowed_companies(user, required_level=MEMBER):
     if not user or not user.is_authenticated:
         return Company.objects.none()
     if user.is_superuser:
-        return Company.objects.filter(is_active=True)
+        return _without_disabled_module(Company.objects.filter(is_active=True))
 
     from accounts.middleware import get_allowed_companies_cache
     req_cache = get_allowed_companies_cache()
@@ -173,10 +175,33 @@ def get_user_allowed_companies(user, required_level=MEMBER):
         allowed_ids |= set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
         allowed_ids |= set(companies_with_any_section(user).values_list('id', flat=True))
 
-    qs = Company.objects.filter(id__in=allowed_ids, is_active=True)
+    qs = _without_disabled_module(Company.objects.filter(id__in=allowed_ids, is_active=True))
     if req_cache is not None:
         req_cache[cache_key] = qs
     return qs
+
+
+def request_module(module_code):
+    """بازهٔ کار هسته به نام یک ماژول (accounts.middleware.request_module)؛ برای هستهٔ پلتفرم و گزارش‌ساز."""
+    from accounts.middleware import request_module as _request_module
+    return _request_module(module_code)
+
+
+def _module_enabled_here(company_id):
+    """در درخواستِ مسیر یک ماژول: آیا آن ماژول در این شرکت روشن است؟ بیرون از مسیر ماژول همیشه True."""
+    from accounts.middleware import get_current_request_module
+    code = get_current_request_module()
+    return company_module_enabled(company_id, code) if code else True
+
+
+def _without_disabled_module(qs):
+    """
+    در درخواستِ مسیر API یک ماژول، شرکت‌هایی که آن ماژول در آن‌ها خاموش است کنار می‌روند (طرح ۲.۱، ت۸)؛
+    مسیرهای هسته و کار بیرون از درخواست دست‌نخورده می‌مانند.
+    """
+    from accounts.middleware import get_current_request_module
+    code = get_current_request_module()
+    return qs.exclude(disabled_modules__contains=[code]) if code else qs
 
 
 def get_request_company_id(request):
@@ -216,3 +241,26 @@ def ensure_scoped_write(user, company_id, message):
     allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
     if company_id is None or company_id not in allowed_ids:
         raise PermissionDenied(message)
+
+
+# ─── کلید ماژول در هر شرکت (ت۸ طرح ۲.۱) ───
+def company_module_enabled(company_or_id, module_code):
+    """
+    آیا ماژول `module_code` نصب است و در این شرکت خاموش نشده است؟ شرکت ناموجود یا بی‌شناسه False است.
+    ماژول‌ها فقط کد خودشان را می‌پرسند؛ هسته نام هیچ ماژولی را نمی‌برد.
+    """
+    from platform_core.registry import is_module_installed
+    if not module_code or not is_module_installed(module_code):
+        return False
+    if isinstance(company_or_id, Company):
+        disabled = company_or_id.disabled_modules
+    else:
+        try:
+            cid = int(company_or_id)
+        except (TypeError, ValueError):
+            return False
+        rows = list(Company.objects.filter(pk=cid).values_list('disabled_modules', flat=True)[:1])
+        if not rows:
+            return False
+        disabled = rows[0]
+    return module_code not in (disabled or ())

@@ -663,12 +663,12 @@ export class Layout implements OnInit, OnDestroy {
         const hasCompanySwitched = !isInitialCompanyLoad && this.lastHandledCompanyId !== company.id;
         this.lastHandledCompanyId = company.id;
 
-        // ماژولی که به پرچم ماژول انبار شرکت وابسته است، در شرکت فاقد آن باز نمی‌ماند
-        const gated = this.moduleRegistry.getInstalledModules().find(m =>
-          m.extensions?.companies?.hasWarehouseModuleToggle && currentUrl.startsWith(m.routePrefix));
-        if (gated && company.has_warehouse_module === false) {
+        // ماژولی که برای این شرکت خاموش است (enabled_modules)، باز نمی‌ماند
+        const isOn = (m: WhFrontendModule) => this.moduleRegistry.isModuleEnabledForCompany(m.code, company);
+        const gated = this.moduleRegistry.getInstalledModules().find(m => currentUrl.startsWith(m.routePrefix));
+        if (gated && !isOn(gated)) {
           const fallback = this.moduleRegistry.getInstalledModules().find(m =>
-            m !== gated && !m.isSuperuserOnly && !m.extensions?.companies?.hasWarehouseModuleToggle);
+            m !== gated && !m.isSuperuserOnly && isOn(m));
           this.toast.show(
             'warning',
             `شرکت «${company.name}» فاقد سامانه ${gated.titleShortFa} است.` + (fallback ? ` هدایت به ${fallback.titleShortFa} انجام شد.` : '')
@@ -677,7 +677,8 @@ export class Layout implements OnInit, OnDestroy {
           return;
         }
 
-        if (this.hasWarehouseSwitcher && company.has_warehouse_module !== false) {
+        const sw0 = this.switcherModule;
+        if (this.hasWarehouseSwitcher && (!sw0 || this.moduleRegistry.isModuleEnabledForCompany(sw0.code, company))) {
           this.scopeDirectory.getAll().subscribe({
             next: (data) => this.handleWarehousesLoaded(data),
             error: () => {}

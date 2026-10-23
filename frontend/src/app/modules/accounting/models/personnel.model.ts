@@ -806,11 +806,17 @@ export interface UserSectionAssignment {
   user: number;
   username?: string;
   user_full_name?: string;
-  section: number;
-  section_name?: string;
-  section_code?: string;
-  project_id?: number;
-  project_name?: string;
+  /** انتساب سه‌سطحی: دقیقاً یکی از company، project و section پر است (سطح شرکت و پروژه: section تهی) */
+  section: number | null;
+  project?: number | null;
+  company?: number | null;
+  level?: 'company' | 'project' | 'section';
+  target_company_id?: number | null;
+  company_name?: string | null;
+  section_name?: string | null;
+  section_code?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
   role: 'employee' | 'supervisor' | 'accountant' | 'manager' | 'treasury';
   role_display?: string;
   is_active: boolean;

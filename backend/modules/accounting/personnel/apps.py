@@ -16,9 +16,8 @@ class PersonnelConfig(AppConfig):
 
         # بخش‌های مجوز شرکت از ماژول حسابداری (طرح مجوزهای بخش‌به‌بخش شرکت، §۵-۱)
         from platform_core.registry import contribute as _contribute
-        from personnel.company_access import COMPANY_PERMISSION_SECTIONS, COMPANY_FIELD_SECTIONS
+        from personnel.company_access import COMPANY_PERMISSION_SECTIONS
         _contribute('company_permission_sections', COMPANY_PERMISSION_SECTIONS)
-        _contribute('company_field_sections', COMPANY_FIELD_SECTIONS)
         # نقش‌های انتساب به بخش؛ پروژه، بخش و منبع عضویتِ انتساب در هسته‌اند (طرح Project_Section_To_Core)
         from personnel.company_access import SECTION_ROLES
         _contribute('section_roles', SECTION_ROLES)
@@ -102,6 +101,7 @@ class PersonnelConfig(AppConfig):
         contribute('company_delete_blockers', (40, 'monthly_work_periods', "این شرکت دارای دوره‌های کارکرد ثبت‌شده است و نمی‌توان آن را حذف کرد."))
         contribute('company_delete_blockers', (50, 'counterparties', "این شرکت دارای طرف‌حساب‌های مالی ثبت‌شده است و نمی‌توان آن را حذف کرد."))
         contribute('company_delete_blockers', (60, 'fiscal_periods', "این شرکت دارای دوره‌های مالی تعریف‌شده است و نمی‌توان آن را حذف کرد."))
+        contribute('company_delete_blockers', (70, 'payroll_profile', "این شرکت دارای پروندهٔ بیمه و مالیات ثبت‌شده است و نمی‌توان آن را حذف کرد."))
 
         # دسترسی نوشتن ساختار سازمانی ماژول حسابداری (گام ۴)
         contribute('org_structure_write_perms', 'accounts.perm_approve_personnel_manager')

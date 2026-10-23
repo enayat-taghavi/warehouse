@@ -523,16 +523,12 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
         } else {
           this.toast.success(`حساب «${acc.bank_name}» به عنوان حساب اصلی شرکت تنظیم شد.`);
         }
+        // حساب اصلی فقط `is_primary` همین حساب‌هاست (ت۶ طرح ۲.۱)؛ شرکت فیلد بانک اصلی ندارد
+        if (companyId !== this.companyId) return;
         this.setAccounts(this.companyBankAccounts.map(a => ({
           ...a,
           is_primary: a.id === acc.id
         })));
-        // این سه فیلد شرکت روی سرور ثبت شده‌اند؛ هسته آن‌ها را بی‌آنکه تغییر ذخیره‌نشده حساب شوند در فرم می‌گذارد
-        this.studioContext.applyServerFields(companyId, {
-          primary_bank_name: acc.bank_name,
-          primary_account_number: acc.account_number || '',
-          primary_iban: acc.sheba_number || ''
-        });
         this.cdr.markForCheck();
       },
       error: () => this.toast.error('خطا در تنظیم حساب اصلی')

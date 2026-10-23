@@ -43,7 +43,7 @@ class FinancialDocsCycleTests(TestCase):
         # ۱. ساخت شرکت تستی و انبار
         self.company, _ = Company.objects.get_or_create(
             code="TEST-DOC-CO",
-            defaults={"name": "شرکت تستی اسناد", "has_warehouse_module": True}
+            defaults={"name": "شرکت تستی اسناد"}
         )
         self.warehouse = Warehouse.objects.create(
             name="انبار مرکزی اسناد و کالا",

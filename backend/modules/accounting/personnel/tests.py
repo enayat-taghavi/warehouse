@@ -5,6 +5,7 @@ from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from .models import (
+    Company,
     Project,
     PersonnelProfile,
     VehicleDriverProfile,
@@ -36,7 +37,9 @@ class PersonnelAppTests(TestCase):
 
         self.warehouse = Warehouse.objects.create(name='انبار پارس', code='WH-PARS')
 
+        self.company = Company.objects.create(code='CMP-PARS', name='شرکت پارس')
         self.project = Project.objects.create(
+            company=self.company,
             name='پروژه پارس',
             code='PRJ-PARS',
             is_active=True

@@ -104,21 +104,14 @@ export interface Company {
   alternate_inspector?: string | null;
   authorized_signers?: string | null;
   board_term_expiry?: string | null;
-  workshop_code?: string | null;
-  social_security_branch_code?: string | null;
-  social_security_branch_name?: string | null;
-  contract_row?: string | null;
-  employer_name?: string | null;
-  tax_memory_id?: string | null;
-  tax_economic_code?: string | null;
-  primary_bank_name?: string | null;
-  primary_account_number?: string | null;
-  primary_iban?: string | null;
   articles_of_association?: string | null;
   latest_gazette?: string | null;
   logo?: string | null;
   is_active: boolean;
-  has_warehouse_module?: boolean;
+  /** کد ماژول‌های نصب‌شده‌ای که برای این شرکت روشن‌اند (نصب‌شده‌ها منهای `disabled_modules`) */
+  enabled_modules?: string[];
+  /** کد ماژول‌هایی که مدیر کل برای این شرکت خاموش کرده است (فقط برای اعضا و مدیر کل فرستاده می‌شود) */
+  disabled_modules?: string[];
   projects_count?: number;
   documents_count?: number;
   documents_health_status?: 'valid' | 'expiring_soon' | 'expired' | 'no_documents';
@@ -129,6 +122,14 @@ export interface Company {
   section_levels?: CompanySectionLevels;
   created_at?: string;
   updated_at?: string;
+}
+
+/**
+ * آیا ماژول با کد `code` برای این شرکت روشن است؟ بی‌شرکت، یا پاسخ قدیمی (کش آفلاین) که فهرست ندارد: روشن.
+ */
+export function companyHasModule(company: Pick<Company, 'enabled_modules'> | null | undefined, code: string): boolean {
+  if (!company || !Array.isArray(company.enabled_modules)) return true;
+  return company.enabled_modules.includes(code);
 }
 
 export interface CompanyBankAccount {
@@ -248,17 +249,40 @@ export interface OrgProjectSection {
   _offlinePending?: boolean;
 }
 
+/** سطح انتساب: شرکت، پروژه یا بخش */
+export type OrgAssignmentLevel = 'company' | 'project' | 'section';
+
+/** سطح یک ردیف انتساب؛ پاسخ قدیمی بی `level` از روی فیلدهای مقصد تشخیص داده می‌شود */
+export function assignmentLevel(a: Pick<OrgSectionAssignment, 'level' | 'section' | 'project' | 'company'>): OrgAssignmentLevel {
+  if (a.level) return a.level;
+  if (a.section) return 'section';
+  if (a.project) return 'project';
+  return a.company ? 'company' : 'section';
+}
+
 /** نقش انتساب را ماژول‌های نصب‌شده اعلام می‌کنند (companies.sectionRoles)؛ هسته نقش‌ها را نمی‌شناسد */
 export interface OrgSectionAssignment {
   id?: number;
   user: number;
   username?: string;
   user_full_name?: string;
-  section: number;
-  section_name?: string;
-  section_code?: string;
-  project_id?: number;
-  project_name?: string;
+  /**
+   * انتساب سه‌سطحی (ت۳ طرح ۲.۱): دقیقاً یکی از company، project و section پر است.
+   * انتساب سطح شرکت برای همهٔ بخش‌های آن شرکت و انتساب سطح پروژه برای همهٔ بخش‌های آن پروژه معتبر است.
+   */
+  section: number | null;
+  project?: number | null;
+  company?: number | null;
+  level?: OrgAssignmentLevel;
+  /** شرکت مقصد در هر سه سطح */
+  target_company_id?: number | null;
+  company_name?: string | null;
+  /** برای سطح شرکت و پروژه null */
+  section_name?: string | null;
+  section_code?: string | null;
+  /** پروژهٔ مقصد (برای سطح شرکت null) */
+  project_id?: number | null;
+  project_name?: string | null;
   role: string;
   role_display?: string;
   is_active: boolean;

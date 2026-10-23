@@ -52,12 +52,19 @@ describe('Module route canMatch (dynamicModuleRoutes)', () => {
     expect(canMatchOf(prefixOf('warehouse'))()).toBe(true);
   });
 
-  it('rejects the toggled module only when the active company explicitly disables it', () => {
-    activeCompanyMock.activeCompany = { id: 1, has_warehouse_module: true };
+  it('rejects a module only when the active company enabled_modules leaves it out (every module, generic)', () => {
+    activeCompanyMock.activeCompany = { id: 1, enabled_modules: ['warehouse', 'accounting'] };
     expect(canMatchOf(prefixOf('warehouse'))()).toBe(true);
 
-    activeCompanyMock.activeCompany = { id: 2, has_warehouse_module: false };
+    activeCompanyMock.activeCompany = { id: 2, enabled_modules: ['accounting'] };
     expect(canMatchOf(prefixOf('warehouse'))()).toBe(false);
     expect(canMatchOf(prefixOf('accounting'))()).toBe(true);
+
+    activeCompanyMock.activeCompany = { id: 3, enabled_modules: ['warehouse'] };
+    expect(canMatchOf(prefixOf('accounting'))()).toBe(false);
+
+    // پاسخ قدیمی کش آفلاین بی فهرست: هیچ ماژولی بسته نمی‌شود
+    activeCompanyMock.activeCompany = { id: 4 };
+    expect(canMatchOf(prefixOf('warehouse'))()).toBe(true);
   });
 });

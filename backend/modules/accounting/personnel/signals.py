@@ -3,49 +3,19 @@ from django.dispatch import receiver
 from .models import Company, CompanyBankAccount, CompanyDocument, SectionAssignment, UserCompanyAccess
 
 
-@receiver(post_save, sender=CompanyBankAccount)
-def handle_bank_account_saved(sender, instance, created, **kwargs):
-    """
-    همگام‌سازی خودکار حساب بانکی اصلی شرکت پس از ذخیره رکورد
-    """
-    comp_id = instance.company_id
-    if not comp_id:
-        return
-
-    if instance.is_primary:
-        # ۱. سایر حساب‌های این شرکت غیر اصلی شوند
-        CompanyBankAccount.objects.filter(
-            company_id=comp_id, is_primary=True
-        ).exclude(pk=instance.pk).update(is_primary=False)
-
-        # ۲. فیلدهای تجمیعی روی جدول Company به‌روزرسانی شوند
-        Company.objects.filter(pk=comp_id).update(
-            primary_bank_name=instance.bank_name,
-            primary_account_number=instance.account_number,
-            primary_iban=instance.sheba_number
-        )
-
-
 @receiver(post_delete, sender=CompanyBankAccount)
 def handle_bank_account_deleted(sender, instance, **kwargs):
     """
-    همگام‌سازی خودکار حساب بانکی اصلی شرکت پس از حذف رکورد
+    با حذف حساب اصلی، تازه‌ترین حساب فعال باقی‌مانده اصلی می‌شود. یکتایی حساب اصلی در save() مدل است (ت۶ طرح ۲.۱).
     """
     comp_id = instance.company_id
-    if not comp_id:
+    if not comp_id or not instance.is_primary:
         return
-
-    if instance.is_primary:
-        remaining = CompanyBankAccount.objects.filter(company_id=comp_id).order_by('-created_at').first()
-        if remaining:
-            remaining.is_primary = True
-            remaining.save()
-        else:
-            Company.objects.filter(pk=comp_id).update(
-                primary_bank_name=None,
-                primary_account_number=None,
-                primary_iban=None
-            )
+    # فقط حساب فعال اصلی می‌شود؛ primary_bank_account() حساب غیرفعال را نمی‌پذیرد (data-loss-reviewer)
+    remaining = CompanyBankAccount.objects.filter(company_id=comp_id, is_active=True).order_by('-created_at').first()
+    if remaining:
+        remaining.is_primary = True
+        remaining.save()
 
 
 @receiver(post_save, sender=Company)
@@ -85,35 +55,41 @@ def sync_company_core_documents(sender, instance, created, **kwargs):
             )
 
 
+def _assignment_company_name(assignment):
+    """نام شرکتی که انتساب در آن معتبر است، در هر سه سطح (شرکت، پروژه یا بخش؛ طرح ۲.۱، ت۳)."""
+    if assignment.company_id:
+        return assignment.company.name
+    project = assignment.target_project
+    return project.company.name if project is not None and project.company_id else None
+
+
 @receiver(post_save, sender=SectionAssignment)
 def handle_user_section_assignment_saved(sender, instance, created, **kwargs):
     """
-    همگام‌سازی بلادرنگ نام شرکت سازمانی کاربر بر مبنای بخش‌های پروژه انتساب‌یافته
+    همگام‌سازی بلادرنگ نام شرکت سازمانی کاربر بر مبنای شرکتِ انتساب (هر سه سطح)
     """
-    if not instance.user or not instance.section or not instance.is_active:
+    if not instance.user_id or not instance.is_active:
         return
-    proj = instance.section.project
-    if proj and proj.company:
-        comp = proj.company
-        if instance.user.company != comp.name:
-            instance.user.company = comp.name
-            instance.user.save(update_fields=['company'])
+    company_name = _assignment_company_name(instance)
+    if company_name and instance.user.company != company_name:
+        instance.user.company = company_name
+        instance.user.save(update_fields=['company'])
 
 
 @receiver(post_delete, sender=SectionAssignment)
 def handle_user_section_assignment_deleted(sender, instance, **kwargs):
     """
-    بازبینی نام شرکت کاربر پس از حذف انتساب بخش
+    بازبینی نام شرکت کاربر پس از حذف انتساب (هر سه سطح)
     """
     if not instance.user:
         return
     user = instance.user
-    remaining = SectionAssignment.objects.filter(
-        user=user, is_active=True, section__project__company__isnull=False
-    ).select_related('section__project__company').first()
+    remaining = SectionAssignment.objects.filter(user=user, is_active=True).select_related(
+        'company', 'project__company', 'section__project__company'
+    ).first()
+    new_name = _assignment_company_name(remaining) if remaining else None
 
-    if remaining and remaining.section and remaining.section.project and remaining.section.project.company:
-        new_name = remaining.section.project.company.name
+    if new_name:
         if user.company != new_name:
             user.company = new_name
             user.save(update_fields=['company'])

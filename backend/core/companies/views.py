@@ -90,7 +90,7 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_superuser:
             # هر فیلد باید به بخشی نگاشت شده باشد که کاربر «نوشتن» آن را در همین شرکت دارد؛
-            # فیلد بی‌نگاشت (مثل is_active و has_warehouse_module) فقط برای superuser است.
+            # فیلد بی‌نگاشت (مثل is_active و disabled_modules) فقط برای superuser است.
             from .permission_sections import field_sections
             mapping = field_sections()
             company_id = serializer.instance.id
@@ -116,11 +116,13 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
     def get_delete_blockers(self, instance):
         blockers = sorted(contributions('company_delete_blockers'), key=lambda b: b[0])
-        return [
-            message
-            for _order, related_name, message in blockers
-            if hasattr(instance, related_name) and getattr(instance, related_name).exists()
-        ]
+
+        def has_related(name):
+            # رابطهٔ چندتایی exists() دارد؛ رابطهٔ یک‌به‌یکِ ناموجود در hasattr همان False است
+            related = getattr(instance, name, None)
+            return related.exists() if hasattr(related, 'exists') else related is not None
+
+        return [message for _order, related_name, message in blockers if has_related(related_name)]
 
     def perform_destroy(self, instance):
         self._ensure_can_delete(self.request.user)
@@ -183,7 +185,7 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
     IMPORT_FIELDS = (
         'code', 'name', 'company_type', 'national_id', 'economic_code', 'registration_number',
-        'phone', 'ceo_name', 'board_chairman', 'workshop_code', 'tax_memory_id', 'address', 'is_active',
+        'phone', 'ceo_name', 'board_chairman', 'address', 'is_active',
     )
 
     @action(detail=False, methods=['post'], url_path='import-excel',
@@ -267,13 +269,13 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
         headers_fa = [
             'ردیف', 'کد یکتا', 'نام کامل شرکت', 'نوع شرکت', 'شناسه ملی', 'کد اقتصادی',
-            'شماره ثبت', 'تلفن تماس', 'مدیرعامل', 'رئیس هیئت‌مدیره', 'کد کارگاه بیمه',
-            'شناسه مودیان', 'شماره شبا رسمی', 'تعداد پروژه‌ها', 'تعداد اسناد', 'وضعیت', 'نشانی دفتر مرکزی'
+            'شماره ثبت', 'تلفن تماس', 'مدیرعامل', 'رئیس هیئت‌مدیره',
+            'تعداد پروژه‌ها', 'تعداد اسناد', 'وضعیت', 'نشانی دفتر مرکزی'
         ]
         headers_en = [
             'row_num', 'code', 'name', 'company_type', 'national_id', 'economic_code',
-            'registration_number', 'phone', 'ceo_name', 'board_chairman', 'workshop_code',
-            'tax_memory_id', 'primary_iban', 'projects_count', 'documents_count', 'is_active', 'address'
+            'registration_number', 'phone', 'ceo_name', 'board_chairman',
+            'projects_count', 'documents_count', 'is_active', 'address'
         ]
 
         title_font = Font(name='B Nazanin', size=11, bold=True, color='FFFFFF')
@@ -327,9 +329,6 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 comp.phone or '',
                 comp.ceo_name or '',
                 comp.board_chairman or '',
-                comp.workshop_code or '',
-                comp.tax_memory_id or '',
-                comp.primary_iban or '',
                 p_count,
                 d_count,
                 'فعال' if comp.is_active else 'غیرفعال',
@@ -340,8 +339,8 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             for col_idx in range(1, len(headers_fa) + 1):
                 c = ws.cell(row=curr_row, column=col_idx)
                 c.border = thin_border
-                c.alignment = Alignment(horizontal='center' if col_idx not in [3, 17] else 'right', vertical='center')
-                if col_idx in [1, 2, 5, 6, 7, 8, 11, 12, 13, 14, 15]:
+                c.alignment = Alignment(horizontal='center' if col_idx not in [3, 14] else 'right', vertical='center')
+                if col_idx in [1, 2, 5, 6, 7, 8, 11, 12]:
                     c.font = data_font_num
                 else:
                     c.font = data_font

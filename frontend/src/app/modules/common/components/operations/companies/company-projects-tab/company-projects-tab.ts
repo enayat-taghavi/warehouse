@@ -12,7 +12,7 @@ import { isServerUnreachable } from '../../../../../../core/services/server-reac
 import { CompanyStudioContextService } from '../../../../../../core/services/company-studio-context.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
 import { SectionRoleSpec } from '../../../../../../core/modules/module-contract';
-import { OrgProject, OrgProjectSection, OrgSectionAssignment } from '../../../../../../core/models/company.model';
+import { OrgAssignmentLevel, OrgProject, OrgProjectSection, OrgSectionAssignment, assignmentLevel } from '../../../../../../core/models/company.model';
 import { normalizeDigits } from '../../../../../../core/utils/date-utils';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -36,18 +36,65 @@ const ROLE_TONE_CLASSES: Record<SectionRoleSpec['tone'], { badge: string; panel:
   slate: { badge: 'bg-surface-muted text-fg border-line', panel: 'bg-surface-muted border-line', text: 'text-fg' }
 };
 
-export interface SectionRoleGroup {
-  role: SectionRoleSpec;
-  assignments: OrgSectionAssignment[];
+/** دارندهٔ نقشی که انتسابش در سطح بالاتر (شرکت یا پروژه) است و برای این بخش هم معتبر است */
+export interface InheritedHolder {
+  assignment: OrgSectionAssignment;
+  source: 'company' | 'project';
 }
 
-export interface SectionGroupedAssignments {
-  section: OrgProjectSection;
+export interface SectionRoleGroup {
+  role: SectionRoleSpec;
+  /** انتساب‌های مستقیم همین مقصد (شرکت، پروژه یا بخش) */
+  assignments: OrgSectionAssignment[];
+  /** فقط در کارت بخش: دارندگان ارث‌برده از سطح شرکت یا پروژه */
+  inherited: InheritedHolder[];
+}
+
+/** کارت ماتریس انتساب: یک مقصد در یکی از سه سطح */
+export interface AssignmentGroup {
+  /** کلید پایدار: `company`، `project:<id>` یا `section:<id>` */
+  key: string;
+  level: OrgAssignmentLevel;
+  title: string;
+  subtitle: string;
+  code?: string;
+  inactive?: boolean;
+  project?: OrgProject;
+  section?: OrgProjectSection;
   roles: SectionRoleGroup[];
+  /** شمار کاربران متمایز (مستقیم و ارث‌برده) */
   totalAssignedUsers: number;
-  /** نقش‌هایی که هشدار «فاقد …» دارند و انتساب فعالی ندارند */
+  /** نقش‌هایی که هشدار «فاقد …» دارند و هیچ دارندهٔ فعالی (مستقیم یا ارث‌برده) ندارند؛ فقط کارت بخش */
   missingWarnings: string[];
 }
+
+export interface SectionGroupedAssignments extends AssignmentGroup {
+  section: OrgProjectSection;
+}
+
+/** مقصد انتساب گروهی و ویرایش */
+export interface AssignmentTargetRef {
+  level: OrgAssignmentLevel;
+  /** شناسهٔ شرکت، پروژه یا بخش */
+  id: number;
+  name: string;
+  /** پروژهٔ مقصد (برای سطح بخش، پروژهٔ والد) */
+  projectId?: number | null;
+  projectName?: string | null;
+}
+
+/** برچسب کوتاه سطح انتساب */
+export const ASSIGNMENT_LEVEL_LABELS: Record<OrgAssignmentLevel, string> = {
+  company: 'سطح شرکت',
+  project: 'سطح پروژه',
+  section: 'سطح بخش'
+};
+
+const LEVEL_BADGE_CLASSES: Record<OrgAssignmentLevel, string> = {
+  company: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+  project: 'bg-teal-50 text-teal-800 border-teal-200',
+  section: 'bg-surface-muted text-fg-muted border-line'
+};
 
 /**
  * تب «پروژه‌ها و بخش‌ها»ی استودیوی شرکت (هسته): پروژه‌ها، بخش‌ها و انتساب کاربران به بخش‌ها، فقط برای همین شرکت.
@@ -93,6 +140,7 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
 
   /** دریافت نخست هنوز تمام نشده (اسکلت) */
   isLoading = false;
+  usersLoading = false;
   isExporting = false;
   /** شکست دریافت پروژه، بخش یا انتساب؛ با «تلاش دوباره» */
   loadError = false;
@@ -122,22 +170,37 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
   isSavingProject = false;
   isSavingSection = false;
 
+  /** انتساب گروهی: کارتِ مبدأ گزینه‌های سطح را تعیین می‌کند (بخش ← پروژه ← شرکت) */
   quickAssign: {
     isOpen: boolean;
-    section: OrgProjectSection | null;
+    /** گزینه‌های سطح، از پایین به بالا (نخستین = کارت مبدأ) */
+    targets: AssignmentTargetRef[];
+    level: OrgAssignmentLevel;
     role: SectionRoleSpec | null;
     selectedUserIds: number[];
     userSearchQuery: string;
     isSubmitting: boolean;
-  } = { isOpen: false, section: null, role: null, selectedUserIds: [], userSearchQuery: '', isSubmitting: false };
+  } = this.emptyQuickAssign();
 
   editAssignment: {
     isOpen: boolean;
     assignment: OrgSectionAssignment | null;
     role: string;
     is_active: boolean;
+    level: OrgAssignmentLevel;
+    projectId: number | null;
+    sectionId: number | null;
+    /** خطای فیلدی کنار همان فیلد */
+    errors: Record<string, string>;
     isSubmitting: boolean;
-  } = { isOpen: false, assignment: null, role: '', is_active: true, isSubmitting: false };
+  } = this.emptyEditAssignment();
+
+  readonly levelLabels = ASSIGNMENT_LEVEL_LABELS;
+  readonly levelOptions: { value: OrgAssignmentLevel; label: string }[] = [
+    { value: 'company', label: 'کل شرکت' },
+    { value: 'project', label: 'یک پروژه (همهٔ بخش‌های آن)' },
+    { value: 'section', label: 'یک بخش' }
+  ];
 
   cloneModal: {
     isOpen: boolean;
@@ -181,6 +244,53 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     return this.roles.find(r => r.key === key);
   }
 
+  // ─── سطح انتساب (شرکت، پروژه یا بخش) ───
+  levelOf(a: OrgSectionAssignment): OrgAssignmentLevel {
+    return assignmentLevel(a);
+  }
+
+  levelBadgeClass(level: OrgAssignmentLevel): string {
+    return LEVEL_BADGE_CLASSES[level] ?? LEVEL_BADGE_CLASSES.section;
+  }
+
+  levelLabel(level: OrgAssignmentLevel): string {
+    return ASSIGNMENT_LEVEL_LABELS[level] ?? '';
+  }
+
+  /** پروژهٔ مقصد ردیف (سطح پروژه: خود پروژه؛ سطح بخش: پروژهٔ والد بخش؛ سطح شرکت: null) */
+  private projectIdOf(a: OrgSectionAssignment): number | null {
+    const level = this.levelOf(a);
+    if (level === 'company') return null;
+    if (level === 'project') return Number(a.project ?? a.project_id) || null;
+    if (a.project_id) return Number(a.project_id);
+    const sec = this.sections.find(s => s.id === CompanyProjectsTabComponent.sectionIdOf(a));
+    return sec ? Number(sec.project) : null;
+  }
+
+  /** متن مقصد ردیف برای جدول و کارت موبایل */
+  targetLabel(a: OrgSectionAssignment): string {
+    const level = this.levelOf(a);
+    if (level === 'company') return a.company_name || 'همهٔ بخش‌های شرکت';
+    if (level === 'project') return a.project_name || this.projects.find(p => p.id === this.projectIdOf(a))?.name || '—';
+    return [a.project_name, a.section_name].filter(Boolean).join(' / ') || '—';
+  }
+
+  private isActiveRow(a: OrgSectionAssignment): boolean {
+    return a.is_active !== false;
+  }
+
+  /** انتساب‌های فعالِ سطح شرکت این شرکت */
+  private companyLevelRows(): OrgSectionAssignment[] {
+    return this.assignments.filter(a => this.levelOf(a) === 'company' && this.isActiveRow(a)
+      && (a.company == null || Number(a.company) === Number(this.companyId)));
+  }
+
+  /** انتساب‌های فعالِ سطح یک پروژه */
+  private projectLevelRows(projectId: number): OrgSectionAssignment[] {
+    return this.assignments.filter(a => this.levelOf(a) === 'project' && this.isActiveRow(a)
+      && Number(a.project ?? a.project_id) === Number(projectId));
+  }
+
   // ─── زیرتب‌ها ───
   private mainTabsKey = '';
   private mainTabsCache: TabDef[] = [];
@@ -192,7 +302,7 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
       this.mainTabsKey = key;
       const tabs: TabDef[] = [
         { id: 'projects', label: 'پروژه‌ها', shortLabel: 'پروژه‌ها', icon: this.icons.projects, count: this.projects.length },
-        { id: 'sections', label: 'بخش‌ها و دپارتمان‌ها', shortLabel: 'بخش‌ها', icon: this.icons.sections, count: this.sections.length }
+        { id: 'sections', label: 'بخش‌ها', shortLabel: 'بخش‌ها', icon: this.icons.sections, count: this.sections.length }
       ];
       // بی نقشِ اعلام‌شده (هیچ ماژول نقش‌داری نصب نیست) انتسابی هم ممکن نیست
       if (hasRoles) {
@@ -356,13 +466,16 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
 
   loadUsers(): void {
     this.usersLoadError = false;
+    this.usersLoading = true;
     this.accountsHttp.getUsers().subscribe({
       next: users => {
+        this.usersLoading = false;
         this.systemUsers = Array.isArray(users) ? users : [];
         this.invalidateAssignmentsCache();
         this.cdr.markForCheck();
       },
       error: err => {
+        this.usersLoading = false;
         this.usersLoadError = true;
         this.toast.show('error', this.extractApiErrorMessage(err, 'خطا در دریافت لیست کاربران'));
         this.cdr.markForCheck();
@@ -394,6 +507,7 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
 
   invalidateAssignmentsCache(): void {
     this._cachedGrouped = null;
+    this._cachedLevelGroups = null;
     this._cachedFiltered = null;
     this._cachedAvailableUsers = null;
     this._availableUsersKey = '';
@@ -427,11 +541,8 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     let list = this.assignments;
     const pFilter = this.assignmentProjectFilter ? Number(this.assignmentProjectFilter) : null;
     if (pFilter) {
-      list = list.filter(a => {
-        if (a.project_id) return Number(a.project_id) === pFilter;
-        const sec = this.sections.find(s => s.id === CompanyProjectsTabComponent.sectionIdOf(a));
-        return sec ? Number(sec.project) === pFilter : false;
-      });
+      // انتساب سطح شرکت برای همهٔ پروژه‌ها معتبر است و زیر فیلتر پروژه هم دیده می‌شود
+      list = list.filter(a => this.levelOf(a) === 'company' || this.projectIdOf(a) === pFilter);
     }
     if (this.assignmentRoleFilter !== 'all') list = list.filter(a => a.role === this.assignmentRoleFilter);
     const q = this.assignmentSearchQuery.trim().toLowerCase();
@@ -440,39 +551,106 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     return list;
   }
 
+  private buildRoles(direct: OrgSectionAssignment[], inherited: InheritedHolder[]): SectionRoleGroup[] {
+    return this.roles.map(role => ({
+      role,
+      assignments: direct.filter(a => a.role === role.key),
+      inherited: inherited.filter(h => h.assignment.role === role.key)
+    }));
+  }
+
+  private static distinctUsers(direct: OrgSectionAssignment[], inherited: InheritedHolder[]): number {
+    return new Set([...direct, ...inherited.map(h => h.assignment)].map(a => Number(a.user))).size;
+  }
+
+  private applyRoleFilter(roles: SectionRoleGroup[]): SectionRoleGroup[] {
+    return this.assignmentRoleFilter === 'all' ? roles : roles.filter(r => r.role.key === this.assignmentRoleFilter);
+  }
+
+  private _cachedLevelGroups: AssignmentGroup[] | null = null;
+
+  /**
+   * کارت‌های سطح شرکت و سطح پروژه بالای کارت‌های بخش. انتساب این کارت‌ها برای همهٔ بخش‌های زیرشان معتبر است.
+   * با جستجو فقط کارتی می‌ماند که عنوان یا دارنده‌ای مطابق دارد.
+   */
+  get levelGroups(): AssignmentGroup[] {
+    if (this._cachedLevelGroups) return this._cachedLevelGroups;
+    const q = this.assignmentSearchQuery.trim().toLowerCase();
+    const pFilter = this.assignmentProjectFilter ? Number(this.assignmentProjectFilter) : null;
+    const result: AssignmentGroup[] = [];
+    const companyRows = this.companyLevelRows();
+    const companyName = this.studioContext?.company()?.name || companyRows[0]?.company_name || '';
+    if (!q || 'شرکت'.includes(q) || companyName.toLowerCase().includes(q) || companyRows.some(a => this.matchesAssignmentQuery(a, q))) {
+      result.push({
+        key: 'company', level: 'company', title: 'همهٔ بخش‌های شرکت',
+        subtitle: 'انتساب این‌جا برای همهٔ پروژه‌ها و بخش‌های شرکت معتبر است.',
+        roles: this.applyRoleFilter(this.buildRoles(companyRows, [])),
+        totalAssignedUsers: CompanyProjectsTabComponent.distinctUsers(companyRows, []), missingWarnings: []
+      });
+    }
+    for (const p of this.projects) {
+      if (!p.id || (pFilter && p.id !== pFilter)) continue;
+      const rows = this.projectLevelRows(p.id);
+      if (q && !(p.name?.toLowerCase().includes(q) || p.code?.toLowerCase().includes(q) || rows.some(a => this.matchesAssignmentQuery(a, q)))) continue;
+      result.push({
+        key: `project:${p.id}`, level: 'project', title: p.name, code: p.code, inactive: p.is_active === false, project: p,
+        subtitle: 'انتساب این‌جا برای همهٔ بخش‌های این پروژه معتبر است.',
+        roles: this.applyRoleFilter(this.buildRoles(rows, [])),
+        totalAssignedUsers: CompanyProjectsTabComponent.distinctUsers(rows, []), missingWarnings: []
+      });
+    }
+    this._cachedLevelGroups = result;
+    return result;
+  }
+
   get groupedAssignmentsBySection(): SectionGroupedAssignments[] {
     if (this._cachedGrouped) return this._cachedGrouped;
     let sections = this.sections;
     const pFilter = this.assignmentProjectFilter ? Number(this.assignmentProjectFilter) : null;
     if (pFilter) sections = sections.filter(s => Number(s.project) === pFilter);
     const q = this.assignmentSearchQuery.trim().toLowerCase();
+    const companyInherited: InheritedHolder[] = this.companyLevelRows().map(assignment => ({ assignment, source: 'company' }));
+    const projectInherited = new Map<number, InheritedHolder[]>();
     const result: SectionGroupedAssignments[] = [];
     for (const sec of sections) {
-      const secAssignments = this.assignments.filter(a =>
-        CompanyProjectsTabComponent.sectionIdOf(a) === Number(sec.id) && a.is_active !== false);
+      const projectId = Number(sec.project);
+      if (!projectInherited.has(projectId)) {
+        projectInherited.set(projectId, this.projectLevelRows(projectId).map(assignment => ({ assignment, source: 'project' as const })));
+      }
+      const direct = this.assignments.filter(a =>
+        this.levelOf(a) === 'section' && CompanyProjectsTabComponent.sectionIdOf(a) === Number(sec.id) && this.isActiveRow(a));
+      const inherited = [...companyInherited, ...projectInherited.get(projectId)!];
       if (q) {
         const matchesSection = sec.name?.toLowerCase().includes(q) || sec.code?.toLowerCase().includes(q)
           || sec.project_name?.toLowerCase().includes(q);
-        if (!matchesSection && !secAssignments.some(a => this.matchesAssignmentQuery(a, q))) continue;
+        if (!matchesSection && !direct.some(a => this.matchesAssignmentQuery(a, q))) continue;
       }
-      let roles = this.roles.map(role => ({ role, assignments: secAssignments.filter(a => a.role === role.key) }));
-      const missingWarnings = roles.filter(r => r.role.missingWarningFa && r.assignments.length === 0).map(r => r.role.missingWarningFa!);
-      if (this.assignmentRoleFilter !== 'all') roles = roles.filter(r => r.role.key === this.assignmentRoleFilter);
-      result.push({ section: sec, roles, totalAssignedUsers: secAssignments.length, missingWarnings });
+      const allRoles = this.buildRoles(direct, inherited);
+      // هشدار «فاقد …» فقط وقتی که نه انتساب مستقیم و نه دارندهٔ ارث‌برده از شرکت یا پروژه هست
+      const missingWarnings = allRoles
+        .filter(r => r.role.missingWarningFa && r.assignments.length === 0 && r.inherited.length === 0)
+        .map(r => r.role.missingWarningFa!);
+      result.push({
+        key: `section:${sec.id}`, level: 'section', title: sec.name, code: sec.code, inactive: !sec.is_active,
+        subtitle: `پروژه: ${sec.project_name || this.projects.find(p => p.id === projectId)?.name || ''}`,
+        section: sec, roles: this.applyRoleFilter(allRoles),
+        totalAssignedUsers: CompanyProjectsTabComponent.distinctUsers(direct, inherited), missingWarnings
+      });
     }
     this._cachedGrouped = result;
     return result;
   }
 
   get availableUsersForQuickAssign(): User[] {
-    const section = this.quickAssign.section;
+    const target = this.quickAssignTarget;
     const roleKey = this.quickAssign.role?.key;
-    if (!section || !roleKey) return [];
+    if (!target || !roleKey) return [];
     const q = this.quickAssign.userSearchQuery.trim().toLowerCase();
-    const key = `${section.id}_${roleKey}_${q}_${this.assignments.length}_${this.systemUsers.length}`;
+    const key = `${target.level}:${target.id}_${roleKey}_${q}_${this.assignments.length}_${this.systemUsers.length}`;
     if (this._cachedAvailableUsers && this._availableUsersKey === key) return this._cachedAvailableUsers;
+    // کاربری که همین نقش را در همین مقصد دارد دوباره فهرست نمی‌شود
     const existing = new Set(this.assignments
-      .filter(a => CompanyProjectsTabComponent.sectionIdOf(a) === Number(section.id) && a.role === roleKey && a.is_active !== false)
+      .filter(a => a.role === roleKey && this.isActiveRow(a) && this.isSameTarget(a, target))
       .map(a => Number(a.user)));
     let users = this.systemUsers.filter(u => u.is_active !== false && !existing.has(Number(u.id)));
     if (q) {
@@ -484,8 +662,10 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     return users;
   }
 
+  /** انتساب‌های فعال مستقیم یک بخش (بی دارندگان ارث‌برده از شرکت یا پروژه) */
   sectionAssignmentCount(sectionId: number | undefined): number {
-    return this.assignments.filter(a => CompanyProjectsTabComponent.sectionIdOf(a) === Number(sectionId) && a.is_active !== false).length;
+    return this.assignments.filter(a => this.levelOf(a) === 'section'
+      && CompanyProjectsTabComponent.sectionIdOf(a) === Number(sectionId) && this.isActiveRow(a)).length;
   }
 
   get cloneSourceSections(): OrgProjectSection[] {
@@ -498,7 +678,9 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
   get cloneSourceStats(): { total: number; roleCounts: Record<string, number> } {
     const sourceId = this.cloneModal.sourceSectionId;
     if (!sourceId) return { total: 0, roleCounts: {} };
-    const list = this.assignments.filter(a => CompanyProjectsTabComponent.sectionIdOf(a) === Number(sourceId) && a.is_active !== false);
+    // کپی فقط ردیف‌های مستقیم بخش را می‌برد (همان رفتار سرور)
+    const list = this.assignments.filter(a => this.levelOf(a) === 'section'
+      && CompanyProjectsTabComponent.sectionIdOf(a) === Number(sourceId) && this.isActiveRow(a));
     const roleCounts: Record<string, number> = {};
     for (const a of list) roleCounts[a.role] = (roleCounts[a.role] || 0) + 1;
     return { total: list.length, roleCounts };
@@ -665,7 +847,8 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
           const sectionIds = new Set(this.sections.filter(s => Number(s.project) === id).map(s => s.id));
           this.projects = this.projects.filter(p => p.id !== id);
           this.sections = this.sections.filter(s => Number(s.project) !== id);
-          this.assignments = this.assignments.filter(a => !sectionIds.has(CompanyProjectsTabComponent.sectionIdOf(a)));
+          this.assignments = this.assignments.filter(a => !sectionIds.has(CompanyProjectsTabComponent.sectionIdOf(a))
+            && !(this.levelOf(a) === 'project' && Number(a.project ?? a.project_id) === id));
           this.afterDataChange();
           return;
         }
@@ -752,7 +935,7 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
         if (CompanyProjectsTabComponent.isQueued(res)) {
           this.queuedToast();
           this.sections = this.sections.filter(s => s.id !== id);
-          this.assignments = this.assignments.filter(a => CompanyProjectsTabComponent.sectionIdOf(a) !== id);
+          this.assignments = this.assignments.filter(a => this.levelOf(a) !== 'section' || CompanyProjectsTabComponent.sectionIdOf(a) !== id);
           this.afterDataChange();
           return;
         }
@@ -768,32 +951,103 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     return !sectionId || !this.expandedSectionIds.has(sectionId);
   }
 
-  toggleSectionCollapse(sectionId: number | undefined): void {
-    if (!sectionId) return;
-    if (this.expandedSectionIds.has(sectionId)) this.expandedSectionIds.delete(sectionId);
-    else this.expandedSectionIds.add(sectionId);
+  /** کارت‌های سطح شرکت و پروژه (کلید `company` و `project:<id>`) که باز شده‌اند */
+  expandedLevelKeys = new Set<string>();
+
+  isGroupCollapsed(g: AssignmentGroup): boolean {
+    return g.section ? this.isSectionCollapsed(g.section.id) : !this.expandedLevelKeys.has(g.key);
+  }
+
+  /** باز و بسته کردن کارت یک مقصد (بخش با شناسه، سطح شرکت و پروژه با کلید) */
+  toggleGroupCollapse(g: AssignmentGroup): void {
+    const sectionId = g.section?.id;
+    if (sectionId) {
+      if (this.expandedSectionIds.has(sectionId)) this.expandedSectionIds.delete(sectionId);
+      else this.expandedSectionIds.add(sectionId);
+    } else if (g.section) {
+      return;
+    } else if (this.expandedLevelKeys.has(g.key)) this.expandedLevelKeys.delete(g.key);
+    else this.expandedLevelKeys.add(g.key);
     this.cdr.markForCheck();
   }
 
   expandAllSections(): void {
     this.expandedSectionIds = new Set(this.sections.map(s => s.id).filter((id): id is number => typeof id === 'number'));
+    this.expandedLevelKeys = new Set(this.levelGroups.map(g => g.key));
     this.cdr.markForCheck();
   }
 
   collapseAllSections(): void {
     this.expandedSectionIds = new Set();
+    this.expandedLevelKeys = new Set();
     this.cdr.markForCheck();
   }
 
-  openQuickAssign(section: OrgProjectSection, role: SectionRoleSpec): void {
+  private emptyQuickAssign(): CompanyProjectsTabComponent['quickAssign'] {
+    return { isOpen: false, targets: [], level: 'section', role: null, selectedUserIds: [], userSearchQuery: '', isSubmitting: false };
+  }
+
+  private companyTarget(): AssignmentTargetRef {
+    return { level: 'company', id: Number(this.companyId), name: this.studioContext?.company()?.name || 'کل شرکت', projectId: null };
+  }
+
+  private projectTarget(projectId: number): AssignmentTargetRef | null {
+    const p = this.projects.find(x => x.id === projectId);
+    return p?.id ? { level: 'project', id: p.id, name: p.name, projectId: p.id, projectName: p.name } : null;
+  }
+
+  /** گزینه‌های سطح برای کارت مبدأ: بخش ← پروژهٔ آن ← شرکت؛ پروژه ← شرکت؛ شرکت */
+  private targetsFor(g: AssignmentGroup): AssignmentTargetRef[] {
+    const targets: AssignmentTargetRef[] = [];
+    if (g.section?.id) {
+      const projectId = Number(g.section.project);
+      targets.push({ level: 'section', id: g.section.id, name: g.section.name, projectId, projectName: g.section.project_name });
+      const pt = this.projectTarget(projectId);
+      if (pt) targets.push(pt);
+    } else if (g.project?.id) {
+      const pt = this.projectTarget(g.project.id);
+      if (pt) targets.push(pt);
+    }
+    targets.push(this.companyTarget());
+    return targets;
+  }
+
+  /** مقصد انتخاب‌شدهٔ مودال انتساب گروهی */
+  get quickAssignTarget(): AssignmentTargetRef | null {
+    return this.quickAssign.targets.find(t => t.level === this.quickAssign.level) ?? null;
+  }
+
+  /** متن گزینهٔ سطح در مودال انتساب گروهی */
+  targetOptionLabel(t: AssignmentTargetRef): string {
+    if (t.level === 'company') return 'کل شرکت (همهٔ پروژه‌ها و بخش‌ها)';
+    if (t.level === 'project') return `کل پروژهٔ «${t.name}» (همهٔ بخش‌های آن)`;
+    return `فقط بخش «${t.name}»`;
+  }
+
+  private isSameTarget(a: OrgSectionAssignment, t: AssignmentTargetRef): boolean {
+    const level = this.levelOf(a);
+    if (level !== t.level) return false;
+    if (level === 'company') return a.company == null || Number(a.company) === t.id;
+    if (level === 'project') return Number(a.project ?? a.project_id) === t.id;
+    return CompanyProjectsTabComponent.sectionIdOf(a) === t.id;
+  }
+
+  openQuickAssign(group: AssignmentGroup, role: SectionRoleSpec): void {
     if (!this.canWrite) return;
-    this.quickAssign = { isOpen: true, section, role, selectedUserIds: [], userSearchQuery: '', isSubmitting: false };
+    const targets = this.targetsFor(group);
+    this.quickAssign = { ...this.emptyQuickAssign(), isOpen: true, targets, level: targets[0].level, role };
+    this._cachedAvailableUsers = null;
+    this.cdr.markForCheck();
+  }
+
+  onQuickAssignLevelChange(level: OrgAssignmentLevel): void {
+    this.quickAssign.level = level;
     this._cachedAvailableUsers = null;
     this.cdr.markForCheck();
   }
 
   closeQuickAssign(): void {
-    this.quickAssign = { isOpen: false, section: null, role: null, selectedUserIds: [], userSearchQuery: '', isSubmitting: false };
+    this.quickAssign = this.emptyQuickAssign();
     this._cachedAvailableUsers = null;
     this.cdr.markForCheck();
   }
@@ -815,14 +1069,36 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     this.quickAssign.selectedUserIds = [];
   }
 
+  /** بدنهٔ مقصد برای bulk-assign */
+  private static bulkTarget(t: AssignmentTargetRef): { section_id: number } | { project_id: number } | { company_id: number } {
+    if (t.level === 'company') return { company_id: t.id };
+    if (t.level === 'project') return { project_id: t.id };
+    return { section_id: t.id };
+  }
+
+  /** فیلدهای مقصد ردیف محلی (صف آفلاین) هم‌شکل پاسخ سرور */
+  private targetFields(t: AssignmentTargetRef): Partial<OrgSectionAssignment> {
+    return {
+      level: t.level,
+      company: t.level === 'company' ? t.id : null,
+      project: t.level === 'project' ? t.id : null,
+      section: t.level === 'section' ? t.id : null,
+      target_company_id: Number(this.companyId),
+      section_name: t.level === 'section' ? t.name : null,
+      project_id: t.projectId ?? null,
+      project_name: t.projectName ?? null
+    };
+  }
+
   submitQuickAssign(): void {
-    const { section, role, selectedUserIds } = this.quickAssign;
-    if (!section?.id || !role || selectedUserIds.length === 0) {
+    const { role, selectedUserIds } = this.quickAssign;
+    const target = this.quickAssignTarget;
+    if (!target || !role || selectedUserIds.length === 0) {
       this.toast.warning('لطفاً دست‌کم یک کاربر را برای انتساب انتخاب کنید.');
       return;
     }
     this.quickAssign.isSubmitting = true;
-    this.api.bulkAssign({ section_id: section.id, user_ids: [...selectedUserIds], role: role.key }).subscribe({
+    this.api.bulkAssign({ ...CompanyProjectsTabComponent.bulkTarget(target), user_ids: [...selectedUserIds], role: role.key }).subscribe({
       next: created => {
         if (CompanyProjectsTabComponent.isQueued(created)) {
           // پاسخ صف آفلاین فهرست ندارد؛ ردیف‌های موقت (شناسهٔ منفی) تا دریافت آنلاین بعدی نمایش داده می‌شوند
@@ -833,7 +1109,8 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
             const u = users.get(uid);
             return {
               id: -(stamp + i), user: uid, username: u?.username, user_full_name: `${u?.first_name || ''} ${u?.last_name || ''}`.trim() || u?.username,
-              section: section.id!, section_name: section.name, project_name: section.project_name, role: role.key, is_active: true, _offlinePending: true
+              ...this.targetFields(target), section: target.level === 'section' ? target.id : null,
+              role: role.key, is_active: true, _offlinePending: true
             };
           });
           this.assignments = [...pending, ...this.assignments];
@@ -842,7 +1119,8 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
           return;
         }
         const list = Array.isArray(created) ? created : [];
-        this.toast.success(`${this.fa(list.length)} کاربر به‌عنوان «${role.shortLabelFa}» در بخش «${section.name}» منتسب شدند.`);
+        const where = target.level === 'company' ? 'در سطح شرکت' : target.level === 'project' ? `در پروژهٔ «${target.name}»` : `در بخش «${target.name}»`;
+        this.toast.success(`${this.fa(list.length)} کاربر به‌عنوان «${role.shortLabelFa}» ${where} منتسب شدند.`);
         const ids = new Set(list.map(a => a.id));
         this.assignments = [...list, ...this.assignments.filter(a => !ids.has(a.id))];
         this.closeQuickAssign();
@@ -857,33 +1135,126 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     });
   }
 
+  private emptyEditAssignment(): CompanyProjectsTabComponent['editAssignment'] {
+    return { isOpen: false, assignment: null, role: '', is_active: true, level: 'section', projectId: null, sectionId: null, errors: {}, isSubmitting: false };
+  }
+
   openEditAssignment(assignment: OrgSectionAssignment): void {
     if (!this.canWrite) return;
-    this.editAssignment = { isOpen: true, assignment, role: assignment.role, is_active: assignment.is_active !== false, isSubmitting: false };
+    const level = this.levelOf(assignment);
+    this.editAssignment = {
+      ...this.emptyEditAssignment(),
+      isOpen: true, assignment, role: assignment.role, is_active: assignment.is_active !== false, level,
+      projectId: this.projectIdOf(assignment),
+      sectionId: level === 'section' ? CompanyProjectsTabComponent.sectionIdOf(assignment) : null
+    };
     this.cdr.markForCheck();
   }
 
   closeEditAssignment(): void {
-    this.editAssignment = { isOpen: false, assignment: null, role: '', is_active: true, isSubmitting: false };
+    this.editAssignment = this.emptyEditAssignment();
     this.cdr.markForCheck();
+  }
+
+  /** بخش‌های پروژهٔ انتخاب‌شده در مودال ویرایش (برای سطح بخش) */
+  get editAssignmentSections(): OrgProjectSection[] {
+    const pid = this.editAssignment.projectId;
+    return pid ? this.sections.filter(s => Number(s.project) === Number(pid)) : this.sections;
+  }
+
+  /** عنوان گزینهٔ بخش در مودال ویرایش؛ تا پروژه انتخاب نشده نام پروژه هم نمایش داده می‌شود تا بخش‌های هم‌نام تمایز یابند */
+  editSectionOptionLabel(s: OrgProjectSection): string {
+    if (this.editAssignment.projectId) return s.name;
+    const project = this.projects.find(p => Number(p.id) === Number(s.project));
+    return project ? `${s.name} — ${project.name}` : s.name;
+  }
+
+  /** انتساب در سطح شرکت یا پروژه شامل همهٔ بخش‌های زیرمجموعه هم می‌شود */
+  isWideLevel(level: OrgAssignmentLevel | null | undefined): boolean {
+    return level === 'company' || level === 'project';
+  }
+
+  onEditLevelChange(level: OrgAssignmentLevel): void {
+    this.editAssignment.level = level;
+    this.editAssignment.errors = {};
+    if (level === 'section' && this.editAssignment.sectionId
+      && !this.editAssignmentSections.some(s => s.id === this.editAssignment.sectionId)) this.editAssignment.sectionId = null;
+  }
+
+  onEditProjectChange(projectId: number | null): void {
+    this.editAssignment.projectId = projectId ? Number(projectId) : null;
+    if (this.editAssignment.sectionId && !this.editAssignmentSections.some(s => s.id === this.editAssignment.sectionId)) {
+      this.editAssignment.sectionId = null;
+    }
+    delete this.editAssignment.errors['project'];
+  }
+
+  /**
+   * بدنهٔ PATCH ویرایش: نقش و وضعیت، و اگر سطح یا مقصد عوض شده، هر سه کلید مقصد (مقصد تازه پر و دو کلید دیگر null)
+   * تا وضعیت نهایی دقیقاً یک مقصد داشته باشد. null یعنی خطای فیلدی (کنار همان فیلد نمایش داده می‌شود).
+   */
+  private buildEditPatch(): { patch: Partial<OrgSectionAssignment>; target: AssignmentTargetRef | null } | null {
+    const e = this.editAssignment;
+    const a = e.assignment!;
+    const patch: Partial<OrgSectionAssignment> = { role: e.role, is_active: e.is_active };
+    const errors: Record<string, string> = {};
+    let target: AssignmentTargetRef | null = null;
+    if (e.level === 'company') {
+      target = this.companyTarget();
+    } else if (e.level === 'project') {
+      if (!e.projectId) errors['project'] = 'پروژه را انتخاب کنید.';
+      else target = this.projectTarget(e.projectId);
+    } else {
+      const sec = this.sections.find(s => s.id === e.sectionId);
+      if (!sec?.id) errors['section'] = 'بخش را انتخاب کنید.';
+      else target = { level: 'section', id: sec.id, name: sec.name, projectId: Number(sec.project), projectName: sec.project_name };
+    }
+    e.errors = errors;
+    if (Object.keys(errors).length > 0) return null;
+    if (target && !this.isSameTarget(a, target)) {
+      patch.company = target.level === 'company' ? target.id : null;
+      patch.project = target.level === 'project' ? target.id : null;
+      patch.section = target.level === 'section' ? target.id : null;
+      return { patch, target };
+    }
+    return { patch, target: null };
   }
 
   submitEditAssignment(): void {
     const id = this.editAssignment.assignment?.id;
     if (!id) return;
+    const built = this.buildEditPatch();
+    if (!built) {
+      this.cdr.markForCheck();
+      return;
+    }
+    const { patch, target } = built;
     this.editAssignment.isSubmitting = true;
-    const patch = { role: this.editAssignment.role, is_active: this.editAssignment.is_active };
+    // نمای محلی صف آفلاین: فیلدهای نمایشی مقصد تازه هم روی ردیف می‌نشینند
+    const localPatch: Partial<OrgSectionAssignment> = target ? { ...patch, ...this.targetFields(target) } : patch;
     this.api.updateAssignment(id, patch).subscribe({
       next: updated => {
         const queued = CompanyProjectsTabComponent.isQueued(updated);
         if (queued) this.queuedToast();
         else this.toast.success('انتساب ویرایش شد.');
-        this.assignments = this.assignments.map(a => a.id === id ? (queued ? { ...a, ...patch, _offlinePending: true } : { ...a, ...updated }) : a);
+        this.assignments = this.assignments.map(a => a.id === id ? (queued ? { ...a, ...localPatch, _offlinePending: true } : { ...a, ...updated }) : a);
         this.closeEditAssignment();
         this.afterDataChange();
       },
       error: err => {
         this.editAssignment.isSubmitting = false;
+        // خطای مقصد سرور (تکراری یا نامعتبر) کنار فیلد مقصد هم نشان داده می‌شود
+        const body = err?.error;
+        if (body && typeof body === 'object') {
+          const fieldKey = this.editAssignment.level === 'company' ? 'level' : this.editAssignment.level;
+          for (const k of ['target', 'section', 'project', 'company', 'non_field_errors']) {
+            const v = body[k];
+            if (v) {
+              this.editAssignment.errors = { ...this.editAssignment.errors, [fieldKey]: Array.isArray(v) ? v.join('، ') : String(v) };
+              break;
+            }
+          }
+        }
         this.toast.error(this.extractApiErrorMessage(err, 'خطا در ویرایش انتساب'));
         this.cdr.markForCheck();
       }
@@ -909,7 +1280,8 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
   async deleteAssignment(assignment: OrgSectionAssignment): Promise<void> {
     if (!this.canWrite || !assignment.id) return;
     const who = assignment.user_full_name || assignment.username || '';
-    const ok = await this.confirm('لغو انتساب', `آیا از لغو انتساب «${who}» به این بخش اطمینان دارید؟`, 'لغو انتساب');
+    const where = this.levelOf(assignment) === 'company' ? 'در سطح شرکت' : this.levelOf(assignment) === 'project' ? 'در سطح پروژه' : 'به این بخش';
+    const ok = await this.confirm('لغو انتساب', `آیا از لغو انتساب «${who}» ${where} اطمینان دارید؟`, 'لغو انتساب');
     if (!ok) return;
     const id = assignment.id;
     this.api.deleteAssignment(id).subscribe({

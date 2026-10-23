@@ -66,15 +66,14 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   /**
-   * دکمه‌های ورود به ماژول‌ها در پوسته (operations.shellLink)؛ ماژول وابسته به پرچم انبار شرکت
-   * فقط وقتی شرکت فعال آن ماژول را دارد نشان داده می‌شود.
+   * دکمه‌های ورود به ماژول‌ها در پوسته (operations.shellLink)؛ هر ماژول فقط وقتی برای شرکت فعال
+   * روشن است (enabled_modules) نشان داده می‌شود.
    */
   get moduleShellLinks(): Array<{ code: string; labelFa: string; mobileLabelFa: string; route: string; icon: IconName; textClass: string; order: number }> {
     const textClass: Record<string, string> = { indigo: 'text-indigo-300', emerald: 'text-emerald-300' };
     return this.moduleRegistry.getExtensions('operations')
       .filter(e => !!e.extension.shellLink)
-      .filter(e => !e.module?.extensions?.companies?.hasWarehouseModuleToggle
-        || (this.activeCompanyService?.hasWarehouseModuleSignal?.() ?? true))
+      .filter(e => this.activeCompanyService?.isModuleEnabled?.(e.moduleCode) ?? true)
       .map(e => {
         const l = e.extension.shellLink!;
         const order = e.module?.extensions?.launcherTile?.switcher?.order ?? 100;

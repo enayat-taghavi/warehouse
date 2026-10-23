@@ -936,7 +936,7 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
     """
     DEF-12: گیرندگان اعلان هر مرحله در یک کوئری.
     UserCompanyAccess فیلد is_active ندارد؛ دسترسی شرکت همان قاعدهٔ get_user_allowed_companies است:
-    دسترسی کامل صریح (workspace_full) یا انتساب فعال به بخشی از پروژه‌های همان شرکت.
+    دسترسی کامل صریح (workspace_full) یا انتساب فعال به خود شرکت، یکی از پروژه‌ها یا یکی از بخش‌های آن.
     """
     from django.contrib.auth import get_user_model
     from django.db.models import Q
@@ -969,9 +969,8 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
     if company_id:
         # عضو شرکت فقط از منبع‌های خودکار (طرح مجوزهای بخش‌به‌بخش، ق۲)
         from platform_core.registry import contributions
-        in_company_q = Q(is_superuser=True) | Q(
-            section_assignments__is_active=True, section_assignments__section__project__company_id=company_id
-        )
+        # انتساب سازمانی در هر سطح (شرکت، پروژه یا بخش) از سازندهٔ هسته (build_section_member_q) می‌آید
+        in_company_q = Q(is_superuser=True)
         for builder in contributions('company_member_q_builders'):
             builder_q = builder({company_id})
             if builder_q is not None:
@@ -981,13 +980,18 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
         users = users.filter(is_superuser=True)
     candidate_ids = set(users.values_list('id', flat=True).distinct())
 
-    # سرپرست: اگر کاربر به بخشی منتسب است، فقط سرپرستِ همان بخشِ پرونده اعلان می‌گیرد
+    # سرپرست: اگر کاربر انتساب سازمانی دارد، فقط کسی اعلان می‌گیرد که بخشِ پرونده را پوشش می‌دهد
+    # (انتساب مستقیم بخش یا انتساب سطح پروژه یا شرکتِ آن؛ طرح ۲.۱)
     if stage in ('pending_supervisor', 'change_request_created') and section_id and candidate_ids:
         from personnel.models import SectionAssignment
+        from companies.org_roles import assignments_covering_section
         superuser_ids = set(User.objects.filter(id__in=candidate_ids, is_superuser=True).values_list('id', flat=True))
-        assigned = SectionAssignment.objects.filter(user_id__in=candidate_ids, is_active=True)
-        users_with_any_section = set(assigned.values_list('user_id', flat=True))
-        users_in_this_section = set(assigned.filter(section_id=section_id).values_list('user_id', flat=True))
+        users_with_any_section = set(
+            SectionAssignment.objects.filter(user_id__in=candidate_ids, is_active=True).values_list('user_id', flat=True)
+        )
+        users_in_this_section = set(
+            assignments_covering_section(section_id).filter(user_id__in=candidate_ids).values_list('user_id', flat=True)
+        )
         candidate_ids = {
             uid for uid in candidate_ids
             if uid in superuser_ids or uid in users_in_this_section or uid not in users_with_any_section

@@ -30,7 +30,6 @@ from ..models import (
     PettyCashTransaction,
     WorkflowAuditLog,
     ProjectSection,
-    SectionAssignment,
     PersonnelProfile,
     PersonnelChangeRequest,
 )
@@ -50,6 +49,10 @@ from .scope_helpers import (
     readable_company_ids,
     resolve_import_company,
 )
+from companies.org_roles import user_has_section_role
+
+# نقش‌هایی که تنخواه همهٔ متصدیان بخش را می‌بینند؛ انتساب سطح شرکت یا پروژه هم برای بخش‌های زیرمجموعه حساب است (طرح ۲.۱)
+TREASURY_OVERSIGHT_ROLES = ('supervisor', 'accountant', 'manager', 'treasury')
 
 class CounterpartyViewSet(viewsets.ModelViewSet):
     """
@@ -433,12 +436,7 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             qs = qs.filter(custodian_id=custodian_id)
         # کارمندان عادی فقط حساب تنخواه خود را مشاهده می‌کنند
         if not user.is_superuser:
-            is_manager = SectionAssignment.objects.filter(
-                user=user,
-                section_id=section_id,
-                is_active=True,
-                role__in=['supervisor', 'accountant', 'manager', 'treasury']
-            ).exists() if section_id else False
+            is_manager = bool(section_id) and user_has_section_role(user, section_id, TREASURY_OVERSIGHT_ROLES)
             if not is_manager:
                 qs = qs.filter(custodian=user)
         return qs.order_by('section', 'custodian')
@@ -494,12 +492,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
 
         # اگر کاربر دسترسی مدیریتی نداشته باشد، فقط اسناد تنخواه خودش در بخش را می‌بیند
         if not user.is_superuser and not custodian_id:
-            is_manager = SectionAssignment.objects.filter(
-                user=user,
-                section_id=section_id,
-                is_active=True,
-                role__in=['supervisor', 'accountant', 'manager', 'treasury']
-            ).exists() if section_id else False
+            is_manager = bool(section_id) and user_has_section_role(user, section_id, TREASURY_OVERSIGHT_ROLES)
             if not is_manager:
                 qs = qs.filter(custodian=user)
 
@@ -589,9 +582,10 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             )
 
         target_user_id = request.query_params.get('custodian_id')
-        if target_user_id and (request.user.is_superuser or SectionAssignment.objects.filter(
-            user=request.user, section_id=section_id, is_active=True, role__in=['supervisor', 'accountant', 'manager', 'treasury']
-        ).exists()):
+        if target_user_id and (
+            request.user.is_superuser
+            or user_has_section_role(request.user, section_id, TREASURY_OVERSIGHT_ROLES)
+        ):
             custodian = get_user_model().objects.filter(id=target_user_id).first() or request.user
         else:
             custodian = request.user

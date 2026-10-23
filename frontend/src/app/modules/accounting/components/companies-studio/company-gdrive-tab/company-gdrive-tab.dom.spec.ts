@@ -140,11 +140,14 @@ describe('CompanyGdriveTabComponent: Google Drive Sync Tab with and without Acco
               module: { code: 'accounting' },
               moduleCode: 'accounting',
               extension: {
-                providesTreasury: true,
-                hasWarehouseModuleToggle: true
+                providesTreasury: true
               }
             }
           ];
+        }
+        // ماژولی که سوییچر محدودهٔ انبار پوسته را عرضه می‌کند (منبع همگام‌سازی تصاویر کالا)
+        if (point === 'layoutNav') {
+          return [{ moduleCode: 'scope-module', extension: { showWarehouseSwitcher: true } }];
         }
         return [];
       }),

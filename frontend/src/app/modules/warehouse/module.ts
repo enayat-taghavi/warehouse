@@ -156,9 +156,6 @@ export const MODULE: WhFrontendModule = {
         }
       })
     },
-    companies: {
-      hasWarehouseModuleToggle: true
-    },
     users: {
       permissionGroup: { key: 'WH_AUDIT', titleFa: 'انبارگردانی 📦', order: 10, codenames: WAREHOUSE_PERMISSION_CODENAMES },
       shortPermissionNames: WAREHOUSE_SHORT_PERMISSION_NAMES,

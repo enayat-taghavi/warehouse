@@ -113,10 +113,10 @@
             <th class="py-3 px-3.5">کد</th>
             <th class="py-3 px-3.5">نام شرکت</th>
             <th class="py-3 px-3.5">شناسه ملی</th>
-            <th class="py-3 px-3.5">کد کارگاه بیمه</th>
+            <th class="py-3 px-3.5">کد اقتصادی</th>
             <th class="py-3 px-3.5">مدیرعامل</th>
             <th *ngFor="let cell of listCells" class="py-3 px-3.5 text-center">{{ cell.labelFa }}</th>
-            <th *ngIf="isWarehouseInstalled" class="py-3 px-3.5 text-center">سامانه انبار</th>
+            <th *ngIf="showModulesColumn" class="py-3 px-3.5 text-center">ماژول‌ها</th>
             <th class="py-3 px-3.5 text-center">وضعیت</th>
             <th class="py-3 px-3.5 text-center w-28">عملیات</th>
           </tr>
@@ -145,28 +145,20 @@
               </div>
             </td>
             <td class="py-3 px-3.5 font-mono text-slate-600" dir="ltr">{{ company.national_id || '—' }}</td>
-            <td class="py-3 px-3.5 font-mono text-slate-600" dir="ltr">{{ company.workshop_code || '—' }}</td>
+            <td class="py-3 px-3.5 font-mono text-slate-600" dir="ltr">{{ company.economic_code || '—' }}</td>
             <td class="py-3 px-3.5 text-slate-700">{{ company.ceo_name || '—' }}</td>
             <!-- ستون‌های مشارکتی ماژول‌ها (listCells) -->
             <td *ngFor="let cell of listCells" class="py-3 px-3.5 text-center">
               <ng-container *ngTemplateOutlet="listCellOutlet; context: { cell: cell, company: company, variant: 'table' }"></ng-container>
             </td>
 
-            <!-- ستون سامانه انبارداری -->
-            <td *ngIf="isWarehouseInstalled" class="py-3 px-3.5 text-center">
-              <span 
-                *ngIf="company.has_warehouse_module !== false" 
-                class="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full text-[10px]"
-                title="سامانه انبارداری و کاردکس کالا فعال است">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box" aria-hidden="true"></svg>
-                <span>فعال</span>
-              </span>
-              <span 
-                *ngIf="company.has_warehouse_module === false" 
-                class="inline-flex items-center gap-1 font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full text-[10px]"
-                title="سامانه انبارداری برای این شرکت غیرفعال است">
-                <span>—</span>
-                <span>غیرفعال</span>
+            <!-- ستون ماژول‌های روشن شرکت (enabled_modules؛ فهرست از رجیستری ماژول‌ها) -->
+            <td *ngIf="showModulesColumn" class="py-3 px-3.5 text-center">
+              <span class="inline-flex flex-wrap items-center justify-center gap-1">
+                <span *ngFor="let m of companyModuleState(company)"
+                  class="inline-flex items-center gap-0.5 font-bold px-2 py-0.5 rounded-full text-[10px] border"
+                  [ngClass]="m.enabled ? 'text-indigo-700 bg-indigo-50 border-indigo-200/80' : 'text-slate-600 bg-slate-100 border-slate-200 line-through'"
+                  [title]="m.titleShortFa + (m.enabled ? ' برای این شرکت روشن است' : ' برای این شرکت خاموش است')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" [appIcon]="m.enabled ? 'status-approved' : 'status-rejected'" aria-hidden="true"></svg>{{ m.titleShortFa }}<span class="sr-only">{{ m.enabled ? ' (روشن)' : ' (خاموش)' }}</span></span>
               </span>
             </td>
 
@@ -286,27 +278,25 @@
           </span>
         </div>
 
-        <!-- بدنه کارت: شناسه ملی، کد کارگاهی، پروژه‌ها و ماژول انبارداری -->
+        <!-- بدنه کارت: شناسه ملی، کد اقتصادی، ستون‌های مشارکتی و ماژول‌های روشن -->
         <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
           <div>
             <span class="text-slate-400 block text-[10px]">شناسه ملی:</span>
             <span class="font-mono text-slate-700 font-bold" dir="ltr">{{ company.national_id || '—' }}</span>
           </div>
           <div>
-            <span class="text-slate-400 block text-[10px]">کد کارگاه بیمه:</span>
-            <span class="font-mono text-slate-700 font-bold" dir="ltr">{{ company.workshop_code || '—' }}</span>
+            <span class="text-slate-400 block text-[10px]">کد اقتصادی:</span>
+            <span class="font-mono text-slate-700 font-bold" dir="ltr">{{ company.economic_code || '—' }}</span>
           </div>
           <!-- ستون‌های مشارکتی ماژول‌ها در جدول مشخصات کارت (listCells با cardPlacement=grid) -->
           <ng-container *ngFor="let cell of cardGridCells">
             <ng-container *ngTemplateOutlet="listCellOutlet; context: { cell: cell, company: company, variant: 'card' }"></ng-container>
           </ng-container>
-          <div *ngIf="isWarehouseInstalled" class="flex items-center gap-1.5">
-            <span class="text-slate-400 text-[10px]">انبارداری:</span>
-            <span *ngIf="company.has_warehouse_module !== false" class="text-indigo-700 font-bold text-[10px] inline-flex items-center gap-1">
-              <span>فعال</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box" aria-hidden="true"></svg>
-            </span>
-            <span *ngIf="company.has_warehouse_module === false" class="text-slate-400 font-bold text-[10px]">غیرفعال</span>
+          <div *ngIf="showModulesColumn" class="col-span-2 flex flex-wrap items-center gap-1.5">
+            <span class="text-slate-400 text-[10px]">ماژول‌ها:</span>
+            <span *ngFor="let m of companyModuleState(company)"
+              class="inline-flex items-center gap-0.5 font-bold text-[10px] px-1.5 py-0.5 rounded-full border"
+              [ngClass]="m.enabled ? 'text-indigo-700 bg-indigo-50 border-indigo-200/80' : 'text-slate-600 bg-slate-100 border-slate-200 line-through'"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" [appIcon]="m.enabled ? 'status-approved' : 'status-rejected'" aria-hidden="true"></svg>{{ m.titleShortFa }}<span class="sr-only">{{ m.enabled ? ' (روشن)' : ' (خاموش)' }}</span></span>
           </div>
         </div>
 
@@ -444,7 +434,8 @@
         <!-- تب ۱: مشخصات هویتی و ثبتی                                          -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'identity'" class="space-y-4" role="tabpanel" id="co-studio-panel-identity" aria-labelledby="co-studio-tab-identity">
-          <p *ngIf="isCoreTabReadonly('identity')" class="p-3 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-2xl" role="note">این بخش برای شما فقط خواندنی است.</p>
+          <ng-container *ngIf="isCoreSectionVisible('identity')">
+          <p *ngIf="isCoreTabReadonly('identity')" class="p-3 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-2xl" role="note">این حوزه برای شما فقط خواندنی است.</p>
           <fieldset [disabled]="isCoreTabReadonly('identity')" class="space-y-4 min-w-0">
             <legend class="sr-only">{{ isCoreTabReadonly('identity') ? 'مشخصات هویتی (فقط خواندنی)' : 'مشخصات هویتی' }}</legend>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
@@ -651,6 +642,44 @@
                 {{ companyModal.errors['postal_code'] }}
               </span>
             </div>
+
+            <!-- کد اقتصادی قدیم -->
+            <div>
+              <label for="co_economic_code" class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی قدیم (۱۲ رقم)</label>
+              <input
+                id="co_economic_code"
+                type="text"
+                [ngModel]="companyModal.data.economic_code"
+                (ngModelChange)="onDigitsInput('economic_code', $event)"
+                [disabled]="!canWriteField('economic_code')"
+                inputmode="numeric"
+                placeholder="411111111111"
+                dir="ltr"
+                maxlength="12"
+                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 font-mono"
+                [ngClass]="companyModal.errors['economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-line bg-surface'"
+                [attr.aria-invalid]="companyModal.errors['economic_code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['economic_code'] ? 'co-err-economic_code' : null"
+              />
+              <span *ngIf="companyModal.errors['economic_code']" id="co-err-economic_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
+                {{ companyModal.errors['economic_code'] }}
+              </span>
+            </div>
+
+            <!-- ماه شروع سال مالی شرکت (مقرر در اساسنامه) -->
+            <div>
+              <label for="co_fiscal_start" class="block text-xs font-bold text-slate-700 mb-1">ماه شروع سال مالی</label>
+              <select
+                id="co_fiscal_start"
+                [(ngModel)]="companyModal.data.fiscal_year_start_month"
+                [disabled]="!canWriteField('fiscal_year_start_month')"
+                class="w-full px-3 py-2 text-xs border border-line rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-surface font-bold">
+                <option [ngValue]="1">فروردین (تقویم هجری شمسی عادی)</option>
+                <option [ngValue]="7">مهرماه (سال‌های مالی پاییزه)</option>
+                <option [ngValue]="10">دی‌ماه (منطبق بر سال میلادی ۱ ژانویه)</option>
+              </select>
+              <span class="block text-[10px] text-slate-400 mt-1">برای بستن حساب‌ها و گزارش‌های قانونی</span>
+            </div>
           </div>
 
           <!-- نشانی دفتر مرکزی -->
@@ -701,221 +730,40 @@
             </div>
           </div>
 
-          <!-- چک‌باکس‌های وضعیت و ماژول انبارداری (فقط مدیر کل) -->
+          <!-- چک‌باکس وضعیت شرکت (فقط مدیر کل) -->
           <div *ngIf="!isRestricted" class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
             <div class="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 id="co_active"
-                [(ngModel)]="companyModal.data.is_active" 
+                [(ngModel)]="companyModal.data.is_active"
                 class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
               />
               <label for="co_active" class="min-h-[40px] flex items-center text-xs font-bold text-slate-700 cursor-pointer select-none">
                 شرکت فعال است و در پروژه‌ها قابل استفاده می‌باشد
               </label>
             </div>
+          </div>
 
-            <div *ngIf="isWarehouseInstalled" class="flex items-center gap-2 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
-              <input 
-                type="checkbox" 
-                id="co_has_warehouse" 
-                [(ngModel)]="companyModal.data.has_warehouse_module" 
-                class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-indigo-300 cursor-pointer"
-              />
-              <label for="co_has_warehouse" class="min-h-[40px] text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="box" aria-hidden="true"></svg>
-                <span>فعال بودن سامانه انبارداری و انبارگردانی برای این شرکت</span>
+          <!-- ماژول‌های روشن این شرکت (فقط مدیر کل؛ disabled_modules). فهرست از رجیستری ماژول‌های نصب‌شده می‌آید -->
+          <fieldset *ngIf="!isRestricted && switchableModules.length > 0" class="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100 space-y-2 min-w-0">
+            <legend class="text-xs font-black text-slate-800 px-1">ماژول‌های این شرکت</legend>
+            <p class="text-[11px] text-slate-500">ماژول خاموش برای کاربران این شرکت در دسترس نیست؛ داده‌های آن پاک نمی‌شود.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <label *ngFor="let m of switchableModules" [attr.for]="'co_module_' + m.code"
+                class="flex items-center gap-2 min-h-[40px] px-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer select-none text-xs font-bold text-slate-700">
+                <input
+                  type="checkbox"
+                  [id]="'co_module_' + m.code"
+                  [checked]="isModuleSwitchOn(m.code)"
+                  (change)="toggleModuleSwitch(m.code, $any($event.target).checked)"
+                  [attr.aria-label]="'روشن بودن ' + m.titleFa + ' برای این شرکت'"
+                  class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-indigo-300 cursor-pointer shrink-0"
+                />
+                <span class="min-w-0">{{ m.titleFa }}</span>
               </label>
             </div>
-          </div>
           </fieldset>
-        </div>
-
-        <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <!-- تب ۲: سال مالی، کارگاه بیمه و سامانه مودیان                           -->
-        <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'fiscal_insurance'" class="space-y-4" role="tabpanel" id="co-studio-panel-fiscal_insurance" aria-labelledby="co-studio-tab-fiscal_insurance">
-          <ng-container *ngIf="isCoreSectionVisible('fiscal_insurance')">
-          <p *ngIf="isCoreTabReadonly('fiscal_insurance')" class="p-3 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-2xl" role="note">این بخش برای شما فقط خواندنی است.</p>
-          <fieldset [disabled]="isCoreTabReadonly('fiscal_insurance')" class="space-y-4 min-w-0">
-            <legend class="sr-only">{{ isCoreTabReadonly('fiscal_insurance') ? 'بیمه و مالیات (فقط خواندنی)' : 'بیمه و مالیات' }}</legend>
-          <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="info" aria-hidden="true"></svg>
-            <span>فیلدهای زیر مربوط به کد کارگاه مرکزی شرکت متبوع و اتصالات حافظه مالیاتی و سامانه مودیان هستند. کدهای کارگاه و ردیف‌های پیمان متناظر با پروژه‌های اجرایی منحصراً در بخش تعریف و مدیریت پروژه‌ها تعیین می‌گردند.</span>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            <!-- کد کارگاه مرکزی تأمین اجتماعی شرکت -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد کارگاه بیمه شرکت (۱۰ رقم)</label>
-              <input 
-                type="text" 
-                [ngModel]="companyModal.data.workshop_code"
-                (ngModelChange)="onDigitsInput('workshop_code', $event)"
-                inputmode="numeric" 
-                placeholder="2398012345"
-                dir="ltr" 
-                maxlength="10"
-                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                [ngClass]="companyModal.errors['workshop_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
-                [attr.aria-invalid]="companyModal.errors['workshop_code'] ? true : null"
-                [attr.aria-describedby]="companyModal.errors['workshop_code'] ? 'co-err-workshop_code' : null"
-              />
-              <span *ngIf="companyModal.errors['workshop_code']" id="co-err-workshop_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
-                {{ companyModal.errors['workshop_code'] }}
-              </span>
-              <span class="block text-[10px] text-slate-400 mt-1">کد ۱۰ رقمی کارگاه دفتر مرکزی شرکت در سازمان تأمین اجتماعی</span>
-            </div>
-
-            <!-- کد اقتصادی قدیم -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی قدیم (۱۲ رقم)</label>
-              <input 
-                type="text" 
-                [ngModel]="companyModal.data.economic_code"
-                (ngModelChange)="onDigitsInput('economic_code', $event)"
-                [disabled]="!canWriteField('economic_code')"
-                inputmode="numeric" 
-                placeholder="411111111111"
-                dir="ltr" 
-                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                [ngClass]="companyModal.errors['economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
-                [attr.aria-invalid]="companyModal.errors['economic_code'] ? true : null"
-                [attr.aria-describedby]="companyModal.errors['economic_code'] ? 'co-err-economic_code' : null"
-              />
-              <span *ngIf="companyModal.errors['economic_code']" id="co-err-economic_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
-                {{ companyModal.errors['economic_code'] }}
-              </span>
-              <span class="block text-[10px] text-slate-400 mt-1">کد اقتصادی پرونده مالیاتی عملکرد و ارزش افزوده</span>
-            </div>
-
-            <!-- شناسه یکتای حافظه مالیاتی (سامانه مودیان) -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">شناسه یکتای حافظه مالیاتی (۶ کاراکتر)</label>
-              <input 
-                type="text" 
-                [ngModel]="companyModal.data.tax_memory_id"
-                (ngModelChange)="onTaxMemoryIdInput($event)" 
-                placeholder="A12B34"
-                dir="ltr" 
-                maxlength="6"
-                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono uppercase"
-                [ngClass]="companyModal.errors['tax_memory_id'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
-                [attr.aria-invalid]="companyModal.errors['tax_memory_id'] ? true : null"
-                [attr.aria-describedby]="companyModal.errors['tax_memory_id'] ? 'co-err-tax_memory_id' : null"
-              />
-              <span *ngIf="companyModal.errors['tax_memory_id']" id="co-err-tax_memory_id" class="text-[10px] text-rose-600 font-bold mt-1 block">
-                {{ companyModal.errors['tax_memory_id'] }}
-              </span>
-              <span class="block text-[10px] text-slate-400 mt-1">شناسه صادر شده توسط کارپوشه سازمان امور مالیاتی</span>
-            </div>
-
-            <!-- کد اقتصادی جدید ۱۶ رقمی سامانه مودیان -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی جدید سامانه مودیان (۱۶ رقم)</label>
-              <input 
-                type="text" 
-                [ngModel]="companyModal.data.tax_economic_code"
-                (ngModelChange)="onDigitsInput('tax_economic_code', $event)"
-                inputmode="numeric" 
-                placeholder="1400812345600001"
-                dir="ltr" 
-                maxlength="16"
-                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                [ngClass]="companyModal.errors['tax_economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
-                [attr.aria-invalid]="companyModal.errors['tax_economic_code'] ? true : null"
-                [attr.aria-describedby]="companyModal.errors['tax_economic_code'] ? 'co-err-tax_economic_code' : null"
-              />
-              <span *ngIf="companyModal.errors['tax_economic_code']" id="co-err-tax_economic_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
-                {{ companyModal.errors['tax_economic_code'] }}
-              </span>
-              <span class="block text-[10px] text-slate-400 mt-1">ترکیب شناسه ملی اشخاص حقوقی و کد شعبه اختصاصی</span>
-            </div>
-
-            <!-- کد شعبه تأمین اجتماعی -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد شعبه سازمان تأمین اجتماعی</label>
-              <input 
-                type="text" 
-                [ngModel]="companyModal.data.social_security_branch_code"
-                (ngModelChange)="onDigitsInput('social_security_branch_code', $event)"
-                inputmode="numeric" 
-                placeholder="22"
-                dir="ltr" 
-                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                [ngClass]="companyModal.errors['social_security_branch_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
-                [attr.aria-invalid]="companyModal.errors['social_security_branch_code'] ? true : null"
-                [attr.aria-describedby]="companyModal.errors['social_security_branch_code'] ? 'co-err-social_security_branch_code' : null"
-              />
-              <span *ngIf="companyModal.errors['social_security_branch_code']" id="co-err-social_security_branch_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
-                {{ companyModal.errors['social_security_branch_code'] }}
-              </span>
-              <span class="block text-[10px] text-slate-400 mt-1">کد عددی شعبه ناظر بر پرونده دفتر مرکزی</span>
-            </div>
-
-            <!-- نام شعبه تأمین اجتماعی -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">نام شعبه سازمان تأمین اجتماعی</label>
-              <input 
-                type="text" 
-                [(ngModel)]="companyModal.data.social_security_branch_name" 
-                placeholder="مثال: شعبه ۲ شیراز" 
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              />
-              <span class="block text-[10px] text-slate-400 mt-1">عنوان کامل شعبه تأمین اجتماعی صادرکننده مفاصاحساب</span>
-            </div>
-
-            <!-- ردیف پیمان کارگاه مرکزی -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">ردیف پیمان کارگاه مرکزی</label>
-              <input 
-                type="text" 
-                [ngModel]="companyModal.data.contract_row"
-                (ngModelChange)="onDigitsInput('contract_row', $event)"
-                inputmode="numeric" 
-                placeholder="000"
-                dir="ltr" 
-                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                [ngClass]="companyModal.errors['contract_row'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
-                [attr.aria-invalid]="companyModal.errors['contract_row'] ? true : null"
-                [attr.aria-describedby]="companyModal.errors['contract_row'] ? 'co-err-contract_row' : null"
-              />
-              <span *ngIf="companyModal.errors['contract_row']" id="co-err-contract_row" class="text-[10px] text-rose-600 font-bold mt-1 block">
-                {{ companyModal.errors['contract_row'] }}
-              </span>
-              <span class="block text-[10px] text-slate-400 mt-1">ردیف پیمان اختصاصی یا ۰۰۰ برای کارگاه مادر</span>
-            </div>
-
-            <!-- نام کارفرما در لیست بیمه -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">نام کارفرما در لیست دیسکت بیمه</label>
-              <input 
-                type="text" 
-                [(ngModel)]="companyModal.data.employer_name" 
-                placeholder="نام مدیرعامل یا شرکت در دیسکت" 
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              />
-              <span class="block text-[10px] text-slate-400 mt-1">نام دقیق کارفرما در ساختار فایل‌های DSKKAR00</span>
-            </div>
-          </div>
-
-          <!-- ماه شروع سال مالی شرکت (مقرر در اساسنامه) -->
-          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <span class="text-xs font-black text-slate-800 block">دوره و تقویم سال مالی شرکت</span>
-              <span class="text-[11px] text-slate-500">تعیین ماه آغاز سال مالی جهت بستن حساب‌ها و گزارشات قانونی</span>
-            </div>
-            <div class="w-full md:w-64">
-              <select 
-                [(ngModel)]="companyModal.data.fiscal_year_start_month"
-                [disabled]="!canWriteField('fiscal_year_start_month')" 
-                class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold">
-                <option [ngValue]="1">فروردین (تقویم هجری شمسی عادی)</option>
-                <option [ngValue]="7">مهرماه (سال‌های مالی پاییزه)</option>
-                <option [ngValue]="10">دی‌ماه (منطبق بر سال میلادی ۱ ژانویه)</option>
-              </select>
-            </div>
-          </div>
           </fieldset>
           </ng-container>
         </div>
@@ -1188,9 +1036,9 @@
                 <h4 id="co-members-title" class="text-xs font-black text-slate-800">اعضای فضای کاری (خودکار)</h4>
                 <span *ngIf="!membersLoading && !permissionExtrasError" class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{{ fa(companyMembers.length) }} عضو</span>
               </div>
-              <p class="text-[11px] text-slate-500 leading-relaxed">عضویت دستی نیست: کاربر با انتساب به بخشی از پروژه‌های این شرکت یا به یکی از انبارهای آن عضو می‌شود.</p>
+              <p class="text-[11px] text-slate-500 leading-relaxed">عضویت دستی نیست: کاربر با انتساب در سطح این شرکت، یکی از پروژه‌ها یا بخش‌های آن، یا با انتساب به یکی از انبارهای آن عضو می‌شود.</p>
               <div *ngIf="permissionExtrasError" class="py-3 text-center space-y-2 border border-dashed border-rose-200 rounded-xl bg-rose-50/40" role="alert">
-                <div class="text-[11px] font-bold text-slate-600">{{ permissionExtrasOffline ? 'اتصال برقرار نیست؛ اعضا و بخش‌های مجوز دریافت نشد.' : 'دریافت اعضا یا بخش‌های مجوز انجام نشد.' }}</div>
+                <div class="text-[11px] font-bold text-slate-600">{{ permissionExtrasOffline ? 'اتصال برقرار نیست؛ اعضا و حوزه‌های اطلاعات شرکت دریافت نشد.' : 'دریافت اعضا یا حوزه‌های اطلاعات شرکت انجام نشد.' }}</div>
                 <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryTab('access')"></button>
               </div>
               <div *ngIf="membersLoading" role="status" aria-busy="true" aria-label="در حال دریافت اعضا">
@@ -1210,7 +1058,7 @@
             <!-- فهرست کاربران مجاز این شرکت -->
             <div>
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <h4 class="text-xs font-black text-slate-800">مجوزهای بخش‌به‌بخش کاربران</h4>
+                <h4 class="text-xs font-black text-slate-800">مجوز کاربران در حوزه‌های اطلاعات شرکت</h4>
                 <span class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                   {{ fa(studioAccesses.length) }} کاربر
                 </span>
@@ -1225,7 +1073,7 @@
               </div>
 
               <div *ngIf="!isLoadingStudioAccesses && !tabLoadError['access'] && studioAccesses.length === 0" class="py-8 px-3 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
-                هنوز مجوز بخش‌به‌بخشی برای کاربری ثبت نشده است؛ اعضای خودکار در بخش بالا دیده می‌شوند.
+                هنوز مجوز حوزه‌ای برای کاربری ثبت نشده است؛ اعضای خودکار در قسمت بالا دیده می‌شوند.
               </div>
 
               <!-- دسکتاپ: جدول -->
@@ -1236,7 +1084,7 @@
                       <th class="py-2.5 px-3 w-10 text-center">ردیف</th>
                       <th class="py-2.5 px-3">نام و نام خانوادگی</th>
                       <th class="py-2.5 px-3">نام کاربری</th>
-                      <th class="py-2.5 px-3">مجوز بخش‌ها</th>
+                      <th class="py-2.5 px-3">مجوز حوزه‌ها</th>
                       <th class="py-2.5 px-3">سمت در شرکت</th>
                       <th class="py-2.5 px-3 text-center">وضعیت پیش‌فرض</th>
                       <th class="py-2.5 px-3 text-center">تاریخ انتساب</th>
@@ -1359,12 +1207,12 @@
                 @defer (on immediate) {
                   <app-company-projects-tab [companyId]="companyModal.data.id!" [canWrite]="canWriteSection('projects')" />
                 } @loading (minimum 200ms) {
-                  <div role="status" aria-busy="true" aria-label="در حال بارگذاری بخش">
+                  <div role="status" aria-busy="true" aria-label="در حال بارگذاری">
                     <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
                   </div>
                 } @error {
                   <div class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
-                    <div class="text-xs font-bold text-slate-600">بارگذاری این بخش انجام نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</div>
+                    <div class="text-xs font-bold text-slate-600">بارگذاری این قسمت انجام نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</div>
                     <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryProjectsTab()"></button>
                   </div>
                 }
@@ -1409,11 +1257,11 @@
             <ng-container *ngComponentOutlet="cmp; inputs: { companyId: studioContext.companyId() }"></ng-container>
           } @else if (contributionFailed(key)) {
             <div class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
-              <div class="text-xs font-bold text-slate-600">بارگذاری این بخش انجام نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</div>
+              <div class="text-xs font-bold text-slate-600">بارگذاری این قسمت انجام نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</div>
               <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryContribution(key)"></button>
             </div>
           } @else {
-            <div role="status" aria-busy="true" aria-label="در حال بارگذاری بخش">
+            <div role="status" aria-busy="true" aria-label="در حال بارگذاری">
               <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
             </div>
           }
@@ -1469,9 +1317,9 @@
 
 </div>
 
-<!-- ویرایشگر سطح بخش‌ها (طرح مجوزهای شرکت، گام ۱۰) -->
+<!-- ویرایشگر سطح حوزه‌های اطلاعات شرکت (طرح مجوزهای شرکت، گام ۱۰) -->
 <ng-template #sectionLevelsEditor let-acc="acc" let-place="place">
-  <div class="space-y-3" role="group" [attr.aria-label]="'مجوزهای بخش‌های ' + (acc.user_full_name || acc.username)">
+  <div class="space-y-3" role="group" [attr.aria-label]="'مجوز حوزه‌های ' + (acc.user_full_name || acc.username)">
     <div class="flex flex-col sm:flex-row sm:items-end gap-2">
       <div class="flex-1">
         <label [for]="'tpl_' + place + acc.id" class="block text-[11px] font-bold text-slate-700 mb-1">اعمال قالب</label>

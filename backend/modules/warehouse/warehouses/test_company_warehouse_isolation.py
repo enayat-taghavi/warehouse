@@ -15,15 +15,15 @@ class CompanyWarehouseIsolationTestCase(TestCase):
         # ۱. دریافت یا ایجاد شرکت‌ها
         self.company_fa, _ = Company.objects.get_or_create(
             code="FA",
-            defaults={"name": "فارس عالیش", "has_warehouse_module": True}
+            defaults={"name": "فارس عالیش"}
         )
         self.company_pts, _ = Company.objects.get_or_create(
             code="PTS",
-            defaults={"name": "پاینده توان ساینا", "has_warehouse_module": True}
+            defaults={"name": "پاینده توان ساینا"}
         )
         self.company_consulting, _ = Company.objects.get_or_create(
             code="CONSULT",
-            defaults={"name": "شرکت مهندسی مشاور", "has_warehouse_module": False}
+            defaults={"name": "شرکت مهندسی مشاور", "disabled_modules": ["warehouse"]}
         )
 
         # ۲. ایجاد انبارها برای هر شرکت
@@ -141,14 +141,19 @@ class CompanyWarehouseIsolationTestCase(TestCase):
         self.assertEqual(new_wh.company_id, self.company_fa.id)
         self.assertEqual(new_wh.company_name, "فارس عالیش")
 
-    def test_company_has_warehouse_module_flag(self):
-        self.assertTrue(self.company_fa.has_warehouse_module)
-        self.assertFalse(self.company_consulting.has_warehouse_module)
-        
+    def test_company_module_switch_for_warehouse(self):
+        # کلید عمومی ماژول در شرکت (ت۸ طرح ۲.۱) جای has_warehouse_module را گرفته است
+        from companies.access import company_module_enabled
+        self.assertTrue(company_module_enabled(self.company_fa, 'warehouse'))
+        self.assertFalse(company_module_enabled(self.company_consulting, 'warehouse'))
+        self.assertFalse(company_module_enabled(self.company_consulting.id, 'warehouse'))
+
         self.client.force_authenticate(user=self.superuser)
-        response = self.client.get(f'/api/personnel/companies/{self.company_consulting.id}/')
+        response = self.client.get(f'/api/org/companies/{self.company_consulting.id}/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['has_warehouse_module'], False)
+        self.assertNotIn('warehouse', response.data['enabled_modules'])
+        response = self.client.get(f'/api/org/companies/{self.company_fa.id}/')
+        self.assertIn('warehouse', response.data['enabled_modules'])
 
     def test_regular_user_blocked_from_other_company_warehouses_via_header(self):
         """

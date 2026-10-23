@@ -20,7 +20,8 @@ import jdatetime
 
 from django.contrib.auth import get_user_model
 from common.date_utils import normalize_digits
-from .models import Project, ProjectSection, SectionAssignment, section_role_choices
+from .models import Company, Project, ProjectSection, SectionAssignment, section_role_choices
+from .org_roles import assignments_in_companies_q
 
 User = get_user_model()
 
@@ -89,16 +90,8 @@ PROJECT_COLUMNS = [
     {'title': 'تاریخ ایجاد', 'key': 'created_at', 'width': 22},
 ]
 
-def _scope_q(prefix, company_ids, include_global):
-    q = Q(**{f'{prefix}company_id__in': company_ids})
-    return q | Q(**{f'{prefix}company__isnull': True}) if include_global else q
-
-
-def export_projects_excel(company_ids=None, include_global=True):
-    """
-    company_ids تهی یعنی همهٔ پروژه‌ها (سوپریوزر)؛ وگرنه پروژه‌های همان شرکت‌ها به‌علاوهٔ پروژه‌های سراسری.
-    include_global=False (خروجی یک شرکت در استودیو): پروژهٔ سراسری نمی‌آید.
-    """
+def export_projects_excel(company_ids=None):
+    """company_ids تهی یعنی همهٔ پروژه‌ها (سوپریوزر)؛ وگرنه فقط پروژه‌های همان شرکت‌ها."""
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'پروژه‌های مالی'
@@ -111,7 +104,7 @@ def export_projects_excel(company_ids=None, include_global=True):
     # بهینه‌سازی N+1 کوئری با Count('sections')
     projects = Project.objects.annotate(sections_count=Count('sections'))
     if company_ids is not None:
-        projects = projects.filter(_scope_q('', company_ids, include_global))
+        projects = projects.filter(company_id__in=company_ids)
     for row_idx, p in enumerate(projects.order_by('code'), 3):
         ws.cell(row=row_idx, column=1, value=p.code).alignment = align_data
         ws.cell(row=row_idx, column=2, value=p.name).alignment = align_text
@@ -143,7 +136,7 @@ SECTION_COLUMNS = [
     {'title': 'تاریخ ایجاد', 'key': 'created_at', 'width': 22},
 ]
 
-def export_sections_excel(project_id=None, company_ids=None, include_global=True):
+def export_sections_excel(project_id=None, company_ids=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'بخش‌های پروژه'
@@ -151,7 +144,7 @@ def export_sections_excel(project_id=None, company_ids=None, include_global=True
 
     qs = ProjectSection.objects.select_related('project').all()
     if company_ids is not None:
-        qs = qs.filter(_scope_q('project__', company_ids, include_global))
+        qs = qs.filter(project__company_id__in=company_ids)
     if project_id:
         try:
             qs = qs.filter(project_id=int(project_id))
@@ -195,25 +188,34 @@ ASSIGNMENT_COLUMNS = [
     {'title': 'عنوان نقش', 'key': 'role_display', 'width': 22},
     {'title': 'وضعیت فعال', 'key': 'is_active', 'width': 14},
     {'title': 'تاریخ انتساب', 'key': 'created_at', 'width': 22},
+    {'title': 'کد شرکت', 'key': 'company_code', 'width': 16},
+    {'title': 'سطح انتساب', 'key': 'level', 'width': 14},
 ]
 
-def export_assignments_excel(project_id=None, role=None, company_ids=None, include_global=True):
+# سطح انتساب (طرح ۲.۱، ت۳): کد پروژه و کد بخش خالی یعنی سطح شرکت؛ فقط کد پروژه یعنی سطح پروژه
+LEVEL_LABELS = {'company': 'شرکت', 'project': 'پروژه', 'section': 'بخش'}
+
+
+def export_assignments_excel(project_id=None, role=None, company_ids=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'ماتریس انتساب‌های سازمانی'
     _apply_2row_header(ws, ASSIGNMENT_COLUMNS, header_bg='6366F1')
 
-    qs = SectionAssignment.objects.select_related('user', 'section', 'section__project').all()
+    qs = SectionAssignment.objects.select_related(
+        'user', 'company', 'project__company', 'section__project__company'
+    ).all()
     if company_ids is not None:
-        qs = qs.filter(_scope_q('section__project__', company_ids, include_global))
+        qs = qs.filter(assignments_in_companies_q(company_ids))
     if project_id:
         try:
-            qs = qs.filter(section__project_id=int(project_id))
+            pid = int(project_id)
+            qs = qs.filter(Q(project_id=pid) | Q(section__project_id=pid))
         except (ValueError, TypeError):
             pass
     if role and role != 'all':
         qs = qs.filter(role=role)
-    qs = qs.order_by('section__project__code', 'section__code', 'role')
+    qs = qs.order_by('company__code', 'project__code', 'section__project__code', 'section__code', 'role')
 
     font_data = Font(name='B Nazanin', size=11)
     align_data = Alignment(horizontal='center', vertical='center')
@@ -226,14 +228,19 @@ def export_assignments_excel(project_id=None, role=None, company_ids=None, inclu
         full_name = f"{u.first_name} {u.last_name}".strip() if u else '-'
         ws.cell(row=row_idx, column=1, value=u.username if u else '-').alignment = align_data
         ws.cell(row=row_idx, column=2, value=full_name).alignment = align_text
-        ws.cell(row=row_idx, column=3, value=a.section.project.code if a.section and a.section.project else '-').alignment = align_data
-        ws.cell(row=row_idx, column=4, value=a.section.code if a.section else '-').alignment = align_data
+        project = a.target_project
+        company = a.company if a.company_id else project.company
+        # کد خالی (نه «-») تا خروجی بی‌تغییر دوباره درون‌ریزی شود
+        ws.cell(row=row_idx, column=3, value=project.code if project else '').alignment = align_data
+        ws.cell(row=row_idx, column=4, value=a.section.code if a.section_id else '').alignment = align_data
         ws.cell(row=row_idx, column=5, value=a.role).alignment = align_data
         ws.cell(row=row_idx, column=6, value=role_map.get(a.role, a.role)).alignment = align_data
         ws.cell(row=row_idx, column=7, value='بله' if a.is_active else 'خیر').alignment = align_data
         ws.cell(row=row_idx, column=8, value=_format_datetime_shamsi(a.created_at)).alignment = align_data
+        ws.cell(row=row_idx, column=9, value=company.code if company else '').alignment = align_data
+        ws.cell(row=row_idx, column=10, value=LEVEL_LABELS[a.level]).alignment = align_data
 
-        for c in range(1, 9):
+        for c in range(1, 11):
             ws.cell(row=row_idx, column=c).font = font_data
 
     buf = io.BytesIO()
@@ -302,6 +309,14 @@ def download_org_template(entity_type):
         ws.cell(row=3, column=5, value=sample_code)
         ws.cell(row=3, column=6, value=sample_label)
         ws.cell(row=3, column=7, value='بله')
+        # نمونهٔ سطح پروژه (کد بخش خالی) و سطح شرکت (کد پروژه و بخش خالی)
+        for row, proj in ((4, 'PRJ-01'), (5, '')):
+            ws.cell(row=row, column=1, value='admin')
+            ws.cell(row=row, column=2, value='مدیر سیستم')
+            ws.cell(row=row, column=3, value=proj)
+            ws.cell(row=row, column=5, value=sample_code)
+            ws.cell(row=row, column=6, value=sample_label)
+            ws.cell(row=row, column=7, value='بله')
         ws_lists = _yes_no_list(wb, column=3)
         for idx, (code, label) in enumerate(roles, 1):
             ws_lists.cell(row=idx, column=1, value=code)
@@ -329,9 +344,15 @@ def download_org_template(entity_type):
 def import_projects_from_excel(file_obj, dry_run=False, company_id=None):
     """
     خواندن و ثبت دسته‌جمعی پروژه‌های مالی از اکسل با پشتیبانی از dry_run.
-    company_id تهی (سوپریوزر): رفتار قبلی، تطبیق کد روی کل جدول.
-    company_id داده‌شده: تطبیق و ساخت فقط در همان شرکت (کد پروژه در هر شرکت یکتاست).
+    تطبیق و ساخت فقط در شرکت company_id (کد پروژه در هر شرکت یکتاست). پروژهٔ بی‌شرکت ساخته نمی‌شود (طرح ۲.۱، ت۲).
     """
+    if company_id is None:
+        return {
+            'success': False,
+            'dry_run': dry_run,
+            'summary': {'total_rows': 0, 'valid_count': 0, 'error_count': 1, 'created': 0, 'updated': 0, 'skipped': 1},
+            'errors': [{'row': 0, 'message': 'شرکت مقصد پروژه‌ها مشخص نیست؛ ابتدا شرکت را در سربرگ انتخاب کنید.'}]
+        }
     try:
         wb = openpyxl.load_workbook(file_obj, data_only=True)
         ws = wb.active
@@ -360,9 +381,7 @@ def import_projects_from_excel(file_obj, dry_run=False, company_id=None):
         active_val = str(ws.cell(row=row_idx, column=4).value or 'بله').strip().lower()
         is_active = active_val not in ['خیر', 'false', '0', 'no']
 
-        lookup = {'code': code}
-        if company_id is not None:
-            lookup['company_id'] = company_id
+        lookup = {'code': code, 'company_id': company_id}
         try:
             exists = Project.objects.filter(**lookup).exists()
             if dry_run:
@@ -480,11 +499,60 @@ def import_sections_from_excel(file_obj, dry_run=False, company_id=None):
     }
 
 
+def _assignment_row_target(proj_code, sec_code, company_code, company_id):
+    """
+    هدف یک ردیف اکسل انتساب (طرح ۲.۱، ت۳): (فیلد هدف، شیء هدف، پیام خطا).
+    کد بخش: سطح بخش؛ فقط کد پروژه: سطح پروژه؛ هر دو خالی: سطح شرکت. شرکت: شرکت فعال درون‌ریزی (company_id)،
+    یا برای superuser بی شرکت فعال، ستون «کد شرکت». کد شرکتِ دیگر در ردیف رد می‌شود.
+    """
+    if company_id is not None:
+        company = Company.objects.filter(id=company_id).first()
+        if company is None or (company_code and company_code != company.code.upper()):
+            return None, None, "این ردیف به شرکت دیگری تعلق دارد؛ فقط انتساب‌های شرکت فعال درون‌ریزی می‌شوند."
+    elif company_code:
+        company = Company.objects.filter(code__iexact=company_code).first()
+        if company is None:
+            return None, None, f"شرکت با کد «{company_code}» یافت نشد."
+    else:
+        company = None
+
+    if sec_code:
+        sec_qs = ProjectSection.objects.filter(code=sec_code).select_related('project')
+        if company is not None:
+            sec_qs = sec_qs.filter(project__company=company)
+        if proj_code:
+            sec_qs = sec_qs.filter(project__code=proj_code)
+        if sec_qs.count() > 1:
+            return None, None, f"کد بخش «{sec_code}» بین چند پروژه یا شرکت مشترک است؛ کد پروژه و کد شرکت را درج کنید."
+        sec = sec_qs.first()
+        if not sec:
+            scope_hint = "در شرکت فعال " if company_id is not None else ""
+            return None, None, f"بخش با کد «{sec_code}» {scope_hint}یافت نشد."
+        return 'section', sec, None
+
+    if proj_code:
+        proj_qs = Project.objects.filter(code=proj_code)
+        if company is not None:
+            proj_qs = proj_qs.filter(company=company)
+        if proj_qs.count() > 1:
+            return None, None, f"کد پروژه «{proj_code}» در چند شرکت هست؛ کد شرکت را درج کنید."
+        proj = proj_qs.first()
+        if not proj:
+            scope_hint = "در شرکت فعال " if company_id is not None else ""
+            return None, None, f"پروژه با کد «{proj_code}» {scope_hint}یافت نشد."
+        return 'project', proj, None
+
+    if company is None:
+        return None, None, "برای انتساب در سطح شرکت، شرکت فعال را انتخاب کنید یا ستون «کد شرکت» را پر کنید."
+    return 'company', company, None
+
+
 def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, member_check=None, forbidden_user_id=None):
     """
-    خواندن و ثبت دسته‌جمعی انتساب کاربران به بخش‌ها از اکسل با پشتیبانی از dry_run.
-    company_id داده‌شده: بخش فقط از پروژه‌های همان شرکت پیدا می‌شود و کاربر باید از قبل عضو همان شرکت باشد
-    (member_check)، چون عضویت بخش خودش دسترسی شرکت می‌دهد.
+    خواندن و ثبت دسته‌جمعی انتساب کاربران در سطح شرکت، پروژه یا بخش از اکسل با پشتیبانی از dry_run
+    (هدف هر ردیف: `_assignment_row_target`).
+    company_id داده‌شده: هدف فقط در همان شرکت پیدا می‌شود و کاربر باید از قبل عضو همان شرکت باشد
+    (member_check)، چون انتساب خودش دسترسی شرکت می‌دهد.
     forbidden_user_id: کاربری که نباید خودش را منتسب کند (نویسندهٔ «پروژه‌ها و بخش‌ها» بی اجازهٔ انتساب خود).
     """
     try:
@@ -532,28 +600,15 @@ def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, memb
                 errors.append(f"ردیف {row_idx}: کاربر با نام کاربری «{username}» یافت نشد.")
             continue
         if forbidden_user_id is not None and user.id == forbidden_user_id:
-            errors.append(f"ردیف {row_idx}: انتساب خودتان به بخش را مدیر کل سامانه انجام می‌دهد.")
+            errors.append(f"ردیف {row_idx}: انتساب خودتان را مدیر کل سامانه انجام می‌دهد.")
             continue
 
         proj_code = normalize_digits(str(ws.cell(row=row_idx, column=3).value or '')).strip().upper()
         sec_code = normalize_digits(str(ws.cell(row=row_idx, column=4).value or '')).strip().upper()
-        if not sec_code:
-            errors.append(f"ردیف {row_idx}: کد بخش الزامی است.")
-            continue
-
-        sec_qs = ProjectSection.objects.filter(code=sec_code)
-        if company_id is not None:
-            sec_qs = sec_qs.filter(project__company_id=company_id)
-        if proj_code:
-            sec_qs = sec_qs.filter(project__code=proj_code)
-        elif sec_qs.count() > 1:
-            errors.append(f"ردیف {row_idx}: کد بخش «{sec_code}» بین چند پروژه مشترک است؛ درج کد پروژه الزامی است.")
-            continue
-
-        sec = sec_qs.first()
-        if not sec:
-            scope_hint = "در شرکت فعال " if company_id is not None else ""
-            errors.append(f"ردیف {row_idx}: بخش با کد «{sec_code}» {scope_hint}یافت نشد.")
+        company_code = normalize_digits(str(ws.cell(row=row_idx, column=9).value or '')).strip().upper()
+        field, target, error = _assignment_row_target(proj_code, sec_code, company_code, company_id)
+        if error:
+            errors.append(f"ردیف {row_idx}: {error}")
             continue
 
         if company_id is not None and member_check is not None and not member_check(user.id, company_id):
@@ -570,7 +625,7 @@ def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, memb
         is_active = active_val not in ['خیر', 'false', '0', 'no']
 
         try:
-            exists = SectionAssignment.objects.filter(user=user, section=sec, role=role).exists()
+            exists = SectionAssignment.objects.filter(user=user, role=role, **{field: target}).exists()
             if dry_run:
                 if exists:
                     updated += 1
@@ -580,8 +635,8 @@ def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, memb
                 with transaction.atomic():
                     a, is_new = SectionAssignment.objects.update_or_create(
                         user=user,
-                        section=sec,
                         role=role,
+                        **{field: target},
                         defaults={'is_active': is_active}
                     )
                     if is_new:

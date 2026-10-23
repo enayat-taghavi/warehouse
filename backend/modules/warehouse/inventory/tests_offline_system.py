@@ -27,7 +27,7 @@ class OfflineSystemRemediationTests(TestCase):
 
         self.company, _ = Company.objects.get_or_create(
             code="TEST-OFFLINE-CO",
-            defaults={"name": "شرکت تستی آفلاین", "has_warehouse_module": True}
+            defaults={"name": "شرکت تستی آفلاین"}
         )
 
         self.warehouse = Warehouse.objects.create(
@@ -155,8 +155,7 @@ class OfflineSystemRemediationTests(TestCase):
         """تست عدم امکان تغییر یا احیای کالای انبار/شرکت دیگر از طریق ارسال مجدد sync_id توسط کاربر غیرسوپریوزر"""
         other_company = Company.objects.create(
             code="OTHER-OFFLINE-CO",
-            name="شرکت دیگر آفلاین",
-            has_warehouse_module=True
+            name="شرکت دیگر آفلاین"
         )
         other_warehouse = Warehouse.objects.create(
             name="انبار شرکت دیگر",
@@ -334,8 +333,7 @@ class OfflineSystemRemediationTests(TestCase):
         """تسک ۲۴: کاربر با اسکوپ محدود نمی‌تواند در انبار شرکت دیگر کالا بسازد (403) یا کالای خود را با PATCH به آن منتقل کند (403)"""
         other_company = Company.objects.create(
             code="ANOTHER-CO-TARGET",
-            name="شرکت دیگر هدف",
-            has_warehouse_module=True
+            name="شرکت دیگر هدف"
         )
         other_warehouse = Warehouse.objects.create(
             name="انبار شرکت دیگر هدف",

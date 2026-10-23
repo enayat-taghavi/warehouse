@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from decimal import Decimal
 from rest_framework.test import APIClient
 from personnel.models import (
+    Company,
     Project,
     ProjectSection,
     SectionAssignment,
@@ -36,7 +37,9 @@ class SectionGuardianPhase1Tests(TestCase):
             first_name='مهندس',
             last_name='احمدی'
         )
+        self.company = Company.objects.create(code='CMP-SG', name='شرکت آزمون نگهبان بخش')
         self.project = Project.objects.create(
+            company=self.company,
             code='PRJ-SHIRAZ',
             name='پروژه انبار مرکزی شیراز',
             description='انبار لجستیک جنوب کشور'
@@ -145,11 +148,13 @@ class SectionGuardianPhase2APITests(TestCase):
             username='employee_ali',
             password='Password123!'
         )
+        self.company = Company.objects.create(code='CMP-SG2', name='شرکت آزمون رابط بخش')
         self.client.force_authenticate(user=self.admin_user)
 
     def test_api_crud_financial_project(self):
         """تست ایجاد و دریافت پروژه از طریق API"""
         res = self.client.post('/api/org/projects/', {
+            'company': self.company.id,
             'code': 'PRJ-TEHRAN',
             'name': 'پروژه پایانه تهران غرب',
             'description': 'انبار توزیع مکانیزه پایتخت'
@@ -189,7 +194,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_api_counterparty_and_invoice(self):
         """تست تعریف طرف‌حساب و صدور فاکتور هزینه با قفل draft"""
-        proj = Project.objects.create(code='PRJ-ISFAHAN', name='پروژه اصفهان')
+        proj = Project.objects.create(company=self.company, code='PRJ-ISFAHAN', name='پروژه اصفهان')
         sec = ProjectSection.objects.create(project=proj, code='SEC-FLEET', name='ناوگان اصفهان')
 
         # تعریف طرف‌حساب
@@ -216,7 +221,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_clone_assignments_api(self):
         """تست اختصاصی تکثیر و کپی چارت سازمانی از بخش مبدأ به مقصد"""
-        proj = Project.objects.create(code='PRJ-CLONE', name='پروژه تکثیر چارت')
+        proj = Project.objects.create(company=self.company, code='PRJ-CLONE', name='پروژه تکثیر چارت')
         sec_source = ProjectSection.objects.create(project=proj, code='SEC-SRC', name='بخش الگو')
         sec_target = ProjectSection.objects.create(project=proj, code='SEC-TGT', name='بخش مقصد')
 
@@ -279,7 +284,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_bulk_assign_api(self):
         """تست اختصاصی انتساب دسته‌جمعی چند کاربر به یک بخش و نقش"""
-        proj = Project.objects.create(code='PRJ-BULK', name='پروژه تست گروهی')
+        proj = Project.objects.create(company=self.company, code='PRJ-BULK', name='پروژه تست گروهی')
         sec = ProjectSection.objects.create(project=proj, code='SEC-BLK', name='بخش انتساب چندگانه')
 
         # درخواست انتساب همزمان مدیر و کارمند
@@ -301,7 +306,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_soft_deactivation_on_destroy_with_invoices(self):
         """تست عدم حذف فیزیکی و تبدیل به غیرفعال‌سازی نرم در صورت وجود فاکتور یا سند مالی"""
-        proj = Project.objects.create(code='PRJ-SAFE', name='پروژه حفاظت داده')
+        proj = Project.objects.create(company=self.company, code='PRJ-SAFE', name='پروژه حفاظت داده')
         sec = ProjectSection.objects.create(project=proj, code='SEC-SAFE', name='بخش امن')
         cp = Counterparty.objects.create(name='تأمین‌کننده قطعات امین')
         ExpenseInvoice.objects.create(
@@ -334,7 +339,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_reactivate_inactive_assignment_without_unique_error(self):
         """تست فعال‌سازی مجدد رکورد غیرفعال انتساب بدون خطای یکتایی دیتابیس"""
-        proj = Project.objects.create(code='PRJ-REACT', name='پروژه فعال‌سازی مجدد')
+        proj = Project.objects.create(company=self.company, code='PRJ-REACT', name='پروژه فعال‌سازی مجدد')
         sec = ProjectSection.objects.create(project=proj, code='SEC-REACT', name='بخش فعال‌سازی')
         assignment = SectionAssignment.objects.create(
             user=self.employee_user,
@@ -373,7 +378,7 @@ class SectionGuardianPhase2APITests(TestCase):
         buf.seek(0)
 
         # اجرای dry_run
-        res = import_projects_from_excel(buf, dry_run=True)
+        res = import_projects_from_excel(buf, dry_run=True, company_id=self.company.id)
         self.assertTrue(res['success'])
         self.assertTrue(res['dry_run'])
         self.assertEqual(res['summary']['created'], 1)

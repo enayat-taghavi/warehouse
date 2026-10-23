@@ -120,29 +120,59 @@ class CompanyBankAccount(models.Model):
 
         super().save(*args, **kwargs)
 
+        # هر شرکت حداکثر یک حساب اصلی دارد؛ حساب اصلی تنها منبع «بانک اصلی شرکت» است (ت۶ طرح ۲.۱)
         if self.is_primary:
             CompanyBankAccount.objects.filter(company=self.company, is_primary=True).exclude(pk=self.pk).update(is_primary=False)
-            Company.objects.filter(pk=self.company_id).update(
-                primary_bank_name=self.bank_name,
-                primary_account_number=self.account_number,
-                primary_iban=self.sheba_number
-            )
+        # جایگزینی حساب اصلی پس از حذف در سیگنال post_delete است (signals.handle_bank_account_deleted)
 
-    def delete(self, *args, **kwargs):
-        comp_id = self.company_id
-        was_primary = self.is_primary
-        super().delete(*args, **kwargs)
-        if was_primary:
-            remaining = CompanyBankAccount.objects.filter(company_id=comp_id).first()
-            if remaining:
-                remaining.is_primary = True
-                remaining.save()
-            else:
-                Company.objects.filter(pk=comp_id).update(
-                    primary_bank_name=None,
-                    primary_account_number=None,
-                    primary_iban=None
-                )
+
+def primary_bank_account(company):
+    """حساب اصلی فعال شرکت (شیء یا شناسه)، یا None. جای فیلدهای حذف‌شدهٔ primary_* روی Company."""
+    company_id = getattr(company, 'pk', company)
+    if company_id is None:
+        return None
+    return CompanyBankAccount.objects.filter(company_id=company_id, is_primary=True, is_active=True).first()
+
+
+class CompanyPayrollProfile(models.Model):
+    """
+    پروندهٔ بیمه و مالیات شرکت برای دیسکت حقوق (ت۵ طرح ۲.۱)؛ این فیلدها پیش‌تر روی Company هسته بودند.
+    یک‌به‌یک با شرکت و در صورت نیاز ساخته می‌شود (`for_company`). مجوز آن حوزهٔ `insurance_tax` است.
+    """
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='payroll_profile',
+        verbose_name="شرکت"
+    )
+    # تنظیمات کارگاهی بیمه تأمین اجتماعی (منطبق بر دیسکت DSKKAR00.DBF)
+    workshop_code = models.CharField(max_length=20, null=True, blank=True, verbose_name="کد کارگاه تأمین اجتماعی (۱۰ رقم)")
+    social_security_branch_code = models.CharField(max_length=20, null=True, blank=True, verbose_name="کد شعبه تأمین اجتماعی")
+    social_security_branch_name = models.CharField(max_length=100, null=True, blank=True, verbose_name="نام شعبه تأمین اجتماعی")
+    contract_row = models.CharField(max_length=20, null=True, blank=True, verbose_name="ردیف پیمان بیمه")
+    employer_name = models.CharField(max_length=150, null=True, blank=True, verbose_name="نام کارفرما در لیست بیمه")
+    # تنظیمات سامانه مودیان مالیاتی
+    tax_memory_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="شناسه یکتای حافظه مالیاتی (۶ کاراکتر)")
+    tax_economic_code = models.CharField(max_length=50, null=True, blank=True, verbose_name="کد اقتصادی جدید ۱۶ رقمی")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
+
+    FIELDS = (
+        'workshop_code', 'social_security_branch_code', 'social_security_branch_name', 'contract_row',
+        'employer_name', 'tax_memory_id', 'tax_economic_code',
+    )
+
+    class Meta:
+        verbose_name = "پروندهٔ بیمه و مالیات شرکت"
+        verbose_name_plural = "پرونده‌های بیمه و مالیات شرکت‌ها"
+
+    def __str__(self):
+        return f"بیمه و مالیات {self.company}"
+
+    @classmethod
+    def for_company(cls, company):
+        profile, _ = cls.objects.get_or_create(company=company)
+        return profile
 
 class CompanyBoardMember(models.Model):
     """

@@ -123,6 +123,17 @@ class SectionGuardian:
             if not roles_ok:
                 all_passed = False
 
+            # چک ۴-ب: انتساب سه‌سطحی (شرکت، پروژه، بخش) و پاسخ‌دهندهٔ مرکزی نقش‌ها (طرح ۲.۱، ت۳ و ت۴)
+            from companies import org_roles
+            sa_fields = {f.name for f in SectionAssignment._meta.get_fields()}
+            three_level_ok = {'company', 'project', 'section'} <= sa_fields and all(
+                callable(getattr(org_roles, fn, None))
+                for fn in ('assignments_covering_section', 'section_role_holders', 'user_sections', 'user_has_section_role')
+            )
+            checks.append(("انتساب سه‌سطحی و پاسخ‌دهندهٔ org_roles", three_level_ok, "سطح شرکت، پروژه و بخش؛ پرسش نقش فقط از org_roles"))
+            if not three_level_ok:
+                all_passed = False
+
             # چک ۵: فیلدهای Counterparty
             cp_fields = [f.name for f in Counterparty._meta.get_fields()]
             req_cp = ['name', 'counterparty_type', 'national_id', 'phone', 'bank_name', 'sheba_number', 'account_code', 'is_active']
@@ -530,8 +541,11 @@ class SectionGuardian:
             )
 
             with transaction.atomic():
-                # ایجاد داده‌های آزمایشی ایزوله
+                # ایجاد داده‌های آزمایشی ایزوله (هر پروژه شرکت دارد؛ طرح ۲.۱، ت۲)
+                from companies.models import Company
+                test_company = Company.objects.create(code="CMP_GUARD_TEST", name="شرکت آزمون نگهبان")
                 test_proj = Project.objects.create(
+                    company=test_company,
                     code="PRJ_GUARD_TEST",
                     name="پروژه آزمون نگهبان",
                     is_active=True
@@ -582,6 +596,26 @@ class SectionGuardian:
                 g1_ok = (not alpha_in_beta_query) and (not beta_vehicles_query)
                 checks.append(("آزمون نگهبان G1: ایزولاسیون داده و تفکیک قطعی قلمرو بخش‌ها", g1_ok, "داده‌های بخش آلفا در کوئری‌های بخش بتا به طور ۱۰۰٪ مسدود و ایزوله شدند"))
                 if not g1_ok:
+                    all_passed = False
+
+                # ─── G1-ب: ارث‌بری انتساب سه‌سطحی (طرح ۲.۱، ت۳) ───
+                # انتساب سطح پروژه همهٔ بخش‌های پروژه را می‌پوشاند؛ انتساب بخش فقط همان بخش را
+                from django.contrib.auth import get_user_model
+                from companies.models import SectionAssignment
+                from companies.org_roles import user_has_section_role, user_section_ids
+                guard_user_model = get_user_model()
+                proj_user = guard_user_model.objects.create(username="guardian_scope_project_tmp")
+                sec_user = guard_user_model.objects.create(username="guardian_scope_section_tmp")
+                SectionAssignment.objects.create(user=proj_user, project=test_proj, role="supervisor")
+                SectionAssignment.objects.create(user=sec_user, section=sec_beta, role="employee")
+                g1b_ok = (
+                    user_section_ids(proj_user) == {sec_alpha.id, sec_beta.id}
+                    and user_has_section_role(proj_user, sec_alpha, "supervisor")
+                    and user_section_ids(sec_user) == {sec_beta.id}
+                    and not user_has_section_role(sec_user, sec_alpha)
+                )
+                checks.append(("آزمون نگهبان G1-ب: ارث‌بری انتساب سطح پروژه به بخش‌ها", g1b_ok, "انتساب پروژه هر دو بخش را پوشش داد و انتساب بخش فقط همان بخش را"))
+                if not g1b_ok:
                     all_passed = False
 
                 # ─── G2: تحمیل وضعیت Draft ───

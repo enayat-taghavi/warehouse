@@ -39,7 +39,6 @@ from .models import (
     AttendanceAuditLog,
     ProjectSection,
     Project,
-    SectionAssignment
 )
 from .serializers import (
     PersonnelProfileSerializer,

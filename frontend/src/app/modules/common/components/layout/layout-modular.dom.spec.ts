@@ -163,7 +163,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     };
 
     const mockActiveCompany: any = {
-      activeCompany: vi.fn().mockReturnValue({ id: 1, name: 'شرکت اصلی', has_warehouse_module: true })
+      activeCompany: vi.fn().mockReturnValue({ id: 1, name: 'شرکت اصلی', enabled_modules: ['warehouse', 'accounting'] })
     };
 
     const injector = Injector.create({

@@ -121,40 +121,30 @@
           />
         </div>
 
-        <!-- فیلد ۶: کارت تعاملی فعال‌سازی ماژول انبارداری -->
-        <div
-          *ngIf="isWarehouseInstalled"
-          (click)="toggleWarehouseModule()"
-          [ngClass]="formData.has_warehouse_module ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500/30' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'"
-          class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none mt-2 min-h-[44px]"
-        >
-          <div class="flex items-center gap-3 min-w-0">
-            <div
-              [ngClass]="formData.has_warehouse_module ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'"
-              class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors shadow-sm"
-            >
-              <svg appIcon="package" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-            </div>
-            <div class="min-w-0">
-              <span class="block text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
-                فعال‌سازی سامانه انبارداری و انبارگردانی
-              </span>
-              <span class="text-[10px] text-slate-500 font-medium block mt-0.5">
-                دسترسی به کاردکس، اسناد باسکول، گمرک و شمارش دوره‌ای کالا
-              </span>
-            </div>
-          </div>
-
-          <div class="shrink-0 flex items-center">
+        <!-- فیلد ۶: ماژول‌های روشن این شرکت (فهرست از رجیستری ماژول‌های نصب‌شده؛ disabled_modules) -->
+        <fieldset *ngIf="switchableModules.length > 1" class="space-y-2 mt-2 min-w-0">
+          <legend class="block text-xs font-black text-slate-800 mb-1">ماژول‌های این شرکت</legend>
+          <label
+            *ngFor="let m of switchableModules"
+            [attr.for]="'fbw_module_' + m.code"
+            [ngClass]="isModuleOn(m.code) ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500/30' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'"
+            class="p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none min-h-[44px]"
+          >
+            <span class="min-w-0">
+              <span class="block text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{{ m.titleFa }}</span>
+              <span class="text-[10px] text-slate-500 font-medium block mt-0.5 line-clamp-2">{{ m.descriptionFa }}</span>
+            </span>
             <input
               type="checkbox"
-              [(ngModel)]="formData.has_warehouse_module"
-              name="has_warehouse_module"
-              (click)="$event.stopPropagation()"
-              class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              [id]="'fbw_module_' + m.code"
+              [name]="'module_' + m.code"
+              [checked]="isModuleOn(m.code)"
+              (change)="toggleModule(m.code)"
+              [attr.aria-label]="'روشن بودن ' + m.titleFa + ' برای این شرکت'"
+              class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
             />
-          </div>
-        </div>
+          </label>
+        </fieldset>
 
         <!-- دکمه اقدام نهایی -->
         <div class="pt-3">

@@ -60,7 +60,7 @@ export interface CompanyStudioTab {
   labelFa: string;
   shortLabelFa: string;
   icon: IconName;
-  /** جای تب در میان تب‌های هسته (هویتی ۱۰، بیمه و مالی ۲۰، مدارک ۵۰، دسترسی ۶۰) */
+  /** جای تب در میان تب‌های هسته (هویتی ۱۰، مدارک ۵۰، پروژه‌ها ۵۵، دسترسی ۶۰) */
   order: number;
   /** پیش از ذخیرهٔ شرکت به‌جای کامپوننت پیام «ابتدا ذخیره کنید» نمایش داده می‌شود */
   requiresSavedCompany: boolean;
@@ -81,7 +81,7 @@ export interface CompanyStudioTab {
 
 /** بخش مشارکتی داخل یک تب هستهٔ استودیو */
 export interface CompanyStudioSection {
-  slot: 'fiscal_insurance' | 'documents';
+  slot: 'identity' | 'documents';
   order: number;
   /** کلید بخش مجوز شرکت؛ همان قاعدهٔ `CompanyStudioTab.permissionSection` */
   permissionSection?: string;
@@ -377,10 +377,10 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۵. پرچم‌های ماژول در مدیریت شرکت‌ها — مصرف در companies.ts، company-gdrive-tab.ts (ماژول حسابداری)، first-boot-wizard.ts و active-company.service.ts
+   * ۵. مشارکت ماژول در مدیریت شرکت‌ها — مصرف در companies.ts، company-projects-tab.ts و active-company.service.ts.
+   * روشن و خاموش بودن ماژول برای هر شرکت پرچم ماژول نیست: پوسته `code` ماژول را در `enabled_modules` شرکت می‌جوید.
    */
   companies?: {
-    hasWarehouseModuleToggle?: boolean;
     providesTreasury?: boolean;
     /** تب‌های تازهٔ استودیوی شرکت (کامپوننت تنبل؛ ورودی companyId و گفت‌وگو با CompanyStudioContextService) */
     studioTabs?: CompanyStudioTab[];

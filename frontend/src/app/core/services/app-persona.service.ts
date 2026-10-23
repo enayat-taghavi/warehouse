@@ -151,8 +151,8 @@ export class AppPersonaService {
     const spec = this.moduleRegistry.getSpec(app);
     if (!spec) return false;
 
-    // اگر ماژول وابسته به پرچم ماژول انبارداری شرکت است و شرکت فعال فاقد ماژول است، دسترسی مسدود می‌شود
-    if (spec.extensions?.companies?.hasWarehouseModuleToggle && this.activeCompanyService && !this.activeCompanyService.hasWarehouseModule) {
+    // ماژولی که مدیر کل برای شرکت فعال خاموش کرده است (enabled_modules شرکت)، در دسترس نیست
+    if (this.activeCompanyService && !this.activeCompanyService.isModuleEnabled(spec.code)) {
       return false;
     }
 

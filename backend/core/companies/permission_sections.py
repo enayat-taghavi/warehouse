@@ -27,9 +27,6 @@ CORE_SECTIONS = (
     {'key': 'identity', 'label_fa': 'هویتی (نام، شناسه‌ها، نشانی، لوگو)', 'order': 10, 'kind': 'levels',
      'sensitive': False, 'studio': 'identity',
      'templates': {'viewer': 'read', 'docs_clerk': 'read', 'manager': 'write'}},
-    {'key': 'insurance_tax', 'label_fa': 'بیمه و مالیات', 'order': 20, 'kind': 'levels',
-     'sensitive': False, 'studio': 'fiscal_insurance',
-     'templates': {'viewer': 'read', 'manager': 'write'}},
     {'key': 'founding_docs', 'label_fa': 'اسناد مادر (اساسنامه و روزنامهٔ رسمی)', 'order': 30, 'kind': 'levels',
      'sensitive': False, 'studio': 'documents',
      'templates': {'viewer': 'read', 'docs_clerk': 'write', 'manager': 'write'}},
@@ -40,6 +37,10 @@ CORE_SECTIONS = (
     {'key': 'projects', 'label_fa': 'پروژه‌ها و بخش‌ها', 'order': 50, 'kind': 'levels',
      'sensitive': False, 'studio': 'projects',
      'templates': {'viewer': 'read', 'manager': 'write'}},
+    # هیئت‌مدیره و صاحبان امضا اطلاعات حقوقی شرکت‌اند و در هر نصبی لازم‌اند (ت۷ طرح ۲.۱)
+    {'key': 'board', 'label_fa': 'هیئت‌مدیره', 'order': 120, 'kind': 'levels',
+     'sensitive': False, 'studio': 'governance',
+     'templates': {'viewer': 'read', 'manager': 'write'}},
 )
 
 # فیلدهای مدل Company در هسته ← بخش. فیلد بی‌نگاشت فقط برای superuser است (بسته به‌طور پیش‌فرض).
@@ -49,11 +50,11 @@ CORE_FIELD_SECTIONS = {
         'registration_date', 'phone', 'address', 'postal_code', 'ceo_name', 'logo',
         'registered_capital', 'shares_count', 'share_nominal_value', 'fiscal_year_start_month',
     )},
-    **{f: 'insurance_tax' for f in (
-        'workshop_code', 'social_security_branch_code', 'social_security_branch_name', 'contract_row',
-        'employer_name', 'tax_memory_id', 'tax_economic_code',
-    )},
     **{f: 'founding_docs' for f in ('articles_of_association', 'latest_gazette')},
+    **{f: 'board' for f in (
+        'board_chairman', 'board_vice_chairman', 'main_inspector', 'alternate_inspector',
+        'authorized_signers', 'board_term_expiry',
+    )},
 }
 
 

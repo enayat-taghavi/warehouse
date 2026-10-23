@@ -6,20 +6,23 @@ import { ModuleRouteAccess, WhFrontendModule } from '../modules/module-contract'
 import { expandPermissionAliases } from '../modules/permission-aliases';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
+import { companyHasModule } from '../models/company.model';
 
 /**
- * گارد فعال بودن ماژول انبارداری برای شرکت فعال — هدایت مستقیم به پرتال لانچر
+ * گارد روشن بودن ماژول `moduleCode` برای شرکت فعال (`enabled_modules`) — در غیر این صورت هدایت به پرتال لانچر
  */
-export const WarehouseCompanyGuard: CanActivateFn = () => {
-  const activeCompany = inject(ActiveCompanyService, { optional: true });
-  const router = inject(Router);
+export function moduleCompanyGuard(moduleCode: string): CanActivateFn {
+  return () => {
+    const activeCompany = inject(ActiveCompanyService, { optional: true });
+    const router = inject(Router);
 
-  if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
-    router.navigate(['/app/launcher']);
-    return false;
-  }
-  return true;
-};
+    if (activeCompany?.activeCompany && !companyHasModule(activeCompany.activeCompany, moduleCode)) {
+      router.navigate(['/app/launcher']);
+      return false;
+    }
+    return true;
+  };
+}
 
 /**
  * گارد احراز هویت — فقط کاربران لاگین‌شده اجازه ورود دارند
@@ -151,11 +154,9 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
         let hasModAccess = isAdmin || hasModuleAccess(mod);
 
-        if (mod.extensions?.companies?.hasWarehouseModuleToggle) {
-          const activeCompany = inject(ActiveCompanyService, { optional: true });
-          if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
-            hasModAccess = false;
-          }
+        const activeCompany = inject(ActiveCompanyService, { optional: true });
+        if (activeCompany?.activeCompany && !companyHasModule(activeCompany.activeCompany, mod.code)) {
+          hasModAccess = false;
         }
 
         if (!hasModAccess) {

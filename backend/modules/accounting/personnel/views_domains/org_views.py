@@ -22,6 +22,7 @@ from ..models import (
     CompanyBankAccount,
     CompanyBoardMember,
     CompanyFiscalPeriod,
+    CompanyPayrollProfile,
 )
 from ..serializers import (
     CompanySerializer,
@@ -29,6 +30,7 @@ from ..serializers import (
     CompanyBankAccountSerializer,
     CompanyBoardMemberSerializer,
     CompanyFiscalPeriodSerializer,
+    CompanyPayrollProfileSerializer,
 )
 from .scope_helpers import broadcast_org_structure_updated
 
@@ -47,6 +49,29 @@ class CompanyViewSet(CoreCompanyViewSet):
         return Company.objects.all().annotate(
             projects_count=Count('projects')
         ).prefetch_related('documents', 'bank_accounts', 'board_members')
+
+    @action(detail=True, methods=['get', 'patch', 'put'], url_path='payroll-profile')
+    def payroll_profile(self, request, pk=None):
+        """
+        پروندهٔ بیمه و مالیات شرکت برای دیسکت حقوق (ت۵ طرح ۲.۱): خواندن با حوزهٔ `insurance_tax`
+        (عضو شرکت هم می‌خواند، مثل وقتی که این فیلدها روی Company بودند) و نوشتن فقط با سطح «نوشتن» آن.
+        پرونده در نخستین خواندن یا نوشتن ساخته می‌شود.
+        """
+        company = self.get_object()
+        user = request.user
+        if request.method == 'GET':
+            ensure_company_section(user, company.id, 'insurance_tax', 'read', members_read=True)
+            profile = CompanyPayrollProfile.objects.filter(company=company).first() or CompanyPayrollProfile(company=company)
+            return Response(CompanyPayrollProfileSerializer(profile).data)
+        ensure_company_section(user, company.id, 'insurance_tax', 'write')
+        profile = CompanyPayrollProfile.for_company(company)
+        serializer = CompanyPayrollProfileSerializer(profile, data=request.data, partial=request.method == 'PATCH')
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        tab_id = request.headers.get('X-Client-Tab-Id')
+        broadcast_org_structure_updated('company_payroll_profile', 'update', company.id, company.name, None, tab_id,
+                                        user.id, company_id=company.id)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'], url_path='expiring-documents')
     def expiring_documents(self, request):

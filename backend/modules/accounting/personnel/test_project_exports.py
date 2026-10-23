@@ -11,6 +11,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from personnel.models import (
+    Company,
     Project,
     ProjectSection,
     PersonnelProfile,
@@ -36,8 +37,9 @@ class ProjectScopedExportTestCase(TestCase):
         self.wh = Warehouse.objects.create(name='انبار تست مرکزی', code='WH-01')
 
         # ۲ پروژه مختلف
-        self.proj_tehran = Project.objects.create(code='PRJ-TEH', name='پروژه تهران')
-        self.proj_shiraz = Project.objects.create(code='PRJ-SHZ', name='پروژه شیراز')
+        self.company = Company.objects.create(code='CMP-EXP', name='شرکت آزمون خروجی')
+        self.proj_tehran = Project.objects.create(company=self.company, code='PRJ-TEH', name='پروژه تهران')
+        self.proj_shiraz = Project.objects.create(company=self.company, code='PRJ-SHZ', name='پروژه شیراز')
 
         # تنظیمات سال ۱۴۰۵ پروژه شیراز با کد کارگاه اختصاصی
         self.settings_shz = PayrollYearlySettings.objects.create(

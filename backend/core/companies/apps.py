@@ -20,3 +20,5 @@ class CompaniesConfig(AppConfig):
         contribute('company_member_sources', section_member_sources)
         contribute('company_member_q_builders', build_section_member_q)
         contribute('company_delete_blockers', (10, 'projects', "این شرکت دارای پروژه‌های ثبت‌شده است و نمی‌توان آن را حذف کرد."))
+        # انتساب سطح شرکت (فعال یا سابقه) با حذف شرکت پاک می‌شد (data-loss-reviewer، طرح ۲.۱)
+        contribute('company_delete_blockers', (15, 'user_assignments', "این شرکت دارای انتساب کاربران در سطح شرکت است و نمی‌توان آن را حذف کرد."))

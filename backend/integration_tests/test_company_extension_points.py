@@ -23,7 +23,8 @@ class CompanyExtensionPointsTests(TestCase):
         related_names = [b[1] for b in blockers]
         self.assertEqual(
             related_names,
-            ['projects', 'warehouses', 'personnel_profiles', 'monthly_work_periods', 'counterparties', 'fiscal_periods']
+            ['projects', 'user_assignments', 'warehouses', 'personnel_profiles', 'monthly_work_periods',
+             'counterparties', 'fiscal_periods', 'payroll_profile']
         )
 
     def test_superuser_delete_company_with_warehouse_returns_400(self):
@@ -141,4 +142,35 @@ class CompanyExtensionPointsTests(TestCase):
         usernames_comp2 = [u['username'] for u in data_comp2]
         self.assertIn('member_nar_comp2', usernames_comp2)
         self.assertNotIn('member_nar_comp1', usernames_comp2)
+
+    def test_org_admin_directory_lists_company_and_project_level_members(self):
+        """
+        طرح ۲.۱، ت۳: انتساب در سطح شرکت یا پروژه هم عضویت می‌دهد؛ دایرکتوری راهبر تشکیلات این اعضا را
+        فقط برای شرکت مجاز خودش نشان می‌دهد و هیچ پروژهٔ بی‌شرکتی وجود ندارد.
+        """
+        comp1 = Company.objects.create(code='DIR_CMP_L1', name='شرکت سطح‌ها یک')
+        comp2 = Company.objects.create(code='DIR_CMP_L2', name='شرکت سطح‌ها دو')
+        prj1 = Project.objects.create(company=comp1, code='DIR_PRJ_L1', name='پروژه سطح یک')
+        prj2 = Project.objects.create(company=comp2, code='DIR_PRJ_L2', name='پروژه سطح دو')
+
+        org_admin = User.objects.create_user(username='org_admin_lvl', password='password123', phone_number='09170001010')
+        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True, section_levels={'projects': 'write'})
+        grant_membership(org_admin, comp1)
+
+        company_member = User.objects.create_user(username='lvl_company_member', password='password123', phone_number='09170001011')
+        SectionAssignment.objects.create(user=company_member, company=comp1, is_active=True)
+        project_member = User.objects.create_user(username='lvl_project_member', password='password123', phone_number='09170001012')
+        SectionAssignment.objects.create(user=project_member, project=prj1, is_active=True)
+        foreign_member = User.objects.create_user(username='lvl_foreign_member', password='password123', phone_number='09170001013')
+        SectionAssignment.objects.create(user=foreign_member, project=prj2, is_active=True)
+
+        self.client.force_authenticate(org_admin)
+        res = self.client.get('/api/accounts/users/')
+        self.assertEqual(res.status_code, 200)
+        data = res.data.get('results', res.data) if isinstance(res.data, dict) else res.data
+        usernames = {u['username'] for u in data}
+        self.assertIn('lvl_company_member', usernames)
+        self.assertIn('lvl_project_member', usernames)
+        self.assertNotIn('lvl_foreign_member', usernames)
+        self.assertFalse(Project.objects.filter(company__isnull=True).exists())
 

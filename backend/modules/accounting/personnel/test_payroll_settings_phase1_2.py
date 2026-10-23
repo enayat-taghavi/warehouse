@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from rest_framework.test import APIClient
 from personnel.models import (
+    Company,
     Project,
     PayrollYearlySettings,
     WorkshopInsuranceSettings,
@@ -211,7 +212,8 @@ class PayrollSettingsComprehensiveTestCase(TestCase):
 
     def test_revert_to_global(self):
         """لغو تنظیمات اختصاصی پروژه و بازگشت به تنظیمات سراسری"""
-        proj = Project.objects.create(code='PRJ-REV', name='پروژه تست ریورت')
+        company = Company.objects.create(code='CMP-REV', name='شرکت تست ریورت')
+        proj = Project.objects.create(company=company, code='PRJ-REV', name='پروژه تست ریورت')
         self.client.force_authenticate(user=self.superuser)
 
         # Clone

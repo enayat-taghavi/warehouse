@@ -7,7 +7,8 @@ import { Layout } from './modules/common/components/layout/layout';
 import { AppLauncherComponent } from './modules/common/components/app-launcher/app-launcher';
 import { ChangePassword } from './modules/common/components/change-password/change-password';
 import { VerifyCard } from './modules/common/components/verify-card/verify-card';
-import { AuthGuard, AuthGuardChild, WarehouseCompanyGuard } from './core/auth/auth.guard';
+import { AuthGuard, AuthGuardChild, moduleCompanyGuard } from './core/auth/auth.guard';
+import { companyHasModule } from './core/models/company.model';
 import { OperationsGuard, OperationsGuardChild, CompaniesManageGuard } from './core/guards/operations.guard';
 import { OperationsLayoutComponent } from './modules/common/components/operations/operations-layout/operations-layout';
 import { OperationsCockpitComponent } from './modules/common/components/operations/operations-cockpit/operations-cockpit';
@@ -27,7 +28,6 @@ import { INSTALLED_MODULES } from './modules/installed-modules';
 
 const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.routes === 'function').map(m => {
   const cleanPrefix = m.routePrefix.replace(/^\//, '');
-  const hasWarehouseToggle = Boolean(m.extensions?.companies?.hasWarehouseModuleToggle);
   return {
     path: cleanPrefix,
     component: Layout,
@@ -35,18 +35,14 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
       () => {
         const reg = inject(ModuleRegistryService);
         if (!reg.isModuleInstalled(m.code)) return false;
-        if (hasWarehouseToggle) {
-          const activeCompany = inject(ActiveCompanyService, { optional: true });
-          if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
-            return false;
-          }
-        }
-        return true;
+        // ماژولی که مدیر کل برای شرکت فعال خاموش کرده است (enabled_modules)، مسیرش تطبیق نمی‌خورد
+        const activeCompany = inject(ActiveCompanyService, { optional: true });
+        return !activeCompany?.activeCompany || companyHasModule(activeCompany.activeCompany, m.code);
       }
     ],
     canActivate: [
       AuthGuard,
-      ...(hasWarehouseToggle ? [WarehouseCompanyGuard] : [])
+      moduleCompanyGuard(m.code)
     ],
     canActivateChild: [AuthGuardChild],
     loadChildren: m.routes!

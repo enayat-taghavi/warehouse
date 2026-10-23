@@ -57,7 +57,7 @@ describe('AppPersonaService Characterization Spec', () => {
     setActiveRole: ReturnType<typeof vi.fn>;
   };
   let mockActiveCompany: {
-    hasWarehouseModule: boolean;
+    isModuleEnabled: (code: string) => boolean;
     hasCompanyDocumentsAccess: ReturnType<typeof vi.fn>;
     manageableCompanies: ReturnType<typeof signal<any[]>>;
   };
@@ -98,7 +98,7 @@ describe('AppPersonaService Characterization Spec', () => {
     };
 
     mockActiveCompany = {
-      hasWarehouseModule: true,
+      isModuleEnabled: () => true,
       hasCompanyDocumentsAccess: vi.fn().mockReturnValue(false),
       manageableCompanies: signal<any[]>([]),
     };
