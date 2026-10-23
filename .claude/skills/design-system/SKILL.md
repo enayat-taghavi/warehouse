@@ -73,6 +73,23 @@ All clickable UI and navigation across `frontend` must strictly use the modular 
   - Keyless actions (e.g. calculation, presets) remain native `<button type="button">` with `.tap-target` and Persian `aria-label`/`title`.
   - 360px budget: mobile tabs/actions max 309px, cards 302–306px, modal footers 280–302px.
 
+## Forms, mobile and Android (release v1 rules ق11/ق12, `Documents/Release_v1/release_v1_master_plan.md`)
+- **Field errors:** show the validation message next to the field, not only in a toast.
+- **Unsaved changes:** leaving a half-filled form asks for confirmation.
+- **No browser dialogs:** `confirm()`, `alert()` and `prompt()` are forbidden. Use `ConfirmDialogService`.
+- **Money:** every amount goes through one shared amount-input component. It:
+  - opens the numeric keyboard (`inputmode="numeric"`);
+  - adds thousands separators;
+  - accepts Persian and Arabic digits;
+  - shows the toman equivalent next to rial.
+
+  Build the component in the step that first needs it; do not write ad-hoc amount inputs.
+- **Long lists:** paginate or load incrementally so mid-range phones stay smooth.
+- **Android back button:** it first closes an open modal, popover or menu, and only then navigates.
+- **Soft keyboard:** it must not cover the focused field. Long forms keep the save button sticky at the bottom on mobile.
+- **Safe area:** respect the notch and bottom bar (`env(safe-area-inset-*)`) for fixed headers, footers and modals.
+- **Frontend modularity:** a module's code stays in `src/app/modules/<module>/`, shared parts only in `shared/`, and no module imports another module's components or pages.
+
 
 ## Icons
 - Only from the shared registry: `<svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>`
