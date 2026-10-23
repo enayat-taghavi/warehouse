@@ -95,7 +95,7 @@ exit $fail
 '@
 $expectedTopDirs = @($whitelist.Apps | ForEach-Object { $_.Split('/')[0] } | Sort-Object -Unique)
 $expectedTop = (@(@($expectedTopDirs) + @($whitelist.Files)) | Sort-Object -Culture ([cultureinfo]::InvariantCulture)) -join ' '
-$expectedApps = 'accounts communications companies inventory notifications personnel platform_core reports settings_core warehouses'
+$expectedApps = 'accounts communications companies inventory notifications personnel platform_core reports settings_core showcase warehouses'
 try {
     $run = Invoke-Process -FilePath $DockerExe -ArgumentList @('run', '-d', '--name', $container, 'ubuntu:24.04', 'sleep', 'infinity') -Capture -Quiet
     if ($run.ExitCode -ne 0) { throw 'docker run failed.' }
