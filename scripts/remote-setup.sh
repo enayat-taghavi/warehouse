@@ -390,8 +390,8 @@ echo "--> Activating the release via /usr/local/sbin/warehouse-deploy --activate
 # 9. Seed permissions and initialize roles
 echo "--> Initializing system permissions and roles..."
 if [[ -d "${BASE_DIR}/current" ]]; then
-    runuser -u warehouse -- "${BASE_DIR}/current/venv/bin/python" "${BASE_DIR}/current/warehouse-backend/manage.py" seed_permissions
-    runuser -u warehouse -- "${BASE_DIR}/current/venv/bin/python" "${BASE_DIR}/current/warehouse-backend/manage.py" init_roles
+    runuser -u warehouse -- "${BASE_DIR}/current/venv/bin/python" "${BASE_DIR}/current/backend/manage.py" seed_permissions
+    runuser -u warehouse -- "${BASE_DIR}/current/venv/bin/python" "${BASE_DIR}/current/backend/manage.py" init_roles
 fi
 
 # 10. Enable application services

@@ -84,6 +84,8 @@ $SecretKeyAllowList = @('GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 
 # Installable modules discovered dynamically from the repository; WH_MODULES on the server.
 $KnownModules = @()
 $AllModules = ''
+# Modules installed when the configuration names none: every module except the opt-in ones (opt_in=True).
+$DefaultModules = ''
 # Certificate modes: http01 (webroot), dns01-cloudflare, cloudflare-origin, custom.
 $KnownCertModes = @('http01', 'dns01-cloudflare', 'cloudflare-origin', 'custom')
 $DefaultCertMode = 'http01'
@@ -326,19 +328,12 @@ function Invoke-Git {
     return (Invoke-Process -FilePath $GitExe -ArgumentList (@('-C', $ScriptRoot) + $ArgumentList) -Raw -Quiet)
 }
 
-# The repo folders are backend/ and frontend/; commits before the rename use warehouse-backend/ and warehouse-front/.
-# The bundle and the server keep the old names, so the units and nginx paths on the server stay valid.
-$BundleBackendDir = 'warehouse-backend'
-$BundleFrontDir = 'warehouse-front'
-
-function Get-RepoDir([string]$Sha, [ValidateSet('backend', 'frontend')][string]$Kind) {
-    $r = Invoke-Git @('ls-tree', '--name-only', $Sha, '--', $Kind)
-    if ($r.ExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($r.Output)) { return $Kind }
-    if ($Kind -eq 'backend') { return $BundleBackendDir } else { return $BundleFrontDir }
-}
+# Repo, bundle and server use the same folder names.
+$BundleBackendDir = 'backend'
+$BundleFrontDir = 'frontend'
 
 function Get-KnownModules([string]$Sha = 'HEAD') {
-    $r = Invoke-Git @('ls-tree', '-d', '--name-only', $Sha, "$(Get-RepoDir $Sha 'backend')/modules/")
+    $r = Invoke-Git @('ls-tree', '-d', '--name-only', $Sha, "$BundleBackendDir/modules/")
     if ($r.ExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($r.Output)) {
         $lines = $r.Output -split "[\r\n]+" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
         $mods = @($lines | ForEach-Object { Split-Path ($_.Trim().Replace('\', '/')) -Leaf } | Sort-Object -Unique)
@@ -352,8 +347,17 @@ function Get-KnownModules([string]$Sha = 'HEAD') {
     return @()
 }
 
+function Get-DefaultModules([string]$Sha = 'HEAD') {
+    # Opt-in modules (opt_in=True in modules/<m>/module.py) install only when named in Modules.
+    return (@($KnownModules | Where-Object {
+        $r = Invoke-Git @('show', "${Sha}:$BundleBackendDir/modules/$_/module.py")
+        -not ($r.ExitCode -eq 0 -and $r.Output -match '(?m)^\s*opt_in\s*=\s*True')
+    }) -join ',')
+}
+
 $KnownModules = @(Get-KnownModules 'HEAD')
 $AllModules = $KnownModules -join ','
+$DefaultModules = Get-DefaultModules 'HEAD'
 
 function Test-LocalTool([string[]]$Name) {
     $map = @{ ssh = $SshExe; 'ssh-keygen' = $SshKeygenExe; 'ssh-keyscan' = $SshKeyscanExe; git = $GitExe; tar = $TarExe; npm = $NpmCmd; docker = $DockerExe }
@@ -449,7 +453,7 @@ function Test-DeployConfig {
     if ($allowedHosts -notmatch '^[A-Za-z0-9.,*-]+$') { $problems['AllowedHosts'] = 'AllowedHosts must match ^[A-Za-z0-9.,*-]+$' }
 
     $modulesSet = $null -ne $RawConfig.PSObject.Properties['Modules']
-    $modules = if ($modulesSet) { ConvertTo-CanonicalModuleList ([string]$RawConfig.Modules) } else { $AllModules }
+    $modules = if ($modulesSet) { ConvertTo-CanonicalModuleList ([string]$RawConfig.Modules) } else { $DefaultModules }
     if (-not $modules) { $problems['Modules'] = "Modules must list known modules separated by commas ($($KnownModules -join ', '))" }
 
     $certModeSet = $null -ne $RawConfig.PSObject.Properties['CertMode']
@@ -551,11 +555,13 @@ function Read-MenuChoice {
 }
 
 function Read-ModuleChoice([string]$Current) {
-    $options = @($KnownModules) + $(if ($KnownModules.Count -gt 1) { @($AllModules) } else { @() })
+    # Each module alone, then the default set (without opt-in modules), then every module when that differs.
+    $combos = @(@($DefaultModules, $AllModules) | Where-Object { $_ -and $_.Contains(',') } | Select-Object -Unique)
+    $options = @($KnownModules) + $combos
     $idx = [array]::IndexOf($options, $Current)
     $tag = 'current'
-    if ($idx -lt 0) { $idx = [Math]::Max(0, $options.Count - 1); $tag = 'default' }
-    $labels = @($KnownModules | ForEach-Object { "$_ only" }) + $(if ($KnownModules.Count -gt 1) { @($KnownModules -join ' and ') } else { @() })
+    if ($idx -lt 0) { $idx = [Math]::Max(0, [array]::IndexOf($options, $DefaultModules)); $tag = 'default' }
+    $labels = @($KnownModules | ForEach-Object { "$_ only" }) + @($combos | ForEach-Object { $_.Replace(',', ' and ') })
     return $options[(Read-MenuChoice 'Modules to install:' $labels $idx $tag)]
 }
 
@@ -694,7 +700,7 @@ function Complete-DeployConfig {
         }
     }
     if (($ForBuild -or $askNames) -and @($BrandingKeys | Where-Object { $null -eq $RawConfig.PSObject.Properties[$_] }).Count -gt 0) {
-        $modules = ConvertTo-CanonicalModuleList $(if ($null -ne $RawConfig.PSObject.Properties['Modules']) { [string]$RawConfig.Modules } else { $AllModules })
+        $modules = ConvertTo-CanonicalModuleList $(if ($null -ne $RawConfig.PSObject.Properties['Modules']) { [string]$RawConfig.Modules } else { $DefaultModules })
         $names = Read-BrandingChoice -RawConfig $RawConfig -Modules $modules
         foreach ($k in $names.Keys) { $RawConfig | Add-Member -NotePropertyName $k -NotePropertyValue $names[$k] -Force; $changed[$k] = $names[$k] }
     }
@@ -1203,6 +1209,7 @@ function Get-DeployCommit {
     if ($sha -cnotmatch '^[0-9a-f]{40}$') { throw 'Could not resolve the HEAD commit.' }
     $script:KnownModules = @(Get-KnownModules $sha)
     $script:AllModules = $script:KnownModules -join ','
+    $script:DefaultModules = Get-DefaultModules $sha
     Write-Success "Deploying commit $sha (Known modules: $AllModules)"
     return $sha
 }
@@ -1262,7 +1269,7 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
     $distDir = Join-Path $snapshotFront $FrontDistRelative
     $marker = Join-Path $scratchDir '.build-complete'
     $stamp = Get-BrandingStamp $Config
-    $buildModules = if ($Config -and $Config.Modules) { ConvertTo-CanonicalModuleList $Config.Modules } else { $AllModules }
+    $buildModules = if ($Config -and $Config.Modules) { ConvertTo-CanonicalModuleList $Config.Modules } else { $DefaultModules }
     $modulesMarker = "MODULES=$buildModules"
     $expectedMarker = if ($stamp) { "COMMIT=$Sha $modulesMarker BRANDING=$stamp" } else { "COMMIT=$Sha $modulesMarker" }
 
@@ -1288,12 +1295,11 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
     $frontTar = Join-Path $LocalDeployScratch "front_$Sha.tar"
     if (Test-Path -LiteralPath $frontTar) { Remove-Item -LiteralPath $frontTar -Force }
     try {
-        $repoFront = Get-RepoDir $Sha 'frontend'
+        $repoFront = $BundleFrontDir
         if ((Invoke-Native $GitExe @('-C', $ScriptRoot, 'archive', '--format=tar', '-o', $frontTar, $Sha, '--', $repoFront)) -ne 0) {
             throw "git archive of $repoFront failed for $Sha."
         }
         if ((Invoke-Native $TarExe @('-xf', $frontTar, '-C', $scratchDir)) -ne 0) { throw 'Extracting the frontend snapshot failed.' }
-        if ($repoFront -ne $BundleFrontDir) { Move-Item -LiteralPath (Join-Path $scratchDir $repoFront) -Destination $snapshotFront }
     } finally {
         if (Test-Path -LiteralPath $frontTar) { Remove-Item -LiteralPath $frontTar -Force }
     }
@@ -1326,7 +1332,7 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
 }
 
 function Get-BackendWhitelist([string]$Sha) {
-    $repoBackend = Get-RepoDir $Sha 'backend'
+    $repoBackend = $BundleBackendDir
     $prefix = [regex]::Escape($repoBackend)
     $r = Invoke-Git @('ls-tree', '-r', '-z', '--name-only', $Sha, '--', $repoBackend)
     if ($r.ExitCode -ne 0) { throw "git ls-tree failed for $Sha." }
@@ -1368,23 +1374,23 @@ function Test-BundleStage([string]$StageDir, $Whitelist, [string]$ExpectedModule
             }
         }
     }
-    $backendTop = @(Get-ChildItem -LiteralPath (Join-Path $StageDir 'warehouse-backend') -Force | ForEach-Object { $_.Name } | Sort-Object)
+    $backendTop = @(Get-ChildItem -LiteralPath (Join-Path $StageDir $BundleBackendDir) -Force | ForEach-Object { $_.Name } | Sort-Object)
     $expectedTopDirs = @($Whitelist.Apps | ForEach-Object { $_.Split('/')[0] } | Sort-Object -Unique)
     $expectedTop = @(@($expectedTopDirs) + @($Whitelist.Files) | Sort-Object)
     if (($backendTop -join '|') -cne ($expectedTop -join '|')) {
-        $problems.Add("warehouse-backend top level differs from the whitelist (got: $($backendTop -join ', '))")
+        $problems.Add("backend top level differs from the whitelist (got: $($backendTop -join ', '))")
     }
     foreach ($appRel in $Whitelist.Apps) {
-        if (-not (Test-Path -LiteralPath (Join-Path $StageDir "warehouse-backend/$appRel/__init__.py"))) {
+        if (-not (Test-Path -LiteralPath (Join-Path $StageDir "backend/$appRel/__init__.py"))) {
             $problems.Add("backend app $appRel missing from bundle")
         }
     }
     foreach ($manifestRel in $Whitelist.Manifests) {
-        if (-not (Test-Path -LiteralPath (Join-Path $StageDir "warehouse-backend/$manifestRel"))) {
+        if (-not (Test-Path -LiteralPath (Join-Path $StageDir "backend/$manifestRel"))) {
             $problems.Add("module manifest $manifestRel missing from bundle")
         }
     }
-    $dist = Join-Path $StageDir "warehouse-front\$FrontDistRelative"
+    $dist = Join-Path $StageDir "frontend\$FrontDistRelative"
     foreach ($required in 'index.html', 'ngsw.json', 'build-modules.txt') {
         if (-not (Test-Path -LiteralPath (Join-Path $dist $required))) { $problems.Add("frontend $required missing from bundle") }
     }
@@ -1428,7 +1434,6 @@ function New-DeploymentBundle([string]$Sha, [string]$SnapshotFront, [string]$Exp
         $archiveArgs = @('-C', $ScriptRoot, 'archive', '--format=tar', '-o', $sourceTar, $Sha, '--') + $pathspecs.ToArray()
         if ((Invoke-Native $GitExe $archiveArgs) -ne 0) { throw "git archive failed for $Sha." }
         if ((Invoke-Native $TarExe @('-xf', $sourceTar, '-C', $stageDir)) -ne 0) { throw 'Extracting the source snapshot failed.' }
-        if ($repoBackend -ne $BundleBackendDir) { Move-Item -LiteralPath (Join-Path $stageDir $repoBackend) -Destination (Join-Path $stageDir $BundleBackendDir) }
 
         $frontTarget = Join-Path $stageDir $BundleFrontDir
         [void][System.IO.Directory]::CreateDirectory($frontTarget)
@@ -2479,7 +2484,7 @@ function Invoke-RollbackMode {
             Write-Host ('  {0}) {1}{2}{3}  {4}' -f ($i + 1), $cand.Name, $tagStr, $commitStr, $compatStr) -ForegroundColor $color
         }
 
-        $prevIndex = [array]::FindIndex($candidates.ToArray(), [System.Predicate[object]]{ param($c) $c.Tag -eq 'previous' })
+        $prevIndex = [array]::FindIndex([object[]]$candidates,[System.Predicate[object]]{ param($c) $c.Tag -eq 'previous' })
         if ($prevIndex -lt 0) { $prevIndex = 0 }
 
         $promptMsg = "Type YES to switch to previous release, or enter number [1-$($candidates.Count)]:"

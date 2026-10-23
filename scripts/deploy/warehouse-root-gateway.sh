@@ -928,11 +928,11 @@ PYEOF
             echo "[ERROR] create-admin takes no arguments; the details are asked interactively." >&2
             exit 2
         fi
-        if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/warehouse-backend/manage.py ]]; then
+        if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/backend/manage.py ]]; then
             echo "[ERROR] Active release manage.py or venv not found" >&2
             exit 1
         fi
-        cd /var/www/warehouse/current/warehouse-backend
+        cd /var/www/warehouse/current/backend
         exec runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings DJANGO_ENV=production \
             /var/www/warehouse/current/venv/bin/python manage.py createsuperuser
         ;;
@@ -943,11 +943,11 @@ PYEOF
             echo "[ERROR] reset-lockout takes no arguments." >&2
             exit 2
         fi
-        if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/warehouse-backend/manage.py ]]; then
+        if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/backend/manage.py ]]; then
             echo "[ERROR] Active release manage.py or venv not found" >&2
             exit 1
         fi
-        cd /var/www/warehouse/current/warehouse-backend
+        cd /var/www/warehouse/current/backend
         exec runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings DJANGO_ENV=production \
             /var/www/warehouse/current/venv/bin/python manage.py axes_reset
         ;;

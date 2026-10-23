@@ -79,11 +79,22 @@ function New-TestCommit([string]$Parent, [string]$Message, [hashtable]$ExtraFile
     # Reuse the frontend build of -BuildSha for this commit (what -SkipBuild expects in scratch/deploy/<sha>).
     $dst = Join-Path $LocalDeployScratch $sha
     Remove-SafeDirectoryRecursively $dst
-    [void][System.IO.Directory]::CreateDirectory((Join-Path $dst 'warehouse-front'))
-    Copy-Item -LiteralPath (Join-Path $LocalDeployScratch "$BuildSha\warehouse-front\dist") -Destination (Join-Path $dst 'warehouse-front\dist') -Recurse
+    [void][System.IO.Directory]::CreateDirectory((Join-Path $dst 'frontend'))
+    Copy-Item -LiteralPath (Join-Path $LocalDeployScratch "$BuildSha\frontend\dist") -Destination (Join-Path $dst 'frontend\dist') -Recurse
     Write-Utf8LfFile (Join-Path $dst '.build-complete') "COMMIT=$sha`n"
     Write-Host "[INFO] test commit $sha ($Message)" -ForegroundColor Cyan
     return $sha
+}
+
+# The frontend build is not under test here: reuse the copied dist and record the modules this run installs,
+# which the bundle check compares with build-modules.txt (a real build writes the same file).
+function Build-IsolatedFrontend([string]$Sha, $Config) {
+    $snapshotFront = Join-Path (Join-Path $LocalDeployScratch $Sha) $BundleFrontDir
+    $distDir = Join-Path $snapshotFront $FrontDistRelative
+    if (-not (Test-Path -LiteralPath (Join-Path $distDir 'index.html'))) { throw "e2e: no reused frontend build for $Sha" }
+    $mods = if ($Config -and $Config.Modules) { ConvertTo-CanonicalModuleList $Config.Modules } else { $DefaultModules }
+    Write-Utf8LfFile (Join-Path $distDir 'build-modules.txt') "$mods`n"
+    return $snapshotFront
 }
 
 # --- fake ssh --------------------------------------------------------------------------------------
@@ -160,7 +171,7 @@ echo "HTTPS_ROOT=$(curl -ks -o /dev/null -w '%{http_code}' --resolve soft.exampl
 function Assert-Serving($State, [string]$Sha, [string]$Label) {
     $rel = $State.CURRENT
     Assert-True ($rel -match "^\d{8}_\d{6}_$($Sha.Substring(0, 12))$" -and $State.COMMIT -eq $Sha -and $State.ACTIVE -eq $rel) "$Label : current, RELEASE and ACTIVE_RELEASE name commit $($Sha.Substring(0, 12)) ($rel)"
-    Assert-True ($State.DAPHNE_CWD -eq "/var/www/warehouse/releases/$rel/warehouse-backend") "$Label : the running daphne serves that release ($($State.DAPHNE_CWD))"
+    Assert-True ($State.DAPHNE_CWD -eq "/var/www/warehouse/releases/$rel/backend") "$Label : the running daphne serves that release ($($State.DAPHNE_CWD))"
     Assert-True ($State.HTTPS_API -eq '200' -and $State.HTTPS_ROOT -eq '200' -and $State.MAINTENANCE -eq 'no') "$Label : HTTPS through nginx answers 200 for / and the API, no MAINTENANCE"
 }
 function Invoke-GatewayAsDeploy([string]$Arguments) {
@@ -408,9 +419,15 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = [('accounts', '0001_initial')]
+    dependencies = [('accounts', '__ACCOUNTS_LEAF__')]
     operations = [migrations.RunPython(migrations.RunPython.noop, migrations.RunPython.noop)]
 '@
+
+# Both fake migrations depend on the latest real one, so the graph keeps a single leaf.
+function Get-MigrationLeaf([string]$Dir) {
+    return (Get-ChildItem -LiteralPath (Join-Path $ScriptRoot $Dir) -Filter '0*.py' | Sort-Object Name | Select-Object -Last 1).BaseName
+}
+$migration = $migration.Replace('__ACCOUNTS_LEAF__', (Get-MigrationLeaf 'backend/core/accounts/migrations'))
 
 $brokenWarehouseMigration = @'
 from django.db import migrations
@@ -421,13 +438,14 @@ def fail(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [('inventory', '0001_initial')]
+    dependencies = [('inventory', '__INVENTORY_LEAF__')]
     operations = [migrations.RunPython(fail, migrations.RunPython.noop)]
 '@
+$brokenWarehouseMigration = $brokenWarehouseMigration.Replace('__INVENTORY_LEAF__', (Get-MigrationLeaf 'backend/modules/warehouse/inventory/migrations'))
 
 try {
     # --- commits -------------------------------------------------------------------------------
-    if ($BuildSha -cnotmatch '^[0-9a-f]{40}$' -or -not (Test-Path -LiteralPath (Join-Path $LocalDeployScratch "$BuildSha\warehouse-front\dist\warehouse-app\browser\ngsw.json"))) {
+    if ($BuildSha -cnotmatch '^[0-9a-f]{40}$' -or -not (Test-Path -LiteralPath (Join-Path $LocalDeployScratch "$BuildSha\frontend\dist\warehouse-app\browser\ngsw.json"))) {
         throw "No completed build for $BuildSha in scratch/deploy (run test_bundle.ps1 first)."
     }
     $head = (Invoke-Git @('rev-parse', 'HEAD')).Output.Trim()
@@ -451,14 +469,15 @@ try {
     # Like soft: Let's Encrypt cannot reach the server, so HTTP-01 fails; the setup must still finish.
     $cfToken = 'e2eTestToken_0123456789abcdefghijklmnopqrstu'
     [void](Invoke-Server "touch /run/fake-certbot-http01-fail; printf '%s' '$cfToken' > /run/fake-cf-token")
-    # The first Setup reviews domain, hosts, e-mail, database, modules, certificate mode (unset: http01), the name
-    # menu and the organization; Enter keeps each. Afterwards it offers the certificate, an outbound proxy,
-    # Google OAuth and the administrator (all declined here; the token and IssueCert are separate modes below).
-    foreach ($a in @('', '', '', '', '', '', '', '', '', 'n', 'n', 'n', 'n')) { $script:ReadHostQueue.Enqueue($a) }
+    # The first Setup reviews the connection (host, user, port), then host, user, port, domain, hosts, e-mail,
+    # database name and user, modules, certificate mode (unset: http01), the name menu and the organization;
+    # Enter keeps each. Afterwards it offers the certificate, an outbound proxy, Google OAuth and the
+    # administrator (all declined here; the token and IssueCert are separate modes below).
+    foreach ($a in @(@('') * 15 + @('n', 'n', 'n', 'n'))) { $script:ReadHostQueue.Enqueue($a) }
     Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #1 exit 0 although HTTP-01 fails'
     Assert-True ((Get-ConfigCertMode) -eq 'http01') "Setup #1 recorded the chosen CertMode in the configuration ($(Get-ConfigCertMode))"
     Assert-True (@(Invoke-Server 'test -e /etc/sudoers.d/90-warehouse-setup-temp && echo PRESENT || echo ABSENT')[0] -eq 'ABSENT') 'Setup #1 removed the temporary bootstrap sudo rule'
-    $tls = @(Invoke-Server 'if [ -e /etc/letsencrypt/live/soft.example.test/fullchain.pem ]; then echo CERT; else echo NOCERT; fi; grep -c -- "--webroot" /run/fake-certbot.log || true; systemctl is-active fail2ban || true; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" http://127.0.0.1/ || true; echo; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true')
+    $tls = @(Invoke-Server 'if [ -e /etc/letsencrypt/live/soft.example.test/fullchain.pem ]; then echo CERT; else echo NOCERT; fi; grep -c -- "--webroot" /run/fake-certbot.log || true; for _ in $(seq 30); do systemctl is-active fail2ban >/dev/null 2>&1 && break; sleep 0.5; done; systemctl is-active fail2ban || true; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" http://127.0.0.1/ || true; echo; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true')
     Assert-True ($tls[0] -eq 'NOCERT' -and $tls[1] -eq '1' -and $tls[2] -eq 'active' -and $tls[3] -eq '301' -and $tls[4] -eq '200') "... no certificate, nginx only redirects to HTTPS, the application answers, and the firewall step (fail2ban) still ran ($($tls -join ', '))"
     $mods = @(Invoke-Server 'sed -n "s/^WH_MODULES=//p" /var/www/warehouse/shared/.env; cat /var/www/warehouse/shared/MODULES; curl -s -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ | python3 -c "import json, sys; print(\",\".join(json.load(sys.stdin)[\"installed_modules\"]))"')
     Assert-True ($mods.Count -eq 3 -and $mods[0] -eq 'accounting' -and $mods[1] -eq 'accounting' -and $mods[2] -eq 'platform,accounting') "Setup #1 installed accounting only: WH_MODULES, the MODULES record and installed_modules ($($mods -join ' | '))"
@@ -506,7 +525,7 @@ runuser -u warehouse -- sh -c 'printf "user upload\n" > /var/www/warehouse/share
 sha256sum /var/www/warehouse/shared/.env | cut -d' ' -f1
 runuser -u postgres -- psql -XAtq -c "SELECT oid FROM pg_database WHERE datname = 'warehouse_db'"
 '@ | Where-Object { $_ -and $_ -notmatch '^(CREATE|INSERT|ALTER)' })
-    foreach ($a in @('', '')) { $script:ReadHostQueue.Enqueue($a) }   # a later Setup reviews only the names
+    foreach ($a in @(@('') * 5)) { $script:ReadHostQueue.Enqueue($a) }   # a later Setup reviews the connection and the names
     Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #2 (gateway only) exit 0'
     $sB = Get-ServerState
     Assert-Serving $sB $sha1 'Setup #2'
@@ -554,7 +573,7 @@ stat -c '%U:%G' /var/www/warehouse/shared/media/uploads /var/www/warehouse/share
     Assert-True ($sD.CURRENT -eq $rU1 -and $sD.PREVIOUS -eq $rU2) 'Rollback switched to Update #1 and recorded Update #2 as previous'
 
     # === E. fail-closed: django.setup of the target fails ===========================================
-    [void](Invoke-Server "f=/var/www/warehouse/releases/$rU2/warehouse-backend/config/settings.py; cp -p `"`$f`" /root/settings.py.orig; printf '\nraise RuntimeError(\`"e2e: broken settings\`")\n' >> `"`$f`"")
+    [void](Invoke-Server "f=/var/www/warehouse/releases/$rU2/backend/config/settings.py; cp -p `"`$f`" /root/settings.py.orig; printf '\nraise RuntimeError(\`"e2e: broken settings\`")\n' >> `"`$f`"")
     $script:ReadHostQueue.Enqueue('YES')
     Assert-True ((Invoke-TestMode 'Rollback') -ne 0) 'Rollback to a release whose django.setup fails exits non-zero'
     $gw = Invoke-GatewayAsDeploy "deploy-rollback --domain $Domain"
@@ -562,7 +581,7 @@ stat -c '%U:%G' /var/www/warehouse/shared/media/uploads /var/www/warehouse/share
     $sE = Get-ServerState
     Assert-Serving $sE $sha2 'after the refused rollback'
     Assert-True ($sE.CURRENT -eq $rU1 -and $sE.PREVIOUS -eq $rU2) '... current and the recorded releases unchanged'
-    [void](Invoke-Server "cp -p /root/settings.py.orig /var/www/warehouse/releases/$rU2/warehouse-backend/config/settings.py")
+    [void](Invoke-Server "cp -p /root/settings.py.orig /var/www/warehouse/releases/$rU2/backend/config/settings.py")
 
     # === F. incompatible release: Update with a forward-only migration, then Rollback ===============
     $script:DeploySha = $shaMig
@@ -587,7 +606,7 @@ stat -c '%U:%G' /var/www/warehouse/shared/media/uploads /var/www/warehouse/share
 
     # === G. PullBackups with a real in-app backup in backups/db ======================================
     $made = Invoke-Container 'root' @'
-cd /var/www/warehouse/current/warehouse-backend
+cd /var/www/warehouse/current/backend
 runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings DJANGO_ENV=production /var/www/warehouse/current/venv/bin/python -c "import django; django.setup(); from accounts.backup_service import create_database_backup; print('[APP_BACKUP]', create_database_backup())"
 '@
     Write-Host "[INFO] create_database_backup: $(($made.Output | Select-Object -Last 3) -join ' | ') $($made.StdErr)"
@@ -765,7 +784,7 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Set-ConfigModules 'warehouse,accounting'
     $relBefore = (Get-ServerState).CURRENT
     Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update whose Modules differ from the server exits non-zero'
-    foreach ($a in @('', '')) { $script:ReadHostQueue.Enqueue($a) }
+    foreach ($a in @('', '', '')) { $script:ReadHostQueue.Enqueue($a) }   # the connection review; the module check stops it
     Assert-True ((Invoke-TestMode 'Setup') -ne 0) 'Setup whose Modules differ from the server exits non-zero'
     Assert-True ((Get-ServerState).CURRENT -eq $relBefore -and (Get-ModuleState).ENV -eq 'accounting') '... current release and WH_MODULES unchanged'
     Set-ConfigModules 'accounting'
@@ -794,8 +813,8 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Assert-True ((Invoke-TestMode 'AddModule') -eq 0) 'AddModule warehouse exit 0'
     $mC = Get-ModuleState
     Assert-Serving (Get-ServerState) $shaMig 'after AddModule warehouse'
-    Assert-True ($mC.API -eq 'platform,warehouse,accounting' -and $mC.ENV -eq 'warehouse,accounting' -and $mC.RECORD -eq 'warehouse,accounting' -and $mC.WH_API -ne '404') "... installed_modules, WH_MODULES and MODULES list both and the warehouse API exists ($($mC.API), $($mC.WH_API))"
-    Assert-True ((Get-ConfigModules) -eq 'warehouse,accounting' -and (@(Get-ChildItem -LiteralPath (Split-Path $ConfigFile) -Filter "$(Split-Path $ConfigFile -Leaf).bak-*" -File).Count -ge 1)) '... the configuration now says warehouse,accounting (previous copy in .bak-<timestamp>)'
+    Assert-True ($mC.API -eq 'platform,accounting,warehouse' -and $mC.ENV -eq 'accounting,warehouse' -and $mC.RECORD -eq 'accounting,warehouse' -and $mC.WH_API -ne '404') "... installed_modules, WH_MODULES and MODULES list both and the warehouse API exists ($($mC.API), $($mC.WH_API))"
+    Assert-True ((Get-ConfigModules) -eq 'accounting,warehouse' -and (@(Get-ChildItem -LiteralPath (Split-Path $ConfigFile) -Filter "$(Split-Path $ConfigFile -Leaf).bak-*" -File).Count -ge 1)) '... the configuration now says accounting,warehouse (previous copy in .bak-<timestamp>)'
     Assert-True (@(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT v FROM e2e_marker`"")[0] -eq 'kept') '... and the existing data is still there'
 
     # M5. removing a module is not supported
@@ -803,7 +822,7 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     $script:AddModule = ''
     Set-ConfigModules 'accounting'
     Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update with Modules=accounting (removing warehouse) exits non-zero'
-    Assert-True ((Get-ModuleState).ENV -eq 'warehouse,accounting') '... WH_MODULES unchanged'
+    Assert-True ((Get-ModuleState).ENV -eq 'accounting,warehouse') '... WH_MODULES unchanged'
 
     # === N. ResetServer (before GO_LIVE only) =======================================================
     $script:ReadHostQueue.Enqueue('no')

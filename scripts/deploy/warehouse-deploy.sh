@@ -22,7 +22,7 @@ PRE_UPDATE_RE='^db_pre_update_[0-9]{8}_[0-9]{6}\.dump$'
 STAGE_FILE_RE='^/tmp/wh-deploy\.[A-Za-z0-9]{10}/[A-Za-z0-9._-]+$'
 PRE_MODULE_RE='^db_pre_module_[0-9]{8}_[0-9]{6}\.dump$'
 
-# Discover known modules dynamically from warehouse-backend/modules/*/
+# Discover known modules dynamically from backend/modules/*/
 # The list is sorted alphabetically by directory name.
 KNOWN_MODULES=()
 declare -A MODULE_SERVICES=()
@@ -30,22 +30,22 @@ declare -A MODULE_SERVICES=()
 discover_known_modules() {
     local base_rel="${1:-}"
     if [[ -z "$base_rel" ]]; then
-        if [[ -d "${CURRENT_LINK}/warehouse-backend/modules" ]]; then
+        if [[ -d "${CURRENT_LINK}/backend/modules" ]]; then
             base_rel="${CURRENT_LINK}"
         else
             local latest
             latest=$(ls -td "${RELEASES_DIR}"/* 2>/dev/null | head -n 1 || true)
-            if [[ -n "$latest" && -d "${latest}/warehouse-backend/modules" ]]; then
+            if [[ -n "$latest" && -d "${latest}/backend/modules" ]]; then
                 base_rel="$latest"
-            elif [[ -d "$(dirname "$0")/../../warehouse-backend/modules" ]]; then
+            elif [[ -d "$(dirname "$0")/../../backend/modules" ]]; then
                 base_rel="$(dirname "$0")/../.."
             fi
         fi
     fi
     KNOWN_MODULES=()
-    if [[ -n "$base_rel" && -d "${base_rel}/warehouse-backend/modules" ]]; then
+    if [[ -n "$base_rel" && -d "${base_rel}/backend/modules" ]]; then
         local d mod_name
-        for d in "${base_rel}/warehouse-backend/modules"/*/; do
+        for d in "${base_rel}/backend/modules"/*/; do
             if [[ -d "$d" ]]; then
                 mod_name=$(basename "$d")
                 KNOWN_MODULES+=("$mod_name")
@@ -398,7 +398,7 @@ MANAGE_ENV=()
 run_manage() {
     local rel="$1"
     shift
-    (cd "${rel}/warehouse-backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
+    (cd "${rel}/backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
         DJANGO_ENV=production "${MANAGE_ENV[@]}" "${rel}/venv/bin/python" manage.py "$@")
 }
 
@@ -450,11 +450,11 @@ print("[MIGRATIONS_OK]")
 # check_migration_compatibility <release dir> [strict]
 check_migration_compatibility() {
     local target="$1" mode="${2:-}" out rc
-    if [[ ! -x "${target}/venv/bin/python" || ! -f "${target}/warehouse-backend/manage.py" ]]; then
+    if [[ ! -x "${target}/venv/bin/python" || ! -f "${target}/backend/manage.py" ]]; then
         echo "[CRITICAL] Cannot verify migrations: ${target} has no venv or manage.py." >&2
         return 1
     fi
-    if out=$(cd "${target}/warehouse-backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
+    if out=$(cd "${target}/backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
             DJANGO_ENV=production "${MANAGE_ENV[@]}" "${target}/venv/bin/python" -c "$MIGRATION_CHECK_PY" ${mode:+"$mode"} 2>&1); then
         rc=0
     else
@@ -1067,12 +1067,6 @@ if [[ "${1:-}" == "--prepare" ]]; then
     done
     [[ "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
     assert_not_legacy_domain "$DOMAIN"
-    # An update never changes the installed modules (deploy.ps1 -AddModule adds one; none is ever removed).
-    if [[ -n "$EXPECTED_MODULES" ]]; then
-        WANT_MODULES=$(canonical_modules "$EXPECTED_MODULES") || die "--modules must list known modules (${KNOWN_MODULES[*]})."
-        HAVE_MODULES=$(effective_modules) || die "WH_MODULES in ${SHARED_DIR}/.env is invalid."
-        [[ "$WANT_MODULES" == "$HAVE_MODULES" ]] || die "Modules mismatch: the server has '${HAVE_MODULES}', the configuration asks for '${WANT_MODULES}'. Update never changes the installed modules: add one with deploy.ps1 -AddModule <code>; removing a module is not supported."
-    fi
     [[ "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]] || die "--bundle-sha256 with 64 lowercase hex digits is required (G-05)."
     assert_stage_file "$BUNDLE_PATH"
     ACTUAL_SHA=$(sha256sum -- "$BUNDLE_PATH" | cut -d' ' -f1)
@@ -1112,10 +1106,17 @@ if [[ "${1:-}" == "--prepare" ]]; then
     tar -xzf "$BUNDLE_PATH" -C "$TEMP_EXTRACT"
     chown -R root:root "$TEMP_EXTRACT"
     discover_known_modules "$TEMP_EXTRACT"
+    # Checked after extraction: on a fresh server the bundle is the only place the known modules come from.
+    # An update never changes the installed modules (deploy.ps1 -AddModule adds one; none is ever removed).
+    if [[ -n "$EXPECTED_MODULES" ]]; then
+        WANT_MODULES=$(canonical_modules "$EXPECTED_MODULES") || die "--modules must list known modules (${KNOWN_MODULES[*]})."
+        HAVE_MODULES=$(effective_modules) || die "WH_MODULES in ${SHARED_DIR}/.env is invalid."
+        [[ "$WANT_MODULES" == "$HAVE_MODULES" ]] || die "Modules mismatch: the server has '${HAVE_MODULES}', the configuration asks for '${WANT_MODULES}'. Update never changes the installed modules: add one with deploy.ps1 -AddModule <code>; removing a module is not supported."
+    fi
     find "$TEMP_EXTRACT" -type d -exec chmod 755 {} +
     find "$TEMP_EXTRACT" -type f -exec chmod 644 {} +
     find "$TEMP_EXTRACT" -type f -name "*.sh" -exec chmod 755 {} +
-    if [[ -f "${TEMP_EXTRACT}/warehouse-backend/manage.py" ]]; then chmod 755 "${TEMP_EXTRACT}/warehouse-backend/manage.py"; fi
+    if [[ -f "${TEMP_EXTRACT}/backend/manage.py" ]]; then chmod 755 "${TEMP_EXTRACT}/backend/manage.py"; fi
     [[ -f "${TEMP_EXTRACT}/RELEASE" ]] || die "Bundle has no RELEASE file."
     SHA=$(sed -n 's/^COMMIT=//p' "${TEMP_EXTRACT}/RELEASE" | head -n 1 | tr -d '\r' | cut -c1-12)
     [[ "$SHA" =~ ^[0-9a-f]{12}$ ]] || die "RELEASE does not name a valid commit (G-06)."
@@ -1160,11 +1161,11 @@ if [[ "${1:-}" == "--prepare" ]]; then
     mv -T -- "$TEMP_EXTRACT" "${RELEASES_DIR}/${RELEASE_NAME}"
     TEMP_EXTRACT=""
     RELEASE_DIR="${RELEASES_DIR}/${RELEASE_NAME}"
-    ln -sfn "${SHARED_DIR}/.env" "${RELEASE_DIR}/warehouse-backend/.env"
+    ln -sfn "${SHARED_DIR}/.env" "${RELEASE_DIR}/backend/.env"
 
     # Resolve Python Virtual Environment (F-06: direct creation at target path)
-    LOCK_FILE_PATH="${RELEASE_DIR}/warehouse-backend/requirements.lock"
-    REQ_FILE_PATH="${RELEASE_DIR}/warehouse-backend/requirements.txt"
+    LOCK_FILE_PATH="${RELEASE_DIR}/backend/requirements.lock"
+    REQ_FILE_PATH="${RELEASE_DIR}/backend/requirements.txt"
     PIP_FLAGS=()
     if [[ -f "$LOCK_FILE_PATH" ]]; then
         TARGET_REQ="$LOCK_FILE_PATH"
@@ -1189,8 +1190,8 @@ if [[ "${1:-}" == "--prepare" ]]; then
     ln -sfn "$VENV_DIR" "${RELEASE_DIR}/venv"
 
     # Preserve the active release's hashed frontend chunks for clients still on the old build (E-23, E-30, F-18)
-    PREV_BROWSER="${CURRENT_LINK}/warehouse-front/dist/warehouse-app/browser"
-    NEW_BROWSER="${RELEASE_DIR}/warehouse-front/dist/warehouse-app/browser"
+    PREV_BROWSER="${CURRENT_LINK}/frontend/dist/warehouse-app/browser"
+    NEW_BROWSER="${RELEASE_DIR}/frontend/dist/warehouse-app/browser"
     if [[ -d "$PREV_BROWSER" && -d "$NEW_BROWSER" ]]; then
         if [[ -f "${PREV_BROWSER}/ngsw.json" ]]; then
             { grep -oE '"/[A-Za-z0-9_.-]+-[A-Za-z0-9]{8}\.(js|css)"' "${PREV_BROWSER}/ngsw.json" || true; } | tr -d '"/' | while read -r chunk; do
@@ -1353,7 +1354,7 @@ if [[ "${1:-}" == "--activate" ]]; then
     fi
 
     # Only staticfiles/ is writable for the application user during collectstatic (E-07, G-15)
-    STATIC_DIR="${RELEASE_DIR}/warehouse-backend/staticfiles"
+    STATIC_DIR="${RELEASE_DIR}/backend/staticfiles"
     if [[ -L "$STATIC_DIR" || ( -e "$STATIC_DIR" && ! -d "$STATIC_DIR" ) ]]; then
         abort_before_switch "${STATIC_DIR} is not a plain directory."
     fi

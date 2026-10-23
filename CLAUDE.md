@@ -36,7 +36,7 @@
 - `scripts/` — guardian/test scripts (`scripts/e2e/`).
 - `Documents/Modular_Middle_Path/` — modular architecture implementation plan.
 - `pyproject.toml` — dev-only umbrella package `wh-suite` (`import-linter==2.3` as dev).
-- **No hard-coded project root** (user, 23 Oct 2026, folder renamed to `comanager`): code and scripts find the root from their own location (`Path(__file__)`, `%~dp0`, `$PSScriptRoot`) or use paths relative to it. `.mcp.json` and `.claude/launch.json` use relative paths. The deploy bundle and `soft` keep the old names `warehouse-backend/` and `warehouse-front/`; `deploy.ps1` maps the repo folders onto them (`Get-RepoDir`), so units and nginx on `soft` are unchanged.
+- **No hard-coded project root** (user, 23 Oct 2026, folder renamed to `comanager`): code and scripts find the root from their own location (`Path(__file__)`, `%~dp0`, `$PSScriptRoot`) or use paths relative to it. `.mcp.json` and `.claude/launch.json` use relative paths. The deploy bundle and `soft` use the same `backend/` and `frontend/` folders (since 23 Oct 2026, after `soft` was wiped); systemd unit names (`warehouse-backend.service` …) are unchanged.
 
 ### Backend apps (Django)
 

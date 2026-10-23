@@ -300,12 +300,13 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     # --- 10. Update orchestration (fake warehouse-deploy) --------------------------------------
     $SkipBuild = $true
     $Maintenance = $true
+    foreach ($a in @('', '')) { $script:ReadHostQueue.Enqueue($a) }   # the first interactive Update asks for the names and the organization once; Enter keeps them
     Assert-True ((Invoke-TestMode 'Update') -eq 0) 'Update exit 0'
     $deployLog = Invoke-Server 'cat /run/fake-deploy.log'
     $act = @($deployLog | Where-Object { $_ -like 'activate *' })
     Assert-True ($act.Count -eq 1 -and $act[0] -match "^activate \d{8}_\d{6}_$($Sha.Substring(0, 12)) --verified-backup db_pre_update_\d{8}_\d{6}\.dump --domain soft\.example\.test --maintenance$") "activate called once with release, verified backup and --maintenance ($($act[0]))"
     $prepLine = @($deployLog | Where-Object { $_ -like 'prepare *' })
-    Assert-True ($prepLine.Count -eq 1 -and $prepLine[0] -like '* --modules warehouse,accounting') "prepare is told the modules the server runs, so it re-checks them ($($prepLine[0]))"
+    Assert-True ($prepLine.Count -eq 1 -and $prepLine[0] -like '* --modules accounting,warehouse') "prepare is told the modules the server runs, so it re-checks them ($($prepLine[0]))"
     $pre = @(Get-LocalNames 'db_pre_update_*.dump')
     Assert-True ($pre.Count -eq 1 -and (Test-LocalDumpVerified (Get-Item -LiteralPath (Join-Path $LocalBackupRoot $pre[0])))) 'pre-update backup pulled and verified before activation'
     $rel = Invoke-Server 'cat /var/www/warehouse/current/RELEASE'
