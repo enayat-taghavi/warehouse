@@ -21,9 +21,11 @@ import { ACCOUNTING_PERSONAS } from './personas';
 import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
 import { ACCOUNTING_ROLE_PRESETS } from './role-presets';
 import { ACCOUNTING_PERMISSION_CODENAMES, ACCOUNTING_SHORT_PERMISSION_NAMES } from './permissions';
+import { redirectToCompanyProjects } from '../../core/modules/documents-archive-route';
+import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
 
-/** فهرست پروژه‌های مالی فعال (هم projectLookup و هم بروزرسانی عمیق) */
-const FINANCIAL_PROJECTS_ENDPOINT = '/personnel/financial-projects';
+/** فهرست پروژه‌های فعال؛ پروژه در هسته است (هم projectLookup و هم بروزرسانی عمیق) */
+const FINANCIAL_PROJECTS_ENDPOINT = '/org/projects';
 
 /**
  * مانیفست رسمی و مستقل ماژول مالی، حقوق و کارکرد (Front-End Module Manifest)
@@ -44,7 +46,7 @@ export const MODULE: WhFrontendModule = {
     'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
     'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
     'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-    'can_act_as_accountant', 'can_act_as_operator', 'view_sys_projects', 'perm_manage_projects_sections'
+    'can_act_as_accountant', 'can_act_as_operator', 'view_sys_projects'
   ],
   roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin'],
   personas: ACCOUNTING_PERSONAS,
@@ -61,7 +63,7 @@ export const MODULE: WhFrontendModule = {
     { path: 'profiles', redirectTo: 'app/finance/profiles', pathMatch: 'full' },
     { path: 'personnel-profiles', redirectTo: 'app/finance/personnel-profiles', pathMatch: 'full' },
     { path: 'base-settings', redirectTo: 'app/finance/base-settings', pathMatch: 'full' },
-    { path: 'projects-and-sections', redirectTo: 'app/finance/projects-and-sections', pathMatch: 'full' },
+    { path: 'projects-and-sections', redirectTo: redirectToCompanyProjects, pathMatch: 'full' },
     { path: 'employee-portal', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
     { path: 'employee-attendance', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
     { path: 'employee-fleet', redirectTo: 'app/finance/employee-fleet', pathMatch: 'full' },
@@ -224,6 +226,30 @@ export const MODULE: WhFrontendModule = {
       ],
       rowActions: [
         { id: 'gdrive', labelFa: 'گوگل‌درایو', hintFa: 'تنظیمات همگام‌سازی گوگل‌درایو', icon: 'google-drive', tab: 'gdrive' }
+      ],
+      // نقش‌های گردش‌کار حسابداری در انتساب کاربر به بخش (همان SECTION_ROLES در personnel/company_access.py)؛
+      // تایید هر یک از دارندگان هم‌نقش پرونده را به گام بعد می‌برد (انتساب موازی)
+      sectionRoles: [
+        {
+          key: 'manager', labelFa: 'مدیران پروژه / شرکت (تایید نهایی)', shortLabelFa: 'مدیران', icon: ROLE_ICONS.manager, tone: 'purple', order: 10,
+          descriptionFa: 'تایید هر یک از مدیران، گردش‌کار و اسناد را مستقیماً به مرحلهٔ بعد منتقل می‌کند.', missingWarningFa: 'فاقد مدیر'
+        },
+        {
+          key: 'accountant', labelFa: 'حسابداران پروژه (بررسی و تایید مالی)', shortLabelFa: 'حسابداران', icon: ROLE_ICONS.accountant, tone: 'amber', order: 20,
+          descriptionFa: 'بررسی هزینه‌ها و تطبیق صورت‌حساب‌ها.'
+        },
+        {
+          key: 'supervisor', labelFa: 'سرپرستان بخش (بررسی عملیاتی)', shortLabelFa: 'سرپرستان', icon: ROLE_ICONS.supervisor, tone: 'blue', order: 30,
+          descriptionFa: 'نظارت عملیاتی بر ترددها، کارکرد پرسنل و ناوگان.'
+        },
+        {
+          key: 'treasury', labelFa: 'خزانه‌داران کل (پرداخت و تسویه)', shortLabelFa: 'خزانه‌داران', icon: ROLE_ICONS.treasury, tone: 'emerald', order: 40,
+          descriptionFa: 'صدور حوالهٔ پرداخت و تسویهٔ ریالی فاکتورها.'
+        },
+        {
+          key: 'employee', labelFa: 'کارمندان و اپراتورها (ثبت‌کنندگان)', shortLabelFa: 'کارمندان', icon: ROLE_ICONS.operator, tone: 'slate', order: 50,
+          descriptionFa: 'ثبت اطلاعات خام، کارکرد و پیش‌نویس اسناد.'
+        }
       ]
     },
     users: {

@@ -1071,7 +1071,8 @@ export class Layout implements OnInit, OnDestroy {
     if (!isAdmin && this.personaService.activeRole() !== role) {
       return [];
     }
-    const hasRoleMarker = cfg.roleMarkers.some(m => userPerms.includes(m));
+    // نشانگر تهی: پرسونای فعال (که بالاتر سنجیده شد) خودش نشانگر نقش است
+    const hasRoleMarker = cfg.roleMarkers.length === 0 || cfg.roleMarkers.some(m => userPerms.includes(m));
     return cfg.items.filter(item => {
       if (isAdmin) return true;
       return (hasRoleMarker || userPerms.includes(item.permission)) && hasRoutePermission(item.id, userPerms);
@@ -1405,7 +1406,6 @@ export class Layout implements OnInit, OnDestroy {
       'treasurer-cheques': 'مدیریت چک‌های صیادی و تقویم سررسید (پنل خزانه‌دار)',
       'treasurer-reconciliation': 'مغایرت‌گیری بانکی و تقویم نقدینگی (پنل خزانه‌دار)',
       companies: 'مدیریت شرکت‌ها و هلدینگ',
-      'projects-and-sections': 'مدیریت ساختار سازمانی، پروژه‌ها و بخش‌ها',
       health: 'مرکز جامع پایش سلامت و تاب‌آوری سامانه'
     };
     this.currentTitle = this.isCompaniesShell ? 'شرکت‌های من' : (titles[tab] || tab);

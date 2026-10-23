@@ -14,7 +14,9 @@ export interface NavItem {
 // مرجع: Documents/Organization_Admin_And_Menu_Architecture/implementation_plan_org_admin_menu.md
 
 export const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
-  { id: 'projects-and-sections', label: 'پروژه‌ها و بخش‌ها', icon: ACCOUNTING_ENTITY_ICONS.projectsAndSections, permission: 'perm_manage_projects_sections', module: 'accounting', isAccounting: true },
+  // تعریف پروژه و بخش در تب «پروژه‌ها و بخش‌ها» استودیوی شرکت (هسته) است؛ این مسیر به همان تب هدایت می‌شود.
+  // دسترسی از سطح «نوشتن» بخش projects شرکت می‌آید، نه از مجوز؛ پرسونای فعال org_admin خودش نشانگر است
+  { id: 'projects-and-sections', label: 'پروژه‌ها و بخش‌ها', icon: PLATFORM_ENTITY_ICONS.projects, permission: '', module: 'accounting', isAccounting: true },
 ];
 
 export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
@@ -70,7 +72,8 @@ export const SUPERVISOR_ROLE_MARKERS = ['can_act_as_workshop_supervisor', 'perm_
 export const ACCOUNTANT_ROLE_MARKERS = ['can_act_as_accountant', 'view_sys_payroll', 'perm_approve_personnel_finance'];
 export const MANAGER_ROLE_MARKERS = ['can_act_as_company_manager', 'perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager'];
 export const TREASURER_ROLE_MARKERS = ['view_sys_treasury', 'perm_treasury_disburse_action'];
-export const ORG_ADMIN_ROLE_MARKERS = ['perm_manage_projects_sections'];
+/** تهی: نقش org_admin از سطح «نوشتن» بخش projects شرکت می‌آید (resolveAccountingRoleCodes)، نه از مجوز */
+export const ORG_ADMIN_ROLE_MARKERS: string[] = [];
 
 /**
  * آیتم‌های قابل نمایش یک منوی نقش: کاربر باید نشانگر نقش (یا مجوز خود آیتم) را داشته باشد
@@ -82,7 +85,7 @@ export function filterRoleNavItems(
   opts: { isAdmin: boolean; userPerms: string[]; roleMarkers: string[]; routeAllowed: (id: string) => boolean }
 ): NavItem[] {
   if (opts.isAdmin) return items;
-  const hasRoleMarker = opts.roleMarkers.some(m => opts.userPerms.includes(m));
+  const hasRoleMarker = opts.roleMarkers.length === 0 || opts.roleMarkers.some(m => opts.userPerms.includes(m));
   return items.filter(item =>
     (hasRoleMarker || opts.userPerms.includes(item.permission)) && opts.routeAllowed(item.id)
   );

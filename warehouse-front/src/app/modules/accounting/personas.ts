@@ -59,9 +59,15 @@ export const ACCOUNTING_ROLES: RolePersona[] = [
   }
 ];
 
-export function resolveAccountingRoleCodes(ctx: { perms: string[]; userRoles: string[] }): string[] {
+export function resolveAccountingRoleCodes(ctx: {
+  perms: string[];
+  userRoles: string[];
+  companySectionLevel?: (section: string) => 'none' | 'read' | 'write';
+}): string[] {
   const { perms, userRoles } = ctx;
   const roles: string[] = [];
+  // راهبر تشکیلات: نوشتن «پروژه‌ها و بخش‌ها» (بخش هستهٔ projects) دست‌کم در یک شرکت؛ همتای role_resolver بک‌اند
+  const isOrgAdmin = ctx.companySectionLevel?.('projects') === 'write';
 
   // کارمند: صراحتاً در نقش‌های کاربر یا دارای مجوز ثبت کارکرد (بدون تحمیل به حسابدار/سرپرست/مدیر/خزانه‌دار)
   const hasOperatorRole = userRoles.includes('operator') || perms.includes('can_act_as_operator');
@@ -72,7 +78,7 @@ export function resolveAccountingRoleCodes(ctx: { perms: string[]; userRoles: st
     perms.includes('can_act_as_company_manager') ||
     perms.includes('perm_treasury_disburse_action') ||
     perms.includes('perm_approve_personnel_supervisor') ||
-    perms.includes('perm_manage_projects_sections');
+    isOrgAdmin;
   if (hasOperatorRole || (hasOperatorPerm && !isOtherExplicitRole)) {
     roles.push('operator');
   }
@@ -98,7 +104,7 @@ export function resolveAccountingRoleCodes(ctx: { perms: string[]; userRoles: st
   }
 
   // راهبر تشکیلات: آخر فهرست تا نقش عملیاتی کاربر چندنقشه پیش‌فرض بماند
-  if (perms.includes('perm_manage_projects_sections')) {
+  if (isOrgAdmin) {
     roles.push('org_admin');
   }
 

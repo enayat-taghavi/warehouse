@@ -316,13 +316,6 @@ describe('Login Destination Characterization Spec', () => {
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/finance');
       expect(localStorage.getItem('active_app_module')).toBe('personnel');
     });
-
-    it('perm_manage_projects_sections lands on /app/finance with active_app_module=personnel', async () => {
-      await submitLoginForm(['perm_manage_projects_sections']);
-
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/finance');
-      expect(localStorage.getItem('active_app_module')).toBe('personnel');
-    });
   });
 
   // =========================================================================

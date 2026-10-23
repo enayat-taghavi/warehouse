@@ -81,6 +81,17 @@ export class ActiveCompanyService {
     return readable.find(c => c.id === activeId)?.id ?? readable[0]?.id ?? null;
   }
 
+  /**
+   * شرکت مقصد یک تب هستهٔ استودیو با بخش مجوز `section` (مثلاً «پروژه‌ها و بخش‌ها»): شرکت فعال اگر کاربر آن بخش را
+   * در آن می‌خواند، وگرنه نخستین شرکتی که می‌خواند؛ null یعنی فهرست شرکت‌ها.
+   */
+  public companySectionTargetId(section: string): number | null {
+    const activeId = this.activeCompanyId;
+    if (this.isSuperuserSubject.value) return activeId;
+    const readable = this.manageableCompanies().filter(c => (c.section_levels?.[section] ?? 'none') !== 'none');
+    return readable.find(c => c.id === activeId)?.id ?? readable[0]?.id ?? null;
+  }
+
   private sessionTab = inject(SessionTabService, { optional: true });
   private router = inject(Router, { optional: true });
 

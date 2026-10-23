@@ -67,17 +67,6 @@ export const ACCOUNTING_ROLE_PRESETS: ModuleRolePreset[] = [
     permissionCodenames: [
       'view_sys_treasury', 'perm_treasury_disburse_action'
     ]
-  },
-  {
-    id: 'org_admin',
-    title: 'راهبر تشکیلات و سیستم',
-    category: 'accounting',
-    categoryTitle: 'حسابداری و کارگاه',
-    color: '#0284c7',
-    icon: '🏢',
-    description: 'تعریف پروژه‌ها و بخش‌ها و انتساب کاربران به بخش‌ها؛ بدون تایید کارکرد، مجوز پرداخت یا ابزار زیرساخت',
-    permissionCodenames: [
-      'perm_manage_projects_sections'
-    ]
   }
+  // «راهبر تشکیلات» قالب مجوز ندارد: سطح «نوشتن» بخش «پروژه‌ها و بخش‌ها» در تب دسترسی استودیوی شرکت داده می‌شود
 ];

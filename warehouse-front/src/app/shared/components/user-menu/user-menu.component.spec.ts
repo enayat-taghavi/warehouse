@@ -72,7 +72,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
 
     mockApi = {
       get: vi.fn().mockImplementation((endpoint: string, params: any) => {
-        if (endpoint === '/personnel/financial-projects') {
+        if (endpoint === '/org/projects') {
           return of([
             { id: 10, name: 'پروژه خط ۲ مترو', code: 'PRJ-10', is_active: true },
             { id: 11, name: 'کارگاه ساختمانی سپهر', code: 'PRJ-11', is_active: true }
@@ -122,7 +122,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
                   selectAllLabel: 'انتخاب همه پروژه‌ها', clearAllLabel: 'لغو انتخاب پروژه‌ها',
                   itemLabel: 'پروژه / کارگاه', summaryLabel: '💳 مالی', accent: 'emerald',
                   loadItems: async (inj: Injector) =>
-                    (await firstValueFrom(inj.get(ApiService).get<any[]>('/personnel/financial-projects', { is_active: true }))) || []
+                    (await firstValueFrom(inj.get(ApiService).get<any[]>('/org/projects', { is_active: true }))) || []
                 }
               }
             }
@@ -133,7 +133,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
             {
               moduleCode: 'accounting',
               extension: {
-                financialProjectsEndpoint: '/personnel/financial-projects'
+                financialProjectsEndpoint: '/org/projects'
               }
             }
           ];
@@ -265,7 +265,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     expect(component.isDeepSyncModalOpen).toBe(true);
     expect(component.deepSyncWarehouses.length).toBe(0);
     expect(component.deepSyncProjects.length).toBe(2);
-    expect(mockApi.get).toHaveBeenCalledWith('/personnel/financial-projects', { is_active: true });
+    expect(mockApi.get).toHaveBeenCalledWith('/org/projects', { is_active: true });
   });
 
   it('should detect operations context mode from operations URL and load both warehouses and projects', async () => {
@@ -280,7 +280,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     expect(component.deepSyncWarehouses.length).toBe(2);
     expect(component.deepSyncProjects.length).toBe(2);
     expect(mockWhService.getAll).toHaveBeenCalled();
-    expect(mockApi.get).toHaveBeenCalledWith('/personnel/financial-projects', { is_active: true });
+    expect(mockApi.get).toHaveBeenCalledWith('/org/projects', { is_active: true });
   });
 
   it('should pass scopeKind = "warehouse" when syncing warehouseIds', async () => {

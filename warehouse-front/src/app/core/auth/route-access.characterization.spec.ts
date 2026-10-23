@@ -48,7 +48,6 @@ const ROUTE_PERMISSIONS_LITERAL: Record<string, string[]> = {
     'can_act_as_accountant', 'view_sys_payroll', 'perm_approve_personnel_finance',
     'can_act_as_company_manager', 'perm_manager_payment_authorize', 'perm_approve_personnel_manager'
   ],
-  'projects-and-sections': ['view_sys_projects', 'perm_manage_projects_sections', 'admin_all'],
   'counterparties': ['view_sys_payroll', 'view_sys_projects', 'admin_all'],
   'employee-portal': ['can_act_as_operator', 'view_sys_personnel_attendance', 'admin_all'],
   'employee-attendance': ['can_act_as_operator', 'view_sys_personnel_attendance', 'admin_all'],
@@ -159,8 +158,9 @@ describe('Route Access Characterization Spec', () => {
       }
     });
 
-    it('validates Group 10: Base Settings & Projects (base-settings, projects-and-sections, counterparties)', () => {
-      for (const k of ['base-settings', 'projects-and-sections', 'counterparties']) {
+    it('validates Group 10: Base Settings & Counterparties (base-settings, counterparties); projects-and-sections is a redirect with no page permission', () => {
+      expect(hasRoutePermission('projects-and-sections', ['unrelated_perm'])).toBe(true);
+      for (const k of ['base-settings', 'counterparties']) {
         verifyRouteKey(k);
       }
     });

@@ -1,0 +1,655 @@
+<div class="space-y-4">
+
+  <!-- نوار زیرتب‌ها (راست) و کارهای اکسل و بارگذاری (چپ) -->
+  <div class="bg-surface rounded-2xl border border-line shadow-sm p-2.5 md:p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <app-tab-bar
+      [tabs]="mainTabs"
+      [active]="activeSubTab"
+      mobile="icon"
+      fullLabelFrom="lg"
+      idPrefix="co-projects"
+      (activeChange)="switchSubTab($event)"
+    />
+    <div class="flex items-center gap-2 justify-end flex-wrap">
+      @if (!isOnline) {
+        <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1" role="status">
+          <svg [appIcon]="statusIcons.offline" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>آفلاین</span>
+        </span>
+      }
+      <button type="button" appAction="export-excel" [label]="exportLabel" [busy]="isExporting" [disabled]="isExporting || !isOnline" (click)="exportExcel()"></button>
+      @if (canWrite) {
+        <button type="button" appAction="import-excel" [label]="importLabel" [disabled]="!isOnline" (click)="openImportModal()"></button>
+      }
+      <button type="button" appAction="refresh" label="بارگذاری دوباره" [busy]="isLoading" (click)="loadAllData()"></button>
+    </div>
+  </div>
+
+  @if (!canWrite) {
+    <div class="p-3 rounded-2xl border border-line bg-surface-muted text-xs text-fg-muted flex items-center gap-2" role="note">
+      <svg [appIcon]="statusIcons.locked" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>دسترسی شما به «پروژه‌ها و بخش‌ها»ی این شرکت فقط خواندنی است.</span>
+    </div>
+  }
+
+  @if (loadError) {
+    <div class="p-3 rounded-2xl border border-rose-200 bg-rose-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2" role="alert">
+      <span class="text-xs font-bold text-rose-800 flex items-center gap-2">
+        <svg [appIcon]="statusIcons.error" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>دریافت ساختار پروژه‌ها و بخش‌ها کامل نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</span>
+      </span>
+      <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="loadAllData()"></button>
+    </div>
+  }
+
+  @if (isLoading && projects.length === 0 && sections.length === 0) {
+    <div role="status" aria-busy="true" aria-label="در حال دریافت پروژه‌ها و بخش‌ها">
+      <app-loading-skeleton type="text" [lines]="4"></app-loading-skeleton>
+    </div>
+  } @else {
+
+  <!-- ── زیرتب ۱: پروژه‌ها ── -->
+  @if (activeSubTab === 'projects') {
+    <div class="space-y-4" role="tabpanel" id="co-projects-panel-projects" aria-labelledby="co-projects-tab-projects">
+      @if (canWrite) {
+        <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 space-y-3" (ngSubmit)="saveProject()">
+          <div class="flex items-center justify-between gap-2 border-b border-line-subtle pb-2">
+            <h4 class="text-xs font-black text-fg">{{ editingProject ? 'ویرایش پروژه' : 'تعریف پروژهٔ تازه' }}</h4>
+            @if (editingProject) {
+              <button type="button" appAction="close" display="label" label="انصراف از ویرایش پروژه" (click)="cancelEditProject()"></button>
+            }
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label for="co-proj-code" class="block text-xs font-bold text-fg-muted mb-1">کد پروژه (یکتا در شرکت)</label>
+              <input id="co-proj-code" name="code" type="text" dir="ltr" [(ngModel)]="newProject.code" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-mono font-bold text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="PRJ-01" />
+            </div>
+            <div>
+              <label for="co-proj-name" class="block text-xs font-bold text-fg-muted mb-1">نام پروژه</label>
+              <input id="co-proj-name" name="name" type="text" [(ngModel)]="newProject.name" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="مثلاً پروژهٔ مرکزی" />
+            </div>
+            <div>
+              <label for="co-proj-desc" class="block text-xs font-bold text-fg-muted mb-1">توضیحات</label>
+              <input id="co-proj-desc" name="description" type="text" [(ngModel)]="newProject.description" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="اختیاری" />
+            </div>
+            <div class="flex items-end gap-3">
+              <label class="flex items-center gap-2 cursor-pointer pb-2.5 text-xs font-bold text-fg shrink-0">
+                <input name="is_active" type="checkbox" [(ngModel)]="newProject.is_active" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                <span>فعال</span>
+              </label>
+              <button type="submit" appAction="save" display="label" class="flex-1" [label]="editingProject ? 'به‌روزرسانی' : 'ثبت پروژه'" [busy]="isSavingProject" [disabled]="isSavingProject"></button>
+            </div>
+          </div>
+        </form>
+      }
+
+      <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
+        <div class="p-3 bg-surface-muted border-b border-line flex items-center justify-between flex-wrap gap-2">
+          <span class="text-xs font-black text-fg">پروژه‌های این شرکت <span class="text-[11px] font-bold text-fg-muted tabular-nums">({{ fa(filteredProjects.length) }})</span></span>
+          <div class="relative w-full sm:w-64">
+            <svg [appIcon]="actionIcons.search" class="w-3.5 h-3.5 absolute start-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <input type="search" [(ngModel)]="projectSearchQuery" aria-label="جستجو در نام یا کد پروژه" placeholder="جستجو در نام یا کد پروژه…" class="w-full bg-surface border border-line rounded-xl ps-8 pe-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 placeholder:text-fg-subtle" />
+          </div>
+        </div>
+
+        @if (filteredProjects.length === 0 && !loadError) {
+          <div class="p-8 text-center text-xs text-fg-muted space-y-1">
+            <p class="font-bold">{{ projectSearchQuery ? 'پروژه‌ای مطابق جستجو یافت نشد.' : 'هنوز پروژه‌ای برای این شرکت تعریف نشده است.' }}</p>
+            @if (!projectSearchQuery && canWrite) { <p class="text-fg-muted">نخستین پروژه را با فرم بالا تعریف کنید.</p> }
+          </div>
+        } @else if (filteredProjects.length > 0) {
+          <!-- دسکتاپ: جدول -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-start text-xs">
+              <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line">
+                <tr>
+                  <th scope="col" class="p-3 text-start w-32">کد</th>
+                  <th scope="col" class="p-3 text-start">نام پروژه</th>
+                  <th scope="col" class="p-3 text-start">توضیحات</th>
+                  <th scope="col" class="p-3 text-center w-24">بخش‌ها</th>
+                  <th scope="col" class="p-3 text-center w-24">وضعیت</th>
+                  @if (canWrite) { <th scope="col" class="p-3 text-center w-40">عملیات</th> }
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line-subtle">
+                @for (proj of filteredProjects; track proj.id) {
+                  <tr class="hover:bg-surface-muted/60 transition-colors">
+                    <td class="p-3 font-mono font-bold text-indigo-700"><bdi>{{ proj.code }}</bdi></td>
+                    <td class="p-3 font-bold text-fg">{{ proj.name }}</td>
+                    <td class="p-3 text-fg-muted text-[11px]">{{ proj.description || '—' }}</td>
+                    <td class="p-3 text-center tabular-nums">{{ fa(proj.sections_count || 0) }}</td>
+                    <td class="p-3 text-center">
+                      <ng-container *ngTemplateOutlet="activeBadge; context: { active: proj.is_active, pending: proj._offlinePending }"></ng-container>
+                    </td>
+                    @if (canWrite) {
+                      <td class="p-3">
+                        <div class="flex items-center justify-center gap-1.5">
+                          <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش پروژه ' + proj.name" (click)="editProject(proj)"></button>
+                          <button type="button" appAction="delete" display="icon" size="sm" [label]="'حذف پروژه ' + proj.name" (click)="deleteProject(proj)"></button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <!-- موبایل: کارت -->
+          <ul class="md:hidden divide-y divide-line-subtle">
+            @for (proj of filteredProjects; track proj.id) {
+              <li class="p-3.5 space-y-2">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-fg truncate">{{ proj.name }}</p>
+                    <p class="text-[11px] font-mono text-indigo-700"><bdi>{{ proj.code }}</bdi></p>
+                  </div>
+                  <ng-container *ngTemplateOutlet="activeBadge; context: { active: proj.is_active, pending: proj._offlinePending }"></ng-container>
+                </div>
+                @if (proj.description) { <p class="text-[11px] text-fg-muted">{{ proj.description }}</p> }
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] text-fg-muted tabular-nums">{{ fa(proj.sections_count || 0) }} بخش</span>
+                  @if (canWrite) {
+                    <div class="flex items-center gap-1.5">
+                      <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش پروژه ' + proj.name" (click)="editProject(proj)"></button>
+                      <button type="button" appAction="delete" display="icon" size="sm" [label]="'حذف پروژه ' + proj.name" (click)="deleteProject(proj)"></button>
+                    </div>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── زیرتب ۲: بخش‌ها ── -->
+  @if (activeSubTab === 'sections') {
+    <div class="space-y-4" role="tabpanel" id="co-projects-panel-sections" aria-labelledby="co-projects-tab-sections">
+      @if (canWrite) {
+        @if (projects.length === 0 && !loadError) {
+          <div class="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-xs text-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2" role="status">
+            <span>برای تعریف بخش، ابتدا یک پروژه بسازید.</span>
+            <button type="button" appAction="create" display="label" label="تعریف پروژه" (click)="switchSubTab('projects')"></button>
+          </div>
+        } @else if (projects.length > 0) {
+          <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 space-y-3" (ngSubmit)="saveSection()">
+            <div class="flex items-center justify-between gap-2 border-b border-line-subtle pb-2">
+              <h4 class="text-xs font-black text-fg">{{ editingSection ? 'ویرایش بخش' : 'تعریف بخش تازه' }}</h4>
+              @if (editingSection) {
+                <button type="button" appAction="close" display="label" label="انصراف از ویرایش بخش" (click)="cancelEditSection()"></button>
+              }
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label for="co-sec-project" class="block text-xs font-bold text-fg-muted mb-1">پروژهٔ والد</label>
+                <select id="co-sec-project" name="project" [(ngModel)]="newSection.project" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                  <option [ngValue]="null" disabled>انتخاب پروژه</option>
+                  @for (p of projects; track p.id) { <option [ngValue]="p.id">{{ p.name }} ({{ p.code }})</option> }
+                </select>
+              </div>
+              <div>
+                <label for="co-sec-code" class="block text-xs font-bold text-fg-muted mb-1">کد بخش (یکتا)</label>
+                <input id="co-sec-code" name="code" type="text" dir="ltr" [(ngModel)]="newSection.code" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-mono font-bold text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="SEC-01" />
+              </div>
+              <div>
+                <label for="co-sec-name" class="block text-xs font-bold text-fg-muted mb-1">نام بخش یا دپارتمان</label>
+                <input id="co-sec-name" name="name" type="text" [(ngModel)]="newSection.name" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" placeholder="مثلاً بخش ترابری" />
+              </div>
+              <div class="flex items-end gap-3">
+                <label class="flex items-center gap-2 cursor-pointer pb-2.5 text-xs font-bold text-fg shrink-0">
+                  <input name="is_active" type="checkbox" [(ngModel)]="newSection.is_active" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                  <span>فعال</span>
+                </label>
+                <button type="submit" appAction="save" display="label" class="flex-1" [label]="editingSection ? 'به‌روزرسانی' : 'ثبت بخش'" [busy]="isSavingSection" [disabled]="isSavingSection"></button>
+              </div>
+            </div>
+          </form>
+        }
+      }
+
+      <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
+        <div class="p-3 bg-surface-muted border-b border-line flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-black text-fg">بخش‌ها <span class="text-[11px] font-bold text-fg-muted tabular-nums">({{ fa(filteredSections.length) }})</span></span>
+            <label for="co-sec-filter" class="sr-only">فیلتر پروژه</label>
+            <select id="co-sec-filter" [ngModel]="selectedProjectId" (ngModelChange)="onSectionProjectFilterChange($event)" class="bg-surface border border-line rounded-lg px-2.5 py-1.5 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <option [ngValue]="null">همهٔ پروژه‌ها</option>
+              @for (p of projects; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+            </select>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <svg [appIcon]="actionIcons.search" class="w-3.5 h-3.5 absolute start-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <input type="search" [(ngModel)]="sectionSearchQuery" aria-label="جستجو در نام یا کد بخش" placeholder="جستجو در نام یا کد بخش…" class="w-full bg-surface border border-line rounded-xl ps-8 pe-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 placeholder:text-fg-subtle" />
+          </div>
+        </div>
+
+        @if (filteredSections.length === 0 && !loadError) {
+          <div class="p-8 text-center text-xs text-fg-muted font-bold">
+            {{ sectionSearchQuery ? 'بخشی مطابق جستجو یافت نشد.' : 'برای این فیلتر بخشی ثبت نشده است.' }}
+          </div>
+        } @else if (filteredSections.length > 0) {
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-start text-xs">
+              <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line">
+                <tr>
+                  <th scope="col" class="p-3 text-start w-40">پروژهٔ والد</th>
+                  <th scope="col" class="p-3 text-start w-32">کد</th>
+                  <th scope="col" class="p-3 text-start">نام بخش</th>
+                  <th scope="col" class="p-3 text-center w-24">وضعیت</th>
+                  @if (canWrite) { <th scope="col" class="p-3 text-center w-40">عملیات</th> }
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line-subtle">
+                @for (sec of filteredSections; track sec.id) {
+                  <tr class="hover:bg-surface-muted/60 transition-colors">
+                    <td class="p-3 text-fg-muted text-[11px] font-bold">{{ sec.project_name || '—' }}</td>
+                    <td class="p-3 font-mono font-bold text-indigo-700"><bdi>{{ sec.code }}</bdi></td>
+                    <td class="p-3 font-bold text-fg">{{ sec.name }}</td>
+                    <td class="p-3 text-center">
+                      <ng-container *ngTemplateOutlet="activeBadge; context: { active: sec.is_active, pending: sec._offlinePending }"></ng-container>
+                    </td>
+                    @if (canWrite) {
+                      <td class="p-3">
+                        <div class="flex items-center justify-center gap-1.5">
+                          <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش بخش ' + sec.name" (click)="editSection(sec)"></button>
+                          <button type="button" appAction="delete" display="icon" size="sm" [label]="'حذف بخش ' + sec.name" (click)="deleteSection(sec)"></button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <ul class="md:hidden divide-y divide-line-subtle">
+            @for (sec of filteredSections; track sec.id) {
+              <li class="p-3.5 space-y-2">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-fg truncate">{{ sec.name }}</p>
+                    <p class="text-[11px] text-fg-muted truncate"><bdi class="font-mono text-indigo-700">{{ sec.code }}</bdi> · {{ sec.project_name }}</p>
+                  </div>
+                  <ng-container *ngTemplateOutlet="activeBadge; context: { active: sec.is_active, pending: sec._offlinePending }"></ng-container>
+                </div>
+                @if (canWrite) {
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش بخش ' + sec.name" (click)="editSection(sec)"></button>
+                    <button type="button" appAction="delete" display="icon" size="sm" [label]="'حذف بخش ' + sec.name" (click)="deleteSection(sec)"></button>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── زیرتب ۳: انتساب کاربران به بخش‌ها با نقش‌های اعلام‌شدهٔ ماژول‌ها ── -->
+  @if (activeSubTab === 'assignments' && roles.length > 0) {
+    <div class="space-y-4" role="tabpanel" id="co-projects-panel-assignments" aria-labelledby="co-projects-tab-assignments">
+      <div class="bg-surface p-3 rounded-2xl border border-line shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto lg:flex lg:items-center">
+          <div class="relative lg:w-60">
+            <svg [appIcon]="actionIcons.search" class="w-3.5 h-3.5 absolute start-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <input type="search" [(ngModel)]="assignmentSearchQuery" (ngModelChange)="onAssignmentFilterChange()" aria-label="جستجو در کاربر، بخش یا نقش" placeholder="جستجو در کاربر، بخش یا نقش…" class="w-full bg-surface-muted border border-line rounded-xl ps-8 pe-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 placeholder:text-fg-subtle" />
+          </div>
+          <select [(ngModel)]="assignmentProjectFilter" (ngModelChange)="onAssignmentFilterChange()" aria-label="فیلتر پروژه" class="bg-surface-muted border border-line rounded-xl px-2.5 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <option [ngValue]="null">همهٔ پروژه‌ها</option>
+            @for (p of projects; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+          </select>
+          <select [(ngModel)]="assignmentRoleFilter" (ngModelChange)="onAssignmentFilterChange()" aria-label="فیلتر نقش" class="bg-surface-muted border border-line rounded-xl px-2.5 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <option value="all">همهٔ نقش‌ها</option>
+            @for (r of roles; track r.key) { <option [value]="r.key">{{ r.shortLabelFa }}</option> }
+          </select>
+        </div>
+        <div class="flex items-center gap-2 justify-end flex-wrap">
+          @if (assignmentViewMode === 'matrix') {
+            <button type="button" appAction="expand" label="باز کردن همه" (click)="expandAllSections()"></button>
+            <button type="button" appAction="collapse" label="بستن همه" (click)="collapseAllSections()"></button>
+          }
+          <app-tab-bar [tabs]="assignmentViewTabs" [active]="assignmentViewMode" mobile="short" (activeChange)="assignmentViewMode = $any($event)" />
+        </div>
+      </div>
+
+      @if (usersLoadError && canWrite) {
+        <div class="p-3 rounded-2xl border border-amber-200 bg-amber-50 text-xs text-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2" role="alert">
+          <span>فهرست کاربران دریافت نشد؛ انتساب تازه تا دریافت آن ممکن نیست.</span>
+          <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="loadUsers()"></button>
+        </div>
+      }
+
+      <!-- نمای ماتریس: کارت جمع‌شوندهٔ هر بخش با ستون هر نقش -->
+      @if (assignmentViewMode === 'matrix') {
+        <div class="space-y-3">
+          @for (g of groupedAssignmentsBySection; track g.section.id) {
+            <section class="bg-surface rounded-2xl border border-line shadow-sm p-3.5 space-y-3">
+              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+                <button type="button" class="flex items-center gap-2.5 text-start min-w-0 rounded-xl p-1 -m-1 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  [attr.aria-expanded]="!isSectionCollapsed(g.section.id)" (click)="toggleSectionCollapse(g.section.id)">
+                  <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shrink-0">
+                    <svg [appIcon]="icons.sections" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  </span>
+                  <span class="min-w-0">
+                    <span class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-xs font-black text-fg">{{ g.section.name }}</span>
+                      <bdi class="text-[10px] font-mono text-fg-muted bg-surface-muted px-1.5 py-0.5 rounded">{{ g.section.code }}</bdi>
+                      @if (!g.section.is_active) { <ng-container *ngTemplateOutlet="activeBadge; context: { active: false }"></ng-container> }
+                    </span>
+                    <span class="block text-[11px] text-fg-muted">پروژه: {{ g.section.project_name }}</span>
+                  </span>
+                  <svg [appIcon]="isSectionCollapsed(g.section.id) ? actionIcons.expand : actionIcons.collapse" class="w-4 h-4 text-fg-subtle shrink-0 ms-auto lg:ms-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                </button>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  @for (r of g.roles; track r.role.key) {
+                    <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold inline-flex items-center gap-1 tabular-nums"
+                      [ngClass]="r.assignments.length > 0 ? roleTone(r.role).badge : 'bg-surface-muted text-fg-muted border-line'"
+                      [title]="r.role.labelFa + ': ' + fa(r.assignments.length) + ' نفر'">
+                      <svg [appIcon]="r.role.icon" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                      <span>{{ fa(r.assignments.length) }} {{ r.role.shortLabelFa }}</span>
+                    </span>
+                  }
+                  @for (w of g.missingWarnings; track w) {
+                    <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-black inline-flex items-center gap-1">
+                      <svg [appIcon]="statusIcons.warning" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                      <span>{{ w }}</span>
+                    </span>
+                  }
+                  @if (canWrite) {
+                    <button type="button" appAction="copy" size="sm" label="کپی انتساب‌ها" (click)="openCloneModal(g.section)"></button>
+                  }
+                </div>
+              </div>
+
+              @if (!isSectionCollapsed(g.section.id)) {
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+                  @for (r of g.roles; track r.role.key) {
+                    <div class="rounded-2xl border p-2.5 flex flex-col gap-2" [ngClass]="roleTone(r.role).panel">
+                      <div class="flex items-center justify-between gap-1 border-b border-line-subtle pb-1.5">
+                        <span class="flex items-center gap-1.5 text-xs font-black" [ngClass]="roleTone(r.role).text">
+                          <svg [appIcon]="r.role.icon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                          <span>{{ r.role.shortLabelFa }}</span>
+                        </span>
+                        <span class="px-1.5 py-0.5 rounded-full bg-surface text-fg-muted text-[10px] font-bold border border-line tabular-nums">{{ fa(r.assignments.length) }} نفر</span>
+                      </div>
+                      <ul class="space-y-1.5 flex-1">
+                        @for (a of r.assignments; track a.id) {
+                          <li class="flex flex-wrap items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-surface border border-line">
+                            <span class="flex items-center gap-1.5 min-w-0">
+                              <span class="w-6 h-6 rounded-full bg-surface-muted text-fg text-[10px] font-bold flex items-center justify-center shrink-0">{{ getUserInitials(a.user_full_name, a.username) }}</span>
+                              <span class="min-w-0">
+                                <span class="block text-xs font-bold text-fg truncate">{{ a.user_full_name || a.username }}@if (a._offlinePending) { <span class="text-[10px] text-amber-800"> · در صف</span> }</span>
+                                <bdi class="block text-[10px] text-fg-muted font-mono truncate">{{ a.username }}</bdi>
+                              </span>
+                            </span>
+                            @if (canWrite) {
+                              <span class="flex items-center gap-0.5 shrink-0 ms-auto">
+                                <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش انتساب ' + (a.user_full_name || a.username)" (click)="openEditAssignment(a)"></button>
+                                <button type="button" appAction="delete" display="icon" size="sm" [label]="'لغو انتساب ' + (a.user_full_name || a.username)" (click)="deleteAssignment(a)"></button>
+                              </span>
+                            }
+                          </li>
+                        } @empty {
+                          <li class="py-3 text-center text-[11px] text-fg-muted border border-dashed border-line rounded-xl bg-surface/60">بدون فرد منتسب</li>
+                        }
+                      </ul>
+                      @if (canWrite) {
+                        <button type="button" appAction="create" size="sm" class="w-full" [label]="'افزودن ' + r.role.shortLabelFa" [disabled]="usersLoadError" (click)="openQuickAssign(g.section, r.role)"></button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          } @empty {
+            @if (!loadError) {
+            <div class="bg-surface rounded-2xl border border-line shadow-sm p-8 text-center space-y-2">
+              @if (sections.length === 0) {
+                <p class="text-xs font-bold text-fg-muted">هنوز بخشی برای این شرکت تعریف نشده است؛ انتساب پس از تعریف بخش ممکن است.</p>
+                @if (canWrite) { <button type="button" appAction="create" display="label" label="تعریف بخش" (click)="switchSubTab('sections')"></button> }
+              } @else {
+                <p class="text-xs font-bold text-fg-muted">بخشی مطابق جستجو یا فیلتر یافت نشد.</p>
+                <button type="button" appAction="filter" display="label" label="پاک کردن فیلترها" (click)="clearAssignmentFilters()"></button>
+              }
+            </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- نمای جدول: همهٔ انتساب‌ها، از جمله غیرفعال -->
+      @if (assignmentViewMode === 'table') {
+        <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
+          <div class="p-3 bg-surface-muted border-b border-line text-xs font-black text-fg">
+            انتساب‌ها <span class="text-[11px] font-bold text-fg-muted tabular-nums">({{ fa(filteredAssignments.length) }})</span>
+          </div>
+          @if (filteredAssignments.length === 0 && !loadError) {
+            <div class="p-8 text-center text-xs text-fg-muted font-bold">انتسابی مطابق جستجو یا فیلتر یافت نشد.</div>
+          } @else if (filteredAssignments.length > 0) {
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-start text-xs">
+                <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line">
+                  <tr>
+                    <th scope="col" class="p-3 text-start">کاربر</th>
+                    <th scope="col" class="p-3 text-start">پروژه / بخش</th>
+                    <th scope="col" class="p-3 text-center w-40">نقش</th>
+                    <th scope="col" class="p-3 text-center w-24">وضعیت</th>
+                    @if (canWrite) { <th scope="col" class="p-3 text-center w-44">عملیات</th> }
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-line-subtle">
+                  @for (a of filteredAssignments; track a.id) {
+                    <tr class="hover:bg-surface-muted/60 transition-colors" [class.opacity-70]="a.is_active === false">
+                      <td class="p-3">
+                        <span class="block font-bold text-fg">{{ a.user_full_name || '—' }}</span>
+                        <bdi class="block text-[11px] font-mono text-fg-muted">{{ a.username }}</bdi>
+                      </td>
+                      <td class="p-3 text-fg">{{ a.project_name }} <span class="text-fg-muted">/</span> {{ a.section_name }}</td>
+                      <td class="p-3 text-center">
+                        <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold inline-flex items-center gap-1" [ngClass]="roleTone(roleByKey(a.role)).badge">
+                          @if (roleByKey(a.role); as rd) {
+                            <svg [appIcon]="rd.icon" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                          }
+                          <span>{{ a.role_display || roleByKey(a.role)?.shortLabelFa || a.role }}</span>
+                        </span>
+                      </td>
+                      <td class="p-3 text-center">
+                        <ng-container *ngTemplateOutlet="activeBadge; context: { active: a.is_active !== false, pending: a._offlinePending }"></ng-container>
+                      </td>
+                      @if (canWrite) {
+                        <td class="p-3">
+                          <div class="flex items-center justify-center gap-1.5">
+                            <button type="button" class="tap-target px-2 py-1 rounded-lg text-[11px] font-bold text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                              [title]="(a.is_active === false ? 'فعال‌سازی دوبارهٔ انتساب ' : 'غیرفعال‌سازی انتساب ') + (a.user_full_name || a.username)"
+                              [attr.aria-label]="(a.is_active === false ? 'فعال‌سازی دوبارهٔ انتساب ' : 'غیرفعال‌سازی انتساب ') + (a.user_full_name || a.username)"
+                              (click)="toggleAssignmentStatus(a)">{{ a.is_active === false ? 'فعال‌سازی' : 'غیرفعال' }}</button>
+                            <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش انتساب ' + (a.user_full_name || a.username)" (click)="openEditAssignment(a)"></button>
+                            <button type="button" appAction="delete" display="icon" size="sm" [label]="'لغو انتساب ' + (a.user_full_name || a.username)" (click)="deleteAssignment(a)"></button>
+                          </div>
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <ul class="md:hidden divide-y divide-line-subtle">
+              @for (a of filteredAssignments; track a.id) {
+                <li class="p-3.5 space-y-2" [class.opacity-70]="a.is_active === false">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <p class="text-xs font-bold text-fg truncate">{{ a.user_full_name || a.username }}</p>
+                      <p class="text-[11px] text-fg-muted truncate">{{ a.project_name }} / {{ a.section_name }}</p>
+                    </div>
+                    <ng-container *ngTemplateOutlet="activeBadge; context: { active: a.is_active !== false, pending: a._offlinePending }"></ng-container>
+                  </div>
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold inline-flex items-center gap-1" [ngClass]="roleTone(roleByKey(a.role)).badge">
+                      @if (roleByKey(a.role); as rd) {
+                        <svg [appIcon]="rd.icon" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                      }
+                      <span>{{ a.role_display || roleByKey(a.role)?.shortLabelFa || a.role }}</span>
+                    </span>
+                    @if (canWrite) {
+                      <div class="flex items-center gap-1.5 ms-auto">
+                        <button type="button" class="tap-target min-h-[40px] px-2 rounded-lg text-[11px] font-bold text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                          [title]="(a.is_active === false ? 'فعال‌سازی دوبارهٔ انتساب ' : 'غیرفعال‌سازی انتساب ') + (a.user_full_name || a.username)"
+                          [attr.aria-label]="(a.is_active === false ? 'فعال‌سازی دوبارهٔ انتساب ' : 'غیرفعال‌سازی انتساب ') + (a.user_full_name || a.username)"
+                          (click)="toggleAssignmentStatus(a)">{{ a.is_active === false ? 'فعال‌سازی' : 'غیرفعال' }}</button>
+                        <button type="button" appAction="edit" display="icon" size="sm" [label]="'ویرایش انتساب ' + (a.user_full_name || a.username)" (click)="openEditAssignment(a)"></button>
+                        <button type="button" appAction="delete" display="icon" size="sm" [label]="'لغو انتساب ' + (a.user_full_name || a.username)" (click)="deleteAssignment(a)"></button>
+                      </div>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  }
+  }
+
+  <!-- نشان فعال / غیرفعال -->
+  <ng-template #activeBadge let-active="active" let-pending="pending">
+    @if (pending) {
+      <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1 me-1">
+        <svg [appIcon]="statusIcons.queued" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>در صف ارسال</span>
+      </span>
+    }
+    @if (active) {
+      <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold whitespace-nowrap">فعال</span>
+    } @else {
+      <span class="px-2 py-0.5 rounded-full bg-surface-muted text-fg-muted border border-line text-[10px] font-bold whitespace-nowrap">غیرفعال</span>
+    }
+  </ng-template>
+
+  <!-- ── مودال انتساب چند کاربر به یک نقش در بخش ── -->
+  <app-modal [isOpen]="quickAssign.isOpen" [title]="'افزودن ' + (quickAssign.role?.shortLabelFa || '') + ' به ' + (quickAssign.section?.name || '')" (closed)="closeQuickAssign()">
+    <div class="space-y-3">
+      @if (quickAssign.role?.descriptionFa) {
+        <p class="p-3 rounded-2xl border text-[11px] leading-relaxed" [ngClass]="roleTone(quickAssign.role).panel">{{ quickAssign.role?.descriptionFa }} چند کاربر را می‌توان با یک نقش در یک بخش منتسب کرد.</p>
+      }
+      <div>
+        <label for="co-qa-search" class="block text-xs font-bold text-fg mb-1">جستجوی کاربر</label>
+        <input id="co-qa-search" type="search" [(ngModel)]="quickAssign.userSearchQuery" placeholder="نام، نام خانوادگی یا نام کاربری…" class="w-full px-3 py-2 text-xs bg-surface-muted border border-line rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+      </div>
+      <div class="flex items-center justify-between gap-2 text-[11px]">
+        <span class="text-fg-muted font-bold tabular-nums">{{ fa(availableUsersForQuickAssign.length) }} کاربر قابل انتساب</span>
+        @if (availableUsersForQuickAssign.length > 0) {
+          <span class="flex items-center gap-1">
+            <button type="button" class="tap-target px-2 py-1 rounded-lg font-bold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="انتخاب همهٔ کاربران" aria-label="انتخاب همهٔ کاربران" (click)="selectAllAvailableUsers()">انتخاب همه</button>
+            <button type="button" class="tap-target px-2 py-1 rounded-lg font-bold text-fg-muted hover:bg-surface-muted disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="لغو انتخاب کاربران" aria-label="لغو انتخاب کاربران" [disabled]="quickAssign.selectedUserIds.length === 0" (click)="deselectAllUsers()">لغو انتخاب</button>
+          </span>
+        }
+      </div>
+      <ul class="max-h-60 overflow-y-auto space-y-1.5 border border-line rounded-2xl p-2 bg-surface-muted/50" aria-label="کاربران قابل انتساب">
+        @for (u of availableUsersForQuickAssign; track u.id) {
+          <li>
+            <label class="p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer text-xs select-none transition-colors"
+              [ngClass]="isUserSelected(u.id) ? 'bg-indigo-50 border-indigo-300 text-indigo-950 font-bold' : 'bg-surface border-line text-fg hover:bg-surface-muted'">
+              <input type="checkbox" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 shrink-0" [checked]="isUserSelected(u.id)" (change)="toggleUserSelection(u.id)" />
+              <span class="w-6 h-6 rounded-full bg-surface-muted text-fg text-[10px] font-bold flex items-center justify-center shrink-0">{{ getUserInitials(u.first_name + ' ' + u.last_name, u.username) }}</span>
+              <span class="min-w-0">
+                <span class="block truncate">{{ u.first_name }} {{ u.last_name }}</span>
+                <bdi class="block text-[10px] text-fg-muted font-mono truncate">{{ u.username }}</bdi>
+              </span>
+            </label>
+          </li>
+        } @empty {
+          <li class="p-5 text-center text-xs text-fg-muted">کاربری برای انتساب یافت نشد (یا همه پیش‌تر با این نقش منتسب شده‌اند).</li>
+        }
+      </ul>
+    </div>
+    <div modal-footer class="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-t border-line">
+      <span class="text-[11px] text-fg-muted font-bold tabular-nums">{{ quickAssign.selectedUserIds.length ? fa(quickAssign.selectedUserIds.length) + ' نفر انتخاب شده' : 'کاربری انتخاب نشده' }}</span>
+      <span class="flex items-center gap-2">
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="closeQuickAssign()"></button>
+        <button type="button" appAction="save" display="label" label="تایید انتساب" [busy]="quickAssign.isSubmitting" [disabled]="quickAssign.selectedUserIds.length === 0 || quickAssign.isSubmitting" (click)="submitQuickAssign()"></button>
+      </span>
+    </div>
+  </app-modal>
+
+  <!-- ── مودال ویرایش نقش یا وضعیت انتساب ── -->
+  <app-modal [isOpen]="editAssignment.isOpen" title="ویرایش انتساب" size="sm" (closed)="closeEditAssignment()">
+    <div class="space-y-3">
+      <div class="bg-surface-muted border border-line rounded-2xl p-3 text-xs space-y-1">
+        <p><span class="text-fg-muted font-bold">کاربر: </span><span class="font-black text-fg">{{ editAssignment.assignment?.user_full_name || editAssignment.assignment?.username }}</span></p>
+        <p><span class="text-fg-muted font-bold">بخش: </span><span class="font-bold text-fg">{{ editAssignment.assignment?.section_name }} ({{ editAssignment.assignment?.project_name }})</span></p>
+      </div>
+      <div>
+        <label for="co-ea-role" class="block text-xs font-bold text-fg mb-1">نقش</label>
+        <select id="co-ea-role" [(ngModel)]="editAssignment.role" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          @for (r of roles; track r.key) { <option [value]="r.key">{{ r.labelFa }}</option> }
+        </select>
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-fg py-1.5 min-h-[28px]">
+        <input type="checkbox" [(ngModel)]="editAssignment.is_active" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+        <span>انتساب فعال است</span>
+      </label>
+    </div>
+    <div modal-footer class="flex flex-wrap items-center justify-end gap-2 px-4 sm:px-6 py-3 border-t border-line">
+      <button type="button" appAction="close" display="label" label="انصراف" (click)="closeEditAssignment()"></button>
+      <button type="button" appAction="save" display="label" label="ثبت تغییرات" [busy]="editAssignment.isSubmitting" [disabled]="editAssignment.isSubmitting" (click)="submitEditAssignment()"></button>
+    </div>
+  </app-modal>
+
+  <!-- ── مودال کپی ساختار انتساب یک بخش دیگر به این بخش ── -->
+  <app-modal [isOpen]="cloneModal.isOpen" [title]="'کپی انتساب‌ها به ' + (cloneModal.targetSection?.name || '')" (closed)="closeCloneModal()">
+    <div class="space-y-3">
+      <div>
+        <label for="co-clone-project" class="block text-xs font-bold text-fg mb-1">پروژهٔ مبدأ (اختیاری)</label>
+        <select id="co-clone-project" [ngModel]="cloneModal.sourceProjectId" (ngModelChange)="onCloneSourceProjectChange($event)" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <option [ngValue]="null">همهٔ پروژه‌ها</option>
+          @for (p of projects; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+        </select>
+      </div>
+      <div>
+        <label for="co-clone-section" class="block text-xs font-bold text-fg mb-1">بخش الگو (مبدأ کپی)</label>
+        <select id="co-clone-section" [(ngModel)]="cloneModal.sourceSectionId" class="w-full bg-surface-muted border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <option [ngValue]="null">انتخاب بخش مبدأ</option>
+          @for (s of cloneSourceSections; track s.id) {
+            <option [ngValue]="s.id">{{ s.name }} &#x200F;[&#x200E;{{ s.code }}&#x200E;]&#x200F; — {{ s.project_name }} &#x200F;({{ fa(sectionAssignmentCount(s.id)) }} نفر)&#x200F;</option>
+          }
+        </select>
+      </div>
+      @if (cloneModal.sourceSectionId) {
+        <div class="bg-surface-muted border border-line rounded-2xl p-3 space-y-2">
+          <p class="text-xs font-black text-fg tabular-nums">{{ fa(cloneSourceStats.total) }} انتساب فعال قابل کپی</p>
+          @if (cloneSourceStats.total > 0) {
+            <div class="flex flex-wrap gap-1.5">
+              @for (r of roles; track r.key) {
+                <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold tabular-nums"
+                  [ngClass]="(cloneSourceStats.roleCounts[r.key] || 0) > 0 ? roleTone(r).badge : 'bg-surface text-fg-muted border-line'">
+                  {{ r.shortLabelFa }}: {{ fa(cloneSourceStats.roleCounts[r.key] || 0) }}
+                </span>
+              }
+            </div>
+          } @else {
+            <p class="text-xs text-amber-700 font-bold">بخش انتخاب‌شده انتساب فعالی ندارد.</p>
+          }
+        </div>
+      }
+      <p class="text-[11px] text-fg-muted">
+        <span>انتساب‌های تکراری نادیده گرفته می‌شوند و فقط افراد تازه افزوده می‌شوند.</span>
+      </p>
+    </div>
+    <div modal-footer class="flex flex-wrap items-center justify-end gap-2 px-4 sm:px-6 py-3 border-t border-line">
+      <button type="button" appAction="close" display="label" label="انصراف" (click)="closeCloneModal()"></button>
+      <button type="button" appAction="copy" display="label" label="کپی انتساب‌ها" [busy]="cloneModal.isSubmitting" [disabled]="cloneModal.isSubmitting || !cloneModal.sourceSectionId || cloneSourceStats.total === 0" (click)="executeClone()"></button>
+    </div>
+  </app-modal>
+
+  @if (isExcelModalOpen) {
+    <app-excel-import-modal
+      [title]="excelModalTitle"
+      [importFn]="excelImportFn"
+      [templateDownloadFn]="excelTemplateFn"
+      (closed)="closeExcelModal()"
+      (imported)="onExcelImported($event)"
+    ></app-excel-import-modal>
+  }
+</div>

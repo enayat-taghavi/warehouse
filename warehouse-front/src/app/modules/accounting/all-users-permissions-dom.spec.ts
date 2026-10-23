@@ -9,6 +9,7 @@ import { hasRoutePermission } from '../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../core/modules/module-registry.service';
 import { WebSocketService } from '../../core/http/websocket.service';
 import { SessionTabService } from '../../core/services/session-tab.service';
+import { ActiveCompanyService } from '../../core/services/active-company.service';
 import {
   NavItem,
   ORG_ADMIN_NAV_ITEMS,
@@ -52,6 +53,8 @@ export interface UserTestCase {
   assignedProjects: string[];
   assignedSections: string[];
   canAccessWarehouse: boolean;
+  /** سطح بخش‌های مجوز شرکت (نقش org_admin از نوشتن بخش projects می‌آید) */
+  sectionLevels?: Record<string, 'none' | 'read' | 'write'>;
 }
 
 export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
@@ -292,19 +295,20 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
 ];
 
 /**
- * کاربر نمونهٔ «راهبر تشکیلات و سیستم». در دیتابیس عملیاتی کسی این مجوز را ندارد؛ preset آن در users.ts است.
+ * کاربر نمونهٔ «راهبر تشکیلات و سیستم»: بی مجوز ویژه، فقط سطح «نوشتن» بخش «پروژه‌ها و بخش‌ها» در یک شرکت.
  */
 export const ORG_ADMIN_SAMPLE_USER: UserTestCase = {
   username: 'org.admin.sample',
   fullName: 'راهبر تشکیلات (نمونهٔ آزمون)',
   expectedRole: 'org_admin',
   allowedApps: ['finance'],
-  permissions: ['perm_manage_projects_sections'],
+  permissions: [],
   roles: ['org_admin'],
   isSuperuser: false,
   assignedProjects: [],
   assignedSections: [],
-  canAccessWarehouse: false
+  canAccessWarehouse: false,
+  sectionLevels: { projects: 'write' }
 };
 
 /** گروه‌های منوی نقش در سایدبار، به همان ترتیب و با همان نشانگرهای layout.ts */
@@ -362,6 +366,14 @@ function createPersona(user: UserTestCase, sessionRole: string): AppPersonaServi
       },
       { provide: AppPersonaService, useClass: AppPersonaService },
       { provide: AuthService, useValue: mockAuth },
+      {
+        provide: ActiveCompanyService,
+        useValue: {
+          hasWarehouseModule: true,
+          hasCompanyDocumentsAccess: () => false,
+          manageableCompanies: signal<any[]>(user.sectionLevels ? [{ id: 1, section_levels: user.sectionLevels }] : [])
+        }
+      },
       { provide: ModuleRegistryService, useValue: new ModuleRegistryService() },
       { provide: WebSocketService, useValue: { sendMessage: vi.fn(), switchAppChannel: vi.fn() } },
       {
@@ -520,7 +532,7 @@ describe('Org Admin persona (راهبر تشکیلات و سیستم)', () => {
     const mixed: UserTestCase = {
       ...accountant,
       username: 'accountant.org.admin',
-      permissions: [...accountant.permissions, 'perm_manage_projects_sections']
+      sectionLevels: { projects: 'write' }
     };
     const persona = createPersona(mixed, '');
 

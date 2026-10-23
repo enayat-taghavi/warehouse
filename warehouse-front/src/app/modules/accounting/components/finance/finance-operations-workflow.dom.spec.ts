@@ -7,7 +7,6 @@ import { AccountantPayrollHubComponent } from './accountant/accountant-payroll/a
 import { EmployeePettyCashHubComponent } from './employee/employee-petty-cash/employee-petty-cash';
 import { EmployeeInvoicesHubComponent } from './employee/employee-invoices/employee-invoices';
 import { TreasurerDisbursementsComponent } from './treasurer/treasurer-disbursements/treasurer-disbursements';
-import { ProjectsAndSectionsComponent } from '../organization/projects-and-sections/projects-and-sections';
 import { ProjectSection, FinancialProject } from '../../models/personnel.model';
 import { OfflineSyncService } from '../../../../core/services/offline-sync.service';
 
@@ -488,75 +487,4 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
     });
   });
 
-  // ════════════════════════════════════════════════════════════════════════
-  // ۶. پروژه‌ها و بخش‌ها: باز کردن فرم‌ها، ذخیره‌سازی و فیلتر اطلاعات
-  // ════════════════════════════════════════════════════════════════════════
-  describe('۶. پروژه‌ها و بخش‌ها - باز کردن فرم‌ها، ذخیره‌سازی پروژه‌ها/بخش‌ها و فیلتر', () => {
-    it('فرم پروژه و بخش را باز کرده، اطلاعات را ثبت و فیلترهای جستجو را اعمال می‌کند', () => {
-      const orgHub = new ProjectsAndSectionsComponent(
-        mockAuth,
-        mockState,
-        mockPersonnelApi,
-        mockAccountsHttp,
-        mockWs,
-        mockToast,
-        mockCdr,
-        mockRoute,
-        mockRouter
-      );
-
-      orgHub.ngOnInit();
-
-      // ۱. بارگذاری اولیه پروژه‌ها و بخش‌ها
-      expect(mockPersonnelApi.getFinancialProjects).toHaveBeenCalled();
-      expect(mockPersonnelApi.getProjectSections).toHaveBeenCalled();
-      expect(orgHub.financialProjects.length).toBe(1);
-      expect(orgHub.projectSections.length).toBe(1);
-
-      // ۲. تکمیل اطلاعات و ذخیره‌سازی پروژه مالی در فرم درجا
-      orgHub.newProject = {
-        name: 'پروژه پایانه صادراتی بندرعباس',
-        code: 'BND-EXP',
-        description: 'فاز دوم انبارداری کانتینری',
-        is_active: true
-      };
-      orgHub.saveProject();
-
-      expect(mockPersonnelApi.createFinancialProject).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'پروژه پایانه صادراتی بندرعباس',
-          code: 'BND-EXP'
-        })
-      );
-      expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('پروژه'));
-
-      // ۳. سوئیچ به تب بخش‌ها و دپارتمان‌ها و انتخاب پروژه ۱
-      orgHub.activeSubTab = 'sections';
-      orgHub.selectedProjectId = 1;
-      expect(orgHub.filteredSections.length).toBe(1);
-
-      // ۴. تکمیل اطلاعات بخش جدید و ذخیره‌سازی
-      orgHub.newSection = {
-        name: 'واحد کنترل کیفیت و بازرسی فنی',
-        code: 'QC-DEP',
-        project: 1,
-        is_active: true
-      };
-      orgHub.saveSection();
-
-      expect(mockPersonnelApi.createProjectSection).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'واحد کنترل کیفیت و بازرسی فنی',
-          code: 'QC-DEP'
-        })
-      );
-      expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('بخش'));
-
-      // ۵. فیلتر کردن و جستجوی متنی
-      orgHub.sectionSearchQuery = 'عمران';
-      expect(orgHub.filteredSections.length).toBe(1);
-      orgHub.sectionSearchQuery = 'ناموجود';
-      expect(orgHub.filteredSections.length).toBe(0);
-    });
-  });
 });

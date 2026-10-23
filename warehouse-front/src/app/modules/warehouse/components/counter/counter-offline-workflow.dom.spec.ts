@@ -306,7 +306,7 @@ describe('۲. بخش آفلاین و همگام‌سازی (Offline & Sync Workf
             ];
           }
           if (extKey === 'projectLookup') {
-            return [{ moduleCode: 'accounting', extension: { financialProjectsEndpoint: '/personnel/financial-projects' } }];
+            return [{ moduleCode: 'accounting', extension: { financialProjectsEndpoint: '/org/projects' } }];
           }
           return [];
         })

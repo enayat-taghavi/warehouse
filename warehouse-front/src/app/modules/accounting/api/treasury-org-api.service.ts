@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
+import { OrgStructureApiService } from '../../../core/api/org-structure-api.service';
 import {
-  SKIP_OFFLINE,
   ImportResult,
   PersonnelProfile,
   VehicleDriverProfile,
@@ -37,7 +36,12 @@ import {
 export class TreasuryOrgApiService {
   private readonly baseUrl = 'personnel';
 
-  constructor(private api: ApiService) {}
+  private readonly org: OrgStructureApiService;
+
+  // ساخت دستی (بی DI در PersonnelApiService و آزمون‌ها): سرویس هسته از همان ApiService ساخته می‌شود
+  constructor(private api: ApiService, org?: OrgStructureApiService) {
+    this.org = org ?? new OrgStructureApiService(api);
+  }
 
   getSupervisorCartable(): Observable<any> {
     return this.api.get<any>(`${this.baseUrl}/cartable/supervisor/`);
@@ -88,68 +92,64 @@ export class TreasuryOrgApiService {
     return `/api/personnel/cartable/treasury/export-diskette/?period_id=${periodId}&type=${type}`;
   }
 
+  // پروژه، بخش و انتساب کاربر به بخش در هسته‌اند (/api/org/)؛ این متدها فقط به سرویس هسته واگذار می‌شوند
   getFinancialProjects(params?: { is_active?: boolean; search?: string }): Observable<FinancialProject[]> {
-    return this.api.get<FinancialProject[]>(`${this.baseUrl}/financial-projects`, params as Record<string, unknown>);
+    return this.org.getProjects(params);
   }
 
   createFinancialProject(data: Partial<FinancialProject>): Observable<FinancialProject> {
-    return this.api.post<FinancialProject>(`${this.baseUrl}/financial-projects`, data);
+    return this.org.createProject(data);
   }
 
   updateFinancialProject(id: number, data: Partial<FinancialProject>): Observable<FinancialProject> {
-    return this.api.patch<FinancialProject>(`${this.baseUrl}/financial-projects/${id}`, data);
+    return this.org.updateProject(id, data);
   }
 
   deleteFinancialProject(id: number): Observable<void> {
-    return this.api.delete<void>(`${this.baseUrl}/financial-projects/${id}`);
+    return this.org.deleteProject(id);
   }
 
   getProjectSections(params?: { project_id?: number; is_active?: boolean; search?: string }): Observable<ProjectSection[]> {
-    return this.api.get<ProjectSection[]>(`${this.baseUrl}/project-sections`, params as Record<string, unknown>);
+    return this.org.getSections(params);
   }
 
   createProjectSection(data: Partial<ProjectSection>): Observable<ProjectSection> {
-    return this.api.post<ProjectSection>(`${this.baseUrl}/project-sections`, data);
+    return this.org.createSection(data);
   }
 
   updateProjectSection(id: number, data: Partial<ProjectSection>): Observable<ProjectSection> {
-    return this.api.patch<ProjectSection>(`${this.baseUrl}/project-sections/${id}`, data);
+    return this.org.updateSection(id, data);
   }
 
   deleteProjectSection(id: number): Observable<void> {
-    return this.api.delete<void>(`${this.baseUrl}/project-sections/${id}`);
+    return this.org.deleteSection(id);
   }
 
   getUserSectionAssignments(
     params?: { section_id?: number; project_id?: number; user_id?: number; role?: string },
     forceFresh: boolean = false
   ): Observable<UserSectionAssignment[]> {
-    const context = forceFresh ? new HttpContext().set(SKIP_OFFLINE, true) : undefined;
-    return this.api.get<UserSectionAssignment[]>(
-      `${this.baseUrl}/user-section-assignments`,
-      params as Record<string, unknown>,
-      { context }
-    );
+    return this.org.getAssignments(params, forceFresh) as Observable<UserSectionAssignment[]>;
   }
 
   bulkAssignUsersToSection(data: { section_id: number; user_ids: number[]; role: string }): Observable<UserSectionAssignment[]> {
-    return this.api.post<UserSectionAssignment[]>(`${this.baseUrl}/user-section-assignments/bulk-assign/`, data);
+    return this.org.bulkAssign(data) as Observable<UserSectionAssignment[]>;
   }
 
   createUserSectionAssignment(data: Partial<UserSectionAssignment>): Observable<UserSectionAssignment> {
-    return this.api.post<UserSectionAssignment>(`${this.baseUrl}/user-section-assignments`, data);
+    return this.org.createAssignment(data) as Observable<UserSectionAssignment>;
   }
 
   updateUserSectionAssignment(id: number, data: Partial<UserSectionAssignment>): Observable<UserSectionAssignment> {
-    return this.api.patch<UserSectionAssignment>(`${this.baseUrl}/user-section-assignments/${id}`, data);
+    return this.org.updateAssignment(id, data) as Observable<UserSectionAssignment>;
   }
 
   deleteUserSectionAssignment(id: number): Observable<void> {
-    return this.api.delete<void>(`${this.baseUrl}/user-section-assignments/${id}`);
+    return this.org.deleteAssignment(id);
   }
 
   getMySections(): Observable<ProjectSection[]> {
-    return this.api.get<ProjectSection[]>(`${this.baseUrl}/user-section-assignments/my-sections/`);
+    return this.org.getMySections();
   }
 
   getCounterparties(params?: { counterparty_type?: string; search?: string }): Observable<Counterparty[]> {
@@ -277,61 +277,6 @@ export class TreasuryOrgApiService {
     if (params?.content_type) query['content_type'] = params.content_type;
     if (params?.object_id) query['object_id'] = params.object_id;
     return this.api.get<WorkflowAuditLog[]>(`${this.baseUrl}/workflow-audit-logs/`, query);
-  }
-
-  exportFinancialProjectsExcel(): Observable<Blob> {
-    return this.api.download(`${this.baseUrl}/financial-projects/export-excel/`);
-  }
-
-  downloadFinancialProjectsTemplate(): Observable<Blob> {
-    return this.api.download(`${this.baseUrl}/financial-projects/download-template/`);
-  }
-
-  importFinancialProjectsExcel(file: File, dryRun: boolean = false): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (dryRun) formData.append('dry_run', 'true');
-    return this.api.post<any>(`${this.baseUrl}/financial-projects/import-excel/`, formData);
-  }
-
-  exportProjectSectionsExcel(projectId?: number): Observable<Blob> {
-    const params = projectId ? { project_id: projectId } : undefined;
-    return this.api.download(`${this.baseUrl}/project-sections/export-excel/`, params);
-  }
-
-  downloadProjectSectionsTemplate(): Observable<Blob> {
-    return this.api.download(`${this.baseUrl}/project-sections/download-template/`);
-  }
-
-  importProjectSectionsExcel(file: File, dryRun: boolean = false): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (dryRun) formData.append('dry_run', 'true');
-    return this.api.post<any>(`${this.baseUrl}/project-sections/import-excel/`, formData);
-  }
-
-  cloneSectionAssignments(targetSectionId: number, sourceSectionId: number): Observable<any> {
-    return this.api.post<any>(`${this.baseUrl}/project-sections/${targetSectionId}/clone-assignments/`, {
-      source_section_id: sourceSectionId
-    });
-  }
-
-  exportUserSectionAssignmentsExcel(projectId?: number, role?: string): Observable<Blob> {
-    const params: Record<string, unknown> = {};
-    if (projectId) params['project_id'] = projectId;
-    if (role && role !== 'all') params['role'] = role;
-    return this.api.download(`${this.baseUrl}/user-section-assignments/export-excel/`, Object.keys(params).length ? params : undefined);
-  }
-
-  downloadUserSectionAssignmentsTemplate(): Observable<Blob> {
-    return this.api.download(`${this.baseUrl}/user-section-assignments/download-template/`);
-  }
-
-  importUserSectionAssignmentsExcel(file: File, dryRun: boolean = false): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (dryRun) formData.append('dry_run', 'true');
-    return this.api.post<any>(`${this.baseUrl}/user-section-assignments/import-excel/`, formData);
   }
 
   exportCounterpartiesExcel(): Observable<Blob> {

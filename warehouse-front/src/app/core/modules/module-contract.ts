@@ -19,7 +19,13 @@ export interface RolePersona {
 export interface ModulePersonas {
   roles: RolePersona[];
   /** permissionAliases: کدهای مجوز یک توانایی که ماژول‌های نصب‌شده اعلام کرده‌اند (گام ۸) */
-  resolveRoleCodes: (ctx: { perms: string[]; userRoles: string[]; permissionAliases?: (capability: string) => string[] }) => string[];
+  /** companySectionLevel: بالاترین سطح کاربر در یک بخش مجوز شرکت، در میان شرکت‌های قابل مدیریت او (مثلاً «پروژه‌ها و بخش‌ها») */
+  resolveRoleCodes: (ctx: {
+    perms: string[];
+    userRoles: string[];
+    permissionAliases?: (capability: string) => string[];
+    companySectionLevel?: (section: string) => 'none' | 'read' | 'write';
+  }) => string[];
   sodProhibitions?: Record<string, string[]>;
   isRouteDeniedForRole?: (role: string, cleanRoute: string) => boolean;
   defaultRouteForRole?: Record<string, string>;
@@ -27,6 +33,24 @@ export interface ModulePersonas {
   homeIsModuleDefault?: boolean;
   /** آخرین مقصد پیش‌فرض نقش، وقتی هیچ قاعدهٔ دیگری مسیری نداد */
   lastResortRoute?: string;
+}
+
+/**
+ * نقش انتساب کاربر به بخش (تب «پروژه‌ها و بخش‌ها» استودیو)؛ هستهٔ پروژه و بخش نقش‌ها را نمی‌شناسد
+ * و هر ماژول نقش‌های خودش را اعلام می‌کند (همتای contribute('section_roles') بک‌اند).
+ */
+export interface SectionRoleSpec {
+  /** مقدار role در پروتکل سرور */
+  key: string;
+  labelFa: string;
+  /** عنوان جمع کوتاه (ستون ماتریس و چیپ) */
+  shortLabelFa: string;
+  descriptionFa?: string;
+  icon: IconName;
+  tone: 'purple' | 'amber' | 'blue' | 'emerald' | 'slate';
+  order: number;
+  /** اگر بخش هیچ انتساب فعالی با این نقش نداشته باشد، این هشدار کنار بخش دیده می‌شود */
+  missingWarningFa?: string;
 }
 
 /** تب مشارکتی استودیوی شرکت */
@@ -319,6 +343,7 @@ export interface ExtensionMap {
     roleMenus?: Array<{
       role: string;
       items: ModuleNavItem[];
+      /** مجوزهای نشانگر نقش؛ فهرست تهی یعنی پرسونای فعال خودش نشانگر است (نقشی که از سطح بخش شرکت می‌آید) */
       roleMarkers: string[];
     }>;
     showWarehouseSwitcher?: boolean;
@@ -365,6 +390,8 @@ export interface ExtensionMap {
     listCells?: CompanyListCell[];
     /** دکمهٔ ردیف فهرست که یک تب استودیو را باز می‌کند */
     rowActions?: CompanyRowAction[];
+    /** نقش‌های انتساب کاربر به بخش که این ماژول در تب «پروژه‌ها و بخش‌ها» اعلام می‌کند */
+    sectionRoles?: SectionRoleSpec[];
   };
 
   /**

@@ -10,6 +10,7 @@ import { WAREHOUSE_ROUTES } from './modules/warehouse/warehouse.routes';
 import { routes } from './app.routes';
 import { AppPersonaService } from './core/services/app-persona.service';
 import { getModuleRegistry } from './core/modules/module-registry.service';
+import { redirectToCompanyProjects } from './core/modules/documents-archive-route';
 
 /** ریدایرکت‌های ماژولی که پیش از گام ۶ مستقیم در app.routes.ts بودند: [مسیر قدیمی، مقصد] */
 const FORMER_ROOT_REDIRECTS: [string, string][] = [
@@ -43,7 +44,6 @@ const FORMER_ROOT_REDIRECTS: [string, string][] = [
   ['profiles', 'app/finance/profiles'],
   ['personnel-profiles', 'app/finance/personnel-profiles'],
   ['base-settings', 'app/finance/base-settings'],
-  ['projects-and-sections', 'app/finance/projects-and-sections'],
   ['employee-portal', 'app/finance/employee-attendance'],
   ['employee-attendance', 'app/finance/employee-attendance'],
   ['employee-fleet', 'app/finance/employee-fleet'],
@@ -100,8 +100,11 @@ describe('legacyRedirects ماژول‌ها', () => {
       expect(hits[0].redirectTo, path).toBe(target);
       expect(hits[0].pathMatch, path).toBe('full');
     }
-    // فقط ریدایرکت جابه‌جاشدهٔ attendance انبار به فهرست اضافه شده است
-    expect(all.length).toBe(FORMER_ROOT_REDIRECTS.length + 1);
+    // ریدایرکت جابه‌جاشدهٔ attendance انبار، و projects-and-sections که اکنون به تب استودیوی شرکت می‌رود
+    const projects = all.filter(r => r.path === 'projects-and-sections');
+    expect(projects.length).toBe(1);
+    expect(projects[0].redirectTo).toBe(redirectToCompanyProjects);
+    expect(all.length).toBe(FORMER_ROOT_REDIRECTS.length + 2);
   });
 
   it('app/warehouse/attendance در ماژول مالی به صفحهٔ کارکرد کارمند می‌رود و روت‌های انبار دیگر به مالی پیوند ندارند', () => {

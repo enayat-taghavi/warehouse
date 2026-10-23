@@ -133,4 +133,26 @@
 - **باز برای گام ۳:** ارجاع‌های فرانت به `perm_manage_projects_sections` (`nav-items.ts`، `personas.ts`، `route-access.ts`، `role-presets.ts`، `accounting.routes.ts`، `projects-and-sections.ts`، `permissionMarkers` در `module.ts` و specها) و مسیرهای `/api/personnel/...` در فرانت.
 - **گام بعد:** گام ۳ (فرانت: تب استودیو).
 
+### گام ۳ (۱ آبان ۱۴۰۵): انجام شد
+
+- **مجری:** زیرعامل Opus (high). یک بار به سقف مصرف API خورد و با همان کانتکس ادامه داد.
+- **تب استودیو:** `modules/common/components/operations/companies/company-projects-tab/` (کلید `projects`، بین «مدارک» و «دسترسی»، با `@defer`). فقط پروژه‌ها، بخش‌ها و انتساب‌های همان شرکت را نشان می‌دهد و زیرتب در `?sub=` می‌ماند.
+  - سرویس هسته: `core/api/org-structure-api.service.ts`.
+  - نقش‌ها از افزونهٔ تازهٔ `companies.sectionRoles` می‌آیند و حسابداری همان پنج نقش را اعلام می‌کند. بی هیچ نقشی، زیرتب انتساب پنهان است.
+- **مسیر قدیمی:** `/app/finance/projects-and-sections` با `redirectToCompanyProjects` به تب استودیوی شرکت فعال می‌رود، و بی شرکت به فهرست شرکت‌ها. کامپوننت قدیمی حذف شد.
+- **مجوز:** همهٔ ارجاع‌های فرانت به `perm_manage_projects_sections` حذف شد. پرسونای `org_admin` از سطح «نوشتن» `projects` در `manageableCompanies` می‌آید (`companySectionLevel` در `resolveRoleCodes`). قالب نقش `org_admin` در `role-presets` حذف شد.
+- **آفلاین:** `FINANCIAL_PROJECTS_ENDPOINT` اکنون `/org/projects` است.
+  - به یافتهٔ `data-loss-reviewer`، همهٔ `invalidateCache`های تب حذف شد: پاسخ صف‌شده فقط نمای محلی را وصله می‌کند و آنلاین، دریافت تازه کش را جایگزین می‌کند. دو spec تازه این را می‌سنجند.
+  - رکوردهای صف قدیمی به مسیرهای حذف‌شده ۴۰۴ می‌گیرند و با بدنه به صندوق خطا می‌روند (§۶).
+- **بازبینی‌ها:**
+  - `ui-reviewer`: ده یافته، همه رفع شد. بند ۷ (آیکون `info`) با حذف آیکون تزئینی رفع شد.
+  - `data-loss-reviewer`: یک یافتهٔ متوسط که رفع شد.
+- **آزمون‌ها:**
+  - `tsc` تمیز است.
+  - specهای تب، استودیو و فرهنگ آیکون: ۱۰۶ از ۱۰۶ سبز. اجرای ۲۰ فایلی فقط شکست زمانیِ پیش‌موجود آزمون ۷ استودیو را دارد (روی HEAD هم هست).
+  - نگهبان‌های 52، 56، 57 و 29 PASS. نگهبان 55 مثل HEAD روی ۱۰۲ است.
+- **بازبینی بصری:** روی localhost:4300 با superuser موقت در دسکتاپ و ۳۶۰ پیکسل انجام شد و کاربرهای `qa_step3*` حذف شدند.
+  - **آزموده‌نشده:** کاربر غیر superuser با سطح خواندن یا نوشتن `projects`، و مسیر آفلاین در مرورگر (فقط spec).
+- **گام بعد:** گام ۴ (جمع‌بندی و انتشار روی `app`).
+
 </div>

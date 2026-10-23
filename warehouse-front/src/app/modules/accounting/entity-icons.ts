@@ -6,7 +6,6 @@ import { IconName } from '../../shared/icons/icon-registry';
  * فقط توسط ماژول accounting مصرف می‌شود (جداسازی وابستگی‌ها).
  */
 export const ACCOUNTING_ENTITY_ICONS = {
-  projectsAndSections: 'folder',
   attendance: 'calendar',
   fleet: 'truck',
   personnel: 'users',
@@ -24,8 +23,6 @@ export const ACCOUNTING_ENTITY_ICONS = {
   cheques: 'clipboard-check',
   reconciliation: 'columns',
   companyDocumentsArchive: 'book',
-  /** بخش‌ها و کارگاه‌ها */
-  sections: 'map-pin',
   /** گروه شغلی، احکام و قرارداد پرسنل */
   jobGrades: 'star',
   /** بیمه و تامین اجتماعی */

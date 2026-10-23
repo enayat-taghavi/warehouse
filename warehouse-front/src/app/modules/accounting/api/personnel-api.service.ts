@@ -235,16 +235,6 @@ export class PersonnelApiService {
   requestPettyCashReplenishment(data: { section_id: number; amount: number; title?: string; description?: string; receipt_number?: string; }): Observable<PettyCashTransaction> { return this.treasuryOrg.requestPettyCashReplenishment(data); }
   exportPettyCashTransactionsExcel(params?: { section_id?: number; custodian_id?: number; transaction_type?: string; status?: string; search?: string; }): Observable<Blob> { return this.treasuryOrg.exportPettyCashTransactionsExcel(params); }
   getWorkflowAuditLogs(params?: { content_type?: string; object_id?: number }): Observable<WorkflowAuditLog[]> { return this.treasuryOrg.getWorkflowAuditLogs(params); }
-  exportFinancialProjectsExcel(): Observable<Blob> { return this.treasuryOrg.exportFinancialProjectsExcel(); }
-  downloadFinancialProjectsTemplate(): Observable<Blob> { return this.treasuryOrg.downloadFinancialProjectsTemplate(); }
-  importFinancialProjectsExcel(file: File, dryRun: boolean = false): Observable<any> { return this.treasuryOrg.importFinancialProjectsExcel(file, dryRun); }
-  exportProjectSectionsExcel(projectId?: number): Observable<Blob> { return this.treasuryOrg.exportProjectSectionsExcel(projectId); }
-  downloadProjectSectionsTemplate(): Observable<Blob> { return this.treasuryOrg.downloadProjectSectionsTemplate(); }
-  importProjectSectionsExcel(file: File, dryRun: boolean = false): Observable<any> { return this.treasuryOrg.importProjectSectionsExcel(file, dryRun); }
-  cloneSectionAssignments(targetSectionId: number, sourceSectionId: number): Observable<any> { return this.treasuryOrg.cloneSectionAssignments(targetSectionId, sourceSectionId); }
-  exportUserSectionAssignmentsExcel(projectId?: number, role?: string): Observable<Blob> { return this.treasuryOrg.exportUserSectionAssignmentsExcel(projectId, role); }
-  downloadUserSectionAssignmentsTemplate(): Observable<Blob> { return this.treasuryOrg.downloadUserSectionAssignmentsTemplate(); }
-  importUserSectionAssignmentsExcel(file: File, dryRun: boolean = false): Observable<any> { return this.treasuryOrg.importUserSectionAssignmentsExcel(file, dryRun); }
   exportCounterpartiesExcel(): Observable<Blob> { return this.treasuryOrg.exportCounterpartiesExcel(); }
   downloadCounterpartiesTemplate(): Observable<Blob> { return this.treasuryOrg.downloadCounterpartiesTemplate(); }
   importCounterpartiesExcel(file: File, dryRun: boolean = false): Observable<any> { return this.treasuryOrg.importCounterpartiesExcel(file, dryRun); }

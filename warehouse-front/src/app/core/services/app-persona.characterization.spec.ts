@@ -59,6 +59,7 @@ describe('AppPersonaService Characterization Spec', () => {
   let mockActiveCompany: {
     hasWarehouseModule: boolean;
     hasCompanyDocumentsAccess: ReturnType<typeof vi.fn>;
+    manageableCompanies: ReturnType<typeof signal<any[]>>;
   };
 
   const ACCESS_USER_BASE_PERMS = ['view_sys_dashboard', 'view_sys_personnel'];
@@ -99,6 +100,7 @@ describe('AppPersonaService Characterization Spec', () => {
     mockActiveCompany = {
       hasWarehouseModule: true,
       hasCompanyDocumentsAccess: vi.fn().mockReturnValue(false),
+      manageableCompanies: signal<any[]>([]),
     };
 
     TestBed.configureTestingModule({
@@ -395,9 +397,14 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['treasury']);
     });
 
-    it('triggers org_admin via permission perm_manage_projects_sections', () => {
-      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'perm_manage_projects_sections']);
+    it('triggers org_admin via write level of the projects company section', () => {
+      mockActiveCompany.manageableCompanies.set([{ id: 1, section_levels: { projects: 'write' } }]);
       expect(service.availableRoles().map(r => r.code)).toEqual(['org_admin']);
+    });
+
+    it('does not trigger org_admin with only read level of the projects company section', () => {
+      mockActiveCompany.manageableCompanies.set([{ id: 1, section_levels: { projects: 'read' } }]);
+      expect(service.availableRoles().map(r => r.code)).not.toContain('org_admin');
     });
 
     it('triggers all personnel roles together in exact order', () => {
@@ -412,8 +419,8 @@ describe('AppPersonaService Characterization Spec', () => {
         'can_act_as_accountant',
         'can_act_as_company_manager',
         'perm_treasury_disburse_action',
-        'perm_manage_projects_sections',
       ]);
+      mockActiveCompany.manageableCompanies.set([{ id: 1, section_levels: { projects: 'write' } }]);
       expect(service.availableRoles().map(r => r.code)).toEqual([
         'operator',
         'supervisor',

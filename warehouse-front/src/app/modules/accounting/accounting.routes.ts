@@ -1,12 +1,10 @@
 import { Router, Routes } from '@angular/router';
 import { inject } from '@angular/core';
-import { AuthService } from '../../core/auth/auth.service';
 import { AppPersonaService } from '../../core/services/app-persona.service';
 import { ActiveCompanyService } from '../../core/services/active-company.service';
 import { ManagerApprovals } from './components/personnel/manager-approvals/manager-approvals';
 import { PersonnelProfilesHub } from './components/personnel/personnel-profiles/personnel-profiles';
 import { BaseSettings } from './components/personnel/base-settings/base-settings';
-import { ProjectsAndSectionsComponent } from './components/organization/projects-and-sections/projects-and-sections';
 import { CounterpartiesComponent } from './components/finance/counterparties/counterparties';
 import { EmployeeAttendanceHubComponent } from './components/finance/employee/employee-attendance/employee-attendance';
 import { EmployeeFleetHubComponent } from './components/finance/employee/employee-fleet/employee-fleet';
@@ -41,7 +39,7 @@ import { TreasurerChequesComponent } from './components/finance/treasurer/treasu
 import { TreasurerReconciliationComponent } from './components/finance/treasurer/treasurer-reconciliation/treasurer-reconciliation';
 import { Audit } from '../common/components/audit/audit';
 import { HealthDashboardComponent } from '../common/components/health-dashboard/health-dashboard';
-import { companyDocumentsUrlTree, redirectToCompanyDocuments } from '../../core/modules/documents-archive-route';
+import { companyDocumentsUrlTree, redirectToCompanyDocuments, redirectToCompanyProjects } from '../../core/modules/documents-archive-route';
 
 
 export const ACCOUNTING_ROUTES: Routes = [
@@ -128,7 +126,8 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'personnel-profiles', component: PersonnelProfilesHub, data: { reuse: true } },
   { path: 'companies', redirectTo: '/app/operations/companies', pathMatch: 'full' },
   { path: 'base-settings', component: BaseSettings, data: { reuse: true } },
-  { path: 'projects-and-sections', component: ProjectsAndSectionsComponent, data: { reuse: true } },
+  // پروژه و بخش به تب «پروژه‌ها و بخش‌ها» استودیوی شرکت (هسته) رفت؛ نشانی قدیمی به همان تب هدایت می‌شود
+  { path: 'projects-and-sections', redirectTo: redirectToCompanyProjects, pathMatch: 'full' },
   { path: 'counterparties', redirectTo: 'accountant-counterparties', pathMatch: 'full' },
   // بایگانی اسناد شرکت در تب مدارک استودیوی شرکت ادغام شد (ق۷)؛ نشانی‌های قدیمی به آن هدایت می‌شوند
   { path: 'company-documents', redirectTo: redirectToCompanyDocuments, pathMatch: 'full' },
@@ -156,11 +155,6 @@ export const ACCOUNTING_ROUTES: Routes = [
       }
 
       // کاربر مالی بدون پرسونای نقش
-      const auth = inject(AuthService);
-      const perms = auth.userPermissions() || [];
-      if (perms.includes('perm_manage_projects_sections')) {
-        return 'projects-and-sections';
-      }
       const companies = inject(ActiveCompanyService);
       if (companies.hasCompanyDocumentsAccess()) {
         return companyDocumentsUrlTree(inject(Router), companies.companyDocumentsTargetId());

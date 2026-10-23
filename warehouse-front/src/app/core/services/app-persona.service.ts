@@ -233,7 +233,8 @@ export class AppPersonaService {
 
     if (targetModule?.personas) {
       const roleCodes = targetModule.personas.resolveRoleCodes({
-        perms, userRoles, permissionAliases: (capability: string) => getPermissionAliases(capability, this.moduleRegistry)
+        perms, userRoles, permissionAliases: (capability: string) => getPermissionAliases(capability, this.moduleRegistry),
+        companySectionLevel: (section: string) => this.companySectionLevel(section)
       });
       for (const code of roleCodes) {
         const persona = targetModule.personas.roles.find(r => r.code === code);
@@ -252,6 +253,13 @@ export class AppPersonaService {
 
     return roles.filter(Boolean);
   });
+
+  /** بالاترین سطح کاربر در یک بخش مجوز شرکت، در میان شرکت‌های قابل مدیریت او (سیگنال؛ با رسیدن فهرست به‌روز می‌شود) */
+  private companySectionLevel(section: string): 'none' | 'read' | 'write' {
+    const levels = (this.activeCompanyService?.manageableCompanies?.() || []).map(c => c.section_levels?.[section] ?? 'none');
+    if (levels.includes('write')) return 'write';
+    return levels.includes('read') ? 'read' : 'none';
+  }
 
   // آیا کاربر چندنقشه است؟
   public isMultiRole = computed<boolean>(() => {

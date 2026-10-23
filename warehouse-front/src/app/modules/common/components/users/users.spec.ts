@@ -263,7 +263,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
         }
         if (point === 'projectLookup') {
           if (activeModuleList.includes('accounting')) {
-            return [{ moduleCode: 'accounting', extension: { financialProjectsEndpoint: '/personnel/financial-projects' } }];
+            return [{ moduleCode: 'accounting', extension: { financialProjectsEndpoint: '/org/projects' } }];
           }
           return [];
         }

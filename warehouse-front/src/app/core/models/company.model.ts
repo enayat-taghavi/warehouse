@@ -212,3 +212,58 @@ export interface CompanyMember {
   user_full_name: string;
   sources: string[];
 }
+
+// ─── ساختار سازمانی زیر شرکت (شرکت ← پروژه ← بخش) و انتساب کاربر به بخش (/api/org/) ───
+
+export interface OrgProject {
+  id?: number;
+  company?: number | null;
+  company_name?: string;
+  company_code?: string;
+  code: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  sections_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  /** ردیف وصله‌شدهٔ محلی که تغییرش هنوز در صف آفلاین است */
+  _offlinePending?: boolean;
+}
+
+export interface OrgProjectSection {
+  id?: number;
+  project: number;
+  project_id?: number;
+  project_name?: string;
+  project_code?: string;
+  company_id?: number;
+  company_name?: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  /** ردیف وصله‌شدهٔ محلی که تغییرش هنوز در صف آفلاین است */
+  _offlinePending?: boolean;
+}
+
+/** نقش انتساب را ماژول‌های نصب‌شده اعلام می‌کنند (companies.sectionRoles)؛ هسته نقش‌ها را نمی‌شناسد */
+export interface OrgSectionAssignment {
+  id?: number;
+  user: number;
+  username?: string;
+  user_full_name?: string;
+  section: number;
+  section_name?: string;
+  section_code?: string;
+  project_id?: number;
+  project_name?: string;
+  role: string;
+  role_display?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  /** ردیف وصله‌شدهٔ محلی که تغییرش هنوز در صف آفلاین است */
+  _offlinePending?: boolean;
+}

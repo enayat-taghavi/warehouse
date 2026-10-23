@@ -89,6 +89,10 @@ export const PLATFORM_ENTITY_ICONS = {
   'notifications': 'bell',
   'chat': 'message-square',
   'permissions': 'key',
+  /** پروژه‌های زیر شرکت (ساختار سازمانی هسته) */
+  'projects': 'folder',
+  /** بخش‌ها و کارگاه‌های زیر پروژه */
+  'sections': 'map-pin',
 } as const satisfies Record<string, IconName>;
 
 export type PlatformEntityIconKey = keyof typeof PLATFORM_ENTITY_ICONS;

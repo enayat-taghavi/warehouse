@@ -1341,6 +1341,39 @@
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <!-- تب هستهٔ «پروژه‌ها و بخش‌ها»: یک بار ساخته و با hidden نگه داشته می‌شود -->
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        @if (activeModalTab === 'projects' || projectsTabOpened) {
+          <div class="space-y-4" [hidden]="activeModalTab !== 'projects'" role="tabpanel" id="co-studio-panel-projects" aria-labelledby="co-studio-tab-projects">
+            @if (!hasSavedCompany) {
+              <div class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
+                برای تعریف پروژه و بخش، ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید.
+              </div>
+            } @else if (actorLevelsLoading) {
+              <div role="status" aria-busy="true" aria-label="در حال دریافت مجوزهای شما">
+                <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
+              </div>
+            } @else {
+              <!-- هر «تلاش دوباره» بلوک defer را از نو می‌سازد تا بارگذاری کامپوننت دوباره انجام شود -->
+              @for (attempt of [projectsTabAttempt]; track attempt) {
+                @defer (on immediate) {
+                  <app-company-projects-tab [companyId]="companyModal.data.id!" [canWrite]="canWriteSection('projects')" />
+                } @loading (minimum 200ms) {
+                  <div role="status" aria-busy="true" aria-label="در حال بارگذاری بخش">
+                    <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
+                  </div>
+                } @error {
+                  <div class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
+                    <div class="text-xs font-bold text-slate-600">بارگذاری این بخش انجام نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</div>
+                    <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryProjectsTab()"></button>
+                  </div>
+                }
+              }
+            }
+          </div>
+        }
+
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب‌های مشارکتی ماژول‌ها (studioTabs) با بارگذاری تنبل کامپوننت       -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- کامپوننت‌های مشارکتی یک بار ساخته و با hidden نگه داشته می‌شوند تا فرم نیمه‌کاره و شمارندهٔ تب‌ها با جابه‌جایی تب از دست نروند -->

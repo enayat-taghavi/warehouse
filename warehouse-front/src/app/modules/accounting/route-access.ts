@@ -9,7 +9,6 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
     'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
     'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-    'perm_manage_projects_sections',
     'can_act_as_accountant', 'can_act_as_operator', 'can_act_as_workshop_supervisor', 'can_act_as_company_manager'
   ],
   pagePermissions: {
@@ -31,7 +30,6 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
       'can_act_as_accountant', 'view_sys_payroll', 'perm_approve_personnel_finance',
       'can_act_as_company_manager', 'perm_manager_payment_authorize', 'perm_approve_personnel_manager'
     ],
-    'projects-and-sections': ['view_sys_projects', 'perm_manage_projects_sections', 'admin_all'],
     'counterparties': ['view_sys_payroll', 'view_sys_projects', 'admin_all'],
     'employee-portal': ['can_act_as_operator', 'view_sys_personnel_attendance', 'admin_all'],
     'employee-attendance': ['can_act_as_operator', 'view_sys_personnel_attendance', 'admin_all'],
@@ -66,7 +64,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
     'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',
     'perm_approve_personnel_finance', 'perm_treasury_disburse_action',
-    'perm_approve_personnel_manager', 'perm_manage_projects_sections'
+    'perm_approve_personnel_manager'
   ],
   loginActiveAppModule: 'personnel',
   resolveLoginRoute: (): string => '/app/finance'

@@ -46,11 +46,12 @@ import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
 import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
 import { ExcelImportModal } from '../../../../../shared/components/excel-import-modal/excel-import-modal';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
+import { CompanyProjectsTabComponent } from './company-projects-tab/company-projects-tab';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal, CompanyProjectsTabComponent],
   providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
@@ -163,6 +164,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   readonly icons = {
     company: PLATFORM_ENTITY_ICONS.company,
     permissions: PLATFORM_ENTITY_ICONS.permissions,
+    projects: PLATFORM_ENTITY_ICONS.projects,
   } as const;
 
   private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
@@ -585,7 +587,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** جای تب‌های هسته؛ تب مشارکتی با `order` خودش میان آن‌ها می‌نشیند (§۵-۴) */
   private static readonly CORE_TAB_ORDER: Record<string, number> = {
-    identity: 10, fiscal_insurance: 20, documents: 50, access: 60
+    identity: 10, fiscal_insurance: 20, documents: 50, projects: 55, access: 60
   };
 
   private _contributedTabsKey = '';
@@ -626,7 +628,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** بخش مجوز هر تب هسته؛ تب‌های مدارک و بیمه بخش مشارکتی هم دارند */
   private static readonly CORE_TAB_SECTION: Record<string, string> = {
-    identity: 'identity', fiscal_insurance: 'insurance_tax', documents: 'founding_docs', access: 'user_access'
+    identity: 'identity', fiscal_insurance: 'insurance_tax', documents: 'founding_docs', projects: 'projects', access: 'user_access'
   };
 
   canReadSection(key: string): boolean {
@@ -793,7 +795,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     // شمارندهٔ تب «مدارک» از بخش مشارکتی بایگانی (studioSections) از راه context می‌آید
     const documentsCount = this.studioContext.count('documents');
     const levelsKey = this.isRestricted ? JSON.stringify(this.actorLevels) : '';
-    const key = `${documentsCount ?? ''}_${this.studioAccesses.length}_${[...errorTabs].join(',')}_${contributedKey}_${levelsKey}`;
+    const projectsKey = `${this.studioContext.count('projects') ?? ''}:${this.studioContext.hasError('projects')}`;
+    const key = `${documentsCount ?? ''}_${this.studioAccesses.length}_${[...errorTabs].join(',')}_${contributedKey}_${levelsKey}_${projectsKey}`;
     if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
       return this._cachedModalTabs;
     }
@@ -804,6 +807,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check', indicator: errorTabs.has('fiscal_insurance') ? errorIndicator : undefined },
     ];
     tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: documentsCount });
+    // ساختار سازمانی زیر شرکت (پروژه ← بخش) و انتساب کاربران؛ شمارنده و نشان خطا از کامپوننت تب می‌آید
+    tabs.push({
+      id: 'projects', label: 'پروژه‌ها و بخش‌ها', shortLabel: 'پروژه‌ها', icon: this.icons.projects,
+      count: this.studioContext.count('projects'),
+      indicator: this.studioContext.hasError('projects') ? errorIndicator : undefined
+    });
     tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: this.icons.permissions, count: this.studioAccesses.length || undefined });
     // تب‌های مشارکتی ماژول‌ها با شمارنده و نشان خطای context، به ترتیب order میان تب‌های هسته
     const order = (id: string) => CompaniesManagementComponent.CORE_TAB_ORDER[id] ?? contributed.find(t => t.id === id)?.order ?? 0;
@@ -846,7 +855,18 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   /** دادهٔ هر تب یک بار برای هر شرکت دریافت می‌شود؛ تازه‌سازی با وب‌سوکت یا «تلاش دوباره» است */
+  /** تب «پروژه‌ها و بخش‌ها» یک بار ساخته و سپس با hidden نگه داشته می‌شود تا فرم نیمه‌کاره و فیلترها نروند */
+  projectsTabOpened = false;
+  /** شمارندهٔ بازسازی بلوک defer تب پروژه‌ها پس از شکست بارگذاری */
+  projectsTabAttempt = 0;
+
+  retryProjectsTab(): void {
+    this.projectsTabAttempt++;
+    this.cdr.markForCheck();
+  }
+
   private onTabActivated(tab: string): void {
+    if (tab === 'projects' && !this.actorLevelsLoading && this.isTabAvailable('projects')) this.projectsTabOpened = true;
     // فهرست کاربران فقط برای فرم تخصیص (نوشتن دسترسی کاربران) لازم است
     if (tab === 'access' && !this.actorLevelsLoading && this.canWriteSection('user_access')) {
       this.ensureSystemUsers();
