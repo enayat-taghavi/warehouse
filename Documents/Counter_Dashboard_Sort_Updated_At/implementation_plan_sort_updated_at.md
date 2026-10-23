@@ -34,8 +34,8 @@
 
 | ردیف | فایل | شرح تغییرات |
 | :--- | :--- | :--- |
-| **۱** | [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | تغییر مقدار اولیه `sortField` به `'updated_at'` و `sortDirection` به `'desc'`، به‌روزرسانی مدیریت پارامترهای URL |
-| **۲** | [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | انتقال گزینه «آخرین زمان تغییر» به ابتدای لیست منوی کشویی مرتب‌سازی |
+| **۱** | [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | تغییر مقدار اولیه `sortField` به `'updated_at'` و `sortDirection` به `'desc'`، به‌روزرسانی مدیریت پارامترهای URL |
+| **۲** | [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | انتقال گزینه «آخرین زمان تغییر» به ابتدای لیست منوی کشویی مرتب‌سازی |
 
 ---
 

@@ -20,13 +20,13 @@
 ### کامپوننت Dispatch (تخصیص کالا)
 این کامپوننت وظیفه مدیریت تخصیص‌ها را بر عهده دارد و تغییرات در فایل‌های HTML و TS آن اعمال خواهد شد.
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - **حذف Modal:** کدهای مربوط به Modal مدیریت تگ‌ها در انتهای فایل حذف خواهند شد.
 - **حذف دکمه تگ:** دکمه `openTagModal()` از کنار دکمه رفرش حذف می‌شود.
 - **افزودن رابط کاربری یکپارچه (Inline UI):** ساختار تگ‌ها (شامل نمایش تگ‌های مشترک، اینپوت افزودن تگ و دکمه حذف همه) به زیر عنوان «۱. سازماندهی و لیبلینگ» منتقل می‌شود.
 - **مدیریت فضا و اسکرول:** برای اینکه اگر تعداد تگ‌ها زیاد شد ساختار بخش به هم نریزد، از `max-height` و اسکرول داخلی استفاده خواهد شد و بقیه فضا را پر خواهد کرد `flex-1`.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - متدهای `openTagModal` و `closeTagModal` حذف خواهند شد.
 - متغیر `isTagModalOpen` حذف خواهد شد.
 - متد `onSelectionChange` تغییر می‌کند تا به صورت خودکار `this.updateSelectedItemsTags()` را فراخوانی کند. بنابراین هر زمان که رکوردی در جدول انتخاب یا لغو انتخاب شود، لیست تگ‌های مشترک آپدیت می‌شود.

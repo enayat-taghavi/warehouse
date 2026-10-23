@@ -27,10 +27,10 @@ classifiers = [
 ]
 
 [tool.setuptools]
-package-dir = { "" = "../../warehouse-backend/core" }
+package-dir = { "" = "../../backend/core" }
 
 [tool.setuptools.packages.find]
-where = ["../../warehouse-backend/core"]
+where = ["../../backend/core"]
 include = [
     "accounts*",
     "common*",

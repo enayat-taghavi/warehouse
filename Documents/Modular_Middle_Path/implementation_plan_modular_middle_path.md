@@ -43,7 +43,7 @@
 | `reports/registry.py:314` → `personnel.models` | موجودیت‌های گزارش مالی (موجودیت‌های انبار هم با `is_installed` در همین فایل‌اند) |
 
 - در `.importlinter`، `reports` هنوز در لایهٔ ماژول‌هاست، ولی در این طرح جزو هسته است.
-- `pyproject.toml` مسیر `warehouse-backend` و فهرست اپ‌های هر بسته را دارد. `deploy.ps1` در `Get-BackendWhitelist` اپ‌ها را با الگوی `warehouse-backend/<app>/__init__.py` پیدا می‌کند.
+- `pyproject.toml` مسیر `backend` و فهرست اپ‌های هر بسته را دارد. `deploy.ps1` در `Get-BackendWhitelist` اپ‌ها را با الگوی `backend/<app>/__init__.py` پیدا می‌کند.
 
 **فرانت**
 - `src/app/components/` تخت نیست: `finance/`، `operations/`، `organization/` و `personnel/` زیرپوشه دارند.
@@ -57,7 +57,7 @@
 ## ۴. ساختار هدف
 
 ```
-warehouse-backend/
+backend/
   manage.py, config/             ریشهٔ ترکیب (جایش عوض نمی‌شود)
   core/                          accounts, common, companies, communications,
                                  notifications, reports, settings_core, platform_core
@@ -65,7 +65,7 @@ warehouse-backend/
     warehouse/   module.py       warehouses, inventory
     accounting/  module.py       personnel
 
-warehouse-front/src/app/
+frontend/src/app/
   core/, shared/                 هسته (جایش عوض نمی‌شود)
   modules/
     common/                      پوستهٔ مشترک و صفحه‌های مشترک (جای platform-shell)
@@ -85,12 +85,12 @@ warehouse-front/src/app/
 ### گام ۰-الف — پوشه‌های بک‌اند (یک نشست، حدود ۳ تا ۴ ساعت)
 - **هماهنگی:** تا پایان صف، Claude روی مخزن کاری نمی‌کند و هیچ صف یا نشست دیگری هم‌زمان اجرا نمی‌شود.
 - اپ‌ها با `git mv` به `core/` و `modules/<x>/` منتقل می‌شوند. `name` و `label` هیچ `AppConfig`ی عوض نمی‌شود.
-- **کمکی مسیر:** فایل تازهٔ `warehouse-backend/backend_paths.py` (در ریشهٔ بک‌اند، که همیشه روی مسیر است):
+- **کمکی مسیر:** فایل تازهٔ `backend/backend_paths.py` (در ریشهٔ بک‌اند، که همیشه روی مسیر است):
   - تابع `paths()` فهرست `core` و هر `modules/*` را برمی‌گرداند و `install()` آن‌ها را یک بار به `sys.path` اضافه می‌کند.
   - `config/__init__.py` آن را صدا می‌زند، پس هر ورودی Django (`manage.py`، `asgi`، `wsgi`، daphne) پوشش داده می‌شود.
   - ابزارهای بیرون از Django همین کمکی را به‌کار می‌برند:
     - نگهبان ۲۹ مقدار `PYTHONPATH` را برای `lint-imports` از `paths()` می‌سازد (`guardian_modularization.py:266`). علتش این است که `lint-imports` هیچ‌وقت `config` را بارگذاری نمی‌کند.
-    - هر اسکریپتی که پس از `sys.path.insert(..warehouse-backend..)` اپ‌ها را مستقیم ایمپورت می‌کند، بلافاصله `import backend_paths; backend_paths.install()` می‌گیرد. فهرست امروز:
+    - هر اسکریپتی که پس از `sys.path.insert(..backend..)` اپ‌ها را مستقیم ایمپورت می‌کند، بلافاصله `import backend_paths; backend_paths.install()` می‌گیرد. فهرست امروز:
       - `scripts/e2e/guardian_30`، `31`، `36`، `41`، `43`، `49`، `50`، `54`، `guardian_modularization.py` و `guardian_phase1` تا `5`.
       - `scripts/setup_e2e_data.py`.
     - اسکریپت‌های داخل اپ‌ها که مسیر بک‌اند را نسبت به `__file__` می‌سازند، با جابه‌جایی یک پوشه عمیق‌تر می‌شوند و باید اصلاح شوند. فهرست امروز:
@@ -98,8 +98,8 @@ warehouse-front/src/app/
       - در `personnel/`: `guardian_menu_redesign.py`، `phase_guardian.py`، `phase_guardian_approval.py`، `section_guardian.py`، `timesheet_phase_guardian.py` و `verify_build_and_suite.py`.
 - اصلاح هر جایی که اپ‌ها را با مسیر پیدا می‌کند:
   - `pyproject.toml` (`package-dir` و `where`، سطرهای ۴۸ تا ۵۲) و توضیح بالای `.importlinter`.
-  - در `deploy.ps1`: `Get-BackendWhitelist` (سطر ۱۲۸۸، الگوی `^warehouse-backend/([^/]+)/__init__\.py$`) و `Test-BundleStage` (حدود سطر ۱۳۱۵). همچنین `scripts/deploy_tests/test_bundle.ps1` (سطرهای ۵۳ تا ۸۸). اگر این‌ها اصلاح نشوند، بستهٔ استقرار بی‌اپ ساخته می‌شود.
-  - `warehouse-backend/docker-compose.yml`، اگر مسیر اپ دارد.
+  - در `deploy.ps1`: `Get-BackendWhitelist` (سطر ۱۲۸۸، الگوی `^backend/([^/]+)/__init__\.py$`) و `Test-BundleStage` (حدود سطر ۱۳۱۵). همچنین `scripts/deploy_tests/test_bundle.ps1` (سطرهای ۵۳ تا ۸۸). اگر این‌ها اصلاح نشوند، بستهٔ استقرار بی‌اپ ساخته می‌شود.
+  - `backend/docker-compose.yml`، اگر مسیر اپ دارد.
   - الگوهای مسیر در `.claude/hooks/guard.py`، مهارت `safe-migration` و بازبین‌ها.
   - بخش ساختار در `CLAUDE.md` و `.agents/AGENTS.md`.
 - **ریسک: متوسط.** تغییر گسترده ولی مکانیکی است. خطر اصلی ابزاری است که اپ را با مسیر پیدا می‌کند، مثلاً یک اپ در بستهٔ استقرار جا بماند و سرور نیاید.
@@ -129,8 +129,8 @@ warehouse-front/src/app/
 - **مسیرهای ثابتی که باید اصلاح شوند:**
   - مبنای نگهبان ۵۵ `scripts/e2e/clickable_ergonomics_baseline.json` (۹۰ مسیر `components/`). مسیرها با همان نگاشت بازنویسی می‌شوند، بدون اجرای `--update-baseline`، تا شمارش‌ها عوض نشوند.
   - نگهبان‌های `scripts/e2e/guardian_38` تا `40`، `42`، `44` تا `48`، `50`، `51` و `guardian_header_harmonization.py`، به‌علاوهٔ `scripts/test_guard_hooks.py`.
-  - `warehouse-front/tools/dom-verify.js`.
-  - `warehouse-front/tsconfig.spec.json` (سطر ۱۷) و `tsconfig.test21.spec.json`.
+  - `frontend/tools/dom-verify.js`.
+  - `frontend/tsconfig.spec.json` (سطر ۱۷) و `tsconfig.test21.spec.json`.
   - specهایی که با `__dirname` فایل می‌خوانند.
   - `.agents/PROJECT_ARCHITECTURE_MAP.md`، مهارت `design-system`، `ui-reviewer`، `CLAUDE.md` و `.agents/AGENTS.md`.
 - **نشست ۰-ب-۱:** نگاشت قطعی، ساخت اسکریپت، جابه‌جایی پوشه‌های `common` و ادغام `platform-shell` در `modules/common/`. بیلد باید سبز بماند.
@@ -144,7 +144,7 @@ warehouse-front/src/app/
   - ناظر: بررسی صفحهٔ ورود روی 4300 و release روی `app`. صفحه‌های پشت ورود را کاربر بررسی می‌کند.
 
 ### گام ۱ — بیلد و استقرار جدا (یک نشست، حدود ۲ تا ۳ ساعت)
-- **درز ثابت:** اسکریپت تازهٔ `warehouse-front/tools/build-for-modules.js` (با `npm run build:modules`) فهرست ماژول‌ها را از `WH_MODULES` می‌خواند و بیلد درست را می‌سازد:
+- **درز ثابت:** اسکریپت تازهٔ `frontend/tools/build-for-modules.js` (با `npm run build:modules`) فهرست ماژول‌ها را از `WH_MODULES` می‌خواند و بیلد درست را می‌سازد:
   - `warehouse` → پروفایل `warehouse-only`.
   - `accounting` → پروفایل `accounting-only`.
   - هر دو یا خالی → بیلد کامل.
@@ -157,7 +157,7 @@ warehouse-front/src/app/
   - `-AddModule` پیش از تغییر `WH_MODULES`، فرانت را با فهرست جدید بیلد و release می‌کند. بقیهٔ مسیر (migrate، ری‌استارت، بازگشت در شکست) مثل امروز است.
 - **فهرست ماژول‌های شناخته‌شده از روی پوشه‌ها:**
   - امروز در `deploy.ps1` (`$KnownModules`، سطر ۸۵) و در `warehouse-deploy.sh` (`KNOWN_MODULES`، سطر ۲۷) ثابت نوشته شده است.
-  - `deploy.ps1` آن را از `git ls-tree` کامیت استقرار (`warehouse-backend/modules/*/module.py`) می‌سازد. `warehouse-deploy.sh` آن را از پوشهٔ `modules/` همان release می‌سازد. ترتیب بر اساس نام پوشه است.
+  - `deploy.ps1` آن را از `git ls-tree` کامیت استقرار (`backend/modules/*/module.py`) می‌سازد. `warehouse-deploy.sh` آن را از پوشهٔ `modules/` همان release می‌سازد. ترتیب بر اساس نام پوشه است.
   - `MODULE_SERVICES` در `warehouse-deploy.sh` برای ماژول ناشناخته مقدار خالی می‌گیرد.
 - **ریسک: کم تا متوسط.** اگر پروفایل اشتباه روی سرور برود، منوها ناقص می‌شوند. بررسی `build-modules.txt` جلوی آن را می‌گیرد.
 - **راستی‌آزمایی:**
@@ -170,7 +170,7 @@ warehouse-front/src/app/
 - **بک‌اند (نگهبان ۲۹ سبز):**
   1. `.importlinter` با پوشه‌ها هم‌تراز می‌شود: لایه‌ها `config` → ماژول‌ها → هسته؛ `reports` در هسته؛ C2 دوطرفه؛ C3 = هسته هیچ ماژولی را ایمپورت نکند.
   2. ۴ سطر ریشهٔ ترکیب حذف می‌شوند: `_PROJECT_LOGGERS` از `INSTALLED_APPS` ساخته می‌شود. سطر ۲۱ `urls.py` (`api/reports/`) احتمالاً با رفتن `reports` به هسته در بند ۱ خودبه‌خود حل می‌شود. اول همین بررسی می‌شود.
-  3. ۳۱ یال غیرتولیدی فهرست و رفع می‌شوند. تست‌هایی که ذاتاً بین‌ماژولی‌اند به `warehouse-backend/integration_tests/` می‌روند. این پوشه جزو هیچ لایه‌ای نیست، فقط با برچسب و روی پروفایل کامل اجرا می‌شود و اسکریپت ریشه ندارد.
+  3. ۳۱ یال غیرتولیدی فهرست و رفع می‌شوند. تست‌هایی که ذاتاً بین‌ماژولی‌اند به `backend/integration_tests/` می‌روند. این پوشه جزو هیچ لایه‌ای نیست، فقط با برچسب و روی پروفایل کامل اجرا می‌شود و اسکریپت ریشه ندارد.
   4. چون تعریف قراردادها عوض شده، مبنا **یک بار** با ثبت عددهای قبل و بعد در گزارش پیشرفت دوباره گرفته می‌شود. از آن به بعد فقط کاهش مجاز است.
 - **فرانت (نگهبان تازهٔ ۵۷، `guardian_57_front_module_fence.py`):**
   - ایمپورت‌های `src/app/**/*.ts` را می‌خواند و می‌شمارد:
@@ -247,7 +247,7 @@ warehouse-front/src/app/
 - **قالب خالی** در `scripts/module-template/`:
   - بک‌اند: `module.py` و یک اپ با `apps.py` (ثبت در `ready()`)، `models.py`، `urls.py`، `migrations/__init__.py` و `tests.py`.
   - فرانت: `module.ts`، `<code>.routes.ts`، `nav-items.ts` و یک صفحهٔ نمونه.
-  - اسکریپت کوچک `scripts/new_module.py --code <code> --title-fa "..." [--root <مسیر مخزن>]` قالب را با نام تازه در `warehouse-backend/modules/<code>` و `warehouse-front/src/app/modules/<code>` کپی می‌کند و `installed-modules.ts` را با مولد به‌روز می‌کند. پیش‌فرض `--root` همین مخزن است.
+  - اسکریپت کوچک `scripts/new_module.py --code <code> --title-fa "..." [--root <مسیر مخزن>]` قالب را با نام تازه در `backend/modules/<code>` و `frontend/src/app/modules/<code>` کپی می‌کند و `installed-modules.ts` را با مولد به‌روز می‌کند. پیش‌فرض `--root` همین مخزن است.
 - **حصار خودکار ماژول تازه:**
   - نگهبان ۲۹ بسته‌های ماژول‌ها را از `modules/*/*/__init__.py` کشف می‌کند. اگر در `.importlinter` نباشند، یک پیکربندی موقت در `scratch/` می‌سازد که لایهٔ ماژول و قرارداد استقلال هر دو ماژول را دارد.
   - نگهبان ۵۷ هم پوشه‌های ماژول را خودش کشف می‌کند.
@@ -310,7 +310,7 @@ warehouse-front/src/app/
   - ۱۴: سنجش عددهای نگهبان ۲۹ تا گام ۲.
   - ۱۵: خط‌های verify، با فرمان‌های `verify_tools.py` به‌جای فرمان‌های خطی.
 - **رد شده (با تأیید کاربر):**
-  - ۱: `warehouse-backend/docker-compose.yml` در git هست.
+  - ۱: `backend/docker-compose.yml` در git هست.
   - ۷: نام مستعار `@core/*` کار و تغییر اضافه می‌آورد، در حالی که اسکریپت مسیر نسبی را دقیق حساب می‌کند.
   - ۸: یکی کردن گام ۱ و ۴. اسکریپت کوچک گام ۱ استقرار جدا را زود می‌دهد، و `deploy.ps1` در گام ۴ دوباره عوض نمی‌شود.
   - ۱۰: `modules/__init__.py` خطر ثبت دوبارهٔ اپ‌ها را دارد (بخش گام ۳).
@@ -345,9 +345,9 @@ warehouse-front/src/app/
   - اقدام بعدی: اجرای صف (نشست ۱).
 - **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۱ (گام ۰-الف):**
   - **کارهای انجام‌شده:**
-    - انتقال اپ‌ها با `git mv`: اپ‌های هسته (`accounts`، `common`، `companies`، `communications`، `notifications`، `reports`، `settings_core`، `platform_core`) به `warehouse-backend/core/`؛ اپ‌های انبار (`warehouses`، `inventory`) به `warehouse-backend/modules/warehouse/`؛ اپ مالی (`personnel`) به `warehouse-backend/modules/accounting/`.
+    - انتقال اپ‌ها با `git mv`: اپ‌های هسته (`accounts`، `common`، `companies`، `communications`، `notifications`، `reports`، `settings_core`، `platform_core`) به `backend/core/`؛ اپ‌های انبار (`warehouses`، `inventory`) به `backend/modules/warehouse/`؛ اپ مالی (`personnel`) به `backend/modules/accounting/`.
     - پاکسازی پوشه‌های خالی قدیمی همنام اپ در ریشه بک‌اند؛ عدم ایجاد `__init__.py` در `modules/` و `modules/<x>/`.
-    - ساخت `warehouse-backend/backend_paths.py` با `paths()` و `install()` و فراخوانی آن در `config/__init__.py`.
+    - ساخت `backend/backend_paths.py` با `paths()` و `install()` و فراخوانی آن در `config/__init__.py`.
     - اصلاح مصرف‌کننده‌ها: نگهبان ۲۹ (تنظیم `PYTHONPATH` از `paths()`)، نگهبان‌های ۳۰، ۳۱، ۳۶، ۴۱، ۴۳، ۴۹ (به‌همراه مسیر `VIEWS_PY`)، ۵۰، ۵۳ (مسیر `settings_core/views.py`)، ۵۴، نگهبان‌های فاز ۱ تا ۵، `setup_e2e_data.py`، اسکریپت‌های داخل اپ‌ها (`accounts/concurrency_stress_test.py` و ۶ اسکریپت نگهبان در `personnel`)، `pyproject.toml` (`package-dir` و `where`)، کامنت بالای `.importlinter`، استثنای `backend_paths.py` در `.gitattributes`، `Get-BackendWhitelist` و `Test-BundleStage` در `deploy.ps1`، `scripts/deploy_tests/test_bundle.ps1` (بررسی برابری اپ‌های بسته با `INSTALLED_APPS` پروفایل کامل)، و مستندات ساختار در `CLAUDE.md` و اسکیل‌های `tenant-scope-reviewer`.
   - **انحراف‌ها:** هیچ. جابه‌جایی مکانیکی کاملاً منطبق بر طرح انجام شد بدون تغییر در `name` یا `label` یا ایجاد مایگریشن.
   - **فرمان‌های اجراشده توسط ایجنت و خلاصه خروجی:**
@@ -363,10 +363,10 @@ warehouse-front/src/app/
   - **کارهای انجام‌شده:**
     - نگاشت قطعی ۳۱ پوشهٔ کامپوننت فرانت‌اند بر اساس بررسی گراف وابستگی‌ها و تحلیل فایل‌های route (`app.routes.ts`، `warehouse.routes.ts` و `accounting.routes.ts`).
     - ساخت اسکریپت `scripts/refactor/move_front_components.mjs` مبتنی بر TypeScript Compiler API در `node_modules` برای انتقال با `git mv` و بازنویسی مسیرهای ایمپورت نسبی در کلیهٔ فایل‌های `*.ts` (از جمله `*.spec.ts` و `*.dom.spec.ts` و `import()` پویا).
-    - انتقال ۱۰ پوشهٔ گروه common به `warehouse-front/src/app/modules/common/components/` با `git mv` (`login`، `layout`، `app-launcher`، `change-password`، `verify-card`، `users`، `operations`، `audit`، `health-dashboard`، `settings`).
-    - ادغام کامل `modules/platform-shell` در `modules/common`: انتقال با `git mv`، بازنویسی اکسپورت‌های `modules/common/index.ts` و به‌روزرسانی مسیر alias در `warehouse-front/tsconfig.json`.
+    - انتقال ۱۰ پوشهٔ گروه common به `frontend/src/app/modules/common/components/` با `git mv` (`login`، `layout`، `app-launcher`، `change-password`، `verify-card`، `users`، `operations`، `audit`، `health-dashboard`، `settings`).
+    - ادغام کامل `modules/platform-shell` در `modules/common`: انتقال با `git mv`، بازنویسی اکسپورت‌های `modules/common/index.ts` و به‌روزرسانی مسیر alias در `frontend/tsconfig.json`.
     - بازنویسی دقیق مسیرهای نسبی ۲۹۱ ایمپورت در ۳۶ فایل فرانت‌اند بدون دستکاری دستی `templateUrl` و `styleUrl` یا استایل‌ها.
-    - اصلاح مسیرهای ثابت: خط مبنای نگهبان ۵۵ در `scripts/e2e/clickable_ergonomics_baseline.json` (۳۵ مسیر `audit.html` بدون تغییر شمارنده‌ها)، نگهبان‌های users (۳۸ تا ۵۱)، `scripts/e2e/guardian_header_harmonization.py`، `scripts/test_guard_hooks.py` (مسیرهای `components/login`)، `warehouse-front/tools/dom-verify.js` و `warehouse-front/tsconfig.test21.spec.json`.
+    - اصلاح مسیرهای ثابت: خط مبنای نگهبان ۵۵ در `scripts/e2e/clickable_ergonomics_baseline.json` (۳۵ مسیر `audit.html` بدون تغییر شمارنده‌ها)، نگهبان‌های users (۳۸ تا ۵۱)، `scripts/e2e/guardian_header_harmonization.py`، `scripts/test_guard_hooks.py` (مسیرهای `components/login`)، `frontend/tools/dom-verify.js` و `frontend/tsconfig.test21.spec.json`.
   - **جدول نهایی نگاشت پوشه‌های ۳۱ گانه:**
 
 | نام پوشه در `components/` | مقصد نهایی | دلیل فنی و شواهد وابستگی | وضعیت انتقال |
@@ -406,8 +406,8 @@ warehouse-front/src/app/
   - **انحراف‌ها:** پوشه `reports` بر اساس شواهد کدبیس منحصراً در `warehouse.routes.ts` مورد ارجاع قرار گرفته است و بنابراین مقصد قطعی آن ماژول انبار (`modules/warehouse/components/reports`) تعیین گردید. پوشه `id-cards` به دلیل وابستگی متقابل مستقیم با تب کارت در `users` به عنوان کامپوننت مشترک به `modules/common/components/id-cards` تعیین شد که همراه باقی‌مانده‌ها در نشست ۳ جابه‌جا خواهد شد.
   - **فرمان‌های اجراشده توسط ایجنت و خلاصه خروجی:**
     - `node scripts/refactor/move_front_components.mjs --step 0-b1` -> `TypeScript imports rewritten: 270 imports across 32 files. Step 0-b1 migration complete!`
-    - `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [134.079 seconds] - exit 0`
-    - نگهبان‌های ۵۲، ۵۵، ۵۶، ۳۸ تا ۵۱، `scripts/test_guard_hooks.py` و `warehouse-front/tools/dom-verify.js` همگی اجرا شده و سبز (کد خروج ۰) تأیید شدند.
+    - `cd frontend && npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [134.079 seconds] - exit 0`
+    - نگهبان‌های ۵۲، ۵۵، ۵۶، ۳۸ تا ۵۱، `scripts/test_guard_hooks.py` و `frontend/tools/dom-verify.js` همگی اجرا شده و سبز (کد خروج ۰) تأیید شدند.
   - **آنچه به runner و ناظر می‌ماند:**
     - runner: اجرای بیلدهای پروفایلی (`build:accounting` و `build:warehouse`)، بررسی `dist-free`، اجرای `ng-test-compare`، راستی‌آزمایی نگهبان‌ها و ایجاد کامیت.
     - ناظر (Claude): بازبین `ui-reviewer`، بررسی صفحه ورود روی 4300 و release روی `app`.
@@ -415,15 +415,15 @@ warehouse-front/src/app/
 - **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۳ (گام ۰-ب-۲):**
   - **پایهٔ نشست:** commit hash برابر `925339413ca2a8c008f22881ec9fced525c870b5`.
   - **کارهای انجام‌شده:**
-    - انتقال با `git mv` برای کلیهٔ ۲۱ پوشهٔ باقیماندهٔ `warehouse-front/src/app/components/` طبق جدول نگاشت قطعی:
+    - انتقال با `git mv` برای کلیهٔ ۲۱ پوشهٔ باقیماندهٔ `frontend/src/app/components/` طبق جدول نگاشت قطعی:
       - ۱۶ پوشهٔ ماژول انبار به `src/app/modules/warehouse/components/` (`count-tracking`، `counter`، `customs`، `dashboard`، `dispatch`، `docs`، `dynamic-fields`، `feeding`، `field`، `label-designer`، `manager-review`، `placeholders`، `projects`، `reports`، `supervisor`، `wh-settings`).
       - ۳ پوشهٔ ماژول مالی و پرسنلی به `src/app/modules/accounting/components/` (`finance`، `organization`، `personnel`).
       - ۲ پوشهٔ باقیماندهٔ مشترک به `src/app/modules/common/components/` (`communications`، `id-cards`).
-    - پاک‌سازی کامل پوشهٔ `warehouse-front/src/app/components` (صفر فایل `*.ts` و حذف کامل پوشه).
+    - پاک‌سازی کامل پوشهٔ `frontend/src/app/components` (صفر فایل `*.ts` و حذف کامل پوشه).
     - بازنویسی مکانیزهٔ کلیهٔ مسیرهای نسبی با TypeScript Compiler API: تعداد ۱۶۱۶ ایمپورت در ۲۸۵ فایل فرانت‌اند بدون دستکاری دستی یا تغییر در رفتار، قالب و استایل‌ها.
     - اصلاح تمامی مسیرهای ثابت تعیین‌شده در طرح:
       - خط مبنای نگهبان ۵۵ در `scripts/e2e/clickable_ergonomics_baseline.json`: بازنویسی مسیرهای ۱۳ فایل باقیمانده بدون تغییر هیچ عدد یا نقضی.
-      - فایل `warehouse-front/tools/dom-verify.js`: به‌روزرسانی مسیرهای تمپلیت‌های انبار و مالی به `src/app/modules/`.
+      - فایل `frontend/tools/dom-verify.js`: به‌روزرسانی مسیرهای تمپلیت‌های انبار و مالی به `src/app/modules/`.
       - فایل‌های کانفیگ تست: `tsconfig.spec.json` (مسیر exclude پرسنل) و `tsconfig.test21.spec.json` (مسیرهای ۵ کامپوننت انبار).
       - اسپک با مسیر عمیق `__dirname`: `employee-new-vehicle.dom.spec.ts` (اصلاح عمق نسبی دسترسی به `excel-import-modal` از ۴ به ۶ سطح والد).
       - اسکریپت‌های نگهبان: `scripts/e2e/guardian_header_harmonization.py` (متد چندمسیره `resolve_component_path`) و `scripts/e2e/guardian_count_tracking.py` (مسیرهای انبار).
@@ -432,7 +432,7 @@ warehouse-front/src/app/
   - **انحراف‌ها:** هیچ. جابه‌جایی مکانیکی به طور کامل بر اساس جدول نشست ۲ انجام و پروندهٔ پوشهٔ قدیمی `components` به صورت کامل بسته شد.
   - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
     - `node scripts/refactor/move_front_components.mjs --step 0-b2` -> `TypeScript imports rewritten: 1616 imports across 285 files. Step 0-b2 migration complete!`
-    - `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [74.151 seconds] - exit 0`
+    - `cd frontend && npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [74.151 seconds] - exit 0`
     - `git rm -f scripts/refactor/move_front_components.mjs` -> `rm 'scripts/refactor/move_front_components.mjs'`
   - **آنچه به runner و ناظر می‌ماند:**
     - runner: اجرای بیلدهای پروفایلی (`build:accounting` و `build:warehouse`)، بررسی `dist-free`، اجرای `ng-test-compare` در برابر پایه، راستی‌آزمایی نگهبان‌های ۵۲، ۵۵، ۵۶ و ایجاد کامیت.
@@ -441,15 +441,15 @@ warehouse-front/src/app/
 - **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۴ (گام ۱):**
   - **پایهٔ نشست:** commit hash برابر `d82ad714c0f64dc9023ee90b153869d7776e69ca`.
   - **کارهای انجام‌شده:**
-    - ساخت `warehouse-front/tools/build-for-modules.js` و افزودن اسکریپت npm با عنوان `"build:modules": "node tools/build-for-modules.js"` به `package.json`:
+    - ساخت `frontend/tools/build-for-modules.js` و افزودن اسکریپت npm با عنوان `"build:modules": "node tools/build-for-modules.js"` به `package.json`:
       - خواندن ماژول‌ها از متغیر محیطی `WH_MODULES` (خالی یا شامل هر دو = بیلد کامل).
       - تفکیک پروفایل‌ها: ماژول `accounting` به پروفایل `accounting-only`، ماژول `warehouse` به پروفایل `warehouse-only`، و حالت ترکیبی یا خالی به بیلد کامل سامانه.
       - پشتیبانی از گزینهٔ اختیاری `--output-path` و انتقال همان مسیر به `ng build` و `tools/patch-ngsw-530.js`.
       - تولید و نگارش فایل `<output-path>/browser/build-modules.txt` شامل نام ماژول‌های بیلدشده به ترتیب الفبا و جداشده با ویرگول (`accounting`، `warehouse` یا `accounting,warehouse`).
-    - به‌روزرسانی `warehouse-front/tools/patch-ngsw-530.js`:
+    - به‌روزرسانی `frontend/tools/patch-ngsw-530.js`:
       - پذیرش آرگومان اختیاری برای مسیر سفارشی خروجی بیلد با حفظ دقیق رفتار پیش‌فرض فعلی در صورت عدم ارسال آرگومان.
     - به‌روزرسانی `deploy.ps1`:
-      - ساخت تابع پویا `Get-KnownModules([string]$Sha = 'HEAD')` با خواندن پوشه‌های `warehouse-backend/modules/` از طریق `git ls-tree` برای کامیت هدف و حذف آرایه‌های هاردکدشده.
+      - ساخت تابع پویا `Get-KnownModules([string]$Sha = 'HEAD')` با خواندن پوشه‌های `backend/modules/` از طریق `git ls-tree` برای کامیت هدف و حذف آرایه‌های هاردکدشده.
       - به‌روزرسانی `Build-IsolatedFrontend`: استفاده از `npm run build:modules` تحت متغیر `WH_MODULES` و ثبت نشانگر `MODULES=` در `.build-complete` (برای جلوگیری از سوءاستفاده از `-SkipBuild` در پروفایل‌های نامتناسب) و اعتبارسنجی تولید `build-modules.txt`.
       - به‌روزرسانی `Test-BundleStage` و `New-DeploymentBundle`: اعتبارسنجی وجود `build-modules.txt` و بررسی تطابق مجموعه‌ای آن با ماژول‌های هدف.
       - به‌روزرسانی `Invoke-AddModuleMode`: اجرای خودکار فرآیند بیلد و انتشار بسته با ماژول جدید پیش از اعمال `add-module` و تغییر `WH_MODULES` روی سرور.
@@ -484,21 +484,21 @@ warehouse-front/src/app/
         - اصلاح `config/settings.py`: استخراج پویای `_PROJECT_LOGGERS` از `INSTALLED_APPS` به همراه فیلتر با `LOCAL_APPS` و ترکیب با پکیج‌های ثابت مجاز (`config` و `common`).
         - سطر ۲۱ `config/urls.py` (`api/reports/`): با انتقال `reports` به لایهٔ هسته، دیگر نام ماژول محسوب نمی‌شود و خودبه‌خود صفر گردید.
         - تنظیم `MODULE_PACKAGES = ("warehouses", "inventory", "personnel")` در `guardian_modularization.py`.
-      - شناسایی و رفع کامل هر ۳۱ یال غیرتولیدی (تست و اسکریپت) و انتقال آزمون‌های ذاتاً بین‌ماژولی به پوشهٔ مجزای `warehouse-backend/integration_tests/` (پوشه‌ای مجزا و بیرون از لایه‌ها و پکیج‌های ریشه که اسکریپت ریشه ندارد و فقط با برچسب روی پروفایل کامل اجرا می‌شود):
-        1. `warehouse-backend/core/accounts/test_user_company_multitenant.py` (۱ یال به `warehouses.models`): آزمون بین‌ماژولی تخصیص کاربر به انبار در محیط چندمستأجری با `git mv` به `warehouse-backend/integration_tests/test_user_company_multitenant.py` منتقل شد.
-        2. `warehouse-backend/core/companies/tests.py` (۳ یال به `warehouses.models` و `inventory.models` در متدهای `test_warehouse_deletion_blocks_company_delete`، `test_item_prevent_deletion`، `test_batch_prevent_deletion`): این ۳ آزمون یکپارچگی به فایل مجزای `warehouse-backend/integration_tests/test_companies_cross_module.py` انتقال یافتند و از آزمون‌های واحد `companies` جدا شدند.
-        3. `warehouse-backend/modules/accounting/personnel/test_company_multitenant.py` (۱ یال به `warehouses.models` در متد `test_cannot_delete_company_with_active_warehouses`): به فایل تازهٔ `warehouse-backend/integration_tests/test_personnel_cross_module.py` منتقل شد.
-        4. `warehouse-backend/core/communications/tests/` (۱۸ یال غیرتولیدی شامل ۱۰ فایل تست به `warehouses.models` و `inventory.models`): کل پوشه تست ارتباطات به دلیل ارجاعات گسترده به مدل‌های انبار با `git mv` به `warehouse-backend/integration_tests/communications/` منتقل شد و یک فایل تست واحد تمیز و سبک در `warehouse-backend/core/communications/tests.py` جایگزین شد.
-        5. `warehouse-backend/core/reports/tests.py` (۱ یال غیرتولیدی به `warehouses.models`): با انتقال `reports` به هسته، تست یکپارچگی ارجاع‌دهنده به مدل‌های انبار با `git mv` به `warehouse-backend/integration_tests/test_reports_integration.py` منتقل شد و فایل تست واحد مستقل در `warehouse-backend/core/reports/tests.py` جایگزین شد.
-        6. `warehouse-backend/modules/accounting/personnel/test_attendance_approval_workflow.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
-        7. `warehouse-backend/modules/accounting/personnel/test_attendance_fleet_audit.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
-        8. `warehouse-backend/modules/accounting/personnel/test_fleet_scenarios_10_vehicles.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
-        9. `warehouse-backend/modules/accounting/personnel/test_project_exports.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
-        10. `warehouse-backend/modules/accounting/personnel/test_google_drive.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
-        11. `warehouse-backend/modules/accounting/personnel/tests.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
-        12. `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py` (۱ یال غیرتولیدی به `personnel.models`): ایمپورت اشتباه `from personnel.models import Company` با ایمپورت صحیح هسته `from companies.models import Company` جایگزین شد.
+      - شناسایی و رفع کامل هر ۳۱ یال غیرتولیدی (تست و اسکریپت) و انتقال آزمون‌های ذاتاً بین‌ماژولی به پوشهٔ مجزای `backend/integration_tests/` (پوشه‌ای مجزا و بیرون از لایه‌ها و پکیج‌های ریشه که اسکریپت ریشه ندارد و فقط با برچسب روی پروفایل کامل اجرا می‌شود):
+        1. `backend/core/accounts/test_user_company_multitenant.py` (۱ یال به `warehouses.models`): آزمون بین‌ماژولی تخصیص کاربر به انبار در محیط چندمستأجری با `git mv` به `backend/integration_tests/test_user_company_multitenant.py` منتقل شد.
+        2. `backend/core/companies/tests.py` (۳ یال به `warehouses.models` و `inventory.models` در متدهای `test_warehouse_deletion_blocks_company_delete`، `test_item_prevent_deletion`، `test_batch_prevent_deletion`): این ۳ آزمون یکپارچگی به فایل مجزای `backend/integration_tests/test_companies_cross_module.py` انتقال یافتند و از آزمون‌های واحد `companies` جدا شدند.
+        3. `backend/modules/accounting/personnel/test_company_multitenant.py` (۱ یال به `warehouses.models` در متد `test_cannot_delete_company_with_active_warehouses`): به فایل تازهٔ `backend/integration_tests/test_personnel_cross_module.py` منتقل شد.
+        4. `backend/core/communications/tests/` (۱۸ یال غیرتولیدی شامل ۱۰ فایل تست به `warehouses.models` و `inventory.models`): کل پوشه تست ارتباطات به دلیل ارجاعات گسترده به مدل‌های انبار با `git mv` به `backend/integration_tests/communications/` منتقل شد و یک فایل تست واحد تمیز و سبک در `backend/core/communications/tests.py` جایگزین شد.
+        5. `backend/core/reports/tests.py` (۱ یال غیرتولیدی به `warehouses.models`): با انتقال `reports` به هسته، تست یکپارچگی ارجاع‌دهنده به مدل‌های انبار با `git mv` به `backend/integration_tests/test_reports_integration.py` منتقل شد و فایل تست واحد مستقل در `backend/core/reports/tests.py` جایگزین شد.
+        6. `backend/modules/accounting/personnel/test_attendance_approval_workflow.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        7. `backend/modules/accounting/personnel/test_attendance_fleet_audit.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        8. `backend/modules/accounting/personnel/test_fleet_scenarios_10_vehicles.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        9. `backend/modules/accounting/personnel/test_project_exports.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        10. `backend/modules/accounting/personnel/test_google_drive.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        11. `backend/modules/accounting/personnel/tests.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        12. `backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py` (۱ یال غیرتولیدی به `personnel.models`): ایمپورت اشتباه `from personnel.models import Company` با ایمپورت صحیح هسته `from companies.models import Company` جایگزین شد.
         13. اسکریپت‌های درون‌برنامه‌ای پرسنل (`phase_guardian.py` و `phase_guardian_approval.py`) (۲ یال غیرتولیدی به `warehouses`): ارجاع پویا و محافظت‌شده اعمال شد تا نقض استاتیک ثبت نشود.
-      - یال‌های تولیدی: از ۱۰ به ۱۳ یال رسید؛ علت این امر انتقال `reports` از لایه ماژول به لایه هسته است که باعث شد ۳ ایمپورت درون `warehouse-backend/core/reports/registry.py` به `inventory.models` و `warehouses.models` مشمول قراردادهای C1 و C3 شوند. طبق دستور صریح طرح، این یال‌ها در گام ۳ رفع خواهند شد و در این نشست دست نخوردند.
+      - یال‌های تولیدی: از ۱۰ به ۱۳ یال رسید؛ علت این امر انتقال `reports` از لایه ماژول به لایه هسته است که باعث شد ۳ ایمپورت درون `backend/core/reports/registry.py` به `inventory.models` و `warehouses.models` مشمول قراردادهای C1 و C3 شوند. طبق دستور صریح طرح، این یال‌ها در گام ۳ رفع خواهند شد و در این نشست دست نخوردند.
       - به‌روزرسانی مبنای نگهبان ۲۹ با فرمان `python scripts/e2e/guardian_modularization.py --update-baseline`:
         - `non_production_violations`: قبل ۱۸ -> بعد ۰ (کاهش کامل)
         - `composition_root_hardcoded_lines`: قبل ۴ -> بعد ۰ (کاهش کامل)
@@ -533,7 +533,7 @@ warehouse-front/src/app/
 - **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۶ (گام ۳-الف):**
   - **پایهٔ نشست:** commit hash برابر `f9e539bdb4df1106c36bbdc126ace71429d20eb2`.
   - **کارهای انجام‌شده:**
-    - انتقال تعاریف مشخصات ماژول‌ها (`WAREHOUSE_SPEC` و `ACCOUNTING_SPEC`) و فهرست مجوزها از هسته (`core/platform_core/module_catalog.py`) به فایل‌های مانیفست مستقل `warehouse-backend/modules/warehouse/module.py` و `warehouse-backend/modules/accounting/module.py`.
+    - انتقال تعاریف مشخصات ماژول‌ها (`WAREHOUSE_SPEC` و `ACCOUNTING_SPEC`) و فهرست مجوزها از هسته (`core/platform_core/module_catalog.py`) به فایل‌های مانیفست مستقل `backend/modules/warehouse/module.py` و `backend/modules/accounting/module.py`.
     - بازنویسی `core/platform_core/module_catalog.py` به عنوان پویشگر خودکار و پویا با `importlib.util.spec_from_file_location` برای بارگذاری ماژول‌های موجود در `modules/*/module.py`، اعتبارسنجی انطباق `code` با نام پوشه، و ایجاد پویای دیکشنری `MODULE_CATALOG` بدون هاردکد کردن هیچ نام یا مشخصات ماژولی در هسته.
     - پیاده‌سازی ابزارهای هسته:
       - توابع `contribute(point, item)` و `contributions(point)` در `core/platform_core/registry.py` برای ثبت و بازیابی نقطه‌های توسعه.
@@ -545,7 +545,7 @@ warehouse-front/src/app/
       - یال `personnel/views.py:4973 → warehouses`: جایگزینی کوئری مستقیم مدل Warehouse با `company_of('warehouse', warehouse_id)`.
       - یال `accounts/serializers.py:449 → personnel`: حذف ایمپورت مستقیم مدل `UserSectionAssignment` پرسنل در هسته و استفاده از تابع تعمیم‌یافته `derived_company_access_details` در هسته `companies/access.py` که توسط `personnel.apps.PersonnelConfig.ready()` با منبع `section_derived_company_source` تغذیه می‌شود.
     - ثبت تابع حل شناسه شرکت انبار در `warehouses/apps.py:ready()` به صورت `contribute('company_of:warehouse', _warehouse_company_resolver)`.
-    - نگارش آزمون جامع جنگو در `warehouse-backend/modules/accounting/personnel/test_scope_deleted_signal.py` جهت اعتبارسنجی برابری رفتار رویداد `scope_deleted` و خالی‌شدن فیلدهای انبار در ۵ مدل مالی و عدم حذف رکوردها.
+    - نگارش آزمون جامع جنگو در `backend/modules/accounting/personnel/test_scope_deleted_signal.py` جهت اعتبارسنجی برابری رفتار رویداد `scope_deleted` و خالی‌شدن فیلدهای انبار در ۵ مدل مالی و عدم حذف رکوردها.
     - به‌روزرسانی مبنای نگهبان ۲۹ (`modularization_baseline.json`) با یک بار اجرای `--update-baseline` به دلیل کاهش نقض‌ها:
       - نقض‌های تولیدی (`production_violations`): کاهش از ۱۳ به ۹ یال (کاهش ۴ یال).
       - قرارداد استقلال دوطرفه ماژول‌ها C2: کاهش به ۰ (`contract:c2-accounting-independent-of-warehouse = 0` و `contract:c2-warehouse-independent-of-accounting = 0`).
@@ -553,7 +553,7 @@ warehouse-front/src/app/
   - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
     - `python scripts/automation/verify_tools.py django-check` -> `[all] manage.py check -> exit 0 / [warehouse] manage.py check -> exit 0 / [accounting] manage.py check -> exit 0`
     - `python scripts/automation/verify_tools.py migrations-unchanged` -> `No changes detected / No model change needs a migration.`
-    - `warehouse-backend\venv\Scripts\python.exe warehouse-backend\manage.py test personnel.test_scope_deleted_signal` -> `Ran 2 tests in 0.085s - OK`
+    - `backend\venv\Scripts\python.exe backend\manage.py test personnel.test_scope_deleted_signal` -> `Ran 2 tests in 0.085s - OK`
     - `python scripts/e2e/guardian_modularization.py --update-baseline` -> `unique_direct_violations = 9, production_violations = 9, non_production_violations = 0, composition_root_hardcoded_lines = 0, C2 = 0`
     - `python scripts/e2e/guardian_modularization.py` -> `exit 0 (PASS)`
     - `python scripts/e2e/guardian_30_settings_core.py` -> `exit 0 (PASS)`
@@ -569,7 +569,7 @@ warehouse-front/src/app/
   - **پایهٔ نشست:** commit hash برابر `fc3cb13134d343bd40f1d40b86181580de836897`.
   - **کارهای انجام‌شده:**
     - پیاده‌سازی نقطهٔ توسعهٔ `user_extensions`:
-      - ساخت کلاس `WarehouseUserExtension` در فایل تازهٔ `warehouse-backend/modules/warehouse/warehouses/user_extension.py` و ثبت آن در نقطهٔ `user_extensions` از طریق `WarehousesConfig.ready()`.
+      - ساخت کلاس `WarehouseUserExtension` در فایل تازهٔ `backend/modules/warehouse/warehouses/user_extension.py` و ثبت آن در نقطهٔ `user_extensions` از طریق `WarehousesConfig.ready()`.
       - حذف ایمپورت استاتیک `from warehouses.models import Warehouse` و تابع کمکی `_warehouse_model()` از `core/accounts/serializers.py` و دریافت فیلد، شناسه‌ها و اعتبارسنجی انبارها از طریق اکستنشن ثبت‌شده.
       - حذف ایمپورت استاتیک `from warehouses.models import Warehouse` و تابع کمکی `_warehouse_model()` از `core/accounts/excel_utils.py` و تأمین داده‌های ستون انبار در اکسل کاربران، اکسل کارت تردد، گزینه‌های منوی آبشاری قالب اکسل و تطبیق هوشمند نام/کد انبار در ورود اکسل از طریق اکستنشن انبار.
     - پیاده‌سازی نقطهٔ توسعهٔ `rollback_models`:
@@ -577,12 +577,12 @@ warehouse-front/src/app/
       - ثبت مدل‌های کالا و تسک `contribute('rollback_models', {'Item': Item, 'CountTask': CountTask})` در `InventoryConfig.ready()`.
       - حذف ۳ ایمپورت استاتیک `inventory.models.Item`، `inventory.models.CountTask` و `warehouses.models.Warehouse` از تابع `get_model_class` در `core/accounts/rollback_service.py` و حل پویا از طریق مشارکت‌های `rollback_models`.
     - ماژولارکردن رجیستری موتور گزارش‌ساز (`reports`):
-      - انتقال تعاریف موجودیت‌های `items`، `count_tasks`, `count_task_history`، `doc_tasks`، `doc_task_history`، توابع فیلدهای پویا و کلیدهای حساس، و دیکشنری روابط مجاز `INVENTORY_JOINS` به فایل تازهٔ `warehouse-backend/modules/warehouse/inventory/report_entities.py` و ثبت با `register_entity` و `register_joins` در `InventoryConfig.ready()`.
-      - انتقال تعریف موجودیت `warehouses` به فایل تازهٔ `warehouse-backend/modules/warehouse/warehouses/report_entities.py` و ثبت آن در `WarehousesConfig.ready()`.
-      - انتقال تعاریف موجودیت‌های `personnel_profiles`، `monthly_payrolls` و `fleet_trips` به فایل تازهٔ `warehouse-backend/modules/accounting/personnel/report_entities.py` و ثبت با `register_entity` در `PersonnelConfig.ready()`.
+      - انتقال تعاریف موجودیت‌های `items`، `count_tasks`, `count_task_history`، `doc_tasks`، `doc_task_history`، توابع فیلدهای پویا و کلیدهای حساس، و دیکشنری روابط مجاز `INVENTORY_JOINS` به فایل تازهٔ `backend/modules/warehouse/inventory/report_entities.py` و ثبت با `register_entity` و `register_joins` در `InventoryConfig.ready()`.
+      - انتقال تعریف موجودیت `warehouses` به فایل تازهٔ `backend/modules/warehouse/warehouses/report_entities.py` و ثبت آن در `WarehousesConfig.ready()`.
+      - انتقال تعاریف موجودیت‌های `personnel_profiles`، `monthly_payrolls` و `fleet_trips` به فایل تازهٔ `backend/modules/accounting/personnel/report_entities.py` و ثبت با `register_entity` در `PersonnelConfig.ready()`.
       - ثبت تابع اعتبارسنجی انبار در گزارش‌ساز با `contribute('validate_warehouse', ...)` در انبار و حذف ارجاع به `warehouses` در `core/reports/serializers.py`.
       - پاکسازی کامل `core/reports/registry.py` از هرگونه ایمپورت از `warehouses`، `inventory` و `personnel`. این فایل اکنون صرفاً موجودیت پلتفرمی `users` را ثبت کرده و پروکسی سازگار رو به عقب `JOINS` و متدهای `register_warehouse_reports()` و `get_registry()` را ارائه می‌دهد.
-    - نگارش آزمون جامع جنگو در `warehouse-backend/integration_tests/test_report_entities_registry.py` جهت مقایسه و تطبیق دقیق فهرست هر ۱۰ کلید موجودیت، تمامی فیلدهای مشتق/اصلی و تمامی روابط JOIN در پروفایل کامل با مبنای پیش از تغییر.
+    - نگارش آزمون جامع جنگو در `backend/integration_tests/test_report_entities_registry.py` جهت مقایسه و تطبیق دقیق فهرست هر ۱۰ کلید موجودیت، تمامی فیلدهای مشتق/اصلی و تمامی روابط JOIN در پروفایل کامل با مبنای پیش از تغییر.
     - به‌روزرسانی مبنای نگهبان ۲۹ (`modularization_baseline.json`) با یک بار اجرای `--update-baseline`:
       - نقض‌های تولیدی (`production_violations`): کاهش از ۹ به ۰ (هدف گام ۳ به صورت کامل محقق شد).
       - نقض‌های مستقیم (`unique_direct_violations`): کاهش از ۹ به ۰.
@@ -593,7 +593,7 @@ warehouse-front/src/app/
   - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
     - `python scripts/automation/verify_tools.py django-check` -> `[all] manage.py check -> exit 0 / [warehouse] manage.py check -> exit 0 / [accounting] manage.py check -> exit 0`
     - `python scripts/automation/verify_tools.py migrations-unchanged` -> `No changes detected / No model change needs a migration.`
-    - `warehouse-backend\venv\Scripts\python.exe manage.py test integration_tests.test_report_entities_registry` -> `Ran 3 tests in 0.002s - OK`
+    - `backend\venv\Scripts\python.exe manage.py test integration_tests.test_report_entities_registry` -> `Ran 3 tests in 0.002s - OK`
     - `python scripts/e2e/guardian_modularization.py --update-baseline` -> `unique_direct_violations = 0, production_violations = 0, non_production_violations = 0, composition_root_hardcoded_lines = 0, contract:c1-layering = 0, contract:c3-core-purity = 0`
     - `python scripts/e2e/guardian_modularization.py` -> `exit 0 (PASS — 4 contracts analyzed, 4 healthy, 0 broken)`
   - **آنچه به runner و ناظر می‌ماند:**
@@ -603,12 +603,12 @@ warehouse-front/src/app/
 - **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۸ (گام ۴-الف):**
   - **پایهٔ نشست:** commit hash برابر `571142367675a247cfc29d5ba120ca46a4cf63bd`.
   - **کارهای انجام‌شده:**
-    - تعریف قرارداد ماژول فرانت‌اند (`WhFrontendModule`)، نوع `ExtensionMap` و مشخصات ماژول در `warehouse-front/src/app/core/modules/module-contract.ts` شامل مسیرها، آیتم‌های ناوبری، آیکون‌های موجودیت و ۱۱ نقطه توسعه رسمی.
+    - تعریف قرارداد ماژول فرانت‌اند (`WhFrontendModule`)، نوع `ExtensionMap` و مشخصات ماژول در `frontend/src/app/core/modules/module-contract.ts` شامل مسیرها، آیتم‌های ناوبری، آیکون‌های موجودیت و ۱۱ نقطه توسعه رسمی.
     - ایجاد مانیفست‌های رسمی ماژول‌ها با صادرات `export const MODULE: WhFrontendModule`:
-      - `warehouse-front/src/app/modules/warehouse/module.ts` (انبار)
-      - `warehouse-front/src/app/modules/accounting/module.ts` (مالی)
-    - ساخت اسکریپت مولد `warehouse-front/tools/gen-installed-modules.js` برای تولید `src/app/modules/installed-modules.ts` از روی متغیر `WH_MODULES`.
-    - بازنویسی `warehouse-front/tools/build-for-modules.js` جهت صدا زدن خودکار مولد و بازگردانی تضمینی نسخه متعهدشده در بلوک `try/finally` (بدون تغییر در قرارداد `build:modules`، `build-modules.txt` یا `deploy.ps1`).
+      - `frontend/src/app/modules/warehouse/module.ts` (انبار)
+      - `frontend/src/app/modules/accounting/module.ts` (مالی)
+    - ساخت اسکریپت مولد `frontend/tools/gen-installed-modules.js` برای تولید `src/app/modules/installed-modules.ts` از روی متغیر `WH_MODULES`.
+    - بازنویسی `frontend/tools/build-for-modules.js` جهت صدا زدن خودکار مولد و بازگردانی تضمینی نسخه متعهدشده در بلوک `try/finally` (بدون تغییر در قرارداد `build:modules`، `build-modules.txt` یا `deploy.ps1`).
     - حذف کامل ۶ فایل استاب و پرچم با `git rm`:
       - `accounting-flags.stub.ts`، `accounting-flags.ts`، `accounting.routes.stub.ts`
       - `warehouse-flags.stub.ts`، `warehouse-flags.ts`، `warehouse.routes.stub.ts`
@@ -697,7 +697,7 @@ warehouse-front/src/app/
       - افزودن تابع `check_module_contracts` جهت بررسی قراردادهای ساختاری:
         ۱. وجود `module.ts` در هر پوشهٔ ماژول فرانت (به‌جز `common`).
         ۲. برابری فیلد `code` در `module.ts` با نام پوشه ماژول.
-        ۳. برابری فیلد `code` فرانت با فیلد `code` در مانیفست بک‌اند `warehouse-backend/modules/<x>/module.py`.
+        ۳. برابری فیلد `code` فرانت با فیلد `code` در مانیفست بک‌اند `backend/modules/<x>/module.py`.
         ۴. کامل بودن `installed-modules.ts` و ایمپورت بودن تمامی ماژول‌های کشف‌شده.
       - صفر شدن قطعی تمامی شمارنده‌های نقض و به‌روزرسانی مبنا با `--update-baseline`:
         - `core_to_module_imports = 0` (کاهش از ۱۰ به ۰)
@@ -737,7 +737,7 @@ warehouse-front/src/app/
 
 - **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۱۰ (گام ۵):**
   - **کارهای انجام‌شده:**
-    - طراحی و استقرار ساختار کامل قالب ماژول‌های آینده در پوشهٔ مستقل `scripts/module-template/` (کاملاً بیرون از `warehouse-backend/modules` و `src/app/modules` جهت جلوگیری از شناسایی به عنوان ماژول نصب‌شده):
+    - طراحی و استقرار ساختار کامل قالب ماژول‌های آینده در پوشهٔ مستقل `scripts/module-template/` (کاملاً بیرون از `backend/modules` و `src/app/modules` جهت جلوگیری از شناسایی به عنوان ماژول نصب‌شده):
       - **بک‌اند:** مانیفست کامل `module.py` مبتنی بر `ModuleSpec` هسته، اپ جنگو با نام متغیر `__MODULE_CODE__` شامل `apps.py` (ثبت خودکار در متد `ready()` از طریق `register_module`)، `models.py` ایزوله، `urls.py` با اندپوینت پایش `ping`، `migrations/__init__.py` و `tests.py`.
       - **فرانت‌اند:** مانیفست استاندارد `module.ts` مبتنی بر قرارداد `WhFrontendModule`، روت‌های مستقل `__MODULE_CODE__.routes.ts`، آیتم‌های ناوبری `nav-items.ts`، و کامپوننت نمونه `sample-page` دارای دایرکتیوهای مشترک پلتفرم (`button[appAction]` و `<svg appIcon>`) با رعایت تمامی قواعد ارگونومی و نگهبان ۵۶.
     - نگارش اسکریپت جامع خودکارساز `scripts/new_module.py`:
@@ -749,7 +749,7 @@ warehouse-front/src/app/
       - تضمین دست‌نزدن به هیچ فایل دیگری در پروژه (منطبق بر متغیر `SAMPLE_ALLOWED` در ابزارهای راستی‌آزمایی).
     - نگارش راهنمای جامع ماژول‌های جدید در `Documents/Modular_Middle_Path/guide_new_module.md` با ساختار راست‌به‌چپ، شامل ساختار پوشه‌ها و قراردادها، جدول نقاط توسعه و رویدادهای پلتفرم، قواعد سخت‌گیرانه وابستگی، مدیریت پروفایل‌های `WH_MODULES` و نگهبان‌های کیفی.
     - پویاسازی و هوشمندسازی کامل نگهبان ۲۹ (`scripts/e2e/guardian_modularization.py`):
-      - حذف کلیه ثوابت سخت‌کدشده و کشف خودکار بسته‌های ماژول‌ها از الگوی `warehouse-backend/modules/*/*/__init__.py`.
+      - حذف کلیه ثوابت سخت‌کدشده و کشف خودکار بسته‌های ماژول‌ها از الگوی `backend/modules/*/*/__init__.py`.
       - افزودن تابع `get_effective_importlinter_config()`: در صورت وجود بسته‌های جدید ماژول که در `.importlinter` ثبت نشده‌اند، یک فایل کانفیگ موقت در `scratch/importlinter_dynamic.ini` می‌سازد و بسته‌ها را به لایه ماژول‌ها در `c1-layering`، قراردادهای استقلال دوطرفه C2 (بین زوج‌های ماژول‌ها) و قرارداد پاکی هسته C3 اضافه می‌کند.
       - پشتیبانی کامل از پارامتر `--config` در فراخوانی موتور `lint-imports` و کشف پویای مسیر venv در نسخه‌های کپی‌شده در `scratch/`.
     - پویاسازی و رفع هاردکدهای نگهبان ۵۷ (`scripts/e2e/guardian_57_front_module_fence.py`):

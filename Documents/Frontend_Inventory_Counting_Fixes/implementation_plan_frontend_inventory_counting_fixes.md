@@ -28,22 +28,22 @@
 5. پیاده‌سازی دکمه و دیالوگ رد گروهی (`bulkReject`) در کارتابل سرپرست.
 
 ### 📁 فایل‌های تحت تغییر:
-* #### [MODIFY] [count-task.model.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/models/count-task.model.ts)
+* #### [MODIFY] [count-task.model.ts](file:///E:/warehouse%20project/frontend/src/app/core/models/count-task.model.ts)
   - افزودن `skip_supervisor?: boolean;`
   - افزودن `new_location?: string;`
-* #### [MODIFY] [count-task-api.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/api/count-task-api.service.ts)
+* #### [MODIFY] [count-task-api.service.ts](file:///E:/warehouse%20project/frontend/src/app/core/api/count-task-api.service.ts)
   - افزودن متد `bulkReject(taskIds: number[], note: string): Observable<{ message: string }>`
-* #### [MODIFY] [supervisor-dashboard.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+* #### [MODIFY] [supervisor-dashboard.ts](file:///E:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
   - در متد `loadTasks()`: تغییر `params` از `{ as_role: 'supervisor', status: 'COUNTED' }` به `{ as_role: 'supervisor' }` تا اقلام ردشده توسط مدیر هم دریافت شوند.
   - پیاده‌سازی متدهای `openBulkRejectDialog()`, `cancelBulkReject()`, `confirmBulkReject()`.
-* #### [MODIFY] [supervisor-dashboard.html](file:///E:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+* #### [MODIFY] [supervisor-dashboard.html](file:///E:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
   - حذف `*appHasPermission="'view_sys_recounts'"` از دکمه رد تکی.
   - افزودن دکمه «رد گروهی (بازشماری)» در نوار شناور پایین (`Sticky Bar`).
   - افزودن مودال ثبت دلیل رد گروهی با ورودی متنی اجباری.
 
 ### 🧪 گیت راستی‌آزمایی فاز ۱ (Gate 1 Verification):
 - [ ] اجرای تست‌های خودکار بک‌اند: `.\venv\Scripts\python.exe manage.py test inventory.tests` (باید ۷ تست پاس شوند).
-- [ ] اجرای بیلد آزمایشی فرانت‌اند: `npm run build --prefix "E:\warehouse project\warehouse-front"`.
+- [ ] اجرای بیلد آزمایشی فرانت‌اند: `npm run build --prefix "frontend"`.
 - [ ] تست دستی بازگشت کالا از مدیر به سرپرست و نمایش بج `رد شده توسط مدیر`.
 
 ---
@@ -55,10 +55,10 @@
 2. ایمن‌سازی متد `isMatched()` برای جلوگیری از رفتارهای غیرمنتظره در مقادیر اعشاری، رشته‌ای و شمارش کور.
 
 ### 📁 فایل‌های تحت تغییر:
-* #### [MODIFY] [manager-review.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+* #### [MODIFY] [manager-review.ts](file:///E:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
   - پیاده‌سازی متغیرها و متدهای: `showBulkRejectDialog`, `bulkRejectNote`, `openBulkRejectDialog()`, `cancelBulkReject()`, `confirmBulkReject()`.
   - بازنویسی متد `isMatched(task)` به صورت مقایسه ایمن عددی با بررسی نال و شرایط شمارش کور.
-* #### [MODIFY] [manager-review.html](file:///E:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
+* #### [MODIFY] [manager-review.html](file:///E:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
   - افزودن دکمه «رد گروهی و بازشماری» در نوار عملیات گروهی پایین صفحه.
   - افزودن مودال رد گروهی با فیلد یادداشت اجباری.
 
@@ -77,7 +77,7 @@
 3. داینامیک‌سازی پیام‌های ارسالی بر اساس وضعیت `skip_supervisor`.
 
 ### 📁 فایل‌های تحت تغییر:
-* #### [MODIFY] [counter-dashboard.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+* #### [MODIFY] [counter-dashboard.ts](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
   - اصلاح لاجیک `saveDraft()`: در صورتی که مقدار عددی وارد شود، وضعیت تسک‌های بازشماری به `INITIAL_COUNT` (آماده ارسال) تغییر کند.
   - اصلاح `saveExtraEditedFields()`: جلوگیری از فراخوانی غیرمجاز `PATCH /api/inventory/items/{id}/` و ثبت در `task.new_location`.
   - اصلاح متدهای `submitDirectlyToSupervisor()` و `submitAll()` جهت نمایش هوشمند پیام «ارسال مستقیم به مدیر» در حالت پرش از سرپرست.
@@ -96,9 +96,9 @@
 2. ایمن‌سازی محاسبات مغایرت در پیگیری شمارش (`count-tracking.ts`) در حالت فعال بودن شمارش کور.
 
 ### 📁 فایل‌های تحت تغییر:
-* #### [MODIFY] [dispatch.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+* #### [MODIFY] [dispatch.ts](file:///E:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
   - اصلاح متد `requestRecount()` جهت ارسال صحیح درخواست بازشماری به سرور.
-* #### [MODIFY] [count-tracking.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+* #### [MODIFY] [count-tracking.ts](file:///E:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
   - اصلاح محاسبه `_discrepancy` به گونه‌ای که در صورت نبود موجودی دفتری (شمارش کور)، با نال به درستی رفتار کند و دچار ارور `NaN` نشود.
 
 ### 🧪 گیت راستی‌آزمایی فاز ۴ (Gate 4 Verification):

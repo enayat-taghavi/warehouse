@@ -142,7 +142,7 @@ class TimesheetPhaseGuardian:
         all_passed = True
 
         try:
-            front_path = os.path.join(os.path.dirname(BASE_DIR), "warehouse-front")
+            front_path = os.path.join(os.path.dirname(BASE_DIR), "frontend")
             ts_file = os.path.join(front_path, "src", "app", "components", "personnel", "personnel-management", "personnel-management.ts")
             html_file = os.path.join(front_path, "src", "app", "components", "personnel", "personnel-management", "personnel-management.html")
 

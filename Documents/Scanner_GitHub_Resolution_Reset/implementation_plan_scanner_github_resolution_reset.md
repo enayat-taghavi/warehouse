@@ -10,7 +10,7 @@
 
 > [!IMPORTANT]
 > **دامنه تغییرات منحصراً به ۱ فایل محدود است:**
-> - مسیر فایل: [`warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
+> - مسیر فایل: [`frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts`](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
 > - هیچ فایل دیگری در پروژه (مانند کارتابل‌ها، انبارگردان، سرویس‌ها یا بک‌اند) ویرایش نخواهد شد.
 
 ---
@@ -29,7 +29,7 @@
 
 ## ۳. کد کامل جایگزین (Full Replacement Code)
 
-این کد جایگزین تمام محتوای فایل [`barcode-scanner.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) خواهد شد:
+این کد جایگزین تمام محتوای فایل [`barcode-scanner.component.ts`](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) خواهد شد:
 
 ```typescript
 import {
@@ -390,7 +390,7 @@ export class BarcodeScannerComponent implements AfterViewInit, OnDestroy {
 
 ## ۴. برنامه راستی‌آزمایی (Verification Plan)
 
-1. **بررسی بیلد فرانت‌اند:** اجرای دستور `npm run build` در پوشه `warehouse-front` جهت اطمینان از کامپایل موفق.
+1. **بررسی بیلد فرانت‌اند:** اجرای دستور `npm run build` در پوشه `frontend` جهت اطمینان از کامپایل موفق.
 2. **بررسی عملکرد:** تست باز شدن وب‌کم و اسکن بارکد در فرم‌ها.
 
 </div>

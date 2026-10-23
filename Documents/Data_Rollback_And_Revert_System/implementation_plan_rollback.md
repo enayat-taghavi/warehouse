@@ -66,7 +66,7 @@ graph TD
 
 ### 🔹 فاز ۱: زیرساخت امنیتی دسترسی‌های ۶‌گانه در بک‌اند (Gate 1)
 - **اقدامات:**
-  1. افزودن ۳ دسترسی جدید (`perm_sys_hard_delete`, `perm_sys_emergency_freeze`, `perm_sys_factory_reset`) به `CustomUser.Meta.permissions` در `warehouse-backend/accounts/models.py`.
+  1. افزودن ۳ دسترسی جدید (`perm_sys_hard_delete`, `perm_sys_emergency_freeze`, `perm_sys_factory_reset`) به `CustomUser.Meta.permissions` در `backend/accounts/models.py`.
   2. به‌روزرسانی مجموعه `SENSITIVE_PERMISSION_CODENAMES` با ۶ پرمیشن کامل.
   3. ایجاد مایگریشن `0022_add_extended_sensitive_permissions.py` و اعمال آن با `python manage.py migrate`.
   4. به‌روزرسانی `PermissionSerializer` جهت درج `is_sensitive=True` برای هر ۶ دسترسی.
@@ -82,7 +82,7 @@ graph TD
 
 ### 🔹 فاز ۲: بازطراحی رابط کاربری ماتریس دسترسی‌ها در فرانت‌اند (Gate 2)
 - **اقدامات:**
-  1. اصلاح تابع `loadData()` در `warehouse-front/src/app/components/users/users.ts` به طوری که گروه `SENSITIVE` همواره در `systemPermissionGroups` ایجاد شود و تمام دسترسی‌های دریافتی با `is_sensitive` در آن قرار گیرند.
+  1. اصلاح تابع `loadData()` در `frontend/src/app/components/users/users.ts` به طوری که گروه `SENSITIVE` همواره در `systemPermissionGroups` ایجاد شود و تمام دسترسی‌های دریافتی با `is_sensitive` در آن قرار گیرند.
   2. اصلاح `users.html` برای نمایش استایل متمایز تب «دسترسی‌های حساس و بحرانی 🛡️»:
      - نمایش چک‌باکس‌ها به صورت Disabled / Read-Only برای کاربران غیر Superuser همراه با راهنما.
      - نمایش چک‌باکس‌های فعال با استایل قرمز/رز برای Superuser.
@@ -128,13 +128,13 @@ graph TD
 
 ## 📁 فایل‌های مشمول تغییر (Files to Modify)
 
-1. `warehouse-backend/accounts/models.py` (تعریف دسترسی‌های جدید و مجموعه حساس)
-2. `warehouse-backend/accounts/migrations/0022_add_extended_sensitive_permissions.py` (مایگریشن جدید)
-3. `warehouse-backend/accounts/serializers.py` (سریالایزر دسترسی‌ها)
-4. `warehouse-backend/accounts/views.py` (گاردهای امنیتی ویوست‌ها)
-5. `warehouse-front/src/app/components/users/users.ts` (لاجیک بارگذاری و ماتریس دسترسی‌ها)
-6. `warehouse-front/src/app/components/users/users.html` (طراحی تب دسترسی‌های حساس و مدال هشدار)
-7. `warehouse-front/src/app/components/wh-settings/wh-settings.ts` & `wh-settings.html` (تب پشتیبان‌گیری)
+1. `backend/accounts/models.py` (تعریف دسترسی‌های جدید و مجموعه حساس)
+2. `backend/accounts/migrations/0022_add_extended_sensitive_permissions.py` (مایگریشن جدید)
+3. `backend/accounts/serializers.py` (سریالایزر دسترسی‌ها)
+4. `backend/accounts/views.py` (گاردهای امنیتی ویوست‌ها)
+5. `frontend/src/app/components/users/users.ts` (لاجیک بارگذاری و ماتریس دسترسی‌ها)
+6. `frontend/src/app/components/users/users.html` (طراحی تب دسترسی‌های حساس و مدال هشدار)
+7. `frontend/src/app/components/wh-settings/wh-settings.ts` & `wh-settings.html` (تب پشتیبان‌گیری)
 8. اسناد DUAL-SAVE در پوشه `Documents/`
 
 </div>

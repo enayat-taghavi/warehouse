@@ -28,9 +28,9 @@
 
 ## 🔍 تغییرات تفکیکی فایل‌ها (Proposed File Changes)
 
-### فرانت‌اند (`warehouse-front`)
+### فرانت‌اند (`frontend`)
 
-#### [MODIFY] [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+#### [MODIFY] [`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
 - به‌روزرسانی ایمپورت‌ها (`PersianDatePipe`, `BarcodeScannerComponent`, `OfflinePendingBadgeComponent`, `WarehouseSelectorComponent`).
 - استقرار متغیرهای وضعیت: فیلتر لوکیشن، دراپ‌دان سورت هوشمند، پایداری دوگانه `LocalStorage` و `URL State` با پارامترهای تفکیکی زیرتب‌ها.
 - تطبیق کامل متدهای بارگذاری `loadTasks`، `loadPoolTasks`، `loadDocTasks` و `loadDocPoolTasks` برای وضعیت‌های `MANAGER_REVIEW` و `DOC_MANAGER_REVIEW`.
@@ -38,7 +38,7 @@
 - بازنویسی متدهای رد مدیر `confirmBulkReject` و `confirmDocReject` جهت صدور دستور بازشماری یا ارجاع به سرپرست.
 - ارتقای متد `applyFilters` با موتور جستجوی یکپارچه و نرمال‌ساز الفبای فارسی/عربی.
 
-#### [MODIFY] [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
+#### [MODIFY] [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
 - پیاده‌سازی هدر استاندارد با سلکتور انبار، دکمه بارکد اسکنر، خروجی اکسل پیشرفته و دکمه رفرش آنی.
 - تب‌های تفکیک‌شده «انبارگردانی (میدانی)» و «مالی / اسناد» با شمارنده‌های زنده.
 - نوار فیلتر چسبان (`Sticky Filters`) شامل چیپ‌های لوکیشن هوشمند، چیپ‌های بازه زمانی و دکمه مرتب‌سازی هوشمند.
@@ -46,7 +46,7 @@
 - نوار ابزار شناور شیشه‌ای (`Floating Action Bar`) با افکت‌های انیمیشنی، دکمه‌های تایید نهایی دسته‌جمعی و رد سریع.
 - مودال‌های غنی جزئیات شمارش میدانی و جزئیات اسناد مالی با پشتیبانی از فیلدهای سفارشی پویا و تاریخ شمسی.
 
-#### [MODIFY] [`manager-review.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.css)
+#### [MODIFY] [`manager-review.css`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.css)
 - تضمین وجود انیمیشن‌های نرم باز و بسته شدن مودال‌ها (`slideInModal`, `slideUpFloating`) و استایل اسکرول‌بار مخفی.
 
 ---

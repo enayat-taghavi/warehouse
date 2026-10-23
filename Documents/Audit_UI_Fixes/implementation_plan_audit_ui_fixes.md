@@ -101,7 +101,7 @@ graph TD
 ## ۳. تغییرات فایل‌ها (File Changes Summary)
 
 ```
-warehouse-front/
+frontend/
 ├── src/app/components/audit/
 │   ├── audit.ts    [MODIFY] - مقداردهی اولیه storage، ایمپورت تقویم جلالی و متدهای هندلر
 │   └── audit.html  [MODIFY] - اصلاح استایل کارت حجم، تگ bdi، تقویم جلالی و چیدمان هدر

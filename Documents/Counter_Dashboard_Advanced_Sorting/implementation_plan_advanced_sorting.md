@@ -28,9 +28,9 @@
 
 ## ۲. فایل‌های تحت تغییر (Proposed File Changes)
 
-### فرانت‌اند (`warehouse-front`)
+### فرانت‌اند (`frontend`)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - توسعه تایپ `sortField` به: `'created_at' | 'updated_at' | 'location' | 'recount_first' | 'code' | 'title'`.
 - تنظیم پیش‌فرض اولیه به `sortField = 'created_at'` و `sortDirection = 'desc'`.
 - ارتقای منطق مقایسه در `applyFilters()` برای فیلدهای `created_at` و `updated_at` (تبدیل به `getTime()` و مرتب‌سازی دقیق میلی‌ثانیه‌ای).
@@ -39,7 +39,7 @@
   - اگر فیلد جدید است: برای فیلدهای زمانی (`created_at`, `updated_at`) جهت روی `desc` و برای متنی روی `asc` تنظیم می‌شود.
 - به‌روزرسانی متد `getSortLabel()` جهت پوشش نام‌های فارسی ۶ گزینه.
 
-#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 - افزودن گزینه‌های «زمان ایجاد» و «زمان تغییر» به منوی پاپ‌اوور مرتب‌سازی.
 - نمایش آیکون و نشانگر جهت در منو برای گزینه‌ای که در حال حاضر فعال است.
 

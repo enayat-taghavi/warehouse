@@ -16,7 +16,7 @@
 ## 🏗️ جزئیات تغییرات پیشنهادی
 
 ### 📦 ۱. کارتابل انبارگردان (Counter Dashboard)
-- **فایل هدف:** [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html#L477)
+- **فایل هدف:** [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html#L477)
 - **تغییر:**
   نمایش نام انبار در سطر لوکیشن کارت‌های تسک:
   ```html
@@ -35,14 +35,14 @@
 ---
 
 ### 📑 ۲. کارتابل مالی (Financial Cartable / Customs)
-- **فایل‌های هدف:** [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) و [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+- **فایل‌های هدف:** [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) و [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 - **تغییرات:**
   1. پیاده‌سازی متغیرها و متدهای Long-Press در `customs.ts`:
      - `onTaskPressStart`, `onTaskPressMove`, `onTaskPressEnd`, `onTaskClick`
      - با تایم‌آوت ۴۵۰ms و لرزش ۵۰ms ویبراتور لمسی موبایل (`navigator.vibrate(50)`).
-  2. اتصال رویدادهای `(pointerdown)`, `(pointerup)`, `(pointercancel)`, `(pointerleave)`, `(pointermove)` و `(click)` روی کارت‌های [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html#L407).
+  2. اتصال رویدادهای `(pointerdown)`, `(pointerup)`, `(pointercancel)`, `(pointerleave)`, `(pointermove)` و `(click)` روی کارت‌های [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html#L407).
   3. پیاده‌سازی متد `revertTaskStatus(task: DocTask, event?: Event)` در `customs.ts` همراه با دیالوگ تاییدیه (`ConfirmDialogService`) برای پاکسازی پیش‌نویس‌های ذخیره‌شده و بازگشت به وضعیت اصلی.
-  4. افزودن دکمه لغو سریع پیش‌نویس (Revert Icon) در کنار بج وضعیت در [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html#L435) برای کارت‌هایی که دارای داده پیش‌نویس هستند.
+  4. افزودن دکمه لغو سریع پیش‌نویس (Revert Icon) در کنار بج وضعیت در [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html#L435) برای کارت‌هایی که دارای داده پیش‌نویس هستند.
 
 ---
 

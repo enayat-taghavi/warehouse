@@ -23,7 +23,7 @@ graph TD
 ## ۲. جزئیات تفصیلی فازها
 
 ### 🔹 فاز ۱: ارتقای هسته منطقی، فیلترهای چیپی هوشمند، آمار زنده و URL State
-- **فایل هدف:** [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+- **فایل هدف:** [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - **شرح جزئیات فنی:**
   1. **تعریف متغیرهای آمار زنده عملکرد ۳ گانه:**
      - `totalTasksCount`: تعداد کل تسک‌های واگذارشده به کاربر.
@@ -50,7 +50,7 @@ graph TD
 ---
 
 ### 🔹 فاز ۲: طراحی هدر، ۳ کارت آمار عملکرد، نوار Omni-Search و ردیف چیپ‌های هوشمند
-- **فایل هدف:** [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+- **فایل هدف:** [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 - **شرح جزئیات فنی:**
   1. **نوسازی هدر اصلی صفحه:**
      - هدر مرتب شامل انتخاب‌گر انبار (در صورت فعال بودن)، دکمه خروجی اکسل (سبز زمردی `emerald-50`)، و دکمه بروزرسانی بنفش/ایندیگو با انیمیشن اسپینر در حالت بارگذاری.
@@ -75,7 +75,7 @@ graph TD
 ---
 
 ### 🔹 فاز ۳: بازطراحی کارت‌های لیست اقلام در تب «تسک‌های من»
-- **فایل هدف:** [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+- **فایل هدف:** [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 - **شرح جزئیات فنی:**
   1. **ساختار کارت‌های مدرن تک‌ستونه (مشابه تصویر کارتابل انبارگردان):**
      - کادر سفید تمیز با حاشیه خاکستری ملایم و سایه ظریف.
@@ -94,7 +94,7 @@ graph TD
 ---
 
 ### 🔹 فاز ۴: بهینه‌سازی فرم اختصاصی ورود اطلاعات کالا و تب «استخر کالاها»
-- **فایل هدف:** [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+- **فایل هدف:** [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 - **شرح جزئیات فنی:**
   1. **فرم ویرایش اطلاعات کالا (`selectedTask`):**
      - هدر چسبان در بالا با دکمه بازگشت مدرن، کد کالا، نام کالا و بج وضعیت.
@@ -110,8 +110,8 @@ graph TD
 
 ### 🔹 فاز ۵: هماهنگ‌سازی کارتابل انبارگردان (`Counter`)، تست جامع و مستندسازی
 - **فایل‌های هدف:**
-  - [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
-  - [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+  - [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+  - [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
   - [`walkthrough_customs_redesign.md`](file:///e:/warehouse%20project/Documents/Customs_Redesign_Counter_Alignment/walkthrough_customs_redesign.md)
   - [`Master_Log.md`](file:///e:/warehouse%20project/Documents/Master_Log.md)
 - **شرح جزئیات فنی:**

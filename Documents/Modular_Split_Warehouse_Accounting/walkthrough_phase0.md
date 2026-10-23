@@ -103,11 +103,11 @@ contract:c3-core-purity         = 23
 > **اجرای سنگین کامل تست فعلاً به دست کاربر سپرده می‌شود** (رویهٔ خانه: بیلد/تست/ری‌استارت روتین را کاربر اجرا می‌کند). برای تکمیل سند فوق، این دو اجرا لازم است:
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python.exe manage.py test accounts personnel warehouses inventory reports communications
+cd "E:/warehouse project/backend" && ./venv/Scripts/python.exe manage.py test accounts personnel warehouses inventory reports communications
 ```
 
 ```bash
-cd "E:/warehouse project" && "E:/warehouse project/warehouse-backend/venv/Scripts/python.exe" scripts/e2e/guardian_all.py
+cd "E:/warehouse project" && "E:/warehouse project/backend/venv/Scripts/python.exe" scripts/e2e/guardian_all.py
 ```
 
 پس از سبز شدن این دو، فاز ۰ به‌صورت کامل «تایید» می‌شود و این سند به‌روزرسانی می‌گردد.

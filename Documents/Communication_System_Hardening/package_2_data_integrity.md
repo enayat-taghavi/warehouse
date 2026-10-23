@@ -18,16 +18,16 @@
 
 | لایه | مسیر فایل | نوع تغییر |
 | :--- | :--- | :---: |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_integrity.py` | [NEW] |
-| **تست فرانت** | `warehouse-front/src/app/core/services/communication.service.spec.ts` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/models.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/views.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/serializers.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/broadcast.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/config/settings.py` | [MODIFY] |
-| **فرانت‌اند** | `warehouse-front/src/app/core/services/communication.service.ts` | [MODIFY] |
-| **فرانت‌اند** | `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html` | [MODIFY] |
-| **فرانت‌اند** | `warehouse-front/src/app/core/services/photo-upload-queue.service.ts` / صف چت | [MODIFY] |
+| **تست بک‌اند** | `backend/communications/tests/test_integrity.py` | [NEW] |
+| **تست فرانت** | `frontend/src/app/core/services/communication.service.spec.ts` | [MODIFY] |
+| **بک‌اند** | `backend/communications/models.py` | [MODIFY] |
+| **بک‌اند** | `backend/communications/views.py` | [MODIFY] |
+| **بک‌اند** | `backend/communications/serializers.py` | [MODIFY] |
+| **بک‌اند** | `backend/communications/broadcast.py` | [MODIFY] |
+| **بک‌اند** | `backend/config/settings.py` | [MODIFY] |
+| **فرانت‌اند** | `frontend/src/app/core/services/communication.service.ts` | [MODIFY] |
+| **فرانت‌اند** | `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html` | [MODIFY] |
+| **فرانت‌اند** | `frontend/src/app/core/services/photo-upload-queue.service.ts` / صف چت | [MODIFY] |
 
 ---
 
@@ -49,10 +49,10 @@
 
 ```bash
 # تست‌های بک‌اند یکپارچگی داده و پایداری پیام
-cd "E:/warehouse project/warehouse-backend" && python manage.py test communications.tests.test_integrity -v 2
+cd "E:/warehouse project/backend" && python manage.py test communications.tests.test_integrity -v 2
 
 # تست‌های کلاینت فرانت‌اند
-cd "E:/warehouse project/warehouse-front" && npm test
+cd "E:/warehouse project/frontend" && npm test
 ```
 
 ---
@@ -62,9 +62,9 @@ cd "E:/warehouse project/warehouse-front" && npm test
 ```text
 سلام. من می‌خواهم «بسته ۲: یکپارچگی داده، صف آفلاین و پایداری پیام‌ها» از سیستم ارتباطات را پیاده‌سازی کنم.
 لطفاً فایل‌های زیر را مبنا قرار بده:
-1. E:\warehouse project\Documents\Communication_System_Hardening\package_2_data_integrity.md
-2. E:\warehouse project\Documents\Communication_System_Hardening\task_communication_hardening.md
-3. E:\warehouse project\Documents\Communication_System_Hardening\implementation_plan_communication_hardening.md
+1. Documents\Communication_System_Hardening\package_2_data_integrity.md
+2. Documents\Communication_System_Hardening\task_communication_hardening.md
+3. Documents\Communication_System_Hardening\implementation_plan_communication_hardening.md
 
 بسته ۱ قبلاً با موفقیت اجرا شده است. لطفاً فاز ۴ را مطابق چک‌لیست بسته ۲ پیاده‌سازی کن و تست‌های آن را اجرا و گزارش کن.
 ```

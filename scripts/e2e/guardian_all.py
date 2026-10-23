@@ -17,8 +17,8 @@ def run_all_guardians():
         ("فاز ۵: کارکرد آفلاین، سینک دستی، فیلترها و اکسل (سناریوهای ۹ و ۱۰)", "guardian_phase5.py"),
     ]
 
-    backend_python = r"e:\warehouse project\warehouse-backend\venv\Scripts\python.exe"
-    script_dir = r"e:\warehouse project\scripts\e2e"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_python = os.path.join(os.path.dirname(os.path.dirname(script_dir)), "backend", "venv", "Scripts", "python.exe")
 
     # نگهبان ۲۹ و همهٔ نگهبان‌های شماره‌دار (guardian_NN_*.py) خودکار افزوده می‌شوند
     # تا نگهبانِ تازه بدون ویرایش این فایل هم اجرا شود.

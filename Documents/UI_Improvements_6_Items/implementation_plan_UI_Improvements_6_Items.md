@@ -26,17 +26,17 @@
 
 ### تغییرات
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - اضافه کردن پراپرتی `isSidebarCollapsed` به `AuthStore` یا به‌صورت لوکال
 - متد `toggleSidebar()` برای تغییر وضعیت
 - ذخیره وضعیت در `localStorage` تا بعد از رفرش حفظ شود
 
-#### [MODIFY] [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html)
+#### [MODIFY] [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html)
 - اضافه کردن دکمه Toggle به `header` (کنار آیکون اعلانات) که روی دسکتاپ نمایش داده شود
 - اعمال کلاس‌های شرطی روی `<aside>` برای جمع شدن/باز شدن با انیمیشن
 - وقتی sidebar جمع شود: `width: 0` و `overflow: hidden` با `transition`
 
-#### [MODIFY] [layout.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.css)
+#### [MODIFY] [layout.css](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.css)
 - انیمیشن `transition` برای باز/بسته شدن نرم sidebar
 - کلاس‌های `sidebar-collapsed` و `sidebar-expanded`
 
@@ -45,14 +45,14 @@
 ## ۲. نمایش داده واقعی شمارش کور (Blind Count) در منوی تخصیص کالا
 
 > [!IMPORTANT]
-> در حال حاضر در [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html) خط ۱۴، متن "شمارش کور فعال است" به‌صورت هاردکد نمایش داده می‌شود. باید از تنظیمات واقعی انبار (`blind_counting`) خوانده شود.
+> در حال حاضر در [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html) خط ۱۴، متن "شمارش کور فعال است" به‌صورت هاردکد نمایش داده می‌شود. باید از تنظیمات واقعی انبار (`blind_counting`) خوانده شود.
 
 ### تغییرات
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - در بخش `ngOnInit()` خط ۱۲۸-۱۴۶ جایی که `settingsService.getWarehouseSettings` صدا زده می‌شود، مقدار `blind_counting` را نیز بخوانیم و در یک متغیر جدید `isBlindCounting: boolean` ذخیره کنیم
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - خطوط ۱۱-۱۶: نمایش شرطی badge بر اساس مقدار `isBlindCounting`
 - اگر `isBlindCounting === true` → badge بنفش "شمارش کور (Blind Count) فعال است"
 - اگر `false` → badge سبز "موجودی سیستمی قابل مشاهده است"
@@ -66,12 +66,12 @@
 
 ### تغییرات
 
-#### [MODIFY] [dynamic-fields.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.ts)
+#### [MODIFY] [dynamic-fields.ts](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.ts)
 - اضافه کردن Regex اعتبارسنجی: `/^[a-zA-Z][a-zA-Z0-9_]*$/`
 - اعتبارسنجی در متد `addField()` و `saveEdit()` قبل از ارسال به سرور
 - نمایش پیام خطای فارسی مناسب از طریق `toast.show('error', ...)`
 
-#### [MODIFY] [dynamic-fields.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.html)
+#### [MODIFY] [dynamic-fields.html](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.html)
 - اضافه کردن `pattern` و `dir="ltr"` به input نام سیستمی (خط ۱۵ و ۹۴)
 - نمایش پیام اخطار زیر فیلد وقتی کاربر حروف غیر‌انگلیسی تایپ کند (Realtime validation)
 
@@ -80,11 +80,11 @@
 ## ۴. جایگزینی `confirm()` مرورگر با دیالوگ سفارشی برای حذف فیلد داینامیک
 
 > [!IMPORTANT]
-> در حال حاضر [dynamic-fields.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.ts) خط ۱۳۹ از `confirm()` بومی مرورگر استفاده می‌کند. باید از `ConfirmDialogService` موجود در سیستم استفاده شود.
+> در حال حاضر [dynamic-fields.ts](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.ts) خط ۱۳۹ از `confirm()` بومی مرورگر استفاده می‌کند. باید از `ConfirmDialogService` موجود در سیستم استفاده شود.
 
 ### تغییرات
 
-#### [MODIFY] [dynamic-fields.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.ts)
+#### [MODIFY] [dynamic-fields.ts](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.ts)
 - تزریق `ConfirmDialogService` در constructor
 - تبدیل متد `deleteField()` به `async` و استفاده از `this.confirmDialog.open({...})`
 - استفاده از type `danger` برای نمایش آیکون قرمز حذف
@@ -98,7 +98,7 @@
 
 ### تغییرات
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - اضافه کردن مدخل `'wh-settings': 'تنظیمات انبار'` به آرایه `titles` در متد `updateTitle()` (خط ۲۵۵)
 
 ---
@@ -111,17 +111,17 @@
 ### ۶.الف — آیکون‌های ناشناس در sidebar
 آیکون `activity` (برای "پیگیری وضعیت شمارش") در لیست `rawIcons` تعریف نشده‌ است. فقط حروف icon خالی در sidebar نمایش داده می‌شود.
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - اضافه کردن آیکون `activity` به لیست `rawIcons`
 
 ### ۶.ب — عنوان صفحات دیگر در `updateTitle()` ناقص است
 صفحات `export` و `wh-settings` و `count-tracking` در آبجکت `titles` وجود ندارند و نام route نمایش داده می‌شود.
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - اضافه کردن عناوین: `'export': 'صدور فایل برای تغذیه'` و `'count-tracking': 'پیگیری وضعیت شمارش'`
 
 ### ۶.ج — فیلد Blind Count در کارتابل انبارگردان (Field) هم هاردکد است
-در [field.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/field/field.html) خط ۶۴-۶۷ هم وضعیت Blind Count هاردکد نمایش داده می‌شود و باید داده واقعی نشان دهد (مشابه مورد ۲).
+در [field.html](file:///e:/warehouse%20project/frontend/src/app/components/field/field.html) خط ۶۴-۶۷ هم وضعیت Blind Count هاردکد نمایش داده می‌شود و باید داده واقعی نشان دهد (مشابه مورد ۲).
 
 ---
 

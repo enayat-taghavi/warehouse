@@ -42,16 +42,16 @@
 
 ### کامپوننت‌های نیازمند تغییر
 
-#### [MODIFY] [settings.py](file:///e:/warehouse%20project/warehouse-backend/config/settings.py)
+#### [MODIFY] [settings.py](file:///e:/warehouse%20project/backend/config/settings.py)
 افزودن ابزار لیست سیاه توکن‌ها به `INSTALLED_APPS`.
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/accounts/views.py)
 افزودن منطق باطل کردن نشست‌ها در زمان تغییر رمز، اضافه کردن متد اختصاصی برای ادمین، و جلوگیری از استفاده از رمز `123456`.
 
-#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts)
+#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts)
 ایجاد تابع `adminResetPassword(userId: number)`.
 
-#### [MODIFY] [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) و [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts)
+#### [MODIFY] [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) و [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts)
 گنجاندن دکمه ریست رمز و اتصال آن به متد بک‌اند.
 
 ## Verification Plan

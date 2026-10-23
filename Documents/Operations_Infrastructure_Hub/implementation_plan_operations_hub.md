@@ -20,18 +20,18 @@
 
 | ردیف | لایه | فایل | نوع تغییر | شرح وظیفه فنی |
 | :---: | :---: | :--- | :---: | :--- |
-| ۱ | Frontend | `warehouse-front/src/app/core/services/app-persona.service.ts` | [MODIFY] | افزودن قلمرو `operations` به `AppModuleType`، نقش `superuser` در این قلمرو و متدهای ناوبری |
-| ۲ | Frontend | `warehouse-front/src/app/core/guards/operations.guard.ts` | [NEW] | سد گارد فعال جهت بررسی `is_superuser` و جلوگیری از ورود کاربران عادی با ثبت لاگ امنیتی |
-| ۳ | Frontend | `warehouse-front/src/app/components/operations/operations-layout/operations-layout.ts` | [NEW] | منطق لایوت اختصاصی اتاق عملیات، ناوبری تب‌ها، سوئیچ سریع، نشانگر پینگ و آمار سرور |
-| ۴ | Frontend | `warehouse-front/src/app/components/operations/operations-layout/operations-layout.html` | [NEW] | ساختار بصری تم تیره SOC/NOC، سایدبار اختصاصی با آیکون‌های نئونی، هدر مدرن و ناحیه router-outlet |
-| ۵ | Frontend | `warehouse-front/src/app/components/operations/operations-cockpit/operations-cockpit.ts` | [NEW] | کامپوننت داشبورد اجرایی اتاق فرماندهی، واکشی کارت‌های ۵گانه سلامت، اسنپ‌شات و امنیت |
-| ۶ | Frontend | `warehouse-front/src/app/components/operations/operations-cockpit/operations-cockpit.html` | [NEW] | طراحی بصری کارت‌های مانیتورینگ ۵گانه، نمودارهای حلقوی سلامت، لاگ رویدادها و کلیدهای عملیات فوری |
-| ۷ | Frontend | `warehouse-front/src/app/components/app-launcher/app-launcher.ts` | [MODIFY] | افزودن بررسی دسترسی سوپریوزر و متد ورود به مرکز عملیات (`enterOperations`) |
-| ۸ | Frontend | `warehouse-front/src/app/components/app-launcher/app-launcher.html` | [MODIFY] | افزودن کارت سوم شیک و بنفش/فیروزه‌ای برای مرکز فرماندهی و زیرساخت سازمان |
-| ۹ | Frontend | `warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.ts` | [MODIFY] | پشتیبانی از قلمرو `operations` در انتخاب ماژول بالای صفحه |
-| ۱۰ | Frontend | `warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.html` | [MODIFY] | دکمه سوئیچ سریع به مرکز عملیات در منوی بازشونده پرسنلی برای سوپریوزر |
-| ۱۱ | Frontend | `warehouse-front/src/app/app.routes.ts` | [MODIFY] | ثبت کامل مسیر `/app/operations` با فرزندان (cockpit, snapshots, health, audit, sync-monitor, rbac-governance) |
-| ۱۲ | Testing | `warehouse-backend/personnel/phase_guardian_approval.py` | [MODIFY] | پیاده‌سازی و اجرای خودکار ایجنت نگهبان ۲۶ (`audit_guardian_26_operations_hub_and_infrastructure_cockpit`) |
+| ۱ | Frontend | `frontend/src/app/core/services/app-persona.service.ts` | [MODIFY] | افزودن قلمرو `operations` به `AppModuleType`، نقش `superuser` در این قلمرو و متدهای ناوبری |
+| ۲ | Frontend | `frontend/src/app/core/guards/operations.guard.ts` | [NEW] | سد گارد فعال جهت بررسی `is_superuser` و جلوگیری از ورود کاربران عادی با ثبت لاگ امنیتی |
+| ۳ | Frontend | `frontend/src/app/components/operations/operations-layout/operations-layout.ts` | [NEW] | منطق لایوت اختصاصی اتاق عملیات، ناوبری تب‌ها، سوئیچ سریع، نشانگر پینگ و آمار سرور |
+| ۴ | Frontend | `frontend/src/app/components/operations/operations-layout/operations-layout.html` | [NEW] | ساختار بصری تم تیره SOC/NOC، سایدبار اختصاصی با آیکون‌های نئونی، هدر مدرن و ناحیه router-outlet |
+| ۵ | Frontend | `frontend/src/app/components/operations/operations-cockpit/operations-cockpit.ts` | [NEW] | کامپوننت داشبورد اجرایی اتاق فرماندهی، واکشی کارت‌های ۵گانه سلامت، اسنپ‌شات و امنیت |
+| ۶ | Frontend | `frontend/src/app/components/operations/operations-cockpit/operations-cockpit.html` | [NEW] | طراحی بصری کارت‌های مانیتورینگ ۵گانه، نمودارهای حلقوی سلامت، لاگ رویدادها و کلیدهای عملیات فوری |
+| ۷ | Frontend | `frontend/src/app/components/app-launcher/app-launcher.ts` | [MODIFY] | افزودن بررسی دسترسی سوپریوزر و متد ورود به مرکز عملیات (`enterOperations`) |
+| ۸ | Frontend | `frontend/src/app/components/app-launcher/app-launcher.html` | [MODIFY] | افزودن کارت سوم شیک و بنفش/فیروزه‌ای برای مرکز فرماندهی و زیرساخت سازمان |
+| ۹ | Frontend | `frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.ts` | [MODIFY] | پشتیبانی از قلمرو `operations` در انتخاب ماژول بالای صفحه |
+| ۱۰ | Frontend | `frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.html` | [MODIFY] | دکمه سوئیچ سریع به مرکز عملیات در منوی بازشونده پرسنلی برای سوپریوزر |
+| ۱۱ | Frontend | `frontend/src/app/app.routes.ts` | [MODIFY] | ثبت کامل مسیر `/app/operations` با فرزندان (cockpit, snapshots, health, audit, sync-monitor, rbac-governance) |
+| ۱۲ | Testing | `backend/personnel/phase_guardian_approval.py` | [MODIFY] | پیاده‌سازی و اجرای خودکار ایجنت نگهبان ۲۶ (`audit_guardian_26_operations_hub_and_infrastructure_cockpit`) |
 
 ---
 
@@ -78,7 +78,7 @@
    - بررسی استقرار کامپوننت‌های لایوت و داشبورد فرماندهی (`OperationsCockpitComponent`).
    - اجرای کامل ۲۶ ایجنت با خروجی ۱۰۰٪ PASS.
 2. **اعتبارسنجی بیلد فرانت‌اند:**
-   - اجرای `npm run build` در `warehouse-front` و تضمین Exit Code 0 بدون هیچ خطای کامپایل.
+   - اجرای `npm run build` در `frontend` و تضمین Exit Code 0 بدون هیچ خطای کامپایل.
 
 ---
 

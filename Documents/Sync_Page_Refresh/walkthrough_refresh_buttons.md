@@ -6,14 +6,14 @@
 
 ## ۱. رفع مشکل بارگذاری (Loading) در تب‌ها
 - فایل‌های ویرایش شده:
-  - [`settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
-  - [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+  - [`settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
+  - [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 - **تغییرات:** شرط `*ngIf="!isLoading"` از کانتینرهای تب‌ها حذف شد تا در هنگام بروزرسانی صفحه، ساختار تب‌ها و اطلاعات درون آن‌ها از بین نرود. بجای آن دکمه‌های بروزرسانی (تک‌کلیکی) حالت `disabled` گرفته و یک افکت Loading (چرخشی / Spinner) نمایش می‌دهند. همچنین دکمه‌ها برای جلوگیری از ارسال ناخواسته‌ی فرم‌ها به `type="button"` تغییر یافتند.
 
 ## ۲. انتقال دکمه‌های بروزرسانی (هم‌ترازی با هدر اصلی)
 - فایل‌های ویرایش شده:
-  - [`projects.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html) (صفحه انبارها)
-  - [`users.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) (صفحه کاربران و نقش‌ها)
+  - [`projects.html`](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html) (صفحه انبارها)
+  - [`users.html`](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) (صفحه کاربران و نقش‌ها)
 - **تغییرات:** در هر دو صفحه، دکمه‌ی بروزرسانی از مکان‌های پراکنده جمع‌آوری شده و دقیقاً کنار عنوان اصلی صفحه در سمت راست بالا قرار داده شد. این تغییر منجر به هماهنگی بیشتر رابط کاربری با دیگر صفحات شد.
 
 ### گزارش‌ساز پویا (`reports`)
@@ -32,10 +32,10 @@
 
 ## ۳. افزودن دکمه‌های بروزرسانی به سایر تب‌ها
 - فایل‌های ویرایش شده:
-  - [`dispatch.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html) (تخصیص کالا)
-  - [`count-tracking.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) (پیگیری وضعیت شمارش)
-  - [`reports.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html) (گزارش‌ساز پویا)
-  - [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) (کارتابل مالی و مدارک)
+  - [`dispatch.html`](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html) (تخصیص کالا)
+  - [`count-tracking.html`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) (پیگیری وضعیت شمارش)
+  - [`reports.html`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html) (گزارش‌ساز پویا)
+  - [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) (کارتابل مالی و مدارک)
 - **تغییرات:** دکمه‌ی بروزرسانی با طراحی یکپارچه‌ی سیستم در کنار عنوان این صفحات اضافه شد و مستقیماً به متدهای بارگذاری مربوطه (مانند `loadItems()`، `loadTasks()` و `store.loadEntities()`) متصل گردید.
 
 ## ۴. تست و ارزیابی (Verification)

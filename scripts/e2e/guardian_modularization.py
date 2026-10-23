@@ -39,7 +39,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+BACKEND_DIR = REPO_ROOT / "backend"
 IMPORTLINTER_FILE = REPO_ROOT / ".importlinter"
 BASELINE_FILE = Path(__file__).resolve().parent / "modularization_baseline.json"
 
@@ -52,7 +52,7 @@ def get_venv_python():
         return cand
     cur = REPO_ROOT
     while cur.parent != cur:
-        cand = cur / "warehouse-backend" / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
+        cand = cur / "backend" / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
             "python.exe" if os.name == "nt" else "python"
         )
         if cand.exists():
@@ -74,7 +74,7 @@ GUARD_CALL = "apps.is_installed"
 
 def discover_backend_modules(backend_dir=BACKEND_DIR):
     """
-    کشف پویای ماژول‌ها و بسته‌های آن‌ها از warehouse-backend/modules/*/*/__init__.py
+    کشف پویای ماژول‌ها و بسته‌های آن‌ها از backend/modules/*/*/__init__.py
     خروجی:
       - module_packages: دیکشنری {کد_ماژول: [لیست_بسته‌ها]}
       - all_packages: لیست مرتب تمام بسته‌های پایتونی ماژول‌ها
@@ -368,19 +368,9 @@ def run_lint_imports(config_path=None):
     کد خروجی آن در فاز ۰ عمداً ۱ است (report-only) و شکست نگهبان نیست؛
     آنچه شکست است، نتوانستن از خواندن/تحلیل کانفیگ است.
     """
-    executables = [
-        BACKEND_DIR / "venv" / "Scripts" / "lint-imports.exe",
-        BACKEND_DIR / "venv" / "bin" / "lint-imports",
-        VENV_PYTHON.parent / "lint-imports.exe",
-        VENV_PYTHON.parent / "lint-imports",
-    ]
-    command = None
-    for candidate in executables:
-        if candidate.exists():
-            command = [str(candidate)]
-            break
-    if command is None:
-        command = [sys.executable, "-c", "from importlinter.cli import lint_imports_command; lint_imports_command()"]
+    # Not the venv's lint-imports.exe: pip's launchers embed the absolute path of the folder they were installed in.
+    python = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
+    command = [python, "-c", "from importlinter.cli import lint_imports_command; lint_imports_command()"]
 
     if config_path:
         command.extend(["--config", str(config_path)])
@@ -409,7 +399,7 @@ CORE_MODULE_APP_REF_RE = re.compile(
 
 def scan_core_module_app_refs(backend_dir=BACKEND_DIR):
     """
-    پویش ارجاعات معنایی به اپ‌های ماژول از داخل پوشه warehouse-backend/core/
+    پویش ارجاعات معنایی به اپ‌های ماژول از داخل پوشه backend/core/
     فایل‌های تست (tests.py، test_*.py و هر فایل زیر tests/) و مایگریشن‌ها مستثنا هستند.
     """
     core_dir = backend_dir / "core"

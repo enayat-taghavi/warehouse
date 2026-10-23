@@ -1,7 +1,7 @@
 # فاز ۵: راه‌اندازی Backend و اتصال همزمان به Frontend
 
 ## ۱. راه‌اندازی ساختار بک‌اند (Django + Docker)
-- `[ ]` ایجاد پوشه `e:\warehouse-backend` به عنوان ریپوی مجزا
+- `[ ]` ایجاد پوشه `e:\backend` به عنوان ریپوی مجزا
 - `[ ]` ایجاد `docker-compose.yml` برای **PostgreSQL** و **Redis**
 - `[ ]` راه‌اندازی محیط مجازی پایتون (venv) و نصب پکیج‌ها (Django, DRF, SimpleJWT, Channels, psycopg2, CORS)
 - `[ ]` ایجاد پروژه جنگو (`warehouse_backend`) و پیکربندی `settings.py`

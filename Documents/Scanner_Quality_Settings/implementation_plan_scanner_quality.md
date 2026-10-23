@@ -43,7 +43,7 @@
 ## ۳. تغییرات پیشنهادی در فایل‌ها
 
 ### الف) لایه بک‌اند (Django)
-#### [MODIFY] [warehouses/services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py)
+#### [MODIFY] [warehouses/services.py](file:///e:/warehouse%20project/backend/warehouses/services.py)
 - افزودن کلیدهای پیش‌فرض تنظیمات اسکنر به `DEFAULT_SETTINGS`:
   - `'scanner_camera_preset': 'adaptive'`
   - `'scanner_custom_resolution': '1080p'`
@@ -52,7 +52,7 @@
   - `'scanner_custom_try_harder': True`
 
 ### ب) لایه کامپوننت اسکنر بارکد (Frontend Shared)
-#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
+#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
 - پیاده‌سازی مدل‌های `ScannerQualityPreset` و پیکربندی‌های متناظر.
 - بارگذاری تنظیم پیش‌فرض از تنظیمات انبار/سیستم و خواندن اورراید محلی از `localStorage`.
 - افزودن مکانیزم ناظر عملکرد (Performance Observer) داخل `startPrecisionScanLoop`:
@@ -63,12 +63,12 @@
 - نمایش اعلان ملایم `⚡ کیفیت اسکنر بهینه شد` هنگام سوییچ خودکار.
 
 ### ج) لایه صفحات تنظیمات سیستم و انبار
-#### [MODIFY] [settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.ts) و [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
+#### [MODIFY] [settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.ts) و [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
 - افزودن بخش کارت "تنظیمات کیفیت و بهینه‌سازی دوربین اسکنر" در تب قوانین عملیاتی (`operations`).
 - پشتیبانی از انتخابگر پروفایل‌های ۴گانه + هوشمند + بخش تفصیلی تنظیمات پیشرفته (رزولوشن، فرکانس، کراپ و TRY_HARDER).
 - ذخیره کلیدهای جدید در آبجکت `settings`.
 
-#### [MODIFY] [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) و [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+#### [MODIFY] [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) و [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 - افزودن قابلیت اختصاصی‌سازی تنظیمات کیفیت دوربین برای هر انبار به همراه دکمه بازنشانی اختصاصی (`resetSetting`).
 
 ---

@@ -33,29 +33,29 @@
 ## جزئیات تفصیلی فازهای اجرایی
 
 ### فاز ۱: پاکسازی پیش‌شرط چاپ لیبل از سراسر سیستم
-1. **پاکسازی UI تخصیص:** حذف متن مسدودکننده خط ۸۹ در [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html) («فقط رکوردهایی که لیبل آنها چاپ شده است قابل ارجاع هستند»).
+1. **پاکسازی UI تخصیص:** حذف متن مسدودکننده خط ۸۹ در [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html) («فقط رکوردهایی که لیبل آنها چاپ شده است قابل ارجاع هستند»).
 2. **پاکسازی فرم‌های تنظیمات:**
-   * حذف انتخابگر `default_tag_status` از [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html).
-   * حذف انتخابگر `default_tag_status` از [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) و کلیدهای متناظر در [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts).
-3. **تطهیر سرویس‌های بک‌اند:** پاکسازی متغیر `default_tag_status` در [services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py) و بخش ایمپورت [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py).
-4. **اصلاح نگاشت وضعیت لیبل:** اصلاح خطوط ۳۰۸، ۳۵۱ و ۴۶۸ در [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts) برای هماهنگی مقادیر فارسی دیتابیس (`چاپ شده` / `چاپ نشده` / `چاپ مجدد`) با استایل‌های جدول.
+   * حذف انتخابگر `default_tag_status` از [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html).
+   * حذف انتخابگر `default_tag_status` از [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) و کلیدهای متناظر در [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts).
+3. **تطهیر سرویس‌های بک‌اند:** پاکسازی متغیر `default_tag_status` در [services.py](file:///e:/warehouse%20project/backend/warehouses/services.py) و بخش ایمپورت [views.py](file:///e:/warehouse%20project/backend/inventory/views.py).
+4. **اصلاح نگاشت وضعیت لیبل:** اصلاح خطوط ۳۰۸، ۳۵۱ و ۴۶۸ در [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts) برای هماهنگی مقادیر فارسی دیتابیس (`چاپ شده` / `چاپ نشده` / `چاپ مجدد`) با استایل‌های جدول.
 * **ممیزی ایجنت ناظر:** تست ارجاع کالای چاپ‌نشده و بررسی عدم وجود هیچ مانع یا خطای منطقی.
 
 ---
 
 ### فاز ۲: حذف منطق حذف نرم (Soft-Delete) و یکپارچه‌سازی حذف مستقیم
-1. **بازطراحی کامپوننت [SmartDeleteModalComponent](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/smart-delete-modal/smart-delete-modal.ts):**
+1. **بازطراحی کامپوننت [SmartDeleteModalComponent](file:///e:/warehouse%20project/frontend/src/app/shared/components/smart-delete-modal/smart-delete-modal.ts):**
    * حذف وضعیت `activeTab: 'soft' | 'hard'` و حذف تب غیرفعال‌سازی از قالب HTML.
    * حذف خروجی `@Output() softDelete`.
    * ورود مستقیم به صفحه هشدار، تحلیل اثرات وابستگی‌ها (`deleteImpactUrl`)، شمارش معکوس ۳ ثانیه‌ای و الزام به نوشتن کلمه «حذف».
 2. **پاکسازی متدهای زائد در صفحات:**
-   * حذف توابع `handleSoftDelete()` و بایندینگ‌های آن از [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)، [projects.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.ts)، و [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts).
+   * حذف توابع `handleSoftDelete()` و بایندینگ‌های آن از [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)، [projects.ts](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.ts)، و [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts).
 * **ممیزی ایجنت ناظر:** اطمینان از حذف کامل رفرنس‌های `softDelete` در کامپایل تایپ‌اسکریپت و بررسی صحت باز شدن مودال حذف در هر ۳ صفحه.
 
 ---
 
 ### فاز ۳: پیاده‌سازی موتور خروجی اکسل هوشمند (ZIP / Multi-file تا ۱ میلیون رکورد)
-1. **بک‌اند ([inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) - متد `export_excel`):**
+1. **بک‌اند ([inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py) - متد `export_excel`):**
    * بررسی `total_count = queryset.count()`.
    * **اگر `total_count <= 100,000`:** تولید فایل اکسل با `openpyxl(write_only=True)` و ارسال مستقیم با هدر `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`.
    * **اگر `total_count > 100,000` (تا ۱ میلیون رکورد):**
@@ -63,7 +63,7 @@
      * پیمایش بهینه دیتابیس با `queryset.iterator(chunk_size=5000)`.
      * تفکیک خودکار رکوردها به پارت‌های ۱۰۰ هزارتایی (`export_part_1.xlsx`, `export_part_2.xlsx`, ...).
      * بسته‌بندی فایل‌ها در بایگانی ZIP و ارسال با `Content-Type: application/zip` و هدرهای مربوطه.
-2. **فرانت‌اند ([dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)):**
+2. **فرانت‌اند ([dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)):**
    * حذف هاردکد `filters['page_size'] = 100000`.
    * خواندن نوع فایل برگشتی (`blob.type` یا نام فایل) و ذخیره‌سازی با پسوند دقیق `.xlsx` یا `.zip`.
 * **ممیزی ایجنت ناظر:** بررسی عملکرد مدیریت حافظه در بک‌اند، نبود Memory Leak، و تست دانلود موفق برای داده‌های کم‌حجم و پرحجم.
@@ -71,10 +71,10 @@
 ---
 
 ### فاز ۴: اصلاح باگ‌های منطقی، فیلترها و عملیات چندصفحه‌ای
-1. **اصلاح شرط‌های سرپرست در `ngOnInit`:** مجزا کردن شرط‌های `requireSupervisor` و `requireDocSupervisor` در خطوط ۱۴۳ تا ۱۵۲ [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts).
+1. **اصلاح شرط‌های سرپرست در `ngOnInit`:** مجزا کردن شرط‌های `requireSupervisor` و `requireDocSupervisor` در خطوط ۱۴۳ تا ۱۵۲ [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts).
 2. **اصلاح تگ‌گذاری چندصفحه‌ای:** اصلاح متدهای `applyBatchTags`، `removeTagFromSelected` و `clearBatchTags` تا با تکیه بر شناسه‌ها عملیات بهینه‌ای در بک‌اند انجام شود و تگ رکوردهای صفحات دیگر پاک نشود.
 3. **اصلاح چاپ لیبل چندصفحه‌ای:** ارسال شناسه‌های انتخابی به کامپوننت طراح لیبل و اطمینان از چاپ کامل تمام رکوردهای انتخاب‌شده.
-4. **رفع تداخل فیلتر سریع:** اصلاح `buildApiFilters` در [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts) جهت جلوگیری از شرط مسدودکننده `__NONE__` هنگام فیلتر کردن از هدر جدول.
+4. **رفع تداخل فیلتر سریع:** اصلاح `buildApiFilters` در [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts) جهت جلوگیری از شرط مسدودکننده `__NONE__` هنگام فیلتر کردن از هدر جدول.
 5. **تکمیل دراپ‌داون کاربران:** اتصال فیلترهای تیم شمارش، اسناد و ایجادکنندگان به متغیرهای کامل `fieldWorkers`، `docWorkers` و `users`.
 6. **پاکسازی کدهای تکراری:** حذف انتساب مضاعف `supervisor_assignee` در `executeFieldDispatch`.
 * **ممیزی ایجنت ناظر:** تست سناریوی انتخاب رکوردها در ۲ صفحه مختلف، افزودن تگ و بازبینی سلامت داده‌ها.

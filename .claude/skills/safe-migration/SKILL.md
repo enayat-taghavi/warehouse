@@ -7,7 +7,7 @@ description: Safety check for Django migrations before running migrate on this m
 
 The local database (`warehouse_db` on 127.0.0.1:5432) is the `app.farsalish.ir` test/staging database with no real users. Its data is still never deleted, and every migration later runs on `soft.farsalish.ir`'s real data. Hard project rule: **no data may be lost.**
 
-All commands run in the `warehouse-backend` folder.
+All commands run in the `backend` folder.
 
 ## 1. Models and migrations in sync
 ```bash
@@ -61,13 +61,13 @@ Watch for `DROP COLUMN`, `DROP TABLE`, `ALTER COLUMN ... TYPE`, `DELETE` and `TR
 - **With destructive operations:** do not run it. Tell the user exactly which column, table or data will be lost. Propose the safe path (expand-contract): first the new column and a data copy, and the removal in a later migration.
 
 ## 5. Backup before migrate (mandatory by guard hook)
-The guard hook `.claude/hooks/guard.py` blocks any execution of `manage.py migrate` unless a non-empty `.dump` file with a corresponding `.meta.json` with an age of **less than 15 minutes** exists in `warehouse-backend/backups/db/`.
+The guard hook `.claude/hooks/guard.py` blocks any execution of `manage.py migrate` unless a non-empty `.dump` file with a corresponding `.meta.json` with an age of **less than 15 minutes** exists in `backend/backups/db/`.
 
 Do not run `run_auto_backup`, because it deletes all backups except the last 7. Instead, create just one standalone backup:
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-migrate'); print(m['filename'], m['size'])"
 ```
-The file is created in `warehouse-backend/backups/db/` and authorization to run migrate will be open for 15 minutes.
+The file is created in `backend/backups/db/` and authorization to run migrate will be open for 15 minutes.
 
 ## 6. After migrate
 ```bash

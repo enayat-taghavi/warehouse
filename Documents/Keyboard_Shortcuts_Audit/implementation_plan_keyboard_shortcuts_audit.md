@@ -188,7 +188,7 @@ graph TD
 
 ### تست‌های بیلد خودکار (Automated Build & Compile):
 ```bash
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

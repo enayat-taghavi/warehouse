@@ -10,12 +10,12 @@
 
 ### کامپوننت Dispatch (تخصیص کالا)
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - **ویرایش ظاهر تگ‌ها:** در ستون «تگ / محموله» به جای نمایش ساده‌ی تگ‌ها، ویژگی `cursor-pointer`، و افکت‌های هاور (`hover:bg-indigo-600 hover:text-white`) به آنها اضافه می‌شود تا به صورت بصری مشخص شود که قابل کلیک هستند.
 - **افزودن رویداد کلیک:** دستور `(click)="filterByTag(t, $event)"` روی هر تگ قرار می‌گیرد.
 - **اتصال State به جدول:** پروپرتی `[filters]="state.appState.dispatchSettings.filters"` به تگ `<app-data-table>` داده می‌شود تا جدول از فیلترهای اعمال شده از خارج خود مطلع شود و آنها را در کادرهای جستجوی بالای ستون‌ها نمایش دهد.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - **افزودن متد `filterByTag`:** 
 این متد مقدار تگ کلیک شده را دریافت کرده، آن را در استیت برنامه (`tag_search`) قرار می‌دهد. همچنین برای جلوگیری از تداخل با کلیک روی ردیف، از `event.stopPropagation()` استفاده می‌کند. در نهایت متد `loadItems()` فراخوانی می‌شود تا داده‌ها مجدداً بارگیری شوند.
 

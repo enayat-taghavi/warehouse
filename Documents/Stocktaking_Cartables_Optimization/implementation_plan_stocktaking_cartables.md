@@ -42,8 +42,8 @@
      - بررسی `warehouse_id` در پیام وب‌سوکت و نادیده گرفتن رویدادهای سایر انبارها.
 
 * **فایل‌های تحت تغییر:**
-  - `warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`
-  - `warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html`
+  - `frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`
+  - `frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html`
 
 ---
 
@@ -57,7 +57,7 @@
      - در متدهای `manager_reject` و `bulk_manager_reject`، در صورت حذف یا نامعتبر بودن سرپرست تخصیص‌یافته، وظیفه به صورت ایمن به استخر یا مستقیماً به شمارشگر منتقل شود تا در کارتابل معلق نماند.
 
 * **فایل‌های تحت تغییر:**
-  - `warehouse-backend/inventory/views.py`
+  - `backend/inventory/views.py`
 
 ---
 
@@ -71,8 +71,8 @@
      - اعتبارسنجی ارسال `base_updated_at` در صف همگام‌سازی فیلدهای پویای کالا برای جلوگیری از بازنویسی اشتباه داده‌ها در نوسانات شبکه.
 
 * **فایل‌های تحت تغییر:**
-  - `warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts`
-  - `warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html`
+  - `frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts`
+  - `frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html`
 
 ---
 
@@ -86,8 +86,8 @@
      - امکان کلیک روی کارت کسری یا مازاد برای فیلتر آنی جدول ردیابی.
 
 * **فایل‌های تحت تغییر:**
-  - `warehouse-front/src/app/components/count-tracking/count-tracking.ts`
-  - `warehouse-front/src/app/components/count-tracking/count-tracking.html`
+  - `frontend/src/app/components/count-tracking/count-tracking.ts`
+  - `frontend/src/app/components/count-tracking/count-tracking.html`
 
 ---
 
@@ -96,12 +96,12 @@
 ### تست‌های خودکار (Automated Checks):
 - اجرای تست بیلد فرانت‌اند:
   ```powershell
-  cd "e:\warehouse project\warehouse-front"
+  cd "frontend"
   npx ng build --configuration=development --no-progress
   ```
 - بررسی خطاهای پایتون و تست‌های بک‌اند جنگو:
   ```powershell
-  cd "e:\warehouse project\warehouse-backend"
+  cd "backend"
   python manage.py check
   ```
 

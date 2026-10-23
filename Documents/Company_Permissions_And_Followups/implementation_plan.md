@@ -25,7 +25,7 @@
 - **پرس‌وجوی فقط‌خواندنی روی دیتابیس `app`:**
   - `UserCompanyAccess`: **۱۴** رکورد `workspace_full` و **۲** رکورد `docs_write`. رکورد `docs_read` نیست.
   - `CompanyBankAccount`: ۲ حساب، که هر دو یک گروه تکراری‌اند (شرکت ۲، یک شبا، دو حساب).
-- **CSS ساخته‌شده** (`dist/warehouse-app/browser/styles-*.css`): هر ۸ کلاس بند ب-۳ در آن صفرند. شمار در `warehouse-front/src`:
+- **CSS ساخته‌شده** (`dist/warehouse-app/browser/styles-*.css`): هر ۸ کلاس بند ب-۳ در آن صفرند. شمار در `frontend/src`:
 
 | کلاس | فایل | مورد |
 |---|---|---|
@@ -134,7 +134,7 @@
 - **بخش:X/خواندن|نوشتن** = `ensure_section` یا `companies_with_section`؛
 - **پیوند** = عضو، یا داشتن ردیف `UserCompanyAccess`، یا داشتن هر بخش با سطح «خواندن» یا بالاتر.
 
-مسیرهای بک‌اند نسبت به `warehouse-backend/` هستند و مسیرهای فرانت نسبت به `warehouse-front/src/app/`.
+مسیرهای بک‌اند نسبت به `backend/` هستند و مسیرهای فرانت نسبت به `frontend/src/app/`.
 
 **بک‌اند هسته**
 
@@ -255,7 +255,7 @@
 |---|---|---|---|---|
 | F1 | ب | `personnel/models_domains/organization.py:28, 82, 164, 207`؛ `payroll.py:15`؛ `treasury_audit.py:20`؛ `inventory/models.py:21` | حذف شرکت آبشاری پاک می‌کند: مدارک، حساب بانکی، هیئت‌مدیره، دوره‌های مالی، تنظیمات سالانهٔ حقوق، طرف‌حساب‌ها و تعریف فیلدهای کالا. `FinancialProject`، `PersonnelProfile`، `MonthlyWorkPeriod`، `VehicleDriverProfile` و `Warehouse` از قبل `PROTECT`‌اند. `CompanyGoogleDriveConfig`، `GoogleDriveSyncQueue` و `UserCompanyAccess` هم آبشاری‌اند | ت۲ (§۷) |
 | F2 | م | `organization.py:78-125` | یکتایی شبا در هر شرکت در بک‌اند نیست (فقط هشدار A15 فرانت). در `app` یک گروه تکراری هست | `UniqueConstraint(company, sheba_number)`. خطای فارسی در serializer. مهاجرت پیش از افزودن قید تکراری‌ها را بررسی می‌کند و با پیام روشن متوقف می‌شود، بی‌آنکه چیزی پاک کند. دادهٔ `app` طبق ت۳ |
-| F3 | م | ۸ کلاس در `warehouse-front/src` (جدول §۲) | کلاس‌های Tailwind 4 در 3.4 ساخته نمی‌شوند و اثری ندارند | ت۴. همیشه: `py-0.2` ← `py-0.5`، `dir-ltr` ← `dir="ltr"`، و `animate-in` حذف (هم‌نشین‌هایش، مثل `fade-in` که در `styles.css:67` هست، می‌مانند). `animate-fade-in` ← `fade-in`. یک بررسی ساده در نگهبان 52 جلوی برگشت این کلاس‌ها را بگیرد |
+| F3 | م | ۸ کلاس در `frontend/src` (جدول §۲) | کلاس‌های Tailwind 4 در 3.4 ساخته نمی‌شوند و اثری ندارند | ت۴. همیشه: `py-0.2` ← `py-0.5`، `dir-ltr` ← `dir="ltr"`، و `animate-in` حذف (هم‌نشین‌هایش، مثل `fade-in` که در `styles.css:67` هست، می‌مانند). `animate-fade-in` ← `fade-in`. یک بررسی ساده در نگهبان 52 جلوی برگشت این کلاس‌ها را بگیرد |
 | F4 | ک | `core/companies/views.py:155` (فقط `export_excel`) | «ورود از اکسل» شرکت‌ها مسیر بک‌اند ندارد | `POST companies/import-excel/`: سربرگ دوسطری هم‌شکل خروجی (AGENTS.md §۳)، اعتبارسنجی شناسهٔ ملی، `transaction.atomic`، و گزارش ردیف‌به‌ردیف. فرانت: `excel-import-modal` مشترک و دکمه فقط برای superuser (ت۵) |
 | F5 | ک | `company-documents-archive.html:454-515`، `.ts` | پیش‌نمایش جدا: فقط ماوس، بدون نقش dialog، و `backdrop-blur-xs` | `<app-document-preview>` از `shared/components/document-preview` (لمسی و دسترس‌پذیر). spec بایگانی به‌روز شود |
 | F6 | ب | `core/companies/views.py:70-72, 84-91` | هر `is_staff` با هر سطح دسترسی (حتی `docs_read`) شرکت می‌سازد، حذف می‌کند و اثر حذف را می‌بیند (یادداشت `tenant-scope-reviewer` گام ۸) | ق۴: ساخت، حذف و `delete_impact` فقط superuser. آزمون: `is_staff` غیر superuser ۴۰۳ |

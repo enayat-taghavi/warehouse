@@ -21,9 +21,9 @@
 
 | نام فایل | وضعیت | خلاصه تغییرات |
 | :--- | :---: | :--- |
-| [`barcode-scanner.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | ✏️ بازنشانی شد | بازگشت به معماری سالم `decodeFromConstraints` و پشتیبانی همه‌جانبه از بارکدها |
-| [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | ✏️ حفظ شد | تطبیق چندگانه فیلدها و نرمال‌سازی ارقام فارسی/عربی |
-| [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | ✏️ حفظ شد | تطبیق چندگانه فیلدهای کالا و نرمال‌سازی ارقام فارسی/عربی |
+| [`barcode-scanner.component.ts`](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | ✏️ بازنشانی شد | بازگشت به معماری سالم `decodeFromConstraints` و پشتیبانی همه‌جانبه از بارکدها |
+| [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | ✏️ حفظ شد | تطبیق چندگانه فیلدها و نرمال‌سازی ارقام فارسی/عربی |
+| [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | ✏️ حفظ شد | تطبیق چندگانه فیلدهای کالا و نرمال‌سازی ارقام فارسی/عربی |
 
 ---
 

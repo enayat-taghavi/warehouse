@@ -10,9 +10,9 @@
 
 | فاز | شرح اقدامات فنی | فایل‌های ایجاد/ویرایش‌شده | وضعیت ارزیابی |
 | :---: | :--- | :--- | :---: |
-| **۱** | **زیرساخت سیگنال‌های بک‌اند و ایمنی تراکنش**<br>پیاده‌سازی سیگنال‌های `post_save` برای `AuditLog` و `UserLoginLog` با تضمین `transaction.on_commit`، سریالایزر اختصاصی سبک و توسعه `NotificationConsumer` | [signals.py](file:///e:/warehouse%20project/warehouse-backend/accounts/signals.py)<br>[apps.py](file:///e:/warehouse%20project/warehouse-backend/accounts/apps.py)<br>[consumers.py](file:///e:/warehouse%20project/warehouse-backend/notifications/consumers.py) | ✅ **پاس ۱۰۰٪** |
-| **۲** | **اتصال فرانت‌اند و به‌روزرسانی نقطه‌ای**<br>اتصال به `WebSocketService`، دریافت زنده رویدادهای `audit_log_created` و `login_log_created`، درج در بالای جدول (In-place Unshift)، محدودسازی به سقف صفحه، به‌روزرسانی کارت‌های آماری و افکت چشمک‌زن `.status-updated-flash` | [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)<br>[audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)<br>[audit.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.css) | ✅ **پاس ۱۰۰٪** |
-| **۳** | **معماری لوکال فست و کش هوشمند SWR**<br>بارگذاری فوق سریع زیر ۱۵ میلی‌ثانیه از کش محلی IndexedDB، همگام‌سازی بی‌صدا در پس‌زمینه با `liveDataUpdates$` و طراحی نشانگر وضعیت زنده (Live Badge) و آفلاین در هدر | [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)<br>[audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html) | ✅ **پاس ۱۰۰٪** |
+| **۱** | **زیرساخت سیگنال‌های بک‌اند و ایمنی تراکنش**<br>پیاده‌سازی سیگنال‌های `post_save` برای `AuditLog` و `UserLoginLog` با تضمین `transaction.on_commit`، سریالایزر اختصاصی سبک و توسعه `NotificationConsumer` | [signals.py](file:///e:/warehouse%20project/backend/accounts/signals.py)<br>[apps.py](file:///e:/warehouse%20project/backend/accounts/apps.py)<br>[consumers.py](file:///e:/warehouse%20project/backend/notifications/consumers.py) | ✅ **پاس ۱۰۰٪** |
+| **۲** | **اتصال فرانت‌اند و به‌روزرسانی نقطه‌ای**<br>اتصال به `WebSocketService`، دریافت زنده رویدادهای `audit_log_created` و `login_log_created`، درج در بالای جدول (In-place Unshift)، محدودسازی به سقف صفحه، به‌روزرسانی کارت‌های آماری و افکت چشمک‌زن `.status-updated-flash` | [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)<br>[audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)<br>[audit.css](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.css) | ✅ **پاس ۱۰۰٪** |
+| **۳** | **معماری لوکال فست و کش هوشمند SWR**<br>بارگذاری فوق سریع زیر ۱۵ میلی‌ثانیه از کش محلی IndexedDB، همگام‌سازی بی‌صدا در پس‌زمینه با `liveDataUpdates$` و طراحی نشانگر وضعیت زنده (Live Badge) و آفلاین در هدر | [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)<br>[audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html) | ✅ **پاس ۱۰۰٪** |
 | **۴** | **تست‌های سرتاسری و بیلد نهایی**<br>اجرای موفق بیلد کامل انگولار (`npm run build`) و پاس شدن تمام تست‌های اعتبارسنجی بک‌اند | کل پروژه | ✅ **پاس ۱۰۰٪** |
 
 ---
@@ -74,7 +74,7 @@ npm run build
 ```
 ```
 Application bundle generation complete. [63.677 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر.
 ```
 

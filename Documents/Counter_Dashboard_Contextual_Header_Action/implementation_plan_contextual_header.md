@@ -24,13 +24,13 @@
 
 ## ۲. فایل‌های تحت تغییر (Proposed File Changes)
 
-### فرانت‌اند (`warehouse-front`)
+### فرانت‌اند (`frontend`)
 
-#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 - حذف کانتینرهای نوار شناور پایین صفحه (`fixed bottom-6`).
 - اضافه کردن نوار هوشمند عملیات انتخابی (`Contextual Top Action Bar`) در هدر چسبان بالای صفحه به جای کادر جستجو هنگام فعال بودن انتخاب‌ها (`selectedTasks.size > 0` یا `selectedPoolTasks.size > 0`).
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - اطمینان از پاک‌سازی انتخاب‌ها هنگام تغییر فیلترها یا تغییر تب.
 
 ---

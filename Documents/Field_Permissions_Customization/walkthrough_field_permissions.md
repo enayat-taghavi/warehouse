@@ -29,16 +29,16 @@
 
 | فایل | نوع عملیات | توضیحات |
 | :--- | :---: | :--- |
-| [`field-config.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/field-config.model.ts) | **NEW** | تعریف تایپ‌ها، رجیستری استاندارد فیلدهای کالا، دسته‌بندی‌ها و تابع ادغام `mergeFieldPermissions` |
-| [`services.py`](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py) | **MODIFY** | افزودن کلید پیش‌فرض `field_permissions_counter` به `DEFAULT_SETTINGS` در بک‌اند |
-| [`settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.ts) | **MODIFY** | افزودن تب `counter_fields`، لودینگ فیلدهای پویا، لاجیک فیلتر/جستجو/ریست و ذخیره کانفیگ |
-| [`settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html) | **MODIFY** | طراحی جدول مدرن فیلدهای انبارگردان با تولبار جستجو، دسته‌بندی و دکمه‌های کنترلی |
-| [`wh-settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) | **MODIFY** | پشتیبانی از تب `counter_fields` برای تنظیمات اختصاصی انبارها |
-| [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) | **MODIFY** | افزودن بخش جدول فیلدهای انبارگردان در صفحه تنظیمات انبار |
-| [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **MODIFY** | لود فیلدهای مجاز انبارگردان، استخراج مقادیر، و بایندینگ ورودی‌های فرم و ذخیره کالا |
-| [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | **MODIFY** | جایگزینی فیلدهای هاردکد شده با رندر داینامیک فیلدهای نمایشی و ورودی‌های ویرایشی |
-| [`field.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/field/field.ts) | **MODIFY** | پشتیبانی از فیلدهای پویا در نمای فیلد همراه |
-| [`field.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/field/field.html) | **MODIFY** | رندر داینامیک در نمای فیلد همراه |
+| [`field-config.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/field-config.model.ts) | **NEW** | تعریف تایپ‌ها، رجیستری استاندارد فیلدهای کالا، دسته‌بندی‌ها و تابع ادغام `mergeFieldPermissions` |
+| [`services.py`](file:///e:/warehouse%20project/backend/warehouses/services.py) | **MODIFY** | افزودن کلید پیش‌فرض `field_permissions_counter` به `DEFAULT_SETTINGS` در بک‌اند |
+| [`settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.ts) | **MODIFY** | افزودن تب `counter_fields`، لودینگ فیلدهای پویا، لاجیک فیلتر/جستجو/ریست و ذخیره کانفیگ |
+| [`settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html) | **MODIFY** | طراحی جدول مدرن فیلدهای انبارگردان با تولبار جستجو، دسته‌بندی و دکمه‌های کنترلی |
+| [`wh-settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) | **MODIFY** | پشتیبانی از تب `counter_fields` برای تنظیمات اختصاصی انبارها |
+| [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) | **MODIFY** | افزودن بخش جدول فیلدهای انبارگردان در صفحه تنظیمات انبار |
+| [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **MODIFY** | لود فیلدهای مجاز انبارگردان، استخراج مقادیر، و بایندینگ ورودی‌های فرم و ذخیره کالا |
+| [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | **MODIFY** | جایگزینی فیلدهای هاردکد شده با رندر داینامیک فیلدهای نمایشی و ورودی‌های ویرایشی |
+| [`field.ts`](file:///e:/warehouse%20project/frontend/src/app/components/field/field.ts) | **MODIFY** | پشتیبانی از فیلدهای پویا در نمای فیلد همراه |
+| [`field.html`](file:///e:/warehouse%20project/frontend/src/app/components/field/field.html) | **MODIFY** | رندر داینامیک در نمای فیلد همراه |
 
 ---
 

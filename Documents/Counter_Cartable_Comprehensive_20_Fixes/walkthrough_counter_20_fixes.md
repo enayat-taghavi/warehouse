@@ -49,7 +49,7 @@ graph LR
     P4 -->|بیلد نهایی کامپایل سبز| PASS[اتمام موفق ۱۰۰٪ کل ۲۰ تسک]
 ```
 
-1. **انطباق دامنه تغییرات:** تمام ادیت‌ها دقیقا در محدوده فایل‌های [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) و [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) اعمال شدند و هیچ تابع، سرویس یا ایمپورت نامربوطی تخریب یا حذف نگردید.
+1. **انطباق دامنه تغییرات:** تمام ادیت‌ها دقیقا در محدوده فایل‌های [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) و [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) اعمال شدند و هیچ تابع، سرویس یا ایمپورت نامربوطی تخریب یا حذف نگردید.
 2. **پایداری کامپایل:** پس از هر فاز کامپایل کامل فریم‌ورک انگولار انجام شد و تمام فایل‌ها بدون هیچ خطایی (`0 errors`) ساخته شدند.
 3. **تطابق با خواسته کاربر:** تمام ۲۰ مورد اعلام‌شده در پرسش‌های کاربر، به انضمام قابلیت دکمه ارسال سریع و رفع معضل ورود ناخواسته به آماده ارسال با دقت پیاده‌سازی شدند.
 

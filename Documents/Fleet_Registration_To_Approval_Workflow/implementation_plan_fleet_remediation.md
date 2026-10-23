@@ -40,15 +40,15 @@
 
 ## ۳. تغییرات پیشنهادی به تفکیک فایل و مؤلفه (Proposed Changes)
 
-### مؤلفه ۱: رفع خطاهای کامپایل فرانت‌اند (`warehouse-front`)
+### مؤلفه ۱: رفع خطاهای کامپایل فرانت‌اند (`frontend`)
 
-#### [MODIFY] [accountant-fleet.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/accountant/accountant-fleet/accountant-fleet.html)
+#### [MODIFY] [accountant-fleet.html](file:///e:/warehouse%20project/frontend/src/app/components/finance/accountant/accountant-fleet/accountant-fleet.html)
 - خط ۶۹۰ و ۶۹۲: اصلاح `shebaValidationResult.error` به `shebaValidationResult.errorMessage`.
 
-#### [MODIFY] [manager-fleet.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/manager/manager-fleet/manager-fleet.html)
+#### [MODIFY] [manager-fleet.html](file:///e:/warehouse%20project/frontend/src/app/components/finance/manager/manager-fleet/manager-fleet.html)
 - هماهنگ‌سازی تگ `<app-smart-delete-modal>` با اینپوت‌های واقعی کامپوننت اشتراکی و اضافه کردن دیالوگ بازدارنده در صورت وجود سابقه تردد (مشابه `manager-personnel.html`).
 
-#### [MODIFY] [supervisor-fleet.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-fleet/supervisor-fleet.html) & [supervisor-fleet.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-fleet/supervisor-fleet.ts)
+#### [MODIFY] [supervisor-fleet.html](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-fleet/supervisor-fleet.html) & [supervisor-fleet.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-fleet/supervisor-fleet.ts)
 - در `supervisor-fleet.ts` خط ۶۱۳: تغییر تایپ ورودی `copyToClipboard` به `id?: number`.
 - در `supervisor-fleet.html` خط ۶۲۷: اصلاح `selectedViewVehicle.model_name` به `selectedViewVehicle.vehicle_type_display || selectedViewVehicle.vehicle_type`.
 
@@ -56,25 +56,25 @@
 
 ### مؤلفه ۲: هدایت صحیح اعلان‌ها (Navigation Mismatch)
 
-#### [MODIFY] [fleet_lifecycle_services.py](file:///e:/warehouse%20project/warehouse-backend/personnel/fleet_lifecycle_services.py)
+#### [MODIFY] [fleet_lifecycle_services.py](file:///e:/warehouse%20project/backend/personnel/fleet_lifecycle_services.py)
 - خط ۶۵۶ تا ۶۶۲: تغییر نشانی اعلان‌های مربوط به بازگشایی، رد، عودت و پیش‌نویس از `/app/finance/employee-fleet` به `/app/finance/employee-new-vehicle`.
 
-#### [MODIFY] [notification-center.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/notification-center/notification-center.component.ts)
+#### [MODIFY] [notification-center.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/notification-center/notification-center.component.ts)
 - خط ۲۸۹ و ۳۰۳: هدایت اعلان‌های ناوگان برای راننده/کارمند و پرونده‌های نیازمند اصلاح به صفحهٔ `/app/finance/employee-new-vehicle`.
 
 ---
 
-### مؤلفه ۳: امنیت ممیزی و دفاع در عمق بک‌اند (`warehouse-backend`)
+### مؤلفه ۳: امنیت ممیزی و دفاع در عمق بک‌اند (`backend`)
 
-#### [MODIFY] [personnel/serializers.py](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py)
+#### [MODIFY] [personnel/serializers.py](file:///e:/warehouse%20project/backend/personnel/serializers.py)
 - خطوط ۱۶۹۳ تا ۱۷۱۲ در `WorkflowAuditLogSerializer`:
   - اضافه کردن `driver_name`، `plate_number` و `vehicle_type` به `SNAPSHOT_SUMMARY_KEYS`.
   - فیلتر کردن فیلد حساس مالی نرخ خودرو (`FLEET_RATE_FIELDS = ('default_service_rate',)` از `fleet_lifecycle_services`) برای کاربران غیرمالی در `diff`، `old_diff` و `snapshot`.
 
-#### [MODIFY] [personnel/models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py)
+#### [MODIFY] [personnel/models.py](file:///e:/warehouse%20project/backend/personnel/models.py)
 - اضافه کردن متد دفاع در عمق `clean()` در مدل `VehicleTripLog`.
 
-#### [MODIFY] [personnel/fleet_excel_engine.py](file:///e:/warehouse%20project/warehouse-backend/personnel/fleet_excel_engine.py)
+#### [MODIFY] [personnel/fleet_excel_engine.py](file:///e:/warehouse%20project/backend/personnel/fleet_excel_engine.py)
 - خطوط ۳۰۷ تا ۳۱۰: ارتقا به متد دفاعی `assert_vehicle_trip_allowed` جهت یکپارچگی خطاها و جلوگیری از ثبت داده نامعتبر.
 
 ---
@@ -104,7 +104,7 @@
 ## ۴. برنامه آزمون و راستی‌آزمایی (Verification Plan)
 
 ### آزمون‌های خودکار (Automated Tests)
-1. **بیلد فرانت‌اند:** اجرای کامل `npx ng build --no-progress` در `warehouse-front` و احراز خروج با کد صفر.
+1. **بیلد فرانت‌اند:** اجرای کامل `npx ng build --no-progress` در `frontend` و احراز خروج با کد صفر.
 2. **تست‌های مرورگر و DOM فرانت‌اند (Type 1 Invariant):**
    ```powershell
    npx vitest run src/app/components/finance/accountant/accountant-fleet/
@@ -114,11 +114,11 @@
    ```
 3. **تست‌های بک‌اند و چرخه حیات ناوگان:**
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; .\warehouse-backend\venv\Scripts\python.exe warehouse-backend\manage.py test personnel.tests_vehicle_cycle --noinput
+   $env:PYTHONIOENCODING="utf-8"; .\backend\venv\Scripts\python.exe backend\manage.py test personnel.tests_vehicle_cycle --noinput
    ```
 4. **تست‌های ایزولاسیون آیکون‌ها:**
    ```powershell
-   .\warehouse-backend\venv\Scripts\python.exe scripts/e2e/guardian_52_icon_registry.py
+   .\backend\venv\Scripts\python.exe scripts/e2e/guardian_52_icon_registry.py
    ```
 
 </div>

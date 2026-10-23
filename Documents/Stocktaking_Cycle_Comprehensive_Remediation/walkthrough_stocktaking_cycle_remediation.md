@@ -25,31 +25,31 @@ graph TD
 ## 🔍 ۲. جزئیات تغییرات بر اساس فایل‌ها و لایه‌ها
 
 ### الف) لایه بک‌اند (Django REST Framework)
-1. **[inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py):**
+1. **[inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py):**
    - **تزریق `is_blind: False` در `get_serializer_context`:** برای نقش‌های مدیر، سرپرست، پیگیری و خروجی اکسل مقدار `is_blind` غیرفعال شد تا فیلدهای حیاتی `inventory` و `bal4miv` به فرانت نرسیده حذف نشوند و محاسبه مغایرت دقیق انجام شود.
    - **گارد تغییر وضعیت در `perform_update`:** مسدودسازی پرش‌های جهشی و غیرمجاز به وضعیت‌های نهایی (`FINAL_APPROVED` و `MANAGER_REVIEW`) از طریق متد PATCH.
    - **اصلاح فیلترهای جستجوی متنی (`q_filter`):** حذف فیلدهای منسوخ دیتابیس (`item_no`، `old_location`، `en_unic_code`) و جایگزینی با فیلدهای معتبر (`tag`، `pk_number`، `new_location`) در `CountTaskViewSet` و `DocTaskViewSet`.
    - **اعتبارسنجی انبار (IDOR Check):** استفاده از `can_access_warehouse` در متدهای `bulk_manager_approve` و `bulk_manager_reject` برای جلوگیری از دستکاری اقلام انبارهای غیرمجاز.
    - **فرمول مغایرت اکسل:** اصلاح محاسبه تفاضل بر پایه موجودی اولیه دفتری کالا (`bal4miv`).
 
-2. **[inventory/tests.py](file:///e:/warehouse%20project/warehouse-backend/inventory/tests.py):**
+2. **[inventory/tests.py](file:///e:/warehouse%20project/backend/inventory/tests.py):**
    - افزودن تست‌های اعتبارسنجی جدید `test_46` تا `test_49` برای پوشش خروجی اکسل با سرچ، context شمارش کور برای مدیر، گارد PATCH و گارد IDOR انبار.
 
 ---
 
 ### ب) لایه فرانت‌اند (Angular 18 Standalone)
-1. **[supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) و [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts):**
+1. **[supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) و [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts):**
    - **ایزولاسیون کامل اشتراک SWR:** تفکیک آدرس‌های استعلام پس‌زمینه بر اساس نقش (`as_role=supervisor` و `as_role=manager`) تا استعلام‌های سایر نقش‌ها منجر به خالی شدن یا پاک شدن لیست تسک‌های سرپرست و مدیر نشود.
    - **ارتقای دیالوگ‌های رد تسک:** جایگزینی تمامی فراخوانی‌های `confirm()` با مودال مدرن `ConfirmDialogService`.
 
-2. **[counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) و [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html):**
+2. **[counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) و [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html):**
    - **همگام‌سازی وضعیت در `bulkSubmit`:** خواندن وضعیت معتبر ارسالی سرور به جای تحمیل دستی `targetStatus`.
    - **اصلاح شرط نمایش موجودی سیستمی:** تفکیک بررسی شرط `isFieldVisible('bal4miv')` از `inventory` جهت حفظ امنیت و نمایش دقیق.
 
-3. **[dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html):**
+3. **[dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html):**
    - پاکسازی ستون‌های مرده و منسوخ `old_location`، `plpkitem` و `item_no` از جدول تخصیص اقلام.
 
-4. **[reports.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts):**
+4. **[reports.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts):**
    - ارتقای متد حذف قالب گزارش به `ConfirmDialogService`.
 
 ---

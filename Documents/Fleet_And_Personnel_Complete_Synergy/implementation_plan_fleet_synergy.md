@@ -104,7 +104,7 @@ graph TD
 
 ### تست‌های واحد بک‌اند جنگو:
 ```powershell
-& "e:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py test personnel.test_attendance_fleet_audit
+& "backend\venv\Scripts\python.exe" manage.py test personnel.test_attendance_fleet_audit
 ```
 * **تست ۱:** بررسی دسترسی‌های ۴ گانه RBAC (`test_rbac_four_pillars`).
 * **تست ۲:** اعتبارسنجی ماتریس ۳۱ روزه ناوگان (`test_fleet_monthly_grid`).

@@ -2,7 +2,7 @@
 
 <div dir="rtl" align="right">
 
-این سند برنامه جامع فنی برای برطرف‌سازی باگ‌های منطقی، نشت انتخاب‌ها (Selection Leak)، اعتبارسنجی ارسال گروهی، و ارتقای ارتباط بلادرنگ وب‌سوکت در دو کارتابل مالی ([customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)) و کارتابل انبارگردان ([counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)) است.
+این سند برنامه جامع فنی برای برطرف‌سازی باگ‌های منطقی، نشت انتخاب‌ها (Selection Leak)، اعتبارسنجی ارسال گروهی، و ارتقای ارتباط بلادرنگ وب‌سوکت در دو کارتابل مالی ([customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)) و کارتابل انبارگردان ([counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)) است.
 
 ---
 
@@ -21,12 +21,12 @@
 
 ### ۱. لایه فرانت‌اند (Frontend Layer)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - اضافه کردن `this.selectedTasks.clear()` در توابع `setStatusFilter` (خط ۳۴۵) و `setDateFilter` (خط ۳۳۷).
 - فیلتر کردن رویداد وب‌سوکت بر اساس انبار فعال: بررسی `data.warehouse_id === this.activeWarehouseId` قبل از رفرش جدول (خط ۱۶۸).
 - اصلاح `fetchPoolTasksSilently` جهت پشتیبانی از حالت `localFirst` و خواندن از دیتابیس لوکال (خط ۷۶۹).
 
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - فیلتر کردن رویداد وب‌سوکت بر اساس انبار فعال در متد سابسکرایب وب‌سوکت (خط ۱۹۳).
 - اصلاح متد `revertTaskStatus` جهت ممانعت از نال کردن تمام فیلدها و حفظ داده‌های قبلی سند (خط ۱۱۷۰).
 - ارتقای اعتبارسنجی در `submitAll` برای جلوگیری از ارسال تسک‌های بدون داده در حالت انتخاب چندتایی (خط ۱۵۰۶).
@@ -35,10 +35,10 @@
 
 ### ۲. لایه بک‌اند (Backend Layer)
 
-#### [MODIFY] [consumers.py](file:///e:/warehouse%20project/warehouse-backend/notifications/consumers.py)
+#### [MODIFY] [consumers.py](file:///e:/warehouse%20project/backend/notifications/consumers.py)
 - اضافه کردن کلید `task` به دیکشنری خروجی `out_data` در متد `send_notification` (خط ۵۵).
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 - در اکشن `bulk_submit` از `DocTaskViewSet` (خط ۲۵۶۹)، اضافه کردن اعتبارسنجی جهت اطمینان از اینکه تسک‌های `PENDING_DOC` دارای حداقل یک فیلد مدرک یا یادداشت هستند.
 
 ---

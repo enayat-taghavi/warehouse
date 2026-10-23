@@ -16,7 +16,7 @@
 ۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر — گام ۹» را بخوان.
 
 ۳. کار این نشست:
-الف) warehouse-front/src/app/shared/components/command-center/command-center.component.ts:
+الف) frontend/src/app/shared/components/command-center/command-center.component.ts:
   - در ROW_CONTAINER_CLASSES، در مقدار md بعد از md:flex-row کلاس md:flex-wrap، و در مقدار lg بعد از lg:flex-row کلاس lg:flex-wrap را بیفزا.
   - در قالب، div اسلات cc-tabs (class="flex items-center overflow-x-auto") کلاس‌های min-w-0 max-w-full بگیرد، و div اسلات cc-actions کلاس ms-auto.
   - توضیح فارسی کوتاه: «اگر تب‌ها و اکشن‌ها در یک سطر جا نشوند، اکشن‌ها به سطر دوم (سمت چپ) می‌روند.»
@@ -28,7 +28,7 @@
     - employee-petty-cash.html ([tabs]="pettyCashStatusTabs")
     - employee-new-vehicle.html ([tabs]="statusFilterTabs")
     - employee-new-personnel.html ([tabs]="statusFilterTabs")
-ج) رجیستری: به warehouse-front/src/app/shared/icons/icon-registry.ts آیکون 'droplet' را با این محتوا بیفزا:
+ج) رجیستری: به frontend/src/app/shared/icons/icon-registry.ts آیکون 'droplet' را با این محتوا بیفزا:
 '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>'
 د) کار تازه «قطع همکاری»:
   - در shared/icons/semantic-icons.ts، به ACTION_ICONS کلید 'terminate': 'slash' را بیفزا.
@@ -86,7 +86,7 @@
 
 ۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
-۳. کار این نشست (مسیرها در warehouse-front/src/app/components/finance/accountant/):
+۳. کار این نشست (مسیرها در frontend/src/app/components/finance/accountant/):
 
 ۴.۱ accountant-payroll:
 - تب‌ها: پنج switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl"، شمارنده‌ها مثل پایه:
@@ -1008,8 +1008,8 @@
 الف) پاک‌سازی رجیستری (بند ۳-۵):
   - نامزدها فقط نام‌های مجموعه RETIRED_VARIANTS در scripts/e2e/guardian_55_clickable_ergonomics.py هستند.
   - یک اسکریپت پایتون موقت در scratch/ بنویس که برای هر نامزد این‌ها را بشمارد:
-    - رخدادهای 'نام' و "نام" در warehouse-front/src، جز shared/icons/icon-registry.ts؛
-    - رخدادهای 'نام' و "نام" در warehouse-backend، جز venv، __pycache__ و logs؛
+    - رخدادهای 'نام' و "نام" در frontend/src، جز shared/icons/icon-registry.ts؛
+    - رخدادهای 'نام' و "نام" در backend، جز venv، __pycache__ و logs؛
     - الگوهای ساخت پویا با پیشوند نام، مثل 'پیشوند-' + و `پیشوند-${.
   - اسکریپت را با python -X utf8 اجرا کن.
   - فقط نامزدی که همه شمارش‌هایش صفر است از icon-registry.ts حذف شود. RETIRED_VARIANTS نگهبان ۵۵ دست نخورد.
@@ -1069,7 +1069,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1107,7 +1107,7 @@
 <div dir="rtl" align="right">
 
 ### ۱. توضیح ساده و شفاف درخواست (Explain Simply)
-در نشست ۶ از ۱۵ طرح ارگونومی واکنش‌گرا، کامپوننت پرونده‌های جدید حسابدار ([`accountant-new-profiles`](file:///E:/warehouse%20project/warehouse-front/src/app/components/finance/accountant/accountant-new-profiles)) و تست‌های آن مطابق الگوی مصوب سرپرست ([`supervisor-new-profiles`](file:///E:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-new-profiles)) به جعبه‌ابزار مشترک ماژولار (`app-tab-bar`، `button[appAction]`، `app-command-center`) مهاجرت داده شد، بدون اینکه کوچک‌ترین تغییری در ساختار شبا، دکمه تولید آنی شبا یا آرایه بانک‌ها ایجاد شود. همچنین گام ۱۰ طرح در مستندات تکمیل گ...
+در نشست ۶ از ۱۵ طرح ارگونومی واکنش‌گرا، کامپوننت پرونده‌های جدید حسابدار ([`accountant-new-profiles`](file:///E:/warehouse%20project/frontend/src/app/components/finance/accountant/accountant-new-profiles)) و تست‌های آن مطابق الگوی مصوب سرپرست ([`supervisor-new-profiles`](file:///E:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-new-profiles)) به جعبه‌ابزار مشترک ماژولار (`app-tab-bar`، `button[appAction]`، `app-command-center`) مهاجرت داده شد، بدون اینکه کوچک‌ترین تغییری در ساختار شبا، دکمه تولید آنی شبا یا آرایه بانک‌ها ایجاد شود. همچنین گام ۱۰ طرح در مستندات تکمیل گ...
 
 ---
 
@@ -1129,7 +1129,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1169,7 +1169,7 @@
 ### گزارش رفع ایراد و اعتبارسنجی (Fix Round Completed)
 
 ۱. **تحلیل و رفع ریشه مشکل (Root Cause & Solution):**
-   - در آزمون‌های DOM آیتم‌های ۸ و ۱۰ فایل [`accountant-new-profiles.dom.spec.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.dom.spec.ts)، جستجوی عمومی بر اساس متن `includes('تایید مالی')` روی تمام دکمه‌ها به‌علت وجود برچسب وضعیت در دسترس‌پذیری تب‌ها (`indicator: { label: '... در انتظار تایید مالی' }`) به اشتباه دکمه تب درون `app-tab-bar` را انتخاب می‌کرد.
+   - در آزمون‌های DOM آیتم‌های ۸ و ۱۰ فایل [`accountant-new-profiles.dom.spec.ts`](file:///E:/warehouse%20project/frontend/src/app/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.dom.spec.ts)، جستجوی عمومی بر اساس متن `includes('تایید مالی')` روی تمام دکمه‌ها به‌علت وجود برچسب وضعیت در دسترس‌پذیری تب‌ها (`indicator: { label: '... در انتظار تایید مالی' }`) به اشتباه دکمه تب درون `app-tab-bar` را انتخاب می‌کرد.
    - سلکتور با استفاده از ویژگی صریح `button[appAction="approve"]` و زنجیره‌سازی اختیاری (`approveBtn?.click(...
 
 ---
@@ -1182,7 +1182,7 @@
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 8/10 passed
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check`
+    - FAILED (exit 1): `cd frontend && npx ng build --output-path ../scratch/ng-build-check`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 7a9954e --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/treasurer/{treasurer-disbursements,treasurer-invoices}/**/*.spec.ts"`
   - verify round 1: 10/10 passed
 - **Task:**
@@ -1192,7 +1192,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1254,7 +1254,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1364,7 +1364,7 @@
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 7/10 passed
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check`
+    - FAILED (exit 1): `cd frontend && npx ng build --output-path ../scratch/ng-build-check`
     - FAILED (exit 1): `python scripts/e2e/guardian_56_change_integrity.py --base c934bb4`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base c934bb4 --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/company-documents-archive/**/*.spec.ts" --include "src/app/components/personnel/base-settings/**/*.spec.ts"`
   - verify round 1: 10/10 passed
@@ -1375,7 +1375,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1446,7 +1446,7 @@
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 7/9 passed
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check`
+    - FAILED (exit 1): `cd frontend && npx ng build --output-path ../scratch/ng-build-check`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base f59d4cb --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/personnel/personnel-profiles/**/*.spec.ts"`
   - verify round 1: 9/9 passed
 - **Task:**
@@ -1456,7 +1456,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1505,7 +1505,7 @@
    - خطای کامپایلر انگولار `TS4104` به دلیل تایپ `readonly TabDef[]` برای فیلد `personnelModalTabs` در کامپوننت رخ داده بود که با ورودی `TabDef[]` دایرکتیو/کامپوننت `app-tab-bar` ناسازگار بود و مانع از موفقیت بیلد و کامپایل تست‌های روی HEAD می‌شد.
 
 ۲. **اصلاح انجام‌شده:**
-   - تایپ `personnelModalTabs` در [personnel-profiles.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-profiles/personnel-profiles.ts) به `TabDef[]` تغییر یافت.
+   - تایپ `personnelModalTabs` در [personnel-profiles.ts](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-profiles/personnel-profiles.ts) به `TabDef[]` تغییر یافت.
    - خط مربوطه در گزارش پیشرفت [implementation_plan_responsive_clickable_ergonomics.md](file:///E:/warehouse%20project/Do...
 
 ---
@@ -1593,7 +1593,7 @@
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 7/9 passed
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check`
+    - FAILED (exit 1): `cd frontend && npx ng build --output-path ../scratch/ng-build-check`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 77e792d --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/personnel/manager-approvals/**/*.spec.ts"`
   - verify round 1: 9/9 passed
 - **Task:**
@@ -1603,7 +1603,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1670,7 +1670,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1716,7 +1716,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1752,7 +1752,7 @@
 ---
 
 ### ۲. اعتبارسنجی تغییرات و ساختار شبا
-- **بررسی ساختار شبا:** خروجی دستور `git diff -U0 8ecbb8b warehouse-front/src` روی واژه‌های `sheba`، `Sheba` و `IRANIAN_BA...
+- **بررسی ساختار شبا:** خروجی دستور `git diff -U0 8ecbb8b frontend/src` روی واژه‌های `sheba`، `Sheba` و `IRANIAN_BA...
 
 ---
 
@@ -1771,7 +1771,7 @@
 
 
 ۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در frontend/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
 
 ۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
@@ -1835,8 +1835,8 @@
 الف) پاک‌سازی رجیستری (بند ۳-۵):
   - نامزدها فقط نام‌های مجموعه RETIRED_VARIANTS در scripts/e2e/guardian_55_clickable_ergonomics.py هستند.
   - یک اسکریپت پایتون موقت در scratch/ بنویس که برای هر نامزد این‌ها را بشمارد:
-    - رخدادهای 'نام' و "نام" در warehouse-front/src، جز shared/icons/icon-registry.ts؛
-    - رخدادهای 'نام' و "نام" در warehouse-backend، جز venv، __pycache__ و logs؛
+    - رخدادهای 'نام' و "نام" در frontend/src، جز shared/icons/icon-registry.ts؛
+    - رخدادهای 'نام' و "نام" در backend، جز venv، __pycache__ و logs؛
     - الگوهای ساخت پویا با پیشوند نام، مثل 'پیشوند-' + و `پیشوند-${.
   - اسکریپت را با python -X utf8 اجرا کن.
   - فقط نامزدی که همه شمارش‌هایش صفر است از icon-registry.ts حذف شود. RETIRED_VARIANTS نگهبان ۵۵ دست نخورد.
@@ -1864,7 +1864,7 @@
 
 ### ۱. توضیح ساده به زبان فارسی (Explain Simply)
 این نشست، نشست پانزدهم (پایانی) از طرح جامع ارگونومی واکنش‌گرا و اجرای گام ۱۳ است. در این نشست پایانی:
-1. **پاک‌سازی رجیستری آیکون‌ها (بند ۳-۵):** بررسی و ممیزی دقیق ۵۳ گونه کنارگذاشته‌شده در `RETIRED_VARIANTS` نگهبان ۵۵؛ شمارش رخدادهای آن‌ها در فرانت‌اند، بک‌اند و الگوهای ساخت پویا، و سپس حذف گونه‌هایی که هیچ رخدادی ندارند (شمارش صفر) از فایل [icon-registry.ts](file:///E:/warehouse%20project/warehouse-front/src/app/shared/icons/icon-registry.ts) بدون تغییر دادن خط مبنا و تعاریف نگهبان ۵۵.
+1. **پاک‌سازی رجیستری آیکون‌ها (بند ۳-۵):** بررسی و ممیزی دقیق ۵۳ گونه کنارگذاشته‌شده در `RETIRED_VARIANTS` نگهبان ۵۵؛ شمارش رخدادهای آن‌ها در فرانت‌اند، بک‌اند و الگوهای ساخت پویا، و سپس حذف گونه‌هایی که هیچ رخدادی ندارند (شمارش صفر) از فایل [icon-registry.ts](file:///E:/warehouse%20project/frontend/src/app/shared/icons/icon-registry.ts) بدون تغییر دادن خط مبنا و تعاریف نگهبان ۵۵.
 2. **مستندسازی استانداردهای جعبه‌ابزار مشترک:** به‌روزرسانی مستندات پروژه در [.agents/AGENTS.md](file:///E:/warehouse%20proje...
 
 ---
@@ -1888,11 +1888,11 @@
 ۱. در فایل Documents/Modular_Middle_Path/implementation_plan_modular_middle_path.md این بخش‌ها را کامل بخوان: `## ۲.`، `## ۴.`، `### گام ۰-الف` و `## ۷.`. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را پیش از هر تغییر یادداشت کن؛ پایهٔ این نشست است.
 
 ۲. کار این نشست، دقیقاً طبق `### گام ۰-الف`:
-- با git mv اپ‌ها را جابه‌جا کن: accounts، common، companies، communications، notifications، reports، settings_core و platform_core به warehouse-backend/core/؛ warehouses و inventory به warehouse-backend/modules/warehouse/؛ personnel به warehouse-backend/modules/accounting/. پوشهٔ config و فایل manage.py سر جایشان می‌مانند.
-- در هیچ‌کدام از warehouse-backend/modules/ و warehouse-backend/modules/<x>/ فایل __init__.py نساز (علتش در بخش `### گام ۳` طرح آمده است).
+- با git mv اپ‌ها را جابه‌جا کن: accounts، common، companies، communications، notifications، reports، settings_core و platform_core به backend/core/؛ warehouses و inventory به backend/modules/warehouse/؛ personnel به backend/modules/accounting/. پوشهٔ config و فایل manage.py سر جایشان می‌مانند.
+- در هیچ‌کدام از backend/modules/ و backend/modules/<x>/ فایل __init__.py نساز (علتش در بخش `### گام ۳` طرح آمده است).
 - name و label هیچ AppConfig و هیچ ایمپورتی (from accounts...) را عوض نکن. هیچ مایگریشنی نساز.
-- warehouse-backend/backend_paths.py را با paths() و install() بساز و در config/__init__.py صدا بزن.
-- همهٔ مصرف‌کننده‌های فهرست‌شده در طرح را اصلاح کن: نگهبان ۲۹ (PYTHONPATH برای lint-imports از paths())، اسکریپت‌های scripts/ که sys.path.insert دارند، اسکریپت‌های داخل اپ‌ها که مسیر را از __file__ می‌سازند، pyproject.toml، توضیح .importlinter، Get-BackendWhitelist و Test-BundleStage در deploy.ps1، scripts/deploy_tests/test_bundle.ps1 (همراه یک بررسی تازه: فهرست اپ‌های بسته برابر INSTALLED_APPS پروفایل کامل باشد)، warehouse-backend/docker-compose.yml اگر مسیر اپ دارد، .claude/hooks/guard.py، .claude/skills/safe-migration، .claude/agents، بخش ساختار CLAUDE.md و .agents/AGENTS.md.
+- backend/backend_paths.py را با paths() و install() بساز و در config/__init__.py صدا بزن.
+- همهٔ مصرف‌کننده‌های فهرست‌شده در طرح را اصلاح کن: نگهبان ۲۹ (PYTHONPATH برای lint-imports از paths())، اسکریپت‌های scripts/ که sys.path.insert دارند، اسکریپت‌های داخل اپ‌ها که مسیر را از __file__ می‌سازند، pyproject.toml، توضیح .importlinter، Get-BackendWhitelist و Test-BundleStage در deploy.ps1، scripts/deploy_tests/test_bundle.ps1 (همراه یک بررسی تازه: فهرست اپ‌های بسته برابر INSTALLED_APPS پروفایل کامل باشد)، backend/docker-compose.yml اگر مسیر اپ دارد، .claude/hooks/guard.py، .claude/skills/safe-migration، .claude/agents، بخش ساختار CLAUDE.md و .agents/AGENTS.md.
 - deploy.ps1 فقط در همین نقاط تغییر کند. تغییر دیگری در آن نده.
 - پس از git mv، پوشه‌های قدیمی که فقط __pycache__ (نادیده‌گرفته‌شده در git) یا desktop.ini دارند را پاک کن تا پوشهٔ خالی هم‌نام اپ در ریشهٔ بک‌اند نماند.
 
@@ -1914,9 +1914,9 @@ refactor(modular): step 0-a backend folders
 ### ۱. توضیح علت خطای اولیهٔ رانر (Explain Simply)
 در اجرای آزمون استقرار [scripts/deploy_tests/test_bundle.ps1](file:///E:/warehouse%20project/scripts/deploy_tests/test_bundle.ps1)، خطای زیر رخ داد:
 ```
-Bundle gate failed: warehouse-backend top level differs from the whitelist (got: config, core, manage.py, modules, requirements.lock, requirements.txt)
+Bundle gate failed: backend top level differs from the whitelist (got: config, core, manage.py, modules, requirements.lock, requirements.txt)
 ```
-فایل [warehouse-backend/backend_paths.py](file:///E:/warehouse%20project/warehouse-backend/backend_paths.py) با اینکه در مخزن وجود داشت و در لیست فایل‌های الزامی `Get-BackendWhitelist` تعریف شده بود، اما درون آرشیو `git archive` خروجی داده نمی‌شد.
+فایل [backend/backend_paths.py](file:///E:/warehouse%20project/backend/backend_paths.py) با اینکه در مخزن وجود داشت و در لیست فایل‌های الزامی `Get-BackendWhitelist` تعریف شده بود، اما درون آرشیو `git archive` خروجی داده نمی‌شد.
 
 ---
 
@@ -1933,10 +1933,10 @@ Bundle gate failed: warehouse-backend top level differs from the whitelist (got:
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 18/24 passed
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check`
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --configuration accounting-only --output-path ../scratch/ng-build-acc`
+    - FAILED (exit 1): `cd frontend && npx ng build --output-path ../scratch/ng-build-check`
+    - FAILED (exit 1): `cd frontend && npx ng build --configuration accounting-only --output-path ../scratch/ng-build-acc`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"`
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --configuration warehouse-only --output-path ../scratch/ng-build-wh`
+    - FAILED (exit 1): `cd frontend && npx ng build --configuration warehouse-only --output-path ../scratch/ng-build-wh`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base bde7841 --include "src/**/*.spec.ts"`
   - verify round 1: 24/24 passed
@@ -1949,14 +1949,14 @@ Bundle gate failed: warehouse-backend top level differs from the whitelist (got:
 ۱. در فایل Documents/Modular_Middle_Path/implementation_plan_modular_middle_path.md بخش‌های `## ۴.`، `### گام ۰-ب` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن؛ پایهٔ این نشست است.
 
 ۲. کار این نشست، طبق «نشست ۰-ب-۱» در `### گام ۰-ب`:
-- نگاشت را قطعی کن: برای هر پوشهٔ warehouse-front/src/app/components/<name> از روی route‌ها (app.routes.ts و modules/*/…routes.ts) و گراف ایمپورت تعیین کن به common، warehouse یا accounting می‌رود. جدول نهایی را در بند گزارش این نشست بنویس. پوشه‌های جدول پیش‌نویس طرح فقط وقتی جابه‌جا شوند که شواهد خلافشان را نشان ندهد؛ اگر نشان داد، شاهد را در گزارش بیاور.
+- نگاشت را قطعی کن: برای هر پوشهٔ frontend/src/app/components/<name> از روی route‌ها (app.routes.ts و modules/*/…routes.ts) و گراف ایمپورت تعیین کن به common، warehouse یا accounting می‌رود. جدول نهایی را در بند گزارش این نشست بنویس. پوشه‌های جدول پیش‌نویس طرح فقط وقتی جابه‌جا شوند که شواهد خلافشان را نشان ندهد؛ اگر نشان داد، شاهد را در گزارش بیاور.
 - اسکریپت scripts/refactor/move_front_components.mjs را با API کامپایلر TypeScript (موجود در node_modules) بساز: با git mv پوشه را منتقل کند و مسیرهای نسبی ایمپورت را در همهٔ فایل‌های *.ts (از جمله *.spec.ts و *.dom.spec.ts و import() پویا) بازنویسی کند؛ هم در فایل‌های جابه‌جاشده و هم در فایل‌هایی که به آن‌ها ایمپورت دارند. نام فایل‌ها پسوند .component ندارند (مثل login/login.ts).
-- فقط پوشه‌های گروه common را به warehouse-front/src/app/modules/common/components/ ببر و محتوای modules/platform-shell را در modules/common ادغام کن (index.ts و هر ارجاع به آن را درست کن). پوشه‌های انبار و مالی در این نشست دست نخورند.
+- فقط پوشه‌های گروه common را به frontend/src/app/modules/common/components/ ببر و محتوای modules/platform-shell را در modules/common ادغام کن (index.ts و هر ارجاع به آن را درست کن). پوشه‌های انبار و مالی در این نشست دست نخورند.
 - هر مسیر ثابتی که به پوشه‌های جابه‌جاشدهٔ همین نشست اشاره دارد، در همین نشست اصلاح شود تا همه‌چیز سبز بماند. فهرست کامل این فایل‌ها در `### گام ۰-ب` طرح، بند «مسیرهای ثابتی که باید اصلاح شوند» است: مبنای نگهبان ۵۵ (فقط بازنویسی مسیر، بدون --update-baseline)، نگهبان‌های users (۳۸ تا ۵۱)، scripts/test_guard_hooks.py (مسیر components/login)، dom-verify.js، tsconfig.*.spec.json، specهای __dirname و مستندها. بقیهٔ پوشه‌ها در نشست ۳.
 - templateUrl و styleUrl را دست نزن. هیچ رفتار، قالب یا استایلی را تغییر نده.
 
 ۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: git mv، اسکریپت خودت، و حداکثر دو بار این بیلد برای بازخورد:
-cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent
+cd frontend && npx ng build --output-path ../scratch/ng-build-agent
 بقیهٔ بررسی‌ها (دو بیلد پروفایل، نگهبان‌ها و ng test) را runner اجرا می‌کند.
 
 ۴. پایان:
@@ -1996,18 +1996,18 @@ refactor(modular): step 0-b1 common front folders
 ۱. در فایل طرح بخش‌های `### گام ۰-ب` و `## ۷.` و بند «نشست ۲» زیر `## گزارش پیشرفت` (جدول نهایی نگاشت) را بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
 ۲. کار این نشست، طبق «نشست ۰-ب-۲» در `### گام ۰-ب`:
-- با همان اسکریپت scripts/refactor/move_front_components.mjs همهٔ پوشه‌های باقی‌ماندهٔ warehouse-front/src/app/components را طبق جدول نشست ۲ به modules/warehouse/components/ و modules/accounting/components/ (یا common اگر جدول گفته) ببر. در پایان پوشهٔ components نباید هیچ فایل *.ts داشته باشد.
+- با همان اسکریپت scripts/refactor/move_front_components.mjs همهٔ پوشه‌های باقی‌ماندهٔ frontend/src/app/components را طبق جدول نشست ۲ به modules/warehouse/components/ و modules/accounting/components/ (یا common اگر جدول گفته) ببر. در پایان پوشهٔ components نباید هیچ فایل *.ts داشته باشد.
 - باقی‌ماندهٔ مسیرهای ثابت فهرست‌شده در طرح را اصلاح کن (هر چه نشست ۲ برای پوشه‌های خودش اصلاح نکرده است):
   - مبنای نگهبان ۵۵ (scripts/e2e/clickable_ergonomics_baseline.json): فقط مسیرها را با همان نگاشت بازنویسی کن. --update-baseline اجرا نکن و هیچ عددی را عوض نکن.
   - نگهبان‌های ۳۸ تا ۴۰، ۴۲، ۴۴ تا ۴۸، ۵۰، ۵۱ و guardian_header_harmonization.py، و scripts/test_guard_hooks.py.
-  - warehouse-front/tools/dom-verify.js، tsconfig.spec.json و tsconfig.test21.spec.json.
+  - frontend/tools/dom-verify.js، tsconfig.spec.json و tsconfig.test21.spec.json.
   - specهایی که با __dirname فایل می‌خوانند.
   - .agents/PROJECT_ARCHITECTURE_MAP.md، .claude/skills/design-system، .claude/agents/ui-reviewer.md، CLAUDE.md و .agents/AGENTS.md.
 - در پایان اسکریپت scripts/refactor/move_front_components.mjs را حذف کن (git rm).
 - هیچ رفتار، قالب یا استایلی را تغییر نده.
 
 ۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: git mv، اسکریپت، و حداکثر دو بار:
-cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent
+cd frontend && npx ng build --output-path ../scratch/ng-build-agent
 بقیه را runner اجرا می‌کند.
 
 ۴. پایان:
@@ -2021,7 +2021,7 @@ refactor(modular): step 0-b2 module front folders
 
 ### ۱. توضیح سادهٔ درخواست (Explain Simply)
 کاربر درخواست اجرای **نشست ۳ از ۱۰ (گام ۰-ب-۲: پوشه‌های انبار و مالی در فرانت‌اند)** را دارد:
-- انتقال کلیهٔ ۲۱ پوشهٔ باقیمانده از `warehouse-front/src/app/components` بر اساس جدول قطعی نگاشت نشست ۲ به مقاصد ماژولار:
+- انتقال کلیهٔ ۲۱ پوشهٔ باقیمانده از `frontend/src/app/components` بر اساس جدول قطعی نگاشت نشست ۲ به مقاصد ماژولار:
   - ۱۶ پوشه به ماژول انبار (`modules/warehouse/components/`)
   - ۳ پوشه به ماژول مالی و پرسنلی (`modules/accounting/components/`)
   - ۲ پوشه به ماژول مشترک (`modules/common/components/`)
@@ -2047,7 +2047,7 @@ refactor(modular): step 0-b2 module front folders
 ۱. در فایل طرح بخش‌های `### گام ۱` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
 ۲. کار این نشست، طبق `### گام ۱`:
-- warehouse-front/tools/build-for-modules.js و اسکریپت npm به نام build:modules:
+- frontend/tools/build-for-modules.js و اسکریپت npm به نام build:modules:
   - فهرست ماژول‌ها را از متغیر WH_MODULES می‌خواند. خالی یعنی همهٔ ماژول‌ها.
   - accounting پروفایل accounting-only، warehouse پروفایل warehouse-only، و هر دو یا خالی بیلد کامل را می‌سازد.
   - گزینهٔ --output-path را به ng build می‌دهد و همان مسیر را به tools/patch-ngsw-530.js هم می‌رساند. برای این کار به patch-ngsw-530.js یک آرگومان اختیاری مسیر خروجی اضافه کن؛ بی‌آرگومان، رفتار امروزش عوض نشود.
@@ -2057,7 +2057,7 @@ refactor(modular): step 0-b2 module front folders
   - نشانگر .build-complete شامل MODULES= شود تا -SkipBuild بیلد پروفایل دیگر را دوباره به‌کار نبرد.
   - بررسی بسته build-modules.txt را با Modules سرور مقایسه کند (مقایسهٔ مجموعه، نه ترتیب).
   - -AddModule پیش از تغییر WH_MODULES فرانت را با فهرست تازه بیلد و release کند. بقیهٔ مسیر مثل امروز بماند.
-  - $KnownModules را از git ls-tree کامیت استقرار (warehouse-backend/modules/*/) بسازد، نه ثابت.
+  - $KnownModules را از git ls-tree کامیت استقرار (backend/modules/*/) بسازد، نه ثابت.
 - scripts/deploy/warehouse-deploy.sh: KNOWN_MODULES را از پوشهٔ modules همان release بسازد. MODULE_SERVICES برای ماژول ناشناخته مقدار خالی بگیرد.
 - به نگهبان ۵۳ یک بند تازه اضافه کن: فهرست ماژول‌ها در deploy.ps1 و warehouse-deploy.sh ثابت نوشته نشده باشد.
 - scripts/deploy_tests/test_bundle.ps1 را برای مسیر تازهٔ بیلد به‌روز کن، از جمله بررسی محتوای .build-complete (امروز دقیقاً COMMIT=<sha> را می‌خواهد) که باید با بخش تازهٔ MODULES= بخواند.
@@ -2075,7 +2075,7 @@ feat(modular): step 1 per-module build and deploy
 
 ### ۱. توضیح شفاف درخواست (Explanation)
 در این نشست (نشست ۴ از ۱۰ — گام ۱ از طرح راه میانهٔ ماژولار)، هدف تفکیک مکانیزم‌های بیلد و استقرار برای ماژول‌های جداگانه طبق سند طرح بود:
-1. پیاده‌سازی اسکریپت `warehouse-front/tools/build-for-modules.js` و اسکریپت npm مربوطه (`build:modules`) برای خواندن متغیر `WH_MODULES`، هدایت به پروفایل‌های مربوطه (`accounting-only`، `warehouse-only` یا بیلد کامل)، پشتیبانی از گزینهٔ `--output-path` و ارسال آن به `patch-ngsw-530.js`، و تولید فایل `build-modules.txt`.
+1. پیاده‌سازی اسکریپت `frontend/tools/build-for-modules.js` و اسکریپت npm مربوطه (`build:modules`) برای خواندن متغیر `WH_MODULES`، هدایت به پروفایل‌های مربوطه (`accounting-only`، `warehouse-only` یا بیلد کامل)، پشتیبانی از گزینهٔ `--output-path` و ارسال آن به `patch-ngsw-530.js`، و تولید فایل `build-modules.txt`.
 2. اصلاح `deploy.ps1` جهت بیلد فرانت با `npm run build:modules` و متغیر `WH_MODULES`، افزودن نشانگر `MODULES=` به `.build-complete`، اعتبارسنجی محتوای `build-modules.tx...
 
 ---
@@ -2100,7 +2100,7 @@ feat(modular): step 1 per-module build and deploy
 - بک‌اند:
   - .importlinter را با پوشه‌ها هم‌تراز کن: config بالا، warehouses و inventory و personnel در لایهٔ ماژول، و همهٔ اپ‌های core (از جمله reports) در لایهٔ هسته. C2 دوطرفه بماند و C3 یعنی هیچ اپ هسته‌ای هیچ اپ ماژولی را ایمپورت نکند.
   - ۴ سطر ریشهٔ ترکیب را صفر کن. _PROJECT_LOGGERS در config/settings.py از INSTALLED_APPS ساخته شود. سطر urls.py را پس از هم‌ترازی دوباره بسنج.
-  - هر ۳۱ یال غیرتولیدی را رفع کن. تست‌های ذاتاً بین‌ماژولی را به warehouse-backend/integration_tests/ ببر (این پوشه در root_packages نیست، اسکریپت ریشه ندارد و فقط با برچسب اجرا می‌شود).
+  - هر ۳۱ یال غیرتولیدی را رفع کن. تست‌های ذاتاً بین‌ماژولی را به backend/integration_tests/ ببر (این پوشه در root_packages نیست، اسکریپت ریشه ندارد و فقط با برچسب اجرا می‌شود).
   - شمار یال‌های تولیدی پس از هم‌ترازی ممکن است بیشتر از ۱۰ شود (مثلاً ایمپورت‌های انباری reports). این‌ها در گام ۳ رفع می‌شوند؛ در این نشست رفعشان نکن.
   - پس از همهٔ این‌ها یک بار python scripts/e2e/guardian_modularization.py --update-baseline اجرا کن. عددهای قبل و بعد هر شمارنده را در گزارش بیاور.
 - فرانت: scripts/e2e/guardian_57_front_module_fence.py را بساز، طبق بند «فرانت» در `### گام ۲`:
@@ -2122,7 +2122,7 @@ chore(modular): step 2 backend and front fences
 
 ### ۱. توضیح سادهٔ درخواست کاربر (Simple Explanation)
 در این نشست (نشست ۵ از ۱۰ — راه میانهٔ ماژولار: گام ۲، حصارها)، هدف برقراری و تثبیت کامل حصارهای معماری ماژولار (Fences) در هر دو لایهٔ بک‌اند و فرانت‌اند بود:
-1. **در بک‌اند:** هم‌تراز کردن فایل `.importlinter` با معماری لایه‌ای جدید، صفر کردن سطرهای هاردکد نام ماژول‌ها در ریشهٔ ترکیب (`composition_root_hardcoded_lines`)، شناسایی و رفع کامل هر ۳۱ یال غیرتولیدی (تست‌ها و اسکریپت‌ها) و انتقال آزمون‌های ذاتاً بین‌ماژولی به پوشهٔ ایزولهٔ `warehouse-backend/integration_tests/`، و سپس به‌روزرسانی مبنای نگهبان ۲۹ (`guardian_modularization.py`).
+1. **در بک‌اند:** هم‌تراز کردن فایل `.importlinter` با معماری لایه‌ای جدید، صفر کردن سطرهای هاردکد نام ماژول‌ها در ریشهٔ ترکیب (`composition_root_hardcoded_lines`)، شناسایی و رفع کامل هر ۳۱ یال غیرتولیدی (تست‌ها و اسکریپت‌ها) و انتقال آزمون‌های ذاتاً بین‌ماژولی به پوشهٔ ایزولهٔ `backend/integration_tests/`، و سپس به‌روزرسانی مبنای نگهبان ۲۹ (`guardian_modularization.py`).
 2. **در فرانت‌اند:** طراحی، ساخت و اعتبارسنجی نگهبان ۵۷ فرانت‌اند (`sc...
 
 ---
@@ -2144,7 +2144,7 @@ chore(modular): step 2 backend and front fences
 ۱. در فایل طرح بخش‌های `### گام ۳`، `## ۳.` (جدول ۱۰ یال تولیدی) و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
 ۲. کار این نشست (نیمهٔ اول `### گام ۳`):
-- معرفی خودکار: WAREHOUSE_SPEC و ACCOUNTING_SPEC و فهرست مجوزهای هر ماژول را از core/platform_core/module_catalog.py به warehouse-backend/modules/warehouse/module.py و modules/accounting/module.py ببر. module_catalog.py فقط modules/*/module.py را با importlib.util.spec_from_file_location و نام یکتا پویش کند و شرط برابری code با نام پوشه را بسنجد. config/settings.py همان MODULE_CATALOG را بی‌تغییر بخواند.
+- معرفی خودکار: WAREHOUSE_SPEC و ACCOUNTING_SPEC و فهرست مجوزهای هر ماژول را از core/platform_core/module_catalog.py به backend/modules/warehouse/module.py و modules/accounting/module.py ببر. module_catalog.py فقط modules/*/module.py را با importlib.util.spec_from_file_location و نام یکتا پویش کند و شرط برابری code با نام پوشه را بسنجد. config/settings.py همان MODULE_CATALOG را بی‌تغییر بخواند.
 - ابزار هسته: contribute(point, item)، contributions(point) و company_of(kind, id) در platform_core/registry.py، و رویداد scope_deleted در platform_core/events.py (فایل تازه).
 - این چهار یال، دقیقاً طبق جدول `### گام ۳`:
   - warehouses/signals.py → personnel: انبار scope_deleted را می‌فرستد و personnel/signals.py گیرنده است و همان ۵ مدل را خالی می‌کند. رفتار عوض نشود (خالی کردن، نه حذف).
@@ -2230,7 +2230,7 @@ refactor(modular): step 3b extension points for core edges
 ۱. در فایل طرح بخش‌های `### گام ۴`، `## ۴.` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵، ۹ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
 ۲. کار این نشست، طبق «نشست ۴-الف» در `### گام ۴`:
-- warehouse-front/src/app/core/modules/module-contract.ts: نوع WhFrontendModule (فیلدهای فعلی FrontendModuleSpec به‌علاوهٔ routes، navItems، entityIcons و extensions) و نوع ExtensionMap. نام‌های ExtensionMap را پس از خواندن هر ۲۴ فایلی که isModuleInstalled دارند قطعی کن و فهرستش را در گزارش بیاور.
+- frontend/src/app/core/modules/module-contract.ts: نوع WhFrontendModule (فیلدهای فعلی FrontendModuleSpec به‌علاوهٔ routes، navItems، entityIcons و extensions) و نوع ExtensionMap. نام‌های ExtensionMap را پس از خواندن هر ۲۴ فایلی که isModuleInstalled دارند قطعی کن و فهرستش را در گزارش بیاور.
 - modules/warehouse/module.ts و modules/accounting/module.ts هر کدام export const MODULE.
 - tools/gen-installed-modules.js فایل src/app/modules/installed-modules.ts را از WH_MODULES می‌سازد (خالی یعنی همهٔ پوشه‌هایی که module.ts دارند). نسخهٔ commitشده همهٔ ماژول‌ها را دارد. build-for-modules.js به‌جای انتخاب پروفایل، مولد را صدا بزند و پس از بیلد نسخهٔ commitشده را برگرداند تا درخت کاری تمیز بماند. بازگرداندن حتماً در try/finally باشد تا شکست یا قطع بیلد هم درخت را کثیف نگذارد. قرارداد build:modules (WH_MODULES، --output-path، build-modules.txt) عوض نشود و deploy.ps1 دست نخورد.
 - فایل‌های *.stub.ts و پرچم‌های modules/*/…-flags*.ts و پروفایل‌های accounting-only و warehouse-only و نسخه‌های dev آن‌ها (accounting-dev و warehouse-dev و پیکربندی‌های serve وابسته) از angular.json حذف شوند. اسکریپت‌های npm قدیمی build:accounting و build:warehouse هم به build:modules با WH_MODULES تبدیل یا حذف شوند.
@@ -2255,7 +2255,7 @@ feat(modular): step 4a front module contract
 در این نشست، معماری فرانت‌اند از روش قدیمی «جایگزینی فایل‌های stub و پیکربندی‌های موازی در `angular.json`» به «قرارداد ماژولار مبتنی بر مانیفست و نقطه‌های توسعه (`ExtensionMap`)» ارتقا یافت:
 
 ۱. **تعریف قرارداد ماژول فرانت‌اند (`WhFrontendModule`) و نقطه‌های توسعه (`ExtensionMap`):**
-فایل [module-contract.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/modules/module-contract.ts) ایجاد شد و ۱۱ نقطه توسعهٔ رسمی (`launcherTile`, `userMenu`, `layoutNav`, `systemHealth`, `auditLog`, `clientTelemetry`, `companySettings`, `companyGdrive`, `userPermissions`, `dashboardWidget`, `re...
+فایل [module-contract.ts](file:///E:/warehouse%20project/frontend/src/app/core/modules/module-contract.ts) ایجاد شد و ۱۱ نقطه توسعهٔ رسمی (`launcherTile`, `userMenu`, `layoutNav`, `systemHealth`, `auditLog`, `clientTelemetry`, `companySettings`, `companyGdrive`, `userPermissions`, `dashboardWidget`, `re...
 
 ---
 
@@ -2280,7 +2280,7 @@ feat(modular): step 4a front module contract
 ۲. کار این نشست، طبق «نشست ۴-ب» در `### گام ۴`:
 - هر فایلی از آن ۲۴ فایل که هنوز نام ماژول را با isModuleInstalled یا رشتهٔ ثابت می‌سنجد، به خواندن extensions تبدیل شود. ماژول‌ها نقطه‌ها را در module.ts خود پر کنند. اگر ماژولی به قابلیت ماژول دیگر نیاز دارد، آن هم از راه نقطهٔ توسعه است.
 - تست DOM مرکز عملیات (operations-cockpit و operations-layout) با سه فهرست ماژول.
-- نگهبان ۵۷ سخت‌گیر شود: بررسی‌های قرارداد بند «نگهبان ۵۷ گسترش می‌یابد» در `### گام ۴` (module.ts در هر پوشهٔ ماژول، برابری code با نام پوشه و با warehouse-backend/modules/<x>/module.py، کامل بودن installed-modules.ts) و مبنای همهٔ شمارنده‌ها صفر. یک بار --update-baseline.
+- نگهبان ۵۷ سخت‌گیر شود: بررسی‌های قرارداد بند «نگهبان ۵۷ گسترش می‌یابد» در `### گام ۴` (module.ts در هر پوشهٔ ماژول، برابری code با نام پوشه و با backend/modules/<x>/module.py، کامل بودن installed-modules.ts) و مبنای همهٔ شمارنده‌ها صفر. یک بار --update-baseline.
 - ظاهر و رفتار در پروفایل کامل عوض نشود.
 
 ۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر دو بار npx ng build --output-path ../scratch/ng-build-agent، تست‌های DOM تازهٔ خودت با npx ng test --watch=false --include <فایل spec>، و نگهبان ۵۷ (با --update-baseline یک بار در پایان).
@@ -2322,10 +2322,10 @@ refactor(modular): step 4b front extension points
 
 ۲. کار این نشست، طبق `### گام ۵`:
 - قالب خالی scripts/module-template/ (بک‌اند: module.py و یک اپ با apps.py که در ready() ثبت می‌کند، models.py، urls.py، migrations/__init__.py و tests.py؛ فرانت: module.ts، <code>.routes.ts، nav-items.ts و یک صفحهٔ نمونه که از مؤلفه‌ها و آیکون‌های مشترک استفاده می‌کند).
-- scripts/new_module.py با گزینه‌های --code، --title-fa و --root (پیش‌فرض ریشهٔ همین مخزن). قالب را با نام تازه در <root>/warehouse-backend/modules/<code> و <root>/warehouse-front/src/app/modules/<code> می‌سازد و installed-modules.ts را با gen-installed-modules.js به‌روز می‌کند. هیچ فایل دیگری را تغییر نمی‌دهد. اگر پوشهٔ مقصد وجود دارد، بدون تغییر خطا می‌دهد.
+- scripts/new_module.py با گزینه‌های --code، --title-fa و --root (پیش‌فرض ریشهٔ همین مخزن). قالب را با نام تازه در <root>/backend/modules/<code> و <root>/frontend/src/app/modules/<code> می‌سازد و installed-modules.ts را با gen-installed-modules.js به‌روز می‌کند. هیچ فایل دیگری را تغییر نمی‌دهد. اگر پوشهٔ مقصد وجود دارد، بدون تغییر خطا می‌دهد.
 - راهنمای Documents/Modular_Middle_Path/guide_new_module.md به فارسی و کوتاه، با محتوای فهرست‌شده در `### گام ۵`، داخل <div dir="rtl" align="right">.
-- قالب در مخزن نباید به‌عنوان ماژول نصب‌شده شناخته شود (scripts/module-template بیرون از warehouse-backend/modules و src/app/modules است).
-- حصار ماژول تازه بدون ویرایش هسته: نگهبان ۲۹ بسته‌های ماژول‌ها را از warehouse-backend/modules/*/*/__init__.py کشف کند و اگر در .importlinter نیستند، یک پیکربندی موقت در scratch/ از روی .importlinter به‌علاوهٔ آن‌ها بسازد (لایهٔ ماژول، و قرارداد استقلال برای هر دو ماژول). نگهبان ۵۷ هم پوشه‌های ماژول را خودش کشف کند. هیچ فهرست ثابت ماژولی در این دو نگهبان نماند.
+- قالب در مخزن نباید به‌عنوان ماژول نصب‌شده شناخته شود (scripts/module-template بیرون از backend/modules و src/app/modules است).
+- حصار ماژول تازه بدون ویرایش هسته: نگهبان ۲۹ بسته‌های ماژول‌ها را از backend/modules/*/*/__init__.py کشف کند و اگر در .importlinter نیستند، یک پیکربندی موقت در scratch/ از روی .importlinter به‌علاوهٔ آن‌ها بسازد (لایهٔ ماژول، و قرارداد استقلال برای هر دو ماژول). نگهبان ۵۷ هم پوشه‌های ماژول را خودش کشف کند. هیچ فهرست ثابت ماژولی در این دو نگهبان نماند.
 
 ۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: یک بار python scripts/automation/verify_tools.py sample-module برای بازخورد. هیچ ماژول نمونه‌ای در خود مخزن نساز.
 
@@ -2372,7 +2372,7 @@ feat(modular): step 5 module template and guide
 - هسته به ماژول import مستقیم نگیرد؛ دامنهٔ انبار فقط از راه همان افزونهٔ موجود برود.
 - هیچ مدل و مایگریشنی عوض نشود. فرانت دست نخورد، چون مودال ورود خطاهای ردیف را با همان قالب نشان می‌دهد.
 
-۳. آزمون‌ها، طبق `### ۲.۳.`: فایل تازهٔ warehouse-backend/integration_tests/test_company_scope_reports_import.py با دو شرکت، یک کاربر غیرسوپریوزر در هر شرکت، یک کاربر بی‌شرکت و یک سوپریوزر. هر بند زیر یک متد آزمون جدا است (دست‌کم ۱۳ متد):
+۳. آزمون‌ها، طبق `### ۲.۳.`: فایل تازهٔ backend/integration_tests/test_company_scope_reports_import.py با دو شرکت، یک کاربر غیرسوپریوزر در هر شرکت، یک کاربر بی‌شرکت و یک سوپریوزر. هر بند زیر یک متد آزمون جدا است (دست‌کم ۱۳ متد):
 - run برای personnel_profiles: کاربر شرکت الف فقط ردیف‌های الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ.
 - همین برای monthly_payrolls.
 - همین برای fleet_trips.
@@ -2388,7 +2388,7 @@ feat(modular): step 5 module template and guide
 - تکرار نام کاربری یا کد ملی کاربرِ بیرون از دامنه: خطای ردیف، بی IntegrityError و بی پاسخ ۵۰۰.
 در پروفایل کامل هیچ آزمونی skip نشود. در پروفایل تک‌ماژول، اگر موجودیتی ثبت نیست، همان آزمون با skipTest و پیام روشن رد شود (مثل test_companies_cross_module.py).
 
-۴. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر سه بار فقط فایل آزمون تازه، در پوشهٔ warehouse-backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_company_scope_reports_import --noinput. هرگز manage.py test بی‌برچسب اجرا نکن.
+۴. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر سه بار فقط فایل آزمون تازه، در پوشهٔ backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_company_scope_reports_import --noinput. هرگز manage.py test بی‌برچسب اجرا نکن.
 
 ۵. پایان:
 - خودبازبینی با git diff --stat <پایه>.
@@ -2503,8 +2503,8 @@ refactor(modular): loose coupling cleanup in companies, user menu and archive li
 #### ۱. اقدامات انجام‌شده
 1. **جداسازی تب‌های مالی شرکت‌ها (`providesTreasury`):**
    - ویژگی اختیاری `providesTreasury?: boolean;` به بخش `companies` در `module-contract.ts` افزوده شد.
-   - ماژول حسابداری در `warehouse-front/src/app/modules/accounting/module.ts` مقدار `providesTreasury: true` را در اکستنشن `companies` فعال کرد.
-   - در `warehouse-front/src/app/modules/common/components/operations/companies/companies.ts` گتر `isAccou...
+   - ماژول حسابداری در `frontend/src/app/modules/accounting/module.ts` مقدار `providesTreasury: true` را در اکستنشن `companies` فعال کرد.
+   - در `frontend/src/app/modules/common/components/operations/companies/companies.ts` گتر `isAccou...
 
 ---
 
@@ -2523,7 +2523,7 @@ refactor(modular): loose coupling cleanup in companies, user menu and archive li
 
 
 ۱. قواعد حیاتی:
-- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py، فایل تازهٔ warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فایل فرانتی تغییر نکند.
+- فقط این فایل‌ها را تغییر بده: backend/modules/accounting/personnel/views.py، backend/modules/accounting/personnel/fleet_excel_engine.py، فایل تازهٔ backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فایل فرانتی تغییر نکند.
 - push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
 - هرگز manage.py test بی‌برچسب اجرا نکن (روی دیتابیس واقعی انبارها را پاک می‌کند).
 - هیچ رکورد سفر یا خودرویی حذف نشود. درخواست بیرون از دامنه فقط رد شود؛ داده‌ای پاک یا بازنویسی نشود.
@@ -2531,9 +2531,9 @@ refactor(modular): loose coupling cleanup in companies, user menu and archive li
 
 ۲. زمینه، پیش از هر ویرایش بخوان:
 - در فایل طرح Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md بخش `## ۴.` و دو ورودی آخر زیر `## گزارش پیشرفت`.
-- در warehouse-backend/modules/accounting/personnel/views.py: تابع scope_vehicle_queryset، کل کلاس VehicleTripViewSet (از class VehicleTripViewSet تا class MonthlyWorkPeriodViewSet)، و get_queryset در VehicleDriverProfileViewSet.
-- warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py: تابع‌های export_fleet_monthly_excel و import_fleet_monthly_excel.
-- آزمون test_trips_endpoint_without_company_header_is_company_scoped و setUp کلاس در warehouse-backend/integration_tests/test_company_scope_reports_import.py، به‌عنوان الگوی ساخت داده.
+- در backend/modules/accounting/personnel/views.py: تابع scope_vehicle_queryset، کل کلاس VehicleTripViewSet (از class VehicleTripViewSet تا class MonthlyWorkPeriodViewSet)، و get_queryset در VehicleDriverProfileViewSet.
+- backend/modules/accounting/personnel/fleet_excel_engine.py: تابع‌های export_fleet_monthly_excel و import_fleet_monthly_excel.
+- آزمون test_trips_endpoint_without_company_header_is_company_scoped و setUp کلاس در backend/integration_tests/test_company_scope_reports_import.py، به‌عنوان الگوی ساخت داده.
 - hash فعلی HEAD را یادداشت کن.
 
 ۳. تعریف‌ها:
@@ -2550,7 +2550,7 @@ refactor(modular): loose coupling cleanup in companies, user menu and archive li
 - پیام‌های اعلان (company_{cid}_notifications) و بقیهٔ منطق قفل دوره و ممیزی دست نخورد.
 - بیرون از دامنه: viewsetهای دیگر، فرانت، و آزمون‌های خراب از پیش موجود personnel.
 
-۵. آزمون‌ها: فایل تازهٔ warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py با دو شرکت (الف و ب)، در هر شرکت یک پروژه، یک بخش، یک خودرو و یک سفر با ممیزی؛ یک کاربر غیرسوپریوزر شرکت الف با UserCompanyAccess سطح workspace_full و انتساب فعال به بخش الف و مجوزهای لازم؛ یک کاربر بی‌شرکت؛ یک سوپریوزر. درخواست‌ها بی سربرگ شرکت، مگر جایی که گفته شده. هر بند یک متد جدا (دست‌کم ۱۲ متد):
+۵. آزمون‌ها: فایل تازهٔ backend/integration_tests/test_vehicle_trip_actions_scope.py با دو شرکت (الف و ب)، در هر شرکت یک پروژه، یک بخش، یک خودرو و یک سفر با ممیزی؛ یک کاربر غیرسوپریوزر شرکت الف با UserCompanyAccess سطح workspace_full و انتساب فعال به بخش الف و مجوزهای لازم؛ یک کاربر بی‌شرکت؛ یک سوپریوزر. درخواست‌ها بی سربرگ شرکت، مگر جایی که گفته شده. هر بند یک متد جدا (دست‌کم ۱۲ متد):
 - matrix: کاربر الف فقط خودرو و سفر الف را می‌بیند؛ سوپریوزر هر دو را.
 - matrix با سربرگ شرکت ب برای کاربر الف: هیچ دادهٔ ب برنمی‌گردد (۴۰۳ یا نتیجهٔ بی ب).
 - monthly-summary: کاربر الف هیچ دادهٔ ب نمی‌بیند.
@@ -2566,7 +2566,7 @@ refactor(modular): loose coupling cleanup in companies, user menu and archive li
 - کاربر بی‌شرکت: matrix هیچ خودرویی برنمی‌گرداند.
 هیچ آزمونی در پروفایل کامل skip نشود. اگر personnel نصب نیست، با skipTest و پیام روشن رد شود (مثل همان فایل الگو).
 
-۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار فقط فایل آزمون تازه، در پوشهٔ warehouse-backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. و یک بار: venv\Scripts\python.exe manage.py test personnel.test_attendance_fleet_audit --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن، نه تکرار. فرمان را در پس‌زمینه رها نکن؛ پیش از پایان نوبت هر فرمانی باید تمام شده باشد.
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار فقط فایل آزمون تازه، در پوشهٔ backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. و یک بار: venv\Scripts\python.exe manage.py test personnel.test_attendance_fleet_audit --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن، نه تکرار. فرمان را در پس‌زمینه رها نکن؛ پیش از پایان نوبت هر فرمانی باید تمام شده باشد.
 
 ۷. راستی‌آزمایی پیش از پایان:
 - git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
@@ -2606,7 +2606,7 @@ fix(scope): company scope in VehicleTripViewSet custom actions
 
 
 ۱. قواعد حیاتی:
-- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن، فایل فرانت یا fleet_excel_engine.py تغییر نکند.
+- فقط این فایل‌ها را تغییر بده: backend/modules/accounting/personnel/views.py، backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن، فایل فرانت یا fleet_excel_engine.py تغییر نکند.
 - push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
 - هرگز manage.py test بی‌برچسب اجرا نکن.
 - هیچ رکوردی حذف نشود. درخواست نامعتبر فقط رد شود و پیش از هر نوشتنی برگردد.
@@ -2615,8 +2615,8 @@ fix(scope): company scope in VehicleTripViewSet custom actions
 ۲. زمینه، پیش از هر ویرایش بخوان:
 - آخرین ورودی Antigravity زیر `## گزارش پیشرفت` در Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md (کار نشست قبل، commit d189c44).
 - در views.py کلاس VehicleTripViewSet: متدهای _scoped_vehicles و _scoped_trips، و سه action نوشتنی bulk_save، update_day_trip و bulk_save_monthly_grid، به‌ویژه بلوک «if section_id and not request.user.is_superuser» و خواندن raw_proj و project_id در هر سه.
-- تابع‌های get_request_company_id و validate_user_company_access در warehouse-backend/core/companies/access.py.
-- فایل آزمون warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py.
+- تابع‌های get_request_company_id و validate_user_company_access در backend/core/companies/access.py.
+- فایل آزمون backend/integration_tests/test_vehicle_trip_actions_scope.py.
 - hash فعلی HEAD را یادداشت کن.
 
 ۳. یافته‌های تأییدشدهٔ بازبین که باید رفع شوند:
@@ -2634,7 +2634,7 @@ fix(scope): company scope in VehicleTripViewSet custom actions
 - رفتار مسیر مجاز امروز (خودرو، بخش و پروژهٔ شرکت خود کاربر، یا بی section_id و project_id) عیناً بماند.
 - بیرون از دامنه: warehouse_id درخواست، viewsetهای دیگر، موتور Excel، فرانت.
 
-۵. آزمون‌ها: به فایل warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و همه پاس شوند. مجموع دست‌کم ۲۰ متد. هر بند یک متد جدا، و در هر بند ردشده، پس از خواندن دوباره از دیتابیس هیچ سفر تازه یا تغییری نباشد:
+۵. آزمون‌ها: به فایل backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و همه پاس شوند. مجموع دست‌کم ۲۰ متد. هر بند یک متد جدا، و در هر بند ردشده، پس از خواندن دوباره از دیتابیس هیچ سفر تازه یا تغییری نباشد:
 - update-day-trip با section_id بخش ب توسط کاربر الف: ۴۰۳.
 - bulk-save-monthly-grid با section_id بخش ب توسط کاربر الف: ۴۰۳.
 - bulk-save با خودروی الف و project_id پروژهٔ ب توسط کاربر الف: ۴۰۳.
@@ -2644,7 +2644,7 @@ fix(scope): company scope in VehicleTripViewSet custom actions
 - bulk-save با section_id بخش الف و project_id پروژهٔ دیگری (ناهمخوان): ۴۰۰.
 - مسیر مثبت: bulk-save با خودرو، بخش و پروژهٔ الف توسط کاربر الف موفق است و سفر با همان بخش و پروژه ذخیره می‌شود.
 
-۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن. فرمان را در پس‌زمینه رها نکن.
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار، در پوشهٔ backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن. فرمان را در پس‌زمینه رها نکن.
 
 ۷. راستی‌آزمایی پیش از پایان:
 - git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
@@ -2682,7 +2682,7 @@ fix(scope): validate project and header company in trip write actions
 
 
 ۱. قواعد حیاتی:
-- فقط warehouse-backend/modules/accounting/personnel/tests.py را تغییر بده، مگر اینکه علت یک باگ واقعی در کد حقوق باشد؛ آن‌وقت فقط فایل مربوط در همان پوشه (payroll_engine.py، payroll_exports.py یا views.py)، و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فرانتی تغییر نکند.
+- فقط backend/modules/accounting/personnel/tests.py را تغییر بده، مگر اینکه علت یک باگ واقعی در کد حقوق باشد؛ آن‌وقت فقط فایل مربوط در همان پوشه (payroll_engine.py، payroll_exports.py یا views.py)، و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فرانتی تغییر نکند.
 - هیچ فایلی در Documents یا ریشهٔ مخزن ساخته یا عوض نشود، جز بند گزارش طرح.
 - push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
 - هرگز manage.py test بی‌برچسب اجرا نکن.
@@ -2700,7 +2700,7 @@ fix(scope): validate project and header company in trip write actions
 - اگر انتظار آزمون کهنه است یا آزمون به فایل بیرونی ناپایدار وابسته است: آزمون را طوری درست کن که دادهٔ ورودی‌اش را خودش در حافظه بسازد (مثلاً کتاب‌کار openpyxl با همان ستون‌هایی که import-tax-excel می‌خواند و کدملی پرسنل آزمون)، و برای ZIP به‌جای طول خام، وجود DSKWOR00.DBF و DSKKAR00.DBF و ردیف پرسنل را بسنج. انتظار را سست نکن.
 - اگر باگ واقعی در کد حقوق است: کمترین اصلاح را در همان فایل کد بده و در گزارش بنویس. اگر اصلاح امن نیست، آزمون را با @unittest.skip('باگ برنامه: <شرح کوتاه>') نشانه بگذار و در گزارش بنویس (حداکثر ۲ skip).
 
-۴. فرمان‌هایی که خودت می‌توانی اجرا کنی، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: حداکثر پنج بار venv\Scripts\python.exe manage.py test personnel.tests.PersonnelAppTests --noinput. فرمان را در پس‌زمینه رها نکن. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن.
+۴. فرمان‌هایی که خودت می‌توانی اجرا کنی، در پوشهٔ backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: حداکثر پنج بار venv\Scripts\python.exe manage.py test personnel.tests.PersonnelAppTests --noinput. فرمان را در پس‌زمینه رها نکن. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن.
 
 ۵. پایان:
 - زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — دو آزمون حقوق personnel»، شامل جداگانه: علت ریشه‌ای هر آزمون، تغییرها، آیا باگ برنامه بود، و آزمون‌هایی که واقعاً اجرا شد با نتیجه. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوا داخل همان <div dir="rtl"> موجود بماند.
@@ -2712,7 +2712,7 @@ test(personnel): fix payroll tax import and dsk export tests
 <div dir="rtl" align="right">
 
 ### ۱. توضیح سادهٔ خواستهٔ کاربر
-کاربر درخواست کرد در نشست ۳ از ۴، علت شکست دو آزمون حقوق در کلاس [PersonnelAppTests](file:///E:/warehouse%20project/warehouse-backend/modules/accounting/personnel/tests.py#L26) بررسی و برطرف شود:
+کاربر درخواست کرد در نشست ۳ از ۴، علت شکست دو آزمون حقوق در کلاس [PersonnelAppTests](file:///E:/warehouse%20project/backend/modules/accounting/personnel/tests.py#L26) بررسی و برطرف شود:
 1. `test_import_tax_excel_flow` که با خطای `AssertionError: 0 not greater than 0` روی `matched_count` مواجه می‌شد.
 2. `test_monthly_payroll_calculation_and_exports_flow` که با خطای `AssertionError: 972 not greater than 1000` روی طول بایت خام خروجی فایل زیپ دیسکت‌های بیمه مواجه می‌شد.
 
@@ -2728,7 +2728,7 @@ test(personnel): fix payroll tax import and dsk export tests
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 7/8 passed
-    - FAILED (exit 1): `python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','integration_tests.test_company_scope_reports_import','personnel.test_fleet_scenarios_10_vehicles','personnel.test_attendance_fleet_audit','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=60 and not sk else 1)"`
+    - FAILED (exit 1): `python -c "import os,re,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','integration_tests.test_company_scope_reports_import','personnel.test_fleet_scenarios_10_vehicles','personnel.test_attendance_fleet_audit','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=60 and not sk else 1)"`
   - verify round 1: 8/8 passed
 - **Task:**
 ```
@@ -2737,7 +2737,7 @@ test(personnel): fix payroll tax import and dsk export tests
 
 
 ۱. قواعد حیاتی:
-- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/modules/accounting/personnel/report_entities.py، warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فرانتی تغییر نکند.
+- فقط این فایل‌ها را تغییر بده: backend/modules/accounting/personnel/views.py، backend/modules/accounting/personnel/report_entities.py، backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فرانتی تغییر نکند.
 - ماژول حسابداری هیچ import مستقیمی از warehouses یا inventory نگیرد. انبار فقط از راه رجیستری هسته: company_of('warehouse', id) و contributions('user_extensions') از platform_core.registry.
 - هیچ رکوردی حذف یا بازنویسی نشود. سفرهای موجود فقط دیده‌شدنی‌تر می‌شوند؛ درخواست نامعتبر پیش از هر نوشتن رد می‌شود.
 - push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
@@ -2748,7 +2748,7 @@ test(personnel): fix payroll tax import and dsk export tests
 - دو ورودی آخر Antigravity و آخرین ورودی Claude زیر `## گزارش پیشرفت` در Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md.
 - در views.py: تابع‌های scope_vehicle_queryset و scope_personnel_for_user (الگوی تابع مشترک)، و در VehicleTripViewSet متدهای _scoped_vehicles، _scoped_trips، _validate_write_target و actionهای bulk_save، update_day_trip، bulk_save_monthly_grid و import_monthly_excel.
 - resolve_fleet_trips_scope در report_entities.py.
-- company_of و contributions در warehouse-backend/core/platform_core/registry.py، و _get_scoped_warehouses_qs و get_all_warehouses در warehouse-backend/modules/warehouse/warehouses/user_extension.py (فقط خواندن؛ این فایل را تغییر نده).
+- company_of و contributions در backend/core/platform_core/registry.py، و _get_scoped_warehouses_qs و get_all_warehouses در backend/modules/warehouse/warehouses/user_extension.py (فقط خواندن؛ این فایل را تغییر نده).
 - hash فعلی HEAD را یادداشت کن.
 
 ۳. تعریف‌ها:
@@ -2770,7 +2770,7 @@ test(personnel): fix payroll tax import and dsk export tests
   - سوپریوزر بی سربرگ: فقط سنجش وجود.
 - actionهای خواندنی (matrix، monthly-grid، monthly-summary، export) را تغییر نده؛ دادهٔ آن‌ها از قبل با _scoped_vehicles و _scoped_trips محدود است.
 
-۵. آزمون‌ها: به warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و پاس شوند. هر بند یک متد جدا. آزمون‌های وابسته به انبار، اگر warehouses نصب نیست، با skipTest رد شوند:
+۵. آزمون‌ها: به backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و پاس شوند. هر بند یک متد جدا. آزمون‌های وابسته به انبار، اگر warehouses نصب نیست، با skipTest رد شوند:
 - کاربر الف خودروی یتیم خودش را دارد و سفر آن را با bulk-save ثبت می‌کند؛ سفر در GET /api/personnel/trips/ و در monthly-grid برای همان کاربر دیده می‌شود.
 - همان سفر یتیم برای کاربر دیگر شرکت الف (نه سازنده) و برای کاربر شرکت ب دیده نمی‌شود.
 - سفری با خودروی دارای company شرکت الف و بی section برای کاربر الف دیده می‌شود و برای کاربر ب نه.
@@ -2782,7 +2782,7 @@ test(personnel): fix payroll tax import and dsk export tests
 - warehouse_id ناموجود در bulk-save: ۴۰۰.
 - مسیر مثبت: bulk-save با warehouse_id انبار شرکت الف موفق است و سفر با همان warehouse_id ذخیره می‌شود.
 
-۶. فرمان‌هایی که خودت می‌توانی اجرا کنی، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8:
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی، در پوشهٔ backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8:
 - حداکثر چهار بار: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope integration_tests.test_company_scope_reports_import --noinput.
 - یک بار: venv\Scripts\python.exe manage.py test personnel.test_attendance_fleet_audit --noinput.
 فرمان را در پس‌زمینه رها نکن. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن.
@@ -2831,17 +2831,17 @@ fix(scope): orphan vehicle trips and warehouse check in trip writes
 - هیچ مدل، مایگریشن، `db_table` یا `app_label` را تغییر نده.
 - رفتار برنامه در پروفایل کامل باید دقیقاً همان بماند؛ این نشست فقط جای کد را عوض می‌کند.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md` را بخوان. نقطه‌های توسعه در `warehouse-backend/core/platform_core/registry.py` هستند: `contribute`، `contributions`، `ModuleSpec`، `app_code_to_module`، `module_allowed_app_code` و `app_code_for_sod`. مانیفست ماژول‌ها: `warehouse-backend/modules/warehouse/module.py` و `warehouse-backend/modules/accounting/module.py`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md` را بخوان. نقطه‌های توسعه در `backend/core/platform_core/registry.py` هستند: `contribute`، `contributions`، `ModuleSpec`، `app_code_to_module`، `module_allowed_app_code` و `app_code_for_sod`. مانیفست ماژول‌ها: `backend/modules/warehouse/module.py` و `backend/modules/accounting/module.py`.
 
 ۳. تعریف‌ها:
-- «هسته» یعنی هر فایل زیر `warehouse-backend/core/`.
+- «هسته» یعنی هر فایل زیر `backend/core/`.
 - «نام ماژول در هسته» یعنی رشتهٔ ثابت `'personnel'`، `'warehouse'` یا فهرست زیرماژول‌های یک ماژول که منطق هسته را برای همان ماژول شاخه‌بندی می‌کند.
 - «فهرست کاتالوگ» یعنی همهٔ ماژول‌های `MODULE_CATALOG` در `platform_core/module_catalog.py`، نصب‌شده یا نه.
 
 ۴. کار:
 - الف) قوانین SoD در `core/accounts/sod_cache_service.py` (`DEFAULT_SOD_RULES`):
-  - قوانینی که `'app_module': 'personnel'` دارند را به فایل تازهٔ `warehouse-backend/modules/accounting/personnel/sod_rules.py` ببر.
-  - قوانینی که `'app_module': 'warehouse'` دارند را به فایل تازهٔ `warehouse-backend/modules/warehouse/warehouses/sod_rules.py` ببر.
+  - قوانینی که `'app_module': 'personnel'` دارند را به فایل تازهٔ `backend/modules/accounting/personnel/sod_rules.py` ببر.
+  - قوانینی که `'app_module': 'warehouse'` دارند را به فایل تازهٔ `backend/modules/warehouse/warehouses/sod_rules.py` ببر.
   - هر ماژول قوانینش را در `ready()` اپ خودش با `contribute('sod_rules', rule)` ثبت کند (هر قانون یک مشارکت).
   - `DEFAULT_SOD_RULES` در هسته به فهرستی تبدیل شود که از `contributions('sod_rules')` ساخته می‌شود؛ محتوا و ترتیب قوانین در پروفایل کامل همان بماند.
 - ب) `SwitchAppScopeView` در `core/accounts/views.py`: شرط `target_app not in ('warehouse', 'finance')` با مجموعهٔ `module_allowed_app_code(code)` برای همهٔ ماژول‌های فهرست کاتالوگ جایگزین شود. برای دو ماژول فعلی همان دو مقدار `'warehouse'` و `'finance'` پذیرفته می‌شود.
@@ -2853,10 +2853,10 @@ fix(scope): orphan vehicle trips and warehouse check in trip writes
   - این دو فهرست با `audit_modules` فعلی یکی نیستند؛ از `audit_modules` استفاده نکن تا نتیجهٔ فیلتر عوض نشود.
   - یک تابع کمکی `audit_scope_keys(module_code)` در `registry.py` بنویس که فهرست ماژول را برگرداند (برای ماژول نصب‌نشده فهرست خالی) و هر سه جای `AuditLogViewSet` از آن استفاده کنند.
 - ه) در `core/settings_core/google_drive_views.py`، `apps.get_model('personnel', 'CompanyGoogleDriveConfig')` حذف شود: اپ personnel در `ready()` مدل را با `contribute('company_gdrive_config_model', CompanyGoogleDriveConfig)` ثبت کند و هسته آن را از `contributions('company_gdrive_config_model')` بخواند؛ اگر چیزی ثبت نشده بود همان رفتار فعلی شاخهٔ «اپ نصب نیست» اجرا شود.
-- و) `packages/*/pyproject.toml`: مسیرهای `package-dir` و `where` را با ساختار فعلی تطبیق بده: `wh-platform` از `warehouse-backend/core` (و شامل `companies*` و `reports*`)، `wh-warehouse` از `warehouse-backend/modules/warehouse` (بدون `reports*`)، `wh-accounting` از `warehouse-backend/modules/accounting`.
+- و) `packages/*/pyproject.toml`: مسیرهای `package-dir` و `where` را با ساختار فعلی تطبیق بده: `wh-platform` از `backend/core` (و شامل `companies*` و `reports*`)، `wh-warehouse` از `backend/modules/warehouse` (بدون `reports*`)، `wh-accounting` از `backend/modules/accounting`.
 - بیرون از دامنه: `apps.get_model('warehouses', 'Warehouse')` هایی که پشت `apps.is_installed('warehouses')` هستند، منطق `active_app` در `core/accounts/serializers.py`، و فایل‌های `personnel/section_guardian.py` و `personnel/phase_guardian_approval.py`.
 
-۵. فرمان‌های مجاز: `python scripts/automation/verify_tools.py django-check` حداکثر سه بار و `warehouse-backend\venv\Scripts\python.exe manage.py test accounts --noinput` در پوشهٔ `warehouse-backend` با `PYTHONUTF8=1` حداکثر دو بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: `python scripts/automation/verify_tools.py django-check` حداکثر سه بار و `backend\venv\Scripts\python.exe manage.py test accounts --noinput` در پوشهٔ `backend` با `PYTHONUTF8=1` حداکثر دو بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین و مطمئن شو هیچ فایل مایگریشن یا قالب فرانت تغییر نکرده است.
 
@@ -2899,7 +2899,7 @@ refactor(core): move module-specific rules out of the backend core into registry
 - هیچ فیلد، `Meta`، `db_table`، `app_label` یا مایگریشنی تغییر نکند و هیچ مایگریشن تازه‌ای ساخته نشود.
 - بدنهٔ کلاس‌ها و توابع را دوباره تایپ نکن؛ فقط جابه‌جا کن.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `warehouse-backend/modules/accounting/personnel/models.py` و `warehouse-backend/modules/accounting/personnel/serializers.py`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `backend/modules/accounting/personnel/models.py` و `backend/modules/accounting/personnel/serializers.py`.
 
 ۳. تعریف‌ها:
 - «Barrel» یعنی همان `models.py` یا `serializers.py` که فقط با import صریح نام‌به‌نام (`from .models_domains.hr import PersonnelProfile, PersonnelBankAccount`) همهٔ نام‌ها را دوباره در دسترس می‌گذارد. `import *` ممنوع است، چون نام‌های آغازشده با `_` را صادر نمی‌کند.
@@ -2922,7 +2922,7 @@ refactor(core): move module-specific rules out of the backend core into registry
 - د) `models.py` و `serializers.py` به Barrel صریح تبدیل شوند (هر کدام زیر ۲۵۰ خط). هر فایل دامنه حداکثر ۹۰۰ خط.
 - بیرون از دامنه: هر تغییر منطق، نام‌گذاری تازه، و فایل‌های دیگر personnel.
 
-۵. فرمان‌های مجاز: اجرای اسکریپت خودت با `python scratch/split_personnel_models.py`، `python scripts/automation/verify_tools.py django-check` حداکثر سه بار، `python scripts/automation/verify_tools.py migrations-unchanged` حداکثر سه بار، و `python scripts/automation/verify_tools.py module-names --base <پایه> --file warehouse-backend/modules/accounting/personnel/models.py warehouse-backend/modules/accounting/personnel/serializers.py` حداکثر سه بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: اجرای اسکریپت خودت با `python scratch/split_personnel_models.py`، `python scripts/automation/verify_tools.py django-check` حداکثر سه بار، `python scripts/automation/verify_tools.py migrations-unchanged` حداکثر سه بار، و `python scripts/automation/verify_tools.py module-names --base <پایه> --file backend/modules/accounting/personnel/models.py backend/modules/accounting/personnel/serializers.py` حداکثر سه بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین و مطمئن شو هیچ فایلی در `migrations/` تغییر نکرده است.
 
@@ -2964,7 +2964,7 @@ refactor(personnel): split models and serializers into domain packages with expl
 - `manage.py test` را فقط با برچسب اپ اجرا کن.
 - بدنهٔ کلاس‌ها و توابع را دوباره تایپ نکن؛ فقط جابه‌جا کن. هیچ منطق دامنهٔ شرکت، دسترسی یا اعتبارسنجی نباید عوض شود.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل: `warehouse-backend/modules/accounting/personnel/views.py` (حدود ۱۱ هزار خط، ۲۲ ViewSet).
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل: `backend/modules/accounting/personnel/views.py` (حدود ۱۱ هزار خط، ۲۲ ViewSet).
 
 ۳. تعریف‌ها:
 - «Barrel» یعنی `views.py` که فقط با import صریح نام‌به‌نام همهٔ نام‌ها را دوباره در دسترس می‌گذارد. `import *` ممنوع است.
@@ -2986,7 +2986,7 @@ refactor(personnel): split models and serializers into domain packages with expl
 - د) اگر تابعی در فایل دیگری از personnel با `views.` صدا زده یا patch می‌شود، همان نام در Barrel بماند. خط verify `module-names` این را می‌سنجد.
 - بیرون از دامنه: `section_guardian.py`، `phase_guardian_approval.py`، `urls.py` و هر تغییر منطق.
 
-۵. فرمان‌های مجاز: اجرای اسکریپت خودت، `python scripts/automation/verify_tools.py django-check` حداکثر سه بار، `python scripts/automation/verify_tools.py module-names --base <پایه> --file warehouse-backend/modules/accounting/personnel/views.py` حداکثر سه بار، و `warehouse-backend\venv\Scripts\python.exe manage.py test personnel --noinput` در پوشهٔ `warehouse-backend` با `PYTHONUTF8=1` یک بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: اجرای اسکریپت خودت، `python scripts/automation/verify_tools.py django-check` حداکثر سه بار، `python scripts/automation/verify_tools.py module-names --base <پایه> --file backend/modules/accounting/personnel/views.py` حداکثر سه بار، و `backend\venv\Scripts\python.exe manage.py test personnel --noinput` در پوشهٔ `backend` با `PYTHONUTF8=1` یک بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ جز `views.py` و پوشهٔ تازه نباید فایلی تغییر کرده باشد.
 
@@ -3025,7 +3025,7 @@ refactor(personnel): split views into domain modules with an explicit barrel
 - بدنهٔ کلاس‌ها و توابع را دوباره تایپ نکن؛ فقط جابه‌جا کن. هیچ منطق تغییر نکند.
 - ۳۲ آزمون `inventory` و ۱ آزمون `warehouses` از پیش شکسته‌اند و در `scripts/automation/known_backend_failures.txt` فهرست شده‌اند. آن‌ها را درست نکن و آن فایل را تغییر نده.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `warehouse-backend/modules/warehouse/inventory/views.py` و `warehouse-backend/core/accounts/views.py`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `backend/modules/warehouse/inventory/views.py` و `backend/core/accounts/views.py`.
 
 ۳. تعریف‌ها: «Barrel» یعنی `views.py` که فقط با import صریح نام‌به‌نام همهٔ نام‌ها را دوباره در دسترس می‌گذارد. `import *` ممنوع است.
 
@@ -3050,7 +3050,7 @@ refactor(personnel): split views into domain modules with an explicit barrel
 - د) هر دو `views.py` به Barrel صریح زیر ۲۰۰ خط تبدیل شوند. هر فایل دامنه حداکثر ۲۸۰۰ خط. `urls.py`، `views_photos.py` و آزمون‌ها بدون تغییر کار کنند.
 - بیرون از دامنه: `phase_guardian_approval.py`، `urls.py` و هر تغییر منطق.
 
-۵. فرمان‌های مجاز: اجرای اسکریپت خودت، `python scripts/automation/verify_tools.py django-check` حداکثر سه بار و `python scripts/automation/verify_tools.py module-names --base <پایه> --file warehouse-backend/modules/warehouse/inventory/views.py warehouse-backend/core/accounts/views.py` حداکثر سه بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: اجرای اسکریپت خودت، `python scripts/automation/verify_tools.py django-check` حداکثر سه بار و `python scripts/automation/verify_tools.py module-names --base <پایه> --file backend/modules/warehouse/inventory/views.py backend/core/accounts/views.py` حداکثر سه بار. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ جز دو `views.py` و دو پوشهٔ تازه نباید فایلی تغییر کرده باشد.
 
@@ -3063,7 +3063,7 @@ refactor(backend): split inventory and accounts views into domain modules with e
 <div dir="rtl" align="right">
 
 ### ۱. توضیح سادهٔ درخواست کاربر (Explain Simply)
-در نشست ۴ از ۱۱ از طرح ماژولارسازی عمیق، دو فایل حجیم ویو در بک‌اند شامل [inventory/views.py](file:///E:/warehouse%20project/warehouse-backend/modules/warehouse/inventory/views.py) (حدود ۵۱۰۰ خط) و [accounts/views.py](file:///E:/warehouse%20project/warehouse-backend/core/accounts/views.py) (حدود ۳۳۰۰ خط) بدون کوچک‌ترین تغییر در منطق بیزینس، محاسبات، دسترسی‌ها یا تست‌ها، باید به پکیج‌های دامنه‌ای مجزا (`views_domains/`) شکسته شده و فایل‌های اصلی `views.py` به ماژول‌های Barrel صریح (بدون `import *` و با صادرات نام‌به‌نام همهٔ نمادها زیر ۲۰۰ خط) تبدیل شوند.
+در نشست ۴ از ۱۱ از طرح ماژولارسازی عمیق، دو فایل حجیم ویو در بک‌اند شامل [inventory/views.py](file:///E:/warehouse%20project/backend/modules/warehouse/inventory/views.py) (حدود ۵۱۰۰ خط) و [accounts/views.py](file:///E:/warehouse%20project/backend/core/accounts/views.py) (حدود ۳۳۰۰ خط) بدون کوچک‌ترین تغییر در منطق بیزینس، محاسبات، دسترسی‌ها یا تست‌ها، باید به پکیج‌های دامنه‌ای مجزا (`views_domains/`) شکسته شده و فایل‌های اصلی `views.py` به ماژول‌های Barrel صریح (بدون `import *` و با صادرات نام‌به‌نام همهٔ نمادها زیر ۲۰۰ خط) تبدیل شوند.
 
 ---
 
@@ -3093,7 +3093,7 @@ refactor(backend): split inventory and accounts views into domain modules with e
 - قانون از دست نرفتن داده: در `sync-pull.service.ts` فقط منبع آدرس و نام پارامتر عوض می‌شود. ترتیب درخواست‌ها، شرط پاک‌کردن یا جایگزینی کش محلی، و رفتار خطا (از جمله `isServerUnreachable()`) دقیقاً همان بماند. کش منقضی هرگز حذف نمی‌شود.
 - هیچ فایل در `core/`، `shared/` یا `modules/common/` چیزی از `modules/warehouse/` یا `modules/accounting/` import نکند.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `warehouse-front/src/app/core/modules/module-contract.ts` (`ExtensionMap`، الگوی `companyApiEndpoints`)، `core/modules/module-registry.service.ts` (`getExtensions`)، `core/services/sync-pull.service.ts`، `modules/warehouse/module.ts`، `modules/accounting/module.ts`، `dev-manager-modular.bat`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `frontend/src/app/core/modules/module-contract.ts` (`ExtensionMap`، الگوی `companyApiEndpoints`)، `core/modules/module-registry.service.ts` (`getExtensions`)، `core/services/sync-pull.service.ts`، `modules/warehouse/module.ts`، `modules/accounting/module.ts`، `dev-manager-modular.bat`.
 
 ۳. تعریف‌ها: «نقطهٔ توسعه» یعنی فیلد اختیاری در `ExtensionMap` که ماژول در `module.ts` پر می‌کند و هسته با `moduleRegistry.getExtensions('<نام>')` می‌خواند، همان الگوی `companyApiEndpoints` در `core/api/company-api.service.ts`.
 
@@ -3106,7 +3106,7 @@ refactor(backend): split inventory and accounts views into domain modules with e
 - ج) در `dev-manager-modular.bat`، فرمان‌های `npm run start:accounting -- --port 4300` و `npm run start:warehouse -- --port 4300` را با `npm start -- --port 4300` جایگزین کن. یک خط توضیح `rem` بگذار که سرور توسعه همیشه همهٔ ماژول‌ها را نشان می‌دهد و بیلد تک‌ماژول با `npm run build:modules` است. `package.json` تغییر نکند.
 - بیرون از دامنه: `offline-sync.service.ts`، `photo-upload-queue.service.ts`، `app-persona.service.ts`، `session-tab.service.ts`، `auth.service.ts` و هر فایل قالب `.html`.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین و بررسی کن در `sync-pull.service.ts` جز منبع آدرس و پارامتر چیزی عوض نشده باشد.
 
@@ -3119,12 +3119,12 @@ refactor(front-core): sync-pull endpoints from module contract and remove deprec
 <div dir="rtl" align="right">
 
 ### ۱. توضیح سادهٔ علت خطا
-در جریان اجرای آزمون مقایسه‌ای تست‌های فرانت‌اند (`ng-test-compare`)، آزمون واحد [app-persona.generic-module.spec.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/services/app-persona.generic-module.spec.ts) با خطای `TypeError: Cannot read properties of undefined (reading 'clear')` به دلیل عدم تعریف شیء `localStorage` در محیط اجرایی ایزولهٔ ورکر شکست خورده بود (در نود ۲۲ متغیر `localStorage` پیش‌فرض تعریف نشده و آزمون فاقد موک مستقل بود).
+در جریان اجرای آزمون مقایسه‌ای تست‌های فرانت‌اند (`ng-test-compare`)، آزمون واحد [app-persona.generic-module.spec.ts](file:///E:/warehouse%20project/frontend/src/app/core/services/app-persona.generic-module.spec.ts) با خطای `TypeError: Cannot read properties of undefined (reading 'clear')` به دلیل عدم تعریف شیء `localStorage` در محیط اجرایی ایزولهٔ ورکر شکست خورده بود (در نود ۲۲ متغیر `localStorage` پیش‌فرض تعریف نشده و آزمون فاقد موک مستقل بود).
 
 ---
 
 ### ۲. اعتبارسنجی و ریشه‌یابی
-- فایل‌های دیگر سرویس‌های هسته نظیر [offline.interceptor.spec.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.i...
+- فایل‌های دیگر سرویس‌های هسته نظیر [offline.interceptor.spec.ts](file:///E:/warehouse%20project/frontend/src/app/core/interceptors/offline.i...
 
 ---
 
@@ -3150,7 +3150,7 @@ refactor(front-core): sync-pull endpoints from module contract and remove deprec
 - `core/services/photo-upload-queue.service.ts` در هسته می‌ماند و در این نشست تغییر نمی‌کند، چون `offline-sync.service.ts` و `domain-migration.service.ts` از آن استفاده می‌کنند.
 - فایل‌ها با `git mv` منتقل شوند تا تاریخچه بماند. منطق هیچ سرویسی عوض نشود.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `warehouse-front/src/app/core/modules/module-contract.ts` (الگوی `companyApiEndpoints`)، `core/api/index.ts`، `shared/index.ts`، `modules/warehouse/module.ts`، `modules/accounting/module.ts`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `frontend/src/app/core/modules/module-contract.ts` (الگوی `companyApiEndpoints`)، `core/api/index.ts`، `shared/index.ts`، `modules/warehouse/module.ts`، `modules/accounting/module.ts`.
 
 ۳. تعریف‌ها: «نقطهٔ توسعه» یعنی فیلد اختیاری در `ExtensionMap` که ماژول در `module.ts` پر می‌کند و هسته با `moduleRegistry.getExtensions('<نام>')` می‌خواند.
 
@@ -3170,7 +3170,7 @@ refactor(front-core): sync-pull endpoints from module contract and remove deprec
 - د) پیش از هر انتقال، با grep مطمئن شو هیچ فایل `core/`، `shared/` یا `modules/common/` از فایل منتقل‌شده استفاده نمی‌کند. اگر استفاده می‌کند، آن فایل را منتقل نکن و در گزارش بنویس.
 - بیرون از دامنه: `personnel-api.service.ts` (نشست بعد)، `offline-sync.service.ts`، `photo-upload-queue.service.ts` و فایل‌های قالب `.html`، به‌جز تغییر مسیر import یا selector که لازم باشد.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و حداکثر دو بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و حداکثر دو بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat -M` را ببین و بررسی کن انتقال‌ها rename ثبت شده‌اند.
 
@@ -3214,7 +3214,7 @@ refactor(front-warehouse): move warehouse services into the module and decouple 
 - هیچ فایل در `core/`، `shared/` یا `modules/common/` چیزی از `modules/accounting/` import نکند.
 - امضا، آدرس، پارامتر و نوع خروجی هیچ متد API عوض نشود. هیچ شیمی در `core/api/` ساخته نشود.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل: `warehouse-front/src/app/core/api/personnel-api.service.ts` و spec کنار آن `core/api/personnel-fleet.spec.ts`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل: `frontend/src/app/core/api/personnel-api.service.ts` و spec کنار آن `core/api/personnel-fleet.spec.ts`.
 
 ۳. تعریف‌ها: «Facade» یعنی کلاس `PersonnelApiService` که همهٔ متدهای عمومی فعلی را با همان امضا نگه می‌دارد و هر متد فقط یک خط به سرویس دامنه می‌سپارد.
 
@@ -3230,7 +3230,7 @@ refactor(front-warehouse): move warehouse services into the module and decouple 
 - د) importهای همهٔ مصرف‌کننده‌ها در `modules/accounting/` به مسیر تازه به‌روز شود و `core/api/index.ts` دیگر آن را export نکند.
 - بیرون از دامنه: فایل‌های قالب `.html` و `section_guardian.py`.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat -M` را ببین؛ شمار متدهای عمومی `PersonnelApiService` باید با کامیت پایه برابر باشد.
 
@@ -3277,7 +3277,7 @@ refactor(front-accounting): split personnel api into domain services inside the 
 - این نشست فقط کد را جابه‌جا می‌کند. هیچ شرط، ترتیب، await، try/catch، کلید IndexedDB یا نام جدول عوض نشود.
 - هیچ فایل در `core/` چیزی از `modules/` import نکند.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `warehouse-front/src/app/core/services/offline-sync.service.ts`، `core/services/photo-upload-queue.service.ts`، `core/modules/module-contract.ts`، `modules/warehouse/module.ts` و specهای این دو سرویس.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها: `frontend/src/app/core/services/offline-sync.service.ts`، `core/services/photo-upload-queue.service.ts`، `core/modules/module-contract.ts`، `modules/warehouse/module.ts` و specهای این دو سرویس.
 
 ۳. تعریف‌ها: «جابه‌جایی بدون تغییر منطق» یعنی بدنهٔ هر متد بدون تغییر به تابع یا کلاس کمکی منتقل شود و متد اصلی همان امضا را نگه دارد و فقط آن را صدا بزند.
 
@@ -3292,7 +3292,7 @@ refactor(front-accounting): split personnel api into domain services inside the 
 - د) specهای موجود دست نخورند، مگر برای اصلاح مسیر import.
 - بیرون از دامنه: `sync-pull.service.ts`، `offline-db.ts`، `domain-migration.service.ts`، Service Worker و هر فایل قالب.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: diff `offline-sync.service.ts` را متد به متد با فایل‌های تازه مقایسه کن و مطمئن شو هیچ شرط حذف رکورد صف عوض نشده است.
 
@@ -3322,7 +3322,7 @@ refactor(offline): split offline sync service into focused helpers without behav
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 6/10 passed
-    - FAILED (exit 1): `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check`
+    - FAILED (exit 1): `cd frontend && npx ng build --output-path ../scratch/ng-build-check`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 18b9223 --include "src/**/*.spec.ts"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 18b9223 --grep "refactor(accounting-ui): extract facades for four large accounting components"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
@@ -3339,7 +3339,7 @@ refactor(offline): split offline sync service into focused helpers without behav
 - هر متد، property، signal، `@Input` و `@Output` که قالب یا spec از آن استفاده می‌کند، روی کلاس کامپوننت با همان نام و امضا بماند و فقط به Facade بسپارد.
 - رفتار، اعتبارسنجی شبا و بانک، تاریخ شمسی و خروجی Excel تغییر نکند.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `warehouse-front/src/app/modules/accounting/components/`: `finance/employee/employee-new-personnel/employee-new-personnel.ts`، `finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، `finance/employee/employee-attendance/employee-attendance.ts` و `organization/projects-and-sections/projects-and-sections.ts`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `frontend/src/app/modules/accounting/components/`: `finance/employee/employee-new-personnel/employee-new-personnel.ts`، `finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، `finance/employee/employee-attendance/employee-attendance.ts` و `organization/projects-and-sections/projects-and-sections.ts`.
 
 ۳. تعریف‌ها:
 - «Facade» یعنی کلاس `@Injectable()` بدون `providedIn` در فایل `<نام>.facade.ts` کنار کامپوننت، که در آرایهٔ `providers` همان کامپوننت ثبت می‌شود و منطق محاسبه، نگاشت، فیلتر و فراخوانی API را نگه می‌دارد.
@@ -3354,7 +3354,7 @@ refactor(offline): split offline sync service into focused helpers without behav
   4. `projects-and-sections`: درخت پروژه و بخش، تنظیمات مؤثر حقوق پروژه، انتساب کاربران، Excel.
 - بیرون از دامنه: قالب‌های `.html`، فایل‌های استایل و هر کامپوننت دیگر.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ هیچ فایل `.html` نباید در آن باشد.
 
@@ -3396,7 +3396,7 @@ refactor(accounting-ui): extract facades for four large accounting components
 - هر متد، property، signal، `@Input` و `@Output` که قالب یا spec از آن استفاده می‌کند، روی کلاس کامپوننت با همان نام و امضا بماند و فقط به Facade بسپارد.
 - رفتار، اعتبارسنجی شبا و بانک، تاریخ شمسی و خروجی Excel تغییر نکند.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `warehouse-front/src/app/modules/accounting/components/`: `finance/employee/employee-new-personnel/employee-new-personnel.ts`، `finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، `finance/employee/employee-attendance/employee-attendance.ts` و `organization/projects-and-sections/projects-and-sections.ts`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `frontend/src/app/modules/accounting/components/`: `finance/employee/employee-new-personnel/employee-new-personnel.ts`، `finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، `finance/employee/employee-attendance/employee-attendance.ts` و `organization/projects-and-sections/projects-and-sections.ts`.
 
 ۳. تعریف‌ها:
 - «Facade» یعنی کلاس `@Injectable()` بدون `providedIn` در فایل `<نام>.facade.ts` کنار کامپوننت، که در آرایهٔ `providers` همان کامپوننت ثبت می‌شود و منطق محاسبه، نگاشت، فیلتر و فراخوانی API را نگه می‌دارد.
@@ -3411,7 +3411,7 @@ refactor(accounting-ui): extract facades for four large accounting components
   4. `projects-and-sections`: درخت پروژه و بخش، تنظیمات مؤثر حقوق پروژه، انتساب کاربران، Excel.
 - بیرون از دامنه: قالب‌های `.html`، فایل‌های استایل و هر کامپوننت دیگر.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ هیچ فایل `.html` نباید در آن باشد.
 
@@ -3454,7 +3454,7 @@ refactor(accounting-ui): extract facades for four large accounting components
 - هر متد، property، signal، `@Input` و `@Output` که قالب یا spec از آن استفاده می‌کند، روی کلاس کامپوننت با همان نام و امضا بماند و فقط به Facade بسپارد.
 - قانون از دست نرفتن داده: ادغام رکوردهای `_offlinePending` و patch درجای WebSocket دقیقاً همان رفتار را داشته باشند؛ هیچ رکورد محلی در حال انتظار نادیده گرفته یا حذف نشود.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `warehouse-front/src/app/modules/warehouse/components/`: `customs/customs.ts`، `counter/counter-dashboard/counter-dashboard.ts`، `supervisor/supervisor-dashboard/supervisor-dashboard.ts` و `manager-review/manager-review.ts`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `frontend/src/app/modules/warehouse/components/`: `customs/customs.ts`، `counter/counter-dashboard/counter-dashboard.ts`، `supervisor/supervisor-dashboard/supervisor-dashboard.ts` و `manager-review/manager-review.ts`.
 
 ۳. تعریف‌ها:
 - «Facade» یعنی کلاس `@Injectable()` بدون `providedIn` در فایل `<نام>.facade.ts` کنار کامپوننت، که در آرایهٔ `providers` همان کامپوننت ثبت می‌شود.
@@ -3470,7 +3470,7 @@ refactor(accounting-ui): extract facades for four large accounting components
   - منطق ادغام `_offlinePending` و WebSocket فقط اگر لازم بود و بدون تغییر منتقل شود.
 - بیرون از دامنه: قالب‌های `.html`، فایل‌های استایل، سرویس‌های هسته و هر کامپوننت دیگر.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front` و یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend` و یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ هیچ فایل `.html` نباید در آن باشد.
 
@@ -3520,7 +3520,7 @@ refactor(warehouse-ui): extract facades for four large warehouse cartables
 - هر متد، property، signal، `@Input` و `@Output` که قالب یا spec از آن استفاده می‌کند، روی کلاس کامپوننت با همان نام و امضا بماند و فقط به Facade بسپارد.
 - نگهبان‌ها هرگز ضعیف‌تر نشوند: هیچ بررسی موجود حذف یا شل نشود.
 
-۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `warehouse-front/src/app/modules/common/components/`: `operations/companies/companies.ts`، `users/users.ts`، `audit/audit.ts` و `id-cards/id-cards.ts`. نگهبان‌ها: `scripts/e2e/guardian_modularization.py` و `scripts/e2e/guardian_57_front_module_fence.py`.
+۲. زمینه: بخش `## ۵.` سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. فایل‌ها در `frontend/src/app/modules/common/components/`: `operations/companies/companies.ts`، `users/users.ts`، `audit/audit.ts` و `id-cards/id-cards.ts`. نگهبان‌ها: `scripts/e2e/guardian_modularization.py` و `scripts/e2e/guardian_57_front_module_fence.py`.
 
 ۳. تعریف‌ها:
 - «Facade» یعنی کلاس `@Injectable()` بدون `providedIn` در فایل `<نام>.facade.ts` کنار کامپوننت، که در آرایهٔ `providers` همان کامپوننت ثبت می‌شود.
@@ -3537,7 +3537,7 @@ refactor(warehouse-ui): extract facades for four large warehouse cartables
 - د) در `.agents/PROJECT_ARCHITECTURE_MAP.md` ساختار تازه را ثبت کن: پکیج‌های `models_domains/`، `serializers_domains/` و `views_domains/` در بک‌اند، `modules/warehouse/api/`، `modules/warehouse/services/`، `modules/accounting/api/`، `core/services/offline/`، نقطه‌های توسعهٔ `syncConfig`، `projectLookup`، `dynamicFields` و `photoUpload`، و الگوی `*.facade.ts`.
 - بیرون از دامنه: قالب‌های `.html`، `CLAUDE.md` و هر کامپوننت دیگر.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front`، یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`، و حداکثر دو بار هر کدام از `python scripts/e2e/guardian_modularization.py`، `python scripts/e2e/guardian_57_front_module_fence.py` و `python scripts/e2e/guardian_57_front_module_fence.py --self-test`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend`، یک بار `python scripts/e2e/guardian_56_change_integrity.py --base <پایه>`، و حداکثر دو بار هر کدام از `python scripts/e2e/guardian_modularization.py`، `python scripts/e2e/guardian_57_front_module_fence.py` و `python scripts/e2e/guardian_57_front_module_fence.py --self-test`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ هیچ فایل `.html` و `CLAUDE.md` نباید در آن باشد.
 
@@ -3563,7 +3563,7 @@ refactor(platform-ui): extract facades for common components and update architec
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 15/16 passed
-    - FAILED (exit 1): `python -c "import pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); reg=pathlib.Path('warehouse-backend/core/platform_core/registry.py').read_text(encoding='utf-8'); fn=reg[reg.find('def audit_scope_keys'):][:900]; sp=(app/'core/services/sync-pull.service.ts').read_text(encoding='utf-8'); pq=(app/'core/services/photo-upload-queue.service.ts').read_text(encoding='utf-8'); bat=pathlib.Path('dev-manager-modular.bat').read_bytes(); amap=pathlib.Path('.agents/PROJECT_ARCHITECTURE_MAP.md').read_text(encoding='utf-8'); ok={'audit_catalog':'MODULE_CATALOG' in fn,'no_second_registry':'getModuleRegistry' not in sp and 'getModuleRegistry' not in pq,'bat_ascii':all(b<128 for b in bat),'map_no_reverted_facades':'(مالی، انبار و پلتفرم مشترک' not in amap}; print(ok); sys.exit(0 if all(ok.values()) else 1)"`
+    - FAILED (exit 1): `python -c "import pathlib,sys; app=pathlib.Path('frontend/src/app'); reg=pathlib.Path('backend/core/platform_core/registry.py').read_text(encoding='utf-8'); fn=reg[reg.find('def audit_scope_keys'):][:900]; sp=(app/'core/services/sync-pull.service.ts').read_text(encoding='utf-8'); pq=(app/'core/services/photo-upload-queue.service.ts').read_text(encoding='utf-8'); bat=pathlib.Path('dev-manager-modular.bat').read_bytes(); amap=pathlib.Path('.agents/PROJECT_ARCHITECTURE_MAP.md').read_text(encoding='utf-8'); ok={'audit_catalog':'MODULE_CATALOG' in fn,'no_second_registry':'getModuleRegistry' not in sp and 'getModuleRegistry' not in pq,'bat_ascii':all(b<128 for b in bat),'map_no_reverted_facades':'(مالی، انبار و پلتفرم مشترک' not in amap}; print(ok); sys.exit(0 if all(ok.values()) else 1)"`
   - verify round 1: 16/16 passed
 - **Task:**
 ```
@@ -3580,16 +3580,16 @@ refactor(platform-ui): extract facades for common components and update architec
 
 ۲. زمینه: بخش `## ۵.` و «گزارش پیشرفت» سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. ناظر Facadeهای نشست ۹ و ۱۰ را با `git revert` برگرداند (کامیت‌های `633c22c` و `cc2aecf`)؛ آن‌ها را دوباره نساز.
 
-۳. تعریف‌ها: «کاتالوگ» یعنی `MODULE_CATALOG` در `warehouse-backend/core/platform_core/module_catalog.py` که همهٔ ماژول‌های کشف‌شده را دارد، نصب‌شده یا نه. «رجیستری ریشه» یعنی نمونهٔ `ModuleRegistryService` که Angular با `inject()` می‌دهد و `config-api.service.ts` روی آن `setInstalledModules()` را صدا می‌زند.
+۳. تعریف‌ها: «کاتالوگ» یعنی `MODULE_CATALOG` در `backend/core/platform_core/module_catalog.py` که همهٔ ماژول‌های کشف‌شده را دارد، نصب‌شده یا نه. «رجیستری ریشه» یعنی نمونهٔ `ModuleRegistryService` که Angular با `inject()` می‌دهد و `config-api.service.ts` روی آن `setInstalledModules()` را صدا می‌زند.
 
 ۴. کار:
-- الف) `audit_scope_keys(module_code)` در `warehouse-backend/core/platform_core/registry.py` به‌جای `_REGISTRY` از `MODULE_CATALOG` بخواند تا در پروفایل تک‌ماژول هم کلیدهای ماژول نصب‌نشده برگردد و `.exclude(...)` در `AuditLogViewSet` خالی نشود. import کاتالوگ را درون تابع بگذار تا import حلقوی پیش نیاید. یک آزمون در `warehouse-backend/core/platform_core/tests.py` (یا فایل آزمون موجود همان اپ) اضافه کن که با `unittest.mock.patch.dict` روی `_REGISTRY` و حذف `'accounting'` از آن، همچنان شش کلید `('personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance')` برگردد.
-- ب) در `warehouse-front/src/app/core/services/sync-pull.service.ts` و `warehouse-front/src/app/core/services/photo-upload-queue.service.ts`، `getModuleRegistry()` را با `inject(ModuleRegistryService)` (رجیستری ریشه) جایگزین کن. هر دو سرویس `@Injectable` هستند. اگر یکی از آن‌ها بیرون از injection context ساخته می‌شود (مثلاً `getInstance()` ایستا)، رجیستری را از همان جایی بگیر که نمونهٔ Angular آن ساخته می‌شود و در گزارش بنویس. specهای همین دو سرویس را هماهنگ کن.
-- ج) `runQueue` در `warehouse-front/src/app/core/services/offline-sync.service.ts`: نسخهٔ کامیت `de01d8e` همین متد را بخوان و دو رفتار را دقیقاً برگردان: (۱) `_lastSyncTime$.next(Date.now())` در همان شرایط قبلی (از جمله وقتی هر دو صف در نخستین دور خالی‌اند)؛ (۲) در خطای پیش‌بینی‌نشده، همان محاسبهٔ نتیجهٔ قبلی، نه `server-unreachable` ثابت. تابع `runQueueSequential` در `core/services/offline/offline-queue-runner.ts` را برای این کار فقط در حد لازم تغییر بده و شرط حذف رکورد صف را دست نزن.
+- الف) `audit_scope_keys(module_code)` در `backend/core/platform_core/registry.py` به‌جای `_REGISTRY` از `MODULE_CATALOG` بخواند تا در پروفایل تک‌ماژول هم کلیدهای ماژول نصب‌نشده برگردد و `.exclude(...)` در `AuditLogViewSet` خالی نشود. import کاتالوگ را درون تابع بگذار تا import حلقوی پیش نیاید. یک آزمون در `backend/core/platform_core/tests.py` (یا فایل آزمون موجود همان اپ) اضافه کن که با `unittest.mock.patch.dict` روی `_REGISTRY` و حذف `'accounting'` از آن، همچنان شش کلید `('personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance')` برگردد.
+- ب) در `frontend/src/app/core/services/sync-pull.service.ts` و `frontend/src/app/core/services/photo-upload-queue.service.ts`، `getModuleRegistry()` را با `inject(ModuleRegistryService)` (رجیستری ریشه) جایگزین کن. هر دو سرویس `@Injectable` هستند. اگر یکی از آن‌ها بیرون از injection context ساخته می‌شود (مثلاً `getInstance()` ایستا)، رجیستری را از همان جایی بگیر که نمونهٔ Angular آن ساخته می‌شود و در گزارش بنویس. specهای همین دو سرویس را هماهنگ کن.
+- ج) `runQueue` در `frontend/src/app/core/services/offline-sync.service.ts`: نسخهٔ کامیت `de01d8e` همین متد را بخوان و دو رفتار را دقیقاً برگردان: (۱) `_lastSyncTime$.next(Date.now())` در همان شرایط قبلی (از جمله وقتی هر دو صف در نخستین دور خالی‌اند)؛ (۲) در خطای پیش‌بینی‌نشده، همان محاسبهٔ نتیجهٔ قبلی، نه `server-unreachable` ثابت. تابع `runQueueSequential` در `core/services/offline/offline-queue-runner.ts` را برای این کار فقط در حد لازم تغییر بده و شرط حذف رکورد صف را دست نزن.
 - د) در `dev-manager-modular.bat` دو خط `rem` فارسی را با این خط انگلیسی جایگزین کن: `rem The dev server always shows all modules; single-module builds use npm run build:modules`. فایل باید فقط نویسهٔ ASCII داشته باشد.
 - ه) در `.agents/PROJECT_ARCHITECTURE_MAP.md` زیر عنوان «الگوی معماری فکاد»، متن را اصلاح کن: الگوی Facade فقط در چهار کامپوننت پلتفرم مشترک (`companies`، `users`، `audit`، `id-cards`) به کار رفته است؛ Facadeهای کامپوننت‌های مالی و انبار برگردانده شدند، چون جابه‌جایی منطقشان رفتار را عوض کرده بود.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front`، حداکثر دو بار `warehouse-backend\venv\Scripts\python.exe manage.py test platform_core accounts --noinput` در پوشهٔ `warehouse-backend` با `PYTHONUTF8=1`، و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend`، حداکثر دو بار `backend\venv\Scripts\python.exe manage.py test platform_core accounts --noinput` در پوشهٔ `backend` با `PYTHONUTF8=1`، و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ جز فایل‌های همین پنج بند و specها و آزمون‌های مربوط نباید فایلی تغییر کرده باشد.
 
@@ -3633,7 +3633,7 @@ python ...
 - قانون از دست نرفتن داده: هیچ شرط حذف رکورد صف، کش یا عکس تغییر نکند.
 - فقط سه فایل زیر و specهای آن‌ها تغییر کنند.
 
-۲. زمینه: در کامیت `09fd3f7`، `SyncPullService.getInstance()` در `warehouse-front/src/app/core/services/sync-pull.service.ts` به `inject(SyncPullService)` تغییر کرد. `layout.ts` در `ngOnInit` از راه `OfflineSyncService.getInstance().pullProgress$` آن را بیرون از injection context صدا می‌زند و خطای NG0203 می‌گیرد. ریشهٔ مشکل این بود که `getModuleRegistry()` در `core/modules/module-registry.service.ts` نمونهٔ دومی جدا از نمونهٔ ریشهٔ Angular می‌ساخت.
+۲. زمینه: در کامیت `09fd3f7`، `SyncPullService.getInstance()` در `frontend/src/app/core/services/sync-pull.service.ts` به `inject(SyncPullService)` تغییر کرد. `layout.ts` در `ngOnInit` از راه `OfflineSyncService.getInstance().pullProgress$` آن را بیرون از injection context صدا می‌زند و خطای NG0203 می‌گیرد. ریشهٔ مشکل این بود که `getModuleRegistry()` در `core/modules/module-registry.service.ts` نمونهٔ دومی جدا از نمونهٔ ریشهٔ Angular می‌ساخت.
 
 ۳. تعریف: «نمونهٔ واحد» یعنی `getModuleRegistry()` و `inject(ModuleRegistryService)` همیشه یک شیء را برگردانند.
 
@@ -3642,7 +3642,7 @@ python ...
 - ب) در `core/services/sync-pull.service.ts` و `core/services/photo-upload-queue.service.ts`، رجیستری را با `getModuleRegistry()` بگیر (نه `inject(ModuleRegistryService)`). `SyncPullService.getInstance()` مثل کامیت `1b1dac8` با `new SyncPullService()` نمونه بسازد و هیچ `inject()` نداشته باشد. اگر سازندهٔ `SyncPullService` یا فیلدهایش `inject()` دیگری دارند، آن را هم با معادل ایستا جایگزین کن.
 - ج) در spec ماژول رجیستری یا `sync-pull.service.spec.ts` دو آزمون اضافه کن: (۱) `TestBed.inject(ModuleRegistryService) === getModuleRegistry()`؛ (۲) `SyncPullService.getInstance()` بیرون از `TestBed.runInInjectionContext` بدون خطا نمونه برمی‌گرداند.
 
-۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `frontend`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
 
 ۶. پیش از پایان: `git diff --stat` را ببین؛ فقط همین سه فایل و specها باید تغییر کرده باشند.
 
@@ -3678,9 +3678,9 @@ Session 14 — Release the current main branch on the local app environment (app
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 8 and 10 apply.
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
-- Never touch the untracked files under `warehouse-front/src/` (four `*.dom.spec.ts` files). Leave them exactly as they are.
+- Never touch the untracked files under `frontend/src/` (four `*.dom.spec.ts` files). Leave them exactly as they are.
 - Only the local `app` environment on this Windows machine is in scope. Do not connect to, deploy to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`.
 - Do not stop the Express server on port 4200, PostgreSQL on port 5432 or `cloudflared`.
 
 2. Context: read `.agents/AGENTS.md` section 8, the "Local Test Deployment Protocol (`app.farsalish.ir`, no yes/no needed)" list. It has the exact commands for every step below. Your terminal commands may run in PowerShell; if so, drop the `MSYS_NO_PATHCONV=1 ` prefix from the `wt.exe` commands and set environment variables with `$env:NAME='value';`.
@@ -3690,13 +3690,13 @@ Session 14 — Release the current main branch on the local app environment (app
 - "Worker processes" means every python process whose command line contains `run_gdrive_sync_worker`. There may be none.
 
 4. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app'); print(m['filename'], m['size'])"`
   Stop the session and report if it fails or prints a size of 0. Do not continue to step b without a successful backup.
-- b) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- b) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 - c) Daphne restart. List the Daphne processes with their PIDs, end them with `taskkill /PID <pid> /F`, confirm port 8000 is free, then launch Daphne with the `wt.exe ... --title "Backend Daphne" ...` command from section 8 step 3. Wait until port 8000 listens again (up to 60 seconds).
 - d) GDrive worker. If worker processes exist, end them with `taskkill /PID <pid> /F`; the auto-restart loop in their tab starts a fresh worker within about 10 seconds. If no worker process exists, launch the worker tab with the `wt.exe ... --title "GDrive Sync Worker" ...` command from section 8 step 4. Then wait until a worker process is running.
-- e) Health checks. Confirm HTTP 200 for `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`. Wait about 30 seconds after step d, then confirm the worker heartbeat is fresh: in `warehouse-backend` run
+- e) Health checks. Confirm HTTP 200 for `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`. Wait about 30 seconds after step d, then confirm the worker heartbeat is fresh: in `backend` run
   `.\venv\Scripts\python.exe manage.py shell -c "from django.utils import timezone; from settings_core.models import SystemGoogleDriveConfig as C; c = C.objects.get(id=1); print((timezone.now() - c.worker_heartbeat_at).total_seconds())"`
   The printed age must be below 180.
 
@@ -3717,7 +3717,7 @@ Session 14 — Release the current main branch on the local app environment (app
   - Size: `1,116,255 bytes`
 
 - **Frontend Build & NGSW Patch:**
-  - Build status: Succeeded (`Application bundle generation complete [171.924s]` in `warehouse-front/dist/warehouse-app`)
+  - Build status: Succeeded (`Application bundle generation complete [171.924s]` in `frontend/dist/warehouse-app`)
   - Patch script output: `[patch-ngsw-530] ✔ ngsw-worker.js patched successfully (Cloudflare 5xx degradation prevented).`
 
 - **Daphne Process Restart:**
@@ -3745,16 +3745,16 @@ Session 15 — Fix stale fixtures in 32 known-failing backend tests (inventory a
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Change only these four test files: `warehouse-backend/modules/warehouse/inventory/tests.py`, `warehouse-backend/modules/warehouse/inventory/tests_docs.py`, `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py`, `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py`. No app code, no models, no migrations, no other file.
+- Change only these four test files: `backend/modules/warehouse/inventory/tests.py`, `backend/modules/warehouse/inventory/tests_docs.py`, `backend/modules/warehouse/inventory/tests_offline_system.py`, `backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py`. No app code, no models, no migrations, no other file.
 - Do not weaken any test: do not change expected status codes, expected counts, expected values, or remove assertions. The only assertion line you may rewrite is line 83 of `test_company_warehouse_isolation.py` (described in 4d).
 - Do not touch `test_idempotent_creation_with_sync_id` in `tests_offline_system.py`. It fails because of a real app bug that is out of scope; it must keep failing.
 - Do not push. Stage only the four files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 - Run `manage.py test` only with app or module labels, never without a label.
 
 2. Context:
-- Non-superuser API access is scoped by company and warehouse. `scope_tenant_queryset` in `warehouse-backend/core/common/tenant_scope.py` returns nothing for a non-superuser without company access (`get_user_allowed_companies` in `warehouse-backend/core/companies/access.py` reads `UserCompanyAccess` rows with `access_level='workspace_full'`). Warehouse-level scope uses `Warehouse.assigned_users`.
+- Non-superuser API access is scoped by company and warehouse. `scope_tenant_queryset` in `backend/core/common/tenant_scope.py` returns nothing for a non-superuser without company access (`get_user_allowed_companies` in `backend/core/companies/access.py` reads `UserCompanyAccess` rows with `access_level='workspace_full'`). Warehouse-level scope uses `Warehouse.assigned_users`.
 - The failing test fixtures were written before this scoping. Their warehouses have no company, and their users have no `UserCompanyAccess` row and no warehouse assignment, so the API answers 403, 404 or empty lists.
-- A working fixture pattern is in `setUp` of `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py` (`Company.objects.get_or_create(code=..., defaults={'name': ..., 'has_warehouse_module': True})`, `Warehouse.objects.create(..., company_id=..., company_name=...)`, `UserCompanyAccess.objects.create(user=..., company=..., access_level='workspace_full', is_default=True)`).
+- A working fixture pattern is in `setUp` of `backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py` (`Company.objects.get_or_create(code=..., defaults={'name': ..., 'has_warehouse_module': True})`, `Warehouse.objects.create(..., company_id=..., company_name=...)`, `UserCompanyAccess.objects.create(user=..., company=..., access_level='workspace_full', is_default=True)`).
 - The permission `view_wh_stocktaking` is not created by any migration. `BaseInventoryTestCase._assign_perms` in `inventory/tests.py` already creates missing permissions with `Permission.objects.get_or_create(content_type=<User content type>, codename=code, defaults={'name': code})`.
 
 3. Definitions:
@@ -3768,7 +3768,7 @@ Session 15 — Fix stale fixtures in 32 known-failing backend tests (inventory a
 - d) `warehouses/test_company_warehouse_isolation.py`: add `from rest_framework import status` to the imports and change line 83 to `self.assertEqual(response.status_code, status.HTTP_200_OK)`.
 - After the changes, all tests in these four files must pass except `test_idempotent_creation_with_sync_id`. If another test still fails, first check whether a scope row or assignment is missing for the user in that test. If the failure is not a fixture problem, do not change its assertions; list the test and the reason in your report.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests inventory.tests_docs inventory.tests_offline_system warehouses.test_company_warehouse_isolation --noinput`, and at most one run of `.\venv\Scripts\python.exe manage.py test inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests inventory.tests_docs inventory.tests_offline_system warehouses.test_company_warehouse_isolation --noinput`, and at most one run of `.\venv\Scripts\python.exe manage.py test inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach.
 
 6. Before finishing: run `git diff --stat`; only the four files may be changed. Check that no assertion line was removed or changed except line 83 of the isolation test.
 
@@ -3793,7 +3793,7 @@ test(inventory): company and warehouse scope in stale test fixtures
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 3/5 passed
-    - FAILED (exit 1): `python -c "import subprocess,sys; base='warehouse-front/src/app/modules/'; ok={base+'accounting/components/finance/finance-pages-workflow.dom.spec.ts',base+'accounting/components/finance/finance-operations-workflow.dom.spec.ts',base+'common/components/layout/login-and-app-switching.dom.spec.ts',base+'warehouse/components/counter/counter-offline-workflow.dom.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','1ce106f','HEAD'],capture_output=True,text=True).stdout.split()); print('changed:',sorted(ch)); bad=sorted(ch-ok); miss=sorted(ok-ch); print('outside scope:',bad,'not committed:',miss); sys.exit(1 if bad or miss else 0)"`
+    - FAILED (exit 1): `python -c "import subprocess,sys; base='frontend/src/app/modules/'; ok={base+'accounting/components/finance/finance-pages-workflow.dom.spec.ts',base+'accounting/components/finance/finance-operations-workflow.dom.spec.ts',base+'common/components/layout/login-and-app-switching.dom.spec.ts',base+'warehouse/components/counter/counter-offline-workflow.dom.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','1ce106f','HEAD'],capture_output=True,text=True).stdout.split()); print('changed:',sorted(ch)); bad=sorted(ch-ok); miss=sorted(ok-ch); print('outside scope:',bad,'not committed:',miss); sys.exit(1 if bad or miss else 0)"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 1ce106f --grep "test(front): workflow DOM specs for finance pages, login and app switching, counter offline"`
   - verify round 1: 5/5 passed
 - **Task:**
@@ -3805,10 +3805,10 @@ Session 16 — Make the four new DOM spec files compile and pass, remove the tes
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 9 and 10 apply.
 - Change only these four untracked files. Do not change any app file (`*.ts` that is not a spec, `*.html`, `*.css`), any other spec, `tsconfig*.json`, `angular.json` or `package.json`:
-  - `warehouse-front/src/app/modules/accounting/components/finance/finance-pages-workflow.dom.spec.ts`
-  - `warehouse-front/src/app/modules/accounting/components/finance/finance-operations-workflow.dom.spec.ts`
-  - `warehouse-front/src/app/modules/common/components/layout/login-and-app-switching.dom.spec.ts`
-  - `warehouse-front/src/app/modules/warehouse/components/counter/counter-offline-workflow.dom.spec.ts`
+  - `frontend/src/app/modules/accounting/components/finance/finance-pages-workflow.dom.spec.ts`
+  - `frontend/src/app/modules/accounting/components/finance/finance-operations-workflow.dom.spec.ts`
+  - `frontend/src/app/modules/common/components/layout/login-and-app-switching.dom.spec.ts`
+  - `frontend/src/app/modules/warehouse/components/counter/counter-offline-workflow.dom.spec.ts`
 - A test must exercise real component or service code. Do not replace the method under test with `vi.spyOn(...).mockImplementation`, a hand-written function or `Object.defineProperty`, and do not assert on values that only a mock produced.
 - Do not push. Stage only the four files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
@@ -3826,7 +3826,7 @@ Session 16 — Make the four new DOM spec files compile and pass, remove the tes
   - `counter-offline-workflow.dom.spec.ts`: the whole second `describe` block (offline photo upload; it fakes `uploadPhotos`, `enqueue` and `flush`), and in the first test everything from the comment that starts with `// ۳.` to the end of that test (it asserts the result of a mocked `processQueue`). Also remove the `vi.spyOn(offlineSync, 'processQueue')` mock in that test. Keep the assertions about the task state and the enqueued mutations after `counterDashboard.saveDraft()`.
 - c) Every remaining test in the four files must pass. If a remaining test fails because the expectation is wrong for the real code, fix the setup or delete that single test and list it in the report; do not change app code to make it pass.
 
-5. Tool policy: to run only these specs, create a temporary tsconfig in `warehouse-front` that extends `tsconfig.spec.json` and includes `src/**/*.d.ts` plus the four files, and run `npx ng test --watch=false --ts-config <that file> --include <each file>` at most four times. Delete the temporary tsconfig before committing. If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: to run only these specs, create a temporary tsconfig in `frontend` that extends `tsconfig.spec.json` and includes `src/**/*.d.ts` plus the four files, and run `npx ng test --watch=false --ts-config <that file> --include <each file>` at most four times. Delete the temporary tsconfig before committing. If a command fails, read the output, do not repeat it unchanged, and change approach.
 
 6. Before finishing: `git status --short` must show no change outside the four files except runner files.
 
@@ -3840,8 +3840,8 @@ test(front): workflow DOM specs for finance pages, login and app switching, coun
 
 ### توضیح ساده و بررسی درخواست
 در این نشست، چهار فایل تست DOM جدید که خطاهای کامپایل تایپ‌اسکریپت و تست‌های خود-ماک (Self-mock) داشتند بازبینی و اصلاح شدند:
-۱. **[finance-operations-workflow.dom.spec.ts](file:///E:/warehouse%20project/warehouse-front/src/app/modules/accounting/components/finance/finance-operations-workflow.dom.spec.ts):** مقدار تب وضعیت فاکتور از `'approved'` به مقدار معتبر اتحادیه `InvoiceStatusTab` یعنی `'paid'` تصحیح شد.
-۲. **[finance-pages-workflow.dom.spec.ts](file:///E:/warehouse%20project/warehouse-front/src/app/modules/accounting/components/finance/finance-pages-workflow.dom.spec.ts):** خصوصیت ناموجود `vehicle_model` از نمونه خودرو حذف ...
+۱. **[finance-operations-workflow.dom.spec.ts](file:///E:/warehouse%20project/frontend/src/app/modules/accounting/components/finance/finance-operations-workflow.dom.spec.ts):** مقدار تب وضعیت فاکتور از `'approved'` به مقدار معتبر اتحادیه `InvoiceStatusTab` یعنی `'paid'` تصحیح شد.
+۲. **[finance-pages-workflow.dom.spec.ts](file:///E:/warehouse%20project/frontend/src/app/modules/accounting/components/finance/finance-pages-workflow.dom.spec.ts):** خصوصیت ناموجود `vehicle_model` از نمونه خودرو حذف ...
 
 ---
 
@@ -3864,7 +3864,7 @@ Session 17 — Close the sync-queue data-loss path in the offline badge: remove 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 7, 9 and 10 apply.
 - Data-loss rule of this project: a sync-queue record is deleted only on explicit server acceptance (2xx) or explicit rejection (4xx). The only user-initiated exception kept after this session is a confirmed cancel of one record of the current user that is not being sent.
-- Change only `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`, `warehouse-front/src/app/core/services/offline-sync.service.ts`, `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, and spec files for them. Do not change `getQueueEntries` in `offline-queue-runner.ts` (the offline interceptor uses it to merge queued changes into cached reads) and do not change anything under `core/interceptors/`.
+- Change only `frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`, `frontend/src/app/core/services/offline-sync.service.ts`, `frontend/src/app/core/services/offline/offline-queue-runner.ts`, and spec files for them. Do not change `getQueueEntries` in `offline-queue-runner.ts` (the offline interceptor uses it to merge queued changes into cached reads) and do not change anything under `core/interceptors/`.
 - Do not change how records are sent, retried, marked failed or deleted after a server response.
 - User-facing text stays Persian. Use `<svg appIcon="...">` for any icon; no new inline svg.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
@@ -3886,9 +3886,9 @@ Session 17 — Close the sync-queue data-loss path in the offline badge: remove 
 - d) In the badge `onCancelQueueItem(id)`: first open the app confirm dialog with `type: 'danger'`, title «لغو این درخواست», message «این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف می‌شود و قابل بازگشت نیست.», `confirmText` «لغو درخواست» and `cancelText` «انصراف». Only when it resolves `true`, call `cancelQueueEntry`; remove the row from `queueEntries` only when that returns `true`; otherwise reload the list. Inject `ConfirmDialogService` with `inject()` as the component already does for other services; keep the constructor parameters unchanged.
 - e) Add spec tests (Vitest, real code, IndexedDB access mocked only at the Dexie table level if needed): `cancelQueueEntry` returns `false` and keeps the record for a `sending` record and for a record of another user, and returns `true` and deletes an own `pending` record; the badge does not call `cancelQueueEntry` when the dialog resolves `false`; the badge lists only own records.
 
-5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for your new specs (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `frontend`, and at most three targeted `npx ng test --watch=false` runs for your new specs (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
 
-6. Before finishing: run `git diff --stat`; only the files allowed in section 1 may be changed. Confirm `git grep -n "clearQueue(" -- warehouse-front/src` prints nothing.
+6. Before finishing: run `git diff --stat`; only the files allowed in section 1 may be changed. Confirm `git grep -n "clearQueue(" -- frontend/src` prints nothing.
 
 7. Output and stop condition:
 - Stage only your changed files and commit with this message, without push:
@@ -3908,7 +3908,7 @@ fix(offline): no clear-all, own entries only and confirmed single cancel in the 
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 4/8 passed
-    - FAILED (exit 1): `python -c "import subprocess,sys; ok={'warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts','warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.spec.ts','warehouse-front/src/app/core/services/offline/offline-queue-runner.ts','warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts','warehouse-front/src/app/core/services/offline-sync.service.ts'}; ch=set(subprocess.run(['git','diff','--name-only','5636a55','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"`
+    - FAILED (exit 1): `python -c "import subprocess,sys; ok={'frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts','frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.spec.ts','frontend/src/app/core/services/offline/offline-queue-runner.ts','frontend/src/app/core/services/offline/offline-queue-runner.spec.ts','frontend/src/app/core/services/offline-sync.service.ts'}; ch=set(subprocess.run(['git','diff','--name-only','5636a55','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 5636a55 --include "src/**/*.spec.ts"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 5636a55 --grep "fix(offline): single cancel targets the record's own queue database"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
@@ -3922,7 +3922,7 @@ Session 18 — Single cancel in the sync badge must target the right queue datab
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 9 and 10 apply.
 - Data-loss rule: a sync-queue record is deleted only on explicit server acceptance (2xx), explicit rejection (4xx), or a confirmed user cancel of that exact record when it is an own record and not being sent. Never delete a record the user did not choose.
-- Change only `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`, `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, `warehouse-front/src/app/core/services/offline-sync.service.ts` (only if its `cancelQueueEntry` signature must follow), and the two spec files next to the first two. Do not change `getQueueEntries`, the send/retry logic of `processQueue`, or anything under `core/interceptors/`.
+- Change only `frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`, `frontend/src/app/core/services/offline/offline-queue-runner.ts`, `frontend/src/app/core/services/offline-sync.service.ts` (only if its `cancelQueueEntry` signature must follow), and the two spec files next to the first two. Do not change `getQueueEntries`, the send/retry logic of `processQueue`, or anything under `core/interceptors/`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context:
@@ -3945,7 +3945,7 @@ Session 18 — Single cancel in the sync badge must target the right queue datab
 - c2) The badge now injects `ConfirmDialogService` with `{ optional: true }` and, when it is missing, cancels without asking. Make it fail closed: when `this.confirmDialog` is missing, do not cancel and return. Keep the optional injection. In the dialog message, write «می‌شود» with a zero-width non-joiner (U+200C) between «می» and «شود».
 - d) Specs: add tests with real code (mock only at the Dexie table level if needed) for: finance record and warehouse record with the same id, a cancel with `scope 'finance'` deletes only the finance record; the same cancel without a scope returns `false` and deletes nothing; the badge passes `appScope` of the chosen row; the badge cancels nothing when no confirm dialog service is available. Keep the session 17 tests passing.
 
-5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `frontend`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
 
 6. Before finishing: run `git diff --stat`; only the allowed files may be changed, and the temporary tsconfig must be deleted.
 
@@ -3980,7 +3980,7 @@ Session 19 — Harden single cancel in the sync queue: unscoped read errors refu
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 9 and 10 apply.
 - Data-loss rule: never delete a sync-queue record the user did not choose. When in doubt, refuse the cancel and keep the record.
-- Change only `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts` and the spec files next to them. Do not change `getQueueEntries`, `processQueue`, send/retry/delete-after-response logic, or anything under `core/interceptors/`.
+- Change only `frontend/src/app/core/services/offline/offline-queue-runner.ts`, `frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts` and the spec files next to them. Do not change `getQueueEntries`, `processQueue`, send/retry/delete-after-response logic, or anything under `core/interceptors/`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context: read the current `cancelQueueEntry` in `offline-queue-runner.ts` and `onCancelQueueItem` in the badge (both changed in commit `a82e6f6`). A review found three remaining weak points:
@@ -3996,7 +3996,7 @@ Session 19 — Harden single cancel in the sync queue: unscoped read errors refu
 - c) In `cancelQueueEntry`, decide success only from the attempt that actually completed: reset the deleted-record variable before each attempt (transaction and fallback), and return `true` only when the attempt that finished without error deleted the record. Keep the read, the guards and the delete inside one transaction as today; keep `invalidateCacheFn` after a successful delete only.
 - d) Specs: a read error on one database in an unscoped call refuses and keeps both records; the badge has no numeric-id path (update or remove any spec that called it with a number). Keep all existing cancel tests passing.
 
-5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `frontend`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files; the temporary tsconfig is deleted.
 
@@ -4027,7 +4027,7 @@ Session 19 — Harden single cancel in the sync queue: unscoped read errors refu
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 9 and 10 apply.
 - Data-loss rule: never delete a sync-queue record the user did not choose. When in doubt, refuse the cancel and keep the record.
-- Change only `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts` and the spec files next to them. Do not change `getQueueEntries`, `processQueue`, send/retry/delete-after-response logic, or anything under `core/interceptors/`.
+- Change only `frontend/src/app/core/services/offline/offline-queue-runner.ts`, `frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts` and the spec files next to them. Do not change `getQueueEntries`, `processQueue`, send/retry/delete-after-response logic, or anything under `core/interceptors/`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context: read the current `cancelQueueEntry` in `offline-queue-runner.ts` and `onCancelQueueItem` in the badge (both changed in commit `a82e6f6`). A review found three remaining weak points:
@@ -4043,7 +4043,7 @@ Session 19 — Harden single cancel in the sync queue: unscoped read errors refu
 - c) In `cancelQueueEntry`, decide success only from the attempt that actually completed: reset the deleted-record variable before each attempt (transaction and fallback), and return `true` only when the attempt that finished without error deleted the record. Keep the read, the guards and the delete inside one transaction as today; keep `invalidateCacheFn` after a successful delete only.
 - d) Specs: a read error on one database in an unscoped call refuses and keeps both records; the badge has no numeric-id path (update or remove any spec that called it with a number). Keep all existing cancel tests passing.
 
-5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `frontend`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files; the temporary tsconfig is deleted.
 
@@ -4081,15 +4081,15 @@ Session 20 — Frontend-only release on the local app environment (app.farsalish
 - This session is a frontend release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop, restart or start Daphne, the GDrive sync worker, the Express server on port 4200, PostgreSQL or `cloudflared`. Do not run `taskkill`. The backend code has not changed since the last release, so Daphne keeps running.
 - Only the local `app` environment is in scope. Do not connect to or deploy to `soft.farsalish.ir`; do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`.
 
 2. Context: `.agents/AGENTS.md` section 8, "Local Test Deployment Protocol (`app.farsalish.ir`, no yes/no needed)", steps 1, 2 and 5. Your commands may run in PowerShell; set environment variables there with `$env:NAME='value';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app frontend'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0.
-- b) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false`, wait until it has finished completely, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build` and do not delete `dist`. Run the build in the foreground; do not end your turn while it runs.
+- b) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false`, wait until it has finished completely, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build` and do not delete `dist`. Run the build in the foreground; do not end your turn while it runs.
 - c) Health checks. Confirm HTTP 200 for `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`.
 
 4. Tool policy: only the commands above, `Invoke-WebRequest` or `curl.exe` for the checks, and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach.
@@ -4129,7 +4129,7 @@ Session 21 — Idempotent item creation: a retried POST with the same sync_id re
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py` and `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py`. No models, serializers, migrations or other files.
+- Change only `backend/modules/warehouse/inventory/views_domains/item_views.py` and `backend/modules/warehouse/inventory/tests_offline_system.py`. No models, serializers, migrations or other files.
 - Tenant isolation: a user may never read, change or restore an item outside their company and warehouse scope through this path, and the response must not reveal whether such an item exists.
 - Do not change behaviour for a POST without `sync_id` or with a `sync_id` that no item has.
 - Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
@@ -4150,7 +4150,7 @@ Session 21 — Idempotent item creation: a retried POST with the same sync_id re
   - Otherwise (no `sync_id`, or no item has it) call `super().create(...)` unchanged.
 - b) In `tests_offline_system.py`, keep `test_idempotent_creation_with_sync_id` unchanged, and add one test: a non-superuser scoped to the test company and warehouse POSTs a `sync_id` that belongs to an item of a different company's warehouse; the response is 403 and that item is unchanged (description and `is_deleted`).
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_offline_system --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_offline_system --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach.
 
 6. Before finishing: `git diff --stat` shows only the two files.
 
@@ -4187,13 +4187,13 @@ Session 22 — Create the missing view_wh_stocktaking permission through the mod
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5, 8 and 10 apply. Read the skill file `.claude/skills/safe-migration/SKILL.md` and follow its steps 1, 2, 2-b, 3, 5 and 6.
 - No data may be lost. The migration must be additive only: `AlterModelOptions` plus, optionally, a `RunPython` that only renames an existing permission row, with `reverse_code=migrations.RunPython.noop`. No delete, no column change, no `RunSQL`.
-- Change only `warehouse-backend/core/accounts/models.py` and the new file `warehouse-backend/core/accounts/migrations/0002_view_wh_stocktaking_permission.py`.
+- Change only `backend/core/accounts/models.py` and the new file `backend/core/accounts/migrations/0002_view_wh_stocktaking_permission.py`.
 - Migrate only the local `app` database on this machine. Never touch `soft.farsalish.ir`; do not run `deploy.ps1`.
 - Do not run `run_auto_backup`. Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context:
 - The permission codename `view_wh_stocktaking` is used by `modules/warehouse/inventory/views_domains/count_views.py`, `modules/warehouse/module.py` and the frontend, but no migration or model creates it. On a fresh database nobody can be given it. The local `app` database has one row for it (content type `accounts.customuser`) whose name is the raw codename, created earlier by a script.
-- All other warehouse menu permissions are declared in `CustomUser.Meta.permissions` in `warehouse-backend/core/accounts/models.py` (section "Warehouse Tabs"). Django's `post_migrate` handler creates missing declared permissions and does not rename existing ones.
+- All other warehouse menu permissions are declared in `CustomUser.Meta.permissions` in `backend/core/accounts/models.py` (section "Warehouse Tabs"). Django's `post_migrate` handler creates missing declared permissions and does not rename existing ones.
 - The `accounts` app has only `0001_initial`. The `django_migrations` table of this database has no other `accounts` record, so the name `0002_view_wh_stocktaking_permission` is free; still run the collision check of skill step 2-b.
 
 3. Definitions: "additive" means the migration only adds state or permission rows and renames the one existing row's display name; it never removes or rewrites user data.
@@ -4204,7 +4204,7 @@ Session 22 — Create the missing view_wh_stocktaking permission through the mod
 - c) Run `makemigrations --check --dry-run`: it must print "No changes detected".
 - d) Follow the skill: check unapplied migrations and the name collision (step 2 and 2-b), read the SQL with `sqlmigrate accounts 0002_view_wh_stocktaking_permission`, take a backup with `create_database_backup` (step 5), run `.\venv\Scripts\python.exe manage.py migrate accounts`, then step 6 checks.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`: the commands named in section 4 and in the skill, at most one `migrate accounts`, and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If `migrate` fails, stop and report; do not edit the database by hand.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`: the commands named in section 4 and in the skill, at most one `migrate accounts`, and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If `migrate` fails, stop and report; do not edit the database by hand.
 
 6. Before finishing: `git diff --stat` and `git status --short` show only the two files.
 
@@ -4245,7 +4245,7 @@ Session 23 — Backend release on the local app environment: backup, Daphne rest
 - Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
 
 2. Task:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0.
 - b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
@@ -4289,7 +4289,7 @@ Session 24 — Item writes: a create retry by sync_id returns the existing item 
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - No data may be lost: a retried create must never overwrite, revive or move an existing item.
 - Tenant isolation: a user may never create an item in, or move an item into, a warehouse outside their company and warehouse scope.
-- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py` and `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py`. No models, serializers, migrations or other files.
+- Change only `backend/modules/warehouse/inventory/views_domains/item_views.py` and `backend/modules/warehouse/inventory/tests_offline_system.py`. No models, serializers, migrations or other files.
 - Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context:
@@ -4311,7 +4311,7 @@ Session 24 — Item writes: a create retry by sync_id returns the existing item 
   - A scoped non-superuser cannot POST a new item into a warehouse of another company (403, no item created), and cannot PATCH an own item's `warehouse` to that warehouse (403, warehouse unchanged).
   - `test_idempotent_creation_with_sync_id` must still pass unchanged.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_offline_system --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on writing into an out-of-scope warehouse, report it; do not weaken the new check.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_offline_system --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on writing into an out-of-scope warehouse, report it; do not weaken the new check.
 
 6. Before finishing: `git diff --stat` shows only the two files.
 
@@ -4351,7 +4351,7 @@ Session 25 — Backend release on the local app environment after the item write
 - Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
 
 2. Task:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0.
 - b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
@@ -4385,7 +4385,7 @@ Session 25 — Backend release on the local app environment after the item write
   - verify round 0: 6/7 passed
     - FAILED (exit 1): `python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scripts/automation/known_backend_failures.txt --min-tests 180`
   - verify round 1: 6/7 passed
-    - FAILED (exit 1): `python -c "import pathlib,sys,re; v=pathlib.Path('warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); s=v.find('class ItemViewSet'); cls=v[s:]; calls=[m.start() for m in re.finditer(r'can_access_warehouse\(', cls)]; helper=cls.find('def _can_write_warehouse'); hb=cls[helper:helper+1500] if helper>0 else ''; outside=[c for c in calls if not (helper>0 and helper<=c<helper+1500)]; bu=cls[cls.find('    def bulk_update'):][:6000]; imp=cls[cls.find('    def import_excel'):][:20000]; ok={'helper_allowed_ids':'def _allowed_warehouse_ids' in cls,'helper_write':helper>0,'helper_tenant':'scope_tenant_queryset' in cls[cls.find('def _allowed_warehouse_ids'):][:2000],'no_direct_checks':not outside,'bulk_protected':'BULK_UPDATE_PROTECTED_FIELDS' in bu and 'is_deleted' in v[v.find('BULK_UPDATE_PROTECTED_FIELDS ='):][:300],'import_name_lookup_scoped':'Warehouse.objects.filter(Q(name__iexact' not in imp}; print(ok,'direct can_access_warehouse calls outside helper:',len(outside)); sys.exit(0 if all(ok.values()) else 1)"`
+    - FAILED (exit 1): `python -c "import pathlib,sys,re; v=pathlib.Path('backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); s=v.find('class ItemViewSet'); cls=v[s:]; calls=[m.start() for m in re.finditer(r'can_access_warehouse\(', cls)]; helper=cls.find('def _can_write_warehouse'); hb=cls[helper:helper+1500] if helper>0 else ''; outside=[c for c in calls if not (helper>0 and helper<=c<helper+1500)]; bu=cls[cls.find('    def bulk_update'):][:6000]; imp=cls[cls.find('    def import_excel'):][:20000]; ok={'helper_allowed_ids':'def _allowed_warehouse_ids' in cls,'helper_write':helper>0,'helper_tenant':'scope_tenant_queryset' in cls[cls.find('def _allowed_warehouse_ids'):][:2000],'no_direct_checks':not outside,'bulk_protected':'BULK_UPDATE_PROTECTED_FIELDS' in bu and 'is_deleted' in v[v.find('BULK_UPDATE_PROTECTED_FIELDS ='):][:300],'import_name_lookup_scoped':'Warehouse.objects.filter(Q(name__iexact' not in imp}; print(ok,'direct can_access_warehouse calls outside helper:',len(outside)); sys.exit(0 if all(ok.values()) else 1)"`
   - verify round 2: 7/7 passed
 - **Task:**
 ```
@@ -4396,7 +4396,7 @@ Session 26 — Company scope on every ItemViewSet write path: bulk_update protec
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Tenant isolation: a user may never write, import into, soft-delete, cancel or revert anything in a warehouse outside their company and warehouse scope. No data may be lost: do not change what a permitted user can do inside their own scope.
-- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py`, plus tests in `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py` or a new file `warehouse-backend/modules/warehouse/inventory/tests_item_write_scope.py`. No models, serializers, migrations or other files.
+- Change only `backend/modules/warehouse/inventory/views_domains/item_views.py`, plus tests in `backend/modules/warehouse/inventory/tests_offline_system.py` or a new file `backend/modules/warehouse/inventory/tests_item_write_scope.py`. No models, serializers, migrations or other files.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context:
@@ -4414,7 +4414,7 @@ Session 26 — Company scope on every ItemViewSet write path: bulk_update protec
 - d) `bulk_update`: add a module-level constant `BULK_UPDATE_PROTECTED_FIELDS = {'id', 'warehouse', 'created_by', 'modified_by', 'created_at', 'updated_at', 'sync_id', 'is_deleted'}` and skip these keys in the apply loop (ignore them silently, so rows that echo unchanged values keep working). Keep the existing field-permission validation as it is.
 - e) Tests (Django `TestCase`, two companies each with one warehouse, a non-superuser with `workspace_full` access to company A only and no warehouse assignment, and the permissions each action needs, created with `Permission.objects.get_or_create` on the user content type): for company B's warehouse, `clear_warehouse_data` and `delete_from_excel` (if it needs a file, build a small xlsx with openpyxl in memory) return 403 and soft-delete nothing; `import_excel` with company B's `warehouse_id` returns 403; `bulk_update` with `warehouse` set to company B's warehouse leaves the item's warehouse unchanged, and with `is_deleted: true` leaves the item active; the same user can still `clear_warehouse_data` in company A's warehouse.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of targeted `manage.py test inventory.<module> --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on writing outside the user's company, report it; do not weaken the check.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most four runs of targeted `manage.py test inventory.<module> --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on writing outside the user's company, report it; do not weaken the check.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4457,7 +4457,7 @@ Session 27 — Backend release on the local app environment after the item write
 - Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
 
 2. Task:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0.
 - b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
@@ -4494,7 +4494,7 @@ Session 27 — Backend release on the local app environment after the item write
   - verify round 0: 6/7 passed
     - FAILED (exit 1): `python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scripts/automation/known_backend_failures.txt --min-tests 189`
   - verify round 1: 4/7 passed
-    - FAILED (exit 1): `python -c "import pathlib,sys; v=pathlib.Path('warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); cls=v[v.find('class ItemViewSet'):]; h=cls.find('def _can_manage_import_log'); ci=cls[cls.find('    def cancel_import'):][:2500]; ri=cls[cls.find('    def revert_import'):][:2500]; dl=cls[cls.find('    def download_import_log'):][:2500]; ba=cls[cls.find('    def bulk_assign'):][:9000]; ok={'helper':h>0,'cancel_uses_helper':'_can_manage_import_log' in ci,'cancel_owner_cache':'import_owner_' in ci and 'import_owner_' in cls[cls.find('    def import_excel'):],'revert_uses_helper':'_can_manage_import_log' in ri,'download_uses_helper':'_can_manage_import_log' in dl,'no_conflicting_wh_leak':'conflicting_wh' not in cls,'assignee_company_check':'get_user_allowed_companies' in ba}; print(ok); sys.exit(0 if all(ok.values()) else 1)"`
+    - FAILED (exit 1): `python -c "import pathlib,sys; v=pathlib.Path('backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); cls=v[v.find('class ItemViewSet'):]; h=cls.find('def _can_manage_import_log'); ci=cls[cls.find('    def cancel_import'):][:2500]; ri=cls[cls.find('    def revert_import'):][:2500]; dl=cls[cls.find('    def download_import_log'):][:2500]; ba=cls[cls.find('    def bulk_assign'):][:9000]; ok={'helper':h>0,'cancel_uses_helper':'_can_manage_import_log' in ci,'cancel_owner_cache':'import_owner_' in ci and 'import_owner_' in cls[cls.find('    def import_excel'):],'revert_uses_helper':'_can_manage_import_log' in ri,'download_uses_helper':'_can_manage_import_log' in dl,'no_conflicting_wh_leak':'conflicting_wh' not in cls,'assignee_company_check':'get_user_allowed_companies' in ba}; print(ok); sys.exit(0 if all(ok.values()) else 1)"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scripts/automation/known_backend_failures.txt --min-tests 189`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
   - verify round 2: 7/7 passed
@@ -4507,7 +4507,7 @@ Session 28 — Import logs and bulk_assign assignees scoped to the user's compan
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Tenant isolation: a user may never cancel, revert or download another company's import, learn another company's warehouse names, or assign another company's user to tasks. Do not change what a permitted user can do inside their own company.
-- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py` and `warehouse-backend/modules/warehouse/inventory/tests_item_write_scope.py`. No models, serializers, migrations or other files.
+- Change only `backend/modules/warehouse/inventory/views_domains/item_views.py` and `backend/modules/warehouse/inventory/tests_item_write_scope.py`. No models, serializers, migrations or other files.
 - Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context (all in `ItemViewSet`, commit `8589eee` added `_allowed_warehouse_ids` and `_can_write_warehouse`):
@@ -4526,7 +4526,7 @@ Session 28 — Import logs and bulk_assign assignees scoped to the user's compan
 - d) In `bulk_assign`, after resolving the items, reject the request with 400 «کاربر انتخاب‌شده عضو شرکت این کالاها نیست.» when any given assignee is not a superuser and `get_user_allowed_companies(assignee)` does not contain the company of every selected item's warehouse (items whose warehouse has no company are checked only against the assignee being active). Check before any write.
 - e) Tests in `tests_item_write_scope.py` (reuse its two-company setup): another company's unrestricted user cannot revert, cancel or download a null-warehouse import log of the first user (403, items unchanged); cancel of a running import with no log works for the owner and is 403 for another user; an import row naming company B's warehouse code returns the generic not-found row error and the response body does not contain company B's warehouse name; `bulk_assign` with a company-B user as `field_assignee` on company-A items returns 400 and creates no `CountTask`; a company-A assignee still works.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_item_write_scope --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on cross-company behaviour, report it; do not weaken the check.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_item_write_scope --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on cross-company behaviour, report it; do not weaken the check.
 
 6. Before finishing: `git diff --stat` shows only the two files.
 
@@ -4565,7 +4565,7 @@ Session 29 — Backend release on the local app environment after the import-log
 - Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
 
 2. Task:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0.
 - b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
@@ -4596,7 +4596,7 @@ Session 1 of 9 — Phase 3: registry helpers for JWT token scopes and WebSocket 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Behavior must stay identical: the token `scopes` dict keeps exactly the keys `finance` and `warehouse` with the same role lists, `active_app` keeps the same priority, and the WebSocket consumer joins exactly the same groups as today. In particular `app=operations` must still join no app group (`app_group_name` stays None), because the operations cockpit relies on receiving every event.
-- Change only: `warehouse-backend/core/platform_core/registry.py`, `warehouse-backend/core/platform_core/tests.py`, `warehouse-backend/core/accounts/serializers.py`, `warehouse-backend/core/accounts/views_domains/auth_views.py`, `warehouse-backend/core/notifications/consumers.py`. Do not touch `config/asgi.py`.
+- Change only: `backend/core/platform_core/registry.py`, `backend/core/platform_core/tests.py`, `backend/core/accounts/serializers.py`, `backend/core/accounts/views_domains/auth_views.py`, `backend/core/notifications/consumers.py`. Do not touch `config/asgi.py`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context:
@@ -4615,7 +4615,7 @@ Session 1 of 9 — Phase 3: registry helpers for JWT token scopes and WebSocket 
 - c) In `consumers.py`, use `normalize_ws_app_scope(...)` in `connect`, in `switch_app`, and in `send_notification` as `normalize_ws_app_scope(event_app) or event_app`. Keep everything else in those methods unchanged.
 - d) Tests in `platform_core/tests.py` (plain `SimpleTestCase` or `TestCase`): `normalize_ws_app_scope` for `'warehouse'`, `'finance'`, `'personnel'`, `'accounting'`, `'operations'`, `None`, `'Warehouse'`, `'unknown'` (expected `'warehouse'`, `'finance'`, `'finance'`, `'finance'`, None, None, None, None); `resolve_default_active_app` for `['finance']`, `['warehouse']`, `['warehouse','finance']`, `[]`; `build_user_token_scopes` for a normal user returns exactly the keys `{'finance','warehouse'}` and values equal to `get_user_valid_roles_for_app(user, 'personnel')` and `get_user_valid_roles_for_app(user, 'warehouse')`.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core accounts notifications --noinput`, and `python scripts/e2e/guardian_modularization.py` at most twice. If a command fails, read the output and change approach; do not repeat it unchanged.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core accounts notifications --noinput`, and `python scripts/e2e/guardian_modularization.py` at most twice. If a command fails, read the output and change approach; do not repeat it unchanged.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4654,7 +4654,7 @@ Session 2 of 9 — Phase 3: characterization test for SoD page-route and action-
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Pure refactor: the resolved `(page_route, action_code)` for every request must stay exactly as today. Do not reorder, merge or simplify any condition.
-- Change only `warehouse-backend/core/accounts/permissions.py` and the new file `warehouse-backend/integration_tests/test_sod_context_resolution.py`.
+- Change only `backend/core/accounts/permissions.py` and the new file `backend/integration_tests/test_sod_context_resolution.py`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context:
@@ -4666,7 +4666,7 @@ Session 2 of 9 — Phase 3: characterization test for SoD page-route and action-
 - a) Move that block verbatim into a module-level function `resolve_sod_context(request, view) -> tuple[str, str]` placed above `SoDPolicyPermission`, and call `page_route, action_code = resolve_sod_context(request, view)` from `has_permission`. Nothing else in `has_permission` changes.
 - b) Create `integration_tests/test_sod_context_resolution.py` with a `SimpleTestCase` and a table of at least 14 cases, each with `path`, `method`, `data`, `action`, optional view attributes, `expected_route` and `expected_action`, checked with `assertEqual`. Requests are `types.SimpleNamespace(path=..., method=..., data=...)`; views are `types.SimpleNamespace(action=...)`. Compute every expected value by reading the current code. Cover: `attendance` + `create`; `attendance` + `lock_period`; a path without any keyword + `create` (fallback route `/attendance`, action `create_daily_attendance_entry`); a path without any keyword + `approve_period`; `profiles` + `approve_manager`; a path containing both `profiles` and `finance`; `monthly-payroll` + `disburse_period`; `treasury` + `list`; `manager` + `action=None` with GET; a path containing both `customs` and `manager`; `customs` + `create`; PATCH with `data={'base_wage': 1}` on a path without keywords; an uppercase path such as `/API/Personnel/Attendance/`; a view with `sod_page_route='/x'` and `sod_action_code='y'`.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_sod_context_resolution --noinput` and one run of `.\venv\Scripts\python.exe manage.py test integration_tests accounts --noinput`. If a case fails, fix the expected value only if your reading of the current code was wrong; never change the logic to fit a test.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_sod_context_resolution --noinput` and one run of `.\venv\Scripts\python.exe manage.py test integration_tests accounts --noinput`. If a case fails, fix the expected value only if your reading of the current code was wrong; never change the logic to fit a test.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4723,7 +4723,7 @@ Session 3 of 9 — Phase 3: move module permission classes and SoD inference rul
 - b) Rewrite `resolve_sod_context` in core: keep the `sod_page_route` and `sod_action_code` view attributes first. Page route: sort `contributions('sod_route_rules')` by priority and take the route of the first matching rule; if none matches, use `'/attendance'`. Action code: call each of `contributions('sod_action_resolvers')` in order and take the first non-None result; if none, `action_name or method.lower()`.
 - c) In `personnel/sod_rules.py`, define and in `PersonnelConfig.ready()` register the route rules `(10, ('attendance',), '/attendance')`, `(20, ('profiles',), '/profiles')`, `(30, ('finance', 'monthly-payroll'), '/finance-cartable')`, `(40, ('treasury',), '/treasury-cartable')`, `(50, ('manager',), '/manager-approvals')` and one action resolver containing today's five action rules in the same order. In `warehouses/sod_rules.py`, define and in `WarehousesConfig.ready()` register `(60, ('customs',), '/customs')`. Register outside any `try` block.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests accounts --noinput` and one run of `.\venv\Scripts\python.exe manage.py test personnel inventory warehouses --noinput`; `python scripts/e2e/guardian_modularization.py` at most twice. If a command fails, read the output and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests accounts --noinput` and one run of `.\venv\Scripts\python.exe manage.py test personnel inventory warehouses --noinput`; `python scripts/e2e/guardian_modularization.py` at most twice. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files, and `test_sod_context_resolution.py` is unchanged.
 
@@ -4780,7 +4780,7 @@ Session 4 of 9 — Phase 3: company delete blockers, org-structure write permiss
 - d) In `_org_admin_directory_queryset`, OR in the result of each `contributions('company_member_q_builders')` builder called with `allowed_cids` (skip None). In `personnel/company_access.py`, add `build_section_member_q(allowed_cids)` that returns today's `Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)`, and register it in `PersonnelConfig.ready()`.
 - e) New `integration_tests/test_company_extension_points.py` (`TestCase`): the sorted `company_delete_blockers` related names equal `['projects','warehouses','personnel_profiles','monthly_work_periods','counterparties','fiscal_periods']`; a superuser DELETE on a company that has a warehouse returns 400 and the company still exists; the same for a company that has a project; a user with only `accounts.perm_approve_personnel_manager` passes `has_structure_write_permission`; in the org-admin directory, an active section member of a project of an allowed company is listed and a user of another company is not.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests companies accounts --noinput`, and `python scripts/e2e/guardian_modularization.py` at most twice. If an existing test fails, report it; do not weaken any check.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests companies accounts --noinput`, and `python scripts/e2e/guardian_modularization.py` at most twice. If an existing test fails, report it; do not weaken any check.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4834,7 +4834,7 @@ Session 5 of 9 — Phase 3: company sub-resource and Google Drive endpoints from
 - d) In `company-gdrive-tab.ts` and `settings-backup-tab.ts`, inject `CompanyApiService` where missing and build every gdrive URL with `getCompanyGdriveUrl(cid, '<same subpath and query as today>')`; if it returns null, show the existing error handling path for that call and send nothing.
 - e) In `company-api-endpoints.spec.ts`, add tests: with the accounting extension the four endpoints and `getCompanyGdriveUrl(5, '/queue/')` equal today's URLs; without it the methods error and no HTTP request is issued (the existing spec mocks `HttpClient` with `vi.fn()`; assert with `expect(http.get).not.toHaveBeenCalled()` and the same for the other verbs); `matchesCompanyUrl` for each kind.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` and one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` and one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4844,7 +4844,7 @@ refactor(company-api): company sub-resource and gdrive endpoints from the accoun
 - Short English report: replaced call sites with their old and new URL expressions, tests added, commands actually run with results, remaining doubts. End the turn after the commit and report.
 ```
 - **Agent's last reply:**
-I have launched the Angular build command with increased Node memory limit (`$env:NODE_OPTIONS="--max-old-space-size=8192"; npx ng build --output-path ../scratch/ng-build-agent`) in `warehouse-front` and will wait for it to complete.
+I have launched the Angular build command with increased Node memory limit (`$env:NODE_OPTIONS="--max-old-space-size=8192"; npx ng build --output-path ../scratch/ng-build-agent`) in `frontend` and will wait for it to complete.
 
 ---
 
@@ -4882,7 +4882,7 @@ Session 5 of 9 — Phase 3: company sub-resource and Google Drive endpoints from
 - d) In `company-gdrive-tab.ts` and `settings-backup-tab.ts`, inject `CompanyApiService` where missing and build every gdrive URL with `getCompanyGdriveUrl(cid, '<same subpath and query as today>')`; if it returns null, show the existing error handling path for that call and send nothing.
 - e) In `company-api-endpoints.spec.ts`, add tests: with the accounting extension the four endpoints and `getCompanyGdriveUrl(5, '/queue/')` equal today's URLs; without it the methods error and no HTTP request is issued (the existing spec mocks `HttpClient` with `vi.fn()`; assert with `expect(http.get).not.toHaveBeenCalled()` and the same for the other verbs); `matchesCompanyUrl` for each kind.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` and one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` and one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4938,7 +4938,7 @@ Session 6 of 9 — Phase 3: offline queue headers, deep-sync probe and tab scope
 - d) In `getActiveApp()`, keep the `/app/operations` check first, then loop over `getModuleRegistry().getInstalledModules()` and, when `path.includes(mod.routePrefix)` and `mod.extensions?.launcherTile?.appKey` exists, call `setActiveApp(appKey)` and return it. Keep the session-storage and local-storage fallbacks.
 - e) Tests: in `offline-queue-runner.spec.ts`, assert the exact headers for `'warehouse'` and `'finance'` with the real registry and with a registry whose `getExtensions` returns `[]`. New `session-tab.service.spec.ts`: `/app/warehouse/counter` gives `'warehouse'`, `/app/finance/x` gives `'personnel'`, `/app/operations/cockpit` gives `'operations'`.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, one run of `python scripts/e2e/guardian_34_offline_continuity.py` and one of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, one run of `python scripts/e2e/guardian_34_offline_continuity.py` and one of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -4994,7 +4994,7 @@ Session 7 of 9 — Phase 3: accounting notification navigation moved out of the 
 - c) In `onNotificationClick`, keep `markAsRead`, closing the panel and the `item.url` branch; then compute `userPerms()` once, iterate over `this.moduleRegistry.getExtensions('notificationHandlers')`, and for each entry iterate over `entry.extension` (an array of handlers); call `navigate(context)` on the first handler whose `canHandle(item)` is true and return. Inject `ModuleRegistryService` with `inject()`. Remove the moved private helpers and any now-unused imports.
 - d) `notification-handlers.spec.ts`: for each handler, the route and query params for the manager, accountant, supervisor and plain-employee permission sets, the invalid `target_id` fallback, and the HTTP-error fallback (mock `HttpClient` with `vi.fn()` returning `of(...)` or `throwError(...)`, and spy on `Router.navigate`).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -5041,7 +5041,7 @@ Session 8 of 9 — Phase 3: move module-only front models into their modules and
 - b) `git mv` `core/models/count-task.model.ts` and `core/models/doc-task.model.ts` to `modules/warehouse/models/`, fix their own relative imports (for example `Item` from `../../../core/models/item.model`), remove both lines from `core/models/index.ts`, and update every import under `modules/warehouse/`, including imports that used the `core/models` barrel for these types.
 - c) `git rm` `core/http/record-http.service.ts`.
 
-5. Tool policy: in `warehouse-front`, at most three runs of `npx ng build --output-path ../scratch/ng-build-agent`; one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. Use the Grep tool to find importers. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most three runs of `npx ng build --output-path ../scratch/ng-build-agent`; one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. Use the Grep tool to find importers. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only renames, `index.ts`, the deletion and import-line edits.
 
@@ -5087,7 +5087,7 @@ Session 9 of 9 — Phase 3: semantic core fences in Guardian 29 (backend) and Gu
 - Guardian 57 (`scripts/e2e/guardian_57_front_module_fence.py`) classifies files with `get_file_zone(rel_posix, module_names)` (zones `composition_root`, a module name, or `core_common`; `modules/common` is `core_common`), counts in `scan_front_fences`, and has `run_self_test()` with a dummy file in zone `core_common`.
 
 3. Definitions:
-- "core module app reference" is one regex match in a non-test, non-migration `.py` file under `warehouse-backend/core/` (skip files named `tests.py`, `test_*.py` and anything under `tests/` or `migrations/`) of `apps\.(?:is_installed|get_model)\(\s*['"](?:personnel|warehouses|inventory)['"]` or `get_user_valid_roles_for_app\(\s*user\s*,\s*['"](?:personnel|warehouse)['"]`.
+- "core module app reference" is one regex match in a non-test, non-migration `.py` file under `backend/core/` (skip files named `tests.py`, `test_*.py` and anything under `tests/` or `migrations/`) of `apps\.(?:is_installed|get_model)\(\s*['"](?:personnel|warehouses|inventory)['"]` or `get_user_valid_roles_for_app\(\s*user\s*,\s*['"](?:personnel|warehouse)['"]`.
 - "hardcoded module API path" is one match of `['"\x60][^'"\x60\n]*/(?:personnel|inventory)/` in a non-spec `.ts` file of zone `core_common`, ignoring lines whose stripped text starts with `//`, `*` or `/*`, and lines matching `^\s*(import|export)\b.*\bfrom\b`. (`\x60` is the backtick character.)
 
 4. Task:
@@ -5108,7 +5108,7 @@ feat(guardians): semantic core fences for module app references and hardcoded mo
 
 ### ۱. توضیح ساده خواسته کاربر (Simple Explanation)
 در این جلسه (جلسه ۹ از ۹ — فاز ۳ ماژولارکردن عمیق)، هدف نصب دو حصار معنایی آچاری در اسکریپت‌های نگهبان و به‌روزرسانی بیس‌لاین‌های آن‌ها بود:
-1. **نگهبان ۲۹ (بک‌اند):** اضافه کردن تابع `scan_core_module_app_refs(backend_dir)` برای یافتن هرگونه ارجاع به اپ‌های ماژول (`personnel`، `warehouses`، `inventory`) یا نقش‌های ماژول از داخل کد غیراستثنای پوشه `warehouse-backend/core/`، ثبت شمارنده `core_module_app_refs` در بیس‌لاین با مقدار اولیه ۱۴ (مربوط به وابستگی‌های نرم `warehouses` در ۷ فایل هسته) و گزارش تفکیکی فایل‌ها.
+1. **نگهبان ۲۹ (بک‌اند):** اضافه کردن تابع `scan_core_module_app_refs(backend_dir)` برای یافتن هرگونه ارجاع به اپ‌های ماژول (`personnel`، `warehouses`، `inventory`) یا نقش‌های ماژول از داخل کد غیراستثنای پوشه `backend/core/`، ثبت شمارنده `core_module_app_refs` در بیس‌لاین با مقدار اولیه ۱۴ (مربوط به وابستگی‌های نرم `warehouses` در ۷ فایل هسته) و گزارش تفکیکی فایل‌ها.
 2. **نگهبان ۵۷ (فرانت‌اند):** اضافه کردن شمارنده `core_hardcoded_module_api_paths` برای شناسایی ...
 
 ---
@@ -5129,18 +5129,18 @@ Session 10 of 10 — Phase 3 follow-up: test that the org-admin directory honors
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply (including the new rule: never alter, bypass or shadow a runner check).
-- Test-only session: change only `warehouse-backend/integration_tests/test_company_extension_points.py`. Do not change application code. If the new test fails, report the failure with the output and end the turn; do not change application code to make it pass.
+- Test-only session: change only `backend/integration_tests/test_company_extension_points.py`. Do not change application code. If the new test fails, report the failure with the output and end the turn; do not change application code to make it pass.
 - Do not push. Stage only your changed file. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
 2. Context:
-- `UserViewSet._org_admin_directory_queryset` in `warehouse-backend/core/accounts/views_domains/user_views.py` narrows `allowed_cids` to `{company_id}` when the `company_id` query parameter is given, then ORs the `company_member_q_builders` contributions (section members of projects of those companies).
+- `UserViewSet._org_admin_directory_queryset` in `backend/core/accounts/views_domains/user_views.py` narrows `allowed_cids` to `{company_id}` when the `company_id` query parameter is given, then ORs the `company_member_q_builders` contributions (section members of projects of those companies).
 - The existing test `test_org_admin_directory_lists_active_section_member_of_allowed_company` covers an admin with access to one company only, so it would not catch a builder that ignored the narrowing.
 
 3. Definitions: "section member of company X" means a user with an active `UserSectionAssignment` in a `ProjectSection` of a `FinancialProject` of company X.
 
 4. Task: add `test_org_admin_directory_company_id_param_narrows_section_members` next to the existing test, reusing its setup style (new unique codes, usernames and phone numbers). The org admin has `perm_manage_projects_sections` and `workspace_full` access to both comp1 and comp2; there is one section member in each company. Assert: `GET /api/accounts/users/` lists both members; `GET /api/accounts/users/?company_id=<comp1.id>` lists the comp1 member and not the comp2 member; `GET /api/accounts/users/?company_id=<comp2.id>` lists the comp2 member and not the comp1 member.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`. If a command fails, read the output and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the test file.
 
@@ -5154,14 +5154,14 @@ test(org-directory): company_id narrowing for section members
 
 ### گام چهارم: حل مستقیم و اعتبارسنجی کامل (Solve Directly if Confirmed)
 
-تست درخواستی به فایل [test_company_extension_points.py](file:///E:/warehouse%20project/warehouse-backend/integration_tests/test_company_extension_points.py) اضافه گردید و با موفقیت اجرا و تایید شد. تغییرات بدون push در گیت کامیت شدند.
+تست درخواستی به فایل [test_company_extension_points.py](file:///E:/warehouse%20project/backend/integration_tests/test_company_extension_points.py) اضافه گردید و با موفقیت اجرا و تایید شد. تغییرات بدون push در گیت کامیت شدند.
 
 </div>
 
 ### Summary Report
 
 - **Test Added**:
-  - Added `test_org_admin_directory_company_id_param_narrows_section_members` in [test_company_extension_points.py](file:///E:/warehouse%20project/warehouse-backend/integration_tests/test_company_extension_points.py).
+  - Added `test_org_admin_directory_company_id_param_narrows_section_members` in [test_company_extension_points.py](file:///E:/warehouse%20project/backend/integration_tests/test_company_extension_points.py).
   - Verifies that `UserViewSet._org_admin_directory_queryset` honors `company_id` query paramet...
 
 ---
@@ -5185,16 +5185,16 @@ Session 11 — Phase 3 release on the local app environment: backup, migration c
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: the phase 3 queue (sessions 1 to 10) changed backend and frontend code and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 3'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error; do not try workarounds that touch files or services.
 
@@ -5215,7 +5215,7 @@ I have launched the frontend build (`npx ng build --delete-output-path=false`) a
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 4/5 passed
-    - FAILED (exit 1): `python -c "import subprocess,sys; ok={'warehouse-front/src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','f51e714','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"`
+    - FAILED (exit 1): `python -c "import subprocess,sys; ok={'frontend/src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','f51e714','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"`
   - verify round 1: 5/5 passed
 - **Task:**
 ```
@@ -5225,7 +5225,7 @@ Session 12 of 22 — Phase 3 DOM test: the org-admin user directory inside proje
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- This session adds one test file only: `warehouse-front/src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts`. Do not change any application file, template, existing spec, config or script. If the application behaves differently from this task text, leave that assertion out of the file and list the difference in the report; do not change application code.
+- This session adds one test file only: `frontend/src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts`. Do not change any application file, template, existing spec, config or script. If the application behaves differently from this task text, leave that assertion out of the file and list the difference in the report; do not change application code.
 - No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`. Every test must assert on the rendered DOM (`fixture.nativeElement`) or on a mocked service call.
 - Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
@@ -5233,7 +5233,7 @@ Session 12 of 22 — Phase 3 DOM test: the org-admin user directory inside proje
 - Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## گزارش پیشرفت`, the last entry (batch A). These specs replace a manual check of pages behind the login.
 - Component class in `projects-and-sections.ts` with template `projects-and-sections.html` (`templateUrl`). `loadUsers()` fills `systemUsers` from `AccountsHttpService.getUsers()` and shows a toast with the text «خطا در دریافت لیست کاربران» on error.
 - Spec style to copy: `src/app/modules/common/components/login/login.spec.ts` and `src/app/modules/common/components/health-dashboard/health-dashboard.dom.spec.ts` (`// @vitest-environment jsdom`, `import '@angular/compiler'`, `TestBed` with mocked providers, `getTestBed().initTestEnvironment(...)` inside a try block). The `@angular/build:unit-test` builder resolves `templateUrl`; no `fs` is needed.
-- Backend rule already tested in `warehouse-backend/integration_tests/test_company_extension_points.py`: an org admin (permission `perm_manage_projects_sections`, not superuser) receives only members of the sections of their companies. The frontend shows exactly what the API returns.
+- Backend rule already tested in `backend/integration_tests/test_company_extension_points.py`: an org admin (permission `perm_manage_projects_sections`, not superuser) receives only members of the sections of their companies. The frontend shows exactly what the API returns.
 
 3. Definitions:
 - "org admin" means a mocked `AuthService` whose `userPermissions()` returns `['perm_manage_projects_sections']` and whose `user()` returns a non-superuser.
@@ -5286,7 +5286,7 @@ Session 13 of 22 — Phase 3 DOM test: fleet and personnel notification navigati
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- This session adds one test file only: `warehouse-front/src/app/shared/components/notification-center/notification-center.dom.spec.ts`. Do not change any application file, template, existing spec, config or script. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
+- This session adds one test file only: `frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts`. Do not change any application file, template, existing spec, config or script. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
 - No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`. Every test must assert on the rendered DOM or on a mocked call.
 - Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
@@ -5324,7 +5324,7 @@ test(dom): notification center fleet and personnel navigation
 ### پروتکل ۴ مرحله‌ای (گام‌های اجرایی)
 
 1. **توضیح ساده خواسته کاربر:**
-   کاربر خواستار افزودن یک فایل تست DOM (نوع اول / کامپوننت یونیت تست مبتنی بر Vitest و JSDOM) برای کامپوننت مرکز اعلان‌ها (`NotificationCenterComponent`) در مسیر `warehouse-front/src/app/shared/components/notification-center/notification-center.dom.spec.ts` بود تا ناوبری اعلان‌های ناوگان و پرسنل، تعامل با ماک‌های رجیستری ماژول (حسابداری یا فقط انبار)، باز شدن پنل از طریق دکمهٔ رندرشده، کلیک روی ردیف اعلان در دام و علامت‌گذاری خوانده‌شده با حداقل ۷ تست اعتبارسنجی شوند.
+   کاربر خواستار افزودن یک فایل تست DOM (نوع اول / کامپوننت یونیت تست مبتنی بر Vitest و JSDOM) برای کامپوننت مرکز اعلان‌ها (`NotificationCenterComponent`) در مسیر `frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts` بود تا ناوبری اعلان‌های ناوگان و پرسنل، تعامل با ماک‌های رجیستری ماژول (حسابداری یا فقط انبار)، باز شدن پنل از طریق دکمهٔ رندرشده، کلیک روی ردیف اعلان در دام و علامت‌گذاری خوانده‌شده با حداقل ۷ تست اعتبارسنجی شوند.
 
 2. **بررسی صحت فنی و انطباق با پایگاه‌کد:**
    - وابستگی‌های کامپوننت (`HttpClient`، `Router`، `AuthService`، `WebSocketSe...
@@ -5347,7 +5347,7 @@ Session 14 of 22 — Phase 3 DOM test: company finance tabs and the Google Drive
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply.
-- This session adds two test files only: `warehouse-front/src/app/modules/common/components/operations/companies/company-finance-tabs.dom.spec.ts` and `warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.dom.spec.ts`. Do not change application files, templates, existing specs (including `companies.dom.spec.ts`), config or scripts. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
+- This session adds two test files only: `frontend/src/app/modules/common/components/operations/companies/company-finance-tabs.dom.spec.ts` and `frontend/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.dom.spec.ts`. Do not change application files, templates, existing specs (including `companies.dom.spec.ts`), config or scripts. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
 - No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
 - Do not push. Stage only the two new specs. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
@@ -5362,7 +5362,7 @@ Session 14 of 22 — Phase 3 DOM test: company finance tabs and the Google Drive
 - b) `company-gdrive-tab.dom.spec.ts`, at least 5 tests: with a mocked `CompanyApiService.getCompanyGdriveUrl` that returns the real accounting URL, init with `companyId = 5` sends its first `HttpClient.get` to the URL under `${environment.apiUrl}/personnel/companies/5/gdrive`; the disconnect and trigger-sync actions, through their rendered buttons (confirm the mocked dialog if one opens), send requests to URLs ending in `/gdrive/disconnect/` and `/gdrive/trigger-sync/`; when `getCompanyGdriveUrl` returns null, no `HttpClient` method is called and the component renders without throwing.
 - Mock `HttpClient` with `vi.fn()` for every verb; no real HTTP.
 
-5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "<spec path relative to warehouse-front>"` for these two specs. If a run fails, read the log and change approach.
+5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "<spec path relative to frontend>"` for these two specs. If a run fails, read the log and change approach.
 
 6. Before finishing: `git status --short` shows only runner files.
 
@@ -5400,7 +5400,7 @@ Session 15 of 22 — Phase 3 DOM test: offline queue badge states, pending count
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - No data may be lost: the spec must never call anything that clears, deletes or skips queue records or IndexedDB stores; use mocks only, never the real `OfflineDb`.
-- This session adds one test file only: `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.dom.spec.ts`. Do not change application files, templates, the existing `offline-pending-badge.component.spec.ts`, config or scripts. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
+- This session adds one test file only: `frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.dom.spec.ts`. Do not change application files, templates, the existing `offline-pending-badge.component.spec.ts`, config or scripts. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
 - No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
 - Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
@@ -5433,7 +5433,7 @@ test(dom): offline queue badge states, pending count and manual sync
 <div dir="rtl" align="right">
 
 ### ۱. توضیح ساده خواسته کاربر (Simple Explanation)
-کاربر درخواست پیاده‌سازی آزمون‌های DOM کامپوننت مرکز وضعیت و صف آفلاین (`OfflinePendingBadgeComponent`) را در فایل مجزای `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.dom.spec.ts` داشتند. این آزمون‌ها باید وضعیت‌های مختلف دکمه کپسولی در حالت `mode = 'header'` (آنلاین و بیکار، صف انتظار، در حال ارسال، آفلاین، قطع موقت سرور)، باز شدن پاپ‌اور و نمایش آمار رکوردها، فعال/غیرفعال بودن دکمه ارسال دستی و بروزرسانی واکنشی DOM پس از تغییر تعداد صف را با استفاده از ماک‌های ایزوله و بدون دستکاری یا خطر از دست رفتن داده‌های `OfflineDb` پوشش دهند.
+کاربر درخواست پیاده‌سازی آزمون‌های DOM کامپوننت مرکز وضعیت و صف آفلاین (`OfflinePendingBadgeComponent`) را در فایل مجزای `frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.dom.spec.ts` داشتند. این آزمون‌ها باید وضعیت‌های مختلف دکمه کپسولی در حالت `mode = 'header'` (آنلاین و بیکار، صف انتظار، در حال ارسال، آفلاین، قطع موقت سرور)، باز شدن پاپ‌اور و نمایش آمار رکوردها، فعال/غیرفعال بودن دکمه ارسال دستی و بروزرسانی واکنشی DOM پس از تغییر تعداد صف را با استفاده از ماک‌های ایزوله و بدون دستکاری یا خطر از دست رفتن داده‌های `OfflineDb` پوشش دهند.
 
 ### ۲. اعتبارسنجی و درستی‌سنجی فنی ...
 
@@ -5456,7 +5456,7 @@ Session 16 of 23 — Deep-sync probe: classify a failed probe with isServerUnrea
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - No data may be lost. `performDeepUpdate` deletes cached rows per warehouse or project only after the probe succeeds. Every non-2xx probe response and every network failure must still throw before that point, exactly as today. Do not touch any line that deletes, clears or rewrites local data, the pull loop, or `core/services/offline-db.ts`.
-- Change only `warehouse-front/src/app/core/services/offline-sync.service.ts` (only the probe `try`/`catch` inside `performDeepUpdate` and the import line) and the new spec `warehouse-front/src/app/core/services/offline-sync.deep-update-probe.spec.ts`.
+- Change only `frontend/src/app/core/services/offline-sync.service.ts` (only the probe `try`/`catch` inside `performDeepUpdate` and the import line) and the new spec `frontend/src/app/core/services/offline-sync.deep-update-probe.spec.ts`.
 - Do not push. Stage only those two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context:
@@ -5472,7 +5472,7 @@ Session 16 of 23 — Deep-sync probe: classify a failed probe with isServerUnrea
 - a) In the probe block: 401 keeps the session-expired message; unreachable keeps «سرور در دسترس نیست»; rejected by the server throws an `Error` with the message «سرور درخواست بروزرسانی عمیق را نپذیرفت (کد <status>).» with the numeric status. All three paths throw before any code after the probe runs. Keep the `console.error` line.
 - b) New spec `offline-sync.deep-update-probe.spec.ts` (Vitest; stub `fetch` with `vi.stubGlobal`; give `getModuleRegistry().getExtensions('syncConfig')` a warehouse `syncConfig` through the real registry or a mock, as the existing specs in `core/services/` do). At least 6 tests: 401 gives the session-expired message; 530 and 503 give «سرور در دسترس نیست»; a network rejection gives «سرور در دسترس نیست»; 403 and 500 give the rejected message containing the status; in every failing case `fetch` was called exactly once (only the probe) and the deep-update state observable never reported `isActive: true`; an empty id list returns `[]` without calling `fetch`.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/offline-sync.deep-update-probe.spec.ts"`. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/offline-sync.deep-update-probe.spec.ts"`. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -5485,7 +5485,7 @@ fix(offline-sync): classify the deep-update probe failure with isServerUnreachab
 <div dir="rtl" align="right">
 
 ### ۱. توضیح سادهٔ درخواست
-درخواست مربوط به اصلاح منطق پروب بررسی سلامت سرور پیش از بروزرسانی عمیق (`performDeepUpdate`) در سرویس [offline-sync.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts) بود. تا پیش از این، هر وضعیت غیر 2xx غیر از 401 به‌عنوان خطای غیرقابل‌دسترس بودن سرور («سرور در دسترس نیست») در نظر گرفته می‌شد. طبق قوانین پروژه (`CLAUDE.md`) و ردیف ۴ سند معماری، بررسی دسترسی‌پذیری باید از تابع `isServerUnreachable` استفاده کند تا خطاهای رد صریح سرور (مانند 403 یا 500) با پیام متناسب تفکیک شده و مانع از حذف داده‌های محلی یا فعال‌شدن وضعیت همگام‌سازی گردد.
+درخواست مربوط به اصلاح منطق پروب بررسی سلامت سرور پیش از بروزرسانی عمیق (`performDeepUpdate`) در سرویس [offline-sync.service.ts](file:///E:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts) بود. تا پیش از این، هر وضعیت غیر 2xx غیر از 401 به‌عنوان خطای غیرقابل‌دسترس بودن سرور («سرور در دسترس نیست») در نظر گرفته می‌شد. طبق قوانین پروژه (`CLAUDE.md`) و ردیف ۴ سند معماری، بررسی دسترسی‌پذیری باید از تابع `isServerUnreachable` استفاده کند تا خطاهای رد صریح سرور (مانند 403 یا 500) با پیام متناسب تفکیک شده و مانع از حذف داده‌های محلی یا فعال‌شدن وضعیت همگام‌سازی گردد.
 
 ### ۲. اعتبارسنجی و درستی‌سنجی
 - بررسی خط...
@@ -5514,7 +5514,7 @@ Session 17 of 23 — Guardians 33 and 35: check the current module build and laz
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.`, row about guardians 33 and 35, and the last entry under `## گزارش پیشرفت`.
 - Both guardians fail on HEAD only because the architecture changed: guardian 33 looks for an `accounting-only` build configuration in `angular.json` and the file `modules/warehouse/warehouse.routes.stub.ts`, which no longer exist; guardian 35 looks for literal `path: 'app/warehouse'` and `path: 'app/finance'` routes with `loadChildren: () => import(`.
-- Current mechanism: `warehouse-front/tools/gen-installed-modules.js` writes `src/app/modules/installed-modules.ts` (the committed version lists every discovered module); `warehouse-front/tools/build-for-modules.js` (npm script `build:modules`) regenerates it for `WH_MODULES`, builds, and restores the committed version; each `src/app/modules/<name>/module.ts` declares `routes: () => import('./<name>.routes')...`; `app.routes.ts` builds `dynamicModuleRoutes` from `INSTALLED_MODULES` with `loadChildren: m.routes!`.
+- Current mechanism: `frontend/tools/gen-installed-modules.js` writes `src/app/modules/installed-modules.ts` (the committed version lists every discovered module); `frontend/tools/build-for-modules.js` (npm script `build:modules`) regenerates it for `WH_MODULES`, builds, and restores the committed version; each `src/app/modules/<name>/module.ts` declares `routes: () => import('./<name>.routes')...`; `app.routes.ts` builds `dynamicModuleRoutes` from `INSTALLED_MODULES` with `loadChildren: m.routes!`.
 - Guardian 33's existing dist loop asserts nothing (its body is `pass`). Real bundle isolation per profile is checked by the runner with separate `build:modules` builds and `verify_tools.py dist-free`.
 
 3. Definitions: "self-test" means the guardian runs its checks against small in-memory text fixtures (a good fixture that must pass and at least one bad fixture per check that must fail) and exits 0 only if every fixture gives the expected result. It must not write files outside a temporary directory.
@@ -5571,7 +5571,7 @@ Session 18 of 23 — Persona characterization spec: pin availableRoles, the pers
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- This session adds one test file only: `warehouse-front/src/app/core/services/app-persona.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
+- This session adds one test file only: `frontend/src/app/core/services/app-persona.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
 - The spec pins today's behavior. Expected values are literal arrays and objects written in the spec, taken from the behavior on HEAD; no snapshot files, no `toMatchSnapshot`. The spec must test only through public members of `AppPersonaService` (`availableRoles`, `isActionProhibited`, `canPerform`, `canAccessRoute`, `getDefaultRouteForRole`, `activeApp`, `activeRole`) and must not import `ALL_APP_ROLES` or `FRONTEND_SOD_PROHIBITIONS`, because the next sessions move those constants into the modules and this spec must keep passing unchanged.
 - Use the real `ModuleRegistryService` (not a mock) with `setInstalledModules(['warehouse', 'accounting'])`, because the next sessions read persona data from the registry.
 - No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
@@ -5610,7 +5610,7 @@ test(persona): characterization of available roles, persona list, SoD prohibitio
 ### گام‌های چهارگانه پروتکل اجباری (Mandatory Protocol)
 
 ۱. **توضیح ساده (Explain Simply):**
-در نشست ۱۸ از ۲۳، فایل تست مشخصه‌یابی (Characterization Test) برای سرویس پرسونای فرانت‌اند (`AppPersonaService`) در مسیر `warehouse-front/src/app/core/services/app-persona.characterization.spec.ts` ایجاد شد تا رفتار فعلی سیستم قبل از انتقال ثابت‌ها و قوانین به درون ماژول‌های مستقل (انبار و مالی) به‌صورت دقیق با مقادیر واقعی و قطعی (Literal) پین و تثبیت گردد.
+در نشست ۱۸ از ۲۳، فایل تست مشخصه‌یابی (Characterization Test) برای سرویس پرسونای فرانت‌اند (`AppPersonaService`) در مسیر `frontend/src/app/core/services/app-persona.characterization.spec.ts` ایجاد شد تا رفتار فعلی سیستم قبل از انتقال ثابت‌ها و قوانین به درون ماژول‌های مستقل (انبار و مالی) به‌صورت دقیق با مقادیر واقعی و قطعی (Literal) پین و تثبیت گردد.
 
 ۲. **بررسی و اعتبارسنجی (Verify Immediately):**
 - ساختار و رفتارهای کنونی `availableRoles`، ماتریس SoD در `isActionProhibited` و `canPerform`، ایزولاسیون روت‌های نقش‌ها در `canAccessRoute` و روت‌های پیش‌فرض در `get...
@@ -5638,7 +5638,7 @@ Session 20 of 23 — SoD prohibitions, role route isolation and role default rou
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Behavior must stay identical with both modules installed: `app-persona.characterization.spec.ts` must pass without any change. Do not edit that spec.
-- Change only `core/modules/module-contract.ts`, `core/services/app-persona.service.ts`, `modules/accounting/personas.ts` and `modules/warehouse/personas.ts` (under `warehouse-front/src/app/`). The method names `switchApp`, `switchRole`, `canPerform`, `isActionProhibited` and `canAccessRoute` stay in `app-persona.service.ts` with the same signatures.
+- Change only `core/modules/module-contract.ts`, `core/services/app-persona.service.ts`, `modules/accounting/personas.ts` and `modules/warehouse/personas.ts` (under `frontend/src/app/`). The method names `switchApp`, `switchRole`, `canPerform`, `isActionProhibited` and `canAccessRoute` stay in `app-persona.service.ts` with the same signatures.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context:
@@ -5652,7 +5652,7 @@ Session 20 of 23 — SoD prohibitions, role route isolation and role default rou
 - b) Move each module's SoD keys (verbatim keys and action lists) into its `personas.ts`, and move the six accounting role branches of `canAccessRoute` (same substrings, same order, same `allowed` list for `org_admin`) into accounting's `isRouteDeniedForRole`.
 - c) In `app-persona.service.ts`: `isActionProhibited` looks up the key in the merged `sodProhibitions` of the installed modules, read at call time; `canAccessRoute` keeps the superuser shortcut and the app-level prefix checks unchanged, then returns false when any installed module's `isRouteDeniedForRole(role, cleanRoute)` is true. `getDefaultRouteForRole` keeps the `ops_commander` case and the `default` branch exactly as today and, before them, returns the first installed module's `defaultRouteForRole[role]` when defined. Keep exporting `FRONTEND_SOD_PROHIBITIONS` only if a file outside this session's scope imports it.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/app-persona*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. Do not run `phase_guardian_approval.py`; it writes to the database. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/app-persona*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. Do not run `phase_guardian_approval.py`; it writes to the database. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -5687,7 +5687,7 @@ Session 21 of 23 — Characterization specs: login destination and route access 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- This session adds two test files only: `warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts` and `warehouse-front/src/app/core/auth/route-access.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
+- This session adds two test files only: `frontend/src/app/modules/common/components/login/login-destination.characterization.spec.ts` and `frontend/src/app/core/auth/route-access.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
 - The specs pin today's behavior with literal expectations taken from HEAD; no snapshot files. They test only through `Login` (rendered with `TestBed`, submitting its form), the exported `hasRoutePermission` and the exported `AuthGuard`, so they keep passing after session 22 moves the permission lists into the modules. Use the real `ModuleRegistryService` with `setInstalledModules(['warehouse', 'accounting'])`; do not provide a mock for it.
 - No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
 - Do not push. Stage only the two new specs. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
@@ -5725,7 +5725,7 @@ test(route-access): characterization of login destination, hasRoutePermission an
 تست‌های مشخصه‌نگار مقصد ورود کاربر (`Login`)، بررسی مجوز مسیر (`hasRoutePermission`) و تصمیمات گارد دسترسی (`AuthGuard`) به همراه تمامی انتظارات لفظی (Literal Expectations) پیاده‌سازی و کامیت شدند.
 
 #### فایل‌های ایجادشده:
-1. [`warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts)
+1. [`frontend/src/app/modules/common/components/login/login-destination.characterization.spec.ts`](file:///E:/warehouse%20project/frontend/src/app/modules/common/components/login/login-destination.characterization.spec.ts)
    - ۳۷ تست برای پوشش کامل ابرکاربر، ۱۲ مجوز ورود انبار به تفکیک زنجیره اولویت، ۱۰ مجوز ورود مالی، همزمانی انبار و مالی، کاربران بدون مجوز م...
 
 ---
@@ -5748,7 +5748,7 @@ Session 22 of 23 — Login entry lists, guard access lists and module page permi
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
 - Behavior must stay identical with both modules installed: `login-destination.characterization.spec.ts` and `route-access.characterization.spec.ts` must pass without any change. Do not edit them. In particular the login lists stay separate from `permissionMarkers` (using the markers would change where users land).
-- Change only `core/modules/module-contract.ts`, `core/auth/auth.guard.ts`, `modules/common/components/login/login.ts`, `modules/accounting/module.ts`, the new `modules/accounting/route-access.ts`, `modules/warehouse/module.ts`, the new `modules/warehouse/route-access.ts` (all under `warehouse-front/src/app/`) and `warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py`. Do not change `app.routes.ts`, `layout.ts` or `app-persona.service.ts`.
+- Change only `core/modules/module-contract.ts`, `core/auth/auth.guard.ts`, `modules/common/components/login/login.ts`, `modules/accounting/module.ts`, the new `modules/accounting/route-access.ts`, `modules/warehouse/module.ts`, the new `modules/warehouse/route-access.ts` (all under `frontend/src/app/`) and `backend/modules/accounting/personnel/phase_guardian_approval.py`. Do not change `app.routes.ts`, `layout.ts` or `app-persona.service.ts`.
 - Never run `phase_guardian_approval.py`; it writes to the database. Only edit its text check.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
@@ -5768,7 +5768,7 @@ Session 22 of 23 — Login entry lists, guard access lists and module page permi
 - c) `login.ts`: for each installed module with `routeAccess`, the user has it when superuser or when any `loginPermissions` entry is in the permissions. Two or more modules: `/app/launcher`. Exactly one: set `localStorage.active_app_module` to its `loginActiveAppModule` and use `resolveLoginRoute(perms)`. None: `/app/launcher`. Keep the password-change branch, the `returnUrl` override and the `navigateByUrl` failure handling unchanged.
 - d) `phase_guardian_approval.py` check 1: read `auth.guard.ts` and `modules/accounting/route-access.ts` together and require the same three texts in the combined content. Change nothing else in that file.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -5810,16 +5810,16 @@ Session 23 of 23 — Release the end of phase 3 on the local app environment: ba
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 12 to 22 changed frontend code, frontend specs and guardian scripts, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 3 end'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
@@ -5856,7 +5856,7 @@ Session 1 of 17 — Mobile phase A: make the 9 non-compiling frontend specs comp
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Change only these 9 spec files (all under `warehouse-front/src/app/`): `modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.spec.ts`, `modules/accounting/components/finance/company-documents-archive/company-documents-archive.dom.spec.ts`, `modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-13-items.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance-and-lock.dom.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.spec.ts`, `modules/common/components/id-cards/id-cards.spec.ts`. Never change application code, models or tsconfig files.
+- Change only these 9 spec files (all under `frontend/src/app/`): `modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.spec.ts`, `modules/accounting/components/finance/company-documents-archive/company-documents-archive.dom.spec.ts`, `modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-13-items.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance-and-lock.dom.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.spec.ts`, `modules/common/components/id-cards/id-cards.spec.ts`. Never change application code, models or tsconfig files.
 - Never delete, skip (`it.skip`, `xit`, `describe.skip`, `.only`, `.todo`) or empty a test.
 - Do not push. Stage only your changed files with `git add <file>`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
@@ -5908,7 +5908,7 @@ Session 1 of 17 — Mobile phase A: make the 9 non-compiling frontend specs comp
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Change only these 9 spec files (all under `warehouse-front/src/app/`): `modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.spec.ts`, `modules/accounting/components/finance/company-documents-archive/company-documents-archive.dom.spec.ts`, `modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-13-items.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance-and-lock.dom.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.spec.ts`, `modules/common/components/id-cards/id-cards.spec.ts`. Never change application code, models or tsconfig files.
+- Change only these 9 spec files (all under `frontend/src/app/`): `modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.spec.ts`, `modules/accounting/components/finance/company-documents-archive/company-documents-archive.dom.spec.ts`, `modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-13-items.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance-and-lock.dom.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.spec.ts`, `modules/common/components/id-cards/id-cards.spec.ts`. Never change application code, models or tsconfig files.
 - Never delete, skip (`it.skip`, `xit`, `describe.skip`, `.only`, `.todo`) or empty a test.
 - Do not push. Stage only your changed files with `git add <file>`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
@@ -5947,7 +5947,7 @@ test(front): make the 9 non-compiling specs compile against the current models
 
 ### گام دوم: اعتبارسنجی (Verify Immediately)
 ۱. خطاهای تایپ‌اسکریپت روی کدهای تست تأیید شدند (`TS2739`، `TS2353`، `TS2741`، `TS2459` و `TS2554`).
-۲. مدل‌های مرجع در `warehouse-front` استعلام و فیلدهای الزامی جدید (`code`...
+۲. مدل‌های مرجع در `frontend` استعلام و فیلدهای الزامی جدید (`code`...
 
 ---
 
@@ -5973,7 +5973,7 @@ Session 2 of 17 — Mobile phase A: fix the 18 pre-existing failing frontend tes
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Change only these 10 spec files under `warehouse-front/src/app/`: `app.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.dom.spec.ts`, `modules/common/components/layout/layout.spec.ts`, `modules/common/components/login/login.spec.ts`, `modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.spec.ts`, `modules/warehouse/components/dashboard/dashboard.spec.ts`, `modules/warehouse/components/dispatch/dispatch.spec.ts`, `modules/warehouse/components/feeding/feeding.spec.ts`, `modules/warehouse/components/placeholders/placeholders.spec.ts`, `modules/warehouse/components/projects/projects.spec.ts`. Never change application code.
+- Change only these 10 spec files under `frontend/src/app/`: `app.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.dom.spec.ts`, `modules/common/components/layout/layout.spec.ts`, `modules/common/components/login/login.spec.ts`, `modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.spec.ts`, `modules/warehouse/components/dashboard/dashboard.spec.ts`, `modules/warehouse/components/dispatch/dispatch.spec.ts`, `modules/warehouse/components/feeding/feeding.spec.ts`, `modules/warehouse/components/placeholders/placeholders.spec.ts`, `modules/warehouse/components/projects/projects.spec.ts`. Never change application code.
 - Never delete, skip or empty a test, and never weaken an assertion to make it pass.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
@@ -6083,7 +6083,7 @@ Session 3 of 17 — Mobile phase A: platform detection, server origin helpers an
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
 - Web behavior must stay identical. On the web (no native Capacitor runtime) the server origin is always the empty string, and every helper must then return its input unchanged (except `wsUrl` and `publicOrigin`, which must return exactly what the current code builds from `window.location`).
 - Do not install any npm package. Do not import `@capacitor/*`; detect the runtime only through `globalThis.Capacitor`.
-- Change only: new files under `warehouse-front/src/app/core/platform/`, the new `core/interceptors/api-origin.interceptor.ts` and its spec, `app.config.ts`, `src/environments/environment.ts`, `src/environments/environment.development.ts`.
+- Change only: new files under `frontend/src/app/core/platform/`, the new `core/interceptors/api-origin.interceptor.ts` and its spec, `app.config.ts`, `src/environments/environment.ts`, `src/environments/environment.development.ts`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
@@ -6110,7 +6110,7 @@ Session 3 of 17 — Mobile phase A: platform detection, server origin helpers an
 - d) Add `serverOrigin: ''` to both environment files.
 - e) Specs with Vitest: `core/platform/server-origin.spec.ts` with at least 12 tests (web: every helper unchanged; native via a stubbed `globalThis.Capacitor`: environment fallback, valid override, invalid override rejected, `http://` rejected, absolute and `/assets/` URLs untouched, `/api/x` and `/media/x` prefixed, `wsUrl` scheme mapping, `publicOrigin`); remove the stub and clear the storage key after each test. `core/interceptors/api-origin.interceptor.spec.ts` with at least 5 tests (web passthrough is the same object; native `/api/` and `/media/` rewritten; absolute and `/assets/` untouched).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6140,7 +6140,7 @@ feat(platform): server origin helpers and api-origin interceptor
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 17/18 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts --require "Capacitor" --require "resolveServerUrl"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline/offline-queue-runner.spec.ts --require "Capacitor" --require "resolveServerUrl"`
   - verify round 1: 18/18 passed
 - **Task:**
 ```
@@ -6158,7 +6158,7 @@ Session 4 of 17 — Mobile phase A: every direct fetch() call resolves its URL t
 
 2. Context:
 - Plan heading `## ۱۰.` (first decision: all `fetch` calls go through `resolveServerUrl()`).
-- `resolveServerUrl` is exported by `warehouse-front/src/app/core/platform/server-origin.ts` (session 3).
+- `resolveServerUrl` is exported by `frontend/src/app/core/platform/server-origin.ts` (session 3).
 - The direct `fetch(` calls today: `network-status.service.ts:140`, `offline/offline-conflict-manager.ts:206`, `offline/offline-queue-runner.ts:69` (token refresh) and `:173` (queued mutation), `offline-sync.service.ts:633` (deep-sync probe), `photo-upload-queue.service.ts:381`, `sync-pull.service.ts:298`, `companies.facade.ts:135`, `companies.ts:1295`, `modules/warehouse/api/item-api.service.ts:98` (Excel import). `domain-migration.service.ts:55` fetches an absolute URL of another origin on purpose; do not change it.
 
 3. Definitions: "resolve at the call" means the code becomes `fetch(resolveServerUrl(<same expression as before>), <same options>)` or an equivalent local `const` used only for that call.
@@ -6167,7 +6167,7 @@ Session 4 of 17 — Mobile phase A: every direct fetch() call resolves its URL t
 - a) Apply "resolve at the call" to each `fetch(` listed in section 2 in: `core/services/network-status.service.ts`, `core/services/offline/offline-conflict-manager.ts`, `core/services/offline/offline-queue-runner.ts`, `core/services/offline-sync.service.ts`, `core/services/photo-upload-queue.service.ts`, `core/services/sync-pull.service.ts`, `modules/common/components/operations/companies/companies.facade.ts`, `modules/common/components/operations/companies/companies.ts`, `modules/warehouse/api/item-api.service.ts`.
 - b) Tests in `core/services/offline/offline-queue-runner.spec.ts` (add at least 2): with a stubbed native `globalThis.Capacitor` and a stored valid override origin, a queued entry with url `/api/v1/...` is sent with `fetch` to `<origin>/api/v1/...`, and the entry stored in the queue still has the relative url afterwards; on the web the same entry is fetched with the relative url. Clean the stub and the storage key after each test. Update `photo-upload-queue.service.spec.ts` or `sync-pull.service.spec.ts` only if an existing test breaks because of the change.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files; re-read every changed `fetch(` line and confirm no resolved URL is stored anywhere.
 
@@ -6186,7 +6186,7 @@ fix(platform): resolve direct fetch URLs through the server origin
 
 ۲. **بررسی و اعتبارسنجی فوری (Verify Immediately):**
 با بررسی خطای لاگ در `task03-r0-verify12.log` و اجرای دستور:
-`python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/...
+`python scripts/automation/verify_tools.py spec-check --file frontend/src/...
 
 ---
 
@@ -6226,7 +6226,7 @@ Session 5 of 17 — Mobile phase A: WebSocket URLs through wsUrl, the serverUrl 
 - c) In `app.config.ts` provide `IMAGE_LOADER` with a loader that returns `resolveServerUrl(config.src)` (no width parameters added), so every `[ngSrc]` resolves server paths. Keep the interceptor array unchanged.
 - d) In `verify-card.ts` and `companies.ts`, wherever the stripped relative `/media/...` path is produced for display, pass it through `resolveServerUrl` before it reaches the sanitizer or the template.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6240,7 +6240,7 @@ feat(platform): websocket and media URLs through the server origin
 
 ### ۱. توضیح شفاف درخواست (Explanation)
 کاربر درخواست اجرای **سشن ۵ از ۱۷ (فاز A اپلیکیشن موبایل / Capacitor)** را دارد که اهداف زیر را شامل می‌شود:
-- بازنویسی ساخت نشانی‌های وب‌سوکت در [websocket.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/http/websocket.service.ts) و [communication.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/services/communication.service.ts) با متد `wsUrl('/ws/...')` جهت حذف وابستگی سخت‌افزاری به `window.location.host` با حفظ کامل پارامترهای query و لاجیک‌های وصل مجدد و فیلتر اکو.
+- بازنویسی ساخت نشانی‌های وب‌سوکت در [websocket.service.ts](file:///E:/warehouse%20project/frontend/src/app/core/http/websocket.service.ts) و [communication.service.ts](file:///E:/warehouse%20project/frontend/src/app/core/services/communication.service.ts) با متد `wsUrl('/ws/...')` جهت حذف وابستگی سخت‌افزاری به `window.location.host` با حفظ کامل پارامترهای query و لاجیک‌های وصل مجدد و فیلتر اکو.
 - ایجاد یک پایپ مستقل و خالص با نام `serverUrl` در [server-url.pipe.ts](file:///E:/warehouse%20project/ware...
 
 ---
@@ -6266,14 +6266,14 @@ Session 6 of 17 — Mobile phase A: server media [src] bindings in templates use
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Pipe: `ServerUrlPipe` in `warehouse-front/src/app/shared/pipes/server-url.pipe.ts` (session 5). On the web it returns its input unchanged; `blob:` and `data:` values are untouched.
-- `[src]` bindings that can receive a server media URL (all under `warehouse-front/src/app/`): `modules/common/components/users/users.html:1415`; `modules/common/components/operations/companies/companies.html:427` and the `<img [src]>` near line 2728; `modules/common/components/id-cards/id-cards.html` lines 58, 131, 268, 829, 886, 1043, 1100, 1284, 1341, 1499, 1556; `modules/common/components/communications/chat-drawer/chat-drawer.component.html:195`; `modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.html:611`; `.../employee-invoices/employee-invoices.html:574`; `.../employee-new-vehicle/employee-new-vehicle.html:1509`; `.../employee-new-personnel/employee-new-personnel.html:960` and `:1799`; `modules/accounting/components/finance/company-documents-archive/company-documents-archive.html:493`; `modules/warehouse/components/supervisor/supervisor-dashboard/supervisor-dashboard.html:1032`; `modules/warehouse/components/manager-review/manager-review.html:1056`; `modules/warehouse/components/item-photo-gallery/item-photo-gallery.component.html:155` and `:347`, and the inline template of `item-photo-thumb.component.ts` if it binds a server URL. Line numbers are approximate; find the binding by its expression.
+- Pipe: `ServerUrlPipe` in `frontend/src/app/shared/pipes/server-url.pipe.ts` (session 5). On the web it returns its input unchanged; `blob:` and `data:` values are untouched.
+- `[src]` bindings that can receive a server media URL (all under `frontend/src/app/`): `modules/common/components/users/users.html:1415`; `modules/common/components/operations/companies/companies.html:427` and the `<img [src]>` near line 2728; `modules/common/components/id-cards/id-cards.html` lines 58, 131, 268, 829, 886, 1043, 1100, 1284, 1341, 1499, 1556; `modules/common/components/communications/chat-drawer/chat-drawer.component.html:195`; `modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.html:611`; `.../employee-invoices/employee-invoices.html:574`; `.../employee-new-vehicle/employee-new-vehicle.html:1509`; `.../employee-new-personnel/employee-new-personnel.html:960` and `:1799`; `modules/accounting/components/finance/company-documents-archive/company-documents-archive.html:493`; `modules/warehouse/components/supervisor/supervisor-dashboard/supervisor-dashboard.html:1032`; `modules/warehouse/components/manager-review/manager-review.html:1056`; `modules/warehouse/components/item-photo-gallery/item-photo-gallery.component.html:155` and `:347`, and the inline template of `item-photo-thumb.component.ts` if it binds a server URL. Line numbers are approximate; find the binding by its expression.
 
 3. Definitions: none beyond section 2.
 
 4. Task: add `| serverUrl` to each binding listed in section 2 (for example `[src]="u.avatar | serverUrl"`) and import `ServerUrlPipe` in each owning component. If a listed binding only ever receives `blob:`/`data:` values, still add the pipe (it is harmless) and mention it in the report.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; after your commit, from the repo root, at most two runs of `python scripts/e2e/guardian_56_change_integrity.py --base HEAD~1 --head HEAD`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; after your commit, from the repo root, at most two runs of `python scripts/e2e/guardian_56_change_integrity.py --base HEAD~1 --head HEAD`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files and no file has a net deletion.
 
@@ -6292,7 +6292,7 @@ feat(platform): server media bindings use the serverUrl pipe
 
 #### ۲. اعتبارسنجی فنی (Verify Immediately)
 تمام فایل‌ها و خطوط اعلام‌شده بررسی شدند:
-- پایپ `ServerUrlPipe` در مسیر `warehouse-front/src/app/shared/pipes/server...
+- پایپ `ServerUrlPipe` در مسیر `frontend/src/app/shared/pipes/server...
 
 ---
 
@@ -6304,7 +6304,7 @@ feat(platform): server media bindings use the serverUrl pipe
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 8/10 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/file-output.ts --contains "export function saveBlob" --contains "export function saveUrl" --contains "export function printWindow" --contains "export class FileOutputService"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.ts --contains "export function saveBlob" --contains "export function saveUrl" --contains "export function printWindow" --contains "export class FileOutputService"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 46a21da --include "src/**/*.spec.ts"`
   - verify round 1: 10/10 passed
 - **Task:**
@@ -6318,7 +6318,7 @@ Session 7 of 17 — Mobile phase A: FileOutputService (save and print) and the w
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
 - Web behavior must stay identical: same file name, same MIME type, same content, same moment of download, same print behavior.
 - `URL.createObjectURL` used for previews (`<img>`, `<iframe>`, lightbox) is NOT a download; leave those untouched.
-- Change only `core/platform/file-output.ts`, its spec, and non-spec `.ts` files under `warehouse-front/src/app/modules/warehouse/`.
+- Change only `core/platform/file-output.ts`, its spec, and non-spec `.ts` files under `frontend/src/app/modules/warehouse/`.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
@@ -6337,7 +6337,7 @@ Session 7 of 17 — Mobile phase A: FileOutputService (save and print) and the w
 - a) Create `core/platform/file-output.ts` per section 3 and `file-output.spec.ts` with at least 5 tests (anchor created with the right `download` and `href`, appended and removed, object URL revoked later with fake timers, `saveUrl` resolves server paths on a stubbed native runtime, `printWindow` calls `print` on the given target and on `window` by default).
 - b) Replace every download block in the warehouse module with `saveBlob(...)`/`saveUrl(...)` (or the injected service). Keep the surrounding logic (export requests, toasts, progress state, file names) unchanged.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts" --include "src/app/modules/warehouse/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts" --include "src/app/modules/warehouse/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files and no file has an unexpected net deletion.
 
@@ -6355,7 +6355,7 @@ feat(platform): FileOutputService; warehouse module downloads through it
 ۲. در اجرای تمام تست‌ها (`src/**/*.spec.ts`)، تست شماره ۲ در `file-output.spec.ts` به دلیل تداخل فراخوانی‌های `URL.revokeObjectURL` در صف سراسری تایمرهای ساختگی Vitest با سایر تست‌ها دچار شکست شده بود.
 
 ### ۲. بررسی و راستی‌آزمایی فنی (Verify Immediately)
-۱. امضای توابع در `warehouse-front/src/app/core/platform/file-output.ts` مستقیماً به `export function saveBlob`...
+۱. امضای توابع در `frontend/src/app/core/platform/file-output.ts` مستقیماً به `export function saveBlob`...
 
 ---
 
@@ -6381,14 +6381,14 @@ Session 8 of 17 — Mobile phase A: accountant, documents archive, counterpartie
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Helpers in `warehouse-front/src/app/core/platform/file-output.ts` (session 7): `saveBlob`, `saveUrl`, `printWindow`, and the injectable `FileOutputService`. Read the file first.
+- Helpers in `frontend/src/app/core/platform/file-output.ts` (session 7): `saveBlob`, `saveUrl`, `printWindow`, and the injectable `FileOutputService`. Read the file first.
 - Files with download or print code today: `accountant-diskettes.ts`, `accountant-fleet.ts` (2), `accountant-invoices.ts`, `accountant-payroll.ts` (download and print), `accountant-personnel.ts`, `accountant-petty-cash.ts`, `company-documents-archive.ts`, `counterparties.ts`, `organization/projects-and-sections/projects-and-sections.ts`, `personnel/base-settings/base-settings.ts`.
 
 3. Definitions: a print call `X.print()` becomes `printWindow(X)`; `window.print()` becomes `printWindow()`.
 
 4. Task: replace every download block with `saveBlob`/`saveUrl` and every print call with `printWindow`, keeping the surrounding logic unchanged.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6430,7 +6430,7 @@ Session 9 of 17 — Mobile phase A: employee, supervisor, treasurer and manager 
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Helpers in `warehouse-front/src/app/core/platform/file-output.ts`: `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`. Read the file first.
+- Helpers in `frontend/src/app/core/platform/file-output.ts`: `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`. Read the file first.
 - `.ts` files with download or print code today: `employee-attendance.ts` (download and print), `employee-fleet.ts` (print), `employee-invoices.ts`, `employee-new-personnel.ts` (2), `employee-new-vehicle.ts` (2), `employee-petty-cash.ts`, `supervisor-fleet.ts`, `supervisor-invoices.ts`, `supervisor-new-profiles.ts` (2), `supervisor-petty-cash.ts`, `treasurer-disbursements.ts` (3), `manager-reports.ts` (print).
 - Template anchor with a `download` attribute: `employee/employee-invoices/employee-invoices.html` near line 579 (`<a [href]="previewAttachmentUrl" ... download>`).
 
@@ -6438,7 +6438,7 @@ Session 9 of 17 — Mobile phase A: employee, supervisor, treasurer and manager 
 
 4. Task: replace every download block with `saveBlob`/`saveUrl`, every print call with `printWindow`, and the template anchor as defined above.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6468,7 +6468,7 @@ refactor(platform): employee, supervisor, treasurer and manager files through fi
   - verify round 0: 10/11 passed
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`
   - verify round 1: 10/11 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 4716d05 --allow warehouse-front/src/app/modules/common/components/audit/* warehouse-front/src/app/modules/common/components/id-cards/* warehouse-front/src/app/modules/common/components/operations/companies/* warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/* warehouse-front/src/app/modules/common/components/users/* warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/modules/common/components/communications/chat-drawer/*`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 4716d05 --allow frontend/src/app/modules/common/components/audit/* frontend/src/app/modules/common/components/id-cards/* frontend/src/app/modules/common/components/operations/companies/* frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/* frontend/src/app/modules/common/components/users/* frontend/src/app/core/services/offline-db.ts frontend/src/app/modules/common/components/communications/chat-drawer/*`
   - verify round 2: 10/11 passed
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`
 - **Task:**
@@ -6486,7 +6486,7 @@ Session 10 of 17 — Mobile phase A: common and core downloads and print through
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Helpers in `warehouse-front/src/app/core/platform/file-output.ts`: `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`. Read the file first.
+- Helpers in `frontend/src/app/core/platform/file-output.ts`: `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`. Read the file first.
 - `.ts` files with download or print code today: `modules/common/components/audit/audit.ts`, `id-cards/id-cards.ts` (download and print), `operations/companies/companies.ts`, `settings/tabs/settings-backup-tab/settings-backup-tab.ts`, `users/users.ts`, `core/services/offline-db.ts:656`.
 - Template anchors with a `download` attribute: `operations/companies/companies.html` near lines 1822, 1875, 2676 and 2739. `communications/chat-drawer/chat-drawer.component.html` near line 194 has a download link too; check it.
 
@@ -6494,7 +6494,7 @@ Session 10 of 17 — Mobile phase A: common and core downloads and print through
 
 4. Task: migrate every remaining download block, print call and template download anchor in these files.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/**/*.spec.ts" --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/**/*.spec.ts" --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6508,7 +6508,7 @@ refactor(platform): common and core files through file-output
 
 ### ۱. توضیح شفاف مسئله (Explain Simply)
 رانر در دور دوم اصلاح به دلیل وجود فایل خارج از دامنه مجاز وظیفه متوقف شده بود:
-`Outside the allowed scope: ['warehouse-front/src/app/core/services/session-tab.service.spec.ts']`
+`Outside the allowed scope: ['frontend/src/app/core/services/session-tab.service.spec.ts']`
 علت این بود که در دور اول اصلاح، برای ایزوله‌سازی تست‌ها، فایل `session-tab.service.spec.ts` ویرایش و کامیت شده بود، اما این فایل در فهرست مسیرهای مجاز (`--allow`) تعریف نشده بود.
 
 ---
@@ -6547,7 +6547,7 @@ Session 10b of 17 — Mobile phase A: session-tab spec independent of state left
 - a) Read `session-tab.service.ts` `getActiveApp()` to see which state it reads, then make the spec self-contained: in `beforeEach` reset every piece of that state to a known value (for example clear the related `localStorage`/`sessionStorage` keys and call `getModuleRegistry().setInstalledModules(['warehouse', 'accounting'])`), and restore it in `afterEach`.
 - b) In `app.config.ts`, provide `IMAGE_LOADER` only when `isNativePlatform()` (from `core/platform/platform.ts`) is true, for example by spreading `...(isNativePlatform() ? [{ provide: IMAGE_LOADER, useValue: ... }] : [])`. Keep the interceptor array unchanged.
 
-4. Tool policy: in `warehouse-front`, at most one run of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `frontend`, at most one run of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -6598,7 +6598,7 @@ Session 11 of 17 — Mobile phase A: external links and popups through openExter
 - b) Replace each `window.open(` in the six files with `openExternal(...)` with the same arguments.
 - c) Add `appExternalLink` (bound to the same expression as `[href]` when `href` is bound, or plain when static) to every anchor with `target="_blank"`, and add `ExternalLinkDirective` to the owning components' `imports`.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files and no template has a net deletion.
 
@@ -6655,7 +6655,7 @@ Session 12 of 17 — Mobile phase A: id-card QR uses publicOrigin, and domain mi
 - b) `domain-migration.service.ts`: when native, `isLegacy` compares `canonical_domain` with the current server host; `performMigration` calls `setServerOriginOverride('https://' + canonical)` and, only if it returned true, reloads the app with `window.location.reload()` through a new `reload()` member of `LocationNavigator` (default factory implementation `window.location.reload()`). Never call `replace` with an external URL when native. All gates stay as they are.
 - c) Specs in `domain-migration.service.spec.ts` (keep every existing test; add at least 3): native + legacy + empty queues sets the override and calls `reload` but not `replace`; native + pending records does nothing; native with the canonical equal to the current server host is not legacy. Stub `globalThis.Capacitor` and clean the stub and the storage key after each test.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/domain-migration.service.spec.ts" --include "src/app/modules/common/components/id-cards/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/domain-migration.service.spec.ts" --include "src/app/modules/common/components/id-cards/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6698,8 +6698,8 @@ Session 13 of 17 — Mobile phase A backend: app version and download settings i
 
 2. Context:
 - Plan headings `### ۴-ج.`, `#### گام الف-۴` and `## ۱۰.`.
-- `warehouse-backend/core/settings_core/services.py`: `DEFAULT_SETTINGS` (line 13), `validate_settings_payload(data)` (line 60) with per-key rules (see the `system_version` rule), `get_setting`.
-- `warehouse-backend/core/settings_core/views.py:104` `PublicConfigViewSet.list` (AllowAny) builds the boot config; `clamped_minutes` shows the "never 500" pattern.
+- `backend/core/settings_core/services.py`: `DEFAULT_SETTINGS` (line 13), `validate_settings_payload(data)` (line 60) with per-key rules (see the `system_version` rule), `get_setting`.
+- `backend/core/settings_core/views.py:104` `PublicConfigViewSet.list` (AllowAny) builds the boot config; `clamped_minutes` shows the "never 500" pattern.
 
 3. Definitions:
 - "app version" is `MAJOR.MINOR.PATCH` matching `^\d{1,4}\.\d{1,4}\.\d{1,4}$`, or the empty string (meaning "no rule").
@@ -6709,9 +6709,9 @@ Session 13 of 17 — Mobile phase A backend: app version and download settings i
 - a) Add to `DEFAULT_SETTINGS`: `'app_min_version': ''`, `'app_recommended_version': ''`, `'app_download_url_direct': ''`, `'app_download_url_bazaar': ''`, `'app_download_url_myket': ''`.
 - b) In `validate_settings_payload`, reject a non-string or an invalid app version for the two version keys and a non-string or invalid download URL for the three URL keys.
 - c) In `PublicConfigViewSet.list`, add `'app_min_version'`, `'app_recommended_version'` and `'app_download_urls': {'direct': ..., 'bazaar': ..., 'myket': ...}`; each value is read with `get_setting` and replaced by `''` when it is not valid by the definitions above.
-- d) New `warehouse-backend/core/settings_core/test_mobile_app_config.py` with at least 8 tests: defaults present; anonymous GET returns 200 with the three new keys and empty defaults; stored valid values are returned; a stored invalid version or `http://` URL comes back as `''`; validation accepts valid values and rejects invalid versions, `http://` URLs, URLs with spaces and non-strings.
+- d) New `backend/core/settings_core/test_mobile_app_config.py` with at least 8 tests: defaults present; anonymous GET returns 200 with the three new keys and empty defaults; stored valid values are returned; a stored invalid version or `http://` URL comes back as `''`; validation accepts valid values and rejects invalid versions, `http://` URLs, URLs with spaces and non-strings.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput` and one run of `.\venv\Scripts\python.exe manage.py check`. If a command fails, read its output and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput` and one run of `.\venv\Scripts\python.exe manage.py check`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6760,7 +6760,7 @@ Session 14 of 17 — Mobile phase A frontend: app version, the two-level update 
 - Plan headings `### ۴-ج.`, `#### گام الف-۴` and `## ۱۰.` (lock screen decision).
 - Backend (session 13): `/api/public/config/` returns `app_min_version`, `app_recommended_version` and `app_download_urls: { direct, bazaar, myket }`; `''` means "no rule". `PublicConfig` is in `core/api/config-api.service.ts`.
 - `core/services/offline/offline-queue-runner.ts` runs the automatic flush; `core/services/offline-sync.service.ts` and `core/services/photo-upload-queue.service.ts` expose pending counts. `PwaUpdateService` is used by `app.ts` and `shared/components/user-menu/user-menu.component.ts`.
-- `warehouse-front/package.json` has `"version": "0.0.0"`.
+- `frontend/package.json` has `"version": "0.0.0"`.
 
 3. Definitions:
 - `APP_VERSION` is a constant in `core/platform/app-version.ts` equal to the `version` of `package.json`, which becomes `1.0.0`.
@@ -6778,7 +6778,7 @@ Session 14 of 17 — Mobile phase A frontend: app version, the two-level update 
 - f) `api-origin.interceptor.ts`: when native, also set `X-App-Version: APP_VERSION` and `X-App-Platform: getAppPlatform()` on server-path requests; add tests for both web (no header) and native.
 - g) `core/platform/app-version.service.spec.ts` with at least 10 tests: `compareVersions` cases; web always `ok`; native `locked`, `recommend`, `ok`; empty and invalid rules ignored; `isAutoSendBlocked` only when locked; `emergencySend` calls the flush even when locked; `downloadUrl` per channel. The word `emergency` must appear in a test name.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts" --include "src/app/app.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts" --include "src/app/app.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6799,10 +6799,10 @@ feat(platform): app version notice, lock screen with emergency send, update serv
 ### Summary Report (Session 14)
 
 #### 1. Files Added & Changed
-- **`warehouse-front/package.json`**: Bumped version from `0.0.0` to `1.0.0`.
-- **`warehouse-front/src/environments/environment.ts` & `environment.development.ts`**: Added `appChannel: 'direct'`.
-- **`warehouse-front/src/app/core/platform/app-version.ts`**: Created with `APP_VERSION = '1.0.0'` constant and `AppChannel` type.
-- **`warehouse-front/src/app/core/platform/app-version.service.ts`**: Created ...
+- **`frontend/package.json`**: Bumped version from `0.0.0` to `1.0.0`.
+- **`frontend/src/environments/environment.ts` & `environment.development.ts`**: Added `appChannel: 'direct'`.
+- **`frontend/src/app/core/platform/app-version.ts`**: Created with `APP_VERSION = '1.0.0'` constant and `AppChannel` type.
+- **`frontend/src/app/core/platform/app-version.service.ts`**: Created ...
 
 ---
 
@@ -6813,7 +6813,7 @@ feat(platform): app version notice, lock screen with emergency send, update serv
 - **Duration:** 28m 33s
 - **Checks:**
   - verify round 0: 14/16 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 3e2431b --allow warehouse-front/package.json warehouse-front/src/app/core/platform/* warehouse-front/src/app/core/api/config-api.service.ts warehouse-front/src/app/core/interceptors/api-origin.interceptor.ts warehouse-front/src/app/core/interceptors/api-origin.interceptor.spec.ts warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/shared/components/app-version-lock/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.html warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts warehouse-front/src/environments/environment.ts warehouse-front/src/environments/environment.development.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 3e2431b --allow frontend/package.json frontend/src/app/core/platform/* frontend/src/app/core/api/config-api.service.ts frontend/src/app/core/interceptors/api-origin.interceptor.ts frontend/src/app/core/interceptors/api-origin.interceptor.spec.ts frontend/src/app/core/services/offline/offline-queue-runner.ts frontend/src/app/core/services/offline/offline-queue-runner.spec.ts frontend/src/app/core/services/offline-sync.service.ts frontend/src/app/shared/components/app-version-lock/* frontend/src/app/app.ts frontend/src/app/app.html frontend/src/app/shared/components/user-menu/user-menu.component.ts frontend/src/environments/environment.ts frontend/src/environments/environment.development.ts`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 3e2431b --include "src/**/*.spec.ts"`
   - verify round 1: 16/16 passed
 - **Task:**
@@ -6833,7 +6833,7 @@ Session 14 of 17 — Mobile phase A frontend: app version, the two-level update 
 - Plan headings `### ۴-ج.`, `#### گام الف-۴` and `## ۱۰.` (lock screen decision).
 - Backend (session 13): `/api/public/config/` returns `app_min_version`, `app_recommended_version` and `app_download_urls: { direct, bazaar, myket }`; `''` means "no rule". `PublicConfig` is in `core/api/config-api.service.ts`.
 - `core/services/offline/offline-queue-runner.ts` runs the automatic flush; `core/services/offline-sync.service.ts` and `core/services/photo-upload-queue.service.ts` expose pending counts. `PwaUpdateService` is used by `app.ts` and `shared/components/user-menu/user-menu.component.ts`.
-- `warehouse-front/package.json` has `"version": "0.0.0"`.
+- `frontend/package.json` has `"version": "0.0.0"`.
 
 3. Definitions:
 - `APP_VERSION` is a constant in `core/platform/app-version.ts` equal to the `version` of `package.json`, which becomes `1.0.0`.
@@ -6851,7 +6851,7 @@ Session 14 of 17 — Mobile phase A frontend: app version, the two-level update 
 - f) `api-origin.interceptor.ts`: when native, also set `X-App-Version: APP_VERSION` and `X-App-Platform: getAppPlatform()` on server-path requests; add tests for both web (no header) and native.
 - g) `core/platform/app-version.service.spec.ts` with at least 10 tests: `compareVersions` cases; web always `ok`; native `locked`, `recommend`, `ok`; empty and invalid rules ignored; `isAutoSendBlocked` only when locked; `emergencySend` calls the flush even when locked; `downloadUrl` per channel. The word `emergency` must appear in a test name.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts" --include "src/app/app.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts" --include "src/app/app.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6895,7 +6895,7 @@ Session 15 of 17 — Mobile phase A backend: explicit CORS origins and headers, 
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
 - Environment variables keep priority: when `DJANGO_ALLOWED_HOSTS` or `DJANGO_CORS_ALLOWED_ORIGINS` is set, its value is used exactly as today's code uses `DJANGO_ALLOWED_HOSTS`. Only the defaults change.
 - Do not read `.env` files. Do not restart any server. Run `manage.py test` only with labels.
-- Change only `warehouse-backend/config/settings.py` and the new test file.
+- Change only `backend/config/settings.py` and the new test file.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
@@ -6911,9 +6911,9 @@ Session 15 of 17 — Mobile phase A backend: explicit CORS origins and headers, 
 - a) Define `DEFAULT_ALLOWED_HOSTS` and use it as the default of `ALLOWED_HOSTS` when `DJANGO_ALLOWED_HOSTS` is not set.
 - b) Remove `CORS_ALLOW_ALL_ORIGINS = True`; set `CORS_ALLOWED_ORIGINS` from `DJANGO_CORS_ALLOWED_ORIGINS` (comma separated) or `DEFAULT_CORS_ALLOWED_ORIGINS`.
 - c) `CORS_ALLOW_HEADERS = list(default_headers) + ['if-match', 'If-Match']` plus the nine custom headers in lower case. Keep `CORS_EXPOSE_HEADERS`.
-- d) New `warehouse-backend/integration_tests/test_cors_and_hosts.py` with at least 7 tests using the Django test client against `/api/public/config/`: a preflight `OPTIONS` from `https://localhost` and from `capacitor://localhost` requesting all nine custom headers is allowed (the response `Access-Control-Allow-Origin` equals the origin and `Access-Control-Allow-Headers` contains each header); `https://evil.example` gets no `Access-Control-Allow-Origin`; a plain GET from `https://soft.farsalish.ir` gets the header; the default lists contain the four domains; `ALLOWED_HOSTS` default never contains `'*'`.
+- d) New `backend/integration_tests/test_cors_and_hosts.py` with at least 7 tests using the Django test client against `/api/public/config/`: a preflight `OPTIONS` from `https://localhost` and from `capacitor://localhost` requesting all nine custom headers is allowed (the response `Access-Control-Allow-Origin` equals the origin and `Access-Control-Allow-Headers` contains each header); `https://evil.example` gets no `Access-Control-Allow-Origin`; a plain GET from `https://soft.farsalish.ir` gets the header; the default lists contain the four domains; `ALLOWED_HOSTS` default never contains `'*'`.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_cors_and_hosts --noinput` and one run of `.\venv\Scripts\python.exe manage.py check`. If a command fails, read its output and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_cors_and_hosts --noinput` and one run of `.\venv\Scripts\python.exe manage.py check`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -6927,7 +6927,7 @@ fix(security): explicit CORS origins and headers, default host allow-list
 ### گام ۳ و ۴: حل مستقیم و گزارش نهایی (Direct Solution & Final Report)
 
 تمامی الزامات نشست ۱۵ فاز A اپلیکیشن موبایل با موفقیت پیاده‌سازی، راستی‌آزمایی و کامیت شد:
-۱. تنظیمات `warehouse-backend/config/settings.py` به‌روزرسانی شد:
+۱. تنظیمات `backend/config/settings.py` به‌روزرسانی شد:
    - حذف `CORS_ALLOW_ALL_ORIGINS = True`
    - تعریف `DEFAULT_ALLOWED_HOSTS` شامل چهار دامنهٔ پروژه، `localhost`، `127.0.0.1`، `[::1]` و کشف خودکار IPv4های هاست از طریق `socket.gethostbyname_ex`
    - اتصال `ALLOWED_HOSTS` به `DJANGO_ALLOWED_HOSTS` با پیش‌فرض `DEFAULT_ALLOWED_HOSTS` (بدون هرگونه wildcard `*`)
@@ -6968,7 +6968,7 @@ Session 16 of 17 — Mobile phase A: safe-area insets for notched phones and iPh
 - b) In `styles.css`, add utilities `.pt-safe`, `.pb-safe`, `.ps-safe`, `.pe-safe` based on `env(safe-area-inset-*)`, and apply safe-area padding to each edge element (through the utilities or in its own CSS).
 - c) Set `apple-mobile-web-app-title` to `CoManage` (keep the other Apple tags).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: `git diff --stat` shows only the allowed files.
 
@@ -7013,16 +7013,16 @@ Session 17 of 17 — Release mobile phase A on the local app environment: backup
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 1 to 16 changed frontend code and specs, `config/settings.py` (CORS and host defaults) and the public config endpoint, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile phase A'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
@@ -7053,7 +7053,7 @@ Session 17 of 17 — Release mobile phase A on the local app environment: backup
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 11/12 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py glob-absent --root warehouse-front/src/app/shared/components/app-version-lock --glob "*.ts" "*.html" --regex "animate-fade-in|active:scale-98|text-right|text-left|bg-white|text-slate-|border-slate-|bg-slate-|rotate-180|z-50" --skip-specs`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py glob-absent --root frontend/src/app/shared/components/app-version-lock --glob "*.ts" "*.html" --regex "animate-fade-in|active:scale-98|text-right|text-left|bg-white|text-slate-|border-slate-|bg-slate-|rotate-180|z-50" --skip-specs`
 - **Task:**
 ```
 Session 1 of 12 — Mobile phase B: reviewer fixes for the version lock screen, chat attachment button and download buttons
@@ -7066,7 +7066,7 @@ Session 1 of 12 — Mobile phase B: reviewer fixes for the version lock screen, 
 - No data may ever be lost: do not change how the queues are flushed, gated or deleted. Only the messages and the UI of the lock screen change.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
-2. Context: plan `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`, heading `## گزارش پیشرفت` (the last entry lists these reviewer findings). Files: `warehouse-front/src/app/shared/components/app-version-lock/app-version-lock.component.ts` (inline template), `chat-drawer.component.html` near line 195, `employee-invoices.html` near line 579, `companies.html` near lines 1822, 1874, 2675, 2738. Read `.claude/skills/design-system/SKILL.md` for tokens and patterns.
+2. Context: plan `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`, heading `## گزارش پیشرفت` (the last entry lists these reviewer findings). Files: `frontend/src/app/shared/components/app-version-lock/app-version-lock.component.ts` (inline template), `chat-drawer.component.html` near line 195, `employee-invoices.html` near line 579, `companies.html` near lines 1822, 1874, 2675, 2738. Read `.claude/skills/design-system/SKILL.md` for tokens and patterns.
 
 3. Task:
 - a) Lock overlay: use `z-[100]` (the modal layer); on open move focus to the update button, keep Tab inside the dialog, and set the `inert` attribute on the app content behind it (a wrapper around the `router-outlet` in `app.html`), removing it when the overlay closes. Keep `role="dialog"` and `aria-modal="true"`; add `aria-labelledby` pointing to the heading.
@@ -7077,7 +7077,7 @@ Session 1 of 12 — Mobile phase B: reviewer fixes for the version lock screen, 
 - f) The download buttons in `employee-invoices.html` and `companies.html` that replaced `download` anchors get the project's standard `focus-visible` ring classes.
 - g) New spec `app-version-lock.component.spec.ts` with at least 4 tests, one whose name contains `still pending` (an emergency send that leaves records shows the pending text, not the success text), plus success when the count is 0, the fixed Persian error text on failure, and focus moved into the dialog when locked.
 
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/shared/**/*.spec.ts" --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/shared/**/*.spec.ts" --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -7111,7 +7111,7 @@ Session 2 of 12 — Mobile phase B: add Capacitor 8, the CoManage Android and iO
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- The web build and web behavior must not change. The mobile build writes to `warehouse-front/dist-mobile/` and never to `warehouse-front/dist/` (Express serves `dist/` right now).
+- The web build and web behavior must not change. The mobile build writes to `frontend/dist-mobile/` and never to `frontend/dist/` (Express serves `dist/` right now).
 - These values are permanent after the first install and must be exactly: app id `ir.comanage.soft`, test flavor suffix `.test`, `androidScheme: 'https'`, `hostname: 'localhost'`. Changing them later makes every user's offline data unreachable.
 - Do not install the Android SDK and do not run Gradle in this session. Do not create a keystore.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never stage build outputs (`dist-mobile`, `android/app/build`, `android/.gradle`, `local.properties`, `android/app/src/main/assets/public`).
@@ -7125,12 +7125,12 @@ Session 2 of 12 — Mobile phase B: add Capacitor 8, the CoManage Android and iO
 3. Definitions: flavor dimensions in `android/app/build.gradle`: `env` with `prod` (no suffix, `manifestPlaceholders = [appLabel: "CoManage"]`) and `staging` (`applicationIdSuffix ".test"`, `versionNameSuffix "-test"`, `manifestPlaceholders = [appLabel: "CoManage تست"]`); `channel` with `direct`, `bazaar`, `myket`, each with `buildConfigField "String", "APP_CHANNEL", "\"<name>\""`. `AndroidManifest.xml` uses `android:label="${appLabel}"` for the application and the main activity.
 
 4. Task:
-- a) In `warehouse-front`: `npm install @capacitor/core@^8.5.3 @capacitor/android@^8.5.3 @capacitor/ios@^8.5.3` and `npm install -D @capacitor/cli@^8.5.3`.
+- a) In `frontend`: `npm install @capacitor/core@^8.5.3 @capacitor/android@^8.5.3 @capacitor/ios@^8.5.3` and `npm install -D @capacitor/cli@^8.5.3`.
 - b) `capacitor.config.ts` with `appId: 'ir.comanage.soft'`, `appName: 'CoManage'`, `webDir: 'dist-mobile/warehouse-app/browser'`, `server: { androidScheme: 'https', hostname: 'localhost' }`, and a comment that these values must never change.
 - c) `src/environments/environment.mobile.ts` (copy of `environment.ts` with `serverOrigin: 'https://soft.farsalish.ir'`, `appChannel: 'direct'`) and `environment.mobile-test.ts` (same with `serverOrigin: 'https://app.farsalish.ir'`).
 - d) `angular.json`: build configurations `mobile` and `mobile-test`, each equal to `production` but with `"serviceWorker": false`, `"outputPath": "dist-mobile/warehouse-app"` and the matching `fileReplacements` for `environment.ts`.
 - e) `app.config.ts`: the service worker `enabled: !isDevMode() && !isNativePlatform()`.
-- f) `package.json` scripts: `"build:mobile": "ng build --configuration mobile && npx cap sync"`, `"build:mobile-test": "ng build --configuration mobile-test && npx cap sync"`. Add `/dist-mobile` to `warehouse-front/.gitignore`.
+- f) `package.json` scripts: `"build:mobile": "ng build --configuration mobile && npx cap sync"`, `"build:mobile-test": "ng build --configuration mobile-test && npx cap sync"`. Add `/dist-mobile` to `frontend/.gitignore`.
 - g) `npx ng build --configuration mobile-test`, then `npx cap add android`, then `npx cap add ios`. If `cap add ios` fails on Windows, keep going, do not create `ios/` by hand, and report the exact error.
 - h) Add the flavors from section 3 to `android/app/build.gradle` and the label placeholder to `AndroidManifest.xml`; remove the `app_name` string only if it causes a duplicate resource error.
 
@@ -7147,7 +7147,7 @@ feat(mobile): Capacitor 8 projects, mobile build configurations and Android flav
 <div dir="rtl" align="right">
 
 ### ۱. توضیح شفاف درخواست (Explanation)
-در این نشست (نشست ۲ از ۱۲ فاز ب ساخت اپ موبایل)، هدف راه‌اندازی فریم‌ورک Capacitor نسخه 8 در فرانت‌اند (`warehouse-front`)، ایجاد و پیکربندی پروژه‌های نیتیو Android و iOS برای اپلیکیشن موبایل CoManage، تنظیم محیط‌های ساخت (`environment.mobile.ts` و `environment.mobile-test.ts`)، افزودن پیکربندی‌های ساخت موبایل به `angular.json` با مسیر خروجی مجزا (`dist-mobile/warehouse-app`) و غیرفعال‌سازی Service Worker در پلتفرم‌های نیتیو، اسکریپت‌های بیلد در `package.json`، پیکربندی فایل تغییرناپذیر `capacitor.config.ts`، و پیاده‌سازی طعم‌ها (Flavors) در پروژه اندروید شامل ابعاد محیط (`env`: prod و staging با پسوند `.test`) و کانال تو...
+در این نشست (نشست ۲ از ۱۲ فاز ب ساخت اپ موبایل)، هدف راه‌اندازی فریم‌ورک Capacitor نسخه 8 در فرانت‌اند (`frontend`)، ایجاد و پیکربندی پروژه‌های نیتیو Android و iOS برای اپلیکیشن موبایل CoManage، تنظیم محیط‌های ساخت (`environment.mobile.ts` و `environment.mobile-test.ts`)، افزودن پیکربندی‌های ساخت موبایل به `angular.json` با مسیر خروجی مجزا (`dist-mobile/warehouse-app`) و غیرفعال‌سازی Service Worker در پلتفرم‌های نیتیو، اسکریپت‌های بیلد در `package.json`، پیکربندی فایل تغییرناپذیر `capacitor.config.ts`، و پیاده‌سازی طعم‌ها (Flavors) در پروژه اندروید شامل ابعاد محیط (`env`: prod و staging با پسوند `.test`) و کانال تو...
 
 ---
 
@@ -7168,21 +7168,21 @@ Session 3 of 12 — Mobile phase B: install the Android SDK, generate app icons,
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes (SDK and Gradle downloads take minutes). Never start a command in the background, and never end your turn while a command is still running.
-- Install the Android SDK only under `E:\Android\Sdk`. Do not change system or user environment variables; point Gradle to the SDK through `warehouse-front/android/local.properties` (`sdk.dir=E\:\\Android\\Sdk`), which must stay untracked.
+- Install the Android SDK only under `E:\Android\Sdk`. Do not change system or user environment variables; point Gradle to the SDK through `frontend/android/local.properties` (`sdk.dir=E\:\\Android\\Sdk`), which must stay untracked.
 - The user approved installing the Android SDK in this plan; accept the SDK licenses with `sdkmanager --licenses` (answer `y`).
 - Do not change the app id, flavors, `capacitor.config.ts` or any web source except `src/index.html`. Do not create a keystore.
 - Do not push. Stage only your changed files. Never stage build outputs or `local.properties`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
 - Plan heading `#### گام ب-۱`. JDK 21 (Temurin) is installed and on PATH. `dl.google.com`, `services.gradle.org` and `maven.google.com` are reachable.
-- Session 2 created `warehouse-front/android/` (read `android/variables.gradle` for `compileSdkVersion` and `targetSdkVersion`).
+- Session 2 created `frontend/android/` (read `android/variables.gradle` for `compileSdkVersion` and `targetSdkVersion`).
 - `public/icons/` has only SVG icons (`icon-512x512.svg` is the largest). `src/index.html` links `apple-touch-icon` to an SVG, which iOS ignores.
 
 3. Task:
 - a) Download the latest Windows "command line tools" zip (find its file name in `https://dl.google.com/android/repository/repository2-3.xml`), unpack it so that `E:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat` exists, accept the licenses, and install `platform-tools`, `platforms;android-<compileSdkVersion>` and the matching `build-tools` version.
-- b) Write `warehouse-front/android/local.properties` with `sdk.dir`.
-- c) Icons: `npm install -D @capacitor/assets@^3`; create `warehouse-front/resources/icon.png` (1024x1024) and `resources/splash.png` (2732x2732, the icon centered on the app's dark background color) by rendering `public/icons/icon-512x512.svg` with the `sharp` package that `@capacitor/assets` brings; run `npx capacitor-assets generate --android --ios` (the iOS part may be skipped if it fails). Also write `public/icons/apple-touch-icon-180.png` (180x180) and point the `apple-touch-icon` link in `src/index.html` to `icons/apple-touch-icon-180.png`.
-- d) `npm run build:mobile-test`, then in `warehouse-front/android` run `gradlew.bat assembleStagingDirectDebug`.
+- b) Write `frontend/android/local.properties` with `sdk.dir`.
+- c) Icons: `npm install -D @capacitor/assets@^3`; create `frontend/resources/icon.png` (1024x1024) and `resources/splash.png` (2732x2732, the icon centered on the app's dark background color) by rendering `public/icons/icon-512x512.svg` with the `sharp` package that `@capacitor/assets` brings; run `npx capacitor-assets generate --android --ios` (the iOS part may be skipped if it fails). Also write `public/icons/apple-touch-icon-180.png` (180x180) and point the `apple-touch-icon` link in `src/index.html` to `icons/apple-touch-icon-180.png`.
+- d) `npm run build:mobile-test`, then in `frontend/android` run `gradlew.bat assembleStagingDirectDebug`.
 
 4. Tool policy: each install or download command at most twice; Gradle at most three times. If a download fails twice, stop and report the exact error. If a command fails, read its output and change approach.
 
@@ -7202,7 +7202,7 @@ feat(mobile): app icons and the first staging debug build
 در این نشست طبق برنامه:
 1. ابزارهای خط فرمان اندروید (Android SDK command-line tools) دانلود و در مسیر `E:\Android\Sdk\cmdline-tools\latest` مستقر گردید.
 2. پکیج‌های مورد نیاز شامل `platform-tools`، `platforms;android-36` و `build-tools;36.0.0` (همچنین `build-tools;35.0.0`) نصب شدند.
-3. فایل `warehouse-front/android/local.properties` با مسیر `sdk.dir=E\:\\Android\\Sdk` ایجاد و بدون ردگیری در گیت (untracked) تنظیم شد.
+3. فایل `frontend/android/local.properties` با مسیر `sdk.dir=E\:\\Android\\Sdk` ایجاد و بدون ردگیری در گیت (untracked) تنظیم شد.
 4. بسته `@capacitor/assets@^3` نصب شد و با استفاده از موتور `sharp`، آیکون ۱۰۲۴×۱۰۲۴ (`resources/icon.png`)، اسپلش ۲۷۳۲×۲۷۳۲ با پس‌زمینه تیره سازمانی (`resources/splash.png`) و آیکون ...
 
 ---
@@ -7273,9 +7273,9 @@ feat(mobile): native file saving, printing, links, back button and app shell
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 1ea9d32 --include "src/**/*.spec.ts"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
   - verify round 1: 12/13 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 1ea9d32 --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.config.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/android/* warehouse-front/ios/*`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 1ea9d32 --allow frontend/package.json frontend/package-lock.json frontend/capacitor.config.ts frontend/src/app/core/platform/* frontend/src/app/app.ts frontend/src/app/app.config.ts frontend/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts frontend/android/* frontend/ios/*`
   - verify round 2: 12/13 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 1ea9d32 --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.config.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/android/* warehouse-front/ios/*`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 1ea9d32 --allow frontend/package.json frontend/package-lock.json frontend/capacitor.config.ts frontend/src/app/core/platform/* frontend/src/app/app.ts frontend/src/app/app.config.ts frontend/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts frontend/android/* frontend/ios/*`
 - **Task:**
 ```
 Session 4 of 12 — Mobile phase B: native branches for file saving, printing, external links, back button, status bar, splash and camera permission
@@ -7352,7 +7352,7 @@ Session 5 of 12 — Mobile phase B backend: publish live-update bundles and APK 
 - d) Views in `core/settings_core/mobile_views.py` (AllowAny): `GET /api/public/mobile-update/` returns the manifest plus `"url"` (absolute URL of `/api/public/mobile-files/updates/<file>` built with `request.build_absolute_uri`) or `{}` when there is none; `GET /api/public/mobile-files/<kind>/<name>` with `kind` in `updates`/`apk` streams the file with `FileResponse` (`as_attachment=True` for APKs, content type `application/vnd.android.package-archive`), 404 otherwise.
 - e) `core/settings_core/test_mobile_release.py` with at least 8 tests using a temporary `MEDIA_ROOT` (`override_settings`): no manifest gives `{}`; publish then read gives version, sha256 and url; invalid version rejected; path traversal or bad names (`../x.zip`, `a/b.apk`, `x.exe`) give 404; APK served with the right content type; older bundles kept after a second publish.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput`. If a command fails, read its output and change approach.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput`. If a command fails, read its output and change approach.
 
 6. Output and stop condition:
 - Commit with this message, without push:
@@ -7365,8 +7365,8 @@ feat(mobile): public live-update manifest and mobile file download
 ### ۱. توضیح ساده نیازمندی کاربر (Simple Persian Explanation)
 درخواست مربوط به جلسه ۵ از ۱۲ (بخش بک‌اند موبایل فاز B) بود:
 - انتشار بسته‌های به‌روزرسانی زنده (Live-Update Zip Bundles) و فایل‌های نصبی (APK) اندروید از طریق اندپوینت‌های عمومی بدون نیاز به احراز هویت.
-- پیاده‌سازی ماژول کمکی [mobile_release.py](file:///E:/warehouse%20project/warehouse-backend/core/settings_core/mobile_release.py) جهت اعتبارسنجی نگارش‌ها (`X.Y.Z`)، اعتبارسنجی نام فایل‌های امن، محاسبه هش SHA-256 و خواندن/نوشتن اتمیک مانیفست.
-- ایجاد دو دستور مدیریتی [publish_mobile_bundle.py](file:///E:/warehouse%20project/warehouse-backend/core/settings_core/management/commands/publish_mobile_bundl...
+- پیاده‌سازی ماژول کمکی [mobile_release.py](file:///E:/warehouse%20project/backend/core/settings_core/mobile_release.py) جهت اعتبارسنجی نگارش‌ها (`X.Y.Z`)، اعتبارسنجی نام فایل‌های امن، محاسبه هش SHA-256 و خواندن/نوشتن اتمیک مانیفست.
+- ایجاد دو دستور مدیریتی [publish_mobile_bundle.py](file:///E:/warehouse%20project/backend/core/settings_core/management/commands/publish_mobile_bundl...
 
 ---
 
@@ -7474,7 +7474,7 @@ feat(mobile): live update with Capgo in manual mode
   - verify round 0: 13/14 passed
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base f2844e1 --include "src/**/*.spec.ts"`
   - verify round 1: 13/14 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base f2844e1 --allow warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base f2844e1 --allow frontend/src/app/core/platform/* frontend/src/app/app.ts frontend/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts`
   - verify round 2: 14/14 passed
 - **Task:**
 ```
@@ -7490,7 +7490,7 @@ Session 6b of 12 — Mobile phase B: reviewer fixes for the native back button, 
 - Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never remove or weaken an existing test; update assertions only where this task changes the behavior.
 
 2. Context:
-- Files: `warehouse-front/src/app/core/platform/native-shell.ts`, `external-link.ts`, `file-output.ts` and their `.spec.ts` files; `warehouse-front/src/app/app.ts` (it already calls `initNativeShell(this.appRef)` in the constructor); `ToastService` is in `shared/components/toast/toast.component.ts` (`error(message)`).
+- Files: `frontend/src/app/core/platform/native-shell.ts`, `external-link.ts`, `file-output.ts` and their `.spec.ts` files; `frontend/src/app/app.ts` (it already calls `initNativeShell(this.appRef)` in the constructor); `ToastService` is in `shared/components/toast/toast.component.ts` (`error(message)`).
 - Modal components (`shared/components/modal/modal.component.ts`, `confirm-dialog`, and others) close on `@HostListener('document:keydown.escape')` and render an element with `aria-modal="true"`.
 - In Capacitor `StatusBar`, `Style.Light` means dark icons for a light background and `Style.Dark` means light icons. The app is always light unless `document.documentElement` has the class `dark`.
 - `@capacitor/share` rejects with a message containing `cancel` (any case) when the user closes the share sheet.
@@ -7517,7 +7517,7 @@ Session 6b of 12 — Mobile phase B: reviewer fixes for the native back button, 
   - `external-link.spec.ts`: native `openExternal` calls the Browser bridge once and never calls `window.open`.
   - `file-output.spec.ts` (at least 12 tests in total): native `saveBlob` writes with `Directory.Documents` and path `CoManage/<filename>`; falls back to `Directory.Data` when the first write throws (test names contain `Directory.Documents` and `Directory.Data`); a share cancel error resolves without notifying (test name contains `cancel`); a write failure in both directories calls the notifier once and rejects; native `saveUrl` with a 500 response calls the notifier once and rejects; native `printWindow` failure calls the notifier and rejects. Reset the notifier with `setFileOutputErrorNotifier(null)` after each test.
 
-5. Tool policy: in `warehouse-front`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Output and stop condition:
 - Commit with this message, without push:
@@ -7569,7 +7569,7 @@ Session 7 of 12 — Mobile phase B backend: device tokens and FCM push for new n
 - e) `config/settings.py`: `FIREBASE_CREDENTIALS_FILE = os.environ.get('FIREBASE_CREDENTIALS_FILE', '')`.
 - f) Tests in `core/notifications/tests.py` (at least 10 new `test_` methods): register, refresh, move to another user, delete own, cannot delete another user's token, unauthenticated rejected, disabled provider sends nothing, a created notification schedules exactly one send to the recipient's tokens (mock the provider, use `captureOnCommitCallbacks`), provider errors do not raise, unregistered token deleted.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`: `.\venv\Scripts\python.exe manage.py makemigrations notifications` once, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`: `.\venv\Scripts\python.exe manage.py makemigrations notifications` once, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -7583,7 +7583,7 @@ feat(notifications): device tokens and FCM push
 درخواست مربوط به نشست ۷ از ۱۲ از فاز موبایل (بخش B بک‌اند) است: پیاده‌سازی زیرساخت ثبت توکن‌های دستگاه (Device Tokens) و ارسال اعلان‌های پوش Firebase Cloud Messaging (FCM) برای اعلان‌های جدید، به‌طوری که تا زمان تنظیم نبودن کلید Firebase در محیط، سیستم پوش به صورت امن غیرفعال بماند و هیچ اختلال یا تاخیری در ایجاد اعلان‌ها ایجاد نکند.
 
 ### ۲. اعتبارسنجی فنی (Technical Verification)
-- مدل `DeviceToken` در [models.py](file:///E:/warehouse%20project/warehouse-backend/core/notifications/models.py) با فیلدهای مشخص‌شده (`user` با رفتار CASCADE، `token` یکتا تا ۵۱۲ نویسه، `platform` با گزینه‌های android/ios، `app_version`...
+- مدل `DeviceToken` در [models.py](file:///E:/warehouse%20project/backend/core/notifications/models.py) با فیلدهای مشخص‌شده (`user` با رفتار CASCADE، `token` یکتا تا ۵۱۲ نویسه، `platform` با گزینه‌های android/ios، `app_version`...
 
 ---
 
@@ -7658,7 +7658,7 @@ Session 9 of 12 — Mobile phase B: public download page for the Android app wit
 - b) A small link «دریافت اپ موبایل» to `/download` on the login page, below the form, matching existing link styles.
 - c) Spec with at least 4 tests: button enabled with a URL, disabled text without one, iPhone guide rendered, the page renders without login.
 
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/app-download/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/app-download/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -7702,8 +7702,8 @@ Session 10 of 12 — Mobile phase B: release signing with a keystore outside the
 3. Task:
 - a) Create `E:\warehouse-secrets\comanage\` and generate `release.jks` with `keytool -genkeypair` (RSA 4096, validity 10000 days, alias `comanage`, distinguished name `CN=CoManage, O=CoManage, C=IR`) with a random 32-character store and key password generated by a script (for example Python `secrets.token_urlsafe`), never typed into your report.
 - b) Write `E:\warehouse-secrets\comanage\keystore.properties` with `storeFile`, `storePassword`, `keyAlias`, `keyPassword`, and a `README.txt` there in Persian saying this folder must be backed up and that losing it makes app updates impossible.
-- c) `android/app/build.gradle`: a `release` signing config that reads the properties file at `E:/warehouse-secrets/comanage/keystore.properties` when it exists (path overridable by the environment variable `COMANAGE_KEYSTORE_PROPERTIES`), used by the `release` build type; builds without the file still work unsigned. Add `*.jks` and `keystore.properties` to `warehouse-front/.gitignore`.
-- d) `npm run build:mobile`, then in `warehouse-front/android` `gradlew.bat assembleProdDirectRelease`; then `npm run build:mobile-test`, then `gradlew.bat assembleStagingDirectRelease`.
+- c) `android/app/build.gradle`: a `release` signing config that reads the properties file at `E:/warehouse-secrets/comanage/keystore.properties` when it exists (path overridable by the environment variable `COMANAGE_KEYSTORE_PROPERTIES`), used by the `release` build type; builds without the file still work unsigned. Add `*.jks` and `keystore.properties` to `frontend/.gitignore`.
+- d) `npm run build:mobile`, then in `frontend/android` `gradlew.bat assembleProdDirectRelease`; then `npm run build:mobile-test`, then `gradlew.bat assembleStagingDirectRelease`.
 
 4. Tool policy: `keytool` once; Gradle at most four times; each mobile build at most twice. If a command fails, read its output and change approach.
 
@@ -7740,7 +7740,7 @@ Session 11 of 12 — Mobile phase B: iOS project synced with all plugins and Per
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Change only `warehouse-front/ios/` (and package files only if the sync requires it). Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+- Change only `frontend/ios/` (and package files only if the sync requires it). Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context: plan heading `#### گام ب-۶`. Session 2 tried `npx cap add ios`; read its commit to see whether `ios/` exists.
 
@@ -7759,12 +7759,12 @@ chore(mobile): iOS project synced
 <div dir="rtl" align="right">
 
 ### ۱. توضیح ساده خواستهٔ کاربر (Explain Simply)
-کاربر درخواست کرد پروژهٔ iOS در دایرکتوری `warehouse-front/ios/` با تمامی افزونه‌های Capacitor همگام‌سازی (`npx cap sync ios`) شده و متن‌های فارسی مجوز دسترسی به دوربین (`NSCameraUsageDescription`) و ذخیره‌سازی در گالری/عکس‌ها (`NSPhotoLibraryAddUsageDescription`) به فایل `ios/App/App/Info.plist` اضافه شوند تا پروژه برای ساخت آتی روی سیستم‌عامل مک یا Codemagic آماده باشد، و در پایان تغییرات تنها در همان فایل stage شده و بدون push با پیام مشخص کامیت گردند.
+کاربر درخواست کرد پروژهٔ iOS در دایرکتوری `frontend/ios/` با تمامی افزونه‌های Capacitor همگام‌سازی (`npx cap sync ios`) شده و متن‌های فارسی مجوز دسترسی به دوربین (`NSCameraUsageDescription`) و ذخیره‌سازی در گالری/عکس‌ها (`NSPhotoLibraryAddUsageDescription`) به فایل `ios/App/App/Info.plist` اضافه شوند تا پروژه برای ساخت آتی روی سیستم‌عامل مک یا Codemagic آماده باشد، و در پایان تغییرات تنها در همان فایل stage شده و بدون push با پیام مشخص کامیت گردند.
 
 ---
 
 ### ۲. اعتبارسنجی فنی و بررسی مخزن (Verify Immediately)
-۱. بررسی تاریخچهٔ گیت (کامیت `3687353`) و ساختار فایل‌های پروژه نشان داد که پوشهٔ `warehouse-front...
+۱. بررسی تاریخچهٔ گیت (کامیت `3687353`) و ساختار فایل‌های پروژه نشان داد که پوشهٔ `frontend...
 
 ---
 
@@ -7798,7 +7798,7 @@ Session 13 of 15 — Mobile phase B review fixes: push registration guard in rel
 
 3. Task:
 - a) `android/app/build.gradle`: when any requested Gradle task name contains `Release` (`gradle.startParameter.taskNames`), throw `GradleException` with a clear English message if `google-services.json` is missing in the app folder or the keystore properties file is missing. Debug builds keep working without them. Set `versionCode 2` and `versionName "1.0.1"`.
-- b) `warehouse-front/.gitignore`: add `google-services.json`.
+- b) `frontend/.gitignore`: add `google-services.json`.
 - c) `file-output.ts`: when the file was written to `Directory.Data` (fallback) and the share is cancelled, treat it as a failure: notify once with the existing message and reject. Cancel after a successful `Directory.Documents` write stays a success.
 - d) `push.service.ts` and `auth.service.ts`: call the push token deletion in `handleRemoteLogout` before the session is cleared (wrapped, failure ignored, never blocking). In `deleteToken()` reset the listeners flag only after `removeAllListeners()` has resolved (or failed).
 - e) Download page html/ts:
@@ -7817,7 +7817,7 @@ Session 13 of 15 — Mobile phase B review fixes: push registration guard in rel
   - `file-output.spec.ts`, at least 13 tests in total: a share cancel after the `Directory.Data` fallback notifies and rejects.
   - `app-download.component.spec.ts`, at least 6 tests in total: loading text, and error line with retry.
 
-4. Tool policy: in `warehouse-front`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/app-download/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `frontend`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/app-download/*.spec.ts"`. If a command fails, read its output and change approach.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -7830,7 +7830,7 @@ fix(mobile): review fixes for push, file output and download page
 ### ۱. توضیح سادهٔ درخواست (Simple Explanation)
 درخواست این نشست (Session 13 of 15) شامل اصلاحات تکمیلی بازبینی فاز موبایل (Mobile Phase B) بود:
 1. **جلوگیری از کرش و بیلد نامعتبر نیتیو (Push Registration & Release Build Guard):** در فایل `android/app/build.gradle`، چنانچه هر تسک بیلد Release درخواست شود ولی فایل‌های `google-services.json` یا کی‌استور موجود نباشند، بیلد با پرتاب `GradleException` با پیام شفاف متوقف شود (بیلدهای Debug همچنان بدون نیاز به آن‌ها کار کنند)، و نسخه روی `versionCode 2` و `versionName "1.0.1"` تنظیم گردد.
-2. **نادیده‌گیری فایل کانفیگ فایربیس (.gitignore):** افزودن `google-services.json` به فایل `warehouse-front/.gitignore`.
+2. **نادیده‌گیری فایل کانفیگ فایربیس (.gitignore):** افزودن `google-services.json` به فایل `frontend/.gitignore`.
 3. **مدیری...
 
 ---
@@ -7843,7 +7843,7 @@ fix(mobile): review fixes for push, file output and download page
 - **Checks:**
   - require: 1/1 passed
   - verify round 0: 6/7 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base a359aad --allow warehouse-backend/core/notifications/push.py warehouse-backend/core/notifications/views.py warehouse-backend/core/notifications/serializers.py warehouse-backend/core/notifications/tests.py`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base a359aad --allow backend/core/notifications/push.py backend/core/notifications/views.py backend/core/notifications/serializers.py backend/core/notifications/tests.py`
   - verify round 1: 7/7 passed
 - **Task:**
 ```
@@ -7864,7 +7864,7 @@ Session 14 of 15 — Mobile phase B backend review fixes: push never breaks noti
 - c) `views.py` POST: validate with a serializer: `token` a non-empty string of at most 512 characters, `platform` one of `android`/`ios`, `app_version` optional string of at most 50 characters; invalid input or a non-object body returns 400 with a Persian message. DELETE returns 404 both for a missing token and for another user's token.
 - d) Tests in `core/notifications/tests.py` (keep all existing tests): a receiver failure (mock the token query to raise) does not break `Notification.objects.create`; tokens are read at commit time; POST with a 600-character token returns 400; POST with a JSON array returns 400; DELETE of another user's token returns 404 and keeps the token.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -7906,18 +7906,18 @@ Session 15 of 15 — Release on the local app environment: staging APK 1.0.1 wit
 - Release only. Do not edit, create, stage or commit any tracked file. Never print the content of any file in `E:\warehouse-secrets\`.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`; do not kill any `node` process. The runner restarts Daphne and the worker after your turn.
 - Only the local `app` environment. Never connect to `soft.farsalish.ir`. Do not run `deploy.ps1`. Publish only the STAGING APK (`ir.comanage.soft.test`).
-- Do not run `run_auto_backup`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`, `warehouse-backend/media/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
 
 2. Context: sessions 13 and 14 changed frontend, `android/app/build.gradle` (versionCode 2, versionName 1.0.1; release builds now require `android/app/google-services.json` and the keystore) and backend push code. No new migration. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup (stop if it fails or the size is 0), in `warehouse-backend`:
+- a) Backup (stop if it fails or the size is 0), in `backend`:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile 1.0.1'); print(m['filename'], m['size'])"`
 - b) `.\venv\Scripts\python.exe manage.py showmigrations --plan`: if any line has `[ ]`, stop and report.
-- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `warehouse-front\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear).
-- d) In `warehouse-front`: `npm run build:mobile-test`, then in `warehouse-front\android` `.\gradlew.bat assembleStagingDirectRelease`.
-- e) Web build in `warehouse-front`: `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`.
-- f) In `warehouse-backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk "<path of the new staging direct release APK>" --version 1.0.1 --channel direct --env staging`; then set the setting `app_download_url_direct` to `https://app.farsalish.ir` + the printed path, the same way as the previous release (validate with `validate_settings_payload`, then save as the settings API does).
+- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear).
+- d) In `frontend`: `npm run build:mobile-test`, then in `frontend\android` `.\gradlew.bat assembleStagingDirectRelease`.
+- e) Web build in `frontend`: `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`.
+- f) In `backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk "<path of the new staging direct release APK>" --version 1.0.1 --channel direct --env staging`; then set the setting `app_download_url_direct` to `https://app.farsalish.ir` + the printed path, the same way as the previous release (validate with `validate_settings_payload`, then save as the settings API does).
 
 4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and reading files outside `E:\warehouse-secrets\`. Gradle at most twice, each build at most twice. If a step fails, stop and report the exact error.
 
@@ -7957,7 +7957,7 @@ Session 1 of 15 — Phase 4: AuthGuard generic module loop only for modules with
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۰`.
-- Commit `30648fb` added a generic loop to `AuthGuard` in `warehouse-front/src/app/core/auth/auth.guard.ts` (the loop that starts with `for (const mod of installed)` and skips `scopeKind` `warehouse` and `finance`). `ModuleRegistryService` always adds the built-in `OPERATIONS_SPEC` (`scopeKind: 'operations'`, `routePrefix: '/app/operations'`) and it has no `routeAccess`. The loop therefore denies every non-admin user on `/app/operations/*`.
+- Commit `30648fb` added a generic loop to `AuthGuard` in `frontend/src/app/core/auth/auth.guard.ts` (the loop that starts with `for (const mod of installed)` and skips `scopeKind` `warehouse` and `finance`). `ModuleRegistryService` always adds the built-in `OPERATIONS_SPEC` (`scopeKind: 'operations'`, `routePrefix: '/app/operations'`) and it has no `routeAccess`. The loop therefore denies every non-admin user on `/app/operations/*`.
 - Evidence: `src/app/core/auth/route-access.characterization.spec.ts`, tests 2 to 5 of the `AuthGuard characterization` block, fail on HEAD and pass on commit `ef99e43`. Example: a user with only `view_sys_users` must get `true` for `/app/operations/users`.
 
 3. Definitions: "module with routeAccess" means `getModuleRouteAccess(mod)` in `auth.guard.ts` returns a value.
@@ -7967,7 +7967,7 @@ Session 1 of 15 — Phase 4: AuthGuard generic module loop only for modules with
 - b) In `app.routes.ts`, delete the two unused constants `whMarkers` and `acctMarkers` in both redirect functions (path `app` and path `''`). Change nothing else there.
 - c) In `module-contract.ts`, set `scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});` and set `deepSyncScope?: 'warehouse' | 'finance';` (the offline system has exactly two scopes).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run above reports no new failing test, and `git diff --stat` shows only the 3 files.
 
@@ -7982,7 +7982,7 @@ fix(guard): generic module loop only for modules with routeAccess
 ### پروتکل ۴ مرحله‌ای (Mandatory 4-Step Protocol)
 
 #### ۱. توضیح ساده (Explain Simply)
-کاربر درخواست کرده است که باگ مسدود شدن کاربران غیرادمین در مسیرهای مرکز عملیات (`/app/operations/*`) که پس از اضافه شدن حلقه عمومی گارد دسترسی ماژول‌ها در [auth.guard.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts) رخ داده بود، برطرف شود؛ به این صورت که ماژول‌هایی که فاقد تنظیمات دسترسی روت (`routeAccess`) هستند در این حلقه نادیده گرفته شوند. همچنین متغیرهای بدون استفاده در [app.routes.ts](file:///E:/warehouse%20project/warehouse-front/src/app/app.routes.ts) حذف شده و تایپ‌های قلمرو در [module-contract.ts](file:///E:/warehouse%20project/wa...
+کاربر درخواست کرده است که باگ مسدود شدن کاربران غیرادمین در مسیرهای مرکز عملیات (`/app/operations/*`) که پس از اضافه شدن حلقه عمومی گارد دسترسی ماژول‌ها در [auth.guard.ts](file:///E:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts) رخ داده بود، برطرف شود؛ به این صورت که ماژول‌هایی که فاقد تنظیمات دسترسی روت (`routeAccess`) هستند در این حلقه نادیده گرفته شوند. همچنین متغیرهای بدون استفاده در [app.routes.ts](file:///E:/warehouse%20project/frontend/src/app/app.routes.ts) حذف شده و تایپ‌های قلمرو در [module-contract.ts](file:///E:/warehouse%20project/wa...
 
 ---
 
@@ -8018,7 +8018,7 @@ Session 2 of 15 — Phase 4: the server rollback and restore gates count the uns
 - b) Update the spec so the existing tests mock both queues (empty by default). Keep every existing test.
 - c) Add at least two tests: one whose name contains `finance queue` (rollback blocked when only the finance queue has a record and the warehouse queue is empty), and one for restore blocked when only the finance queue has a record. Each asserts the error toast and that the confirm modal stays closed.
 
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`.
+4. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8026,7 +8026,7 @@ fix(backup): rollback and restore gates count both offline queues
 - Short English report: the change, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
 ```
 - **Agent's last reply:**
-I have launched `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front` to verify that there are no compilation or template errors, and will wait for it to complete.
+I have launched `npx ng build --output-path ../scratch/ng-build-agent` in `frontend` to verify that there are no compilation or template errors, and will wait for it to complete.
 I have launched the test comparison verification:
 `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`
 and will wait for the test results.
@@ -8073,7 +8073,7 @@ Session 3 of 15 — Phase 4 backend: module spec is the only source for app code
 - d) In `middleware.py`, change the ContextVar default to `''` and make `get_current_active_app()` return the variable value or, when empty, `default_module()` (import inside the function). In `permissions.py`, remove the trailing `or 'accounting'` from both expressions.
 - e) Add at least three tests to `core/platform_core/tests.py`: with `accounting` removed from `_REGISTRY` (use `patch.dict` as the existing test does), `app_code_to_module('personnel') == 'accounting'` and `module_scope_codes('accounting') == ('finance', 'personnel')`; with an extra catalog spec `ModuleSpec(code='zeta', title_fa='زتا', allowed_app_code='zeta', active_priority=5)` patched into `MODULE_CATALOG`, `resolve_default_active_app(['zeta', 'warehouse']) == 'zeta'`; `get_current_active_app()` outside a request equals `default_module()`.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice. If an existing test fails, report it; do not weaken any check.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice. If an existing test fails, report it; do not weaken any check.
 
 6. Output and stop condition:
 - Commit with this message, without push:
@@ -8135,7 +8135,7 @@ Session 4 of 15 — Phase 4 backend: public read prefixes and the reports fallba
   - With `get_reporting_modules` patched to return `[]`, `GET /api/reports/entities/` passes with `['warehouse']` and raises `PermissionDenied` with `['finance']`.
   - With the warehouse spec's `public_read_prefixes` patched to `()`, `GET /api/warehouses/` with only `finance` raises `PermissionDenied`.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_module_spec_auth_fields --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_module_spec_auth_fields --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8152,7 +8152,7 @@ refactor(auth): public read prefixes and reports fallback from module spec
 <div dir="rtl" align="right">
 
 ### توضیح اولیه (ساده و شفاف)
-در این نشست، وابستگی‌های سخت‌کد شده به نام ماژول انبار (`warehouse`) در متد `enforce_token_app_scope` فایل [authentication.py](file:///E:/warehouse%20project/warehouse-backend/core/accounts/authentication.py) حذف شدند. پیشوندهای خواندن عمومی (`public_read_prefixes`) و پرچم ماژول پشتیبان گزارش‌ساز (`reports_fallback`) به عنوان فیلدهایی در [registry.py](file:///E:/warehouse%20project/warehouse-backend/co...
+در این نشست، وابستگی‌های سخت‌کد شده به نام ماژول انبار (`warehouse`) در متد `enforce_token_app_scope` فایل [authentication.py](file:///E:/warehouse%20project/backend/core/accounts/authentication.py) حذف شدند. پیشوندهای خواندن عمومی (`public_read_prefixes`) و پرچم ماژول پشتیبان گزارش‌ساز (`reports_fallback`) به عنوان فیلدهایی در [registry.py](file:///E:/warehouse%20project/backend/co...
 
 ---
 
@@ -8188,7 +8188,7 @@ Session 5 of 15 — Phase 4 backend: users report entity reads module extra fiel
 - c) In `WarehousesConfig.ready()`, delete the `try` block that imports and calls `_register_platform_entities`; keep `contribute('user_report_extra_fields', get_user_report_extra_fields())`.
 - d) Add at least three tests to `core/reports/tests.py`: `get_entity('users').get_fields()` contains `assigned_warehouses_count` in the full profile without calling `get_registry()` or `register_warehouse_reports()`; an `EntityConfig` built with a test point gets a `FieldDef` contributed after it was built (patch `platform_core.registry._CONTRIBUTIONS` with `patch.dict` so nothing leaks); a `ReportEngine` run on `users` that selects `assigned_warehouses_count` returns the correct count for a user with two assigned warehouses (follow the spec format of existing report tests in `integration_tests/test_reports_integration.py`).
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test reports --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests reports platform_core --noinput`.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test reports --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests reports platform_core --noinput`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8256,7 +8256,7 @@ Session 6 of 15 — Phase 4 backend: characterization tests for the audit log ap
 - `export_excel` for the superuser with `app_scope` `warehouse` and `finance`: the number of data rows (read the workbook with `openpyxl`; data starts at row 3).
 Find the permission the list needs from `get_permissions` and the existing permission classes; give the non-superuser only what is needed.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most five runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`, at most five runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8290,7 +8290,7 @@ test(audit): characterization of app-scope filters for list, stats and export
 - **Checks:**
   - require: 1/1 passed
   - verify gate 1: 11/14 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 7116a7d --allow warehouse-backend/core/accounts/views_domains/audit_views.py warehouse-backend/core/accounts/audit_scope.py warehouse-backend/core/platform_core/registry.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/modules/warehouse/warehouses/audit_scope.py warehouse-backend/modules/accounting/personnel/apps.py warehouse-backend/modules/accounting/personnel/audit_scope.py`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 7116a7d --allow backend/core/accounts/views_domains/audit_views.py backend/core/accounts/audit_scope.py backend/core/platform_core/registry.py backend/modules/warehouse/warehouses/apps.py backend/modules/warehouse/warehouses/audit_scope.py backend/modules/accounting/personnel/apps.py backend/modules/accounting/personnel/audit_scope.py`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 7116a7d --grep "refactor(audit): app-scope filters and user restriction via module contributions"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
   - verify gate 2: 14/14 passed
@@ -8321,7 +8321,7 @@ Session 7 of 15 — Phase 4 backend: audit log app-scope filters and the assigne
 - b) `modules/warehouse/warehouses/audit_scope.py`: the warehouse filter (`module__in` own keys or `warehouse_id__isnull=False`, excluding other modules' keys) and the user restriction with today's three branches, using the user's assigned warehouse ids (no restriction when the user has no `assigned_warehouses` attribute): scope module is `warehouse` gives ids only; another module gives ids or null warehouse; `None` gives ids or (null warehouse and module in other modules' keys). `modules/accounting/personnel/audit_scope.py`: the accounting filter (own keys, the six `target_model` names, `details__target_module='finance'`). Register both in their `ready()`.
 - c) In `audit_views.py`, replace the three filter blocks with `apply_audit_app_scope` and the restriction block with `restrict_audit_for_user`, keeping the superuser and `perm_sys_logs` check in the view. `stats` keeps the response keys `warehouse_logs_count` and `finance_logs_count`, computed with `apply_audit_app_scope(base_qs, 'warehouse')` and `apply_audit_app_scope(base_qs, 'finance')`.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
 
 6. Output and stop condition:
 - Commit with this message, without push:
@@ -8371,7 +8371,7 @@ Session 8 of 15 — Phase 4 backend: comment target models come from module cont
 - b) Register `'item'`, `'counttask'` and `'doctask'` in `InventoryConfig.ready()` and `'warehouse'` in `WarehousesConfig.ready()`, outside any `try` block.
 - c) New `integration_tests/test_comment_target_models.py` (`TestCase`, at least 3 tests): the contributed set equals `{'item', 'counttask', 'doctask', 'warehouse'}`; the comment serializer accepts `content_type_str='inventory.item'` past the allow-list check; it rejects `content_type_str='personnel.personneldocument'` with the existing Persian «مجاز نیست» error.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_comment_target_models --noinput`, one run of `.\venv\Scripts\python.exe manage.py test communications integration_tests --noinput`.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_comment_target_models --noinput`, one run of `.\venv\Scripts\python.exe manage.py test communications integration_tests --noinput`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8385,7 +8385,7 @@ refactor(comments): comment target models via module contributions
 در نشست ۸ از فاز ۴ ماژولارسازی، هدف این بود که لیست مدل‌های مجاز برای درج نظر (کامنت) چندریختی که قبلاً به صورت یک متغیر هاردکدشده ثابت (`ALLOWED_COMMENT_MODELS`) در هستهٔ `communications` قرار داشت، با یک تابع پویا که مدل‌ها را از نقطهٔ مشارکت (`contributions('comment_target_models')`) می‌خواند جایگزین شود. همچنین ورودی‌های غیرواقعی `document` و `financialdocument` که در سیستم وجود خارجی نداشتند حذف شدند و هر ماژول مدل‌های مرتبط با خود را در متد `ready()` خود ثبت کرد (`inventory` مدل‌های `'item'`, `'counttask'`, `'doctask'` و `warehouses` مدل `'warehouse'`).
 
 ### ۲. اعتبارسنجی فوری
-- بررسی کدهای `warehouse-backend/core/communications/serializ...
+- بررسی کدهای `backend/core/communications/serializ...
 
 ---
 
@@ -8420,7 +8420,7 @@ Session 9 of 15 — Phase 4 backend: user serializers and user views reach assig
 - b) Replace every direct use listed above with the extension methods; when the extension is `None` (no warehouse module), keep today's result for that install (empty list, nothing set). Keep the order of operations in the import code.
 - c) New `integration_tests/test_user_warehouse_extension_calls.py` (`TestCase`, at least 4 tests): creating a user through the user API with `assigned_warehouses` sets them; the user detail returns the same ids; updating with a new list replaces them; with `contributions('user_extensions')` patched to return no extension, the user serializer has no `assigned_warehouses` field and create still works.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_user_warehouse_extension_calls --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+4. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_user_warehouse_extension_calls --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8474,7 +8474,7 @@ Session 10 of 15 — Phase 4 backend: warehouse scope rules of the report query 
 - c) New `modules/warehouse/warehouses/report_scope.py` with the warehouse handler (`kind='warehouse'`, `per_scope_settings=True`) using `common.warehouse_scope` exactly as the engine does today; register it in `WarehousesConfig.ready()`.
 - d) New `integration_tests/test_report_scope_handlers.py` (`TestCase`, at least 4 tests): exactly one handler with kind `warehouse` is registered; a non-superuser assigned to one warehouse gets only that warehouse's rows from a warehouse-scoped entity (follow `integration_tests/test_reports_integration.py`); requesting another warehouse id gives 403; an entity with a made-up kind and a `scope_path` raises `ReportError` with status 403.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_report_scope_handlers --noinput`, one run of `.\venv\Scripts\python.exe manage.py test reports integration_tests --noinput`.
+5. Tool policy: in `backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_report_scope_handlers --noinput`, one run of `.\venv\Scripts\python.exe manage.py test reports integration_tests --noinput`.
 
 6. Output and stop condition:
 - Commit with this message, without push:
@@ -8524,7 +8524,7 @@ Session 11 of 15 — Phase 4: one generic module loop in AuthGuard replaces the 
 - b) Replace the warehouse block, the finance block and both loops with one loop over all known module specs that have routeAccess (installed and not installed, so the not-installed redirect still works; find how the registry exposes them), detecting the module by `routePrefix` or `route.routeConfig?.path` equal to the prefix without its leading slash. Use `extensions.layoutNav.hasCompanyDocumentsArchive` to apply the company-documents exception only to the module that owns the archive, keeping today's checks exactly.
 - c) No module name, route prefix or scope kind literal remains in `auth.guard.ts` except inside the company-documents expressions that session 12 replaces.
 
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/services/app-persona*.spec.ts"`.
+4. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/services/app-persona*.spec.ts"`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8553,20 +8553,20 @@ refactor(guard): one generic module loop in AuthGuard
 - **Checks:**
   - require: 1/1 passed
   - verify gate 1: 8/12 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/app.routes.ts frontend/src/app/core/auth/auth.guard.ts frontend/src/app/core/services/app-persona.service.ts frontend/src/app/core/auth/company-documents-route.spec.ts`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 946e4b6 --include "src/**/*.spec.ts"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
   - verify gate 2: 9/12 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/app.routes.ts frontend/src/app/core/auth/auth.guard.ts frontend/src/app/core/services/app-persona.service.ts frontend/src/app/core/auth/company-documents-route.spec.ts`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
   - verify gate 3: 9/12 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/app.routes.ts frontend/src/app/core/auth/auth.guard.ts frontend/src/app/core/services/app-persona.service.ts frontend/src/app/core/auth/company-documents-route.spec.ts`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
   - verify gate 4: 9/12 passed
-    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/app.routes.ts frontend/src/app/core/auth/auth.guard.ts frontend/src/app/core/services/app-persona.service.ts frontend/src/app/core/auth/company-documents-route.spec.ts`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
     - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
 - **Task:**
@@ -8590,7 +8590,7 @@ Session 12 of 15 — Phase 4: the company documents route comes from the layoutN
 - b) Read the route from the installed module whose `layoutNav` has `hasCompanyDocumentsArchive` true, through the module registry, in all the places above. A URL counts as a company-documents URL when it starts with that route or with the same parent path plus `/documents`. The two legacy redirects use a function that returns the route without its leading slash, or `app/launcher` when no module owns the archive.
 - c) New `core/auth/company-documents-route.spec.ts` (at least 4 tests, one name containing `without the archive module`): the root redirect sends a user with company-documents access and no module access to the archive route; the guard allows that user on the archive route; the legacy `documents` redirect resolves to the archive route; without the archive module installed the redirect goes to `app/launcher`.
 
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/*.spec.ts"`.
+4. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/*.spec.ts"`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
@@ -8622,18 +8622,18 @@ Session 16 of 22 — Phase 4 step 4: characterization spec for offline scope rou
 - This session writes tests only. Do not change any production `.ts` file. Change only the 2 files in the scope verify line: create the new spec, and append tests to `user-menu.component.spec.ts` without changing or deleting any existing test there.
 - The tests must lock what the code does today. When a test fails, fix the test expectation to match today's behaviour, never the production code.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-- Do not install packages. There is no `fake-indexeddb`: mock Dexie tables with `vi.spyOn` the way `warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts` does.
+- Do not install packages. There is no `fake-indexeddb`: mock Dexie tables with `vi.spyOn` the way `frontend/src/app/core/services/offline/offline-queue-runner.spec.ts` does.
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱` under `### گام ۴`. Read the invariants (lines starting with `ن۱` to `ن۱۲`) and the paragraph for session 16.
-- Code under test: `warehouse-front/src/app/core/services/offline-db.ts` (`normalizeScope`, `getScopedDbName`, `resolveScopeFromUrl`, `getCurrentActiveAppScope`, `getOfflineDb`, `warehouseOfflineDb`, `financeOfflineDb`); `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts` (`runQueueSequential`, `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`, `buildScopedHeaders`, `refreshAccessToken`); `offline-local-patcher.ts` (`purgeEphemeralQueueEntries`); `offline-conflict-manager.ts` (`dismissError`, `deleteError`); `warehouse-front/src/app/core/services/session-tab.service.ts` (`getScopedAccessToken`, `setScopedAccessToken`); `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts` (getter `currentScopeContext`).
-- The server-installed module list is set with `getModuleRegistry().setInstalledModules(codes)` and read with `getInstalledCodes()` in `warehouse-front/src/app/core/modules/module-registry.service.ts`.
+- Code under test: `frontend/src/app/core/services/offline-db.ts` (`normalizeScope`, `getScopedDbName`, `resolveScopeFromUrl`, `getCurrentActiveAppScope`, `getOfflineDb`, `warehouseOfflineDb`, `financeOfflineDb`); `frontend/src/app/core/services/offline/offline-queue-runner.ts` (`runQueueSequential`, `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`, `buildScopedHeaders`, `refreshAccessToken`); `offline-local-patcher.ts` (`purgeEphemeralQueueEntries`); `offline-conflict-manager.ts` (`dismissError`, `deleteError`); `frontend/src/app/core/services/session-tab.service.ts` (`getScopedAccessToken`, `setScopedAccessToken`); `frontend/src/app/shared/components/user-menu/user-menu.component.ts` (getter `currentScopeContext`).
+- The server-installed module list is set with `getModuleRegistry().setInstalledModules(codes)` and read with `getInstalledCodes()` in `frontend/src/app/core/modules/module-registry.service.ts`.
 
 3. Definitions:
 - "Both DBs" means the two instances `warehouseOfflineDb` (IndexedDB name `WarehouseOfflineDB_warehouse`) and `financeOfflineDb` (`WarehouseOfflineDB_finance`).
 - "Installed subsets" means three runs of the same table: `setInstalledModules(['warehouse', 'accounting'])`, `setInstalledModules(['warehouse'])` and `setInstalledModules(['accounting'])`. Save `getInstalledCodes()` in `beforeEach` and restore it in `afterEach`.
 
-4. Task: create `warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts` (first line `// @vitest-environment jsdom`, like the other specs) with at least 14 plain `it(` blocks covering:
+4. Task: create `frontend/src/app/core/services/offline/offline-scope.characterization.spec.ts` (first line `// @vitest-environment jsdom`, like the other specs) with at least 14 plain `it(` blocks covering:
 - a) `normalizeScope` and `getScopedDbName` for `undefined`, `null`, `''`, `'warehouse'`, `'WAREHOUSE'`, `'finance'`, `'personnel'`, `'accounting'`, `'operations'`, `'xyz'`.
 - b) `resolveScopeFromUrl` for at least 20 URLs, each run under the three installed subsets with identical expected values: one URL for each of the 8 finance patterns in the function, plus URLs containing `/doc-tasks/`, `/inventory/`, `/warehouses/`, `/chat/`, `/notifications/`, `/auth/refresh/`, an absolute `https://` URL, an uppercase URL, and `null` (which returns the current scope).
 - c) `getCurrentActiveAppScope`: sessionStorage `active_app_module` = `personnel`, `warehouse`, `operations`; sessionStorage `wh_active_app` = `finance`; no session key with `window.history.pushState` to `/app/finance/x`, `/app/warehouse/x`, `/app/operations/users`, `/`; localStorage `active_app_module` = `accounting` on path `/`. Clear both storages between tests.
@@ -8690,11 +8690,11 @@ Session 17 of 22 — Phase 4 step 4: fix two pre-existing data-loss paths (legac
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, the invariants `ن۸` and `ن۹` and the paragraph for session 17.
-- `migrateLegacyDatabaseIfNeeded` in `warehouse-front/src/app/core/services/offline-db.ts` runs on every app start (called from `initialize()` in `offline-sync.service.ts`). Its defects today:
+- `migrateLegacyDatabaseIfNeeded` in `frontend/src/app/core/services/offline-db.ts` runs on every app start (called from `initialize()` in `offline-sync.service.ts`). Its defects today:
   - `targetDb.syncQueue.where('url')` throws a Dexie `SchemaError`, because `url` is not an index in any `syncQueue` schema. The outer `catch` swallows it, so no legacy queue row is ever migrated.
   - `warehouseOfflineDb.docTasks.bulkPut(legacyDocs)` runs on every start and overwrites newer local `docTasks` rows (including rows with `_offlinePending`) with the old legacy copies.
   - `add({ ...item, appScope: scope })` keeps the legacy `id`, which collides with existing auto-increment ids in the target DB.
-- `warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts`: errors are loaded from both DBs (around line 185) and merged. The "discard" strategy updates and the "server" strategy deletes `syncErrors` rows with the same `errorId` in both DBs (around lines 298 and 319). Ids are per DB, so this also dismisses or deletes an unrelated error row of the other DB, which holds the only copy of a rejected request body.
+- `frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts`: errors are loaded from both DBs (around line 185) and merged. The "discard" strategy updates and the "server" strategy deletes `syncErrors` rows with the same `errorId` in both DBs (around lines 298 and 319). Ids are per DB, so this also dismisses or deletes an unrelated error row of the other DB, which holds the only copy of a rejected request body.
 
 3. Definitions:
 - "Source DB" of an error is the DB instance the row was read from.
@@ -8709,7 +8709,7 @@ Session 17 of 22 — Phase 4 step 4: fix two pre-existing data-loss paths (legac
 - f) Spec `offline-db.legacy-migration.spec.ts` (at least 6 `it(`): marker set means nothing is read; existing `docTasks` row is not overwritten and a missing one is added; a legacy queue row is added once without its legacy `id` and gets `migratedAt`; a row with `migratedAt` is skipped; a second run with an existing copy adds nothing; a failing row leaves the marker unset. Use plain objects and `vi.spyOn` on the target tables.
 - g) Spec `operations-sync-monitor.error-source.spec.ts` (at least 3 `it(`): with id 5 in both DBs, discarding the warehouse error updates only `warehouseOfflineDb.syncErrors`; the server strategy without `server_record` deletes only in the source DB; same for a finance error.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run above reports no new failing test, `offline-scope.characterization.spec.ts` passes unchanged, and `git diff --stat` shows only the 4 files.
 
@@ -8730,7 +8730,7 @@ fix(offline): idempotent legacy migration and single-DB error writes in sync mon
 ### English Report (Session 17)
 
 #### 1. What changed per defect
-- **Defect 1 (`migrateLegacyDatabaseIfNeeded` in [offline-db.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/services/offline-db.ts)):**
+- **Defect 1 (`migrateLegacyDatabaseIfNeeded` in [offline-db.ts](file:///E:/warehouse%20project/frontend/src/app/core/services/offline-db.ts)):**
   - Extracted modular, exported function `migrateLegacyData(legacy, targets)`.
   - Added run-once marker check and setter for `wh_legacy_offline_db_migrated_v1` in `localStorage`, set only upon error-free migration completion.
   - Eliminated the...
@@ -8795,7 +8795,7 @@ Session 18 of 22 — Phase 4 step 4: offlineSync module extension and registry-d
   - for both real modules, `offlineSync.scopeKind` equals `syncConfig.scopeKind`.
   Do not open IndexedDB in tests: assert names and instance identity only.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"` and at most two runs each of `python scripts/e2e/guardian_34_offline_continuity.py` and `python scripts/e2e/guardian_57_front_module_fence.py`. Guardian 57 must not report an increase; never run it with `--update-baseline`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"` and at most two runs each of `python scripts/e2e/guardian_34_offline_continuity.py` and `python scripts/e2e/guardian_57_front_module_fence.py`. Guardian 57 must not report an increase; never run it with `--update-baseline`. If a command fails, read its output and change approach.
 
 6. Before finishing: the characterization spec of session 16 passes unchanged, the ng-test-compare run reports no new failing test, guardians 34 and 57 pass, and `git diff --stat` shows only the 5 files.
 
@@ -8840,7 +8840,7 @@ Session 19 of 22 — Phase 4 step 4: queue readers use every offline DB (drain, 
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۶`, `ن۱۱`, `ن۱۲` and the paragraph for session 19.
-- `getAllOfflineDbs()` in `warehouse-front/src/app/core/services/offline-db.ts` (session 18) returns the two locked DBs first, then registered DBs.
+- `getAllOfflineDbs()` in `frontend/src/app/core/services/offline-db.ts` (session 18) returns the two locked DBs first, then registered DBs.
 - Places that read both queues with a fixed pair today:
   - `offline-queue-runner.ts`: the drain loop in `runQueueSequential` (`currentScope`/`otherScope`), `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`.
   - `offline-sync.service.ts`: `initialize()` (`sending` back to `pending`) and `refreshCounts()`.
@@ -8863,7 +8863,7 @@ Session 19 of 22 — Phase 4 step 4: queue readers use every offline DB (drain, 
 - g) `countUnsentEntries` in `server-restore-gate.ts`: count every DB, plus the `syncQueue` rows of every unknown device DB, opened read-only with `new Dexie(name)` and `open()` (dynamic mode, no `version()` call), counted, then `close()`d. Skip a DB without a `syncQueue` table. Any error while listing or reading must propagate so the gate stays closed, exactly like today's read errors.
 - h) Spec `offline-n-scope.readers.spec.ts` (at least 7 `it(`), registering a fake module `qa_mod` (as in `offline-scope.registry.spec.ts`) and spying on the tables of its DB: the drain sends a `qa_mod` entry with its own DB handle in global `createdAt` order; `getPendingCount()`, `getUnsentCountStrict()` and `getQueueEntries('all')` include it; `getPendingCount('xyz')` is 0; `countUnsentEntries` counts a `qa_mod` row and a row from an unknown device DB returned by a mocked `Dexie.getDatabaseNames`; a rejected `getDatabaseNames` makes `countUnsentEntries` reject; `purgeEphemeralQueueEntries` does not touch the `qa_mod` DB.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/**/settings-backup-tab/*.spec.ts" --include "src/app/modules/warehouse/components/wh-settings/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/**/settings-backup-tab/*.spec.ts" --include "src/app/modules/warehouse/components/wh-settings/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the specs of sessions 16 and 18 pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -8931,7 +8931,7 @@ Session 20 of 22 — Phase 4 step 4: record writers never fall back to the wareh
 - e) `offline-sync.service.ts`: pass the optional `scope` through its wrappers. `operations-sync-monitor.ts`: pass the source DB's `dbScope` to `resolveConflict`.
 - f) Spec `offline-n-scope.writers.spec.ts` (at least 8 `it(`): an entry with `appScope: 'xyz'` makes `handleRetry` and `markTransportFailure` write nothing in any DB; `cancelQueueEntry(7, 'xyz')` returns `false` and deletes nothing; `cancelQueueEntry(7)` with id 7 in the warehouse DB and in a registered `qa_mod` DB returns `false`; `reconcileRejected` with `appScope: 'xyz'` writes nothing; `dismissError(7, 'finance')` with id 7 in both locked DBs updates only the finance DB; `dismissError(7)` without scope keeps the session 16 result; `resolveOfflineDbStrict` is used for `qa_mod` entries (its DB handle receives the write).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the specs of sessions 16 to 19 pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -8977,8 +8977,8 @@ Session 21 of 22 — Phase 4 step 4: user-menu scope context and session-tab tok
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, the `offlineSync` table and the paragraph for session 21.
-- `currentScopeContext` in `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts` (around lines 110 to 160): step 1 checks hard-coded `startsWith` prefixes, step 2 maps `activeApp` names, step 3 checks installed `scopeKind`s.
-- `getScopedAccessToken` and `setScopedAccessToken` in `warehouse-front/src/app/core/services/session-tab.service.ts` map `personnel`/`finance` to `finance` and everything else to `warehouse`.
+- `currentScopeContext` in `frontend/src/app/shared/components/user-menu/user-menu.component.ts` (around lines 110 to 160): step 1 checks hard-coded `startsWith` prefixes, step 2 maps `activeApp` names, step 3 checks installed `scopeKind`s.
+- `getScopedAccessToken` and `setScopedAccessToken` in `frontend/src/app/core/services/session-tab.service.ts` map `personnel`/`finance` to `finance` and everything else to `warehouse`.
 - `normalizeScope` and the `offlineSync` extension (session 18) are in `offline-db.ts` and the two module files.
 
 3. Definitions: "route scope" is the `scopeKind` of the first module in `getModuleRegistry().getAllModules()` whose `offlineSync.appRoutePrefixes` contains a prefix the router url starts with.
@@ -8987,7 +8987,7 @@ Session 21 of 22 — Phase 4 step 4: user-menu scope context and session-tab tok
 - a) `currentScopeContext`: keep the `/app/operations` check first and unchanged. Replace the hard-coded finance and warehouse prefix lists with the route scope. Replace the `activeApp` name mapping with `normalizeScope(activeApp)` for any non-empty `activeApp` other than `operations`. Keep step 3 and the final default unchanged. The return type stays the same; a route scope or normalized scope that is neither `warehouse` nor `finance` returns `warehouse` (the deep-sync modal has only these two sections).
 - b) `session-tab.service.ts`: in both token functions, compute the scoped key suffix with `normalizeScope(scope)` and keep only `warehouse` or `finance` as the suffix (anything else uses `warehouse`, as today).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/components/user-menu/*.spec.ts" --include "src/app/core/services/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/components/user-menu/*.spec.ts" --include "src/app/core/services/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run reports no new failing test, and `git diff --stat` shows only the 2 files.
 
@@ -9031,16 +9031,16 @@ Session 22 of 22 — Release phase 4 step 4 on the local app environment: backup
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 16 to 21 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
@@ -9083,7 +9083,7 @@ Session 23 of 24 — Phase 4 step 4 review fixes: explicit locked scope constant
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۲` and `ن۸`.
-- `warehouse-front/src/app/core/services/offline-db.ts` defines `WH_SCOPE`, `FIN_SCOPE`, `ACCT_SCOPE` and `PERS_SCOPE` by position from `Object.keys(SCOPED_DB_NAMES)`. Reordering that table would silently change which DB a record goes to.
+- `frontend/src/app/core/services/offline-db.ts` defines `WH_SCOPE`, `FIN_SCOPE`, `ACCT_SCOPE` and `PERS_SCOPE` by position from `Object.keys(SCOPED_DB_NAMES)`. Reordering that table would silently change which DB a record goes to.
 - `migrateLegacyData` in the same file, queue part: it checks for an existing copy, then `add`s, then sets `migratedAt` on the legacy row. Two defects:
   - Two tabs opened at the same time both run it, both find no copy, and both add the same row, so the request is sent twice.
   - When `add` succeeds but the `migratedAt` update fails, the marker stays unset; after the added copy is sent and deleted, the next start finds no copy and adds the row again, so it is sent twice.
@@ -9098,7 +9098,7 @@ Session 23 of 24 — Phase 4 step 4 review fixes: explicit locked scope constant
 - c) Claim-first per queue row: skip a row without `id` (log it). Claim the row; if the claim fails, skip the row and set the error flag. Then check for an existing copy and `add` when there is none (unchanged rules). If the check or `add` throws, release the claim; if the release also fails, log it and keep the error flag. The row is never deleted from the legacy DB.
 - d) Spec: add at least 4 tests: the claim `update` happens before `add`; a failing `add` releases the claim and leaves the marker unset; a failing claim adds nothing; with a mocked `navigator.locks.request` the migration body runs inside it, and without `navigator.locks` it still runs.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts"` and at most two runs of `python scripts/e2e/guardian_57_front_module_fence.py` (never with `--update-baseline`). If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts"` and at most two runs of `python scripts/e2e/guardian_57_front_module_fence.py` (never with `--update-baseline`). If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run reports no new failing test, guardian 57 passes, and `git diff --stat` shows only the 2 files.
 
@@ -9138,16 +9138,16 @@ Session 24 of 24 — Release phase 4 step 4 review fixes on the local app enviro
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 16 to 21 and 23 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4 fixes'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
@@ -9193,18 +9193,18 @@ Session 25 of 30 — Close modularization: backend core defaults from the module
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 25.
-- `default_module()` is in `warehouse-backend/core/platform_core/registry.py`; read it and how `accounts/middleware.py` and `accounts/permissions.py` already derive the default active app from it (phase 4 session 3).
-- `export_excel` in `warehouse-backend/core/accounts/views_domains/audit_views.py` (around line 904): with POST, filters read `request.data`, but `get_queryset()` (around line 739) calls `restrict_audit_for_user(qs, user, params.get('app_scope'))` with the query string.
+- `default_module()` is in `backend/core/platform_core/registry.py`; read it and how `accounts/middleware.py` and `accounts/permissions.py` already derive the default active app from it (phase 4 session 3).
+- `export_excel` in `backend/core/accounts/views_domains/audit_views.py` (around line 904): with POST, filters read `request.data`, but `get_queryset()` (around line 739) calls `restrict_audit_for_user(qs, user, params.get('app_scope'))` with the query string.
 - Literal defaults to replace: `app_module: str = 'personnel'` in `get_user_valid_roles_for_app` and `resolve_effective_role` (`middleware.py`); `getattr(request, 'active_app', 'warehouse') or 'warehouse'` (`backup_views.py` around line 130); `data.get('app_scope', 'warehouse')` (`session_views.py` around line 30); the `scope_kind: str = 'warehouse'` and `module_code: str = 'warehouse'` defaults in `query_engine/definitions.py` (lines 57, 199, 206, 315, 321).
 
-3. Definitions: "registry default" means the value derived from `default_module()` exactly the way `middleware.py` already derives the default active app (reuse that existing code path; do not write a new module-name mapping). For `query_engine`, the default parameter becomes `None` and is resolved inside the function from the registry, so callers in `warehouse-backend/modules` keep working without edits.
+3. Definitions: "registry default" means the value derived from `default_module()` exactly the way `middleware.py` already derives the default active app (reuse that existing code path; do not write a new module-name mapping). For `query_engine`, the default parameter becomes `None` and is resolved inside the function from the registry, so callers in `backend/modules` keep working without edits.
 
 4. Task:
 - a) `export_excel`: when the request is POST with a body, the user restriction uses the body's `app_scope` (the same value the filter uses). Pass the effective `app_scope` into the restriction; do not duplicate `restrict_audit_for_user`. GET behaviour stays the same.
 - b) Replace the literal defaults of section 2 with the registry default. In the full profile (both modules installed) every result must be identical to today.
 - c) Add tests (new test methods in an existing test module of `accounts`, `platform_core` or `integration_tests`): the POST export for a restricted non-superuser with body `app_scope` applies the same restriction as GET with that query parameter; each replaced default returns today's value in the full profile.
 
-5. Tool policy: from `warehouse-backend`, run tests only with labels, for example `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test accounts platform_core --keepdb`, at most four times; from the repo root, `python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55` at most twice. If a command fails, read its output and change approach.
+5. Tool policy: from `backend`, run tests only with labels, for example `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test accounts platform_core --keepdb`, at most four times; from the repo root, `python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55` at most twice. If a command fails, read its output and change approach.
 
 6. Before finishing: the labelled tests above pass except the known failure listed in `scripts/automation/known_backend_failures.txt`, and `git diff --stat` shows only files from the scope line.
 

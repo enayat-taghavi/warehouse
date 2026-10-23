@@ -40,7 +40,7 @@
 
 ### ۱. لایه مدل‌ها و دیتابیس (Database & Models)
 
-#### [MODIFY] [models.py](../../warehouse-backend/communications/models.py)
+#### [MODIFY] [models.py](../../backend/communications/models.py)
 - تعریف مدل جدید `ConversationParticipant` ارث‌بری کرده از `SyncModelMixin` شامل فیلدهای:
   - `conversation`: کلید خارجی به `Conversation` با `related_name='participant_memberships'`
   - `user`: کلید خارجی به مدل کاربر با `related_name='conversation_participations'`
@@ -57,14 +57,14 @@
 
 ### ۲. لایه منطق، سریالایزر و دیدها (Backend Views, Serializers & Access)
 
-#### [MODIFY] [serializers.py](../../warehouse-backend/communications/serializers.py)
+#### [MODIFY] [serializers.py](../../backend/communications/serializers.py)
 - در `ConversationSerializer`:
   - بهینه‌سازی متد `get_last_message`: استفاده از پیام‌های از پیش بارگذاری‌شده (`obj.prefetched_messages`) در صورت وجود جهت صفر کردن کوئری N+1.
   - بهینه‌سازی متد `get_unread_count`: استفاده از مقدار محاسبه‌شده `getattr(obj, 'annotated_unread_count', None)` در صورت موجود بودن.
 - در `MessageSerializer`:
   - بهینه‌سازی `get_read_by_count` با استفاده از فیلد محاسبه‌شده `annotated_read_by_count` در صورت وجود.
 
-#### [MODIFY] [views.py](../../warehouse-backend/communications/views.py)
+#### [MODIFY] [views.py](../../backend/communications/views.py)
 - در `ConversationViewSet`:
   - اعمال `IsChatEnabled` در `permission_classes`.
   - در `get_queryset`: افزودن `Prefetch` پیام‌ها با `select_related('sender')` و `prefetch_related('attachments')` و محاسبه `unread_count` با استفاده از کوئری بهینه.
@@ -77,17 +77,17 @@
 - در `GenericCommentViewSet` و `ChatContactsListView`:
   - اعمال `IsChatEnabled` در دسترسی‌ها.
 
-#### [MODIFY] [permissions.py](../../warehouse-backend/communications/permissions.py)
+#### [MODIFY] [permissions.py](../../backend/communications/permissions.py)
 - افزودن کلاس پرمیشن `IsChatEnabled`:
   - استخراج انبار مرتبط یا سراسری و بررسی `get_setting('chat_enabled', warehouse_id)`.
   - در صورت `False` بودن، پرتاب `PermissionDenied('سیستم پیام‌رسان در این انبار غیرفعال است')`.
 
-#### [MODIFY] [broadcast.py](../../warehouse-backend/communications/broadcast.py)
+#### [MODIFY] [broadcast.py](../../backend/communications/broadcast.py)
 - بهینه‌سازی `broadcast_message_ws`:
   - جلوگیری از اجرای کوئری سنگین `count()` در حلقه به‌ازای هر عضو.
   - ارسال امن رویدادهای WebSocket به روم‌های کاربری بدون افت عملکرد سرور در گفتگوهای پرتعداد.
 
-#### [MODIFY] [consumers.py](../../warehouse-backend/communications/consumers.py)
+#### [MODIFY] [consumers.py](../../backend/communications/consumers.py)
 - در `ChatConsumer.connect()`:
   - بررسی سوئیچ `chat_enabled` از طریق `get_setting`.
   - بستن اتصال با کد `4003` در صورتی که چت غیرفعال باشد.
@@ -96,49 +96,49 @@
 
 ### ۳. لایه تنظیمات، سرویس‌ها و پاکسازی دیسک (Settings, Admin & Purge)
 
-#### [MODIFY] [services.py](../../warehouse-backend/warehouses/services.py)
+#### [MODIFY] [services.py](../../backend/warehouses/services.py)
 - افزودن کلیدهای زیر به `DEFAULT_SETTINGS`:
   ```python
   'chat_enabled': True,
   'chat_file_sharing': True,
   ```
 
-#### [MODIFY] [warehouses/views.py](../../warehouse-backend/warehouses/views.py)
+#### [MODIFY] [warehouses/views.py](../../backend/warehouses/views.py)
 - در `PublicConfigViewSet.list()`:
   - اضافه کردن `chat_enabled` و `chat_file_sharing` به خروجی پیکربندی عمومی.
 
-#### [MODIFY] [purge_expired_chat_media.py](../../warehouse-backend/communications/management/commands/purge_expired_chat_media.py)
+#### [MODIFY] [purge_expired_chat_media.py](../../backend/communications/management/commands/purge_expired_chat_media.py)
 - اصلاح کوئری برای استفاده از `MessageAttachment.all_objects.filter(created_at__lt=cutoff_date)`.
 - حذف فیزیکی فایل‌ها و بندانگشتی‌ها از دیسک با `att.file.delete(save=False)`.
 - اجرای حذف قطعی دیتابیس با `att.delete()`.
 
-#### [NEW] [admin.py](../../warehouse-backend/communications/admin.py)
+#### [NEW] [admin.py](../../backend/communications/admin.py)
 - ثبت مدل‌های `Conversation`, `ConversationParticipant`, `Message`, `MessageAttachment`, `GenericComment` در پنل ادمین جنگو با:
   - فیلتر بر اساس انبار، نوع گفتگو و تاریخ ثبت.
   - فیلدهای جستجو بر روی متن، نام کاربری و شناسه کلاینت.
   - تعریف فیلدهای فقط‌خواندنی (`readonly_fields`) برای داده‌های حساس همگام‌سازی و ممیزی.
 
-#### [MODIFY] [config/settings.py](../../warehouse-backend/config/settings.py)
+#### [MODIFY] [config/settings.py](../../backend/config/settings.py)
 - پیکربندی لایه کانال‌ها (`CHANNEL_LAYERS`):
   - اتصال به `channels_redis.core.RedisChannelLayer` در صورت وجود متغیر محیطی `REDIS_URL` یا `REDIS_HOST`.
   - بازگشت هوشمند به `InMemoryChannelLayer` در غیاب ردیس.
 
 #### [DELETE] اسکریپت‌های تستی موقت ریشه بک‌اند
 - حذف فایل‌های:
-  - `warehouse-backend/check_conversation.py`
-  - `warehouse-backend/send_manager_message.py`
-  - `warehouse-backend/send_manager_reply_with_file.py`
-  - `warehouse-backend/send_manager_live_reply.py`
-  - `warehouse-backend/send_test_live_msg.py`
+  - `backend/check_conversation.py`
+  - `backend/send_manager_message.py`
+  - `backend/send_manager_reply_with_file.py`
+  - `backend/send_manager_live_reply.py`
+  - `backend/send_test_live_msg.py`
 
 ---
 
 ### ۴. لایه فرانت‌اند (Frontend UX & Settings Integration)
 
-#### [MODIFY] [config-api.service.ts](../../warehouse-front/src/app/core/api/config-api.service.ts)
+#### [MODIFY] [config-api.service.ts](../../frontend/src/app/core/api/config-api.service.ts)
 - افزودن `chat_enabled?: boolean;` و `chat_file_sharing?: boolean;` به اینترفیس `PublicConfig`.
 
-#### [MODIFY] [communication.service.ts](../../warehouse-front/src/app/core/services/communication.service.ts)
+#### [MODIFY] [communication.service.ts](../../frontend/src/app/core/services/communication.service.ts)
 - تزریق `ConfigApiService` یا گوش دادن به پیکربندی سراسری و به‌روزرسانی سیگنال `isChatEnabled`.
 - در متد `ensureConnected`: اگر `!this.isChatEnabled()` بود، از برقراری اتصال خودداری کرده و اتصالات باز قبلی بسته شوند.
 
@@ -148,7 +148,7 @@
 
 ### ۱. آزمون‌های خودکار بک‌اند (Automated Backend Tests)
 
-#### [NEW] `warehouse-backend/communications/tests/test_performance.py`
+#### [NEW] `backend/communications/tests/test_performance.py`
 - `test_mark_read_is_single_query`: اثبات تعداد کوئری ثابت و بهینه در خوانده شدن پیام‌ها (`assertNumQueries`).
 - `test_mark_read_idempotent`: اثبات بی‌اثر بودن فراخوانی‌های مکرر `mark_as_read`.
 - `test_conversation_list_query_count_is_constant`: اثبات عدم وجود N+1 در دریافت لیست گفتگوها برای تعداد ۵ و ۲۰ گفتگو.
@@ -156,7 +156,7 @@
 - `test_broadcast_query_count_independent_of_participants`: اثبات ثبات کارایی برودکست برای اتاق‌های با تعداد اعضای زیاد.
 - `test_since_id_returns_same_timestamp_messages`: اثبات عدم گم شدن پیام‌های هم‌میکروثانیه با مکانیزم Tie-break.
 
-#### [NEW] `warehouse-backend/communications/tests/test_settings_and_purge.py`
+#### [NEW] `backend/communications/tests/test_settings_and_purge.py`
 - `test_chat_disabled_blocks_rest`: بازگرداندن کد ۴۰۳ در صورت غیرفعال بودن چت.
 - `test_chat_disabled_rejects_websocket`: رد اتصال وب‌سوکت با کد ۴۰۰۳ هنگام غیرفعال بودن چت.
 - `test_file_sharing_disabled_blocks_upload`: بازگرداندن کد ۴۰۳ هنگام آپلود در صورت خاموش بودن ارسال فایل.
@@ -170,10 +170,10 @@
 
 ```bash
 # اجرای آزمون‌های جدید و تمام آزمون‌های سیستم ارتباطات
-& "E:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py test communications -v 2
+& "backend\venv\Scripts\python.exe" manage.py test communications -v 2
 
 # اجرای چک کلی سلامت سیستم و مایگریشن‌ها
-& "E:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py check
+& "backend\venv\Scripts\python.exe" manage.py check
 ```
 
 ---

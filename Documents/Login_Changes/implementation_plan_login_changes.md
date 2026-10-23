@@ -19,7 +19,7 @@
 
 ### ۱. کامپوننت ورود (Login Component)
 
-#### [MODIFY] [login.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.ts)
+#### [MODIFY] [login.ts](file:///e:/warehouse%20project/frontend/src/app/components/login/login.ts)
 - افزودن متغیر کنترل‌کننده مودال فراموشی رمز: `showForgotModal = false;`
 - افزودن متد بازیابی رمز: `showForgotPasswordDialog(event: Event)` برای جلوگیری از رفتار پیش‌فرض لینک و باز کردن مودال.
 - ترجمه پیام خطای سرور در بلاک `error`:
@@ -32,7 +32,7 @@
   }
   ```
 
-#### [MODIFY] [login.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.html)
+#### [MODIFY] [login.html](file:///e:/warehouse%20project/frontend/src/app/components/login/login.html)
 - تغییر متن هدر از "سامانه یکپارچه مدیریت انبارگردانی شیراز" به **"سامانه یکپارچه مدیریت انبارگردانی فارس عالیش"** در خط ۲۳.
 - تغییر متن فوتر از "سامان تقوی سوق · مدیریت پروژه انبارگردانی شیراز" به **"شرکت فارس عالیش"** در خط ۹۱.
 - حذف تگ `div` حاوی نام کاربری و رمزهای تستی (خطوط ۸۰ تا ۸۷).
@@ -59,7 +59,7 @@
 
 ### ۲. کامپوننت اعلان‌ها (Toast Component)
 
-#### [MODIFY] [toast.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/toast/toast.component.ts)
+#### [MODIFY] [toast.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/toast/toast.component.ts)
 - تغییر کلاس موقعیت‌دهی کانتینر توست (خط ۴۷) به صورت زیر جهت قرارگیری در پایین-وسط صفحه:
   ```html
   <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col-reverse gap-2 max-w-sm w-full px-4" id="toast-container">

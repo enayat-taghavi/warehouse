@@ -15,7 +15,7 @@ description: تأیید پیش از اعلام اتمام. پیش از گفتن 
 5. **فقط آن‌وقت** ادعا کن. اگر تأیید نکرد، وضعیت واقعی را همراه با شاهدش بگو.
 
 ## ادعا ← شاهد لازم در این پروژه
-- **TypeScript درست است** ← `npx tsc --noEmit -p tsconfig.app.json` در `warehouse-front` با کد خروج 0. «ویرایش ساده بود» کافی نیست.
+- **TypeScript درست است** ← `npx tsc --noEmit -p tsconfig.app.json` در `frontend` با کد خروج 0. «ویرایش ساده بود» کافی نیست.
 - **بک‌اند سالم است** ← `./venv/Scripts/python.exe manage.py check` بدون ERROR. هشدار `communications.W001` (نبودِ Redis) در حالت DEBUG خاموش عادی است.
 - **مهاجرت امن است** ← اسکیل `safe-migration`. خواندن سرسری فایل مهاجرت کافی نیست.
 - **نگهبان‌ها پاس‌اند** ← `python scripts/e2e/guardian_all.py`، با گزارش شمار پاس و رد. اجرای یک نگهبان به‌جای همه کافی نیست.

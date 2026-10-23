@@ -14,7 +14,7 @@
 
 ### بک‌اند (Backend)
 
-#### [MODIFY] [accounts/admin.py](file:///e:/warehouse%20project/warehouse-backend/accounts/admin.py)
+#### [MODIFY] [accounts/admin.py](file:///e:/warehouse%20project/backend/accounts/admin.py)
 در این فایل، کدهای مربوط به تنظیمات ظاهری پنل ادمین را قرار می‌دهیم.
 
 **۱. ثبت نقش‌های سفارشی (CustomRoleAdmin):**

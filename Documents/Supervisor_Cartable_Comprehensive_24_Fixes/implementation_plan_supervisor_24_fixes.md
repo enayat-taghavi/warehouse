@@ -47,7 +47,7 @@ graph TD
 ## 📂 تغییرات تفصیلی به تفکیک فازها و فایل‌ها
 
 ### فاز ۱: امنیت داده، تراکنش‌های اتمیک و فیلترهای بک‌اند جنگو
-* **[تغییر]** [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+* **[تغییر]** [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
   - **خط ۳۰۲۷ (`DocTaskViewSet.bulk_approve`):** مقداردهی صریح `task.updated_at = timezone.now()` و افزودن `'updated_at'` به آرایه `DocTask.objects.bulk_update(tasks, ['status', 'modified_by', 'supervisor_note', 'doc_supervisor', 'updated_at'])`.
   - **خط ۳۰۴۵ (`DocTaskViewSet.reject`):** مقداردهی `task.updated_at = timezone.now()`، اضافه کردن `'updated_at'` به `bulk_update` و ثبت `data_snapshot=_create_doc_task_snapshot(task)` در `DocTaskHistory`.
   - **خطوط ۲۰۸۹، ۲۲۵۷، ۲۹۹۷ و ۳۰۳۴:** قرار دادن عملیات متدهای تایید و رد سرپرست در `with transaction.atomic():` و اضافه کردن `.select_for_update()`.
@@ -56,30 +56,30 @@ graph TD
 ---
 
 ### فاز ۲: پایداری وضعیت مرورگر، حافظه تفکیکی بخش‌ها و خروجی اکسل
-* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
   - پیاده‌سازی سیستم ذخیره‌سازی و بازیابی دوگانه `URL State` و `LocalStorage` برای کلیدهای `supervisor_active_tab`، `supervisor_active_section`، `supervisor_last_count_tab` و `supervisor_last_doc_tab`.
   - اصلاح متد `updateUrlState` جهت نگهداری دائم پارامتر `tab` در آدرس و ذخیره آنی در `localStorage`.
   - اصلاح متد `syncStateFromUrl` جهت خواندن اولویت‌دار از URL و در صورت عدم وجود، بازیابی از `localStorage`.
   - اصلاح متد `executeExport` جهت ارسال پارامترهای فعال `q: this.searchQuery`، `status: this.statusFilter`، `date: this.dateFilter` و `warehouse_id`.
   - ارسال صریح `warehouse_id` در تمامی تاییدات و عملیات گروهی سرپرست.
-* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
   - به‌روزرسانی کلیک دکمه‌های بخش انبارگردانی و مالی جهت فراخوانی متد سوییچ بخش هوشمند با حافظه زیرتب.
 
 ---
 
 ### فاز ۳: موتور جستجو، نرمال‌سازی الفبای فارسی و فیلتر سریع لوکیشن
-* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
   - پیاده‌سازی متد جامع `normalizeText(str: string): string` برای تبدیل `[آأإ]` به `ا`، `ي` به `ی`، `ك` به `ک` و `ة` به `ه`.
   - گسترش شرط `matchesSearch` جهت جستجو روی شماره فنی (`item_no`)، پکینگ‌لیست (`pk_number`, `plpkitem`)، تگ کالا (`tag`, `tag_number`)، شماره RTI و نام تامین‌کننده.
   - پیاده‌سازی متغیر `locationFilter` و فیلتر کردن اقلام بر اساس مسیر قفسه/لوکیشن در `applyFilters`.
   - استانداردسازی سورت الفبایی شرح و کد کالا با `localeCompare` فارسی و نرمال‌سازی.
-* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
   - تعبیه کنترل دراپ‌داون/چیپ‌های فیلتر سریع لوکیشن در نوار ابزار سرپرست.
 
 ---
 
 ### فاز ۴: اصلاح باگ انتخاب همه، پایداری SWR و چرخه حیات انبار
-* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
   - اصلاح کامل متدهای `toggleAll` و `toggleAllDoc` جهت تشخیص نوع المان کلیک‌شده؛ اگر از دکمه نوار مشکی فراخوانی شد، در صورت عدم انتخاب همه، تمام اقلام فیلترشده را انتخاب کند.
   - اصلاح اشتراک `swrSub` جهت به‌روزرسانی آرایه‌های `poolTasks` و `docPoolTasks` در پس‌زمینه حتی در تب‌های غیرفعال.
   - به‌روزرسانی این‌پلیس (`In-Place`) رفرنس‌های `selectedCountingDetailTask` و `selectedDocDetailTask` هنگام دریافت وب‌سوکت.
@@ -87,20 +87,20 @@ graph TD
   - افزودن گارد اتصال اینترنت (`navigator.onLine`) قبل از فراخوانی متدهای `claimSelectedTasks` و `claimSelectedDocTasks`.
   - تخلیه و رفرش خودکار مخزن کالاها و اسناد پس از به عهده گرفتن موفق.
   - پیاده‌سازی بازگشت خوش‌بینانه (`Optimistic Rollback`) در صورت بروز خطای سرور در تایید یا رد.
-* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
   - اصلاح بایندینگ رویداد `(changed)` کامپوننت انبار به `onWarehouseChanged($event)`.
 
 ---
 
 ### فاز ۵: بومی‌سازی تقویم، فیلدهای پویا، گاردها و تست تعاملی مرورگر
-* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+* **[تغییر]** [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
   - ایمپورت `PersianDatePipe` در آرایه `imports` کامپوننت.
   - تبدیل تاریخ میلادی فاکتور (`invoice_date`) به تقویم شمسی (`YYYY/MM/DD`) در زمان باز شدن فرم در `openDocDetail`.
   - افزودن تابع `isTaskSelectable(task)` و اعتبارسنجی تاچ طولانی موبایل.
   - افزودن گارد مسدودسازی بارکدخوان فیزیکی `!this.selectedCountingDetailTask` در شنونده کیبورد.
   - افزودن گارد تایید پیش از بستن دیالوگ در صورت وجود متن یادداشت ذخیره‌نشده.
   - نمایش پیام راهنما در صورت اسکن بارکد در حین باز بودن فرم جزئیات.
-* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+* **[تغییر]** [supervisor-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
   - جایگزینی تمامی `| date:'short'` با `| persianDate:'short-time'` در تایم‌لاین تاریخچه و مودال‌ها.
   - رندر حلقه‌ای فیلدهای پویای سفارشی انبار (`dynamic_fields`) در مودال مشخصات کالا.
 * **[تست مرورگر]** اجرای سناریوهای تستی کامل با ساب‌ایجنت مرورگر جهت تایید عملکرد ۲۴ مورد.
@@ -121,7 +121,7 @@ graph TD
 
 ### ۱. تست‌های خودکار و کامپایل
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npx ng build --configuration=development
 ```
 

@@ -54,11 +54,11 @@
 
 | ردیف | نام پرونده | تغییرات اعمال‌شده |
 | :---: | :--- | :--- |
-| ۱ | [reports.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html) | نوار ابزار چسبان، دکمه‌های آیکونی، هاور خالص، تراکم جدول، دکمه و مودال راهنما |
-| ۲ | [reports.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts) | متغیرهای سیگنال تراکم جدول، کنترل مودال راهنما، و تابع `isRowAliasConflict` |
-| ۳ | [filter-value.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/filter-value.component.ts) | چیپ‌های انتخابی شرط `IN`، کنترل‌های تاریخ همراه با آیکون تقویم و پاک‌سازی |
-| ۴ | [filter-group.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/filter-group.component.ts) | هاور خالص دیتابیسی و اعمال کلاس `.custom-select` |
-| ۵ | [styles.css](file:///e:/warehouse%20project/warehouse-front/src/styles.css) | کلاس‌های سفارشی `.custom-select` و `.dense-table` |
+| ۱ | [reports.html](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html) | نوار ابزار چسبان، دکمه‌های آیکونی، هاور خالص، تراکم جدول، دکمه و مودال راهنما |
+| ۲ | [reports.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts) | متغیرهای سیگنال تراکم جدول، کنترل مودال راهنما، و تابع `isRowAliasConflict` |
+| ۳ | [filter-value.component.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/filter-value.component.ts) | چیپ‌های انتخابی شرط `IN`، کنترل‌های تاریخ همراه با آیکون تقویم و پاک‌سازی |
+| ۴ | [filter-group.component.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/filter-group.component.ts) | هاور خالص دیتابیسی و اعمال کلاس `.custom-select` |
+| ۵ | [styles.css](file:///e:/warehouse%20project/frontend/src/styles.css) | کلاس‌های سفارشی `.custom-select` و `.dense-table` |
 | ۶ | [task.md](file:///e:/warehouse%20project/Documents/task.md) | همگام‌سازی وضعیت تکمیل تمامی تسک‌های ۴ فاز در DUAL-SAVE |
 
 </div>

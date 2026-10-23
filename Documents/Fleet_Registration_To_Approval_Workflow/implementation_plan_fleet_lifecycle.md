@@ -290,7 +290,7 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 ### ۵.۳. انتشار روی این ماشین (همه با Claude؛ پیش از شروع یک پرسش بله/خیر)
 1. پشتیبان: `./venv/Scripts/python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; print(create_database_backup())"` (نه `run_auto_backup`).
 2. اسکیل `safe-migration`؛ تطبیق نام مایگریشن `accounts` با `django_migrations`؛ سپس `migrate`.
-3. `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` در `warehouse-front`.
+3. `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` در `frontend`.
 4. بستن daphne روی پورت ۸۰۰۰ و لانچر venv با `taskkill`، سپس فرمان `wt.exe` در `CLAUDE.md`.
 5. وضعیت ۲۰۰ برای `https://app.farsalish.ir/` و `https://app.farsalish.ir/api/public/config/`.
 
@@ -527,7 +527,7 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
     - تسک ۱۱.۱۳: حذف کامل ۱۰۰٪ ایموجی‌ها از فایل‌های `manager-fleet.html`، `supervisor-fleet.html`، `accountant-fleet.html`، `employee-new-vehicle.html` و `employee-new-vehicle.ts`؛ اعتبارسنجی با نگهبان ۵۲ (۱۲۷۹ استفاده مجاز، ۰ اس‌وی‌جی خام).
     - تسک ۱۱.۱۴: جایگزینی رنگ‌های هاردکد با توکن‌های معنایی رنگ (`surface`، `fg`، `line`، `muted`).
   - **پوشش آزمون جامع:**
-    - تسک ۱۱.۱۷: اضافه شدن ۵ آزمون نوین به `warehouse-backend/personnel/tests_vehicle_cycle.py` (شامل قلمرو بدون هدر شرکت، متدهای `perform_create` و `perform_update` لاگ تردد، گارد اکسل و قید محافظتی `PROTECT`، تفکیک وظایف نرخ در پیش‌نویس و مصوب).
+    - تسک ۱۱.۱۷: اضافه شدن ۵ آزمون نوین به `backend/personnel/tests_vehicle_cycle.py` (شامل قلمرو بدون هدر شرکت، متدهای `perform_create` و `perform_update` لاگ تردد، گارد اکسل و قید محافظتی `PROTECT`، تفکیک وظایف نرخ در پیش‌نویس و مصوب).
     - پاس شدن هر ۳۶ تست بک‌اند ناوگان (`Ran 36 tests in 3.406s, OK`) و ۴۰ تست حسابداری (`Ran 40 tests in 11.044s, OK`).
     - پاس شدن هر ۴۲ تست Vitest فرانت‌اند در کامپوننت‌های ناوگان (`employee-fleet.spec.ts`، `manager-fleet.spec.ts`، `personnel-profiles.spec.ts`، `manager-approvals.spec.ts`).
     - بیلد بدون خطای فرانت‌اند و اعمال پچ سرویس‌ورکر (`node tools/patch-ngsw-530.js`).
@@ -558,8 +558,8 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 - **وضعیت:** تمام موارد گزارش ممیزی (ن-۱۲، ن-۱۴، ن-۱۵، ن-۱۷، تسک ۷.۱ و الزامات انتشار ۱۰.۶ و ۱۱.۱۸) با موفقیت کامل و ۱۰۰٪ حل، آزموده و در محیط عملیاتی منتشر شدند.
 - **اقدامات انجام‌شده:**
   1. **رفع ن-۱۲ (بررسی وضعیت پاسخ در ساخت خودرو):**
-     - در `warehouse-backend/personnel/views.py` (`perform_create`)، وضعیت پس از ارتقای خودکار (`auto_pass_vehicle`) با فراخوانی `instance.refresh_from_db()` و سریالایز مجدد در پاسخ بازگردانده شد.
-     - در `warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، بررسی وضعیت پاسخ اضافه شد تا در صورت ارتقای خودکار به وضعیت‌هایی غیر از `draft`/`revision_required`، از فراخوانی زائد `/submit/` و نمایش خطای ۴۰۰ کاذب جلوگیری شود.
+     - در `backend/personnel/views.py` (`perform_create`)، وضعیت پس از ارتقای خودکار (`auto_pass_vehicle`) با فراخوانی `instance.refresh_from_db()` و سریالایز مجدد در پاسخ بازگردانده شد.
+     - در `frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، بررسی وضعیت پاسخ اضافه شد تا در صورت ارتقای خودکار به وضعیت‌هایی غیر از `draft`/`revision_required`، از فراخوانی زائد `/submit/` و نمایش خطای ۴۰۰ کاذب جلوگیری شود.
   2. **رفع ن-۱۴ (اسکن صفر رنگ‌های ثابت):**
      - ۴۲ کلاس رنگ ثابت (`slate-*`، `bg-white`، `border-slate-*`) در فایل‌های `manager-fleet.html`، `supervisor-fleet.html`، `accountant-fleet.html`، `employee-new-vehicle.html` و `employee-new-vehicle.ts` با توکن‌های معنایی (`surface`، `surface-alt`، `surface-muted`، `fg`، `line`، `black/50`) جایگزین شدند. اسکن مجدد نشان‌دهندهٔ صفر مطلق (0 matches) است.
   3. **رفع ن-۱۵ (هشدار سوابق ساختاریافته در Purge):**
@@ -577,7 +577,7 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
      - **data-loss-reviewer:** ایمنی `on_delete=PROTECT` لاگ‌های تردد، قفل بدنه در تراکنش‌های حذف و رد، حفظ مستندات آپلودشده فیزیکی و مصونیت صف آفلاین تایید شد.
      - **ui-reviewer:** دسترس‌پذیری، راست‌به‌چپ (RTL)، غیاب ۱۰۰٪ ایموجی، اسکن صفر رنگ ثابت و نگهبان ۵۲ با ۱۲۸۳ کاربرد معتبر پاس شدند.
   7. **انتشار نهایی عملیاتی (تسک‌های ۱۰.۶ و ۱۱.۱۸):**
-     - **پشتیبان‌گیری امن از دیتابیس:** ایجاد فایل `backup_20261004_095237.dump` در مسیر `warehouse-backend/backups/`.
+     - **پشتیبان‌گیری امن از دیتابیس:** ایجاد فایل `backup_20261004_095237.dump` در مسیر `backend/backups/`.
      - **بیلد بدون توقف فرانت (Zero-Downtime):** اجرای موفق `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` با کد خروج ۰.
      - **راه‌اندازی مجدد سرور Daphne:** اجرای سرویس روی `0.0.0.0:8000` بدون تداخل.
      - **آزمون‌های سلامت آنلاین (Health Check):**

@@ -29,7 +29,7 @@ graph TD
 - **پشتیبانی از `sync_ids` در `bulk_submit`:** متد `bulk_submit` اکنون علاوه بر `task_ids` از `sync_ids` نیز پشتیبانی می‌کند تا ارسال آفلاین از کلاینت به صورت اتمیک همگام گردد.
 - **ثبت لاگ و اسنپ‌شات در `claim_tasks`:** هنگام برعهده گرفتن تسک‌ها از استخر، رکورد `DocTaskHistory` با اکشن `CLAIMED` و ثبت نام کاربر و اسنپ‌شات داده‌ها ایجاد می‌شود.
 - **تبدیل هوشمند تاریخ شمسی به میلادی:** متد `to_internal_value` در `DocTaskSerializer` تاریخ‌های شمسی فرمت‌های `YYYY/MM/DD` و `YYYY-MM-DD` را به صورت امن به میلادی تبدیل و پاکسازی می‌کند.
-- **تثبیت ۱۹ تست جامع در [`tests_docs.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/tests_docs.py):** تمام ۱۹ تست با نتیجه `OK (100% green)` پاس شدند.
+- **تثبیت ۱۹ تست جامع در [`tests_docs.py`](file:///e:/warehouse%20project/backend/inventory/tests_docs.py):** تمام ۱۹ تست با نتیجه `OK (100% green)` پاس شدند.
 
 ---
 
@@ -81,7 +81,7 @@ npm run build
 **نتیجه:**
 ```text
 Application bundle generation complete. [22.227 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر (کدهای 5xx).
 The command exited with code 0.
 ```
@@ -90,15 +90,15 @@ The command exited with code 0.
 
 ## 📂 فایل‌های کلیدی تغییر‌یافته
 
-1. [`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
-2. [`warehouse-backend/inventory/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py)
-3. [`warehouse-backend/inventory/tests_docs.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/tests_docs.py)
-4. [`warehouse-front/src/app/core/services/doc-task-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts)
-5. [`warehouse-front/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
-6. [`warehouse-front/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
-7. [`warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
-8. [`warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
-9. [`warehouse-front/src/app/components/manager-review/manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
-10. [`warehouse-front/src/app/components/manager-review/manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
+1. [`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)
+2. [`backend/inventory/serializers.py`](file:///e:/warehouse%20project/backend/inventory/serializers.py)
+3. [`backend/inventory/tests_docs.py`](file:///e:/warehouse%20project/backend/inventory/tests_docs.py)
+4. [`frontend/src/app/core/services/doc-task-store.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts)
+5. [`frontend/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
+6. [`frontend/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
+7. [`frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+8. [`frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+9. [`frontend/src/app/components/manager-review/manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
+10. [`frontend/src/app/components/manager-review/manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
 
 </div>

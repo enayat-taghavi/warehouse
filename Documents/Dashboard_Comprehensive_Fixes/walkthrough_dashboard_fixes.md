@@ -39,10 +39,10 @@
 
 | ردیف | فایل | نوع تغییر | توضیحات |
 | :---: | :--- | :---: | :--- |
-| ۱ | [warehouse-backend/inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | `MODIFY` | اصلاح `get_permissions` و محاسبات `dashboard_stats` با تقویم جلالی |
-| ۲ | [warehouse-front/src/app/components/dashboard/dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.ts) | `MODIFY` | اتصال به سیگنال انبار، خواندن مستقیم شمارش، مدیریت خطا و ترند |
-| ۳ | [warehouse-front/src/app/components/dashboard/dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.html) | `MODIFY` | بازسازی کامل ساختار HTML، تراز تارگت، قیف عملیات و اکشن سنتر تعاملی |
-| ۴ | [warehouse-front/src/app/components/dashboard/dashboard.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.css) | `MODIFY` | افزودن انیمیشن `animate-shine` |
+| ۱ | [backend/inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py) | `MODIFY` | اصلاح `get_permissions` و محاسبات `dashboard_stats` با تقویم جلالی |
+| ۲ | [frontend/src/app/components/dashboard/dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.ts) | `MODIFY` | اتصال به سیگنال انبار، خواندن مستقیم شمارش، مدیریت خطا و ترند |
+| ۳ | [frontend/src/app/components/dashboard/dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.html) | `MODIFY` | بازسازی کامل ساختار HTML، تراز تارگت، قیف عملیات و اکشن سنتر تعاملی |
+| ۴ | [frontend/src/app/components/dashboard/dashboard.css](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.css) | `MODIFY` | افزودن انیمیشن `animate-shine` |
 
 ---
 

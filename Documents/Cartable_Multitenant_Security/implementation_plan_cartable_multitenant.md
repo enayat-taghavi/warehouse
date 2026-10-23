@@ -29,7 +29,7 @@
 
 ## ۳. تغییرات پیشنهادی در معماری و کدها (Proposed Changes)
 
-### الف) ماژول بک‌اند: `warehouse-backend/personnel/cartable_views.py`
+### الف) ماژول بک‌اند: `backend/personnel/cartable_views.py`
 
 #### ۱. پیاده‌سازی متدهای کمکی استخراج و فیلتر شرکت
 استفاده از متدهای استاندارد موجود در `personnel/views.py`:
@@ -61,7 +61,7 @@
 
 ---
 
-### ب) ماژول بک‌اند: `warehouse-backend/personnel/treasury_engine.py`
+### ب) ماژول بک‌اند: `backend/personnel/treasury_engine.py`
 
 #### به‌روزرسانی `TreasuryDisbursementService.get_pending_treasury_batches`
 - افزودن پارامتر `company_ids: Optional[List[int]] = None`
@@ -72,7 +72,7 @@
 
 ### ج) فرانت‌اند: وضعیت ارسال هدر و همگام‌سازی
 
-بررسی عمیق کدها نشان داد که در فایل `warehouse-front/src/app/core/auth/auth.interceptor.ts` خطوط ۱۰۵ تا ۱۱۰:
+بررسی عمیق کدها نشان داد که در فایل `frontend/src/app/core/auth/auth.interceptor.ts` خطوط ۱۰۵ تا ۱۱۰:
 ```typescript
 const activeCompanyId = typeof window !== 'undefined'
   ? (sessionStorage.getItem('active_company_id') || localStorage.getItem('active_company_id'))
@@ -87,7 +87,7 @@ if (activeCompanyId) {
 
 ### د) آزمون‌های خودکار چندشرکتی (Automated Test Suite)
 
-#### ایجاد فایل تست اختصاصی `warehouse-backend/personnel/test_cartable_multitenant.py`
+#### ایجاد فایل تست اختصاصی `backend/personnel/test_cartable_multitenant.py`
 شامل سناریوهای آزمایشی دقیق:
 1. **جداسازی نمایش در کارتابل سرپرست:** سرپرست شرکت FA تنها رکوردهای FA را در لیست و شمارنده‌ها می‌بیند و رکوردهای PTS برایش مخفی است.
 2. **جداسازی نمایش در کارتابل حسابدار و مدیر:** بررسی عدم تداخل رکوردهای استخدامی و فاکتورها بین FA و PTS.

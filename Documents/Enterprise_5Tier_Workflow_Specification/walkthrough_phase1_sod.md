@@ -42,7 +42,7 @@
 
 ### تست ۱: اجرای سوئیت کامل ۹ ایجنت سخت‌گیر نگهبان
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe personnel\phase_guardian_approval.py
 ```
 *خروجی مورد انتظار:* چاپ پیام **«🏆 تبریک! تمامی ۹ ایجنت نگهبان ... با موفقیت ۱۰۰٪ تایید شدند 🏆»**.

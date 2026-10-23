@@ -40,11 +40,11 @@
 
 | ردیف | نام فایل | مسیر فایل | نوع تغییر | شرح وظیفه فنی |
 | :---: | :--- | :--- | :---: | :--- |
-| ۱ | `operations-snapshots.*` | `warehouse-front/src/app/components/operations/operations-snapshots/` | **جدید** | کامپوننت مستقل اسنپ‌شات‌های سرور، هش SHA-256، مودال بازگشت و IndexedDB |
-| ۲ | `operations-sync-monitor.*` | `warehouse-front/src/app/components/operations/operations-sync-monitor/` | **جدید** | کامپوننت تله‌متری تبلت‌ها، صف آفلاین، رهگیری خطاهای ۴۰۹ و ادغام سه‌سویه |
-| ۳ | `operations-rbac-governance.*` | `warehouse-front/src/app/components/operations/operations-rbac-governance/` | **جدید** | کامپوننت گاوصندوق ۶ مجوز حساس، ممیزی SoD و ادعاهای توکن نشست |
-| ۴ | `app.routes.ts` | `warehouse-front/src/app/` | اصلاح | اتصال مسیرهای فرعی `/app/operations` به کامپوننت‌های اختصاصی جدید |
-| ۵ | `phase_guardian_approval.py` | `warehouse-backend/personnel/` | اصلاح | پیاده‌سازی ایجنت نگهبان ۲۷ و ارتقای سوئیت به ۲۷ ایجنت نگهبان |
+| ۱ | `operations-snapshots.*` | `frontend/src/app/components/operations/operations-snapshots/` | **جدید** | کامپوننت مستقل اسنپ‌شات‌های سرور، هش SHA-256، مودال بازگشت و IndexedDB |
+| ۲ | `operations-sync-monitor.*` | `frontend/src/app/components/operations/operations-sync-monitor/` | **جدید** | کامپوننت تله‌متری تبلت‌ها، صف آفلاین، رهگیری خطاهای ۴۰۹ و ادغام سه‌سویه |
+| ۳ | `operations-rbac-governance.*` | `frontend/src/app/components/operations/operations-rbac-governance/` | **جدید** | کامپوننت گاوصندوق ۶ مجوز حساس، ممیزی SoD و ادعاهای توکن نشست |
+| ۴ | `app.routes.ts` | `frontend/src/app/` | اصلاح | اتصال مسیرهای فرعی `/app/operations` به کامپوننت‌های اختصاصی جدید |
+| ۵ | `phase_guardian_approval.py` | `backend/personnel/` | اصلاح | پیاده‌سازی ایجنت نگهبان ۲۷ و ارتقای سوئیت به ۲۷ ایجنت نگهبان |
 
 ---
 
@@ -70,7 +70,7 @@
 ### ب) خروجی بیلد نهایی کلاینت فرانت‌اند (`npm run build`):
 ```
 Application bundle generation complete. [95.572 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر (کدهای 5xx).
 Exit code: 0
 ```

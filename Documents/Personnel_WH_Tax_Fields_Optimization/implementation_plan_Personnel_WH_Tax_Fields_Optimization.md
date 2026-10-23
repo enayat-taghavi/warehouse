@@ -75,21 +75,21 @@
 ## تغییرات پیشنهادی در سطح فایل‌ها (Proposed Changes)
 
 ### ۱. بک‌اند (Django Backend)
-- **[`warehouse-backend/personnel/models.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/models.py):**
+- **[`backend/personnel/models.py`](file:///E:/warehouse%20project/backend/personnel/models.py):**
   - اضافه شدن فیلدهای `tax_payment_type`، `tax_service_location`، `tax_exceptions`، `tax_currency_type`، `tax_currency_exchange_rate`، `tax_housing_benefit_type` و `tax_vehicle_benefit_type` به `PersonnelProfile`.
   - به‌روزرسانی مقادیر مجاز (`CHOICES`) برای `education_level` (۱ تا ۷)، `exemption_type` (۱ تا ۱۱ و ۱۰+۱۱)، `job_category` (۱ تا ۱۹ با پیش‌فرض ۵ انبارداری) و `employment_type` (۱ تا ۱۲).
   - ایجاد و اجرای مایگریشن جنگو.
-- **[`warehouse-backend/personnel/tax_bank_exporter.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/tax_bank_exporter.py):**
+- **[`backend/personnel/tax_bank_exporter.py`](file:///E:/warehouse%20project/backend/personnel/tax_bank_exporter.py):**
   - بازنویسی توابع `generate_wp_tax_content` و `generate_wh_tax_content` با انطباق ۱۰۰٪ بر ۲۳ فیلد WP و ۳۹ فیلد WH با اولویت تنظیمات انفرادی پرسنل.
-- **[`warehouse-backend/personnel/serializers.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/serializers.py):**
+- **[`backend/personnel/serializers.py`](file:///E:/warehouse%20project/backend/personnel/serializers.py):**
   - اضافه شدن فیلدهای جدید مالیاتی به `PersonnelProfileSerializer`.
 
 ### ۲. فرانت‌اند (Angular Frontend)
-- **[`personnel.model.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/core/models/personnel.model.ts):**
+- **[`personnel.model.ts`](file:///E:/warehouse%20project/frontend/src/app/core/models/personnel.model.ts):**
   - به‌روزرسانی اینترفیس `PersonnelProfile` با فیلدهای جدید مالیاتی دارایی.
-- **[`personnel-management.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts):**
+- **[`personnel-management.ts`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts):**
   - مقداردهی اولیه فیلدهای مالیاتی بر اساس تنظیمات کارگاه در `openAddPersonnelModal`.
-- **[`personnel-management.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html):**
+- **[`personnel-management.html`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html):**
   - اضافه شدن دراپ‌داون‌های استاندارد با گزینه‌های فارسی کامل در تب‌های ۱ (هویتی) و ۳ (بیمه و مالیات).
 
 ---
@@ -97,6 +97,6 @@
 ## برنامه راستی‌آزمایی (Verification Plan)
 1. **آزمون مایگریشن دیتابیس:** اجرای `makemigrations` و `migrate` بدون خطا.
 2. **آزمون واحد تولید فایل‌های WP و WH:** اجرای تست صحت ۲۳ فیلد WP و ۳۹ فیلد WH و بررسی کدهای جدول در خروجی.
-3. **بیلد پروژه فرانت‌اند:** اجرای `npm run build` در `warehouse-front` جهت تایید کامپایل تمیز و بدون خطا.
+3. **بیلد پروژه فرانت‌اند:** اجرای `npm run build` در `frontend` جهت تایید کامپایل تمیز و بدون خطا.
 
 </div>

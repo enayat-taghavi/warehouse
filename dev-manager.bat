@@ -12,8 +12,8 @@ if "%WT_SESSION%"=="" (
 :: Dynamic project root and directory paths without trailing backslashes
 set "ROOT_DIR=%~dp0"
 if "%ROOT_DIR:~-1%"=="\" set "ROOT_DIR=%ROOT_DIR:~0,-1%"
-set "BACKEND_DIR=%ROOT_DIR%\warehouse-backend"
-set "FRONT_DIR=%ROOT_DIR%\warehouse-front"
+set "BACKEND_DIR=%ROOT_DIR%\backend"
+set "FRONT_DIR=%ROOT_DIR%\frontend"
 
 :MENU
 cls

@@ -37,31 +37,31 @@ graph TD
 ```
 
 ### فاز ۱: مدل‌های پایه، سرویس API و کارتابل سرپرست
-- **[`count-task.model.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/core/models/count-task.model.ts):** افزودن `skip_supervisor?: boolean;` و `new_location?: string;` به اینترفیس `CountTask`.
-- **[`inventory/views.py`](file:///E:/warehouse%20project/warehouse-backend/inventory/views.py):**
+- **[`count-task.model.ts`](file:///E:/warehouse%20project/frontend/src/app/core/models/count-task.model.ts):** افزودن `skip_supervisor?: boolean;` و `new_location?: string;` به اینترفیس `CountTask`.
+- **[`inventory/views.py`](file:///E:/warehouse%20project/backend/inventory/views.py):**
   - تنظیم پرمیشن‌های متدهای `reject`, `bulk_reject`, `bulk_manager_reject` در `CountTaskViewSet.get_permissions()`.
   - پیاده‌سازی اکشن‌های `@action(detail=False) bulk_reject` و `bulk_manager_reject` همراه با تراکنش اتمیک و تاریخچه `CountTaskHistory`.
-- **[`count-task-api.service.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/core/api/count-task-api.service.ts):** اضافه شدن متدهای `bulkReject(taskIds, note)` و `bulkManagerReject(taskIds, note)`.
-- **[`supervisor-dashboard.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) & [`.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html):**
+- **[`count-task-api.service.ts`](file:///E:/warehouse%20project/frontend/src/app/core/api/count-task-api.service.ts):** اضافه شدن متدهای `bulkReject(taskIds, note)` و `bulkManagerReject(taskIds, note)`.
+- **[`supervisor-dashboard.ts`](file:///E:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) & [`.html`](file:///E:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html):**
   - بارگذاری کامل رکوردهای `COUNTED` و `MANAGER_REJECTED`.
   - اضافه شدن دکمه و مودال رد گروهی (`bulkReject`) در نوار شناور پایین و پشتیبانی از میانبرهای کیبورد (Escape و Ctrl+Enter).
   - حذف شرط اشتباه `view_sys_recounts` از دکمه رد تکی.
 
 ### فاز ۲: کارتابل بررسی نهایی مدیر (Manager Review)
-- **[`manager-review.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) & [`.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html):**
+- **[`manager-review.ts`](file:///E:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) & [`.html`](file:///E:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html):**
   - اضافه شدن دکمه «رد و بازشماری» در کنار «تایید نهایی» در نوار شناور انتخاب گروهی.
   - پیاده‌سازی مودال ثبت دلیل رد و دستورات بازشماری با اعتبارسنجی اجباری بودن متن یادداشت.
   - ایمن‌سازی متد `isMatched` برای پشتیبانی از `bal4miv` و `inventory` و دقت مقایسه اعشاری.
 
 ### فاز ۳: میزکار انبارگردان میدانی و همگام‌سازی (Counter Dashboard & Sync)
-- **[`counter-dashboard.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts):**
+- **[`counter-dashboard.ts`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts):**
   - اصلاح متد `saveDraft`: رکوردهای در وضعیت `SUPERVISOR_REJECTED` و `MANAGER_REJECTED` پس از ورود مقدار شمرده‌شده به `INITIAL_COUNT` ارتقا می‌یابند تا در لیست اقلام آماده ارسال قرار گیرند.
   - داینامیک‌سازی پیام‌های ارسال مستقیم (`skip_supervisor`) در توست‌ها و دیالوگ‌های تایید.
-- **[`inventory/views.py`](file:///E:/warehouse%20project/warehouse-backend/inventory/views.py):**
+- **[`inventory/views.py`](file:///E:/warehouse%20project/backend/inventory/views.py):**
   - تنظیم دسترسی `ItemViewSet` برای متدهای `update` و `partial_update` تا کاربران دارای `view_sys_counter` و `view_sys_supervisor` بتوانند موقعیت جدید و فیلدهای پویای کالا را بدون خطای ۴۰۳ ذخیره کنند.
 
 ### فاز ۴: ارجاع کالا و پیگیری لحظه‌ای شمارش (Dispatch & Count Tracking)
-- **[`count-tracking.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts):**
+- **[`count-tracking.ts`](file:///E:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts):**
   - ایمن‌سازی محاسبه مغایرت `_discrepancy` با اولویت `bal4miv` و سپس `inventory`.
   - بهینه‌سازی متد `bulkApproveGreenTasks` برای مقایسه دقیق اعشاری اقلام بدون مغایرت در کارتابل مدیر.
 
@@ -89,7 +89,7 @@ OK
 ### ۲. بیلد فرانت‌اند و کامپایل تایپ‌اسکریپت (Frontend Production Build)
 اجرای دستور:
 ```powershell
-npm run build --prefix "E:\warehouse project\warehouse-front"
+npm run build --prefix "frontend"
 ```
 **نتیجه:**
 ```

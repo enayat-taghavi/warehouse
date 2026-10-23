@@ -22,17 +22,17 @@
 ### 📝 جزئیات تسک‌ها
 
 - [x] **فاز ۱: سیستم حضور زنده آنلاین/آفلاین در بک‌اند** <!-- id: 0 -->
-  - [x] عضویت در گروه عمومی `chat_presence` هنگام اتصال و خروج در `warehouse-backend/communications/consumers.py` <!-- id: 1 -->
+  - [x] عضویت در گروه عمومی `chat_presence` هنگام اتصال و خروج در `backend/communications/consumers.py` <!-- id: 1 -->
   - [x] برودکست رویداد `chat.presence` به کلاینت‌ها با وضعیت `online` و `offline` <!-- id: 2 -->
 
 - [x] **فاز ۲: اصلاح قطعی استخراج شناسه کاربر جاری در موبایل** <!-- id: 3 -->
-  - [x] تبدیل قطعی رشته‌ها به عدد در `getCurrentUserId` در `warehouse-front/src/app/core/services/communication.service.ts` <!-- id: 4 -->
+  - [x] تبدیل قطعی رشته‌ها به عدد در `getCurrentUserId` در `frontend/src/app/core/services/communication.service.ts` <!-- id: 4 -->
 
 - [x] **فاز ۳: اصلاح عنوان چت‌های دونفره در کلاینت موبایل** <!-- id: 5 -->
-  - [x] اولویت‌بخشی به استخراج نام طرف مقابل در `getConversationTitle` برای گفتگوهای `direct` در `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts` <!-- id: 6 -->
+  - [x] اولویت‌بخشی به استخراج نام طرف مقابل در `getConversationTitle` برای گفتگوهای `direct` در `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts` <!-- id: 6 -->
 
 - [x] **فاز ۴: نشانگرهای آنلاین/آفلاین واقعی در رابط کاربری** <!-- id: 7 -->
-  - [x] حذف عبارت هاردکد «آنلاین» و نمایش وضعیت واقعی در هدر چت در `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html` <!-- id: 8 -->
+  - [x] حذف عبارت هاردکد «آنلاین» و نمایش وضعیت واقعی در هدر چت در `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html` <!-- id: 8 -->
   - [x] نمایش دایره سبز حضور آنلاین روی آواتار همکاران در تب مخاطبین <!-- id: 9 -->
 
 - [x] **فاز ۵: تست‌های جامع و راستی‌آزمایی** <!-- id: 10 -->

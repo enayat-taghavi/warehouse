@@ -36,16 +36,16 @@
 
 ## 🔍 فایل‌های ویرایش‌شده در این تغییرات
 
-1. [`warehouse-backend/inventory/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py)
+1. [`backend/inventory/serializers.py`](file:///e:/warehouse%20project/backend/inventory/serializers.py)
    - حذف کامل فیلد `balance` در کنار `inventory` و `bal4miv` در حالت `is_blind=True`.
-2. [`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+2. [`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)
    - بازنویسی متد `bulk_submit` جهت خواندن تنظیمات تاییدیه سرپرست به تفکیک هر انبار.
    - اضافه شدن ترجمه فارسی وضعیت `INITIAL_COUNT` و فالبک هوشمند استخراج موجودی در `export_excel`.
-3. [`warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+3. [`frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
    - به‌روزرسانی `normalizeDigits`، اضافه شدن `convertPersianKeyboardToEnglish`، توسعه `match` در `onBarcodeScanned`.
    - مسدودسازی `balance` در `visibleInfoFields` و حذف ریدایرکت ناخواسته در `applyFilters`.
    - اتصال `revertTaskStatus` به تاییدیه دیالوگ، اصلاح محاسبه `previousStatus` و درج زنده رکورد تاریخچه.
-4. [`warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+4. [`frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
    - اضافه شدن `step="any"` به اینپوت‌های عددی و پنهان‌سازی یادداشت‌ها در حالت شمارش کور.
 
 ---

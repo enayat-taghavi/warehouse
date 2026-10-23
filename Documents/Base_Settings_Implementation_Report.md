@@ -65,7 +65,7 @@
 ### الف) تست‌های واحد و یکپارچگی بک‌اند (Django Test Suites)
 دستور اجرا:
 ```powershell
-cd "warehouse-backend"
+cd "backend"
 ./venv/Scripts/python.exe -m unittest personnel.test_project_settings personnel.test_payroll_settings_phase1_2
 ```
 خروجی تست‌ها:
@@ -86,7 +86,7 @@ OK
 ### ب) تست‌های واحد فرانت‌اند (Vitest Test Suite)
 دستور اجرا:
 ```powershell
-cd "warehouse-front"
+cd "frontend"
 npx vitest run src/app/components/personnel/base-settings/base-settings.spec.ts
 ```
 خروجی تست‌ها:
@@ -100,7 +100,7 @@ Test Files  1 passed (1)
 ### ج) بیلد نهایی پروژه انگولار (Production Build)
 دستور اجرا:
 ```powershell
-cd "warehouse-front"
+cd "frontend"
 npm run build
 ```
 خروجی:
@@ -115,22 +115,22 @@ Application bundle generation complete. [81.678 seconds]
 ## ۴. فایل‌های تغییریافته و ایجادشده در پروژه
 
 1. **مدل‌ها و مهاجرت دیتابیس بک‌اند:**
-   - `warehouse-backend/personnel/models.py`: افزودن فیلدهای ساعات کار روزانه، ضرایب پاداش، سنوات، اضافه‌کار، جمعه‌کاری، سقف بیمه، شماره شبا مبدأ، ایجادکننده و ویرایش‌کننده.
-   - `warehouse-backend/personnel/migrations/0006_bankexportsettings_source_sheba_number_and_more.py`: مایگریشن اعمال‌شده روی دیتابیس PostgreSQL.
+   - `backend/personnel/models.py`: افزودن فیلدهای ساعات کار روزانه، ضرایب پاداش، سنوات، اضافه‌کار، جمعه‌کاری، سقف بیمه، شماره شبا مبدأ، ایجادکننده و ویرایش‌کننده.
+   - `backend/personnel/migrations/0006_bankexportsettings_source_sheba_number_and_more.py`: مایگریشن اعمال‌شده روی دیتابیس PostgreSQL.
 2. **مجوزها، سریالایزر و لاگ ممیزی بک‌اند:**
-   - `warehouse-backend/personnel/permissions.py`: کلاس پرمیشن `IsPayrollSettingsManagerOrReadOnly`.
-   - `warehouse-backend/personnel/serializers.py`: بازنویسی سریالایزر به صورت Writable Nested و اعتبارسنجی مقادیر بازه حضور و غیاب.
-   - `warehouse-backend/personnel/views.py`: اتصال پرمیشن، متد `revert-to-global`، اصلاح `create-year`, `create-version` و ثبت لاگ در `AuditLog`.
+   - `backend/personnel/permissions.py`: کلاس پرمیشن `IsPayrollSettingsManagerOrReadOnly`.
+   - `backend/personnel/serializers.py`: بازنویسی سریالایزر به صورت Writable Nested و اعتبارسنجی مقادیر بازه حضور و غیاب.
+   - `backend/personnel/views.py`: اتصال پرمیشن، متد `revert-to-global`، اصلاح `create-year`, `create-version` و ثبت لاگ در `AuditLog`.
 3. **موتور محاسبات حقوق و خروجی بانک:**
-   - `warehouse-backend/personnel/payroll_engine.py`: نرمال‌سازی درصدها، اعمال ساعات کار استاندارد ۱۰ ساعته، ضرایب مصوب اکسل شرکت و سقف بیمه ۷ برابری.
-   - `warehouse-backend/personnel/tax_bank_exporter.py`: ایمن‌سازی قالب شرح واریز فایل اکسل بانک ملی.
+   - `backend/personnel/payroll_engine.py`: نرمال‌سازی درصدها، اعمال ساعات کار استاندارد ۱۰ ساعته، ضرایب مصوب اکسل شرکت و سقف بیمه ۷ برابری.
+   - `backend/personnel/tax_bank_exporter.py`: ایمن‌سازی قالب شرح واریز فایل اکسل بانک ملی.
 4. **رابط کاربری و سرویس فرانت‌اند:**
-   - `warehouse-front/src/app/core/models/personnel.model.ts`: افزودن اینترفیس‌های کامل فیلدهای جدید به تایپ‌های TypeScript.
-   - `warehouse-front/src/app/core/api/personnel-api.service.ts`: افزودن متد `revertSettingsToGlobal`.
-   - `warehouse-front/src/app/components/personnel/base-settings/base-settings.ts`: منطق ضد اتلاف داده، تبدیل تومان، مدیریت اکسل/CSV، کلید Escape و بازگشت به سراسری.
-   - `warehouse-front/src/app/components/personnel/base-settings/base-settings.html`: قالب بازطراحی‌شده با لودینگ، نوار ابزار اکسل، فیلدهای مفقود و دراپ‌داون‌های استاندارد مالیاتی.
+   - `frontend/src/app/core/models/personnel.model.ts`: افزودن اینترفیس‌های کامل فیلدهای جدید به تایپ‌های TypeScript.
+   - `frontend/src/app/core/api/personnel-api.service.ts`: افزودن متد `revertSettingsToGlobal`.
+   - `frontend/src/app/components/personnel/base-settings/base-settings.ts`: منطق ضد اتلاف داده، تبدیل تومان، مدیریت اکسل/CSV، کلید Escape و بازگشت به سراسری.
+   - `frontend/src/app/components/personnel/base-settings/base-settings.html`: قالب بازطراحی‌شده با لودینگ، نوار ابزار اکسل، فیلدهای مفقود و دراپ‌داون‌های استاندارد مالیاتی.
 5. **تست‌ها و مستندات:**
-   - `warehouse-backend/personnel/test_payroll_settings_phase1_2.py`: مجموعه تست‌های خودکار بک‌اند.
-   - `warehouse-front/src/app/components/personnel/base-settings/base-settings.spec.ts`: مجموعه تست‌های Vitest فرانت‌اند.
+   - `backend/personnel/test_payroll_settings_phase1_2.py`: مجموعه تست‌های خودکار بک‌اند.
+   - `frontend/src/app/components/personnel/base-settings/base-settings.spec.ts`: مجموعه تست‌های Vitest فرانت‌اند.
    - `Documents/Base_Settings_Comprehensive_Improvement_Plan.md`: طرح مدون معماری.
    - `Documents/Base_Settings_Implementation_Report.md`: گزارش اجرایی حاضر.

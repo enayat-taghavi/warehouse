@@ -35,8 +35,8 @@
 
 | ردیف | فایل | نوع تغییر | شرح تغییرات |
 | :---: | :--- | :---: | :--- |
-| ۱ | [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) | `[MODIFY]` | تغییر ساختار کشویی شناور به ساختار تعویض نما (`*ngIf="!selectedTask"` و `*ngIf="selectedTask"`) با کانتینر استاندارد و انیمیشن انتقال |
-| ۲ | [`customs.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.css) | `[MODIFY]` | افزودن استایل‌ها و انیمیشن‌های نرم انتقال (`slide-in`) مشابه انبارگردان در صورت نیاز |
+| ۱ | [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) | `[MODIFY]` | تغییر ساختار کشویی شناور به ساختار تعویض نما (`*ngIf="!selectedTask"` و `*ngIf="selectedTask"`) با کانتینر استاندارد و انیمیشن انتقال |
+| ۲ | [`customs.css`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.css) | `[MODIFY]` | افزودن استایل‌ها و انیمیشن‌های نرم انتقال (`slide-in`) مشابه انبارگردان در صورت نیاز |
 
 ---
 

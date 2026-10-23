@@ -20,14 +20,14 @@
 
 ## 📂 تغییرات فایل‌ها
 
-### [فرانت‌اند] Frontend (`warehouse-front`)
+### [فرانت‌اند] Frontend (`frontend`)
 
-#### [MODIFY] `warehouse-front/src/app/core/services/communication.service.ts`
+#### [MODIFY] `frontend/src/app/core/services/communication.service.ts`
 - در `handleNewMessage`: مرتب‌سازی آنی آرایه مکالمات به صورتی که گفتگوی تغییریافته در صدر قرار گیرد.
 - در `sendMessage`: انتقال فوری گفتگوی فعال به ابتدای آرایه مکالمات.
 - لود خودکار مکالمه‌های ناشناخته از سرور در صورت دریافت پیام در چت تازه ایجادشده.
 
-#### [MODIFY] `warehouse-front/src/app/core/services/communication.service.spec.ts`
+#### [MODIFY] `frontend/src/app/core/services/communication.service.spec.ts`
 - افزودن تست‌های واحد برای راستی‌آزمایی پرش گفتگو به صدر لیست در پیام‌های ورودی و خروجی.
 
 ---

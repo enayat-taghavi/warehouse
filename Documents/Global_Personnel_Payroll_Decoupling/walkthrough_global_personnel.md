@@ -26,14 +26,14 @@
 
 ## ۳. لیست فایل‌های تغییریافته
 
-- **[MODIFY]** [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts) (انتقال منوها به سیستم اصلی)
-- **[MODIFY]** [`personnel.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/personnel.model.ts) (افزودن فیلدهای تگ انبار)
-- **[MODIFY]** [`personnel-api.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/personnel-api.service.ts) (پشتیبانی از انبار نال/سراسری)
-- **[MODIFY]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html) (ستون تگ انبار)
-- **[MODIFY]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) (ذخیره تگ انبار در ماتریس)
-- **[MODIFY]** [`personnel-management.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html) (گزینه کل پرسنل شرکت)
-- **[MODIFY]** [`personnel-management.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts) (محاسبه بدون الزام انبار)
-- **[MODIFY]** [`serializers.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py) (پشتیبانی بک‌اند از تگ انبار)
-- **[MODIFY]** [`views.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py) (واکشی و ذخیره سراسری با تگ انبار)
+- **[MODIFY]** [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts) (انتقال منوها به سیستم اصلی)
+- **[MODIFY]** [`personnel.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/personnel.model.ts) (افزودن فیلدهای تگ انبار)
+- **[MODIFY]** [`personnel-api.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/api/personnel-api.service.ts) (پشتیبانی از انبار نال/سراسری)
+- **[MODIFY]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html) (ستون تگ انبار)
+- **[MODIFY]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) (ذخیره تگ انبار در ماتریس)
+- **[MODIFY]** [`personnel-management.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html) (گزینه کل پرسنل شرکت)
+- **[MODIFY]** [`personnel-management.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts) (محاسبه بدون الزام انبار)
+- **[MODIFY]** [`serializers.py`](file:///e:/warehouse%20project/backend/personnel/serializers.py) (پشتیبانی بک‌اند از تگ انبار)
+- **[MODIFY]** [`views.py`](file:///e:/warehouse%20project/backend/personnel/views.py) (واکشی و ذخیره سراسری با تگ انبار)
 
 </div>

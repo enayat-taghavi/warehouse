@@ -80,8 +80,8 @@ graph TD
 ---
 
 ## 📁 پرونده‌های تحت تاثیر (Modified Files)
-- `warehouse-front/src/app/components/audit/audit.html` (طراحی آکاردئون آمار، دکمه اسکنر هدر، اصلاح تقویم مودال‌ها)
-- `warehouse-front/src/app/components/audit/audit.ts` (مدیریت اسکنر، هندلینگ تاریخ در مودال‌ها، مدیریت آکاردئون)
+- `frontend/src/app/components/audit/audit.html` (طراحی آکاردئون آمار، دکمه اسکنر هدر، اصلاح تقویم مودال‌ها)
+- `frontend/src/app/components/audit/audit.ts` (مدیریت اسکنر، هندلینگ تاریخ در مودال‌ها، مدیریت آکاردئون)
 - `Documents/Audit_UX_Refinements/` (اسناد DUAL-SAVE)
 - `Documents/Master_Log.md` (لاگ مستر پروژه)
 

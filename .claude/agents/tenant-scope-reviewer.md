@@ -1,6 +1,6 @@
 ---
 name: tenant-scope-reviewer
-description: Multi-tenant data-isolation reviewer (companies, warehouses, personnel sections). Run once per plan step, on that step's diff and before commit, when the diff touches backend (warehouse-backend) views, serializers, querysets, permissions, cartables or reports, to make sure every user sees and changes only their own scope's data. Read-only.
+description: Multi-tenant data-isolation reviewer (companies, warehouses, personnel sections). Run once per plan step, on that step's diff and before commit, when the diff touches backend (backend) views, serializers, querysets, permissions, cartables or reports, to make sure every user sees and changes only their own scope's data. Read-only.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

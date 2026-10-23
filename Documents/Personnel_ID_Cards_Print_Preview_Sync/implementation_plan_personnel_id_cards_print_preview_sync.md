@@ -22,21 +22,21 @@
 
 | ردیف | فایل | نوع تغییر | شرح تغییرات |
 | :---: | :--- | :---: | :--- |
-| ۱ | [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) | اصلاح | افزودن متد محاسبه چیدمان آینه‌ای پشت کارت‌ها (`getMirroredPrintableUsers`)، مدیریت مودال پیش‌نمایش شیت چاپ A4 |
-| ۲ | [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html) | اصلاح | بازطراحی کامل شیت چاپ با المان‌های گرافیکی واقعی (هدر گرادیانت، نوار GATE PASS، فیلدهای کامل)، افزودن مودال پیش‌نمایش شیت A4 |
-| ۳ | [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css) | اصلاح | استایل‌های پرینت با حفظ رنگ‌های سازمانی و گرادیانت‌ها (`-webkit-print-color-adjust: exact`)، خطوط راهنمای برش، و مودال پیش‌نمایش شیت |
+| ۱ | [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) | اصلاح | افزودن متد محاسبه چیدمان آینه‌ای پشت کارت‌ها (`getMirroredPrintableUsers`)، مدیریت مودال پیش‌نمایش شیت چاپ A4 |
+| ۲ | [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html) | اصلاح | بازطراحی کامل شیت چاپ با المان‌های گرافیکی واقعی (هدر گرادیانت، نوار GATE PASS، فیلدهای کامل)، افزودن مودال پیش‌نمایش شیت A4 |
+| ۳ | [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css) | اصلاح | استایل‌های پرینت با حفظ رنگ‌های سازمانی و گرادیانت‌ها (`-webkit-print-color-adjust: exact`)، خطوط راهنمای برش، و مودال پیش‌نمایش شیت |
 
 ---
 
 ## ۳. جزئیات تغییرات کامپوننت‌ها (Component Details)
 
-### الف. فایل [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts)
+### الف. فایل [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts)
 - افزودن متغیر و متدهای کنترل مودال پیش‌نمایش شیت A4:
   - `isPreviewSheetModalOpen: boolean = false`
   - `openSheetPreviewModal()` / `closeSheetPreviewModal()`
 - پیاده‌سازی متد `getMirroredPrintableUsers(columns: number)` جهت معکوس کردن ترتیبی ستون‌های هر ردیف برای شیت صفحه دوم (پشت کارت‌ها) در چاپ دورو.
 
-### ب. فایل [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html)
+### ب. فایل [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html)
 - **دکمه پیش‌نمایش شیت در هدر:** اضافه شدن دکمه «پیش‌نمایش شیت A4» در کنار دکمه پرینت.
 - **بازطراحی کارت‌های شیت چاپ عمودی:**
   - هدر گرادیانتی با رنگ سازمانی `effectiveCardColor` و پترن نقطه‌ای.
@@ -51,7 +51,7 @@
 - **مودال پیش‌نمایش زنده شیت چاپ:**
   - نمایش صفحات A4 در قالب شیت‌های واقعی با امکان ورق زدن و زوم، قبل از ارسال به پرینتر.
 
-### ج. فایل [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css)
+### ج. فایل [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css)
 - تعریف قوانین قطعی `@media print` جهت تثبیت گرادیانت‌ها و پس‌زمینه‌ها.
 - خطوط راهنمای برش نازک (`Crop Guide Marks`) جهت برش آسان بدون آسیب به کادر اصلی.
 - استایل‌های مودال نمایش شیت چاپ A4 با شبیه‌سازی دقیق برگه کاغذ.
@@ -62,7 +62,7 @@
 
 ### ۱. تست خودکار بیلد و کامپایل
 ```bash
-cd "E:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

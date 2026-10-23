@@ -2,10 +2,10 @@
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts --min-tests 14 --require normalizeScope --require getScopedDbName --require resolveScopeFromUrl --require getCurrentActiveAppScope --require setInstalledModules --require runQueueSequential --require getPendingCount --require getUnsentCountStrict --require getQueueEntries --require purgeEphemeralQueueEntries --require buildScopedHeaders --require refreshAccessToken --require dismissError --require deleteError --require SessionTabService --require doc-tasks
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts --contains /app/treasury --contains /app/tag-templates
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/offline/offline-scope.characterization.spec.ts frontend/src/app/shared/components/user-menu/user-menu.component.spec.ts
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/shared/components/user-menu/user-menu.component.spec.ts
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline/offline-scope.characterization.spec.ts --min-tests 14 --require normalizeScope --require getScopedDbName --require resolveScopeFromUrl --require getCurrentActiveAppScope --require setInstalledModules --require runQueueSequential --require getPendingCount --require getUnsentCountStrict --require getQueueEntries --require purgeEphemeralQueueEntries --require buildScopedHeaders --require refreshAccessToken --require dismissError --require deleteError --require SessionTabService --require doc-tasks
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/user-menu/user-menu.component.spec.ts --contains /app/treasury --contains /app/tag-templates
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(offline): characterize scope routing and both queues"
 verify: python scripts/automation/verify_tools.py clean-tree
@@ -17,18 +17,18 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - This session writes tests only. Do not change any production `.ts` file. Change only the 2 files in the scope verify line: create the new spec, and append tests to `user-menu.component.spec.ts` without changing or deleting any existing test there.
 - The tests must lock what the code does today. When a test fails, fix the test expectation to match today's behaviour, never the production code.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-- Do not install packages. There is no `fake-indexeddb`: mock Dexie tables with `vi.spyOn` the way `warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts` does.
+- Do not install packages. There is no `fake-indexeddb`: mock Dexie tables with `vi.spyOn` the way `frontend/src/app/core/services/offline/offline-queue-runner.spec.ts` does.
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱` under `### گام ۴`. Read the invariants (lines starting with `ن۱` to `ن۱۲`) and the paragraph for session 16.
-- Code under test: `warehouse-front/src/app/core/services/offline-db.ts` (`normalizeScope`, `getScopedDbName`, `resolveScopeFromUrl`, `getCurrentActiveAppScope`, `getOfflineDb`, `warehouseOfflineDb`, `financeOfflineDb`); `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts` (`runQueueSequential`, `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`, `buildScopedHeaders`, `refreshAccessToken`); `offline-local-patcher.ts` (`purgeEphemeralQueueEntries`); `offline-conflict-manager.ts` (`dismissError`, `deleteError`); `warehouse-front/src/app/core/services/session-tab.service.ts` (`getScopedAccessToken`, `setScopedAccessToken`); `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts` (getter `currentScopeContext`).
-- The server-installed module list is set with `getModuleRegistry().setInstalledModules(codes)` and read with `getInstalledCodes()` in `warehouse-front/src/app/core/modules/module-registry.service.ts`.
+- Code under test: `frontend/src/app/core/services/offline-db.ts` (`normalizeScope`, `getScopedDbName`, `resolveScopeFromUrl`, `getCurrentActiveAppScope`, `getOfflineDb`, `warehouseOfflineDb`, `financeOfflineDb`); `frontend/src/app/core/services/offline/offline-queue-runner.ts` (`runQueueSequential`, `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`, `buildScopedHeaders`, `refreshAccessToken`); `offline-local-patcher.ts` (`purgeEphemeralQueueEntries`); `offline-conflict-manager.ts` (`dismissError`, `deleteError`); `frontend/src/app/core/services/session-tab.service.ts` (`getScopedAccessToken`, `setScopedAccessToken`); `frontend/src/app/shared/components/user-menu/user-menu.component.ts` (getter `currentScopeContext`).
+- The server-installed module list is set with `getModuleRegistry().setInstalledModules(codes)` and read with `getInstalledCodes()` in `frontend/src/app/core/modules/module-registry.service.ts`.
 
 3. Definitions:
 - "Both DBs" means the two instances `warehouseOfflineDb` (IndexedDB name `WarehouseOfflineDB_warehouse`) and `financeOfflineDb` (`WarehouseOfflineDB_finance`).
 - "Installed subsets" means three runs of the same table: `setInstalledModules(['warehouse', 'accounting'])`, `setInstalledModules(['warehouse'])` and `setInstalledModules(['accounting'])`. Save `getInstalledCodes()` in `beforeEach` and restore it in `afterEach`.
 
-4. Task: create `warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts` (first line `// @vitest-environment jsdom`, like the other specs) with at least 14 plain `it(` blocks covering:
+4. Task: create `frontend/src/app/core/services/offline/offline-scope.characterization.spec.ts` (first line `// @vitest-environment jsdom`, like the other specs) with at least 14 plain `it(` blocks covering:
 - a) `normalizeScope` and `getScopedDbName` for `undefined`, `null`, `''`, `'warehouse'`, `'WAREHOUSE'`, `'finance'`, `'personnel'`, `'accounting'`, `'operations'`, `'xyz'`.
 - b) `resolveScopeFromUrl` for at least 20 URLs, each run under the three installed subsets with identical expected values: one URL for each of the 8 finance patterns in the function, plus URLs containing `/doc-tasks/`, `/inventory/`, `/warehouses/`, `/chat/`, `/notifications/`, `/auth/refresh/`, an absolute `https://` URL, an uppercase URL, and `null` (which returns the current scope).
 - c) `getCurrentActiveAppScope`: sessionStorage `active_app_module` = `personnel`, `warehouse`, `operations`; sessionStorage `wh_active_app` = `finance`; no session key with `window.history.pushState` to `/app/finance/x`, `/app/warehouse/x`, `/app/operations/users`, `/`; localStorage `active_app_module` = `accounting` on path `/`. Clear both storages between tests.
@@ -56,14 +56,14 @@ test(offline): characterize scope routing and both queues
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.error-source.spec.ts
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|WarehouseOfflineDB_warehouse|WarehouseOfflineDB_finance|export function resolveScopeFromUrl|export function normalizeScope"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --absent "where('url')" --absent "docTasks.bulkPut(legacyDocs)" --contains wh_legacy_offline_db_migrated_v1 --contains migratedAt
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts --absent "await financeOfflineDb.syncErrors.update(errorId" --absent "await financeOfflineDb.syncErrors.delete(errorId"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts --min-tests 6 --require migratedAt --require docTasks
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.error-source.spec.ts --min-tests 3
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/offline-db.ts frontend/src/app/core/services/offline-db.legacy-migration.spec.ts frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.error-source.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path frontend/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|WarehouseOfflineDB_warehouse|WarehouseOfflineDB_finance|export function resolveScopeFromUrl|export function normalizeScope"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline-db.ts --absent "where('url')" --absent "docTasks.bulkPut(legacyDocs)" --contains wh_legacy_offline_db_migrated_v1 --contains migratedAt
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts --absent "await financeOfflineDb.syncErrors.update(errorId" --absent "await financeOfflineDb.syncErrors.delete(errorId"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline-db.legacy-migration.spec.ts --min-tests 6 --require migratedAt --require docTasks
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.error-source.spec.ts --min-tests 3
 verify: python scripts/e2e/guardian_34_offline_continuity.py
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -81,11 +81,11 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, the invariants `ن۸` and `ن۹` and the paragraph for session 17.
-- `migrateLegacyDatabaseIfNeeded` in `warehouse-front/src/app/core/services/offline-db.ts` runs on every app start (called from `initialize()` in `offline-sync.service.ts`). Its defects today:
+- `migrateLegacyDatabaseIfNeeded` in `frontend/src/app/core/services/offline-db.ts` runs on every app start (called from `initialize()` in `offline-sync.service.ts`). Its defects today:
   - `targetDb.syncQueue.where('url')` throws a Dexie `SchemaError`, because `url` is not an index in any `syncQueue` schema. The outer `catch` swallows it, so no legacy queue row is ever migrated.
   - `warehouseOfflineDb.docTasks.bulkPut(legacyDocs)` runs on every start and overwrites newer local `docTasks` rows (including rows with `_offlinePending`) with the old legacy copies.
   - `add({ ...item, appScope: scope })` keeps the legacy `id`, which collides with existing auto-increment ids in the target DB.
-- `warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts`: errors are loaded from both DBs (around line 185) and merged. The "discard" strategy updates and the "server" strategy deletes `syncErrors` rows with the same `errorId` in both DBs (around lines 298 and 319). Ids are per DB, so this also dismisses or deletes an unrelated error row of the other DB, which holds the only copy of a rejected request body.
+- `frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts`: errors are loaded from both DBs (around line 185) and merged. The "discard" strategy updates and the "server" strategy deletes `syncErrors` rows with the same `errorId` in both DBs (around lines 298 and 319). Ids are per DB, so this also dismisses or deletes an unrelated error row of the other DB, which holds the only copy of a rejected request body.
 
 3. Definitions:
 - "Source DB" of an error is the DB instance the row was read from.
@@ -100,7 +100,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - f) Spec `offline-db.legacy-migration.spec.ts` (at least 6 `it(`): marker set means nothing is read; existing `docTasks` row is not overwritten and a missing one is added; a legacy queue row is added once without its legacy `id` and gets `migratedAt`; a row with `migratedAt` is skipped; a second run with an existing copy adds nothing; a failing row leaves the marker unset. Use plain objects and `vi.spyOn` on the target tables.
 - g) Spec `operations-sync-monitor.error-source.spec.ts` (at least 3 `it(`): with id 5 in both DBs, discarding the warehouse error updates only `warehouseOfflineDb.syncErrors`; the server strategy without `server_record` deletes only in the source DB; same for a finance error.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run above reports no new failing test, `offline-scope.characterization.spec.ts` passes unchanged, and `git diff --stat` shows only the 4 files.
 
@@ -115,15 +115,15 @@ fix(offline): idempotent legacy migration and single-DB error writes in sync mon
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline/offline-scope.registry.spec.ts
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|warehouse: 'WarehouseOfflineDB_warehouse'|finance: 'WarehouseOfflineDB_finance'|accounting: 'WarehouseOfflineDB_finance'|personnel: 'WarehouseOfflineDB_finance'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --contains "export type AppScope = 'warehouse' | 'finance' | (string & {});" --contains "export function getAllOfflineDbs" --contains "export function resolveOfflineDbStrict" --contains "function resolveLegacyScopeFromUrl" --contains "getAllModules()" --absent "getInstalledModules" --absent "getExtensions("
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/modules/module-contract.ts --contains "offlineSync?:" --contains queueUrlPatterns --contains activePathPatterns --contains appRoutePrefixes --contains scopeAliases
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains "offlineSync:" --contains "'WarehouseOfflineDB_finance'" --contains "'/treasury'" --contains "'/attendance'" --contains "'/paya'" --contains "'/slips'" --contains "'/fiscal'" --contains "'/app/projects'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/module.ts --contains "offlineSync:" --contains "'WarehouseOfflineDB_warehouse'" --contains "'/app/tag-templates'"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-scope.registry.spec.ts --min-tests 8 --require registerModule --require resolveOfflineDbStrict --require getAllOfflineDbs --require WarehouseOfflineDB_
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/warehouse/module.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/core/services/offline-db.ts frontend/src/app/core/services/offline/offline-scope.registry.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path frontend/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|warehouse: 'WarehouseOfflineDB_warehouse'|finance: 'WarehouseOfflineDB_finance'|accounting: 'WarehouseOfflineDB_finance'|personnel: 'WarehouseOfflineDB_finance'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline-db.ts --contains "export type AppScope = 'warehouse' | 'finance' | (string & {});" --contains "export function getAllOfflineDbs" --contains "export function resolveOfflineDbStrict" --contains "function resolveLegacyScopeFromUrl" --contains "getAllModules()" --absent "getInstalledModules" --absent "getExtensions("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/modules/module-contract.ts --contains "offlineSync?:" --contains queueUrlPatterns --contains activePathPatterns --contains appRoutePrefixes --contains scopeAliases
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/module.ts --contains "offlineSync:" --contains "'WarehouseOfflineDB_finance'" --contains "'/treasury'" --contains "'/attendance'" --contains "'/paya'" --contains "'/slips'" --contains "'/fiscal'" --contains "'/app/projects'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/warehouse/module.ts --contains "offlineSync:" --contains "'WarehouseOfflineDB_warehouse'" --contains "'/app/tag-templates'"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline/offline-scope.registry.spec.ts --min-tests 8 --require registerModule --require resolveOfflineDbStrict --require getAllOfflineDbs --require WarehouseOfflineDB_
 verify: python scripts/e2e/guardian_34_offline_continuity.py
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -175,7 +175,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
   - for both real modules, `offlineSync.scopeKind` equals `syncConfig.scopeKind`.
   Do not open IndexedDB in tests: assert names and instance identity only.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"` and at most two runs each of `python scripts/e2e/guardian_34_offline_continuity.py` and `python scripts/e2e/guardian_57_front_module_fence.py`. Guardian 57 must not report an increase; never run it with `--update-baseline`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"` and at most two runs each of `python scripts/e2e/guardian_34_offline_continuity.py` and `python scripts/e2e/guardian_57_front_module_fence.py`. Guardian 57 must not report an increase; never run it with `--update-baseline`. If a command fails, read its output and change approach.
 
 6. Before finishing: the characterization spec of session 16 passes unchanged, the ng-test-compare run reports no new failing test, guardians 34 and 57 pass, and `git diff --stat` shows only the 5 files.
 
@@ -190,16 +190,16 @@ refactor(offline): offlineSync extension and registry-driven scope resolution
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/core/services/sync-pull.service.ts warehouse-front/src/app/core/services/offline/offline-local-patcher.ts warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/server-restore-gate.ts warehouse-front/src/app/core/services/offline/offline-n-scope.readers.spec.ts
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|WarehouseOfflineDB_warehouse'|WarehouseOfflineDB_finance'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.ts --contains getAllOfflineDbs --absent otherScope --absent "financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count()"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/server-restore-gate.ts --contains getAllOfflineDbs --contains getDatabaseNames --contains WarehouseOfflineDB_
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/sync-pull.service.ts --contains getAllOfflineDbs
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-local-patcher.ts --contains getAllOfflineDbs --contains "for (const db of [warehouseOfflineDb, financeOfflineDb])"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --contains "others:" --contains "warehouse: { [tableName: string]: any[] };" --contains "finance: { [tableName: string]: any[] };"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-n-scope.readers.spec.ts --min-tests 7 --require registerModule --require runQueueSequential --require countUnsentEntries --require getDatabaseNames
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/offline/offline-queue-runner.ts frontend/src/app/core/services/offline-sync.service.ts frontend/src/app/core/services/sync-pull.service.ts frontend/src/app/core/services/offline/offline-local-patcher.ts frontend/src/app/core/services/offline-db.ts frontend/src/app/core/services/server-restore-gate.ts frontend/src/app/core/services/offline/offline-n-scope.readers.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path frontend/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|WarehouseOfflineDB_warehouse'|WarehouseOfflineDB_finance'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-queue-runner.ts --contains getAllOfflineDbs --absent otherScope --absent "financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count()"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/server-restore-gate.ts --contains getAllOfflineDbs --contains getDatabaseNames --contains WarehouseOfflineDB_
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/sync-pull.service.ts --contains getAllOfflineDbs
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-local-patcher.ts --contains getAllOfflineDbs --contains "for (const db of [warehouseOfflineDb, financeOfflineDb])"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline-db.ts --contains "others:" --contains "warehouse: { [tableName: string]: any[] };" --contains "finance: { [tableName: string]: any[] };"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline/offline-n-scope.readers.spec.ts --min-tests 7 --require registerModule --require runQueueSequential --require countUnsentEntries --require getDatabaseNames
 verify: python scripts/e2e/guardian_34_offline_continuity.py
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -218,7 +218,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۶`, `ن۱۱`, `ن۱۲` and the paragraph for session 19.
-- `getAllOfflineDbs()` in `warehouse-front/src/app/core/services/offline-db.ts` (session 18) returns the two locked DBs first, then registered DBs.
+- `getAllOfflineDbs()` in `frontend/src/app/core/services/offline-db.ts` (session 18) returns the two locked DBs first, then registered DBs.
 - Places that read both queues with a fixed pair today:
   - `offline-queue-runner.ts`: the drain loop in `runQueueSequential` (`currentScope`/`otherScope`), `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`.
   - `offline-sync.service.ts`: `initialize()` (`sending` back to `pending`) and `refreshCounts()`.
@@ -241,7 +241,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - g) `countUnsentEntries` in `server-restore-gate.ts`: count every DB, plus the `syncQueue` rows of every unknown device DB, opened read-only with `new Dexie(name)` and `open()` (dynamic mode, no `version()` call), counted, then `close()`d. Skip a DB without a `syncQueue` table. Any error while listing or reading must propagate so the gate stays closed, exactly like today's read errors.
 - h) Spec `offline-n-scope.readers.spec.ts` (at least 7 `it(`), registering a fake module `qa_mod` (as in `offline-scope.registry.spec.ts`) and spying on the tables of its DB: the drain sends a `qa_mod` entry with its own DB handle in global `createdAt` order; `getPendingCount()`, `getUnsentCountStrict()` and `getQueueEntries('all')` include it; `getPendingCount('xyz')` is 0; `countUnsentEntries` counts a `qa_mod` row and a row from an unknown device DB returned by a mocked `Dexie.getDatabaseNames`; a rejected `getDatabaseNames` makes `countUnsentEntries` reject; `purgeEphemeralQueueEntries` does not touch the `qa_mod` DB.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/**/settings-backup-tab/*.spec.ts" --include "src/app/modules/warehouse/components/wh-settings/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/**/settings-backup-tab/*.spec.ts" --include "src/app/modules/warehouse/components/wh-settings/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the specs of sessions 16 and 18 pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -256,13 +256,13 @@ refactor(offline): queue readers cover every offline database
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline/offline-local-patcher.ts warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts warehouse-front/src/app/core/services/offline/offline-n-scope.writers.spec.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.ts --contains resolveOfflineDbStrict --absent "targetDb || getOfflineDb(entry.appScope)" --absent "targetDb || getOfflineDb(appScope)"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-local-patcher.ts --contains resolveOfflineDbStrict --absent "const otherScope"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts --contains getAllOfflineDbs --contains resolveOfflineDbStrict
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-n-scope.writers.spec.ts --min-tests 8 --require cancelQueueEntry --require handleRetry --require reconcileRejected --require dismissError --require resolveOfflineDbStrict
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/offline/offline-queue-runner.ts frontend/src/app/core/services/offline/offline-local-patcher.ts frontend/src/app/core/services/offline/offline-conflict-manager.ts frontend/src/app/core/services/offline-sync.service.ts frontend/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts frontend/src/app/core/services/offline/offline-n-scope.writers.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-queue-runner.ts --contains resolveOfflineDbStrict --absent "targetDb || getOfflineDb(entry.appScope)" --absent "targetDb || getOfflineDb(appScope)"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-local-patcher.ts --contains resolveOfflineDbStrict --absent "const otherScope"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-conflict-manager.ts --contains getAllOfflineDbs --contains resolveOfflineDbStrict
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline/offline-n-scope.writers.spec.ts --min-tests 8 --require cancelQueueEntry --require handleRetry --require reconcileRejected --require dismissError --require resolveOfflineDbStrict
 verify: python scripts/e2e/guardian_34_offline_continuity.py
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -300,7 +300,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - e) `offline-sync.service.ts`: pass the optional `scope` through its wrappers. `operations-sync-monitor.ts`: pass the source DB's `dbScope` to `resolveConflict`.
 - f) Spec `offline-n-scope.writers.spec.ts` (at least 8 `it(`): an entry with `appScope: 'xyz'` makes `handleRetry` and `markTransportFailure` write nothing in any DB; `cancelQueueEntry(7, 'xyz')` returns `false` and deletes nothing; `cancelQueueEntry(7)` with id 7 in the warehouse DB and in a registered `qa_mod` DB returns `false`; `reconcileRejected` with `appScope: 'xyz'` writes nothing; `dismissError(7, 'finance')` with id 7 in both locked DBs updates only the finance DB; `dismissError(7)` without scope keeps the session 16 result; `resolveOfflineDbStrict` is used for `qa_mod` entries (its DB handle receives the write).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the specs of sessions 16 to 19 pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -315,11 +315,11 @@ fix(offline): id-keyed queue and error writes resolve their database strictly
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts warehouse-front/src/app/core/services/session-tab.service.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts --contains appRoutePrefixes --contains normalizeScope --absent "url.startsWith('/app/treasury')" --absent "url.startsWith('/app/tag-templates')"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/session-tab.service.ts --contains normalizeScope --absent "scope === 'personnel' || scope === 'finance' ? 'finance' : 'warehouse'"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts --pattern "\(click\)|\[ngClass\]|class="
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/shared/components/user-menu/user-menu.component.ts frontend/src/app/core/services/session-tab.service.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/user-menu/user-menu.component.ts --contains appRoutePrefixes --contains normalizeScope --absent "url.startsWith('/app/treasury')" --absent "url.startsWith('/app/tag-templates')"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/session-tab.service.ts --contains normalizeScope --absent "scope === 'personnel' || scope === 'finance' ? 'finance' : 'warehouse'"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path frontend/src/app/shared/components/user-menu/user-menu.component.ts --pattern "\(click\)|\[ngClass\]|class="
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -336,8 +336,8 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, the `offlineSync` table and the paragraph for session 21.
-- `currentScopeContext` in `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts` (around lines 110 to 160): step 1 checks hard-coded `startsWith` prefixes, step 2 maps `activeApp` names, step 3 checks installed `scopeKind`s.
-- `getScopedAccessToken` and `setScopedAccessToken` in `warehouse-front/src/app/core/services/session-tab.service.ts` map `personnel`/`finance` to `finance` and everything else to `warehouse`.
+- `currentScopeContext` in `frontend/src/app/shared/components/user-menu/user-menu.component.ts` (around lines 110 to 160): step 1 checks hard-coded `startsWith` prefixes, step 2 maps `activeApp` names, step 3 checks installed `scopeKind`s.
+- `getScopedAccessToken` and `setScopedAccessToken` in `frontend/src/app/core/services/session-tab.service.ts` map `personnel`/`finance` to `finance` and everything else to `warehouse`.
 - `normalizeScope` and the `offlineSync` extension (session 18) are in `offline-db.ts` and the two module files.
 
 3. Definitions: "route scope" is the `scopeKind` of the first module in `getModuleRegistry().getAllModules()` whose `offlineSync.appRoutePrefixes` contains a prefix the router url starts with.
@@ -346,7 +346,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - a) `currentScopeContext`: keep the `/app/operations` check first and unchanged. Replace the hard-coded finance and warehouse prefix lists with the route scope. Replace the `activeApp` name mapping with `normalizeScope(activeApp)` for any non-empty `activeApp` other than `operations`. Keep step 3 and the final default unchanged. The return type stays the same; a route scope or normalized scope that is neither `warehouse` nor `finance` returns `warehouse` (the deep-sync modal has only these two sections).
 - b) `session-tab.service.ts`: in both token functions, compute the scoped key suffix with `normalizeScope(scope)` and keep only `warehouse` or `finance` as the suffix (anything else uses `warehouse`, as today).
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/components/user-menu/*.spec.ts" --include "src/app/core/services/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/components/user-menu/*.spec.ts" --include "src/app/core/services/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run reports no new failing test, and `git diff --stat` shows only the 2 files.
 
@@ -374,16 +374,16 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 16 to 21 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
@@ -397,13 +397,13 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|: 'WarehouseOfflineDB_"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --absent "SCOPE_KEYS[" --absent "Object.keys(SCOPED_DB_NAMES)" --contains "navigator.locks" --contains wh-legacy-offline-migration
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts --min-tests 10 --require locks
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/offline-db.ts frontend/src/app/core/services/offline-db.legacy-migration.spec.ts
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/core/services/offline-db.legacy-migration.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path frontend/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|: 'WarehouseOfflineDB_"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline-db.ts --absent "SCOPE_KEYS[" --absent "Object.keys(SCOPED_DB_NAMES)" --contains "navigator.locks" --contains wh-legacy-offline-migration
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline-db.legacy-migration.spec.ts --min-tests 10 --require locks
 verify: python scripts/e2e/guardian_34_offline_continuity.py
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -420,7 +420,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۲` and `ن۸`.
-- `warehouse-front/src/app/core/services/offline-db.ts` defines `WH_SCOPE`, `FIN_SCOPE`, `ACCT_SCOPE` and `PERS_SCOPE` by position from `Object.keys(SCOPED_DB_NAMES)`. Reordering that table would silently change which DB a record goes to.
+- `frontend/src/app/core/services/offline-db.ts` defines `WH_SCOPE`, `FIN_SCOPE`, `ACCT_SCOPE` and `PERS_SCOPE` by position from `Object.keys(SCOPED_DB_NAMES)`. Reordering that table would silently change which DB a record goes to.
 - `migrateLegacyData` in the same file, queue part: it checks for an existing copy, then `add`s, then sets `migratedAt` on the legacy row. Two defects:
   - Two tabs opened at the same time both run it, both find no copy, and both add the same row, so the request is sent twice.
   - When `add` succeeds but the `migratedAt` update fails, the marker stays unset; after the added copy is sent and deleted, the next start finds no copy and adds the row again, so it is sent twice.
@@ -435,7 +435,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - c) Claim-first per queue row: skip a row without `id` (log it). Claim the row; if the claim fails, skip the row and set the error flag. Then check for an existing copy and `add` when there is none (unchanged rules). If the check or `add` throws, release the claim; if the release also fails, log it and keep the error flag. The row is never deleted from the legacy DB.
 - d) Spec: add at least 4 tests: the claim `update` happens before `add`; a failing `add` releases the claim and leaves the marker unset; a failing claim adds nothing; with a mocked `navigator.locks.request` the migration body runs inside it, and without `navigator.locks` it still runs.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts"` and at most two runs of `python scripts/e2e/guardian_57_front_module_fence.py` (never with `--update-baseline`). If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts"` and at most two runs of `python scripts/e2e/guardian_57_front_module_fence.py` (never with `--update-baseline`). If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run reports no new failing test, guardian 57 passes, and `git diff --stat` shows only the 2 files.
 
@@ -463,16 +463,16 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 16 to 21 and 23 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4 fixes'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
@@ -486,11 +486,11 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/views_domains/audit_views.py warehouse-backend/core/accounts/middleware.py warehouse-backend/core/accounts/views_domains/backup_views.py warehouse-backend/core/accounts/views_domains/session_views.py warehouse-backend/core/platform_core/query_engine/definitions.py "warehouse-backend/integration_tests/*" "warehouse-backend/core/accounts/tests/*" "warehouse-backend/core/platform_core/tests/*"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/middleware.py --absent "app_module: str = 'personnel'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/definitions.py --absent "module_code: str = 'warehouse'" --absent "scope_kind: str = 'warehouse'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/views_domains/backup_views.py --absent "getattr(request, 'active_app', 'warehouse') or 'warehouse'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/views_domains/session_views.py --absent "data.get('app_scope', 'warehouse')"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow backend/core/accounts/views_domains/audit_views.py backend/core/accounts/middleware.py backend/core/accounts/views_domains/backup_views.py backend/core/accounts/views_domains/session_views.py backend/core/platform_core/query_engine/definitions.py "backend/integration_tests/*" "backend/core/accounts/tests/*" "backend/core/platform_core/tests/*"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/accounts/middleware.py --absent "app_module: str = 'personnel'"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/platform_core/query_engine/definitions.py --absent "module_code: str = 'warehouse'" --absent "scope_kind: str = 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/accounts/views_domains/backup_views.py --absent "getattr(request, 'active_app', 'warehouse') or 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/accounts/views_domains/session_views.py --absent "data.get('app_scope', 'warehouse')"
 verify: python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
@@ -509,18 +509,18 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 25.
-- `default_module()` is in `warehouse-backend/core/platform_core/registry.py`; read it and how `accounts/middleware.py` and `accounts/permissions.py` already derive the default active app from it (phase 4 session 3).
-- `export_excel` in `warehouse-backend/core/accounts/views_domains/audit_views.py` (around line 904): with POST, filters read `request.data`, but `get_queryset()` (around line 739) calls `restrict_audit_for_user(qs, user, params.get('app_scope'))` with the query string.
+- `default_module()` is in `backend/core/platform_core/registry.py`; read it and how `accounts/middleware.py` and `accounts/permissions.py` already derive the default active app from it (phase 4 session 3).
+- `export_excel` in `backend/core/accounts/views_domains/audit_views.py` (around line 904): with POST, filters read `request.data`, but `get_queryset()` (around line 739) calls `restrict_audit_for_user(qs, user, params.get('app_scope'))` with the query string.
 - Literal defaults to replace: `app_module: str = 'personnel'` in `get_user_valid_roles_for_app` and `resolve_effective_role` (`middleware.py`); `getattr(request, 'active_app', 'warehouse') or 'warehouse'` (`backup_views.py` around line 130); `data.get('app_scope', 'warehouse')` (`session_views.py` around line 30); the `scope_kind: str = 'warehouse'` and `module_code: str = 'warehouse'` defaults in `query_engine/definitions.py` (lines 57, 199, 206, 315, 321).
 
-3. Definitions: "registry default" means the value derived from `default_module()` exactly the way `middleware.py` already derives the default active app (reuse that existing code path; do not write a new module-name mapping). For `query_engine`, the default parameter becomes `None` and is resolved inside the function from the registry, so callers in `warehouse-backend/modules` keep working without edits.
+3. Definitions: "registry default" means the value derived from `default_module()` exactly the way `middleware.py` already derives the default active app (reuse that existing code path; do not write a new module-name mapping). For `query_engine`, the default parameter becomes `None` and is resolved inside the function from the registry, so callers in `backend/modules` keep working without edits.
 
 4. Task:
 - a) `export_excel`: when the request is POST with a body, the user restriction uses the body's `app_scope` (the same value the filter uses). Pass the effective `app_scope` into the restriction; do not duplicate `restrict_audit_for_user`. GET behaviour stays the same.
 - b) Replace the literal defaults of section 2 with the registry default. In the full profile (both modules installed) every result must be identical to today.
 - c) Add tests (new test methods in an existing test module of `accounts`, `platform_core` or `integration_tests`): the POST export for a restricted non-superuser with body `app_scope` applies the same restriction as GET with that query parameter; each replaced default returns today's value in the full profile.
 
-5. Tool policy: from `warehouse-backend`, run tests only with labels, for example `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test accounts platform_core --keepdb`, at most four times; from the repo root, `python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55` at most twice. If a command fails, read its output and change approach.
+5. Tool policy: from `backend`, run tests only with labels, for example `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test accounts platform_core --keepdb`, at most four times; from the repo root, `python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55` at most twice. If a command fails, read its output and change approach.
 
 6. Before finishing: the labelled tests above pass except the known failure listed in `scripts/automation/known_backend_failures.txt`, and `git diff --stat` shows only files from the scope line.
 
@@ -535,15 +535,15 @@ refactor(core): registry defaults instead of module literals; audit export app_s
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/warehouse/warehouse.routes.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/modules/accounting/accounting.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/modules/legacy-redirects.spec.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --absent "redirectTo: 'app/finance/" --absent "redirectTo: 'app/warehouse/" --contains legacyRedirects
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/warehouse.routes.ts --absent /app/finance/
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/auth/auth.guard.ts --absent "'finance-audit'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/app-persona.service.ts --absent "['warehouse', 'personnel', 'accounting', 'finance', 'operations']" --absent "app: 'personnel',"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains legacyRedirects --contains "'app/finance/accountant-payroll'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/module.ts --contains legacyRedirects --contains "'app/warehouse/counter'"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/modules/legacy-redirects.spec.ts --min-tests 4 --require legacyRedirects
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/app.routes.ts frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/warehouse/module.ts frontend/src/app/modules/warehouse/warehouse.routes.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/modules/accounting/accounting.routes.ts frontend/src/app/core/auth/auth.guard.ts frontend/src/app/core/services/app-persona.service.ts frontend/src/app/core/modules/legacy-redirects.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/app.routes.ts --absent "redirectTo: 'app/finance/" --absent "redirectTo: 'app/warehouse/" --contains legacyRedirects
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/warehouse/warehouse.routes.ts --absent /app/finance/
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/auth/auth.guard.ts --absent "'finance-audit'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/app-persona.service.ts --absent "['warehouse', 'personnel', 'accounting', 'finance', 'operations']" --absent "app: 'personnel',"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/module.ts --contains legacyRedirects --contains "'app/finance/accountant-payroll'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/warehouse/module.ts --contains legacyRedirects --contains "'app/warehouse/counter'"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/modules/legacy-redirects.spec.ts --min-tests 4 --require legacyRedirects
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -560,10 +560,10 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 26.
-- `warehouse-front/src/app/app.routes.ts`: root-level redirects to `app/warehouse/...` (from `path: 'users'` to `path: 'feed_approvals'`) and to `app/finance/...` (the block from `finance-cartable` to `fleet-settlement`, plus `finance-audit`). The `operations` and `cockpit` redirects are core and stay. `dynamicModuleRoutes` is built from `INSTALLED_MODULES`.
-- `warehouse-front/src/app/modules/warehouse/warehouse.routes.ts` line 60: `attendance` redirects to `/app/finance/employee-attendance` (a link from the warehouse module into the accounting module).
-- `warehouse-front/src/app/core/auth/auth.guard.ts`: `ROUTE_PERMISSIONS` has `'finance-audit'`; module pages get permissions from `routeAccess.pagePermissions`.
-- `warehouse-front/src/app/core/services/app-persona.service.ts`: `isGenericModuleApp` uses a hard-coded list of names; `CORE_SUPERUSER.app` is `'personnel'`, but every reader of `app` on that persona short-circuits with `r.code === 'superuser'`.
+- `frontend/src/app/app.routes.ts`: root-level redirects to `app/warehouse/...` (from `path: 'users'` to `path: 'feed_approvals'`) and to `app/finance/...` (the block from `finance-cartable` to `fleet-settlement`, plus `finance-audit`). The `operations` and `cockpit` redirects are core and stay. `dynamicModuleRoutes` is built from `INSTALLED_MODULES`.
+- `frontend/src/app/modules/warehouse/warehouse.routes.ts` line 60: `attendance` redirects to `/app/finance/employee-attendance` (a link from the warehouse module into the accounting module).
+- `frontend/src/app/core/auth/auth.guard.ts`: `ROUTE_PERMISSIONS` has `'finance-audit'`; module pages get permissions from `routeAccess.pagePermissions`.
+- `frontend/src/app/core/services/app-persona.service.ts`: `isGenericModuleApp` uses a hard-coded list of names; `CORE_SUPERUSER.app` is `'personnel'`, but every reader of `app` on that persona short-circuits with `r.code === 'superuser'`.
 
 3. Definitions:
 - "Scoped module": a module with `extensions.syncConfig`, or whose `scopeKind` has a locked offline DB (`resolveOfflineDbStrict(spec.scopeKind)` from `core/services/offline-db.ts` is not `null`).
@@ -577,7 +577,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - e) `app-persona.service.ts`: `isGenericModuleApp` follows the definition in section 3 without a list of module names; `CORE_SUPERUSER.app` becomes `OPERATIONS_APP`.
 - f) Spec `core/modules/legacy-redirects.spec.ts` (at least 4 `it(`): every redirect formerly in `app.routes.ts` appears exactly once in the combined `legacyRedirects` with the same target; `app/warehouse/attendance` targets the finance page; the core redirects `operations` and `cockpit` are still in the root routes; `isGenericModuleApp` is false for `warehouse`, `accounting`, `personnel`, `finance` and `operations`.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the three characterization specs pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -592,15 +592,15 @@ refactor(front): legacy redirects and route permissions in their modules
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts warehouse-front/src/app/core/services/photo-upload-queue.service.ts warehouse-front/src/app/core/auth/auth.service.ts warehouse-front/src/app/core/services/session-tab.service.ts warehouse-front/src/app/core/http/websocket.service.ts warehouse-front/src/app/core/services/sync-pull.service.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/core/services/offline/scope-sync-profile.spec.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --contains "export function getScopeSyncProfile" --contains "export const DEFAULT_OFFLINE_SCOPE"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.ts --contains getScopeSyncProfile --absent "'wh_access_token_finance' : 'wh_access_token_warehouse'" --absent "? 'operator' : 'counter'" --absent "? 'personnel' : 'warehouse'" --contains allSettled
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts --contains getScopeSyncProfile --absent "'wh_access_token_finance' : 'wh_access_token_warehouse'" --absent "? 'personnel' : 'warehouse'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/photo-upload-queue.service.ts --absent "'X-Active-App': 'warehouse'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/session-tab.service.ts --absent "norm === 'finance' ? 'finance' : 'warehouse'"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/scope-sync-profile.spec.ts --min-tests 6 --require getScopeSyncProfile --require registerModule
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/offline-db.ts frontend/src/app/core/services/offline/offline-queue-runner.ts frontend/src/app/core/services/offline/offline-conflict-manager.ts frontend/src/app/core/services/photo-upload-queue.service.ts frontend/src/app/core/auth/auth.service.ts frontend/src/app/core/services/session-tab.service.ts frontend/src/app/core/http/websocket.service.ts frontend/src/app/core/services/sync-pull.service.ts frontend/src/app/core/services/offline-sync.service.ts frontend/src/app/core/services/offline/scope-sync-profile.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline-db.ts --contains "export function getScopeSyncProfile" --contains "export const DEFAULT_OFFLINE_SCOPE"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-queue-runner.ts --contains getScopeSyncProfile --absent "'wh_access_token_finance' : 'wh_access_token_warehouse'" --absent "? 'operator' : 'counter'" --absent "? 'personnel' : 'warehouse'" --contains allSettled
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline/offline-conflict-manager.ts --contains getScopeSyncProfile --absent "'wh_access_token_finance' : 'wh_access_token_warehouse'" --absent "? 'personnel' : 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/photo-upload-queue.service.ts --absent "'X-Active-App': 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/session-tab.service.ts --absent "norm === 'finance' ? 'finance' : 'warehouse'"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/offline/scope-sync-profile.spec.ts --min-tests 6 --require getScopeSyncProfile --require registerModule
 verify: python scripts/e2e/guardian_34_offline_continuity.py
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -634,7 +634,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - e) `exportLocalDatabaseSnapshot`: `metrics.pendingSyncCount` also counts pending/failed rows of the `others` DBs.
 - f) Spec `scope-sync-profile.spec.ts` (at least 6 `it(`): today's values for `warehouse`, `finance`, `personnel`, `accounting` and `xyz` under the three installed subsets; a registered fake module `qa_mod` with its own `syncConfig` gets its own token key and header; a drain where one DB's `where` rejects still sends the entries of the other DB; `getUnsentCountStrict` rejects in that case.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the phase 4 step 4 specs pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -649,14 +649,14 @@ refactor(offline): scope sync profile from syncConfig; fault-tolerant drain
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.spec.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-sections.spec.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts --absent "activeOpsTab.set('warehouse')" --absent "activeOpsTab.set('finance')" --absent "effectiveContext === 'finance'" --absent "effectiveContext === 'warehouse'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts --absent "deepSyncScope === 'warehouse'" --absent "deepSyncScope === 'finance'" --absent "performDeepUpdate(targetWarehouseIds, warehousesMap, 'warehouse')"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains deepSync:
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/module.ts --contains deepSync:
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-sections.spec.ts --min-tests 5 --require registerModule
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.spec.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/warehouse/module.ts frontend/src/app/modules/accounting/module.ts frontend/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts frontend/src/app/shared/components/user-menu/user-menu.component.ts frontend/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.spec.ts frontend/src/app/shared/components/user-menu/user-menu.component.spec.ts frontend/src/app/shared/components/deep-sync-modal/deep-sync-sections.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts --absent "activeOpsTab.set('warehouse')" --absent "activeOpsTab.set('finance')" --absent "effectiveContext === 'finance'" --absent "effectiveContext === 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/user-menu/user-menu.component.ts --absent "deepSyncScope === 'warehouse'" --absent "deepSyncScope === 'finance'" --absent "performDeepUpdate(targetWarehouseIds, warehousesMap, 'warehouse')"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/module.ts --contains deepSync:
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/warehouse/module.ts --contains deepSync:
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/shared/components/deep-sync-modal/deep-sync-sections.spec.ts --min-tests 5 --require registerModule
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.spec.ts frontend/src/app/shared/components/user-menu/user-menu.component.spec.ts
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
@@ -673,8 +673,8 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 28.
-- `warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts`: two hard-coded sections (warehouses, projects) with Persian titles and banners, `contextMode` `warehouse`/`finance`/`operations`, and tabs in the operations context.
-- `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts`: `openDeepSync` (around line 490) and the deep update run (around lines 555 to 670) load warehouses through `whService` and projects through the `projectLookup` extension, check `userMenu.deepSyncScope`, and call `performDeepUpdate(ids, map, scope)` per scope.
+- `frontend/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts`: two hard-coded sections (warehouses, projects) with Persian titles and banners, `contextMode` `warehouse`/`finance`/`operations`, and tabs in the operations context.
+- `frontend/src/app/shared/components/user-menu/user-menu.component.ts`: `openDeepSync` (around line 490) and the deep update run (around lines 555 to 670) load warehouses through `whService` and projects through the `projectLookup` extension, check `userMenu.deepSyncScope`, and call `performDeepUpdate(ids, map, scope)` per scope.
 - `userMenu` and `projectLookup` extensions are defined in `core/modules/module-contract.ts`.
 
 3. Definitions: a "deep sync section" is `{ scope: AppScope; order: number; tabLabel: string; sectionTitle: string; bannerTitle: string; bannerDescription: string; emptyText: string; accent: string; loadItems: (injector: Injector) => Promise<{ id: number; name: string }[]> }`, contributed by a module as `extensions.userMenu.deepSync`. `loadItems` gets services through the injector so module code does not import from `shared/`.
@@ -686,7 +686,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - d) `user-menu`: build the sections from `getExtensions('userMenu')`, pick the context section with `currentScopeContext`, and run `performDeepUpdate(ids, map, section.scope)` for each section that has a selection.
 - e) Spec `deep-sync-sections.spec.ts` (at least 5 `it(`): the two real modules give sections in today's order with today's titles; a registered fake module `qa_mod` with a `deepSync` section adds a third tab in the operations context; selecting ids in it emits them under `idsByScope.qa_mod`; with no `deepSync` contribution the dialog shows no section.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/**/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `frontend`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/**/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts"`. If a command fails, read its output and change approach.
 
 6. Before finishing: the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
 
@@ -720,7 +720,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 2. Context:
 - Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`: the closing criterion and the paragraph for session 29.
-- Guardian 29 `scripts/e2e/guardian_modularization.py`: `scan_core_module_literals()` (backend `warehouse-backend/core`, ast string constants) with a "no increase over baseline" rule. Guardian 57 `scripts/e2e/guardian_57_front_module_fence.py`: `find_module_literals` and the counter `core_module_literals` for `core/` and `shared/`, with the same rule.
+- Guardian 29 `scripts/e2e/guardian_modularization.py`: `scan_core_module_literals()` (backend `backend/core`, ast string constants) with a "no increase over baseline" rule. Guardian 57 `scripts/e2e/guardian_57_front_module_fence.py`: `find_module_literals` and the counter `core_module_literals` for `core/` and `shared/`, with the same rule.
 
 3. Definitions (allowlist categories):
 - `data-field`: a model field, column, serializer field, kwarg or request parameter named `warehouse`/`warehouse_id` (including compatibility shims such as `kwargs.pop('warehouse')`), and Django permission content-type model names.
@@ -764,16 +764,16 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
 - Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
-- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
 
 2. Context: sessions 25 to 29 changed backend core defaults, frontend routing, offline, deep-update and guardian code, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app modularization close-out'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
-- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
 4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 

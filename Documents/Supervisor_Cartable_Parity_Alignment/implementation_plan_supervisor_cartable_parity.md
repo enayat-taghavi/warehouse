@@ -64,9 +64,9 @@
 
 | فایل | نوع تغییر | شرح تغییرات |
 | :--- | :---: | :--- |
-| [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | [MODIFY] | افزودن فیلدهای مرتب‌سازی هوشمند، توابع سورت و هندلر کلیک بیرونی، بهبود فیلترهای اسناد و شمارش |
-| [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) | [MODIFY] | بازطراحی کامل کارت‌های انبارگردانی و اسناد، افزودن کامپوننت مرتب‌سازی هوشمند، نوار اکشن گروهی و هماهنگ‌سازی تم رنگی |
-| [`supervisor-dashboard.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.css) | [MODIFY] | افزودن استایل‌ها و انیمیشن‌های مورد نیاز کارت‌ها و منوی شناور مرتب‌سازی |
+| [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | [MODIFY] | افزودن فیلدهای مرتب‌سازی هوشمند، توابع سورت و هندلر کلیک بیرونی، بهبود فیلترهای اسناد و شمارش |
+| [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) | [MODIFY] | بازطراحی کامل کارت‌های انبارگردانی و اسناد، افزودن کامپوننت مرتب‌سازی هوشمند، نوار اکشن گروهی و هماهنگ‌سازی تم رنگی |
+| [`supervisor-dashboard.css`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.css) | [MODIFY] | افزودن استایل‌ها و انیمیشن‌های مورد نیاز کارت‌ها و منوی شناور مرتب‌سازی |
 
 ---
 

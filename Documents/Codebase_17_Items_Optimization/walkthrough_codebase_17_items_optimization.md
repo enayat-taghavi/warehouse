@@ -19,27 +19,27 @@
 ## 📂 خلاصه تغییرات فایل‌ها
 
 ### ۱. بک‌اند (Django):
-1. **[`config/settings.py`](file:///e:/warehouse%20project/warehouse-backend/config/settings.py):**
+1. **[`config/settings.py`](file:///e:/warehouse%20project/backend/config/settings.py):**
    - خواندن `SECRET_KEY`، `DEBUG` و `ALLOWED_HOSTS` از محیط.
-2. **[`inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py):**
+2. **[`inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py):**
    - پیاده‌سازی اسکوپ انبار در `ItemViewSet.get_queryset` و `ItemFieldDefinitionViewSet.get_queryset`.
    - تنظیم سقف امنیتی `max_page_size = 500` در `ItemPagination`.
    - اصلاح منطق شرط انبار در `CountTaskViewSet.get_queryset`.
-3. **[`accounts/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py):**
+3. **[`accounts/serializers.py`](file:///e:/warehouse%20project/backend/accounts/serializers.py):**
    - تنظیم `user.requires_password_change = True` هنگام ایجاد کاربر با رمز پیش‌فرض.
 
 ### ۲. فرانت‌اند (Angular):
-1. **[`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts):**
+1. **[`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts):**
    - تطبیق شرط نمایش منوی `count-tracking` در سایدبار با تمام مجوزهای مجاز.
-2. **[`users.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts):**
+2. **[`users.ts`](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts):**
    - حذف انتساب `payload.password = payload.national_code`.
 3. **داشبوردها (`supervisor-dashboard.ts`, `manager-review.ts`, `customs.ts`, `counter-dashboard.ts`):**
    - حذف `page_size: 100000` از پارامترهای خروجی اکسل.
-4. **[`offline-sync.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts):**
+4. **[`offline-sync.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts):**
    - بروزرسانی کش IndexedDB متناظر هنگام دریافت پیام وب‌سوکت در `notifyDataUpdated`.
-5. **[`global-error-handler.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/error/global-error-handler.ts) و [`app.config.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/app.config.ts):**
+5. **[`global-error-handler.ts`](file:///e:/warehouse%20project/frontend/src/app/core/error/global-error-handler.ts) و [`app.config.ts`](file:///e:/warehouse%20project/frontend/src/app/app.config.ts):**
    - پیاده‌سازی و ثبت سراسری مدیریت خطاهای ناشناخته قالب و جلوگیری از کرش UI.
-6. **[`audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html):**
+6. **[`audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html):**
    - غیرفعال‌سازی دکمه‌های پاکسازی لاگ و بازگردانی زمان مشخص در حالت آفلاین (`[disabled]="!isOnline"`).
 
 ---

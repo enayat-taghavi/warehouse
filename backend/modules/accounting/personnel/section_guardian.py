@@ -280,9 +280,9 @@ class SectionGuardian:
                 all_passed = False
 
             # چک ۵: بررسی فایل‌های فرانت‌اند
-            front_model_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'models', 'personnel.model.ts')
-            front_api_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'api', 'personnel-api.service.ts')
-            front_html_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'personnel', 'base-settings', 'base-settings.html')
+            front_model_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'models', 'personnel.model.ts')
+            front_api_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'api', 'personnel-api.service.ts')
+            front_html_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'personnel', 'base-settings', 'base-settings.html')
             
             with open(front_model_path, 'r', encoding='utf-8') as f:
                 model_content = f.read()
@@ -311,18 +311,18 @@ class SectionGuardian:
                 all_passed = False
 
             # ارزیابی ماژول مستقل جدید در سایدبار
-            org_comp_ts = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'organization', 'projects-and-sections', 'projects-and-sections.ts')
-            org_comp_html = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'organization', 'projects-and-sections', 'projects-and-sections.html')
-            routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'app.routes.ts')
-            layout_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'layout', 'layout.ts')
+            org_comp_ts = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'organization', 'projects-and-sections', 'projects-and-sections.ts')
+            org_comp_html = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'organization', 'projects-and-sections', 'projects-and-sections.html')
+            routes_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'app.routes.ts')
+            layout_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'layout', 'layout.ts')
 
             comp_exists = os.path.exists(org_comp_ts) and os.path.exists(org_comp_html)
             checks.append(("کامپوننت مستقل ProjectsAndSectionsComponent", comp_exists, "کامپوننت اختصاصی در src/app/components/organization مستقر است"))
             if not comp_exists:
                 all_passed = False
 
-            accounting_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'accounting.routes.ts')
-            nav_items_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'nav-items.ts')
+            accounting_routes_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'modules', 'accounting', 'accounting.routes.ts')
+            nav_items_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'modules', 'accounting', 'nav-items.ts')
             
             with open(routes_path, 'r', encoding='utf-8') as f:
                 routes_content = f.read()
@@ -344,7 +344,7 @@ class SectionGuardian:
             if not has_sidebar_item:
                 all_passed = False
 
-            dist_index_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'dist', 'warehouse-app', 'browser', 'index.html')
+            dist_index_path = os.path.join(BASE_DIR, '..', 'frontend', 'dist', 'warehouse-app', 'browser', 'index.html')
             build_ok = os.path.exists(dist_index_path) and os.path.getsize(dist_index_path) > 0
             checks.append(("بیلد پروداکشن Angular (AOT Bundle)", build_ok, f"فایل dist/warehouse-app/browser/index.html حاضر است (حجم: {os.path.getsize(dist_index_path) if build_ok else 0} بایت)"))
             if not build_ok:
@@ -399,7 +399,7 @@ class SectionGuardian:
                 all_passed = False
 
             # ۵. بررسی سلکتور پروژه در BaseSettings فرانت‌اند
-            base_settings_ts = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'personnel', 'base-settings', 'base-settings.ts')
+            base_settings_ts = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'personnel', 'base-settings', 'base-settings.ts')
             with open(base_settings_ts, 'r', encoding='utf-8') as f:
                 ts_content = f.read()
             has_proj_selector = 'selectedProjectId' in ts_content and 'cloneForSelectedProject' in ts_content
@@ -428,7 +428,7 @@ class SectionGuardian:
         checks = []
 
         try:
-            front_app = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app')
+            front_app = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app')
             employee_hubs = ['employee-attendance', 'employee-fleet', 'employee-invoices',
                              'employee-petty-cash', 'employee-new-vehicle', 'employee-new-personnel']
 
@@ -635,7 +635,7 @@ class SectionGuardian:
                 transaction.set_rollback(True)
 
             # چک پایانی: بیلد نهایی فرانت‌اند
-            dist_index_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'dist', 'warehouse-app', 'browser', 'index.html')
+            dist_index_path = os.path.join(BASE_DIR, '..', 'frontend', 'dist', 'warehouse-app', 'browser', 'index.html')
             bundle_ok = os.path.exists(dist_index_path) and os.path.getsize(dist_index_path) > 0
             checks.append(("آزمون بیلد و تولید باندل پروداکشن بدون خطای کامپایل (ng build)", bundle_ok, "بسته‌های Angular AOT با کد خروجی صفر کامپایل شدند"))
             if not bundle_ok:
@@ -659,7 +659,7 @@ class SectionGuardian:
         checks = []
 
         try:
-            front_base = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app')
+            front_base = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app')
             emp_dir = os.path.join(front_base, 'components', 'finance', 'employee')
 
             submodules = [

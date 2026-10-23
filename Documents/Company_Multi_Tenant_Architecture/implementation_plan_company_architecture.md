@@ -231,13 +231,13 @@ def forward_migrate_companies(apps, schema_editor):
 ### شرح فازها:
 
 #### فاز ۱: زیرساخت بک‌اند و پایگاه داده (Backend Core & Migration)
-* تعریف کلاس `Company` و `UserCompanyAccess` در [models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py).
+* تعریف کلاس `Company` و `UserCompanyAccess` در [models.py](file:///e:/warehouse%20project/backend/personnel/models.py).
 * افزودن کلید خارجی `company` به `FinancialProject` با `null=True`.
 * اعمال مایگریشن اسکیما (`makemigrations`).
 * اجرای مایگریشن داده اختصاصی برای ساخت دو شرکت «پاینده توان ساینا» و «فارس عالیش» و تخصیص ۳ پروژه به آن‌ها بدون دستکاری داده‌های قبلی.
 
 #### فاز ۲: لایه وب‌سرویس و منطق دسترسی (REST APIs & RBAC)
-* ایجاد [CompanySerializer](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py) و متدهای اعتبارسنجی شناسه ملی.
+* ایجاد [CompanySerializer](file:///e:/warehouse%20project/backend/personnel/serializers.py) و متدهای اعتبارسنجی شناسه ملی.
 * ایجاد `CompanyViewSet` با متدهای استاندارد CRUD و متد سفارشی `user_available`.
 * افزودن فیلتر `company_id` در `FinancialProjectViewSet` و اعمال دسترسی بر مبنای شرکت فعال.
 
@@ -249,7 +249,7 @@ def forward_migrate_companies(apps, schema_editor):
 
 #### فاز ۴: صفحه اختصاصی مدیریت شرکت‌ها و تطبیق فرم‌ها (Company Hub & Form Scoping)
 * ساخت کامپوننت مستقل `CompaniesManagementComponent` در مسیر `src/app/components/finance/companies/`.
-* افزودن مسیر `/app/finance/companies` در [accounting.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/modules/accounting/accounting.routes.ts) و افزودن منو در سایدبار ذیل تنظیمات پایه.
+* افزودن مسیر `/app/finance/companies` در [accounting.routes.ts](file:///e:/warehouse%20project/frontend/src/app/modules/accounting/accounting.routes.ts) و افزودن منو در سایدبار ذیل تنظیمات پایه.
 * پیاده‌سازی جدول اطلاعات حقوقی شرکت‌ها، سرچ زنده و مودال ثبت/ویرایش با آپلود لوگو.
 * فیلتر شدن هوشمند پروژه‌های قابل انتخاب در فرم‌های ثبت پرسنل و ناوگان بر اساس شرکت فعال هدر.
 
@@ -265,7 +265,7 @@ def forward_migrate_companies(apps, schema_editor):
 ### ۷.۱. تست‌های خودکار بک‌اند (Automated Django Tests)
 1. **تست سلامت مایگریشن داده:** بررسی اینکه پس از مایگریشن، پروژه‌های دالان و پارسیان متعلق به شرکت PTS و انبارداری متعلق به FA هستند.
 2. **تست عایق‌سازی دسترسی (RBAC Isolation):** کاربری که فقط دسترسی به شرکت فارس عالیش دارد، نباید بتواند لیست پروژه‌ها یا پرسنل پاینده توان ساینا را دریافت کند.
-3. **تست عدم شکست خروجی دیسکت‌های بیمه:** اجرای مجدد آزمون‌های [test_project_exports.py](file:///e:/warehouse%20project/warehouse-backend/personnel/test_project_exports.py) برای اطمینان از اینکه دیسکت‌های بیمه پروژه شیراز و پروژه تهران دقیقاً با همان کدهای کارگاه و پرسنل مربوطه بدون تغییر تولید می‌شوند.
+3. **تست عدم شکست خروجی دیسکت‌های بیمه:** اجرای مجدد آزمون‌های [test_project_exports.py](file:///e:/warehouse%20project/backend/personnel/test_project_exports.py) برای اطمینان از اینکه دیسکت‌های بیمه پروژه شیراز و پروژه تهران دقیقاً با همان کدهای کارگاه و پرسنل مربوطه بدون تغییر تولید می‌شوند.
 
 ### ۷.۲. تست‌های واحد فرانت‌اند (Type 1 DOM/Component Tests)
 1. **تست لاگین تک‌شرکتی و چندشرکتی:** تأیید اینکه برای کاربر با ۱ شرکت، کانتکست بلافاصله پر شده و مودال باز نمی‌شود؛ و برای کاربر چندشرکتی مودال باز شده و با کلیک روی کارت شرکت، کانتکست ست می‌شود.

@@ -42,7 +42,7 @@ graph TD
 
 ### 🔹 فاز ۱: اصلاح باگ‌های حیاتی موتور بازگردانی داده (Rollback Engine)
 
-#### [MODIFY] [rollback_service.py](file:///e:/warehouse%20project/warehouse-backend/accounts/rollback_service.py)
+#### [MODIFY] [rollback_service.py](file:///e:/warehouse%20project/backend/accounts/rollback_service.py)
 * **محافظت از فیلدهای حساس و مقادیر ماسک‌شده:**
   * در متد `revert_log_entry` و `get_revert_preview`، اگر مقدار فیلدی در `before_state` حاوی رشته ماسک‌شده (نظیر `'********'`) باشد یا نام فیلد در `SENSITIVE_KEYS` قرار داشته باشد و مقدار پنهان شده باشد، از بازنویسی آن روی رکورد جلوگیری شده و مقدار واقعی فعلی دست‌نخورده باقی می‌ماند.
 * **قفل بدبینانه سطری (`select_for_update`):**
@@ -56,7 +56,7 @@ graph TD
 
 ### 🔹 فاز ۲: رفع باگ‌های کوئری، امنیت دسترسی (RBAC) و چندانبارگی
 
-#### [MODIFY] [accounts/views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [accounts/views.py](file:///e:/warehouse%20project/backend/accounts/views.py)
 * **اصلاح فیلتر `warehouse=ALL`:**
   * در `AuditLogViewSet.get_queryset`، بررسی `if warehouse_id and str(warehouse_id).upper() != 'ALL':` تا ارسال مقدار `'ALL'` منجر به خطای دیتابیس نشود.
 * **ایزولاسیون قلمرو انبار در بازگردانی گروهی (`bulk_revert`):**
@@ -70,7 +70,7 @@ graph TD
 
 ### 🔹 فاز ۳: پوشش نقاط کور ممیزی در ماژول انبارداری و کالاها
 
-#### [MODIFY] [inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 * **ثبت لاگ در ویرایش گروهی کالاها (`bulk_update`):**
   * فراخوانی `log_audit_event` با `module='docs', action='BULK_UPDATE'` و ثبت تعداد و شناسه‌های رکوردهای ویرایش‌شده.
 * **ثبت لاگ در تخصیص و ارجاع گروهی (`bulk_assign`):**
@@ -86,7 +86,7 @@ graph TD
 
 ### 🔹 فاز ۴: پوشش نقاط کور ممیزی در کاربران، نقش‌ها و تنظیمات
 
-#### [MODIFY] [accounts/views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [accounts/views.py](file:///e:/warehouse%20project/backend/accounts/views.py)
 * **ثبت لاگ ممیزی در ایجاد، ویرایش و حذف نقش‌ها (`CustomRoleViewSet`):**
   * ثبت لاگ با `module='users', target_model='CustomRole'` همراه با تفاضل دسترسی‌های اعطاشده/حذف‌شده.
 * **ثبت لاگ ممیزی در تغییر و بازنشانی رمز عبور (`change_password` و `admin_reset_password`):**
@@ -94,7 +94,7 @@ graph TD
 * **ثبت لاگ ممیزی در ایمپورت اکسل کاربران و نقش‌ها:**
   * ثبت لاگ `action='IMPORT'` برای عملیات بارگذاری دسته‌ای کاربران.
 
-#### [MODIFY] [warehouses/views.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/views.py)
+#### [MODIFY] [warehouses/views.py](file:///e:/warehouse%20project/backend/warehouses/views.py)
 * **ثبت لاگ ممیزی در تغییر تنظیمات سیستم و انبار (`SettingsViewSet`):**
   * ثبت رویداد `module='settings', action='UPDATE', severity='warning'` هنگام ذخیره تغییرات پیکربندی.
 
@@ -102,7 +102,7 @@ graph TD
 
 ### 🔹 فاز ۵: بهینه‌سازی فرانت‌اند، وب‌سوکت و خروجی اکسل
 
-#### [MODIFY] [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
+#### [MODIFY] [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
 * **اعمال فیلتر تاریخ روی پیام‌های زنده وب‌سوکت:**
   * به‌روزرسانی متد `isFilterMatch` جهت بررسی `fromDate` و `toDate` روی تاریخ لاگ جدید (`log.created_at`).
 * **مدیریت پاکسازی لاگ‌های ورود:**
@@ -110,11 +110,11 @@ graph TD
 * **بهینه‌سازی نمایش خلاصه تفاضل در اکسل:**
   * محدودسازی طول متن تفاضل در خروجی اکسل جهت جلوگیری از سرریز سلول‌ها.
 
-#### [MODIFY] [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
+#### [MODIFY] [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
 * **دکمه و مدال پاکسازی در تب تاریخچه ورود:**
   * افزودن دکمه پاکسازی لاگ‌ها به نوار ابزار تب تاریخچه ورود کاربران برای کاربران دارای مجوز.
 
-#### [MODIFY] [audit-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/audit-api.service.ts)
+#### [MODIFY] [audit-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/audit-api.service.ts)
 * **متدهای ارتباطی پاکسازی لاگین:**
   * افزودن متد `purgeLoginLogs(req)` و `getLoginPurgePreview(req)`.
 

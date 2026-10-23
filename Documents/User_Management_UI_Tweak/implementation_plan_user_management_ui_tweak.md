@@ -8,12 +8,12 @@ This plan addresses minor UI adjustments in the User Management system:
 
 ### Navigation (Sidebar)
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - Change the `label` for the `users` route in `SYSTEM_NAV_ITEMS` from "کاربران و گیت‌پاس" to "کاربران و نقش ها".
 
 ### Users Component
 
-#### [MODIFY] [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts)
+#### [MODIFY] [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts)
 - Inject `ConfirmDialogService` into the `Users` component.
 - Refactor the `resetPassword(id: number)` method to be `async` and use `await this.confirmDialog.open({...})` instead of the native `confirm()` dialog.
 

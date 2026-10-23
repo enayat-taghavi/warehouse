@@ -9,11 +9,11 @@
 ## ۱. دستاوردهای کلیدی پیاده‌سازی
 
 1. **رجیستری جامع فیلدهای مالی و کالا:**
-   - تعریف `DEFAULT_DOC_FIELD_PERMISSIONS` در [`field-config.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/field-config.model.ts) شامل کلیه فیلدهای مدرک (`DocTask`)، مشخصات عمومی کالا (`Item`) و فیلدهای تعریف‌شده داینامیک انبار (`ItemFieldDefinition`).
+   - تعریف `DEFAULT_DOC_FIELD_PERMISSIONS` در [`field-config.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/field-config.model.ts) شامل کلیه فیلدهای مدرک (`DocTask`)، مشخصات عمومی کالا (`Item`) و فیلدهای تعریف‌شده داینامیک انبار (`ItemFieldDefinition`).
    - ایجاد تابع اختصاصی `mergeDocFieldPermissions()` برای ادغام تنظیمات پیش‌فرض مالی با مقادیر ذخیره‌شده و فیلدهای پویا.
 
 2. **پنل مدیریت پیشرفته در تنظیمات سراسری و انبار:**
-   - اضافه شدن تب «فیلدهای کارتابل مالی» (`doc_fields`) در [`settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html) و [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html).
+   - اضافه شدن تب «فیلدهای کارتابل مالی» (`doc_fields`) در [`settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html) و [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html).
    - امکان تغییر عنوان نمایشی فیلدها (`Custom Label`) همراه با دکمه بازنشانی تک‌فیلدی (↺) و بازنشانی کل فیلدها به پیش‌فرض کارخانه.
    - قابلیت فعال/غیرفعال‌سازی نمایش (`visible`) و قابلیت ویرایش (`editable`).
    - دسته‌بندی و جستجوی آنی در میان فیلدها.
@@ -32,11 +32,11 @@
 
 | فایل | مسیر | توضیحات تغییر |
 | :--- | :--- | :--- |
-| **`field-config.model.ts`** | `warehouse-front/src/app/core/models/` | افزودن `DEFAULT_DOC_FIELD_PERMISSIONS` و `mergeDocFieldPermissions` |
-| **`services.py`** | `warehouse-backend/warehouses/` | افزودن `'field_permissions_doc': {}` به `DEFAULT_SETTINGS` |
-| **`settings.ts` & `.html`** | `warehouse-front/src/app/components/settings/` | افزودن تب، منطق و جدول تنظیم فیلدهای مالی در سطح سراسری |
-| **`wh-settings.ts` & `.html`** | `warehouse-front/src/app/components/wh-settings/` | افزودن تب، منطق و جدول تنظیم فیلدهای مالی در سطح انبار |
-| **`customs.ts` & `.html`** | `warehouse-front/src/app/components/customs/` | اتصال به سرویس تنظیمات، رندر داینامیک فرم و ذخیره‌سازی دوگانه |
+| **`field-config.model.ts`** | `frontend/src/app/core/models/` | افزودن `DEFAULT_DOC_FIELD_PERMISSIONS` و `mergeDocFieldPermissions` |
+| **`services.py`** | `backend/warehouses/` | افزودن `'field_permissions_doc': {}` به `DEFAULT_SETTINGS` |
+| **`settings.ts` & `.html`** | `frontend/src/app/components/settings/` | افزودن تب، منطق و جدول تنظیم فیلدهای مالی در سطح سراسری |
+| **`wh-settings.ts` & `.html`** | `frontend/src/app/components/wh-settings/` | افزودن تب، منطق و جدول تنظیم فیلدهای مالی در سطح انبار |
+| **`customs.ts` & `.html`** | `frontend/src/app/components/customs/` | اتصال به سرویس تنظیمات، رندر داینامیک فرم و ذخیره‌سازی دوگانه |
 
 ---
 

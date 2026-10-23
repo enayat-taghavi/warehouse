@@ -30,16 +30,16 @@
 
 | فایل | لایه | وضعیت | شرح تغییرات |
 | :--- | :---: | :---: | :--- |
-| [`warehouse-backend/common/date_utils.py`](file:///e:/warehouse%20project/warehouse-backend/common/date_utils.py) | بک‌اند | **جدید** | ماژول مرکزی حاوی `parse_date_smart`، `format_to_shamsi_str`، `normalize_digits`، پشتیبانی `make_aware` و مسیر کمکی `_parse_fallback_digits`. |
-| [`warehouse-backend/common/tests/test_date_utils.py`](file:///e:/warehouse%20project/warehouse-backend/common/tests/test_date_utils.py) | بک‌اند | **جدید** | ۹ آزمون جامع و پیشرفته شامل مسیر سریع، ارقام فارسی/عربی، پدینگ تک‌رقمی، اعتبارسنجی مرز ماه‌ها و پارامتر `make_aware`. |
-| [`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | بک‌اند | **اصلاح** | احیای لاگر ماژول، اتصال `_parse_date_flexible` به موتور سراسری `parse_date_smart` و حذف ایمپورت‌های مرده. |
-| [`warehouse-backend/inventory/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py) | بک‌اند | **اصلاح** | استفاده از `parse_date_smart` در `DocTaskSerializer` برای تاریخ‌های ورودی فاکتورها. |
-| [`warehouse-front/src/app/core/utils/date-utils.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/utils/date-utils.ts) | فرانت‌اند | **جدید** | ماژول همگام تایپ‌اسکریپت شامل `parseSmartDate` و `formatToStandardShamsi` با اعتبارسنجی طول ماه‌ها (`Utils.monthLength`). |
-| [`warehouse-front/src/app/core/utils/date-utils.spec.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/utils/date-utils.spec.ts) | فرانت‌اند | **جدید** | ۲۹ تست خودکار تحت فریم‌ورک Vitest با پوشش ۱۰۰٪ کلیه سناریوها و مرزهای تقویمی. |
-| [`warehouse-front/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts) | فرانت‌اند | **اصلاح** | اتصال فیلترهای تاریخ ممیزی به موتور مرکزی با حفظ نیمه‌شب UTC (`Date.UTC`) و حذف متدهای مرده محاسباتی. |
-| [`warehouse-front/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | فرانت‌اند | **اصلاح** | اتصال `convertToShamsiDateString` با حفظ مقدار خام ورودی جهت جلوگیری از پاک شدن داده کاربر. |
-| [`warehouse-front/angular.json`](file:///e:/warehouse%20project/warehouse-front/angular.json) | فرانت‌اند | **اصلاح** | افزودن `jalali-ts` به `allowedCommonJsDependencies` جهت بیلد پروداکشن ۱۰۰٪ بدون اخطار. |
-| [`warehouse-front/src/app/components/reports/reports.spec.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.spec.ts) | فرانت‌اند | **اصلاح** | افزودن فیلد `warehouse_required_for_dynamic: false` به ماک و رفع خطای کامپایل سوئیت تست. |
+| [`backend/common/date_utils.py`](file:///e:/warehouse%20project/backend/common/date_utils.py) | بک‌اند | **جدید** | ماژول مرکزی حاوی `parse_date_smart`، `format_to_shamsi_str`، `normalize_digits`، پشتیبانی `make_aware` و مسیر کمکی `_parse_fallback_digits`. |
+| [`backend/common/tests/test_date_utils.py`](file:///e:/warehouse%20project/backend/common/tests/test_date_utils.py) | بک‌اند | **جدید** | ۹ آزمون جامع و پیشرفته شامل مسیر سریع، ارقام فارسی/عربی، پدینگ تک‌رقمی، اعتبارسنجی مرز ماه‌ها و پارامتر `make_aware`. |
+| [`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | بک‌اند | **اصلاح** | احیای لاگر ماژول، اتصال `_parse_date_flexible` به موتور سراسری `parse_date_smart` و حذف ایمپورت‌های مرده. |
+| [`backend/inventory/serializers.py`](file:///e:/warehouse%20project/backend/inventory/serializers.py) | بک‌اند | **اصلاح** | استفاده از `parse_date_smart` در `DocTaskSerializer` برای تاریخ‌های ورودی فاکتورها. |
+| [`frontend/src/app/core/utils/date-utils.ts`](file:///e:/warehouse%20project/frontend/src/app/core/utils/date-utils.ts) | فرانت‌اند | **جدید** | ماژول همگام تایپ‌اسکریپت شامل `parseSmartDate` و `formatToStandardShamsi` با اعتبارسنجی طول ماه‌ها (`Utils.monthLength`). |
+| [`frontend/src/app/core/utils/date-utils.spec.ts`](file:///e:/warehouse%20project/frontend/src/app/core/utils/date-utils.spec.ts) | فرانت‌اند | **جدید** | ۲۹ تست خودکار تحت فریم‌ورک Vitest با پوشش ۱۰۰٪ کلیه سناریوها و مرزهای تقویمی. |
+| [`frontend/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts) | فرانت‌اند | **اصلاح** | اتصال فیلترهای تاریخ ممیزی به موتور مرکزی با حفظ نیمه‌شب UTC (`Date.UTC`) و حذف متدهای مرده محاسباتی. |
+| [`frontend/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | فرانت‌اند | **اصلاح** | اتصال `convertToShamsiDateString` با حفظ مقدار خام ورودی جهت جلوگیری از پاک شدن داده کاربر. |
+| [`frontend/angular.json`](file:///e:/warehouse%20project/frontend/angular.json) | فرانت‌اند | **اصلاح** | افزودن `jalali-ts` به `allowedCommonJsDependencies` جهت بیلد پروداکشن ۱۰۰٪ بدون اخطار. |
+| [`frontend/src/app/components/reports/reports.spec.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.spec.ts) | فرانت‌اند | **اصلاح** | افزودن فیلد `warehouse_required_for_dynamic: false` به ماک و رفع خطای کامپایل سوئیت تست. |
 
 ---
 

@@ -114,7 +114,7 @@ class UserDeviceSession(models.Model):
 
 ## ۴. طراحی ایجنت نگهبان ۲۸ (Phase Guardian 28 Specification)
 
-در فایل `warehouse-backend/personnel/phase_guardian_approval.py`، ایجنت نگهبان زیر افزوده خواهد شد:
+در فایل `backend/personnel/phase_guardian_approval.py`، ایجنت نگهبان زیر افزوده خواهد شد:
 
 ```python
 def audit_guardian_28_real_client_telemetry_and_conflict_engine(self) -> bool:
@@ -137,21 +137,21 @@ def audit_guardian_28_real_client_telemetry_and_conflict_engine(self) -> bool:
 ## ۵. برنامه تغییرات فایل‌ها (Proposed File Changes)
 
 ### لایه بک‌اند (Django):
-1. **[MODIFY]** `warehouse-backend/accounts/models.py`: افزودن مدل `UserDeviceSession`.
+1. **[MODIFY]** `backend/accounts/models.py`: افزودن مدل `UserDeviceSession`.
 2. **[NEW]** مایگریشن دیتابیس برای مدل جدید `UserDeviceSession`.
-3. **[MODIFY]** `warehouse-backend/accounts/views.py`: افزودن ویوهای `DeviceHeartbeatView`, `FleetSessionsListView`, `RevokeDeviceSessionView`.
-4. **[MODIFY]** `warehouse-backend/accounts/urls.py`: ثبت روت‌های تله‌متری و سشن‌ها.
-5. **[MODIFY]** `warehouse-backend/personnel/phase_guardian_approval.py`: افزودن متد `audit_guardian_28` و اجرای آن در `__main__`.
+3. **[MODIFY]** `backend/accounts/views.py`: افزودن ویوهای `DeviceHeartbeatView`, `FleetSessionsListView`, `RevokeDeviceSessionView`.
+4. **[MODIFY]** `backend/accounts/urls.py`: ثبت روت‌های تله‌متری و سشن‌ها.
+5. **[MODIFY]** `backend/personnel/phase_guardian_approval.py`: افزودن متد `audit_guardian_28` و اجرای آن در `__main__`.
 
 ### لایه فرانت‌اند (Angular 19 Standalone):
-1. **[MODIFY]** `warehouse-front/src/app/core/services/session-tab.service.ts`: ادغام با `detectClientDeviceModel` و پالس خودکار ضربان قلب به سرور.
-2. **[MODIFY]** `warehouse-front/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.ts`:
+1. **[MODIFY]** `frontend/src/app/core/services/session-tab.service.ts`: ادغام با `detectClientDeviceModel` و پالس خودکار ضربان قلب به سرور.
+2. **[MODIFY]** `frontend/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.ts`:
    * حذف داده‌های ماک.
    * تزریق `OfflineSyncService` و `HttpClient`.
    * اتصال به API ناوگان و سشن‌ها.
    * فراخوانی واقعی `triggerSync()` و `resolveConflict()`.
    * پایش تجمیعی دو دیتابیس.
-3. **[MODIFY]** `warehouse-front/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html`:
+3. **[MODIFY]** `frontend/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html`:
    * افزودن ستون‌های نام کاربر، مدل دستگاه، سیستم‌عامل، آی‌پی و دکمه ابطال سشن.
    * اتصال دکمه تخلیه صف به لودینگ واقعی.
    * تعبیه `app-conflict-resolution-modal` به جای مودال قدیمی.
@@ -169,7 +169,7 @@ def audit_guardian_28_real_client_telemetry_and_conflict_engine(self) -> bool:
 3. اجرای تست بیلد کامل فرانت‌اند: `npm run build`
 4. اجرای کامل سوئیت ۲۸ ایجنت سخت‌گیر نگهبان:
    ```bash
-   python warehouse-backend/personnel/phase_guardian_approval.py
+   python backend/personnel/phase_guardian_approval.py
    ```
    باید خروجی با تایید ۱۰۰٪ هر ۲۸ ایجنت (PASS) به پایان برسد.
 

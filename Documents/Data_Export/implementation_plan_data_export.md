@@ -17,23 +17,23 @@
 ## تغییرات پیشنهادی (Proposed Changes)
 
 ### Backend (بک‌اند)
-#### [MODIFY] [requirements.txt](file:///e:/warehouse%20project/warehouse-backend/requirements.txt)
+#### [MODIFY] [requirements.txt](file:///e:/warehouse%20project/backend/requirements.txt)
 - اضافه کردن `openpyxl` برای تولید فایل خروجی `.xlsx`
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 - اضافه کردن متد `@action(detail=False, methods=['post'])` با نام `export_excel` به `ItemViewSet`.
 - اعمال کردن منطق فیلترها (مشابه متد `getAll`) و گرفتن رکوردهای مربوطه.
 - تولید فایل اکسل با استفاده از `openpyxl` بر اساس ستون‌های درخواستی کاربر و بازگرداندن فایل در Response.
 
 ### Frontend (فرانت‌اند)
-#### [MODIFY] [item-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/item-api.service.ts)
+#### [MODIFY] [item-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/item-api.service.ts)
 - اضافه کردن متد `exportExcel(payload)` برای ارسال درخواست به سرور و دانلود فایل `Blob` دریافتی.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - افزودن state ها و متدهای مربوط به Modal دانلود (مثلا `isExportModalOpen`, `exportDataScope`, `exportColumnScope`, `selectedExportColumns`).
 - استخراج لیست تمام ستون‌های موجود برای فرم انتخاب دستی ستون‌ها.
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - افزودن دکمه «دانلود داده‌ها» در نوار ابزار بالای صفحه یا در کنار دکمه‌های لیبلینگ.
 - طراحی و پیاده‌سازی Modal دانلود با گزینه‌های Radio Button و لیست Checkbox برای انتخاب ستون‌ها.
 

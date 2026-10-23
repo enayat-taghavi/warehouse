@@ -13,7 +13,7 @@
 * هدر اصلی صفحه سبک و خلوت‌تر شد و دکمه جدید **«عملکرد تیم»** با آیکون چارت و استایل مدرن به آن افزوده شد.
 
 ### ۲. فعال‌سازی قابلیت کلیک ایمن روی سطرهای جدول (Phase 1)
-* به کامپوننت اشتراکی [data-table.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/data-table/data-table.component.ts) خروجی `@Output() rowClick` اضافه شد.
+* به کامپوننت اشتراکی [data-table.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/data-table/data-table.component.ts) خروجی `@Output() rowClick` اضافه شد.
 * منطق کلیک به گونه‌ای ایمن‌سازی شد که با کلیک روی چک‌باکس‌ها، دکمه‌های لغو، اینپوت‌ها، لینک‌ها یا منوها تداخلی نداشته باشد.
 * استایل بصری `cursor-pointer` و هاور نرم روی سطرهای کلیک‌پذیر اعمال گردید.
 
@@ -31,7 +31,7 @@
 * تمام محاسبات به صورت بلادرنگ از حافظه کلاینت انجام می‌شود و هیچ باری به سرور تحمیل نمی‌کند.
 
 ### ۵. بهینه‌سازی بک‌اند (Phase 4)
-* در [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)، متد `get_queryset` در `CountTaskViewSet` با `Prefetch('history')` بهینه‌سازی شد تا از بروز کوئری N+1 در لود تسک‌ها جلوگیری شود.
+* در [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)، متد `get_queryset` در `CountTaskViewSet` با `Prefetch('history')` بهینه‌سازی شد تا از بروز کوئری N+1 در لود تسک‌ها جلوگیری شود.
 * متد `export_excel` با پارامتر `chunk_size=500` برای سازگاری کامل با prefetch به‌روزرسانی شد.
 
 ---
@@ -40,11 +40,11 @@
 
 | نام فایل | وضعیت | شرح تغییرات |
 | :--- | :--- | :--- |
-| [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) | اصلاح‌شده | انتقال سلکتور انبار، افزودن دکمه عملکرد تیم، دکمه گردش سطر، و قالب‌های Drawer و Performance Modal |
-| [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts) | اصلاح‌شده | متدهای باز و بستن Drawer، محاسبات آماری سرعت و دقت افراد، مدیریت کلید ESC و فرمترهای تایم‌لاین |
-| [count-tracking.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.css) | اصلاح‌شده | انیمیشن‌های اسلاید برای کشوی جانبی |
-| [data-table.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/data-table/data-table.component.ts) | اصلاح‌شده | افزودن `@Output() rowClick` و متد `onRowClicked` بدون تداخل با المان‌های تعاملی |
-| [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | اصلاح‌شده | بهینه‌سازی کوئری‌ست با `Prefetch` و تنظیم `chunk_size` در اکسپورت |
+| [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) | اصلاح‌شده | انتقال سلکتور انبار، افزودن دکمه عملکرد تیم، دکمه گردش سطر، و قالب‌های Drawer و Performance Modal |
+| [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts) | اصلاح‌شده | متدهای باز و بستن Drawer، محاسبات آماری سرعت و دقت افراد، مدیریت کلید ESC و فرمترهای تایم‌لاین |
+| [count-tracking.css](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.css) | اصلاح‌شده | انیمیشن‌های اسلاید برای کشوی جانبی |
+| [data-table.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/data-table/data-table.component.ts) | اصلاح‌شده | افزودن `@Output() rowClick` و متد `onRowClicked` بدون تداخل با المان‌های تعاملی |
+| [views.py](file:///e:/warehouse%20project/backend/inventory/views.py) | اصلاح‌شده | بهینه‌سازی کوئری‌ست با `Prefetch` و تنظیم `chunk_size` در اکسپورت |
 
 ---
 

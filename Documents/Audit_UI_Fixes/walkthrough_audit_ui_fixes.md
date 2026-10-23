@@ -34,8 +34,8 @@
 ---
 
 ### ۳. فایل‌های ویرایش‌شده (Modified Files)
-- [`warehouse-front/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
-- [`warehouse-front/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
+- [`frontend/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
+- [`frontend/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
 - [`Documents/Audit_UI_Fixes/task_audit_ui_fixes.md`](file:///e:/warehouse%20project/Documents/Audit_UI_Fixes/task_audit_ui_fixes.md)
 - [`Documents/Master_Log.md`](file:///e:/warehouse%20project/Documents/Master_Log.md)
 

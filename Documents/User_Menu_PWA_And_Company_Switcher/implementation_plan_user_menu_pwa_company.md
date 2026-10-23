@@ -40,7 +40,7 @@
 ## ۳. فازبندی گام‌به‌گام و جزئیات تغییرات فایل‌ها (Phased Implementation)
 
 ### فاز ۱: سرویس اختصاصی هوشمند نصب PWA (`PwaInstallService`)
-* **فایل جدید:** `warehouse-front/src/app/core/services/pwa-install.service.ts`
+* **فایل جدید:** `frontend/src/app/core/services/pwa-install.service.ts`
 * **شرح وظایف:**
   * گوش دادن به رویداد `window.addEventListener('beforeinstallprompt', evt)` و ذخیره ارجاع آن در یک Signal.
   * تشخیص اجرای اپلیکیشن در حالت وب‌اپ نصب‌شده (`display-mode: standalone` یا `window.navigator.standalone`).
@@ -50,8 +50,8 @@
 
 ### فاز ۲: بازطراحی قالب و منطق منوی کاربری (`UserMenuComponent`)
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/shared/components/user-menu/user-menu.component.html`
-  * `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts`
+  * `frontend/src/app/shared/components/user-menu/user-menu.component.html`
+  * `frontend/src/app/shared/components/user-menu/user-menu.component.ts`
 * **تغییرات کد:**
   * حذف خطوط ۲۱ تا ۸۱ در `user-menu.component.html` (کارت و ساب‌منوی انتخاب شرکت).
   * پاکسازی کدهای TypeScript مرتبط (`isCompanySubmenuOpen`, `toggleCompanySubmenu`, `selectCompanyFromMenu`, `openCompanySelectionModal`).
@@ -68,8 +68,8 @@
 
 ### فاز ۳: هوشمندسازی سوئیچر شرکت برای افراد تک‌شرکتی و چندشرکتی
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/components/organization/company-switcher/company-switcher.ts`
-  * `warehouse-front/src/app/components/organization/company-switcher/company-switcher.html`
+  * `frontend/src/app/components/organization/company-switcher/company-switcher.ts`
+  * `frontend/src/app/components/organization/company-switcher/company-switcher.html`
 * **تغییرات منطقی:**
   * اضافه کردن یک Getter به نام `isMultiCompanyUser`:
     ```typescript
@@ -88,8 +88,8 @@
 
 ### فاز ۴: استانداردسازی ارگونومی هدر موبایل (Icon-Only Mode)
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/components/organization/company-switcher/company-switcher.html`
-  * `warehouse-front/src/app/components/organization/company-switcher/company-switcher.css`
+  * `frontend/src/app/components/organization/company-switcher/company-switcher.html`
+  * `frontend/src/app/components/organization/company-switcher/company-switcher.css`
 * **تغییرات طراحی:**
   * در اندازه‌های موبایل (`sm:hidden`):
     * حذف کامل متن‌های نام و کد شرکت از روی دکمه در نوار هدر.
@@ -102,15 +102,15 @@
 
 ### فاز ۵: افزودن سوئیچر شرکت به هدر مرکز عملیات
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/components/operations/operations-layout/operations-layout.html`
-  * `warehouse-front/src/app/components/operations/operations-layout/operations-layout.ts`
+  * `frontend/src/app/components/operations/operations-layout/operations-layout.html`
+  * `frontend/src/app/components/operations/operations-layout/operations-layout.ts`
 * **تغییرات:**
   * ایمپورت `CompanySwitcherComponent` در `operations-layout.ts`.
   * درج `<app-company-switcher class="shrink-0"></app-company-switcher>` در کنار `<app-user-menu>` در هدر عملیات.
 
 ### فاز ۶: به‌روزرسانی تست‌ها و اعتبارسنجی نهایی
 * **فایل‌های تست:**
-  * `warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts`
+  * `frontend/src/app/shared/components/user-menu/user-menu.component.spec.ts`
   * ایجاد `pwa-install.service.spec.ts`
   * ایجاد یا تکمیل تست برای `company-switcher`
 * **فرمان‌های اعتبارسنجی:**

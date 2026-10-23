@@ -6,7 +6,8 @@ try:
 except Exception:
     pass
 
-backend_dir = r"e:\warehouse project\warehouse-backend"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_dir = os.path.join(REPO_ROOT, "backend")
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 import backend_paths
@@ -45,7 +46,7 @@ def verify_phase5():
             errors.append(f"وضعیت تسک E2E-ITEM-09 برابر {task9.status} است، انتظار: FINAL_APPROVED")
 
     # 2. بررسی سناریو ۱۰ (فایل خروجی اکسل)
-    excel_path = r"e:\warehouse project\Documents\Browser_E2E_Comprehensive_Testing\inventory_e2e_export.xlsx"
+    excel_path = os.path.join(REPO_ROOT, "Documents", "Browser_E2E_Comprehensive_Testing", "inventory_e2e_export.xlsx")
     if not os.path.exists(excel_path) or os.path.getsize(excel_path) < 1000:
         errors.append("فایل خروجی اکسل تولید نشده یا حجم نامعتبر دارد.")
     else:
@@ -59,7 +60,7 @@ def verify_phase5():
             errors.append(f"خطا در اعتبارسنجی ساختار فایل اکسل: {e}")
 
     # 3. بررسی فایل‌های اسکرین‌شات فاز ۵
-    screenshot_dir = r"e:\warehouse project\Documents\Browser_E2E_Comprehensive_Testing\screenshots"
+    screenshot_dir = os.path.join(REPO_ROOT, "Documents", "Browser_E2E_Comprehensive_Testing", "screenshots")
     expected_screens = [
         'phase5_scenario9_01_draft_saved.png',
         'phase5_scenario9_02_draft_persisted_after_refresh.png',

@@ -41,16 +41,16 @@ graph TD
 
 ## 📂 فایل‌های هدف و تغییرات پیشنهادی
 
-### [بک‌اند] Backend (`warehouse-backend`)
+### [بک‌اند] Backend (`backend`)
 
-#### [MODIFY] `warehouse-backend/communications/broadcast.py`
+#### [MODIFY] `backend/communications/broadcast.py`
 - حذف ارسال کانتکست `request` دارای کاربر به `MessageSerializer` در توابع `broadcast_message_ws` و `broadcast_message_updated_ws` تا فیلد `is_me` به صورت پیش‌فرض `False` برودکست شود و کلاینت‌ها بر اساس هویت خود تصمیم بگیرند.
 
 ---
 
-### [فرانت‌اند] Frontend (`warehouse-front`)
+### [فرانت‌اند] Frontend (`frontend`)
 
-#### [MODIFY] `warehouse-front/proxy.conf.json`
+#### [MODIFY] `frontend/proxy.conf.json`
 - اضافه کردن روت پروکسی برای سوکت:
 ```json
 "/ws": {
@@ -61,13 +61,13 @@ graph TD
 }
 ```
 
-#### [MODIFY] `warehouse-front/src/app/core/services/communication.service.ts`
+#### [MODIFY] `frontend/src/app/core/services/communication.service.ts`
 - اضافه کردن متد کمکی برای دریافت شناسه کاربر لاگین‌شده از توکن JWT یا `localStorage`.
 - در متدهای `handleNewMessage` و `handleUpdatedMessage`، محاسبه مستقیم `msg.is_me = (msg.sender === currentUserId)`.
 - تصحیح شرط اجرای `playNotificationSound()` تا برای پیام‌های دریافتی از دیگران صددرصد صدا پخش شود.
 - اضافه کردن شنود رویدادهای `document.addEventListener('visibilitychange')` و `window.addEventListener('online')` برای اتصال مجدد هوشمند در موبایل.
 
-#### [MODIFY] `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
+#### [MODIFY] `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
 - تزریق `AuthService` در کامپوننت.
 - اصلاح تابع `getConversationTitle(conv)` با استفاده از شناسه کاربر جاری از `auth.user()?.id`.
 

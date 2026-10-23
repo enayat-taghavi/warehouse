@@ -16,8 +16,8 @@
 
 | فایل | تغییر |
 |---|---|
-| [backends.py](file:///e:/warehouse%20project/warehouse-backend/accounts/backends.py) | **[NEW]** ساخت کلاس `RoleInheritanceBackend` با پشتیبانی از جستجوی بازگشتی (Recursive) فرزندان |
-| [settings.py](file:///e:/warehouse%20project/warehouse-backend/config/settings.py) | جایگزینی `ModelBackend` با `RoleInheritanceBackend` در `AUTHENTICATION_BACKENDS` |
+| [backends.py](file:///e:/warehouse%20project/backend/accounts/backends.py) | **[NEW]** ساخت کلاس `RoleInheritanceBackend` با پشتیبانی از جستجوی بازگشتی (Recursive) فرزندان |
+| [settings.py](file:///e:/warehouse%20project/backend/config/settings.py) | جایگزینی `ModelBackend` با `RoleInheritanceBackend` در `AUTHENTICATION_BACKENDS` |
 
 ---
 

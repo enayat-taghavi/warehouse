@@ -44,20 +44,20 @@ graph TD
 
 ## 📂 فایل‌های هدف و تغییرات
 
-### [بک‌اند] Backend (`warehouse-backend`)
+### [بک‌اند] Backend (`backend`)
 
-#### [MODIFY] `warehouse-backend/communications/views.py`
+#### [MODIFY] `backend/communications/views.py`
 - در `ChatContactsListView`: بازگرداندن تمامی کاربران فعال سیستم.
 - در `ConversationViewSet.get_queryset`: حذف یا فیلتر گفتگوهای مستقیم که هیچ پیامی در آن‌ها ارسال نشده است.
 
 ---
 
-### [فرانت‌اند] Frontend (`warehouse-front`)
+### [فرانت‌اند] Frontend (`frontend`)
 
-#### [MODIFY] `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html`
+#### [MODIFY] `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html`
 - انتقال رفرنس `#messagesScrollContainer` به المان دارای `overflow-y-auto`.
 
-#### [MODIFY] `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
+#### [MODIFY] `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
 - بازنویسی `startDirectChat` برای حالت Draft Mode (عدم ثبت در دیتابیس تا زمان ارسال اولین پیام).
 - بازنویسی `sendMessage` برای هندل کردن چت‌های Draft و ارتقای آن به چت ذخیره‌شده واقعی.
 - اصلاح تابع `getConversationTitle` با مقایسه رشته‌ای شناسه‌ها (`String(p.id) !== String(currentUserId)`).

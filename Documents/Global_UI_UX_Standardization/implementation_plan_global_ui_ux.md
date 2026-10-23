@@ -107,11 +107,11 @@ gantt
 ### 🔴 فاز ۱: کارتابل‌های عملیاتی انبارگردانی و شمارش (صفحات ۱ تا ۵)
 * **هدف فاز:** تجهیز زنجیره شمارش کالا به نوار فیلتر چندمعیاره، نوار شناور اقدام گروهی، خروجی اکسل انتخابی و صفحه‌بندی فشرده.
 * **صفحات تحت پوشش:**
-  1. [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
-  2. [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
-  3. [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
-  4. [`count-tracking.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html)
-  5. [`dispatch.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+  1. [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+  2. [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+  3. [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
+  4. [`count-tracking.html`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html)
+  5. [`dispatch.html`](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 * **تسک‌های کلیدی:**
   - [ ] افزودن چک‌باکس انتخاب سطرها و اتصال به نوار شناور شیشه‌ای در پایین صفحه.
   - [ ] اعمال دکمه‌های آیکونی مربعی در هدر کارتابل‌ها با نشانگر زنده تعداد اقلام منتظر اقدام.
@@ -124,11 +124,11 @@ gantt
 ### 🟠 فاز ۲: کارتابل‌های اسناد، کالا، گمرک و لیبل (صفحات ۶ تا ۱۰)
 * **هدف فاز:** تبدیل کارتابل اسناد و طراحی لیبل به استودیو ۳ ستونه هم‌ارتفاع، بارگذاری دفاعی تصاویر با تایم‌اوت محافظتی و اکسپورت انتخابی.
 * **صفحات تحت پوشش:**
-  6. [`docs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/docs/docs.html)
-  7. [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
-  8. [`feeding.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/feeding/feeding.html)
-  9. [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
-  10. [`placeholders.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/placeholders/placeholders.html)
+  6. [`docs.html`](file:///e:/warehouse%20project/frontend/src/app/components/docs/docs.html)
+  7. [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
+  8. [`feeding.html`](file:///e:/warehouse%20project/frontend/src/app/components/feeding/feeding.html)
+  9. [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
+  10. [`placeholders.html`](file:///e:/warehouse%20project/frontend/src/app/components/placeholders/placeholders.html)
 * **تسک‌های کلیدی:**
   - [ ] طراحی استودیو ۳ ستونه در ماژول طراحی لیبل (ستون تنظیمات، بوم زنده و میز شیت چاپ).
   - [ ] اعمال تایم‌اوت محافظتی ۱۵۰۰ میلی‌ثانیه‌ای روی بارگذاری عکس کالاهای فاکتور و قبوض باسکول.
@@ -140,10 +140,10 @@ gantt
 ### 🟡 فاز ۳: کارکرد پرسنل، تردد ناوگان و پرونده‌ها (صفحات ۱۱ تا ۱۴)
 * **هدف فاز:** تفکیک ارگونومیک جدول کارکرد پرسنل و ماشین‌آلات، اعمال فیلتر ترکیبی، اکسل انتخابی و سگمنتد کنترل پرونده‌ها.
 * **صفحات تحت پوشش:**
-  11. [`warehouse-attendance.html (Personnel)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
-  12. [`warehouse-attendance.html (Fleet)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
-  13. [`personnel-profiles.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-profiles/personnel-profiles.html)
-  14. [`base-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/base-settings/base-settings.html)
+  11. [`warehouse-attendance.html (Personnel)`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
+  12. [`warehouse-attendance.html (Fleet)`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
+  13. [`personnel-profiles.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-profiles/personnel-profiles.html)
+  14. [`base-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/base-settings/base-settings.html)
 * **تسک‌های کلیدی:**
   - [ ] استقرار نوار فیلتر ترکیبی بالای تقویم کارکرد ماهانه (جستجوی فرد + فیلتر انبار + فیلتر وضعیت حضور).
   - [ ] اضافه شدن نوار شناور برای عملیات گروهی ثبت وضعیت (حاضر، غایب، مرخصی) روی منتخبین.
@@ -155,11 +155,11 @@ gantt
 ### 🟢 فاز ۴: کارتابل‌های مالی، حقوق و خزانه‌داری (صفحات ۱۵ تا ۱۹)
 * **هدف فاز:** مجهزسازی کارتابل‌های مالی به نوار اقدام شناور تایید/رد، پاپ‌اور بازرسی سریع کسورات فیش حقوقی و خروجی دیسکت‌های انتخابی.
 * **صفحات تحت پوشش:**
-  15. [`finance-cartable.html (Payroll)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/finance-cartable/finance-cartable.html)
-  16. [`finance-cartable.html (Fleet)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/finance-cartable/finance-cartable.html)
-  17. [`manager-approvals.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/manager-approvals/manager-approvals.html)
-  18. [`treasury-cartable.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/treasury-cartable/treasury-cartable.html)
-  19. [`projects-and-sections.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/organization/projects-and-sections/projects-and-sections.html)
+  15. [`finance-cartable.html (Payroll)`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/finance-cartable/finance-cartable.html)
+  16. [`finance-cartable.html (Fleet)`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/finance-cartable/finance-cartable.html)
+  17. [`manager-approvals.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/manager-approvals/manager-approvals.html)
+  18. [`treasury-cartable.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/treasury-cartable/treasury-cartable.html)
+  19. [`projects-and-sections.html`](file:///e:/warehouse%20project/frontend/src/app/components/organization/projects-and-sections/projects-and-sections.html)
 * **تسک‌های کلیدی:**
   - [ ] تعبیه نوار شناور تایید گروهی مالی و صدور مجوز پرداخت بانکی.
   - [ ] اضافه کردن پاپ‌اور سریع روی ردیف‌های حقوق جهت مشاهده ریز محاسبات (حق مسکن، بن کارگری، مالیات، سهم بیمه).
@@ -171,13 +171,13 @@ gantt
 ### 🔵 فاز ۵: داشبوردها، گزارش‌ساز و پایش سلامت (صفحات ۲۰ تا ۲۶)
 * **هدف فاز:** استودیو ۳ ستونه موتور گزارش‌ساز، مینی‌پروگرس‌بارهای شاخص‌های کلیدی (KPI) و پایش بصری سلامت سرورها.
 * **صفحات تحت پوشش:**
-  20. [`dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.html)
-  21. [`reports.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html)
-  22. [`health-dashboard.html (Warehouse)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/health-dashboard/health-dashboard.html)
-  23. [`health-dashboard.html (Finance)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/health-dashboard/health-dashboard.html)
-  24. [`operations-cockpit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/operations-cockpit/operations-cockpit.html)
-  25. [`operations-sync-monitor.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html)
-  26. [`health-dashboard.html (Operations)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/health-dashboard/health-dashboard.html)
+  20. [`dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.html)
+  21. [`reports.html`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html)
+  22. [`health-dashboard.html (Warehouse)`](file:///e:/warehouse%20project/frontend/src/app/components/health-dashboard/health-dashboard.html)
+  23. [`health-dashboard.html (Finance)`](file:///e:/warehouse%20project/frontend/src/app/components/health-dashboard/health-dashboard.html)
+  24. [`operations-cockpit.html`](file:///e:/warehouse%20project/frontend/src/app/components/operations/operations-cockpit/operations-cockpit.html)
+  25. [`operations-sync-monitor.html`](file:///e:/warehouse%20project/frontend/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html)
+  26. [`health-dashboard.html (Operations)`](file:///e:/warehouse%20project/frontend/src/app/components/health-dashboard/health-dashboard.html)
 * **تسک‌های کلیدی:**
   - [ ] بازطراحی صفحه گزارش‌ساز به معماری استودیو ۳ ستونه: پنل فیلترها، پنل انتخاب ستون‌ها و پنل پیش‌نمایش جدول زنده.
   - [ ] تجهیز ویجت‌های داشبورد به نوارهای پیشرفت بصری گرادیانی با تفکیک انبارها.
@@ -189,11 +189,11 @@ gantt
 ### 🟣 فاز ۶: زیرساخت، حاکمیت RBAC، لاگ و پورتال‌های عمومی (صفحات ۲۷ تا ۳۱)
 * **هدف فاز:** ممیزی لاگ‌های امنیتی، مدیریت اسنپ‌شات‌ها، حاکمیت ماتریس دسترسی، لانچر هوشمند و ورود.
 * **صفحات تحت پوشش:**
-  27. [`projects.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html)
-  28. [`settings.html & backup-tab.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
-  29. [`audit.html (Security & All Scopes)`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
-  30. [`operations-rbac-governance.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/operations-rbac-governance/operations-rbac-governance.html)
-  31. [`login`, `launcher`, `change-pwd`, `verify-card`](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.html)
+  27. [`projects.html`](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html)
+  28. [`settings.html & backup-tab.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
+  29. [`audit.html (Security & All Scopes)`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
+  30. [`operations-rbac-governance.html`](file:///e:/warehouse%20project/frontend/src/app/components/operations/operations-rbac-governance/operations-rbac-governance.html)
+  31. [`login`, `launcher`, `change-pwd`, `verify-card`](file:///e:/warehouse%20project/frontend/src/app/components/login/login.html)
 * **تسک‌های کلیدی:**
   - [ ] تجهیز جدول لاگ‌های ممیزی به صفحه‌بندی مدرن، فیلتر ترکیبی و خروجی اکسل انتخابی.
   - [ ] اعمال نوار درصد پوشش مجوزهای RBAC و بازرسی سریع نقش‌ها در حاکمیت امنیت.
@@ -206,7 +206,7 @@ gantt
 
 | معیار پذیرش | ابزار و روش راستی‌آزمایی | شرط قبولی قطعی |
 | :--- | :--- | :--- |
-| **۱. کامپایل بدون خطای تایپ‌اسکریپت و قالب** | `npm run build` در `warehouse-front` | بیلد موفق تولیدی با کد خروجی ۰ (`Exit code: 0`) |
+| **۱. کامپایل بدون خطای تایپ‌اسکریپت و قالب** | `npm run build` در `frontend` | بیلد موفق تولیدی با کد خروجی ۰ (`Exit code: 0`) |
 | **۲. یکپارچگی سیستم بک‌اند جنگو** | `python manage.py check` | اجرای سیستم بدون ارور (`0 issues identified`) |
 | **۳. سرعت تعامل بدون لگ** | ابزار DevTools Performance | پاسخ رابط کاربری و باز شدن پاپ‌اورها زیر ۱۰۰ میلی‌ثانیه |
 | **۴. عدم به هم ریختگی در صفحات کوچک** | تست ریسپانسیو در تبلت (768px) و موبایل | عدم اسکرول افقی ناخواسته در کل صفحه |

@@ -46,25 +46,25 @@
 ## ۲. فایل‌های تغییریافته و ایجادشده (Modified & Created Files)
 
 ### الف. لایه بک‌اند (Django Backend)
-- [`warehouse-backend/accounts/rollback_service.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/rollback_service.py):
+- [`backend/accounts/rollback_service.py`](file:///e:/warehouse%20project/backend/accounts/rollback_service.py):
   - اضافه شدن توابع `normalize_for_comparison` و `coerce_field_value`.
   - اضافه شدن متدهای `preview_point_in_time_rollback` و `execute_point_in_time_rollback`.
   - تنظیم متغیر ایزولاسیون سیگنال‌ها `_is_rollback_operation = True`.
-- [`warehouse-backend/accounts/views.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py):
+- [`backend/accounts/views.py`](file:///e:/warehouse%20project/backend/accounts/views.py):
   - اضافه شدن توابع کمکی `get_table_storage_info` و `format_bytes_to_human`.
   - ارتقای متد `stats` جهت بازگرداندن آبجکت `storage`.
   - بازطراحی اکشن `purge` با پشتیبانی از `from_date`, `to_date`, `dry_run` و تاییدیه امنیتی.
   - اضافه شدن اکشن‌های `preview_point_in_time_rollback` و `execute_point_in_time_rollback`.
 
 ### ب. لایه فرانت‌اند (Angular Frontend)
-- [`warehouse-front/src/app/core/models/audit-log.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/audit-log.model.ts):
+- [`frontend/src/app/core/models/audit-log.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/audit-log.model.ts):
   - تعریف اینترفیس‌های `AuditStorageStats`، `PurgeRequest`، `PurgePreviewResponse`، `PointInTimeRollbackPreview`، `PointInTimeRollbackRecordItem`، `PointInTimeRollbackRequest` و `PointInTimeRollbackResult`.
-- [`warehouse-front/src/app/core/api/audit-api.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/audit-api.service.ts):
+- [`frontend/src/app/core/api/audit-api.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/api/audit-api.service.ts):
   - اضافه شدن متدهای `getPurgePreview`، `purgeLogs`، `previewPointInTimeRollback` و `executePointInTimeRollback`.
-- [`warehouse-front/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts):
+- [`frontend/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts):
   - پیاده‌سازی متد `computeWordDiff` برای استخراج توکن‌های تفاوت کلمه‌ای.
   - مدیریت استیت و متدهای مدال‌های پاکسازی لاگ‌ها و بازگردانی به تاریخ مشخص.
-- [`warehouse-front/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html):
+- [`frontend/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html):
   - اضافه شدن کارت KPI حجم مصرفی دیتابیس در تب ممیزی و نشست‌ها.
   - اضافه شدن دکمه‌های مدیریتی «پاکسازی لاگ‌ها» و «بازگردانی به تاریخ مشخص» در هدر صفحه.
   - بازطراحی پیش‌نمایش Revert Modal با هایلایت کلمه‌ای تفاوت‌ها.

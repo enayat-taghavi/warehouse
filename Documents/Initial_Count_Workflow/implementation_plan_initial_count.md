@@ -41,50 +41,50 @@ graph LR
 
 | ردیف | لایه / کامپوننت | فایل‌های هدف | شرح تغییرات |
 | :--- | :--- | :--- | :--- |
-| **۱** | **مدل و دیتابیس بک‌اند** | [models.py](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py) | افزودن `INITIAL_COUNT` به `STATUS_CHOICES` در مدل `CountTask` و ایجاد مایگریشن |
-| **۲** | **ویوها و کنترلرهای بک‌اند** | [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | به‌روزرسانی متد `bulk_submit`، کوئری‌های فیلتر و اکشن‌های سرپرست/شمارشگر |
-| **۳** | **رجیستری و گزارشات بک‌اند** | [registry.py](file:///e:/warehouse%20project/warehouse-backend/reports/registry.py) | افزودن لیبل فارسی و فیلتر وضعیت در رجیستری گزارش‌ساز جامع |
-| **۴** | **تایپ‌ها و مدل‌های فرانت‌اند** | [count-task.model.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/count-task.model.ts) | افزودن `INITIAL_COUNT` به `CountTaskStatus` و اکشن‌های تاریخچه |
-| **۵** | **لایه Local-First و آفلاین** | [count-task-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/count-task-store.ts) | ارتقای وضعیت به `INITIAL_COUNT` در متد `saveDraft` و هماهنگی با صف همگام‌سازی Dexie |
-| **۶** | **داشبورد انبارگردان (UI & Logic)** | [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)<br>[counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | افزودن چیپ فیلتر «شمارش اولیه»، به‌روزرسانی شمارنده‌ها، بج اختصاصی و منطق دسترسی ویرایش |
-| **۷** | **مانیتورینگ و رهگیری شمارش** | [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)<br>[count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) | افزودن ستون وضعیت، بج رنگی (Indigo/Purple)، محاسبه زمان توقف و فیلترهای زنده |
+| **۱** | **مدل و دیتابیس بک‌اند** | [models.py](file:///e:/warehouse%20project/backend/inventory/models.py) | افزودن `INITIAL_COUNT` به `STATUS_CHOICES` در مدل `CountTask` و ایجاد مایگریشن |
+| **۲** | **ویوها و کنترلرهای بک‌اند** | [views.py](file:///e:/warehouse%20project/backend/inventory/views.py) | به‌روزرسانی متد `bulk_submit`، کوئری‌های فیلتر و اکشن‌های سرپرست/شمارشگر |
+| **۳** | **رجیستری و گزارشات بک‌اند** | [registry.py](file:///e:/warehouse%20project/backend/reports/registry.py) | افزودن لیبل فارسی و فیلتر وضعیت در رجیستری گزارش‌ساز جامع |
+| **۴** | **تایپ‌ها و مدل‌های فرانت‌اند** | [count-task.model.ts](file:///e:/warehouse%20project/frontend/src/app/core/models/count-task.model.ts) | افزودن `INITIAL_COUNT` به `CountTaskStatus` و اکشن‌های تاریخچه |
+| **۵** | **لایه Local-First و آفلاین** | [count-task-store.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/count-task-store.ts) | ارتقای وضعیت به `INITIAL_COUNT` در متد `saveDraft` و هماهنگی با صف همگام‌سازی Dexie |
+| **۶** | **داشبورد انبارگردان (UI & Logic)** | [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)<br>[counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | افزودن چیپ فیلتر «شمارش اولیه»، به‌روزرسانی شمارنده‌ها، بج اختصاصی و منطق دسترسی ویرایش |
+| **۷** | **مانیتورینگ و رهگیری شمارش** | [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)<br>[count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) | افزودن ستون وضعیت، بج رنگی (Indigo/Purple)، محاسبه زمان توقف و فیلترهای زنده |
 
 ---
 
 ## ۴. فازبندی اجرایی گام‌به‌گام (Implementation Phases)
 
 ### 🔹 فاز ۱: زیرساخت داده و بک‌اند (Backend Foundation & Migrations)
-1. **به‌روزرسانی مدل [CountTask](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py):**
+1. **به‌روزرسانی مدل [CountTask](file:///e:/warehouse%20project/backend/inventory/models.py):**
    * اضافه کردن گزینه `('INITIAL_COUNT', 'شمارش اولیه (ثبت موقت)')` به `STATUS_CHOICES`.
    * اجرای دستور `makemigrations` و `migrate` برای ساخت مایگریشن رو به جلو بدون حذف یا تغییر مایگریشن‌های پیشین.
-2. **اصلاح اکشن `bulk_submit` در [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py):**
+2. **اصلاح اکشن `bulk_submit` در [views.py](file:///e:/warehouse%20project/backend/inventory/views.py):**
    * گسترش شرط فیلتر تسک‌های مجاز برای ارسال به سرپرست:
      ```python
      status__in=['PENDING_COUNT', 'INITIAL_COUNT', 'SUPERVISOR_REJECTED', 'MANAGER_REJECTED']
      ```
-3. **پشتیبانی در تاریخچه [CountTaskHistory](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py):**
+3. **پشتیبانی در تاریخچه [CountTaskHistory](file:///e:/warehouse%20project/backend/inventory/models.py):**
    * ثبت اکشن `INITIAL_COUNT` در لاگ تغییرات تسک هنگام ثبت شمارش اولیه.
 
 ---
 
 ### 🔹 فاز ۲: لایه داده محلی و همگام‌سازی آفلاین فرانت‌اند (Dexie & Store Layer)
-1. **به‌روزرسانی مدل [count-task.model.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/count-task.model.ts):**
+1. **به‌روزرسانی مدل [count-task.model.ts](file:///e:/warehouse%20project/frontend/src/app/core/models/count-task.model.ts):**
    * اضافه شدن `INITIAL_COUNT` به اتحادیه تایپ‌های وضعیت `CountTaskStatus`.
-2. **ارتقای مخزن محلی [count-task-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/count-task-store.ts):**
+2. **ارتقای مخزن محلی [count-task-store.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/count-task-store.ts):**
    * در متد `saveDraft`، در صورتی که تسک در وضعیت `PENDING_COUNT` باشد و کاربر عدد شمارش را ثبت کند، وضعیت به صورت محلی و خوش‌بینانه به `INITIAL_COUNT` تغییر می‌یابد.
    * ثبت در صف سینک آفلاین با اکشن متناظر جهت همگام‌سازی بی‌درنگ با سرور در صورت اتصال اینترنت.
 
 ---
 
 ### 🔹 فاز ۳: ارتقای رابط کاربری داشبورد انبارگردان (Counter Dashboard UI/UX)
-1. **سیستم فیلتر و چیپ‌های وضعیت در [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts):**
+1. **سیستم فیلتر و چیپ‌های وضعیت در [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts):**
    * بازطراحی `statusCounts` جهت تفکیک ۴ وضعیت:
      * **همه (All):** تمام اقلام
      * **دست‌نخورده (Pending):** فقط `PENDING_COUNT`
      * **شمارش اولیه (Initial Count):** تسک‌های دارای وضعیت `INITIAL_COUNT`
      * **نیاز به بازشماری (Recount):** تسک‌های رد شده توسط سرپرست یا مدیر
      * **تکمیل شده (Completed):** تسک‌های ارسال شده به سرپرست/مدیر
-2. **طراحی بصری و بج‌ها در [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html):**
+2. **طراحی بصری و بج‌ها در [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html):**
    * طراحی بج اختصاصی مدرن با تم بنفش/نیلی (`bg-indigo-50 text-indigo-700 border-indigo-200`) برای وضعیت «شمارش اولیه».
    * نمایش وضعیت صریح «شمارش اولیه» در کارت‌های کالا و فرم جزئیات.
    * به‌روزرسانی کلیدهای میانبر (`Ctrl+Enter` و غیره) برای ذخیره در این وضعیت.
@@ -92,7 +92,7 @@ graph LR
 ---
 
 ### 🔹 فاز ۴: مانیتورینگ زنده و گزارش‌ساز (Count Tracking & Reports)
-1. **به‌روزرسانی کارتابل رهگیری [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts):**
+1. **به‌روزرسانی کارتابل رهگیری [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts):**
    * افزودن رنگ و برچسب `INITIAL_COUNT` به جدول مانیتورینگ زنده انبار.
    * محاسبه دقیق مدت زمان توقف کالا در مرحله شمارش اولیه توسط انبارگردان.
 2. **سازگاری خروجی اکسل و گزارش‌ساز:**

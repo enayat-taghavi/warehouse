@@ -35,9 +35,9 @@
 
 ## ۲. فایل‌های تحت تغییر (Proposed File Changes)
 
-### فرانت‌اند (`warehouse-front`)
+### فرانت‌اند (`frontend`)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - افزودن منطق مرتب‌سازی پیشرفته (`applySorting`, `Natural Sort` برای لوکیشن، اولویت برگشتی‌ها).
 - متغیرهای وضعیت مرتب‌سازی: `sortField: 'location' | 'recount_first' | 'code' | 'title'` و `sortDirection: 'asc' | 'desc'`.
 - ارتقای متد `syncStateToUrl()` و `loadStateFromUrl()` برای ثبت و خواندن تمام پارامترهای جدید (`status`, `date`, `sort`, `sortDir`, `q`, `tab`).
@@ -45,7 +45,7 @@
 - اضافه کردن شمارنده‌های زنده برای وضعیت‌ها (`statusCounts: { all, pending, recount, completed }`).
 - پیاده‌سازی متد باز کردن پاپ‌آپ اسکنر دوربین و مدیریت اسکن سریع بدون نیاز به فیلد ورودی جداگانه.
 
-#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 - جایگزینی کادر جستجو با **Omni-Search Bar** مدرن دارای آیکون اکشن دوربین و دکمه پاک‌کردن سریع.
 - طراحی منوی دراپ‌داون شکیل و مینیمال مرتب‌سازی با آیکون و جهت صعودی/نزولی.
 - نمایش نشانگرهای تعداد زنده روی دکمه‌های فیلتر وضعیت.

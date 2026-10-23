@@ -31,14 +31,14 @@
 
 ### 1. دیتابیس آفلاین (Offline Database)
 
-#### [MODIFY] [offline-db.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-db.ts)
+#### [MODIFY] [offline-db.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-db.ts)
 - ارتقای نسخه Dexie از `version(1)` به `version(2)`.
 - اضافه کردن اینترفیس `SyncErrorEntry`.
 - ایجاد جدول جدید `syncErrors`.
 
 ### 2. سرویس همگام‌سازی (Sync Service)
 
-#### [MODIFY] [offline-sync.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts)
+#### [MODIFY] [offline-sync.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts)
 - اضافه کردن قابلیت **Auto Sync** با `setInterval` (خواندن interval از تنظیمات).
 - اضافه کردن متد **`forceSync()`** برای اجرای دستی.
 - متغیر `isSyncing$` (به عنوان Observable) برای نمایش لودینگ در UI.
@@ -47,7 +47,7 @@
 
 ### 3. ادغام کش و صف (Data Merging)
 
-#### [MODIFY] [offline.interceptor.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.interceptor.ts)
+#### [MODIFY] [offline.interceptor.ts](file:///e:/warehouse%20project/frontend/src/app/core/interceptors/offline.interceptor.ts)
 - در قسمت `handleOfflineGet`، پس از خواندن داده از `apiCache`، صف `syncQueue` را واکشی می‌کنیم.
 - اگر درخواست `POST` در صف وجود داشت که URL آن با URL لیست همخوانی داشت، آن را به لیست (مثلاً در `results` دیتای Django) اضافه می‌کنیم.
 - اگر `PATCH/PUT` در صف بود، رکورد مربوطه در کش را به صورت محلی به‌روزرسانی می‌کنیم.
@@ -55,8 +55,8 @@
 
 ### 4. رابط کاربری (UI)
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
-#### [MODIFY] [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html)
 - اضافه کردن نوارهای هشدار دهنده (Banners) در بالای صفحه برای حالت آفلاین.
 - اضافه کردن دکمه `Force Sync` با آیکون چرخان هنگام همگام‌سازی.
 - اضافه کردن آیکون **زنگوله (صندوق خطای همگام‌سازی)** که تعداد خطاها را نشان می‌دهد.

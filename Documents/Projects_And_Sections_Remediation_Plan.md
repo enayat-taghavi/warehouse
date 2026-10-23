@@ -3,8 +3,8 @@
 
 > **نسخه:** ۲.۰ (بازبینی‌شده، جامع و نهایی با ممیزی ۴۱ نقص فنی و معماری)  
 > **وضعیت سند:** تدوین‌شده / آماده تایید و اجرا  
-> **مسیر فایل:** `E:\warehouse project\Documents\Projects_And_Sections_Remediation_Plan.md`  
-> **محدوده اثر:** بک‌اند (`warehouse-backend/personnel/`) و فرانت‌اند (`warehouse-front/src/app/components/organization/projects-and-sections/`)  
+> **مسیر فایل:** `Documents\Projects_And_Sections_Remediation_Plan.md`  
+> **محدوده اثر:** بک‌اند (`backend/personnel/`) و فرانت‌اند (`frontend/src/app/components/organization/projects-and-sections/`)  
 > **اصل بنیادین:** حفظ ۱۰۰٪ داده‌ها (هیچ داده‌ای نباید از بین برود)، صفر بازنویسی مخرب، امنیت سخت‌گیرانه RBAC، پایداری پشت تونل Cloudflare، و بهینه‌سازی رندرینگ DOM  
 
 ---

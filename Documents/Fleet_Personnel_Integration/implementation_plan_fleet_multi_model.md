@@ -34,12 +34,12 @@
 
 ### 🔹 لایه بک‌اند (Backend - Django & Database)
 
-#### [MODIFY] [models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py)
+#### [MODIFY] [models.py](file:///e:/warehouse%20project/backend/personnel/models.py)
 - افزودن فیلد `pricing_model` با مقادیر `('hourly', 'trip', 'daily', 'company')` به `VehicleDriverProfile`.
 - افزودن فیلدهای `hourly_rate` و `overtime_rate` به `VehicleDriverProfile`.
 - افزودن فیلدهای `effective_hours`، `overtime_hours` و `is_present` به `VehicleTripLog` برای ثبت دقیق کارکرد ساعتی و روزمزد در کنار سرویسی.
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/personnel/views.py)
 - ارتقای متد `get_matrix` و `bulk_save` در `VehicleTripViewSet` جهت پشتیبانی از ثبت چندحالته (ساعتی، سرویسی، روزمزد).
 - ارتقای متد `get_monthly_grid` و `bulk_save_monthly_grid` برای تجمیع ساعات، سرویس‌ها و روزهای کارکرد در تقویم ۳۱ روزه.
 - ارتقای موتور تسویه مالی ناوگان `fleet_settlement_engine.py` جهت محاسبه ترکیبی ۴ مدل.
@@ -48,10 +48,10 @@
 
 ### 🔹 لایه فرانت‌اند (Frontend - Angular & UI/UX)
 
-#### [MODIFY] [personnel.model.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/personnel.model.ts)
+#### [MODIFY] [personnel.model.ts](file:///e:/warehouse%20project/frontend/src/app/core/models/personnel.model.ts)
 - به‌روزرسانی اینترفیس‌های `VehicleDriverProfile`، `VehicleMatrixRow` و `VehicleMonthlyGridRow` با فیلدهای مدل‌های جدید.
 
-#### [MODIFY] [warehouse-attendance.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
+#### [MODIFY] [warehouse-attendance.html](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
 - افزودن تب‌های فیلتر سریع در بالای جدول: «همه ناوگان»، «ماشین‌آلات ساعتی»، «ناوگان سرویسی»، «روزمزد و شرکتی».
 - طراحی سلول‌های تطبیقی (Adaptive Row Cells):
   - ردیف ساعتی: فیلدهای ساعت موثر (پیش‌فرض ۱۰س) و اضافه‌کار.
@@ -59,7 +59,7 @@
   - ردیف روزمزد: بج وضعیت حضور (حاضر / غایب / نیمه‌شیفت).
 - ارتقای شیت تقویم ۳۱ روزه، مودال ویرایش روز و برگه چاپی رسمی A4.
 
-#### [MODIFY] [warehouse-attendance.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)
+#### [MODIFY] [warehouse-attendance.ts](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)
 - مدیریت وضعیت تب‌های فیلتر سریع و ذخیره چندحالته مقادیر ردیف‌ها در پی‌لود سرور.
 
 ---

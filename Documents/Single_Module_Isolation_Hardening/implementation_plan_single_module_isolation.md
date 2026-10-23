@@ -161,7 +161,7 @@ public hasWarehouseModule$ = this.activeCompany$.pipe(
 
 همهٔ فرمان‌ها را عامل در Git Bash اجرا می‌کند. خروجی‌ها در `scratch/logs/` ذخیره می‌شوند و فقط خلاصه خوانده می‌شود.
 
-1. **بیلد و بررسی نوع در هر سه پروفایل** (هرگز در `dist/`، چون Express روی 4200 آن را سرو می‌کند و نگهبان ۳۳ می‌خواند). از ریشهٔ `warehouse-front`:
+1. **بیلد و بررسی نوع در هر سه پروفایل** (هرگز در `dist/`، چون Express روی 4200 آن را سرو می‌کند و نگهبان ۳۳ می‌خواند). از ریشهٔ `frontend`:
    ```bash
    npx ng build --configuration development    --output-path ../scratch/build-check/full      > ../scratch/logs/smi-build-full.log 2>&1
    npx ng build --configuration accounting-dev --output-path ../scratch/build-check/accounting > ../scratch/logs/smi-build-acc.log 2>&1

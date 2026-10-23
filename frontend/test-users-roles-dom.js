@@ -1033,7 +1033,7 @@ async function runUsersRolesDomTest() {
     });
 
     await runStep('TASK-6.5', 'راستی‌آزمایی وجود ستون‌های تکمیلی پروفایل در خروجی و ساختار اکسل کاربران', async () => {
-      const excelUtilsPath = path.join(__dirname, '..', 'warehouse-backend', 'accounts', 'excel_utils.py');
+      const excelUtilsPath = path.join(__dirname, '..', 'backend', 'accounts', 'excel_utils.py');
       const content = fs.readFileSync(excelUtilsPath, 'utf-8');
       const hasEmail = content.includes("'key': 'email'");
       const hasBlood = content.includes("'key': 'blood_type'");

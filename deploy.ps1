@@ -326,14 +326,25 @@ function Invoke-Git {
     return (Invoke-Process -FilePath $GitExe -ArgumentList (@('-C', $ScriptRoot) + $ArgumentList) -Raw -Quiet)
 }
 
+# The repo folders are backend/ and frontend/; commits before the rename use warehouse-backend/ and warehouse-front/.
+# The bundle and the server keep the old names, so the units and nginx paths on the server stay valid.
+$BundleBackendDir = 'warehouse-backend'
+$BundleFrontDir = 'warehouse-front'
+
+function Get-RepoDir([string]$Sha, [ValidateSet('backend', 'frontend')][string]$Kind) {
+    $r = Invoke-Git @('ls-tree', '--name-only', $Sha, '--', $Kind)
+    if ($r.ExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($r.Output)) { return $Kind }
+    if ($Kind -eq 'backend') { return $BundleBackendDir } else { return $BundleFrontDir }
+}
+
 function Get-KnownModules([string]$Sha = 'HEAD') {
-    $r = Invoke-Git @('ls-tree', '-d', '--name-only', $Sha, 'warehouse-backend/modules/')
+    $r = Invoke-Git @('ls-tree', '-d', '--name-only', $Sha, "$(Get-RepoDir $Sha 'backend')/modules/")
     if ($r.ExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($r.Output)) {
         $lines = $r.Output -split "[\r\n]+" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
         $mods = @($lines | ForEach-Object { Split-Path ($_.Trim().Replace('\', '/')) -Leaf } | Sort-Object -Unique)
         if ($mods.Count -gt 0) { return $mods }
     }
-    $localModsDir = Join-Path $ScriptRoot 'warehouse-backend\modules'
+    $localModsDir = Join-Path $ScriptRoot 'backend\modules'
     if (Test-Path -LiteralPath $localModsDir) {
         $mods = @(Get-ChildItem -LiteralPath $localModsDir -Directory | ForEach-Object { $_.Name } | Sort-Object -Unique)
         if ($mods.Count -gt 0) { return $mods }
@@ -445,7 +456,7 @@ function Test-DeployConfig {
     $certMode = if ($certModeSet) { ([string]$RawConfig.CertMode).Trim().ToLowerInvariant() } else { $DefaultCertMode }
     if ($certMode -notin $KnownCertModes) { $problems['CertMode'] = "CertMode must be one of: $($KnownCertModes -join ', ')" }
 
-    # Names shown in the user interface; empty keeps the names in the code (warehouse-front/src/app/core/branding.ts).
+    # Names shown in the user interface; empty keeps the names in the code (frontend/src/app/core/branding.ts).
     $branding = [ordered]@{}
     foreach ($key in $BrandingKeys) {
         $value = ([string]$RawConfig.$key).Trim()
@@ -1243,11 +1254,11 @@ function Set-SnapshotBranding([string]$SnapshotFront, $Config) {
 }
 
 function Build-IsolatedFrontend([string]$Sha, $Config) {
-    # Builds warehouse-front from the commit inside scratch/deploy/<sha>; the project's own dist is never touched.
+    # Builds the frontend from the commit inside scratch/deploy/<sha>; the project's own dist is never touched.
     # The configured branding names are written into the snapshot before the build and are part of the marker.
     if ($Sha -cnotmatch '^[0-9a-f]{40}$') { throw "Invalid commit: $Sha" }
     $scratchDir = Join-Path $LocalDeployScratch $Sha
-    $snapshotFront = Join-Path $scratchDir 'warehouse-front'
+    $snapshotFront = Join-Path $scratchDir $BundleFrontDir
     $distDir = Join-Path $snapshotFront $FrontDistRelative
     $marker = Join-Path $scratchDir '.build-complete'
     $stamp = Get-BrandingStamp $Config
@@ -1277,16 +1288,18 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
     $frontTar = Join-Path $LocalDeployScratch "front_$Sha.tar"
     if (Test-Path -LiteralPath $frontTar) { Remove-Item -LiteralPath $frontTar -Force }
     try {
-        if ((Invoke-Native $GitExe @('-C', $ScriptRoot, 'archive', '--format=tar', '-o', $frontTar, $Sha, '--', 'warehouse-front')) -ne 0) {
-            throw "git archive of warehouse-front failed for $Sha."
+        $repoFront = Get-RepoDir $Sha 'frontend'
+        if ((Invoke-Native $GitExe @('-C', $ScriptRoot, 'archive', '--format=tar', '-o', $frontTar, $Sha, '--', $repoFront)) -ne 0) {
+            throw "git archive of $repoFront failed for $Sha."
         }
         if ((Invoke-Native $TarExe @('-xf', $frontTar, '-C', $scratchDir)) -ne 0) { throw 'Extracting the frontend snapshot failed.' }
+        if ($repoFront -ne $BundleFrontDir) { Move-Item -LiteralPath (Join-Path $scratchDir $repoFront) -Destination $snapshotFront }
     } finally {
         if (Test-Path -LiteralPath $frontTar) { Remove-Item -LiteralPath $frontTar -Force }
     }
     if ($Config) { Set-SnapshotBranding $snapshotFront $Config }
 
-    $sourceNodeModules = Join-Path $ScriptRoot 'warehouse-front\node_modules'
+    $sourceNodeModules = Join-Path $ScriptRoot 'frontend\node_modules'
     if (-not (Test-Path -LiteralPath $sourceNodeModules)) { throw "node_modules not found at $sourceNodeModules" }
     $junction = Join-Path $snapshotFront 'node_modules'
     New-SafeJunction $junction $sourceNodeModules
@@ -1313,26 +1326,28 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
 }
 
 function Get-BackendWhitelist([string]$Sha) {
-    $r = Invoke-Git @('ls-tree', '-r', '-z', '--name-only', $Sha, '--', 'warehouse-backend')
+    $repoBackend = Get-RepoDir $Sha 'backend'
+    $prefix = [regex]::Escape($repoBackend)
+    $r = Invoke-Git @('ls-tree', '-r', '-z', '--name-only', $Sha, '--', $repoBackend)
     if ($r.ExitCode -ne 0) { throw "git ls-tree failed for $Sha." }
     $names = $r.Output.Split([char]0)
     $apps = @($names | ForEach-Object {
-        if ($_ -match '^warehouse-backend/((?:core/|modules/[^/]+/|)([^/]+))/__init__\.py$') { $Matches[1] }
+        if ($_ -match "^$prefix/((?:core/|modules/[^/]+/|)([^/]+))/__init__\.py$") { $Matches[1] }
     } | Sort-Object -Unique)
     $files = @('backend_paths.py', 'manage.py', 'requirements.txt', 'requirements.lock')
     foreach ($f in $files) {
-        if ($names -notcontains "warehouse-backend/$f") { throw "Commit $Sha has no warehouse-backend/$f; it is mandatory in the bundle." }
+        if ($names -notcontains "$repoBackend/$f") { throw "Commit $Sha has no $repoBackend/$f; it is mandatory in the bundle." }
     }
     if ($apps.Count -eq 0) { throw "No backend app packages found in $Sha." }
     # Module manifests (modules/<m>/module.py) sit outside any app package; module_catalog builds INSTALLED_APPS from them.
     $manifests = @($names | ForEach-Object {
-        if ($_ -match '^warehouse-backend/(modules/[^/]+/module\.py)$') { $Matches[1] }
+        if ($_ -match "^$prefix/(modules/[^/]+/module\.py)$") { $Matches[1] }
     } | Sort-Object -Unique)
     $moduleDirs = @($apps | ForEach-Object { if ($_ -match '^(modules/[^/]+)/') { $Matches[1] } } | Sort-Object -Unique)
     foreach ($d in $moduleDirs) {
-        if ($manifests -notcontains "$d/module.py") { throw "Commit $Sha has no warehouse-backend/$d/module.py; every module needs its manifest in the bundle." }
+        if ($manifests -notcontains "$d/module.py") { throw "Commit $Sha has no $repoBackend/$d/module.py; every module needs its manifest in the bundle." }
     }
-    return [pscustomobject]@{ Apps = $apps; Files = $files; Manifests = $manifests }
+    return [pscustomobject]@{ Apps = $apps; Files = $files; Manifests = $manifests; RepoDir = $repoBackend }
 }
 
 function Test-BundleStage([string]$StageDir, $Whitelist, [string]$ExpectedModules = $null) {
@@ -1405,15 +1420,17 @@ function New-DeploymentBundle([string]$Sha, [string]$SnapshotFront, [string]$Exp
     try {
         $whitelist = Get-BackendWhitelist $Sha
         $pathspecs = [System.Collections.Generic.List[string]]::new()
-        foreach ($f in $whitelist.Files) { $pathspecs.Add("warehouse-backend/$f") }
-        foreach ($a in $whitelist.Apps) { $pathspecs.Add("warehouse-backend/$a") }
-        foreach ($m in $whitelist.Manifests) { $pathspecs.Add("warehouse-backend/$m") }
-        $pathspecs.AddRange([string[]]@('scripts/deploy', 'scripts/remote-setup.sh', ':(exclude,glob)warehouse-backend/**/test_phase*.py'))
+        $repoBackend = $whitelist.RepoDir
+        foreach ($f in $whitelist.Files) { $pathspecs.Add("$repoBackend/$f") }
+        foreach ($a in $whitelist.Apps) { $pathspecs.Add("$repoBackend/$a") }
+        foreach ($m in $whitelist.Manifests) { $pathspecs.Add("$repoBackend/$m") }
+        $pathspecs.AddRange([string[]]@('scripts/deploy', 'scripts/remote-setup.sh', ":(exclude,glob)$repoBackend/**/test_phase*.py"))
         $archiveArgs = @('-C', $ScriptRoot, 'archive', '--format=tar', '-o', $sourceTar, $Sha, '--') + $pathspecs.ToArray()
         if ((Invoke-Native $GitExe $archiveArgs) -ne 0) { throw "git archive failed for $Sha." }
         if ((Invoke-Native $TarExe @('-xf', $sourceTar, '-C', $stageDir)) -ne 0) { throw 'Extracting the source snapshot failed.' }
+        if ($repoBackend -ne $BundleBackendDir) { Move-Item -LiteralPath (Join-Path $stageDir $repoBackend) -Destination (Join-Path $stageDir $BundleBackendDir) }
 
-        $frontTarget = Join-Path $stageDir 'warehouse-front'
+        $frontTarget = Join-Path $stageDir $BundleFrontDir
         [void][System.IO.Directory]::CreateDirectory($frontTarget)
         Copy-Item -LiteralPath (Join-Path $SnapshotFront 'dist') -Destination (Join-Path $frontTarget 'dist') -Recurse -Force
 

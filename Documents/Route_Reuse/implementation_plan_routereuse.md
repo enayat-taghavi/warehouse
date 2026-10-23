@@ -14,11 +14,11 @@
 - هنگام برگشت کاربر به همان روت، کامپوننتِ فریز شده را دقیقاً با همان شکل و اسکرول بدون نیاز به ساخت مجدد بازیابی می‌کند.
 
 ### ۲. اعمال تنظیمات در پروایدرهای سراسری
-#### [MODIFY] [app.config.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.config.ts)
+#### [MODIFY] [app.config.ts](file:///e:/warehouse%20project/frontend/src/app/app.config.ts)
 این استراتژی سفارشی به عنوان پروایدرِ `RouteReuseStrategy` به کل نرم‌افزار تزریق (Provide) می‌شود.
 
 ### ۳. مشخص کردن مسیرهای اصلی برای کش شدن
-#### [MODIFY] [app.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts)
+#### [MODIFY] [app.routes.ts](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts)
 فقط به مسیرهای اصلی یعنی `counter`، `supervisor`، `manager` و `dispatch` فلگِ `data: { reuse: true }` اضافه می‌شود.
 **نکته مهم:** صفحاتی مثل فرم‌های لاگین یا ویرایش مشخصات به عمد این تیک را نخواهند داشت تا کش نشوند و مشکل تداخل اطلاعات به وجود نیاید.
 

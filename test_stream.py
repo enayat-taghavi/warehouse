@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import time
@@ -17,7 +18,7 @@ def test_stream():
     url_import = "http://127.0.0.1:8000/api/inventory/items/import_excel/"
     headers = {"Authorization": f"Bearer {token}"}
     
-    file_path = r"E:\warehouse project\Data.xlsx"
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Data.xlsx')
     print(f"Uploading {file_path}")
     with open(file_path, "rb") as f:
         files = {"file": f}

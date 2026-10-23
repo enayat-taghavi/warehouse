@@ -35,7 +35,7 @@
 - [x] **گام ۴: دستور پاکسازی دیسک و پنل ادمین و پاکسازی نهایی (فاز ۸)**
   - [x] اصلاح دستور `purge_expired_chat_media.py` برای خواندن از `all_objects` و حذف فیزیکی فایل‌ها و Hard Delete رکوردها
   - [x] ایجاد ماژول مدیریت ادمین جنگو `communications/admin.py`
-  - [x] حذف ۵ اسکریپت تستی موقت از ریشه `warehouse-backend/`
+  - [x] حذف ۵ اسکریپت تستی موقت از ریشه `backend/`
 
 - [x] **گام ۵: پیکربندی لایه کانال‌های Redis (فاز ۹)**
   - [x] تنظیم `CHANNEL_LAYERS` در `settings.py` بر پایه متغیر محیطی Redis با Fallback امن

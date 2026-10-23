@@ -79,7 +79,7 @@ npx ng build --configuration=development --no-progress
 **خروجی ترمینال:**
 ```text
 Application bundle generation complete. [48.202 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 Exit code: 0 (No Errors)
 ```
 
@@ -89,12 +89,12 @@ Exit code: 0 (No Errors)
 
 | مسیر فایل (File Path) | شرح تغییرات اعمال‌شده (Changes Description) |
 | :--- | :--- |
-| `warehouse-backend/accounts/views.py` | افزودن تابع `format_shamsi_datetime`، تولید هدر دو ردیفه (فارسی + نام دیتابیسی) در اکسل و CSV، تنظیم `freeze_panes = 'A3'`، فرمت‌بندی تاریخ شمسی رویدادها |
-| `warehouse-backend/accounts/test_export_unlock.py` | آزمون‌های دقیق ساختار هدر ردیف ۲ اکسل و CSV و اعتبارسنجی عبارات باقاعده تاریخ شمسی `^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$` |
-| `warehouse-front/src/app/core/models/audit-log.model.ts` | مدل‌های تنظیمات خروجی، ستون‌ها و بازنشانی قفل |
-| `warehouse-front/src/app/core/api/audit-api.service.ts` | متدهای سرویس خروجی اکسل و ارتباط با اندپوینت‌های ریست قفل |
-| `warehouse-front/src/app/components/audit/audit.ts` | مدیریت وضعیت مودال خروجی، ستون‌های سفارشی و رفع قفل کاربران |
-| `warehouse-front/src/app/components/audit/audit.html` | رابط کاربری مودال خروجی، بنر هشدار قفل، دکمه‌های رفع مسدودیت و تاییدیه امنیتی |
+| `backend/accounts/views.py` | افزودن تابع `format_shamsi_datetime`، تولید هدر دو ردیفه (فارسی + نام دیتابیسی) در اکسل و CSV، تنظیم `freeze_panes = 'A3'`، فرمت‌بندی تاریخ شمسی رویدادها |
+| `backend/accounts/test_export_unlock.py` | آزمون‌های دقیق ساختار هدر ردیف ۲ اکسل و CSV و اعتبارسنجی عبارات باقاعده تاریخ شمسی `^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$` |
+| `frontend/src/app/core/models/audit-log.model.ts` | مدل‌های تنظیمات خروجی، ستون‌ها و بازنشانی قفل |
+| `frontend/src/app/core/api/audit-api.service.ts` | متدهای سرویس خروجی اکسل و ارتباط با اندپوینت‌های ریست قفل |
+| `frontend/src/app/components/audit/audit.ts` | مدیریت وضعیت مودال خروجی، ستون‌های سفارشی و رفع قفل کاربران |
+| `frontend/src/app/components/audit/audit.html` | رابط کاربری مودال خروجی، بنر هشدار قفل، دکمه‌های رفع مسدودیت و تاییدیه امنیتی |
 | `Documents/Audit_Export_And_User_Unlock/walkthrough_audit_export_and_user_unlock.md` | مستندات جامع DUAL-SAVE طبق استانداردهای پروژه |
 
 <!-- GOAL_COMPLETE -->

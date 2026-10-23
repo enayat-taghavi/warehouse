@@ -21,15 +21,15 @@
 
 ### ۱. مستندات فنی فاز ۱: بک‌اند، پایگاه داده و عایق‌سازی انبارها
 
-1. **ارتقای مدل داده `Warehouse` در [warehouses/models.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/models.py):**
+1. **ارتقای مدل داده `Warehouse` در [warehouses/models.py](file:///e:/warehouse%20project/backend/warehouses/models.py):**
    * افزودن فیلدهای `company_id = models.IntegerField(null=True, blank=True, db_index=True)` و `company_name = models.CharField(max_length=255, null=True, blank=True)`.
-2. **ارتقای مدل داده `Company` در [personnel/models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py):**
+2. **ارتقای مدل داده `Company` در [personnel/models.py](file:///e:/warehouse%20project/backend/personnel/models.py):**
    * افزودن فیلد `has_warehouse_module = models.BooleanField(default=True, verbose_name="فعال بودن سامانه انبارداری")`.
 3. **مایگریشن‌های اسکیما و داده:**
    * مایگریشن `personnel.0015_company_has_warehouse_module`
    * مایگریشن `warehouses.0002_warehouse_company_id_warehouse_company_name`
-   * مایگریشن داده خودکار [0003_assign_warehouses_to_fars_alish.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/migrations/0003_assign_warehouses_to_fars_alish.py) جهت انتساب امن تمام ۹ انبار موجود فعلی سیستم به شرکت فارس عالیش (شناسه ۲).
-4. **عایق‌سازی کوئری‌ست در [warehouses/views.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/views.py):**
+   * مایگریشن داده خودکار [0003_assign_warehouses_to_fars_alish.py](file:///e:/warehouse%20project/backend/warehouses/migrations/0003_assign_warehouses_to_fars_alish.py) جهت انتساب امن تمام ۹ انبار موجود فعلی سیستم به شرکت فارس عالیش (شناسه ۲).
+4. **عایق‌سازی کوئری‌ست در [warehouses/views.py](file:///e:/warehouse%20project/backend/warehouses/views.py):**
    * متد `get_queryset` در `WarehouseViewSet` کوئری را بر پایه هدر ارسالی از کلاینت `HTTP_X_COMPANY_ID` یا کوئری‌پارامتر فیلتر می‌کند.
    * متد `perform_create` به صورت خودکار `company_id` و `company_name` شرکت فعال را به انبار جدید الصاق می‌کند.
 5. **نتایج تست ترمینال بک‌اند:**
@@ -48,11 +48,11 @@ OK
 ### ۲. مستندات فنی فاز ۲: انتقال پورتال شرکت‌ها به مرکز عملیات
 
 1. **انتقال ساختار فایل‌ها:**
-   * کامپوننت از مسیر قدیمی مالی به [src/app/components/operations/companies/](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/companies/) منتقل شد و پوشه زائد قدیمی مالی پاکسازی شد.
-2. **پیکربندی روتینگ در [app.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts):**
+   * کامپوننت از مسیر قدیمی مالی به [src/app/components/operations/companies/](file:///e:/warehouse%20project/frontend/src/app/components/operations/companies/) منتقل شد و پوشه زائد قدیمی مالی پاکسازی شد.
+2. **پیکربندی روتینگ در [app.routes.ts](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts):**
    * مسیر رسمی `/app/operations/companies` ذیل سایدبار عملیات ثبت شد.
-   * ریدایرکت از مسیر قدیمی مالی `/app/finance/companies` در [accounting.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/modules/accounting/accounting.routes.ts) فعال شد.
-3. **سایدبار مرکز عملیات در [operations-layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/operations-layout/operations-layout.ts):**
+   * ریدایرکت از مسیر قدیمی مالی `/app/finance/companies` در [accounting.routes.ts](file:///e:/warehouse%20project/frontend/src/app/modules/accounting/accounting.routes.ts) فعال شد.
+3. **سایدبار مرکز عملیات در [operations-layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/operations/operations-layout/operations-layout.ts):**
    * آیتم منوی `مدیریت شرکت‌ها و هلدینگ` (🏢) اضافه شد.
 4. **فرم ثبت/ویرایش شرکت:**
    * اضافه شدن چک‌باکس فعال بودن ماژول انبارداری و نمایش بج وضعیت ماژول انبارداری در جدول شرکت‌ها.
@@ -67,26 +67,26 @@ OK
 
 ### ۳. مستندات فنی فاز ۳: ماژولار بودن انبارداری و گاردها
 
-1. **ارتقای واکنشی سرویس [active-company.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/active-company.service.ts):**
+1. **ارتقای واکنشی سرویس [active-company.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/active-company.service.ts):**
    * پیاده‌سازی سیگنال‌های واکنشی `activeCompanySignal` و `hasWarehouseModuleSignal = computed(...)`.
    * هماهنگ‌سازی خودکار سیگنال‌ها با هرگونه تعویض شرکت در `selectCompany` و بازیابی از حافظه مرورگر.
-2. **پنهان‌سازی مشروط در سوئیچر سامانه‌ها [app-role-switcher.component.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.html):**
+2. **پنهان‌سازی مشروط در سوئیچر سامانه‌ها [app-role-switcher.component.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.html):**
    * تب «📦 انبارگردانی» منحصراً در صورت `persona.hasWarehouseAccess()` رندر می‌شود. با توجه به شرط `activeCompanyService.hasWarehouseModuleSignal()` در `canAccessApp('warehouse')`، اگر شرکت انتخابی فاقد انبارداری باشد، گزینه انبارگردانی فوراً و بدون نیاز به رفرش از دید کاربر محو می‌شود.
-3. **گاردهای امنیتی روتینگ در [auth.guard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts):**
+3. **گاردهای امنیتی روتینگ در [auth.guard.ts](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts):**
    * گارد `WarehouseModuleMatchGuard` و گارد روتینگ `WarehouseCompanyGuard` در `/app/warehouse` مانع ورود مستقیم کاربر از طریق نوار آدرس URL به شرکت‌های بدون انبار شده و کاربر را به لانچر هدایت می‌کنند.
-4. **همگام‌سازی بلادرنگ انبارها در [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts):**
+4. **همگام‌سازی بلادرنگ انبارها در [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts):**
    * شنود جریان `activeCompany$` در `ngOnInit`؛ به محض تغییر شرکت، `whService.getAll()` مجدداً فراخوانی شده و انبارهای اختصاصی شرکت جدید جایگزین می‌شوند. در صورتی که کاربر در صفحه انبارداری باشد و به شرکت بدون انبار سوئیچ کند، با نمایش اعلان شفاف به سامانه مالی هدایت می‌شود.
 
 ---
 
 ### ۴. مستندات فنی فاز ۴: ویزارد راه‌اندازی اول (First-Boot Wizard)
 
-1. **کامپوننت [first-boot-wizard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/first-boot-wizard/first-boot-wizard.ts):**
+1. **کامپوننت [first-boot-wizard.ts](file:///e:/warehouse%20project/frontend/src/app/components/operations/first-boot-wizard/first-boot-wizard.ts):**
    * کامپوننت مستقل و مدرن با تم بصری غنی ایندیگو/بنفش، استانداردهای تایپوگرافی فارسی، انیمیشن‌های ورود و اعتبارسنجی دقیق ورودی‌ها.
 2. **تشخیص خودکار دیتابیس خام در `ActiveCompanyService`:**
    * متد `loadAvailableCompanies` در صورت دریافت `companies.length === 0` و احراز `res.is_superuser`، سیگنال `isFirstBoot$` را فعال می‌کند.
 3. **یکپارچه‌سازی در لایه‌بندی‌ها:**
-   * تگ `<app-first-boot-wizard>` در [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html)، [operations-layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/operations-layout/operations-layout.html) و [app-launcher.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/app-launcher/app-launcher.html) تعبیه شده است.
+   * تگ `<app-first-boot-wizard>` در [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html)، [operations-layout.html](file:///e:/warehouse%20project/frontend/src/app/components/operations/operations-layout/operations-layout.html) و [app-launcher.html](file:///e:/warehouse%20project/frontend/src/app/components/app-launcher/app-launcher.html) تعبیه شده است.
 4. **نتایج تست‌های Vitest DOM فاز ۴:**
 ```text
  ✓ src/app/components/operations/first-boot-wizard/first-boot-wizard.dom.spec.ts (10 tests) 180ms
@@ -100,7 +100,7 @@ OK
 
 #### ۵.۱. تست‌های بک‌اند جنگو (Django Backend Test Suite)
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; & "e:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py test warehouses.test_company_warehouse_isolation personnel.test_company_multitenant --keepdb
+$env:PYTHONIOENCODING="utf-8"; & "backend\venv\Scripts\python.exe" manage.py test warehouses.test_company_warehouse_isolation personnel.test_company_multitenant --keepdb
 ```
 **نتیجه:** ۱۶ آزمون جامع بک‌اند (ایزولاسیون انبارها، تزریق خودکار شرکت در Create، فیلتر هدر X-Company-ID، عدم دسترسی کاربر PTS به FA، و تست‌های دیسکت بیمه/مالیات) با خروجی **OK** اجرا شدند.
 

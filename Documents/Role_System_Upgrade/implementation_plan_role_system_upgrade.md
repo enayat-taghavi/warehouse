@@ -81,7 +81,7 @@ class CustomRole(Group):
 
 ---
 
-#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py) — سریالایزر `CustomRole`
+#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py) — سریالایزر `CustomRole`
 
 `GroupSerializer` با `CustomRoleSerializer` جایگزین می‌شود:
 
@@ -104,7 +104,7 @@ class CustomRoleSerializer(serializers.ModelSerializer):
 
 ---
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py) — ویو `GroupViewSet`
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/accounts/views.py) — ویو `GroupViewSet`
 
 | تغییر | جزئیات |
 |---|---|
@@ -114,7 +114,7 @@ class CustomRoleSerializer(serializers.ModelSerializer):
 
 ---
 
-#### [MODIFY] [urls.py](file:///e:/warehouse%20project/warehouse-backend/accounts/urls.py) — ثبت روتر جدید
+#### [MODIFY] [urls.py](file:///e:/warehouse%20project/backend/accounts/urls.py) — ثبت روتر جدید
 
 تغییر `GroupViewSet` به `CustomRoleViewSet` در `router.register`.
 
@@ -124,7 +124,7 @@ class CustomRoleSerializer(serializers.ModelSerializer):
 
 ---
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py) — حذف هاردکدها
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/accounts/views.py) — حذف هاردکدها
 
 | خط | کد فعلی (هاردکد) | کد جدید (استاندارد) |
 |:---:|---|---|
@@ -135,7 +135,7 @@ class CustomRoleSerializer(serializers.ModelSerializer):
 
 ---
 
-#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py) — حذف هاردکدها
+#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py) — حذف هاردکدها
 
 | خط | کد فعلی | کد جدید |
 |:---:|---|---|
@@ -150,13 +150,13 @@ class CustomRoleSerializer(serializers.ModelSerializer):
 
 ---
 
-#### [MODIFY] [state.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/services/state.service.ts) — حذف `rolesMap` هاردکد
+#### [MODIFY] [state.service.ts](file:///e:/warehouse%20project/frontend/src/app/services/state.service.ts) — حذف `rolesMap` هاردکد
 
 مپ هاردکد شده `rolesMap` حذف شده و به جای آن، داده‌ها مستقیماً از API پر می‌شوند (چون اکنون `title` و `color` از سرور می‌آیند).
 
 ---
 
-#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts) — آپدیت اینترفیس `Role`
+#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts) — آپدیت اینترفیس `Role`
 
 ```typescript
 export interface Role {
@@ -173,7 +173,7 @@ export interface Role {
 
 ---
 
-#### [MODIFY] [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts) — حذف هاردکدهای نقش
+#### [MODIFY] [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts) — حذف هاردکدهای نقش
 
 | تغییر | جزئیات |
 |---|---|
@@ -186,13 +186,13 @@ export interface Role {
 
 ---
 
-#### [MODIFY] [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) — فعال‌سازی Color Picker
+#### [MODIFY] [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) — فعال‌سازی Color Picker
 
 فیلد رنگ نقش که اکنون `disabled` و با متن «در این نسخه پشتیبانی نمی‌شود» مشخص شده، فعال می‌شود و به `roleForm.color` متصل می‌شود.
 
 ---
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts) — حذف فیلتر نقش هاردکد
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts) — حذف فیلتر نقش هاردکد
 
 فیلتر کردن `fieldWorkers`, `supervisors`, `managers` بر اساس نام نقش → بر اساس `is_system` یا بر اساس `group.id`.
 
@@ -202,17 +202,17 @@ export interface Role {
 
 | فایل | عملیات | فاز | اولویت |
 |---|:---:|:---:|:---:|
-| [models.py](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py) | MODIFY (افزودن مدل) | ۱ | 🔴 |
+| [models.py](file:///e:/warehouse%20project/backend/accounts/models.py) | MODIFY (افزودن مدل) | ۱ | 🔴 |
 | Migration جدید | NEW | ۱ | 🔴 |
-| [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py) | MODIFY | ۱+۲ | 🔴 |
-| [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py) | MODIFY | ۱+۲ | 🔴 |
-| [urls.py](file:///e:/warehouse%20project/warehouse-backend/accounts/urls.py) | MODIFY | ۱ | 🔴 |
-| [init_roles.py](file:///e:/warehouse%20project/warehouse-backend/accounts/management/commands/init_roles.py) | MODIFY | ۱ | 🟠 |
-| [state.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/services/state.service.ts) | MODIFY | ۳ | 🟠 |
-| [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts) | MODIFY | ۳ | 🟠 |
-| [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts) | MODIFY | ۳ | 🟠 |
-| [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) | MODIFY | ۳ | 🟡 |
-| [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts) | MODIFY | ۳ | 🟡 |
+| [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py) | MODIFY | ۱+۲ | 🔴 |
+| [views.py](file:///e:/warehouse%20project/backend/accounts/views.py) | MODIFY | ۱+۲ | 🔴 |
+| [urls.py](file:///e:/warehouse%20project/backend/accounts/urls.py) | MODIFY | ۱ | 🔴 |
+| [init_roles.py](file:///e:/warehouse%20project/backend/accounts/management/commands/init_roles.py) | MODIFY | ۱ | 🟠 |
+| [state.service.ts](file:///e:/warehouse%20project/frontend/src/app/services/state.service.ts) | MODIFY | ۳ | 🟠 |
+| [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts) | MODIFY | ۳ | 🟠 |
+| [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts) | MODIFY | ۳ | 🟠 |
+| [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) | MODIFY | ۳ | 🟡 |
+| [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts) | MODIFY | ۳ | 🟡 |
 
 ---
 

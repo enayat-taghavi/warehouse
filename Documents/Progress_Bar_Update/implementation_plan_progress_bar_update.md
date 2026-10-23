@@ -7,13 +7,13 @@ This plan details the implementation of a dynamic progress bar for the warehouse
 
 ## Proposed Changes
 
-### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - Add a new getter method `progressStats` that:
   - Checks if the user is in the Warehouse Menu or Main Menu.
   - Aggregates `total_quantity` and `counted_quantity` across all projects (if in Main Menu) or fetches it for the specific warehouse.
   - Calculates the percentage and assigns a color class (`bg-slate-400`, `bg-amber-500`, `bg-indigo-500`, `bg-blue-500`, `bg-emerald-500`) based on the percentage.
 
-### [MODIFY] [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html)
+### [MODIFY] [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html)
 - Bind the header's progress section to the new `progressStats` object.
 - Update the progress label to change between "پیشرفت کل پروژه:" and "پیشرفت انبار:".
 - Bind the CSS width of the progress bar to the calculated `percent`.

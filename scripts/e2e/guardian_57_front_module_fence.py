@@ -41,7 +41,7 @@ except Exception:
     pass
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-FRONT_APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
+FRONT_APP_DIR = REPO_ROOT / "frontend" / "src" / "app"
 BASELINE_FILE = pathlib.Path(__file__).resolve().parent / "front_fence_baseline.json"
 SCRATCH_DIR = REPO_ROOT / "scratch"
 
@@ -432,7 +432,7 @@ def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
     بررسی‌های قرارداد ساختاری ماژول‌ها طبق گام ۴ طرح راه میانهٔ ماژولار:
       ۱. وجود module.ts در هر پوشهٔ ماژول فرانت (به‌جز common).
       ۲. برابری code در module.ts با نام پوشه.
-      ۳. برابری code ماژول فرانت با code در warehouse-backend/modules/<x>/module.py.
+      ۳. برابری code ماژول فرانت با code در backend/modules/<x>/module.py.
       ۴. کامل بودن installed-modules.ts (شامل همهٔ پوشه‌های ماژول‌های کشف‌شده، جز ماژول opt-in).
       ۵. ماژول opt-in (گام ۷): optIn فرانت با opt_in بک‌اند برابر است و در installed-modules.ts ایمپورت نمی‌شود.
     """
@@ -447,7 +447,7 @@ def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
         errors.append("هیچ ماژولی در پوشهٔ modules یافت نشد.")
         return errors
 
-    backend_modules_dir = repo_root / "warehouse-backend" / "modules"
+    backend_modules_dir = repo_root / "backend" / "modules"
     opt_in = set()
 
     for mod_dir in discovered:
@@ -529,7 +529,7 @@ def run_self_test():
     try:
         dummy_file.write_text(
             '// فایل نقض ساختگی برای خودآزمایی نگهبان ۵۷\n'
-            'import { test } from "../warehouse-front/src/app/modules/warehouse/warehouse-flags";\n'
+            'import { test } from "../frontend/src/app/modules/warehouse/warehouse-flags";\n'
             'export function check() {\n'
             '  const syncUrl = `/api/personnel/sync/pull/?project_id=1`;\n'
             '  return isModuleInstalled("warehouse");\n'

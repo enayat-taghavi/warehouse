@@ -10,12 +10,12 @@
 
 | نام فایل | لایه معماری | شرح تغییرات اعمال‌شده |
 | :--- | :---: | :--- |
-| [warehouses/services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py) | بک‌اند (Django) | اضافه شدن کلیدهای `counter_can_view_history` و `counter_can_view_previous_notes` با مقدار پیش‌فرض `True` به `DEFAULT_SETTINGS`. |
-| [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html) | فرانت‌اند (تنظیمات کلان) | ایجاد دو تاگل سوئیچ مدرن در تب «قوانین عملیاتی» برای تنظیم مشاهده تاریخچه و مشاهده یادداشت‌های قبلی. |
-| [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) | فرانت‌اند (تنظیمات انبار) | ایجاد دو تاگل سوئیچ همراه با نشانگر وضعیت اورراید اختصاصی (`is_override`) در تب قوانین عملیاتی هر انبار. |
-| [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) | فرانت‌اند (تنظیمات انبار) | افزودن کلیدهای جدید به `opKeys` برای تشخیص تغییرات اورراید و بازنشانی اختصاصی. |
-| [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | فرانت‌اند (انبارگردان) | تعریف متغیرهای وضعیتی، استخراج تنظیمات در `fetchFieldSettings` و متد کمکی `canViewRecordNote`. |
-| [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | فرانت‌اند (انبارگردان) | شرطی‌سازی نمایش کادر تاریخچه با `counterCanViewHistory` و مخفی‌سازی یادداشت‌های قدیمی با `canViewRecordNote(i)`. |
+| [warehouses/services.py](file:///e:/warehouse%20project/backend/warehouses/services.py) | بک‌اند (Django) | اضافه شدن کلیدهای `counter_can_view_history` و `counter_can_view_previous_notes` با مقدار پیش‌فرض `True` به `DEFAULT_SETTINGS`. |
+| [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html) | فرانت‌اند (تنظیمات کلان) | ایجاد دو تاگل سوئیچ مدرن در تب «قوانین عملیاتی» برای تنظیم مشاهده تاریخچه و مشاهده یادداشت‌های قبلی. |
+| [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) | فرانت‌اند (تنظیمات انبار) | ایجاد دو تاگل سوئیچ همراه با نشانگر وضعیت اورراید اختصاصی (`is_override`) در تب قوانین عملیاتی هر انبار. |
+| [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) | فرانت‌اند (تنظیمات انبار) | افزودن کلیدهای جدید به `opKeys` برای تشخیص تغییرات اورراید و بازنشانی اختصاصی. |
+| [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | فرانت‌اند (انبارگردان) | تعریف متغیرهای وضعیتی، استخراج تنظیمات در `fetchFieldSettings` و متد کمکی `canViewRecordNote`. |
+| [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | فرانت‌اند (انبارگردان) | شرطی‌سازی نمایش کادر تاریخچه با `counterCanViewHistory` و مخفی‌سازی یادداشت‌های قدیمی با `canViewRecordNote(i)`. |
 
 ---
 

@@ -21,13 +21,13 @@
 
 | ردیف | مسیر فایل | نوع تغییر | شرح تغییرات |
 | :--- | :--- | :--- | :--- |
-| ۱ | [`warehouses/services.py`](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py) | `MODIFY` | افزودن `manager_approval_mode` به `DEFAULT_SETTINGS` |
-| ۲ | [`settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html) | `MODIFY` | افزودن تایید سرپرست اسناد، بهبود دسترسی‌پذیری و ارتقای UI |
-| ۳ | [`settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.ts) | `MODIFY` | حذف تاخیر مصنوعی، اصلاح هندلینگ خطای بلاب بک‌آپ و هدایت به لاگین پس از ریستور |
-| ۴ | [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) | `MODIFY` | رفع باگ تاگل‌ها، افزودن تنظیمات آفلاین، افزودن Empty State |
-| ۵ | [`wh-settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) | `MODIFY` | اتصال به سیگنال `AuthStore.activeWarehouseId` جهت رفرش خودکار با تغییر انبار |
-| ۶ | [`dynamic-fields.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.ts) | `MODIFY` | اصلاح خواندن انبار از `AuthStore` به جای `StateService` قدیمی |
-| ۷ | [`label-designer.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/label-designer/label-designer.ts) | `MODIFY` | افزودن لیسنر تغییر `warehouseId` در `ngOnChanges` |
+| ۱ | [`warehouses/services.py`](file:///e:/warehouse%20project/backend/warehouses/services.py) | `MODIFY` | افزودن `manager_approval_mode` به `DEFAULT_SETTINGS` |
+| ۲ | [`settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html) | `MODIFY` | افزودن تایید سرپرست اسناد، بهبود دسترسی‌پذیری و ارتقای UI |
+| ۳ | [`settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.ts) | `MODIFY` | حذف تاخیر مصنوعی، اصلاح هندلینگ خطای بلاب بک‌آپ و هدایت به لاگین پس از ریستور |
+| ۴ | [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) | `MODIFY` | رفع باگ تاگل‌ها، افزودن تنظیمات آفلاین، افزودن Empty State |
+| ۵ | [`wh-settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) | `MODIFY` | اتصال به سیگنال `AuthStore.activeWarehouseId` جهت رفرش خودکار با تغییر انبار |
+| ۶ | [`dynamic-fields.ts`](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.ts) | `MODIFY` | اصلاح خواندن انبار از `AuthStore` به جای `StateService` قدیمی |
+| ۷ | [`label-designer.ts`](file:///e:/warehouse%20project/frontend/src/app/components/label-designer/label-designer.ts) | `MODIFY` | افزودن لیسنر تغییر `warehouseId` در `ngOnChanges` |
 
 ---
 
@@ -66,12 +66,12 @@
 ### تست‌های خودکار و اعتبارسنجی بیلد
 - اجرای تست بیلد فرانت‌اند برای اطمینان از عدم وجود هرگونه خطای تایپ یا تمپلیت:
   ```powershell
-  cd "e:\warehouse project\warehouse-front"
+  cd "frontend"
   npx ng build --configuration development
   ```
 - بررسی خطاهای جنگو و چک سلامت سرور:
   ```powershell
-  cd "e:\warehouse project\warehouse-backend"
+  cd "backend"
   python manage.py check
   ```
 

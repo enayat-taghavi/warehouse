@@ -3,20 +3,20 @@
 # فهرست وظایف اجرایی: طرح جامع ارتقای شرکت‌ها، هیئت‌مدیره پویا و معماری اسناد
 
 - [x] **فاز ۱: اصلاح ساختاری و قطعی تقویم شمسی جلالی در فرانت‌اند**
-  - [x] کپسوله‌سازی تگ `<input>` درون `<ng-persian-datepicker>` و بایندینگ دوطرفه `[(uiIsVisible)]` در [companies.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/companies/companies.html)
-  - [x] اعمال اصلاح مشابه در فرم آپلود آرشیو اسناد [company-documents-archive.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/company-documents-archive/company-documents-archive.html)
+  - [x] کپسوله‌سازی تگ `<input>` درون `<ng-persian-datepicker>` و بایندینگ دوطرفه `[(uiIsVisible)]` در [companies.html](file:///e:/warehouse%20project/frontend/src/app/components/operations/companies/companies.html)
+  - [x] اعمال اصلاح مشابه در فرم آپلود آرشیو اسناد [company-documents-archive.html](file:///e:/warehouse%20project/frontend/src/app/components/finance/company-documents-archive/company-documents-archive.html)
   - [x] تصحیح Z-index و استایل‌های پاپ‌اور در فایل‌های CSS جهت جلوگیری از برش خوردن
   - [x] اعتبارسنجی عملکرد تقویم در تست‌های DOM
 
 - [x] **فاز ۲: معماری بک‌اند و پایگاه داده (Data Models & Migrations)**
-  - [x] تعریف مدل `CompanyBoardMember` با فیلدهای کامل هویتی، سمتی، حق امضا و مدارک پیوست در [personnel/models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py)
+  - [x] تعریف مدل `CompanyBoardMember` با فیلدهای کامل هویتی، سمتی، حق امضا و مدارک پیوست در [personnel/models.py](file:///e:/warehouse%20project/backend/personnel/models.py)
   - [x] افزودن فیلدهای نسخه `version` و `is_superseded` به مدل `CompanyDocument`
   - [x] ایجاد و اعمال مایگریشن پیش‌رونده جدید جنگو (`makemigrations` و `migrate`)
   - [x] هماهنگی ساختار داده‌ای جدید بدون تغییر در مایگریشن‌های پیشین
 
 - [x] **فاز ۳: وب‌سرویس‌ها، سریالایزرها و بهینه‌سازی کوئری‌ها**
-  - [x] ایجاد `CompanyBoardMemberSerializer` و `CompanyBoardMemberViewSet` در [personnel/views.py](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py)
-  - [x] ثبت روت‌های جدید در [personnel/urls.py](file:///e:/warehouse%20project/warehouse-backend/personnel/urls.py)
+  - [x] ایجاد `CompanyBoardMemberSerializer` و `CompanyBoardMemberViewSet` در [personnel/views.py](file:///e:/warehouse%20project/backend/personnel/views.py)
+  - [x] ثبت روت‌های جدید در [personnel/urls.py](file:///e:/warehouse%20project/backend/personnel/urls.py)
   - [x] افزودن `prefetch_related('documents', 'bank_accounts', 'board_members')` به `CompanyViewSet.get_queryset` جهت حذف مشکل N+1
   - [x] پیاده‌سازی متد اعتبارسنجی چکسام ۱۱ رقمی شناسه ملی اشخاص حقوقی
   - [x] نوشتن تست‌های جامع جنگو برای پوشش ۱۰۰٪ وب‌سرویس هیئت‌مدیره و بهینه‌سازی کوئری‌ها (۱۴ تست کاملاً سبز)

@@ -4,7 +4,7 @@
 
 ### ۱. اصلاح و تمیزسازی عناوین گروه‌ها در پنل مدیریت نقش‌ها (Angular UI)
 
-واژه‌های تکراری «دسترسی‌های» از سرگروه‌های ماتریس دسترسی نقش‌ها در فایل [`users.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts) حذف و به صورت کوتاه و شفاف بازنویسی شد:
+واژه‌های تکراری «دسترسی‌های» از سرگروه‌های ماتریس دسترسی نقش‌ها در فایل [`users.ts`](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts) حذف و به صورت کوتاه و شفاف بازنویسی شد:
 
 * **دسترسی‌های منوی اصلی** ⬅️ <span style="color:green">**منوی اصلی**</span>
 * **دسترسی‌های منوی انبار** ⬅️ <span style="color:green">**منوی انبار**</span>
@@ -16,7 +16,7 @@
 
 ### ۲. به‌روزرسانی رکوردهای دیتابیس و مدل جنگو (Database & Backend Names)
 
-عبارت‌های اضافی «دسترسی به تب...»، «دسترسی به...» و «مجوز...» از تمام ۴۱ پرمیشن موجود در مدل [`accounts/models.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py) و دیتابیس حذف شد و با اجرای فرمان بذر داده‌ها تمامی ۴۱ رکورد در جدول `auth_permission` دیتابیس با موفقیت به‌روزرسانی شدند:
+عبارت‌های اضافی «دسترسی به تب...»، «دسترسی به...» و «مجوز...» از تمام ۴۱ پرمیشن موجود در مدل [`accounts/models.py`](file:///e:/warehouse%20project/backend/accounts/models.py) و دیتابیس حذف شد و با اجرای فرمان بذر داده‌ها تمامی ۴۱ رکورد در جدول `auth_permission` دیتابیس با موفقیت به‌روزرسانی شدند:
 
 ```text
 Successfully processed permissions: 0 created, 41 updated.
@@ -40,7 +40,7 @@ Successfully processed permissions: 0 created, 41 updated.
 
 ### ۳. نتایج راستی‌آزمایی و بیلد نهایی
 
-* ✅ **مایگریشن جنگو:** مایگریشن رسمی [`0027_alter_customuser_options.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/migrations/0027_alter_customuser_options.py) اعمال شد.
+* ✅ **مایگریشن جنگو:** مایگریشن رسمی [`0027_alter_customuser_options.py`](file:///e:/warehouse%20project/backend/accounts/migrations/0027_alter_customuser_options.py) اعمال شد.
 * ✅ **آزمون سرتاسری:** اجرای موفقیت‌آمیز `test_phase5_master_e2e.py` با ۱۰۰٪ پاس.
 * ✅ **بیلد فرانت‌اند:** اجرای موفقیت‌آمیز `npm run build` با کد خروجی ۰ (Exit Code 0).
 

@@ -95,8 +95,8 @@ class RunnerCase(unittest.TestCase):
         write(self.repo / "a" / "x.txt", "one\n")
         write(self.repo / "b" / ".keep", "")
         write(self.repo / "notes.txt", "base\n")
-        write(self.repo / "warehouse-front" / ".keep", "")
-        write(self.repo / "warehouse-backend" / ".keep", "")
+        write(self.repo / "frontend" / ".keep", "")
+        write(self.repo / "backend" / ".keep", "")
         write(self.repo / "tasks.md", "# Queue\n")
         tools = self.repo / "scripts" / "automation"
         tools.mkdir(parents=True)
@@ -104,9 +104,9 @@ class RunnerCase(unittest.TestCase):
         git(self.repo, "add", "-A")
         git(self.repo, "commit", "-qm", "base")
         # پوشه‌های ignore‌شده‌ای که runner در worktree با junction یا کپی می‌سازد
-        write(self.repo / "warehouse-front" / "node_modules" / "marker.txt", "front deps\n")
-        write(self.repo / "warehouse-backend" / "venv" / "marker.txt", "backend venv\n")
-        write(self.repo / "warehouse-backend" / ".env", "SECRET=test\n")
+        write(self.repo / "frontend" / "node_modules" / "marker.txt", "front deps\n")
+        write(self.repo / "backend" / "venv" / "marker.txt", "backend venv\n")
+        write(self.repo / "backend" / ".env", "SECRET=test\n")
 
         os.environ.update(FAKE_AGY_STATE=str(self.state), FAKE_AGY_PYTHON=PY, FAKE_AGY_MAIN=str(self.repo))
         self.saved = {k: getattr(R, k) for k in PATCHED}
@@ -157,15 +157,15 @@ class RunnerCase(unittest.TestCase):
         return json.loads((self.repo / "scratch" / "logs" / "runner" / "status.json").read_text(encoding="utf-8"))
 
     def assert_clean_shared_dirs(self):
-        self.assertEqual((self.repo / "warehouse-front" / "node_modules" / "marker.txt").read_text(), "front deps\n")
-        self.assertEqual((self.repo / "warehouse-backend" / "venv" / "marker.txt").read_text(), "backend venv\n")
+        self.assertEqual((self.repo / "frontend" / "node_modules" / "marker.txt").read_text(), "front deps\n")
+        self.assertEqual((self.repo / "backend" / "venv" / "marker.txt").read_text(), "backend venv\n")
 
     # ------------------------------------------------------------ unit
 
     def test_scope_parsing_and_overlap(self):
         t = R.Task("t", "t", verifies=['python scripts/automation/verify_tools.py scope --base {base} --allow '
-                                       'warehouse-front/src/app/a/* warehouse-front/x.ts --min-files 1'])
-        self.assertEqual(R.task_scope(t), ["warehouse-front/src/app/a/*", "warehouse-front/x.ts"])
+                                       'frontend/src/app/a/* frontend/x.ts --min-files 1'])
+        self.assertEqual(R.task_scope(t), ["frontend/src/app/a/*", "frontend/x.ts"])
         self.assertFalse(R.scopes_overlap(["front/a/*"], ["front/b/*"]))
         self.assertTrue(R.scopes_overlap(["front/a*"], ["front/ab/x.ts"]))
         self.assertTrue(R.scopes_overlap(["front/*"], ["front/b/c.ts"]))
@@ -196,7 +196,7 @@ class RunnerCase(unittest.TestCase):
         R.configure(self.repo, self.wt_root)
         path, branch = self.wt_root / "run" / "task-01", "runner/run/task-01"
         self.assertEqual(R.create_worktree(path, branch, git(self.repo, "rev-parse", "HEAD")), "")
-        self.assertTrue(R.is_link(path / "warehouse-front" / "node_modules"))
+        self.assertTrue(R.is_link(path / "frontend" / "node_modules"))
         (path / "scratch").mkdir()
         R.make_link(self.repo / "b", path / "scratch" / "leftover")
         R.remove_worktree(path, branch)
@@ -225,8 +225,8 @@ class RunnerCase(unittest.TestCase):
         write(self.repo / "notes.txt", "uncommitted user work\n")
         self.queue(
             task("Task A", group="g", scope="a/*", sleep=3,
-                 verify=[exists_check("warehouse-front/node_modules/marker.txt"),
-                         exists_check("warehouse-backend/venv/marker.txt"), exists_check("warehouse-backend/.env")],
+                 verify=[exists_check("frontend/node_modules/marker.txt"),
+                         exists_check("backend/venv/marker.txt"), exists_check("backend/.env")],
                  merged=[exists_check("b/y.txt")],
                  run=[put("a/x.txt", "A"), commit("task a", "a")]),
             task("Task B", group="g", scope="b/*", sleep=3,

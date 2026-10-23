@@ -25,35 +25,35 @@
 ---
 
 ### Supervisor Dashboard (`supervisor-dashboard.ts`)
-#### [MODIFY] [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+#### [MODIFY] [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
 - گوش دادن به رویداد `NavigationEnd` در `Router` برای بررسی پارامتر `tab` از URL.
 - در `setTab`، انجام ناوبری با `queryParams: { tab }` (بدون `replaceUrl` تا دکمه Back برای تب‌ها کار کند).
 
 ### Counter Dashboard (`counter-dashboard.ts`)
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - استخراج `tab`, `status`, `date`, `q` و `sort` در `NavigationEnd`.
 - اعمال `replaceUrl: true` هنگام تایپ کلمات کلیدی در باکس جستجو یا تغییر فیلترها.
 
 ### Manager Review (`manager-review.ts`)
-#### [MODIFY] [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+#### [MODIFY] [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
 - اعمال رویکرد مشابه برای خواندن امن `tab` از URL در کامپوننت کش شده.
 
 ### Customs (کارتابل مالی) (`customs.ts`)
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - همگام‌سازی `tab`, `status` و جستجو با آدرس مرورگر با رعایت `replaceUrl: true` برای جستجو.
 
 ### Count Tracking (`count-tracking.ts`)
-#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
 - ذخیره و خواندن پارامترهای صفحه‌بندی (`page`) و وضعیت مغایرت در URL.
 
 ### Customs (کارتابل مالی) (`customs.ts`)
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - اضافه کردن `ActivatedRoute` و `Router`.
 - همگام‌سازی `currentTab`، `statusFilter` و احتمالاً `searchQuery` با پارامترهای `tab`, `status` و `q`.
 - خواندن مقادیر اولیه در `ngOnInit` و به‌روزرسانی URL در متدهای `setTab` و `onSearch`.
 
 ### Count Tracking (`count-tracking.ts`)
-#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
 - همگام‌سازی `showOnlyDiscrepancies` و احتمالاً شماره صفحه (`currentPage`) در URL (مثال: `?discrepancies=true&page=2`).
 
 ## نحوه بررسی

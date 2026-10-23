@@ -24,7 +24,7 @@
 ۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر — گام ۹» را بخوان.
 
 ۳. کار این نشست:
-الف) warehouse-front/src/app/shared/components/command-center/command-center.component.ts:
+الف) frontend/src/app/shared/components/command-center/command-center.component.ts:
   - در ROW_CONTAINER_CLASSES، در مقدار md بعد از md:flex-row کلاس md:flex-wrap، و در مقدار lg بعد از lg:flex-row کلاس lg:flex-wrap را بیفزا.
   - در قالب، div اسلات cc-tabs (class="flex items-center overflow-x-auto") کلاس‌های min-w-0 max-w-full بگیرد، و div اسلات cc-actions کلاس ms-auto.
   - توضیح فارسی کوتاه: «اگر تب‌ها و اکشن‌ها در یک سطر جا نشوند، اکشن‌ها به سطر دوم (سمت چپ) می‌روند.»
@@ -36,7 +36,7 @@
     - employee-petty-cash.html ([tabs]="pettyCashStatusTabs")
     - employee-new-vehicle.html ([tabs]="statusFilterTabs")
     - employee-new-personnel.html ([tabs]="statusFilterTabs")
-ج) رجیستری: به warehouse-front/src/app/shared/icons/icon-registry.ts آیکون 'droplet' را با این محتوا بیفزا:
+ج) رجیستری: به frontend/src/app/shared/icons/icon-registry.ts آیکون 'droplet' را با این محتوا بیفزا:
 '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>'
 د) کار تازه «قطع همکاری»:
   - در shared/icons/semantic-icons.ts، به ACTION_ICONS کلید 'terminate': 'slash' را بیفزا.
@@ -78,7 +78,7 @@
 
 ۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
-۳. کار این نشست (مسیرها در warehouse-front/src/app/components/finance/accountant/):
+۳. کار این نشست (مسیرها در frontend/src/app/components/finance/accountant/):
 
 ۴.۱ accountant-payroll:
 - تب‌ها: پنج switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl"، شمارنده‌ها مثل پایه:
@@ -738,8 +738,8 @@
 الف) پاک‌سازی رجیستری (بند ۳-۵):
   - نامزدها فقط نام‌های مجموعه RETIRED_VARIANTS در scripts/e2e/guardian_55_clickable_ergonomics.py هستند.
   - یک اسکریپت پایتون موقت در scratch/ بنویس که برای هر نامزد این‌ها را بشمارد:
-    - رخدادهای 'نام' و "نام" در warehouse-front/src، جز shared/icons/icon-registry.ts؛
-    - رخدادهای 'نام' و "نام" در warehouse-backend، جز venv، __pycache__ و logs؛
+    - رخدادهای 'نام' و "نام" در frontend/src، جز shared/icons/icon-registry.ts؛
+    - رخدادهای 'نام' و "نام" در backend، جز venv، __pycache__ و logs؛
     - الگوهای ساخت پویا با پیشوند نام، مثل 'پیشوند-' + و `پیشوند-${.
   - اسکریپت را با python -X utf8 اجرا کن.
   - فقط نامزدی که همه شمارش‌هایش صفر است از icon-registry.ts حذف شود. RETIRED_VARIANTS نگهبان ۵۵ دست نخورد.

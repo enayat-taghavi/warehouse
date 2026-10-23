@@ -24,7 +24,7 @@ graph LR
 > [!IMPORTANT]
 > **هدف فاز ۱:** جلوگیری قطعی از نشت اطلاعات موجودی سیستم و اختلافات در خروجی اکسل صفحه پیگیری شمارش هنگام فعال بودن حالت «شمارش کور» (`is_blind`).
 
-- **فایل هدف:** [`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) (متد `CountTaskViewSet.export_excel`)
+- **فایل هدف:** [`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) (متد `CountTaskViewSet.export_excel`)
 - **اقدامات اجرایی دقیق:**
   1. واکشی وضعیت تنظیمات شمارش کور انبار از طریق کانتکست یا مدل `SystemSetting` مربوط به انبار تسک‌ها.
   2. بررسی نقش کاربر (کاربران شمارنده یا شرایطی که `is_blind=True` است).
@@ -41,7 +41,7 @@ graph LR
 > [!IMPORTANT]
 > **هدف فاز ۲:** تضمین ماندگاری تغییرات لوکیشن، فیلدهای داینامیک و اطلاعات کالا در حالت قطعی اینترنت و اضافه شدن آنها به صف همگام‌سازی محلی (Local-First).
 
-- **فایل هدف:** [`warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) (متد `saveExtraEditedFields`)
+- **فایل هدف:** [`frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) (متد `saveExtraEditedFields`)
 - **اقدامات اجرایی دقیق:**
   1. در صورت وجود تغییرات در فیلدهای کالا (`hasChanges === true`):
      - به‌روزرسانی آبجکت محلی در حافظه و ثبت تغییرات در جدول `offlineDb.items` و فیلد `item_details` در جدول `offlineDb.countTasks`.
@@ -61,8 +61,8 @@ graph LR
 > **هدف فاز ۳:** شفاف‌سازی کامل رابط کاربری برای تسک‌های برگشت‌خورده (`SUPERVISOR_REJECTED` / `MANAGER_REJECTED`) پس از ورود مقدار جدید و اصلاح شروط قالب.
 
 - **فایل‌های هدف:**
-  - [`warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
-  - [`warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+  - [`frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+  - [`frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - **اقدامات اجرایی دقیق:**
   1. **اصلاح کادر و پس‌زمینه کارت‌ها:**
      - اگر تسکی در وضعیت `SUPERVISOR_REJECTED` یا `MANAGER_REJECTED` باشد ولی شمارنده برای آن مقداری وارد کرده باشد (`task.counted_balance !== null`)، کادر قرمز به کادر نارنجی/کهربایی متمایز (`border-amber-500 ring-1 ring-amber-500/20 bg-amber-50/10`) تبدیل شود تا مشخص گردد پیش‌نویس بازشماری ذخیره شده است.
@@ -84,7 +84,7 @@ graph LR
 > **هدف فاز ۴:** روان‌سازی انیمیشن‌های ورود و خروج مودال‌ها/دراورها در چیدمان راست‌به‌چپ (RTL) و راستی‌آزمایی نهایی بیلد کل پروژه.
 
 - **فایل‌های هدف:**
-  - [`warehouse-front/src/styles.css`](file:///e:/warehouse%20project/warehouse-front/src/styles.css)
+  - [`frontend/src/styles.css`](file:///e:/warehouse%20project/frontend/src/styles.css)
 - **اقدامات اجرایی دقیق:**
   1. تعریف کامل کی‌فریم‌های انیمیشن در `styles.css`:
      - `@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`

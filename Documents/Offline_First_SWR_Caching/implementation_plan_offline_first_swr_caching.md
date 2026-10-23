@@ -21,10 +21,10 @@
 
 ### 🔹 فاز ۱: هسته سرویس‌های آفلاین و رهگیر SWR (Core SWR Services)
 1. **افزودن گذرگاه رویدادهای زنده (`liveDataUpdates$`):**
-   - در [offline-sync.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts): ایجاد `Subject` اختصاصی برای انتشار بسته‌های داده جدید سرور شامل `{ url, data, timestamp }`.
+   - در [offline-sync.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts): ایجاد `Subject` اختصاصی برای انتشار بسته‌های داده جدید سرور شامل `{ url, data, timestamp }`.
    - ایجاد متد `notifyDataUpdated(url, data)`.
 2. **بازطراحی موتور رهگیر درخواست‌های GET (`offlineInterceptor`):**
-   - در [offline.interceptor.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.interceptor.ts):
+   - در [offline.interceptor.ts](file:///e:/warehouse%20project/frontend/src/app/core/interceptors/offline.interceptor.ts):
      - **بررسی کش محلی:** جستجو در IndexedDB؛ در صورت وجود رکورد، بلافاصله پاسخ `HttpResponse` ادغام‌شده با صف (`mergeWithQueue`) تحویل داده می‌شود (زمان لود زیر ۲۰ میلی‌ثانیه).
      - **استعلام پس‌زمینه (Background Request):** همزمان یک درخواست پس‌زمینه با تایم‌اوت ۱۰ ثانیه به سمت سرور روانه می‌شود.
      - **پاسخ موفق سرور:** ذخیره نسخه جدید در IndexedDB، ادغام با تغییرات در صف، مقایسه با کش قبلی و انتشار رویداد `notifyDataUpdated`.

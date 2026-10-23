@@ -21,13 +21,13 @@
 
 ## ۳. تغییرات پیشنهادی در فایل‌ها (Proposed Changes)
 
-### فرانت‌اند (`warehouse-front`)
+### فرانت‌اند (`frontend`)
 
-#### [MODIFY] [customs-scanner-parser.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs-scanner-parser.ts)
+#### [MODIFY] [customs-scanner-parser.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs-scanner-parser.ts)
 - بازنویسی و تقویت تابع `isMultiRowOrStructured` جهت الزام به وجود همزمان جداکننده سطر و ستون یا کاراکترهای کنترلی اسکنر.
 - افزودن تگ (`tag`) و پارت نامبر به کلیدهای نگاشت هدر در `mapHeaderToKey`.
 
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - ارتقای متد `onBarcodeScanned` با پیاده‌سازی گام‌های سه‌گانه:
   1. جستجوی دقیق در `tasks` کارشناس (بر پایه `fa_unic_code`, `en_unic_code`, `id`, `po`, `inv_rti_number`, `tag`).
   2. در صورت تطبیق ۱ مورد: باز کردن فوری با `openDetail`.

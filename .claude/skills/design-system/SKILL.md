@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: Design language and visual rules for the warehouse and accounting frontend (Angular + Tailwind, Persian and right-to-left). Use this when building or changing any template, style, component or UI page in warehouse-front, so the look stays consistent, accessible and offline-first. Invoke at most once per session; re-invoke only if it is no longer in context.
+description: Design language and visual rules for the warehouse and accounting frontend (Angular + Tailwind, Persian and right-to-left). Use this when building or changing any template, style, component or UI page in frontend, so the look stays consistent, accessible and offline-first. Invoke at most once per session; re-invoke only if it is no longer in context.
 user-invocable: false
 ---
 
@@ -61,7 +61,7 @@ Semantic tokens (new code should use these):
 - **Icon-button accessibility:** every button without text needs a Persian `aria-label` and `title`.
 
 ## Shared Ergonomics Toolkit (Default UI Standard)
-All clickable UI and navigation across `warehouse-front` must strictly use the modular shared toolkit as the primary and default pattern:
+All clickable UI and navigation across `frontend` must strictly use the modular shared toolkit as the primary and default pattern:
 - **`button[appAction]`:** Default button directive. Uses catalog action keys (`create`, `edit`, `delete`, `refresh`, `export-excel`, `import-excel`, `save`, `approve`, `reject`, `return`, `restore`, `confirm`, `close`, `send`, `print`, `copy`, `view`, `hide`, `search`, `filter`, `more`, `camera`, `scan`, `loading`, `lock`, `unlock`, `history`, `sync`, `settings`, `back`, `forward`, `expand`, `collapse`, `logout`, and `terminate` for ending collaboration/employment). Sensitive actions (`terminate`, `delete`, `reject`, `restore`, `lock`, `unlock`) always stay labeled. Unfamiliar actions in mobile use `display="label"`. Do not add static `title="..."` (the directive creates it from `label`). For a separate tooltip, such as why the button is disabled, use `[hint]`.
 - **`app-tab-bar`:** Default tab bar component (`role="tablist"`, RTL arrow keys, `activeChange` output). Never use a getter returning a new array `get tabs(): TabDef[]` (NG0100 in dev mode); use `readonly tabs: TabDef[]` or a keyed cache (`xKey` / `xCache`). 1–3 tabs use `mobile="short"`; 4+ tabs use `mobile="icon"`.
 - **`app-overflow-menu`:** Default overflow wrapper for actions exceeding mobile width budget. Renders inline on desktop (`display: contents`) and in an ergonomic popover with `more-vertical` icon on mobile.
@@ -121,6 +121,6 @@ Detect server outages only with `isServerUnreachable()`.
 - Page transitions are global (`withViewTransitions` in `app.config.ts`); no new code is needed.
 
 ## Before declaring completion
-- `npx tsc --noEmit -p tsconfig.app.json` in `warehouse-front`
+- `npx tsc --noEmit -p tsconfig.app.json` in `frontend`
 - `python scripts/e2e/guardian_52_icon_registry.py`
 - The `ui-reviewer` subagent to review appearance and accessibility

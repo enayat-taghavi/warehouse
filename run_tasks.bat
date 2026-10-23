@@ -10,8 +10,8 @@ where python >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
     set "PY_CMD=python"
 ) else (
-    if exist "warehouse-backend\venv\Scripts\python.exe" (
-        set "PY_CMD=warehouse-backend\venv\Scripts\python.exe"
+    if exist "backend\venv\Scripts\python.exe" (
+        set "PY_CMD=backend\venv\Scripts\python.exe"
     ) else (
         set "PY_CMD=py"
     )

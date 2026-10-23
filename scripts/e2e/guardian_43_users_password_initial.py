@@ -26,7 +26,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+BACKEND_DIR = REPO_ROOT / "backend"
 
 
 def test_users_password_initial():

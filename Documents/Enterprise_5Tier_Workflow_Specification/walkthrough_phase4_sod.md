@@ -5,7 +5,7 @@
 ## ۱. خلاصه اقدامات انجام‌شده در فاز ۴ (Executive Summary)
 فاز چهارم طرح جامع سوپراپلیکیشن ماژولار با طراحی و استقرار کامپوننت پیشرفته هدر پیاده‌سازی شد:
 
-1. **طراحی و ساخت کامپوننت دولایه `AppRoleSwitcherComponent` در [`warehouse-front/src/app/shared/components/app-role-switcher/`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.ts):**
+1. **طراحی و ساخت کامپوننت دولایه `AppRoleSwitcherComponent` در [`frontend/src/app/shared/components/app-role-switcher/`](file:///e:/warehouse%20project/frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.ts):**
    - **لایه اول (App Segmented Capsule):** دکمه‌های تگل کپسولی با انیمیشن روان و نور پس‌زمینه اکتیو بین دو ماژول اصلی:
      - 📦 **انبارداری و انبارگردانی** (`warehouse`)
      - 💳 **مالی، کارکرد و خزانه‌داری** (`personnel`)
@@ -13,7 +13,7 @@
      - دکمه نمایشگر نقش فعال کاربر با آیکون اختصاصی، رنگ اختصاصی هر نقش (سبز حسابدار، بنفش مدیر، کهربایی خزانه‌دار، آبی سرپرست، نوک‌مدادی اپراتور) و بردر شیشه‌ای.
      - منوی بازشونده (Dropdown) لیست نقش‌های معتبر کاربر چندنقشه به همراه تیک سبز رنگ روی نقش فعال.
      - در صورت تک‌نقشه بودن، نقش به صورت یک بج ثابت و زیبا نمایش داده شده و دراپ‌داون غیرفعال است.
-2. **استقرار در هدر اصلی سیستم در [`warehouse-front/src/app/components/layout/layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html):**
+2. **استقرار در هدر اصلی سیستم در [`frontend/src/app/components/layout/layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html):**
    - جایگذاری در نوار هدر با پشتیبانی کامل از حالت‌های ریسپانسیو دسکتاپ و موبایل.
 3. **توسعه و اتصال ایجنت سخت‌گیر نگهبان ۱۳:**
    - **🛡️ نگهبان ۱۳ (`Header App & Persona Switcher UI Guardian`):** اعتبارسنجی فایل‌های ۳ گانه کامپوننت، منطق تایپ‌اسکریپت، ساختار دولایه در HTML و استقرار در Layout.
@@ -50,14 +50,14 @@
 
 ### تست ۱: اجرای سوئیت کامل ۱۳ ایجنت سخت‌گیر نگهبان
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe personnel\phase_guardian_approval.py
 ```
 *خروجی مورد انتظار:* چاپ پیام **«🏆 تبریک! تمامی ۱۳ ایجنت نگهبان ... با موفقیت ۱۰۰٪ تایید شدند 🏆»**.
 
 ### تست ۲: بررسی صحت کامپایل و بیلد فرانت‌اند Angular 19
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 *خروجی مورد انتظار:* اتمام موفق بیلد با پیام `Application bundle generation complete` و کد خروجی صفر.

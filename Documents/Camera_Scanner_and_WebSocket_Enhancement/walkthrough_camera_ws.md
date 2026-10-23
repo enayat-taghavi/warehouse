@@ -24,7 +24,7 @@
 
 | ردیف | فایل تغییر یافته | شرح تغییرات |
 | :---: | :--- | :--- |
-| ۱ | [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | بازنویسی کامل با معماری شتاب‌یافته ۶۰FPS، ۱۲ فرمت بارکد، کنترل فلش LED، زوم سخت‌افزاری، صدای بیپ سنتزشده و لرزش هپتیک. |
+| ۱ | [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | بازنویسی کامل با معماری شتاب‌یافته ۶۰FPS، ۱۲ فرمت بارکد، کنترل فلش LED، زوم سخت‌افزاری، صدای بیپ سنتزشده و لرزش هپتیک. |
 
 ---
 

@@ -12,7 +12,7 @@
 ---
 
 ## فاز ۲: ارتقای بک‌اند، سینک آفلاین و جستجوی همه‌جانبه (Backend & Local-First Sync)
-- [x] ۲.۱. پشتیبانی از `sync_ids` در اکشن `claim_tasks` در فایل `warehouse-backend/inventory/views.py` <!-- id: 5 -->
+- [x] ۲.۱. پشتیبانی از `sync_ids` در اکشن `claim_tasks` در فایل `backend/inventory/views.py` <!-- id: 5 -->
 - [x] ۲.۲. یکپارچه‌سازی SWR Live Revalidation در `customs.ts`: تفکیک مسیر استخر از تسک‌های من و هماهنگی با دیتابیس Dexie <!-- id: 6 -->
 - [x] ۲.۳. افزودن فیلدهای پویا (`item.dynamic_data`) به تابع جستجوی سراسری `matchesSearch` <!-- id: 7 -->
 - [x] 🔍 **گیت بررسی فاز ۲:** اجرای تست‌های بک‌اند `python manage.py test inventory.tests_docs` <!-- id: 8 -->

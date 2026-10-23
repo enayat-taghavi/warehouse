@@ -3,7 +3,7 @@
 <div dir="rtl" align="right">
 
 ## فاز ۱: مدل‌های دیتابیس و مایگریشن پیش‌رونده
-- [ ] <!-- id: 101 --> **تسک ۱.۱:** حذف فیلد `section` از مدل `Counterparty` در `warehouse-backend/personnel/models.py`.
+- [ ] <!-- id: 101 --> **تسک ۱.۱:** حذف فیلد `section` از مدل `Counterparty` در `backend/personnel/models.py`.
 - [ ] <!-- id: 102 --> **تسک ۱.۲:** ایجاد و اعمال مایگریشن پیش‌رونده جنگو با `makemigrations` و `migrate`.
 - [ ] <!-- id: 103 --> **تسک ۱.۳:** به‌روزرسانی `CounterpartySerializer` در `personnel/serializers.py` (حذف فیلدهای بخش).
 
@@ -17,7 +17,7 @@
 ---
 
 ## فاز ۳: کامپوننت فرانت جدید، روتینگ و منو
-- [ ] <!-- id: 301 --> **تسک ۳.۱:** ایجاد کامپوننت مستقل `warehouse-front/src/app/components/finance/counterparties/counterparties.ts`.
+- [ ] <!-- id: 301 --> **تسک ۳.۱:** ایجاد کامپوننت مستقل `frontend/src/app/components/finance/counterparties/counterparties.ts`.
 - [ ] <!-- id: 302 --> **تسک ۳.۲:** طراحی قالب `counterparties.html` و استایل‌های مربوطه با بهترین استانداردهای ارگونومی و زیبایی‌شناسی.
 - [ ] <!-- id: 303 --> **تسک ۳.۳:** ثبت روت `counterparties` در `accounting.routes.ts`.
 - [ ] <!-- id: 304 --> **تسک ۳.۴:** افزودن آیتم «🤝 مدیریت طرف‌حساب‌های مالی» به منوی ناوبری مالی در `nav-items.ts`.

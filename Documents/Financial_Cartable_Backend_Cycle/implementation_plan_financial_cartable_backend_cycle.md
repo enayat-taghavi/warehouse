@@ -23,8 +23,8 @@ graph TD
 ### 🔹 فاز ۱: توسعه مدل، سریالایزر و دیتابیس (Model & Database Updates)
 * **هدف:** ایجاد زیرساخت ذخیره اسنپ‌شات در مدل تاریخچه بدون دستکاری میگریشن‌های قبلی.
 * **فایل‌های مشمول تغییر:**
-  - [`inventory/models.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py): افزودن `data_snapshot = models.JSONField(null=True, blank=True)` به مدل `DocTaskHistory`.
-  - [`inventory/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py): حصول اطمینان از سریالایز شدن `data_snapshot` در `DocTaskHistorySerializer`.
+  - [`inventory/models.py`](file:///e:/warehouse%20project/backend/inventory/models.py): افزودن `data_snapshot = models.JSONField(null=True, blank=True)` به مدل `DocTaskHistory`.
+  - [`inventory/serializers.py`](file:///e:/warehouse%20project/backend/inventory/serializers.py): حصول اطمینان از سریالایز شدن `data_snapshot` در `DocTaskHistorySerializer`.
 * **اقدامات اجرایی:**
   1. ویرایش مدل `DocTaskHistory`.
   2. اجرای `python manage.py makemigrations inventory` و تولید فایل میگریشن جدید.
@@ -36,7 +36,7 @@ graph TD
 ### 🔹 فاز ۲: ارتقای منطق ویوها و ثبت اسنپ‌شات در چرخه کار (Views & Snapshot Logging)
 * **هدف:** ثبت خودکار اسنپ‌شات کامل فیلدهای مالی در هر بار تغییر وضعیت تسک.
 * **فایل‌های مشمول تغییر:**
-  - [`inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+  - [`inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)
 * **اقدامات اجرایی:**
   1. پیاده‌سازی متد هلپر `_create_doc_task_snapshot(task)` برای استخراج مقادیر ۱۴ فیلد مالی و فیلدهای پویا.
   2. به‌روزرسانی متدهای تغییر وضعیت در `DocTaskViewSet` شامل:
@@ -53,7 +53,7 @@ graph TD
 ### 🔹 فاز ۳: همگام‌سازی فیلدها با جدول کالا و اصلاح ارجاع مجدد (Data Sync & Dispatch Fix)
 * **هدف:** تضمین انتقال مقادیر تاییدشده مالی به مدل `Item` در مرحله تایید نهایی مدیر، و اصلاح هشدار ارجاع مجدد.
 * **فایل‌های مشمول تغییر:**
-  - [`inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+  - [`inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)
 * **اقدامات اجرایی:**
   1. در متد `bulk_manager_approve`: رونویسی مقادیر ۱۴ فیلد مالی (`price_amount`, `total_value`, `inv_rti_number`, `added_rti_no`, `invoice_type`, `invoice_date`, `currency`, `doc_supplier`, `folder_address`, `stamp`, `signature`, `page_row`, `invoice_page`, `similar_unit_price`) از `DocTask` روی رکورد `Item` متناظر.
   2. به‌روزرسانی وضعیت کالا به `Item.doc_status = 'approved'`.
@@ -65,7 +65,7 @@ graph TD
 ### 🔹 فاز ۴: پیاده‌سازی و اجرای آزمون‌های ۱۵گانه کارتابل مالی (`tests_docs.py`)
 * **هدف:** پیاده‌سازی و راستی‌آزمایی ۱۰۰٪ خودکار تمام ۱۵ سناریوی منطقی بک‌اند کارتابل مالی.
 * **فایل‌های مشمول ایجاد:**
-  - [`inventory/tests_docs.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/tests_docs.py)
+  - [`inventory/tests_docs.py`](file:///e:/warehouse%20project/backend/inventory/tests_docs.py)
 * **ماتریس ۱۵ آزمون خودکار:**
   1. `test_01_full_happy_path_with_supervisor`: چرخه استاندارد کامل و انتقال فیلدها به کالا.
   2. `test_02_unlimited_manager_rejects_and_corrections`: رد مکرر مدیر (۴ دور متوالی) بدون محدودیت و ثبت اسنپ‌شات هر دور.

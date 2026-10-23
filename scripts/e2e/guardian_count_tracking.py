@@ -15,10 +15,11 @@ def verify_count_tracking():
     errors = []
     successes = []
 
-    html_path = r"e:\warehouse project\warehouse-front\src\app\modules\warehouse\components\count-tracking\count-tracking.html"
-    ts_path = r"e:\warehouse project\warehouse-front\src\app\modules\warehouse\components\count-tracking\count-tracking.ts"
-    css_path = r"e:\warehouse project\warehouse-front\src\styles.css"
-    dt_path = r"e:\warehouse project\warehouse-front\src\app\shared\components\data-table\data-table.component.ts"
+    front_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend")
+    html_path = os.path.join(front_dir, "src", "app", "modules", "warehouse", "components", "count-tracking", "count-tracking.html")
+    ts_path = os.path.join(front_dir, "src", "app", "modules", "warehouse", "components", "count-tracking", "count-tracking.ts")
+    css_path = os.path.join(front_dir, "src", "styles.css")
+    dt_path = os.path.join(front_dir, "src", "app", "shared", "components", "data-table", "data-table.component.ts")
 
     if not os.path.exists(html_path) or not os.path.exists(ts_path) or not os.path.exists(css_path) or not os.path.exists(dt_path):
         errors.append("یکی از فایل‌های هدف یافت نشد.")

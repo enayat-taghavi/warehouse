@@ -3,7 +3,7 @@
 <div dir="rtl" align="right">
 
 ## 🔹 فاز ۱: زیرساخت هسته ماژول، لایوت دارک، لانچر و سد امنیتی سوپریوزر
-- [x] ساخت گارد امنیتی اختصاصی `OperationsGuard` در `warehouse-front/src/app/core/guards/operations.guard.ts` <!-- id: 0 -->
+- [x] ساخت گارد امنیتی اختصاصی `OperationsGuard` در `frontend/src/app/core/guards/operations.guard.ts` <!-- id: 0 -->
 - [x] توسعه `AppPersonaService` و `SessionTabService` جهت پشتیبانی از قلمرو `operations` و متدهای ناوبری <!-- id: 1 -->
 - [x] طراحی لایوت اختصاصی اتاق عملیات `OperationsLayoutComponent` با تم تیره نئونی SOC Cockpit <!-- id: 2 -->
 - [x] ارتقای پورتال لانچر `AppLauncherComponent` و افزودن کارت سوم اختصاصی مرکز عملیات برای مدیران ارشد <!-- id: 3 -->

@@ -7,18 +7,18 @@
 ## تغییرات ساختار پایگاه داده و مدل‌ها
 > [!NOTE]
 > با این تغییر، تسک‌هایی که به صورت استثنا باید از تایید سرپرست معاف شوند، به راحتی توسط سیستم شناسایی شده و مستقیماً به مرحله بعد (کارتابل مدیر) منتقل می‌شوند.
-* در فایل [models.py](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py) یک فیلد از نوع Boolean به نام `skip_supervisor` به مدل `CountTask` اضافه شد.
+* در فایل [models.py](file:///e:/warehouse%20project/backend/inventory/models.py) یک فیلد از نوع Boolean به نام `skip_supervisor` به مدل `CountTask` اضافه شد.
 * دستورهای `makemigrations` و `migrate` برای اعمال این تغییر بر روی پایگاه داده اجرا شدند.
 
 ## بروزرسانی منطق ثبت و پیشرفت در بک‌اند
-* در فایل [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) (متد `bulk_assign`) کدهای پردازش تخصیص تغییر یافت تا در صورت دریافت کلید واژه `skip` برای سرپرست، فیلد `skip_supervisor` را برای آن تسک‌ها فعال (True) کند.
+* در فایل [views.py](file:///e:/warehouse%20project/backend/inventory/views.py) (متد `bulk_assign`) کدهای پردازش تخصیص تغییر یافت تا در صورت دریافت کلید واژه `skip` برای سرپرست، فیلد `skip_supervisor` را برای آن تسک‌ها فعال (True) کند.
 * متد `bulk_submit` نیز به‌روزرسانی شد. اکنون به جای چک کردن یکباره وضعیت انبار برای همه تسک‌ها، در یک حلقه برای هر تسک به صورت مجزا تنظیم انبار و استثنای تسک را بررسی کرده و مقصد نهایی را محاسبه می‌کند (تغییر از متد `update()` به `bulk_update()`).
 
 ## تغییرات فرانت‌اند و رابط کاربری
 > [!TIP]
 > اگر تنظیم سرپرست انبار در پنل تنظیمات خاموش باشد، فیلد تخصیص سرپرست به طور پیش‌فرض روی حالت «بدون نیاز به سرپرست» قرار می‌گیرد و دیگر نیازی نیست مدیر عملیات اضافه‌ای انجام دهد!
-* در فایل [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)، شرط پنهان شدن لیست (`*ngIf`) برداشته شد. دو گزینه مجزا برای "بدون نیاز به سرپرست" و "همه سرپرست‌ها" افزوده شد و ترتیب نمایش آنها به صورت پویا و بر اساس تنظیمات انبار جابجا می‌شود.
-* در فایل [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts) منطق تنظیم اولیه مقدار `selectedSupervisor` پیاده‌سازی شد. اگر قانون انبار خاموش باشد، این فیلد بلافاصله با مقدار `skip` پر می‌شود. همچنین در کادر محاوره تاییدیه ارسال کالا، این گزینه با رنگ و عنوان صحیح نشان داده خواهد شد.
+* در فایل [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)، شرط پنهان شدن لیست (`*ngIf`) برداشته شد. دو گزینه مجزا برای "بدون نیاز به سرپرست" و "همه سرپرست‌ها" افزوده شد و ترتیب نمایش آنها به صورت پویا و بر اساس تنظیمات انبار جابجا می‌شود.
+* در فایل [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts) منطق تنظیم اولیه مقدار `selectedSupervisor` پیاده‌سازی شد. اگر قانون انبار خاموش باشد، این فیلد بلافاصله با مقدار `skip` پر می‌شود. همچنین در کادر محاوره تاییدیه ارسال کالا، این گزینه با رنگ و عنوان صحیح نشان داده خواهد شد.
 
 ### صحت‌سنجی
 * پروژه سمت کاربر (Angular) مجدداً کامپایل شد (`esbuild`) و هیچ خطایی یافت نشد.

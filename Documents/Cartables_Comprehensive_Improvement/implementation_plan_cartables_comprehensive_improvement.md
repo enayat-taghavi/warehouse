@@ -38,20 +38,20 @@ graph TD
 ---
 
 ### 📂 فاز ۱.۱: اصلاح باگ منطقی خروجی اکسل ستون‌های فعال (Excel Export Fix)
-- **مسئله:** در متد `executeExport()` در [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts#L1541)، هنگام انتخاب گزینه «ستون‌های فعال در این کارتابل» (`exportColumnScope === 'visible'`)، آرایه `payload.columns_list` پر نمی‌شود و فایل با تمام ستون‌های دیتابیس صادر می‌شود.
+- **مسئله:** در متد `executeExport()` در [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts#L1541)، هنگام انتخاب گزینه «ستون‌های فعال در این کارتابل» (`exportColumnScope === 'visible'`)، آرایه `payload.columns_list` پر نمی‌شود و فایل با تمام ستون‌های دیتابیس صادر می‌شود.
 - **اقدام:** 
-  - در [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)، منطق استخراج ستون‌های قابل مشاهده از `fieldConfigs` اضافه می‌شود:
+  - در [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)، منطق استخراج ستون‌های قابل مشاهده از `fieldConfigs` اضافه می‌شود:
     ```typescript
     else if (this.exportColumnScope === 'visible') {
       payload.columns_list = this.fieldConfigs.filter(f => f.visible).map(f => f.key);
     }
     ```
-  - در [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html#L857)، گزینه رادیویی سه حالته هماهنگ با کارتابل مالی تعبیه می‌شود (`all_db`، `visible`، `custom`).
+  - در [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html#L857)، گزینه رادیویی سه حالته هماهنگ با کارتابل مالی تعبیه می‌شود (`all_db`، `visible`، `custom`).
 
 ---
 
 ### 📂 فاز ۱.۲: اصلاحات ظاهری هدر و بازخوردها (Header & Visual Feedback)
-- **مسئله:** در هدر [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html#L20)، نشانگر وضعیت صف آفلاین وجود ندارد و دکمه رفرش فاقد انیمیشن چرخش هنگام `isLoading` است.
+- **مسئله:** در هدر [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html#L20)، نشانگر وضعیت صف آفلاین وجود ندارد و دکمه رفرش فاقد انیمیشن چرخش هنگام `isLoading` است.
 - **اقدام:**
   - افزودن `<app-offline-pending-badge />` در کنار دکمه‌های هدر کارتابل انبارگردان.
   - اضافه کردن `[class.animate-spin]="isLoading"` به آیکون SVG در دکمه رفرش هدر.
@@ -77,24 +77,24 @@ graph TD
 ---
 
 ### 📂 فاز ۲.۱: تکمیل مودال خروجی اکسل (Excel Modal UI Enhancement)
-- **مسئله:** در [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts#L1405)، متغیرها و توابع ستون‌های سفارشی وجود دارد، اما در [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html#L905) چک‌باکس‌ها و گزینه انتخاب دستی ستون‌ها در قالب غایب است.
+- **مسئله:** در [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts#L1405)، متغیرها و توابع ستون‌های سفارشی وجود دارد، اما در [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html#L905) چک‌باکس‌ها و گزینه انتخاب دستی ستون‌ها در قالب غایب است.
 - **اقدام:**
-  - افزودن گزینه سوم رادیویی «انتخاب دستی ستون‌ها» در [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html).
+  - افزودن گزینه سوم رادیویی «انتخاب دستی ستون‌ها» در [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html).
   - پیاده‌سازی گرید چک‌باکس‌های ستون‌های خروجی (`availableExportColumns`) به همراه قابلیت تیک زدن/برداشتن.
 
 ---
 
 ### 📂 فاز ۲.۲: اصلاح منطق بک‌اند در ارسال گروهی (Backend Warehouse Filtering)
-- **مسئله:** در [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L2537)، متد `bulk_submit` کارتابل مالی در صورت خالی بودن `task_ids`، فیلتر `warehouse_id` را روی کوئری‌ست اعمال نمی‌کند.
+- **مسئله:** در [views.py](file:///e:/warehouse%20project/backend/inventory/views.py#L2537)، متد `bulk_submit` کارتابل مالی در صورت خالی بودن `task_ids`، فیلتر `warehouse_id` را روی کوئری‌ست اعمال نمی‌کند.
 - **اقدام:**
-  - در [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L2535): دریافت پارامتر `warehouse_id` از `request.data` یا `query_params` و فیلتر کردن تسک‌های انبار مشخص.
-  - در [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts#L1217): ارسال `warehouse_id: this.state.appState.activeWarehouseId` در پی‌لود `bulkSubmit`.
+  - در [views.py](file:///e:/warehouse%20project/backend/inventory/views.py#L2535): دریافت پارامتر `warehouse_id` از `request.data` یا `query_params` و فیلتر کردن تسک‌های انبار مشخص.
+  - در [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts#L1217): ارسال `warehouse_id: this.state.appState.activeWarehouseId` در پی‌لود `bulkSubmit`.
 
 ---
 
 ### 📂 فاز ۲.۳: پیاده‌سازی کلیدهای میانبر جامع (Keyboard Shortcuts & Hotkeys)
 - **اقدام:**
-  - افزودن `@HostListener('window:keydown', ['$event'])` در [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts):
+  - افزودن `@HostListener('window:keydown', ['$event'])` در [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts):
     - `Escape`: بستن فرم جزئیات، مودال اکسل یا منوی سورت.
     - `Ctrl + Enter`: ذخیره پیش‌نویس در فرم جزئیات، دانلود اکسل در مودال، یا ارسال موارد انتخابی در لیست.
     - `Alt + 1` / `Alt + 2`: سوییچ آنی بین تب «تسک‌های من» و «استخر کالاها».
@@ -134,10 +134,10 @@ npm run build
 
 | نام فایل | بخش مربوطه | نوع تغییر |
 | :--- | :--- | :---: |
-| [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | کارتابل انبارگردان | اصلاح اکسل ستون‌های فعال + اعتبارسنجی |
-| [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | کارتابل انبارگردان | افزودن نشان آفلاین + انیمیشن رفرش + مودال اکسل |
-| [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | کارتابل مالی | افزودن کلیدهای میانبر + ارسال انبار به بک‌اند |
-| [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) | کارتابل مالی | افزودن انتخاب دستی ستون‌ها در اکسل + ریسپانسیو |
-| [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | بک‌اند جنگو | فیلتر انبار در `bulk_submit` کارتابل مالی |
+| [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | کارتابل انبارگردان | اصلاح اکسل ستون‌های فعال + اعتبارسنجی |
+| [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | کارتابل انبارگردان | افزودن نشان آفلاین + انیمیشن رفرش + مودال اکسل |
+| [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | کارتابل مالی | افزودن کلیدهای میانبر + ارسال انبار به بک‌اند |
+| [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) | کارتابل مالی | افزودن انتخاب دستی ستون‌ها در اکسل + ریسپانسیو |
+| [views.py](file:///e:/warehouse%20project/backend/inventory/views.py) | بک‌اند جنگو | فیلتر انبار در `bulk_submit` کارتابل مالی |
 
 </div>

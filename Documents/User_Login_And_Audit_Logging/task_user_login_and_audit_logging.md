@@ -24,7 +24,7 @@
   - [x] ۳.۵: 🔍 **گیت بازبینی و تایید ایجنت بازبین برای فاز ۳** (بررسی کوئری‌های بهینه، تست بلاک بودن متدهای مخرب و تست خروجی CSV - تایید شد ✅) <!-- id: 3_gate -->
 
 - [x] **فاز ۴: اتصال سرویس و بازطراحی داشبورد ممیزی در فرانت‌اند (Angular Audit Dashboard)** <!-- id: phase4 -->
-  - [x] ۴.۱: ایجاد سرویس `AuditService` در `warehouse-front/src/app/services/audit.service.ts` <!-- id: 4_1 -->
+  - [x] ۴.۱: ایجاد سرویس `AuditService` در `frontend/src/app/services/audit.service.ts` <!-- id: 4_1 -->
   - [x] ۴.۲: بازطراحی کامپوننت `app-audit` با ساختار دو تبه (Audit Trail + Login History) در `audit.html` و `audit.ts` <!-- id: 4_2 -->
   - [x] ۴.۳: پیاده‌سازی کارت‌های شاخص عملکرد (KPI Cards) و فیلترهای بلادرنگ ماژول، شدت و تقویم <!-- id: 4_3 -->
   - [x] ۴.۴: پیاده‌سازی مدال پیشرفته تفاضل (Visual JSON Diff Modal) با هایلایت رنگی قبل و بعد <!-- id: 4_4 -->

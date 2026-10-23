@@ -2,7 +2,7 @@
 
 # طرح جامع ارتقا و بهینه‌سازی سیستم حقوق، دستمزد و مالیات (Payroll & Tax Engine Optimization Plan)
 
-این طرح بر اساس مصاحبه فنی (`/grill-me`) و انطباق کامل با منطق محاسباتی فایل اکسل مرجع شرکت (`E:\warehouse project\حقوق تیر ماه انبارداری.xlsm`) و فایل خروجی اداره مالیات (`E:\warehouse project\نمونه مالیات محاسبه شده.xlsx`) تدوین شده است.
+این طرح بر اساس مصاحبه فنی (`/grill-me`) و انطباق کامل با منطق محاسباتی فایل اکسل مرجع شرکت (`حقوق تیر ماه انبارداری.xlsm`) و فایل خروجی اداره مالیات (`نمونه مالیات محاسبه شده.xlsx`) تدوین شده است.
 
 ---
 
@@ -30,14 +30,14 @@
 ## ۳. تغییرات پیشنهادی در فایل‌ها و ماژول‌ها (Proposed Code Changes)
 
 ```
-warehouse-backend/
+backend/
 ├── personnel/
 │   ├── models.py                     # [MODIFY] فیلدهای surplus_overtime_percent و متادیتای مالیاتی
 │   ├── payroll_engine.py             # [MODIFY] بازنویسی الگوریتم تناسب روزهای بیمه، تسهیم مازاد و چک مالیات
 │   ├── tax_bank_exporter.py          # [MODIFY] بهبود فرمت فایل‌های WH/WP و سرویس پارس اکسل مالیات
 │   ├── views.py                      # [MODIFY] اندپوینت import_tax_result_excel و اکشن‌های محاسبه حقوق
 │   └── urls.py                       # [MODIFY] روت اندپوینت‌های جدید مالیات و تنظیمات
-warehouse-front/
+frontend/
 └── src/app/components/personnel/
     └── personnel-management/
         ├── personnel-management.html # [MODIFY] افزودن دکمه و مودال ایمپورت اکسل مالیات، استایل ۵۸ ستونه
@@ -50,12 +50,12 @@ warehouse-front/
 
 | ردیف | فایل | نوع تغییر | شرح فنی تغییرات |
 | :--- | :--- | :---: | :--- |
-| **۱** | [`personnel/models.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/models.py) | **اصلاح** | افزودن `surplus_overtime_percent` (پیش‌فرض 50.00) به `PayrollYearlySettings`، افزودن فیلدهای منبع مالیات و ماه‌های معافیت به `MonthlyPayrollRecord`. |
-| **۲** | [`personnel/payroll_engine.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/payroll_engine.py) | **اصلاح** | بازنویسی کامل متد محاسبه ماهانه: تعیین هوشمند `insurance_days` بر اساس $\text{MinStatutory}(D)$، تفکیک مازاد بر اساس نسبت تنظیمات و ضریب وزنی سفر/ماموریت، محاسبه دقیق ستون‌های ۵۰ تا ۵۸. |
-| **۳** | [`personnel/tax_bank_exporter.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/tax_bank_exporter.py) | **اصلاح** | افزودن تابع `import_tax_result_from_excel(file, period)` جهت خواندن ستون‌های کد ملی و مالیات محاسبه‌شده دارایی و به‌روزرسانی اتمیک رکوردها. |
-| **۴** | [`personnel/views.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/views.py) | **اصلاح** | ایجاد اندپوینت `POST /api/personnel/monthly-payroll/import-tax-result/` و اتصال آن به مدیریت خطا و گزارش تعداد رکوردهای به‌روزشده. |
-| **۵** | [`personnel-management.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html) | **اصلاح** | افزودن دکمه «درون‌ریزی اکسل دارایی»، مودال بارگذاری فایل با پیش‌نمایش و هشدار مغایرت‌ها، و فیلد تنظیم درصد تسهیم مازاد. |
-| **۶** | [`personnel-management.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts) | **اصلاح** | پیاده‌سازی متدهای فرانت‌اند برای مدیریت رویداد آپلود، دریافت بازخورد و رفرش آنی جدول محاسبات. |
+| **۱** | [`personnel/models.py`](file:///E:/warehouse%20project/backend/personnel/models.py) | **اصلاح** | افزودن `surplus_overtime_percent` (پیش‌فرض 50.00) به `PayrollYearlySettings`، افزودن فیلدهای منبع مالیات و ماه‌های معافیت به `MonthlyPayrollRecord`. |
+| **۲** | [`personnel/payroll_engine.py`](file:///E:/warehouse%20project/backend/personnel/payroll_engine.py) | **اصلاح** | بازنویسی کامل متد محاسبه ماهانه: تعیین هوشمند `insurance_days` بر اساس $\text{MinStatutory}(D)$، تفکیک مازاد بر اساس نسبت تنظیمات و ضریب وزنی سفر/ماموریت، محاسبه دقیق ستون‌های ۵۰ تا ۵۸. |
+| **۳** | [`personnel/tax_bank_exporter.py`](file:///E:/warehouse%20project/backend/personnel/tax_bank_exporter.py) | **اصلاح** | افزودن تابع `import_tax_result_from_excel(file, period)` جهت خواندن ستون‌های کد ملی و مالیات محاسبه‌شده دارایی و به‌روزرسانی اتمیک رکوردها. |
+| **۴** | [`personnel/views.py`](file:///E:/warehouse%20project/backend/personnel/views.py) | **اصلاح** | ایجاد اندپوینت `POST /api/personnel/monthly-payroll/import-tax-result/` و اتصال آن به مدیریت خطا و گزارش تعداد رکوردهای به‌روزشده. |
+| **۵** | [`personnel-management.html`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html) | **اصلاح** | افزودن دکمه «درون‌ریزی اکسل دارایی»، مودال بارگذاری فایل با پیش‌نمایش و هشدار مغایرت‌ها، و فیلد تنظیم درصد تسهیم مازاد. |
+| **۶** | [`personnel-management.ts`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts) | **اصلاح** | پیاده‌سازی متدهای فرانت‌اند برای مدیریت رویداد آپلود، دریافت بازخورد و رفرش آنی جدول محاسبات. |
 
 ---
 

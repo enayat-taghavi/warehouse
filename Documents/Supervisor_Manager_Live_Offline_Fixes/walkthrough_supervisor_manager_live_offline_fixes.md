@@ -9,11 +9,11 @@
 ## ۱. خلاصه اقدامات انجام‌شده
 
 ### ۱.۱. بک‌اند جنگو (Backend WebSocket Signal Serialization):
-* **ارتقای کامل سیگنال‌های وب‌سوکت در [inventory/signals.py](file:///e:/warehouse%20project/warehouse-backend/inventory/signals.py):**
+* **ارتقای کامل سیگنال‌های وب‌سوکت در [inventory/signals.py](file:///e:/warehouse%20project/backend/inventory/signals.py):**
   * سیگنال‌های `post_save` و `post_delete` مدل‌های `CountTask` و `DocTask` ارتقا یافتند تا علاوه بر `task_id` و `warehouse_id`، آبجکت کامل سریالایز شده تسک (`CountTaskSerializer` و `DocTaskSerializer`) را در قالب کلید `task` داخل payload پیام وب‌سوکت برادکست کنند.
   * در صورت حذف رکورد (`post_delete`)، کلید `_deleted: True` به داده‌ها ضمیمه می‌شود تا فرانت‌اند بلافاصله رکورد را از جداول حذف کند.
 
-### ۱.۲. کارتابل سرپرست ([supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)):
+### ۱.۲. کارتابل سرپرست ([supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)):
 * **دریافت زنده و اعمال نقطه‌ای (In-Place Updates):**
   * متدهای `updateCountTaskInPlace` و `updateDocTaskInPlace` پیاده‌سازی شدند تا با دریافت تسک تغییریافته از وب‌سوکت، بدون زدن درخواست مجدد شبکه (Zero-Fetch)، ردیف مربوطه را در جدول همان تب به‌روز کرده یا جابجا نمایند.
   * فال‌بک استعلام تکی (`fetchSingleCountTask` و `fetchSingleDocTask`) پیاده‌سازی شد تا در صورت فقدان داده در پیام وب‌سوکت، فقط همان یک تسک استعلام شود.
@@ -23,7 +23,7 @@
   * در استعلام مجدد پس‌زمینه (`loadTasks`, `loadPoolTasks`, `loadDocTasks`, `loadDocPoolTasks`) چک‌باکس‌ها، شماره صفحه و وضعیت انتخاب کاربر با پرچم `preserveState` حفظ می‌گردد.
   * سابسکرایبر SWR فقط به درخواست‌های مربوط به نقش سرپرست (`as_role=supervisor`) واکنش نشان می‌دهد.
 
-### ۱.۳. کارتابل بررسی مدیر ([manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)):
+### ۱.۳. کارتابل بررسی مدیر ([manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)):
 * **دریافت زنده و اعمال نقطه‌ای (In-Place Updates):**
   * متدهای `updateCountTaskInPlace` و `updateDocTaskInPlace` و استعلام تکی پیاده‌سازی شدند.
   * در صورتی که تسک تایید نهایی شده یا به بازشماری ارجاع داده شود (`status !== 'MANAGER_REVIEW'`)، بلافاصله و با صفر ثانیه تاخیر از جدول مدیر خارج می‌شود.
@@ -33,7 +33,7 @@
   * سابسکرایبر SWR فقط به درخواست‌های مربوط به نقش مدیر (`as_role=manager`) واکنش نشان می‌دهد.
 
 ### ۱.۴. هماهنگی با صفحه پیگیری شمارش و انبارگردان:
-* در [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts) و [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) سابسکرایبرهای SWR و استعلام‌های تکی وب‌سوکت تطبیق داده شدند تا هیچ تداخلی میان نقش‌های انبارگردان، سرپرست و مدیر به وجود نیاید.
+* در [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts) و [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) سابسکرایبرهای SWR و استعلام‌های تکی وب‌سوکت تطبیق داده شدند تا هیچ تداخلی میان نقش‌های انبارگردان، سرپرست و مدیر به وجود نیاید.
 
 ---
 

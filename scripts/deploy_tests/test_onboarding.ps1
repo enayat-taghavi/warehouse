@@ -223,7 +223,7 @@ try {
     foreach ($rel in @('src\app\core\branding.ts', 'public\manifest.webmanifest', 'src\index.html')) {
         $dst = Join-Path $snap $rel
         [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $dst))
-        Copy-Item -LiteralPath (Join-Path $ScriptRoot "warehouse-front\$rel") -Destination $dst
+        Copy-Item -LiteralPath (Join-Path $ScriptRoot "frontend\$rel") -Destination $dst
     }
     $origManifest = [System.IO.File]::ReadAllText((Join-Path $snap 'public\manifest.webmanifest')) | ConvertFrom-Json
     Set-SnapshotBranding $snap ([pscustomobject]@{ SystemName = 'سامانه $1 آزمون'; AppShortName = ''; OrganizationName = 'شرکت نمونه' })

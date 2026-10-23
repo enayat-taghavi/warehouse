@@ -22,7 +22,7 @@
 
 ### الف) نوار ناوبری و هدر سراسری (`layout`)
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 * حذف آیتم `{id:'export', label:'صدور فایل برای تغذیه', ...}` از آرایه‌های `SYSTEM_NAV_ITEMS` و `WAREHOUSE_NAV_ITEMS`.
 * حفظ آیتم `{id:'feeding', label:'مدیریت و تغذیه MT26/49', ...}` با برچسب یا نشانگر اطلاع‌رسانی توسعه آینده.
 * پیاده‌سازی متغیرها و متدهای مدیریت صندوق خطاها:
@@ -39,14 +39,14 @@
   * `openSyncErrorsFromBadge()` جهت باز شدن صندوق هنگام کلیک روی خطا در پاپ‌اور دکمه متصل.
 * اشتراک در `OfflineSyncService.errorCount$` و `OfflineSyncService.rejected$` جهت بروزرسانی همزمان تعداد خطاها.
 
-#### [MODIFY] [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html)
+#### [MODIFY] [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html)
 * اتصال رویداد خروجی `(openSyncInbox)="openSyncErrorsFromBadge()"` روی تگ `<app-offline-pending-badge>` سراسری.
 
 ---
 
 ### ب) بازطراحی صفحه تغذیه اطلاعات (`feeding`)
 
-#### [MODIFY] [feeding.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/feeding/feeding.html)
+#### [MODIFY] [feeding.html](file:///e:/warehouse%20project/frontend/src/app/components/feeding/feeding.html)
 * حذف نشانگر اضافه `<app-offline-pending-badge mode="header" />`.
 * بازطراحی محتوای صفحه به یک کارت شیک و مدرن با تم سازمانی و جذاب (شامل آیکون متحرک، تگ «در دست توسعه - نسخه آینده»، توضیحات شفاف درباره ماژول‌های اتصال خودکار MT26 و MT49، زمان‌بندی انتشار و دکمه بازگشت به داشبورد) تا کاربر هنگام ورود کاملاً مطلع شود این بخش در حال آماده‌سازی است.
 
@@ -54,7 +54,7 @@
 
 ### ج) کامپوننت وضعیت اتصال و آفلاین (`offline-pending-badge`)
 
-#### [MODIFY] [offline-pending-badge.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts)
+#### [MODIFY] [offline-pending-badge.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts)
 * افزودن رویداد خروجی `@Output() openSyncInbox = new EventEmitter<void>()`.
 * تبدیل کادر نمایش خطا در پاپ‌اور به یک دکمه/کارت تعاملی با افکت Hover و رویداد کلیک جهت فراخوانی `openSyncInbox`.
 
@@ -62,10 +62,10 @@
 
 ### د) پاکسازی روت‌ها و گاردهای ماژول صدور فایل
 
-#### [MODIFY] [app.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts)
+#### [MODIFY] [app.routes.ts](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts)
 * حذف روت `{ path: 'export', component: Placeholders }`.
 
-#### [MODIFY] [auth.guard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts)
+#### [MODIFY] [auth.guard.ts](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts)
 * حذف مپینگ مجوز `export` از جدول قوانین دسترسی.
 
 ---

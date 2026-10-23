@@ -34,11 +34,11 @@
 
 ## 📁 فایل‌های مشمول تغییر
 
-#### [MODIFY] [counter-dashboard.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - اصلاح توابع دسته‌بندی `isRecount` و `isInitial` در `applyFilters`.
 - اصلاح محاسبات `statusCounts` و فیلتر اقلام.
 
-#### [MODIFY] [counter-dashboard.html](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 - ارتقای عنوان چیپ فیلتر به «مغایرت و بازشماری».
 - اصلاح شرط‌های نمایش برچسب وضعیت و استایل کارت اقلام ردشده.
 

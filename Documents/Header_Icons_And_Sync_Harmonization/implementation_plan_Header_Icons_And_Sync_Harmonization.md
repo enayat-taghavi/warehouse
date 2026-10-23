@@ -45,35 +45,35 @@
 ## 🗂️ فازبندی اجرایی و تغییرات به تفکیک فایل‌ها
 
 ### فاز ۱: بازبینی و نهایی‌سازی کامپوننت نشانگر پویای وضعیت
-* **فایل هدف:** [`offline-pending-badge.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts)
+* **فایل هدف:** [`offline-pending-badge.component.ts`](file:///e:/warehouse%20project/frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts)
 * **اقدامات:** اطمینان از عملکرد بدون باگ در هر دو حالت هدر و اینلاین، صحت عملکرد پاپ‌آپ و بستن کلیک‌خارجی، اتصال تمیز به `NetworkStatusService` و `OfflineSyncService`.
 
 ### فاز ۲: هدر سراسری بالای سامانه (Top Navbar)
-* **فایل‌های هدف:** [`layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) و [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+* **فایل‌های هدف:** [`layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) و [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 * **اقدامات:** استقرار کامپوننت نشانگر وضعیت در کنار آواتار کاربر و کلیدهای ناوبری تاریخچه با چیدمان تراز و ریسپانسیو.
 
 ### فاز ۳: تب‌های پنج‌گانه عملیات شمارش و انبارگردانی
 * **فایل‌های هدف:**
-  1. [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) (کارتابل شمارشگر)
-  2. [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) (کارتابل سرپرست)
-  3. [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html) (کارتابل مدیر و ناظر)
-  4. [`count-tracking.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) (پیگیری وضعیت شمارش)
-  5. [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) (استخر ترخیص و گمرک)
+  1. [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) (کارتابل شمارشگر)
+  2. [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) (کارتابل سرپرست)
+  3. [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html) (کارتابل مدیر و ناظر)
+  4. [`count-tracking.html`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) (پیگیری وضعیت شمارش)
+  5. [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) (استخر ترخیص و گمرک)
 * **اقدامات:** هماهنگ‌سازی نوار ابزار آیکونی، قرارگیری دکمه اسکنر، خروجی اکسل، رفرش و نشانگر پویای هدر در تمامی این ۵ صفحه در یک راستا و با استایل واحد.
 
 ### فاز ۴: تب‌های مدیریتی، لاجستیک و تعریف پایه
 * **فایل‌های هدف:**
-  1. [`projects.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html) (انبارها/پروژه‌ها: دکمه انبار جدید با آیکون اختصاصی، دانلود اکسل، آپلود اکسل و رفرش)
-  2. [`users.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) (کاربران و نقش‌ها: دکمه‌های ثبت پرسنل، تعریف نقش، اکسل‌ها و رفرش)
-  3. [`dispatch.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html) (تخصیص کالا: نوار ابزار هماهنگ هدر)
-  4. [`feeding.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/feeding/feeding.html) (تغذیه خط و اطلاعات: دکمه آپلود و پردازش با آیکون)
+  1. [`projects.html`](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html) (انبارها/پروژه‌ها: دکمه انبار جدید با آیکون اختصاصی، دانلود اکسل، آپلود اکسل و رفرش)
+  2. [`users.html`](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) (کاربران و نقش‌ها: دکمه‌های ثبت پرسنل، تعریف نقش، اکسل‌ها و رفرش)
+  3. [`dispatch.html`](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html) (تخصیص کالا: نوار ابزار هماهنگ هدر)
+  4. [`feeding.html`](file:///e:/warehouse%20project/frontend/src/app/components/feeding/feeding.html) (تغذیه خط و اطلاعات: دکمه آپلود و پردازش با آیکون)
 
 ### فاز ۵: تب‌های مانیتورینگ، اسناد، ممیزی و گزارش‌ساز
 * **فایل‌های هدف:**
-  1. [`dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.html) (داشبورد: دکمه رفرش مربعی و نشانگر هدر)
-  2. [`docs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/docs/docs.html) (اسناد و تزریق داده: دانلود قالب نمونه و نشانگر هدر)
-  3. [`audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html) (مرکز ممیزی: دکمه‌های پاکسازی، بازگردانی، اکسل و نشانگر هدر)
-  4. [`reports.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html) (گزارش‌ساز: دکمه‌های PDF، اکسل، ذخیره قالب و اجرای گزارش)
+  1. [`dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.html) (داشبورد: دکمه رفرش مربعی و نشانگر هدر)
+  2. [`docs.html`](file:///e:/warehouse%20project/frontend/src/app/components/docs/docs.html) (اسناد و تزریق داده: دانلود قالب نمونه و نشانگر هدر)
+  3. [`audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html) (مرکز ممیزی: دکمه‌های پاکسازی، بازگردانی، اکسل و نشانگر هدر)
+  4. [`reports.html`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html) (گزارش‌ساز: دکمه‌های PDF، اکسل، ذخیره قالب و اجرای گزارش)
 
 ### فاز ۶: کامپایل، بیلد نهایی و راستی‌آزمایی
 * **اقدامات:** اجرای کامپایل کامل Angular با دستور `npm run build`، بررسی نبود هرگونه خطای تایپ‌اسکریپت یا تمپلیت، و بررسی سلامت رندر عناصر در خروجی.

@@ -70,33 +70,33 @@ flowchart TD
 ## 🛠 فایل‌ها و لایه‌های تحت تغییر (Proposed Changes)
 
 ### ۱. لایه مدل‌ها و تعاریف فیلد (Frontend Core Models)
-#### [MODIFY] [`field-config.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/field-config.model.ts)
+#### [MODIFY] [`field-config.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/field-config.model.ts)
 - افزودن `DEFAULT_DOC_FIELD_PERMISSIONS` با تنظیمات پیش‌فرض کارتابل مالی.
 - افزودن فیلد `worker_note` به تعاریف فیلدهای مالی.
 - به‌روزرسانی متد `mergeFieldPermissions` با قابلیت پذیرش `defaultPermissions` سفارشی.
 
 ### ۲. لایه بک‌اند (Backend Settings)
-#### [MODIFY] [`services.py`](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py)
+#### [MODIFY] [`services.py`](file:///e:/warehouse%20project/backend/warehouses/services.py)
 - افزودن کلید پیش‌فرض `'field_permissions_doc': {}` در دیکشنری `DEFAULT_SETTINGS`.
 
 ### ۳. لایه تنظیمات کلان و اختصاصی انبار (Settings & WhSettings)
-#### [MODIFY] [`settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.ts) و [`settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
+#### [MODIFY] [`settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.ts) و [`settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
 - افزودن تب `'doc_fields'` (فیلدهای کارتابل مالی) در لیست تب‌ها.
 - پیاده‌سازی متغیرها و متدهای مدیریت فیلدهای مالی (`docFieldConfigs`, جستجو، فیلتر دسته، دکمه ریست و ذخیره کلان).
 - طراحی جدول مدرن فیلدهای مالی در `settings.html`.
 
-#### [MODIFY] [`wh-settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) و [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+#### [MODIFY] [`wh-settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) و [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 - افزودن تب `'doc_fields'` و پشتیبانی از اورراید تنظیمات فیلدهای مالی در سطح انبار خاص.
 
 ### ۴. لایه رابط کاربری کارتابل مالی (Customs Component)
-#### [MODIFY] [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - تزریق `SettingsService` و `DynamicFieldApiService` و `ItemApiService`.
 - واکشی و ادغام کانفیگ دسترسی فیلدهای مالی (`field_permissions_doc`) با اولویت انبار و فال‌بک کلان.
 - استخراج فیلدهای اطلاعاتی فقط‌خواندنی (`visibleInfoFields`) و فیلدهای ورودی فرم (`editableFormFields`).
 - مدیریت مقادیر ورودی در آبجکت `editableValues` هنگام باز کردن جزئیات تسک.
 - ذخیره همزمان فیلدهای مستقیم `DocTask` و فیلدهای تغییریافته کالا (`Item`) یا فیلدهای پویا در متد `saveDraft`.
 
-#### [MODIFY] [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+#### [MODIFY] [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 - جایگزینی بخش هاردکد کارت کالا با رندرینگ داینامیک `visibleInfoFields`.
 - جایگزینی فیلدهای هاردکد فرم با رندرینگ داینامیک `editableFormFields` (شامل ورودی‌های عددی، متنی، تاریخ، چک‌باکس، چندخطی، منوهای کشویی نوع فاکتور و ارز، و فیلدهای پویای انبار).
 

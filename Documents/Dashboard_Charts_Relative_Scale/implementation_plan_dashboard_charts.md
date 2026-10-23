@@ -7,12 +7,12 @@ Based on your feedback, all progress bars and charts in the dashboards (both ove
 
 ## Proposed Changes
 
-### [MODIFY] [dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.ts)
+### [MODIFY] [dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.ts)
 - Update the `getHeight` function to use `this.overallStats.total` as the denominator instead of `this.overallMax`.
 - Add a fallback to `1` to avoid division by zero.
 - Ensure tooltips dynamically display the exact ratio.
 
-### [MODIFY] [dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.html)
+### [MODIFY] [dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.html)
 - Add hover titles (`title="..."`) to the horizontal progress bars for Today, Yesterday, and Last Week, displaying the ratio of "counted out of total", to provide exact context for the shorter bars.
 
 ## Verification Plan

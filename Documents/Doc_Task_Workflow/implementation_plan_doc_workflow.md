@@ -14,7 +14,7 @@
 ## جزئیات اجرایی (تغییرات کد)
 
 ### ۱. معماری مدل‌ها در بک‌اند (Database Models)
-#### [NEW/MODIFY] [models.py](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py)
+#### [NEW/MODIFY] [models.py](file:///e:/warehouse%20project/backend/inventory/models.py)
 مدل‌های جدید برای تاریخچه و پیگیری وضعیت اسناد ایجاد می‌شوند.
 - ایجاد مدل `DocTask` با فیلدهای زیر:
   - `item` (ارتباط با کالا)
@@ -27,22 +27,22 @@
 - ایجاد مدل `DocTaskHistory` برای نگهداری لاگ تغییرات اسناد.
 
 ### ۲. تعریف نقش‌های سیستمی و تنظیمات (Roles & Settings)
-#### [MODIFY] [init_roles.py](file:///e:/warehouse%20project/warehouse-backend/accounts/management/commands/init_roles.py)
+#### [MODIFY] [init_roles.py](file:///e:/warehouse%20project/backend/accounts/management/commands/init_roles.py)
 - افزودن نقش‌های `doc_worker` و `doc_supervisor` به لیست نقش‌های سیستمی تا با اجرای دستور `init_roles` در پایگاه داده ثبت شوند.
 
-#### [MODIFY] [services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py)
+#### [MODIFY] [services.py](file:///e:/warehouse%20project/backend/warehouses/services.py)
 - اضافه کردن متغیر `require_doc_supervisor_approval: True` به تنظیمات پیش‌فرض سیستم تا انبارها بتوانند تایید سرپرست اسناد را فعال یا غیرفعال کنند.
 
 ### ۳. رابط برنامه‌نویسی و API (Views)
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 - **ارجاع گروهی (`bulk_assign`):** اضافه شدن منطق ساخت نمونه‌های `DocTask` به همراه انتخاب بررسی‌کننده و سرپرست.
 - **تایید گروهی (`bulk_submit_docs`):** (یا ساخت متد جدید) برای پردازش تایید اسناد توسط کاربر با در نظر گرفتن گزینه «بدون نیاز به سرپرست» (دقیقاً مشابه متد شمارش).
 
 ### ۴. تغییرات رابط کاربری و فرانت‌اند (UI & Frontend)
-#### [MODIFY] [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+#### [MODIFY] [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 - اضافه کردن سویچ و تنظیمات جدید با عنوان «تایید سرپرست اسناد» (Require Document Supervisor Approval) در بخش تنظیمات انبار.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts) و [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts) و [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - تغییر باکس «ارجاع اسناد» به ساختاری مشابه «ارجاع شمارش». 
 - واکشی کاربرانی که نقش `doc_worker` و `doc_supervisor` دارند و نمایش آنها در لیست کشویی.
 - مدیریت وضعیت `skip_supervisor` برای اسناد (در صورت خاموش بودن تنظیم انبار، گزینه پیش‌فرض برای سرپرست اسناد به «بدون نیاز به سرپرست» تغییر یابد).

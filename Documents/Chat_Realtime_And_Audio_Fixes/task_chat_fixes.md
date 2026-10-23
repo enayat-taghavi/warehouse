@@ -22,20 +22,20 @@
 ### 📝 جزئیات تسک‌ها
 
 - [x] **فاز ۱: اصلاح برودکست وب‌سوکت بک‌اند** <!-- id: 0 -->
-  - [x] حذف کانتکست فرستنده از `MessageSerializer` در `warehouse-backend/communications/broadcast.py` تا `is_me` برای سایر کاربران `True` ارسال نشود <!-- id: 1 -->
+  - [x] حذف کانتکست فرستنده از `MessageSerializer` در `backend/communications/broadcast.py` تا `is_me` برای سایر کاربران `True` ارسال نشود <!-- id: 1 -->
   - [x] اعتبارسنجی رویدادهای `chat_message_broadcast` و `broadcast_message_updated_ws` <!-- id: 2 -->
 
 - [x] **فاز ۲: اصلاح کلاینت فرانت‌اند و فعال‌سازی صدا** <!-- id: 3 -->
-  - [x] تطبیق شناسه فرستنده (`msg.sender`) با شناسه کاربر جاری لاگین‌شده در `warehouse-front/src/app/core/services/communication.service.ts` <!-- id: 4 -->
+  - [x] تطبیق شناسه فرستنده (`msg.sender`) با شناسه کاربر جاری لاگین‌شده در `frontend/src/app/core/services/communication.service.ts` <!-- id: 4 -->
   - [x] فعال‌سازی قطعی شرط `playNotificationSound()` برای تمام پیام‌های دریافتی از دیگران (`!msg.is_me`) <!-- id: 5 -->
   - [x] بهبود آنلاک صوتی Web Audio API برای سازگاری حداکثری با مرورگرهای مدرن <!-- id: 6 -->
 
 - [x] **فاز ۳: اتصال وب‌سوکت موبایل و ریکاوری پایدار** <!-- id: 7 -->
-  - [x] افزودن کانفیگ اختصاصی `"/ws"` با `"ws": true` به فایل `warehouse-front/proxy.conf.json` <!-- id: 8 -->
-  - [x] اضافه کردن لیسنرهای `visibilitychange` و `online` در `warehouse-front/src/app/core/services/communication.service.ts` جهت اتصال مجدد فوری هنگام روشن شدن صفحه گوشی <!-- id: 9 -->
+  - [x] افزودن کانفیگ اختصاصی `"/ws"` با `"ws": true` به فایل `frontend/proxy.conf.json` <!-- id: 8 -->
+  - [x] اضافه کردن لیسنرهای `visibilitychange` و `online` در `frontend/src/app/core/services/communication.service.ts` جهت اتصال مجدد فوری هنگام روشن شدن صفحه گوشی <!-- id: 9 -->
 
 - [x] **فاز ۴: اصلاح نام گفتگوهای دو‌نفره در لیست چت‌ها** <!-- id: 10 -->
-  - [x] جایگزینی `StateService` با `AuthService` در `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts` جهت استخراج دقیق شناسه کاربر جاری <!-- id: 11 -->
+  - [x] جایگزینی `StateService` با `AuthService` در `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts` جهت استخراج دقیق شناسه کاربر جاری <!-- id: 11 -->
   - [x] اطمینان از نمایش نام مخاطب روبرو به جای نام کاربر جاری در تمام چت‌های دونفره <!-- id: 12 -->
 
 - [x] **فاز ۵: تست، اعتبارسنجی و تایید سلامت سیستم** <!-- id: 13 -->

@@ -41,13 +41,13 @@
 
 ### کامپوننت‌های نیازمند تغییر
 
-#### [MODIFY] [login.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.ts)
+#### [MODIFY] [login.ts](file:///e:/warehouse%20project/frontend/src/app/components/login/login.ts)
 اضافه کردن `detectChanges` پس از تغییر `passwordFieldType`.
 
-#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 تزریق وابستگی `ChangeDetectorRef` و اضافه‌کردن آن در متد `toggleUserMenu()`.
 
-#### [MODIFY] [data-table.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/data-table/data-table.component.ts)
+#### [MODIFY] [data-table.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/data-table/data-table.component.ts)
 این کامپوننت پیچیده و پرتکرار سیستم است. برای فیلترها و مودال‌های پاپ‌آپ داخل تیبل، نیاز است `ChangeDetectorRef` تزریق شده و به‌روزرسانی در متدهای کلیدی تغییر وضعیت فیلترها فراخوانی شود.
 
 ## Verification Plan

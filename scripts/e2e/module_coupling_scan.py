@@ -3,7 +3,7 @@
 
 نگهبان‌های ۲۹ و ۵۷ نام ماژول را می‌شمارند؛ این پویشگر «مفهوم ماژول» را می‌شمارد:
 - module_permission_literals: کد مجوزی که یک ماژول در module.py خودش اعلام کرده، در هستهٔ بک‌اند
-  (warehouse-backend/core) یا پوستهٔ فرانت (core/، shared/، modules/common/). باید صفر باشد، جز فایل‌های فهرست مجاز.
+  (backend/core) یا پوستهٔ فرانت (core/، shared/، modules/common/). باید صفر باشد، جز فایل‌های فهرست مجاز.
 - cross_module_permission_literals: کد مجوز ماژول دیگر در کد یک ماژول. باید صفر باشد، جز فایل‌های فهرست مجاز.
   ماژول مجوز ماژول دیگر را فقط با نام «توانایی» می‌شناسد (alias مجوز، گام ۸).
 - locked_scope_refs (فقط فرانت): ارجاع به دو دیتابیس آفلاین قفل‌شده (LOCKED_OFFLINE_SCOPES، warehouseOfflineDb،
@@ -23,8 +23,8 @@ import shutil
 import tempfile
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-BACKEND_DIR = REPO_ROOT / "warehouse-backend"
-FRONT_APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
+BACKEND_DIR = REPO_ROOT / "backend"
+FRONT_APP_DIR = REPO_ROOT / "frontend" / "src" / "app"
 
 # فایل‌هایی (یا «فایل|کد») که آگاهانه ارجاع دارند؛ هر کدام دلیل دارد. فایل فهرست‌شده‌ای که دیگر ارجاعی ندارد، ورودی کهنه و شکست است.
 ALLOWED_FILES = {

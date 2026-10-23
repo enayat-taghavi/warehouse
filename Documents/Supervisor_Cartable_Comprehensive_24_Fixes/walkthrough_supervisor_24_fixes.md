@@ -31,8 +31,8 @@
 
 ## 📁 فایل‌های تغییریافته اصلی در این تسک
 
-- [`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) (خطوط 1858، 2095، 2270، 3020، 3055)
-- [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
-- [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+- [`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) (خطوط 1858، 2095، 2270، 3020، 3055)
+- [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+- [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
 
 </div>

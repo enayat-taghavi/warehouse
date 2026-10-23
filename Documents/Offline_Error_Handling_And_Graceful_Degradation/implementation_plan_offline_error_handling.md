@@ -21,29 +21,29 @@
 ## ۲. تغییرات پیشنهادی (Proposed Changes)
 
 ### الف) سرویس و کامپوننت رهگیری تغییرات (Audit Trail)
-#### [MODIFY] [audit-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/audit-api.service.ts)
+#### [MODIFY] [audit-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/audit-api.service.ts)
 - افزودن توکن `SKIP_GLOBAL_ERROR_TOAST: true` به کانتکست متدهای `getAuditStats` و `getLoginStats` تا در حالت آفلاین هیچ توست قرمزی توسط اینترسپتور پرتاب نشود.
 
-#### [MODIFY] [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
+#### [MODIFY] [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
 - بررسی وضعیت اتصال در متدهای `loadAuditLogs` و `loadLoginLogs`؛ در صورت آفلاین بودن از نمایش توست خطای قرمز عمومی سرور خودداری شده و صفحه در آرامش وضعیت داده‌های محلی را نمایش دهد.
 
 ---
 
 ### ب) سرویس و استور گزارش‌ساز پویا (Report Builder)
-#### [MODIFY] [report-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/report-api.service.ts)
+#### [MODIFY] [report-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/report-api.service.ts)
 - تنظیم سراسری `SKIP_GLOBAL_ERROR_TOAST: true` در متد سازنده کانتکست `ctx()` برای تمامی درخواست‌های گزارش‌ساز، تا هیچ درخواست شکست‌خورده‌ای در حالت آفلاین منجر به خطای پاپ‌آپ قرمز نشود.
 
-#### [MODIFY] [report-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts)
+#### [MODIFY] [report-store.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/report-store.ts)
 - کنترل وضعیت `isOffline()` قبل از تلاش برای لود مجدد موجودیت‌ها و قالب‌ها در زمان آفلاین و جلوگیری از ست کردن پیام خطای سرور در `store.error`، تا بنر آفلاین موجود در قالب صفحه به تنهایی و بدون تداخل کار کند.
 
 ---
 
 ### ج) کارتابل مدیر و سرپرست (Manager Review & Supervisor)
-#### [MODIFY] [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+#### [MODIFY] [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
 - بررسی وضعیت `NetworkStatusService.getInstance().isOnline` و کدهای خطای ۵۰۳/آفلاین در متدهای `loadTasks`، `loadPoolTasks`، `loadDocTasks` و `loadDocPoolTasks`.
 - جلوگیری از نمایش `this.toast.error(...)` زمانی که کاربر آفلاین است و کش در دستگاه وجود ندارد.
 
-#### [MODIFY] [manager-review.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
+#### [MODIFY] [manager-review.html](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
 - اطمینان از نمایش پیام راهنمای شفاف در وضعیت خالی (Empty State) جدول زمانی که کاربر آفلاین است و رکوردی در کش محلی وجود ندارد.
 
 ---

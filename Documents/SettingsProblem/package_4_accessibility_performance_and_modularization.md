@@ -24,7 +24,7 @@
 
 ### گام ۱: دسترس‌پذیری و ارتقای تعاملی (فاز ۷)
 1. **ساخت کامپوننت `<app-toggle-switch>`:**
-   - مسیر: `warehouse-front/src/app/shared/components/toggle-switch/toggle-switch.component.ts`.
+   - مسیر: `frontend/src/app/shared/components/toggle-switch/toggle-switch.component.ts`.
    - استفاده از تگ پایه `<button type="button" role="switch" [attr.aria-checked]="checked">`.
    - پشتیبانی از کلیدهای Space و Enter و برقراری اتصال دوطرفه `[(checked)]`.
    - جایگزینی تمام چک‌باکس‌های سفارشی در `settings.html` با این کامپوننت.
@@ -54,7 +54,7 @@
      this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(...)
      ```
    - حذف فراخوانی نابهنگام `this.cdr.detectChanges()` از درون اشتراک روت.
-   - ایجاد اینترفیس `SystemSettingsConfig` در `warehouse-front/src/app/core/models/system-settings.model.ts` و تایپ‌گذاری دقیق `settings`.
+   - ایجاد اینترفیس `SystemSettingsConfig` در `frontend/src/app/core/models/system-settings.model.ts` و تایپ‌گذاری دقیق `settings`.
 2. **سیگنال‌های محاسباتی:**
    - تبدیل `filteredFieldConfigs` و `filteredDocFieldConfigs` به سیگنال‌های محاسباتی `computed()` وابسته به سیگنال سرچ و دسته‌بندی.
 3. **تفکیک قالب `settings.html` به ۵ زیرکامپوننت:**
@@ -71,7 +71,7 @@
 
 ```bash
 # تست‌های فرانت‌اند
-cd "E:/warehouse project/warehouse-front"
+cd "E:/warehouse project/frontend"
 npx ng test --watch=false --browsers=ChromeHeadless
 
 # بیلد نهایی پروژه

@@ -75,7 +75,7 @@ def run_all():
 
     # 7. Angular ngc Compiler Check
     print("\n[Check 6/6] Verifying Angular Template & Type Compiler (ngc)...", flush=True)
-    front_dir = os.path.abspath(os.path.join(backend_dir, '..', 'warehouse-front'))
+    front_dir = os.path.abspath(os.path.join(backend_dir, '..', 'frontend'))
     ngc_bin = os.path.join(front_dir, 'node_modules', '@angular', 'compiler-cli', 'bundles', 'src', 'bin', 'ngc.js')
     
     proc = subprocess.run(

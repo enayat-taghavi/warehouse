@@ -19,7 +19,7 @@
 
 ### بخش منطق و کامپوننت (Component Logic)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - **حذف Getters:** متدهای `filteredTasks`، `completedTasksCount` و `remainingTasksCount` از حالت `get` خارج شده و به متغیرهای معمولی تبدیل می‌شوند.
 - **ایجاد تابع `applyFilters()`:** تابعی ایجاد می‌شود که وظیفه دارد مقادیر متغیرهای فوق را محاسبه کند. این تابع فقط زمانی فراخوانی می‌شود که لیست کالاها از سرور دریافت شود یا کاربر روی دکمه‌های فیلتر کلیک کند.
 - **ایجاد تابع `trackByTaskId`:** تابعی برای استفاده در دستور `*ngFor` اضافه می‌شود تا Angular بتواند کالاها را با شناسه (`id`) آن‌ها رهگیری کند و از رندر مجدد موارد تکراری جلوگیری نماید.
@@ -28,7 +28,7 @@
 
 ### بخش رابط کاربری (HTML Template)
 
-#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 - **افزودن trackBy:** تغییر دستور `<div *ngFor="let task of filteredTasks">` به `<div *ngFor="let task of filteredTasks; trackBy: trackByTaskId">`.
 
 ## برنامه تست و راستی‌آزمایی (Verification Plan)

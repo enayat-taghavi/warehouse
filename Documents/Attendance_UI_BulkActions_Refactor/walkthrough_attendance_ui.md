@@ -38,9 +38,9 @@
 
 ## ۳. لیست فایل‌های تغییریافته
 
-- **[MODIFY]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html) (دکمه ذخیره بالا، دکمه‌های کامل وضعیت گروهی و حذف فوتر مزاحم)
-- **[MODIFY]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) (پیاده‌سازی `setBulkAttendanceStatus` و حذف `fillUnsetAsPresent`)
-- **[MODIFY]** [`personnel-management.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html) (به‌روزرسانی نوار ابزار کارکرد در تب پرسنل)
-- **[MODIFY]** [`personnel-management.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts) (پیاده‌سازی `setBulkAttendanceStatus` در کامپوننت مدیریت پرسنل)
+- **[MODIFY]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html) (دکمه ذخیره بالا، دکمه‌های کامل وضعیت گروهی و حذف فوتر مزاحم)
+- **[MODIFY]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) (پیاده‌سازی `setBulkAttendanceStatus` و حذف `fillUnsetAsPresent`)
+- **[MODIFY]** [`personnel-management.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html) (به‌روزرسانی نوار ابزار کارکرد در تب پرسنل)
+- **[MODIFY]** [`personnel-management.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts) (پیاده‌سازی `setBulkAttendanceStatus` در کامپوننت مدیریت پرسنل)
 
 </div>

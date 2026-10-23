@@ -10,10 +10,10 @@
 
 | بخش / لایه | مسیر فایل | نوع تغییر | شرح اقدامات |
 | :--- | :--- | :---: | :--- |
-| **فرانت‌اند (منطق)** | [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح | افزودن حالت فقط‌خواندنی، اعتبارسنجی مقادیر منفی، اصلاح `toggleAll` روی فیلترشده‌ها، تبدیل ارقام فارسی در اسکنر، اصلاح ذخیره فیلدهای پویا و تنظیم مجدد لیسنر تغییر انبار |
-| **فرانت‌اند (ظاهر)** | [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | اصلاح | غیرفعال‌سازی اینپوت‌ها در حالت فقط‌خواندنی، فارسی‌سازی متون انگلیسی، رفع باگ چک‌باکس بولی، اصلاح جهت‌بندی RTL، تبدیل عناوین تاریخچه به فارسی |
-| **بک‌اند (کنترلر)** | [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | اصلاح | اعمال فیلتر انبار (`warehouse_id`) در `bulk_submit`، مدیریت دقیق پاسخ در صورت رقابت تسک‌های استخر در `claim_tasks` |
-| **مسیریابی** | [app.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts) | اصلاح | هدایت خودکار روت قدیمی `/field` به `/counter` جهت یکپارچگی |
+| **فرانت‌اند (منطق)** | [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح | افزودن حالت فقط‌خواندنی، اعتبارسنجی مقادیر منفی، اصلاح `toggleAll` روی فیلترشده‌ها، تبدیل ارقام فارسی در اسکنر، اصلاح ذخیره فیلدهای پویا و تنظیم مجدد لیسنر تغییر انبار |
+| **فرانت‌اند (ظاهر)** | [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | اصلاح | غیرفعال‌سازی اینپوت‌ها در حالت فقط‌خواندنی، فارسی‌سازی متون انگلیسی، رفع باگ چک‌باکس بولی، اصلاح جهت‌بندی RTL، تبدیل عناوین تاریخچه به فارسی |
+| **بک‌اند (کنترلر)** | [views.py](file:///e:/warehouse%20project/backend/inventory/views.py) | اصلاح | اعمال فیلتر انبار (`warehouse_id`) در `bulk_submit`، مدیریت دقیق پاسخ در صورت رقابت تسک‌های استخر در `claim_tasks` |
+| **مسیریابی** | [app.routes.ts](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts) | اصلاح | هدایت خودکار روت قدیمی `/field` به `/counter` جهت یکپارچگی |
 
 ---
 
@@ -33,8 +33,8 @@
 
 ### فاز ۱: اصلاحات منطقی، قفل فقط‌خواندنی و اعتبارسنجی‌ها (Logic & Validation)
 1. **افزودن قابلیت Read-Only به فرم جزئیات:**
-   - پیاده‌سازی متد `isTaskReadOnly(task: CountTask): boolean` در [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) برای بررسی وضعیت‌هایی مانند `COUNTED`, `MANAGER_REVIEW`, `FINAL_APPROVED`.
-   - غیرفعال‌سازی فیلدهای ورودی و تبدیل دکمه «ثبت و بازگشت» به «بازگشت به لیست» در [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html).
+   - پیاده‌سازی متد `isTaskReadOnly(task: CountTask): boolean` در [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) برای بررسی وضعیت‌هایی مانند `COUNTED`, `MANAGER_REVIEW`, `FINAL_APPROVED`.
+   - غیرفعال‌سازی فیلدهای ورودی و تبدیل دکمه «ثبت و بازگشت» به «بازگشت به لیست» در [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html).
 2. **اعتبارسنجی مقادیر ورودی:**
    - مسدودسازی ورود اعداد منفی در فرم و اضافه کردن شرط `min="0"` و اعتبارسنجی تایپ‌اسکریپت.
 3. **اصلاح انتخاب همگانی (`toggleAll`):**
@@ -84,12 +84,12 @@
 ### تست‌های خودکار و بیلد (Automated Checks)
 * اجرای بررسی خطاهای تایپ‌اسکریپت و بیلد فرانت‌اند:
   ```powershell
-  cd "e:\warehouse project\warehouse-front"
+  cd "frontend"
   npx ng build --configuration=development
   ```
 * بررسی سینتکس و صحت ماژول‌های پایتون بک‌اند:
   ```powershell
-  cd "e:\warehouse project\warehouse-backend"
+  cd "backend"
   python manage.py check
   ```
 

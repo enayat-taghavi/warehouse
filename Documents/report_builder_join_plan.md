@@ -14,7 +14,7 @@
 
 ## ۲. محدودیت فعلی
 
-در [registry.py](../warehouse-backend/reports/registry.py) فقط FKهای خارج‌رونده expose
+در [registry.py](../backend/reports/registry.py) فقط FKهای خارج‌رونده expose
 می‌شوند. روابط وارونه (مثل CountTask→Item) ممنوع‌اند چون JOIN چندمقداری باعث **ضرب
 دکارتی** می‌شود. این طرح همان قاعده را حفظ می‌کند و یک استثنا کنترل‌شده با
 `FilteredRelation` می‌افزاید.

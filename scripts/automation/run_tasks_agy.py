@@ -93,8 +93,8 @@ HEAVY_COMMAND_RE = re.compile(r"\bng\s+(build|test)\b|ng-test-compare|gradlew|gu
                               # زیرفرمان‌های verify_tools.py که آزمون، DB آزمون یا ساخت اجرا می‌کنند
                               r"django-tests|migrate-empty|sample-module|release-check", re.IGNORECASE)
 # پوشه‌های ignore‌شده‌ای که در worktree با junction به پروژه وصل یا کپی می‌شوند
-WORKTREE_LINKS = ("warehouse-front/node_modules", "warehouse-backend/venv")
-WORKTREE_COPIES = ("warehouse-backend/.env",)
+WORKTREE_LINKS = ("frontend/node_modules", "backend/venv")
+WORKTREE_COPIES = ("backend/.env",)
 
 RESUME_MESSAGE = ("[RUNNER] Your previous turn ended because of a service error or a lost process, not because of "
                   "your work. Run `git status` to see what is already done, finish the task, commit, and end your turn.")

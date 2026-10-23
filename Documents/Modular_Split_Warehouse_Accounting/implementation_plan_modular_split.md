@@ -372,11 +372,11 @@ class ModuleSpec:
 ## ۹. راستی‌آزمایی و معیار پذیرش نهایی
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && python manage.py check && python manage.py makemigrations --check --dry-run
+cd "E:/warehouse project/backend" && python manage.py check && python manage.py makemigrations --check --dry-run
 ```
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && python manage.py test accounts personnel warehouses inventory reports communications
+cd "E:/warehouse project/backend" && python manage.py test accounts personnel warehouses inventory reports communications
 ```
 
 ```bash
@@ -384,7 +384,7 @@ cd "E:/warehouse project" && lint-imports && python scripts/e2e/guardian_modular
 ```
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx tsc --noEmit && npm run build
+cd "E:/warehouse project/frontend" && npx tsc --noEmit && npm run build
 ```
 
 راستی‌آزمایی پروفایل نصب (از فاز ۷ به بعد) در سه venv جدا: در هر پروفایل `manage.py check`، سپس `migrate` روی دیتابیس خالی، سپس `curl /api/public/config/` برای صحت `installed_modules` و اثبات ۴۰۴ بودن پیشوند ماژول نصب‌نشده.

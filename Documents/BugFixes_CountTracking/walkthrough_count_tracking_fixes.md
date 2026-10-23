@@ -12,9 +12,9 @@
 
 | فایل | فاز | تغییرات اصلی |
 |---|---|---|
-| [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L1885-L1920) | ۱ | ایجاد متد `bulk_cancel` با اعتبارسنجی وضعیت |
-| [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts) | ۲، ۳، ۵، ۶ | پاک‌سازی انتخاب‌ها + اعتبارسنجی هوشمند + جستجوی case-insensitive + اصلاح formatDuration + Pre-compute + صفحه‌بندی + رفع toString |
-| [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) | ۲، ۴، ۵، ۶ | پاس دادن selectedIds + فیلتر کامل + رفع CSS + متن داینامیک دکمه + حذف *ngIf جدول + صفحه‌بندی + استفاده از مقادیر محاسبه‌شده |
+| [views.py](file:///e:/warehouse%20project/backend/inventory/views.py#L1885-L1920) | ۱ | ایجاد متد `bulk_cancel` با اعتبارسنجی وضعیت |
+| [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts) | ۲، ۳، ۵، ۶ | پاک‌سازی انتخاب‌ها + اعتبارسنجی هوشمند + جستجوی case-insensitive + اصلاح formatDuration + Pre-compute + صفحه‌بندی + رفع toString |
+| [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) | ۲، ۴، ۵، ۶ | پاس دادن selectedIds + فیلتر کامل + رفع CSS + متن داینامیک دکمه + حذف *ngIf جدول + صفحه‌بندی + استفاده از مقادیر محاسبه‌شده |
 
 ---
 

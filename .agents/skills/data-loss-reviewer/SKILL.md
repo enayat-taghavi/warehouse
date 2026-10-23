@@ -1,6 +1,6 @@
 ---
 name: data-loss-reviewer
-description: بازبین «از دست رفتن داده». پس از هر تغییر در صف آفلاین و همگام‌سازی فرانت (warehouse-front/src/app/core/services/offline-*، sync-*، photo-upload-queue، interceptorها)، مهاجرت‌های Django، سیگنال‌های حذف و CASCADE یا Service Worker، این اسکیل را برای ممیزی دقیق اجرا کن.
+description: بازبین «از دست رفتن داده». پس از هر تغییر در صف آفلاین و همگام‌سازی فرانت (frontend/src/app/core/services/offline-*، sync-*، photo-upload-queue، interceptorها)، مهاجرت‌های Django، سیگنال‌های حذف و CASCADE یا Service Worker، این اسکیل را برای ممیزی دقیق اجرا کن.
 ---
 
 # بازبین عدم از دست رفتن داده (Data Loss Reviewer)
@@ -27,7 +27,7 @@ description: بازبین «از دست رفتن داده». پس از هر تغ
    - `RunSQL` یا `RunPython` بدون reverse یا همراه با حذف داده
    - `AlterUniqueTogether` یا `AddConstraint` که روی دادهٔ موجود شکست بخورد
 
-   در صورت نیاز، `./venv/Scripts/python.exe manage.py sqlmigrate <app> <name>` را در `warehouse-backend` اجرا کن.
+   در صورت نیاز، `./venv/Scripts/python.exe manage.py sqlmigrate <app> <name>` را در `backend` اجرا کن.
 5. **حذف آبشاری:**
    - `on_delete=CASCADE` تازه
    - سیگنال‌های `pre_delete` و `post_delete` (مثل `warehouses/signals.py`)

@@ -38,7 +38,7 @@
 ## ۲. فازبندی اجرایی (Phased Execution Plan)
 
 ### 🔹 فاز ۱: اصلاحات هسته بک‌اند و اعتبارسنجی‌های دیتابیس
-- **فایل‌های هدف:** [`personnel/views.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py), [`personnel/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py)
+- **فایل‌های هدف:** [`personnel/views.py`](file:///e:/warehouse%20project/backend/personnel/views.py), [`personnel/serializers.py`](file:///e:/warehouse%20project/backend/personnel/serializers.py)
 - **اقدامات:**
   1. در `bulk_save`: اگر `target_wh` نال بود، به عنوان فال‌بک از `p_obj.assigned_warehouse_id` استفاده شود تا انتساب انبار پرسنل نپرد.
   2. در `get_matrix`: پیش‌فرض انبار برای افراد بدون سابقه از `p_obj.assigned_warehouse_id` خوانده شود؛ و فیلد `def_friday` تنها در صورتی فعال شود که تاریخ روز، روز جمعه باشد (`is_friday_work = True`).
@@ -47,7 +47,7 @@
   5. در `get_monthly_summary` و شیت ماهانه: یکسان‌سازی فرمول `present_days`.
 
 ### 🔹 فاز ۲: اصلاحات و تکمیل برودکست‌های وب‌سوکت بک‌اند
-- **فایل‌های هدف:** [`personnel/views.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py), [`notifications/consumers.py`](file:///e:/warehouse%20project/warehouse-backend/notifications/consumers.py)
+- **فایل‌های هدف:** [`personnel/views.py`](file:///e:/warehouse%20project/backend/personnel/views.py), [`notifications/consumers.py`](file:///e:/warehouse%20project/backend/notifications/consumers.py)
 - **اقدامات:**
   1. در `broadcast_attendance_updated`: افزودن پارامتر `sender_id` (شناسه کاربری `request.user.id`).
   2. در `VehicleDailyTripViewSet.bulk_save`: افزودن برودکست رویداد `fleet_trips_updated`.
@@ -55,7 +55,7 @@
   4. اطمینان از قرار گرفتن `sender_id` و `warehouse_id` در تمام پیلودهای وب‌سوکت.
 
 ### 🔹 فاز ۳: اصلاحات منطق و ارگونومی فرانت‌اند
-- **فایل‌های هدف:** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts), [`warehouse-attendance.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
+- **فایل‌های هدف:** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts), [`warehouse-attendance.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
 - **اقدامات:**
   1. اصلاح `saveAttendanceMatrix`: انتقال `r.is_existing = true` به درون بلوک `next` و حفظ وضعیت قبلی در صورت بروز خطا.
   2. اصلاح `applyBulkHours`: نادیده گرفتن افراد با وضعیت غایب یا مرخصی در صورتی که وضعیت جدیدی برای آن‌ها انتخاب نشده باشد.
@@ -63,7 +63,7 @@
   4. تمایز بصری شفاف میان سطرهای پیش‌نویس (Ghost Defaults) و سطرهای ثبت‌شده نهایی در HTML.
 
 ### 🔹 فاز ۴: بازنویسی سابسکرایب وب‌سوکت و پچ درجا در فرانت‌اند
-- **فایل‌های هدف:** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)
+- **فایل‌های هدف:** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)
 - **اقدامات:**
   1. نادیده گرفتن پیام‌هایی که `notif.sender_id === this.auth.user()?.id` هستند (جلوگیری از اکو).
   2. اعتبارسنجی `warehouse_id` با انبار انتخابی صفحه (جلوگیری از تداخل انبارها).

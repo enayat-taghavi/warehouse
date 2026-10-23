@@ -2,7 +2,7 @@
 
 # 🚀 گزارش جامع آزمون‌های خودکار بک‌اند انبارگردانی (۱۵ سناریوی کامل)
 
-یک سوئیت تست کامل شامل **۱۵ سناریوی مختلف** در فایل [`warehouse-backend/inventory/tests.py`](file:///E:/warehouse%20project/warehouse-backend/inventory/tests.py) پیاده‌سازی و اجرا گردید. تمام ۱۵ آزمون با موفقیت ۱۰۰٪ پاس شدند.
+یک سوئیت تست کامل شامل **۱۵ سناریوی مختلف** در فایل [`backend/inventory/tests.py`](file:///E:/warehouse%20project/backend/inventory/tests.py) پیاده‌سازی و اجرا گردید. تمام ۱۵ آزمون با موفقیت ۱۰۰٪ پاس شدند.
 
 ---
 
@@ -49,6 +49,6 @@ Destroying test database for alias 'default'...
 ---
 
 > [!TIP]
-> فایل تست در [`inventory/tests.py`](file:///E:/warehouse%20project/warehouse-backend/inventory/tests.py) به عنوان تست استاندارد و دائمی چرخه انبارگردانی در گیت ذخیره گردید.
+> فایل تست در [`inventory/tests.py`](file:///E:/warehouse%20project/backend/inventory/tests.py) به عنوان تست استاندارد و دائمی چرخه انبارگردانی در گیت ذخیره گردید.
 
 </div>

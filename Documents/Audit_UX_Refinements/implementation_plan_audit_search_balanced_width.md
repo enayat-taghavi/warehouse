@@ -49,7 +49,7 @@ graph TD
 ---
 
 ## 📁 پرونده‌های تحت تاثیر (Modified Files)
-- `warehouse-front/src/app/components/audit/audit.html`
+- `frontend/src/app/components/audit/audit.html`
 - `Documents/Audit_UX_Refinements/`
 - `Documents/Master_Log.md`
 

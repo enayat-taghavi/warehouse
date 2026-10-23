@@ -12,7 +12,7 @@
 
 ### Warehouse Backend (`warehouses`)
 
-#### [MODIFY] [label_pdf_generator.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/label_pdf_generator.py)
+#### [MODIFY] [label_pdf_generator.py](file:///e:/warehouse%20project/backend/warehouses/label_pdf_generator.py)
 
 | مکان خطا | تغییر پیشنهادی | علت تغییر |
 | :--- | :--- | :--- |

@@ -33,7 +33,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FRONT_SERVICES = REPO_ROOT / "warehouse-front" / "src" / "app" / "core" / "services"
+FRONT_SERVICES = REPO_ROOT / "frontend" / "src" / "app" / "core" / "services"
 OFFLINE_DB_TS = FRONT_SERVICES / "offline-db.ts"
 SYNC_PULL_TS = FRONT_SERVICES / "sync-pull.service.ts"
 

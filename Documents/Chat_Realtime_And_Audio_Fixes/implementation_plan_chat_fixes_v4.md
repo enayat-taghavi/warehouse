@@ -22,9 +22,9 @@ graph TD
 
 ## 📂 تغییرات فایل‌ها و فازبندی
 
-### [بک‌اند] Backend (`warehouse-backend`)
+### [بک‌اند] Backend (`backend`)
 
-#### [MODIFY] `warehouse-backend/communications/consumers.py`
+#### [MODIFY] `backend/communications/consumers.py`
 - در `ChatConsumer`:
   - هنگام `connect`: اضافه کردن کلاینت به گروه عمومی `chat_presence` و ارسال برودکست رویداد `chat.presence` با `status: 'online'` و `user_id`. همچنین ارسال پیام اولیه حاوی لیست شناسه‌های کاربران آنلاین به کلاینت تازه‌متصل‌شده.
   - هنگام `disconnect`: برودکست رویداد `chat.presence` با `status: 'offline'` و `user_id` به گروه `chat_presence`.
@@ -32,19 +32,19 @@ graph TD
 
 ---
 
-### [فرانت‌اند] Frontend (`warehouse-front`)
+### [فرانت‌اند] Frontend (`frontend`)
 
-#### [MODIFY] `warehouse-front/src/app/core/services/communication.service.ts`
+#### [MODIFY] `frontend/src/app/core/services/communication.service.ts`
 - اضافه کردن سیگنال `onlineUserIds = signal<Set<number>>(new Set())` جهت نگهداری کاربران آنلاین زنده.
 - شنود رویدادهای `chat.presence` و `chat.online_users` در سوکت چت.
 - تابع `isUserOnline(userId?: number | string): boolean`.
 - اصلاح متد `getCurrentUserId()` با تبدیل قطعی شناسه‌های رشته‌ای به عدد (`Number(parsed.id)` و `Number(payload.user_id)`) جهت تضمین صحت شناسه در موبایل.
 
-#### [MODIFY] `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
+#### [MODIFY] `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
 - اصلاح تابع `getConversationTitle`: در چت‌های دو‌نفره (`conv_type === 'direct'`) مستقیماً نام طرف مقابل جستجو شود و به `conv.title` سرور اتکا نشود.
 - افزودن متد `isOtherUserOnline(): boolean` برای بررسی آنلاین بودن طرف مقابل گفتگوی جاری.
 
-#### [MODIFY] `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html`
+#### [MODIFY] `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html`
 - در هدر چت: جایگزینی متن هاردکد «آنلاین» با وضعیت واقعی:
   - اگر طرف مقابل تایپ می‌کند: «در حال نوشتن...» (سبز)
   - اگر طرف مقابل آنلاین است: نقطه سبز پالس‌دار + «آنلاین»

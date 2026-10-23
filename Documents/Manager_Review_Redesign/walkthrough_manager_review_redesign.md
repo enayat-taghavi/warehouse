@@ -48,9 +48,9 @@
 
 | مسیر فایل | نوع تغییر | شرح وظیفه |
 | :--- | :---: | :--- |
-| [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) | [MODIFY] | پیاده‌سازی منطق فیلترها، شمارنده‌های زنده، همگام‌سازی وضعیت URL، متدهای انتخاب هوشمند و کنترلرهای مدال |
-| [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html) | [MODIFY] | ساختار کامل قالب با کارت‌های آمار، نوار Omni-Search، چیپ‌های شرطی، کارت‌های تعاملی و مدال‌های دیالوگ |
-| [`manager-review.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.css) | [MODIFY] | انیمیشن‌های باز شدن مدال‌ها (`slide-in`, `slide-up`) و تنظیم اسکرول‌بار مخفی |
+| [`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) | [MODIFY] | پیاده‌سازی منطق فیلترها، شمارنده‌های زنده، همگام‌سازی وضعیت URL، متدهای انتخاب هوشمند و کنترلرهای مدال |
+| [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html) | [MODIFY] | ساختار کامل قالب با کارت‌های آمار، نوار Omni-Search، چیپ‌های شرطی، کارت‌های تعاملی و مدال‌های دیالوگ |
+| [`manager-review.css`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.css) | [MODIFY] | انیمیشن‌های باز شدن مدال‌ها (`slide-in`, `slide-up`) و تنظیم اسکرول‌بار مخفی |
 
 ---
 

@@ -5,7 +5,7 @@
 ## ۱. امکانات پیاده‌سازی‌شده (Features Implemented)
 
 ### 🔹 ۱. ابزار جامع اعتبارسنجی شبا (ISO 7064 Mod 97-10)
-- ایجاد ماژول‌های مستقل در فرانت‌اند ([`sheba-utils.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/utils/sheba-utils.ts)) و بک‌اند ([`sheba_utils.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/sheba_utils.py)).
+- ایجاد ماژول‌های مستقل در فرانت‌اند ([`sheba-utils.ts`](file:///e:/warehouse%20project/frontend/src/app/core/utils/sheba-utils.ts)) و بک‌اند ([`sheba_utils.py`](file:///e:/warehouse%20project/backend/personnel/sheba_utils.py)).
 - نرمال‌سازی خودکار ارقام فارسی/عربی و حذف فواصل.
 - افزودن خودکار پیشوند `IR` در صورت درج ۲۴ رقم.
 - محاسبه دقیق چک‌سام با استاندارد بین‌المللی $\text{BigInt} \pmod{97} == 1$.

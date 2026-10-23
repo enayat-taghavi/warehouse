@@ -19,16 +19,16 @@
 ## 🛠️ گام‌های اجرایی و فایل‌های هدف
 
 ### گام ۱: اصلاحات آفلاین و PWA (فاز ۲)
-1. در `warehouse-front/src/app/services/settings.ts`:
+1. در `frontend/src/app/services/settings.ts`:
    - افزودن توکن `SKIP_OFFLINE` و `SKIP_GLOBAL_ERROR_TOAST` به متدهای `saveGlobalSettings`، `downloadBackup` و `restoreBackup`:
      ```ts
      context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
      ```
    - متد `getGlobalSettings` بدون `SKIP_OFFLINE` باقی بماند تا کش SWR برای لود سریع حفظ شود.
-2. در `warehouse-front/src/app/core/services/offline-db.ts`:
+2. در `frontend/src/app/core/services/offline-db.ts`:
    - ساخت متد `clearServerDerivedCaches(): Promise<void>` برای پاک کردن جداول `apiCache`، `countTasks`، `docTasks`، `items`، `dynamicFields` و `syncCursors`.
    - جداول `syncQueue`، `photoQueue` و `syncErrors` به هیچ عنوان پاک نشوند.
-3. در `warehouse-front/src/app/components/settings/settings.ts`:
+3. در `frontend/src/app/components/settings/settings.ts`:
    - در متد `openRestoreConfirm()`، ابتدا بررسی شود که آیا `OfflineSyncService.getInstance().getQueueEntries()` رکوردی دارد یا خیر. در صورت وجود رکورد pending، پیام هشدار نمایش داده شده و اجازه ریستور داده نشود تا ابتدا سینک انجام شود.
    - در `finalize()` درخواست دانلود بکاپ، فلگ `isBackupLoading = false` ست شود تا اسپینر هرگز گیر نکند.
    - پس از ریستور موفقیت‌آمیز، تابع `clearServerDerivedCaches()` فراخوانی شود.
@@ -44,7 +44,7 @@
    - پس از دریافت تنظیمات، مقدار اولیه در `originalSettings = structuredClone(this.settings)` کپی شود.
    - در متد `saveGlobalSettings`، مقادیر تغییریافته با `originalSettings` مقایسه شده و فقط آبجکت دلتا به متد ذخیره ارسال شود.
 4. **گارد خروج `settingsLeaveGuard` (ایراد ۲-۶):**
-   - ساخت فایل `warehouse-front/src/app/core/guards/settings-leave.guard.ts`.
+   - ساخت فایل `frontend/src/app/core/guards/settings-leave.guard.ts`.
    - بررسی `isDirty` کامپوننت و نمایش دیالوگ تأییدیه قبل از خروج از مسیر `/settings`.
    - ثبت گارد در `app.routes.ts`.
 
@@ -54,6 +54,6 @@
 
 ```bash
 # تست‌های واحد فرانت‌اند
-cd "E:/warehouse project/warehouse-front"
+cd "E:/warehouse project/frontend"
 npx ng test --include="**/settings*.spec.ts" --watch=false --browsers=ChromeHeadless
 ```

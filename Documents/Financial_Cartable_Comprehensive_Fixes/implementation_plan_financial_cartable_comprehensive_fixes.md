@@ -29,9 +29,9 @@ graph TD
 
 #### ۱. اقدامات اجرایی فاز ۱:
 1. **کپی مقادیر اولیه از کالا به تسک در ارجاع (`bulk_dispatch`):**
-   - در متد `bulk_assign` در [`inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L613)، در زمان ایجاد `DocTask`، مقادیر ۱۴ فیلد مالی و فیلدهای متناظر کالا (`price_amount`, `similar_unit_price`, `total_value`, `currency`, `invoice_type`, `invoice_date`, `inv_rti_number`, `added_rti_no`, `page_row`, `invoice_page`, `doc_supplier`, `folder_address`, `stamp`, `signature`) از رکورد `Item` خوانده شده و تسک با مقادیر پرشده ایجاد شود تا سابقه و داده‌های موجود از بین نرود.
+   - در متد `bulk_assign` در [`inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py#L613)، در زمان ایجاد `DocTask`، مقادیر ۱۴ فیلد مالی و فیلدهای متناظر کالا (`price_amount`, `similar_unit_price`, `total_value`, `currency`, `invoice_type`, `invoice_date`, `inv_rti_number`, `added_rti_no`, `page_row`, `invoice_page`, `doc_supplier`, `folder_address`, `stamp`, `signature`) از رکورد `Item` خوانده شده و تسک با مقادیر پرشده ایجاد شود تا سابقه و داده‌های موجود از بین نرود.
 2. **پشتیبانی از `sync_ids` در متد `bulk_submit` بک‌اند:**
-   - در متد `bulk_submit` در [`views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L2425)، فیلتر تسک‌ها علاوه بر `task_ids` از لیست `sync_ids` ارسالی از کلاینت آفلاین نیز پشتیبانی کند.
+   - در متد `bulk_submit` در [`views.py`](file:///e:/warehouse%20project/backend/inventory/views.py#L2425)، فیلتر تسک‌ها علاوه بر `task_ids` از لیست `sync_ids` ارسالی از کلاینت آفلاین نیز پشتیبانی کند.
 3. **ثبت لاگ تاریخچه در متد `claim_tasks`:**
    - در زمان اختصاص تسک از استخر به کارشناس یا سرپرست در `claim_tasks`، رکورد `DocTaskHistory` با `action_type = 'CLAIMED'` و ثبت کاربر مربوطه ایجاد گردد.
 4. **اعمال پرمیشن‌های دقیق نقشی در `DocTaskViewSet`:**
@@ -40,9 +40,9 @@ graph TD
    - فیلد `invoice_date` قابلیت دریافت رشته تاریخ شمسی (مانند `1403/05/20`) و تبدیل خودکار به فرمت استاندارد میلادی `YYYY-MM-DD` بدون ایجاد خطای ۴۰۰ را دارا باشد.
 
 #### ۲. فایل‌های مشمول تغییر در فاز ۱:
-- [`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
-- [`warehouse-backend/inventory/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py)
-- [`warehouse-backend/inventory/tests_docs.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/tests_docs.py)
+- [`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)
+- [`backend/inventory/serializers.py`](file:///e:/warehouse%20project/backend/inventory/serializers.py)
+- [`backend/inventory/tests_docs.py`](file:///e:/warehouse%20project/backend/inventory/tests_docs.py)
 
 #### ۳. معیار راستی‌آزمایی و تایید فاز ۱:
 - اجرای موفقیت‌آمیز تست‌های بک‌اند با دستور `python manage.py test inventory.tests_docs` و صحت کپی مقادیر در ارجاع جدید.
@@ -56,17 +56,17 @@ graph TD
 
 #### ۱. اقدامات اجرایی فاز ۲:
 1. **پایداری آفلاین فیلدهای پویا و غیرمستقیم کالا (`saveExtraEditedFields`):**
-   - در [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts#L653)، در حالت `localFirst`، تغییرات فیلدهای کالا و `dynamic_data` ابتدا در جدول محلی `offlineDb.items` ذخیره شده و سپس درخواست به‌روزرسانی در صف آفلاین `OfflineSyncService.enqueue` قرار گیرد تا هیچ داده‌ای در زمان آفلاین مفقود نشود.
+   - در [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts#L653)، در حالت `localFirst`، تغییرات فیلدهای کالا و `dynamic_data` ابتدا در جدول محلی `offlineDb.items` ذخیره شده و سپس درخواست به‌روزرسانی در صف آفلاین `OfflineSyncService.enqueue` قرار گیرد تا هیچ داده‌ای در زمان آفلاین مفقود نشود.
 2. **خواندن تنظیمات فیلدها و فیلدهای پویا از حافظه محلی Dexie:**
    - متد `loadFieldPermissions()` در صورت آفلاین بودن یا عدم دسترسی به سرور، تعاریف فیلدهای پویا را از جدول `offlineDb.dynamicFields` لود نماید.
 3. **پیش‌بینی دقیق وضعیت محلی در `submitTasks`:**
-   - در [`doc-task-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts#L125)، وضعیت تسک محلی با توجه به فلگ `skip_supervisor` تعیین شود (در صورت پرش از سرپرست، محلی نیز مستقیماً `DOC_MANAGER_REVIEW` شود).
+   - در [`doc-task-store.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts#L125)، وضعیت تسک محلی با توجه به فلگ `skip_supervisor` تعیین شود (در صورت پرش از سرپرست، محلی نیز مستقیماً `DOC_MANAGER_REVIEW` شود).
 4. **مدیریت هوشمند رفرش در صورت باز بودن فرم جزئیات:**
    - در صورت دریافت سیگنال وب‌سوکت در زمان باز بودن فرم کالا، پرچم `needsRefresh` تنظیم شده و به محض بستن فرم یا اتمام ویرایش، لیست کارهای من به صورت خودکار رفرش شود.
 
 #### ۲. فایل‌های مشمول تغییر در فاز ۲:
-- [`warehouse-front/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
-- [`warehouse-front/src/app/core/services/doc-task-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts)
+- [`frontend/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
+- [`frontend/src/app/core/services/doc-task-store.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts)
 
 #### ۳. معیار راستی‌آزمایی و تایید فاز ۲:
 - تست قطع شبکه (Offline Mode) در مرورگر، ثبت اطلاعات مالی و فیلدهای پویا، و همگام‌سازی خودکار و بدون خطا پس از اتصال مجدد شبکه.
@@ -86,14 +86,14 @@ graph TD
 3. **انتخابگر تاریخ شمسی (Jalali Datepicker):**
    - افزودن کامپوننت تقویم شمسی استاندارد به فیلد `invoice_date` به جای اینپوت متنی خام، با تبدیل مطمئن به فرمت استاندارد.
 4. **رفع کامل باگ انتخاب ستون‌ها در مودال خروجی اکسل:**
-   - در متد `executeExport()` در [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts#L981)، هنگام انتخاب گزینه «فقط ستون‌های فعال در این کارتابل» (`visible`)، کلیدهای ستون‌های فعال (`this.fieldConfigs.filter(f => f.visible).map(f => f.key)`) در `payload.columns_list` قرار گیرد تا اکسل دقیقاً مطابق انتخاب کاربر تولید شود.
+   - در متد `executeExport()` در [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts#L981)، هنگام انتخاب گزینه «فقط ستون‌های فعال در این کارتابل» (`visible`)، کلیدهای ستون‌های فعال (`this.fieldConfigs.filter(f => f.visible).map(f => f.key)`) در `payload.columns_list` قرار گیرد تا اکسل دقیقاً مطابق انتخاب کاربر تولید شود.
 5. **ارتقای اسکنر بارکد و نرمال‌سازی جستجو:**
    - پشتیبانی جستجوی بارکد از پارت‌نامبر (`part_no`)، شماره تگ (`tag_number`) و PO، همراه با نرمال‌سازی حروف فارسی و عربی («ی/ي» و «ک/ك»).
 
 #### ۲. فایل‌های مشمول تغییر در فاز ۳:
-- [`warehouse-front/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
-- [`warehouse-front/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
-- [`warehouse-front/src/app/components/customs/customs.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.css)
+- [`frontend/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
+- [`frontend/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
+- [`frontend/src/app/components/customs/customs.css`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.css)
 
 #### ۳. معیار راستی‌آزمایی و تایید فاز ۳:
 - بررسی چشمی و تعاملی فرم مالی: درج مبالغ بزرگ با فرمت ۳ رقمی، انتخاب تاریخ از تقویم شمسی، و دانلود اکسل با ستون‌های سفارشی فعال.
@@ -109,16 +109,16 @@ graph TD
 1. **بومی‌سازی و فارسی‌سازی تایم‌لاین تاریخچه (`DocTaskHistory`):**
    - ترجمه اکشن‌های انگلیسی مانند `DOC_PROCESSED` («ارسال جهت بررسی سرپرست»)، `DOC_SUPERVISOR_REJECTED` («رد شده توسط سرپرست»)، `DOC_MANAGER_REVIEW` («در انتظار تایید مدیر»)، `DOC_MANAGER_REJECTED` («رد شده توسط مدیر»)، `DOC_FINAL_APPROVED` («تایید نهایی») و `CLAIMED` («بر عهده گرفته شد») در تمپلیت تاریخچه.
 2. **فارسی‌سازی عناوین فاکتور و ارزها در داشبورد سرپرست و مدیر:**
-   - در [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) و [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)، مقادیر `invoice_type` و `currency` از دیکشنری فارسی (`رسمی/مالیاتی`، `ریال`، `دلار` و...) نمایش یابند.
+   - در [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) و [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)، مقادیر `invoice_type` و `currency` از دیکشنری فارسی (`رسمی/مالیاتی`، `ریال`، `دلار` و...) نمایش یابند.
 3. **مدال/دراور مشاهده جزئیات کامل سند مالی برای سرپرست و مدیر:**
    - امکان کلیک روی کارت کالا در داشبورد سرپرست و مدیر برای باز شدن مودال جامع نمایش تمام ۱۴ فیلد مالی، مشخصات کالا، فیلدهای پویا، اسنپ‌شات و تاریخچه، قبل از تصمیم‌گیری برای تایید یا رد.
 
 #### ۲. فایل‌های مشمول تغییر در فاز ۴:
-- [`warehouse-front/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
-- [`warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
-- [`warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
-- [`warehouse-front/src/app/components/manager-review/manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
-- [`warehouse-front/src/app/components/manager-review/manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+- [`frontend/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
+- [`frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+- [`frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+- [`frontend/src/app/components/manager-review/manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
+- [`frontend/src/app/components/manager-review/manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
 
 #### ۳. معیار راستی‌آزمایی و تایید فاز ۴:
 - بازبینی کارتابل سرپرست و مدیر، مشاهده جزئیات کامل فاکتور و تایید/رد اسناد با مشاهده پیش‌نمایش دقیق.

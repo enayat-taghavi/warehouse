@@ -16,7 +16,7 @@
 
 ### Backend Components
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 - **شرح تغییر:** حذف کامل دریافت پارامترهای `show_counted` و `show_counting` و منطق `excluded_statuses` از متد `get_queryset`.
 - **نتیجه:** سرور دیگر هیچ پیش‌فرضی برای حذف وضعیت‌های `done` یا `counting` اعمال نمی‌کند و تماماً بر اساس کوئری `field_status__in` (که توسط django-filter پردازش می‌شود) پاسخ می‌دهد.
 
@@ -24,7 +24,7 @@
 
 ### Frontend Components
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - **شرح تغییر:** حذف ارسال پارامترهای بی‌فایده و منسوخ شده `show_counted` و `show_counting` در متدهای `loadItems` و `exportData`.
 - **حذف کدهای اضافی:** رفع خطاهای کامپایل احتمالی مربوط به `this.showCountedItems` و `this.showCountingItems` از تابع `exportData`.
 

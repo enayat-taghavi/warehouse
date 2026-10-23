@@ -23,12 +23,12 @@
 
 ### فرانت‌اند (Angular Frontend)
 
-#### [MODIFY] [`personnel-management.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts)
+#### [MODIFY] [`personnel-management.ts`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts)
 - افزودن متغیر تب‌های مودال: `personnelModalTab: 'identity' | 'contract' | 'insurance' | 'allowances' | 'contact' = 'identity';`
 - به‌روزرسانی متد `openAddPersonnelModal` با مقداردهی اولیه کامل فیلدهای ۵ تب.
 - ریست کردن تب به `'identity'` در هنگام باز کردن مودال.
 
-#### [MODIFY] [`personnel-management.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html)
+#### [MODIFY] [`personnel-management.html`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html)
 - جایگزینی مودال ساده با مودال بزرگ ۵ تب شیشه‌ای (`max-w-4xl`) دارای نوار تب‌های بصری با آیکون‌های اختصاصی:
   - تب ۱: 👤 اطلاعات هویتی و فردی
   - تب ۲: 💼 قرارداد، دستمزد و گروه شغلی
@@ -42,7 +42,7 @@
 ## برنامه راستی‌آزمایی (Verification Plan)
 
 ### ۱. تست بیلد فرانت‌اند
-- اجرای `npm run build` در پوشه `warehouse-front` برای تضمین عدم وجود خطای کامپایل تمپلیت و تایپ‌اسکریپت.
+- اجرای `npm run build` در پوشه `frontend` برای تضمین عدم وجود خطای کامپایل تمپلیت و تایپ‌اسکریپت.
 
 ### ۲. تست عملکردی رابط کاربری
 - باز کردن مودال افزودن پرسنل و ویرایش پرسنل موجود.

@@ -20,10 +20,10 @@
 | **۷** | ابطال خودکار وضعیت تاییدیه در صورت ویرایش مجدد | `personnel/views.py` (در متدهای `bulk_save` و `bulk_save_monthly_grid`) | اگر سرپرست یا کاربری یک روز تاییدشده (`APPROVED`) را مجدداً ذخیره و ویرایش کند، وضعیت تایید آن خودکار به `PENDING_SUPERVISOR` بازمی‌گردد تا مجدداً ممیزی شود. |
 | **۸** | مسدودسازی ویرایش کارکرد در دوره‌های بسته و قفل‌شده | `personnel/views.py` (بررسی وضعیت دوره با `LOCKED_PERIOD_STATUSES`) | تلاش برای ثبت یا ویرایش کارکرد در دوره‌ای که وضعیت آن `SUBMITTED_SUPERVISOR` یا `LOCKED` است با خطای ۴۰۰ مسدود می‌گردد. |
 | **۹** | اکشن‌های تایید، عودت و رد کارکرد در کارتابل سرپرست | `personnel/cartable_views.py` (اکشن‌های `approve`, `revision`, `reject` برای مدل `attendance`) | سرپرست می‌تواند کارکردها را به صورت تکی یا دسته‌ای تایید یا با ذکر دلیل عودت دهد. تمامی لاگ‌ها در `AttendanceAuditLog` ثبت می‌شوند. |
-| **۱۰** | تفکیک نشان‌های حضور و تایید در جدول کارتابل سرپرست | `warehouse-front/src/app/components/finance/supervisor/supervisor-attendance/supervisor-attendance.html` و `.ts` | در صفحه کارتابل کارکرد سرپرست، ستون «نوع حضور» (سبز: حاضر کامل، زرد: نیمه‌وقت، قرمز: غایب) کاملاً جدا از ستون «وضعیت گردش‌کار» (کپسول خاکستری: در انتظار، آبی: تایید سرپرست، کهربایی: عودت) نمایش داده می‌شود. |
+| **۱۰** | تفکیک نشان‌های حضور و تایید در جدول کارتابل سرپرست | `frontend/src/app/components/finance/supervisor/supervisor-attendance/supervisor-attendance.html` و `.ts` | در صفحه کارتابل کارکرد سرپرست، ستون «نوع حضور» (سبز: حاضر کامل، زرد: نیمه‌وقت، قرمز: غایب) کاملاً جدا از ستون «وضعیت گردش‌کار» (کپسول خاکستری: در انتظار، آبی: تایید سرپرست، کهربایی: عودت) نمایش داده می‌شود. |
 | **۱۱** | اصلاح فیلتر تب‌های کارتابل کارکرد و شمارنده‌ها | `supervisor-attendance.ts` (متد `applyFilter`) | تب «⏳ نیازمند بررسی» تنها رکوردهای `PENDING_SUPERVISOR` را نشان می‌دهد، تب «✅ تایید شده» رکوردهای `APPROVED` و تب «⚠️ نیازمند بازنگری» رکوردهای `REVISION_REQUIRED` را با شمارنده زنده نشان می‌دهد. |
 | **۱۲** | جایگزینی `window.prompt` با مودال مدرن عودت | `supervisor-attendance.html` و `.ts` (مودال `showRevisionModal`) | با کلیک روی دکمه عودت، یک مودال ارگونومیک با تم کهربایی باز می‌شود، ثبت علت عودت اجباری است و متن قبلی یادداشت از بین نمی‌رود. |
-| **۱۳** | غیرفعال‌سازی دکمه قفل دوره تا صفر شدن کارکردهای معلق | `warehouse-front/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.html` و `.ts` | در صفحه قفل دوره سرپرست، اگر حتی ۱ کارکرد تاییدنشده وجود داشته باشد، دکمه قفل دوره خاکستری و غیرفعال است و یک بنر کهربایی راهنما به همراه دکمه هدایت سریع («مشاهده و تایید کارکردها») نمایش داده می‌شود. |
+| **۱۳** | غیرفعال‌سازی دکمه قفل دوره تا صفر شدن کارکردهای معلق | `frontend/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.html` و `.ts` | در صفحه قفل دوره سرپرست، اگر حتی ۱ کارکرد تاییدنشده وجود داشته باشد، دکمه قفل دوره خاکستری و غیرفعال است و یک بنر کهربایی راهنما به همراه دکمه هدایت سریع («مشاهده و تایید کارکردها») نمایش داده می‌شود. |
 | **۱۴** | اصلاح پارامترهای ارسالی قفل دوره در فرانت | `personnel-api.service.ts` و `supervisor-period-lock.ts` | ارسال صریح پارامترهای `section_id` و `project_id` به جای ارسال اشتباه در فیلد `warehouse_id`. |
 
 ---
@@ -33,7 +33,7 @@
 ### الف) آزمون‌های واحد و یکپارچگی بک‌اند (Django Unit & Integration Tests)
 دستور اجرا شده:
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; $env:PYTHONUTF8="1"; & "e:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py test personnel.test_attendance_approval_workflow personnel.test_attendance_fleet_audit personnel.test_cartable_multitenant --noinput
+$env:PYTHONIOENCODING="utf-8"; $env:PYTHONUTF8="1"; & "backend\venv\Scripts\python.exe" manage.py test personnel.test_attendance_approval_workflow personnel.test_attendance_fleet_audit personnel.test_cartable_multitenant --noinput
 ```
 **نتیجه خروجی ترمینال:**
 ```text

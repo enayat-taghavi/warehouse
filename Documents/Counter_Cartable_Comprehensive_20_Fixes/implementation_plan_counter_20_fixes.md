@@ -42,47 +42,47 @@ graph TD
 ## 📂 تغییرات پیشنهادی به تفکیک فایل‌ها و فازها
 
 ### فاز ۱: منطق چرخه حیات، ارسال مستقیم و پایداری همگام‌سازی (موارد ۱ تا ۵)
-* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
   - اصلاح متد `submitDirectlyToSupervisor` جهت انتساب مستقیم وضعیت `COUNTED` در حافظه و ارسال خوش‌بینانه.
   - پیاده‌سازی متد `quickSubmitTask(task, $event)` جهت ارسال سریع و تک‌کلیکه کالا از روی کارت لیست.
   - اصلاح متد `claimSelectedTasks` برای رفرش خودکار لیست استخر (`loadPoolTasks(false)`).
   - مدیریت پایداری آفلاین برای تسک‌های فاقد `sync_id`.
   - تفکیک انبار فعال در ارسال گروهی و جلوگیری از ارسال ناخواسته سایر انبارها در حالت `ALL`.
-* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
   - افزودن دکمه سبز رنگ «ارسال سریع» در کنار دکمه بازگشت روی کارت‌های دارای پیش‌نویس.
 
 ---
 
 ### فاز ۲: جستجو، فیلترها و سورتینگ پیشرفته (موارد ۶ تا ۱۰)
-* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
   - گسترش تابع `matchesSearchAndDate` برای جستجوی `item_no`، `plpkitem`، `pk_number` و `pl`.
   - افزودن نرمال‌سازی کاراکترهای عربی/فارسی (`ي/ی`, `ك/ک`, `آ/ا`).
   - اصلاح سورت الفبایی `title` با یکدست‌سازی پیشوندها.
   - پیاده‌سازی متغیر و فیلتر لوکیشن/قفسه (`locationFilter`).
-* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
   - افزودن دکمه «پاک کردن جستجو» در حالت خالی شدن نتایج تب مخزن.
   - افزودن چیپ یا دراپ‌داون فیلتر سریع لوکیشن در نوار فیلترها.
 
 ---
 
 ### فاز ۳: تجربه کاربری موبایل، استپرها و امنیت فرم (موارد ۱۱ تا ۱۵)
-* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
   - اصلاح شرط `onTaskPressStart` با بررسی صریح `== null`.
   - اضافه کردن متد گارد تغییرات فرم (`hasUnsavedChanges`) و هشدار پیش از خروج (`closeDetailWithGuard`).
   - متدهای شمارش سریع `stepQty(delta: number)`.
   - افزودن گارد اتصال اینترنت (`navigator.onLine`) در `claimSelectedTasks`.
-* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
   - اضافه کردن دکمه‌های استپر (`+۱`, `-۱`, `+۱۰`) در دو طرف فیلد ورودی عدد.
   - اصلاح اندازه فونت و ریسپانسیو کردن کادر ورودی عدد برای ارقام بزرگ در موبایل.
 
 ---
 
 ### فاز ۴: بومی‌سازی تقویم، برچسب‌ها و ظواهر هدر (موارد ۱۶ تا ۲۰)
-* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+* **[تغییر]** [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
   - ایمپورت `PersianDatePipe` در آرایه `imports`.
   - افزودن ثبت اکشن لغو در تاریخچه تسک هنگام `revertTaskStatus`.
   - نمایش پیام راهنما در صورت اسکن بارکد در حین باز بودن فرم جزئیات.
-* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+* **[تغییر]** [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
   - استفاده از `persianDate:'short-time'` برای نمایش تاریخ و ساعت در تایم‌لاین.
   - اصلاح برچسب و رنگ کارت برای اقلامی که مقدار دارند تا عنوان «آماده ارسال» بگیرند.
   - خارج کردن کادر «موجودی سیستمی» از شرط `visibleInfoFields.length > 0`.
@@ -106,7 +106,7 @@ graph TD
 ### ۱. تست‌های خودکار و کامپایل
 - اجرای بیلد کامل فرانت‌اند جهت اعتبارسنجی تمپلیت و تایپ‌اسکریپت:
   ```powershell
-  cd "e:\warehouse project\warehouse-front"
+  cd "frontend"
   npx ng build --configuration=development
   ```
 

@@ -1,6 +1,6 @@
 /**
  * مجوزهای ماژول انبارداری در صفحهٔ نقش‌ها.
- * کدها همان PERMISSION_CODENAMES مانیفست بک‌اند (`warehouse-backend/modules/warehouse/module.py`)؛ نگهبان ۵۷ برابری را می‌سنجد.
+ * کدها همان PERMISSION_CODENAMES مانیفست بک‌اند (`backend/modules/warehouse/module.py`)؛ نگهبان ۵۷ برابری را می‌سنجد.
  */
 export const WAREHOUSE_PERMISSION_CODENAMES: string[] = [
   'view_wh_dashboard', 'view_wh_docs', 'view_wh_dispatch', 'view_sys_counter',

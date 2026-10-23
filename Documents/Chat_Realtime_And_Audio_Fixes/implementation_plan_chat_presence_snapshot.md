@@ -21,24 +21,24 @@
 
 ## 📂 تغییرات فایل‌ها
 
-### [بک‌اند] Backend (`warehouse-backend`)
+### [بک‌اند] Backend (`backend`)
 
-#### [NEW] `warehouse-backend/communications/presence.py`
+#### [NEW] `backend/communications/presence.py`
 - توابع امن و همگام/ناهمگام کش جهت ثبت آنلاین بودن، آفلاین شدن و استعلام لیست کاربران آنلاین:
   - `add_online_user(user_id)`
   - `remove_online_user(user_id)`
   - `get_online_user_ids()`
 
-#### [MODIFY] `warehouse-backend/communications/consumers.py`
+#### [MODIFY] `backend/communications/consumers.py`
 - در `ChatConsumer.connect`: ثبت شناسه کاربر در کش، ارسال مستقیم `chat.online_users` به کلاینت و برودکست `chat.presence` به سایر کاربران.
 - در `ChatConsumer.disconnect`: حذف شناسه کاربر از کش و برودکست `offline`.
 - در `ChatConsumer.receive`: پشتیبانی از پیام `get_online_users` و تمدید وضعیت در `ping`.
 
 ---
 
-### [فرانت‌اند] Frontend (`warehouse-front`)
+### [فرانت‌اند] Frontend (`frontend`)
 
-#### [MODIFY] `warehouse-front/src/app/core/services/communication.service.ts`
+#### [MODIFY] `frontend/src/app/core/services/communication.service.ts`
 - شنود رویداد `chat.online_users` و مقداردهی اولیه سیگنال `onlineUsers`.
 - ارسال درخواست استعلام `get_online_users` هنگام باز شدن کشوی چت یا بازگشت فوکوس به صفحه.
 

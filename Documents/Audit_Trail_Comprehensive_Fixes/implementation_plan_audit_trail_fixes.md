@@ -50,7 +50,7 @@ graph TD
 ### 🔹 فاز ۱: امنیت، کنترل دسترسی (RBAC) و فیلتر انبار در بک‌اند
 * **هدف:** مسدودسازی دسترسی غیرمجاز و جلوگیری از نشت اطلاعات ممیزی بین انبارها.
 * **فایل‌های هدف:**
-  * `warehouse-backend/accounts/views.py`
+  * `backend/accounts/views.py`
 * **اقدامات اجرایی:**
   1. در `UserLoginLogViewSet`: بررسی دسترسی `perm_sys_logs` یا `is_superuser` در متد `get_permissions` یا `get_queryset`.
   2. در `AuditLogViewSet`: بررسی دسترسی `perm_sys_logs` یا `view_wh_audit`.
@@ -67,8 +67,8 @@ graph TD
 ### 🔹 فاز ۲: رفع خطای N+1 Query و اصلاح تابع تفاضل بک‌اند
 * **هدف:** افزایش کارایی دیتابیس تا ۱۰ برابر و اصلاح منطق شناسایی مقادیر تهی در تفاضل.
 * **فایل‌های هدف:**
-  * `warehouse-backend/accounts/views.py`
-  * `warehouse-backend/accounts/audit_utils.py`
+  * `backend/accounts/views.py`
+  * `backend/accounts/audit_utils.py`
 * **اقدامات اجرایی:**
   1. اضافه کردن `.prefetch_related('user__groups__customrole')` به کوئری‌ست `AuditLogViewSet`.
   2. اصلاح تابع `calculate_model_diff` در `audit_utils.py`:
@@ -84,9 +84,9 @@ graph TD
 ### 🔹 فاز ۳: اتصال و راه‌اندازی لاگ‌گیری رویدادهای عملیاتی در سامانه
 * **هدف:** عملیاتی‌سازی ثبت تغییرات واقعی کالاها، انبارها، فایل پایه و تصمیمات مدیریتی.
 * **فایل‌های هدف:**
-  * `warehouse-backend/inventory/views.py`
-  * `warehouse-backend/warehouses/views.py`
-  * `warehouse-backend/accounts/views.py`
+  * `backend/inventory/views.py`
+  * `backend/warehouses/views.py`
+  * `backend/accounts/views.py`
 * **اقدامات اجرایی:**
   1. فراخوانی `log_audit_event` هنگام تغییر مشخصات یا فریز/فعال‌سازی انبار در `warehouses/views.py`.
   2. فراخوانی `log_audit_event` در اکشن‌های ایمپورت اکسل (`IMPORT`)، لغو ایمپورت و حذف گروهی رکوردها (`DELETE`/`ROLLBACK`) در `inventory/views.py`.
@@ -99,9 +99,9 @@ graph TD
 ### 🔹 فاز ۴: همگام‌سازی فیلترها و سرویس‌های فرانت‌اند
 * **هدف:** یکپارچه‌سازی رابط فیلترها، ارسال انبار جاری، و رفع خطاهای ریست و پارامترهای ارسالی.
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/components/audit/audit.ts`
-  * `warehouse-front/src/app/components/audit/audit.html`
-  * `warehouse-front/src/app/core/api/audit-api.service.ts`
+  * `frontend/src/app/components/audit/audit.ts`
+  * `frontend/src/app/components/audit/audit.html`
+  * `frontend/src/app/core/api/audit-api.service.ts`
 * **اقدامات اجرایی:**
   1. تزریق `AuthStore` و افزودن `warehouse: this.authStore.selectedWarehouseId() || undefined` به فیلترهای درخواست در `loadAuditLogs` و `downloadCsv`.
   2. اضافه کردن منوی کشویی انتخاب نوع عملیات (`selectedAction`) در `audit.html` با کلیه اکشن‌های معتبر (ایجاد، ویرایش، حذف، تایید، رد، بازشماری، ایمپورت و...).
@@ -117,7 +117,7 @@ graph TD
 ### 🔹 فاز ۵: الگوریتم پیشرفته مقایسه تفاضل در فرانت‌اند (Visual Diff Engine)
 * **هدف:** جلوگیری قطعی از مغایرت‌های کاذب و مقایسه دقیق اشیاء، آرایه‌ها و ساختارهای JSON.
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/components/audit/audit.ts`
+  * `frontend/src/app/components/audit/audit.ts`
 * **اقدامات اجرایی:**
   1. پیاده‌سازی تابع مقایسه عمیق (Deep Value Comparison) برای جایگزینی با `valB === valA`.
   2. فرمت‌بندی استاندارد مقادیر بولی (`بله/خیر`)، مقادیر عددی، دیکشنری‌ها و آرایه‌ها در جدول تفاضل.
@@ -130,9 +130,9 @@ graph TD
 ### 🔹 فاز ۶: بازطراحی UI، رفع ایرادات استایل، تاریخ فارسی و اسکلت لودینگ
 * **هدف:** مدرن‌سازی UI، رفع کلاس نامعتبر Tailwind، حل تداخل نمایش تاریخ/ساعت فارسی و اضافه کردن Skeleton Loader.
 * **فایل‌های هدف:**
-  * `warehouse-front/src/app/components/audit/audit.html`
-  * `warehouse-front/src/app/components/audit/audit.ts`
-  * `warehouse-front/src/app/components/audit/audit.css`
+  * `frontend/src/app/components/audit/audit.html`
+  * `frontend/src/app/components/audit/audit.ts`
+  * `frontend/src/app/components/audit/audit.css`
 * **اقدامات اجرایی:**
   1. اصلاح کلاس نامعتبر `py-0.2` به `py-0.5` و `text-[10px]` در بج‌های وضعیت مدال.
   2. اصلاح چیدمان ستون تاریخ و زمان و جلوگیری از معکوس شدن چینش ارقام فارسی در کانتینرهای LTR.

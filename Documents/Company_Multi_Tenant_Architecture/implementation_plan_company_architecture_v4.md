@@ -29,18 +29,18 @@
 
 ### لایه بک‌اند (Django REST Framework)
 
-#### [MODIFY] `warehouse-backend/accounts/serializers.py`
+#### [MODIFY] `backend/accounts/serializers.py`
 - افزودن فیلدهای `company_accesses` یا `company_ids` و `default_company_id` به `UserSerializer`.
 - در متدهای `create` و `update`:
   - ایجاد/به‌روزرسانی رکوردهای `UserCompanyAccess` درون `transaction.atomic()`.
   - اعتبارسنجی اینکه انبارهای موجود در `assigned_warehouses` حتماً متعلق به شرکت‌های مجاز کاربر باشند.
 - در خروجی `to_representation`: ارسال لیست `company_accesses` شامل `company_id`, `company_name`, `access_level`, `is_default`.
 
-#### [MODIFY] `warehouse-backend/accounts/views.py`
+#### [MODIFY] `backend/accounts/views.py`
 - در `UserViewSet.get_queryset`:
   - اعمال فیلتر اختیاری شرکت: اگر هدر `X-Company-ID` یا کوئری‌پارامتر `company_id` ارسال شده بود و کاربر سوپریوزر نبود یا فیلتر فعال بود، فقط کاربرانی را بازگرداند که به آن شرکت منتسب هستند (`Q(company_accesses__company_id=cid)`).
 
-#### [MODIFY] `warehouse-backend/warehouses/views.py`
+#### [MODIFY] `backend/warehouses/views.py`
 - در `WarehouseViewSet.get_queryset`:
   - اطمینان از اینکه علاوه بر هدر `X-Company-ID`، کوئری‌پارامتر `company_id` نیز در اولویت بالا فیلتر شود تا درخواست‌های فرانت‌اند بدون ابهام ایزوله شوند.
 
@@ -48,7 +48,7 @@
 
 ### لایه فرانت‌اند (Angular & Offline Core)
 
-#### [MODIFY] `warehouse-front/src/app/core/interceptors/offline.interceptor.ts`
+#### [MODIFY] `frontend/src/app/core/interceptors/offline.interceptor.ts`
 - **حل باگ تداخل کش:** در تابع تولید کلید کش:
   ```typescript
   // کلید کش قبلی:
@@ -59,16 +59,16 @@
   ```
 - بدین ترتیب پاسخ‌های کش‌شده انبارها، کالاها و پروژه‌ها هرگز بین شرکت ۱ و شرکت ۲ هم‌پوشانی نخواهند داشت.
 
-#### [MODIFY] `warehouse-front/src/app/core/http/warehouse-http.service.ts`
+#### [MODIFY] `frontend/src/app/core/http/warehouse-http.service.ts`
 - ارتقای متد `getAll(companyId?: number)`: در صورتی که شناسه شرکت ارسال شود، به عنوان کوئری‌پارامتر `?company_id=${companyId}` به سرور الصاق گردد.
 
-#### [MODIFY] `warehouse-front/src/app/components/layout/layout.html` & `layout.ts`
+#### [MODIFY] `frontend/src/app/components/layout/layout.html` & `layout.ts`
 - **تعبیه سوییچر برجسته شرکت در نوار بالای صفحه (Navbar):**
   - افزودن کامپوننت یا نشانگر اختصاصی شرکت فعال در نوار ابزار اصلی (کنار نشانگر وضعیت اتصال و دکمه اعلانات).
   - طراحی چیپ مدرن شامل آیکون ساختمان (`🏢`)، نام شرکت فعال، فلش بازشونده، و منوی سریع جابه‌جایی بین شرکت‌ها.
   - پشتیبانی از حالت موبایل و دسکتاپ.
 
-#### [MODIFY] `warehouse-front/src/app/components/users/users.ts` & `users.html`
+#### [MODIFY] `frontend/src/app/components/users/users.ts` & `users.html`
 - **افزودن تب / بخش «شرکت‌ها و سازمان» در مودال تعریف کاربر:**
   - چک‌باکس لیست شرکت‌های تعریف‌شده در هلدینگ.
   - دکمه رادیویی برای مشخص کردن «شرکت اصلی / پیش‌فرض».

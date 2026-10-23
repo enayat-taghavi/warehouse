@@ -173,12 +173,12 @@ stateDiagram-v2
 
 ## 🌐 ۶. اطلس کامل مسیرها و اندپوینت‌ها (All Routes & Endpoints)
 
-### الف) ۱۹ روت فرانت‌اند (`warehouse-front`):
+### الف) ۱۹ روت فرانت‌اند (`frontend`):
 * `/login`, `/verify-card/:code`, `/change-password`
 * `/dashboard`, `/projects`, `/dispatch`, `/docs`, `/users`, `/settings`, `/wh-settings`, `/audit`, `/feeding`
 * `/counter`, `/supervisor`, `/manager-review`, `/count-tracking`, `/reports`, `/customs`, `/placeholders`
 
-### ب) تمامی اندپوینت‌های بک‌اند (`warehouse-backend`):
+### ب) تمامی اندپوینت‌های بک‌اند (`backend`):
 * احراز هویت و کاربران: `/api/auth/login/`, `/api/auth/refresh/`, `/api/auth/users/`, `/api/auth/roles/`, `/api/auth/permissions/`, `/api/auth/table-views/`
 * انبارها و لیبل: `/api/warehouses/`, `/api/warehouses/<id>/settings/`, `/api/warehouses/label-templates/`
 * انبارداری و تسک‌ها: `/api/inventory/items/`, `/api/inventory/count-tasks/`, `/api/inventory/doc-tasks/`, `/api/inventory/dynamic-fields/`, `/api/inventory/sync/pull/`
@@ -192,19 +192,19 @@ stateDiagram-v2
 
 | ردیف | مسیر فایل در پروژه | لایه | مسئولیت کلیدی و وظیفه عملیاتی |
 | :---: | :--- | :---: | :--- |
-| **۱** | [`inventory/models.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py) | Backend | تعاریف مدل‌های `Item`, `CountTask`, `DocTask`, `ItemFieldDefinition` |
-| **۲** | [`inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | Backend | متدهای تجاری تسک‌ها (`bulk_submit`, `claim_tasks`, `revert_status`, `export`) |
-| **۳** | [`inventory/sync_views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/sync_views.py) | Backend | سرویس دریافت دلتای آفلاین با کرسر Base64 (`SyncPullView`) |
-| **۴** | [`notifications/consumers.py`](file:///e:/warehouse%20project/warehouse-backend/notifications/consumers.py) | Backend | کانسیومر وب‌سوکت، پایداری ارتباط با Heartbeat و ارسال اعلان‌ها |
-| **۵** | [`reports/engine.py`](file:///e:/warehouse%20project/warehouse-backend/reports/engine.py) | Backend | موتور تولید کوئری‌های پویا، جوین چندجدوله و خروجی داده |
-| **۶** | [`warehouses/label_pdf_generator.py`](file:///e:/warehouse%20project/warehouse-backend/warehouses/label_pdf_generator.py) | Backend | رسم و صدور لیبل‌های استاندارد با ReportLab و حل فونت فارسی Bidi |
-| **۷** | [`core/services/offline-sync.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts) | Frontend | هماهنگ‌کننده صف تغییرات آفلاین، پردازش خودکار و مدیریت خطاها |
-| **۸** | [`core/services/offline-db.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-db.ts) | Frontend | ساختار پایگاه داده محلی Dexie v4 شامل ۸ جدول کلیدی |
-| **۹** | [`core/interceptors/offline.interceptor.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.interceptor.ts) | Frontend | رهگیری درخواست‌های HTTP متغیر و تولید پاسخ شبیه‌سازی‌شده 200 OK |
-| **۱۰** | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | Frontend | میزکار شمارشگر، ثبت مقادیر، سورت بازشماری و همگام‌سازی زنده |
-| **۱۱** | [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | Frontend | کارتابل سرپرست شمارش، تایید/رد مقادیر و مانیتورینگ مغایرت‌ها |
-| **۱۲** | [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) | Frontend | کارتابل تایید نهایی مدیر و ارجاع اقلام مغایر به چرخه بازشماری |
-| **۱۳** | [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | Frontend | کارتابل مالی، گمرکی، ثبت اسناد، شماره فاکتور و قیمت‌گذاری کالاها |
+| **۱** | [`inventory/models.py`](file:///e:/warehouse%20project/backend/inventory/models.py) | Backend | تعاریف مدل‌های `Item`, `CountTask`, `DocTask`, `ItemFieldDefinition` |
+| **۲** | [`inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | Backend | متدهای تجاری تسک‌ها (`bulk_submit`, `claim_tasks`, `revert_status`, `export`) |
+| **۳** | [`inventory/sync_views.py`](file:///e:/warehouse%20project/backend/inventory/sync_views.py) | Backend | سرویس دریافت دلتای آفلاین با کرسر Base64 (`SyncPullView`) |
+| **۴** | [`notifications/consumers.py`](file:///e:/warehouse%20project/backend/notifications/consumers.py) | Backend | کانسیومر وب‌سوکت، پایداری ارتباط با Heartbeat و ارسال اعلان‌ها |
+| **۵** | [`reports/engine.py`](file:///e:/warehouse%20project/backend/reports/engine.py) | Backend | موتور تولید کوئری‌های پویا، جوین چندجدوله و خروجی داده |
+| **۶** | [`warehouses/label_pdf_generator.py`](file:///e:/warehouse%20project/backend/warehouses/label_pdf_generator.py) | Backend | رسم و صدور لیبل‌های استاندارد با ReportLab و حل فونت فارسی Bidi |
+| **۷** | [`core/services/offline-sync.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts) | Frontend | هماهنگ‌کننده صف تغییرات آفلاین، پردازش خودکار و مدیریت خطاها |
+| **۸** | [`core/services/offline-db.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-db.ts) | Frontend | ساختار پایگاه داده محلی Dexie v4 شامل ۸ جدول کلیدی |
+| **۹** | [`core/interceptors/offline.interceptor.ts`](file:///e:/warehouse%20project/frontend/src/app/core/interceptors/offline.interceptor.ts) | Frontend | رهگیری درخواست‌های HTTP متغیر و تولید پاسخ شبیه‌سازی‌شده 200 OK |
+| **۱۰** | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | Frontend | میزکار شمارشگر، ثبت مقادیر، سورت بازشماری و همگام‌سازی زنده |
+| **۱۱** | [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | Frontend | کارتابل سرپرست شمارش، تایید/رد مقادیر و مانیتورینگ مغایرت‌ها |
+| **۱۲** | [`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) | Frontend | کارتابل تایید نهایی مدیر و ارجاع اقلام مغایر به چرخه بازشماری |
+| **۱۳** | [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | Frontend | کارتابل مالی، گمرکی، ثبت اسناد، شماره فاکتور و قیمت‌گذاری کالاها |
 
 ---
 

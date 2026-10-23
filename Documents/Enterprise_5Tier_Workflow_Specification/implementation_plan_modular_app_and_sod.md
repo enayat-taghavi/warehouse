@@ -60,14 +60,14 @@ graph TD
   - سوئیچ پویا و نرم بین دو ماژول بدون نیاز به رفرش صفحه.
 
 ### فاز ۴: کامپوننت UI سوئیچر دولایه در هدر (`AppRoleSwitcher`)
-* **طراحی کامپوننت مدرن در `warehouse-front/src/app/components/layout/app-role-switcher/`:**
+* **طراحی کامپوننت مدرن در `frontend/src/app/components/layout/app-role-switcher/`:**
   - دکمه کپسولی براق جهت سوئیچ ماژول (انبارداری ↔ مالی) با آیکون و شمارنده دسترسی.
   - دراپ‌داون شیک نقش‌های فعال کاربر در ماژول جاری با نشانگر رنگی، نشانگر رده سازمانی و تیک فعال.
   - انیمیشن‌های روان و عدم نمایش به کاربران تک‌نقشه.
 
 ### فاز ۵: اعمال قواعد خطوط قرمز در صفحات مشترک
 * **دایرکتیو یا متد گارد فرانت‌اند `canDo(actionCode)`:**
-  - در کامپوننت‌های [`attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)، [`profiles.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-profiles/personnel-profiles.ts) و صفحات اسناد انبار:
+  - در کامپوننت‌های [`attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)، [`profiles.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-profiles/personnel-profiles.ts) و صفحات اسناد انبار:
     - مخفی‌سازی دکمه «تایید سرپرست» برای کارمند.
     - مخفی‌سازی فیلدهای دستمزد و ضرایب برای سرپرست میدانی.
     - مخفی‌سازی دکمه پرداخت برای حسابدار و مدیر.

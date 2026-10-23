@@ -82,9 +82,9 @@ graph TD
 ---
 
 ## 📁 پرونده‌های تحت تاثیر (Modified Files)
-- `warehouse-front/src/app/components/audit/audit.html` (پاکسازی هدر، فشرده‌سازی کارت‌های KPI، ارتقای فیلدهای تاریخ شمسی)
-- `warehouse-front/src/app/components/audit/audit.ts` (مدیریت QueryParams، ماسک ورودی تاریخ شمسی، مبدل شمسی به میلادی، مدیریت تا شدن کارت‌ها)
-- `warehouse-front/src/app/components/audit/audit.css` (استایل‌های فشرده‌سازی KPI و فیلدهای تاریخ)
+- `frontend/src/app/components/audit/audit.html` (پاکسازی هدر، فشرده‌سازی کارت‌های KPI، ارتقای فیلدهای تاریخ شمسی)
+- `frontend/src/app/components/audit/audit.ts` (مدیریت QueryParams، ماسک ورودی تاریخ شمسی، مبدل شمسی به میلادی، مدیریت تا شدن کارت‌ها)
+- `frontend/src/app/components/audit/audit.css` (استایل‌های فشرده‌سازی KPI و فیلدهای تاریخ)
 - `Documents/Audit_UX_Refinements/` (اسناد DUAL-SAVE)
 - `Documents/Master_Log.md` (لاگ مستر تغییرات)
 

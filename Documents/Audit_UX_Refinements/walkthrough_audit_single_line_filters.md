@@ -36,7 +36,7 @@
 ---
 
 ## 📁 پرونده‌های به‌روزشده (Modified Files)
-- [`warehouse-front/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
+- [`frontend/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
 - [`Documents/Audit_UX_Refinements/implementation_plan_audit_single_line_filters.md`](file:///e:/warehouse%20project/Documents/Audit_UX_Refinements/implementation_plan_audit_single_line_filters.md)
 - [`Documents/Audit_UX_Refinements/task_audit_single_line_filters.md`](file:///e:/warehouse%20project/Documents/Audit_UX_Refinements/task_audit_single_line_filters.md)
 - [`Documents/Master_Log.md`](file:///e:/warehouse%20project/Documents/Master_Log.md)

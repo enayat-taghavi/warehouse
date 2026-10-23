@@ -27,7 +27,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-APP_ROUTES_TS = REPO_ROOT / "warehouse-front" / "src" / "app" / "app.routes.ts"
+APP_ROUTES_TS = REPO_ROOT / "frontend" / "src" / "app" / "app.routes.ts"
 
 # لیست مورد انتظار ۳۸ ریدایرکت legacy مطابق سند طرح
 EXPECTED_LEGACY_REDIRECTS = {

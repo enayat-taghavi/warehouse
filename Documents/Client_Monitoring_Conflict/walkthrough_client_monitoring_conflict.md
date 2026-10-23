@@ -87,23 +87,23 @@
 
 | ردیف | فایل | تغییرات اعمال‌شده |
 | :--- | :--- | :--- |
-| ۱ | `warehouse-backend/accounts/models.py` | مدل دیتابیس `UserDeviceSession` برای ثبت نشست‌ها و تله‌متری ناوگان |
-| ۲ | `warehouse-backend/accounts/views.py` | اندپوینت‌های ضربان قلب، ناوگان، ابطال سشن، مصونیت سوپروایزر با خطای ۴۰۰، پاکسازی سشن‌های ابطال‌شده در لاگین و خروج |
-| ۳ | `warehouse-backend/notifications/consumers.py` | پشتیبانی از خروج بلادرنگ (`logout`) و سوئیچ آنی اپ (`switch_app`) با به‌روزرسانی دیتابیس و برودکست |
-| ۴ | `warehouse-front/src/app/core/utils/device-detector.ts` | ارتقای تشخیص مدل گوشی با پیشوندهای سامسونگ و لایه‌های بازگشتی فارسی معتبر |
-| ۵ | `warehouse-front/src/app/core/services/session-tab.service.ts` | متد `rotateTabId()` جهت چرخش امنیتی شناسه تب در هر لاگین موفق |
-| ۶ | `warehouse-front/src/app/core/services/client-telemetry.service.ts` | ادغام با `formatDeviceModelName`، شنود وب‌سوکت جهت اخراج آنی و فال‌بک‌های دقیق |
-| ۷ | `warehouse-front/src/app/app.ts` | تزریق سراسری تله‌متری جهت فعال‌سازی آنی برای تمام کاربران و دستگاه‌های متصل |
-| ۸ | `warehouse-front/src/app/core/http/websocket.service.ts` | افزودن متد `sendLogout` و رویدادهای بی‌صدا |
-| ۹ | `warehouse-front/src/app/core/auth/auth.service.ts` | چرخش سشن در `handleLoginSuccess`، اتصال متد `logout` به وب‌سوکت و ارسال شناسه تب به سرور |
-| ۱۰ | `warehouse-front/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.ts` | اتصال به `WebSocketService`، دریافت زنده رویدادهای ناوگان، بج «🛡️ مصون از ابطال» با متد `isSupervisorSession` |
-| ۱۱ | `warehouse-front/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html` | حذف ستون Tab ID، نمایش نشانگر زنده وب‌سوکت، بج «این پایانه» و بج «🛡️ مصون از ابطال» |
-| ۱۲ | `warehouse-front/src/app/core/services/app-persona.service.ts` | افزودن سیگنال `accessibleApps` و محاسبه هوشمند `canSwitchApps` برای ۳ سامانه |
-| ۱۳ | `warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.ts` | افزودن وضعیت دراپ‌داون ماژول‌ها (`isAppDropdownOpen`) و متدهای باز/بسته کردن و انتخاب اپ |
-| ۱۴ | `warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.html` | حذف دکمه مجزای SOC و پیاده‌سازی منوی بازشونده ۳-حالته انتخاب سامانه |
-| ۱۵ | `warehouse-front/src/app/components/operations/operations-layout/operations-layout.ts` | تزریق سرویس‌های هدر (`NavigationHistoryService`، `CommunicationService`، پروفایل کاربر و عنوان پویا) |
-| ۱۶ | `warehouse-front/src/app/components/operations/operations-layout/operations-layout.html` | بازنویسی هدر مرکز عملیات منطبق بر معماری استاندارد `layout.html` و افزودن پیل ناوبری `< \| >` و چت سازمانی |
-| ۱۷ | `warehouse-backend/personnel/phase_guardian_approval.py` | اعتبارسنجی ارتقایافته ایجنت‌های نگهبان با پوشش مصونیت سوپروایزر، سوئیچر سه‌گانه و یکپارچگی هدر |
+| ۱ | `backend/accounts/models.py` | مدل دیتابیس `UserDeviceSession` برای ثبت نشست‌ها و تله‌متری ناوگان |
+| ۲ | `backend/accounts/views.py` | اندپوینت‌های ضربان قلب، ناوگان، ابطال سشن، مصونیت سوپروایزر با خطای ۴۰۰، پاکسازی سشن‌های ابطال‌شده در لاگین و خروج |
+| ۳ | `backend/notifications/consumers.py` | پشتیبانی از خروج بلادرنگ (`logout`) و سوئیچ آنی اپ (`switch_app`) با به‌روزرسانی دیتابیس و برودکست |
+| ۴ | `frontend/src/app/core/utils/device-detector.ts` | ارتقای تشخیص مدل گوشی با پیشوندهای سامسونگ و لایه‌های بازگشتی فارسی معتبر |
+| ۵ | `frontend/src/app/core/services/session-tab.service.ts` | متد `rotateTabId()` جهت چرخش امنیتی شناسه تب در هر لاگین موفق |
+| ۶ | `frontend/src/app/core/services/client-telemetry.service.ts` | ادغام با `formatDeviceModelName`، شنود وب‌سوکت جهت اخراج آنی و فال‌بک‌های دقیق |
+| ۷ | `frontend/src/app/app.ts` | تزریق سراسری تله‌متری جهت فعال‌سازی آنی برای تمام کاربران و دستگاه‌های متصل |
+| ۸ | `frontend/src/app/core/http/websocket.service.ts` | افزودن متد `sendLogout` و رویدادهای بی‌صدا |
+| ۹ | `frontend/src/app/core/auth/auth.service.ts` | چرخش سشن در `handleLoginSuccess`، اتصال متد `logout` به وب‌سوکت و ارسال شناسه تب به سرور |
+| ۱۰ | `frontend/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.ts` | اتصال به `WebSocketService`، دریافت زنده رویدادهای ناوگان، بج «🛡️ مصون از ابطال» با متد `isSupervisorSession` |
+| ۱۱ | `frontend/src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html` | حذف ستون Tab ID، نمایش نشانگر زنده وب‌سوکت، بج «این پایانه» و بج «🛡️ مصون از ابطال» |
+| ۱۲ | `frontend/src/app/core/services/app-persona.service.ts` | افزودن سیگنال `accessibleApps` و محاسبه هوشمند `canSwitchApps` برای ۳ سامانه |
+| ۱۳ | `frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.ts` | افزودن وضعیت دراپ‌داون ماژول‌ها (`isAppDropdownOpen`) و متدهای باز/بسته کردن و انتخاب اپ |
+| ۱۴ | `frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.html` | حذف دکمه مجزای SOC و پیاده‌سازی منوی بازشونده ۳-حالته انتخاب سامانه |
+| ۱۵ | `frontend/src/app/components/operations/operations-layout/operations-layout.ts` | تزریق سرویس‌های هدر (`NavigationHistoryService`، `CommunicationService`، پروفایل کاربر و عنوان پویا) |
+| ۱۶ | `frontend/src/app/components/operations/operations-layout/operations-layout.html` | بازنویسی هدر مرکز عملیات منطبق بر معماری استاندارد `layout.html` و افزودن پیل ناوبری `< \| >` و چت سازمانی |
+| ۱۷ | `backend/personnel/phase_guardian_approval.py` | اعتبارسنجی ارتقایافته ایجنت‌های نگهبان با پوشش مصونیت سوپروایزر، سوئیچر سه‌گانه و یکپارچگی هدر |
 
 ---
 
@@ -112,7 +112,7 @@
 ### ۳.۱. اجرای سوئیت کامل ۲۸ ایجنت سخت‌گیر نگهبان
 سوئیت کامل ایجنت‌های نگهبان با دستور زیر اجرا شد:
 ```bash
-python warehouse-backend/personnel/phase_guardian_approval.py
+python backend/personnel/phase_guardian_approval.py
 ```
 **نتیجه:** هر ۲۸ ایجنت نگهبان با **موفقیت ۱۰۰٪ (PASS)** تایید شدند:
 * ✅ مدل و فیلدهای نشست کلاینت (`UserDeviceSession Model Schema`)

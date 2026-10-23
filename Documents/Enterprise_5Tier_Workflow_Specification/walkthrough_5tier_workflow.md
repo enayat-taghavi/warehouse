@@ -29,13 +29,13 @@
 ---
 
 ### فایل‌های اصلی ایجاد و ارتقایافته در پروژه
-1. [`accounts/models.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py) & [`accounts/permissions.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/permissions.py): پرمیشن‌های ۵ سطحی و کلاس‌های گارد RBAC
-2. [`personnel/models.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py): ارتقای ساختار مدل‌های پرسنل، ناوگان، درخواست‌ها و دوره‌های مالی
-3. [`personnel/workflow_engine.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/workflow_engine.py): موتور ماشین حالت متمرکز، عبور خودکار و قفل‌های همروندی سطری
-4. [`personnel/treasury_engine.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/treasury_engine.py): موتور پرداخت و خزانه‌داری، تسویه تفکیکی و تولید دیسکت‌های پایا و ساتنا
-5. [`personnel/cartable_views.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/cartable_views.py) & [`personnel/urls.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/urls.py): لایه API کارتابل‌های ۴ گانه تفکیک‌شده
-6. [`warehouse-front/src/app/components/personnel/treasury-cartable/`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/treasury-cartable/): کامپوننت کامل کارتابل خزانه‌داری در انگولار ۱۹ (HTML/CSS/TS)
-7. [`warehouse-front/src/app/core/api/personnel-api.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/personnel-api.service.ts): سرویس‌های کلاینت فرانت‌اند
-8. [`warehouse-front/src/app/app.routes.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts) & [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts): روت‌ها و منوهای نوبار سایدبار
+1. [`accounts/models.py`](file:///e:/warehouse%20project/backend/accounts/models.py) & [`accounts/permissions.py`](file:///e:/warehouse%20project/backend/accounts/permissions.py): پرمیشن‌های ۵ سطحی و کلاس‌های گارد RBAC
+2. [`personnel/models.py`](file:///e:/warehouse%20project/backend/personnel/models.py): ارتقای ساختار مدل‌های پرسنل، ناوگان، درخواست‌ها و دوره‌های مالی
+3. [`personnel/workflow_engine.py`](file:///e:/warehouse%20project/backend/personnel/workflow_engine.py): موتور ماشین حالت متمرکز، عبور خودکار و قفل‌های همروندی سطری
+4. [`personnel/treasury_engine.py`](file:///e:/warehouse%20project/backend/personnel/treasury_engine.py): موتور پرداخت و خزانه‌داری، تسویه تفکیکی و تولید دیسکت‌های پایا و ساتنا
+5. [`personnel/cartable_views.py`](file:///e:/warehouse%20project/backend/personnel/cartable_views.py) & [`personnel/urls.py`](file:///e:/warehouse%20project/backend/personnel/urls.py): لایه API کارتابل‌های ۴ گانه تفکیک‌شده
+6. [`frontend/src/app/components/personnel/treasury-cartable/`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/treasury-cartable/): کامپوننت کامل کارتابل خزانه‌داری در انگولار ۱۹ (HTML/CSS/TS)
+7. [`frontend/src/app/core/api/personnel-api.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/api/personnel-api.service.ts): سرویس‌های کلاینت فرانت‌اند
+8. [`frontend/src/app/app.routes.ts`](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts) & [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts): روت‌ها و منوهای نوبار سایدبار
 
 </div>

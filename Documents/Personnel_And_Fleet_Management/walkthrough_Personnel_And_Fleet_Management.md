@@ -23,21 +23,21 @@
 ## ۲. ساختار فایل‌ها و کدهای ایجاد/به‌روزرسانی شده
 
 ### بک‌اند (Django & Python):
-* [`warehouse-backend/personnel/models.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/models.py): اضافه شدن مدل‌های `PayrollYearlySettings`, `JobGradeTier`, `WorkshopInsuranceSettings`, `TaxRuleSettings`, `BankExportSettings`, `MonthlyPayrollRecord`.
-* [`warehouse-backend/personnel/iransystem.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/iransystem.py): انکودر بیت‌به‌بیت ایران‌سیستم و جدول ۴ حالته کاراکترهای فارسی.
-* [`warehouse-backend/personnel/dbf_generator.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/dbf_generator.py): ماژول تولید باینری دیسکت‌های تأمین اجتماعی `DSKWOR00` و `DSKKAR00`.
-* [`warehouse-backend/personnel/tax_bank_exporter.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/tax_bank_exporter.py): ماژول صدور فایل‌های متنی مالیاتی (`WH`/`WP`) و فایل واریز گروهی بانک ملی.
-* [`warehouse-backend/personnel/payroll_engine.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/payroll_engine.py): موتور تجمیع تردد و محاسبه خودکار ۵۸ ستون حقوق مطابق شیت `تیر`.
-* [`warehouse-backend/personnel/payroll_excel_exporter.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/payroll_excel_exporter.py): صادرکننده فایل اکسل ۲ سطری ۵۸ ستونه.
-* [`warehouse-backend/personnel/views.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/views.py) و [`urls.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/urls.py): ویوست‌های تنظیمات سالانه و رکورد ماهانه حقوق.
-* [`warehouse-backend/personnel/tests.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/tests.py): مجموعه آزمون‌های واحد جامع ۸ گانه.
+* [`backend/personnel/models.py`](file:///E:/warehouse%20project/backend/personnel/models.py): اضافه شدن مدل‌های `PayrollYearlySettings`, `JobGradeTier`, `WorkshopInsuranceSettings`, `TaxRuleSettings`, `BankExportSettings`, `MonthlyPayrollRecord`.
+* [`backend/personnel/iransystem.py`](file:///E:/warehouse%20project/backend/personnel/iransystem.py): انکودر بیت‌به‌بیت ایران‌سیستم و جدول ۴ حالته کاراکترهای فارسی.
+* [`backend/personnel/dbf_generator.py`](file:///E:/warehouse%20project/backend/personnel/dbf_generator.py): ماژول تولید باینری دیسکت‌های تأمین اجتماعی `DSKWOR00` و `DSKKAR00`.
+* [`backend/personnel/tax_bank_exporter.py`](file:///E:/warehouse%20project/backend/personnel/tax_bank_exporter.py): ماژول صدور فایل‌های متنی مالیاتی (`WH`/`WP`) و فایل واریز گروهی بانک ملی.
+* [`backend/personnel/payroll_engine.py`](file:///E:/warehouse%20project/backend/personnel/payroll_engine.py): موتور تجمیع تردد و محاسبه خودکار ۵۸ ستون حقوق مطابق شیت `تیر`.
+* [`backend/personnel/payroll_excel_exporter.py`](file:///E:/warehouse%20project/backend/personnel/payroll_excel_exporter.py): صادرکننده فایل اکسل ۲ سطری ۵۸ ستونه.
+* [`backend/personnel/views.py`](file:///E:/warehouse%20project/backend/personnel/views.py) و [`urls.py`](file:///E:/warehouse%20project/backend/personnel/urls.py): ویوست‌های تنظیمات سالانه و رکورد ماهانه حقوق.
+* [`backend/personnel/tests.py`](file:///E:/warehouse%20project/backend/personnel/tests.py): مجموعه آزمون‌های واحد جامع ۸ گانه.
 
 ### فرانت‌اند (Angular & TypeScript):
-* [`warehouse-front/src/app/core/models/personnel.model.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/core/models/personnel.model.ts): اینترفیس‌های کامل تنظیمات و رکورد ۵۸ ستونی.
-* [`warehouse-front/src/app/core/api/personnel-api.service.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/core/api/personnel-api.service.ts): سرویس‌های API محاسبات، تنظیمات و لینک‌های دانلود دیسکت‌ها.
-* [`warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts): لاجیک سوییچ پورتال، محاسبات، ۵ تب تنظیمات و دانلود دیسکت‌ها.
-* [`warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html): رابط کاربری مدرن با سوییچر شیشه‌ای نقش‌ها، کارت‌های ابزار دانلود، جدول ۵۸ ستونه و مودال‌ها.
-* [`warehouse-front/src/app/components/personnel/personnel-management/personnel-management.css`](file:///E:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.css): استایل‌های اکتیو تب‌ها و سوییچ پورتال‌ها.
+* [`frontend/src/app/core/models/personnel.model.ts`](file:///E:/warehouse%20project/frontend/src/app/core/models/personnel.model.ts): اینترفیس‌های کامل تنظیمات و رکورد ۵۸ ستونی.
+* [`frontend/src/app/core/api/personnel-api.service.ts`](file:///E:/warehouse%20project/frontend/src/app/core/api/personnel-api.service.ts): سرویس‌های API محاسبات، تنظیمات و لینک‌های دانلود دیسکت‌ها.
+* [`frontend/src/app/components/personnel/personnel-management/personnel-management.ts`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts): لاجیک سوییچ پورتال، محاسبات، ۵ تب تنظیمات و دانلود دیسکت‌ها.
+* [`frontend/src/app/components/personnel/personnel-management/personnel-management.html`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html): رابط کاربری مدرن با سوییچر شیشه‌ای نقش‌ها، کارت‌های ابزار دانلود، جدول ۵۸ ستونه و مودال‌ها.
+* [`frontend/src/app/components/personnel/personnel-management/personnel-management.css`](file:///E:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.css): استایل‌های اکتیو تب‌ها و سوییچ پورتال‌ها.
 
 ---
 
@@ -67,7 +67,7 @@ npm run build
 **نتیجه:**
 ```text
 Application bundle generation complete. [38.811 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر (کدهای 5xx).
 ```
 

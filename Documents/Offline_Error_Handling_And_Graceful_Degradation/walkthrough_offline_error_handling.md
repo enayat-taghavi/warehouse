@@ -10,12 +10,12 @@
 
 | ردیف | فایل تغییر یافته | شرح اصلاحات |
 | :---: | :--- | :--- |
-| **۱** | [audit-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/audit-api.service.ts) | افزودن `SKIP_GLOBAL_ERROR_TOAST: true` به متدهای استعلام آمار (`getAuditStats` و `getLoginStats`) جهت جلوگیری از پرتاب خطای قرمز سرور در حالت آفلاین |
-| **۲** | [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts) | محافظت از `loadStats` در برابر فراخوانی در زمان آفلاین و سرکوب توست‌های خطای ۵۰۳/شبکه در `loadAuditLogs` و `loadLoginLogs` |
-| **۳** | [report-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/report-api.service.ts) | اعمال خودکار `SKIP_GLOBAL_ERROR_TOAST: true` روی کلیه درخواست‌های گزارش‌ساز پویا |
-| **۴** | [report-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts) | کنترل وضعیت `isOffline()` در متدهای `loadEntities` و `refreshAll` جهت عدم ارسال ریکوئست ناموفق و جلوگیری از نمایش متن خطای سرور |
-| **۵** | [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) | بررسی وضعیت آنلاین بودن و جلوگیری از نمایش توست‌های خطای قرمز در متدهای `loadTasks`، `loadPoolTasks`، `loadDocTasks` و `loadDocPoolTasks` هنگام نبود کش |
-| **۶** | [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | بررسی وضعیت آنلاین بودن و جلوگیری از نمایش توست‌های خطای قرمز در متدهای بارگذاری تسک‌های شمارش و اسناد مالی سرپرست در زمان آفلاین |
+| **۱** | [audit-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/audit-api.service.ts) | افزودن `SKIP_GLOBAL_ERROR_TOAST: true` به متدهای استعلام آمار (`getAuditStats` و `getLoginStats`) جهت جلوگیری از پرتاب خطای قرمز سرور در حالت آفلاین |
+| **۲** | [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts) | محافظت از `loadStats` در برابر فراخوانی در زمان آفلاین و سرکوب توست‌های خطای ۵۰۳/شبکه در `loadAuditLogs` و `loadLoginLogs` |
+| **۳** | [report-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/report-api.service.ts) | اعمال خودکار `SKIP_GLOBAL_ERROR_TOAST: true` روی کلیه درخواست‌های گزارش‌ساز پویا |
+| **۴** | [report-store.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/report-store.ts) | کنترل وضعیت `isOffline()` در متدهای `loadEntities` و `refreshAll` جهت عدم ارسال ریکوئست ناموفق و جلوگیری از نمایش متن خطای سرور |
+| **۵** | [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) | بررسی وضعیت آنلاین بودن و جلوگیری از نمایش توست‌های خطای قرمز در متدهای `loadTasks`، `loadPoolTasks`، `loadDocTasks` و `loadDocPoolTasks` هنگام نبود کش |
+| **۶** | [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | بررسی وضعیت آنلاین بودن و جلوگیری از نمایش توست‌های خطای قرمز در متدهای بارگذاری تسک‌های شمارش و اسناد مالی سرپرست در زمان آفلاین |
 
 ---
 

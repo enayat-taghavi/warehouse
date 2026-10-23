@@ -47,7 +47,7 @@ FORBIDDEN_TITLE_CHARS = set('\'"\\`<>{}$')
 
 def existing_backend_packages(root: pathlib.Path) -> set[str]:
     """نام بسته‌های بک‌اند که روی sys.path می‌نشینند (ریشه، core و modules/*)؛ ماژول تازه نباید آن‌ها را بپوشاند."""
-    backend = root / "warehouse-backend"
+    backend = root / "backend"
     names: set[str] = set()
     bases = [backend, backend / "core", *(p for p in (backend / "modules").glob("*") if p.is_dir())]
     for base in bases:
@@ -79,8 +79,8 @@ def main():
     validate_module_code(code, root)
     validate_title(title_fa)
 
-    backend_module_dir = root / "warehouse-backend" / "modules" / code
-    frontend_module_dir = root / "warehouse-front" / "src" / "app" / "modules" / code
+    backend_module_dir = root / "backend" / "modules" / code
+    frontend_module_dir = root / "frontend" / "src" / "app" / "modules" / code
 
     # ۱. بررسی عدم وجود پوشه مقصد (اگر پوشه مقصد وجود دارد، بدون تغییر خطا می‌دهد)
     if backend_module_dir.exists():
@@ -147,13 +147,13 @@ def main():
         dest_file.write_text(replace_content(content), encoding="utf-8")
 
     # ۵. به‌روزرسانی installed-modules.ts با فراخوانی gen-installed-modules.js
-    gen_script = root / "warehouse-front" / "tools" / "gen-installed-modules.js"
+    gen_script = root / "frontend" / "tools" / "gen-installed-modules.js"
     if not gen_script.exists():
         sys.exit(f"❌ خطا: اسکریپت مولد ماژول‌های فرانت یافت نشد: {gen_script}")
 
     node_cmd = "node"
     # --all: فهرست commitشده همیشه همهٔ ماژول‌هاست؛ WH_MODULES به‌ارث‌رسیده از پوسته نباید آن را کوتاه کند
-    r = subprocess.run([node_cmd, str(gen_script), "--all"], cwd=str(root / "warehouse-front"), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    r = subprocess.run([node_cmd, str(gen_script), "--all"], cwd=str(root / "frontend"), capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         sys.exit(f"❌ خطا در اجرای gen-installed-modules.js (exit {r.returncode}):\n{r.stderr or r.stdout}")
 

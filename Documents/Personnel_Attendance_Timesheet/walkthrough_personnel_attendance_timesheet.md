@@ -31,7 +31,7 @@
 2. **بیلد پروداکشن فرانت‌اند انگولار (Angular Build):**
    ```text
    Application bundle generation complete. [54.606 seconds]
-   Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+   Output location: frontend\dist\warehouse-app
    [patch-ngsw-530] ✔ ngsw-worker.js وصله شد.
    Exit code: 0
    ```

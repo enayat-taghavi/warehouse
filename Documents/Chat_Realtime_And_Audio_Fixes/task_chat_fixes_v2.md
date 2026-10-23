@@ -22,16 +22,16 @@
 ### 📝 جزئیات تسک‌ها
 
 - [ ] **فاز ۱: نمایش تمام کاربران فعال در تب همکاران** <!-- id: 0 -->
-  - [ ] بازگرداندن تمام کاربران فعال به جز کاربر جاری در `ChatContactsListView` در `warehouse-backend/communications/views.py` <!-- id: 1 -->
+  - [ ] بازگرداندن تمام کاربران فعال به جز کاربر جاری در `ChatContactsListView` در `backend/communications/views.py` <!-- id: 1 -->
   - [ ] بررسی دریافت لیست مخاطبان در کلاینت موبایل <!-- id: 2 -->
 
 - [ ] **فاز ۲: اصلاح قطعی نام مخاطب در گفتگوهای دو‌نفره** <!-- id: 3 -->
-  - [ ] اعمال مقایسه رشته‌ای `String(p.id) !== String(currentUserId)` در `getConversationTitle` در `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts` <!-- id: 4 -->
+  - [ ] اعمال مقایسه رشته‌ای `String(p.id) !== String(currentUserId)` در `getConversationTitle` در `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts` <!-- id: 4 -->
   - [ ] اعتبارسنجی نمایش نام صحیح طرف مقابل در تمام سناریوها <!-- id: 5 -->
 
 - [ ] **فاز ۳: اسکرول خودکار و روان به انتهای چت** <!-- id: 6 -->
-  - [ ] انتقال رفرنس `#messagesScroll` به کانتینر والد دارای `overflow-y-auto` در `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html` <!-- id: 7 -->
-  - [ ] پیاده‌سازی `scrollTo({ top: scrollHeight, behavior: 'smooth' })` در `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts` <!-- id: 8 -->
+  - [ ] انتقال رفرنس `#messagesScroll` به کانتینر والد دارای `overflow-y-auto` در `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html` <!-- id: 7 -->
+  - [ ] پیاده‌سازی `scrollTo({ top: scrollHeight, behavior: 'smooth' })` در `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts` <!-- id: 8 -->
 
 - [ ] **فاز ۴: حالت چت موقت (Draft Mode) و عدم ایجاد گفتگوی خالی** <!-- id: 9 -->
   - [ ] بازنویسی `startDirectChat` جهت باز کردن پنجره چت موقت بدون فراخوانی API ایجاد چت <!-- id: 10 -->

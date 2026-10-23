@@ -502,7 +502,7 @@
 **دستور اجرای دوبارهٔ آزمون‌های کاوشی** (پس از اصلاح، انتظار وارونه می‌شود):
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && PYTHONPATH="C:/Users/Payandeh/AppData/Local/Temp/auditprobe" PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py test audit_probe_tests audit_probe_tests2.AuditProbes2 --keepdb --noinput
+cd "E:/warehouse project/backend" && PYTHONPATH="C:/Users/Payandeh/AppData/Local/Temp/auditprobe" PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py test audit_probe_tests audit_probe_tests2.AuditProbes2 --keepdb --noinput
 ```
 
 **نتایج سایر بررسی‌ها.** همهٔ این بررسی‌ها و هر ۲۱ آزمون کاوشی بین ساعت ۲۱:۵۷ و ۲۲:۰۲ دوباره و تازه اجرا شدند و همان نتیجه را دادند. در آن زمان کد نسبت به زمان بازبینی تغییری نکرده بود (۳۵ فایل، ۵۸۵۲+ و ۱۰۳۶−).

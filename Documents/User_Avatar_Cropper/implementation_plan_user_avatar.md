@@ -34,24 +34,24 @@ graph TD
 
 ### الف) بک‌اند پایگاه‌داده و سرویس‌ها (Django Backend)
 
-#### [MODIFY] [models.py](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py)
+#### [MODIFY] [models.py](file:///e:/warehouse%20project/backend/accounts/models.py)
 - افزودن فیلد `avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True, verbose_name="تصویر پرسنلی")` به مدل `CustomUser`.
 
-#### [MODIFY] [settings.py](file:///e:/warehouse%20project/warehouse-backend/config/settings.py) & [urls.py](file:///e:/warehouse%20project/warehouse-backend/config/urls.py)
+#### [MODIFY] [settings.py](file:///e:/warehouse%20project/backend/config/settings.py) & [urls.py](file:///e:/warehouse%20project/backend/config/urls.py)
 - پیکربندی `MEDIA_URL = '/media/'` و `MEDIA_ROOT = BASE_DIR / 'media'`.
 - اضافه کردن مسیردهی و سرو فایل‌های `media` در `urls.py`.
 
-#### [NEW] [avatar_utils.py](file:///e:/warehouse%20project/warehouse-backend/accounts/avatar_utils.py)
+#### [NEW] [avatar_utils.py](file:///e:/warehouse%20project/backend/accounts/avatar_utils.py)
 - تابع اختصاصی `process_and_optimize_avatar(image_file, max_size=(600, 600), quality=85)`:
   - باز کردن تصویر با Pillow، اصلاح چرخش Exif (جهت عکس‌های موبایل).
   - تبدیل به فضای رنگی RGB.
   - تغییر اندازه هوشمند به حداکثر ۶۰۰ پیکسل با فیلتر Lanczos.
   - خروجی با پسوند `.webp` و ذخیره بهینه.
 
-#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py)
+#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py)
 - افزودن `avatar` به فیلدهای `UserSerializer` و ساخت متد `get_avatar` برای بازگرداندن URL مطلق/نسبی تصویر.
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/accounts/views.py)
 - افزودن اکشن `me/avatar` (متدهای POST و DELETE) برای تغییر تصویر پروفایل توسط خودِ کاربر لاگین‌شده.
 - افزودن اکشن `avatar` روی آبجکت کاربر (`detail=True`) برای تغییر/حذف تصویر هر پرسنل توسط مدیر سیستم.
 
@@ -59,7 +59,7 @@ graph TD
 
 ### ب) فرانت‌اند و رابط کاربری (Angular Frontend)
 
-#### [NEW] [avatar-cropper-modal](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/)
+#### [NEW] [avatar-cropper-modal](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/)
 - کامپوننت مستقل و مدرن با قابلیت‌های:
   - **حالت آپلود فایل:** درگ اند دراپ و انتخاب فایل تصویر (JPG, PNG, WebP).
   - **حالت وب‌کم (Camera):** دسترسی به وب‌کم با `navigator.mediaDevices.getUserMedia` و ثبت فوری عکس با دکمه شاتر.
@@ -69,14 +69,14 @@ graph TD
   - خروجی تصویر برش‌خورده به فرمت Blob و ارسال مستقیم به سرور.
   - دکمه «حذف تصویر فعلی» برای ریست کردن آواتار.
 
-#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts)
+#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts)
 - افزودن متدهای `updateMyAvatar(file: Blob)`، `deleteMyAvatar()`، `updateUserAvatar(userId: number, file: Blob)` و `deleteUserAvatar(userId: number)`.
 
-#### [MODIFY] [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) & [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) & [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - نمایش عکس واقعی کاربر در هدر به جای آیکون متنی (در صورت داشتن آواتار).
 - افزودن گزینه «ویرایش تصویر پروفایل 📷» در منوی کاربری هدر با باز شدن مودال برش تصویر.
 
-#### [MODIFY] [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) & [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts)
+#### [MODIFY] [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) & [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts)
 - در کارت‌های لیست پرسنل: نمایش عکس واقعی `avatar` با `loading="lazy"` و انیمیشن انتقال نرم، و در صورت عدم وجود عکس، نمایش حرف اول نام فارسی با پس‌زمینه نقش.
 - در فرم ویرایش کاربر: اتصال دکمه «مدیریت تصویر» به باز شدن مودال برش عکس برای کاربر در حال ویرایش.
 

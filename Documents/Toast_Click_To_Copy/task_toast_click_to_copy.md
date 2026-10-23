@@ -2,8 +2,8 @@
 
 # چک‌لیست وظایف: پیاده‌سازی کپی متن با کلیک روی توست (Toast Click-to-Copy)
 
-- [ ] <!-- id: 0 --> **فاز ۱: به‌روزرسانی کامپوننت توست انگولار (`warehouse-front`)**
-  - [ ] <!-- id: 1 --> افزودن متد امن کپی کلیپ‌بورد (`copyToClipboard`) با پشتیبانی از مرورگرها و Fallback در [toast.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/toast/toast.component.ts)
+- [ ] <!-- id: 0 --> **فاز ۱: به‌روزرسانی کامپوننت توست انگولار (`frontend`)**
+  - [ ] <!-- id: 1 --> افزودن متد امن کپی کلیپ‌بورد (`copyToClipboard`) با پشتیبانی از مرورگرها و Fallback در [toast.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/toast/toast.component.ts)
   - [ ] <!-- id: 2 --> افزودن استیت واکنشی کپی (`copiedIds`) جهت ردگیری وضعیت هر پیام
   - [ ] <!-- id: 3 --> به‌روزرسانی تمپلیت HTML: تفکیک رویداد بستن دکمه ✕ و رویداد کلیک روی بدنه توست
   - [ ] <!-- id: 4 --> افزودن استایل بج متحرک «کپی شد ✓»، نشانگر اشاره‌گر و انیمیشن مقیاس

@@ -26,8 +26,8 @@
 
 | ردیف | فایل | نوع تغییر | شرح تغییرات |
 | :---: | :--- | :---: | :--- |
-| ۱ | [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) | اصلاح | بازنویسی متدهای `drawCardFaceOnCanvas`، `drawPure2DBarcode`، محاسبه دقیق موقعیت عکس در کارت‌های افقی و عمودی، رسم کپسول نقش، درج خطوط جداکننده و مهر حراست در پشت کارت |
-| ۲ | [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css) | اصلاح جزئی | اطمینان از همگامی کلاس‌های پیش‌نمایش با مقیاس‌های خروجی تصویر |
+| ۱ | [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) | اصلاح | بازنویسی متدهای `drawCardFaceOnCanvas`، `drawPure2DBarcode`، محاسبه دقیق موقعیت عکس در کارت‌های افقی و عمودی، رسم کپسول نقش، درج خطوط جداکننده و مهر حراست در پشت کارت |
+| ۲ | [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css) | اصلاح جزئی | اطمینان از همگامی کلاس‌های پیش‌نمایش با مقیاس‌های خروجی تصویر |
 
 ---
 
@@ -60,7 +60,7 @@
 
 ### ۱. تست خودکار کامپایل و بیلد
 ```bash
-cd "E:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

@@ -9,7 +9,7 @@
 ## بررسی کاربر لازم است (User Review Required)
 
 > [!IMPORTANT]
-> **کتابخانه `openpyxl`** از قبل در [requirements.txt](file:///e:/warehouse%20project/warehouse-backend/requirements.txt) نصب شده (نسخه `3.1.5`). نیازی به نصب کتابخانه جدید نیست.
+> **کتابخانه `openpyxl`** از قبل در [requirements.txt](file:///e:/warehouse%20project/backend/requirements.txt) نصب شده (نسخه `3.1.5`). نیازی به نصب کتابخانه جدید نیست.
 
 > [!WARNING]
 > **دسترسی Import/Export:** طبق پیشنهاد قبلی، عملیات Import فقط برای کاربران دارای مجوز مدیریت (`perm_usr_add` برای کاربران، `perm_wh_create` برای انبارها، `perm_usr_role` برای نقش‌ها) مجاز خواهد بود. آیا این سیاست مورد تأیید شماست؟
@@ -36,7 +36,7 @@
 
 ایجاد یک ماژول مشترک برای منطق تولید و خوانش فایل‌های اکسل.
 
-#### [NEW] [excel_utils.py](file:///e:/warehouse%20project/warehouse-backend/accounts/excel_utils.py)
+#### [NEW] [excel_utils.py](file:///e:/warehouse%20project/backend/accounts/excel_utils.py)
 
 فایل کمکی حاوی توابع زیر:
 
@@ -46,7 +46,7 @@
 | `generate_users_template()` | تولید فایل قالب خالی (Template) با هدرها و ۲ سطر داده نمونه |
 | `parse_users_excel(file)` | خوانش فایل اکسل آپلودی، اعتبارسنجی هر سطر، و بازگشت لیست `{valid_rows, errors}` |
 
-#### [NEW] [excel_utils.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/excel_utils.py)
+#### [NEW] [excel_utils.py](file:///e:/warehouse%20project/backend/warehouses/excel_utils.py)
 
 | تابع | عملکرد |
 |---|---|
@@ -54,7 +54,7 @@
 | `generate_warehouses_template()` | فایل قالب خالی + ۲ سطر نمونه |
 | `parse_warehouses_excel(file)` | خوانش و اعتبارسنجی فایل اکسل انبارها |
 
-#### [NEW] [roles_excel_utils.py](file:///e:/warehouse%20project/warehouse-backend/accounts/roles_excel_utils.py)
+#### [NEW] [roles_excel_utils.py](file:///e:/warehouse%20project/backend/accounts/roles_excel_utils.py)
 
 | تابع | عملکرد |
 |---|---|
@@ -66,7 +66,7 @@
 
 ### ۲. بک‌اند — اکشن‌های جدید در (ViewSet) ها
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/accounts/views.py)
 
 اضافه کردن ۳ اکشن جدید به `UserViewSet`:
 
@@ -84,7 +84,7 @@
 | `import_excel` | `POST` | `/auth/roles/import_excel/` | آپلود فایل اکسل و ایجاد دسته‌جمعی نقش‌ها |
 | `download_template` | `GET` | `/auth/roles/download_template/` | دانلود فایل قالب نمونه |
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/warehouses/views.py)
 
 اضافه کردن ۳ اکشن جدید به `WarehouseViewSet`:
 
@@ -160,7 +160,7 @@
 
 ### ۵. فرانت‌اند — سرویس‌های HTTP جدید
 
-#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts)
+#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts)
 
 اضافه کردن متدهای زیر:
 
@@ -176,7 +176,7 @@ importRolesExcel(file: File): Observable<ImportResult>
 downloadRolesTemplate(): Observable<Blob>
 ```
 
-#### [MODIFY] [warehouse-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/warehouse-http.service.ts)
+#### [MODIFY] [warehouse-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/warehouse-http.service.ts)
 
 ```typescript
 exportExcel(): Observable<Blob>
@@ -188,7 +188,7 @@ downloadTemplate(): Observable<Blob>
 
 ### ۶. فرانت‌اند — رابط کاربری (UI)
 
-#### [MODIFY] [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts) و [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html)
+#### [MODIFY] [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts) و [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html)
 
 - اضافه کردن **دکمه‌های اکشن** در بالای لیست کاربران و لیست نقش‌ها:
   - 📥 **دانلود اکسل** — خروجی اکسل از لیست فعلی
@@ -203,7 +203,7 @@ downloadTemplate(): Observable<Blob>
   - نمایش Progress Bar هنگام آپلود
   - نمایش گزارش نتیجه (تعداد موفق، تعداد ناموفق، جدول خطاها)
 
-#### [MODIFY] [projects.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.ts) و [projects.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html)
+#### [MODIFY] [projects.ts](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.ts) و [projects.html](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html)
 
 - اضافه کردن همان ۳ دکمه اکشن (دانلود، آپلود، فایل نمونه) در بالای لیست انبارها
 - استفاده از همان مودال آپلود اکسل مشترک
@@ -212,7 +212,7 @@ downloadTemplate(): Observable<Blob>
 
 ### ۷. فرانت‌اند — کامپوننت مشترک مودال آپلود
 
-#### [NEW] [excel-import-modal](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/excel-import-modal/)
+#### [NEW] [excel-import-modal](file:///e:/warehouse%20project/frontend/src/app/shared/components/excel-import-modal/)
 
 یک کامپوننت مشترک (Shared Component) برای مودال آپلود اکسل که در هر ۳ بخش قابل استفاده مجدد باشد:
 

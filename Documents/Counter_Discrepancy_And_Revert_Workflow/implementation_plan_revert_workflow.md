@@ -53,7 +53,7 @@ graph TD
 
 ### 🔹 فاز ۱: اصلاح منطق فیلترها و دسته‌بندی اقلام (Logic & Tab Filtering)
 **هدف:** تثبیت تب «مغایرت و بازشماری» و تفکیک دقیق وضعیت‌ها در محاسبات فرانت‌اند.
-1. اصلاح توابع تشخیصی در `applyFilters` در فایل [`counter-dashboard.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts):
+1. اصلاح توابع تشخیصی در `applyFilters` در فایل [`counter-dashboard.ts`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts):
    - **`isRecount`**: اقلامی که وضعیت آنها دقیقاً `SUPERVISOR_REJECTED` یا `MANAGER_REJECTED` است، بدون توجه به خالی یا پر بودن مقدار شمارش، منحصراً متعلق به تب «مغایرت و بازشماری» هستند.
    - **`isInitial`**: اقلامی که وضعیت آنها `INITIAL_COUNT` است منحصراً متعلق به تب «آماده ارسال» هستند.
    - **`isPending`**: اقلامی که وضعیت آنها `PENDING_COUNT` است متعلق به تب «دست‌نخورده» هستند.
@@ -64,7 +64,7 @@ graph TD
 
 ### 🔹 فاز ۲: پیاده‌سازی موتور بازگرداندن هوشمند به وضعیت قبل (Revert Engine)
 **هدف:** افزودن قابلیت لغو پیش‌نویس و برگشت هوشمند کالا به وضعیت و تب متناظر.
-1. پیاده‌سازی متد `revertTaskStatus(task: CountTask)` در [`counter-dashboard.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts):
+1. پیاده‌سازی متد `revertTaskStatus(task: CountTask)` در [`counter-dashboard.ts`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts):
    - تشخیص منشأ کالا (اگر یادداشت سرپرست/مدیر دارد یا قبلاً وضعیت رد داشته، به `SUPERVISOR_REJECTED` برگردد؛ در غیر این صورت به `PENDING_COUNT`).
    - تنظیم مقدار `counted_balance = null`.
    - ذخیره در IndexedDB محلی در حالت Local-First و ارسال PATCH به سرور در حالت آنلاین.
@@ -104,8 +104,8 @@ graph TD
 
 | نام فایل | مسیر فایل | نوع تغییر | شرح تغییرات |
 | :--- | :--- | :---: | :--- |
-| **`counter-dashboard.ts`** | [`warehouse-front/.../counter-dashboard.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح | اصلاح منطق `applyFilters`، افزودن متد `revertTaskStatus` و اصلاح `saveDraft` |
-| **`counter-dashboard.html`** | [`warehouse-front/.../counter-dashboard.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | اصلاح | چیپ مغایرت، دکمه Revert روی کارت، دکمه Revert در فرم جزئیات و استایل‌ها |
+| **`counter-dashboard.ts`** | [`frontend/.../counter-dashboard.ts`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح | اصلاح منطق `applyFilters`، افزودن متد `revertTaskStatus` و اصلاح `saveDraft` |
+| **`counter-dashboard.html`** | [`frontend/.../counter-dashboard.html`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | اصلاح | چیپ مغایرت، دکمه Revert روی کارت، دکمه Revert در فرم جزئیات و استایل‌ها |
 
 ---
 

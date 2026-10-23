@@ -21,8 +21,8 @@ python scripts/new_module.py --code logistics --title-fa "سامانه لجست�
 ```
 
 این دستور به صورت خودکار:
-1. پوشه ماژول بک‌اند را در `warehouse-backend/modules/logistics/` می‌سازد.
-2. پوشه ماژول فرانت‌اند را در `warehouse-front/src/app/modules/logistics/` می‌سازد.
+1. پوشه ماژول بک‌اند را در `backend/modules/logistics/` می‌سازد.
+2. پوشه ماژول فرانت‌اند را در `frontend/src/app/modules/logistics/` می‌سازد.
 3. فایل ثبتی `installed-modules.ts` را در فرانت‌اند به‌روزرسانی می‌کند.
 4. اگر پوشه مقصد از قبل وجود داشته باشد، بدون ایجاد تغییر با خطا متوقف می‌شود.
 
@@ -30,9 +30,9 @@ python scripts/new_module.py --code logistics --title-fa "سامانه لجست�
 
 ## ۲. ساختار پوشه‌ها و فیلدهای قرارداد
 
-### الف) بک‌اند (`warehouse-backend/modules/<code>/`)
+### الف) بک‌اند (`backend/modules/<code>/`)
 ```text
-warehouse-backend/modules/<code>/
+backend/modules/<code>/
   ├── module.py                 # مانیفست رسمی ماژول بک‌اند
   └── <code>/                   # اپ جنگو ماژول
       ├── __init__.py
@@ -55,9 +55,9 @@ warehouse-backend/modules/<code>/
 - `audit_modules`: نام و عنوان حوزه‌های ممیزی لاگ‌ها.
 - `sod_app_module`: شناسه ماژول در تفکیک وظایف رکوردهای حساس.
 
-### ب) فرانت‌اند (`warehouse-front/src/app/modules/<code>/`)
+### ب) فرانت‌اند (`frontend/src/app/modules/<code>/`)
 ```text
-warehouse-front/src/app/modules/<code>/
+frontend/src/app/modules/<code>/
   ├── module.ts                 # مانیفست رسمی ماژول فرانت‌اند
   ├── <code>.routes.ts          # روت‌های ماژول
   ├── nav-items.ts              # آیتم‌های منوی ناوبری سایدبار
@@ -159,11 +159,11 @@ warehouse-front/src/app/modules/<code>/
    *توضیح:* بررسی می‌کند هیچ ایمپورت غیرمجازی از ماژول جدید به هسته یا سایر ماژول‌ها نشت نکرده باشد و قراردادهای `module.ts` برقرار باشند.
 3. **بررسی صحت اپلیکیشن‌های جنگو:**
    ```bash
-   python warehouse-backend/manage.py check
+   python backend/manage.py check
    ```
 4. **بررسی بیلد مستقل فرانت‌اند:**
    ```bash
-   npm --prefix warehouse-front run build:modules
+   npm --prefix frontend run build:modules
    ```
 
 </div>

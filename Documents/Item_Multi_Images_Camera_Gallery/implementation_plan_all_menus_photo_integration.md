@@ -19,7 +19,7 @@
 
 ### ۱. کارتابل سرپرست (`SupervisorDashboard`)
 
-#### [MODIFY] [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
+#### [MODIFY] [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html)
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های وظایف شمارش (`filteredTasks`)
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های استخر شمارش (`filteredPoolTasks`)
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های وظایف اسناد مالی (`filteredDocTasks`)
@@ -29,7 +29,7 @@
 
 ### ۲. کارتابل بررسی مدیر (`ManagerReview`)
 
-#### [MODIFY] [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)
+#### [MODIFY] [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های وظایف شمارش مدیر (`filteredTasks`)
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های استخر شمارش مدیر (`filteredPoolTasks`)
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های وظایف اسناد مالی مدیر (`filteredDocTasks`)
@@ -39,20 +39,20 @@
 
 ### ۳. ماژول پیگیری شمارش و مغایرت‌ها (`CountTracking`)
 
-#### [MODIFY] [`count-tracking.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+#### [MODIFY] [`count-tracking.ts`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
 - ایمپورت `ItemPhotoGalleryComponent` و افزودن متدهای `openPhotoGallery`, `closePhotoGallery`, `onPhotosChanged`.
 
-#### [MODIFY] [`count-tracking.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html)
+#### [MODIFY] [`count-tracking.html`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html)
 - قرار دادن آواتار بندانگشتی ۴۰×۴۰ در کنار کد یکتا در جدول پیگیری و افزودن تگ `<app-item-photo-gallery>`.
 
 ---
 
 ### ۴. ماژول گمرک و ترخیص (`Customs`)
 
-#### [MODIFY] [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - ایمپورت `ItemPhotoGalleryComponent` و افزودن متدهای `openPhotoGallery`, `closePhotoGallery`, `onPhotosChanged`.
 
-#### [MODIFY] [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+#### [MODIFY] [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 - قرار دادن آواتار بندانگشتی ۴۰×۴۰ در جدول اقلام گمرکی و افزودن تگ `<app-item-photo-gallery>`.
 
 ---

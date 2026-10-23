@@ -10,21 +10,21 @@
 
 ### 📦 ۱. کارتابل انبارگردان (Counter Dashboard):
 - **نمایش نام انبار در کارت‌های تسک:**
-  در فایل [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html#L477)، سطر لوکیشن به گونه‌ای ارتقا یافت که نام انبار کالا (`warehouse_name`) قبل از لوکیشن به صورت `انبار: ... | لوکیشن: ...` نمایش داده شود (دقیقاً مشابه کارتابل مالی).
+  در فایل [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html#L477)، سطر لوکیشن به گونه‌ای ارتقا یافت که نام انبار کالا (`warehouse_name`) قبل از لوکیشن به صورت `انبار: ... | لوکیشن: ...` نمایش داده شود (دقیقاً مشابه کارتابل مالی).
 
 ---
 
 ### 📑 ۲. کارتابل مالی (Financial Cartable / Customs):
 - **پیاده‌سازی مکانیزم لمسی نگه داشتن دست (Long-Press):**
-  - در [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts#L1005)، متدهای `onTaskPressStart`، `onTaskPressMove`، `onTaskPressEnd` و `onTaskClick` پیاده‌سازی شدند.
+  - در [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts#L1005)، متدهای `onTaskPressStart`، `onTaskPressMove`، `onTaskPressEnd` و `onTaskClick` پیاده‌سازی شدند.
   - نگه داشتن انگشت روی کارت به مدت **۴۵۰ میلی‌ثانیه** کارت را به حالت انتخاب درمی‌آورد و ویبره لمسی ۵۰ میلی‌ثانیه‌ای (`navigator.vibrate(50)`) ایجاد می‌کند.
   - در صورت اسکرول شدن صفحه توسط کاربر، تایمر لغو می‌شود تا مانع اسکرول طبیعی نشود.
-  - در فایل [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html#L407)، رویدادهای اشاره‌گر متصل شدند.
+  - در فایل [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html#L407)، رویدادهای اشاره‌گر متصل شدند.
 - **رفتار هوشمند کلیک در حالت انتخاب چندتایی (Multi-Select Mode):**
   - هنگامی که حداقل یک آیتم انتخاب شده باشد، کلیک روی هر کارت به جای باز کردن کشوی فرم، وضعیت انتخاب همان کارت را تغییر می‌دهد.
 - **دکمه لغو سریع پیش‌نویس (Revert Icon):**
-  - در [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts#L1068)، متد `revertTaskStatus` پیاده‌سازی شد که داده‌های پیش‌نویس مالی ثبت‌شده را پاک کرده و کالا را به وضعیت پیشین بازمی‌گرداند.
-  - در [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html#L454)، آیکون لغو پیش‌نویس در کنار نشان وضعیت برای کارت‌های دارای پیش‌نویس قرار گرفت.
+  - در [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts#L1068)، متد `revertTaskStatus` پیاده‌سازی شد که داده‌های پیش‌نویس مالی ثبت‌شده را پاک کرده و کالا را به وضعیت پیشین بازمی‌گرداند.
+  - در [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html#L454)، آیکون لغو پیش‌نویس در کنار نشان وضعیت برای کارت‌های دارای پیش‌نویس قرار گرفت.
 
 ---
 
@@ -52,7 +52,7 @@ npm run build
 **خروجی:**
 ```text
 Application bundle generation complete. [57.076 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر (کدهای 5xx).
 The command exited with code 0.
 ```
@@ -61,9 +61,9 @@ The command exited with code 0.
 
 ## 📂 فایل‌های کلیدی تغییر یافته
 
-1. [`warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
-2. [`warehouse-front/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
-3. [`warehouse-front/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
-4. [`warehouse-front/angular.json`](file:///e:/warehouse%20project/warehouse-front/angular.json)
+1. [`frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+2. [`frontend/src/app/components/customs/customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
+3. [`frontend/src/app/components/customs/customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
+4. [`frontend/angular.json`](file:///e:/warehouse%20project/frontend/angular.json)
 
 </div>

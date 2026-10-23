@@ -23,27 +23,27 @@
 ## ۲. تغییرات پیشنهادی به تفکیک فایل‌ها (Proposed Changes)
 
 ### لایه بک‌اند (Backend Django)
-#### [MODIFY] [warehouses/services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py)
+#### [MODIFY] [warehouses/services.py](file:///e:/warehouse%20project/backend/warehouses/services.py)
 * اضافه کردن مقادیر پیش‌فرض `counter_can_view_history: True` و `counter_can_view_previous_notes: True` به دیکشنری `DEFAULT_SETTINGS`.
 
 ---
 
 ### لایه مدیریت تنظیمات فرانت‌اند (Frontend Settings UI)
-#### [MODIFY] [src/app/components/settings/settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
+#### [MODIFY] [src/app/components/settings/settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
 * افزودن دو تاگل سوئیچ مدرن در تب «قوانین عملیاتی» برای تنظیمات سراسری سیستم (Global Settings).
 
-#### [MODIFY] [src/app/components/wh-settings/wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+#### [MODIFY] [src/app/components/wh-settings/wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 * افزودن دو تاگل سوئیچ با برچسب‌های وضعیت اورراید (`is_override`) در تب «قوانین عملیاتی» تنظیمات اختصاصی انبار (Warehouse Settings).
 
 ---
 
 ### لایه کارتابل انبارگردان (Frontend Counter Dashboard)
-#### [MODIFY] [src/app/components/counter/counter-dashboard/counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [src/app/components/counter/counter-dashboard/counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 * تعریف فیلدهای وضعیتی `counterCanViewHistory: boolean = true` و `counterCanViewPreviousNotes: boolean = true`.
 * استخراج این دو تنظیم از پاسخ سرویس تنظیمات انبار/سراسری در متد `fetchFieldSettings`.
 * پیاده‌سازی متد کمکی `canViewRecordNote(index: number): boolean` جهت تشخیص مجاز بودن نمایش یادداشت بر اساس ترتیب زمانی (شاخص 0 = جدیدترین رکورد).
 
-#### [MODIFY] [src/app/components/counter/counter-dashboard/counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [src/app/components/counter/counter-dashboard/counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 * شرطی کردن نمایش کادر آکاردئون تاریخچه با `*ngIf="counterCanViewHistory && selectedTask.history && selectedTask.history.length > 0"`.
 * کنترل نمایش متن یادداشت در تاریخچه با استفاده از شرط `canViewRecordNote(i)`.
 

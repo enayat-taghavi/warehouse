@@ -6,7 +6,7 @@
 
 **قواعد حاکم بر اجرا**
 - هر مرحله یک commit مستقل روی `main` است؛ مرحله بعد فقط با سبز بودن تست‌های مرحله قبل شروع می‌شود.
-- تست‌ها **قبل** از اصلاح نوشته می‌شوند (اول قرمز، بعد سبز) — همه در `warehouse-backend/reports/tests.py` و `*.spec.ts` موجود؛ فایل تست جدید در ریشه ساخته نمی‌شود.
+- تست‌ها **قبل** از اصلاح نوشته می‌شوند (اول قرمز، بعد سبز) — همه در `backend/reports/tests.py` و `*.spec.ts` موجود؛ فایل تست جدید در ریشه ساخته نمی‌شود.
 - هیچ فایلی بالای ۵۰۰ خط نمی‌رود؛ اگر `engine.py` (۶۹۹ خط) بیشتر رشد کرد، توابع JOIN به `reports/joins.py` منتقل می‌شوند (در مرحله ۱ پیش‌بینی شده).
 - دستورهای build/restart/test به کاربر داده می‌شود، اجرا نمی‌شود.
 
@@ -43,7 +43,7 @@
 
 ### کارها
 1. اجرای سوئیت فعلی و ثبت خروجی (۵۲ تست باید سبز باشد).
-2. افزودن به [tests.py](../../warehouse-backend/reports/tests.py) در کلاس `JoinQueryTests` و کلاس جدید `EngineRegressionTests`:
+2. افزودن به [tests.py](../../backend/reports/tests.py) در کلاس `JoinQueryTests` و کلاس جدید `EngineRegressionTests`:
 
 | تست | مورد | انتظار قبل از اصلاح |
 |---|---|---|
@@ -54,13 +54,13 @@
 | `test_join_scope_condition_applied_when_no_path_to_base` | ۶-۱ | مسیر اجرا نمی‌شود |
 | `test_datetime_lte_includes_last_day` | ۴-۱ | ردیف روز پایانی حذف می‌شود |
 
-3. اسکلت تست فرانت در [reports.spec.ts](../../warehouse-front/src/app/components/reports) (اگر نبود، ساخت `reports.spec.ts` در همان پوشه کامپوننت):
+3. اسکلت تست فرانت در [reports.spec.ts](../../frontend/src/app/components/reports) (اگر نبود، ساخت `reports.spec.ts` در همان پوشه کامپوننت):
    - `addJoin` باید `pruneAggDependents` را صدا بزند (۱-۳)
    - تغییر `jobId` باید poll را از نو شروع کند (۱-۶)
 
 ### تست مرحله
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py test reports -v 2
+cd "E:/warehouse project/backend" && ./venv/Scripts/python manage.py test reports -v 2
 ```
 **پذیرش:** ۵۲ تست قبلی سبز؛ ۶ تست جدید بک‌اند و ۲ تست فرانت به‌صورت کنترل‌شده قرمز.
 
@@ -70,7 +70,7 @@ cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py t
 
 **هدف:** رفع خطای قطعی EXISTS، پایدارسازی صفحه‌بندی گروهی، آزادسازی تجمیع درست، تمیز کردن پاسخ.
 
-### تغییرات — [engine.py](../../warehouse-backend/reports/engine.py)
+### تغییرات — [engine.py](../../backend/reports/engine.py)
 
 **۱-۱ (بحرانی):** تفکیک محل نشستن انوتیشن‌های فیلد محاسباتیِ JOIN
 - در `_process_joins` (خطوط ۱۰۰-۱۷۳) هنگام ساخت انوتیشن فیلد محاسباتی، آن را در دیکشنری جدید `self._joined_anns[alias][orm_source] = annotation` هم ثبت کن (علاوه بر ثبت روی `FieldDef`).
@@ -96,7 +96,7 @@ cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py t
 
 ### تست مرحله
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py test reports.tests -v 2
+cd "E:/warehouse project/backend" && ./venv/Scripts/python manage.py test reports.tests -v 2
 ```
 - ۶ تست قرمز مرحله ۰ (به‌جز ۴-۱ که در مرحله ۵ است) → سبز.
 - تست اضافه: `test_exists_join_does_not_duplicate_rows` (تعداد ردیف با/بدون JOIN فیلتر-only یکسان).
@@ -110,21 +110,21 @@ cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py t
 
 **هدف:** حذف بن‌بست alias فارسی و جلوگیری از خراب شدن HAVING/نمودار.
 
-### بک‌اند — [engine.py](../../warehouse-backend/reports/engine.py)
+### بک‌اند — [engine.py](../../backend/reports/engine.py)
 **۱-۲:** افزودن فیلد اختیاری `label` به هر آیتم `aggregations`:
 - `alias` همان شناسه SQL می‌ماند و `ALIAS_RE` روی آن باقی است؛ اگر کاربر ندهد، خودکار ساخته می‌شود (رفتار فعلی خط ۴۴۲).
 - `label` فقط برای نمایش: طول حداکثر ۶۰ کاراکتر، هر کاراکتری مجاز، در `columns[*].label` نشسته و بی‌واسطه به Excel/PDF می‌رود.
 - پیام خطای `ALIAS_RE` فارسی و راهنما شود: «شناسه فنی فقط حروف کوچک انگلیسی، رقم و `_`؛ برای عنوان فارسی از فیلد «عنوان ستون» استفاده کنید.»
 
 ### فرانت‌اند
-**۱-۲** — [reports.html](../../warehouse-front/src/app/components/reports/reports.html) (حدود ۳۵۲-۳۶۱):
+**۱-۲** — [reports.html](../../frontend/src/app/components/reports/reports.html) (حدود ۳۵۲-۳۶۱):
 - input فعلی به `label` بایند می‌شود با placeholder «عنوان ستون (مثال: جمع موجودی)».
 - یک input ثانویه و جمع‌شده («تنظیمات پیشرفته») برای `alias` با `pattern="[a-z_][a-z0-9_]{0,40}"` و راهنمای فارسی.
 **۵-۷** — حذف شرط `agg.fn === 'count' ? store.fieldsMeta() : aggregatableFields()`؛ برای `count` هم فهرست کامل شامل فیلدهای JOIN.
-**۱-۳** — [reports.ts](../../warehouse-front/src/app/components/reports/reports.ts):
+**۱-۳** — [reports.ts](../../frontend/src/app/components/reports/reports.ts):
 - در `addJoin` (۳۰۹-۳۲۱) و `updateAggregation` (~۴۸۷) بعد از هر تغییر `fn`/`field`/`alias`، فراخوانی `store.pruneAggDependents()`.
 - به‌جای تغییر خاموش `fn`، نمایش toast: «تابع «جمع» با جدول پیوندی چندمقداری به «تعداد» تغییر یافت؛ شرط HAVING/نمودار وابسته بازنشانی شد.»
-**۵-۸** — [report-store.ts](../../warehouse-front/src/app/components/reports/report-store.ts) `pruneAggDependents` (۲۴۰-۲۴۷): فقط بخش نامعتبر نمودار پاک شود (`y` تنها)، `x`/`kind` حفظ شود.
+**۵-۸** — [report-store.ts](../../frontend/src/app/components/reports/report-store.ts) `pruneAggDependents` (۲۴۰-۲۴۷): فقط بخش نامعتبر نمودار پاک شود (`y` تنها)، `x`/`kind` حفظ شود.
 **۵-۶** — `aliasLabel()` و `chartXLabel()`: جست‌وجو در ادغام `fieldsMeta()` + فیلدهای JOIN + `label` تجمیع‌ها؛ در نبود برچسب، fallback به کلید.
 **۶-۲** — `manyJoinAliases()` (۷۴-۷۶): `j.as || j.key`.
 
@@ -139,7 +139,7 @@ cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py t
 - `aliasLabel()` روی تجمیع فیلد JOIN → برچسب فارسی، نه `count_tasks.counted_balance`.
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browsers=ChromeHeadless
+cd "E:/warehouse project/frontend" && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 **دستی:** تایپ «جمع موجودی» در عنوان ستون → گزارش اجرا شود و همان عنوان در جدول/Excel دیده شود.
 
@@ -150,26 +150,26 @@ cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browser
 **هدف:** بی‌اثر کردن تایم‌اوت تونل، حذف رقابت thread/worker، بازیابی خروجی پس از رفرش.
 
 ### بک‌اند
-**۲-۱** — [engine.py](../../warehouse-backend/reports/engine.py) `export_queryset` (۶۷۸-۶۸۵):
+**۲-۱** — [engine.py](../../backend/reports/engine.py) `export_queryset` (۶۷۸-۶۸۵):
 - استخراج helper مشترک `_timed_execute(fn)` که `transaction.atomic()` + `SET LOCAL statement_timeout` را می‌گذارد و `OperationalError`/`DataError` را به `ReportError` فارسی تبدیل می‌کند؛ استفاده در `run()` و `export_queryset()`.
 - برای export، تایم‌اوت جدا و بلندتر (`EXPORT_STATEMENT_TIMEOUT_MS = 120_000`) چون خارج از چرخه HTTP اجرا می‌شود.
 
-**۲-۵** — [excel.py](../../warehouse-backend/reports/excel.py):
+**۲-۵** — [excel.py](../../backend/reports/excel.py):
 - در ابتدای `_run_export_job` یک claim اتمی مثل worker: `select_for_update(skip_locked=True).filter(pk=job_pk, status='pending')` → اگر ردیفی برنگشت، بی‌صدا return (یعنی worker آن را برداشته).
 - `start_export_job` بدون تغییر ساختاری؛ فقط comment توضیح claim.
 
-**۲-۳** — `cleanup_old_jobs`: آستانه `stale_cutoff` برای `running` از ۱ ساعت به `ORPHAN_MINUTES*3` (۶ دقیقه) کاهش یابد و منطق بازیابی یتیم (سه تلاش) از [run_export_worker.py](../../warehouse-backend/reports/management/commands/run_export_worker.py) به تابع مشترک `recover_orphan_jobs()` در `excel.py` منتقل شود تا هم worker و هم مسیر HTTP آن را صدا بزنند.
+**۲-۳** — `cleanup_old_jobs`: آستانه `stale_cutoff` برای `running` از ۱ ساعت به `ORPHAN_MINUTES*3` (۶ دقیقه) کاهش یابد و منطق بازیابی یتیم (سه تلاش) از [run_export_worker.py](../../backend/reports/management/commands/run_export_worker.py) به تابع مشترک `recover_orphan_jobs()` در `excel.py` منتقل شود تا هم worker و هم مسیر HTTP آن را صدا بزنند.
 
-**۵-۳ و ۵-۴** — [views.py](../../warehouse-backend/reports/views.py):
+**۵-۳ و ۵-۴** — [views.py](../../backend/reports/views.py):
 - helper `_content_disposition(name, ext)` که هم `filename="report.<ext>"` (ASCII fallback) و هم `filename*=UTF-8''<quote(name)>` را می‌سازد؛ استفاده در مسیر PDF (۱۳۶-۱۳۹) و پاس دادن نام واقعی به `sync_excel_response` (۱۴۲).
 - `sync_excel_response` هدر را از همان helper بگیرد.
 
 **۶-۳** — `ExportJobListView` با افزودن `?active=1` فقط jobهای `pending`/`running`/`done` اخیر (۶ ساعت) را برگرداند و `cleanup_old_jobs()` + `recover_orphan_jobs()` را صدا بزند.
 
 ### فرانت‌اند
-**۲-۴ و ۶-۳** — [report-api.service.ts](../../warehouse-front/src/app/core/api/report-api.service.ts): افزودن `getExportJobs(activeOnly = true)`.
-**۲-۴** — [reports.ts](../../warehouse-front/src/app/components/reports/reports.ts): در `ngOnInit` (اگر آنلاین) فراخوانی `getExportJobs()` و در صورت وجود job فعال یا `done` اخیر، ست کردن `exportJobId` و باز کردن پنل پیشرفت. `exportJobId` در پیش‌نویس `localStorage` هم ذخیره شود.
-**۱-۶** — قبل از هر export: `exportJobId = null` و یک tick صبر (`setTimeout(0)`) یا استفاده از `@if` با کلید `[key]`؛ در [export-progress.component.ts](../../warehouse-front/src/app/components/reports/export-progress.component.ts) پیاده‌سازی `OnChanges` که با تغییر `jobId` مقدارهای `job`/`consecutiveErrors` را ریست و poll را از نو شروع کند.
+**۲-۴ و ۶-۳** — [report-api.service.ts](../../frontend/src/app/core/api/report-api.service.ts): افزودن `getExportJobs(activeOnly = true)`.
+**۲-۴** — [reports.ts](../../frontend/src/app/components/reports/reports.ts): در `ngOnInit` (اگر آنلاین) فراخوانی `getExportJobs()` و در صورت وجود job فعال یا `done` اخیر، ست کردن `exportJobId` و باز کردن پنل پیشرفت. `exportJobId` در پیش‌نویس `localStorage` هم ذخیره شود.
+**۱-۶** — قبل از هر export: `exportJobId = null` و یک tick صبر (`setTimeout(0)`) یا استفاده از `@if` با کلید `[key]`؛ در [export-progress.component.ts](../../frontend/src/app/components/reports/export-progress.component.ts) پیاده‌سازی `OnChanges` که با تغییر `jobId` مقدارهای `job`/`consecutiveErrors` را ریست و poll را از نو شروع کند.
 **۲-۲** — در همان کامپوننت: شمارنده مدت poll؛ پس از ۱۰ دقیقه بدون تغییر `progress` نمایش وضعیت «متوقف شده؟» با دکمه «تلاش مجدد» و توقف interval. نمایش `heartbeat_at` نیازمند افزودن این فیلد به سریالایزر job است.
 **۵-۳** — `fileName` ورودی کامپوننت از `job.report_name` ساخته شود، نه پیش‌فرض `report.xlsx`.
 
@@ -194,21 +194,21 @@ cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browser
 **هدف:** جلوگیری از افشای متن استثنا، درست کردن کد وضعیت، هم‌راستایی مجوز و دامنه انبار.
 
 ### تغییرات
-**۳-۱** — [views.py](../../warehouse-backend/reports/views.py) (۱۱۲-۱۱۵ و ۱۵۲-۱۵۵) و [excel.py:205-208](../../warehouse-backend/reports/excel.py):
+**۳-۱** — [views.py](../../backend/reports/views.py) (۱۱۲-۱۱۵ و ۱۵۲-۱۵۵) و [excel.py:205-208](../../backend/reports/excel.py):
 - `except ReportError` → ۴۰۰ با `e.message` (بدون تغییر).
 - `except Exception` → `logger.exception('report run failed', extra={'user': request.user.pk})` و پاسخ **۵۰۰** با متن ثابت فارسی «خطای داخلی در اجرای گزارش؛ لطفاً با پشتیبانی تماس بگیرید (کد پیگیری: <uuid کوتاه>)». همان uuid در لاگ ثبت شود.
 - `error_message` روی job هم پیام ثابت فارسی + کد پیگیری بگیرد، نه `str(e)`.
-- بررسی: فرانت باید ۵۰۰ را هم مثل ۴۰۰ نمایش دهد → کنترل `msg(e)` در [report-store.ts:413-445](../../warehouse-front/src/app/components/reports/report-store.ts) تا ۵۰۰ با آفلاین اشتباه نشود.
+- بررسی: فرانت باید ۵۰۰ را هم مثل ۴۰۰ نمایش دهد → کنترل `msg(e)` در [report-store.ts:413-445](../../frontend/src/app/components/reports/report-store.ts) تا ۵۰۰ با آفلاین اشتباه نشود.
 
-**۳-۲** — اصلاح docstring [views.py:4-6](../../warehouse-backend/reports/views.py) به وضع واقعی مجوزها.
+**۳-۲** — اصلاح docstring [views.py:4-6](../../backend/reports/views.py) به وضع واقعی مجوزها.
 
-**۳-۳ (پس از تأیید)** — [registry.py:40](../../warehouse-backend/reports/registry.py): `SENSITIVE_BYPASS_PERMS` بدون `view_sys_export`؛ در صورت انتخاب مجوز جدید، افزودن آن به فهرست مجوزهای سیستم در `accounts` و منوی تنظیمات دسترسی.
+**۳-۳ (پس از تأیید)** — [registry.py:40](../../backend/reports/registry.py): `SENSITIVE_BYPASS_PERMS` بدون `view_sys_export`؛ در صورت انتخاب مجوز جدید، افزودن آن به فهرست مجوزهای سیستم در `accounts` و منوی تنظیمات دسترسی.
 
-**۳-۴** — [registry.py:240-273](../../warehouse-backend/reports/registry.py): تابع کمکی `_is_blind(user, warehouse_id)`؛ اگر `warehouse_id is None`، روی همه انبارهای در دامنه کاربر پیمایش شود و **سخت‌گیرانه‌ترین** حالت انتخاب شود (اگر حتی یک انبار `blind` است → کور).
+**۳-۴** — [registry.py:240-273](../../backend/reports/registry.py): تابع کمکی `_is_blind(user, warehouse_id)`؛ اگر `warehouse_id is None`، روی همه انبارهای در دامنه کاربر پیمایش شود و **سخت‌گیرانه‌ترین** حالت انتخاب شود (اگر حتی یک انبار `blind` است → کور).
 
-**۳-۵** — [engine.py:196-214](../../warehouse-backend/reports/engine.py): جایگزینی منطق دستی با helper مشترک [warehouse_scope.py](../../warehouse-backend/common/warehouse_scope.py)؛ رفتار فعلی حفظ می‌شود ولی از یک منبع.
+**۳-۵** — [engine.py:196-214](../../backend/reports/engine.py): جایگزینی منطق دستی با helper مشترک [warehouse_scope.py](../../backend/common/warehouse_scope.py)؛ رفتار فعلی حفظ می‌شود ولی از یک منبع.
 
-**۳-۶ (پس از تأیید)** — [reports.ts:146-160](../../warehouse-front/src/app/components/reports/reports.ts): فیلترها از query params حذف و فقط در `localStorage` بمانند؛ URL فقط `entity`/`fields`/`sort`/`page` را نگه دارد.
+**۳-۶ (پس از تأیید)** — [reports.ts:146-160](../../frontend/src/app/components/reports/reports.ts): فیلترها از query params حذف و فقط در `localStorage` بمانند؛ URL فقط `entity`/`fields`/`sort`/`page` را نگه دارد.
 
 ### تست مرحله
 - `test_unexpected_error_returns_500_without_internal_text` — mock که `FieldError('Choices are: id, warehouse_id')` بیندازد → status ۵۰۰ و نبود رشته `Choices are` در بدنه.
@@ -227,21 +227,21 @@ cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browser
 **هدف:** رفع خطای بازه تاریخ، قالب‌بندی عدد، و هم‌خوان کردن متن‌ها با کد.
 
 ### تغییرات
-**۴-۱** — [engine.py](../../warehouse-backend/reports/engine.py) `_process_filter_node` (۲۷۵-۳۹۴):
+**۴-۱** — [engine.py](../../backend/reports/engine.py) `_process_filter_node` (۲۷۵-۳۹۴):
 - برای فیلد `datetime` که مقدار ورودی فقط تاریخ است (بدون جزء ساعت): `lte` → `__date__lte`، `gt` → `__date__gt`، و در `between` مرز پایانی → `__date__lte`. (`eq` قبلاً درست است.)
 - تشخیص «فقط تاریخ» در `_coerce_value` (~۲۳۶) با یک پرچم بازگشتی انجام شود، نه heuristic روی رشته.
 
-**۴-۲** — [reports.ts:881-894](../../warehouse-front/src/app/components/reports/reports.ts) `formatCell`:
+**۴-۲** — [reports.ts:881-894](../../frontend/src/app/components/reports/reports.ts) `formatCell`:
 - شاخه `number`: `new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 4 }).format(Number(value))`، با حذف صفرهای انتهایی و بازگشت به `String(value)` در صورت `NaN`.
 - سازگاری: مقدار Decimal که به `str` آمده (`'1234.5000'`) باید `۱٬۲۳۴٫۵` شود.
 
-**۴-۳ (گزینه ب)** — [engine.py:531](../../warehouse-backend/reports/engine.py): وقتی `distinct=True` اعمال می‌شود، برچسب ستون پسوند «(متمایز)» بگیرد و در پاسخ فیلد `columns[i].distinct = true` برگردد؛ فرانت آیکون/tooltip توضیحی نشان دهد.
+**۴-۳ (گزینه ب)** — [engine.py:531](../../backend/reports/engine.py): وقتی `distinct=True` اعمال می‌شود، برچسب ستون پسوند «(متمایز)» بگیرد و در پاسخ فیلد `columns[i].distinct = true` برگردد؛ فرانت آیکون/tooltip توضیحی نشان دهد.
 
-**۵-۱** — یک ثابت مشترک: `CHART_GROUP_LIMIT` در [report-chart.component.ts](../../warehouse-front/src/app/components/reports/report-chart.component.ts) export شود؛ `fetchChartRows()` در [report-store.ts:305-332](../../warehouse-front/src/app/components/reports/report-store.ts) همان مقدار را به‌عنوان `page_size` بفرستد؛ بنر [reports.html:549](../../warehouse-front/src/app/components/reports/reports.html) از همان ثابت بخواند. حذف بنر تکراری.
+**۵-۱** — یک ثابت مشترک: `CHART_GROUP_LIMIT` در [report-chart.component.ts](../../frontend/src/app/components/reports/report-chart.component.ts) export شود؛ `fetchChartRows()` در [report-store.ts:305-332](../../frontend/src/app/components/reports/report-store.ts) همان مقدار را به‌عنوان `page_size` بفرستد؛ بنر [reports.html:549](../../frontend/src/app/components/reports/reports.html) از همان ثابت بخواند. حذف بنر تکراری.
 
-**۵-۲** — متن [reports.html:838](../../warehouse-front/src/app/components/reports/reports.html) به «۱۰٬۰۰۰ ردیف» اصلاح شود (هم‌راستا با `SYNC_ROW_LIMIT`). بهتر: مقدار از پاسخ `meta` سرور بیاید تا دیگر واگرا نشود.
+**۵-۲** — متن [reports.html:838](../../frontend/src/app/components/reports/reports.html) به «۱۰٬۰۰۰ ردیف» اصلاح شود (هم‌راستا با `SYNC_ROW_LIMIT`). بهتر: مقدار از پاسخ `meta` سرور بیاید تا دیگر واگرا نشود.
 
-**۵-۵** — [reports.ts:407-416](../../warehouse-front/src/app/components/reports/reports.ts) `visibleJoinFields`: `label` از عنوان فارسی JoinDef (`joinsMeta().find(j => j.key === …)?.label`) ساخته شود، نه alias خام.
+**۵-۵** — [reports.ts:407-416](../../frontend/src/app/components/reports/reports.ts) `visibleJoinFields`: `label` از عنوان فارسی JoinDef (`joinsMeta().find(j => j.key === …)?.label`) ساخته شود، نه alias خام.
 
 ### تست مرحله
 - `test_datetime_lte_includes_last_day` (از مرحله ۰) → سبز؛ به‌علاوه `test_datetime_between_inclusive_end`.
@@ -258,13 +258,13 @@ cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browser
 **هدف:** رفتار درست در آفلاین، قفل نشدن UI، مودال‌های استاندارد، حذف hackهای زمانی، تکمیل پوشش تست.
 
 ### تغییرات
-**۲-۶** — [reports.ts:191-224](../../warehouse-front/src/app/components/reports/reports.ts) `restoreStateAndRun`:
+**۲-۶** — [reports.ts:191-224](../../frontend/src/app/components/reports/reports.ts) `restoreStateAndRun`:
 - افزودن `if (this.store.isOffline()) { toast.info('اتصال برقرار نیست؛ گزارش بازیابی شد ولی اجرا نشد.'); return; }`
 - افزودن `if (!this.validateReportSpec()) return;`
 - ثبت یک `effect` روی `NetworkStatusService` که با برگشت اتصال، اجرای معلق را یک‌بار انجام دهد (پرچم `pendingAutoRun`).
 **۶-۴** — حذف `setTimeout(50)` و `setTimeout(100)`: `_loadJoinTargetFields` یک `Observable` برگرداند و اجرای گزارش با `forkJoin([...]).subscribe()` زنجیره شود (هم در `restoreStateAndRun` و هم `loadTemplate`).
-**۲-۷** — [report-store.ts:127-134](../../warehouse-front/src/app/components/reports/report-store.ts): حذف `setTimeout(600)`؛ `isRefreshing` مستقیم با اتمام درخواست‌ها پایین بیاید. در [reports.html:125](../../warehouse-front/src/app/components/reports/reports.html) کلاس `pointer-events-none` فقط به بخش نتایج/نمودار محدود شود، نه کل سازنده.
-**۵-۹** — هر دو مودال در [reports.html](../../warehouse-front/src/app/components/reports/reports.html): `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + بستن با `Escape` (`(keydown.escape)`) + focus روی اولین کنترل هنگام باز شدن و بازگشت focus به دکمه فراخوان هنگام بستن. اگر دایرکتیو مشترکی در `shared/` هست از آن استفاده شود، وگرنه ساده و محلی پیاده شود.
+**۲-۷** — [report-store.ts:127-134](../../frontend/src/app/components/reports/report-store.ts): حذف `setTimeout(600)`؛ `isRefreshing` مستقیم با اتمام درخواست‌ها پایین بیاید. در [reports.html:125](../../frontend/src/app/components/reports/reports.html) کلاس `pointer-events-none` فقط به بخش نتایج/نمودار محدود شود، نه کل سازنده.
+**۵-۹** — هر دو مودال در [reports.html](../../frontend/src/app/components/reports/reports.html): `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + بستن با `Escape` (`(keydown.escape)`) + focus روی اولین کنترل هنگام باز شدن و بازگشت focus به دکمه فراخوان هنگام بستن. اگر دایرکتیو مشترکی در `shared/` هست از آن استفاده شود، وگرنه ساده و محلی پیاده شود.
 **۶-۳** — حذف کد بی‌مصرف باقی‌مانده (اگر پس از مرحله ۳ چیزی بی‌مصرف ماند).
 **۶-۵** — تکمیل تست‌های نبود پوشش: HAVING روی alias فیلد JOIN، `export_queryset` با کوئری سنگین، مسیر EXISTS، صفحه‌بندی گروهی (بخشی در مراحل قبل انجام شده؛ اینجا فقط بازبینی پوشش).
 
@@ -283,22 +283,22 @@ cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browser
 
 بک‌اند — کل سوئیت گزارش‌ساز:
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py test reports -v 2
+cd "E:/warehouse project/backend" && ./venv/Scripts/python manage.py test reports -v 2
 ```
 
 فرانت‌اند — تست واحد:
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browsers=ChromeHeadless
+cd "E:/warehouse project/frontend" && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
 فرانت‌اند — بیلد کنترلی:
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng build --configuration production
+cd "E:/warehouse project/frontend" && npx ng build --configuration production
 ```
 
 worker خروجی (برای تست مرحله ۳ در محیط واقعی):
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python manage.py run_export_worker
+cd "E:/warehouse project/backend" && ./venv/Scripts/python manage.py run_export_worker
 ```
 
 ---

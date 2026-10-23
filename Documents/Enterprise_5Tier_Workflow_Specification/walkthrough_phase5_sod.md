@@ -5,10 +5,10 @@
 ## ۱. خلاصه اقدامات انجام‌شده در فاز ۵ (Executive Summary)
 فاز پنجم و نهایی طرح با پنهان‌سازی و مسدودسازی هوشمند خطوط قرمز در DOM صفحات مشترک با موفقیت ۱۰۰٪ پیاده‌سازی شد:
 
-1. **ایمن‌سازی صفحه ثبت کارکرد پرسنل و ناوگان ([`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)):**
+1. **ایمن‌سازی صفحه ثبت کارکرد پرسنل و ناوگان ([`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)):**
    - اتصال متد `canUnlockPeriod` به گارد امنیتی `persona.canPerform('/attendance', 'approve_attendance_period')` (جلوگیری از نمایش دکمه قفل/تایید برای اپراتور).
    - تعریف متد `canDirectEditAttendance` و اعمال محدودیت خطوط قرمز برای نقش‌های حسابدار و مدیر بر اساس ماتریس SoD.
-2. **ایمن‌سازی بانک پرونده‌های پرسنل و ناوگان ([`personnel-profiles.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-profiles/personnel-profiles.ts) و [`personnel-profiles.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-profiles/personnel-profiles.html)):**
+2. **ایمن‌سازی بانک پرونده‌های پرسنل و ناوگان ([`personnel-profiles.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-profiles/personnel-profiles.ts) و [`personnel-profiles.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-profiles/personnel-profiles.html)):**
    - اتصال متدهای تصویب احکام (`canApprovePersonnelManager`, `canApprovePersonnelFinance`, `canApproveFleetManager`, `canApproveFleetFinance`) به ارزیابی هوشمند SoD.
    - اعمال شناسه محافظتی `[disabled]="!canEditWageAndAllowances"` بر روی فیلدهای گروه شغلی، مزد روزانه پایه، سنوات و مزد مبنا جهت جلوگیری از دستکاری سرپرست انبار در داده‌های مالی.
 3. **توسعه و اتصال ایجنت سخت‌گیر نگهبان ۱۴:**
@@ -47,14 +47,14 @@
 
 ### تست ۱: اجرای سوئیت کامل ۱۴ ایجنت سخت‌گیر نگهبان
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe personnel\phase_guardian_approval.py
 ```
 *خروجی مورد انتظار:* چاپ پیام **«🏆 تبریک! تمامی ۱۴ ایجنت نگهبان گردش کار، خزانه‌داری، کارتابل‌ها، ماتریس SoD، میدلور، گارد، سوئیچر واکنشی و محافظت DOM با موفقیت ۱۰۰٪ تایید شدند. 🏆»**.
 
 ### تست ۲: بررسی صحت کامپایل و بیلد فرانت‌اند Angular 19
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 *خروجی مورد انتظار:* اتمام موفق بیلد با پیام `Application bundle generation complete` و کد خروجی صفر بدون خطا.

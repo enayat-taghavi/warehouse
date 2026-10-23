@@ -20,7 +20,7 @@
 | ردیف | محور کشف‌شده در کدبیس واقعی (HEAD) | شواهد دقیق فایل و شماره خط در مخزن فعلی | چرا در طرح قبلی پنهان بود و چگونه در این نسخه حل شده است |
 |---|---|---|---|
 | **۱** | **موارد باز فوری در انتهای `Supervisor_Followups` (کامیت `86399d8`)** | در کامیت `86399d8` فقط `VehicleTripViewSet.get_queryset` اصلاح شد، اما **۸ اکشن سفارشی همان کلاس** در `modules/accounting/personnel/views.py` (`get_matrix` خ۶۷۹۰، `bulk_save` خ۶۸۸۳، `get_monthly_summary` خ۷۰۲۳، `get_monthly_grid` خ۷۰۷۹، `update_day_trip` خ۷۲۶۶، `bulk_save_monthly_grid` خ۷۴۶۰، `export_monthly_excel` خ۷۵۸۳، `import_monthly_excel` خ۷۶۰۶) مستقیماً روی `VehicleDriverProfile.objects` و `VehicleTripLog.objects` بدون دامنه شرکت کوئری می‌زنند! همچنین **۶۹ خطای تست در ۶ فایل تست `personnel`** (`NameError: Warehouse` و `AttributeError: warehouse`) و **۳ خطای تست شناخته‌شده** در `test_reports_integration.py` و `test_company_warehouse_isolation.py` باز مانده‌اند. | این دو مورد دقیقاً آخرین «اقدام بعدی» ثبت‌شده توسط ناظر (Claude) پیش از انتشار روی `soft` هستند و در **نشست ۱ و ۲** این طرح در اولویت اول قرار گرفتند. |
-| **۲** | **هاردکدهای سنگین نام و منطق ماژول‌ها درون هسته بک‌اند (`warehouse-backend/core/`)** | ۱) `core/accounts/sod_cache_service.py:17-180`: ۱۶ قانون SoD با `'app_module': 'personnel'` و `'warehouse'` هاردکد شده‌اند.<br>۲) `core/accounts/middleware.py:105-166`: تابع `get_user_valid_roles_for_app` با `if module_code == 'accounting': ... elif module_code == 'warehouse':` هاردکد شده است.<br>۳) `core/accounts/serializers.py:618-626, 744-749` و `core/accounts/views.py:2828` (`SwitchAppScopeView`): فقط `'warehouse'` و `'finance'` را می‌پذیرند و ماژول سوم را رد می‌کنند!<br>۴) `core/accounts/views.py:1930-2173` (`AuditLogViewSet`): لیست زیرماژول‌های انبار و مالی را ۳ بار به صورت دستی هاردکد کرده، در حالی که `ModuleSpec.audit_modules` در رجیستری موجود است!<br>۵) `core/settings_core/google_drive_views.py:273` و `core/communications/models.py:60,271`: فراخوانی مستقیم `apps.get_model('personnel', ...)` و `apps.get_model('warehouses', ...)`. | نگهبان ۲۹ فقط `import` را می‌دید و رشته‌های هاردکدشده را نمی‌دید. در **نشست ۳**، تمام این موارد از طریق `ModuleSpec` و `contribute()` در `platform_core/registry.py` کاملاً پویا و ماژولار می‌شوند. |
+| **۲** | **هاردکدهای سنگین نام و منطق ماژول‌ها درون هسته بک‌اند (`backend/core/`)** | ۱) `core/accounts/sod_cache_service.py:17-180`: ۱۶ قانون SoD با `'app_module': 'personnel'` و `'warehouse'` هاردکد شده‌اند.<br>۲) `core/accounts/middleware.py:105-166`: تابع `get_user_valid_roles_for_app` با `if module_code == 'accounting': ... elif module_code == 'warehouse':` هاردکد شده است.<br>۳) `core/accounts/serializers.py:618-626, 744-749` و `core/accounts/views.py:2828` (`SwitchAppScopeView`): فقط `'warehouse'` و `'finance'` را می‌پذیرند و ماژول سوم را رد می‌کنند!<br>۴) `core/accounts/views.py:1930-2173` (`AuditLogViewSet`): لیست زیرماژول‌های انبار و مالی را ۳ بار به صورت دستی هاردکد کرده، در حالی که `ModuleSpec.audit_modules` در رجیستری موجود است!<br>۵) `core/settings_core/google_drive_views.py:273` و `core/communications/models.py:60,271`: فراخوانی مستقیم `apps.get_model('personnel', ...)` و `apps.get_model('warehouses', ...)`. | نگهبان ۲۹ فقط `import` را می‌دید و رشته‌های هاردکدشده را نمی‌دید. در **نشست ۳**، تمام این موارد از طریق `ModuleSpec` و `contribute()` در `platform_core/registry.py` کاملاً پویا و ماژولار می‌شوند. |
 | **۳** | **موارد انجام‌نشده نشست ۸ و ۹ طرح قبلی در هسته فرانت‌اند (`core/services/` و `core/auth/`)** | طبق یادداشت ناظر در خط ۵۳۲ `implementation_plan_modular_middle_path.md`، فایل‌های زیر در نشست ۹ دست نخوردند:<br>۱) `core/services/sync-pull.service.ts:131-221`: هاردکد `'/personnel/sync/pull/'` و `'/inventory/sync/pull/'` و جداول `warehouseOfflineDb`.<br>۲) `core/services/photo-upload-queue.service.ts:344-358`: هاردکد کامل مسیر `'/inventory/items/${entry.itemId}/photos/'` و توکن انبار درون `core/services/`!<br>۳) `core/services/offline-sync.service.ts:487-953` و `offline-db.ts:151-212`: هاردکد دوتایی `'warehouse' \| 'finance'` و `warehouseOfflineDb` / `financeOfflineDb`.<br>۴) `core/services/app-persona.service.ts` (۴۳ هاردکد)، `session-tab.service.ts` (۱۳ هاردکد) و `core/auth/auth.service.ts:257`. | در **نشست ۷ و ۸**، این سرویس‌های هسته به کمک نقطه توسعه جدید `offlineSync` و `scopeConfig` در `module-contract.ts` از هاردکد نام ماژول‌ها پاکسازی می‌شوند. |
 | **۴** | **تله خطرناک نگهبان ۵۷ و `section_guardian.py` هنگام انتقال `core/api/*`** | در `src/app/core/api/`، سرویس `personnel-api.service.ts` (۱٬۳۰۵ خط) و ۹ سرویس انبار قرار دارند. **اما بررسی عمیق نشان داد ۵ فایل در `core/common/shared` آن‌ها را ایمپورت کرده‌اند:**<br>- `modules/common/components/users/users.ts:808` (`personnelApi.getFinancialProjects`)<br>- `shared/components/user-menu/user-menu.component.ts:542` (`personnelApi.getFinancialProjects`)<br>- `modules/common/components/settings/settings.ts:120` (`dynamicFieldApi.getFields`)<br>- `core/services/import.service.ts:3` (`ItemApiService`)<br>- `shared/components/item-photo-gallery/item-photo-gallery.component.ts:6` (`ItemPhotoService`)<br>علاوه بر این، `personnel/section_guardian.py:278` مستقیماً فایل `src/app/core/api/personnel-api.service.ts` را از دیسک می‌خواند! | اگر بدون قطع این ۵ وابستگی، سرویس‌ها به `modules/*/api/` بروند، **نگهبان ۵۷ فوراً با خطای `core_to_module_imports` می‌شکند!** در **نشست ۸**، ابتدا این ۵ نقطه از طریق نقطه توسعه و انتقال `import.service` / `item-photo-gallery` به ماژول انبار حل شده و یک شیم/رجیستری تمیز جایگزین می‌شود. |
 | **۵** | **تله اسکریپت‌های نگهبان داخلی هنگام شکستن فایل‌های غول‌پیکر بک‌اند (`views.py`، `models.py`، `serializers.py`)** | ۱) فایل‌های `personnel/views.py` (**۱۱٬۰۶۸ خط**)، `personnel/models.py` (**۳٬۶۱۳ خط**)، `personnel/serializers.py` (**۱٬۶۲۰ خط**)، `inventory/views.py` (**۵٬۱۴۶ خط**) و `accounts/views.py` (**۳٬۳۳۰ خط**) مونولیت هستند.<br>۲) **تله کشف‌شده:** اسکریپت `personnel/section_guardian.py:484` فایل `personnel/views.py` را با `open()` می‌خواند و `personnel/phase_guardian_approval.py:2460,3529` فایل `accounts/views.py` را با `open()` می‌خواند! | به جای حذف فایل‌های `views.py`، `models.py` و `serializers.py`، کدهای آن‌ها به پوشه‌های دامنه (`views_domains/`، `models_domains/`، `serializers_domains/`) منتقل می‌شوند و خود فایل‌های `views.py`، `models.py` و `serializers.py` به عنوان **Barrel ظریف Re-export (زیر ۱۲۰ خط)** باقی می‌مانند و تابع کمکی خواندن پوشه در ۲ اسکریپت نگهبان نیز به‌روز می‌شود (**نشست‌های ۴، ۵ و ۶**). |
@@ -40,7 +40,7 @@
 ### ب) نقشه معماری هدف پس از اجرای ۱۲ نشست
 
 ```text
-warehouse-backend/
+backend/
 ├── core/
 │   ├── platform_core/
 │   │   ├── registry.py               # مجهز به نقاط توسعه sod_rules, role_resolvers, audit_scopes
@@ -96,7 +96,7 @@ warehouse-backend/
 ```
 
 ```text
-warehouse-front/src/app/
+frontend/src/app/
 ├── core/                             # هسته ۱۰۰٪ خالص (صفر سرویس اختصاصی ماژول، صفر مسیر API هاردکدشده ماژول)
 │   ├── api/                          # فقط APIهای پلتفرم: api, audit-api, backup-api, company-api, config-api, report-api, role-api, table-view-api, user-api
 │   ├── modules/
@@ -154,7 +154,7 @@ warehouse-front/src/app/
 require: python scripts/automation/verify_tools.py clean-tree
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_company_scope_reports_import','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; print(o[-3000:]); sys.exit(0 if r.returncode==0 and n>=21 else 1)"
+verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_company_scope_reports_import','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; print(o[-3000:]); sys.exit(0 if r.returncode==0 and n>=21 else 1)"
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): enforce company scope across all VehicleTripViewSet custom actions"
@@ -163,14 +163,14 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۱. قوانین `.agents/AGENTS.md` بخش‌های ۳، ۵ و ۱۰ و آخرین بند «اقدام بعدی» در انتهای `Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md` برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. هدف این نشست، بستن نشت دامنهٔ شرکت در اکشن‌های سفارشی `VehicleTripViewSet` در `warehouse-backend/modules/accounting/personnel/views.py` (خطوط ۶۷۹۰ تا ۷۶۲۷) است که در کامیت `86399d8` به عنوان اقدام بعدی پیش از انتشار روی `soft` ثبت شد:
+۲. هدف این نشست، بستن نشت دامنهٔ شرکت در اکشن‌های سفارشی `VehicleTripViewSet` در `backend/modules/accounting/personnel/views.py` (خطوط ۶۷۹۰ تا ۷۶۲۷) است که در کامیت `86399d8` به عنوان اقدام بعدی پیش از انتشار روی `soft` ثبت شد:
 - یک متد کمکی مشترک در `VehicleTripViewSet` (یا تابع کمکی در کنار `scope_vehicle_queryset`) تعریف کن که هم برای کوئری‌های `VehicleTripLog` (از طریق `self.get_queryset()`) و هم برای کوئری‌های `VehicleDriverProfile` (از طریق `scope_vehicle_queryset(request.user, qs, cid)`) و `MonthlyWorkPeriod` دامنهٔ شرکت فعال (`get_request_company_id(request)` با `validate_user_company_access`) و در نبود سربرگ شرکت، شرکت‌های مجاز کاربر (`get_user_allowed_companies(request.user)`) را برای کاربران غیرسوپریوزر اعمال کند.
 - هر ۸ اکشن سفارشی `VehicleTripViewSet` یعنی `get_matrix`، `bulk_save`، `get_monthly_summary`، `get_monthly_grid`، `update_day_trip`، `bulk_save_monthly_grid`، `export_monthly_excel` و `import_monthly_excel` را بررسی و اصلاح کن تا:
   1. در خواندن لیست خودروها (`VehicleDriverProfile`) و سفرها (`VehicleTripLog`) و دوره‌های کارکرد (`MonthlyWorkPeriod`)، کاربر غیرسوپریوزرِ شرکت الف هرگز نتواند خودروها یا سفرهای شرکت ب را ببیند (حتی اگر سربرگ شرکت نفرستد یا `section_id` شرکت ب را بفرستد).
   2. در نوشتن/ثبت سفر (`bulk_save`، `update_day_trip`، `bulk_save_monthly_grid`، `import_monthly_excel`)، اگر `vehicle_id` یا `section_id` متعلق به شرکتی خارج از دامنهٔ مجاز کاربر بود، با خطای ۴۰۳ یا خطای ردیف رد شود و هیچ تغییری در داده‌های شرکت دیگر ایجاد نشود.
-- در فایل `warehouse-backend/integration_tests/test_company_scope_reports_import.py` دست‌کم ۳ متد آزمون جدید اضافه کن که اثبات کنند کاربر شرکت الف بدون سربرگ شرکت (یا با ارسال شناسه خودرو/بخش شرکت ب) در اکشن‌های `matrix`، `monthly-grid`، `monthly-summary` و `bulk-save` به خودروها و سفرهای شرکت ب دسترسی ندارد و نمی‌تواند برای خودروی شرکت ب سفر ثبت کند.
+- در فایل `backend/integration_tests/test_company_scope_reports_import.py` دست‌کم ۳ متد آزمون جدید اضافه کن که اثبات کنند کاربر شرکت الف بدون سربرگ شرکت (یا با ارسال شناسه خودرو/بخش شرکت ب) در اکشن‌های `matrix`، `monthly-grid`، `monthly-summary` و `bulk-save` به خودروها و سفرهای شرکت ب دسترسی ندارد و نمی‌تواند برای خودروی شرکت ب سفر ثبت کند.
 
-۳. فرمان مجاز برای بررسی در طول کار: حداکثر سه بار اجرای `warehouse-backend\venv\Scripts\python.exe manage.py test integration_tests.test_company_scope_reports_import --noinput` در پوشه `warehouse-backend` با `PYTHONUTF8=1`.
+۳. فرمان مجاز برای بررسی در طول کار: حداکثر سه بار اجرای `backend\venv\Scripts\python.exe manage.py test integration_tests.test_company_scope_reports_import --noinput` در پوشه `backend` با `PYTHONUTF8=1`.
 
 ۴. در پایان:
 - خودبازبینی با `git diff --stat <پایه>`.
@@ -185,7 +185,7 @@ fix(scope): enforce company scope across all VehicleTripViewSet custom actions
 require: python scripts/automation/verify_tools.py clean-tree
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','accounts','warehouses','reports','platform_core','personnel','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-3000:]); sys.exit(0 if r.returncode==0 else 1)"
+verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','accounts','warehouses','reports','platform_core','personnel','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-3000:]); sys.exit(0 if r.returncode==0 else 1)"
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_54_module_independence.py
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(tests): resolve 69 personnel test errors and 3 known test failures without cross-module imports"
@@ -195,19 +195,19 @@ verify: python scripts/automation/verify_tools.py clean-tree
 ۱. قوانین `.agents/AGENTS.md` بخش‌های ۳، ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
 ۲. هدف این نشست، سبز کردن کامل مجموعه آزمون‌های بک‌اند (`integration_tests`، `accounts`، `warehouses`، `reports`، `platform_core`، `personnel`) با رفع ۶۹ خطای `NameError: Warehouse` / `AttributeError: warehouse` در `personnel` و ۳ خطای شناخته‌شده دیگر، بدون ایجاد هیچ نقض مرزی در نگهبان ۲۹ است:
-- **الف) رفع ۲ خطای `ExportWorkerTests` در `warehouse-backend/integration_tests/test_reports_integration.py`:**
+- **الف) رفع ۲ خطای `ExportWorkerTests` در `backend/integration_tests/test_reports_integration.py`:**
   - ایمپورت نسبی شکسته `from .management.commands.run_export_worker import Command` را به ایمپورت مطلق `from reports.management.commands.run_export_worker import Command` اصلاح کن.
-- **ب) رفع ۱ خطای `CompanyWarehouseIsolationTestCase` در `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py`:**
+- **ب) رفع ۱ خطای `CompanyWarehouseIsolationTestCase` در `backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py`:**
   - ایمپورت جاافتاده `from rest_framework import status` را به بالای فایل اضافه کن.
-- **ج) رفع ۶۹ خطای تست در ۶ فایل تست `warehouse-backend/modules/accounting/personnel/`:**
+- **ج) رفع ۶۹ خطای تست در ۶ فایل تست `backend/modules/accounting/personnel/`:**
   - در فایل‌های `test_attendance_approval_workflow.py`، `test_attendance_fleet_audit.py`، `test_fleet_scenarios_10_vehicles.py`، `test_google_drive.py`، `test_project_exports.py` و `tests.py`:
   - توجه کن که مدل‌های `personnel` از `_WarehouseCompatMixin` (`models.py:42-83`) استفاده می‌کنند که هر شیء دارای صفت `.id` (مانند `types.SimpleNamespace(id=1, name='انبار مرکزی تست', code='WH-01', is_active=True)`) را در آرگومان‌های `warehouse=...` و `assigned_warehouse=...` می‌پذیرد و به ستون عددی `warehouse_id` / `assigned_warehouse_id` نگاشت می‌کند.
   - در این ۶ فایل، به جای `Warehouse.objects.create(...)` از یک تابع کمکی سبک مبتنی بر `SimpleNamespace` (با شناسه‌های یکتا مانند ۱، ۲ و غیره) استفاده کن و در `tests.py` خطایی که باعث شده بود `self.warehouse` در `PersonnelTests.setUp` تعریف نشود را با تعریف `self.warehouse = SimpleNamespace(id=1, name='انبار تست', code='WH-01')` برطرف کن.
-  - اگر متد خاصی در `tests.py` یا `test_google_drive.py` واقعاً به رکورد جدول `Warehouse` در دیتابیس نیاز دارد (مثلاً کوئری مستقیم مدل `Warehouse` یا `company_of('warehouse', ...)` را تست می‌کند)، آن متد خاص را به `warehouse-backend/integration_tests/test_personnel_cross_module.py` منتقل کن تا در `modules/accounting/personnel/` هیچ ایمپورتی به `warehouses` وجود نداشته باشد و نگهبان ۲۹ با ۰ نقض سبز بماند.
+  - اگر متد خاصی در `tests.py` یا `test_google_drive.py` واقعاً به رکورد جدول `Warehouse` در دیتابیس نیاز دارد (مثلاً کوئری مستقیم مدل `Warehouse` یا `company_of('warehouse', ...)` را تست می‌کند)، آن متد خاص را به `backend/integration_tests/test_personnel_cross_module.py` منتقل کن تا در `modules/accounting/personnel/` هیچ ایمپورتی به `warehouses` وجود نداشته باشد و نگهبان ۲۹ با ۰ نقض سبز بماند.
 - **د) همگام‌سازی فایل‌های `packages/*/pyproject.toml`:**
-  - در `packages/wh-platform/pyproject.toml`، `packages/wh-warehouse/pyproject.toml` و `packages/wh-accounting/pyproject.toml`، مسیرهای `package-dir` و `where` را با ساختار جدید `warehouse-backend/core` و `warehouse-backend/modules/{warehouse,accounting}` تطبیق بده و `companies*` و `reports*` را در `wh-platform` قرار بده (و `reports*` را از `wh-warehouse` حذف کن).
+  - در `packages/wh-platform/pyproject.toml`، `packages/wh-warehouse/pyproject.toml` و `packages/wh-accounting/pyproject.toml`، مسیرهای `package-dir` و `where` را با ساختار جدید `backend/core` و `backend/modules/{warehouse,accounting}` تطبیق بده و `companies*` و `reports*` را در `wh-platform` قرار بده (و `reports*` را از `wh-warehouse` حذف کن).
 
-۳. فرمان مجاز برای بررسی در طول کار: حداکثر سه بار اجرای `warehouse-backend\venv\Scripts\python.exe manage.py test integration_tests accounts warehouses reports platform_core personnel --noinput` در پوشه `warehouse-backend` با `PYTHONUTF8=1`.
+۳. فرمان مجاز برای بررسی در طول کار: حداکثر سه بار اجرای `backend\venv\Scripts\python.exe manage.py test integration_tests accounts warehouses reports platform_core personnel --noinput` در پوشه `backend` با `PYTHONUTF8=1`.
 
 ۴. در پایان:
 - خودبازبینی با `git diff --stat <پایه>`.
@@ -220,10 +220,10 @@ fix(tests): resolve 69 personnel test errors and 3 known test failures without c
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; core=pathlib.Path('warehouse-backend/core'); s1=(core/'accounts/sod_cache_service.py').read_text(encoding='utf-8'); s2=(core/'accounts/views.py').read_text(encoding='utf-8'); s3=(core/'settings_core/google_drive_views.py').read_text(encoding='utf-8'); bad={'sod_hardcoded':'\x27app_module\x27: \x27personnel\x27' in s1,'switch_scope_hardcoded':'target_app not in (\x27warehouse\x27, \x27finance\x27)' in s2,'gdrive_personnel_hardcoded':'apps.get_model(\x27personnel\x27' in s3}; print(bad); sys.exit(1 if any(bad.values()) else 0)"
+verify: python -c "import pathlib,sys; core=pathlib.Path('backend/core'); s1=(core/'accounts/sod_cache_service.py').read_text(encoding='utf-8'); s2=(core/'accounts/views.py').read_text(encoding='utf-8'); s3=(core/'settings_core/google_drive_views.py').read_text(encoding='utf-8'); bad={'sod_hardcoded':'\x27app_module\x27: \x27personnel\x27' in s1,'switch_scope_hardcoded':'target_app not in (\x27warehouse\x27, \x27finance\x27)' in s2,'gdrive_personnel_hardcoded':'apps.get_model(\x27personnel\x27' in s3}; print(bad); sys.exit(1 if any(bad.values()) else 0)"
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','accounts','warehouses','reports','platform_core','personnel','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
+verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','accounts','warehouses','reports','platform_core','personnel','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_30_settings_core.py
 verify: python scripts/e2e/guardian_31_install_profiles.py
@@ -235,7 +235,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۱. قوانین `.agents/AGENTS.md` بخش‌های ۳، ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. هدف این نشست، حذف هاردکدهای باقی‌مانده از نام و منطق ماژول‌های `warehouse` و `accounting`/`personnel` در فایل‌های تولیدی `warehouse-backend/core/` و انتقال آن‌ها به نقطه‌های توسعه در `platform_core/registry.py` است، به طوری که رفتار فعلی در هر سه پروفایل صددرصد یکسان بماند:
+۲. هدف این نشست، حذف هاردکدهای باقی‌مانده از نام و منطق ماژول‌های `warehouse` و `accounting`/`personnel` در فایل‌های تولیدی `backend/core/` و انتقال آن‌ها به نقطه‌های توسعه در `platform_core/registry.py` است، به طوری که رفتار فعلی در هر سه پروفایل صددرصد یکسان بماند:
 - **الف) قوانین تفکیک وظایف (`core/accounts/sod_cache_service.py`):**
   - قوانین هاردکدشده `'app_module': 'personnel'` (۱۳ قانون) را به `modules/accounting/personnel/` (مثلاً `personnel/sod_rules.py` و ثبت با `contribute('sod_rules', ...)` در `PersonnelConfig.ready()`) و قوانین `'app_module': 'warehouse'` (۳ قانون) را به `modules/warehouse/warehouses/` (ثبت با `contribute('sod_rules', ...)` در `WarehousesConfig.ready()`) منتقل کن.
   - `sod_cache_service.py` قوانین را به صورت پویا از `contributions('sod_rules')` بخواند (و در صورت نیاز یک فالبک سازگار داشته باشد تا نگهبان ۴۹ `guardian_49_sod_enforcement.py` صددرصد سبز بماند؛ پیش از اتمام، `guardian_49_sod_enforcement.py` را بررسی و اجرا کن).
@@ -260,10 +260,10 @@ refactor(core): replace hardcoded module logic in backend core with registry con
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; p=pathlib.Path('warehouse-backend/modules/accounting/personnel'); m_py=p/'models.py'; s_py=p/'serializers.py'; m_dom=list((p/'models_domains').glob('*.py')) if (p/'models_domains').exists() else []; s_dom=list((p/'serializers_domains').glob('*.py')) if (p/'serializers_domains').exists() else []; m_len=len(m_py.read_text(encoding='utf-8').splitlines()) if m_py.exists() else 9999; s_len=len(s_py.read_text(encoding='utf-8').splitlines()) if s_py.exists() else 9999; big=[str(f.name) for f in m_dom+s_dom if len(f.read_text(encoding='utf-8').splitlines())>750]; print('models.py lines:',m_len,'serializers.py lines:',s_len,'m_dom:',len(m_dom),'s_dom:',len(s_dom),'big:',big); sys.exit(0 if m_len<150 and s_len<150 and len(m_dom)>=7 and len(s_dom)>=7 and not big else 1)"
+verify: python -c "import pathlib,sys; p=pathlib.Path('backend/modules/accounting/personnel'); m_py=p/'models.py'; s_py=p/'serializers.py'; m_dom=list((p/'models_domains').glob('*.py')) if (p/'models_domains').exists() else []; s_dom=list((p/'serializers_domains').glob('*.py')) if (p/'serializers_domains').exists() else []; m_len=len(m_py.read_text(encoding='utf-8').splitlines()) if m_py.exists() else 9999; s_len=len(s_py.read_text(encoding='utf-8').splitlines()) if s_py.exists() else 9999; big=[str(f.name) for f in m_dom+s_dom if len(f.read_text(encoding='utf-8').splitlines())>750]; print('models.py lines:',m_len,'serializers.py lines:',s_len,'m_dom:',len(m_dom),'s_dom:',len(s_dom),'big:',big); sys.exit(0 if m_len<150 and s_len<150 and len(m_dom)>=7 and len(s_dom)>=7 and not big else 1)"
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','personnel','integration_tests','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
+verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','personnel','integration_tests','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_54_module_independence.py
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(personnel): modularize models and serializers into domain modules with barrel exports"
@@ -272,8 +272,8 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۱. قوانین `.agents/AGENTS.md` بخش‌های ۳، ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. هدف این نشست، شکستن فایل ۳٬۶۱۳ خطی `warehouse-backend/modules/accounting/personnel/models.py` و فایل ۱٬۶۲۰ خطی `warehouse-backend/modules/accounting/personnel/serializers.py` به ماژول‌های دامنه در پوشه‌های `models_domains/` و `serializers_domains/` است، به طوری که خود فایل‌های `models.py` و `serializers.py` به عنوان Barrel ظریف (زیر ۱۵۰ خط) باقی بمانند و تمام کلاس‌ها و توابع را Re-export کنند:
-- **الف) ساخت پوشه `warehouse-backend/modules/accounting/personnel/models_domains/` با `__init__.py` و ۷ ماژول زیر (هر فایل زیر ۷۵۰ خط):**
+۲. هدف این نشست، شکستن فایل ۳٬۶۱۳ خطی `backend/modules/accounting/personnel/models.py` و فایل ۱٬۶۲۰ خطی `backend/modules/accounting/personnel/serializers.py` به ماژول‌های دامنه در پوشه‌های `models_domains/` و `serializers_domains/` است، به طوری که خود فایل‌های `models.py` و `serializers.py` به عنوان Barrel ظریف (زیر ۱۵۰ خط) باقی بمانند و تمام کلاس‌ها و توابع را Re-export کنند:
+- **الف) ساخت پوشه `backend/modules/accounting/personnel/models_domains/` با `__init__.py` و ۷ ماژول زیر (هر فایل زیر ۷۵۰ خط):**
   1. `base.py`: شامل `_WarehouseCompatQuerySet`، `_WarehouseCompatManager`، `_WarehouseCompatMixin`.
   2. `organization.py`: شامل `CompanyDocument`، `CompanyBankAccount`، `CompanyBoardMember`، `CompanyFiscalPeriod`، `FinancialProject`، `ProjectSection`، `UserSectionAssignment`.
   3. `hr.py`: شامل `InsuranceJobTitle`، `PersonnelProfile`، `PersonnelBankAccount`، `PersonnelDocument`، `PersonnelSectionAssignment`، `PersonnelChangeRequest`.
@@ -283,7 +283,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
   7. `treasury_audit.py`: شامل `Counterparty`، `ExpenseInvoice`، `PettyCashAccount`، `PettyCashTransaction`، `AccountingEvent`، تابع `emit_accounting_event`، `WorkflowAuditLog`، `CompanyGoogleDriveConfig`، `GoogleDriveSyncQueue`.
   - نکته مهم برای جنگو: چون مدل‌ها از داخل زیرپکیج `personnel.models_domains.*` تعریف می‌شوند و در `personnel/models.py` ایمپورت می‌شوند، در صورتی که جنگو نیازمند `app_label = 'personnel'` در `Meta` باشد، بررسی کن که همه مدل‌ها `app_label = 'personnel'` را به درستی داشته باشند (یا در کلاس پایه/Meta تنظیم شود) تا `makemigrations --check --dry-run` دقیقاً `No changes detected` بدهد و هیچ مایگریشنی ساخته یا تغییر داده نشود.
   - در `personnel/models.py`، تمام ۳۴ مدل، کلاس‌های پایه، `emit_accounting_event` و `Company` / `UserCompanyAccess` را Re-export کن تا `models.py` زیر ۱۵۰ خط باشد.
-- **ب) ساخت پوشه `warehouse-backend/modules/accounting/personnel/serializers_domains/` با `__init__.py` و ۷ ماژول متناظر:**
+- **ب) ساخت پوشه `backend/modules/accounting/personnel/serializers_domains/` با `__init__.py` و ۷ ماژول متناظر:**
   1. `helpers.py`: شامل `normalize_iranian_phone`، `normalize_plate`، `user_can_view_fleet_rates`.
   2. `organization.py`، `hr.py`، `fleet.py`، `attendance.py`، `payroll.py`، `treasury_audit.py`: شامل سریالایزرهای متناظر هر دامنه.
   - در `personnel/serializers.py`، تمام ۳۵ سریالایزر و توابع کمکی را Re-export کن تا `serializers.py` زیر ۱۵۰ خط باشد.
@@ -301,10 +301,10 @@ refactor(personnel): modularize models and serializers into domain modules with 
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; p=pathlib.Path('warehouse-backend/modules/accounting/personnel'); v_py=p/'views.py'; v_dom=list((p/'views_domains').glob('*.py')) if (p/'views_domains').exists() else []; v_len=len(v_py.read_text(encoding='utf-8').splitlines()) if v_py.exists() else 9999; print('views.py lines:',v_len,'views_domains files:',[f.name for f in v_dom]); sys.exit(0 if v_len<150 and len(v_dom)>=7 else 1)"
+verify: python -c "import pathlib,sys; p=pathlib.Path('backend/modules/accounting/personnel'); v_py=p/'views.py'; v_dom=list((p/'views_domains').glob('*.py')) if (p/'views_domains').exists() else []; v_len=len(v_py.read_text(encoding='utf-8').splitlines()) if v_py.exists() else 9999; print('views.py lines:',v_len,'views_domains files:',[f.name for f in v_dom]); sys.exit(0 if v_len<150 and len(v_dom)>=7 else 1)"
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','personnel','integration_tests','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
+verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','personnel','integration_tests','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_49_sod_enforcement.py
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(personnel): split 11k-line views.py into 7 domain view modules"
@@ -313,8 +313,8 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۱. قوانین `.agents/AGENTS.md` بخش‌های ۳، ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. هدف این نشست، شکستن کامل فایل ۱۱٬۰۶۸ خطی `warehouse-backend/modules/accounting/personnel/views.py` به ۷ ماژول دامنه در پوشه `warehouse-backend/modules/accounting/personnel/views_domains/` و تبدیل `personnel/views.py` به یک Barrel ظریف (زیر ۱۵۰ خط) است:
-- پوشه `warehouse-backend/modules/accounting/personnel/views_domains/` را با `__init__.py` و ۷ فایل زیر بساز:
+۲. هدف این نشست، شکستن کامل فایل ۱۱٬۰۶۸ خطی `backend/modules/accounting/personnel/views.py` به ۷ ماژول دامنه در پوشه `backend/modules/accounting/personnel/views_domains/` و تبدیل `personnel/views.py` به یک Barrel ظریف (زیر ۱۵۰ خط) است:
+- پوشه `backend/modules/accounting/personnel/views_domains/` را با `__init__.py` و ۷ فایل زیر بساز:
   1. `scope_helpers.py`: تمام توابع کمکی دامنه، دسترسی و وب‌سوکت (`user_belongs_to_company`، `ensure_scoped_assignment`، `resolve_write_company`، `resolve_import_company`، `readable_company_ids`، `is_personnel_global_auditor`، `scope_personnel_queryset`، `scope_personnel_for_user`، `ensure_record_write_scope`، `ensure_personnel_write_scope`، `is_vehicle_global_auditor`، `scope_vehicle_queryset`، `broadcast_personnel_update`، `broadcast_vehicle_update`، `log_vehicle_audit`، `normalize_attendance_date`، `validate_attendance_date_window`، `is_date_shamsi_friday`، `broadcast_attendance_updated`، `safe_int`، `_copy_payroll_submodels`، `broadcast_org_structure_updated` و هر کمکی دیگر).
   2. `org_views.py`: شامل `CompanyViewSet`، `CompanyDocumentViewSet`، `CompanyBankAccountViewSet`، `CompanyBoardMemberViewSet`، `CompanyFiscalPeriodViewSet`، `FinancialProjectViewSet`، `ProjectSectionViewSet`، `UserSectionAssignmentViewSet`.
   3. `treasury_views.py`: شامل `CounterpartyViewSet`، `ExpenseInvoiceViewSet`، `PettyCashAccountViewSet`، `PettyCashTransactionViewSet`، `WorkflowAuditLogViewSet`.
@@ -322,8 +322,8 @@ verify: python scripts/automation/verify_tools.py clean-tree
   5. `attendance_views.py`: شامل `DailyAttendanceViewSet`، `VehicleTripViewSet`، `MonthlyWorkPeriodViewSet`.
   6. `hr_views.py`: شامل `PersonnelProfileViewSet`، `PersonnelChangeRequestViewSet`.
   7. `fleet_views.py`: شامل `VehicleDriverProfileViewSet`، `VehicleChangeRequestViewSet`.
-- در `warehouse-backend/modules/accounting/personnel/views.py`، تمام ۲۲ کلاس ViewSet و تمام توابع `scope_helpers` (و نیز ماژول‌ها یا توابعی که در تست‌ها روی `personnel.views` با `unittest.mock.patch` پچ می‌شوند، مانند `export_fleet_monthly_excel` یا `calculate_monthly_fleet_settlement` یا `validate_user_company_access`) را ایمپورت و Re-export کن تا هیچ تستی که `@patch('personnel.views....')` دارد نشکند.
-- **نکته حیاتی برای نگهبان‌ها:** در `scripts/e2e/guardian_49_sod_enforcement.py` و `warehouse-backend/modules/accounting/personnel/section_guardian.py` (خط ۴۸۴) که محتوای متنی `personnel/views.py` را می‌خوانند، طوری اصلاحشان کن که علاوه بر `personnel/views.py`، محتوای تمام فایل‌های `personnel/views_domains/*.py` را هم با هم الحاق و بررسی کنند.
+- در `backend/modules/accounting/personnel/views.py`، تمام ۲۲ کلاس ViewSet و تمام توابع `scope_helpers` (و نیز ماژول‌ها یا توابعی که در تست‌ها روی `personnel.views` با `unittest.mock.patch` پچ می‌شوند، مانند `export_fleet_monthly_excel` یا `calculate_monthly_fleet_settlement` یا `validate_user_company_access`) را ایمپورت و Re-export کن تا هیچ تستی که `@patch('personnel.views....')` دارد نشکند.
+- **نکته حیاتی برای نگهبان‌ها:** در `scripts/e2e/guardian_49_sod_enforcement.py` و `backend/modules/accounting/personnel/section_guardian.py` (خط ۴۸۴) که محتوای متنی `personnel/views.py` را می‌خوانند، طوری اصلاحشان کن که علاوه بر `personnel/views.py`، محتوای تمام فایل‌های `personnel/views_domains/*.py` را هم با هم الحاق و بررسی کنند.
 
 ۳. فرمان‌های مجاز برای بررسی: `python scripts/e2e/guardian_49_sod_enforcement.py` و `python scripts/automation/verify_tools.py django-check`.
 
@@ -338,10 +338,10 @@ refactor(personnel): split 11k-line views.py into 7 domain view modules
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; inv=pathlib.Path('warehouse-backend/modules/warehouse/inventory'); acc=pathlib.Path('warehouse-backend/core/accounts'); inv_len=len((inv/'views.py').read_text(encoding='utf-8').splitlines()); acc_len=len((acc/'views.py').read_text(encoding='utf-8').splitlines()); inv_dom=list((inv/'views_domains').glob('*.py')) if (inv/'views_domains').exists() else []; acc_dom=list((acc/'views_domains').glob('*.py')) if (acc/'views_domains').exists() else []; print('inv views.py:',inv_len,'acc views.py:',acc_len,'inv_dom:',len(inv_dom),'acc_dom:',len(acc_dom)); sys.exit(0 if inv_len<120 and acc_len<120 and len(inv_dom)>=5 and len(acc_dom)>=6 else 1)"
+verify: python -c "import pathlib,sys; inv=pathlib.Path('backend/modules/warehouse/inventory'); acc=pathlib.Path('backend/core/accounts'); inv_len=len((inv/'views.py').read_text(encoding='utf-8').splitlines()); acc_len=len((acc/'views.py').read_text(encoding='utf-8').splitlines()); inv_dom=list((inv/'views_domains').glob('*.py')) if (inv/'views_domains').exists() else []; acc_dom=list((acc/'views_domains').glob('*.py')) if (acc/'views_domains').exists() else []; print('inv views.py:',inv_len,'acc views.py:',acc_len,'inv_dom:',len(inv_dom),'acc_dom:',len(acc_dom)); sys.exit(0 if inv_len<120 and acc_len<120 and len(inv_dom)>=5 and len(acc_dom)>=6 else 1)"
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','inventory','warehouses','accounts','integration_tests','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
+verify: python -c "import os,subprocess,sys; py=os.path.abspath(r'backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','inventory','warehouses','accounts','integration_tests','--noinput'],cwd='backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; print(o[-2500:]); sys.exit(0 if r.returncode==0 else 1)"
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_30_settings_core.py
 verify: python scripts/e2e/guardian_31_install_profiles.py
@@ -352,15 +352,15 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۱. قوانین `.agents/AGENTS.md` بخش‌های ۳، ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. هدف این نشست، شکستن فایل ۵٬۱۴۶ خطی `warehouse-backend/modules/warehouse/inventory/views.py` و فایل ۳٬۳۳۰ خطی `warehouse-backend/core/accounts/views.py` به ماژول‌های دامنه در `views_domains/` با حفظ Barrel در `views.py` (زیر ۱۲۰ خط) است:
-- **الف) ساخت پوشه `warehouse-backend/modules/warehouse/inventory/views_domains/` با `__init__.py` و ۵ ماژول زیر:**
+۲. هدف این نشست، شکستن فایل ۵٬۱۴۶ خطی `backend/modules/warehouse/inventory/views.py` و فایل ۳٬۳۳۰ خطی `backend/core/accounts/views.py` به ماژول‌های دامنه در `views_domains/` با حفظ Barrel در `views.py` (زیر ۱۲۰ خط) است:
+- **الف) ساخت پوشه `backend/modules/warehouse/inventory/views_domains/` با `__init__.py` و ۵ ماژول زیر:**
   1. `helpers.py`: شامل `_parse_decimal`، `_parse_date_flexible`، `_parse_positive_int`، `_clean_currency`، `_clean_invoice_type`، `_create_doc_task_snapshot`، `_soft_delete_items_cascade`، `_restore_item_photos_cascade`، `_cleanup_old_import_logs`، `ItemPagination` و `PriorityOrderingFilter`.
   2. `field_views.py`: شامل `ItemFieldDefinitionViewSet`.
   3. `item_views.py`: شامل `ItemViewSet`.
   4. `count_views.py`: شامل `CountTaskViewSet`.
   5. `doc_views.py`: شامل `DocTaskViewSet`.
   - در `inventory/views.py` تمام کلاس‌ها و توابع بالا را Re-export کن تا `inventory/views.py` زیر ۱۲۰ خط شود و `views_photos.py`، `urls.py` و تست‌ها بدون تغییر کار کنند.
-- **ب) ساخت پوشه `warehouse-backend/core/accounts/views_domains/` با `__init__.py` و ۶ ماژول زیر:**
+- **ب) ساخت پوشه `backend/core/accounts/views_domains/` با `__init__.py` و ۶ ماژول زیر:**
   1. `auth_views.py`: شامل `OptionalPageNumberPagination`، `CustomTokenObtainPairView`، `LogoutView`، `SwitchAppScopeView`.
   2. `user_views.py`: شامل `UserViewSet`، `UserTableViewStateViewSet`.
   3. `role_views.py`: شامل `CustomRoleViewSet`، `PermissionViewSet`.
@@ -368,7 +368,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
   5. `backup_views.py`: شامل `DatabaseBackupViewSet`، `SystemHealthView`، `ConcurrencyStressTestView`.
   6. `session_views.py`: شامل `DeviceHeartbeatView`، `FleetSessionsListView`، `RevokeDeviceSessionView`.
   - در `accounts/views.py` تمام کلاس‌ها، توابع و وابستگی‌های قابل patch در تست‌ها (مانند `create_database_backup` یا `restore_database_backup`) را Re-export کن تا `accounts/views.py` زیر ۱۲۰ خط شود.
-- در `warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py` (خطوط ۲۴۶۰ و ۳۵۲۹) که محتوای `accounts/views.py` را از دیسک می‌خواند، طوری اصلاح کن که علاوه بر `accounts/views.py`، فایل‌های `accounts/views_domains/*.py` را هم بخواند.
+- در `backend/modules/accounting/personnel/phase_guardian_approval.py` (خطوط ۲۴۶۰ و ۳۵۲۹) که محتوای `accounts/views.py` را از دیسک می‌خواند، طوری اصلاح کن که علاوه بر `accounts/views.py`، فایل‌های `accounts/views_domains/*.py` را هم بخواند.
 
 ۳. فرمان مجاز برای بررسی: `python scripts/automation/verify_tools.py django-check`.
 
@@ -383,12 +383,12 @@ refactor(backend): split inventory and accounts views into domain modules with b
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import json,pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); pkg=json.loads(pathlib.Path('warehouse-front/package.json').read_text(encoding='utf-8')); sp=(app/'core/services/sync-pull.service.ts').read_text(encoding='utf-8'); ct=(app/'core/modules/module-contract.ts').read_text(encoding='utf-8'); old_dirs=(app/'services').exists() or (app/'guards').exists(); has_scripts='start:accounting' in pkg.get('scripts',{}) and 'start:warehouse' in pkg.get('scripts',{}); no_hardcoded_pull='/personnel/sync/pull/' not in sp and '/inventory/sync/pull/' not in sp and 'syncConfig' in ct; print('old_dirs:',old_dirs,'has_scripts:',has_scripts,'no_hardcoded_pull:',no_hardcoded_pull); sys.exit(0 if not old_dirs and has_scripts and no_hardcoded_pull else 1)"
-verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python -c "import json,pathlib,sys; app=pathlib.Path('frontend/src/app'); pkg=json.loads(pathlib.Path('frontend/package.json').read_text(encoding='utf-8')); sp=(app/'core/services/sync-pull.service.ts').read_text(encoding='utf-8'); ct=(app/'core/modules/module-contract.ts').read_text(encoding='utf-8'); old_dirs=(app/'services').exists() or (app/'guards').exists(); has_scripts='start:accounting' in pkg.get('scripts',{}) and 'start:warehouse' in pkg.get('scripts',{}); no_hardcoded_pull='/personnel/sync/pull/' not in sp and '/inventory/sync/pull/' not in sp and 'syncConfig' in ct; print('old_dirs:',old_dirs,'has_scripts:',has_scripts,'no_hardcoded_pull:',no_hardcoded_pull); sys.exit(0 if not old_dirs and has_scripts and no_hardcoded_pull else 1)"
+verify: cd frontend && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
-verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: cd frontend && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
@@ -409,8 +409,8 @@ verify: python scripts/automation/verify_tools.py clean-tree
   - ابتدا بررسی کن کدام فایل‌ها در پروژه هنوز از `app/services/...` یا `app/guards/...` ایمپورت می‌کنند:
     - اگر `src/app/services/settings.ts`، `settings.spec.ts` و `state.service.ts` هنوز مصرف‌کننده دارند، آن‌ها را با `git mv` به `src/app/core/services/` منتقل کن و ایمپورت‌های مصرف‌کنندگانشان را به `core/services/...` تغییر بده.
     - ایمپورت‌های به شیم‌های منسوخ `services/auth.service.ts`، `services/audit.service.ts`، `services/toast.service.ts` و `guards/auth.guard.ts` را به مسیر اصلی در `core/auth/`، `core/api/` و `shared/components/toast/` تغییر بده و هر دو پوشه قدیمی `src/app/services/` و `src/app/guards/` را به طور کامل با `git rm` حذف کن.
-- **ج) بازگرداندن اسکریپت‌های `start:accounting` و `start:warehouse` در `warehouse-front/package.json`:**
-  - فایل `dev-manager-modular.bat` (خطوط ۵۸ و ۶۷) فرمان‌های `npm run start:accounting -- --port 4300` و `npm run start:warehouse -- --port 4300` را صدا می‌زند. این دو اسکریپت را به `warehouse-front/package.json` اضافه کن تا با `ng serve --proxy-config proxy.conf.json` اجرا شوند.
+- **ج) بازگرداندن اسکریپت‌های `start:accounting` و `start:warehouse` در `frontend/package.json`:**
+  - فایل `dev-manager-modular.bat` (خطوط ۵۸ و ۶۷) فرمان‌های `npm run start:accounting -- --port 4300` و `npm run start:warehouse -- --port 4300` را صدا می‌زند. این دو اسکریپت را به `frontend/package.json` اضافه کن تا با `ng serve --proxy-config proxy.conf.json` اجرا شوند.
 - **د) محاسبه پویای `shortcutsCategory.count` در `user-menu.component.ts`:**
   - مطابق یادداشت ناظر در انتهای `Supervisor_Followups` (خط ۲۸۰)، در `shared/components/user-menu/user-menu.component.ts` شمارنده هر دسته در منوی کاربر را از روی تعداد واقعی آیتم‌های همان دسته محاسبه کن تا به عدد ثابت در `module.ts` وابسته نباشد.
 
@@ -427,12 +427,12 @@ refactor(front-core): decouple sync-pull endpoints via module contract and remov
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); acc_api=list((app/'modules/accounting/api').glob('*.ts')) if (app/'modules/accounting/api').exists() else []; wh_api=list((app/'modules/warehouse/api').glob('*.ts')) if (app/'modules/warehouse/api').exists() else []; p_shim=app/'core/api/personnel-api.service.ts'; p_len=len(p_shim.read_text(encoding='utf-8').splitlines()) if p_shim.exists() else 0; print('acc_api count:',len(acc_api),'wh_api count:',len(wh_api),'core personnel-api lines:',p_len); sys.exit(0 if len(acc_api)>=5 and len(wh_api)>=8 and p_len<60 else 1)"
-verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python -c "import pathlib,sys; app=pathlib.Path('frontend/src/app'); acc_api=list((app/'modules/accounting/api').glob('*.ts')) if (app/'modules/accounting/api').exists() else []; wh_api=list((app/'modules/warehouse/api').glob('*.ts')) if (app/'modules/warehouse/api').exists() else []; p_shim=app/'core/api/personnel-api.service.ts'; p_len=len(p_shim.read_text(encoding='utf-8').splitlines()) if p_shim.exists() else 0; print('acc_api count:',len(acc_api),'wh_api count:',len(wh_api),'core personnel-api lines:',p_len); sys.exit(0 if len(acc_api)>=5 and len(wh_api)>=8 and p_len<60 else 1)"
+verify: cd frontend && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
-verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: cd frontend && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
@@ -458,7 +458,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
     5. `treasury-org-api.service.ts` (پروژه‌ها، بخش‌ها، انتساب بخش، طرف‌حساب‌ها، فاکتورهای هزینه، تنخواه، گوگل‌درایو شرکت)
   - در `src/app/modules/accounting/api/personnel-api.service.ts`، کلاس `PersonnelApiService` را به عنوان Facade تجمیع‌کننده ۵ سرویس بالا قرار بده و تمام اینترفیس‌ها را Re-export کن.
   - تمام ۳۹ فایل داخل `src/app/modules/accounting/` و فایل تست `personnel-fleet.spec.ts` را به `modules/accounting/api/personnel-api.service` متصل کن.
-  - توجه به `warehouse-backend/modules/accounting/personnel/section_guardian.py` (خط ۲۷۸): فایل `src/app/core/api/personnel-api.service.ts` را به یک شیم کوچک (زیر ۴۰ خط، بدون ایمپورت از `modules/accounting` تا نگهبان ۵۷ نقض نگیرد) تبدیل کن و در `section_guardian.py` مسیر بررسی را به پوشه `src/app/modules/accounting/api/` نیز گسترش بده.
+  - توجه به `backend/modules/accounting/personnel/section_guardian.py` (خط ۲۷۸): فایل `src/app/core/api/personnel-api.service.ts` را به یک شیم کوچک (زیر ۴۰ خط، بدون ایمپورت از `modules/accounting` تا نگهبان ۵۷ نقض نگیرد) تبدیل کن و در `section_guardian.py` مسیر بررسی را به پوشه `src/app/modules/accounting/api/` نیز گسترش بده.
 - **گام ۳ (انتقال سرویس‌های API اختصاصی انبار به `src/app/modules/warehouse/api/`):**
   - فایل‌های `count-task-api.service.ts`، `doc-task-api.service.ts`، `item-api.service.ts`، `dynamic-field-api.service.ts`، `feeding-api.service.ts`، `label-api.service.ts`، `project-api.service.ts`، `tag-api.service.ts` و `dashboard-api.service.ts` را با `git mv` به `src/app/modules/warehouse/api/` منتقل کن، آن‌ها را از `src/app/core/api/index.ts` بردار و ایمپورت‌هایشان را در فایل‌های داخل `src/app/modules/warehouse/` به‌روز کن.
 
@@ -475,8 +475,8 @@ refactor(front-api): split personnel-api into 5 domain services and move warehou
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); sync_f=app/'core/services/offline-sync.service.ts'; sync_len=len(sync_f.read_text(encoding='utf-8').splitlines()); helpers=list((app/'core/services/offline').glob('*.ts')) if (app/'core/services/offline').exists() else []; wh_stores=(app/'modules/warehouse/services/count-task-store.ts').exists() and (app/'modules/warehouse/services/doc-task-store.ts').exists(); print('offline-sync lines:',sync_len,'offline helpers:',[f.name for f in helpers],'wh_stores moved:',wh_stores); sys.exit(0 if sync_len<700 and len(helpers)>=3 and wh_stores else 1)"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python -c "import pathlib,sys; app=pathlib.Path('frontend/src/app'); sync_f=app/'core/services/offline-sync.service.ts'; sync_len=len(sync_f.read_text(encoding='utf-8').splitlines()); helpers=list((app/'core/services/offline').glob('*.ts')) if (app/'core/services/offline').exists() else []; wh_stores=(app/'modules/warehouse/services/count-task-store.ts').exists() and (app/'modules/warehouse/services/doc-task-store.ts').exists(); print('offline-sync lines:',sync_len,'offline helpers:',[f.name for f in helpers],'wh_stores moved:',wh_stores); sys.exit(0 if sync_len<700 and len(helpers)>=3 and wh_stores else 1)"
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
@@ -498,7 +498,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
     3. `offline-conflict-manager.ts`: منطق تشخیص تداخل ۴۰۹/۴۰۰، ساخت رکوردهای `syncErrors` و بازپخش (`retry` / `resolveConflict`).
     4. `offline-queue-runner.ts`: منطق پردازش ترتیبی صف، مدیریت هدرها و توکن‌های قلمرو.
   - کلاس `OfflineSyncService` در `core/services/offline-sync.service.ts` تمام متدها، سیگنال‌ها و Observableهای عمومی فعلی خود را صددرصد حفظ کند (تا هیچ کامپوننت یا تستی نشکند) و حجم فایل `offline-sync.service.ts` به زیر ۷۰۰ خط کاهش یابد.
-  - در `warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py` (خطوط ۲۲۵۱ و ۲۳۴۱) که فایل `offline-sync.service.ts` را باز می‌کند، بررسی کن که اگر به دنبال عبارت خاصی در متن فایل می‌گردد، یا آن عبارت در `offline-sync.service.ts` بماند یا اسکریپت فایل‌های `core/services/offline/*.ts` را نیز بخواند.
+  - در `backend/modules/accounting/personnel/phase_guardian_approval.py` (خطوط ۲۲۵۱ و ۲۳۴۱) که فایل `offline-sync.service.ts` را باز می‌کند، بررسی کن که اگر به دنبال عبارت خاصی در متن فایل می‌گردد، یا آن عبارت در `offline-sync.service.ts` بماند یا اسکریپت فایل‌های `core/services/offline/*.ts` را نیز بخواند.
 
 ۳. فرمان مجاز برای بررسی: یک بار `npx ng build --output-path ../scratch/ng-build-agent` و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`.
 
@@ -513,8 +513,8 @@ refactor(offline): modularize offline-sync service into focused helpers and move
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; acc=pathlib.Path('warehouse-front/src/app/modules/accounting/components'); files=[acc/'finance/employee/employee-new-personnel/employee-new-personnel.ts',acc/'finance/employee/employee-new-vehicle/employee-new-vehicle.ts',acc/'finance/employee/employee-attendance/employee-attendance.ts',acc/'organization/projects-and-sections/projects-and-sections.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; facades=[f.with_name(f.stem+'.facade.ts').exists() for f in files]; print('lines:',lines,'facades:',facades); sys.exit(0 if all(l<1500 for l in lines) and all(facades) else 1)"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python -c "import pathlib,sys; acc=pathlib.Path('frontend/src/app/modules/accounting/components'); files=[acc/'finance/employee/employee-new-personnel/employee-new-personnel.ts',acc/'finance/employee/employee-new-vehicle/employee-new-vehicle.ts',acc/'finance/employee/employee-attendance/employee-attendance.ts',acc/'organization/projects-and-sections/projects-and-sections.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; facades=[f.with_name(f.stem+'.facade.ts').exists() for f in files]; print('lines:',lines,'facades:',facades); sys.exit(0 if all(l<1500 for l in lines) and all(facades) else 1)"
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
@@ -551,8 +551,8 @@ refactor(accounting-ui): extract facade services and helpers for 4 large account
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; wh=pathlib.Path('warehouse-front/src/app/modules/warehouse/components'); files=[wh/'customs/customs.ts',wh/'counter/counter-dashboard/counter-dashboard.ts',wh/'supervisor/supervisor-dashboard/supervisor-dashboard.ts',wh/'manager-review/manager-review.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; facades=[f.with_name(f.stem+'.facade.ts').exists() for f in files]; print('lines:',lines,'facades:',facades); sys.exit(0 if all(l<1450 for l in lines) and all(facades) else 1)"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python -c "import pathlib,sys; wh=pathlib.Path('frontend/src/app/modules/warehouse/components'); files=[wh/'customs/customs.ts',wh/'counter/counter-dashboard/counter-dashboard.ts',wh/'supervisor/supervisor-dashboard/supervisor-dashboard.ts',wh/'manager-review/manager-review.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; facades=[f.with_name(f.stem+'.facade.ts').exists() for f in files]; print('lines:',lines,'facades:',facades); sys.exit(0 if all(l<1450 for l in lines) and all(facades) else 1)"
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
@@ -588,12 +588,12 @@ refactor(warehouse-ui): extract facade services and helpers for 4 large warehous
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; cm=pathlib.Path('warehouse-front/src/app/modules/common/components'); files=[cm/'operations/companies/companies.ts',cm/'users/users.ts',cm/'audit/audit.ts',cm/'id-cards/id-cards.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; facades=[f.with_name(f.stem+'.facade.ts').exists() for f in files]; print('lines:',lines,'facades:',facades); sys.exit(0 if all(l<1500 for l in lines) and all(facades) else 1)"
-verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python -c "import pathlib,sys; cm=pathlib.Path('frontend/src/app/modules/common/components'); files=[cm/'operations/companies/companies.ts',cm/'users/users.ts',cm/'audit/audit.ts',cm/'id-cards/id-cards.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; facades=[f.with_name(f.stem+'.facade.ts').exists() for f in files]; print('lines:',lines,'facades:',facades); sys.exit(0 if all(l<1500 for l in lines) and all(facades) else 1)"
+verify: cd frontend && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
-verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: cd frontend && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd frontend && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_modularization.py
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
@@ -638,7 +638,7 @@ refactor(platform-ui): extract facades for common components and update architec
 
 - **نشست‌های ۱ و ۲ قدیم حذف شدند.** دامنهٔ شرکت در اکشن‌های `VehicleTripViewSet` پیش‌تر در `d189c44`، `342b305`، `d985774` و `844af09` بسته شده بود. آزمون‌های personnel هم در `685d22e` و `d5c206a` درست شده بودند. فقط همگام‌سازی `packages/*/pyproject.toml` باز بود و به نشست ۱ تازه رفت.
 - **بدون شماره خط.** متن تسک‌ها فقط نام نماد و فایل دارد.
-- **«تلهٔ» یافتهٔ ۵ وجود ندارد.** `BASE_DIR` در `personnel/section_guardian.py` و `personnel/phase_guardian_approval.py` به `warehouse-backend` می‌رسد. پس مسیرهایی که این دو می‌خوانند از پیش از جابه‌جایی ماژولار وجود ندارند. این دو فایل در این صف دست نمی‌خورند.
+- **«تلهٔ» یافتهٔ ۵ وجود ندارد.** `BASE_DIR` در `personnel/section_guardian.py` و `personnel/phase_guardian_approval.py` به `backend` می‌رسد. پس مسیرهایی که این دو می‌خوانند از پیش از جابه‌جایی ماژولار وجود ندارند. این دو فایل در این صف دست نمی‌خورند.
 - **`guardian_49_sod_enforcement.py` وجود ندارد.** نگهبان ۴۹ مخزن `guardian_49_users_backend_n1.py` است. خط‌های verify آن برداشته شدند.
 - **Barrel فقط با import صریح.** `import *` نام‌های آغازشده با `_` را صادر نمی‌کند. ابزار تازهٔ `verify_tools.py module-names` این را می‌سنجد: هر نامی که ماژول روی پایه تعریف کرده و هر نامی که بقیهٔ بک‌اند از آن import می‌کند، باید هنوز در دسترس باشد.
 - **جابه‌جایی مکانیکی.** فایل‌های بزرگ با اسکریپت یک‌بارمصرف `ast` در `scratch/` و بایت‌به‌بایت شکسته می‌شوند، نه با بازنویسی.

@@ -6,7 +6,7 @@
 > [!NOTE]
 > شماره ردیف‌ها همان شماره جدول‌های بخش ۴ طرح است. «کوچ» یعنی جایگزینی نشانه‌گذاری دستی با جعبه‌ابزار بخش ۲ و آیکون‌های فرهنگ بخش ۳. هر گام در یک نشست انجام می‌شود و پیش از تیک خوردن باید «معیار پایان هر گام» (بند ۵ طرح) را کامل بگذراند: سیاهه، بیلد، نگهبان‌های ۵۲ و ۵۵ (با ثبت عدد تازه خط مبنا)، تست‌ها، `zero_scroll_probe.js`، `ui-reviewer`، commit و یادداشت تحویل.
 >
-> **بیلد بررسی** (از پوشه `warehouse-front`): `npx ng build --output-path ../scratch/ng-build-check > ../scratch/logs/ergonomics-build.log 2>&1`؛ در گام‌های ۰، ۱ و ۱۳ همچنین با `--configuration accounting-only` و `--configuration warehouse-only`.
+> **بیلد بررسی** (از پوشه `frontend`): `npx ng build --output-path ../scratch/ng-build-check > ../scratch/logs/ergonomics-build.log 2>&1`؛ در گام‌های ۰، ۱ و ۱۳ همچنین با `--configuration accounting-only` و `--configuration warehouse-only`.
 
 - [x] **گام ۰: فرهنگ آیکون و پایه**
   - [x] `shared/icons/semantic-icons.ts`: `ACTION_ICONS`، `STATUS_ICONS`، `PLATFORM_ENTITY_ICONS` با `satisfies Record<string, IconName>`

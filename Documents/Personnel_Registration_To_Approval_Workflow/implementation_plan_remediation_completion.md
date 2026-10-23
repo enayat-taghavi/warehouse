@@ -8,10 +8,10 @@
 هدف این طرح، تکمیل باقی‌ماندهٔ گام‌های ۵ و ۶ از سند [remediation_plan_defects.md](file:///E:/warehouse%20project/Documents/Personnel_Registration_To_Approval_Workflow/remediation_plan_defects.md) بر مبنای آخرین وضعیت سورس‌کد پروژه و گزارش سه‌گانهٔ بازبین‌ها (Data Loss, Tenant Scope, UI) است.
 
 ### ارزیابی مجدد و تصحیح یافته‌های پیشین (Self-Correction & Nuances):
-1. **خطای نحوی سطر ۲۰۸۹ در [`personnel/views.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/views.py):**
+1. **خطای نحوی سطر ۲۰۸۹ در [`personnel/views.py`](file:///E:/warehouse%20project/backend/personnel/views.py):**
    در آخرین ویرایش کلاد کد هنگام اعمال فیلتر قلمرو شرکت روی ایمپورت اکسل، علامت دو نقطه (`:`) مربوط به `for` اشتباهاً در انتهای کامنت فارسی قرار گرفته است. این موضوع مانع کامپایل و اجرای تمام دستورات `manage.py` شده است و باید در اولویت اول اصلاح شود.
 2. **بررسی مشکل «IR دوبل» کشف‌شده توسط بازبین ظاهر (UI Reviewer):**
-   در کامپوننت [`employee-new-personnel.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts) سطر ۱۸۸۱، هنگام پر کردن فرم از پروندهٔ موجود در صورت عدم وجود اعتبارسنجی زنده، مقدار خام `prim.sheba_number` (شامل پیشوند IR) مستقیماً به `shebaDigitsDisplay` اختصاص داده می‌شود. از آنجا که تمپلیت خود دارای بج ثابت `IR` است، مقدار به شکل `IR IR...` نمایش داده می‌شود که در فاز اول اصلاح خواهد شد.
+   در کامپوننت [`employee-new-personnel.ts`](file:///E:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts) سطر ۱۸۸۱، هنگام پر کردن فرم از پروندهٔ موجود در صورت عدم وجود اعتبارسنجی زنده، مقدار خام `prim.sheba_number` (شامل پیشوند IR) مستقیماً به `shebaDigitsDisplay` اختصاص داده می‌شود. از آنجا که تمپلیت خود دارای بج ثابت `IR` است، مقدار به شکل `IR IR...` نمایش داده می‌شود که در فاز اول اصلاح خواهد شد.
 3. **وضعیت مهاجرت‌های دیتابیس:**
    مهاجرت‌های `accounts.0006_perm_delete_personnel_nomovement` و `personnel.0031` و `personnel.0032` پیش‌تر اعمال شده‌اند؛ اما طبق استاندارد پروژه پیش از انتشار نهایی گام ۶، باید یک نسخه پشتیبان تمیز توسط سرویس بک‌آپ سیستم تولید شود.
 4. **وضعیت ۳۷ تسک چک‌لیست [`task_personnel_lifecycle.md`](file:///E:/warehouse%20project/Documents/Personnel_Registration_To_Approval_Workflow/task_personnel_lifecycle.md):**
@@ -50,14 +50,14 @@ graph TD
 
 ### فاز ۱: رفع خطای نحوی و اصلاحات بازبین‌ها (Fixes & Code Polish)
 
-#### ۱. [MODIFY] [`warehouse-backend/personnel/views.py`](file:///E:/warehouse%20project/warehouse-backend/personnel/views.py)
+#### ۱. [MODIFY] [`backend/personnel/views.py`](file:///E:/warehouse%20project/backend/personnel/views.py)
 اصلاح سطر ۲۰۸۹ جهت قرارگیری دونقطه قبل از کامنت پایتون:
 ```diff
 -        for prof in existing_qs.order_by('company_id', 'id')  # در Postgres مقدار تهی در ترتیب صعودی آخر می‌آید:
 +        for prof in existing_qs.order_by('company_id', 'id'):  # در Postgres مقدار تهی در ترتیب صعودی آخر می‌آید
 ```
 
-#### ۲. [MODIFY] [`warehouse-front/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts)
+#### ۲. [MODIFY] [`frontend/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts`](file:///E:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts)
 اصلاح مقدار `shebaDigitsDisplay` در سطر ۱۸۸۱ جهت جلوگیری از نمایش دوگانهٔ پیشوند IR:
 ```diff
 -      this.shebaDigitsDisplay = this.shebaValidationResult.formattedDigits || prim.sheba_number;
@@ -70,7 +70,7 @@ graph TD
 
 1. اجرای دستور سلامت‌سنجی بدون خطا:
    ```powershell
-   cd "E:\warehouse project\warehouse-backend"
+   cd "backend"
    .\venv\Scripts\python.exe manage.py check
    ```
 2. اجرای ۴۹ آزمون رگرسیون اختصاصی طرح رفع نواقص (پوشش کامل DEF-01 تا DEF-27):
@@ -88,7 +88,7 @@ graph TD
 
 1. بررسی کامپایل تایپ‌اسکریپت فرانت‌اند:
    ```powershell
-   cd "E:\warehouse project\warehouse-front"
+   cd "frontend"
    npx tsc -p tsconfig.app.json --noEmit
    ```
 2. اجرای ۴ فایل spec مربوط به این چرخه:
@@ -127,7 +127,7 @@ graph TD
 3. **راه‌اندازی مجدد سرور Daphne در تب اختصاصی ویندوز ترمینال:**
    بستن پروسهٔ قبلی پورت ۸۰۰۰ و اجرای دستور استاندارد:
    ```powershell
-   MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+   MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"
    ```
 4. **بررسی صحت دسترسی و سلامت سیستم:**
    بررسی دریافت کد HTTP 200 از نشانی‌های:

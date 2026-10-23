@@ -9,14 +9,14 @@
 ### [کامپوننت دیالوگ سراسری]
 این تغییر باعث می‌شود که متد `ConfirmDialog` امکان پردازش تگ‌های HTML در متن پیغام‌ها را پیدا کند.
 
-#### [MODIFY] [confirm-dialog.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts)
+#### [MODIFY] [confirm-dialog.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts)
 - **شرح تغییر:** تغییر ساختار رندر پیغام دیالوگ از حالت متنی به `[innerHTML]`.
 - **جزئیات:** خط مربوط به چاپ متن پیام (`{{ config()?.message }}`) تغییر یافته و از Property Binding مربوط به `[innerHTML]` استفاده خواهد شد تا تگ‌های `<span class="...">` که به آن پاس می‌دهیم، به صورت HTML رندر شوند.
 
 ### [فرم تخصیص کالا]
 این فرم وظیفه‌ی ارسال پیغام HTML‌دار را بر عهده خواهد گرفت.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - **شرح تغییر:** استایل‌دهی مستقیم با استفاده از کلاس‌های Tailwind CSS به نقش‌ها.
 - **جزئیات:** در متد `executeFieldDispatch` متغیرهای نام‌ها با رنگ‌های مشخص (مثلاً آبی برای انبارگردان، سبز برای سرپرست، و بنفش برای مدیر) کپسوله می‌شوند.
   - نمونه: `<span class="font-black text-blue-600">نام انبارگردان</span>`

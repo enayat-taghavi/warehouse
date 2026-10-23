@@ -37,7 +37,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-APP_PREFIX = "warehouse-front/src/app/"
+APP_PREFIX = "frontend/src/app/"
 REGISTRY = APP_PREFIX + "shared/icons/icon-registry.ts"
 SEMANTIC = APP_PREFIX + "shared/icons/semantic-icons.ts"
 NET_DELETION_WARN = 80
@@ -74,7 +74,7 @@ def git(*args):
 
 
 class Tree:
-    """متن فایل‌های warehouse-front/src/app از درخت کاری (ref=None) یا از یک commit."""
+    """متن فایل‌های frontend/src/app از درخت کاری (ref=None) یا از یک commit."""
 
     def __init__(self, ref=None):
         self.ref = ref

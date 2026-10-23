@@ -1,6 +1,6 @@
 /**
  * مجوزهای ماژول حسابداری در صفحهٔ نقش‌ها.
- * کدها همان PERMISSION_CODENAMES مانیفست بک‌اند (`warehouse-backend/modules/accounting/module.py`)؛ نگهبان ۵۷ برابری را می‌سنجد.
+ * کدها همان PERMISSION_CODENAMES مانیفست بک‌اند (`backend/modules/accounting/module.py`)؛ نگهبان ۵۷ برابری را می‌سنجد.
  */
 export const ACCOUNTING_PERMISSION_CODENAMES: string[] = [
   'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance', 'view_sys_payroll',

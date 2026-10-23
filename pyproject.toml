@@ -43,17 +43,17 @@ accounting = "personnel.module_spec:SPEC"
 
 [tool.setuptools.dynamic]
 # فهرست وابستگی‌ها تکرار نمی‌شود تا از واگرایی با requirements.txt جلوگیری شود.
-dependencies = { file = ["warehouse-backend/requirements.txt"] }
+dependencies = { file = ["backend/requirements.txt"] }
 
 [tool.setuptools]
-package-dir = { "" = "warehouse-backend", accounts = "warehouse-backend/core/accounts", common = "warehouse-backend/core/common", communications = "warehouse-backend/core/communications", companies = "warehouse-backend/core/companies", notifications = "warehouse-backend/core/notifications", platform_core = "warehouse-backend/core/platform_core", reports = "warehouse-backend/core/reports", settings_core = "warehouse-backend/core/settings_core", warehouses = "warehouse-backend/modules/warehouse/warehouses", inventory = "warehouse-backend/modules/warehouse/inventory", personnel = "warehouse-backend/modules/accounting/personnel" }
+package-dir = { "" = "backend", accounts = "backend/core/accounts", common = "backend/core/common", communications = "backend/core/communications", companies = "backend/core/companies", notifications = "backend/core/notifications", platform_core = "backend/core/platform_core", reports = "backend/core/reports", settings_core = "backend/core/settings_core", warehouses = "backend/modules/warehouse/warehouses", inventory = "backend/modules/warehouse/inventory", personnel = "backend/modules/accounting/personnel" }
 
 [tool.setuptools.packages.find]
 where = [
-    "warehouse-backend",
-    "warehouse-backend/core",
-    "warehouse-backend/modules/warehouse",
-    "warehouse-backend/modules/accounting",
+    "backend",
+    "backend/core",
+    "backend/modules/warehouse",
+    "backend/modules/accounting",
 ]
 include = [
     "accounts*",

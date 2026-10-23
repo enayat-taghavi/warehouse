@@ -24,7 +24,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-STRATEGY_TS = REPO_ROOT / "warehouse-front" / "src" / "app" / "core" / "strategies" / "custom-route-reuse-strategy.ts"
+STRATEGY_TS = REPO_ROOT / "frontend" / "src" / "app" / "core" / "strategies" / "custom-route-reuse-strategy.ts"
 
 
 def test_route_reuse_keys():

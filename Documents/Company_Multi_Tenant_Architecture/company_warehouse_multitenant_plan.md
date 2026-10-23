@@ -41,7 +41,7 @@
 در اپلیکیشن `warehouses`، مدل `Warehouse` به شناسه شرکت مالک مجهز می‌گردد:
 
 ```python
-# warehouse-backend/warehouses/models.py
+# backend/warehouses/models.py
 
 class Warehouse(models.Model):
     # ... سایر فیلدهای موجود حفظ می‌شوند ...
@@ -69,7 +69,7 @@ class Warehouse(models.Model):
 در اپلیکیشن `personnel`، مدل `Company` به فیلد ماژولار بودن انبارداری مجهز می‌گردد:
 
 ```python
-# warehouse-backend/personnel/models.py
+# backend/personnel/models.py
 
 class Company(models.Model):
     # ... فیلدهای کد، نام، شناسه ملی، لوگو و غیره ...
@@ -83,7 +83,7 @@ class Company(models.Model):
 در فایل `warehouses/views.py`، متد `get_queryset` در `WarehouseViewSet` بر اساس شرکت فعال فیلتر می‌گردد:
 
 ```python
-# warehouse-backend/warehouses/views.py
+# backend/warehouses/views.py
 
 class WarehouseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
@@ -239,16 +239,16 @@ graph TD
 
 | ردیف | مسیر فایل (File Path) | لایه | شرح نقش و تغییرات |
 | :---: | :--- | :---: | :--- |
-| ۱ | `warehouse-backend/warehouses/models.py` | بک‌اند | افزودن فیلدهای `company_id` و `company_name` به مدل `Warehouse` |
-| ۲ | `warehouse-backend/personnel/models.py` | بک‌اند | افزودن فیلد `has_warehouse_module` به مدل `Company` |
-| ۳ | `warehouse-backend/warehouses/views.py` | بک‌اند | فیلتر کوئری‌ست انبارها بر مبنای `HTTP_X_COMPANY_ID` و انتساب خودکار شرکت در `perform_create` |
-| ۴ | `warehouse-backend/warehouses/serializers.py` | بک‌اند | ارائه فیلدهای شرکت در خروجی انبارها |
-| ۵ | `warehouse-backend/personnel/serializers.py` | بک‌اند | ارائه فیلد `has_warehouse_module` در سریالایزر شرکت |
-| ۶ | `warehouse-front/src/app/routes.ts` | فرانت‌اند | انتقال روت به `/app/operations/companies` و تنظیم ریدایرکت روت قبلی |
-| ۷ | `warehouse-front/src/app/components/operations/companies/*` | فرانت‌اند | استقرار کامپوننت پورتال شرکت‌ها در مرکز عملیات و افزودن فیلد ماژول انبار |
-| ۸ | `warehouse-front/src/app/shared/components/app-role-switcher/*` | فرانت‌اند | مخفی‌سازی تب انبارگردانی در صورت `has_warehouse_module === false` |
-| ۹ | `warehouse-front/src/app/core/services/active-company.service.ts` | فرانت‌اند | ارائه استیت و هلپر اعتبارسنجی ماژول انبارداری شرکت فعال |
-| ۱۰ | `warehouse-front/src/app/components/layout/layout.*` | فرانت‌اند | یکپارچه‌سازی سایدبار مرکز عملیات و هندل کردن ویزارد راه‌اندازی اولیه |
+| ۱ | `backend/warehouses/models.py` | بک‌اند | افزودن فیلدهای `company_id` و `company_name` به مدل `Warehouse` |
+| ۲ | `backend/personnel/models.py` | بک‌اند | افزودن فیلد `has_warehouse_module` به مدل `Company` |
+| ۳ | `backend/warehouses/views.py` | بک‌اند | فیلتر کوئری‌ست انبارها بر مبنای `HTTP_X_COMPANY_ID` و انتساب خودکار شرکت در `perform_create` |
+| ۴ | `backend/warehouses/serializers.py` | بک‌اند | ارائه فیلدهای شرکت در خروجی انبارها |
+| ۵ | `backend/personnel/serializers.py` | بک‌اند | ارائه فیلد `has_warehouse_module` در سریالایزر شرکت |
+| ۶ | `frontend/src/app/routes.ts` | فرانت‌اند | انتقال روت به `/app/operations/companies` و تنظیم ریدایرکت روت قبلی |
+| ۷ | `frontend/src/app/components/operations/companies/*` | فرانت‌اند | استقرار کامپوننت پورتال شرکت‌ها در مرکز عملیات و افزودن فیلد ماژول انبار |
+| ۸ | `frontend/src/app/shared/components/app-role-switcher/*` | فرانت‌اند | مخفی‌سازی تب انبارگردانی در صورت `has_warehouse_module === false` |
+| ۹ | `frontend/src/app/core/services/active-company.service.ts` | فرانت‌اند | ارائه استیت و هلپر اعتبارسنجی ماژول انبارداری شرکت فعال |
+| ۱۰ | `frontend/src/app/components/layout/layout.*` | فرانت‌اند | یکپارچه‌سازی سایدبار مرکز عملیات و هندل کردن ویزارد راه‌اندازی اولیه |
 
 ---
 

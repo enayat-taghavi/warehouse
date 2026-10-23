@@ -46,16 +46,16 @@
 
 ### تغییرات دقیق فایل‌ها
 
-#### [MODIFY] [accounts/models.py](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py)
+#### [MODIFY] [accounts/models.py](file:///e:/warehouse%20project/backend/accounts/models.py)
 افزودن فیلد `password_changed_at = models.DateTimeField(auto_now_add=True)`.
 
-#### [NEW] [accounts/authentication.py](file:///e:/warehouse%20project/warehouse-backend/accounts/authentication.py)
+#### [NEW] [accounts/authentication.py](file:///e:/warehouse%20project/backend/accounts/authentication.py)
 ایجاد این فایل برای میزبانی لاجیک سفارشی چک کردنِ اعتبار زمانی توکن‌ها.
 
-#### [MODIFY] [settings.py](file:///e:/warehouse%20project/warehouse-backend/config/settings.py)
+#### [MODIFY] [settings.py](file:///e:/warehouse%20project/backend/config/settings.py)
 به‌روزرسانی کلید `DEFAULT_AUTHENTICATION_CLASSES`.
 
-#### [MODIFY] [change-password.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/change-password/change-password.ts)
+#### [MODIFY] [change-password.ts](file:///e:/warehouse%20project/frontend/src/app/components/change-password/change-password.ts)
 حذف `passwordFieldType` مشترک و جایگزین کردن آن با متغیرهای اختصاصی برای هر فیلد و انجام به‌روزرسانی دستی ویو (`this.cdr.detectChanges()`).
 
 ## Verification Plan

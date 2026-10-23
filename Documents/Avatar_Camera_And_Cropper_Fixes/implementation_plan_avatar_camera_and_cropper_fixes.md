@@ -22,35 +22,35 @@
 ## ۲. تغییرات پیشنهادی به تفکیک فایل‌ها (Proposed Changes)
 
 ### الف) کانفیگ پروکسی و سرور فرانت‌اند (Proxy & Media Routing)
-#### [MODIFY] [proxy.conf.json](file:///e:/warehouse%20project/warehouse-front/proxy.conf.json)
+#### [MODIFY] [proxy.conf.json](file:///e:/warehouse%20project/frontend/proxy.conf.json)
 - افزودن روت `"/media"` با هدف `http://127.0.0.1:8000` و `changeOrigin: true`.
 
-#### [MODIFY] [server.js](file:///e:/warehouse%20project/warehouse-front/server.js)
+#### [MODIFY] [server.js](file:///e:/warehouse%20project/frontend/server.js)
 - به‌روزرسانی `pathFilter` برای عبور دادن تمامی درخواست‌های با پیشوند `/media` به بک‌اند جنگو.
 
 ---
 
 ### ب) کامپوننت مودال برش و دوربین (Avatar Cropper Modal)
-#### [MODIFY] [avatar-cropper-modal.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)
+#### [MODIFY] [avatar-cropper-modal.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)
 - تزریق `ChangeDetectorRef` جهت همگام‌سازی فوری DOM.
 - اصلاح `startCamera`: اجرای `video.play()` با `onloadedmetadata` و رفع ارورهای احتمالی.
 - اصلاح `captureFromCamera`: بررسی `video.readyState` و ابعاد معتبر، رسم فریم روی Canvas موقت، تغییر `activeMode = 'crop'` و اجرای `cdr.detectChanges()` قبل از `drawCanvas`.
 - بازنویسی کامل سیستم Pan با Pointer Events (`onPointerDown`, `onPointerMove`, `onPointerUp`) با `setPointerCapture` و `releasePointerCapture`.
 - افزودن متدهای `nudge(dx, dy)` جهت جابه‌جایی دقیق با دکمه‌های جهت‌دار.
 
-#### [MODIFY] [avatar-cropper-modal.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.html)
+#### [MODIFY] [avatar-cropper-modal.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.html)
 - افزودن ویژگی‌های `autoplay playsinline muted` به تگ `<video>`.
 - اتصال رویدادهای `pointerdown`, `pointermove`, `pointerup`, `pointercancel` به Canvas.
 - افزودن دکمه‌های جابه‌جایی چهارگانه (⬅️، ➡️، ⬆️، ⬇️) در کنترل‌بار پایین جهت کاربری آسان.
 
-#### [MODIFY] [avatar-cropper-modal.css](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.css)
+#### [MODIFY] [avatar-cropper-modal.css](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.css)
 - افزودن `touch-action: none; user-select: none;` به بوم نقاشی و محفظه آن.
 - استایل‌دهی دکمه‌های جهت‌دار جابه‌جایی عکس.
 
 ---
 
 ### ج) به‌روزرسانی زنده در هدر و لیست کاربران (Live State & Cache Invalidation)
-#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts) & [auth.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.service.ts)
+#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts) & [auth.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.service.ts)
 - اطمینان از افزودن پارامتر زمان (`?t=...`) به URL آواتار تا مرورگر کش قدیمی را نخواند و تصویر بلافاصله به‌روزرسانی شود.
 
 ---

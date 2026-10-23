@@ -9,7 +9,7 @@
 ### N1 — وضعیت نامعتبر `CLAIMED` در بازگردانی تسک اسناد
 * **توضیح به زبان ساده:** در زمان بازگردانی ایمپورت، سیستم برای برگرداندن وضعیت تسک به قبل، مستقیماً `last_d_hist.action_type` را در `d_task.status` قرار می‌داد. اگر قبل از ایمپورت، کارشناس تسک را «بر عهده گرفته» بود (`claim_tasks`)، نوع عملیات در تاریخچه `CLAIMED` ثبت شده بود؛ در حالی که در مدل `DocTask.STATUS_CHOICES` وضعیتی به نام `CLAIMED` وجود ندارد و تسک در وضعیت نامعتبر قرار گرفته و از کارتابل‌ها غیب می‌شد.
 * **نتیجه بررسی:** کاملاً **درست و دقیق** بود.
-* **حل قطعی:** در تابع [revert_import](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L2485)، سیستم ابتدا مقدار معتبر وضعیت را از `last_d_hist.data_snapshot.get('status')` استخراج می‌کند و در صورتی که `action_type` جزو گزینه‌های مجاز مدل (`DocTask.STATUS_CHOICES`) نباشد، به طور خودکار به `PENDING_DOC` برمی‌گردد. آزمون واحد اختصاصی `test_revert_import_claimed_history_restores_valid_status_not_claimed` صحت این منطق را تایید کرد.
+* **حل قطعی:** در تابع [revert_import](file:///e:/warehouse%20project/backend/inventory/views.py#L2485)، سیستم ابتدا مقدار معتبر وضعیت را از `last_d_hist.data_snapshot.get('status')` استخراج می‌کند و در صورتی که `action_type` جزو گزینه‌های مجاز مدل (`DocTask.STATUS_CHOICES`) نباشد، به طور خودکار به `PENDING_DOC` برمی‌گردد. آزمون واحد اختصاصی `test_revert_import_claimed_history_restores_valid_status_not_claimed` صحت این منطق را تایید کرد.
 
 ### N2 — حذف فیزیکی و نامتقارن `DocTask` در زمان بازگردانی
 * **توضیح به زبان ساده:** در زمان بازگردانی ردیف‌های ایجادشده (`create`)، تسک شمارش صرفاً حذف نرم (`is_deleted=True`) می‌شد اما تسک اسناد با `delete()` فیزیکی به طور کامل از دیتابیس پاک و تاریخچه آن نیز `cascade` می‌شد.
@@ -19,14 +19,14 @@
 ### N3 — جا افتادن 'رسمی' در نگاشت نوع فاکتور و ارز
 * **توضیح به زبان ساده:** در مدل `DocTask` یکی از چهار گزینه معتبر نوع فاکتور `formal` (رسمی/مالیاتی) است؛ اما در دیکشنری نگاشت فقط داخلی، خارجی و امانی وجود داشت و واژه «رسمی» خام ذخیره می‌شد.
 * **نتیجه بررسی:** کاملاً **درست و دقیق** بود.
-* **حل قطعی:** توابع `_clean_invoice_type` و `_clean_currency` در [views.py:1695-1730](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py#L1695) بازنویسی شدند. واژه‌های «رسمی»، «مالیاتی» و «formal» مستقیماً به کد استاندارد `formal` نگاشت می‌شوند و کدهای ارزی بین‌المللی (`USD`, `EUR`, `IRR`, `AED`) مستقیماً پذیرفته و اعتبارسنجی می‌شوند.
+* **حل قطعی:** توابع `_clean_invoice_type` و `_clean_currency` در [views.py:1695-1730](file:///e:/warehouse%20project/backend/inventory/views.py#L1695) بازنویسی شدند. واژه‌های «رسمی»، «مالیاتی» و «formal» مستقیماً به کد استاندارد `formal` نگاشت می‌شوند و کدهای ارزی بین‌المللی (`USD`, `EUR`, `IRR`, `AED`) مستقیماً پذیرفته و اعتبارسنجی می‌شوند.
 
 ### N4 — عدم فیلتر رکوردهای قدیمی 'approved' در توزیع و مغایرت KPI
 * **توضیح به زبان ساده:** در فرانت‌اند وضعیت اسناد قبلاً `approved` و اکنون `done` بود؛ در صفحه توزیع فیلتر فقط `done` ارسال می‌کرد و اقلام قدیمی تاییدشده دیده نمی‌شدند.
 * **نتیجه بررسی:** کاملاً **درست و دقیق** بود.
 * **حل قطعی:**
-  1. مایگریشن رو به جلو [0029_normalize_doc_status_to_done.py](file:///e:/warehouse%20project/warehouse-backend/inventory/migrations/0029_normalize_doc_status_to_done.py) ایجاد و اعمال شد که تمام رکوردهای قدیمی دیتابیس با `doc_status='approved'` را به صورت یکنواخت به `'done'` تبدیل کرد.
-  2. در فرانت‌اند [dispatch.ts:565-585](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts#L565) در زمان ارسال فیلتر `docStatus` یا `doc_status`، در صورتی که مقدار شامل `done` باشد، به صورت خودکار `approved` نیز اضافه می‌شود تا سازگاری دوطرفه حفظ شود.
+  1. مایگریشن رو به جلو [0029_normalize_doc_status_to_done.py](file:///e:/warehouse%20project/backend/inventory/migrations/0029_normalize_doc_status_to_done.py) ایجاد و اعمال شد که تمام رکوردهای قدیمی دیتابیس با `doc_status='approved'` را به صورت یکنواخت به `'done'` تبدیل کرد.
+  2. در فرانت‌اند [dispatch.ts:565-585](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts#L565) در زمان ارسال فیلتر `docStatus` یا `doc_status`، در صورتی که مقدار شامل `done` باشد، به صورت خودکار `approved` نیز اضافه می‌شود تا سازگاری دوطرفه حفظ شود.
 
 ### N5 — انتخاب تاریخچه ماقبل ایمپورت و رفع وابستگی به کاربر یا زمان نادقیق
 * **توضیح به زبان ساده:** فیلتر کردن بر اساس کاربر نادقیق بود؛ فیلتر بر اساس زمان کلاک نیز در تراکنش‌های هم‌زمان به دلیل ایجاد ردیف‌ها درون یک بلاک `atomic` ممکن بود تاریخچه خود ایمپورت را برگرداند.

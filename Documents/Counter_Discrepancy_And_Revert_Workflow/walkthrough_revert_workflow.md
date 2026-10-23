@@ -42,8 +42,8 @@
 
 | نام فایل | مسیر فایل | خلاصه تغییرات |
 | :--- | :--- | :--- |
-| **`counter-dashboard.ts`** | [`warehouse-front/.../counter-dashboard.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح `applyFilters`، افزودن متد `revertTaskStatus` و مدیریت حالت خالی در `saveDraft` |
-| **`counter-dashboard.html`** | [`warehouse-front/.../counter-dashboard.html`](file:///E:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | عنوان چیپ «مغایرت و بازشماری»، دکمه Undo روی کارت، دکمه بازگشت در نمای جزئیات و استایل‌ها |
+| **`counter-dashboard.ts`** | [`frontend/.../counter-dashboard.ts`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح `applyFilters`، افزودن متد `revertTaskStatus` و مدیریت حالت خالی در `saveDraft` |
+| **`counter-dashboard.html`** | [`frontend/.../counter-dashboard.html`](file:///E:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | عنوان چیپ «مغایرت و بازشماری»، دکمه Undo روی کارت، دکمه بازگشت در نمای جزئیات و استایل‌ها |
 
 ---
 
@@ -51,7 +51,7 @@
 ```text
 √ Building...
 Application bundle generation complete. [21.003 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش.
 Exit Code: 0
 ```

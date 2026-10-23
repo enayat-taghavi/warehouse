@@ -20,10 +20,10 @@
 
 | نام فایل | لایه | شرح تغییرات |
 | :--- | :--- | :--- |
-| [`reports.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts) | Component | تزریق `Router` و `ActivatedRoute`، همگام‌سازی دوطرفه با URL و `localStorage`، اجرای خودکار، متد بازنشانی |
-| [`report-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts) | Store | اضافه کردن هلپرهای سریال‌سازی/دیسریال‌سازی وضعیت، بازنشانی تمیز |
-| [`reports.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html) | Template | افزودن دکمه «گزارش جدید / بازنشانی» در نوار اکشن بالا |
-| [`filter-group.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/filter-group.component.ts) | Component | ارسال رویداد هنگام تغییر شرایط فیلتر جهت تریگر همگام‌سازی لحظه‌ای با URL |
+| [`reports.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts) | Component | تزریق `Router` و `ActivatedRoute`، همگام‌سازی دوطرفه با URL و `localStorage`، اجرای خودکار، متد بازنشانی |
+| [`report-store.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/report-store.ts) | Store | اضافه کردن هلپرهای سریال‌سازی/دیسریال‌سازی وضعیت، بازنشانی تمیز |
+| [`reports.html`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html) | Template | افزودن دکمه «گزارش جدید / بازنشانی» در نوار اکشن بالا |
+| [`filter-group.component.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/filter-group.component.ts) | Component | ارسال رویداد هنگام تغییر شرایط فیلتر جهت تریگر همگام‌سازی لحظه‌ای با URL |
 
 ---
 
@@ -63,7 +63,7 @@
 ### تست‌های خودکار و کامپایل
 - اجرای بیلد و بررسی خطاهای تایپ‌اسکریپت در پروژه فرانت‌اند:
   ```powershell
-  cd "e:\warehouse project\warehouse-front" ; npm run build -- --no-cache
+  cd "frontend" ; npm run build -- --no-cache
   ```
 
 ### اعتبارسنجی دستی در مرورگر

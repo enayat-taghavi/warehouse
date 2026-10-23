@@ -2,7 +2,7 @@
 
 # برنامه اجرایی اصلاح و ارتقای جامع صفحه مدیریت انبارها (Warehouse Management Comprehensive Fixes)
 
-این سند برنامه گام‌به‌گام برای رفع تمام باگ‌های عملکردی، اصلاح دسترسی‌ها و مجوزها، حل مشکل N+1 کوئری در بک‌اند، افزودن قابلیت انتخاب رنگ تم انبار، و پاکسازی کدهای مرده در صفحه مدیریت انبارها ([projects.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.ts) و [projects.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html)) را تشریح می‌کند.
+این سند برنامه گام‌به‌گام برای رفع تمام باگ‌های عملکردی، اصلاح دسترسی‌ها و مجوزها، حل مشکل N+1 کوئری در بک‌اند، افزودن قابلیت انتخاب رنگ تم انبار، و پاکسازی کدهای مرده در صفحه مدیریت انبارها ([projects.ts](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.ts) و [projects.html](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html)) را تشریح می‌کند.
 
 ---
 
@@ -26,7 +26,7 @@
 
 ### بخش فرانت‌اند (Frontend)
 
-#### [MODIFY] [projects.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.ts)
+#### [MODIFY] [projects.ts](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.ts)
 * تزریق `AccountsHttpService` جهت فراخوانی و پر کردن `state.appState.users` در صورت خالی بودن در بدو ورود به صفحه.
 * تغییر `debounceTime(2000)` به `debounceTime(300)` جهت واکنش‌گرایی سریع URL.
 * سینک دوطرفه `statusFilter` با `queryParams` آدرس صفحه.
@@ -39,7 +39,7 @@
 * افزودن گتر `activeProjectsCount` جهت محاسبه دقیق تعداد انبارهای فعال.
 * حذف متدهای مرده و نامربوط: `downloadTemplate()`، `goToDocs()` و متغیر `templateModalOpen`.
 
-#### [MODIFY] [projects.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html)
+#### [MODIFY] [projects.html](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html)
 * **مجوزها:**
   * افزودن `*appHasPermission="'perm_wh_create'"` به دکمه «انبار جدید» و «آپلود اکسل».
   * افزودن `*appHasPermission="'perm_wh_edit'"` به دکمه «ویرایش مشخصات انبار» و دکمه حذف فیزیکی.
@@ -61,10 +61,10 @@
 
 ### بخش بک‌اند (Backend)
 
-#### [MODIFY] [warehouses/views.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/views.py)
+#### [MODIFY] [warehouses/views.py](file:///e:/warehouse%20project/backend/warehouses/views.py)
 * بهینه‌سازی `get_queryset` در `WarehouseViewSet`: اضافه کردن `annotate` برای محاسبه مستقیم `total_quantity` و `counted_quantity` با استفاده از `Count` و `Q` شرطی در یک کوئری واحد به جای N کوئری جداگانه.
 
-#### [MODIFY] [warehouses/serializers.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/serializers.py)
+#### [MODIFY] [warehouses/serializers.py](file:///e:/warehouse%20project/backend/warehouses/serializers.py)
 * خواندن مقادیر `total_quantity` و `counted_quantity` مستقیماً از مقادیر انوتیت‌شده (Annotated) با فال‌بک امن برای جلوگیری از سربار کوئری‌های مکرر.
 
 ---

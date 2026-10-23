@@ -74,7 +74,7 @@ graph TD
 
 ---
 
-### ۳.۱. لایه پایگاه داده و مدل‌ها (`warehouse-backend/personnel/models.py`)
+### ۳.۱. لایه پایگاه داده و مدل‌ها (`backend/personnel/models.py`)
 
 #### ۱. گسترش فیلدهای مدل `Company`:
 فیلدهای ساختاریافته زیر به مدل `Company` اضافه می‌شوند:
@@ -201,17 +201,17 @@ class CompanyDocument(models.Model):
 
 ---
 
-### ۳.۲. امنیت رسانه‌ها و دانلود اسناد محرمانه (`warehouse-backend/common/media_urls.py`)
+### ۳.۲. امنیت رسانه‌ها و دانلود اسناد محرمانه (`backend/common/media_urls.py`)
 
 برای جلوگیری از دسترسی مستقیم بدون احراز هویت به فایل‌های اسناد شرکت:
-1. اضافه کردن `company_documents/` و `company_core_docs/` به `PROTECTED_PREFIXES` در [media_urls.py](file:///e:/warehouse%20project/warehouse-backend/common/media_urls.py).
+1. اضافه کردن `company_documents/` و `company_core_docs/` به `PROTECTED_PREFIXES` در [media_urls.py](file:///e:/warehouse%20project/backend/common/media_urls.py).
 2. پیاده‌سازی متد دانلود محافظت‌شده در ویوی شرکت‌ها:
    - در صورت `is_confidential=True`، بررسی مجوز سوپریوزر یا `company_admin`.
    - بررسی دسترسی کاربر به شرکت از طریق `validate_user_company_access`.
 
 ---
 
-### ۳.۳. لایه سریالایزرها و کنترلرها (`warehouse-backend/personnel/`)
+### ۳.۳. لایه سریالایزرها و کنترلرها (`backend/personnel/`)
 
 1. **`CompanyDocumentSerializer`:**
    - سریالایز تمام فیلدها به‌علاوه پراپرتی‌های پویا: `expiry_status`، `days_until_expiry`، `uploaded_by_name` و `file_url`.
@@ -267,39 +267,39 @@ graph TD
 ---
 
 ### 🔹 فاز ۱: بک‌اند، مدل‌های داده و مایگریشن اسکیما (Database & Models)
-1. گسترش مدل `Company` در [personnel/models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py) با فیلدهای ثبتی، حاکمیتی، کارگاهی بیمه، سامانه مودیان، اطلاعات بانکی و دو سند مادر.
+1. گسترش مدل `Company` در [personnel/models.py](file:///e:/warehouse%20project/backend/personnel/models.py) با فیلدهای ثبتی، حاکمیتی، کارگاهی بیمه، سامانه مودیان، اطلاعات بانکی و دو سند مادر.
 2. تعریف مدل جامع `CompanyDocument` با انواع دسته‌بندی اسناد، تاریخ‌های صدور/انقضا، پرچم محرمانگی و پراپرتی‌های وضعیت.
 3. تولید و اعمال مایگریشن امن پایگاه داده (`makemigrations` و `migrate`).
 
 ---
 
 ### 🔹 فاز ۲: سریالایزرها، امنیت رسانه‌ها و کنترلرها (API, Security & RBAC)
-1. افزودن `company_documents/` و `company_core_docs/` به `PROTECTED_PREFIXES` در [common/media_urls.py](file:///e:/warehouse%20project/warehouse-backend/common/media_urls.py).
-2. ساخت `CompanyDocumentSerializer` و به‌روزرسانی `CompanySerializer` در [personnel/serializers.py](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py).
-3. پیاده‌سازی `CompanyDocumentViewSet` در [personnel/views.py](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py) با متدهای آپلود، حذف و فیلتر اسناد محرمانه (`is_confidential`).
+1. افزودن `company_documents/` و `company_core_docs/` به `PROTECTED_PREFIXES` در [common/media_urls.py](file:///e:/warehouse%20project/backend/common/media_urls.py).
+2. ساخت `CompanyDocumentSerializer` و به‌روزرسانی `CompanySerializer` در [personnel/serializers.py](file:///e:/warehouse%20project/backend/personnel/serializers.py).
+3. پیاده‌سازی `CompanyDocumentViewSet` در [personnel/views.py](file:///e:/warehouse%20project/backend/personnel/views.py) با متدهای آپلود، حذف و فیلتر اسناد محرمانه (`is_confidential`).
 4. پیاده‌سازی اکشن `expiring_documents` در `CompanyViewSet` جهت تجمیع اسناد در آستانه انقضای هلدینگ.
 5. ارتقای متد `export_excel` شرکت‌ها جهت خروجی استاندارد ۲ ردیفه شامل فیلدهای جدید کارگاهی، مودیان و بانکی.
 
 ---
 
 ### 🔹 فاز ۳: استودیوی مودال ۵ تبی و مدیریت اسناد در فرانت‌اند (UI/UX)
-1. به‌روزرسانی اینترفیس `Company` و تعریف `CompanyDocument` در [company.model.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/company.model.ts).
+1. به‌روزرسانی اینترفیس `Company` و تعریف `CompanyDocument` در [company.model.ts](file:///e:/warehouse%20project/frontend/src/app/core/models/company.model.ts).
 2. افزودن متدهای بارگذاری و مدیریت اسناد به `CompanyApiService`.
-3. بازطراحی فرم مودال ثبت/ویرایش شرکت در [companies.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/companies/companies.html) و [companies.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/companies/companies.ts) به صورت استودیوی ارگونومیک ۵ تبی (هویتی، مدارک، هیئت‌مدیره، بیمه/مودیان، بانک).
+3. بازطراحی فرم مودال ثبت/ویرایش شرکت در [companies.html](file:///e:/warehouse%20project/frontend/src/app/components/operations/companies/companies.html) و [companies.ts](file:///e:/warehouse%20project/frontend/src/app/components/operations/companies/companies.ts) به صورت استودیوی ارگونومیک ۵ تبی (هویتی، مدارک، هیئت‌مدیره، بیمه/مودیان، بانک).
 4. پیاده‌سازی تب آرشیو مدارک با قابلیت آپلود دراپ‌زون، فیلتر دسته‌بندی، نمایش وضعیت انقضا و مدیریت اسناد.
 
 ---
 
 ### 🔹 فاز ۴: سیستم هشدار انقضا و ویجت داشبورد مرکز عملیات (Smart Alerts)
 1. تعبیه ستون وضعیت سلامت اسناد با بج‌های رنگی در جدول شرکت‌ها.
-2. افزودن ویجت اختصاصی «پایش سررسید مدارک و مجوزهای هلدینگ» در [operations-cockpit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/operations-cockpit/operations-cockpit.ts) و قالب HTML آن.
+2. افزودن ویجت اختصاصی «پایش سررسید مدارک و مجوزهای هلدینگ» در [operations-cockpit.ts](file:///e:/warehouse%20project/frontend/src/app/components/operations/operations-cockpit/operations-cockpit.ts) و قالب HTML آن.
 3. اتصال ویجت به اندپوینت `expiring-documents` با نمایش روزشمار تا انقضا و لینک اقدام سریع.
 
 ---
 
 ### 🔹 فاز ۵: آزمون‌های یکپارچگی، تست‌های مرورگر و صحه‌گذاری (Testing & Quality Assurance)
-1. نگارش آزمون‌های جامع بک‌اند در [personnel/test_company_documents.py](file:///e:/warehouse%20project/warehouse-backend/personnel/test_company_documents.py) (تست آپلود، محاسبات انقضا، فیلتر اسناد محرمانه و امنیت BOLA).
-2. نگارش تست‌های سریع DOM نوع ۱ (Vitest) در [companies.dom.spec.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/operations/companies/companies.dom.spec.ts) برای ارزیابی ۵ تب، فرم آپلود و بج‌های انقضا.
+1. نگارش آزمون‌های جامع بک‌اند در [personnel/test_company_documents.py](file:///e:/warehouse%20project/backend/personnel/test_company_documents.py) (تست آپلود، محاسبات انقضا، فیلتر اسناد محرمانه و امنیت BOLA).
+2. نگارش تست‌های سریع DOM نوع ۱ (Vitest) در [companies.dom.spec.ts](file:///e:/warehouse%20project/frontend/src/app/components/operations/companies/companies.dom.spec.ts) برای ارزیابی ۵ تب، فرم آپلود و بج‌های انقضا.
 3. راستی‌آزمایی عدم وجود هرگونه خطای تایپ‌اسکریپت (`npx tsc --noEmit`) و تایید بیلد موفق پروژه (`npm run build`).
 4. تهیه گزارش نهایی تحویل کار (`walkthrough`) بر اساس پروتکل DUAL-SAVE.
 
@@ -309,17 +309,17 @@ graph TD
 
 | ردیف | لایه معماری | مسیر فایل | ماهیت تغییرات |
 | :---: | :---: | :--- | :--- |
-| ۱ | **بک‌اند** | `warehouse-backend/personnel/models.py` | گسترش مدل `Company` و افزودن مدل‌های `CompanyDocument` و `CompanyBankAccount` |
-| ۲ | **بک‌اند** | `warehouse-backend/common/media_urls.py` | افزودن پیشوندهای مدارک شرکت به لیست مسیرهای محافظت‌شده |
-| ۳ | **بک‌اند** | `warehouse-backend/personnel/serializers.py` | ایجاد `CompanyDocumentSerializer`، `CompanyBankAccountSerializer` و سریالایزر شرکت |
-| ۴ | **بک‌اند** | `warehouse-backend/personnel/views.py` | کنترلرهای `CompanyDocumentViewSet`، `CompanyBankAccountViewSet` و مانیتورینگ |
-| ۵ | **بک‌اند** | `warehouse-backend/personnel/urls.py` | ثبت روت‌های اختصاصی مدارک و حساب‌های بانکی شرکت در روتر |
-| ۶ | **بک‌اند** | `warehouse-backend/personnel/test_company_documents.py` | آزمون‌های جامع یکپارچگی، امنیت مدارک و چندشبایی |
-| ۷ | **فرانت‌اند** | `warehouse-front/src/app/core/models/company.model.ts` | تعریف اینترفیس‌های `CompanyDocument` و `CompanyBankAccount` |
-| ۸ | **فرانت‌اند** | `warehouse-front/src/app/core/api/company-api.service.ts` | متدهای مدیریت اسناد و حساب‌های بانکی شرکتی |
-| ۹ | **فرانت‌اند** | `warehouse-front/src/app/shared/components/user-menu/*` | سوئیچر و نمایش شرکت‌های مجاز داخل منوی پروفایل کاربر |
-| ۱۰ | **فرانت‌اند** | `warehouse-front/src/app/components/operations/companies/*` | استودیوی ۶ تبی با ابعاد ثابت، تقویم شمسی، چندشبایی و کمبوباکس جستجوپذیر |
-| ۱۱ | **فرانت‌اند** | `warehouse-front/src/app/components/operations/operations-cockpit/*` | ویجت پایش سررسید مدارک و روزنامه‌های رسمی هلدینگ |
+| ۱ | **بک‌اند** | `backend/personnel/models.py` | گسترش مدل `Company` و افزودن مدل‌های `CompanyDocument` و `CompanyBankAccount` |
+| ۲ | **بک‌اند** | `backend/common/media_urls.py` | افزودن پیشوندهای مدارک شرکت به لیست مسیرهای محافظت‌شده |
+| ۳ | **بک‌اند** | `backend/personnel/serializers.py` | ایجاد `CompanyDocumentSerializer`، `CompanyBankAccountSerializer` و سریالایزر شرکت |
+| ۴ | **بک‌اند** | `backend/personnel/views.py` | کنترلرهای `CompanyDocumentViewSet`، `CompanyBankAccountViewSet` و مانیتورینگ |
+| ۵ | **بک‌اند** | `backend/personnel/urls.py` | ثبت روت‌های اختصاصی مدارک و حساب‌های بانکی شرکت در روتر |
+| ۶ | **بک‌اند** | `backend/personnel/test_company_documents.py` | آزمون‌های جامع یکپارچگی، امنیت مدارک و چندشبایی |
+| ۷ | **فرانت‌اند** | `frontend/src/app/core/models/company.model.ts` | تعریف اینترفیس‌های `CompanyDocument` و `CompanyBankAccount` |
+| ۸ | **فرانت‌اند** | `frontend/src/app/core/api/company-api.service.ts` | متدهای مدیریت اسناد و حساب‌های بانکی شرکتی |
+| ۹ | **فرانت‌اند** | `frontend/src/app/shared/components/user-menu/*` | سوئیچر و نمایش شرکت‌های مجاز داخل منوی پروفایل کاربر |
+| ۱۰ | **فرانت‌اند** | `frontend/src/app/components/operations/companies/*` | استودیوی ۶ تبی با ابعاد ثابت، تقویم شمسی، چندشبایی و کمبوباکس جستجوپذیر |
+| ۱۱ | **فرانت‌اند** | `frontend/src/app/components/operations/operations-cockpit/*` | ویجت پایش سررسید مدارک و روزنامه‌های رسمی هلدینگ |
 
 ---
 

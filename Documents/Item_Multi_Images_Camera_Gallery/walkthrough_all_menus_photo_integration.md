@@ -30,29 +30,29 @@
 
 ## 🛠️ تغییرات اعمال‌شده بر اساس فایل‌ها
 
-### ۱. کارتابل سرپرست ([supervisor-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) و [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts))
+### ۱. کارتابل سرپرست ([supervisor-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) و [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts))
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های `filteredTasks` (وظایف شمارش).
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های `filteredPoolTasks` (استخر شمارش).
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های `filteredDocTasks` (وظایف اسناد مالی).
 - افزودن باکس بندانگشتی ۴۰×۴۰ به کارت‌های `filteredDocPoolTasks` (استخر اسناد مالی).
 - ارتقاء `onPhotosChanged` برای پیمایش و به‌روزرسانی هم‌زمان `tasks`, `poolTasks`, `docTasks` و `docPoolTasks`.
 
-### ۲. کارتابل مدیر ([manager-review.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html) و [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts))
+### ۲. کارتابل مدیر ([manager-review.html](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html) و [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts))
 - افزودن باکس بندانگشتی ۴۰×۴۰ به ۴ دسته کارت: وظایف شمارش، استخر شمارش، وظایف اسناد، و استخر اسناد مدیر.
 - ارتقاء متد `onPhotosChanged` جهت به‌روزرسانی درجا در تمامی این ۴ لیست.
 
-### ۳. پیگیری شمارش ([count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) و [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts))
+### ۳. پیگیری شمارش ([count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) و [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts))
 - ایمپورت و ادغام `ItemPhotoGalleryComponent`.
 - قرار دادن بندانگشتی شکیل ۳۲×۳۲ در کنار کد یکتا در ستون «کد کالا» جدول داده.
 - اضافه شدن متدهای مدیریت مودال (`openPhotoGallery`, `closePhotoGallery`, `onPhotosChanged`) برای به‌روزرسانی حافظه‌ای اقلام جدول.
 
-### ۴. ترخیص و گمرک ([customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) و [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts))
+### ۴. ترخیص و گمرک ([customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) و [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts))
 - ایمپورت و ادغام `ItemPhotoGalleryComponent`.
 - افزودن باکس ۴۰×۴۰ به کارت‌های وظایف ترخیص کاربر (`filteredTasks`).
 - افزودن باکس ۴۰×۴۰ به کارت‌های استخر اقلام ترخیص (`filteredPoolTasks`).
 - افزودن باکس بزرگ‌تر ۴۸×۴۸ در هدر کارت اطلاعات کالا در فرم ثبت اطلاعات مالی.
 
-### ۵. تایپ‌ها و مدل‌ها ([doc-task.model.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/doc-task.model.ts))
+### ۵. تایپ‌ها و مدل‌ها ([doc-task.model.ts](file:///e:/warehouse%20project/frontend/src/app/core/models/doc-task.model.ts))
 - اضافه شدن ویژگی‌های اختیاری `photos_count?: number` و `primary_thumbnail?: string | null` به رابط کاربری `item_details` در `DocTask`.
 
 ---

@@ -15,7 +15,7 @@ Every request's path: browser (Service Worker and offline queue) → Cloudflare 
   - `netstat -ano | grep -E ":(8000|4200) .*LISTENING"`
   - `tasklist //FI "IMAGENAME eq cloudflared.exe"`
   - `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/public/config/`
-- **500 from Django:** DEBUG is off and the error page shows no details. The traceback is saved in `warehouse-backend/logs/django-errors.log`; read it with the Read tool. If it is not there, obtain it via "Safe reproduction" (below).
+- **500 from Django:** DEBUG is off and the error page shows no details. The traceback is saved in `backend/logs/django-errors.log`; read it with the Read tool. If it is not there, obtain it via "Safe reproduction" (below).
 - **4xx:** read the full response body; the cause is usually validation, permissions, or company and warehouse scope.
 - **Only in the browser or in offline mode:** check the Dexie queue, the Service Worker (`ngsw`) and the `isServerUnreachable()` logic.
 
@@ -24,7 +24,7 @@ Every request's path: browser (Service Worker and offline queue) → Cloudflare 
 2. Reproduce the error consistently. If it is not consistent, gather evidence; do not guess.
 3. Look at recent changes (`git log`, `git diff`), and at **the code that is actually running**:
    - Compare the daphne process start time with the file modification times; the code on disk is not the same as the code in memory.
-   - Compare the build time of `warehouse-front/dist/` with the frontend changes. The client may also be running a cached Service Worker version.
+   - Compare the build time of `frontend/dist/` with the frontend changes. The client may also be running a cached Service Worker version.
 4. In a multi-layer system, gather evidence at each layer boundary to find exactly where it breaks.
 5. Trace the bad data backward to its origin. Fix it there, not where the error appeared.
 

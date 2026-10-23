@@ -191,7 +191,7 @@ class PhaseGuardian:
         all_passed = True
         try:
             # Check UI files
-            front_path = r"E:\warehouse project\warehouse-front\src\app\components\personnel"
+            front_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), *[".."] * 4, "frontend", "src", "app", "components", "personnel")
             ui_exists = os.path.exists(front_path)
             checks.append(("ساختار فرانت‌اند حقوق و دستمزد", ui_exists, "پوشه و کامپوننت‌های فرانت‌اند یافت شدند"))
             

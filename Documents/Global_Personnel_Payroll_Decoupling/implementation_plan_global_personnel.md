@@ -49,7 +49,7 @@ graph TD
   - حذف الزام انتخاب انبار برای محاسبه ۵۸ ستونی حقوق و صدور دیسکت‌ها.
 
 ### بک‌اند (Django):
-- **`warehouse-backend/personnel/views.py`:**
+- **`backend/personnel/views.py`:**
   - پشتیبانی از `warehouse_id = None` در تجمیع و محاسبه حقوق ۵۸ ستونی، قفل دوره‌ها و ماتریس کارکرد سراسری.
 
 ---

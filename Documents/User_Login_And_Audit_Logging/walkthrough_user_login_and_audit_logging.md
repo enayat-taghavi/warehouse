@@ -33,20 +33,20 @@ graph LR
 
 | ردیف | مسیر فایل | لایه | وضعیت | شرح تغییرات |
 | :---: | :--- | :---: | :---: | :--- |
-| ۱ | `warehouse-backend/accounts/models.py` | Backend Model | اصلاح شد | تعریف مدل‌های `UserLoginLog` و `AuditLog` با ایندکس‌های کامپوزیت بهینه |
-| ۲ | `warehouse-backend/accounts/migrations/0019_*.py` | Migration | ایجاد و اعمال شد | اعمال امن مایگریشن فوروارد روی پایگاه‌داده |
-| ۳ | `warehouse-backend/accounts/middleware.py` | Backend Core | جدید | پیاده‌سازی `AuditContextMiddleware` با متغیرهای کانتکست ایزوله `contextvars` |
-| ۴ | `warehouse-backend/accounts/audit_utils.py` | Backend Utils | جدید | توابع کمکی `log_audit_event`، `log_login_event`، و ماسک‌سازی فیلدهای محرمانه |
-| ۵ | `warehouse-backend/accounts/serializers.py` | Backend Serializer | اصلاح شد | هوک لاگین خودکار در `CustomTokenObtainPairSerializer` و سریالایزرهای لاگ |
-| ۶ | `warehouse-backend/accounts/views.py` | Backend API | اصلاح شد | پیاده‌سازی `UserLoginLogViewSet`، `AuditLogViewSet` و `LogoutView` با اکشن‌های آماری و CSV |
-| ۷ | `warehouse-backend/accounts/urls.py` | Backend Routing | اصلاح شد | ثبت مسیرهای اختصاصی API ممیزی و تاریخچه ورود |
-| ۸ | `warehouse-backend/config/settings.py` | Backend Config | اصلاح شد | فعال‌سازی `AuditContextMiddleware` در لیست میدل‌ورهای جنگو |
-| ۹ | `warehouse-front/src/app/core/models/audit-log.model.ts` | Frontend Model | اصلاح شد | تعریف اینترفیس‌های کامل TypeScript برای AuditLog، UserLoginLog و آمار |
-| ۱۰ | `warehouse-front/src/app/core/api/audit-api.service.ts` | Frontend API | جدید | سرویس ارتباطی جامع با اندپوینت‌های لاگ و دانلود فایل‌های گزارش |
-| ۱۱ | `warehouse-front/src/app/services/audit.service.ts` | Frontend Service | جدید | اکسپورت استاندارد سرویس جهت سازگاری با معماری کامپوننت‌ها |
-| ۱۲ | `warehouse-front/src/app/components/audit/audit.ts` | Frontend Component | بازنویسی شد | منطق کامل دو تبه، مدیریت فیلترهای Debounce، مدال تفاضل Diff و صفحه‌بندی |
-| ۱۳ | `warehouse-front/src/app/components/audit/audit.html` | Frontend Template | بازطراحی شد | قالب مدرن با کارت‌های KPI، جداول واکنش‌گرا، مدال Diff Viewer و بج‌های رنگی |
-| ۱۴ | `warehouse-front/src/app/components/audit/audit.css` | Frontend Styling | به‌روزرسانی شد | استایل‌های سفارشی هایلایت تغییرات قبل/بعد و انیمیشن‌های روان |
+| ۱ | `backend/accounts/models.py` | Backend Model | اصلاح شد | تعریف مدل‌های `UserLoginLog` و `AuditLog` با ایندکس‌های کامپوزیت بهینه |
+| ۲ | `backend/accounts/migrations/0019_*.py` | Migration | ایجاد و اعمال شد | اعمال امن مایگریشن فوروارد روی پایگاه‌داده |
+| ۳ | `backend/accounts/middleware.py` | Backend Core | جدید | پیاده‌سازی `AuditContextMiddleware` با متغیرهای کانتکست ایزوله `contextvars` |
+| ۴ | `backend/accounts/audit_utils.py` | Backend Utils | جدید | توابع کمکی `log_audit_event`، `log_login_event`، و ماسک‌سازی فیلدهای محرمانه |
+| ۵ | `backend/accounts/serializers.py` | Backend Serializer | اصلاح شد | هوک لاگین خودکار در `CustomTokenObtainPairSerializer` و سریالایزرهای لاگ |
+| ۶ | `backend/accounts/views.py` | Backend API | اصلاح شد | پیاده‌سازی `UserLoginLogViewSet`، `AuditLogViewSet` و `LogoutView` با اکشن‌های آماری و CSV |
+| ۷ | `backend/accounts/urls.py` | Backend Routing | اصلاح شد | ثبت مسیرهای اختصاصی API ممیزی و تاریخچه ورود |
+| ۸ | `backend/config/settings.py` | Backend Config | اصلاح شد | فعال‌سازی `AuditContextMiddleware` در لیست میدل‌ورهای جنگو |
+| ۹ | `frontend/src/app/core/models/audit-log.model.ts` | Frontend Model | اصلاح شد | تعریف اینترفیس‌های کامل TypeScript برای AuditLog، UserLoginLog و آمار |
+| ۱۰ | `frontend/src/app/core/api/audit-api.service.ts` | Frontend API | جدید | سرویس ارتباطی جامع با اندپوینت‌های لاگ و دانلود فایل‌های گزارش |
+| ۱۱ | `frontend/src/app/services/audit.service.ts` | Frontend Service | جدید | اکسپورت استاندارد سرویس جهت سازگاری با معماری کامپوننت‌ها |
+| ۱۲ | `frontend/src/app/components/audit/audit.ts` | Frontend Component | بازنویسی شد | منطق کامل دو تبه، مدیریت فیلترهای Debounce، مدال تفاضل Diff و صفحه‌بندی |
+| ۱۳ | `frontend/src/app/components/audit/audit.html` | Frontend Template | بازطراحی شد | قالب مدرن با کارت‌های KPI، جداول واکنش‌گرا، مدال Diff Viewer و بج‌های رنگی |
+| ۱۴ | `frontend/src/app/components/audit/audit.css` | Frontend Styling | به‌روزرسانی شد | استایل‌های سفارشی هایلایت تغییرات قبل/بعد و انیمیشن‌های روان |
 
 ---
 

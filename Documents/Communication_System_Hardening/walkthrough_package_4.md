@@ -54,13 +54,13 @@
 | **مجموع کل** | **سیستم جامع ارتباطات و چت سازمانی** | **۶۵** | **✅ ۱۰۰٪ سبز (OK)** |
 
 ```bash
-& "E:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py test communications -v 2
+& "backend\venv\Scripts\python.exe" manage.py test communications -v 2
 Ran 65 tests in 122.672s
 OK
 ```
 
 ```bash
-& "E:\warehouse project\warehouse-backend\venv\Scripts\python.exe" manage.py check
+& "backend\venv\Scripts\python.exe" manage.py check
 System check identified no issues (0 silenced).
 ```
 

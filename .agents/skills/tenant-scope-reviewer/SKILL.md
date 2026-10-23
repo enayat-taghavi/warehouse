@@ -1,6 +1,6 @@
 ---
 name: tenant-scope-reviewer
-description: بازبین تفکیک داده بین شرکت‌ها، انبارها و بخش‌ها (multi-tenant). پس از هر تغییر در viewها، serializerها، querysetها، permissionها، کارتابل‌ها یا گزارش‌های بک‌اند (warehouse-backend)، این اسکیل را برای اعتبارسنجی عدم نشت اطلاعات بین انبارها و شرکت‌ها اجرا کن.
+description: بازبین تفکیک داده بین شرکت‌ها، انبارها و بخش‌ها (multi-tenant). پس از هر تغییر در viewها، serializerها، querysetها، permissionها، کارتابل‌ها یا گزارش‌های بک‌اند (backend)، این اسکیل را برای اعتبارسنجی عدم نشت اطلاعات بین انبارها و شرکت‌ها اجرا کن.
 ---
 
 # بازبین تفکیک قلمرو و چندمستأجری (Tenant Scope Reviewer)

@@ -5,13 +5,13 @@
 ## ۱. خلاصه اقدامات انجام‌شده در فاز ۲ (Executive Summary)
 فاز دوم طرح بر اساس استانداردهای تفکیک وظایف و امنیت سازمانی پیاده‌سازی و نهایی شد:
 
-1. **میدلور `ActiveRoleMiddleware` در [`accounts/middleware.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/middleware.py):**
+1. **میدلور `ActiveRoleMiddleware` در [`accounts/middleware.py`](file:///e:/warehouse%20project/backend/accounts/middleware.py):**
    - استخراج هدرهای `X-Active-Role` و `X-Active-App` از درخواست‌های ورودی.
    - اعمال الگوریتم اعتبارسنجی ضدجعل (`Anti Role-Spoofing`): اگر کاربر کم‌دسترسی هدر نقشی بالاتر از اختیارات واقعی خود بفرستد، سیستم آن را بی‌اثر کرده و نقش واقعی را تخصیص می‌دهد.
    - پشتیبانی از سوئیچ صریح نقش (Persona Switching) برای کاربران چندنقشه معتبر.
 2. **ثبت در تنظیمات پروژه:**
-   - افزودن میدلور به لیست `MIDDLEWARE` در [`config/settings.py`](file:///e:/warehouse%20project/warehouse-backend/config/settings.py).
-3. **کلاس گارد امنیتی `SoDPolicyPermission` و متد `check_sod_prohibition` در [`accounts/permissions.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/permissions.py):**
+   - افزودن میدلور به لیست `MIDDLEWARE` در [`config/settings.py`](file:///e:/warehouse%20project/backend/config/settings.py).
+3. **کلاس گارد امنیتی `SoDPolicyPermission` و متد `check_sod_prohibition` در [`accounts/permissions.py`](file:///e:/warehouse%20project/backend/accounts/permissions.py):**
    - اتصال به کش ردیس و بررسی خطوط قرمز در زمان $O(1)$؛ در صورت تخلف، استثنای `PermissionDenied` با کد وضعیت 403 و پیام ممیزی فارسی صادر می‌شود.
 4. **توسعه و اتصال ایجنت‌های سخت‌گیر نگهبان ۱۰ و ۱۱:**
    - **🛡️ نگهبان ۱۰ (`X-Active-Role Middleware & Anti-Spoofing Guardian`):** تایید استخراج هدرها، سپر ضدجعل و سوئیچ ماژول انبارداری.
@@ -41,11 +41,11 @@
 
 ## ۳. دستورالعمل تست‌های اعتبارسنجی توسط کاربر (User Verification Guide)
 
-برای بررسی و راستی‌آزمایی دستی فاز دوم توسط شما، ۳ دستور زیر را در ترمینال پوشه `warehouse-backend` اجرا فرمایید:
+برای بررسی و راستی‌آزمایی دستی فاز دوم توسط شما، ۳ دستور زیر را در ترمینال پوشه `backend` اجرا فرمایید:
 
 ### تست ۱: اجرای سوئیت کامل ۱۱ ایجنت سخت‌گیر نگهبان
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe personnel\phase_guardian_approval.py
 ```
 *خروجی مورد انتظار:* چاپ پیام **«🏆 تبریک! تمامی ۱۱ ایجنت نگهبان ... با موفقیت ۱۰۰٪ تایید شدند 🏆»**.

@@ -32,8 +32,8 @@
 
 | نام فایل | تغییرات کلیدی |
 | :--- | :--- |
-| [`id-cards.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html) | بازطراحی زون اسکن بزرگ QR Code در پیش‌نمایش زنده، شیت مودال و شیت چاپ |
-| [`id-cards.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) | به‌روزرسانی متد `drawCardFaceOnCanvas` جهت رسم کادر اسکن بزرگ و هماهنگ در Canvas |
+| [`id-cards.html`](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html) | بازطراحی زون اسکن بزرگ QR Code در پیش‌نمایش زنده، شیت مودال و شیت چاپ |
+| [`id-cards.ts`](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) | به‌روزرسانی متد `drawCardFaceOnCanvas` جهت رسم کادر اسکن بزرگ و هماهنگ در Canvas |
 
 ---
 

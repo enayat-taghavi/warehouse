@@ -18,23 +18,23 @@
 
 ### 📁 فایل‌های ویرایش‌شده و جزئیات کد
 
-#### ۱. بک‌اند: `warehouse-backend/communications/consumers.py`
+#### ۱. بک‌اند: `backend/communications/consumers.py`
 - عضویت در کانال عمومی `chat_presence` هنگام اتصال به وب‌سوکت چت
 - برودکست رویداد `chat.presence` با وضعیت `online` هنگام اتصال کاربر و `offline` هنگام قطع اتصال
 - پیاده‌سازی متد `chat_presence_event` برای مخابره تغییر وضعیت به تمام کلاینت‌های متصل
 
-#### ۲. فرانت‌اند: `warehouse-front/src/app/core/services/communication.service.ts`
+#### ۲. فرانت‌اند: `frontend/src/app/core/services/communication.service.ts`
 - افزودن سیگنال `onlineUsers = signal<Set<number>>(new Set())`
 - افزودن متد `isUserOnline(userId)` جهت بررسی آنلاین بودن هر کاربر
 - شنود رویداد `chat.presence` و به‌روزرسانی آنی لیست کاربران آنلاین
 - اصلاح متد `getCurrentUserId()` جهت تجزیه بدون نقص شناسه‌ها (اعم از عدد یا رشته) از `localStorage`، `sessionStorage` و توکن‌های JWT
 - افزودن متد `disconnect()` جهت بستن امن سوکت‌ها و ریست لیست حضور
 
-#### ۳. فرانت‌اند: `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
+#### ۳. فرانت‌اند: `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
 - بازنویسی تابع `getConversationTitle` برای اولویت دادن به نام طرف مقابل در تمام چت‌های دو‌نفره
 - افزودن متدهای `getOtherParticipant` و `isOtherUserOnline` برای بررسی وضعیت آنلاین بودن طرف مقابل در گفتگوی جاری و لیست گفتگوها
 
-#### ۴. فرانت‌اند: `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html`
+#### ۴. فرانت‌اند: `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html`
 - حذف برچسب استاتیک «آنلاین» و جایگزینی با وضعیت پویا:
   - حالت تایپ کردن: «در حال نوشتن...»
   - حالت آنلاین: نقطه سبز پالس‌دار + متن «آنلاین»
@@ -71,7 +71,7 @@ npx vitest run src/app/core/services/communication.service.spec.ts src/app/compo
 ```bash
 npx ng build --configuration=development --no-progress
 Application bundle generation complete. [30.437 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 ```
 
 </div>

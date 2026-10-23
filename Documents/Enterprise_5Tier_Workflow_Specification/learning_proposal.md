@@ -5,7 +5,7 @@
 
 ### ۱. دسته‌بندی و منطق یادگیری (Classification & Rationale)
 * **نوع:** قانون جدید سیستم (Workspace Rule Addition).
-* **هدف:** اضافه کردن **بخش ۸ (Enterprise 5-Tier Dynamic Workflow Standards)** به فایل قوانین سراسری پروژه (`E:\warehouse project\.agents\AGENTS.md`) جهت تضمین پایبندی تمامی ایجنت‌ها، مدل‌های بک‌اند، کامپوننت‌های انگولار، تست‌ها و کارتابل‌ها به این معماری.
+* **هدف:** اضافه کردن **بخش ۸ (Enterprise 5-Tier Dynamic Workflow Standards)** به فایل قوانین سراسری پروژه (`.agents\AGENTS.md`) جهت تضمین پایبندی تمامی ایجنت‌ها، مدل‌های بک‌اند، کامپوننت‌های انگولار، تست‌ها و کارتابل‌ها به این معماری.
 
 ---
 

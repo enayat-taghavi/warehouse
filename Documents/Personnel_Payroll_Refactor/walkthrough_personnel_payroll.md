@@ -60,12 +60,12 @@ graph LR
 
 ## ۴. لیست فایل‌های تغییریافته و ایجادشده
 
-- **[NEW]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)
-- **[NEW]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
-- **[NEW]** [`warehouse-attendance.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.css)
-- **[MODIFY]** [`personnel-management.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.ts)
-- **[MODIFY]** [`personnel-management.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/personnel-management/personnel-management.html)
-- **[MODIFY]** [`app.routes.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts)
-- **[MODIFY]** [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+- **[NEW]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts)
+- **[NEW]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html)
+- **[NEW]** [`warehouse-attendance.css`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.css)
+- **[MODIFY]** [`personnel-management.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.ts)
+- **[MODIFY]** [`personnel-management.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/personnel-management/personnel-management.html)
+- **[MODIFY]** [`app.routes.ts`](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts)
+- **[MODIFY]** [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 
 </div>

@@ -70,7 +70,7 @@
   5. نمایش پاپ‌اور یا بنر هشدار زردرنگ شامل «علت عودت سرپرست/مدیر» به همراه دکمه ارسال مجدد اصلاحیه.
 
 ### فاز ۳: اصلاح باگ تنزل رتبه و ایمن‌سازی امنیتی لایه بک‌اند
-- **فایل‌ها:** `warehouse-backend/personnel/views.py` و `models.py`
+- **فایل‌ها:** `backend/personnel/views.py` و `models.py`
 - **اقدامات:**
   1. **رفع باگ کشنده تنزل رتبه (`views.py:1040-1050`):** در اکشن `approve_manager` مدل `VehicleChangeRequest`، لیست فیلدهای مستثنی (`excluded_fields`) شامل `approval_status`، `id`، `created_at`، `updated_at` و روابط خارجی ایجاد شود تا وضعیت تایید شده ناوگان به `pending_supervisor` بازنگردد.
   2. **کنترل قلمرو بخش (BOLA/IDOR):** اصلاح متد `get_queryset` در `VehicleDriverProfileViewSet` تا کاربران غیر سوپریوزر فقط خودروهای پروژه‌ها و بخش‌های مجاز خود را ببینند.

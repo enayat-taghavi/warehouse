@@ -24,7 +24,7 @@
 <body>
 
 <h1>گزارش بررسی کد — سامانه مدیریت انبار</h1>
-<p class="meta">تاریخ بررسی: ۳ مرداد ۱۴۰۵ (۲۵ ژوئیه ۲۰۲۶) — محدوده بررسی: فرانت‌اند Angular در پوشه <span class="path">warehouse-front</span></p>
+<p class="meta">تاریخ بررسی: ۳ مرداد ۱۴۰۵ (۲۵ ژوئیه ۲۰۲۶) — محدوده بررسی: فرانت‌اند Angular در پوشه <span class="path">frontend</span></p>
 
 <h2>۱. خلاصه مدیریتی</h2>
 <div class="summary-box">

@@ -38,24 +38,24 @@
 
 | بخش / ماژول | فایل تغییر یافته | شرح دقیق تغییرات و مسئولیت کد |
 | :--- | :--- | :--- |
-| **داده و مدل جنگو** | `warehouse-backend/personnel/models.py` | افزودن گزینه‌های `ACCESS_LEVEL_CHOICES` (`docs_read`, `docs_write`, `workspace_full`) و فیلدهای `access_level` و `role_in_company` به مدل `UserCompanyAccess`. |
-| **مایگریشن جنگو** | `warehouse-backend/personnel/migrations/0018_usercompanyaccess_access_level_and_more.py` | ایجاد و اجرای مایگریشن اسکیما، افزودن فیلدها با پیش‌فرض `workspace_full` برای حفظ سازگاری رکوردهای پیشین. |
-| **سریالایزر جنگو** | `warehouse-backend/personnel/serializers.py` | افزودن `access_level`, `access_level_display`, `role_in_company` به `UserCompanyAccessSerializer` و اضافه کردن فیلد `user_access_level` به سریالایزر شرکت. |
-| **امنیت و فیلتر بک‌اند** | `warehouse-backend/personnel/views.py` | به‌روزرسانی `get_user_allowed_companies` و اکشن `user_available` با پارامتر `scope`، ایزوله‌سازی اکشن‌های دانلود و لیست اسناد بر پایه `docs_read` و کنترل ساخت/ویرایش/حذف بر پایه `docs_write`. |
-| **انزوای انبارداری** | `warehouse-backend/inventory/views.py` | اصلاح متد `dashboard_stats` جهت بررسی هدر `X-Company-ID` و فیلتر کوئری‌ست با `warehouse__company_id`، بستن منافذ نشت آمار کالاها. |
-| **مدل‌های تایپ‌اسکریپت** | `warehouse-front/src/app/core/models/company.model.ts` | تعریف تایپ `CompanyAccessLevel` و به‌روزرسانی اینترفیس‌های `UserCompanyAccess` و `Company` با فیلدهای جدید. |
-| **سرویس‌های کلاینت** | `warehouse-front/src/app/core/api/company-api.service.ts` | متدهای `getUserAvailable(scope)`، `createUserAccess`، `updateUserAccess`، `deleteUserAccess` و `downloadDocument`. |
-| **مدیریت شرکت فعال** | `warehouse-front/src/app/core/services/active-company.service.ts` | محدودسازی سوئیچر هدر به `workspace_full`، متد `loadDocumentCompanies()`، و اصلاح `hasWarehouseModule`. |
-| **گاردهای امنیتی روت** | `warehouse-front/src/app/core/auth/auth.guard.ts` | هدایت کاربران فاقد انبار یا فاقد شرکت فعال انبارداری به `/app/launcher` جهت جلوگیری از لوپ ریدایرکت. |
-| **استودیوی مدیریت شرکت** | `warehouse-front/src/app/components/operations/companies/companies.ts` | پیاده‌سازی متدهای ثبت و لغو دسترسی، متد `loadStudioAccesses`، حذف کدهای تکراری و متد `filterSystemUsers`. |
-| **قالب استودیو** | `warehouse-front/src/app/components/operations/companies/companies.html` | ارتقای فرم تب ۶ با انتخابگر ۳ سطحی، فیلد سمت سازمانی، و جدول لیست دسترسی‌ها با بج‌های تفکیک‌شده. |
-| **کامپوننت جدید اسناد** | `warehouse-front/src/app/components/finance/company-documents-archive/company-documents-archive.ts` | کامپوننت منطق کارتابل متمرکز اسناد، فیلتر رسته‌ها، جستجوی زنده، پیش‌نمایش، دانلود و آپلود سند. |
-| **قالب کامپوننت اسناد** | `warehouse-front/src/app/components/finance/company-documents-archive/company-documents-archive.html` | رابط کاربری مدرن با هدر چسبان، سلکتور شرکت، فیلتر موضوعی و پیش‌نمایش فایل. |
-| **استایل کامپوننت اسناد** | `warehouse-front/src/app/components/finance/company-documents-archive/company-documents-archive.css` | استایل‌های پایه و پشتیبانی از تقویم شمسی جلالی. |
-| **مسیریابی مالی** | `warehouse-front/src/app/modules/accounting/accounting.routes.ts` | ثبت روت‌های `company-documents` و آلیاس `documents`. |
-| **مسیریابی ریشه** | `warehouse-front/src/app/app.routes.ts` | ثبت ریدایرکت‌های سراسری برای `company-documents` و `documents`. |
-| **منوهای ناوبری** | `warehouse-front/src/app/modules/accounting/nav-items.ts` | اضافه کردن آیتم منوی بایگانی مدارک به پورتال‌های عمومی مالی، مدیر، حسابدار و خزانه‌دار. |
-| **سایدبار سراسری** | `warehouse-front/src/app/components/layout/layout.ts` | پیکربندی تب‌های فعال، عناوین صفحات و مجوزهای دسترسی به اسناد شرکت‌ها. |
+| **داده و مدل جنگو** | `backend/personnel/models.py` | افزودن گزینه‌های `ACCESS_LEVEL_CHOICES` (`docs_read`, `docs_write`, `workspace_full`) و فیلدهای `access_level` و `role_in_company` به مدل `UserCompanyAccess`. |
+| **مایگریشن جنگو** | `backend/personnel/migrations/0018_usercompanyaccess_access_level_and_more.py` | ایجاد و اجرای مایگریشن اسکیما، افزودن فیلدها با پیش‌فرض `workspace_full` برای حفظ سازگاری رکوردهای پیشین. |
+| **سریالایزر جنگو** | `backend/personnel/serializers.py` | افزودن `access_level`, `access_level_display`, `role_in_company` به `UserCompanyAccessSerializer` و اضافه کردن فیلد `user_access_level` به سریالایزر شرکت. |
+| **امنیت و فیلتر بک‌اند** | `backend/personnel/views.py` | به‌روزرسانی `get_user_allowed_companies` و اکشن `user_available` با پارامتر `scope`، ایزوله‌سازی اکشن‌های دانلود و لیست اسناد بر پایه `docs_read` و کنترل ساخت/ویرایش/حذف بر پایه `docs_write`. |
+| **انزوای انبارداری** | `backend/inventory/views.py` | اصلاح متد `dashboard_stats` جهت بررسی هدر `X-Company-ID` و فیلتر کوئری‌ست با `warehouse__company_id`، بستن منافذ نشت آمار کالاها. |
+| **مدل‌های تایپ‌اسکریپت** | `frontend/src/app/core/models/company.model.ts` | تعریف تایپ `CompanyAccessLevel` و به‌روزرسانی اینترفیس‌های `UserCompanyAccess` و `Company` با فیلدهای جدید. |
+| **سرویس‌های کلاینت** | `frontend/src/app/core/api/company-api.service.ts` | متدهای `getUserAvailable(scope)`، `createUserAccess`، `updateUserAccess`، `deleteUserAccess` و `downloadDocument`. |
+| **مدیریت شرکت فعال** | `frontend/src/app/core/services/active-company.service.ts` | محدودسازی سوئیچر هدر به `workspace_full`، متد `loadDocumentCompanies()`، و اصلاح `hasWarehouseModule`. |
+| **گاردهای امنیتی روت** | `frontend/src/app/core/auth/auth.guard.ts` | هدایت کاربران فاقد انبار یا فاقد شرکت فعال انبارداری به `/app/launcher` جهت جلوگیری از لوپ ریدایرکت. |
+| **استودیوی مدیریت شرکت** | `frontend/src/app/components/operations/companies/companies.ts` | پیاده‌سازی متدهای ثبت و لغو دسترسی، متد `loadStudioAccesses`، حذف کدهای تکراری و متد `filterSystemUsers`. |
+| **قالب استودیو** | `frontend/src/app/components/operations/companies/companies.html` | ارتقای فرم تب ۶ با انتخابگر ۳ سطحی، فیلد سمت سازمانی، و جدول لیست دسترسی‌ها با بج‌های تفکیک‌شده. |
+| **کامپوننت جدید اسناد** | `frontend/src/app/components/finance/company-documents-archive/company-documents-archive.ts` | کامپوننت منطق کارتابل متمرکز اسناد، فیلتر رسته‌ها، جستجوی زنده، پیش‌نمایش، دانلود و آپلود سند. |
+| **قالب کامپوننت اسناد** | `frontend/src/app/components/finance/company-documents-archive/company-documents-archive.html` | رابط کاربری مدرن با هدر چسبان، سلکتور شرکت، فیلتر موضوعی و پیش‌نمایش فایل. |
+| **استایل کامپوننت اسناد** | `frontend/src/app/components/finance/company-documents-archive/company-documents-archive.css` | استایل‌های پایه و پشتیبانی از تقویم شمسی جلالی. |
+| **مسیریابی مالی** | `frontend/src/app/modules/accounting/accounting.routes.ts` | ثبت روت‌های `company-documents` و آلیاس `documents`. |
+| **مسیریابی ریشه** | `frontend/src/app/app.routes.ts` | ثبت ریدایرکت‌های سراسری برای `company-documents` و `documents`. |
+| **منوهای ناوبری** | `frontend/src/app/modules/accounting/nav-items.ts` | اضافه کردن آیتم منوی بایگانی مدارک به پورتال‌های عمومی مالی، مدیر، حسابدار و خزانه‌دار. |
+| **سایدبار سراسری** | `frontend/src/app/components/layout/layout.ts` | پیکربندی تب‌های فعال، عناوین صفحات و مجوزهای دسترسی به اسناد شرکت‌ها. |
 
 ---
 

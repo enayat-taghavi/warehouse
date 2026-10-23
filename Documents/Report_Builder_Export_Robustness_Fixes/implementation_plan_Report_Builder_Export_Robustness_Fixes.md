@@ -18,20 +18,20 @@
 
 ### ۱. لایه بک‌اند (Backend)
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/reports/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/reports/views.py)
 - در کلاس `ExportReportView`، مجوز `require_menu_access('view_sys_export')` حذف شده و تنها مجوز دسترسی به گزارش‌ساز (`ReportsMenuAccess`) اعمال می‌شود.
 
-#### [MODIFY] [engine.py](file:///e:/warehouse%20project/warehouse-backend/reports/engine.py)
+#### [MODIFY] [engine.py](file:///e:/warehouse%20project/backend/reports/engine.py)
 - اصلاح مرتب‌سازی `order_by` در حالت `_has_many_join` با `distinct()`: استفاده مستقیم از `'id'` به جای `'pk'` در هنگام انتخاب مقادیر متمایز جهت تطابق ۱۰۰٪ با استاندارد SQL پایگاه‌داده PostgreSQL و جلوگیری از خطای `ProgrammingError`.
 
 ---
 
 ### ۲. لایه فرانت‌اند (Frontend)
 
-#### [MODIFY] [report-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/report-api.service.ts)
+#### [MODIFY] [report-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/report-api.service.ts)
 - افزودن پرچم `SKIP_GLOBAL_ERROR_TOAST` به درخواست `export` در کانتکست HTTP تا اینترسپتور خطای سراسری پاسخ‌های باینری (Blob) را تخریب نکند و پیام خطا با متن دقیق سرور در خود کامپوننت پارس و به کاربر نمایش داده شود.
 
-#### [MODIFY] [reports.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts)
+#### [MODIFY] [reports.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts)
 - اضافه کردن متد اعتبارسنجی مشترک برای شروط فیلتر، شروط `HAVING` و تداخل نام مستعار (`Alias Conflict`) در متد `exportReport` قبل از ارسال درخواست خروجی به سرور، تا در صورت وجود شروط ناقص در فرم، توست هشدار مناسب به کاربر نمایش داده شده و درخواست نامعتبر ارسال نشود.
 
 ---

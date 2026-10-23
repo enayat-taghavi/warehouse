@@ -19,7 +19,7 @@ __pycache__/
 *$py.class
 
 # Local database backups
-warehouse-backend/backups/
+backend/backups/
 
 # Scratch directory (local test scripts and screenshots)
 scratch/

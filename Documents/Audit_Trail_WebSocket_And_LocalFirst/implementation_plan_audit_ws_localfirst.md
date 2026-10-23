@@ -108,12 +108,12 @@ graph TD
 
 ## 📋 فایل‌های تحت تغییر (Files to Modify)
 
-#### [NEW] [signals.py](file:///e:/warehouse%20project/warehouse-backend/accounts/signals.py)
-#### [MODIFY] [apps.py](file:///e:/warehouse%20project/warehouse-backend/accounts/apps.py)
-#### [MODIFY] [consumers.py](file:///e:/warehouse%20project/warehouse-backend/notifications/consumers.py)
-#### [MODIFY] [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
-#### [MODIFY] [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
-#### [MODIFY] [audit.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.css)
+#### [NEW] [signals.py](file:///e:/warehouse%20project/backend/accounts/signals.py)
+#### [MODIFY] [apps.py](file:///e:/warehouse%20project/backend/accounts/apps.py)
+#### [MODIFY] [consumers.py](file:///e:/warehouse%20project/backend/notifications/consumers.py)
+#### [MODIFY] [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
+#### [MODIFY] [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
+#### [MODIFY] [audit.css](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.css)
 
 ---
 
@@ -121,11 +121,11 @@ graph TD
 
 ```bash
 # اعتبارسنجی بیلد فرانت‌اند
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 
 # اجرای تست‌های جامع یکپارچگی بک‌اند
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 python test_phase5_master_e2e.py
 ```
 

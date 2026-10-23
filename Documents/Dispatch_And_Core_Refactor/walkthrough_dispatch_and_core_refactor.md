@@ -38,32 +38,32 @@
 ### ۳. فایل‌های تغییریافته (Changed Files Map)
 
 #### فرانت‌اند (Frontend):
-1. [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html):
+1. [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html):
    - افزودن نوار ۴ نمای پیش‌فرض سریع
    - افزودن تمپلیت و فیلتر هوشمند برای تمامی ستون‌های مالی، بازرگانی، سیستمی و فیلدهای داینامیک انبار
    - افزودن مودال دسته‌بندی ۶‌گانه ستون‌ها با قابلیت جستجو و انتخاب گروهی
    - پاکسازی وابستگی به چاپ لیبل و `softDelete`
-2. [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts):
+2. [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts):
    - پیاده‌سازی منطق دسته‌بندی ۶‌گانه ستون‌ها و مدیریت نماهای آماده (`field`, `financial`, `procurement`, `all`, `custom`)
    - اصلاح متد `executeExport` برای مدیریت فایل‌های `.zip` و حذف هاردکد ۱۰۰ هزارتایی
    - اصلاح متدهای تگ‌گذاری گروهی به صورت اتمیک سمت سرور
    - رفع بن‌بست فیلترها و اصلاح منطق تنظیمات سرپرست
-3. [smart-delete-modal.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/smart-delete-modal/smart-delete-modal.html) & [smart-delete-modal.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/smart-delete-modal/smart-delete-modal.ts):
+3. [smart-delete-modal.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/smart-delete-modal/smart-delete-modal.html) & [smart-delete-modal.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/smart-delete-modal/smart-delete-modal.ts):
    - حذف تب‌های بایگانی و غیرفعال‌سازی موقت
    - اجرای مستقیم جریان حذف فیزیکی دائم همراه با تحلیل اثرات آبشاری، تایپ کلمه «حذف» و تایمر ۳ ثانیه
-4. [projects.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html) & [projects.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.ts):
+4. [projects.html](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html) & [projects.ts](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.ts):
    - پاکسازی متدها و رویدادهای `softDelete`
-5. [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html) & [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts):
+5. [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html) & [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts):
    - پاکسازی متدها و رویدادهای `softDelete`
-6. [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html), [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html), [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts):
+6. [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html), [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html), [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts):
    - پاکسازی تنظیمات پیش‌فرض چاپ لیبل
 
 #### بک‌اند (Backend):
-1. [inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py):
+1. [inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py):
    - بازنویسی `export_excel` با موتور استریم چندپارتی ZIP برای داده‌های حجیم بالای ۱۰۰ هزار رکورد
    - افزودن اکشن‌های اتمیک `add`, `remove`, `clear` به اندپوینت `bulk_tag`
    - تنظیم پیش‌فرض وضعیت لیبل به `'چاپ نشده'` در ایمپورت اکسل
-2. [warehouses/services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py):
+2. [warehouses/services.py](file:///e:/warehouse%20project/backend/warehouses/services.py):
    - پاکسازی کلید `default_tag_status` از تنظیمات پایه سیستم
 
 ---
@@ -73,7 +73,7 @@
 * **بیلد فرانت‌اند Angular:**
   ```bash
   Application bundle generation complete. [38.426 seconds]
-  Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+  Output location: frontend\dist\warehouse-app
   Exit Code: 0 (SUCCESS)
   ```
 * **تست سلامت سیستم بک‌اند Django:**

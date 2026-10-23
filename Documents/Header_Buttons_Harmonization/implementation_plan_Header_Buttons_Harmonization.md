@@ -31,10 +31,10 @@
 
 | فایل | نوع تغییر | شرح تغییرات |
 |---|:---:|---|
-| [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts) | اصلاح کد | افزودن متغیر `savedShowCompletedState` و لاجیک بازگشت هوشمند وضعیت در `setDiscrepancyFilter` |
-| [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) | اصلاح قالب | تبدیل دکمه وضعیت به آیکون مربعی «تأیید نهایی» با وکتور SVG و تولتیپ‌های اختصاصی |
-| [data-table.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/data-table/data-table.component.ts) | اصلاح قالب | بهینه‌سازی دراپ‌داون فیلتر تاریخ به `w-64 overflow-visible z-[70]` |
-| [styles.css](file:///e:/warehouse%20project/warehouse-front/src/styles.css) | اصلاح استایل | تعریف استایل‌های جامع و زیبای تقویم جلالی `ng-persian-datepicker` در سطح سراسری |
+| [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts) | اصلاح کد | افزودن متغیر `savedShowCompletedState` و لاجیک بازگشت هوشمند وضعیت در `setDiscrepancyFilter` |
+| [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) | اصلاح قالب | تبدیل دکمه وضعیت به آیکون مربعی «تأیید نهایی» با وکتور SVG و تولتیپ‌های اختصاصی |
+| [data-table.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/data-table/data-table.component.ts) | اصلاح قالب | بهینه‌سازی دراپ‌داون فیلتر تاریخ به `w-64 overflow-visible z-[70]` |
+| [styles.css](file:///e:/warehouse%20project/frontend/src/styles.css) | اصلاح استایل | تعریف استایل‌های جامع و زیبای تقویم جلالی `ng-persian-datepicker` در سطح سراسری |
 
 ---
 

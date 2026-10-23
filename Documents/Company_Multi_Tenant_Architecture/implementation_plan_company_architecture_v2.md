@@ -44,7 +44,7 @@ graph TD
 
 ### 🔹 بخش اول: لایه داده و پایگاه داده بک‌اند (Django Models & Migrations)
 
-#### [MODIFY] `warehouse-backend/personnel/models.py`
+#### [MODIFY] `backend/personnel/models.py`
 * گسترش مدل `UserCompanyAccess` با افزودن فیلدهای:
   - `access_level`: گزینه‌های `docs_read` (فقط مشاهده مدارک رسمی)، `docs_write` (مشاهده و بارگذاری/تمدید مدارک)، `workspace_full` (عضویت کامل در فضای کاری عملیات).
   - `role_in_company`: عنوان سمت یا مسئولیت فرد در آن شرکت (اختیاری جهت شفافیت چارت).
@@ -55,14 +55,14 @@ graph TD
 
 ### 🔹 بخش دوم: سرویس‌های بک‌اند و رفع نشت داده‌ها (API & Backend Security)
 
-#### [MODIFY] `warehouse-backend/personnel/views.py`
+#### [MODIFY] `backend/personnel/views.py`
 1. ارتقای تابع `get_user_allowed_companies(user, purpose='workspace')`:
    - در حالت `purpose='workspace'` (جهت سوئیچر بالای صفحه): فقط شرکت‌هایی بازگردانده شوند که کاربر در آن‌ها `access_level == 'workspace_full'` دارد (یا سوپریوزر است).
    - در حالت `purpose='documents'` (جهت کارتابل بایگانی مدارک): تمام شرکت‌های منتسب به کاربر بازگردانده می‌شوند.
 2. اصلاح اکشن `CompanyViewSet.user_available`:
    - اختصاصی‌سازی این اندپوینت برای سوئیچر هدر به گونه‌ای که تنها شرکت‌های با سطح `workspace_full` ارسال شوند.
 
-#### [MODIFY] `warehouse-backend/inventory/views.py`
+#### [MODIFY] `backend/inventory/views.py`
 * اصلاح متد `dashboard_stats`:
   - استخراج شناسه شرکت فعال از هدر `X-Company-ID` یا کوئری‌پارامتر `company_id`.
   - اضافه کردن شرط قطعی `items = items.filter(warehouse__company_id=active_company_id)`.
@@ -72,23 +72,23 @@ graph TD
 
 ### 🔹 بخش سوم: فرانت‌اند و کارتابل مستقل اسناد (Frontend & UI/UX)
 
-#### [NEW] `warehouse-front/src/app/components/finance/company-documents-archive/`
+#### [NEW] `frontend/src/app/components/finance/company-documents-archive/`
 ایجاد کامپوننت مستقل **«بایگانی مدارک حقوقی شرکت‌ها»**:
 - هدر چسبان استاندارد (Sticky Command Center)
 - کارت‌های خلاصه شرکت‌های مجاز کاربر (همراه با وضعیت سلامت مدارک، شناسه ملی و شماره ثبت).
 - جدول مدارک و اسناد رسمی شرکت انتخاب‌شده با بج‌های انقضا، دکمه‌های پیش‌نمایش درجا (`In-Place Preview`) و دانلود امن.
 - فرم بارگذاری سریع مدرک جدید برای دارندگان سطح `docs_write`.
 
-#### [MODIFY] `warehouse-front/src/app/modules/accounting/nav-items.ts` & `layout.ts`
+#### [MODIFY] `frontend/src/app/modules/accounting/nav-items.ts` & `layout.ts`
 * اضافه کردن منوی جدید `📑 بایگانی مدارک شرکت‌ها`.
 
-#### [MODIFY] `warehouse-front/src/app/core/services/active-company.service.ts` & `user-menu.component.ts`
+#### [MODIFY] `frontend/src/app/core/services/active-company.service.ts` & `user-menu.component.ts`
 * فیلتر شدن شرکت‌های در دسترس در سوئیچر هدر به نحوی که کاربرانی با دسترسی صرفاً مدارک، نام شرکت را در سوئیچر کلان نبینند.
 
-#### [MODIFY] `warehouse-front/src/app/core/auth/auth.guard.ts` & `app.routes.ts`
+#### [MODIFY] `frontend/src/app/core/auth/auth.guard.ts` & `app.routes.ts`
 * جلوگیری از سقوط کاربران فاقد نقش انبارداری به `/app/warehouse/dashboard`.
 
-#### [MODIFY] `warehouse-front/src/app/components/operations/companies/companies.html` & `companies.ts`
+#### [MODIFY] `frontend/src/app/components/operations/companies/companies.html` & `companies.ts`
 * در استودیوی مودال شرکت (تب دسترسی کاربران)، افزودن کمبوباکس انتخاب سطح دسترسی (`فقط مشاهده مدارک` / `مشاهده و بارگذاری` / `عضویت کامل در فضای کاری`).
 
 ---

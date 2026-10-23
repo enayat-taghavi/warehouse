@@ -14,8 +14,8 @@
 - **استایل‌های Autofill در تم تیره:** حذف رنگ پس‌زمینه سفید/زرد ناخواسته مرورگرها در فرم ورود.
 
 ## ۲. فایل‌های تحت تغییر
-- `warehouse-front/src/app/components/login/login.html`
-- `warehouse-front/src/app/components/login/login.ts`
-- `warehouse-front/src/app/components/login/login.css`
+- `frontend/src/app/components/login/login.html`
+- `frontend/src/app/components/login/login.ts`
+- `frontend/src/app/components/login/login.css`
 
 </div>

@@ -8,7 +8,7 @@
 
 ## ۱. ارزیابی کدهای ظاهری و ایرادات شناسایی‌شده (UI Code Audit & Recommendations)
 
-بررسی دقیق فایل‌های [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) و [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts) موارد زیر را نشان می‌دهد:
+بررسی دقیق فایل‌های [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) و [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts) موارد زیر را نشان می‌دهد:
 
 | ردیف | بخش | ایراد یا نقطه ضعف فعلی | راهکار پیشنهادی در این طرح |
 | :--- | :--- | :--- | :--- |
@@ -16,19 +16,19 @@
 | **۲** | **نبود تعامل سطری برای تاریخچه** | سطرهای جدول فقط از طریق ستون عملیات دکمه لغو دارند و کاربر برای دیدن جزئیات گردش کالا هیچ امکانی ندارد. | افزودن ایونت `rowClick` هوشمند به `DataTableComponent` + دکمه آیکونی تایم‌لاین در ستون عملیات. |
 | **۳** | **خلاصه عملکرد و راندمان تیم** | هیچ نمایی برای پایش بازدهی لحظه‌ای انبارگردان‌ها و سرپرستان (سرعت شمارش در ساعت، درصد مغایرت و زمان تایید) وجود ندارد. | افزودن دکمه تحلیلی «عملکرد تیم» در هدر و ایجاد مودال کامل با تب‌های تفکیک‌شده و نمودارهای پیشرفت. |
 | **۴** | **عدم کشوی جانبی (Drawer)** | نبود سایدبار تایم‌لاین برای مشاهده لاگ زنجیره اقدامات (`CountTaskHistory`). | طراحی کشوی جانبی اسلاید-اور شکیل با انیمیشن روان و بک‌دراپ بلور. |
-| **۵** | **کارایی کوئری‌های بک‌اند** | هنگام بارگذاری تسک‌ها در حالت پیگیری، فراخوانی روابط تاریخچه بدون Prefetch ممکن است باعث کوئری اضافی (N+1) شود. | افزودن `Prefetch('history')` بهینه به کوئری‌ست بک‌اند در [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py). |
+| **۵** | **کارایی کوئری‌های بک‌اند** | هنگام بارگذاری تسک‌ها در حالت پیگیری، فراخوانی روابط تاریخچه بدون Prefetch ممکن است باعث کوئری اضافی (N+1) شود. | افزودن `Prefetch('history')` بهینه به کوئری‌ست بک‌اند در [views.py](file:///e:/warehouse%20project/backend/inventory/views.py). |
 
 ---
 
 ## ۲. ساختار فازبندی اجرا (Phased Implementation Plan)
 
 ### فاز ۰: اصلاح چیدمان، زیباسازی و انتقال انتخاب انبار به بالای جدول
-* انتقال سلکتور انبار از هدر اصلی به بخش `<div table-actions>` داخل [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html) بین کادر جستجوی سریع و دکمه‌های عملیات گروهی.
+* انتقال سلکتور انبار از هدر اصلی به بخش `<div table-actions>` داخل [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html) بین کادر جستجوی سریع و دکمه‌های عملیات گروهی.
 * افزودن دکمه با آیکون چارت/آنالیز در هدر بالا برای باز کردن مودال عملکرد افراد.
 * بهینه‌سازی استایل کارت‌های مینی‌داشبورد.
 
 ### فاز ۱: پشتیبانی جدول داده‌ها از کلیک روی سطرها (`DataTableComponent`)
-* افزودن خروجی `@Output() rowClick = new EventEmitter<any>()` به [data-table.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/data-table/data-table.component.ts).
+* افزودن خروجی `@Output() rowClick = new EventEmitter<any>()` به [data-table.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/data-table/data-table.component.ts).
 * جلوگیری از تداخل کلیک با المان‌های فعال (دکمه‌ها، چک‌باکس‌ها، اینپوت‌ها).
 * افزودن استایل بصری هاور و نشانگر ماوس.
 
@@ -42,7 +42,7 @@
 * محاسبه سرعت شمارش (کالا در ساعت Items/Hour)، نرخ مغایرت، نرخ دقت انبارگردان‌ها و سرعت بررسی سرپرستان به صورت بلادرنگ کلاینت‌ساید.
 
 ### فاز ۴: بهینه‌سازی بک‌اند، یکپارچه‌سازی و اعتبارسنجی
-* افزودن `Prefetch('history')` در بک‌اند [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py).
+* افزودن `Prefetch('history')` در بک‌اند [views.py](file:///e:/warehouse%20project/backend/inventory/views.py).
 * تست پایداری آفلاین و کنترل بیست‌چهار ساعته رویدادها.
 
 </div>

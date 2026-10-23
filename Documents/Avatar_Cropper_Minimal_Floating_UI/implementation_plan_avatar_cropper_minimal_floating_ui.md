@@ -17,19 +17,19 @@
 ## ۲. تغییرات فایل‌ها (Proposed Changes)
 
 ### الف) منطق کامپوننت مودال برش (Component Logic)
-#### [MODIFY] [avatar-cropper-modal.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)
+#### [MODIFY] [avatar-cropper-modal.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)
 - تثبیت نسبت ابعاد `aspectRatio = '1:1'`.
 - حذف وابستگی‌های مربوط به متد `setAspectRatio`.
 
 ---
 
 ### ب) قالب HTML و استایل‌های مدرن CSS (Template & Aesthetics)
-#### [MODIFY] [avatar-cropper-modal.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.html)
+#### [MODIFY] [avatar-cropper-modal.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.html)
 - حذف بخش `aspect-ratio-group` از نوار ابزار بالا.
 - حذف کامل بخش `controls-section` (اسلایدر زوم و دکمه‌های بازنشانی و چرخش قبلی) از پایین.
 - اضافه کردن دکمه شناور چرخش (`floating-rotate-btn`) داخل کادر پیش‌نمایش عکس (`canvas-box`) در گوشه بالا-راست.
 
-#### [MODIFY] [avatar-cropper-modal.css](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.css)
+#### [MODIFY] [avatar-cropper-modal.css](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.css)
 - تعریف استایل `floating-rotate-btn`:
   - موقعیت `position: absolute; top: 12px; right: 12px; z-index: 10;`.
   - افکت شیشه‌ای مدرن `background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.25); color: #ffffff;`.

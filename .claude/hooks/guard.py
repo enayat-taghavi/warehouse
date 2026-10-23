@@ -141,7 +141,7 @@ def check_migrate_backup(command):
         return
 
     override_dir = os.environ.get('TEST_GUARD_BACKUP_DIR')
-    backup_dir = Path(override_dir) if override_dir else (ROOT / 'warehouse-backend' / 'backups' / 'db')
+    backup_dir = Path(override_dir) if override_dir else (ROOT / 'backend' / 'backups' / 'db')
     max_age_seconds = 15 * 60  # ۱۵ دقیقه
     now = time.time()
     has_fresh_backup = False
@@ -162,7 +162,7 @@ def check_migrate_backup(command):
         deny(
             'اجرای manage.py migrate روی دیتابیس عملیاتی بدون پشتیبان تازه ممنوع است.\n'
             'طبق اسکیل safe-migration، باید یک فایل .dump غیرخالی با .meta.json در '
-            'warehouse-backend/backups/db/ با عمر کمتر از ۱۵ دقیقه وجود داشته باشد.\n'
+            'backend/backups/db/ با عمر کمتر از ۱۵ دقیقه وجود داشته باشد.\n'
             'دستور ساخت پشتیبان:\n'
             'PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c '
             '"from accounts.backup_service import create_database_backup; '
@@ -175,7 +175,7 @@ def check_status_checks(file_path, text):
         return
     path = file_path.replace('\\', '/')
     if (
-        '/warehouse-front/src/' not in path
+        '/frontend/src/' not in path
         or not path.endswith('.ts')
         or path.endswith('.spec.ts')
         or path.endswith('/server-reachability.ts')
@@ -198,7 +198,7 @@ def check_ui_template(file_path, text):
         return
     path = file_path.replace('\\', '/')
     if (
-        '/warehouse-front/src/' not in path
+        '/frontend/src/' not in path
         or not (path.endswith('.html') or path.endswith('.ts'))
         or path.endswith('.spec.ts')
         or path.endswith('/icon-registry.ts')

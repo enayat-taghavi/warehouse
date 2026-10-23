@@ -26,7 +26,7 @@
 
 ## ۲. کالبدشکافی عمیق قطعات صفحه مبدا (`WarehouseAttendance`)
 
-صفحه مبدا [warehouse-attendance.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) شامل دو هسته بزرگ است:
+صفحه مبدا [warehouse-attendance.ts](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) شامل دو هسته بزرگ است:
 
 ### ۲.۱. هسته کارکرد پرسنل (`mainSectionTab === 'personnel'`)
 1. **ماتریس روزانه (`daily`):**
@@ -96,7 +96,7 @@ graph TD
 
 ### ۴.۳. نگهبان G3: مصونیت کدهای مبدا (Zero-Regression Guardian)
 > [!WARNING]
-> فایل [warehouse-attendance.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) به عنوان ستون فقرات کارکرد پرسنل سازمان نباید دستخوش تغییرات مخرب یا حذف کد شود. فرآیند انتقال به صورت پیوند ماژولار مستقل انجام می‌پذیرد.
+> فایل [warehouse-attendance.ts](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) به عنوان ستون فقرات کارکرد پرسنل سازمان نباید دستخوش تغییرات مخرب یا حذف کد شود. فرآیند انتقال به صورت پیوند ماژولار مستقل انجام می‌پذیرد.
 
 ### ۴.۴. نگهبان G4: انطباق محاسباتی تیرماه و تقویم شمسی (Personnel & Payroll Invariant)
 - روزهای کاری استاندارد دارای پایه ۱۰ ساعت هستند.
@@ -110,11 +110,11 @@ graph TD
 
 ## ۵. برنامه‌ریزی فازهای اجرایی (Implementation Phasing)
 
-- **فاز ۱:** پیاده‌سازی کامل موتور کارکرد روزانه و ماهانه پرسنل در [employee-attendance.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-attendance/employee-attendance.ts).
-- **فاز ۲:** پیاده‌سازی کامل موتور کارکرد روزانه و ماهانه ناوگان در [employee-fleet.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-fleet/employee-fleet.ts).
-- **فاز ۳:** استقرار کارتابل و فرم ثبت فاکتور هزینه و طرف‌حساب‌ها در [employee-invoices.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-invoices/employee-invoices.ts).
-- **فاز ۴:** استقرار فرم استاندارد تعریف خودرو با اعتبارسنجی شبا در [employee-new-vehicle.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts).
-- **فاز ۵:** استقرار فرم استاندارد تعریف پرسنل با اعتبارسنجی کد ملی در [employee-new-personnel.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts).
+- **فاز ۱:** پیاده‌سازی کامل موتور کارکرد روزانه و ماهانه پرسنل در [employee-attendance.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-attendance/employee-attendance.ts).
+- **فاز ۲:** پیاده‌سازی کامل موتور کارکرد روزانه و ماهانه ناوگان در [employee-fleet.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-fleet/employee-fleet.ts).
+- **فاز ۳:** استقرار کارتابل و فرم ثبت فاکتور هزینه و طرف‌حساب‌ها در [employee-invoices.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-invoices/employee-invoices.ts).
+- **فاز ۴:** استقرار فرم استاندارد تعریف خودرو با اعتبارسنجی شبا در [employee-new-vehicle.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts).
+- **فاز ۵:** استقرار فرم استاندارد تعریف پرسنل با اعتبارسنجی کد ملی در [employee-new-personnel.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts).
 - **فاز ۶:** راستی‌آزمایی جامع با ایجنت‌های نگهبان، تست‌های تایپ‌اسکریپت و بیلد نهایی پروداکشن.
 
 </div>

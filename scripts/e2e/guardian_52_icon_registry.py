@@ -28,7 +28,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
+APP_DIR = REPO_ROOT / "frontend" / "src" / "app"
 REGISTRY = APP_DIR / "shared" / "icons" / "icon-registry.ts"
 DIRECTIVE = APP_DIR / "shared" / "icons" / "svg-icon.directive.ts"
 SEMANTIC = APP_DIR / "shared" / "icons" / "semantic-icons.ts"

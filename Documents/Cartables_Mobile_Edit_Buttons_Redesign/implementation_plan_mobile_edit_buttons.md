@@ -21,7 +21,7 @@
 
 ### ۲. جزئیات دقیق خطوط کد و تغییرات فازبندی‌شده
 
-#### فاز ۱: اصلاح کارتابل انبارگردان ([`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html))
+#### فاز ۱: اصلاح کارتابل انبارگردان ([`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html))
 
 1. **تغییر کلاس کانتینر دکمه‌های فعال (خط ۷۹۴):**
 ```diff
@@ -37,7 +37,7 @@
 
 ---
 
-#### فاز ۲: اصلاح کارتابل مالی ([`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html))
+#### فاز ۲: اصلاح کارتابل مالی ([`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html))
 
 1. **تغییر کلاس کانتینر دکمه‌های فعال (خط ۸۳۸):**
 ```diff

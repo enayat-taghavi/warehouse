@@ -20,14 +20,14 @@
 
 ### 📁 فایل‌های ویرایش‌شده و جزئیات کد
 
-#### ۱. بک‌اند: `warehouse-backend/communications/broadcast.py`
+#### ۱. بک‌اند: `backend/communications/broadcast.py`
 ```python
 # سریالایز بی‌طرفانه پیام بدون کانتکست اختصاصی کاربر فرستنده تا is_me برای سایرین True نشود
 data = MessageSerializer(msg).data
 data['is_me'] = False
 ```
 
-#### ۲. تنظیمات پروکسی: `warehouse-front/proxy.conf.json`
+#### ۲. تنظیمات پروکسی: `frontend/proxy.conf.json`
 ```json
 "/ws": {
   "target": "http://127.0.0.1:8000",
@@ -37,13 +37,13 @@ data['is_me'] = False
 }
 ```
 
-#### ۳. سرویس هسته چت: `warehouse-front/src/app/core/services/communication.service.ts`
+#### ۳. سرویس هسته چت: `frontend/src/app/core/services/communication.service.ts`
 - اضافه شدن متد `getCurrentUserId()` با استخراج از توکن JWT و استوریج
 - اضافه شدن لیسنرهای `document.visibilitychange` و `window.online` جهت ریکاوری آنی وب‌سوکت در موبایل
 - اصلاح متدهای `loadMessages`، `loadOlderMessages`، `handleNewMessage` و `handleUpdatedMessage` برای تعیین دقیق `is_me`
 - پخش قطعی صدای نوتیفیکیشن برای تمامی پیام‌های دریافتی از همکاران
 
-#### ۴. کامپوننت کشوی چت: `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
+#### ۴. کامپوننت کشوی چت: `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
 - تزریق `AuthService` و بازنویسی `getConversationTitle` جهت نمایش دقیق نام طرف مقابل گفتگو
 
 ---
@@ -69,7 +69,7 @@ Tests       13 passed (13)
 #### ۳. بیلد نهایی و کامپایل تایپ‌اسکریپت:
 ```bash
 npx ng build --configuration=development --no-progress
-Application bundle generation complete. Output location: warehouse-front\dist\warehouse-app
+Application bundle generation complete. Output location: frontend\dist\warehouse-app
 ```
 
 </div>

@@ -26,7 +26,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+BACKEND_DIR = REPO_ROOT / "backend"
 VENV_PYTHON = BACKEND_DIR / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
     "python.exe" if os.name == "nt" else "python"
 )

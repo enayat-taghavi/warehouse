@@ -27,10 +27,10 @@
 
 | ردیف | مسیر فایل | توضیحات تغییرات |
 | :---: | :--- | :--- |
-| **۱** | [`views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | افزودن اکشن‌های `get_export_columns` و `export_excel` به `DocTaskViewSet` |
-| **۲** | [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | پیاده‌سازی متدهای ارسال تکی، جستجوی دوطرفه، انتخاب همه، پایداری URL و حفاظت از فرم |
-| **۳** | [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) | بازطراحی هدر، کادر جستجو، بنر هشدار رد، تایم‌لاین تاریخچه و بهینه‌سازی فرم |
-| **۴** | [`doc-task-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts) | اصلاح شرط منطقی فیلتر تسک‌های کاربر در `getMyTasks` |
+| **۱** | [`views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | افزودن اکشن‌های `get_export_columns` و `export_excel` به `DocTaskViewSet` |
+| **۲** | [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | پیاده‌سازی متدهای ارسال تکی، جستجوی دوطرفه، انتخاب همه، پایداری URL و حفاظت از فرم |
+| **۳** | [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) | بازطراحی هدر، کادر جستجو، بنر هشدار رد، تایم‌لاین تاریخچه و بهینه‌سازی فرم |
+| **۴** | [`doc-task-store.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts) | اصلاح شرط منطقی فیلتر تسک‌های کاربر در `getMyTasks` |
 
 ---
 

@@ -32,17 +32,17 @@
 ## 🏗️ فایل‌های ایجاد و اصلاح‌شده
 
 ### ۱. لایه بک‌اند (Django / DRF)
-- `warehouse-backend/inventory/models.py`: ارتقای مدل `ItemPhoto` با ارث‌بری از `SyncModelMixin`، تعریف سه رده ابعادی/کیفیتی WebP، فیلدهای مبدا تصویر (`camera` / `gallery`)، شناسه تسک شمارش (`CountTask`) و متادیتا.
-- `warehouse-backend/inventory/migrations/0027_alter_itemphoto_options_alter_itemphoto_managers_and_more.py`: اعمال مایگریشن ساختار دیتابیس بدون دستکاری داده‌های قبلی.
-- `warehouse-backend/inventory/utils/image_processor.py`: ماژول پردازش تصاویر با استفاده از Pillow، اصلاح EXIF Orientation و تولید نسخه‌های چندگانه WebP در حافظه رم.
-- `warehouse-backend/inventory/serializers.py`: ایجاد `ItemPhotoSerializer` و غنی‌سازی `ItemSerializer` با `photos_count` و `primary_thumbnail`.
-- `warehouse-backend/inventory/views.py` & `urls.py`: راه‌اندازی `ItemPhotoViewSet` برای آپلود دسته‌ای، تنظیم عکس شاخص، جابجایی ترتیب و حذف عکس.
+- `backend/inventory/models.py`: ارتقای مدل `ItemPhoto` با ارث‌بری از `SyncModelMixin`، تعریف سه رده ابعادی/کیفیتی WebP، فیلدهای مبدا تصویر (`camera` / `gallery`)، شناسه تسک شمارش (`CountTask`) و متادیتا.
+- `backend/inventory/migrations/0027_alter_itemphoto_options_alter_itemphoto_managers_and_more.py`: اعمال مایگریشن ساختار دیتابیس بدون دستکاری داده‌های قبلی.
+- `backend/inventory/utils/image_processor.py`: ماژول پردازش تصاویر با استفاده از Pillow، اصلاح EXIF Orientation و تولید نسخه‌های چندگانه WebP در حافظه رم.
+- `backend/inventory/serializers.py`: ایجاد `ItemPhotoSerializer` و غنی‌سازی `ItemSerializer` با `photos_count` و `primary_thumbnail`.
+- `backend/inventory/views.py` & `urls.py`: راه‌اندازی `ItemPhotoViewSet` برای آپلود دسته‌ای، تنظیم عکس شاخص، جابجایی ترتیب و حذف عکس.
 
 ### ۲. لایه فرانت‌اند (Angular 19+ Standalone)
-- `warehouse-front/src/app/core/models/item.model.ts`: افزودن اینترفیس `ItemPhoto` و مشخصات عکس‌ها به مدل کالا.
-- `warehouse-front/src/app/core/services/image-compressor.service.ts`: سرویس فشرده‌سازی کلاینت با موتور Canvas WebP.
-- `warehouse-front/src/app/core/services/item-photo.service.ts`: کلاینت HTTP برای مدیریت درخواست‌ها و رصد درصد پیشرفت آپلود (`reportProgress`).
-- `warehouse-front/src/app/shared/components/item-photo-gallery/`: کامپوننت ماژولار و مدرن گالری تصویر با استایل شیشه‌ای (Glassmorphism)، زوم دوبرابری، چرخش ۹۰ درجه، کلیدهای دسترسی سریع دوربین و گالری، و مدیریت حذف/شاخص.
+- `frontend/src/app/core/models/item.model.ts`: افزودن اینترفیس `ItemPhoto` و مشخصات عکس‌ها به مدل کالا.
+- `frontend/src/app/core/services/image-compressor.service.ts`: سرویس فشرده‌سازی کلاینت با موتور Canvas WebP.
+- `frontend/src/app/core/services/item-photo.service.ts`: کلاینت HTTP برای مدیریت درخواست‌ها و رصد درصد پیشرفت آپلود (`reportProgress`).
+- `frontend/src/app/shared/components/item-photo-gallery/`: کامپوننت ماژولار و مدرن گالری تصویر با استایل شیشه‌ای (Glassmorphism)، زوم دوبرابری، چرخش ۹۰ درجه، کلیدهای دسترسی سریع دوربین و گالری، و مدیریت حذف/شاخص.
 - ادغام در کارتابل‌ها:
   - `counter-dashboard`: دکمه عکاسی و مشاهده در لیست و نمای جزییات شمارشگر.
   - `supervisor-dashboard`: دکمه مشاهده و مدیریت آلبوم تصاویر در جزییات سوپروایزر.

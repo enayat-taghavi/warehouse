@@ -60,17 +60,17 @@
 ## 📁 فایل‌های ایجاد و اصلاح شده
 
 - **Backend:**
-  - `warehouse-backend/communications/` (تمامی فایل‌های اپلیکیشن، مدل‌ها، کانسومرها، سریالایزرها و ویوها)
-  - `warehouse-backend/communications/management/commands/purge_expired_chat_media.py`
-  - `warehouse-backend/config/settings.py`
-  - `warehouse-backend/config/urls.py`
-  - `warehouse-backend/config/asgi.py`
+  - `backend/communications/` (تمامی فایل‌های اپلیکیشن، مدل‌ها، کانسومرها، سریالایزرها و ویوها)
+  - `backend/communications/management/commands/purge_expired_chat_media.py`
+  - `backend/config/settings.py`
+  - `backend/config/urls.py`
+  - `backend/config/asgi.py`
 - **Frontend:**
-  - `warehouse-front/src/app/core/services/communication.service.ts`
-  - `warehouse-front/src/app/components/communications/contextual-comments/`
-  - `warehouse-front/src/app/components/communications/chat-drawer/`
-  - `warehouse-front/src/app/components/layout/layout.ts` & `layout.html`
-  - `warehouse-front/src/app/components/settings/settings.html`
+  - `frontend/src/app/core/services/communication.service.ts`
+  - `frontend/src/app/components/communications/contextual-comments/`
+  - `frontend/src/app/components/communications/chat-drawer/`
+  - `frontend/src/app/components/layout/layout.ts` & `layout.html`
+  - `frontend/src/app/components/settings/settings.html`
 - **Documentation:**
   - `Documents/Communication_System_And_Contextual_Comments/`
   - `Documents/Master_Log.md`

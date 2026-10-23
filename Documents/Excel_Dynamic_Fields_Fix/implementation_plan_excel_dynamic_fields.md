@@ -8,14 +8,14 @@
 
 | مسیر | کامپوننت | توضیحات تغییرات |
 |------|-----------|-----------------|
-| `warehouse-backend/inventory/views.py` | فایل‌های اصلی | حذف `dynamic_data` و یکپارچه‌سازی `get_expected_fields` برای دریافت و پردازش صحیح نام‌های داینامیک |
+| `backend/inventory/views.py` | فایل‌های اصلی | حذف `dynamic_data` و یکپارچه‌سازی `get_expected_fields` برای دریافت و پردازش صحیح نام‌های داینامیک |
 
 ### تغییرات پیشنهادی
 
 > [!TIP]
 > با این اصلاح، کاربران به جای کار با JSON مستقیم، با نام واقعی ستون‌ها کار خواهند کرد و سیستم تبدیل را خودش انجام می‌دهد.
 
-#### [MODIFY] [inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 تغییرات در متدهای زیر اعمال خواهد شد:
 1. `get_expected_fields`: تغییر ساختار برای دریافت پارامتر `warehouse_id`. فیلد `dynamic_data` نادیده گرفته می‌شود و فیلدهای داینامیک جدول `ItemFieldDefinition` در صورت وجود به لیست اضافه می‌شوند.
 2. `export_columns`: حذف فیلد `dynamic_data` از خروجی ستون‌های جدول‌های فرانت‌اند.

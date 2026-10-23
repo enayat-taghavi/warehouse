@@ -26,11 +26,11 @@
 
 | ردیف | لایه | فایل‌های هدف | شرح تغییرات |
 | :---: | :---: | :--- | :--- |
-| **۱** | دیتابیس و مدل | `warehouse-backend/personnel/models.py` | حذف فیلد `section` از مدل `Counterparty` و تبدیل آن به یک رکورد سراسری Master Data. |
-| **۲** | مایگریشن جنگو | `warehouse-backend/personnel/migrations/0004_...` | ایجاد و اجرای مایگریشن پیش‌رونده استاندارد جهت حذف فیلد بدون آسیب به سایر جداول. |
+| **۱** | دیتابیس و مدل | `backend/personnel/models.py` | حذف فیلد `section` از مدل `Counterparty` و تبدیل آن به یک رکورد سراسری Master Data. |
+| **۲** | مایگریشن جنگو | `backend/personnel/migrations/0004_...` | ایجاد و اجرای مایگریشن پیش‌رونده استاندارد جهت حذف فیلد بدون آسیب به سایر جداول. |
 | **۳** | سریالایزر و کوئری‌ست | `personnel/serializers.py`<br>`personnel/views.py` | حذف فیلدهای بخش از `CounterpartySerializer` و بهینه‌سازی `CounterpartyViewSet` (حذف کوئری‌های جوین بخش). |
 | **۴** | موتور اکسل | `personnel/org_excel_engine.py` | اصلاح قالب اکسل، ورودی و خروجی طرف‌حساب‌ها بدون ستون‌های پروژه و بخش. |
-| **۵** | کامپوننت فرانت جدید | `warehouse-front/src/app/components/finance/counterparties/` | ساخت کامپوننت مستقل و کامل مدیریت طرف‌حساب‌ها با فرم، جستجو، فیلتر نوع، اعتبارسنجی شبا و اکسل. |
+| **۵** | کامپوننت فرانت جدید | `frontend/src/app/components/finance/counterparties/` | ساخت کامپوننت مستقل و کامل مدیریت طرف‌حساب‌ها با فرم، جستجو، فیلتر نوع، اعتبارسنجی شبا و اکسل. |
 | **۶** | پالایش صفحه پروژه‌ها | `projects-and-sections.ts`<br>`projects-and-sections.html` | حذف کامل تب چهارم (طرف‌حساب‌ها) و متغیرها/متدهای آن جهت تمرکز ۱۰۰٪ روی چارت سازمانی. |
 | **۷** | روتینگ، منو و گارد | `accounting.routes.ts`<br>`nav-items.ts`<br>`auth.guard.ts` | اضافه کردن روت `counterparties`، آیتم منوی مستقل و مجوزهای امنیتی RBAC. |
 
@@ -40,26 +40,26 @@
 
 ### الف) بک‌اند (Backend)
 
-#### [MODIFY] `warehouse-backend/personnel/models.py`
+#### [MODIFY] `backend/personnel/models.py`
 - حذف فیلد `section` از مدل `Counterparty`.
 
-#### [NEW MIGRATION] `warehouse-backend/personnel/migrations/0004_remove_counterparty_section.py`
+#### [NEW MIGRATION] `backend/personnel/migrations/0004_remove_counterparty_section.py`
 - تولید خودکار مایگریشن پیش‌رونده جنگو از طریق `makemigrations` و اعمال با `migrate`.
 
-#### [MODIFY] `warehouse-backend/personnel/serializers.py`
+#### [MODIFY] `backend/personnel/serializers.py`
 - حذف `section`, `section_name`, `project_name` از فیلدهای `CounterpartySerializer`.
 
-#### [MODIFY] `warehouse-backend/personnel/views.py`
+#### [MODIFY] `backend/personnel/views.py`
 - پاکسازی `select_related('section', 'section__project')` و فیلتر `section_id` در `CounterpartyViewSet`.
 
-#### [MODIFY] `warehouse-backend/personnel/org_excel_engine.py`
+#### [MODIFY] `backend/personnel/org_excel_engine.py`
 - به‌روزرسانی توابع اکسل طرف‌حساب‌ها (`export_counterparties_excel`, `import_counterparties_from_excel`, `download_counterparties_template`).
 
 ---
 
 ### ب) فرانت‌اند (Frontend)
 
-#### [NEW] `warehouse-front/src/app/components/finance/counterparties/counterparties.ts`
+#### [NEW] `frontend/src/app/components/finance/counterparties/counterparties.ts`
 - کامپوننت مستقل و کامل مدیریت طرف‌حساب‌ها شامل:
   - فرم ثبت و ویرایش هوشمند با اسکرول نرم
   - دراپ‌داون هوشمند بانک‌های ایرانی و اعتبارسنجی خودکار شبا / شماره حساب
@@ -70,23 +70,23 @@
   - شنود رویدادهای زنده وب‌سوکت برای همگام‌سازی بین تب‌ها
   - مدیریت کش آفلاین SWR
 
-#### [NEW] `warehouse-front/src/app/components/finance/counterparties/counterparties.html`
+#### [NEW] `frontend/src/app/components/finance/counterparties/counterparties.html`
 - رابط کاربری مدرن، ارگونومیک، واکنش‌گرا و سازگار با استانداردهای زیبایی‌شناسی.
 
-#### [NEW] `warehouse-front/src/app/components/finance/counterparties/counterparties.css`
+#### [NEW] `frontend/src/app/components/finance/counterparties/counterparties.css`
 - استایل‌های تکمیلی.
 
-#### [MODIFY] `warehouse-front/src/app/modules/accounting/accounting.routes.ts`
+#### [MODIFY] `frontend/src/app/modules/accounting/accounting.routes.ts`
 - ثبت روت `{ path: 'counterparties', component: CounterpartiesComponent, data: { reuse: true } }`.
 
-#### [MODIFY] `warehouse-front/src/app/modules/accounting/nav-items.ts`
+#### [MODIFY] `frontend/src/app/modules/accounting/nav-items.ts`
 - افزودن آیتم:
   `{ id: 'counterparties', label: '🤝 مدیریت طرف‌حساب‌های مالی', icon: 'users', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true }`.
 
-#### [MODIFY] `warehouse-front/src/app/core/auth/auth.guard.ts`
+#### [MODIFY] `frontend/src/app/core/auth/auth.guard.ts`
 - ثبت مجوزهای روت `counterparties` در `ROUTE_PERMISSIONS`.
 
-#### [MODIFY] `warehouse-front/src/app/components/organization/projects-and-sections/`
+#### [MODIFY] `frontend/src/app/components/organization/projects-and-sections/`
 - حذف ساب‌تب `counterparties`، فرم و جدول آن و پاکسازی متدهای مربوطه از کامپوننت.
 
 ---

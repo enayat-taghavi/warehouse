@@ -30,7 +30,7 @@ graph TD
 
 ### الف) لایه بک‌اند (Backend)
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 * پیاده‌سازی اکشن `@action(detail=False, methods=['get'], url_path='get_export_columns')` در کلاس `DocTaskViewSet` جهت بازگرداندن لیست ستون‌های مجاز خروجی اکسل کارتابل مالی.
 * پیاده‌سازی اکشن `@action(detail=False, methods=['post'], url_path='export_excel')` در کلاس `DocTaskViewSet` جهت تولید و دانلود فایل اکسل تسک‌های مالی شامل تبدیل تاریخ‌ها به شمسی، برچسب‌های فارسی وضعیت‌ها، پشتیبانی از فیلتر انبار و لیست شناسه‌های انتخابی (`selected_ids`).
 
@@ -38,7 +38,7 @@ graph TD
 
 ### ب) لایه سرویس‌ها و مدل‌های فرانت‌اند (Core & Services)
 
-#### [MODIFY] [doc-task-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts)
+#### [MODIFY] [doc-task-store.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts)
 * اصلاح شرط منطقی متد `getMyTasks` جهت بازگرداندن دقیق تسک‌های کارشناس جاری.
 * پشتیبانی از ذخیره‌سازی آفلاین فیلدهای پویای کالا در صورت ایجاد تغییرات در فرم مالی.
 
@@ -46,7 +46,7 @@ graph TD
 
 ### ج) لایه کامپوننت کارتابل مالی (Customs Component)
 
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 1. **جداسازی ارسال تکی کالا (`submitCurrentTask`):** افزودن متد اختصاصی برای ارسال کالای فعال در فرم جزئیات پس از ذخیره خودکار پیش‌نویس.
 2. **بهینه‌سازی جستجو:** کاهش `debounceTime` از ۲۰۰۰ms به ۳۰۰ms و اعمال فیلتر جستجو بر روی هر دو تب `my-tasks` و `poolTasks`.
 3. **همگام‌سازی وضعیت URL:** ذخیره و بازیابی `taskId` در پارامترهای آدرس مرورگر (`?taskId=...`) جهت ماندگاری وضعیت فرم پس از Refresh.
@@ -55,7 +55,7 @@ graph TD
 6. **پاکسازی کدهای مرده:** حذف متغیرهای بدون استفاده `f_added_rti_no` تا `f_signature` و حذف تاخیرهای مصنوعی `setTimeout(600)`.
 7. **پشتیبانی از انتخاب همه:** متدهای `toggleSelectAll()` و `isAllSelected()`.
 
-#### [MODIFY] [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+#### [MODIFY] [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
 1. **افزودن کادر جستجوی زیبا و پیشرفته:** نوار جستجو با دکمه پاک کردن، آیکون و شمارنده نتایج.
 2. **جعبه پیام وضعیت و دلیل رد (Rejection Alert Box):** نمایش بنر هشدار با متن یادداشت سرپرست (`supervisor_note`) یا یادداشت مدیر (`manager_note`) در فرم جزئیات کالاهای رد شده.
 3. **افزودن تاریخچه اقدامات (History Timeline):** نمایش تاریخچه بررسی‌ها و تغییرات سند در پایین فرم جزئیات.

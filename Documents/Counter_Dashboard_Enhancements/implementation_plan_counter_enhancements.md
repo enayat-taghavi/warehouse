@@ -2,7 +2,7 @@
 
 # طرح جامع اصلاحات، بهینه‌سازی و ارتقای داشبورد انبارگردان (Counter Dashboard Enhancements)
 
-این سند فنی شامل جزئیات پیاده‌سازی ۱۲ مورد عیب‌یابی‌شده به همراه ۳ نیازمندی جدید کاربر جهت بهبود عملکرد، سرعت، تجربه کاربری (UX) و قابلیت اطمینان در صفحه انبارگردان ([`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) و [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)) می‌باشد.
+این سند فنی شامل جزئیات پیاده‌سازی ۱۲ مورد عیب‌یابی‌شده به همراه ۳ نیازمندی جدید کاربر جهت بهبود عملکرد، سرعت، تجربه کاربری (UX) و قابلیت اطمینان در صفحه انبارگردان ([`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) و [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)) می‌باشد.
 
 ---
 
@@ -30,7 +30,7 @@
 ## ۲. خلاصه تغییرات پیشنهادی به تفکیک لایه‌ها (Proposed Changes)
 
 ```
-warehouse-front/src/app/components/counter/counter-dashboard/
+frontend/src/app/components/counter/counter-dashboard/
  ├── counter-dashboard.ts    [MODIFY] -> منطق فیلترها، سابمیت مستقیم، تبدیل ارقام فارسی، بهینه‌سازی ذخیره فیلدها و Long-Press
  └── counter-dashboard.html  [MODIFY] -> فوتر دو دکمه‌ای، نمایش شرطی چیپ‌ها، اصلاح لیبل‌ها و استایل پاپ‌اور سورت
 ```
@@ -39,7 +39,7 @@ warehouse-front/src/app/components/counter/counter-dashboard/
 
 ### فاز ۱: منطق وضعیت‌ها، اعتبارسنجی فرم و ارسال مستقیم (State & Form Logic)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 1. **نرمال‌سازی ارقام فارسی در ورودی شمارش:**
    - اعمال تابع `normalizeDigits` بر روی `countedBalanceStr` در زمان ذخیره یا ارسال تا ارقام کیبورد فارسی/عربی با خطای `NaN` مواجه نشوند.
 2. **اصلاح وضعیت در صورت خالی کردن عدد شمارش:**
@@ -57,7 +57,7 @@ warehouse-front/src/app/components/counter/counter-dashboard/
 
 ### فاز ۲: تعاملات، بهینه‌سازی عملکرد و مالتی‌سلکت (Performance & Interaction)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 1. **بهینه‌سازی ذخیره فیلدهای سفارشی کالا (`saveExtraEditedFields`):**
    - مقایسه مقادیر فرم با مقادیر موجود در `selectedTask.item_details` و فقط ارسال درخواست HTTP PATCH در صورت وجود تغییر واقعی (`dirty checking`).
 2. **پشتیبانی امن از حالت آفلاین برای ویرایش فیلدهای کالا:**
@@ -73,7 +73,7 @@ warehouse-front/src/app/components/counter/counter-dashboard/
 
 ### فاز ۳: رابط کاربری، تمپلیت و واکنش‌گرایی (UI & Template Enhancements)
 
-#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 1. **طراحی فوتر جدید در نمای جزئیات (Detail View):**
    - ایجاد دو دکمه اصلی:
      - دکمه سبز رنگ: **«ثبت و ارسال به سرپرست»** (با آیکون ارسال)

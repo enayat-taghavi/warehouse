@@ -1,6 +1,6 @@
 
 
-cd "e:\warehouse project\warehouse-backend"
+cd backend
 .\venv\Scripts\python manage.py runserver 8000
 
 WebSocket 
@@ -12,7 +12,7 @@ python -m daphne -b 0.0.0.0 -p 8000 config.asgi:application
 
 
 
-cd "e:\warehouse project\warehouse-front"
+cd frontend
 npm run start
 npm run start -- --port 4300
 
@@ -82,7 +82,7 @@ ssh -p 443 -R0:localhost:4200 a.pinggy.io
 اجرا در شاخه فرعی
 git stash -u
 
-cd "E:\warehouse project"
+cd /d <project root>
 git checkout main
 git stash apply
 npm run build

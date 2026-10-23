@@ -15,7 +15,7 @@ description: Verification before declaring completion. Use this before saying "d
 5. **Only then** make the claim. If it did not confirm it, state the actual status along with its evidence.
 
 ## Claim → required evidence in this project
-- **TypeScript is correct** → `npx tsc --noEmit -p tsconfig.app.json` in `warehouse-front` with exit code 0. "The edit was simple" is not enough.
+- **TypeScript is correct** → `npx tsc --noEmit -p tsconfig.app.json` in `frontend` with exit code 0. "The edit was simple" is not enough.
 - **Backend is healthy** → `./venv/Scripts/python.exe manage.py check` with no ERROR. The `communications.W001` warning (missing Redis) is normal with DEBUG off.
 - **Migration is safe** → the `safe-migration` skill. Skimming the migration file is not enough.
 - **Guardians pass** → `python scripts/e2e/guardian_all.py`, reporting the pass and fail counts. Running one guardian instead of all is not enough.

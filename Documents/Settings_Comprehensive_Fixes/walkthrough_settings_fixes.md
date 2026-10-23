@@ -10,13 +10,13 @@
 
 | ردیف | فایل | دسته‌بندی | شرح اقدامات انجام‌شده |
 | :--- | :--- | :--- | :--- |
-| ۱ | [`warehouses/services.py`](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py) | **بک‌اند** | اضافه شدن `manager_approval_mode: 'any_manager'` به `DEFAULT_SETTINGS` جهت جلوگیری از مقادیر `undefined`. |
-| ۲ | [`settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html) | **تنظیمات کلان** | افزودن فیلد جاافتاده «تایید سرپرست اسناد»، ارتقای ویژگی‌های دسترسی‌پذیری (`role="switch"`) و افزودن بنر امنیتی سوپریوزر. |
-| ۳ | [`settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.ts) | **تنظیمات کلان** | حذف تاخیر ۶۰۰ms، پارس صحیح خطای `Blob` در بک‌آپ و هدایت ایمن به صفحه لاگین پس از ریستور موفق. |
-| ۴ | [`wh-settings.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) | **تنظیمات انبار** | ۱) افزودن دکمه سراسری «حذف تنظیم اختصاصی» در تب «قوانین عملیاتی» و تب «فیلدهای انبارگردان» مشابه فیلدهای مالی.<br>۲) حذف دکمه‌های سطل‌زباله تکی کنار هر فیلد در تب قوانین عملیاتی برای تمیزی و یکپارچگی رابط کاربری.<br>۳) رفع باگ کلیک معکوس تاگل‌ها و افزودن تنظیمات آفلاین. |
-| ۵ | [`wh-settings.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) | **تنظیمات انبار** | اضافه شدن متد `resetOperationsSettings()` و گتر `hasOperationsOverride` برای بازنشانی یکجای تمام قوانین عملیاتی اختصاصی انبار، همراه با اتصال به `AuthStore.activeWarehouseId` با `effect()`. |
-| ۶ | [`dynamic-fields.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.ts) | **فیلدهای پویا** | اصلاح خواندن انبار از `AuthStore` و رفرش خودکار لیست فیلدهای پویا با تعویض انبار. |
-| ۷ | [`label-designer.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/label-designer/label-designer.ts) | **طراح لیبل** | مانیتورینگ تغییرات `warehouseId` در `ngOnChanges` جهت ریلود خودکار تمپلیت‌ها و فیلدها. |
+| ۱ | [`warehouses/services.py`](file:///e:/warehouse%20project/backend/warehouses/services.py) | **بک‌اند** | اضافه شدن `manager_approval_mode: 'any_manager'` به `DEFAULT_SETTINGS` جهت جلوگیری از مقادیر `undefined`. |
+| ۲ | [`settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html) | **تنظیمات کلان** | افزودن فیلد جاافتاده «تایید سرپرست اسناد»، ارتقای ویژگی‌های دسترسی‌پذیری (`role="switch"`) و افزودن بنر امنیتی سوپریوزر. |
+| ۳ | [`settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.ts) | **تنظیمات کلان** | حذف تاخیر ۶۰۰ms، پارس صحیح خطای `Blob` در بک‌آپ و هدایت ایمن به صفحه لاگین پس از ریستور موفق. |
+| ۴ | [`wh-settings.html`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) | **تنظیمات انبار** | ۱) افزودن دکمه سراسری «حذف تنظیم اختصاصی» در تب «قوانین عملیاتی» و تب «فیلدهای انبارگردان» مشابه فیلدهای مالی.<br>۲) حذف دکمه‌های سطل‌زباله تکی کنار هر فیلد در تب قوانین عملیاتی برای تمیزی و یکپارچگی رابط کاربری.<br>۳) رفع باگ کلیک معکوس تاگل‌ها و افزودن تنظیمات آفلاین. |
+| ۵ | [`wh-settings.ts`](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) | **تنظیمات انبار** | اضافه شدن متد `resetOperationsSettings()` و گتر `hasOperationsOverride` برای بازنشانی یکجای تمام قوانین عملیاتی اختصاصی انبار، همراه با اتصال به `AuthStore.activeWarehouseId` با `effect()`. |
+| ۶ | [`dynamic-fields.ts`](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.ts) | **فیلدهای پویا** | اصلاح خواندن انبار از `AuthStore` و رفرش خودکار لیست فیلدهای پویا با تعویض انبار. |
+| ۷ | [`label-designer.ts`](file:///e:/warehouse%20project/frontend/src/app/components/label-designer/label-designer.ts) | **طراح لیبل** | مانیتورینگ تغییرات `warehouseId` در `ngOnChanges` جهت ریلود خودکار تمپلیت‌ها و فیلدها. |
 
 ---
 

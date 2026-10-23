@@ -32,7 +32,7 @@
 
 ## ۳. فایل‌های تغییریافته
 
-- **[MODIFY]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html) (چیدمان بهینه دو سطری هدر، پیوستگی تب‌ها و فیلترها از راست به چپ)
-- **[MODIFY]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) (متدهای جابجایی تب‌ها، پاپ‌اوور ماه و بارگذاری اکسل)
+- **[MODIFY]** [`warehouse-attendance.html`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.html) (چیدمان بهینه دو سطری هدر، پیوستگی تب‌ها و فیلترها از راست به چپ)
+- **[MODIFY]** [`warehouse-attendance.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) (متدهای جابجایی تب‌ها، پاپ‌اوور ماه و بارگذاری اکسل)
 
 </div>

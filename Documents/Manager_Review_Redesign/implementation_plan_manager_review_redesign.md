@@ -11,11 +11,11 @@
 
 | فاز | عنوان فاز | فایل‌های هدف | خروجی قابل راستی‌آزمایی |
 | :---: | :--- | :--- | :--- |
-| **فاز ۱** | توسعه هسته منطقی و مدیریت وضعیت کامپوننت | [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) | کامپایل بدون خطا، کارکرد دقیق فیلترها، آمار زنده و همگام‌سازی با URL |
-| **فاز ۲** | طراحی هدر، کارت‌های آمار و نوار ابزار جستجو و فیلترهای شیشه‌ای | [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html) | رندر کارت‌های شاخص ۳ گانه، نوار جستجو، چیپ‌های هوشمند شرطی و نوار اقدام متنی تیره |
-| **فاز ۳** | بازطراحی کارت‌های اقلام و مدال بررسی دقیق کالا | [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html) | کارت‌های مدرن با اکشن‌های سریع درون‌کارت، نشانگر مغایرت، و مدال بررسی بدون خروج از لیست |
-| **فاز ۴** | نوسازی بخش اسناد مالی و تب‌های استخر کالا و اسناد | [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html) | یکپارچگی ظاهری و عملکردی تب‌های اسناد (`doc`) و استخرها (`pool` و `doc-pool`) |
-| **فاز ۵** | استایل‌های تکمیلی CSS، انیمیشن‌ها و اعتبارسنجی بیلد فرانت‌اند | [`manager-review.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.css) | اعتبارسنجی بیلد، انیمیشن‌های روان، ریسپانسیو کامل و ثبت مستندات نهایی |
+| **فاز ۱** | توسعه هسته منطقی و مدیریت وضعیت کامپوننت | [`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) | کامپایل بدون خطا، کارکرد دقیق فیلترها، آمار زنده و همگام‌سازی با URL |
+| **فاز ۲** | طراحی هدر، کارت‌های آمار و نوار ابزار جستجو و فیلترهای شیشه‌ای | [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html) | رندر کارت‌های شاخص ۳ گانه، نوار جستجو، چیپ‌های هوشمند شرطی و نوار اقدام متنی تیره |
+| **فاز ۳** | بازطراحی کارت‌های اقلام و مدال بررسی دقیق کالا | [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html) | کارت‌های مدرن با اکشن‌های سریع درون‌کارت، نشانگر مغایرت، و مدال بررسی بدون خروج از لیست |
+| **فاز ۴** | نوسازی بخش اسناد مالی و تب‌های استخر کالا و اسناد | [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html) | یکپارچگی ظاهری و عملکردی تب‌های اسناد (`doc`) و استخرها (`pool` و `doc-pool`) |
+| **فاز ۵** | استایل‌های تکمیلی CSS، انیمیشن‌ها و اعتبارسنجی بیلد فرانت‌اند | [`manager-review.css`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.css) | اعتبارسنجی بیلد، انیمیشن‌های روان، ریسپانسیو کامل و ثبت مستندات نهایی |
 
 ---
 

@@ -26,11 +26,11 @@
 
 - **اقدامات و فایل‌های مشمول:**
   1. **ایجاد کامپوننت عمومی `VerifyCard`:**
-     - [NEW] [verify-card.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/verify-card/verify-card.ts): دریافت پارامتر `code` از URL (مانند `EMP-1001`)، استخراج مشخصات کاربر، مدیریت وضعیت بارگذاری، تایید امضای دیجیتال و وضعیت فعال/معلق بودن کاربر.
-     - [NEW] [verify-card.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/verify-card/verify-card.html): رابط کاربری مدرن با نشان شکیل سبز رنگ **«اصالت کارت تایید شد - سیستم مرکزی انبارداری»**، کارت پرسنلی دیجیتال، تصویر آواتار واقعی باکیفیت، سمت، کد پرسنلی، کد ملی، گروه خونی، تاریخ اعتبار، فهرست انبارهای مجاز تردد و مهر رسمی دیجیتال همراه با برچسب ساعت و تاریخ اسکن.
-     - [NEW] [verify-card.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/verify-card/verify-card.css): افکت‌های مدرن گلس‌مورفیسم، انیمیشن‌های پالس نوری و بهینه‌سازی کامل جهت گوشی‌های هوشمند.
+     - [NEW] [verify-card.ts](file:///e:/warehouse%20project/frontend/src/app/components/verify-card/verify-card.ts): دریافت پارامتر `code` از URL (مانند `EMP-1001`)، استخراج مشخصات کاربر، مدیریت وضعیت بارگذاری، تایید امضای دیجیتال و وضعیت فعال/معلق بودن کاربر.
+     - [NEW] [verify-card.html](file:///e:/warehouse%20project/frontend/src/app/components/verify-card/verify-card.html): رابط کاربری مدرن با نشان شکیل سبز رنگ **«اصالت کارت تایید شد - سیستم مرکزی انبارداری»**، کارت پرسنلی دیجیتال، تصویر آواتار واقعی باکیفیت، سمت، کد پرسنلی، کد ملی، گروه خونی، تاریخ اعتبار، فهرست انبارهای مجاز تردد و مهر رسمی دیجیتال همراه با برچسب ساعت و تاریخ اسکن.
+     - [NEW] [verify-card.css](file:///e:/warehouse%20project/frontend/src/app/components/verify-card/verify-card.css): افکت‌های مدرن گلس‌مورفیسم، انیمیشن‌های پالس نوری و بهینه‌سازی کامل جهت گوشی‌های هوشمند.
   2. **تنظیم روتینگ عمومی:**
-     - [MODIFY] [app.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts): افزودن مسیرهای بدون گارد `{ path: 'verify-card/:code', component: VerifyCard }` و `{ path: 'verify-card', component: VerifyCard }`.
+     - [MODIFY] [app.routes.ts](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts): افزودن مسیرهای بدون گارد `{ path: 'verify-card/:code', component: VerifyCard }` و `{ path: 'verify-card', component: VerifyCard }`.
 - **معیار راستی‌آزمایی فاز ۱:** ورود دستی به آدرس `http://localhost:4200/#/verify-card/EMP-1001` در مرورگر (حتی در تب ناشناس/Incognito) و مشاهده کارت دیجیتال رسمی و تاییدیه سبز اصالت.
 
 ---
@@ -41,7 +41,7 @@
 > **هدف فاز ۲:** جایگزینی متن خام با URL کامل و فعال‌سازی موتور Canvas جهت رندر بارکد دو‌بعدی بزرگتر (حداقل ۲.۵ برابر مساحت فعلی).
 
 - **اقدامات و فایل‌های مشمول:**
-  1. **تولید داینامیک URL استعلام در [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts):**
+  1. **تولید داینامیک URL استعلام در [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts):**
      - افزودن متد `getCardVerificationUrl(user: User): string` برای ساخت خودکار URL کامل بر مبنای `window.location.origin` و پارامتر هش یا مسیر روتینگ.
      - به‌روزرسانی متدهای `getQrCodeSvg` و `drawPure2DBarcode` جهت انکود کردن URL کامل به همراه داده‌های احراز اصالت.
   2. **بازطراحی ابعاد و چیدمان Canvas در متد `drawCardFaceOnCanvas`:**
@@ -58,12 +58,12 @@
 > **هدف فاز ۳:** هماهنگ‌سازی صددرصدی و دقیق پیش‌نمایش کارت در صفحه، مودال شیت A4 و برگه چاپ با خروجی تصویر دیجیتال به طوری که هیچ‌گونه ناهماهنگی در جایگاه، فونت، کادر و ابعاد وجود نداشته باشد.
 
 - **اقدامات و فایل‌های مشمول:**
-  1. **به‌روزرسانی تمپلیت [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html):**
+  1. **به‌روزرسانی تمپلیت [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html):**
      - اختصاص کادر بزرگ `w-28 h-28` تا `w-32 h-32` به QR Code در پشت کارت عمودی با حاشیه امنیتی و برچسب متنی استعلام.
      - تراز دقیق بلوک مشخصات، گروه خونی، تماس اضطراری و مهر رسمی حراست.
      - هماهنگ‌سازی پشت کارت افقی با زون اختصاصی QR Code.
      - اعمال تغییرات یکپارچه در بخش‌های کارت سه‌بعدی زنده (`live-card-render`)، پیش‌نمایش شیت چاپی مودال (`sheet-preview`) و بخش چاپ اصلی (`print-container`).
-  2. **تنظیم استایل‌های مکمل در [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css):**
+  2. **تنظیم استایل‌های مکمل در [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css):**
      - تثبیت کادرهای برداری QR Code و جلوگیری از هرگونه فشردگی یا اعوجاج در اندازه‌های مختلف صفحه نمایش.
 - **معیار راستی‌آزمایی فاز ۳:** قرار دادن خروجی PNG دانلود شده در کنار کارت پیش‌نمایش مانیتور و تایید تطابق ۱:۱ عناصر، رنگ‌ها، فاصله‌ها و متن‌ها.
 
@@ -72,7 +72,7 @@
 ### فاز ۴: تست نهایی بیلد، اعتبارسنجی جامع و مستندسازی DUAL-SAVE (Phase 4: Build & Finalization)
 
 - **اقدامات:**
-  1. اجرای بیلد فرانت‌اند: `npm run build` در پوشه `warehouse-front`
+  1. اجرای بیلد فرانت‌اند: `npm run build` در پوشه `frontend`
   2. بررسی عدم وجود هرگونه خطای تایپ‌اسکریپت و لود صحیح ماژول‌ها.
   3. تست چرخش سه‌بعدی کارت، تغییر تم‌های رنگی، سوییچ بین پرسنل مختلف و تست شیت چاپ.
   4. به‌روزرسانی و ثبت کامل گزارش عملکرد در مستندات `walkthrough.md` و بستن آیتم‌های `task.md`.
@@ -83,7 +83,7 @@
 
 ### تست‌های سیستمی و خودکار:
 ```bash
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

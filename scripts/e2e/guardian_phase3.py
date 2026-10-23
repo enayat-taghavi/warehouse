@@ -6,7 +6,8 @@ try:
 except Exception:
     pass
 
-backend_dir = r"e:\warehouse project\warehouse-backend"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_dir = os.path.join(REPO_ROOT, "backend")
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 import backend_paths
@@ -59,7 +60,7 @@ def verify_phase3():
             errors.append(f"انتساب میدانی E2E-ITEM-06 پاک نشده است: {item6.field_assignee}")
 
     # 3. بررسی فایل‌های اسکرین‌شات فاز ۳
-    screenshot_dir = r"e:\warehouse project\Documents\Browser_E2E_Comprehensive_Testing\screenshots"
+    screenshot_dir = os.path.join(REPO_ROOT, "Documents", "Browser_E2E_Comprehensive_Testing", "screenshots")
     expected_screens = [
         'phase3_scenario5_01_dispatch_public_pool.png',
         'phase3_scenario5_02_counter_claimed.png',

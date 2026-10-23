@@ -16,9 +16,9 @@
 
 بند ۴ گزارش گفته بود `chat_enabled` / `chat_file_sharing` «هیچ مصرف‌کننده‌ای ندارند». این ادعا با توجه به پیاده‌سازی اخیر ماژول ارتباطات کاملاً اصلاح شده است:
 
-- در بک‌اند در [warehouses/services.py:26-27](../../warehouse-backend/warehouses/services.py:26) هر دو کلید به صورت `True` در `DEFAULT_SETTINGS` ثبت هستند و در [warehouses/views.py:338](../../warehouse-backend/warehouses/views.py:338) در endpoint عمومی `public/config` منتشر می‌شوند.
-- در فرانت‌اند اینترسفیس `PublicConfig` در [config-api.service.ts](../../warehouse-front/src/app/core/api/config-api.service.ts) این کلیدها را دارد و [communication.service.ts](../../warehouse-front/src/app/core/services/communication.service.ts) مقدار `chat_enabled` را مستقیماً دریافت و اعمال می‌کند.
-- زنجیره بک‌اند تا کلاینت سالم است؛ صرفاً در [settings.html](../../warehouse-front/src/app/components/settings/settings.html) منطق نمایشی سوئیچ‌ها نیازمند اتصال استاندارد دوطرفه است.
+- در بک‌اند در [warehouses/services.py:26-27](../../backend/warehouses/services.py:26) هر دو کلید به صورت `True` در `DEFAULT_SETTINGS` ثبت هستند و در [warehouses/views.py:338](../../backend/warehouses/views.py:338) در endpoint عمومی `public/config` منتشر می‌شوند.
+- در فرانت‌اند اینترسفیس `PublicConfig` در [config-api.service.ts](../../frontend/src/app/core/api/config-api.service.ts) این کلیدها را دارد و [communication.service.ts](../../frontend/src/app/core/services/communication.service.ts) مقدار `chat_enabled` را مستقیماً دریافت و اعمال می‌کند.
+- زنجیره بک‌اند تا کلاینت سالم است؛ صرفاً در [settings.html](../../frontend/src/app/components/settings/settings.html) منطق نمایشی سوئیچ‌ها نیازمند اتصال استاندارد دوطرفه است.
 
 ---
 
@@ -55,11 +55,11 @@
 
 ### کارها
 
-1. ساخت `warehouse-backend/warehouses/tests_settings.py` — فایل `tests.py` این اپ فقط boilerplate خالی است.
-2. ساخت `warehouse-backend/config/tests_backup.py`.
+1. ساخت `backend/warehouses/tests_settings.py` — فایل `tests.py` این اپ فقط boilerplate خالی است.
+2. ساخت `backend/config/tests_backup.py`.
    **الزام ایمنی:** این تست‌ها هرگز نباید `pg_dump` / `pg_restore` واقعی اجرا کنند. `subprocess.run` و `_find_pg_tool` باید با `unittest.mock.patch` جایگزین شوند. یک تست بکاپ که واقعاً restore کند، دیتابیس توسعه را نابود می‌کند.
-3. بازبینی [settings.spec.ts](../../warehouse-front/src/app/components/settings/settings.spec.ts): تست فعلی `Settings` را بدون هیچ provider می‌سازد در حالی که کامپوننت `HttpClient` و `ActivatedRoute` می‌خواهد. **اول تأیید کنید که این تست واقعاً سبز می‌شود**؛ اگر نه، `provideHttpClient` + `provideHttpClientTesting` + stub برای `ActivatedRoute`/`ToastService`/`AuthStore` اضافه شود. بعیدبودنِ سبزشدنِ فعلی، خودش یک یافته است.
-4. یک helper مشترک تست در `warehouse-backend/warehouses/tests_settings.py` برای ساخت کاربر با/بدون `perm_sys_settings`.
+3. بازبینی [settings.spec.ts](../../frontend/src/app/components/settings/settings.spec.ts): تست فعلی `Settings` را بدون هیچ provider می‌سازد در حالی که کامپوننت `HttpClient` و `ActivatedRoute` می‌خواهد. **اول تأیید کنید که این تست واقعاً سبز می‌شود**؛ اگر نه، `provideHttpClient` + `provideHttpClientTesting` + stub برای `ActivatedRoute`/`ToastService`/`AuthStore` اضافه شود. بعیدبودنِ سبزشدنِ فعلی، خودش یک یافته است.
+4. یک helper مشترک تست در `backend/warehouses/tests_settings.py` برای ساخت کاربر با/بدون `perm_sys_settings`.
 
 ### تست‌های این فاز
 
@@ -72,11 +72,11 @@
 ### دستورها
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && python manage.py test warehouses.tests_settings config.tests_backup -v 2 --keepdb
+cd "E:/warehouse project/backend" && python manage.py test warehouses.tests_settings config.tests_backup -v 2 --keepdb
 ```
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browsers=ChromeHeadless
+cd "E:/warehouse project/frontend" && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
 ### معیار پذیرش
@@ -91,7 +91,7 @@ cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browser
 
 ### ۱.۱ رفع باگ نابودی فایل نجات (ایراد ۲-۳)
 
-در [views_backup.py:430-445](../../warehouse-backend/config/views_backup.py:430) عبارت `'exc' not in dir()` همیشه `True` است، چون پایتون `exc` را پیش از اجرای `finally` بیرونی حذف می‌کند. با یک flag صریح جایگزین شود:
+در [views_backup.py:430-445](../../backend/config/views_backup.py:430) عبارت `'exc' not in dir()` همیشه `True` است، چون پایتون `exc` را پیش از اجرای `finally` بیرونی حذف می‌کند. با یک flag صریح جایگزین شود:
 
 ```python
 restore_failed = False          # کنار rollback_succeeded تعریف شود (خط ~۳۲۸)
@@ -122,7 +122,7 @@ finally:
 
 ### ۱.۳ الزام تأیید متنی (ایراد ۱-۶)
 
-`BackupRestoreView.post` مقدار `confirm_text == 'RESTORE_DATABASE_CONFIRM'` را الزامی کند — همان قراردادی که `DatabaseBackupViewSet` در [accounts/views.py:2101](../../warehouse-backend/accounts/views.py:2101) دارد. بدون آن ۴۰۰ با پیام روشن.
+`BackupRestoreView.post` مقدار `confirm_text == 'RESTORE_DATABASE_CONFIRM'` را الزامی کند — همان قراردادی که `DatabaseBackupViewSet` در [accounts/views.py:2101](../../backend/accounts/views.py:2101) دارد. بدون آن ۴۰۰ با پیام روشن.
 
 ### ۱.۴ لاگ حسابرسی (ایراد ۱-۷)
 
@@ -142,7 +142,7 @@ finally:
 
 ### ۱.۷ پیش‌نیاز فرانت: ورودی متنی در دیالوگ تأیید
 
-`ConfirmDialogConfig` در [confirm-dialog.component.ts:8](../../warehouse-front/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts:8) هیچ فیلد ورودی متنی ندارد، پس بند ۱.۳ بدون توسعهٔ آن قابل استفاده نیست. اضافه شود:
+`ConfirmDialogConfig` در [confirm-dialog.component.ts:8](../../frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts:8) هیچ فیلد ورودی متنی ندارد، پس بند ۱.۳ بدون توسعهٔ آن قابل استفاده نیست. اضافه شود:
 
 ```ts
 requireText?: string;        // دکمه تأیید تا تطابق دقیق، غیرفعال بماند
@@ -189,11 +189,11 @@ requireTextLabel?: string;
 
 ## فاز ۲ — آفلاین و PWA
 
-**هدف:** هر پنج ایراد این دسته یک ریشه دارند: سه درخواست [services/settings.ts](../../warehouse-front/src/app/services/settings.ts) توکن `SKIP_OFFLINE` ندارند.
+**هدف:** هر پنج ایراد این دسته یک ریشه دارند: سه درخواست [services/settings.ts](../../frontend/src/app/services/settings.ts) توکن `SKIP_OFFLINE` ندارند.
 
 ### ۲.۱ افزودن `SKIP_OFFLINE` (ایرادات ۳-۱، ۳-۲، ۳-۳)
 
-الگوی موجود پروژه در [audit-api.service.ts:59](../../warehouse-front/src/app/core/api/audit-api.service.ts:59) است:
+الگوی موجود پروژه در [audit-api.service.ts:59](../../frontend/src/app/core/api/audit-api.service.ts:59) است:
 
 ```ts
 context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
@@ -204,7 +204,7 @@ context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, 
 
 ### ۲.۲ پاکسازی کش پس از بازیابی (ایراد ۳-۴)
 
-یک helper در [offline-db.ts](../../warehouse-front/src/app/core/services/offline-db.ts) اضافه شود (این فایل هیچ helper پاکسازی ندارد):
+یک helper در [offline-db.ts](../../frontend/src/app/core/services/offline-db.ts) اضافه شود (این فایل هیچ helper پاکسازی ندارد):
 
 ```ts
 export async function clearServerDerivedCaches(): Promise<void>
@@ -245,7 +245,7 @@ export async function clearServerDerivedCaches(): Promise<void>
 
 ### ۳.۱ مسدودکردن ذخیره وقتی فیلدهای داینامیک بار نشده‌اند (ایراد ۲-۱، بحرانی)
 
-در [settings.ts:105](../../warehouse-front/src/app/components/settings/settings.ts:105) خطای بارگذاری فیلدها به `dynamicFieldsList = []` تبدیل می‌شود و ذخیرهٔ بعدی همهٔ کلیدهای `dyn_*` را نابود می‌کند.
+در [settings.ts:105](../../frontend/src/app/components/settings/settings.ts:105) خطای بارگذاری فیلدها به `dynamicFieldsList = []` تبدیل می‌شود و ذخیرهٔ بعدی همهٔ کلیدهای `dyn_*` را نابود می‌کند.
 
 - یک flag `dynamicFieldsLoadFailed` اضافه شود.
 - دکمهٔ ذخیره در حالت flag غیرفعال + بنر قرمز با دکمهٔ «تلاش مجدد».
@@ -254,7 +254,7 @@ export async function clearServerDerivedCaches(): Promise<void>
 ### ۳.۲ حفظ کلیدهای ناشناس (ایراد ۲-۲)
 
 - نقشهٔ خامِ بارگذاری‌شده در `rawFieldPermsCounter` / `rawFieldPermsDoc` نگه داشته شود.
-- در `saveGlobalSettings` ([settings.ts:264](../../warehouse-front/src/app/components/settings/settings.ts:264)) `configMap` از کپی نقشهٔ خام شروع شود و بعد کلیدهای حاضر بازنویسی شوند — به‌جای ساختن از صفر.
+- در `saveGlobalSettings` ([settings.ts:264](../../frontend/src/app/components/settings/settings.ts:264)) `configMap` از کپی نقشهٔ خام شروع شود و بعد کلیدهای حاضر بازنویسی شوند — به‌جای ساختن از صفر.
 
 ### ۳.۳ ارسال دلتا (ایراد ۲-۵)
 
@@ -266,7 +266,7 @@ export async function clearServerDerivedCaches(): Promise<void>
 ### ۳.۴ محافظ dirty-state (ایراد ۲-۶)
 
 - getter `isDirty` بر پایهٔ مقایسه با `originalSettings`.
-- گارد `settingsLeaveGuard` هم‌الگوی [importLeaveGuard](../../warehouse-front/src/app/core/guards/import-leave.guard.ts) و افزودنش به مسیر در [app.routes.ts:52](../../warehouse-front/src/app/app.routes.ts:52).
+- گارد `settingsLeaveGuard` هم‌الگوی [importLeaveGuard](../../frontend/src/app/core/guards/import-leave.guard.ts) و افزودنش به مسیر در [app.routes.ts:52](../../frontend/src/app/app.routes.ts:52).
 - `@HostListener('window:beforeunload')` و تأیید روی دکمهٔ بارگذاری مجدد و تعویض تب.
 
 ### تست‌های فاز ۳
@@ -291,17 +291,17 @@ export async function clearServerDerivedCaches(): Promise<void>
 
 ### ۴.۱ گیت‌کردن دکمهٔ ذخیره (ایراد ۱-۱)
 
-`canEditSettings = computed(() => is_superuser || has_perm('perm_sys_settings'))` و `[disabled]` روی دکمهٔ ذخیره + بنر «حالت فقط‌خواندنی». همین‌جا `isSuperUser` مردهٔ [settings.ts:46](../../warehouse-front/src/app/components/settings/settings.ts:46) جای درست خودش را پیدا می‌کند.
+`canEditSettings = computed(() => is_superuser || has_perm('perm_sys_settings'))` و `[disabled]` روی دکمهٔ ذخیره + بنر «حالت فقط‌خواندنی». همین‌جا `isSuperUser` مردهٔ [settings.ts:46](../../frontend/src/app/components/settings/settings.ts:46) جای درست خودش را پیدا می‌کند.
 
 ### ۴.۲ نمایش پیام واقعی سرور (ایراد ۱-۲)
 
-هندلر [settings.ts:296](../../warehouse-front/src/app/components/settings/settings.ts:296) پارامتر خطا بگیرد: `error: (err) => this.toast.show('error', err?.error?.error || 'خطا در ذخیره تنظیمات سیستم.')`.
+هندلر [settings.ts:296](../../frontend/src/app/components/settings/settings.ts:296) پارامتر خطا بگیرد: `error: (err) => this.toast.show('error', err?.error?.error || 'خطا در ذخیره تنظیمات سیستم.')`.
 
 ### ۴.۳ محدودکردن GET با projection (ایراد ۱-۳)
 
-⚠ **بستن کامل GET کارتابل انبارگردان را می‌شکند:** [counter-dashboard.ts:1127](../../warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts:1127) وقتی انبار انتخاب نشده همین endpoint را صدا می‌زند.
+⚠ **بستن کامل GET کارتابل انبارگردان را می‌شکند:** [counter-dashboard.ts:1127](../../frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts:1127) وقتی انبار انتخاب نشده همین endpoint را صدا می‌زند.
 
-پس در [warehouses/views.py:189](../../warehouse-backend/warehouses/views.py:189):
+پس در [warehouses/views.py:189](../../backend/warehouses/views.py:189):
 
 - دارندهٔ `view_sys_settings` یا `perm_sys_settings` یا superuser → نقشهٔ کامل.
 - بقیهٔ کاربران احراز هویت‌شده → فقط کلیدهای لازم برای کارتابل: `field_permissions_counter`, `field_permissions_doc`, `blind_counting`, `counter_can_view_*`, `financial_can_view_*`, `scanner_*_delimiter`.
@@ -310,7 +310,7 @@ export async function clearServerDerivedCaches(): Promise<void>
 
 ### ۴.۴ whitelist و اعتبارسنجی نوع (ایراد ۱-۴)
 
-حلقهٔ [views.py:204-209](../../warehouse-backend/warehouses/views.py:204) هر کلیدی را می‌پذیرد. اضافه شود:
+حلقهٔ [views.py:204-209](../../backend/warehouses/views.py:204) هر کلیدی را می‌پذیرد. اضافه شود:
 
 - whitelist = کلیدهای `DEFAULT_SETTINGS` (که بعد از فاز ۶ شامل کلیدهای چت هم می‌شود).
 - اعتبارسنجی نوع/بازه به‌ازای کلید: `offline_sync_interval_minutes` عدد ۱..۱۴۴۰، `blind_counting` عضو `{'blind','visible'}`، `field_permissions_*` دیکشنری با شکل `{visible, editable, custom_label}`.
@@ -350,12 +350,12 @@ export async function clearServerDerivedCaches(): Promise<void>
 
 ### ۵.۱ شناسایی دقیق نقطهٔ اعمال
 
-نقطهٔ هدف در کلاینت متد `saveExtraEditedFields` در [counter-dashboard.ts:1869](../../warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts:1869) است که درخواست `PATCH /api/inventory/items/{id}/` را (از طریق `OfflineSyncService` و `itemApi.update`) ارسال می‌کند.
-در سمت بک‌اند، نقطهٔ اعمال کلاس `ItemViewSet.partial_update` در [inventory/views.py](../../warehouse-backend/inventory/views.py) و اعتبارسنجی در [inventory/serializers.py](../../warehouse-backend/inventory/serializers.py) است.
+نقطهٔ هدف در کلاینت متد `saveExtraEditedFields` در [counter-dashboard.ts:1869](../../frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts:1869) است که درخواست `PATCH /api/inventory/items/{id}/` را (از طریق `OfflineSyncService` و `itemApi.update`) ارسال می‌کند.
+در سمت بک‌اند، نقطهٔ اعمال کلاس `ItemViewSet.partial_update` در [inventory/views.py](../../backend/inventory/views.py) و اعتبارسنجی در [inventory/serializers.py](../../backend/inventory/serializers.py) است.
 
 ### ۵.۲ منبع حقیقت سمت سرور
 
-در [warehouses/services.py](../../warehouse-backend/warehouses/services.py):
+در [warehouses/services.py](../../backend/warehouses/services.py):
 
 ```python
 def get_editable_item_fields(role: str, warehouse_id=None) -> set[str]
@@ -387,7 +387,7 @@ def get_editable_item_fields(role: str, warehouse_id=None) -> set[str]
 هشت تست سبز **و** مجموعهٔ کامل `inventory` بدون رگرسیون:
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && python manage.py test inventory -v 2 --keepdb
+cd "E:/warehouse project/backend" && python manage.py test inventory -v 2 --keepdb
 ```
 
 ### ریسک
@@ -401,29 +401,29 @@ cd "E:/warehouse project/warehouse-backend" && python manage.py test inventory -
 ### ۶.۱ پاکسازی و اعتبارسنجی سوئیچ‌های چت (ایراد ۴، وضعیت فعلی)
 
 تنظیمات `chat_enabled` و `chat_file_sharing` هم‌اکنون در `DEFAULT_SETTINGS` و `PublicConfig` و `communication.service.ts` فعال هستند. در این فاز:
-1. الگوی شکنندهٔ `!== false` در [settings.html](../../warehouse-front/src/app/components/settings/settings.html) به بایندینگ استاندارد دوطرفه تبدیل شود.
+1. الگوی شکنندهٔ `!== false` در [settings.html](../../frontend/src/app/components/settings/settings.html) به بایندینگ استاندارد دوطرفه تبدیل شود.
 2. تست‌های خودکار برای اطمینان از اعمال دقیق تغییر فلگ‌های چت و انعکاس در `public/config` افزوده شوند.
 
 ### ۶.۲ جداکننده‌های اسکنر (ایراد ۴-۱)
 
-[settings.ts:139](../../warehouse-front/src/app/components/settings/settings.ts:139) توکن خوانا ذخیره می‌کند (`'Chr(30)'`، `'\\n'`) ولی پارسر آن‌ها را متن خام مقایسه می‌کند ([customs-scanner-parser.ts:54](../../warehouse-front/src/app/components/customs/customs-scanner-parser.ts:54)).
+[settings.ts:139](../../frontend/src/app/components/settings/settings.ts:139) توکن خوانا ذخیره می‌کند (`'Chr(30)'`، `'\\n'`) ولی پارسر آن‌ها را متن خام مقایسه می‌کند ([customs-scanner-parser.ts:54](../../frontend/src/app/components/customs/customs-scanner-parser.ts:54)).
 
 - `onScannerPresetChange` کاراکتر واقعی ذخیره کند (`'\x1E'`, `'\x1F'`, `'\n'`, `'\t'`).
-- **بدون از دست رفتن داده:** یک `decodeDelimiter(stored: string): string` که مقادیر قدیمی (`'Chr(30)'`, `'Chr(30) & ";"'`, `'\\n'`) را به کاراکتر واقعی نگاشت کند، در نقطهٔ مصرف ([customs.ts:1045](../../warehouse-front/src/app/components/customs/customs.ts:1045)). ردیف‌های موجود دیتابیس دست‌نخورده کار کنند.
+- **بدون از دست رفتن داده:** یک `decodeDelimiter(stored: string): string` که مقادیر قدیمی (`'Chr(30)'`, `'Chr(30) & ";"'`, `'\\n'`) را به کاراکتر واقعی نگاشت کند، در نقطهٔ مصرف ([customs.ts:1045](../../frontend/src/app/components/customs/customs.ts:1045)). ردیف‌های موجود دیتابیس دست‌نخورده کار کنند.
 - `detectScannerPreset` هم با هر دو شکل کار کند تا UI پیش‌تنظیم را درست نشان دهد.
 
 ### ۶.۳ کیفیت دوربین (ایراد ۴، تصمیم ت-۲)
 
-`@Input() serverPreset` در [barcode-scanner.component.ts:424](../../warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts:424) تعریف شده ولی هیچ قالبی به آن bind نمی‌کند. در همهٔ قالب‌های میزبان اسکنر bind شود. اولویت درست: override محلی کاربر (`localStorage`) > مقدار سرور > `'adaptive'` — یعنی همان منطق موجود [خط ۵۴۲](../../warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts:542) که فقط ورودی‌اش نرسیده.
+`@Input() serverPreset` در [barcode-scanner.component.ts:424](../../frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts:424) تعریف شده ولی هیچ قالبی به آن bind نمی‌کند. در همهٔ قالب‌های میزبان اسکنر bind شود. اولویت درست: override محلی کاربر (`localStorage`) > مقدار سرور > `'adaptive'` — یعنی همان منطق موجود [خط ۵۴۲](../../frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts:542) که فقط ورودی‌اش نرسیده.
 `scanner_custom_*` هم به `SCANNER_PRESET_CONFIGS` وصل شود، یا اگر پیاده‌سازی‌اش سنگین است، حالت `custom` تا زمان وصل‌شدن از UI حذف شود — نگه‌داشتن یک گزینهٔ بی‌اثر بدتر از نداشتن آن است.
 
 ### ۶.۴ `manager_approval_mode` (تصمیم ت-۱)
 
-پیش‌فرض: حذف `<select>` از [settings.html:114](../../warehouse-front/src/app/components/settings/settings.html:114) و از فهرست کلیدهای [wh-settings.ts:357](../../warehouse-front/src/app/components/wh-settings/wh-settings.ts:357). کلید در `DEFAULT_SETTINGS` و ردیف‌های موجود دیتابیس **حذف نشوند** تا اگر بعداً پیاده شد، مقدار انتخابی ادمین از دست نرفته باشد.
+پیش‌فرض: حذف `<select>` از [settings.html:114](../../frontend/src/app/components/settings/settings.html:114) و از فهرست کلیدهای [wh-settings.ts:357](../../frontend/src/app/components/wh-settings/wh-settings.ts:357). کلید در `DEFAULT_SETTINGS` و ردیف‌های موجود دیتابیس **حذف نشوند** تا اگر بعداً پیاده شد، مقدار انتخابی ادمین از دست نرفته باشد.
 
 ### ۶.۵ سوئیچ‌های شکنندهٔ چت (ایراد ۴-۲)
 
-با ورود کلیدها به `DEFAULT_SETTINGS`، الگوی `!== false` و `=== false ? true : false` در [settings.html:365-382](../../warehouse-front/src/app/components/settings/settings.html:365) با bool صریح جایگزین شود (در فاز ۷ به کامپوننت مشترک منتقل می‌شود).
+با ورود کلیدها به `DEFAULT_SETTINGS`، الگوی `!== false` و `=== false ? true : false` در [settings.html:365-382](../../frontend/src/app/components/settings/settings.html:365) با bool صریح جایگزین شود (در فاز ۷ به کامپوننت مشترک منتقل می‌شود).
 
 ### تست‌های فاز ۶
 
@@ -455,7 +455,7 @@ cd "E:/warehouse project/warehouse-backend" && python manage.py test inventory -
 
 ### ۷.۱ کامپوننت سوئیچ مشترک (ایرادات ۵-۱، ۵-۲؛ مهم‌ترین بند این فاز)
 
-الگوی فعلی ([settings.html:120-129](../../warehouse-front/src/app/components/settings/settings.html:120)) با صفحه‌کلید، DOM و مدل را از هم جدا می‌کند و تغییر هرگز ذخیره نمی‌شود.
+الگوی فعلی ([settings.html:120-129](../../frontend/src/app/components/settings/settings.html:120)) با صفحه‌کلید، DOM و مدل را از هم جدا می‌کند و تغییر هرگز ذخیره نمی‌شود.
 
 `<app-toggle-switch>` مشترک ساخته شود:
 
@@ -468,9 +468,9 @@ cd "E:/warehouse project/warehouse-backend" && python manage.py test inventory -
 
 ### ۷.۲ بقیهٔ بندها
 
-- **۵-۳:** دکمه‌های «نمایش همه»/«مخفی‌سازی همه» ([settings.html:416](../../warehouse-front/src/app/components/settings/settings.html:416), [:613](../../warehouse-front/src/app/components/settings/settings.html:613)) روی همهٔ فیلدها عمل کنند، یا برچسب به «همهٔ نتایج فیلترشده» تغییر کند. برچسب و رفتار باید یکی باشند.
-- **۵-۴:** `confirm.open({type:'danger'})` قبل از `resetAllFieldsToDefault` ([:195](../../warehouse-front/src/app/components/settings/settings.ts:195)) و `resetAllDocFieldsToDefault` ([:245](../../warehouse-front/src/app/components/settings/settings.ts:245)) — همان الگوی [wh-settings.ts:378](../../warehouse-front/src/app/components/wh-settings/wh-settings.ts:378).
-- **۵-۵:** در [settings.ts:319](../../warehouse-front/src/app/components/settings/settings.ts:319) انکر به DOM اضافه، بعد از `click()` حذف، و `revokeObjectURL` در `setTimeout(..., 0)`.
+- **۵-۳:** دکمه‌های «نمایش همه»/«مخفی‌سازی همه» ([settings.html:416](../../frontend/src/app/components/settings/settings.html:416), [:613](../../frontend/src/app/components/settings/settings.html:613)) روی همهٔ فیلدها عمل کنند، یا برچسب به «همهٔ نتایج فیلترشده» تغییر کند. برچسب و رفتار باید یکی باشند.
+- **۵-۴:** `confirm.open({type:'danger'})` قبل از `resetAllFieldsToDefault` ([:195](../../frontend/src/app/components/settings/settings.ts:195)) و `resetAllDocFieldsToDefault` ([:245](../../frontend/src/app/components/settings/settings.ts:245)) — همان الگوی [wh-settings.ts:378](../../frontend/src/app/components/wh-settings/wh-settings.ts:378).
+- **۵-۵:** در [settings.ts:319](../../frontend/src/app/components/settings/settings.ts:319) انکر به DOM اضافه، بعد از `click()` حذف، و `revokeObjectURL` در `setTimeout(..., 0)`.
 - **۵-۶:** `autocomplete="new-password"` روی هر دو فیلد رمز؛ پاک‌کردن `backupPassword` در مسیر خطا هم.
 - **۵-۷:** بازگرداندن focus و focus trap در دیالوگ (Escape در فاز ۱ بسته شد).
 
@@ -499,8 +499,8 @@ cd "E:/warehouse project/warehouse-backend" && python manage.py test inventory -
 
 ### کارها
 
-- **۵-۸:** `takeUntilDestroyed()` روی `route.queryParams` ([settings.ts:81](../../warehouse-front/src/app/components/settings/settings.ts:81)) و حذف `detectChanges` از مسیر `ngOnInit` ([:86](../../warehouse-front/src/app/components/settings/settings.ts:86)).
-- **۵-۹:** interface `SystemSettings` جایگزین `settings: any` ([:26](../../warehouse-front/src/app/components/settings/settings.ts:26)) — با whitelist فاز ۴ هم‌راستا و مشتق از یک منبع مشترک.
+- **۵-۸:** `takeUntilDestroyed()` روی `route.queryParams` ([settings.ts:81](../../frontend/src/app/components/settings/settings.ts:81)) و حذف `detectChanges` از مسیر `ngOnInit` ([:86](../../frontend/src/app/components/settings/settings.ts:86)).
+- **۵-۹:** interface `SystemSettings` جایگزین `settings: any` ([:26](../../frontend/src/app/components/settings/settings.ts:26)) — با whitelist فاز ۴ هم‌راستا و مشتق از یک منبع مشترک.
 - **۵-۱۰:** تبدیل `filteredFieldConfigs` / `filteredDocFieldConfigs` از getter به `computed()` روی سیگنال.
 - **۵-۱۱:** حذف `settings.css` صفر بایتی از `styleUrl` (بعد از فاز ۴ که `isSuperUser` مصرف‌کننده پیدا کرد).
 - **۵-۱۳:** تفکیک قالب ۱۰۰۸ خطی به پنج زیرکامپوننت بر اساس تب‌ها (`operations`, `label`, `counter_fields`, `doc_fields`, `backup`) تا زیر سقف ۵۰۰ خط CLAUDE.md برود.
@@ -514,7 +514,7 @@ cd "E:/warehouse project/warehouse-backend" && python manage.py test inventory -
 - بیلد تمیز:
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng build
+cd "E:/warehouse project/frontend" && npx ng build
 ```
 
 ### معیار پذیرش
@@ -527,11 +527,11 @@ cd "E:/warehouse project/warehouse-front" && npx ng build
 
 | فایل | فاز |
 |---|---|
-| `warehouse-backend/warehouses/tests_settings.py` | ۰ |
-| `warehouse-backend/config/tests_backup.py` | ۰ |
-| `warehouse-front/src/app/core/guards/settings-leave.guard.ts` | ۳ |
-| `warehouse-front/src/app/core/guards/settings-leave.guard.spec.ts` | ۳ |
-| `warehouse-front/src/app/shared/components/toggle-switch/*` | ۷ |
+| `backend/warehouses/tests_settings.py` | ۰ |
+| `backend/config/tests_backup.py` | ۰ |
+| `frontend/src/app/core/guards/settings-leave.guard.ts` | ۳ |
+| `frontend/src/app/core/guards/settings-leave.guard.spec.ts` | ۳ |
+| `frontend/src/app/shared/components/toggle-switch/*` | ۷ |
 | پنج زیرکامپوننت تب‌های تنظیمات | ۸ |
 
 ## پیوست ب — دستورهای پرکاربرد
@@ -539,19 +539,19 @@ cd "E:/warehouse project/warehouse-front" && npx ng build
 اجرای تست‌های بک‌اند مرتبط:
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && python manage.py test warehouses config inventory -v 2 --keepdb
+cd "E:/warehouse project/backend" && python manage.py test warehouses config inventory -v 2 --keepdb
 ```
 
 اجرای تست‌های فرانت:
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng test --watch=false --browsers=ChromeHeadless
+cd "E:/warehouse project/frontend" && npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
 بیلد فرانت:
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npx ng build
+cd "E:/warehouse project/frontend" && npx ng build
 ```
 
 ## پیوست ج — یادداشت ریسک کلی

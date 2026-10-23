@@ -2,7 +2,7 @@
 
 # گزارش جامع ارتقا و نوسازی کارتابل بررسی نهایی مدیر (Manager Review Modernization Walkthrough)
 
-این سند گزارش نهایی و مستندات گام‌به‌گام پیاده‌سازی، اعتبارسنجی و ممیزی ایجنت نگهبان مستقل برای پروژه ارتقای **کارتابل بررسی نهایی و تایید مدیر** ([`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) و [`manager-review.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.html)) منطبق بر شاسی مدرن کارتابل سرپرست و بومی‌سازی دامین اختصاصی مدیر است.
+این سند گزارش نهایی و مستندات گام‌به‌گام پیاده‌سازی، اعتبارسنجی و ممیزی ایجنت نگهبان مستقل برای پروژه ارتقای **کارتابل بررسی نهایی و تایید مدیر** ([`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) و [`manager-review.html`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.html)) منطبق بر شاسی مدرن کارتابل سرپرست و بومی‌سازی دامین اختصاصی مدیر است.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### الف. شاسی و کامپوننت‌های فرانت‌اند:
 1. **ادغام ۲۴ قابلیت پیشرفته کارتابل سرپرست:**
-   - **تقویم و تاریخ شمسی:** استفاده از [`PersianDatePipe`](file:///e:/warehouse%20project/warehouse-front/src/app/pipes/persian-date.pipe.ts) در تمامی نماها، کارت‌ها و مودال‌ها.
+   - **تقویم و تاریخ شمسی:** استفاده از [`PersianDatePipe`](file:///e:/warehouse%20project/frontend/src/app/pipes/persian-date.pipe.ts) در تمامی نماها، کارت‌ها و مودال‌ها.
    - **موتور سورت هوشمند ۶ حالته:** مرتب‌سازی بر اساس آخرین زمان تغییر، زمان تخصیص، مسیر لوکیشن، اولویت بازشماری/رد، کد کالا و شرح الفبا با قابلیت تغییر جهت صعودی/نزولی.
    - **فیلترهای پیشرفته:** فیلترهای وضعیت (`all`, `pending`, `recount`)، فیلترهای زمانی (`all`, `today`, `yesterday`, `week`) و چیپ‌های داینامیک قفسه/لوکیشن.
    - **جستجوی چندفیلدی یکپارچه:** نرمال‌سازی حروف فارسی و عربی (ی/ي، ک/ك) و ارقام فارسی/انگلیسی.
@@ -22,11 +22,11 @@
 ### ب. انطباق دقیق با دامین تجاری مدیر (Manager Domain Alignment):
 1. **شمارش و انبارگردانی میدانی (Counting Tasks):**
    - استاتوس‌های هدف: `MANAGER_REVIEW` (در انتظار تایید مدیر)، `MANAGER_REJECTED` (رد و بازشماری مدیر)، `FINAL_APPROVED` (تایید قطعی و فریز آمار).
-   - اکشن‌های اندپوینت: فراخوانی `bulk_manager_approve` و `bulk_manager_reject` روی سرویس [`countTaskApi`](file:///e:/warehouse%20project/warehouse-front/src/app/services/count-task.service.ts).
+   - اکشن‌های اندپوینت: فراخوانی `bulk_manager_approve` و `bulk_manager_reject` روی سرویس [`countTaskApi`](file:///e:/warehouse%20project/frontend/src/app/services/count-task.service.ts).
    - برعهده‌گیری تسک‌های مخزن با نقش `as_role: 'manager'`.
 2. **اسناد مالی (Financial Doc Tasks):**
    - استاتوس‌های هدف: `DOC_MANAGER_REVIEW` (در انتظار تایید مدیر مالی)، `DOC_MANAGER_REJECTED` (رد مدیر مالی)، `DOC_FINAL_APPROVED` (تایید نهایی مالی).
-   - اکشن‌های اندپوینت: فراخوانی `bulk_manager_approve` و `manager_reject` روی سرویس [`docTaskApi`](file:///e:/warehouse%20project/warehouse-front/src/app/services/doc-task.service.ts).
+   - اکشن‌های اندپوینت: فراخوانی `bulk_manager_approve` و `manager_reject` روی سرویس [`docTaskApi`](file:///e:/warehouse%20project/frontend/src/app/services/doc-task.service.ts).
 
 ---
 

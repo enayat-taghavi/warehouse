@@ -4,7 +4,7 @@
 
 ## تغییرات انجام‌شده
 
-### ۱. بک‌اند — [settings.py](file:///e:/warehouse%20project/warehouse-backend/config/settings.py)
+### ۱. بک‌اند — [settings.py](file:///e:/warehouse%20project/backend/config/settings.py)
 
 | تنظیم | مقدار قبلی | مقدار جدید |
 |---|---|---|
@@ -14,21 +14,21 @@
 
 ---
 
-### ۲. فرانت‌اند — [login.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.html)
+### ۲. فرانت‌اند — [login.html](file:///e:/warehouse%20project/frontend/src/app/components/login/login.html)
 
 - حذف کامل چک‌باکس «مرا به خاطر بسپار» و برچسب آن
 - لینک «فراموشی رمز عبور» حفظ شده و به سمت چپ (انتها) منتقل شد
 
 ---
 
-### ۳. فرانت‌اند — [login.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.ts)
+### ۳. فرانت‌اند — [login.ts](file:///e:/warehouse%20project/frontend/src/app/components/login/login.ts)
 
 - حذف متغیر `rememberMe`
 - حذف ارسال `rememberMe` به `auth.login()`
 
 ---
 
-### ۴. فرانت‌اند — [auth.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.service.ts)
+### ۴. فرانت‌اند — [auth.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.service.ts)
 
 - حذف پارامتر `rememberMe` از متدهای `login()`, `mockLogin()`, `handleLoginSuccess()`
 - ساده‌سازی `setItem()`, `getItem()`, `removeItem()` — فقط `localStorage`
@@ -37,7 +37,7 @@
 
 ---
 
-### ۵. فرانت‌اند — [auth.interceptor.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.interceptor.ts)
+### ۵. فرانت‌اند — [auth.interceptor.ts](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.interceptor.ts)
 
 - **تغییر مهم:** پیاده‌سازی مکانیزم صف/قفل (`isRefreshing` + `BehaviorSubject`) برای مدیریت درخواست‌های ۴۰۱ همزمان
 - اولین درخواست ۴۰۱ فرآیند رفرش را شروع می‌کند
@@ -45,7 +45,7 @@
 
 ---
 
-### ۶. فرانت‌اند — [offline-sync.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts)
+### ۶. فرانت‌اند — [offline-sync.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts)
 
 - حذف استفاده از `sessionStorage` در `tryRefreshToken()`
 - ذخیره `refresh` token جدید (علاوه بر `access`) پس از هر بار رفرش

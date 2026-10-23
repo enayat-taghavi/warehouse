@@ -21,7 +21,7 @@
 ## ۲. تغییرات پیشنهادی به تفکیک فایل‌ها (Proposed Changes)
 
 ### الف) منطق کامپوننت مودال برش (Component Logic)
-#### [MODIFY] [avatar-cropper-modal.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)
+#### [MODIFY] [avatar-cropper-modal.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)
 - حذف متدهای زائد `nudge` مربوط به دکمه‌های چهارجهته.
 - افزودن پشتیبانی از **زوم دو انگشتی (Pinch-to-Zoom)** با رویدادهای لمسی برای گوشی‌ها و تبلت‌ها.
 - بهینه‌سازی رویداد چرخ ماوس (Wheel Zoom) جهت بزرگ‌نمایی نرم و پیوسته.
@@ -29,12 +29,12 @@
 ---
 
 ### ب) قالب HTML و استایل‌های مدرن CSS (Template & Aesthetics)
-#### [MODIFY] [avatar-cropper-modal.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.html)
+#### [MODIFY] [avatar-cropper-modal.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.html)
 - حذف پنل دکمه‌های چهار جهته از قالب.
 - بازآرایی نوار کنترل‌های زوم و چرخش به صورت خطی، تمیز و متقارن.
 - تنظیم دقیق کلاس‌ها و ساختار دکمه‌های فوتر و هدر.
 
-#### [MODIFY] [avatar-cropper-modal.css](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.css)
+#### [MODIFY] [avatar-cropper-modal.css](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.css)
 - تعریف ابعاد و ارتفاع‌های استاندارد برای تمام دکمه‌ها:
   - `toolbar-btn`: ارتفاع ۳۶px، فونت ۱۱px بولد، پدینگ متقارن ۸px ۱۶px.
   - `ctrl-btn` و `micro-btn`: ارتفاع ۳۲px یکسان.
@@ -44,7 +44,7 @@
 ---
 
 ### ج) دکمه تغییر عکس در فرم پرونده پرسنلی (User Form UI)
-#### [MODIFY] [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html)
+#### [MODIFY] [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html)
 - هماهنگ‌سازی ظاهر دکمه «مدیریت تصویر پرسنلی 📷» داخل فرم پرونده پرسنلی با سایر دکمه‌های فرم.
 
 ---

@@ -15,35 +15,35 @@
 ### بخش Projects (انبارها/پروژه‌ها)
 در هدر صفحه انبارها دکمه بروزرسانی اضافه می‌شود که متد `loadWarehouses()` را فراخوانی می‌کند.
 
-#### [MODIFY] [projects.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html)
+#### [MODIFY] [projects.html](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html)
 
 ---
 
 ### بخش Users (کاربران و نقش‌ها)
 در هدر تب‌های کاربران و نقش‌ها دکمه بروزرسانی اضافه می‌شود که متد `loadData()` را فراخوانی می‌کند.
 
-#### [MODIFY] [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html)
+#### [MODIFY] [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html)
 
 ---
 
 ### بخش Dynamic Fields (فیلدهای پویا)
 در هدر لیست فیلدها دکمه بروزرسانی با فراخوانی متد `loadFields()` اضافه می‌شود.
 
-#### [MODIFY] [dynamic-fields.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.html)
+#### [MODIFY] [dynamic-fields.html](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.html)
 
 ---
 
 ### بخش Settings (تنظیمات کلان سیستم)
 در هدر تنظیمات، دکمه بروزرسانی با فراخوانی `loadSettings()` اضافه می‌شود.
 
-#### [MODIFY] [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
+#### [MODIFY] [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
 
 ---
 
 ### بخش Warehouse Settings (تنظیمات انبار)
 در هدر تنظیمات محیط کارگاهی، دکمه بروزرسانی با فراخوانی `loadSettings()` اضافه می‌شود.
 
-#### [MODIFY] [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+#### [MODIFY] [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 
 ## Verification Plan
 

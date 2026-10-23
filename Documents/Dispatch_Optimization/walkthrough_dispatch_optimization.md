@@ -41,21 +41,21 @@
 
 ## ۳. تغییرات فایل‌ها (Files Modified)
 
-- `e:\warehouse project\warehouse-front\src\app\components\dispatch\dispatch.ts`:
+- `frontend\src\app\components\dispatch\dispatch.ts`:
   - تزریق `WebSocketService` و اشتراک‌های بلادرنگ.
   - پیاده‌سازی متد `updateTaskInPlace()`.
   - لغو اشتراک‌ها در `ngOnDestroy()`.
   - اضافه شدن وضعیت `selectionMode` و هماهنگ‌سازی متدهای ارجاع با پارامترهای `select_all` و `filters`.
   - اعمال `orderingMap` در `buildApiFilters()` جهت رفع خطای ۴۰۰ مرتب‌سازی.
   - اصلاح عبارات باقاعده برای تگ‌ها با `/[،,]/.`.
-- `e:\warehouse project\warehouse-front\src\app\components\dispatch\dispatch.html`:
+- `frontend\src\app\components\dispatch\dispatch.html`:
   - حذف دکمه تکراری با `[showColumnToggle]="false"`.
   - اتصال ورودی/خروجی `selectionMode` و `selectionModeChange`.
-- `e:\warehouse project\warehouse-front\src\app\shared\components\data-table\data-table.component.ts`:
+- `frontend\src\app\shared\components\data-table\data-table.component.ts`:
   - اضافه شدن `@Input() selectionMode` و `@Output() selectionModeChange`.
   - پیاده‌سازی دکمه گرافیکی ۳ حالته در تگ `<th>`.
   - نمایش وضعیت تفکیکی (صفحه جاری در برابر کل دیتابیس) در هدر جدول.
-- `e:\warehouse project\warehouse-backend\inventory\views.py`:
+- `backend\inventory\views.py`:
   - ارتقای متدهای `bulk_assign` و `bulk_tag` برای پردازش کوئری‌ست فیلترشده در صورت ارسال `select_all=True`.
 
 ---

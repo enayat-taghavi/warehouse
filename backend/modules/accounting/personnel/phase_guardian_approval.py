@@ -1147,7 +1147,7 @@ class ApprovalPhaseGuardian:
 
         try:
             # Check 1: AppPersonaService TypeScript File
-            service_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            service_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
             if os.path.exists(service_path):
                 with open(service_path, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -1161,7 +1161,7 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # Check 2: Auth Interceptor Header Injection
-            interceptor_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'auth', 'auth.interceptor.ts')
+            interceptor_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'auth', 'auth.interceptor.ts')
             if os.path.exists(interceptor_path):
                 with open(interceptor_path, 'r', encoding='utf-8') as f:
                     icontent = f.read()
@@ -1175,7 +1175,7 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # Check 3: Layout.ts Sidebar Separation
-            layout_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'layout', 'layout.ts')
+            layout_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'layout', 'layout.ts')
             if os.path.exists(layout_path):
                 with open(layout_path, 'r', encoding='utf-8') as f:
                     lcontent = f.read()
@@ -1239,7 +1239,7 @@ class ApprovalPhaseGuardian:
         all_passed = True
 
         try:
-            comp_base = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'shared', 'components', 'app-role-switcher')
+            comp_base = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'shared', 'components', 'app-role-switcher')
             ts_path = os.path.join(comp_base, 'app-role-switcher.component.ts')
             html_path = os.path.join(comp_base, 'app-role-switcher.component.html')
             css_path = os.path.join(comp_base, 'app-role-switcher.component.css')
@@ -1270,8 +1270,8 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # Check 4: Layout Header Embedding
-            layout_html_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'layout', 'layout.html')
-            layout_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'layout', 'layout.ts')
+            layout_html_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'layout', 'layout.html')
+            layout_ts_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'layout', 'layout.ts')
             with open(layout_html_path, 'r', encoding='utf-8') as f:
                 lh_content = f.read()
             with open(layout_ts_path, 'r', encoding='utf-8') as f:
@@ -1300,8 +1300,8 @@ class ApprovalPhaseGuardian:
             # Check 1: Attendance SoD Protection
             # صفحهٔ مشترک کارکرد (warehouse-attendance) بازنشسته شد. تفکیک وظایف کارکرد اکنون با ایزولاسیون مسیر نقش‌ها
             # در canAccessRoute اعمال می‌شود: هاب کارمند فقط «ارسال» دوره دارد و حسابدار به هاب‌های ثبت کارمند راه ندارد.
-            persona_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
-            emp_att_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'finance', 'employee', 'employee-attendance', 'employee-attendance.ts')
+            persona_ts_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            emp_att_ts_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'finance', 'employee', 'employee-attendance', 'employee-attendance.ts')
             with open(persona_ts_path, 'r', encoding='utf-8') as f:
                 persona_src = f.read()
             with open(emp_att_ts_path, 'r', encoding='utf-8') as f:
@@ -1322,7 +1322,7 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # Check 2: Profiles Hub SoD Approval Protection
-            prof_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'personnel', 'personnel-profiles', 'personnel-profiles.ts')
+            prof_ts_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'personnel', 'personnel-profiles', 'personnel-profiles.ts')
             with open(prof_ts_path, 'r', encoding='utf-8') as f:
                 prof_ts_content = f.read()
 
@@ -1333,7 +1333,7 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # Check 3: Profiles Wage Inputs DOM Masking
-            prof_html_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'personnel', 'personnel-profiles', 'personnel-profiles.html')
+            prof_html_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'personnel', 'personnel-profiles', 'personnel-profiles.html')
             with open(prof_html_path, 'r', encoding='utf-8') as f:
                 prof_html_content = f.read()
 
@@ -1370,10 +1370,10 @@ class ApprovalPhaseGuardian:
 
         try:
             # Check 1: Route Permissions & Module Separation
-            auth_guard_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'auth', 'auth.guard.ts')
+            auth_guard_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'auth', 'auth.guard.ts')
             with open(auth_guard_path, 'r', encoding='utf-8') as f:
                 ag_content = f.read()
-            acc_route_access_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'route-access.ts')
+            acc_route_access_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'modules', 'accounting', 'route-access.ts')
             with open(acc_route_access_path, 'r', encoding='utf-8') as f:
                 ag_content += f.read()
 
@@ -1384,7 +1384,7 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # Check 2: AppPersonaService & Signals State Management
-            persona_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            persona_ts_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
             with open(persona_ts_path, 'r', encoding='utf-8') as f:
                 persona_content = f.read()
 
@@ -1624,8 +1624,8 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # چک ۳: بررسی صحت پیاده‌سازی متدهای فرانت‌اند (Frontend Live Token Exchange Verification)
-            front_auth_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'auth', 'auth.service.ts')
-            front_persona_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            front_auth_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'auth', 'auth.service.ts')
+            front_persona_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
             
             with open(front_auth_path, 'r', encoding='utf-8') as f:
                 auth_code = f.read()
@@ -1642,8 +1642,8 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # چک ۴: بررسی تفکیک تب‌های تخصیص نقش در فرانت‌اند (Segmented Provisioning UI Architecture)
-            front_users_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'users', 'users.ts')
-            front_users_html_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'users', 'users.html')
+            front_users_ts_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'users', 'users.ts')
+            front_users_html_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'users', 'users.html')
 
             with open(front_users_ts_path, 'r', encoding='utf-8') as f:
                 users_ts = f.read()
@@ -1843,8 +1843,8 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # چک ۶: بررسی یکپارچگی کلاینت فرانت‌اند (Frontend WebSocket Integration)
-            front_ws_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'http', 'websocket.service.ts')
-            front_persona_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            front_ws_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'http', 'websocket.service.ts')
+            front_persona_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
 
             with open(front_ws_path, 'r', encoding='utf-8') as f:
                 ws_code = f.read()
@@ -2008,9 +2008,9 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # چک ۵: اعتبارسنجی کدهای فرانت‌اند (Frontend Security Dashboard Architecture)
-            front_audit_ts = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'audit', 'audit.ts')
-            front_audit_html = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'audit', 'audit.html')
-            front_model_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'models', 'audit-log.model.ts')
+            front_audit_ts = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'audit', 'audit.ts')
+            front_audit_html = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'audit', 'audit.html')
+            front_model_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'models', 'audit-log.model.ts')
 
             with open(front_audit_ts, 'r', encoding='utf-8') as f:
                 ts_code = f.read()
@@ -2050,8 +2050,8 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # چک ۶: مسیر و منوی ممیزی اختصاصی در سامانه مالی و تشخیص خودکار قلمرو (Dedicated Finance Audit Route & Auto-Scope Detection)
-            front_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'app.routes.ts')
-            front_layout_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'layout', 'layout.ts')
+            front_routes_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'app.routes.ts')
+            front_layout_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'layout', 'layout.ts')
 
             with open(front_routes_path, 'r', encoding='utf-8') as f:
                 routes_code = f.read()
@@ -2060,7 +2060,7 @@ class ApprovalPhaseGuardian:
 
             # مسیر ممیزی مالی پس از بارگذاری تنبل در accounting.routes.ts است. آیتم منوی «ممیزی مالی» طبق طرح
             # منوی نقش‌ها و راهبر تشکیلات عمداً حذف شد (ممیزی کامل در مرکز عملیات است)؛ مسیر و ریدایرکت قدیمی می‌مانند.
-            acct_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'accounting.routes.ts')
+            acct_routes_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'modules', 'accounting', 'accounting.routes.ts')
             with open(acct_routes_path, 'r', encoding='utf-8') as f:
                 acct_routes_code = f.read()
             routes_has_finance_audit = (
@@ -2106,11 +2106,11 @@ class ApprovalPhaseGuardian:
             rf = RequestFactory()
 
             # ۱. ارزیابی فایل‌های سرویس SessionTabService و کدهای فرانت‌اند
-            session_tab_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'session-tab.service.ts')
-            auth_service_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'auth', 'auth.service.ts')
-            interceptor_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'auth', 'auth.interceptor.ts')
-            persona_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
-            ws_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'http', 'websocket.service.ts')
+            session_tab_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'session-tab.service.ts')
+            auth_service_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'auth', 'auth.service.ts')
+            interceptor_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'auth', 'auth.interceptor.ts')
+            persona_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            ws_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'http', 'websocket.service.ts')
 
             with open(session_tab_path, 'r', encoding='utf-8') as f:
                 st_code = f.read()
@@ -2250,8 +2250,8 @@ class ApprovalPhaseGuardian:
         all_passed = True
 
         try:
-            front_offline_db_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'offline-db.ts')
-            front_offline_sync_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'offline-sync.service.ts')
+            front_offline_db_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'offline-db.ts')
+            front_offline_sync_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'offline-sync.service.ts')
 
             with open(front_offline_db_path, 'r', encoding='utf-8') as f:
                 db_code = f.read()
@@ -2341,9 +2341,9 @@ class ApprovalPhaseGuardian:
         all_passed = True
 
         try:
-            front_sync_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'offline-sync.service.ts')
-            front_modal_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'shared', 'components', 'conflict-resolution-modal', 'conflict-resolution-modal.component.ts')
-            front_badge_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'shared', 'components', 'offline-pending-badge', 'offline-pending-badge.component.ts')
+            front_sync_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'offline-sync.service.ts')
+            front_modal_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'shared', 'components', 'conflict-resolution-modal', 'conflict-resolution-modal.component.ts')
+            front_badge_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'shared', 'components', 'offline-pending-badge', 'offline-pending-badge.component.ts')
 
             with open(front_sync_path, 'r', encoding='utf-8') as f:
                 sync_code = f.read()
@@ -2462,11 +2462,11 @@ class ApprovalPhaseGuardian:
         try:
             backend_views_path = os.path.join(BASE_DIR, 'accounts', 'views.py')
             backend_urls_path = os.path.join(BASE_DIR, 'accounts', 'urls.py')
-            front_service_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'system-health.service.ts')
-            front_dashboard_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'health-dashboard', 'health-dashboard.ts')
-            front_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'app.routes.ts')
-            front_badge_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'shared', 'components', 'offline-pending-badge', 'offline-pending-badge.component.ts')
-            front_layout_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'layout', 'layout.ts')
+            front_service_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'system-health.service.ts')
+            front_dashboard_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'health-dashboard', 'health-dashboard.ts')
+            front_routes_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'app.routes.ts')
+            front_badge_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'shared', 'components', 'offline-pending-badge', 'offline-pending-badge.component.ts')
+            front_layout_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'layout', 'layout.ts')
 
             with open(backend_views_path, 'r', encoding='utf-8') as f:
                 views_code = f.read()
@@ -2528,7 +2528,7 @@ class ApprovalPhaseGuardian:
             # ۴. مسیریابی در هر دو قلمرو انبارداری و مالی
             # پس از تفکیک ماژول‌ها مسیرها در routes هر ماژول و منوی انبار در nav-items همان ماژول است.
             # آیتم منوی «پایش سلامت» مالی طبق طرح منوی نقش‌ها و راهبر تشکیلات عمداً حذف شد؛ مسیر /app/finance/health برای نشان همگام‌سازی می‌ماند.
-            front_app_dir = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app')
+            front_app_dir = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app')
             with open(os.path.join(front_app_dir, 'modules', 'warehouse', 'warehouse.routes.ts'), 'r', encoding='utf-8') as f:
                 wh_routes_code = f.read()
             with open(os.path.join(front_app_dir, 'modules', 'accounting', 'accounting.routes.ts'), 'r', encoding='utf-8') as f:
@@ -2692,11 +2692,11 @@ class ApprovalPhaseGuardian:
             # ۵. یکپارچگی کدهای فرانت‌اند (Service Contract & UI Dashboard Panel)
             front_service_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'system-health.service.ts'
+                '..', '..', 'frontend', 'src', 'app', 'core', 'services', 'system-health.service.ts'
             )
             front_comp_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app', 'components', 'health-dashboard', 'health-dashboard.ts'
+                '..', '..', 'frontend', 'src', 'app', 'components', 'health-dashboard', 'health-dashboard.ts'
             )
 
             has_front_contract = False
@@ -2832,19 +2832,19 @@ class ApprovalPhaseGuardian:
             # ۴. بررسی یکپارچگی کد و قراردادهای فرانت‌اند (Angular Contracts & IndexedDB Backup)
             front_offline_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'offline-db.ts'
+                '..', '..', 'frontend', 'src', 'app', 'core', 'services', 'offline-db.ts'
             )
             front_html_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app', 'components', 'settings', 'tabs', 'settings-backup-tab', 'settings-backup-tab.html'
+                '..', '..', 'frontend', 'src', 'app', 'components', 'settings', 'tabs', 'settings-backup-tab', 'settings-backup-tab.html'
             )
             front_ts_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app', 'components', 'settings', 'tabs', 'settings-backup-tab', 'settings-backup-tab.ts'
+                '..', '..', 'frontend', 'src', 'app', 'components', 'settings', 'tabs', 'settings-backup-tab', 'settings-backup-tab.ts'
             )
             front_health_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app', 'components', 'health-dashboard', 'health-dashboard.ts'
+                '..', '..', 'frontend', 'src', 'app', 'components', 'health-dashboard', 'health-dashboard.ts'
             )
 
             has_export_fn = False
@@ -2902,16 +2902,16 @@ class ApprovalPhaseGuardian:
         all_passed = True
 
         try:
-            front_guard_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'guards', 'operations.guard.ts')
-            front_persona_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
-            front_layout_ts = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'operations', 'operations-layout', 'operations-layout.ts')
-            front_layout_html = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'operations', 'operations-layout', 'operations-layout.html')
-            front_cockpit_ts = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'operations', 'operations-cockpit', 'operations-cockpit.ts')
-            front_cockpit_html = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'operations', 'operations-cockpit', 'operations-cockpit.html')
-            front_launcher_ts = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'app-launcher', 'app-launcher.ts')
-            front_launcher_html = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'app-launcher', 'app-launcher.html')
-            front_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'app.routes.ts')
-            front_switcher_html = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'shared', 'components', 'app-role-switcher', 'app-role-switcher.component.html')
+            front_guard_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'guards', 'operations.guard.ts')
+            front_persona_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            front_layout_ts = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'operations', 'operations-layout', 'operations-layout.ts')
+            front_layout_html = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'operations', 'operations-layout', 'operations-layout.html')
+            front_cockpit_ts = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'operations', 'operations-cockpit', 'operations-cockpit.ts')
+            front_cockpit_html = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'operations', 'operations-cockpit', 'operations-cockpit.html')
+            front_launcher_ts = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'app-launcher', 'app-launcher.ts')
+            front_launcher_html = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'components', 'app-launcher', 'app-launcher.html')
+            front_routes_path = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'app.routes.ts')
+            front_switcher_html = os.path.join(BASE_DIR, '..', 'frontend', 'src', 'app', 'shared', 'components', 'app-role-switcher', 'app-role-switcher.component.html')
 
             # ۱. ارزیابی سد امنیتی ورود سوپریوزر (OperationsGuard)
             guard_exists = os.path.isfile(front_guard_path)
@@ -3063,7 +3063,7 @@ class ApprovalPhaseGuardian:
             factory = APIRequestFactory()
 
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            front_base = os.path.join(BASE_DIR, '..', '..', 'warehouse-front', 'src', 'app')
+            front_base = os.path.join(BASE_DIR, '..', '..', 'frontend', 'src', 'app')
 
             # ۱. ارزیابی کامپوننت سورس واحد پشتیبان‌گیری و اسنپ‌شات‌های سرور (SettingsBackupTabComponent Single Source)
             snap_ts = os.path.join(front_base, 'components', 'settings', 'tabs', 'settings-backup-tab', 'settings-backup-tab.ts')
@@ -3451,7 +3451,7 @@ class ApprovalPhaseGuardian:
             # ۷. ارزیابی فرانت‌اند، تزریق سراسری و یکپارچگی وب‌سوکت و موتور ۳-Way Merge
             front_base = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'warehouse-front', 'src', 'app'
+                '..', '..', 'frontend', 'src', 'app'
             )
             sync_ts_path = os.path.join(front_base, 'components', 'operations', 'operations-sync-monitor', 'operations-sync-monitor.ts')
             sync_html_path = os.path.join(front_base, 'components', 'operations', 'operations-sync-monitor', 'operations-sync-monitor.html')

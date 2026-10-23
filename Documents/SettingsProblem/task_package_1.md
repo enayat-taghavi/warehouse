@@ -5,8 +5,8 @@
 ## 📋 وضعیت فازها و گام‌های اجرایی
 
 - [x] **فاز ۰: راه‌اندازی زیرساخت تست‌های واحد (Test Infrastructure)**
-  - [x] ساخت `warehouse-backend/warehouses/tests_settings.py` و Mock helper کاربر دارای/فاقد مجوز <!-- id: 0.1 -->
-  - [x] ساخت `warehouse-backend/config/tests_backup.py` و شبیه‌سازی امن Mock برای `pg_dump`/`pg_restore` <!-- id: 0.2 -->
+  - [x] ساخت `backend/warehouses/tests_settings.py` و Mock helper کاربر دارای/فاقد مجوز <!-- id: 0.1 -->
+  - [x] ساخت `backend/config/tests_backup.py` و شبیه‌سازی امن Mock برای `pg_dump`/`pg_restore` <!-- id: 0.2 -->
   - [x] پیکربندی و سبزسازی تست‌های فرانت‌اند `settings.spec.ts` با Providerهای HTTP Testing و Stubها <!-- id: 0.3 -->
 
 - [x] **فاز ۱: ایمن‌سازی بک‌اند و فرانت‌اند بازیابی دیتابیس و بکاپ (Database & Backup Armor)**

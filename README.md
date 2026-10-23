@@ -17,8 +17,8 @@
 - [پیش‌نیازهای سیستمی](#-پیشنیازهای-سیستمی)
 - [راه‌اندازی سریع (Quick Start)](#-راهاندازی-سریع-quick-start)
 - [راه‌اندازی دستی و گام‌به‌گام](#-راهاندازی-دستی-و-گامبهگام)
-  - [راه‌اندازی بک‌اند (Django)](#۱-بکاند-warehouse-backend)
-  - [راه‌اندازی فرانت‌اند (Angular)](#۲-فرانتاند-warehouse-front)
+  - [راه‌اندازی بک‌اند (Django)](#۱-بکاند-backend)
+  - [راه‌اندازی فرانت‌اند (Angular)](#۲-فرانتاند-frontend)
 - [پروفایل‌های اجرای تفکیک‌شده (Modular Builds)](#-پروفایلهای-اجرای-تفکیکشده-modular-builds)
 - [کاربران و نقش‌های پیش‌فرض تست](#-کاربران-و-نقشهای-پیشفرض-تست)
 - [تست‌ها و نگهبان‌های کیفیت (Quality Assurance)](#-تستها-و-نگهبانهای-کیفیت-quality-assurance)
@@ -65,7 +65,7 @@
 پروژه به صورت یک مخزن یکپارچه (Monorepo) با استراتژی تفکیک ماژولار پیاده‌سازی شده است:
 
 ```text
-├── warehouse-backend/               # هسته بک‌اند بر پایه Django 5 و Django REST Framework
+├── backend/               # هسته بک‌اند بر پایه Django 5 و Django REST Framework
 │   ├── config/                      # تنظیمات مرکزی پروژه، پیکربندی ASGI/WSGI و URLهای پایه
 │   ├── settings_core/               # تنظیمات سیستمی پلتفرم و ماژول‌های فعال
 │   ├── warehouses/                  # هسته مدیریت انبارها و تعریف ساختار فیزیکی
@@ -76,7 +76,7 @@
 │   ├── notifications/               # موتور اعلان‌ها و هشدارها
 │   └── reports/                     # موتور گزارش‌ساز پیشرفته اکسل و PDF
 │
-├── warehouse-front/                 # فرانت‌اند مدرن Single Page Application با Angular 22
+├── frontend/                 # فرانت‌اند مدرن Single Page Application با Angular 22
 │   ├── src/app/components/          # کامپوننت‌های ماژول‌های انبارداری، حسابداری، پرسنلی و ناوگان
 │   ├── src/app/core/services/       # سرویس‌های زیرساختی، آفلاین، سینک و ارتباط با سرور
 │   └── tools/patch-ngsw-530.js      # پچ نگهبان Service Worker برای پایداری در تونل شبکه
@@ -116,11 +116,11 @@ dev-manager-modular.bat
 
 ## 🛠 راه‌اندازی دستی و گام‌به‌گام
 
-### ۱. بک‌اند (`warehouse-backend`)
+### ۱. بک‌اند (`backend`)
 
 ۱. وارد پوشه بک‌اند شوید:
 ```bash
-cd warehouse-backend
+cd backend
 ```
 
 ۲. محیط مجازی پایتون (Virtual Environment) ایجاد و فعال کنید:
@@ -153,11 +153,11 @@ python manage.py runserver 8000
 
 ---
 
-### ۲. فرانت‌اند (`warehouse-front`)
+### ۲. فرانت‌اند (`frontend`)
 
 ۱. یک پنجره ترمینال جدید باز کرده و وارد پوشه فرانت‌اند شوید:
 ```bash
-cd warehouse-front
+cd frontend
 ```
 
 ۲. وابستگی‌های نود را نصب نمایید:
@@ -212,7 +212,7 @@ npm run start
 ### تست‌های فرانت‌اند (DOM Unit Testing با Vitest)
 برای اجرای سریع تست‌های اجزای فرانت‌اند و کامپوننت‌های Angular بدون نیاز به مرورگرهای سنگین:
 ```bash
-cd warehouse-front
+cd frontend
 npm run test
 ```
 
@@ -226,7 +226,7 @@ python scripts/e2e/guardian_modularization.py
 python scripts/e2e/guardian_all.py
 
 # تست‌های سیستمی جنگو
-cd warehouse-backend
+cd backend
 python manage.py test
 ```
 

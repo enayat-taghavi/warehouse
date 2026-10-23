@@ -22,10 +22,10 @@
 ## 🛠️ تفکیک گام‌به‌گام اقدامات
 
 ### فاز ۰: هارنس تست و اثبات قرمز (Phase 0: Test Harness & Red Flags)
-- [x] <!-- id: 0.1 --> ساخت پکیج تست بک‌اند `warehouse-backend/communications/tests/__init__.py`
+- [x] <!-- id: 0.1 --> ساخت پکیج تست بک‌اند `backend/communications/tests/__init__.py`
 - [x] <!-- id: 0.2 --> پیاده‌سازی کلاس پایه `BaseCommsTestCase` در `communications/tests/base.py` با ۲ انبار و ۵ کاربر با نقش‌های متفاوت
 - [x] <!-- id: 0.3 --> نوشتن تست‌های قرمز اثبات‌کننده رخنه‌های امنیتی در `communications/tests/test_access_rest.py` (اثبات شکست اولیه در ۱۲ تست)
-- [x] <!-- id: 0.4 --> ساخت فایل تست سرویس کلاینت در `warehouse-front/src/app/core/services/communication.service.spec.ts`
+- [x] <!-- id: 0.4 --> ساخت فایل تست سرویس کلاینت در `frontend/src/app/core/services/communication.service.spec.ts`
 
 ### فاز ۱: لایه دسترسی واحد در REST (Phase 1: Centralized Access Layer & IDOR Shield)
 - [x] <!-- id: 1.1 --> ساخت ماژول متمرکز `communications/access.py` متصل به `common/warehouse_scope.py`

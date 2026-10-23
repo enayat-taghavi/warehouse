@@ -8,13 +8,13 @@
 ## تغییرات پیشنهادی
 
 ### ۱. دیتابیس (مدل بک‌اند)
-- **فایل:** `warehouse-backend/inventory/models.py`
+- **فایل:** `backend/inventory/models.py`
 - یک فیلد جدید به مدل `CountTask` اضافه می‌کنیم:
   `assigned_manager = ForeignKey(User, null=True, blank=True)`
   این فیلد مشخص می‌کند که آیا تایید نهایی این کالا منحصراً در اختیار یک مدیر خاص است یا خیر.
 
 ### ۲. لاجیک بک‌اند (API)
-- **فایل:** `warehouse-backend/inventory/views.py`
+- **فایل:** `backend/inventory/views.py`
 - در متد `ItemViewSet.bulk_assign` (هنگام ساخت وظایف شمارش)، پارامتر `manager_assignee` را از کلاینت دریافت کرده و در فیلد جدید ذخیره می‌کنیم.
 - در متد `CountTaskViewSet.get_queryset` که لیست کارتابل مدیران را می‌سازد، شرط جدیدی اضافه می‌کنیم: 
   **«مدیر فقط وظایفی را ببیند که یا به خودش اختصاص داده شده‌اند، یا فیلد مدیرِ آن‌ها خالی است (استخر مشترک).»**

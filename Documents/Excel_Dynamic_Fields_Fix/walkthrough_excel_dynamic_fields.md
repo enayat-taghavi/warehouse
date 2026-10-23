@@ -2,7 +2,7 @@
 
 # Walkthrough: Excel Dynamic Fields Fix
 
-تغییرات مورد نظر برای مدیریت صحیح فیلدهای داینامیک و حذف فیلد `dynamic_data` از فایل اکسل، مطابق برنامه اجرایی در `warehouse-backend/inventory/views.py` پیاده‌سازی شدند:
+تغییرات مورد نظر برای مدیریت صحیح فیلدهای داینامیک و حذف فیلد `dynamic_data` از فایل اکسل، مطابق برنامه اجرایی در `backend/inventory/views.py` پیاده‌سازی شدند:
 
 ### تغییرات اعمال شده
 

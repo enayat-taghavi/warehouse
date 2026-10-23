@@ -22,21 +22,21 @@
 
 ## ۲. بررسی دقیق فایل‌های تغییر یافته (Modified Files)
 
-### ۱. [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts)
+### ۱. [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts)
 - ایمپورت `QRCodeWriter`, `BarcodeFormat`, `EncodeHintType` از کتابخانه استاندارد `@zxing/library`.
 - افزودن متدهای `getWarehouseNamesList`، `getWarehouseSummary` و `getWarehouseFullText` جهت خلاصه‌سازی هوشمند و جلوگیری از سرریز متن.
 - اصلاح گتر `filteredUsers` جهت مقایسه شناسه عددی انبارها.
 - بازنویسی متدهای `getQrCodeSvg` و `drawCanvas2DBarcode` جهت تولید داینامیک ماتریس QR Code.
 - افزودن متد `wrapText` به Canvas و تطبیق ساختار گرافیکی کارت افقی در خروجی تصویر دیجیتال.
 
-### ۲. [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html)
+### ۲. [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html)
 - اصلاح مقدار `[value]="w.id"` در منوی دراپ‌داون فیلتر انبارها.
 - اتصال فیلد مجوز تردد به `getWarehouseSummary` در پیش‌نمایش کارت‌های عمودی و افقی و شیت‌های چاپ.
 - بازطراحی کامل بخش پشت کارت افقی (`card-back-face`) شامل فیلدهای تفکیک‌شده و مهر حراست.
 - افزودن انتخابگر «طرف چاپ کارت» (`printSide`) به کنترل پنل پرینت.
 - اضافه شدن شیت پشت کارت‌ها (`Back Sheet`) به ساختار چاپ A4 با کلاس `print-page-break`.
 
-### ۳. [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css)
+### ۳. [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css)
 - افزودن کلاس‌های اختصاصی گرید چاپی `.print-sheet-vertical` (۳ ستونه ۵۴ میلی‌متری) و `.print-sheet-horizontal` (۲ ستونه ۸۵.۶ میلی‌متری).
 - افزودن کلاس شکست صفحه چاپی `.print-page-break` جهت تفکیک منظم برگه‌های رو و پشت در پرینتر.
 
@@ -48,7 +48,7 @@
 > ng build && node tools/patch-ngsw-530.js
 √ Building...
 Application bundle generation complete. [26.212 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر.
 ```
 

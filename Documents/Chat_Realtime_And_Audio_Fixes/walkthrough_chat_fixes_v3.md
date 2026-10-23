@@ -22,29 +22,29 @@
 
 ### 📁 فایل‌های ویرایش‌شده و جزئیات کد
 
-#### ۱. بک‌اند: `warehouse-backend/communications/views.py`
+#### ۱. بک‌اند: `backend/communications/views.py`
 - بازگرداندن تمام کاربران فعال سازمان در `ChatContactsListView`
 - برودکست رویداد وب‌سوکت `broadcast_read_receipt_ws` در `mark_as_read`
 - فیلتر کردن چت‌های دو‌نفره بدون پیام در `get_queryset`
 
-#### ۲. بک‌اند: `warehouse-backend/communications/broadcast.py`
+#### ۲. بک‌اند: `backend/communications/broadcast.py`
 - پیاده‌سازی تابع `broadcast_read_receipt_ws(conversation, reader_user)` جهت اطلاع‌رسانی به اعضای روم و روم شخصی فرستنده
 
-#### ۳. فرانت‌اند: `warehouse-front/src/app/core/services/communication.service.ts`
+#### ۳. فرانت‌اند: `frontend/src/app/core/services/communication.service.ts`
 - افزودن سیگنال `hasNewIncomingPulse` برای پالس چشمک‌زن هدر
 - شنود رویداد `chat.read_receipt` و به‌روزرسانی آنی `read_by_count` روی پیام‌های ارسالی من
 - اصلاح هندلرهای `chat.unread_badge` و `handleNewMessage` برای جلوگیری از مارک-رید خودکار در زمان بسته بودن کشو
 
-#### ۴. فرانت‌اند: `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
+#### ۴. فرانت‌اند: `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`
 - پیاده‌سازی حالت Draft Mode در `startDirectChat` و ذخیره‌سازی در `sendMessage`
 - مقایسه رشته‌ای `String(p.id) !== String(currentUserId)` در `getConversationTitle`
 - اسکرول نرم و روان در `scrollToBottom`
 
-#### ۵. فرانت‌اند: `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html`
+#### ۵. فرانت‌اند: `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html`
 - انتقال `#messagesScrollContainer` به کانتینر والد اسکرول‌پذیر
 - رندر تفکیکی وضعیت پیام‌ها: ⏳ (در حال ارسال)، `✓` (تک‌تیک ارسال‌شده)، `✓✓` (دو‌تیک خوانده‌شده با رنگ متمایز)، و ⚠️ (ناموفق با دکمه تلاش مجدد)
 
-#### ۶. فرانت‌اند: `warehouse-front/src/app/components/layout/layout.html` و `layout.ts`
+#### ۶. فرانت‌اند: `frontend/src/app/components/layout/layout.html` و `layout.ts`
 - نمایش عدد بج پیام‌های خوانده‌نشده همراه با انیمیشن جهشی/چشمک‌زن پیام جدید
 
 ---
@@ -76,7 +76,7 @@ npx vitest run src/app/core/services/communication.service.spec.ts src/app/compo
 ```bash
 npx ng build --configuration=development --no-progress
 Application bundle generation complete. [30.504 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 ```
 
 </div>

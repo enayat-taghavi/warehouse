@@ -26,7 +26,7 @@ graph TD
 - **تمرکز بر ژست‌های طبیعی:** جابه‌جایی عکس با درگ ماوس روی دسکتاپ و کشیدن انگشت روی موبایل با حساسیت و پایداری بالا انجام می‌پذیرد.
 
 ### ب) پشتیبانی کامل از زوم دو انگشتی (Pinch-to-Zoom)
-- در کامپوننت [AvatarCropperModal](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)، رویدادهای لمسی `touchstart`، `touchmove` و `touchend` بازنویسی شدند:
+- در کامپوننت [AvatarCropperModal](file:///e:/warehouse%20project/frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts)، رویدادهای لمسی `touchstart`، `touchmove` و `touchend` بازنویسی شدند:
   - **تک‌لمسی (۱ انگشت):** جابه‌جایی (Pan) عکس در هر جهت.
   - **دو لمسی (۲ انگشت):** محاسبه فاصله اقلیدسی میان دو انگشت و بزرگ‌نمایی/کوچک‌نمایی پیوسته و روان (Pinch Zoom).
   - **دسکتاپ:** پشتیبانی از اسکرول ماوس (Wheel Zoom) و اسلایدر ظریف.
@@ -41,7 +41,7 @@ graph TD
   - ارتفاع دقیق ۳۸px برای تمام دکمه‌ها («ذخیره و اعمال تصویر»، «انصراف» و «حذف عکس فعلی»).
   - تراز کامل آیکون‌ها و متون و رعایت دقیق سلسله‌مراتب بصری.
 
-### د) ارتقای باکس پیش‌نمایش در فرم پرونده پرسنلی ([users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html))
+### د) ارتقای باکس پیش‌نمایش در فرم پرونده پرسنلی ([users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html))
 - آواتار پیش‌نمایش با ابعاد ۶۴×۶۴px، سایه نرم و دکمه کپسولی «مدیریت تصویر» با حاشیه هماهنگ با استایل کلی سامانه پیاده‌سازی شد.
 
 ---

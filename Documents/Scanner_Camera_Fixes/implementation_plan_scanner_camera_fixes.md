@@ -29,7 +29,7 @@
 
 ### 📦 کامپوننت مشترک اسکنر (`src/app/shared/components/barcode-scanner`)
 
-#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
+#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
 - افزودن متغیرهای `availableCameras: MediaDeviceInfo[]` و `selectedCameraId: string | null`.
 - پیاده‌سازی متد `detectAvailableCameras()` جهت دریافت و فیلتر کردن وب‌کم‌های موجود.
 - پیاده‌سازی متد `switchCamera()` برای چرخش بین دوربین‌ها و اتصال مجدد استریم.
@@ -41,7 +41,7 @@
 
 ### 💼 کارتابل مالی و اسناد (`src/app/components/customs`)
 
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
 - ارتقای متد `onBarcodeScanned` جهت پشتیبانی از:
   - تبدیل ارقام فارسی و عربی به انگلیسی (`normalizeDigits`).
   - تطبیق چندگانه بر روی `fa_unic_code`, `en_unic_code`, `id`, `po`, `inv_rti_number`.
@@ -51,7 +51,7 @@
 
 ### 📦 کارتابل انبارگردان (`src/app/components/counter/counter-dashboard`)
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - اطمینان از عملکرد صحیح اسکن بارکد، هماهنگی با دکمه تعویض دوربین و فوکوس بلادرنگ.
 
 ---
@@ -76,7 +76,7 @@
 ## ۵. برنامه راستی‌آزمایی (Verification Plan)
 
 ### تست‌های خودکار:
-1. **تست بیلد کامل فرانت‌اند:** اجرای `npm run build` در پوشه `warehouse-front` و اطمینان از خروجی سالم بدون خطای کامپایل.
+1. **تست بیلد کامل فرانت‌اند:** اجرای `npm run build` در پوشه `frontend` و اطمینان از خروجی سالم بدون خطای کامپایل.
 
 ### تست‌های دستی و میدانی:
 1. باز کردن کارتابل انبارگردان و کارتابل مالی و کلیک روی آیکون دوربین.

@@ -15,15 +15,15 @@
 
 تغییرات مربوط به شناسایی جداول `many` و اعمال محدودیت در دکمه‌های فیلدها.
 
-#### [MODIFY] [report-store.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts)
+#### [MODIFY] [report-store.ts](file:///E:/warehouse%20project/frontend/src/app/components/reports/report-store.ts)
 دو ویژگیِ `computed` به `ReportStore` اضافه خواهد شد:
 - **`manyJoinAliases`**: یک `Set` شامل تمام aliasهایی که `cardinality === 'many'` دارند.
 - **`activeManyJoinAlias`**: بررسی می‌کند که در بین `selectedFields`، `groupBy` و `aggregations` آیا فیلدی متعلق به یکی از جداول `many` وجود دارد یا خیر. اگر وجود داشت، alias آن جدول را برمی‌گرداند.
 
-#### [MODIFY] [reports.ts](file:///E:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts)
+#### [MODIFY] [reports.ts](file:///E:/warehouse%20project/frontend/src/app/components/reports/reports.ts)
 - اضافه کردن متد `isManyJoinDisabled(alias: string)` برای بررسی این‌که آیا این جدولِ خاص باید به دلیل فعال بودنِ یک جدولِ `many` دیگر، غیرفعال (Disabled) شود یا خیر.
 
-#### [MODIFY] [reports.html](file:///E:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html)
+#### [MODIFY] [reports.html](file:///E:/warehouse%20project/frontend/src/app/components/reports/reports.html)
 - در بخش **«۲. فیلدهای گزارش»** (فقط خروجی‌ها، نه فیلترها):
   - به دکمه‌های انتخاب فیلدهای `JOIN`، ویژگی `[disabled]="store.grouped() || isManyJoinDisabled(group.alias)"` اضافه می‌شود.
   - یک تگ `<p>` با متن هشدار (زرد رنگ) زیر نام گروهِ فیلدها اضافه می‌شود که تنها در صورت غیرفعال بودنِ آن گروه نمایش داده می‌شود: *(«امکان انتخاب فیلد از این جدول وجود ندارد زیرا از یک جدول چندمقداری دیگر فیلد انتخاب شده است.»)*

@@ -25,7 +25,7 @@
 ## ۳. فازهای اجرایی طرح (Phased Implementation Roadmap)
 
 ### فاز ۱: ایجاد صفحه اختصاصی «پروژه‌ها و بخش‌ها» در سایدبار و پالایش تنظیمات پایه
-- ساخت کامپوننت مستقل `ProjectsAndSectionsComponent` در مسیر `warehouse-front/src/app/components/organization/projects-and-sections/`.
+- ساخت کامپوننت مستقل `ProjectsAndSectionsComponent` در مسیر `frontend/src/app/components/organization/projects-and-sections/`.
 - انتقال ۴ زیرتب (پروژه‌ها، بخش‌ها، انتساب نقش‌ها، طرف‌حساب‌ها) از `base-settings` به صفحه جدید.
 - ثبت مسیر `/projects-and-sections` در `app.routes.ts` با گارد دسترسی مناسب.
 - افزودن آیتم مستقل «🏢 پروژه‌ها و بخش‌ها» در سایدبار اصلی (`layout.html` و `layout.ts`).

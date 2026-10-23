@@ -34,8 +34,8 @@
 
 | ردیف | فایل | شرح تغییرات |
 | :--- | :--- | :--- |
-| **۱** | [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | تغییر مقدار پیش‌فرض `statusFilter` به `'pending'`، محاسبه پویا و حساس به متن جستجو برای `statusCounts`، و اطمینان از اسکن سراسری در `onBarcodeScanned` |
-| **۲** | [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | تغییر چیدمان دکمه‌های چیپ وضعیت و افزودن کارت راهنمای وضعیت خالی هوشمند برای تب دست‌نخورده |
+| **۱** | [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | تغییر مقدار پیش‌فرض `statusFilter` به `'pending'`، محاسبه پویا و حساس به متن جستجو برای `statusCounts`، و اطمینان از اسکن سراسری در `onBarcodeScanned` |
+| **۲** | [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | تغییر چیدمان دکمه‌های چیپ وضعیت و افزودن کارت راهنمای وضعیت خالی هوشمند برای تب دست‌نخورده |
 
 ---
 

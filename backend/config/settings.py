@@ -19,7 +19,7 @@ import socket
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # تنظیمات محرمانهٔ محیط عملیاتی (DJANGO_SECRET_KEY، DJANGO_DEBUG و...) از
-# `warehouse-backend/.env` خوانده می‌شوند که بیرون از git است. متغیری که در
+# `backend/.env` خوانده می‌شوند که بیرون از git است. متغیری که در
 # محیط سیستم تنظیم شده باشد بر مقدار فایل مقدم است.
 _ENV_FILE = BASE_DIR / '.env'
 if _ENV_FILE.exists():
@@ -146,7 +146,7 @@ if os.environ.get('WH_DEV_TOOLS', '').strip().lower() in ('1', 'true', 'yes'):
     INSTALLED_APPS.append('django_extensions')
 
 # ثبت ماندگار خطاها: خطاهای سطح ERROR به بالای Django و اپ‌های پروژه، علاوه بر
-# کنسول daphne (مثل قبل)، در `warehouse-backend/logs/django-errors.log` هم ذخیره
+# کنسول daphne (مثل قبل)، در `backend/logs/django-errors.log` هم ذخیره
 # می‌شوند (بیرون از git). سطح لاگرها و انتشار به لاگر ریشه دست نمی‌خورد، پس خروجی
 # کنسول عیناً مثل قبل می‌ماند. لاگرها پویا از روی INSTALLED_APPS ساخته می‌شوند.
 _custom_log_dir = os.environ.get('DJANGO_LOG_DIR')

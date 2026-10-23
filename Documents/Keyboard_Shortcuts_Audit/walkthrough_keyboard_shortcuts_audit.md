@@ -45,29 +45,29 @@
 
 ## ۲. فایل‌های تغییریافته (Modified Components)
 
-1. `warehouse-front/src/app/components/layout/layout.ts` & `layout.html`:
+1. `frontend/src/app/components/layout/layout.ts` & `layout.html`:
    - پیاده‌سازی شنونده سراسری کلیدهای میانبر، تاگل سایدبار با `Ctrl+B`، و طراحی پنجره راهنمای کامل کلیدها.
-2. `warehouse-front/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts`:
+2. `frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts`:
    - پشتیبانی از `Enter` و `Escape`.
-3. `warehouse-front/src/app/shared/components/smart-delete-modal/smart-delete-modal.ts`:
+3. `frontend/src/app/shared/components/smart-delete-modal/smart-delete-modal.ts`:
    - پشتیبانی از `Enter` و `Escape`.
-4. `warehouse-front/src/app/shared/components/excel-import-modal/excel-import-modal.ts`:
+4. `frontend/src/app/shared/components/excel-import-modal/excel-import-modal.ts`:
    - پشتیبانی از `Escape` و `Ctrl+Enter`.
-5. `warehouse-front/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts`:
+5. `frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts`:
    - کلیدهای زوم `+`/`-`، چرخش `R`، ذخیره `Ctrl+Enter` و بستن `Escape`.
-6. `warehouse-front/src/app/shared/components/data-table/data-table.component.ts`:
+6. `frontend/src/app/shared/components/data-table/data-table.component.ts`:
    - میانبرهای `Ctrl+S`, `Ctrl+A`, `Escape`.
-7. `warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts`:
+7. `frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts`:
    - میانبرهای `F2`/`Alt+B` و `Escape`.
-8. `warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts` & `counter-dashboard.html`:
+8. `frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts` & `counter-dashboard.html`:
    - میانبرهای `Enter`, `Ctrl+Enter`, `Alt+1`, `Alt+2`, `Escape`.
-9. `warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`:
+9. `frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts`:
    - کلیدهای `A`, `Ctrl+Enter`, `Alt+1..4`, `Escape`.
-10. `warehouse-front/src/app/components/manager-review/manager-review.ts`:
+10. `frontend/src/app/components/manager-review/manager-review.ts`:
     - کلیدهای `A`, `Ctrl+Enter`, `Alt+1..4`, `Escape`.
-11. `warehouse-front/src/app/components/label-designer/label-designer.ts`:
+11. `frontend/src/app/components/label-designer/label-designer.ts`:
     - جابجایی پیکسلی با Arrow keys، کپی/پیست المان با `Ctrl+C`/`Ctrl+V`، ذخیره با `Ctrl+S`.
-12. `warehouse-front/src/app/components/id-cards/id-cards.ts`:
+12. `frontend/src/app/components/id-cards/id-cards.ts`:
     - چرخش کارت با `Space`/`F`، چاپ سریع با `Ctrl+P`، ذخیره با `Ctrl+S` و بستن با `Escape`.
 
 ---

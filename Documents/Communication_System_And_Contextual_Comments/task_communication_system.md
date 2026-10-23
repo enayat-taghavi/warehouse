@@ -20,7 +20,7 @@
   - [x] 🛡️ **دروازه نگهبان فاز ۲ (Gate 2):** بررسی یکپارچگی هندلرهای ASGI بدون تداخل با `ws/notifications/` <!-- id: 2.5 -->
 
 - [x] **🟡 فاز ۳: سرویس هسته ارتباطات در فرانت‌اند (Core Communication Service)** <!-- id: 3 -->
-  - [x] ایجاد `warehouse-front/src/app/core/services/communication.service.ts` <!-- id: 3.1 -->
+  - [x] ایجاد `frontend/src/app/core/services/communication.service.ts` <!-- id: 3.1 -->
   - [x] مدیریت ارتباطات سوکت، ارسال پیام خوش‌بینانه (Optimistic UI) و صف آفلاین <!-- id: 3.2 -->
   - [x] فشرده‌سازی تصاویر پیش از آپلود با `ImageCompressorService` (فرمت WebP) <!-- id: 3.3 -->
   - [x] پخش افکت صوتی اعلان با Web Audio API و سینک نشانگر پیام‌های خوانده‌نشده <!-- id: 3.4 -->

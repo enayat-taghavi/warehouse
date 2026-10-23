@@ -45,14 +45,14 @@
 
 | لایه | مسیر فایل | نوع تغییر | شرح تغییرات |
 | :--- | :--- | :---: | :--- |
-| **Backend Views** | [`personnel/views.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py) | ویرایش | رفع باگ تنزل رتبه در `approve_manager`، اعمال BOLA در `get_queryset`، حفاظت Cascade Delete در `destroy`، افزودن `download_template` و `import_excel` و رویدادهای وب‌سوکت |
-| **Backend Serializers** | [`personnel/serializers.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py) | ویرایش | افزودن فیلد `pending_change_request`، اعتبارسنجی ۱۰ رقمی کد ملی و شبا |
-| **Backend URLs** | [`personnel/urls.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/urls.py) | ویرایش | افزودن مسیرهای دانلود تمپلیت و ایمپورت اکسل ناوگان |
-| **Backend Tests** | [`personnel/tests_vehicle_cycle.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/tests_vehicle_cycle.py) | جدید | ۶ آزمون جامع بک‌اند برای چرخه حیات، گردش کار، تغییرات معلق، پیشگیری از حذف و اکسل |
-| **Frontend API** | [`personnel-api.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/personnel-api.service.ts) | ویرایش | افزودن متدهای `downloadVehicleTemplate`، `importVehicleExcel` و `importVehicleExcelModal` |
-| **Frontend Component TS** | [`employee-new-vehicle.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts) | بازنویسی کامل | پیاده‌سازی استیت مودال، لاجیک پلاک ۴ بخشی، دی‌بانس جستجو، وب‌سوکت، ورود اکسل و تفکیک پیش‌نویس/تغییرات معلق |
-| **Frontend Template** | [`employee-new-vehicle.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html) | بازنویسی کامل | حذف فرم درون‌خطی، هدر چسبان، جدول کارت‌محور، پیش‌نمایش گرافیکی پلاک، مودال ثبت، مودال Diff و کارت‌های موبایل |
-| **Frontend Spec** | [`employee-new-vehicle.spec.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.spec.ts) | بازنویسی کامل | ۲۳ آزمون جامع DOM و رفتار کامپوننت با پوشش ۱۰۰٪ تمام فیچرها |
+| **Backend Views** | [`personnel/views.py`](file:///e:/warehouse%20project/backend/personnel/views.py) | ویرایش | رفع باگ تنزل رتبه در `approve_manager`، اعمال BOLA در `get_queryset`، حفاظت Cascade Delete در `destroy`، افزودن `download_template` و `import_excel` و رویدادهای وب‌سوکت |
+| **Backend Serializers** | [`personnel/serializers.py`](file:///e:/warehouse%20project/backend/personnel/serializers.py) | ویرایش | افزودن فیلد `pending_change_request`، اعتبارسنجی ۱۰ رقمی کد ملی و شبا |
+| **Backend URLs** | [`personnel/urls.py`](file:///e:/warehouse%20project/backend/personnel/urls.py) | ویرایش | افزودن مسیرهای دانلود تمپلیت و ایمپورت اکسل ناوگان |
+| **Backend Tests** | [`personnel/tests_vehicle_cycle.py`](file:///e:/warehouse%20project/backend/personnel/tests_vehicle_cycle.py) | جدید | ۶ آزمون جامع بک‌اند برای چرخه حیات، گردش کار، تغییرات معلق، پیشگیری از حذف و اکسل |
+| **Frontend API** | [`personnel-api.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/api/personnel-api.service.ts) | ویرایش | افزودن متدهای `downloadVehicleTemplate`، `importVehicleExcel` و `importVehicleExcelModal` |
+| **Frontend Component TS** | [`employee-new-vehicle.ts`](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts) | بازنویسی کامل | پیاده‌سازی استیت مودال، لاجیک پلاک ۴ بخشی، دی‌بانس جستجو، وب‌سوکت، ورود اکسل و تفکیک پیش‌نویس/تغییرات معلق |
+| **Frontend Template** | [`employee-new-vehicle.html`](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html) | بازنویسی کامل | حذف فرم درون‌خطی، هدر چسبان، جدول کارت‌محور، پیش‌نمایش گرافیکی پلاک، مودال ثبت، مودال Diff و کارت‌های موبایل |
+| **Frontend Spec** | [`employee-new-vehicle.spec.ts`](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.spec.ts) | بازنویسی کامل | ۲۳ آزمون جامع DOM و رفتار کامپوننت با پوشش ۱۰۰٪ تمام فیچرها |
 
 ---
 

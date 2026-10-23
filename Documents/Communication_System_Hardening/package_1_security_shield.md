@@ -17,19 +17,19 @@
 
 | لایه | مسیر فایل | نوع تغییر |
 | :--- | :--- | :---: |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/__init__.py` | [NEW] |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/base.py` | [NEW] |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_access_rest.py` | [NEW] |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_attachments.py` | [NEW] |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_ws_access.py` | [NEW] |
-| **تست فرانت** | `warehouse-front/src/app/core/services/communication.service.spec.ts` | [NEW] |
-| **بک‌اند** | `warehouse-backend/communications/access.py` | [NEW] |
-| **بک‌اند** | `warehouse-backend/communications/broadcast.py` | [NEW] |
-| **بک‌اند** | `warehouse-backend/communications/views.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/permissions.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/serializers.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/communications/consumers.py` | [MODIFY] |
-| **بک‌اند** | `warehouse-backend/common/media_urls.py` | [MODIFY] |
+| **تست بک‌اند** | `backend/communications/tests/__init__.py` | [NEW] |
+| **تست بک‌اند** | `backend/communications/tests/base.py` | [NEW] |
+| **تست بک‌اند** | `backend/communications/tests/test_access_rest.py` | [NEW] |
+| **تست بک‌اند** | `backend/communications/tests/test_attachments.py` | [NEW] |
+| **تست بک‌اند** | `backend/communications/tests/test_ws_access.py` | [NEW] |
+| **تست فرانت** | `frontend/src/app/core/services/communication.service.spec.ts` | [NEW] |
+| **بک‌اند** | `backend/communications/access.py` | [NEW] |
+| **بک‌اند** | `backend/communications/broadcast.py` | [NEW] |
+| **بک‌اند** | `backend/communications/views.py` | [MODIFY] |
+| **بک‌اند** | `backend/communications/permissions.py` | [MODIFY] |
+| **بک‌اند** | `backend/communications/serializers.py` | [MODIFY] |
+| **بک‌اند** | `backend/communications/consumers.py` | [MODIFY] |
+| **بک‌اند** | `backend/common/media_urls.py` | [MODIFY] |
 
 ---
 
@@ -68,10 +68,10 @@
 
 ```bash
 # ۱. اجرای تست‌های بک‌اند ماژول ارتباطات (باید ۳۰ تست سبز شود)
-cd "E:/warehouse project/warehouse-backend" && python manage.py test communications -v 2
+cd "E:/warehouse project/backend" && python manage.py test communications -v 2
 
 # ۲. اجرای تست‌های پایه فرانت‌اند
-cd "E:/warehouse project/warehouse-front" && npm test
+cd "E:/warehouse project/frontend" && npm test
 ```
 
 ---
@@ -81,9 +81,9 @@ cd "E:/warehouse project/warehouse-front" && npm test
 ```text
 سلام. من می‌خواهم «بسته ۱: سپر امنیتی، کنترل دسترسی و تست پایه» از سیستم ارتباطات را پیاده‌سازی کنم.
 لطفاً فایل‌های زیر را مبنا قرار بده:
-1. E:\warehouse project\Documents\Communication_System_Hardening\package_1_security_shield.md
-2. E:\warehouse project\Documents\Communication_System_Hardening\task_communication_hardening.md
-3. E:\warehouse project\Documents\Communication_System_Hardening\implementation_plan_communication_hardening.md
+1. Documents\Communication_System_Hardening\package_1_security_shield.md
+2. Documents\Communication_System_Hardening\task_communication_hardening.md
+3. Documents\Communication_System_Hardening\implementation_plan_communication_hardening.md
 
 لطفاً فازهای ۰، ۱، ۲ و ۳ را مطابق چک‌لیست بسته ۱ اجرا کن، تست‌های خودکار را بساز و پس از سبز شدن همه تست‌ها در ترمینال، گزارش بده.
 ```

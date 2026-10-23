@@ -5,14 +5,14 @@
 ## ۱. خلاصه اقدامات انجام‌شده در فاز ۳ (Executive Summary)
 فاز سوم طرح جامع سوپراپلیکیشن ماژولار و مدیریت نقش فعال در لایه فرانت‌اند (Angular 19) پیاده‌سازی شد:
 
-1. **سرویس `AppPersonaService` در [`warehouse-front/src/app/core/services/app-persona.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/app-persona.service.ts):**
+1. **سرویس `AppPersonaService` در [`frontend/src/app/core/services/app-persona.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/app-persona.service.ts):**
    - معماری مدرن بر پایه Angular Signals (`activeApp`, `activeRole`, `availableRoles`, `currentPersona`, `isMultiRole`).
    - ذخیره‌سازی پایدار و بازیابی در `localStorage` برای مقاومت در برابر رفرش صفحه.
    - متدهای سوئیچ هوشمند (`switchApp`, `switchRole`, `canAccessRoute`, `isActionProhibited`, `canPerform`).
    - ماتریس محلی خطوط قرمز SoD جهت ارزیابی در لحظه ($O(1)$) برای مخفی‌سازی دکمه‌ها در فرانت‌اند.
-2. **ارسال خودکار هدرهای هویتی در [`warehouse-front/src/app/core/auth/auth.interceptor.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.interceptor.ts):**
+2. **ارسال خودکار هدرهای هویتی در [`frontend/src/app/core/auth/auth.interceptor.ts`](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.interceptor.ts):**
    - تزریق خودکار هدرهای `X-Active-Role` و `X-Active-App` در تمام درخواست‌های ارسالی به سرور بک‌اند.
-3. **تفکیک واکنشی سایدبار در [`warehouse-front/src/app/components/layout/layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts):**
+3. **تفکیک واکنشی سایدبار در [`frontend/src/app/components/layout/layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts):**
    - سایدبار بر اساس ماژول فعال (`personnel` یا `warehouse`) و نقش فعال فیلتر شده و هیچ منوی نامربوط یا ممنوعه‌ای نمایش داده نمی‌شود.
 4. **توسعه و اتصال ایجنت سخت‌گیر نگهبان ۱۲:**
    - **🛡️ نگهبان ۱۲ (`Two-Level App Switcher Reactive Guardian`):** اعتبارسنجی سرویس انگولار، فایل اینترسپتور، تفکیک سایدبار و دوربرگردان هدرهای بک‌اند.
@@ -48,21 +48,21 @@
 
 ### تست ۱: اجرای سوئیت کامل ۱۲ ایجنت سخت‌گیر نگهبان
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe personnel\phase_guardian_approval.py
 ```
 *خروجی مورد انتظار:* چاپ پیام **«🏆 تبریک! تمامی ۱۲ ایجنت نگهبان ... با موفقیت ۱۰۰٪ تایید شدند 🏆»**.
 
 ### تست ۲: بررسی صحت کامپایل و بیلد فرانت‌اند Angular 19
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 *خروجی مورد انتظار:* اتمام موفق بیلد با پیام `Application bundle generation complete` و کد خروجی صفر.
 
 ### تست ۳: تست دوربرگردان نقش فعال و ماژول با هدرها در بک‌اند
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe -c "import django, os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); django.setup(); from django.test import RequestFactory; from django.contrib.auth import get_user_model; from accounts.middleware import ActiveRoleMiddleware; User = get_user_model(); u, _ = User.objects.get_or_create(username='test_admin', defaults={'is_superuser': True}); req = RequestFactory().get('/api/test/', HTTP_X_ACTIVE_APP='personnel', HTTP_X_ACTIVE_ROLE='accountant'); req.user = u; ActiveRoleMiddleware(lambda r: None)(req); print('Active App:', req.active_app, '| Active Role:', req.active_role)"
 ```
 *خروجی مورد انتظار:* نمایش `Active App: personnel | Active Role: accountant`.

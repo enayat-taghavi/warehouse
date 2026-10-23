@@ -120,7 +120,7 @@ assigned_users = models.ManyToManyField(
 > **اجرای سنگین کامل تست به دست کاربر سپرده می‌شود** (رویهٔ خانه). برای بستن کامل فاز لازم است:
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python.exe manage.py test accounts personnel warehouses inventory reports communications
+cd "E:/warehouse project/backend" && ./venv/Scripts/python.exe manage.py test accounts personnel warehouses inventory reports communications
 ```
 
 ---

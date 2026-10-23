@@ -22,7 +22,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FRONT_DIR = REPO_ROOT / "warehouse-front"
+FRONT_DIR = REPO_ROOT / "frontend"
 USERS_TS = FRONT_DIR / "src" / "app" / "modules" / "common" / "components" / "users" / "users.ts"
 USERS_HTML = FRONT_DIR / "src" / "app" / "modules" / "common" / "components" / "users" / "users.html"
 

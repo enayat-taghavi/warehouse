@@ -34,10 +34,10 @@
 
 ### کامپوننت‌های نیازمند تغییر
 
-#### [MODIFY] [file-upload.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/file-upload/file-upload.component.ts)
+#### [MODIFY] [file-upload.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/file-upload/file-upload.component.ts)
 تغییر وضعیت <code>selectedFile</code> از حالت لوکال به یک پراپرتی ورودی (Input).
 
-#### [MODIFY] [docs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/docs/docs.html)
+#### [MODIFY] [docs.html](file:///e:/warehouse%20project/frontend/src/app/components/docs/docs.html)
 ارسال فایلی که در حافظه ذخیره شده است به کامپوننت دیداری فایل آپلود.
 
 ## Verification Plan

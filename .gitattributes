@@ -8,13 +8,13 @@ scripts/deploy/** text eol=lf
 
 # Deployment archives (git archive). deploy.ps1 also whitelists the paths it ships;
 # these rules are defence in depth.
-# warehouse-backend root: only manage.py and the requirements files ship (app packages have no dot in their name)
-warehouse-backend/*.* export-ignore
-warehouse-backend/backend_paths.py -export-ignore
-warehouse-backend/manage.py -export-ignore
-warehouse-backend/requirements.txt -export-ignore
-warehouse-backend/requirements.lock -export-ignore
-warehouse-backend/**/test_phase*.py export-ignore
+# backend root: only manage.py and the requirements files ship (app packages have no dot in their name)
+backend/*.* export-ignore
+backend/backend_paths.py -export-ignore
+backend/manage.py -export-ignore
+backend/requirements.txt -export-ignore
+backend/requirements.lock -export-ignore
+backend/**/test_phase*.py export-ignore
 users.json export-ignore
 user_dump.json export-ignore
 sync_pull_res.json export-ignore

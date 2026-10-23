@@ -2,13 +2,13 @@
 
 # طرح جامع و جزئیات دقیق کدها: به‌روزرسانی نقطه‌ای هوشمند وب‌سوکت در کارتابل انبارگردان (فاز ۳۲)
 
-این مستند حاوی جزئیات خط‌به‌خط کدهای مورد نظر برای اعمال انحصاری در فایل [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) است.
+این مستند حاوی جزئیات خط‌به‌خط کدهای مورد نظر برای اعمال انحصاری در فایل [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) است.
 
 ---
 
 ## ۱. فایل هدف
 
-* **فایل:** [warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+* **فایل:** [frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 * **دامنه تغییرات:** صرفاً ارتقای شنونده وب‌سوکت و اضافه شدن متدهای به‌روزرسانی درجا بدون هیچ‌گونه دستکاری در ساختار UI یا سایر متدها.
 
 ---

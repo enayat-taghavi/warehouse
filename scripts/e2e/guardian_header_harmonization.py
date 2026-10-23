@@ -7,7 +7,7 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-FRONT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "warehouse-front")
+FRONT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
 SRC_DIR = os.path.join(FRONT_DIR, "src", "app")
 
 def check_phase_1():

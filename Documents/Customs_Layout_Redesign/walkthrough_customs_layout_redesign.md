@@ -30,7 +30,7 @@
 
 | نام فایل | مسیر | شرح تغییرات |
 | :--- | :--- | :--- |
-| **`customs.html`** | `warehouse-front/src/app/components/customs/` | تبدیل به ساختار دوحالته لیست/جزئیات متمرکز (`max-w-2xl`) و حذف Backdrop |
+| **`customs.html`** | `frontend/src/app/components/customs/` | تبدیل به ساختار دوحالته لیست/جزئیات متمرکز (`max-w-2xl`) و حذف Backdrop |
 
 ---
 

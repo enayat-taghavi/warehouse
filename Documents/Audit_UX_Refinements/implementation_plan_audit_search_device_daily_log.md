@@ -62,12 +62,12 @@ graph TD
 ---
 
 ## 📁 پرونده‌های تحت تاثیر (Modified Files)
-- `warehouse-backend/accounts/models.py`
-- `warehouse-backend/accounts/views.py`
-- `warehouse-backend/accounts/serializers.py`
-- `warehouse-front/src/app/components/audit/audit.html`
-- `warehouse-front/src/app/components/audit/audit.ts`
-- `warehouse-front/src/app/core/services/auth.service.ts`
+- `backend/accounts/models.py`
+- `backend/accounts/views.py`
+- `backend/accounts/serializers.py`
+- `frontend/src/app/components/audit/audit.html`
+- `frontend/src/app/components/audit/audit.ts`
+- `frontend/src/app/core/services/auth.service.ts`
 - `Documents/Audit_UX_Refinements/`
 - `Documents/Master_Log.md`
 

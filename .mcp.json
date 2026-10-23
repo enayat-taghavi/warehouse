@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "angular-cli": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "frontend/node_modules/@angular/cli/bin/ng.js",
+        "mcp",
+        "--read-only"
+      ]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}

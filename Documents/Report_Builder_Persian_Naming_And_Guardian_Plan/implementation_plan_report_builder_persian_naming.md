@@ -83,10 +83,10 @@ graph TD
 
 ## 📁 پرونده‌های تحت تغییر
 
-1. [reports.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html) (نوار چسبان، دکمه آیکونی اجرا، هاور خالص، تراکم جدول، دکمه و مودال راهنما)
-2. [reports.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts) (مدیریت مودال راهنما و وضعیت تراکم جدول)
-3. [filter-value.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/filter-value.component.ts) (چیپ‌های انتخابی برای شرط IN و آیکون‌های تقویم)
-4. [filter-group.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/filter-group.component.ts) (هاور خالص دیتابیسی فیلترها و استایل دکمه نقیض)
-5. [styles.css](file:///e:/warehouse%20project/warehouse-front/src/styles.css) (استایل‌های سفارشی منوهای کشویی، جدول و اسکرول‌بار)
+1. [reports.html](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html) (نوار چسبان، دکمه آیکونی اجرا، هاور خالص، تراکم جدول، دکمه و مودال راهنما)
+2. [reports.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts) (مدیریت مودال راهنما و وضعیت تراکم جدول)
+3. [filter-value.component.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/filter-value.component.ts) (چیپ‌های انتخابی برای شرط IN و آیکون‌های تقویم)
+4. [filter-group.component.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/filter-group.component.ts) (هاور خالص دیتابیسی فیلترها و استایل دکمه نقیض)
+5. [styles.css](file:///e:/warehouse%20project/frontend/src/styles.css) (استایل‌های سفارشی منوهای کشویی، جدول و اسکرول‌بار)
 
 </div>

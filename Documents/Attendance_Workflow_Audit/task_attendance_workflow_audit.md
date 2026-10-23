@@ -11,7 +11,7 @@
     - [ ] به‌روزرسانی سریالایزرهای ماتریسی کارکرد (`BulkAttendanceMatrixSerializer` و `MonthlyGridItemInputSerializer`) <!-- id: 6 -->
 
 - [ ] **فاز ۲: ارتقای کارتابل، موتور حقوق و محاسبات خلاصه ماهانه (Backend Business Logic)** <!-- id: 7 -->
-    - [ ] اعمال فیلتر `approval_status='APPROVED'` در [payroll_engine.py](file:///e:/warehouse%20project/warehouse-backend/personnel/payroll_engine.py) جهت ممانعت از محاسبه حقوق کارکردهای تاییدنشده <!-- id: 8 -->
+    - [ ] اعمال فیلتر `approval_status='APPROVED'` در [payroll_engine.py](file:///e:/warehouse%20project/backend/personnel/payroll_engine.py) جهت ممانعت از محاسبه حقوق کارکردهای تاییدنشده <!-- id: 8 -->
     - [ ] پشتیبانی از `section_id` و `project_id` در اندپوینت `monthly-summary` و محاسبه دقیق `pending_approvals_count` <!-- id: 9 -->
     - [ ] مسدودسازی ویرایش کارکرد در دوره‌های بسته/قفل‌شده (`SUBMITTED_SUPERVISOR`, `LOCKED` و...) در `bulk_save_matrix` و `bulk_save_monthly_grid` <!-- id: 10 -->
     - [ ] ابطال خودکار وضعیت تاییدیه (`PENDING_SUPERVISOR`) در صورت ویرایش کارکرد قبلاً تاییدشده به همراه لاگ ممیزی <!-- id: 11 -->

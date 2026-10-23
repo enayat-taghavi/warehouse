@@ -10,17 +10,17 @@
 
 | فایل / بخش | تغییرات |
 |---|---|
-| `warehouse-backend/config/settings.py` | [MODIFY] فعال‌سازی قابلیت `ROTATE_REFRESH_TOKENS = True` در دیکشنری `SIMPLE_JWT` و افزایش زمان `REFRESH_TOKEN_LIFETIME` به ۹۰ روز (۳ ماه). |
+| `backend/config/settings.py` | [MODIFY] فعال‌سازی قابلیت `ROTATE_REFRESH_TOKENS = True` در دیکشنری `SIMPLE_JWT` و افزایش زمان `REFRESH_TOKEN_LIFETIME` به ۹۰ روز (۳ ماه). |
 
 ### فرانت‌اند (Angular)
 
 | فایل / بخش | تغییرات |
 |---|---|
-| `warehouse-front/src/app/components/login/login.html` | [MODIFY/DELETE] حذف کامل چک‌باکس مربوط به «مرا به خاطر بسپار». |
-| `warehouse-front/src/app/components/login/login.ts` | [MODIFY] حذف متغیر `rememberMe` و حذف ارسال آن به متد `this.auth.login`. |
-| `warehouse-front/src/app/core/auth/auth.service.ts` | [MODIFY] تغییر پیش‌فرض به ذخیره‌سازی همیشگی در `localStorage`. اصلاح متد `refreshToken` برای دریافت و ذخیره‌سازی همزمان `access` و `refresh` توکن‌های جدید که توسط بک‌اند پس از Rotate بازگردانده می‌شوند. |
-| `warehouse-front/src/app/core/auth/auth.interceptor.ts` | [MODIFY] پیاده‌سازی مکانیزم قفل/صف (`isRefreshing` و `BehaviorSubject`) برای مدیریت خطای 401 در درخواست‌های همزمان، تا فقط یک بار درخواست Refresh ارسال شود و مابقی منتظر دریافت توکن جدید بمانند. |
-| `warehouse-front/src/app/core/services/offline-sync.service.ts` | [MODIFY] به‌روزرسانی متد `tryRefreshToken` برای استخراج و ذخیره‌سازی `data.refresh` علاوه بر `data.access`، تا توکن باطل‌شده‌ی قبلی جایگزین شود. |
+| `frontend/src/app/components/login/login.html` | [MODIFY/DELETE] حذف کامل چک‌باکس مربوط به «مرا به خاطر بسپار». |
+| `frontend/src/app/components/login/login.ts` | [MODIFY] حذف متغیر `rememberMe` و حذف ارسال آن به متد `this.auth.login`. |
+| `frontend/src/app/core/auth/auth.service.ts` | [MODIFY] تغییر پیش‌فرض به ذخیره‌سازی همیشگی در `localStorage`. اصلاح متد `refreshToken` برای دریافت و ذخیره‌سازی همزمان `access` و `refresh` توکن‌های جدید که توسط بک‌اند پس از Rotate بازگردانده می‌شوند. |
+| `frontend/src/app/core/auth/auth.interceptor.ts` | [MODIFY] پیاده‌سازی مکانیزم قفل/صف (`isRefreshing` و `BehaviorSubject`) برای مدیریت خطای 401 در درخواست‌های همزمان، تا فقط یک بار درخواست Refresh ارسال شود و مابقی منتظر دریافت توکن جدید بمانند. |
+| `frontend/src/app/core/services/offline-sync.service.ts` | [MODIFY] به‌روزرسانی متد `tryRefreshToken` برای استخراج و ذخیره‌سازی `data.refresh` علاوه بر `data.access`، تا توکن باطل‌شده‌ی قبلی جایگزین شود. |
 
 > [!IMPORTANT]
 > **نیاز به تایید:** 

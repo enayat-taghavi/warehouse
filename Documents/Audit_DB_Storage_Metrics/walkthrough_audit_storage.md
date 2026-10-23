@@ -22,10 +22,10 @@
 ---
 
 ### ۳. فایل‌های ویرایش‌شده
-- [`warehouse-backend/accounts/views.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
-- [`warehouse-front/src/app/core/models/audit-log.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/audit-log.model.ts)
-- [`warehouse-front/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
-- [`warehouse-front/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
+- [`backend/accounts/views.py`](file:///e:/warehouse%20project/backend/accounts/views.py)
+- [`frontend/src/app/core/models/audit-log.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/audit-log.model.ts)
+- [`frontend/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
+- [`frontend/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
 - [`Documents/Audit_DB_Storage_Metrics/task_audit_storage.md`](file:///e:/warehouse%20project/Documents/Audit_DB_Storage_Metrics/task_audit_storage.md)
 - [`Documents/Master_Log.md`](file:///e:/warehouse%20project/Documents/Master_Log.md)
 

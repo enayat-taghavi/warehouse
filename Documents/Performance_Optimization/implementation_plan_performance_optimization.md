@@ -22,15 +22,15 @@
 
 ### بخش اول: بک‌اند (Warehouse Backend)
 
-#### [MODIFY] [services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py)
+#### [MODIFY] [services.py](file:///e:/warehouse%20project/backend/warehouses/services.py)
 - پیاده‌سازی مکانیزم کش درون‌حافظه‌ای/جنگو (`django.core.cache`) برای توابع `get_setting` و `get_all_settings`
 - ابطال کش هنگام تغییر یا ذخیره تنظیمات سیستم در مدل `SystemSetting`
 
-#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py)
+#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/backend/inventory/serializers.py)
 - بازنویسی متدهای `get_is_blind` و `get_item_details` در `CountTaskSerializer` جهت خواندن وضعیت از `self.context` بدون کوئری دیتابیس
 - پاس دادن کانتکست والد به `ItemSerializer` برای جلوگیری از کوئری‌های تکراری
 
-#### [MODIFY] [sync_views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/sync_views.py)
+#### [MODIFY] [sync_views.py](file:///e:/warehouse%20project/backend/inventory/sync_views.py)
 - تکمیل پیوندهای پیش‌واکشی (`select_related` برای فیلدهای `item__warehouse`، `item__created_by`، `item__modified_by`) در متد `_build_queryset`
 - سریالایز دسته‌جمعی به جای حلقه تک‌تک (`many=True`) به همراه ارسال کانتکست `is_blind`
 
@@ -38,7 +38,7 @@
 
 ### بخش دوم: فرانت‌اند و سرور توزیع (Warehouse Front)
 
-#### [MODIFY] [server.js](file:///e:/warehouse%20project/warehouse-front/server.js)
+#### [MODIFY] [server.js](file:///e:/warehouse%20project/frontend/server.js)
 - نصب پکیج `compression` و اضافه کردن میدل‌ور فشرده‌سازی در ابتدای زنجیره اکسپرس
 - تنظیم هدرهای بهینه کش برای فایل‌های استاتیک انگولار
 

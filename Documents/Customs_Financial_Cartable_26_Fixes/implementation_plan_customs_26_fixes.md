@@ -47,7 +47,7 @@ graph TD
 ## 📂 تغییرات تفصیلی به تفکیک فازها و فایل‌ها
 
 ### فاز ۱: امنیت داده، تراکنش‌ها و فیلترهای بک‌اند جنگو
-* **[تغییر]** [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+* **[تغییر]** [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
   - **خط ۲۹۲۷ (`bulk_submit`):** انتساب `updated_at = timezone.now()` روی اشیاء و افزودن `'updated_at'` به آرایه فیلدهای `DocTask.objects.bulk_update(tasks_list, ['status', 'modified_by', 'updated_at'])`.
   - **خطوط ۲۷۶۱ و ۲۸۵۳ (`claim_tasks` و `bulk_submit`):** قرار دادن عملیات در `with transaction.atomic():` و اضافه کردن `select_for_update()` جهت جلوگیری از Race Condition.
   - **خطوط ۲۶۸۱ تا ۲۷۱۰ (`get_queryset`):** دریافت و اعمال فیلترهای جستجوی متنی `q` (روی کد، شرح، PO، پکینگ، RTI، شماره فنی)، وضعیت `status` و تاریخ `date`.
@@ -55,36 +55,36 @@ graph TD
 ---
 
 ### فاز ۲: چرخه حیات، ارسال سریع، پایداری همگام‌سازی و خروجی اکسل
-* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
   - پیاده‌سازی متد `quickSubmitTask(task: DocTask, event: Event)` جهت ارسال فوری و تک‌کلیکه کالا از روی کارت.
   - اصلاح متد `claimSelectedTasks` جهت رفرش خودکار مخزن اسناد (`this.loadPoolTasks(false)` یا تنظیم فلگ).
   - ارسال پارامترهای فعال `q`، `status`، `date` و `warehouse_id` در متد `executeExport`.
   - اصلاح وضعیت اقلام برگشتیِ ویرایش‌شده (نمایش در شمارنده و فیلتر آماده ارسال با بج تفکیک‌شده).
   - ریست کردن پرچم‌های لود دیتای تب‌ها (`tasksLoaded = false`, `poolTasksLoaded = false`) در متد `onWarehouseChanged`.
   - ارسال صریح `warehouse_id` در متد `submitCurrentTask`.
-* **[تغییر]** [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+* **[تغییر]** [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
   - افزودن دکمه سبز رنگ «ارسال سریع» در کنار دکمه بازگشت روی کارت‌های دارای پیش‌نویس.
-* **[تغییر]** [doc-task-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts)
+* **[تغییر]** [doc-task-store.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts)
   - مدیریت امن تسک‌های فاقد `sync_id` در `saveDraft` و `submitTasks` با تولید شناسه موقت یا جستجوی مبتنی بر `id`.
 
 ---
 
 ### فاز ۳: موتور جستجو، سورتینگ الفبایی و فیلتر سریع لوکیشن
-* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
   - اضافه کردن فیلد شماره فنی کالا (`item_no`) به شرط `matchesSearch` و روال اسکنر `onBarcodeScanned`.
   - نرمال‌سازی الف و آ کلاه‌دار (`replace(/[آأإ]/g, 'ا')`) در متد `normalizeText`.
   - اصلاح سورت الفبایی شرح کالا با `localeCompare(..., 'fa', { sensitivity: 'base' })`.
   - پیاده‌سازی متغیر و دراپ‌داون/چیپ فیلتر سریع قفسه و لوکیشن (`locationFilter`).
-* **[تغییر]** [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+* **[تغییر]** [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
   - افزودن کنترل فیلتر سریع لوکیشن در نوار ابزار.
   - افزودن پیام راهنما و دکمه «پاک کردن جستجو» در حالت خالی شدن نتایج تب مخزن اسناد.
-* **[تغییر]** [customs-scanner-parser.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs-scanner-parser.ts)
+* **[تغییر]** [customs-scanner-parser.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs-scanner-parser.ts)
   - افزودن مترادف‌های شماره فنی (`item_no`, `itemno`, شماره فنی, پارت نامبر) در متد `mapHeaderToKey`.
 
 ---
 
 ### فاز ۴: فرم جزئیات، محاسبات مالی و تعاملات وب‌سوکت
-* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
   - تصحیح فرمول `calculateTotalValue` با اضافه کردن فیلد اصلی `item.balance`.
   - تبدیل متد `saveExtraEditedFields` به یک متد `async` و استفاده از `await firstValueFrom(...)` با مدیریت خطای پایدار.
   - تبدیل تاریخ میلادی فاکتور (`invoice_date`) به شمسی (`YYYY/MM/DD`) در زمان باز شدن فرم در `openDetail`.
@@ -96,10 +96,10 @@ graph TD
 ---
 
 ### فاز ۵: بومی‌سازی تقویم، ظواهر هدر و راستی‌آزمایی با مرورگر
-* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
+* **[تغییر]** [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
   - ایمپورت `PersianDatePipe` در آرایه `imports`.
   - نمایش پیام راهنما در صورت اسکن بارکد در حین باز بودن فرم جزئیات کالا.
-* **[تغییر]** [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
+* **[تغییر]** [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
   - استفاده از `h.created_at | persianDate:'short-time'` در تایم‌لاین تاریخچه به جای پایپ میلادی.
   - خارج کردن کادر اطلاعات پایه کالا از شرط `visibleInfoFields.length > 0`.
   - نمایش برچسب واحد سنجش کالا (`unit`) در کارت‌های تب مخزن اسناد.
@@ -122,7 +122,7 @@ graph TD
 
 ### ۱. تست‌های خودکار و کامپایل
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npx ng build --configuration=development
 ```
 

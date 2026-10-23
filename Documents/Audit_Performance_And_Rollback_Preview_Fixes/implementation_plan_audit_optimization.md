@@ -41,10 +41,10 @@ graph TD
 
 * **هدف:** کاهش ۹۰ درصدی حجم دیتای انتقالی روی شبکه و تونل کلادفلر، تجمیع کوئری‌های آماری، و یکسان‌سازی ساختار پاسخ پیش‌نمایش بازگردانی.
 * **اقدامات فنی:**
-  1. **ایجاد `AuditLogListSerializer`:** در [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py)، تعریف سریالایزر سبک مخصوص لیست جدول که فاقد فیلدهای سنگین `before_state`، `after_state` و `details` است.
-  2. **اتصال داینامیک سریالایزر در ViewSet:** در [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py#L801)، پیاده‌سازی `get_serializer_class()` جهت ارائه `AuditLogListSerializer` در اکشن `list` و حفظ `AuditLogSerializer` با دیتای کامل برای متد `retrieve`.
-  3. **تجمیع کوئری‌های آماری (Single Aggregate Query):** بازنویسی متد `stats` در [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py#L866) با استفاده از `aggregate()` برای اجرای همزمان محاسبات ۲۴ ساعته، بحرانی و هشدار در یک تک‌کوئری پایگاه‌داده.
-  4. **ارتقای ساختار خروجی `get_revert_preview`:** در [rollback_service.py](file:///e:/warehouse%20project/warehouse-backend/accounts/rollback_service.py#L66)، تضمین ارسال فیلدهای تکمیلی (`target_repr`، `target_model`، `action_display`) و پیام‌های فارسی گویا حتی در زمان `can_revert: false`.
+  1. **ایجاد `AuditLogListSerializer`:** در [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py)، تعریف سریالایزر سبک مخصوص لیست جدول که فاقد فیلدهای سنگین `before_state`، `after_state` و `details` است.
+  2. **اتصال داینامیک سریالایزر در ViewSet:** در [views.py](file:///e:/warehouse%20project/backend/accounts/views.py#L801)، پیاده‌سازی `get_serializer_class()` جهت ارائه `AuditLogListSerializer` در اکشن `list` و حفظ `AuditLogSerializer` با دیتای کامل برای متد `retrieve`.
+  3. **تجمیع کوئری‌های آماری (Single Aggregate Query):** بازنویسی متد `stats` در [views.py](file:///e:/warehouse%20project/backend/accounts/views.py#L866) با استفاده از `aggregate()` برای اجرای همزمان محاسبات ۲۴ ساعته، بحرانی و هشدار در یک تک‌کوئری پایگاه‌داده.
+  4. **ارتقای ساختار خروجی `get_revert_preview`:** در [rollback_service.py](file:///e:/warehouse%20project/backend/accounts/rollback_service.py#L66)، تضمین ارسال فیلدهای تکمیلی (`target_repr`، `target_model`، `action_display`) و پیام‌های فارسی گویا حتی در زمان `can_revert: false`.
 * **معیار پذیرش و راستی‌آزمایی ایجنت مستقل (Phase 1 Acceptance Criteria):**
   - اجرای اسکریپت آزمون سلامت `test_phase5_master_e2e.py` با نتیجه ۱۰۰٪ سبز.
   - کاهش زمان پاسخ متد `list` و `stats` به کمتر از ۳۰ میلی‌ثانیه.
@@ -56,10 +56,10 @@ graph TD
 
 * **هدف:** به صفر رساندن مصرف غیرضروری پردازنده ناشی از تبدیل تاریخ (حذف ۲,۰۰۰+ فراخوانی در ثانیه)، بازسازی نرم DOM، و لود On-Demand دیتای تفاضل.
 * **اقدامات فنی:**
-  1. **بهینه‌سازی و کَش‌گذاری (Memoization) در پایپ تاریخ:** در [persian-date.pipe.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/pipes/persian-date.pipe.ts)، کَش کردن نمونه‌های `Intl.DateTimeFormat` در سطح حافظه جهت اجرای آنی و سبک در چرخه رندر.
-  2. **افزودن متد واکشی جزییات به سرویس:** در [audit-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/audit-api.service.ts)، ایجاد متد `getAuditLog(id: number)` جهت دریافت اطلاعات کامل لاگ تنها در صورت کلیک کاربر روی دکمه تفاضل.
-  3. **پیاده‌سازی توابع TrackBy و لود هوشمند دیف:** در [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)، افزودن `trackByLogId` و `trackByLoginId`، ادغام پایپ تاریخ در ماژول‌های ایمپورت‌شده، و مدیریت واکشی جزییات در متد `openAuditDiffModal`.
-  4. **اصلاح قالب جدول‌ها:** در [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)، جایگزینی تمامی فراخوانی‌های تابعی `formatDateTime(...)` با پایپ خالص `{{log.created_at | persianDate:'short-time'}}` و الصاق `[trackBy]="trackByLogId"`.
+  1. **بهینه‌سازی و کَش‌گذاری (Memoization) در پایپ تاریخ:** در [persian-date.pipe.ts](file:///e:/warehouse%20project/frontend/src/app/shared/pipes/persian-date.pipe.ts)، کَش کردن نمونه‌های `Intl.DateTimeFormat` در سطح حافظه جهت اجرای آنی و سبک در چرخه رندر.
+  2. **افزودن متد واکشی جزییات به سرویس:** در [audit-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/audit-api.service.ts)، ایجاد متد `getAuditLog(id: number)` جهت دریافت اطلاعات کامل لاگ تنها در صورت کلیک کاربر روی دکمه تفاضل.
+  3. **پیاده‌سازی توابع TrackBy و لود هوشمند دیف:** در [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)، افزودن `trackByLogId` و `trackByLoginId`، ادغام پایپ تاریخ در ماژول‌های ایمپورت‌شده، و مدیریت واکشی جزییات در متد `openAuditDiffModal`.
+  4. **اصلاح قالب جدول‌ها:** در [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)، جایگزینی تمامی فراخوانی‌های تابعی `formatDateTime(...)` با پایپ خالص `{{log.created_at | persianDate:'short-time'}}` و الصاق `[trackBy]="trackByLogId"`.
 * **معیار پذیرش و راستی‌آزمایی ایجنت مستقل (Phase 2 Acceptance Criteria):**
   - تست زنده در مرورگر و اطمینان از اسکرول کاملاً نرم (۶۰ فریم بر ثانیه) بدون هیچ‌گونه لگ در حین حرکت ماوس یا تایپ در فیلترها.
   - تست کلیک روی دکمه «تفاضل» و لود شدن کامل اطلاعات مقایسه‌ای فیلدها بدون خطا.
@@ -70,7 +70,7 @@ graph TD
 
 * **هدف:** حل قطعی مشکل صفحه خالی مدال بازگردانی و نمایش وضعیت، هشدارها و تفاضل داده‌ها به صورت کاملاً حرفه‌ای و کاربرپسند.
 * **اقدامات فنی:**
-  1. **تفکیک دو حالت ساختاری در قالب مدال:** در [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html#L598-L704):
+  1. **تفکیک دو حالت ساختاری در قالب مدال:** در [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html#L598-L704):
      - **حالت اول (`can_revert === false`):** نمایش یک کارت هشدار استاندارد و زیبا با آیکون گویا، نمایش مشخصات رکورد هدف، علت عدم امکان بازگردانی با متن واضح فارسی (`revertPreview.message`)، و دکمه بستن.
      - **حالت دوم (`can_revert === true`):** نمایش خلاصه عملیات، هشدار تداخل زمانی در صورت وجود، جدول مقایسه دقیق مقادیر زنده با مقادیر بازگردانی‌شده، کادر ثبت علت بازگردانی و دکمه تایید نهایی.
   2. **کنترل وضعیت‌های بارگذاری و خطا:** مدیریت کامل انیمیشن اسپینر در زمان واکشی پیش‌نمایش و جلوگیری از بسته شدن ناگهانی بدون نمایش علت به کاربر.
@@ -97,12 +97,12 @@ graph TD
 
 | مسیر فایل | لایه | شرح تغییرات |
 | :--- | :--- | :--- |
-| [accounts/serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py) | بک‌اند | تعریف سریالایزر سبک `AuditLogListSerializer` |
-| [accounts/views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py) | بک‌اند | اعمال `get_serializer_class` و تجمیع کوئری‌های `stats` |
-| [accounts/rollback_service.py](file:///e:/warehouse%20project/warehouse-backend/accounts/rollback_service.py) | بک‌اند | ارتقای ساختار پیام‌ها و داده‌های بازگشتی `get_revert_preview` |
-| [shared/pipes/persian-date.pipe.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/pipes/persian-date.pipe.ts) | فرانت‌اند | کَش کردن نمونه‌های `Intl.DateTimeFormat` |
-| [core/api/audit-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/audit-api.service.ts) | فرانت‌اند | افزودن متد `getAuditLog` جهت واکشی On-Demand |
-| [components/audit/audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts) | فرانت‌اند | ادغام PersianDatePipe، متدهای trackBy و لود دیف |
-| [components/audit/audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html) | فرانت‌اند | اعمال پایپ تاریخ، افزودن trackBy و بازطراحی کارت‌های وضعیت مدال |
+| [accounts/serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py) | بک‌اند | تعریف سریالایزر سبک `AuditLogListSerializer` |
+| [accounts/views.py](file:///e:/warehouse%20project/backend/accounts/views.py) | بک‌اند | اعمال `get_serializer_class` و تجمیع کوئری‌های `stats` |
+| [accounts/rollback_service.py](file:///e:/warehouse%20project/backend/accounts/rollback_service.py) | بک‌اند | ارتقای ساختار پیام‌ها و داده‌های بازگشتی `get_revert_preview` |
+| [shared/pipes/persian-date.pipe.ts](file:///e:/warehouse%20project/frontend/src/app/shared/pipes/persian-date.pipe.ts) | فرانت‌اند | کَش کردن نمونه‌های `Intl.DateTimeFormat` |
+| [core/api/audit-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/audit-api.service.ts) | فرانت‌اند | افزودن متد `getAuditLog` جهت واکشی On-Demand |
+| [components/audit/audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts) | فرانت‌اند | ادغام PersianDatePipe، متدهای trackBy و لود دیف |
+| [components/audit/audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html) | فرانت‌اند | اعمال پایپ تاریخ، افزودن trackBy و بازطراحی کارت‌های وضعیت مدال |
 
 </div>

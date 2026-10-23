@@ -34,9 +34,9 @@
 ---
 
 ## ۳. فایل‌های تغییر یافته (Modified Files)
-- `warehouse-front/src/app/components/layout/layout.ts`
-- `warehouse-front/src/app/core/auth/auth.guard.ts`
-- `warehouse-front/src/app/components/audit/audit.ts`
-- `warehouse-front/src/app/components/audit/audit.html`
+- `frontend/src/app/components/layout/layout.ts`
+- `frontend/src/app/core/auth/auth.guard.ts`
+- `frontend/src/app/components/audit/audit.ts`
+- `frontend/src/app/components/audit/audit.html`
 
 </div>

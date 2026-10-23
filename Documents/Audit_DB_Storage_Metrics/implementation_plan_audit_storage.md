@@ -29,7 +29,7 @@
 
 ### الف. لایه بک‌اند (Backend)
 
-#### [MODIFY] [`warehouse-backend/accounts/views.py`](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [`backend/accounts/views.py`](file:///e:/warehouse%20project/backend/accounts/views.py)
 - ایجاد تابع کمکی `get_db_total_storage_info()` جهت استعلام حجم کل دیتابیس جاری.
 - ارتقای تابع `get_table_storage_info()` برای جدول‌های ممیزی و لاگین.
 - غنی‌سازی متد `stats` در `AuditLogViewSet` با فیلدهای `db_total_bytes`، `db_total_formatted`، `audit_percent`، `login_percent` و `total_logs_percent`.
@@ -39,13 +39,13 @@
 
 ### ب. لایه فرانت‌اند (Frontend)
 
-#### [MODIFY] [`warehouse-front/src/app/core/models/audit-log.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/audit-log.model.ts)
+#### [MODIFY] [`frontend/src/app/core/models/audit-log.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/audit-log.model.ts)
 - به‌روزرسانی اینترفیس `LogStorageInfo` جهت پوشش فیلدهای جدید درصد و حجم کل دیتابیس.
 
-#### [MODIFY] [`warehouse-front/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
+#### [MODIFY] [`frontend/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
 - همسان‌سازی آبجکت مقداردهی اولیه `storage` در `auditStats` و `loginStats`.
 
-#### [MODIFY] [`warehouse-front/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
+#### [MODIFY] [`frontend/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
 - ارتقای کارت چهارم در تب تغییرات داده‌ها (`audit`) با رقم حجم، نوار پیشرفت درصد و زیرنویس حجم کل دیتابیس.
 - ارتقای کارت چهارم در تب تاریخچه ورود (`login`) با ساختار متناسب و درصد اشغال لاگین از کل دیتابیس.
 

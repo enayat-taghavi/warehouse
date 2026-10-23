@@ -10,7 +10,7 @@
 ### ۱. دستاوردهای کلیدی و تغییرات اعمال‌شده
 
 #### ۱.۱. پایگاه داده و مایگریشن ایمن (Database & Zero Data Loss)
-1. **مدل شرکت (`Company`):** موجودیت حقوقی با فیلدهای کد یکتا (`code`)، نام کامل (`name`)، شناسه ملی ۱۱ رقمی (`national_id`)، کد اقتصادی، شماره ثبت، تلفن، آدرس، نام مدیرعامل، وضعیت فعال و متادیتا در [models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py).
+1. **مدل شرکت (`Company`):** موجودیت حقوقی با فیلدهای کد یکتا (`code`)، نام کامل (`name`)، شناسه ملی ۱۱ رقمی (`national_id`)، کد اقتصادی، شماره ثبت، تلفن، آدرس، نام مدیرعامل، وضعیت فعال و متادیتا در [models.py](file:///e:/warehouse%20project/backend/personnel/models.py).
 2. **ارتباط کلید خارجی (`FinancialProject.company`):** اتصال نال‌پذیر با `on_delete=models.PROTECT` به مدل پروژه‌های مالی جهت جلوگیری از حذف ناخواسته یا آبشاری پروژه‌ها.
 3. **مایگریشن داده خودکار (`0013_seed_initial_companies.py`):**
    * ایجاد شرکت **«پاینده توان ساینا»** با کد `PTS`.

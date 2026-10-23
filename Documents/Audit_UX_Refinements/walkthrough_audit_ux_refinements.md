@@ -47,8 +47,8 @@
 ---
 
 ## 📁 فایل‌های ویرایش‌شده
-- [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
-- [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
+- [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
+- [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
 - [Master_Log.md](file:///e:/warehouse%20project/Documents/Master_Log.md)
 
 </div>

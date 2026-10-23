@@ -58,7 +58,7 @@ graph TD
 
 | ردیف | مسیر فایل | نوع تغییر | شرح عملیات |
 | :---: | :--- | :---: | :--- |
-| **۱** | [inventory/tests.py](file:///e:/warehouse%20project/warehouse-backend/inventory/tests.py) | **MODIFY** | پیاده‌سازی کامل و بازنویسی جامع سوئیت تست انبارگردانی با بیش از ۴۴ سناریوی اتمیک |
+| **۱** | [inventory/tests.py](file:///e:/warehouse%20project/backend/inventory/tests.py) | **MODIFY** | پیاده‌سازی کامل و بازنویسی جامع سوئیت تست انبارگردانی با بیش از ۴۴ سناریوی اتمیک |
 | **۲** | `Documents/Inventory_Audit_Comprehensive_Testing/` | **NEW** | ذخیره‌سازی مستندات و پلن‌ها بر اساس پروتکل DUAL-SAVE |
 | **۳** | `Documents/Master_Log.md` | **MODIFY** | به‌روزرسانی مستر لاگ پروژه |
 

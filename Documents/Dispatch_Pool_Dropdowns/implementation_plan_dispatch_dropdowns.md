@@ -10,13 +10,13 @@
 
 تغییرات در دو فایل مرتبط با صفحه Dispatch صورت می‌گیرد.
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - **شرح تغییر:** تغییر عنوان گزینه‌های پیش‌فرض (بدون مقدار) در لیست‌های کشویی انبارگردان و سرپرست.
 - **جزئیات:**
   - تغییر `-- انتخاب تیم / انبارگردان --` به `-- همه انبارگردان‌ها (استخر مشترک) --`.
   - تغییر `-- انتخاب سرپرست گروه --` به `-- همه سرپرست‌ها (استخر مشترک) --`.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - **شرح تغییر:** افزودن نام مدیر به پیام تایید (Confirmation) و اصلاح نام‌های جایگزین برای پیام.
 - **جزئیات:** 
   - در متد `executeFieldDispatch`، در صورتی که کاربری انتخاب نشده باشد، مقدار پیش‌فرض آنها به `همه انبارگردان‌ها (استخر مشترک)` و `همه سرپرست‌ها (استخر مشترک)` و برای مدیر به `همه مدیران (استخر مشترک)` تنظیم می‌شود.

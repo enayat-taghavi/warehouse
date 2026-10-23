@@ -5,7 +5,7 @@
 ## ۱. خلاصه اقدامات انجام‌شده در فاز ۶ (Executive Summary)
 فاز ششم به عنوان فاز نهایی یکپارچه‌سازی سرتاسری، اعمال روت‌گاردهای جامع و ممیزی نهایی امنیت با موفقیت ۱۰۰٪ اجرا شد:
 
-1. **به‌روزرسانی روت‌گارد مرکزی فرانت‌اند ([`auth.guard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts)):**
+1. **به‌روزرسانی روت‌گارد مرکزی فرانت‌اند ([`auth.guard.ts`](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts)):**
    - ثبت تمام روت‌های جدید ماژولار مالی، کارکرد پرسنل، ناوگان و خزانه‌داری (`attendance`, `fleet`, `profiles`, `finance-cartable`, `manager-approvals`, `treasury-cartable`, `base-settings`) در ساختار `ROUTE_PERMISSIONS`.
    - همگام‌سازی ناوبری بین دو ماژول انبارداری (`warehouse`) و مالی (`personnel`).
 2. **توسعه و اتصال ایجنت سخت‌گیر نگهبان ۱۵:**
@@ -45,14 +45,14 @@
 
 ### تست ۱: اجرای سوئیت کامل ۱۵ ایجنت سخت‌گیر نگهبان
 ```powershell
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe personnel\phase_guardian_approval.py
 ```
 *خروجی مورد انتظار:* چاپ پیام **«🏆 تبریک! تمامی ۱۵ ایجنت سخت‌گیر نگهبان گردش کار، خزانه‌داری، کارتابل‌ها، ماتریس SoD، میدلور، گارد، سوئیچر واکنشی، محافظت DOM و یکپارچگی سرتاسری E2E با موفقیت ۱۰۰٪ تایید شدند. 🏆»**.
 
 ### تست ۲: بررسی صحت کامپایل و بیلد فرانت‌اند Angular 19
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 *خروجی مورد انتظار:* اتمام موفق بیلد با پیام `Application bundle generation complete` و کد خروجی صفر بدون خطا.

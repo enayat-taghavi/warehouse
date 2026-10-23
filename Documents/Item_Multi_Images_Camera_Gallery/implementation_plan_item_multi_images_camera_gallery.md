@@ -158,18 +158,18 @@ class ItemPhoto(SyncModelMixin):
 
 | بخش | مسیر فایل | نوع تغییر | شرح وظیفه |
 | :--- | :--- | :---: | :--- |
-| **Backend Model** | `warehouse-backend/inventory/models.py` | `MODIFY` | ارتقای مدل `ItemPhoto` با فیلدهای ۳ گانه کیفیت، منبع دوربین، ترتیب و شاخص |
-| **Backend Processor** | `warehouse-backend/inventory/utils/image_processor.py` | `NEW` | سرویس فشرده‌سازی Pillow، اصلاح EXIF Orientation و خروجی WebP |
-| **Backend Serializers**| `warehouse-backend/inventory/serializers.py` | `MODIFY` | افزودن `ItemPhotoSerializer` و فیلدهای محاسباتی `photos_count` و `primary_thumbnail` |
-| **Backend Views** | `warehouse-backend/inventory/views.py` | `MODIFY` | پیاده‌سازی ویوست `ItemPhotoViewSet` و اکشن‌های آپلود دسته‌ای، شاخص‌سازی و حذف |
-| **Backend URLs** | `warehouse-backend/inventory/urls.py` | `MODIFY` | رجیستر روت‌های API تصاویر کالا |
-| **Frontend Service** | `warehouse-front/src/app/core/services/image-compressor.service.ts` | `NEW` | فشرده‌سازی کلاینت، تغییر سایز هوشمند بومی و ساخت آدرس پیش‌نمایش |
-| **Frontend Service** | `warehouse-front/src/app/core/services/item-photo.service.ts` | `NEW` | سرویس ارتباط با API، آپلود چندگانه و همگام‌سازی محلی |
-| **Frontend Component**| `warehouse-front/src/app/shared/components/item-photo-gallery/` | `NEW` | کامپوننت دیالوگ گالری، عکاسی دوربین، گالری، زوم و مدیریت آلبوم |
-| **Frontend Integration**| `warehouse-front/src/app/components/counter/counter-dashboard/` | `MODIFY` | افزودن دکمه شاتر دوربین و انتخاب گالری در کارت‌های شمارشگر |
-| **Frontend Integration**| `warehouse-front/src/app/components/supervisor/supervisor-dashboard/` | `MODIFY` | نمایش آلبوم عکس در مودال بررسی سرپرست |
-| **Frontend Integration**| `warehouse-front/src/app/components/manager-review/` | `MODIFY` | نمایش تصاویر ثبت شده در مودال بازبینی مدیر |
-| **Frontend Integration**| `warehouse-front/src/app/components/dispatch/dispatch.html` | `MODIFY` | افزودن ستون عکس / نشانگر گالری با بارگذاری تنبل در جدول اصلی کالا |
+| **Backend Model** | `backend/inventory/models.py` | `MODIFY` | ارتقای مدل `ItemPhoto` با فیلدهای ۳ گانه کیفیت، منبع دوربین، ترتیب و شاخص |
+| **Backend Processor** | `backend/inventory/utils/image_processor.py` | `NEW` | سرویس فشرده‌سازی Pillow، اصلاح EXIF Orientation و خروجی WebP |
+| **Backend Serializers**| `backend/inventory/serializers.py` | `MODIFY` | افزودن `ItemPhotoSerializer` و فیلدهای محاسباتی `photos_count` و `primary_thumbnail` |
+| **Backend Views** | `backend/inventory/views.py` | `MODIFY` | پیاده‌سازی ویوست `ItemPhotoViewSet` و اکشن‌های آپلود دسته‌ای، شاخص‌سازی و حذف |
+| **Backend URLs** | `backend/inventory/urls.py` | `MODIFY` | رجیستر روت‌های API تصاویر کالا |
+| **Frontend Service** | `frontend/src/app/core/services/image-compressor.service.ts` | `NEW` | فشرده‌سازی کلاینت، تغییر سایز هوشمند بومی و ساخت آدرس پیش‌نمایش |
+| **Frontend Service** | `frontend/src/app/core/services/item-photo.service.ts` | `NEW` | سرویس ارتباط با API، آپلود چندگانه و همگام‌سازی محلی |
+| **Frontend Component**| `frontend/src/app/shared/components/item-photo-gallery/` | `NEW` | کامپوننت دیالوگ گالری، عکاسی دوربین، گالری، زوم و مدیریت آلبوم |
+| **Frontend Integration**| `frontend/src/app/components/counter/counter-dashboard/` | `MODIFY` | افزودن دکمه شاتر دوربین و انتخاب گالری در کارت‌های شمارشگر |
+| **Frontend Integration**| `frontend/src/app/components/supervisor/supervisor-dashboard/` | `MODIFY` | نمایش آلبوم عکس در مودال بررسی سرپرست |
+| **Frontend Integration**| `frontend/src/app/components/manager-review/` | `MODIFY` | نمایش تصاویر ثبت شده در مودال بازبینی مدیر |
+| **Frontend Integration**| `frontend/src/app/components/dispatch/dispatch.html` | `MODIFY` | افزودن ستون عکس / نشانگر گالری با بارگذاری تنبل در جدول اصلی کالا |
 
 ---
 

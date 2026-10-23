@@ -22,7 +22,7 @@
 
 ### بخش اصلی برنامه (Core Application)
 
-#### [MODIFY] [app.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.ts)
+#### [MODIFY] [app.ts](file:///e:/warehouse%20project/frontend/src/app/app.ts)
 - **افزودن وابستگی:** تزریق (Inject) سرویس `SwUpdate` از پکیج `@angular/service-worker`.
 - **شنود رویدادها:** در بلاک `constructor` به `this.swUpdate.versionUpdates` گوش می‌دهیم.
 - **منطق دیالوگ:** در صورتی که رویداد از نوع `VERSION_READY` باشد، با استفاده از `this.confirmDialog.open()` پیامی با متن "نسخه جدیدی از برنامه در دسترس است. آیا می‌خواهید هم‌اکنون بروزرسانی کنید؟" نمایش داده می‌شود.

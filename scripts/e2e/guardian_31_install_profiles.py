@@ -38,7 +38,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+BACKEND_DIR = REPO_ROOT / "backend"
 VENV_PYTHON = BACKEND_DIR / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
     "python.exe" if os.name == "nt" else "python"
 )
@@ -92,8 +92,8 @@ def test_installation_profiles():
     # ── ۱) آزمون بررسی سازگاری نسخه پلتفرم (تسک ۶۶) ──────────────────────
     test_version_script = """
 import sys
-if 'warehouse-backend' not in sys.path:
-    sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+if 'backend' not in sys.path:
+    sys.path.insert(0, __import__('os').getcwd())
 import backend_paths
 backend_paths.install()
 
@@ -131,8 +131,8 @@ except RuntimeError as e:
     test_acct_script = """
 import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
-if 'warehouse-backend' not in sys.path:
-    sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+if 'backend' not in sys.path:
+    sys.path.insert(0, __import__('os').getcwd())
 import backend_paths
 backend_paths.install()
 
@@ -167,8 +167,8 @@ print("✓ پاسخ ۴۰۴ (قانون ۵: عدم افشای ماژول نصب�
     test_wh_script = """
 import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
-if 'warehouse-backend' not in sys.path:
-    sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+if 'backend' not in sys.path:
+    sys.path.insert(0, __import__('os').getcwd())
 import backend_paths
 backend_paths.install()
 
@@ -201,8 +201,8 @@ print("✓ پاسخ ۴۰۴ برای مسیر /api/personnel/ در غیاب ما�
     test_full_script = """
 import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
-if 'warehouse-backend' not in sys.path:
-    sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+if 'backend' not in sys.path:
+    sys.path.insert(0, __import__('os').getcwd())
 import backend_paths
 backend_paths.install()
 
@@ -245,8 +245,8 @@ if 'showcase' in MODULE_CATALOG:
     test_showcase_script = """
 import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
-if 'warehouse-backend' not in sys.path:
-    sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+if 'backend' not in sys.path:
+    sys.path.insert(0, __import__('os').getcwd())
 import backend_paths
 backend_paths.install()
 

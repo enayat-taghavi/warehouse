@@ -77,20 +77,20 @@ flowchart TD
 ## 🛠 تغییرات در فایل‌ها و لایه‌ها (Proposed Changes)
 
 ### ۱. بک‌اند (Backend)
-#### `warehouse-backend/warehouses/services.py`
+#### `backend/warehouses/services.py`
 - افزودن رجیستری فیلدهای کالا (`ITEM_FIELD_REGISTRY`) و تنظیم کلید پیش‌فرض `field_permissions_counter` در `DEFAULT_SETTINGS`.
 - ارائه یک اندپوینت برای واکشی فیلدهای استاندارد کالا و فیلدهای پویای فعال هر انبار.
 
-#### `warehouse-backend/inventory/models.py` و `inventory/views.py`
+#### `backend/inventory/models.py` و `inventory/views.py`
 - پشتیبانی از ذخیره مقادیر فیلدهای ویرایش‌شده اضافی توسط انبارگردان در تسک شمارش (`CountTask.custom_data` یا مقادیر اختصاصی) جهت بررسی سرپرست.
 
 ---
 
 ### ۲. فرانت‌اند (Frontend)
-#### `warehouse-front/src/app/core/models/field-config.model.ts` [NEW]
+#### `frontend/src/app/core/models/field-config.model.ts` [NEW]
 - تعریف تایپ‌های TypeScript برای ساختار فیلدها، دسته‌بندی‌ها و تنظیمات نمایش/ویرایش.
 
-#### `warehouse-front/src/app/components/settings/settings.html` و `settings.ts` [MODIFY]
+#### `frontend/src/app/components/settings/settings.html` و `settings.ts` [MODIFY]
 - افزودن یک تب اختصاصی به نام **«فیلدهای انبارگردان» (Counter Fields)** در کنار تب‌های عملیات، لیبل و بک‌آپ.
 - پیاده‌سازی جدول تنظیمات با قابلیت‌های:
   - فیلتر بر اساس دسته‌بندی (همه، اطلاعات پایه، موجودی، بازرگانی، اسناد و مالی، فیلدهای پویا).
@@ -99,7 +99,7 @@ flowchart TD
   - چک‌باکس‌های «قابل نمایش» و «قابل ویرایش».
   - دکمه «بازنشانی به پیش‌فرض‌های کارخانه».
 
-#### `warehouse-front/src/app/components/field/field.html` و `field.ts` [MODIFY]
+#### `frontend/src/app/components/field/field.html` و `field.ts` [MODIFY]
 - خواندن تنظیمات فیلدهای انبارگردان از سرویس تنظیمات.
 - رندرینگ داینامیک فیلدهای فقط-خواندنی در کارت اطلاعات کالا با لیبل‌های تنظیم‌شده.
 - رندرینگ داینامیک اینپوت‌های قابل ویرایش در فرم شمارش متناسب با نوع داده (عدد، متن، تاریخ، چندخطی).

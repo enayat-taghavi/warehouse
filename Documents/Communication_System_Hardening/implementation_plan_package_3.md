@@ -2,7 +2,7 @@
 
 # 📦 طرح اجرایی بسته ۳: بهبود تجربه کاربری، زنده کردن کامنت‌ها و رفع باگ‌های فرانت (UX & Live Comments)
 
-> **سند مرجع:** `E:\warehouse project\Documents\Communication_System_Hardening\package_3_frontend_ux_and_comments.md`  
+> **سند مرجع:** `Documents\Communication_System_Hardening\package_3_frontend_ux_and_comments.md`  
 > **فازهای پوشش‌داده:** فاز ۶ (اصلاح باگ‌های کلاینت) + فاز ۷ (فعال‌سازی واقعی کامنت‌های تعاملی)  
 > **پیش‌نیازها:** بسته ۱ (سپر امنیتی) و بسته ۲ (یکپارچگی داده و پایداری آفلاین) که با ۴۶ تست بک‌اند و ۱۰ تست فرانت‌اند سبز شده‌اند.  
 > **ایرادات هدف:** ۲۵، ۲۶، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲، ۳۴، ۳۵، ۳۶، ۳۷، ۳۸، ۳۹، ۴۲
@@ -23,20 +23,20 @@
 
 | لایه | مسیر فایل | نوع تغییر | شرح تغییرات |
 | :--- | :--- | :---: | :--- |
-| **سرویس فرانت** | `warehouse-front/src/app/core/services/communication.service.ts` | [MODIFY] | افزودن `ensureConnected`، Reconnect نمایی، Pong Timeout، `loadOlderMessages`، Debounced `markAsRead`، `subscribeComments` و `unsubscribeComments` |
-| **تست سرویس فرانت** | `warehouse-front/src/app/core/services/communication.service.spec.ts` | [MODIFY] | افزودن تست‌های واحد فاز ۶ و ۷ (Reconnect، عدم پخش صدا برای پیام خود، Debounce، اشتراک کامنت) |
-| **کامپوننت کشوی چت** | `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts` | [MODIFY] | حذف سوکت موازی، فیلتر کاربر جاری در عنوان چت، تایمر ۵ ثانیه‌ای تایپینگ، آزادسازی `revokeObjectURL`، فراخوانی `loadOlderMessages` |
-| **قالب کشوی چت** | `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html` | [MODIFY] | افزودن `trackBy` در حلقه پیام‌ها، دکمه/تریگر پیام‌های قدیمی‌تر، تصحیح وضعیت آنلاین/خوانده‌شده |
-| **کامپوننت نظرات** | `warehouse-front/src/app/components/communications/contextual-comments/contextual-comments.component.ts` | [MODIFY] | ارسال `subscribe_comments` در `ngOnInit` و `unsubscribe_comments` در `ngOnDestroy`، ورودی `appLabel`، توکن منشن `@[id:username]` |
-| **قالب نظرات** | `warehouse-front/src/app/components/communications/contextual-comments/contextual-comments.component.html` | [MODIFY] | بهبود استایل پاسخ‌های تو در تو (Threaded replies) و رندر سلسله‌مراتبی |
-| **تست کامپوننت نظرات** | `warehouse-front/src/app/components/communications/contextual-comments/contextual-comments.component.spec.ts` | [NEW] | تست‌های واحد چرخه حیات اشتراک کامنت، اعتبارسنجی منشن، و تعاملات UI |
-| **لی‌اوت اصلی** | `warehouse-front/src/app/components/layout/layout.ts` | [MODIFY] | تک‌نقطه‌ای کردن اتصال سوکت با `ensureConnected` و درخواست مجوز نوتیفیکیشن مرورگر |
-| **پیگیری شمارش** | `warehouse-front/src/app/components/count-tracking/count-tracking.html` & `.ts` | [MODIFY] | تعبیه کامپوننت `<app-contextual-comments>` در کشوی تاریخچه و گردش کالا |
-| **بررسی مدیر** | `warehouse-front/src/app/components/manager-review/manager-review.html` & `.ts` | [MODIFY] | تعبیه کامپوننت نظرات در مودال‌های جزئیات شمارش و سند مالی |
-| **کارتابل سرپرست** | `warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html` & `.ts` | [MODIFY] | تعبیه کامپوننت نظرات در مودال‌های جزئیات شمارش |
-| **سریالایزر بک‌اند** | `warehouse-backend/communications/serializers.py` | [MODIFY] | استخراج خودکار منشن‌ها از متن کامنت با الگوی `@[id:username]` و `@username` |
-| **ویوهای بک‌اند** | `warehouse-backend/communications/views.py` | [MODIFY] | ثبت اعلان پایدار در AuditLog / Notifications هنگام منشن کاربر |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_ws_comments.py` | [NEW] | تست‌های وب‌سوکت کامنت‌ها: اشتراک، پخش زنده، لغو اشتراک و تفکیک اتاق‌ها |
+| **سرویس فرانت** | `frontend/src/app/core/services/communication.service.ts` | [MODIFY] | افزودن `ensureConnected`، Reconnect نمایی، Pong Timeout، `loadOlderMessages`، Debounced `markAsRead`، `subscribeComments` و `unsubscribeComments` |
+| **تست سرویس فرانت** | `frontend/src/app/core/services/communication.service.spec.ts` | [MODIFY] | افزودن تست‌های واحد فاز ۶ و ۷ (Reconnect، عدم پخش صدا برای پیام خود، Debounce، اشتراک کامنت) |
+| **کامپوننت کشوی چت** | `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts` | [MODIFY] | حذف سوکت موازی، فیلتر کاربر جاری در عنوان چت، تایمر ۵ ثانیه‌ای تایپینگ، آزادسازی `revokeObjectURL`، فراخوانی `loadOlderMessages` |
+| **قالب کشوی چت** | `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html` | [MODIFY] | افزودن `trackBy` در حلقه پیام‌ها، دکمه/تریگر پیام‌های قدیمی‌تر، تصحیح وضعیت آنلاین/خوانده‌شده |
+| **کامپوننت نظرات** | `frontend/src/app/components/communications/contextual-comments/contextual-comments.component.ts` | [MODIFY] | ارسال `subscribe_comments` در `ngOnInit` و `unsubscribe_comments` در `ngOnDestroy`، ورودی `appLabel`، توکن منشن `@[id:username]` |
+| **قالب نظرات** | `frontend/src/app/components/communications/contextual-comments/contextual-comments.component.html` | [MODIFY] | بهبود استایل پاسخ‌های تو در تو (Threaded replies) و رندر سلسله‌مراتبی |
+| **تست کامپوننت نظرات** | `frontend/src/app/components/communications/contextual-comments/contextual-comments.component.spec.ts` | [NEW] | تست‌های واحد چرخه حیات اشتراک کامنت، اعتبارسنجی منشن، و تعاملات UI |
+| **لی‌اوت اصلی** | `frontend/src/app/components/layout/layout.ts` | [MODIFY] | تک‌نقطه‌ای کردن اتصال سوکت با `ensureConnected` و درخواست مجوز نوتیفیکیشن مرورگر |
+| **پیگیری شمارش** | `frontend/src/app/components/count-tracking/count-tracking.html` & `.ts` | [MODIFY] | تعبیه کامپوننت `<app-contextual-comments>` در کشوی تاریخچه و گردش کالا |
+| **بررسی مدیر** | `frontend/src/app/components/manager-review/manager-review.html` & `.ts` | [MODIFY] | تعبیه کامپوننت نظرات در مودال‌های جزئیات شمارش و سند مالی |
+| **کارتابل سرپرست** | `frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html` & `.ts` | [MODIFY] | تعبیه کامپوننت نظرات در مودال‌های جزئیات شمارش |
+| **سریالایزر بک‌اند** | `backend/communications/serializers.py` | [MODIFY] | استخراج خودکار منشن‌ها از متن کامنت با الگوی `@[id:username]` و `@username` |
+| **ویوهای بک‌اند** | `backend/communications/views.py` | [MODIFY] | ثبت اعلان پایدار در AuditLog / Notifications هنگام منشن کاربر |
+| **تست بک‌اند** | `backend/communications/tests/test_ws_comments.py` | [NEW] | تست‌های وب‌سوکت کامنت‌ها: اشتراک، پخش زنده، لغو اشتراک و تفکیک اتاق‌ها |
 
 ---
 
@@ -86,13 +86,13 @@
 
 ### تست‌های خودکار بک‌اند:
 ```bash
-cd "E:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe manage.py test communications -v 2
 ```
 
 ### تست‌های خودکار فرانت‌اند:
 ```bash
-cd "E:\warehouse project\warehouse-front"
+cd "frontend"
 npx vitest run src/app/core/services/communication.service.spec.ts
 npx vitest run src/app/components/communications/contextual-comments/contextual-comments.component.spec.ts
 ```

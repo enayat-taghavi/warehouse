@@ -30,13 +30,13 @@
 
 ## فایل‌های اصلاح‌شده
 
-1. **[`warehouse-front/src/app/core/auth/auth.guard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts)**
+1. **[`frontend/src/app/core/auth/auth.guard.ts`](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts)**
    - اعمال پرمیشن‌های کارتابل پیگیری وضعیت شمارش در گارد مسیریابی.
-2. **[`warehouse-backend/inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)**
+2. **[`backend/inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)**
    - ایزولاسیون انبارها در `get_queryset`، افزودن `perform_update` با ثبت لاگ ممیزی، بازنویسی اتمیک اکشن‌های `bulk_manager_approve`, `reject`, `manager_reject`, `bulk_reject`, `bulk_manager_reject`, `bulk_cancel` با `select_for_update(of=('self',))` و ارتقای استاندارد اکسل به ۲ سطر، فریز A3 و تاریخ ثانیه‌دار.
-3. **[`warehouse-front/src/app/components/count-tracking/count-tracking.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)**
+3. **[`frontend/src/app/components/count-tracking/count-tracking.ts`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)**
    - تزریق `AuthService`، پیاده‌سازی `getSystemBalance`، `normalizeText`، اصلاح `getManagerName`، ایزولاسیون وب‌سوکت، بهینه‌سازی محاسبات راندمان و حذف خوش‌بینانه لغو تخصیص.
-4. **[`warehouse-front/src/app/components/count-tracking/count-tracking.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html)**
+4. **[`frontend/src/app/components/count-tracking/count-tracking.html`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html)**
    - گارد `*ngIf` روی دکمه‌های حساس، اصلاح تولتیپ موجودی و نمایش یکپارچه `_system_balance` در کشو و جدول.
 
 ---

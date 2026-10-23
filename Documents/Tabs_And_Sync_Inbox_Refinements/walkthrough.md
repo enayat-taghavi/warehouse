@@ -21,14 +21,14 @@
 ## 🔍 فایل‌های اصلاح‌شده
 
 1. **مدیریت ناوبری و روت‌ها:**
-   - [`warehouse-front/src/app/app.routes.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts) (حذف مسیر export)
-   - [`warehouse-front/src/app/core/auth/auth.guard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts) (حذف گارد export)
-   - [`warehouse-front/src/app/components/layout/layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts) (حذف صدور فایل از آیتم‌های منو، افزودن متد `openSyncErrorsFromBadge`)
-   - [`warehouse-front/src/app/components/layout/layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) (بازسازی ساختار هدر، زنگوله صندوق خطاها، و نشانگر مرکزی)
+   - [`frontend/src/app/app.routes.ts`](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts) (حذف مسیر export)
+   - [`frontend/src/app/core/auth/auth.guard.ts`](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts) (حذف گارد export)
+   - [`frontend/src/app/components/layout/layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts) (حذف صدور فایل از آیتم‌های منو، افزودن متد `openSyncErrorsFromBadge`)
+   - [`frontend/src/app/components/layout/layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) (بازسازی ساختار هدر، زنگوله صندوق خطاها، و نشانگر مرکزی)
 
 2. **بازطراحی صفحه تغذیه:**
-   - [`warehouse-front/src/app/components/feeding/feeding.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/feeding/feeding.html) (نمای Roadmap و کارت‌های وضعیت توسعه)
-   - [`warehouse-front/src/app/components/feeding/feeding.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/feeding/feeding.ts) (کامپوننت سبک بدون کدهای مازاد)
+   - [`frontend/src/app/components/feeding/feeding.html`](file:///e:/warehouse%20project/frontend/src/app/components/feeding/feeding.html) (نمای Roadmap و کارت‌های وضعیت توسعه)
+   - [`frontend/src/app/components/feeding/feeding.ts`](file:///e:/warehouse%20project/frontend/src/app/components/feeding/feeding.ts) (کامپوننت سبک بدون کدهای مازاد)
 
 3. **حذف نشانگرهای هدر در ۱۱ تب:**
    - `dashboard.html` / `dashboard.ts`
@@ -44,7 +44,7 @@
    - `count-tracking.html` / `count-tracking.ts`
 
 4. **کامپوننت نشانگر آفلاین و اتصال:**
-   - [`warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts)
+   - [`frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`](file:///e:/warehouse%20project/frontend/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts)
 
 ---
 

@@ -92,9 +92,9 @@ graph TD
 
 ## 📁 پرونده‌های تحت تغییر
 
-1. [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html) (نوار چسبان، دکمه‌های مربعی اکشن، کارت‌ها، چیپ‌های فیلتر، جدول‌ها، مدال‌ها و مودال راهنما)
-2. [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts) (کنترل فیلترهای سریع، چیپ‌های فیلتر، متدهای بازه زمانی سریع و مدیریت مودال راهنما)
-3. [audit.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.css) (استایل‌های تکمیلی هدر، چیپ‌ها، ترنزیشن‌ها و دیف ویوور)
+1. [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html) (نوار چسبان، دکمه‌های مربعی اکشن، کارت‌ها، چیپ‌های فیلتر، جدول‌ها، مدال‌ها و مودال راهنما)
+2. [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts) (کنترل فیلترهای سریع، چیپ‌های فیلتر، متدهای بازه زمانی سریع و مدیریت مودال راهنما)
+3. [audit.css](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.css) (استایل‌های تکمیلی هدر، چیپ‌ها، ترنزیشن‌ها و دیف ویوور)
 
 ---
 
@@ -112,7 +112,7 @@ graph TD
 ## 🔍 برنامه اعتبارسنجی (Verification Plan)
 
 ### تست‌های خودکار و سیستمی
-- اجرای دستور `npm run build` در پوشه `warehouse-front` برای تضمین عدم وجود خطای تایپ‌اسکریپت و کامپایل قالب‌های HTML.
+- اجرای دستور `npm run build` در پوشه `frontend` برای تضمین عدم وجود خطای تایپ‌اسکریپت و کامپایل قالب‌های HTML.
 
 ### تست‌های مرورگر و بصری (با استفاده از ابزار مرورگر)
 - بررسی عملکرد نوار چسبان هدر در حالت اسکرول روی صفحه `http://localhost:4200/audit`.

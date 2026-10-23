@@ -15,18 +15,18 @@
 بر اساس ساختار فعلی:
 
 ### بک‌اند
-- [registry.py](warehouse-backend/reports/registry.py)
+- [registry.py](backend/reports/registry.py)
   - موجودیت‌ها به‌صورت whitelist ثبت شده‌اند.
   - فقط مسیرهای **FK مستقیم** امروز مجازند.
   - امنیت و جلوگیری از ضرب دکارتی از قبل مورد توجه بوده است.
-- [engine.py](warehouse-backend/reports/engine.py)
+- [engine.py](backend/reports/engine.py)
   - `spec` را می‌گیرد و یک QuerySet امن می‌سازد.
   - فعلاً معماری بر پایه‌ی یک `entity` اصلی است.
   - JOIN فقط در قالب مسیرهای `related` همان entity انجام می‌شود.
 
 ### فرانت‌اند
 - صفحه گزارش‌ساز در مسیر:
-  - `warehouse-front/src/app/components/reports/`
+  - `frontend/src/app/components/reports/`
 - ساختار فعلی احتمالاً حول یک entity پایه طراحی شده است:
   - انتخاب entity
   - انتخاب فیلدها
@@ -553,18 +553,18 @@ JoinDef(
 
 ### بک‌اند
 احتمالاً این فایل‌ها تغییر می‌کنند:
-- [warehouse-backend/reports/registry.py](warehouse-backend/reports/registry.py)
-- [warehouse-backend/reports/engine.py](warehouse-backend/reports/engine.py)
-- [warehouse-backend/reports/views.py](warehouse-backend/reports/views.py)
-- [warehouse-backend/reports/serializers.py](warehouse-backend/reports/serializers.py)
-- [warehouse-backend/reports/pdf.py](warehouse-backend/reports/pdf.py) (اگر header/label ستون‌ها نیاز به اصلاح داشته باشد)
-- [warehouse-backend/reports/excel.py](warehouse-backend/reports/excel.py) (اگر ستون‌های joined لازم به handling ویژه داشته باشند)
+- [backend/reports/registry.py](backend/reports/registry.py)
+- [backend/reports/engine.py](backend/reports/engine.py)
+- [backend/reports/views.py](backend/reports/views.py)
+- [backend/reports/serializers.py](backend/reports/serializers.py)
+- [backend/reports/pdf.py](backend/reports/pdf.py) (اگر header/label ستون‌ها نیاز به اصلاح داشته باشد)
+- [backend/reports/excel.py](backend/reports/excel.py) (اگر ستون‌های joined لازم به handling ویژه داشته باشند)
 
 ### فرانت‌اند
-- `warehouse-front/src/app/components/reports/reports.ts`
-- `warehouse-front/src/app/components/reports/reports.html`
-- `warehouse-front/src/app/components/reports/report-store.ts`
-- `warehouse-front/src/app/core/api/report-api.service.ts`
+- `frontend/src/app/components/reports/reports.ts`
+- `frontend/src/app/components/reports/reports.html`
+- `frontend/src/app/components/reports/report-store.ts`
+- `frontend/src/app/core/api/report-api.service.ts`
 - احتمالاً:
   - `filter-group.component.ts`
   - `filter-value.component.ts`

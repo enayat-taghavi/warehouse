@@ -22,20 +22,21 @@
 
 - Permissions are **bypass**: `permissions.defaultMode` is `bypassPermissions` in the project `.claude/settings.local.json` and the global `~/.claude/settings.json` (`skipDangerousModePermissionPrompt: true`). Don't ask the user for extra approval for commands or edits.
 - The only intentional exception: the deny on reading `.env` / `.env.*` in `.claude/settings.json`. It is quiet (no prompt) and prevents key leaks. Remove it only on the user's explicit request.
-- Work only on `main` in the main folder `E:/warehouse project`. Never create a branch or worktree without the user's permission; even if the session opens inside a worktree, edit `main` via absolute paths.
+- Work only on `main` in the main checkout (the repository root, not a worktree). Never create a branch or worktree without the user's permission; even if the session opens inside a worktree, edit `main` via absolute paths.
 
 ## Repository layout (monorepo)
 
-- `warehouse-backend/` — Django backend (with `venv/`).
+- `backend/` — Django backend (with `venv/`).
   - `config/` — system settings and composition root (`settings.py`, `urls.py`, `asgi.py`, `wsgi.py`).
   - `backend_paths.py` — path discovery helper adding `core/` and `modules/*` to `sys.path`.
   - `core/` — platform core apps (`accounts`, `common`, `companies`, `communications`, `notifications`, `platform_core`, `reports`, `settings_core`).
   - `modules/warehouse/` — warehouse module apps (`warehouses`, `inventory`).
   - `modules/accounting/` — accounting module apps (`personnel`).
-- `warehouse-front/` — Angular frontend (`src/app/`). Key services in `src/app/core/services/`.
+- `frontend/` — Angular frontend (`src/app/`). Key services in `src/app/core/services/`.
 - `scripts/` — guardian/test scripts (`scripts/e2e/`).
 - `Documents/Modular_Middle_Path/` — modular architecture implementation plan.
 - `pyproject.toml` — dev-only umbrella package `wh-suite` (`import-linter==2.3` as dev).
+- **No hard-coded project root** (user, 23 Oct 2026, folder renamed to `comanager`): code and scripts find the root from their own location (`Path(__file__)`, `%~dp0`, `$PSScriptRoot`) or use paths relative to it. `.mcp.json` and `.claude/launch.json` use relative paths. The deploy bundle and `soft` keep the old names `warehouse-backend/` and `warehouse-front/`; `deploy.ps1` maps the repo folders onto them (`Get-RepoDir`), so units and nginx on `soft` are unchanged.
 
 ### Backend apps (Django)
 
@@ -83,7 +84,7 @@
   - Ask one short yes/no question only before work that directly affects production (next item) or opens a data-loss path.
   - Replies stay short and in Persian.
 - **Environment roles (`app` vs `soft`):**
-  - **`app.farsalish.ir` (This Windows machine):** Local test and staging environment behind Cloudflare Tunnel (`cloudflared`). Daphne listens on port 8000, Express on port 4200 serves `warehouse-front/dist/`, PostgreSQL on port 5432 holds test/staging data. There are NO real users here. Building frontend or restarting services on this machine is for personal testing and does not require yes/no prompts.
+  - **`app.farsalish.ir` (This Windows machine):** Local test and staging environment behind Cloudflare Tunnel (`cloudflared`). Daphne listens on port 8000, Express on port 4200 serves `frontend/dist/`, PostgreSQL on port 5432 holds test/staging data. There are NO real users here. Building frontend or restarting services on this machine is for personal testing and does not require yes/no prompts.
   - **No real users anywhere yet (user, 21 Oct 2026):** the whole project, `soft` included, is still in its testing phase; never describe current data as real users' data. The safety rules below stay in force so the code is ready for the day real users arrive.
   - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server for the live application; it will host real users later (none yet). Direct DNS (no Cloudflare), TLS via Let's Encrypt / Nginx. Real user data must NEVER be lost or deleted during updates, and no test data from `app` may ever be transferred to `soft`. Any operation directly affecting `soft` or opening data-loss paths requires explicit approval.
   - Alongside the stack, an `ng serve` on `localhost:4300` serves the working tree live. Use it for safe visual review (config `attach-frontend-dev-4300` in `.claude/launch.json`). 4200 is local test.
@@ -130,16 +131,16 @@ Plan: warehouse counting and accounting as two independently installable modules
   - 18 spec files have TypeScript errors (missing Node types for `fs`/`path`/`__dirname`, and stale model fields). Because the builder type-checks every spec, the whole suite fails to compile.
   - To run the rest: a temporary tsconfig that extends `tsconfig.spec.json` and excludes those 18 files, passed with `--ts-config` plus the same `--exclude`s. Result: 357 pass, 19 fail (the failures are pre-existing).
   - To measure a change's effect, run the same on HEAD (`git archive` into `scratch/` with a junction to `node_modules`) and compare. Remove the junction only with `cmd /c rmdir`, never `rm -rf`.
-- Backend secrets (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) live in `warehouse-backend/.env`, outside git; `settings.py` reads it and system environment variables override it. Don't read it.
-- Backend errors at ERROR level and above (Django and project apps) go to `warehouse-backend/logs/django-errors.log`. The folder is outside git; the file is created on the first error.
+- Backend secrets (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) live in `backend/.env`, outside git; `settings.py` reads it and system environment variables override it. Don't read it.
+- Backend errors at ERROR level and above (Django and project apps) go to `backend/logs/django-errors.log`. The folder is outside git; the file is created on the first error.
 - Code searches skip the tracked chat archives `chat_history_data.json` and `chat_history_dashboard.html` (listed in `.gitignore`); pass the path explicitly to search them.
 - **Release on this machine** (`app`, no real users: no yes/no needed; releases to `soft` follow `deploy.ps1` and need explicit approval):
   1. Back up with `create_database_backup` from `accounts/backup_service.py`. Don't run `run_auto_backup`: it deletes old backups.
-  2. Frontend build in `warehouse-front`: `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`. The flag keeps files that are being served from being deleted mid-build.
+  2. Frontend build in `frontend`: `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`. The flag keeps files that are being served from being deleted mid-build.
   3. Backend restart: close the daphne process on port 8000 and its venv launcher with `taskkill`. Then relaunch it in a Windows Terminal tab so it doesn't depend on the Claude session:
-     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "$(cygpath -w "$PWD/backend")" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
   4. GDrive sync worker (D9): launch in an auto-restarting tab (to restart during release, simply `taskkill` the python worker process):
-     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "$(cygpath -w "$PWD/backend")" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
   5. Verify: `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/` must return 200, and worker heartbeat is fresh.
 - Claude Code automation:
   - **Hooks** in `.claude/settings.json` run `.claude/hooks/guard.py`; Antigravity calls the same script from `.agents/hooks.json`.

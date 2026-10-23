@@ -1,6 +1,6 @@
 ---
 name: data-loss-reviewer
-description: Data-loss reviewer. Run once per plan step, on that step's diff and before commit, when the diff touches the frontend offline queue/sync (warehouse-front/src/app/core/services/offline-*, sync-*, photo-upload-queue, interceptors), Django migrations, delete signals/CASCADE, or the Service Worker. Read-only; reports findings with file:line.
+description: Data-loss reviewer. Run once per plan step, on that step's diff and before commit, when the diff touches the frontend offline queue/sync (frontend/src/app/core/services/offline-*, sync-*, photo-upload-queue, interceptors), Django migrations, delete signals/CASCADE, or the Service Worker. Read-only; reports findings with file:line.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -27,7 +27,7 @@ You review this project's hardest rule: **no user data may ever be lost.**
    - `RunSQL` or `RunPython` without a reverse, or that deletes data
    - `AlterUniqueTogether` or `AddConstraint` that would fail on existing data
 
-   If needed, run `./venv/Scripts/python.exe manage.py sqlmigrate <app> <name>` in `warehouse-backend`.
+   If needed, run `./venv/Scripts/python.exe manage.py sqlmigrate <app> <name>` in `backend`.
 5. **Cascading deletes:**
    - new `on_delete=CASCADE`
    - `pre_delete` and `post_delete` signals (e.g. `warehouses/signals.py`)

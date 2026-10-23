@@ -36,11 +36,11 @@
 
 | نام فایل | لایه | شرح تغییرات |
 | :--- | :--- | :--- |
-| [services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py) | بک‌اند Django | ثبت کلیدهای پیش‌فرض کیفیت دوربین و تنظیمات سفارشی در `DEFAULT_SETTINGS` |
-| [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | کامپوننت اسکنر | پیاده‌سازی پروفایل‌های ۵گانه، ناظر تطبیقی همواره‌فعال، منوی هدر و هماهنگی با LocalStorage و Server |
-| [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html) | تنظیمات کلان | افزودن کارت تنظیمات کیفیت دوربین و بخش گزینه‌های پیشرفته |
-| [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) | تنظیمات انبار | افزودن کارت کیفیت دوربین با نشانگر اورراید و دکمه حذف اختصاصی |
-| [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) | لاجیک انبار | اضافه شدن کلیدهای جدید به `hasOperationsOverride` و متد بازنشانی انبار |
+| [services.py](file:///e:/warehouse%20project/backend/warehouses/services.py) | بک‌اند Django | ثبت کلیدهای پیش‌فرض کیفیت دوربین و تنظیمات سفارشی در `DEFAULT_SETTINGS` |
+| [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | کامپوننت اسکنر | پیاده‌سازی پروفایل‌های ۵گانه، ناظر تطبیقی همواره‌فعال، منوی هدر و هماهنگی با LocalStorage و Server |
+| [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html) | تنظیمات کلان | افزودن کارت تنظیمات کیفیت دوربین و بخش گزینه‌های پیشرفته |
+| [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) | تنظیمات انبار | افزودن کارت کیفیت دوربین با نشانگر اورراید و دکمه حذف اختصاصی |
+| [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) | لاجیک انبار | اضافه شدن کلیدهای جدید به `hasOperationsOverride` و متد بازنشانی انبار |
 
 ---
 

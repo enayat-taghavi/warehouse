@@ -27,7 +27,7 @@
 
 ### فرانت‌اند (Angular)
 
-#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
 - اضافه کردن متغیرهای محاسبه آمار (Mini Dashboard).
 - اضافه کردن منطق فیلتر `showOnlyDiscrepancies`.
 - **اضافه کردن متد `onSortChanged(sort)` برای مرتب‌سازی تمام فیلدها در حافظه (شامل فیلد جدید `discrepancy`).**
@@ -35,19 +35,19 @@
 - اضافه کردن اتصال WebSocket به لیست `CountTask`ها (مشابه صفحه Notifications).
 - اضافه کردن متد `bulkApproveGreenTasks()` برای فراخوانی API `bulk_manager_approve`.
 
-#### [MODIFY] [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html)
+#### [MODIFY] [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html)
 - متصل کردن `(sortChanged)="onSortChanged($event)"` به جدول.
 - اضافه کردن بخش ویجت‌های آماری (Mini Dashboard) در هدر صفحه.
 - اضافه کردن دکمه فیلتر «فقط دارای مغایرت» در کنار دکمه‌های بالا.
 - اضافه کردن دکمه «تأیید گروهی بدون مغایرت‌ها» (Manager Approve).
 - اضافه کردن ستون جدید «مقدار مغایرت» (Discrepancy) در `appTableCol`.
 
-#### [MODIFY] [count-task-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/count-task-api.service.ts)
+#### [MODIFY] [count-task-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/count-task-api.service.ts)
 - بررسی و اطمینان از وجود متد `bulkManagerApprove(taskIds)`.
 
 ### بک‌اند (Django)
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 - در اکشن‌های `CountTaskViewSet` بررسی می‌کنیم که بعد از تغییرات مهم، سیگنال WebSocket ارسال شود (هرچند احتمالاً در مدل‌ها این سیگنال از قبل برای `channels` پیکربندی شده است). در صورت نیاز، `Group_send` مربوط به آپدیت وضعیت انبارگردانی بررسی می‌شود.
 
 > [!NOTE]

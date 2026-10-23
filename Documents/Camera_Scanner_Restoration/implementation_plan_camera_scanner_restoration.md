@@ -28,7 +28,7 @@
 
 ### 📦 کامپوننت مشترک اسکنر (`src/app/shared/components/barcode-scanner`)
 
-#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
+#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
 - بازنویسی کامل متدهای راه‌اندازی دوربین بر اساس `decodeFromConstraints` از کتابخانه `@zxing/browser`.
 - پشتیبانی از موتور بومی `BarcodeDetector` در صورت فعال بودن مرورگر به همراه فال‌بک خودکار به ZXing چندفرمتِه.
 - تنظیم قیود تصویری رزولوشن بالا و فوکوس خودکار پیوسته (`continuous focus`).
@@ -54,7 +54,7 @@
 ## ۵. برنامه راستی‌آزمایی (Verification Plan)
 
 ### تست‌های خودکار:
-1. اجرای `npm run build` در پوشه `warehouse-front` و دریافت خروجی سبز با Exit Code: 0.
+1. اجرای `npm run build` در پوشه `frontend` و دریافت خروجی سبز با Exit Code: 0.
 
 ### تست‌های دستی توسط شما:
 1. باز کردن پروژه در مرورگر و کلیک روی آیکون دوربین در کارتابل مالی یا انبارگردان.

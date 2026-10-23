@@ -22,11 +22,11 @@
 
 ### Frontend (Angular)
 
-#### [MODIFY] `warehouse-front/src/app/components/users/users.ts`
+#### [MODIFY] `frontend/src/app/components/users/users.ts`
 - اضافه کردن فیلد `is_superuser: false` به استیت `userForm`.
 - تنظیم مقدار اولیه این فیلد در متد `openUserModal` بر اساس اطلاعات کاربر در حال ویرایش.
 
-#### [MODIFY] `warehouse-front/src/app/components/users/users.html`
+#### [MODIFY] `frontend/src/app/components/users/users.html`
 - اضافه کردن کدهای HTML مربوط به یک سوییچ (Toggle) در داخل مُدال (Modal) ویرایش کاربر که به مدل `userForm.is_superuser` متصل (Bind) شده باشد.
 - احاطه کردن این سوییچ با دستور `*ngIf="state.appState.user.is_superuser || state.appState.user.roles.includes('admin')"` تا این المان گرافیکی فقط و فقط برای شخص ادمین رندر شده و نمایش داده شود.
 

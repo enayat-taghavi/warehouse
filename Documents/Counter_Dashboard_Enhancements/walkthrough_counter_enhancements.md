@@ -9,10 +9,10 @@
 ## ۱. خلاصه اقدامات انجام‌شده به تفکیک بخش‌ها (Changes Implemented)
 
 ### ۱. ارسال مستقیم کالا به سرپرست از نمای جزئیات (Direct Submit)
-* **در [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts):**
+* **در [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts):**
   * پیاده‌سازی متد `submitDirectlyToSupervisor()`: ثبت مقدار شمارش و ارتقای فوری وضعیت تسک به `COUNTED` (یا `MANAGER_REVIEW`) بدون نیاز به خروج از صفحه و استفاده از چک‌باکس‌های لیست.
   * پشتیبانی کامل از هر دو حالت آنلاین (سرور) و آفلاین (`localFirst` با Dexie).
-* **در [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html):**
+* **در [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html):**
   * طراحی فوتر دکمه‌های شناور در موبایل و دسکتاپ شامل:
     - **دکمه سبز رنگ:** «ثبت و ارسال به سرپرست» (با نشانگر چرخان حین ارسال)
     - **دکمه بنفش رنگ:** «ثبت موقت (آماده ارسال)»
@@ -57,8 +57,8 @@
 
 | فایل | نوع تغییر | شرح اقدامات |
 | :--- | :---: | :--- |
-| [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | `[MODIFY]` | متد `submitDirectlyToSupervisor`، فیلتر تاریخ بر مبنای `updated_at`، ارقام فارسی، Dirty Check فیلدهای کالا، هدایت هوشمند چیپ‌ها و منطق مالتی‌سلکت |
-| [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | `[MODIFY]` | فوتر سه‌گانه نمای جزئیات، نمایش شرطی چیپ‌های بازشماری و آماده ارسال، تغییر برچسب‌ها و رفع باگ نمایش `bal4miv` |
+| [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | `[MODIFY]` | متد `submitDirectlyToSupervisor`، فیلتر تاریخ بر مبنای `updated_at`، ارقام فارسی، Dirty Check فیلدهای کالا، هدایت هوشمند چیپ‌ها و منطق مالتی‌سلکت |
+| [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | `[MODIFY]` | فوتر سه‌گانه نمای جزئیات، نمایش شرطی چیپ‌های بازشماری و آماده ارسال، تغییر برچسب‌ها و رفع باگ نمایش `bal4miv` |
 | [`Master_Log.md`](file:///e:/warehouse%20project/Documents/Master_Log.md) | `[MODIFY]` | به‌روزرسانی لاگ سراسری پروژه |
 
 </div>

@@ -23,7 +23,7 @@
    - جلوگیری از سریالایز رکوردهای حذف‌شده (Tombstone) با اولویت‌دهی به پرچم `is_deleted`.
 
 ### بخش دوم: سرور توزیع و فرانت‌اند (Frontend & Distribution Server)
-1. **فعال‌سازی فشرده‌سازی خودکار Gzip (`warehouse-front/server.js`):**
+1. **فعال‌سازی فشرده‌سازی خودکار Gzip (`frontend/server.js`):**
    - نصب و اتصال میدل‌ور `compression` به زنجیره پردازش Express.
    - اعمال هدرهای بهینه کش (`Cache-Control`) برای فایل‌های باندل انگولار و استثنا کردن `index.html` و `ngsw.json` جهت پایداری PWA.
 

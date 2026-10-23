@@ -2,7 +2,7 @@
 
 # گزارش جامع پایان عملیات اصلاح به‌روزرسانی‌های زنده، وب‌سوکت و عملیات آفلاین در رهگیری شمارش (Count Tracking Live Updates & Offline Fixes)
 
-این سند گزارش نهایی اصلاحات فنی اعمال‌شده روی کامپوننت پیگیری وضعیت شمارش ([count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)) و قالب آن ([count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html)) را ارائه می‌نماید.
+این سند گزارش نهایی اصلاحات فنی اعمال‌شده روی کامپوننت پیگیری وضعیت شمارش ([count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)) و قالب آن ([count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html)) را ارائه می‌نماید.
 
 ---
 
@@ -50,8 +50,8 @@
 ---
 
 ## ۴. فایل‌های تغییریافته (Modified Files)
-* [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
-* [count-tracking.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.html)
+* [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
+* [count-tracking.html](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.html)
 * [task_count_tracking_live_offline_fixes.md](file:///e:/warehouse%20project/Documents/CountTracking_Live_Offline_Fixes/task_count_tracking_live_offline_fixes.md)
 * [task.md](file:///e:/warehouse%20project/Documents/task.md)
 * [implementation_plan.md](file:///e:/warehouse%20project/Documents/implementation_plan.md)

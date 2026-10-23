@@ -9,27 +9,27 @@
 ### ۱. صفحه انبارها (Projects)
 - افزودن دکمه در کنار گزینه‌های جستجو و دانلود اکسل.
 - فراخوانی متد `loadWarehouses()`.
-- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/warehouse-front/src/app/components/projects/projects.html)
+- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/frontend/src/app/components/projects/projects.html)
 
 ### ۲. مدیریت کاربران و نقش‌ها (Users)
 - افزودن دکمه بروزرسانی به صورت مجزا برای **تب لیست کاربران** و **تب لیست نقش‌ها** قبل از دکمه‌های عملیاتی اکسل.
 - فراخوانی متد سراسری `loadData()`.
-- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html)
+- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html)
 
 ### ۳. فیلدهای پویا (Dynamic Fields)
 - گنجاندن دکمه در هدر اصلی صفحه در کنار دکمه "کپی از انبار دیگر".
 - فراخوانی متد `loadFields()`.
-- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/warehouse-front/src/app/components/dynamic-fields/dynamic-fields.html)
+- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/frontend/src/app/components/dynamic-fields/dynamic-fields.html)
 
 ### ۴. تنظیمات کلان سیستم (Global Settings)
 - افزودن دکمه بروزرسانی در هدر چسبنده (Sticky Header) در کنار دکمه "ذخیره و اعمال تنظیمات".
 - فراخوانی متد `loadSettings()`.
-- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html)
+- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html)
 
 ### ۵. تنظیمات اختصاصی انبار (Warehouse Settings)
 - افزودن دکمه بروزرسانی در هدر چسبنده در کنار دکمه "ذخیره تنظیمات".
 - فراخوانی متد `loadSettings()`.
-- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html)
+- [مشاهده تغییرات در فایل](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html)
 
 ## وضعیت تست و بررسی
 > [!NOTE]  

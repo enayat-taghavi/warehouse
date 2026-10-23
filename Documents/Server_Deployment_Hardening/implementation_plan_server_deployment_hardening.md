@@ -2,7 +2,7 @@
 
 - **ویرایش:** ۳. در ۱۴ مهر ۱۴۰۵ (2026-10-06) گزارش بازبینی بیرونی با کد سنجیده شد و موارد پذیرفته‌شده اعمال شدند (بخش ۲.۲). ویرایش ۲ (۱۳ مهر ۱۴۰۵) پاسخ‌های کاربر را ثبت کرده بود.
 - **وضعیت (۱۵ مهر ۱۴۰۵):** فاز ۱ و بخش‌هایی از فازهای ۲ تا ۶ به‌صورت commit‌نشده پیاده شده‌اند. بازبینی اجرای طرح ۳۵ ایراد یافت (بخش ۱۰). اصلاح در سه گام ر۱ تا ر۳ انجام می‌شود. گام ر۱ نیمه‌کاره است (طراحی در ۱۰.۴). هنوز هیچ فرمانی روی سرور اجرا نشده است.
-- **فایل‌های بررسی‌شده:** `deploy.ps1`، `scripts/remote-setup.sh`، `scripts/remote-update.sh`، `scripts/deploy_runner.py`، `dev-manager.bat`، `warehouse-front/server.js`، `warehouse-front/tools/patch-ngsw-530.js`، `warehouse-front/angular.json`، `warehouse-backend/config/settings.py`، `config/urls.py`، `config/views_backup.py`، `common/media_urls.py`، `accounts/backup_service.py`، `personnel/dbf_generator.py`، `warehouse-backend/requirements.txt`، `.gitignore`. در ویرایش ۳: `.agents/AGENTS.md`، `warehouse-front/ngsw-config.json`، `accounts/management/commands/{init_roles,seed_permissions}.py`، `reports/excel.py`، `reports/management/commands/run_export_worker.py` و دو فایل `run_gdrive_sync_worker.py` (`settings_core` و `personnel`).
+- **فایل‌های بررسی‌شده:** `deploy.ps1`، `scripts/remote-setup.sh`، `scripts/remote-update.sh`، `scripts/deploy_runner.py`، `dev-manager.bat`، `frontend/server.js`، `frontend/tools/patch-ngsw-530.js`، `frontend/angular.json`، `backend/config/settings.py`، `config/urls.py`، `config/views_backup.py`، `common/media_urls.py`، `accounts/backup_service.py`، `personnel/dbf_generator.py`، `backend/requirements.txt`، `.gitignore`. در ویرایش ۳: `.agents/AGENTS.md`، `frontend/ngsw-config.json`، `accounts/management/commands/{init_roles,seed_permissions}.py`، `reports/excel.py`، `reports/management/commands/run_export_worker.py` و دو فایل `run_gdrive_sync_worker.py` (`settings_core` و `personnel`).
 
 ---
 
@@ -160,7 +160,7 @@
 - **محل:** `deploy.ps1:336-362`، `deploy_runner.py:86-114`.
 - **تغییرات commit‌نشده و migrationها:** هر تغییر commit‌نشده یا untracked منتشر می‌شود. الان یعنی migrationهای untracked گوگل‌درایو (`personnel/migrations/0036..0038`) روی دیتابیس واقعی اعمال می‌شوند.
 - **نبود نسخه:** sha در بسته ثبت نمی‌شود.
-- **فایل‌های آزمایشی ریشهٔ `warehouse-backend`:**
+- **فایل‌های آزمایشی ریشهٔ `backend`:**
   - `users.json`، `user_dump.json`، `sync_pull_res.json` و `db.sqlite3`؛
   - `create_users.py` و `cleanup_testsprite.py`؛
   - `test_phase*_*.py`: اسکریپت‌های ریشه که `manage.py test` بدون برچسب آن‌ها را روی دیتابیس اجرا می‌کند.
@@ -210,7 +210,7 @@
 
 **D-01 — بیلد استقرار، فرانت محیط تست `app.farsalish.ir` را وسط بیلد پاک و جایگزین می‌کند.**
 - **محل:** `deploy.ps1:296-306`، `deploy_runner.py:63`.
-- **علت:** `ng build` بدون `--delete-output-path=false` همان `warehouse-front/dist` را که express:4200 سرو می‌کند پاک و بازسازی می‌کند.
+- **علت:** `ng build` بدون `--delete-output-path=false` همان `frontend/dist` را که express:4200 سرو می‌کند پاک و بازسازی می‌کند.
 - **پیامد:** محیط تست وسط بیلد قطع می‌شود و بعد از آن نسخهٔ بازبینی‌نشدهٔ working tree را نشان می‌دهد.
 
 **D-15 — سیاست کش Nginx نسبت به `server.js` پسرفت دارد.**
@@ -320,7 +320,7 @@
 - **۱.۱ بیلد ایزوله:**
   - snapshot از commit هدف با `git archive` در `scratch/deploy/<sha>/` ساخته شود و `node_modules` با junction وصل شود (`cmd /c mklink /J`؛ برداشتن فقط با `cmd /c rmdir`).
   - `npx ng build && node tools/patch-ngsw-530.js` داخل snapshot اجرا شود.
-  - `warehouse-front/dist` هرگز لمس نشود.
+  - `frontend/dist` هرگز لمس نشود.
   - ساختن و برداشتن junction فقط در یک تابع با `try/finally` انجام شود. پیش از هر حذف بازگشتی snapshot بررسی شود که هیچ reparse pointی در آن نمانده است؛ وگرنه حذف متوقف شود. هیچ ابزار دیگری (`rm -rf` یا `Remove-Item -Recurse`) snapshot را پاک نکند، چون ممکن است از junction عبور کند و `node_modules` اصلی را پاک کند.
 - **۱.۲ گارد git:**
   - اگر working tree تمیز نباشد، استقرار متوقف شود، مگر با `-AllowDirty` و تأیید صریح. migration untracked همیشه مانع است.
@@ -344,14 +344,14 @@
   - روال نصب دوباره: تا کاربر تأیید نکند، کلید جدید پذیرفته نشود.
 - **۱.۸ حذف `deploy_runner.py`** و حذف paramiko از venv محلی.
 - **۱.۹ guardian 53** (`scripts/e2e/guardian_53_deploy_safety.py`)، فقط‌خواندنی و بدون دسترسی به دیتابیس. این موارد را بررسی کند:
-  - ابزار استقرار در `warehouse-front/dist` بیلد نکند؛
+  - ابزار استقرار در `frontend/dist` بیلد نکند؛
   - `.gitattributes` قاعدهٔ LF برای `*.sh` را داشته باشد؛
   - قالب nginx `location ^~ /media/` را پروکسی کند و `alias` مسیر media فقط در location از نوع `internal` باشد (از فاز ۳)؛
   - `deploy.ps1` junction را فقط از راه همان تابع ۱.۱ بردارد؛
   - `requirements.txt` قفل باشد (از فاز ۲)؛
   - اسرار در argv فرستاده نشوند.
 - **معیار پذیرش:**
-  - `warehouse-front/dist` دست‌نخورده بماند.
+  - `frontend/dist` دست‌نخورده بماند.
   - بسته در کانتینر `ubuntu:24.04` با کد 0 باز شود.
   - شبیه‌سازی `exit 0` و `exit 3` پیام و کد خروج درست بدهد.
   - PSScriptAnalyzer و guardian 53 بدون خطا اجرا شوند.
@@ -376,7 +376,7 @@
   - **collation دیتابیس:** ICU `fa-IR` (PostgreSQL 15 به بالا)، پس از آزمون مرتب‌سازی فارسی در کانتینر (D-30).
   - **جای بکاپ:** اگر دیسک یا پارتیشن جدایی هست، `shared/backups` روی آن باشد تا پر شدنش PostgreSQL را از کار نیندازد.
 - **۲.۳ نسخه‌های دقیق:** نسخه‌های دقیق در `requirements.txt` برگردانده شوند و `Pillow` و `packaging` صریح اضافه شوند.
-- **۲.۴ lock:** `warehouse-backend/requirements.lock` با hash برای Python و معماری سرور ساخته شود. wheelhouse در صورت انتخاب در `scratch/deploy/wheels/` ساخته شود. نصب با `--require-hashes` (و `--no-index --find-links` اگر wheelhouse انتخاب شده باشد).
+- **۲.۴ lock:** `backend/requirements.lock` با hash برای Python و معماری سرور ساخته شود. wheelhouse در صورت انتخاب در `scratch/deploy/wheels/` ساخته شود. نصب با `--require-hashes` (و `--no-index --find-links` اگر wheelhouse انتخاب شده باشد).
 - **معیار پذیرش:** نصب از lock و `manage.py check` در کانتینرِ همان نسخهٔ سیستم‌عامل بدون خطا اجرا شوند.
 
 ### فاز ۳: قالب‌های امن زیرساخت (Nginx، پروکسی، اسرار، سخت‌سازی)
@@ -518,7 +518,7 @@
   - کاربر `warehouse`، قالب‌ها (هر سه unit) و اولین release؛
   - `seed_permissions` و `init_roles`. هرگز `setup_project`.
 - **۶.۲ حفاظ D-04:** اگر `GO_LIVE` وجود داشته باشد یا دیتابیس خالی نباشد، Setup متوقف شود. حتی `-Reprovision` با تأیید تایپی هم به دیتابیس، `shared/.env` و media دست نزند.
-- **۶.۳ قالب بیمه (D-23):** `DSKKAR00.DBF` و `DSKWOR00.DBF` به `warehouse-backend/personnel/data/insurance_templates/` منتقل شوند و مسیرهای hardcode ویندوزی حذف شوند. مسیرهای قدیمی برای محیط تست fallback بمانند.
+- **۶.۳ قالب بیمه (D-23):** `DSKKAR00.DBF` و `DSKWOR00.DBF` به `backend/personnel/data/insurance_templates/` منتقل شوند و مسیرهای hardcode ویندوزی حذف شوند. مسیرهای قدیمی برای محیط تست fallback بمانند.
 - **۶.۴ اقدام کاربر:**
   - یک بار `deploy.ps1 -CreateAdmin` در تبی که Claude باز می‌کند؛ `createsuperuser` تعاملی با `ssh -t` اجرا می‌شود و کاربر رمز را خودش تایپ می‌کند. در صورت نیاز `-SetSecret` را هم برای Google اجرا کند.
   - **راه‌اندازی اولیه پس از ورود:** superuser با `admin_all` به همه‌چیز دسترسی دارد، ولی نقش‌های `init_roles` هیچ مجوزی ندارند و کاربر عادیِ دارای این نقش‌ها چیزی نمی‌بیند. کاربر مجوز نقش‌ها را در صفحهٔ نقش‌ها تنظیم می‌کند (ورود گروهی با Excel نقش‌ها هم هست)، سپس شرکت، بخش‌ها، انبارها و کاربران را تعریف می‌کند.
@@ -551,9 +551,9 @@
 | `.gitattributes` (جدید) | ۱ |
 | `scripts/e2e/guardian_53_deploy_safety.py` (جدید) | ۱ |
 | `scripts/deploy_runner.py` (حذف) | ۱ |
-| `warehouse-backend/requirements.txt`، `requirements.lock` (جدید) | ۲ |
+| `backend/requirements.txt`، `requirements.lock` (جدید) | ۲ |
 | `scripts/deploy/templates/*` و `warehouse-deploy` (جدید، جایگزین `remote-*.sh`) | ۳، ۵ |
-| `warehouse-backend/config/settings.py` | ۳، ۵ |
+| `backend/config/settings.py` | ۳، ۵ |
 | `common/media_urls.py` (شاخهٔ X-Accel-Redirect) | ۳ |
 | `accounts/backup_service.py`، `accounts/management/commands/run_auto_backup.py` | ۴ |
 | `reports/models.py` (مسیر `report_exports` از env) | ۵ |
@@ -603,7 +603,7 @@
 
 **آزمون‌های این بازبینی:**
 - pwsh 7.6.5: تابعی که خروجی فرمان native را رها می‌کند، آن خروجی را در مقدار بازگشتی می‌ریزد. `exit @("[SSH_CONNECTED_OK]", 3)` کد خروج **0** می‌دهد.
-- `git archive --worktree-attributes`: از ۳۶ فایل tracked ریشهٔ `warehouse-backend` فقط ۱۰ فایل کنار گذاشته می‌شوند.
+- `git archive --worktree-attributes`: از ۳۶ فایل tracked ریشهٔ `backend` فقط ۱۰ فایل کنار گذاشته می‌شوند.
 - نام فایل‌های بیلد esbuild: `main-XTQARCXN.js`، `chunk-Bu7lCNZI.js` و `styles-45LYSYTT.css`.
 - `run_export_worker.py` تابع `add_arguments` ندارد.
 - `requirements.lock` با `requirements.txt` و venv محلی هم‌خوان است (۶۹ بسته؛ هش برای همهٔ سکوها؛ هیچ بستهٔ مخصوص ویندوز).
@@ -628,7 +628,7 @@
 - **E-02 — کل `scripts/` از working tree در بسته کپی می‌شود** (`deploy.ps1:416-418`).
   - پیامد: guardianهای `scripts/e2e/`، `setup_e2e_data.py`، `test_guard_hooks.py` و هر تغییر commit‌نشده به soft می‌رسند. `export-ignore` بی‌اثر است و تضمین «استقرار از sha» می‌شکند.
   - راه‌حل: فقط `git archive $Sha scripts/deploy`.
-- **E-03 — ۲۳ فایل آزمایشی ریشهٔ `warehouse-backend` هنوز منتشر می‌شوند.**
+- **E-03 — ۲۳ فایل آزمایشی ریشهٔ `backend` هنوز منتشر می‌شوند.**
   - نمونه‌ها: `users_debug.json`، `perms.json`، `seed_testsprite.py`، `check_user.py`، `test_api.py`، `docker-compose.yml`. همچنین `personnel/test_phase5_excel_and_endpoints.py`.
   - راه‌حل: فهرست سفید در `git archive`: `manage.py`، `requirements.txt`، `requirements.lock` و پوشه‌های اپ‌ها، به‌علاوهٔ حذف `test_phase*.py` در هر عمقی. فهرست `.gitattributes` هم کامل شود.
 - **E-04 — پس از go-live، بکاپ pre-update پس از migrate به این ماشین منتقل می‌شود؛ نقض صریح بخش ۷** (`deploy.ps1:583-589`، `warehouse-deploy.sh:141-155`).
@@ -653,7 +653,7 @@
   - release: متعلق به root است، ولی `collectstatic` با `warehouse` در `staticfiles` می‌نویسد (خلاف ۵.۱).
   - راه‌حل:
     - venv در مسیر نهایی `venvs/<hash>` ساخته شود، با نشانهٔ `.complete` و مجوز 755. پوشهٔ ناقص مصنوع است و بازسازی می‌شود.
-    - `warehouse-backend/` تا پایان `collectstatic` مال `warehouse` باشد، سپس `root:root` با `u=rwX,go=rX`.
+    - `backend/` تا پایان `collectstatic` مال `warehouse` باشد، سپس `root:root` با `u=rwX,go=rX`.
 - **E-08 — اسکریپت در حال اجرا روی خودش بازنویسی می‌شود** (`warehouse-deploy.sh:163-170`: `cp` روی `/usr/local/sbin/warehouse-deploy`).
   - پیامد: bash ادامه را از offset فعلیِ محتوای تازه می‌خواند و رفتار نامعین است (حتی خط `rm -rf` پاک‌سازی).
   - راه‌حل: `install` در فایل موقت و `mv -f` اتمیک (inode تازه). اسکریپت شبانه هم همین‌طور.
@@ -809,13 +809,13 @@
 - **E-01:** بندهای الف-۱ تا ۴. `Test-SshConnection` با `-Capture -Quiet` نشانهٔ `[SSH_CONNECTED_OK]` را بسنجد.
 - **E-02، E-03 و D-24 (بسته):**
   - snapshot فرانت: `git archive --format=tar -o <tmp>`، سپس bsdtar `-xf` (بدون pipe).
-  - بک‌اند با فهرست سفید از همان sha: `manage.py`، `requirements.txt`، `requirements.lock` (اجباری) و پوشه‌های سطح اولی که در آن commit فایل `__init__.py` دارند. الان ۱۱ پوشه: accounts، common، communications، config، inventory، notifications، personnel، platform_core، reports، settings_core، warehouses. به‌علاوهٔ `:(exclude,glob)warehouse-backend/**/test_phase*.py` (آزموده شد: git archive این pathspec را می‌پذیرد).
+  - بک‌اند با فهرست سفید از همان sha: `manage.py`، `requirements.txt`، `requirements.lock` (اجباری) و پوشه‌های سطح اولی که در آن commit فایل `__init__.py` دارند. الان ۱۱ پوشه: accounts، common، communications، config، inventory، notifications، personnel، platform_core، reports، settings_core، warehouses. به‌علاوهٔ `:(exclude,glob)backend/**/test_phase*.py` (آزموده شد: git archive این pathspec را می‌پذیرد).
   - `scripts/deploy` و `scripts/remote-setup.sh` هم از همان sha برداشته شوند.
   - `RELEASE` با LF و UTF-8 بدون BOM نوشته شود. here-string روی checkout با CRLF، کاراکتر CR می‌گیرد.
   - گیت‌های پیش از آپلود:
     - هیچ نامی `\` نداشته باشد؛
     - هیچ فایلی در `scripts/deploy/**`، هیچ `*.sh` و خود `RELEASE` کاراکتر CR نداشته باشد؛
-    - سطح اول `warehouse-backend` دقیقاً همان فهرست سفید باشد؛
+    - سطح اول `backend` دقیقاً همان فهرست سفید باشد؛
     - `test_phase`، `.env`، `db.sqlite3` و `__pycache__` در بسته نباشند؛
     - `index.html` و `ngsw.json` موجود باشند.
   - tar با `--format ustar` و مالک root ساخته شود (اگر bsdtar پشتیبانی کند؛ آزموده شود). sha256 بسته به سرور داده شود.
@@ -947,7 +947,7 @@
   - راه‌حل: `-H "Host: $DOMAIN" -H "X-Forwarded-Proto: https"`.
 - **F-05 — E-05 هنوز باز است.**
   - بازگشت خودکار پس از migrate (`:423-441`) هیچ بررسی migration ندارد.
-  - بررسی `--rollback` (`:36-65`) fail-open است: `django.setup()` بیرون از try و بدون `cd` به `warehouse-backend` اجرا می‌شود (import `config` شکست می‌خورد)، `except` با کد 0 خارج می‌شود، و `|| true` می‌گذارد بازگشت ادامه پیدا کند.
+  - بررسی `--rollback` (`:36-65`) fail-open است: `django.setup()` بیرون از try و بدون `cd` به `backend` اجرا می‌شود (import `config` شکست می‌خورد)، `except` با کد 0 خارج می‌شود، و `|| true` می‌گذارد بازگشت ادامه پیدا کند.
   - `applied - disk` قاعدهٔ `replaces` را نمی‌شناسد و پس از squash، مثبت کاذب می‌دهد.
   - «release قبلی» با `ls -t` انتخاب می‌شود و ممکن است releaseی باشد که prepare شده ولی هرگز activate نشده (بدون collectstatic).
   - راه‌حل: یک تابع مشترک fail-closed با `replaces`؛ ثبت release قبلی هنگام تعویض و بازگشت فقط به همان.
@@ -1108,7 +1108,7 @@
   - **بازنویسی و سخت‌سازی `deploy.ps1`:**
     - قفل با `#Requires -Version 7.2`.
     - توابع junction ایمن (`New-SafeJunction` و `Remove-SafeJunction` با `rmdir` و گارد `Assert-NoReparsePoints`).
-    - بیلد ایزوله در `scratch/deploy/<sha>/` بدون لمس `warehouse-front/dist`.
+    - بیلد ایزوله در `scratch/deploy/<sha>/` بدون لمس `frontend/dist`.
     - بسته‌بندی با `tar.exe` بر پایه استاندارد POSIX و گارد ممانعت از کاراکترهای `\` و CR در فایل‌های اسکریپت.
     - بازگرداندن و خروج با کدهای خروج خطا (`exit $code`).
     - افزودن حالت تعاملی `-InstallKey` جهت نصب کلید عمومی روی سرور توسط کاربر.
@@ -1149,13 +1149,13 @@
       - `desktop.ini` در `.gitignore`؛
       - در `.gitattributes`: `scripts/deploy/** text eol=lf`، و `*.DBF` و `*.dbf` با `binary`.
     - **بخش `.gitattributes` از E-03 انجام شد:**
-      - `warehouse-backend/*.* export-ignore`، با استثنای `manage.py` و دو فایل requirements؛
-      - `warehouse-backend/**/test_phase*.py`؛
+      - `backend/*.* export-ignore`، با استثنای `manage.py` و دو فایل requirements؛
+      - `backend/**/test_phase*.py`؛
       - الگوی بی‌اثر `scripts/e2e/` به `scripts/e2e/**` اصلاح شد (در gitattributes الگوی با `/` پایانی هیچ مسیری را نمی‌گیرد).
   - **باقی‌مانده از ر۱:** بازنویسی `deploy.ps1` (E-01، E-02، سمت `deploy.ps1` از E-03، سمت محلی E-04، E-14 تا E-18، E-26، E-28، E-29، E-31 و حالت `-RestoreDrill`)، و تغییر E-16 در `warehouse-nightly-backup.sh`، همه طبق ۱۰.۴.
   - **آزمون‌ها:**
     - `git check-attr` قواعد را تأیید کرد.
-    - `git archive --worktree-attributes HEAD warehouse-backend`: ریشهٔ بک‌اند فقط ۱۱ پوشهٔ اپ، `manage.py` و `requirements.txt` دارد، و هیچ `test_phase`ی در کل آرشیو نیست.
+    - `git archive --worktree-attributes HEAD backend`: ریشهٔ بک‌اند فقط ۱۱ پوشهٔ اپ، `manage.py` و `requirements.txt` دارد، و هیچ `test_phase`ی در کل آرشیو نیست.
     - pathspec `:(exclude,glob)` در `git archive` کار می‌کند.
     - guardian 53 پاس شد. `test_guard_hooks.py`: FAILURES 0.
   - **یافته‌های تازه:**
@@ -1403,7 +1403,7 @@
     - آزمون B این را می‌سنجد.
   - **کد:** چیزی commit نشد. کانتینر آزمون پاک شد.
   - **اقدام بعدی (نشست تازه؛ فقط همین بند و ۱۲.۲ خوانده شوند):**
-    1. **H-01:** `warehouse-backend/requirements.lock` بازسازی شود:
+    1. **H-01:** `backend/requirements.lock` بازسازی شود:
        - بستهٔ کامل وابستگی‌ها برای Linux و Python 3.12؛
        - نسخه‌ها همان نسخه‌های `pip freeze` venv محلی (آزموده‌شده)، به‌عنوان constraint؛
        - همهٔ هش‌های PyPI؛
@@ -1413,7 +1413,7 @@
     2. اجرای دوباره: `pwsh -File scripts/deploy_tests/test_server_e2e.ps1 -BuildSha 97f7546161d9358ba6188777f848d63bc0a8ecf0`، با لاگ در `scratch/logs/`، و رفع ایرادهای پیداشده تا `failures=0`.
     3. سپس بندهای 3 تا 5 «اقدام بعدی» بخش اول: `test_integration.ps1`، guardian 53، PSScriptAnalyzer، `data-loss-reviewer`، commit و ثبت پایان ر۶.
 - **۱۵ مهر ۱۴۰۵ (2026-10-07) — گام ر۶، بخش سوم: پایان ر۶ (Claude):**
-  - **H-01 (رفع شد):** `warehouse-backend/requirements.lock` بازسازی شد.
+  - **H-01 (رفع شد):** `backend/requirements.lock` بازسازی شد.
     - بستهٔ کامل وابستگی برای Linux و Python 3.12، با `pip-compile --generate-hashes` (pip-tools 7.4.1 روی pip 24.0) در کانتینر `ubuntu:24.04`.
     - constraint: `pip freeze` همان venv محلی، بدون بسته‌های فقط ویندوزی (`colorama`) و فقط dev (`django-extensions`، `import-linter`، `grimp`).
     - ۶۶ بسته با همهٔ هش‌ها. `opentelemetry-api==1.45.0` اضافه شد. `bcrypt`، `click`، `PyNaCl` و `tzdata` در لینوکس لازم نیستند و حذف شدند.

@@ -63,8 +63,8 @@
 - **توضیح خیلی خیلی ساده:**  
   چون اطلاعات تستی قبلی مهم نیستند، فیلدهای تنظیمات را کاملاً شسته و رفته می‌کنیم. دو فیلد تمیز به اسم «از چه ماهی» (`effective_from`) و «تا چه ماهی» (`effective_to`) به جدول تنظیمات اضافه می‌کنیم تا مشخص باشد احکام حقوقی دقیقا از چه ماهی تا چه ماهی اعتبار دارند.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/models.py`
-  - **فیلدهای مدل [PayrollYearlySettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1587):**
+  - **فایل مقصد:** `backend/personnel/models.py`
+  - **فیلدهای مدل [PayrollYearlySettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1587):**
     - `effective_from`: از نوع `CharField(max_length=7, db_index=True)` به فرمت استاندارد شمسی `YYYY/MM` (مثلاً `1405/01` - الزامی).
     - `effective_to`: از نوع `CharField(max_length=7, null=True, blank=True, db_index=True)` (اختیاری، خالی = جاری/تا پایان سال).
     - `version_title`: از نوع `CharField(max_length=150, default="احکام مصوب ابتدای سال")`.
@@ -77,7 +77,7 @@
 - **توضیح خیلی خیلی ساده:**  
   در دیتابیس یک قانون تمیز و محکم می‌گذاریم: در هر پروژه، در یک سال مالی، نباید دو تا تنظیمات با یک ماه شروع یکسان ثبت شود؛ اما می‌توانیم در همان سال، تنظیمات دیگری با ماه شروع متفاوت (مثلاً یکی فروردین و یکی مهر) داشته باشیم.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/models.py`
+  - **فایل مقصد:** `backend/personnel/models.py`
   - حذف قیود صلب قبلی و جایگزینی با دو قید صریح در `Meta.constraints`:
     ```python
     models.UniqueConstraint(
@@ -101,7 +101,7 @@
 - **جزئیات فنی:**  
   - اجرای دستور `.\venv\Scripts\python.exe manage.py makemigrations personnel`.
   - اعمال آن با `.\venv\Scripts\python.exe manage.py migrate personnel`.
-  - اطمینان از سلامت جداول متصل [WorkshopInsuranceSettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1682)، [TaxRuleSettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1709)، [BankExportSettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1737) و [JobGradeTier](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1656).
+  - اطمینان از سلامت جداول متصل [WorkshopInsuranceSettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1682)، [TaxRuleSettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1709)، [BankExportSettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1737) و [JobGradeTier](file:///e:/warehouse%20project/backend/personnel/models.py#L1656).
 
 ---
 
@@ -109,7 +109,7 @@
 - **توضیح خیلی خیلی ساده:**  
   فرمان پر کردن اطلاعات اولیه را طوری بازنویسی می‌کنیم که با یک دستور ساده، احکام تمیز و دقیق سال ۱۴۰۵ با شروع از فروردین (`1405/01`) و جدول ۲۰ گروه شغلی و کارگاه بیمه و فایل دارایی را داخل دیتابیس بریزد.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/management/commands/seed_payroll_settings.py`
+  - **فایل مقصد:** `backend/personnel/management/commands/seed_payroll_settings.py`
   - بازنویسی فرمان با مقداردهی `effective_from='1405/01'` و عنوان «تنظیمات پایه و قانون کار سال ۱۴۰۵ (مصوب فروردین)».
   - ایجاد خودکار رکوردهای ۲۰ گروه شغلی و تنظیمات کارگاه و دارایی و بانک ملی.
 
@@ -121,7 +121,7 @@
 - **توضیح خیلی خیلی ساده:**  
   موتور محاسبه حقوق وقتی می‌خواهد حقوق کارمند را برای یک ماه (مثلاً آبان) حساب کند، چک می‌کند کارمند در چه پروژه‌ای است و آخرین احکام معتبر تا ماه آبان برای آن پروژه چیست. اگر پروژه احکام اختصاصی نداشت، احکام کل شرکت در همان ماه را اعمال می‌کند.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/payroll_engine.py`
+  - **فایل مقصد:** `backend/personnel/payroll_engine.py`
   - ایجاد متد بهینه‌شده:
     ```python
     def get_effective_payroll_settings(year_month: str, project_id: int = None) -> PayrollYearlySettings:
@@ -167,7 +167,7 @@
 - **توضیح خیلی خیلی ساده:**  
   سیستم ما هیچ کاری با حساب و کتاب معافیت مالیاتی ندارد؛ چون این کار وظیفه خود سایت اداره مالیات است. ما تمام ستون‌های درآمد و مزایای کارمند را بر اساس اکسل شرکت دقیق جمع می‌زنیم تا فایل خروجی برای اداره مالیات بی‌نقص باشد. بعداً وقتی اداره مالیات مالیات قطعی را اعلام کرد، آن رقم از اکسل دارایی وارد فیش می‌شود.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/payroll_engine.py` خطوط ۲۶۰ تا ۲۷۱
+  - **فایل مقصد:** `backend/personnel/payroll_engine.py` خطوط ۲۶۰ تا ۲۷۱
   - حذف کامل خطوط سقف فرضی ۱۴۰ میلیون ریال و ضریب ۱۰٪.
   - تثبیت رفتار استاندارد:
     - اگر قبلاً مالیات از اکسل دارایی آپلود شده باشد (`is_tax_imported=True`)، دقیقاً همان عدد حفظ می‌شود.
@@ -182,10 +182,10 @@
 - **توضیح خیلی خیلی ساده:**  
   اداره مالیات برای هر پروژه و پیمان فایل جداگانه می‌خواهد. این تسک باعث می‌شود فایل‌های متنی مالیات (WH و WP) فقط برای پرسنل همان پروژه و با مشخصات پرونده مالیاتی همان پروژه دانلود شوند.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/views.py` متدهای `export_tax_wh` و `export_tax_wp`
+  - **فایل مقصد:** `backend/personnel/views.py` متدهای `export_tax_wh` و `export_tax_wp`
   - اجباری کردن دریافت پارامتر `project_id`.
   - فیلتر کردن رکوردهای دوره بر اساس پرسنل آن پروژه: `r.personnel.project_id == project.id`.
-  - واکشی [TaxRuleSettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1709) متناظر با نسخه معتبر همان پروژه در ماه آن دوره.
+  - واکشی [TaxRuleSettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1709) متناظر با نسخه معتبر همان پروژه در ماه آن دوره.
   - نام‌گذاری تمیز فایل خروجی: `WH_{project.code}_{year_month}.txt` و `WP_{project.code}_{year_month}.txt`.
 
 ---
@@ -194,8 +194,8 @@
 - **توضیح خیلی خیلی ساده:**  
   اگر در وسط سال کد کارگاه یا ردیف پیمان یک پروژه عوض شد، دیسکت‌های بیمه از آن ماه به بعد با کد کارگاه جدید تولید می‌شوند و ماه‌های قبل دست‌نخورده می‌مانند.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** `warehouse-backend/personnel/views.py` خط ۳۶۷۸
-  - انتخاب [WorkshopInsuranceSettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1682) از طریق متد واکشی بازه‌ای (`effective_from <= year_month`).
+  - **فایل مقصد:** `backend/personnel/views.py` خط ۳۶۷۸
+  - انتخاب [WorkshopInsuranceSettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1682) از طریق متد واکشی بازه‌ای (`effective_from <= year_month`).
   - تضمین درج کد کارگاه ۱۰ رقمی، نام کارفرما و کد پیمان (`MON_PYM`) متناظر با همان ماه پروژه در فایل‌های دیسکت باینری DBF.
 
 ---
@@ -204,7 +204,7 @@
 - **توضیح خیلی خیلی ساده:**  
   شماره حساب شرکت یا شناسه واریز پروژه اگر در وسط سال تغییر کرد، فایل اکسل پرداخت بانک از آن تاریخ به بعد با شماره حساب جدید ساخته می‌شود.
 - **جزئیات فنی:**  
-  - متد `export_bank_excel` در [views.py:3823](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py#L3823) به متد واکشی بازه‌ای متصل شده و تنظیمات [BankExportSettings](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1737) نسخه معتبر همان ماه را اعمال می‌کند.
+  - متد `export_bank_excel` در [views.py:3823](file:///e:/warehouse%20project/backend/personnel/views.py#L3823) به متد واکشی بازه‌ای متصل شده و تنظیمات [BankExportSettings](file:///e:/warehouse%20project/backend/personnel/models.py#L1737) نسخه معتبر همان ماه را اعمال می‌کند.
 
 ---
 
@@ -214,7 +214,7 @@
 - **توضیح خیلی خیلی ساده:**  
   در بالای صفحه تنظیمات، حسابدار وقتی پروژه و سال مالی را انتخاب می‌کند، می‌تواند ببیند چه نسخه‌هایی از احکام برای آن سال وجود دارد (مثلاً احکام فروردین، یا اصلاحیه مهرماه) و با کلیک روی هر نسخه، مبالغ آن را ببیند و ویرایش کند.
 - **جزئیات فنی:**  
-  - **فایل‌های مقصد:** [base-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/base-settings/base-settings.html#L26) و [base-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/base-settings/base-settings.ts#L24)
+  - **فایل‌های مقصد:** [base-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/personnel/base-settings/base-settings.html#L26) و [base-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/personnel/base-settings/base-settings.ts#L24)
   - افزودن دراپ‌داون در هدر: `نسخه احکام و بازه زمانی (از ماه ... تا ...)`.
   - بارگذاری خودکار فیلدها و جدول ۲۰ گروه شغلی متناظر با نسخه انتخابی.
   - همگام‌سازی انتخاب با آدرس صفحه (`URL queryParams: version_id`).
@@ -235,7 +235,7 @@
 - **توضیح خیلی خیلی ساده:**  
   کدهای پشت صحنه فرانت‌اند را به‌روزرسانی می‌کنیم تا بتواند نسخه‌های مختلف تنظیمات را بر اساس ماه از بک‌اند بگیرد و ذخیره کند.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** [personnel-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/personnel-api.service.ts#L394)
+  - **فایل مقصد:** [personnel-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/personnel-api.service.ts#L394)
   - متدهای `getYearlySettings` و `updateYearlySettings` پارامتر `effectiveFrom` یا `settingsId` را نیز پشتیبانی کنند.
 
 ---
@@ -246,7 +246,7 @@
 - **توضیح خیلی خیلی ساده:**  
   در کارتابل مالی، دکمه‌های دانلود فایل‌های مالیاتی WH و WP مثل دیسکت بیمه شوند؛ یعنی اول باید پروژه انتخاب شود تا فایل مخصوص همان پروژه دانلود شود.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** [finance-cartable.ts:469-479](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/finance-cartable/finance-cartable.ts#L469-L479)
+  - **فایل مقصد:** [finance-cartable.ts:469-479](file:///e:/warehouse%20project/frontend/src/app/components/personnel/finance-cartable/finance-cartable.ts#L469-L479)
   - تغییر متدهای `downloadTaxWh()` و `downloadTaxWp()` برای اجباری کردن `selectedProjectId` و ارسال آن در لینک دانلود.
 
 ---
@@ -255,7 +255,7 @@
 - **توضیح خیلی خیلی ساده:**  
   یک راهنمای متنی شیک در تب مالیات می‌گذاریم: فایل‌های WH و WP را دانلود کنید، در سامانه مالیات آپلود کنید، و پس از محاسبه اداره مالیات، اکسل نتیجه را با دکمه «ایمپورت اکسل مالیات» بارگذاری نمایید.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** [finance-cartable.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/finance-cartable/finance-cartable.html#L560)
+  - **فایل مقصد:** [finance-cartable.html](file:///e:/warehouse%20project/frontend/src/app/components/personnel/finance-cartable/finance-cartable.html#L560)
   - افزودن یک پیام شفاف برای کاربر پیرامون جریان کار ۲ مرحله‌ای مالیاتی.
 
 ---
@@ -266,7 +266,7 @@
 - **توضیح خیلی خیلی ساده:**  
   یک تست کدنویسی می‌نویسیم که بررسی کند اگر برای پروژه شیراز در نیمه اول سال بن خواربار ۲۰ میلیون و در نیمه دوم ۲۵ میلیون بود، حقوق تیر با نرخ اول و حقوق آبان با نرخ دوم محاسبه شود و خروجی‌های بیمه و مالیات هر دو ماه درست کار کنند.
 - **جزئیات فنی:**  
-  - **فایل مقصد:** [test_project_settings.py](file:///e:/warehouse%20project/warehouse-backend/personnel/test_project_settings.py) و [test_project_exports.py](file:///e:/warehouse%20project/warehouse-backend/personnel/test_project_exports.py)
+  - **فایل مقصد:** [test_project_settings.py](file:///e:/warehouse%20project/backend/personnel/test_project_settings.py) و [test_project_exports.py](file:///e:/warehouse%20project/backend/personnel/test_project_exports.py)
   - تست تفکیک نسخه‌ها در یک سال برای یک پروژه و ارث‌بری درست پروژه‌ها از احکام سراسری.
 
 ---

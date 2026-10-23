@@ -3,12 +3,12 @@
 <div dir="rtl" align="right">
 
 - [x] **فاز ۱: پیاده‌سازی منطق مرتب‌سازی هوشمند و ارتقای فیلترها در لایه لاجیک** <!-- id: 0 -->
-    - [x] تعریف متغیرهای `sortField` و `sortDirection` و `isSortMenuOpen` در [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) <!-- id: 1 -->
+    - [x] تعریف متغیرهای `sortField` و `sortDirection` و `isSortMenuOpen` در [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) <!-- id: 1 -->
     - [x] پیاده‌سازی توابع `setSort`, `toggleSortDirection`, `toggleSortMenu`, `getSortLabel` و شنونده کلیک خارجی (`onDocumentClick`) <!-- id: 2 -->
     - [x] اعمال سورت چندمعیاره در `applyFilters` برای اقلام شمارش و اسناد مالی <!-- id: 3 -->
     - [x] یکسان‌سازی شمارنده‌ها و متدهای پاکسازی فیلتر <!-- id: 4 -->
 - [x] **فاز ۲: بازطراحی کامل تب انبارگردانی و مخزن کالاها** <!-- id: 5 -->
-    - [x] افزودن کامپوننت مرتب‌سازی هوشمند (Smart Sort Popover) به بالای لیست اقلام در [`supervisor-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) <!-- id: 6 -->
+    - [x] افزودن کامپوننت مرتب‌سازی هوشمند (Smart Sort Popover) به بالای لیست اقلام در [`supervisor-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html) <!-- id: 6 -->
     - [x] بازطراحی کارت‌های لیست شمارش به سبک Rounded-2xl با حاشیه‌های وضعیت و پس‌زمینه لایت <!-- id: 7 -->
     - [x] افزودن ردیف لوکیشن و انبار، بج وضعیت استاندارد و بنر یادداشت رد مدیر <!-- id: 8 -->
     - [x] طراحی ردیف متمایز مقدار شمارش شده با فونت بزرگ، واحد سنجش و نام انبارگردان <!-- id: 9 -->

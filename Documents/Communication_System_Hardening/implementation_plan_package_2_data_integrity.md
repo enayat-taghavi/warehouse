@@ -14,17 +14,17 @@
 
 | لایه | مسیر فایل | نوع تغییر | شرح و هدف تغییر |
 | :--- | :--- | :---: | :--- |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_integrity.py` | [NEW] | آزمون‌های جامع یکپارچگی، Idempotency، Soft Delete، Rate Limit، سقف طول و AuditLog (۸ تست) |
-| **تست فرانت** | `warehouse-front/src/app/core/services/communication.service.spec.ts` | [MODIFY] | افزودن سناریوهای تست استیت شکست ارسال، تلاش مجدد (Retry)، مدیریت `_offlinePending` و رویداد آپدیت |
-| **بک‌اند** | `warehouse-backend/communications/models.py` | [MODIFY] | افزودن قید یکتایی `UniqueConstraint` روی `(conversation, sender, client_temp_id)` در پیام‌ها |
-| **بک‌اند** | `warehouse-backend/communications/views.py` | [MODIFY] | بازنویسی `create` با گارد Idempotency، پیاده‌سازی `perform_destroy` با `soft_delete()`، اعمال Scoped Throttling و ثبت `AuditLog` |
-| **بک‌اند** | `warehouse-backend/communications/serializers.py` | [MODIFY] | اعمال محدودیت سقف کاراکتر (`max_length=4000`) در `MessageSerializer` و `GenericCommentSerializer` |
-| **بک‌اند** | `warehouse-backend/communications/broadcast.py` | [MODIFY] | پیاده‌سازی تابع `broadcast_message_updated_ws` برای ارسال رویداد `chat.message.updated` |
-| **بک‌اند** | `warehouse-backend/communications/consumers.py` | [MODIFY] | پشتیبانی از انواع رویدادهای برودکست پیام (`chat.message.new` و `chat.message.updated`) |
-| **بک‌اند** | `warehouse-backend/config/settings.py` | [MODIFY] | پیکربندی `DEFAULT_THROTTLE_CLASSES` و نرخ‌های Scoped Throttling برای پیام، کامنت و آپلود |
-| **فرانت‌اند** | `warehouse-front/src/app/core/services/communication.service.ts` | [MODIFY] | پیاده‌سازی استیت سه‌حالته (`pending / sent / failed`)، رفع باگ `_offlinePending`، متد `retryMessage` و دریافت رویداد `chat.message.updated` |
-| **فرانت‌اند** | `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.html` | [MODIFY] | نمایش وضعیت‌های سه‌گانه پیام (🕒 در انتظار، ⚠️ خطا با دکمه تلاش مجدد، ✓✓ ارسال شده) بدون پاک شدن متن |
-| **فرانت‌اند** | `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts` | [MODIFY] | افزودن متد `retrySend` برای فراخوانی سرویس با حفظ متن و شناسه موقت |
+| **تست بک‌اند** | `backend/communications/tests/test_integrity.py` | [NEW] | آزمون‌های جامع یکپارچگی، Idempotency، Soft Delete، Rate Limit، سقف طول و AuditLog (۸ تست) |
+| **تست فرانت** | `frontend/src/app/core/services/communication.service.spec.ts` | [MODIFY] | افزودن سناریوهای تست استیت شکست ارسال، تلاش مجدد (Retry)، مدیریت `_offlinePending` و رویداد آپدیت |
+| **بک‌اند** | `backend/communications/models.py` | [MODIFY] | افزودن قید یکتایی `UniqueConstraint` روی `(conversation, sender, client_temp_id)` در پیام‌ها |
+| **بک‌اند** | `backend/communications/views.py` | [MODIFY] | بازنویسی `create` با گارد Idempotency، پیاده‌سازی `perform_destroy` با `soft_delete()`، اعمال Scoped Throttling و ثبت `AuditLog` |
+| **بک‌اند** | `backend/communications/serializers.py` | [MODIFY] | اعمال محدودیت سقف کاراکتر (`max_length=4000`) در `MessageSerializer` و `GenericCommentSerializer` |
+| **بک‌اند** | `backend/communications/broadcast.py` | [MODIFY] | پیاده‌سازی تابع `broadcast_message_updated_ws` برای ارسال رویداد `chat.message.updated` |
+| **بک‌اند** | `backend/communications/consumers.py` | [MODIFY] | پشتیبانی از انواع رویدادهای برودکست پیام (`chat.message.new` و `chat.message.updated`) |
+| **بک‌اند** | `backend/config/settings.py` | [MODIFY] | پیکربندی `DEFAULT_THROTTLE_CLASSES` و نرخ‌های Scoped Throttling برای پیام، کامنت و آپلود |
+| **فرانت‌اند** | `frontend/src/app/core/services/communication.service.ts` | [MODIFY] | پیاده‌سازی استیت سه‌حالته (`pending / sent / failed`)، رفع باگ `_offlinePending`، متد `retryMessage` و دریافت رویداد `chat.message.updated` |
+| **فرانت‌اند** | `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.html` | [MODIFY] | نمایش وضعیت‌های سه‌گانه پیام (🕒 در انتظار، ⚠️ خطا با دکمه تلاش مجدد، ✓✓ ارسال شده) بدون پاک شدن متن |
+| **فرانت‌اند** | `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts` | [MODIFY] | افزودن متد `retrySend` برای فراخوانی سرویس با حفظ متن و شناسه موقت |
 
 ---
 
@@ -99,7 +99,7 @@ flowchart TD
 
 ### الف) آزمون‌های جامع بک‌اند (`communications/tests/test_integrity.py`)
 ```powershell
-cd "E:\warehouse project\warehouse-backend"
+cd "backend"
 venv\Scripts\python.exe manage.py test communications.tests.test_integrity -v 2
 ```
 شامل آزمون‌های:
@@ -114,7 +114,7 @@ venv\Scripts\python.exe manage.py test communications.tests.test_integrity -v 2
 
 ### ب) آزمون‌های کلاینت فرانت‌اند (`communication.service.spec.ts`)
 ```powershell
-cd "E:\warehouse project\warehouse-front"
+cd "frontend"
 npx ng test --include="**/communication.service.spec.ts"
 ```
 شامل آزمون‌های:
@@ -126,7 +126,7 @@ npx ng test --include="**/communication.service.spec.ts"
 
 ### ج) اجرای رگرسیون کلی آزمون‌های ارتباطات
 ```powershell
-cd "E:\warehouse project\warehouse-backend"
+cd "backend"
 venv\Scripts\python.exe manage.py test communications -v 2
 ```
 تمامی ۳۸ تست قبلی بسته ۱ به‌همراه تست‌های جدید بسته ۲ باید با موفقیت (سبز) به پایان برسند.

@@ -6,7 +6,8 @@ try:
 except Exception:
     pass
 
-backend_dir = r"e:\warehouse project\warehouse-backend"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_dir = os.path.join(REPO_ROOT, "backend")
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 import backend_paths
@@ -53,7 +54,7 @@ def verify_phase4():
             errors.append("قلم اختصاصی انبار بوشهر یافت نشد.")
 
     # 3. بررسی فایل‌های اسکرین‌شات فاز ۴
-    screenshot_dir = r"e:\warehouse project\Documents\Browser_E2E_Comprehensive_Testing\screenshots"
+    screenshot_dir = os.path.join(REPO_ROOT, "Documents", "Browser_E2E_Comprehensive_Testing", "screenshots")
     expected_screens = [
         'phase4_scenario7_01_blind_counting_view.png',
         'phase4_scenario7_02_manager_conflict_approved.png',

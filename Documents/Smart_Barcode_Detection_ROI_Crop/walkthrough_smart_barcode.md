@@ -27,7 +27,7 @@
 
 | ردیف | فایل تغییر یافته | شرح تغییرات |
 | :---: | :--- | :--- |
-| ۱ | [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | پیاده‌سازی تکنیک پردازش آف‌اسکرین با ساخت بوم سفید مجازی (White Padded Canvas)، حلقه دستی `requestAnimationFrame`، دیکود دومرحله‌ای با قابلیت Negative Filter، و کاهش رزولوشن برای حفظ فوکوس وب‌کم. |
+| ۱ | [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | پیاده‌سازی تکنیک پردازش آف‌اسکرین با ساخت بوم سفید مجازی (White Padded Canvas)، حلقه دستی `requestAnimationFrame`، دیکود دومرحله‌ای با قابلیت Negative Filter، و کاهش رزولوشن برای حفظ فوکوس وب‌کم. |
 
 ---
 

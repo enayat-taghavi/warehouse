@@ -47,11 +47,11 @@
 
 ## ۳. جدول فایل‌های تغییر یافته (Modified Files)
 
-- `warehouse-backend/accounts/views.py`
-- `warehouse-backend/accounts/audit_utils.py`
-- `warehouse-backend/warehouses/views.py`
-- `warehouse-front/src/app/core/api/audit-api.service.ts`
-- `warehouse-front/src/app/components/audit/audit.ts`
-- `warehouse-front/src/app/components/audit/audit.html`
+- `backend/accounts/views.py`
+- `backend/accounts/audit_utils.py`
+- `backend/warehouses/views.py`
+- `frontend/src/app/core/api/audit-api.service.ts`
+- `frontend/src/app/components/audit/audit.ts`
+- `frontend/src/app/components/audit/audit.html`
 
 </div>

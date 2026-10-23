@@ -27,7 +27,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FRONT_DIR = REPO_ROOT / "warehouse-front"
+FRONT_DIR = REPO_ROOT / "frontend"
 PACKAGE_JSON = FRONT_DIR / "package.json"
 BUILD_FOR_MODULES_JS = FRONT_DIR / "tools" / "build-for-modules.js"
 MODULES_DIR = FRONT_DIR / "src" / "app" / "modules"

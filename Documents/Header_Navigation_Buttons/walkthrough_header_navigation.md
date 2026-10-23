@@ -10,9 +10,9 @@
 
 | ردیف | نام فایل | نوع تغییر | شرح عملیات انجام‌شده |
 | :---: | :--- | :---: | :--- |
-| ۱ | [`navigation-history.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/navigation-history.service.ts) | **NEW** | ساخت سرویس مدیریت تاریخچه روتینگ با رهگیری `NavigationEnd`، پشته روت‌ها، پشتیبانی از دکمه‌های ماوس/مرورگر و کلیدهای میانبر کیبورد. |
-| ۲ | [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts) | **MODIFY** | تزریق سرویس `NavigationHistoryService` در کلاس Layout و اتصال مستقیم وضعیت‌ها به تمپلیت. |
-| ۳ | [`layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) | **MODIFY** | طراحی و تعبیه دکمه دوگانه کپسولی (Pill) دقیقاً بعد از بخش نام کاربری/پروفایل، با وضعیت Disabled خودکار، ترنزیشن‌های نرم و تولتیپ‌های فارسی. |
+| ۱ | [`navigation-history.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/navigation-history.service.ts) | **NEW** | ساخت سرویس مدیریت تاریخچه روتینگ با رهگیری `NavigationEnd`، پشته روت‌ها، پشتیبانی از دکمه‌های ماوس/مرورگر و کلیدهای میانبر کیبورد. |
+| ۲ | [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts) | **MODIFY** | تزریق سرویس `NavigationHistoryService` در کلاس Layout و اتصال مستقیم وضعیت‌ها به تمپلیت. |
+| ۳ | [`layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) | **MODIFY** | طراحی و تعبیه دکمه دوگانه کپسولی (Pill) دقیقاً بعد از بخش نام کاربری/پروفایل، با وضعیت Disabled خودکار، ترنزیشن‌های نرم و تولتیپ‌های فارسی. |
 
 ---
 

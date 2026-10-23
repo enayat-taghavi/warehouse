@@ -25,13 +25,13 @@
 
 | فاز | لایه / کامپوننت | توضیحات تغییرات |
 | :---: | :--- | :--- |
-| **فاز ۱** | **[`offline-sync.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts)** | ایجاد جریان `liveDataUpdates$` و متد `notifyDataUpdated` جهت مخابره داده‌های جدید سرور |
-| **فاز ۱** | **[`offline.interceptor.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.interceptor.ts)** | بازنویسی متد GET با الگوی SWR، تحویل فوری کش محلی، استعلام پس‌زمینه با تایم‌اوت ۱۰ ثانیه و هندلینگ خاموش خطای شبکه |
-| **فاز ۲** | **[`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)** | اتصال میزکار انبارگردان به رویدادهای پس‌زمینه، ادغام ردیف‌ها و اعمال افکت `.status-updated-flash` |
-| **فاز ۲** | **[`count-tracking.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)** | اتصال کارتابل پیگیری به داده‌های پس‌زمینه و هایلایت انیمیشنی تغییرات |
-| **فاز ۳** | **[`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)** | تازه‌سازی خودکار تب فعال سرپرست هنگام رسیدن داده‌های جدیدتر از سرور |
-| **فاز ۳** | **[`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)** | به‌روزرسانی زنده تب فعال مدیر با حفظ فیلترها، جستجو و ردیف‌های انتخابی |
-| **فاز ۴** | **[`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)** | اتصال کارتابل مالی و مدارک به جریان SWR و بروزرسانی بلادرنگ اقلام |
+| **فاز ۱** | **[`offline-sync.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts)** | ایجاد جریان `liveDataUpdates$` و متد `notifyDataUpdated` جهت مخابره داده‌های جدید سرور |
+| **فاز ۱** | **[`offline.interceptor.ts`](file:///e:/warehouse%20project/frontend/src/app/core/interceptors/offline.interceptor.ts)** | بازنویسی متد GET با الگوی SWR، تحویل فوری کش محلی، استعلام پس‌زمینه با تایم‌اوت ۱۰ ثانیه و هندلینگ خاموش خطای شبکه |
+| **فاز ۲** | **[`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)** | اتصال میزکار انبارگردان به رویدادهای پس‌زمینه، ادغام ردیف‌ها و اعمال افکت `.status-updated-flash` |
+| **فاز ۲** | **[`count-tracking.ts`](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)** | اتصال کارتابل پیگیری به داده‌های پس‌زمینه و هایلایت انیمیشنی تغییرات |
+| **فاز ۳** | **[`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)** | تازه‌سازی خودکار تب فعال سرپرست هنگام رسیدن داده‌های جدیدتر از سرور |
+| **فاز ۳** | **[`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)** | به‌روزرسانی زنده تب فعال مدیر با حفظ فیلترها، جستجو و ردیف‌های انتخابی |
+| **فاز ۴** | **[`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)** | اتصال کارتابل مالی و مدارک به جریان SWR و بروزرسانی بلادرنگ اقلام |
 
 ---
 

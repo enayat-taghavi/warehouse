@@ -9,16 +9,16 @@
 ## ۱. اهداف محقق‌شده و قابلیت‌های کلیدی
 
 ### ۱. سامانه آنلاین و عمومی استعلام اصالت دیجیتال (`/verify-card/:code`)
-- **اندپوینت عمومی سرور:** افزودن اکشن `@action(detail=False, methods=['get'], url_path='verify_card')` در [accounts/views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py) با مجوز `AllowAny` جهت امکان استعلام بدون نیاز به ورود یا لاگین.
+- **اندپوینت عمومی سرور:** افزودن اکشن `@action(detail=False, methods=['get'], url_path='verify_card')` در [accounts/views.py](file:///e:/warehouse%20project/backend/accounts/views.py) با مجوز `AllowAny` جهت امکان استعلام بدون نیاز به ورود یا لاگین.
 - **صفحه واکنش‌گرا و مدرن استعلام اصالت:** طراحی و پیاده‌سازی کامپوننت مستقل `VerifyCard` در فرانت‌اند با استایل گلس‌مورفیک مدرن شامل:
   - نشان سبز اصالت سازمانی (Verified Badge) و مهر امنیتی دیجیتال
   - آواتار باکیفیت پرسنل، نام و نام خانوادگی، سمت سازمانی
   - کد پرسنلی، وضعیت تردد، لیست انبارهای مجاز و تاریخ اعتبار کارت
   - برچسب زمانی زنده تاریخ استعلام و کد پیگیری استعلام
-- **روتینگ بدون گارد:** تعریف مسیرهای عمومی `verify-card/:code` و `verify-card` در [app.routes.ts](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts).
+- **روتینگ بدون گارد:** تعریف مسیرهای عمومی `verify-card/:code` و `verify-card` در [app.routes.ts](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts).
 
 ### ۲. اتصال QR Code به URL اختصاصی استعلام
-- **متد تولید خودکار لینک:** پیاده‌سازی متد `getCardVerificationUrl(user)` در [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) با فرمت:
+- **متد تولید خودکار لینک:** پیاده‌سازی متد `getCardVerificationUrl(user)` در [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) با فرمت:
   `${window.location.origin}/#/verify-card/${personnelCode}`
 - **ارتقای موتور تولید QR:** به‌روزرسانی متد `getQrCodeSvg` و `drawPure2DBarcode` جهت انکود کردن مستقیم این پیوند اختصاصی برای هر پرسنل.
 
@@ -41,21 +41,21 @@
 
 | ردیف | فایل | نوع تغییر | شرح تغییرات |
 | :---: | :--- | :---: | :--- |
-| ۱ | `warehouse-backend/accounts/views.py` | [MODIFY](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py) | افزودن متد `verify_card` با دسترسی `AllowAny` و مسیر نسبی `avatar_url` |
-| ۲ | `warehouse-front/src/app/components/verify-card/verify-card.ts` | [NEW](file:///e:/warehouse%20project/warehouse-front/src/app/components/verify-card/verify-card.ts) | کامپوننت استعلام آنلاین اصالت کارت پرسنلی و متد `getAvatarUrl` |
-| ۳ | `warehouse-front/src/app/components/verify-card/verify-card.html` | [NEW](file:///e:/warehouse%20project/warehouse-front/src/app/components/verify-card/verify-card.html) | تمپلیت واکنش‌گرا و موبایل‌محور با کارت گلس‌مورفیک اصالت |
-| ۴ | `warehouse-front/src/app/components/verify-card/verify-card.css` | [NEW](file:///e:/warehouse%20project/warehouse-front/src/app/components/verify-card/verify-card.css) | استایل‌های افکت شیشه‌ای و انیمیشن‌های پالس |
-| ۵ | `warehouse-front/src/app/app.routes.ts` | [MODIFY](file:///e:/warehouse%20project/warehouse-front/src/app/app.routes.ts) | ثبت مسیر عمومی `verify-card/:code` بدون `AuthGuard` |
-| ۶ | `warehouse-front/src/app/core/auth/auth.guard.ts` | [MODIFY](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts) | افزودن پشتیبانی هدایت خودکار لینک‌های هش‌دار به صفحه استعلام |
-| ۷ | `warehouse-front/src/app/components/id-cards/id-cards.ts` | [MODIFY](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) | تولید لینک استعلام بدون `#`، پشتیبانی از `customDomain` و رندر QR بزرگ در Canvas |
-| ۸ | `warehouse-front/src/app/components/id-cards/id-cards.html` | [MODIFY](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html) | کادر بزرگ QR، تگ استعلام اصالت و فیلد تنظیم دامنه سفارشی |
+| ۱ | `backend/accounts/views.py` | [MODIFY](file:///e:/warehouse%20project/backend/accounts/views.py) | افزودن متد `verify_card` با دسترسی `AllowAny` و مسیر نسبی `avatar_url` |
+| ۲ | `frontend/src/app/components/verify-card/verify-card.ts` | [NEW](file:///e:/warehouse%20project/frontend/src/app/components/verify-card/verify-card.ts) | کامپوننت استعلام آنلاین اصالت کارت پرسنلی و متد `getAvatarUrl` |
+| ۳ | `frontend/src/app/components/verify-card/verify-card.html` | [NEW](file:///e:/warehouse%20project/frontend/src/app/components/verify-card/verify-card.html) | تمپلیت واکنش‌گرا و موبایل‌محور با کارت گلس‌مورفیک اصالت |
+| ۴ | `frontend/src/app/components/verify-card/verify-card.css` | [NEW](file:///e:/warehouse%20project/frontend/src/app/components/verify-card/verify-card.css) | استایل‌های افکت شیشه‌ای و انیمیشن‌های پالس |
+| ۵ | `frontend/src/app/app.routes.ts` | [MODIFY](file:///e:/warehouse%20project/frontend/src/app/app.routes.ts) | ثبت مسیر عمومی `verify-card/:code` بدون `AuthGuard` |
+| ۶ | `frontend/src/app/core/auth/auth.guard.ts` | [MODIFY](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.guard.ts) | افزودن پشتیبانی هدایت خودکار لینک‌های هش‌دار به صفحه استعلام |
+| ۷ | `frontend/src/app/components/id-cards/id-cards.ts` | [MODIFY](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) | تولید لینک استعلام بدون `#`، پشتیبانی از `customDomain` و رندر QR بزرگ در Canvas |
+| ۸ | `frontend/src/app/components/id-cards/id-cards.html` | [MODIFY](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html) | کادر بزرگ QR، تگ استعلام اصالت و فیلد تنظیم دامنه سفارشی |
 
 ---
 
 ## ۳. نتایج راستی‌آزمایی و تست‌ها
 
 1. **تست بیلد فرانت‌اند:**
-   - دستور `npm run build` در پوشه `warehouse-front` با موفقیت کامل و بدون خطا اجرا شد (`Application bundle generation complete`).
+   - دستور `npm run build` در پوشه `frontend` با موفقیت کامل و بدون خطا اجرا شد (`Application bundle generation complete`).
 2. **تست بارگذاری تصویر آواتار:**
    - با فراخوانی مسیر `/verify-card/EMP-1003` بر روی هر دامنه‌ای، تصویر به صورت امن و از طریق پروکسی `/media/` با کیفیت بالا بارگذاری می‌شود.
 3. **تست داینامیک بودن دامنه استقرار:**

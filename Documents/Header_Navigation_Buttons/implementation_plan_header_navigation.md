@@ -32,7 +32,7 @@
 
 ### لایه هسته و سرویس‌ها (Core Services)
 
-#### [NEW] [`navigation-history.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/navigation-history.service.ts)
+#### [NEW] [`navigation-history.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/navigation-history.service.ts)
 - ایجاد سرویس سراسری (`providedIn: 'root'`)
 - مدیریت `historyStack: string[]` و `currentIndex: number`
 - متدهای `back()` و `forward()`
@@ -43,15 +43,15 @@
 
 ### لایه رابط کاربری و چیدمان (Layout Component)
 
-#### [MODIFY] [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts)
+#### [MODIFY] [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts)
 - تزریق سرویس `NavigationHistoryService`
 - اتصال متدها و وضعیت‌ها به قالب هدر
 
-#### [MODIFY] [`layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html)
+#### [MODIFY] [`layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html)
 - تعبیه دکمه کپسولی دوتایی شیک (Segmented Pill) با دو آیکون Chevron در نوار هدر
 - افزودن تولتیپ‌های فارسی راهنما به همراه کلیدهای میانبر
 
-#### [MODIFY] [`layout.css`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.css)
+#### [MODIFY] [`layout.css`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.css)
 - افزودن استایل‌های انیمیشن و ترنزیشن‌های ظریف برای هاور و حالت فعال/غیرفعال
 
 ---

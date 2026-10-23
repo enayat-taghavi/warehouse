@@ -28,9 +28,9 @@
 
 | ردیف | فایل | شرح تغییرات |
 | :---: | :--- | :--- |
-| ۱ | [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html) | بازطراحی هدر و بدنه کارت افقی و عمودی در ۳ بخش (پیش‌نمایش زنده، مودال شیت A4 و شیت چاپ) با کادر اسکن بزرگ QR |
-| ۲ | [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) | به‌روزرسانی متد `drawCardFaceOnCanvas` و `drawPure2DBarcode` در رندر تصویر دیجیتال متناسب با ابعاد و موقعیت جدید |
-| ۳ | [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css) | هماهنگ‌سازی استایل‌های کادر اسکن و پرینت |
+| ۱ | [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html) | بازطراحی هدر و بدنه کارت افقی و عمودی در ۳ بخش (پیش‌نمایش زنده، مودال شیت A4 و شیت چاپ) با کادر اسکن بزرگ QR |
+| ۲ | [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) | به‌روزرسانی متد `drawCardFaceOnCanvas` و `drawPure2DBarcode` در رندر تصویر دیجیتال متناسب با ابعاد و موقعیت جدید |
+| ۳ | [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css) | هماهنگ‌سازی استایل‌های کادر اسکن و پرینت |
 
 ---
 
@@ -38,7 +38,7 @@
 
 ### ۱. تست خودکار بیلد
 ```bash
-cd "E:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

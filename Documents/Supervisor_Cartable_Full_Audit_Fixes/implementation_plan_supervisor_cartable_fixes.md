@@ -3,7 +3,7 @@
 <div dir="rtl" align="right">
 
 ## مقدمه و هدف
-این سند راهنمای گام‌به‌گام و تفصیلی جهت رفع هشت نقص عملکردی شناسایی‌شده در جریان ارزیابی چندعاملی (Multi-Agent Audit) صفحه کارتابل سرپرست ([`SupervisorDashboard`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)) می‌باشد.
+این سند راهنمای گام‌به‌گام و تفصیلی جهت رفع هشت نقص عملکردی شناسایی‌شده در جریان ارزیابی چندعاملی (Multi-Agent Audit) صفحه کارتابل سرپرست ([`SupervisorDashboard`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)) می‌باشد.
 
 ---
 
@@ -11,7 +11,7 @@
 
 | ردیف | عنوان نقص | ریشه بروز مشکل | راه‌حل مهندسی پیاده‌سازی |
 | :--- | :--- | :--- | :--- |
-| **۱** | فراخوانی هاردکدشدهٔ `loadTasks()` در رفرش و سلکتور انبار | در `supervisor-dashboard.html` خطوط ۱۲ و ۲۶ مستقیماً `loadTasks()` فراخوانی شده که فقط تب کارهای من را لود می‌کند. | جایگزینی با متد هوشمند [`refreshCurrentTab()`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts#L294) تا تب فعال کاربر بازخوانی شود. |
+| **۱** | فراخوانی هاردکدشدهٔ `loadTasks()` در رفرش و سلکتور انبار | در `supervisor-dashboard.html` خطوط ۱۲ و ۲۶ مستقیماً `loadTasks()` فراخوانی شده که فقط تب کارهای من را لود می‌کند. | جایگزینی با متد هوشمند [`refreshCurrentTab()`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts#L294) تا تب فعال کاربر بازخوانی شود. |
 | **۲** | نشت تسک‌های بدون سرپرستِ استخر به تب کارهای من در وب‌سوکت | شرط `(!taskData.supervisor && this.currentTab === 'my-tasks')` در خط ۳۴۰ و ۳۹۱ تسک‌های استخر را در تب فعال تزریق می‌کرد. | تفکیک قاطع `isMyTask` و `isPool` و حذف شرط نشت داده. |
 | **۳** | فیلتر ناصحیح و مفقود شدن اسناد مالی ردشده مدیر | خطوط ۳۷۵ و ۷۷۵ در `supervisor-dashboard.ts` فقط وضعیت `DOC_PROCESSED` را دریافت می‌کردند و `DOC_MANAGER_REJECTED` را حذف می‌نمودند. | اضافه کردن وضعیت `DOC_MANAGER_REJECTED` به شروط دریافت داده و فیلتر وب‌سوکت و نمایش بج اختصاصی در تمپلیت. |
 | **۴** | خنثی شدن هوش استعلام زنده SWR پس‌زمینه | در اینترسپتور آفلاین مقدار `req.url` بدون کوئری‌پارامتر پاس داده می‌شد و شرط `as_role=supervisor` هرگز برقرار نمی‌شد. | ارسال `req.urlWithParams` در اینترسپتور و تطابق منعطف آدرس در لیسنر کامپوننت. |

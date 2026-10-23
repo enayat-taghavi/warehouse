@@ -12,8 +12,8 @@
 1. [منشور قوانین و استانداردهای مهندسی پروژه (Core Engineering Rules)](#۱-منشور-قوانین-و-استانداردهای-مهندسی-پروژه)
 2. [معماری کلان سیستم و پشته فناوری (High-Level Architecture & Stack)](#۲-معماری-کلان-سیستم-و-پشته-فناوری)
 3. [اطلس کامل تمامی مسیرها و اندپوینت‌ها (Complete Routes & Endpoints)](#۳-اطلس-کامل-تمامی-مسیرها-و-اندپوینت‌ها)
-4. [کالبدشکافی عمیق لایه بک‌اند (`warehouse-backend`)](#۴-کالبدشکافی-عمیق-لایه-بک‌اند)
-5. [کالبدشکافی عمیق لایه فرانت‌اند (`warehouse-front`)](#۵-کالبدشکافی-عمیق-لایه-فرانت‌اند)
+4. [کالبدشکافی عمیق لایه بک‌اند (`backend`)](#۴-کالبدشکافی-عمیق-لایه-بک‌اند)
+5. [کالبدشکافی عمیق لایه فرانت‌اند (`frontend`)](#۵-کالبدشکافی-عمیق-لایه-فرانت‌اند)
 6. [معماری وب‌سوکت و رویدادهای زنده بلادرنگ (Real-Time WebSocket Engine)](#۶-معماری-وب‌سوکت-و-رویدادهای-زنده-بلادرنگ)
 7. [معماری محلی-محور و همگام‌سازی آفلاین (Local-First & Offline SWR Engine)](#۷-معماری-محلی-محور-و-همگام‌سازی-آفلاین)
 8. [سلسله‌مراتب و منطق انبارگردانی فیزیکی (Physical Counting 4-Tier Logic)](#۸-سلسله‌مراتب-و-منطق-انبارگردانی-فیزیکی)
@@ -116,7 +116,7 @@ graph TD
 
 ---
 
-### ب) ساختار تمامی اندپوینت‌های بک‌اند (`warehouse-backend`)
+### ب) ساختار تمامی اندپوینت‌های بک‌اند (`backend`)
 
 ```
 /admin/                           -> پنل مدیریت اصلی جنگو
@@ -153,7 +153,7 @@ graph TD
 
 ---
 
-## ۴. کالبدشکافی عمیق لایه بک‌اند (`warehouse-backend`)
+## ۴. کالبدشکافی عمیق لایه بک‌اند (`backend`)
 
 ### تفکیک ۶ اپلیکیشن اصلی:
 
@@ -185,7 +185,7 @@ graph TD
 
 ---
 
-## ۵. کالبدشکافی عمیق لایه فرانت‌اند (`warehouse-front`)
+## ۵. کالبدشکافی عمیق لایه فرانت‌اند (`frontend`)
 
 ### الف) ساختار هسته (`src/app/core/`):
 * **`auth/`:** سرویس `AuthService`، گاردهای `AuthGuard` و `RoleGuard`، اینترسپتور `AuthInterceptor` (تزریق توکن Bearer).
@@ -360,30 +360,30 @@ stateDiagram-v2
 
 | ردیف | مسیر فایل در پروژه | لایه | مسئولیت کلیدی و شرح وظیفه عملیاتی |
 | :---: | :--- | :---: | :--- |
-| **۱** | [`inventory/models.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py) | Backend | تعاریف مدل‌های `Item`, `CountTask`, `DocTask`, `ItemFieldDefinition` |
-| **۲** | [`inventory/views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | Backend | منطق تجاری تسک‌ها (`bulk_submit`, `claim_tasks`, `revert_status`, `export`) |
-| **۳** | [`inventory/sync_views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/sync_views.py) | Backend | سرویس دریافت دلتای آفلاین با کرسر Base64 (`SyncPullView`) |
-| **۴** | [`notifications/consumers.py`](file:///e:/warehouse%20project/warehouse-backend/notifications/consumers.py) | Backend | کانسیومر وب‌سوکت، مدیریت Heartbeat پینگ/پونگ و انتشار پیام‌ها |
-| **۵** | [`reports/engine.py`](file:///e:/warehouse%20project/warehouse-backend/reports/engine.py) | Backend | موتور کوئری‌ساز چندجدوله، اجرای گزارشات پویا و اکسپورت داده |
-| **۶** | [`warehouses/label_pdf_generator.py`](file:///e:/warehouse%20project/warehouse-backend/warehouses/label_pdf_generator.py) | Backend | موتور تولید فایل PDF چیدمان لیبل با سازگاری فونت فارسی Bidi |
-| **۷** | [`core/services/offline-sync.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts) | Frontend | مدیریت صف آفلاین، همگام‌سازی خودکار و پایش خطاها |
-| **۸** | [`core/services/offline-db.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-db.ts) | Frontend | شمای پایگاه داده محلی Dexie v4 شامل ۸ جدول کلیدی |
-| **۹** | [`core/interceptors/offline.interceptor.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.interceptor.ts) | Frontend | رهگیری درخواست‌های متغیر و تولید پاسخ شبیه‌سازی‌شده 200 OK |
-| **۱۰** | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/counter/counter-dashboard/counter-dashboard.ts) | Frontend | میزکار شمارشگر، ثبت مقادیر، سورت بازشماری و همگام‌سازی زنده |
-| **۱۱** | [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | Frontend | کارتابل سرپرست شمارش، تایید/رد مقادیر و مدیریت مغایرت‌ها |
-| **۱۲** | [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/manager-review/manager-review.ts) | Frontend | کارتابل مدیر انبارگردانی، تایید نهایی و ارجاع اقلام به بازشماری |
-| **۱۳** | [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/customs/customs.ts) | Frontend | کارتابل مالی، گمرکی، اسناد فاکتور و قیمت‌گذاری کالاها |
+| **۱** | [`inventory/models.py`](file:///e:/warehouse%20project/backend/inventory/models.py) | Backend | تعاریف مدل‌های `Item`, `CountTask`, `DocTask`, `ItemFieldDefinition` |
+| **۲** | [`inventory/views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | Backend | منطق تجاری تسک‌ها (`bulk_submit`, `claim_tasks`, `revert_status`, `export`) |
+| **۳** | [`inventory/sync_views.py`](file:///e:/warehouse%20project/backend/inventory/sync_views.py) | Backend | سرویس دریافت دلتای آفلاین با کرسر Base64 (`SyncPullView`) |
+| **۴** | [`notifications/consumers.py`](file:///e:/warehouse%20project/backend/notifications/consumers.py) | Backend | کانسیومر وب‌سوکت، مدیریت Heartbeat پینگ/پونگ و انتشار پیام‌ها |
+| **۵** | [`reports/engine.py`](file:///e:/warehouse%20project/backend/reports/engine.py) | Backend | موتور کوئری‌ساز چندجدوله، اجرای گزارشات پویا و اکسپورت داده |
+| **۶** | [`warehouses/label_pdf_generator.py`](file:///e:/warehouse%20project/backend/warehouses/label_pdf_generator.py) | Backend | موتور تولید فایل PDF چیدمان لیبل با سازگاری فونت فارسی Bidi |
+| **۷** | [`core/services/offline-sync.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-sync.service.ts) | Frontend | مدیریت صف آفلاین، همگام‌سازی خودکار و پایش خطاها |
+| **۸** | [`core/services/offline-db.ts`](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-db.ts) | Frontend | شمای پایگاه داده محلی Dexie v4 شامل ۸ جدول کلیدی |
+| **۹** | [`core/interceptors/offline.interceptor.ts`](file:///e:/warehouse%20project/frontend/src/app/core/interceptors/offline.interceptor.ts) | Frontend | رهگیری درخواست‌های متغیر و تولید پاسخ شبیه‌سازی‌شده 200 OK |
+| **۱۰** | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/modules/warehouse/components/counter/counter-dashboard/counter-dashboard.ts) | Frontend | میزکار شمارشگر، ثبت مقادیر، سورت بازشماری و همگام‌سازی زنده |
+| **۱۱** | [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/modules/warehouse/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | Frontend | کارتابل سرپرست شمارش، تایید/رد مقادیر و مدیریت مغایرت‌ها |
+| **۱۲** | [`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/modules/warehouse/components/manager-review/manager-review.ts) | Frontend | کارتابل مدیر انبارگردانی، تایید نهایی و ارجاع اقلام به بازشماری |
+| **۱۳** | [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/modules/warehouse/components/customs/customs.ts) | Frontend | کارتابل مالی، گمرکی، اسناد فاکتور و قیمت‌گذاری کالاها |
 
 ---
 
 ## ۱۲. ساختار ماژولار نهایی، دامنه‌ها و الگوی فکاد (Deep Modular Architecture)
 
-### الف) ساختار دامنه‌های تفکیک‌شده در بک‌اند (`warehouse-backend`):
+### الف) ساختار دامنه‌های تفکیک‌شده در بک‌اند (`backend`):
 * **دامنه‌های مدل (`models_domains/`):** تفکیک مدل‌های غول‌پیکر به ماژول‌های متمرکز دامنه (`base`, `organization`, `hr`, `fleet`, `attendance`, `payroll`, `treasury_audit`) همراه با فایل‌های هماهنگ‌کننده Barrel صریح نام‌به‌نام در `models.py`.
 * **دامنه‌های سریالایزر (`serializers_domains/`):** تفکیک اعتبارسنجی‌ها و تبدیلات به ماژول‌های تخصصی با حفظ Barrel صریح در `serializers.py`.
 * **دامنه‌های نما (`views_domains/`):** تفکیک کنترلرها و ViewSetها در اپ‌های `personnel`، `inventory` و `accounts` به دامنه‌های مستقل با حفظ Barrel برای مسیریابی یکپارچه در `views.py`.
 
-### ب) ماژولارسازی سرویس‌ها در فرانت‌اند (`warehouse-front`):
+### ب) ماژولارسازی سرویس‌ها در فرانت‌اند (`frontend`):
 * **سرویس‌های اختصاصی انبار:** انتقال سرویس‌های API انبار به `modules/warehouse/api/` و سرویس‌ها و استورهای وظایف به `modules/warehouse/services/`.
 * **سرویس‌های اختصاصی حسابداری:** تفکیک سرویس‌های پرسنل، ناوگان، کارکرد و خزانه‌داری به `modules/accounting/api/`.
 * **هسته آفلاین خالص (`core/services/offline/`):** شکستن سرویس همگام‌سازی آفلاین به زیرماژول‌های تفکیک‌شده و خالص‌سازی هسته از مسیرهای ماژول.

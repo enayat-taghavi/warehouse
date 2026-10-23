@@ -29,7 +29,7 @@ except Exception:
     pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
+APP_DIR = REPO_ROOT / "frontend" / "src" / "app"
 BASELINE_FILE = REPO_ROOT / "scripts" / "e2e" / "clickable_ergonomics_baseline.json"
 
 # ۵۳ گونه کنارگذاشته آیکون (بخش‌های ۳-۱ و ۳-۲ طرح)

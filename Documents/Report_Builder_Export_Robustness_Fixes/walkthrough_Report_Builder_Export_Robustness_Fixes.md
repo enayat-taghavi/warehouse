@@ -10,9 +10,9 @@
 
 | فایل | تغییرات اعمال‌شده | وضعیت اعتبارسنجی |
 | :--- | :--- | :---: |
-| [`reports/views.py`](file:///e:/warehouse%20project/warehouse-backend/reports/views.py) | یکپارچه‌سازی مجوز `ExportReportView` به `ReportsMenuAccess` (`view_sys_reports`) و حذف وابستگی به مجوز غیرمرتبط `view_sys_export` | ✅ تایید شد |
-| [`reports/engine.py`](file:///e:/warehouse%20project/warehouse-backend/reports/engine.py) | اصلاح مرتب‌سازی `order_by` در کوئری‌های `DISTINCT` و استفاده هماهنگ از `id` جهت سازگاری ۱۰۰٪ با PostgreSQL | ✅ تایید شد |
-| [`reports/tests.py`](file:///e:/warehouse%20project/warehouse-backend/reports/tests.py) | به‌روزرسانی و افزودن تست‌های اعتبارسنجی سطح دسترسی خروجی گزارش‌ساز | ✅ تایید شد |
+| [`reports/views.py`](file:///e:/warehouse%20project/backend/reports/views.py) | یکپارچه‌سازی مجوز `ExportReportView` به `ReportsMenuAccess` (`view_sys_reports`) و حذف وابستگی به مجوز غیرمرتبط `view_sys_export` | ✅ تایید شد |
+| [`reports/engine.py`](file:///e:/warehouse%20project/backend/reports/engine.py) | اصلاح مرتب‌سازی `order_by` در کوئری‌های `DISTINCT` و استفاده هماهنگ از `id` جهت سازگاری ۱۰۰٪ با PostgreSQL | ✅ تایید شد |
+| [`reports/tests.py`](file:///e:/warehouse%20project/backend/reports/tests.py) | به‌روزرسانی و افزودن تست‌های اعتبارسنجی سطح دسترسی خروجی گزارش‌ساز | ✅ تایید شد |
 
 ---
 
@@ -20,8 +20,8 @@
 
 | فایل | تغییرات اعمال‌شده | وضعیت اعتبارسنجی |
 | :--- | :--- | :---: |
-| [`report-api.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/report-api.service.ts) | افزودن پرچم `SKIP_GLOBAL_ERROR_TOAST` به درخواست `export` جهت جلوگیری از تداخل اینترسپتور سراسری با پاسخ‌های باینری | ✅ تایید شد |
-| [`reports.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts) | استخراج و یکپارچه‌سازی تابع `validateReportSpec()` و اعتبارسنجی کامل شروط، بازه‌ها و نام‌های مستعار پیش از صدور خروجی | ✅ تایید شد |
+| [`report-api.service.ts`](file:///e:/warehouse%20project/frontend/src/app/core/api/report-api.service.ts) | افزودن پرچم `SKIP_GLOBAL_ERROR_TOAST` به درخواست `export` جهت جلوگیری از تداخل اینترسپتور سراسری با پاسخ‌های باینری | ✅ تایید شد |
+| [`reports.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts) | استخراج و یکپارچه‌سازی تابع `validateReportSpec()` و اعتبارسنجی کامل شروط، بازه‌ها و نام‌های مستعار پیش از صدور خروجی | ✅ تایید شد |
 
 ---
 

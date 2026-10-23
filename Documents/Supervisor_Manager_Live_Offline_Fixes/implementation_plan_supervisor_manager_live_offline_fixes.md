@@ -34,26 +34,26 @@ graph TD
 
 ### بک‌اند (Django Backend)
 
-#### [MODIFY] [signals.py](file:///e:/warehouse%20project/warehouse-backend/inventory/signals.py)
+#### [MODIFY] [signals.py](file:///e:/warehouse%20project/backend/inventory/signals.py)
 * ارتقای `broadcast_count_task_update` و `broadcast_doc_task_update` جهت دریافت پارامتر `task_data` یا `instance`.
 * سریال‌سازی فیلدهای اساسی تسک (`id`, `status`, `counted_balance`, `counter`, `supervisor`, `manager`, `warehouse_id`, `updated_at`, ...) و قرار دادن آن در فیلد `task` پیام وب‌سوکت.
 
 ### فرانت‌اند (Warehouse Frontend)
 
-#### [MODIFY] [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+#### [MODIFY] [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
 * ارتقای شنونده وب‌سوکت با الگوی ترکیبی هوشمند (به‌روزرسانی درجا با داده دریافتی یا فال‌بک `getById` تکی).
 * حذف هوشمندانه تسک از تب فعلی در صورت تغییر وضعیت (مثلاً رفتن به کارتابل مدیر) یا افزودن به تب در صورت ارجاع به سرپرست.
 * **حفظ اکید رکوردهای انتخاب‌شده (`selectedTasks`)** در تمام به‌روزرسانی‌های پس‌زمینه.
 * اعمال فیلتر دقیق روی سابسکرایبر SWR (`as_role=supervisor`).
 * به‌روزرسانی خوش‌بینانه عملیات تایید/رد گروهی (`bulkApprove`, `bulkReject`) با پشتیبانی صف آفلاین.
 
-#### [MODIFY] [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+#### [MODIFY] [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
 * ارتقای شنونده وب‌سوکت با به‌روزرسانی موضعی تسک و فال‌بک `getById`.
 * **حفظ اکید رکوردهای انتخاب‌شده (`selectedTasks`)** و وضعیت فیلترها.
 * پالایش استریم SWR با قید دقیق `as_role=manager`.
 * به‌روزرسانی خوش‌بینانه تایید نهایی و بازشماری (`bulkManagerApprove`, `confirmSingleReject`) در حالت آفلاین.
 
-#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
 * هماهنگ‌سازی تکمیلی با دریافت payload غنی‌شده وب‌سوکت و فال‌بک `getById` تکی برای تسک‌های منفرد.
 
 ---
@@ -63,11 +63,11 @@ graph TD
 ### آزمون‌های خودکار و کامپایل
 ```powershell
 # ۱. اعتبارسنجی بیلد فرانت‌اند
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 
 # ۲. تست سیگنال‌های وب‌سوکت بک‌اند در محیط مجازی
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 .\venv\Scripts\python.exe -c "import django; django.setup(); from inventory.signals import broadcast_count_task_update; broadcast_count_task_update(1, 1); print('OK')"
 ```
 

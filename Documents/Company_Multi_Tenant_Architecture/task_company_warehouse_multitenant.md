@@ -6,26 +6,26 @@
 ---
 
 ### 🔹 فاز ۱: بک‌اند، مدل‌های داده و مایگریشن امن (Backend & Safe Migrations)
-- [x] <!-- id: W1.1 --> افزودن فیلدهای عددی ایندکس‌شده `company_id` و `company_name` به مدل `Warehouse` در [warehouses/models.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/models.py) <!-- priority: High -->
-- [x] <!-- id: W1.2 --> افزودن فیلد بولین `has_warehouse_module = models.BooleanField(default=True)` به مدل `Company` در [personnel/models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py) <!-- priority: High -->
+- [x] <!-- id: W1.1 --> افزودن فیلدهای عددی ایندکس‌شده `company_id` و `company_name` به مدل `Warehouse` در [warehouses/models.py](file:///e:/warehouse%20project/backend/warehouses/models.py) <!-- priority: High -->
+- [x] <!-- id: W1.2 --> افزودن فیلد بولین `has_warehouse_module = models.BooleanField(default=True)` به مدل `Company` در [personnel/models.py](file:///e:/warehouse%20project/backend/personnel/models.py) <!-- priority: High -->
 - [x] <!-- id: W1.3 --> تولید و اعمال مایگریشن‌های اسکیما برای اپ‌های `warehouses` و `personnel` (`makemigrations` و `migrate`) <!-- priority: High -->
 - [x] <!-- id: W1.4 --> تولید و اجرای مایگریشن داده خودکار (`RunPython`) جهت اتصال تمامی ۹ انبار موجود در سیستم به شرکت «فارس عالیش» (`company_id = 2`) <!-- priority: Critical -->
-- [x] <!-- id: W1.5 --> به‌روزرسانی کوئری‌ست `WarehouseViewSet.get_queryset` بر پایه هدر `HTTP_X_COMPANY_ID` و انتساب خودکار شرکت فعال در `perform_create` در [warehouses/views.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/views.py) <!-- priority: High -->
-- [x] <!-- id: W1.6 --> به‌روزرسانی `CompanySerializer` و `WarehouseSerializer` جهت انعکاس فیلدهای جدید در [personnel/serializers.py](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py) و [warehouses/serializers.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/serializers.py) <!-- priority: High -->
+- [x] <!-- id: W1.5 --> به‌روزرسانی کوئری‌ست `WarehouseViewSet.get_queryset` بر پایه هدر `HTTP_X_COMPANY_ID` و انتساب خودکار شرکت فعال در `perform_create` در [warehouses/views.py](file:///e:/warehouse%20project/backend/warehouses/views.py) <!-- priority: High -->
+- [x] <!-- id: W1.6 --> به‌روزرسانی `CompanySerializer` و `WarehouseSerializer` جهت انعکاس فیلدهای جدید در [personnel/serializers.py](file:///e:/warehouse%20project/backend/personnel/serializers.py) و [warehouses/serializers.py](file:///e:/warehouse%20project/backend/warehouses/serializers.py) <!-- priority: High -->
 
 ---
 
 ### 🔹 فاز ۲: انتقال پورتال مدیریت شرکت‌ها به مرکز عملیات (Operations Portal Refactoring)
 - [x] <!-- id: W2.1 --> انتقال فیزیکی کامپوننت از `src/app/components/finance/companies/` به `src/app/components/operations/companies/` <!-- priority: High -->
 - [x] <!-- id: W2.2 --> به‌روزرسانی مسیرهای روتینگ در `app.routes.ts` (ثبت `/app/operations/companies` و ایجاد ریدایرکت از مسیر قدیمی مالی) <!-- priority: High -->
-- [x] <!-- id: W2.3 --> افزودن آیتم «مدیریت شرکت‌ها و هلدینگ» به منوی سایدبار مرکز عملیات در [layout.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) و [layout.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts) <!-- priority: High -->
+- [x] <!-- id: W2.3 --> افزودن آیتم «مدیریت شرکت‌ها و هلدینگ» به منوی سایدبار مرکز عملیات در [layout.html](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) و [layout.ts](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts) <!-- priority: High -->
 - [x] <!-- id: W2.4 --> افزودن چک‌باکس ارگونومیک «فعال بودن سامانه انبارداری برای این شرکت» به فرم مودال ثبت/ویرایش شرکت <!-- priority: High -->
 
 ---
 
 ### 🔹 فاز ۳: ماژولار بودن انبارداری و پویایی منوی بالای صفحه (Modular App Switcher & Guards)
-- [x] <!-- id: W3.1 --> پیاده‌سازی متد `hasWarehouseModule()` و سیگنال واکنشی در [active-company.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/active-company.service.ts) <!-- priority: High -->
-- [x] <!-- id: W3.2 --> پنهان‌سازی مشروط تب «📦 انبارگردانی» در سوئیچر سامانه‌ها بر مبنای وضعیت شرکت فعال در [app-role-switcher.component.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/app-role-switcher/app-role-switcher.component.html) <!-- priority: High -->
+- [x] <!-- id: W3.1 --> پیاده‌سازی متد `hasWarehouseModule()` و سیگنال واکنشی در [active-company.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/active-company.service.ts) <!-- priority: High -->
+- [x] <!-- id: W3.2 --> پنهان‌سازی مشروط تب «📦 انبارگردانی» در سوئیچر سامانه‌ها بر مبنای وضعیت شرکت فعال در [app-role-switcher.component.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/app-role-switcher/app-role-switcher.component.html) <!-- priority: High -->
 - [x] <!-- id: W3.3 --> پیاده‌سازی گارد امنیتی روتینگ `WarehouseModuleGuard` جهت ممانعت از ورود مستقیم با URL به شرکت‌های بدون انبار <!-- priority: High -->
 - [x] <!-- id: W3.4 --> اتصال سلکتور انتخاب انبار در بالای صفحه انبارداری جهت لود منحصربه‌فرد انبارهای شرکت فعال <!-- priority: Medium -->
 

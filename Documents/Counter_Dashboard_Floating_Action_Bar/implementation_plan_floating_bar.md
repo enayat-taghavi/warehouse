@@ -25,14 +25,14 @@
 
 ## ۲. فایل‌های تحت تغییر (Proposed File Changes)
 
-### فرانت‌اند (`warehouse-front`)
+### فرانت‌اند (`frontend`)
 
-#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 - حذف بلاک استاتیک و قدیمی دکمه‌های انتهای لیست.
 - افزودن کامپوننت نوار شناور چسبان (`Floating Action Bar`) با شرط `selectedTasks.size > 0` یا `selectedPoolTasks.size > 0`.
 - تنظیم پدینگ پایین صفحه (`pb-24`) تا نوار شناور روی آخرین کارت‌های لیست نیفتد.
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - افزودن متد `clearAllSelections()` جهت پاک‌سازی سریع چک‌باکس‌های انتخابی.
 - ارتقای متد `handleKeyDown` برای پشتیبانی از کلید میانبر `Ctrl+Enter` جهت اجرای متد `submitSelected()`.
 

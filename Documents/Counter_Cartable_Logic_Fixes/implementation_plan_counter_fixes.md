@@ -8,9 +8,9 @@
 
 ## 🏗️ جزئیات تغییرات و شماره خطوط کد
 
-### ۱. لایه بک‌اند (`warehouse-backend`)
+### ۱. لایه بک‌اند (`backend`)
 
-#### 🟡 [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### 🟡 [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 
 1. **امن‌سازی، اتمیک کردن و قفل همزمانی در متد ارسال گروهی (`bulk_submit`):**
    - **محل تغییر:** متد `bulk_submit` در خطوط **۱۷۴۸ تا ۱۸۱۸**
@@ -62,9 +62,9 @@
 
 ---
 
-### ۲. لایه فرانت‌اند (`warehouse-front`)
+### ۲. لایه فرانت‌اند (`frontend`)
 
-#### 🟡 [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### 🟡 [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 
 1. **اصلاح پایدار بازیابی آخرین وضعیت رد شده در `saveDraft` و `revertTaskStatus`:**
    - **محل تغییر در `saveDraft`:** خطوط **۱۱۸۰ تا ۱۱۹۸**
@@ -117,7 +117,7 @@
 
 ---
 
-#### 🟡 [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html)
+#### 🟡 [MODIFY] [counter-dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html)
 
 1. **بررسی مجوز دسترسی فیلد موجودی سیستمی (`bal4miv` / `inventory`):**
    - **محل تغییر:** خطوط **۶۵۴ تا ۶۵۹**
@@ -141,18 +141,18 @@
 
 | ردیف | لایه | نام فایل | شماره خطوط | شرح نقص منطقی و ریسک | راهکار قطعی و اصلاح‌شده |
 | :---: | :---: | :--- | :---: | :--- | :--- |
-| **۱** | بک‌اند | [`views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | **۱۷۴۸ - ۱۸۱۸** | ارسال بازشماری‌های دست‌نخورده و عدم وجود تراکنش اتمیک و قفل | اعمال `status='INITIAL_COUNT'`، `select_for_update` و `transaction.atomic()` |
-| **۲** | بک‌اند | [`views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | **۱۶۶۶ - ۱۷۰۴** | خطای همزمانی دو انبارگردان در استخر کالاها | استفاده از `select_for_update()` و تراکنش اتمیک سراسری در `claim_tasks` |
-| **۳** | بک‌اند | [`views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | **۱۶۰۹ - ۱۶۴۳ & ۲۱۵۴** | بی‌اثر بودن فیلترهای ارسالی اکسل در کوئری سرور | افزودن فیلترهای `status` (تفکیک‌شده بر اساس نقش)، `date` و `q` در کوئری سرور |
-| **۴** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۱۸۱ & ۱۲۶۶** | ناهمگونی ترتیب تاریخچه و خطای بازگشت وضعیت | مرتب‌سازی صریح نزولی تاریخچه بر اساس `created_at` / `id` پیش از جستجو |
-| **۵** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۳۱۶ - ۳۳۷** | وارونه شدن اولویت بازشماری در سورت نزولی | تثبیت دائمی اقلام بازشماری در صدر لیست و سورت ثانویه مسیر |
-| **۶** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۶۷۲ - ۱۶۹۵** | نادیده گرفتن فیلترهای فعال در خروجی اکسل | ارسال پارامترهای `status`، `date` و `q` به بک‌اند در درخواست اکسل |
-| **۷** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۰۰۹ - ۱۰۲۲** | باز شدن ناگهانی فرم جزئیات حین انتخاب چندگانه | ممانعت از باز شدن مودال و نمایش پیام راهنما |
-| **۸** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۸۷ - ۱۹۸** | پاک شدن پیش‌نویس‌های آفلاین رم با SWR | ادغام ایمن داده‌های سرور با حفظ رکوردهای `_offlinePending` |
-| **۹** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۵۵۲ & ۱۵۹۳** | انتخاب و ارسال ناخواسته اقلام بازشماری دست‌نخورده در فرانت | اصلاح شرط به `status === 'INITIAL_COUNT' \|\| (PENDING_COUNT && count!=null)` |
-| **۱۰** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۲۸۲-۳۰۰ & ۴۹۸** | خالی ماندن تب استخر و نبود فیلتر جستجو | تولید `filteredPoolTasks` و فراخوانی `applyFilters` در `loadPoolTasks` |
-| **۱۱** | فرانت‌اند | [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | **۵۳۹ - ۵۶۴** | انتخاب ناخواسته اقلام مخفی و عدم نمایش پیام جستجو | اتصال انتخاب همه و حلقه `*ngFor` به `filteredPoolTasks` و افزودن پیام نتیجه خالی |
-| **۱۲** | فرانت‌اند | [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | **۶۵۴ - ۶۵۹** | نمایش موجودی سیستمی با وجود مخفی بودن در تنظیمات | اتصال کادر زرد به بررسی مجوز فیلد در `isFieldVisible` |
+| **۱** | بک‌اند | [`views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | **۱۷۴۸ - ۱۸۱۸** | ارسال بازشماری‌های دست‌نخورده و عدم وجود تراکنش اتمیک و قفل | اعمال `status='INITIAL_COUNT'`، `select_for_update` و `transaction.atomic()` |
+| **۲** | بک‌اند | [`views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | **۱۶۶۶ - ۱۷۰۴** | خطای همزمانی دو انبارگردان در استخر کالاها | استفاده از `select_for_update()` و تراکنش اتمیک سراسری در `claim_tasks` |
+| **۳** | بک‌اند | [`views.py`](file:///e:/warehouse%20project/backend/inventory/views.py) | **۱۶۰۹ - ۱۶۴۳ & ۲۱۵۴** | بی‌اثر بودن فیلترهای ارسالی اکسل در کوئری سرور | افزودن فیلترهای `status` (تفکیک‌شده بر اساس نقش)، `date` و `q` در کوئری سرور |
+| **۴** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۱۸۱ & ۱۲۶۶** | ناهمگونی ترتیب تاریخچه و خطای بازگشت وضعیت | مرتب‌سازی صریح نزولی تاریخچه بر اساس `created_at` / `id` پیش از جستجو |
+| **۵** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۳۱۶ - ۳۳۷** | وارونه شدن اولویت بازشماری در سورت نزولی | تثبیت دائمی اقلام بازشماری در صدر لیست و سورت ثانویه مسیر |
+| **۶** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۶۷۲ - ۱۶۹۵** | نادیده گرفتن فیلترهای فعال در خروجی اکسل | ارسال پارامترهای `status`، `date` و `q` به بک‌اند در درخواست اکسل |
+| **۷** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۰۰۹ - ۱۰۲۲** | باز شدن ناگهانی فرم جزئیات حین انتخاب چندگانه | ممانعت از باز شدن مودال و نمایش پیام راهنما |
+| **۸** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۸۷ - ۱۹۸** | پاک شدن پیش‌نویس‌های آفلاین رم با SWR | ادغام ایمن داده‌های سرور با حفظ رکوردهای `_offlinePending` |
+| **۹** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۱۵۵۲ & ۱۵۹۳** | انتخاب و ارسال ناخواسته اقلام بازشماری دست‌نخورده در فرانت | اصلاح شرط به `status === 'INITIAL_COUNT' \|\| (PENDING_COUNT && count!=null)` |
+| **۱۰** | فرانت‌اند | [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | **۲۸۲-۳۰۰ & ۴۹۸** | خالی ماندن تب استخر و نبود فیلتر جستجو | تولید `filteredPoolTasks` و فراخوانی `applyFilters` در `loadPoolTasks` |
+| **۱۱** | فرانت‌اند | [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | **۵۳۹ - ۵۶۴** | انتخاب ناخواسته اقلام مخفی و عدم نمایش پیام جستجو | اتصال انتخاب همه و حلقه `*ngFor` به `filteredPoolTasks` و افزودن پیام نتیجه خالی |
+| **۱۲** | فرانت‌اند | [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | **۶۵۴ - ۶۵۹** | نمایش موجودی سیستمی با وجود مخفی بودن در تنظیمات | اتصال کادر زرد به بررسی مجوز فیلد در `isFieldVisible` |
 
 ---
 

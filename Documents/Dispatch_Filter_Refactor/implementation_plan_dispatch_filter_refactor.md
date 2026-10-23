@@ -21,7 +21,7 @@
 
 ### Frontend Component: Dispatch (تخصیص کالا)
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - حذف بخش چک‌باکس‌های قدیمی از سربرگ جدول.
 - اضافه کردن دکمه **"فیلتر سریع"** با آیکون قیف (Funnel) در کنار دکمه‌های دیگر.
 - پیاده‌سازی مودال جدید (`isQuickFilterModalOpen`) با ظاهری مدرن (شبیه به سایر مودال‌های سیستم).
@@ -30,7 +30,7 @@
   - **در حال شمارش**
   - **شمرده شده**
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - اضافه کردن متغیر `isQuickFilterModalOpen` برای کنترل نمایش مودال.
 - تغییر منطق `showCountedItems` و `showCountingItems` به متغیرهای جدیدتر و منعطف‌تر (یک آرایه از وضعیت‌های انتخاب شده).
 - افزودن توابع `toggleQuickFilter()`، `applyQuickFilters()` و منطق به‌روزرسانی `loadItems()` بر اساس برچسب‌های انتخاب شده.

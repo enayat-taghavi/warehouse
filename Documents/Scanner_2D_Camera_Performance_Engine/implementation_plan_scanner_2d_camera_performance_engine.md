@@ -29,7 +29,7 @@
 
 ### 📦 کامپوننت مشترک اسکنر بارکد
 
-#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
+#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
 - **اصلاح قیود دوربین (`VIDEO_CONSTRAINTS`):** تنظیم `{ ideal: 1920, min: 640 }` و `{ ideal: 1080, min: 480 }` با مکانیزم فال‌بک خودکار در صورت محدودیت سخت‌افزاری.
 - **فعال‌سازی جامع کدهای دوبعدی:** پشتیبانی از `formats: ['qr_code', 'data_matrix', 'aztec', 'pdf417', 'code_128', 'ean_13', ...]` در هر دو موتور Native و ZXing.
 - **افزودن قابلیت‌های سخت‌افزاری دوربین:**
@@ -44,7 +44,7 @@
 ## ۴. برنامه راستی‌آزمایی (Verification Plan)
 
 ### تست‌های خودکار
-- اجرای دستور `npm run build` در پوشه `warehouse-front` و تایید Exit Code: 0 بدون هیچ‌گونه خطای تایپ‌اسکریپت یا تمپلیت.
+- اجرای دستور `npm run build` در پوشه `frontend` و تایید Exit Code: 0 بدون هیچ‌گونه خطای تایپ‌اسکریپت یا تمپلیت.
 
 ### تست‌های دستی
 - باز کردن کارتابل انبارگردان یا مالی در مرورگر گوشی یا دسکتاپ.

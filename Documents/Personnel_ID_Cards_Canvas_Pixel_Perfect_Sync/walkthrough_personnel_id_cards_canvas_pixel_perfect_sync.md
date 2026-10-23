@@ -21,7 +21,7 @@
 
 ## ۲. پرونده‌های اصلاح‌شده (Modified Files)
 
-### ۱. [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts)
+### ۱. [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts)
 - بازنویسی متدهای `exportDigitalCard`، `drawCardFaceOnCanvas`، `drawPure2DBarcode` جهت تولید خروجی تصویر کاملاً همگام با پیش‌نمایش زنده.
 - ارتقای پشت کارت شامل بافت امنیتی مورب، اطلاعات کاربر با فونت و فواصل یکدست و کادر خط‌چین مهر رسمی حراست.
 
@@ -33,7 +33,7 @@
 > ng build && node tools/patch-ngsw-530.js
 √ Building...
 Application bundle generation complete.
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر.
 ```
 

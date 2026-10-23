@@ -72,9 +72,9 @@ graph TD
 #### فاز ۱: معماری پایه، مدل‌های داده و احراز هویت OAuth 2.0 شرکت‌ها
 * **هدف:** نصب پیش‌نیازهای ارتباط با گوگل، افزودن مدل‌های تنظیمات و صف، پیاده‌سازی لاگین گوگل جهت دریافت `refresh_token` برای هر شرکت.
 * **فایل‌های تحت تغییر و ایجاد:**
-  1. `warehouse-backend/requirements.txt`:
+  1. `backend/requirements.txt`:
      * افزودن: `google-api-python-client>=2.100.0`, `google-auth>=2.23.0`, `google-auth-oauthlib>=1.1.0`, `httplib2>=0.22.0`, `pysocks>=1.7.1`.
-  2. `warehouse-backend/config/settings.py` و `.env`:
+  2. `backend/config/settings.py` و `.env`:
      * تعریف تنظیمات سراسری:
        ```python
        GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
@@ -82,7 +82,7 @@ graph TD
        GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', 'https://app.farsalish.ir/api/accounts/gdrive/callback/')
        OUTBOUND_HTTP_PROXY = os.getenv('OUTBOUND_HTTP_PROXY', '')  # e.g., 'http://127.0.0.1:10809'
        ```
-  3. `warehouse-backend/personnel/models.py`:
+  3. `backend/personnel/models.py`:
      * ایجاد مدل `CompanyGoogleDriveConfig`:
        ```python
        class CompanyGoogleDriveConfig(models.Model):
@@ -131,7 +131,7 @@ graph TD
            completed_at = models.DateTimeField(null=True, blank=True)
        ```
   4. ایجاد مهاجرت رو به جلو Django طبق پروتکل `safe-migration`.
-  5. `warehouse-backend/personnel/google_drive_views.py`:
+  5. `backend/personnel/google_drive_views.py`:
      * پیاده‌سازی اندپوینت‌های:
        - `GET /api/personnel/companies/{id}/gdrive/auth-url/`: ایجاد لینک استاندارد OAuth2 با پارامتر State امن شامل شناسه شرکت.
        - `GET /api/accounts/gdrive/callback/`: دریافت کد احراز هویت از گوگل، تبادل آن با Refresh Token و ذخیره در کانفیگ شرکت.
@@ -143,13 +143,13 @@ graph TD
 #### فاز ۲: موتور ناهمگام همگام‌سازی، پروکسی شبکه و ساختار سلسله‌مراتبی پوشه‌ها
 * **هدف:** ساخت کلاینت هوشمند گوگل‌درایو، مسیریابی و ایجاد خودکار پوشه‌ها با کش، حل مشکل پروکسی سرور، و فرمول‌بندی نام فایل‌ها.
 * **فایل‌های تحت ایجاد:**
-  1. `warehouse-backend/personnel/google_drive_service.py`:
+  1. `backend/personnel/google_drive_service.py`:
      * ساخت کلاینت اختصاصی گوگل درایو بر اساس `refresh_token` شرکت.
      * اتصال خودکار از طریق `OUTBOUND_HTTP_PROXY` در صورت تعریف شدن (با استفاده از `httplib2.ProxyInfo` یا تنظیم ترنسپورت مجاز).
      * متد `get_or_create_folder_hierarchy(drive_service, parent_id, path_segments)`: ساخت یا دریافت پوشه‌ها و کش کردن شناسه‌ها جهت حداقل‌سازی فراخوانی‌های API.
      * متد `upload_file(file_path, parent_folder_id, filename)` با قابلیت Resumable Upload برای فایل‌های با حجم بالا و محاسبه MD5.
      * متد `archive_file(file_id, archive_folder_id)` جهت انتقال فایل‌های حذفی به پوشه بایگانی.
-  2. `warehouse-backend/personnel/google_drive_path_resolver.py`:
+  2. `backend/personnel/google_drive_path_resolver.py`:
      * نگاشت مدل به مسیر و نام فایل:
        - ورودی: شیء مدل (مثلاً `Invoice`, `PersonnelProfile`, `VehicleDocument`, `ItemPhoto`, `BackupFile`)
        - خروجی: `(company, folder_segments, meaningful_filename)`
@@ -160,12 +160,12 @@ graph TD
 #### فاز ۳: اتصال رویدادها، سیگنال‌ها و صف پس‌زمینه (Background Worker)
 * **هدف:** اتصال ذخیره و حذف فایل‌های سامانه به صف بدون هیچ‌گونه کندی در فرآیند اصلی و اجرای مداوم ورکر.
 * **فایل‌های تحت تغییر:**
-  1. `warehouse-backend/personnel/signals_gdrive.py`:
+  1. `backend/personnel/signals_gdrive.py`:
      * تعریف گیرنده‌های سیگنال `post_save` و `post_delete` برای فیلدهای فایل در مدل‌های مرتبط.
      * استفاده از `transaction.on_commit(...)` برای اطمینان از اینکه ثبت تسک فقط پس از Commit موفق تراکنش اصلی در دیتابیس صورت می‌گیرد.
-  2. `warehouse-backend/accounts/backup_service.py`:
+  2. `backend/accounts/backup_service.py`:
      * افزودن هوک پس از ایجاد موفق پشتیبان دیتابیس (`create_database_backup`) جهت افزودن فایل `.dump` به صف همگام‌سازی گوگل‌درایو کلیه شرکت‌های فعال یا شرکت مرتبط.
-  3. `warehouse-backend/personnel/management/commands/run_gdrive_sync_worker.py`:
+  3. `backend/personnel/management/commands/run_gdrive_sync_worker.py`:
      * ورکر سبک و خودکار برای پایش جدول `GoogleDriveSyncQueue` با فواصل مشخص یا سیگنال بیدارباش.
      * مدیریت صف با مکانیزم `select_for_update(skip_locked=True)` جهت جلوگیری از مسدودسازی و رقابت چند پردازه.
      * تلاش مجدد هوشمند (Exponential Backoff) برای مواقعی که اینترنت قطع شده یا سهمیه گوگل موقتاً پر شده است.
@@ -175,7 +175,7 @@ graph TD
 #### فاز ۴: رابط کاربری فرانت‌اند و مرکز کنترل وضعیت گوگل‌درایو شرکت‌ها
 * **هدف:** ارائه تجربه کاربری ارگونومیک، زیبا و شفاف در تنظیمات شرکت مطابق با استانداردهای طراحی پروژه.
 * **فایل‌های تحت تغییر:**
-  1. `warehouse-front/src/app/components/organization/projects-and-sections/` (یا تب جدید در تنظیمات شرکت):
+  1. `frontend/src/app/components/organization/projects-and-sections/` (یا تب جدید در تنظیمات شرکت):
      * افزودن کامپوننت یا زیرتب **«سرویس ابری گوگل‌درایو (Google Drive Sync)»**.
      * کارت وضعیت اتصال شامل:
        - وضعیت فعلی: متصل (سبز) / قطع (خاکستری) / خطا در اتصال (قرمز).
@@ -212,7 +212,7 @@ graph TD
   2. **همگام‌سازی زمان‌بندی‌شده در ساعات خلوتی (Scheduled Off-Peak Hours):** در طول ساعات کاری، کلیه فایل‌ها بدون کوچک‌ترین وقفه در دیسک محلی سرور ذخیره شده و فقط تسک متناظر در جدول صف با وضعیت `pending` ثبت می‌شود. هیچ داده‌ای به شبکه ارسال نخواهد شد تا پهنای باند شرکت در ساعات اداری مصرف نشود. ورکر پس‌زمینه منحصراً در بازه زمانی تعیین‌شده خلوتی شبکه (به‌صورت پیش‌فرض از ساعت ۲۳:۰۰ شب تا ۰۶:۰۰ بامداد) بیدار شده و صف فایل‌ها را ارسال و خالی می‌کند.
   3. **همگام‌سازی دستی با دستور مدیر (Manual / On-Demand):** فایل‌ها در صف دیتابیسی ذخیره می‌شوند اما هیچ ترافیک شبکه‌ای خودکاری با گوگل‌درایو انجام نمی‌شود تا زمانی که کاربر مسئول در پنل تنظیمات با کلیک بر روی دکمه «شروع ارسال صف»، فرآیند همگام‌سازی را فعال کند.
 * **فایل‌های تحت تغییر و وظایف فنی:**
-  1. `warehouse-backend/personnel/models.py`:
+  1. `backend/personnel/models.py`:
      * افزودن فیلدهای کنترلی و سیاست‌گذاری به مدل `CompanyGoogleDriveConfig`:
        ```python
        SYNC_MODE_CHOICES = (
@@ -226,15 +226,15 @@ graph TD
        chunk_delay_seconds = models.PositiveSmallIntegerField(default=1, verbose_name="تاخیر بین فایل‌ها جهت کنترل پهنای باند (ثانیه)")
        ```
   2. ایجاد و اعمال مهاجرت رو به جلو Django طبق پروتکل `safe-migration`.
-  3. `warehouse-backend/personnel/signals_gdrive.py`:
+  3. `backend/personnel/signals_gdrive.py`:
      * مشروط‌سازی فعال‌سازی نخ ناهمگام (`_trigger_async_sync`) به شرط `config.sync_mode == 'immediate'`. در حالت‌های زمان‌بندی‌شده و دستی، تسک در دیتابیس ثبت شده اما هیچ نخ آپلودی فراخوانی نخواهد شد.
-  4. `warehouse-backend/personnel/management/commands/run_gdrive_sync_worker.py`:
+  4. `backend/personnel/management/commands/run_gdrive_sync_worker.py`:
      * تطبیق زمان فعلی سرور (`timezone.localtime().time()`) با بازه ساعات مجاز شرکت برای تسک‌های حالت `scheduled` (با پشتیبانی از بازه‌های عبورکننده از نیمه‌شب مانند ۲۳:۰۰ تا ۰۶:۰۰).
      * اعمال تاخیر نرم (`time.sleep(config.chunk_delay_seconds)`) بین ارسال تسک‌ها جهت ممانعت از اشغال ۱۰۰ درصدی پهنای باند آپلود شبکه.
-  5. `warehouse-backend/personnel/google_drive_views.py`:
+  5. `backend/personnel/google_drive_views.py`:
      * توسعه اندپوینت ذخیره و واکشی تنظیمات جهت پشتیبانی از فیلدهای زمان‌بندی و حالت همگام‌سازی.
      * افزودن اندپوینت اقدام دستی (`POST .../gdrive/trigger-sync/`) برای اجرای درجا و با اولویت صف به دستور کاربر در حالت‌های دستی یا خارج از ساعات زمان‌بندی.
-  6. `warehouse-front/src/app/components/settings/tabs/settings-gdrive-tab/`:
+  6. `frontend/src/app/components/settings/tabs/settings-gdrive-tab/`:
      * افزودن کارت کنترل سیاست و زمان‌بندی با سلکتور مدرن ۳ حالته (آنی، زمان‌بندی در ساعات خلوتی، دستی).
      * اینپوت‌های انتخاب ساعت شروع و پایان خلوتی شبکه با استایل ارگونومیک طراحی سیستم.
      * دکمه اقدام سریع «ارسال دستی صف فایل‌های معلق» با بازخورد نوار پیشرفت و Toast.
@@ -249,7 +249,7 @@ graph TD
 
 | نام فایل | لایه معماری | ماهیت تغییر | توضیحات کلیدی |
 | :--- | :--- | :--- | :--- |
-| `warehouse-backend/requirements.txt` | وابستگی‌ها | ویرایش | افزودن کتابخانه‌های رسمی Google API، httplib2 و pysocks |
+| `backend/requirements.txt` | وابستگی‌ها | ویرایش | افزودن کتابخانه‌های رسمی Google API، httplib2 و pysocks |
 | `personnel/models.py` | دیتابیس | ویرایش | افزودن مدل‌های کانفیگ، صف و فیلدهای زمان‌بندی و سیاست ترافیک |
 | `personnel/google_drive_service.py` | سرویس بک‌اند | جدید | مدیریت کلاینت گوگل، پشتیبانی از پروکسی، آپلود چانکی Resumable و آرشیو |
 | `personnel/google_drive_path_resolver.py` | هسته منطق | جدید | تولید ساختار درختی و نام معنادار فارسی با اولویت تاریخ فاکتور و شناسه یکتا |
@@ -257,8 +257,8 @@ graph TD
 | `personnel/google_drive_views.py` | API بک‌اند | جدید | جریان OAuth2، قطع اتصال، آمار صف، تنظیمات زمان‌بندی و اجرای دستی |
 | `accounts/backup_service.py` | بک‌آپ | ویرایش | هوک اتصال پشتیبان دیتابیس به صف همگام‌سازی درایو |
 | `management/commands/run_gdrive_sync_worker.py` | پردازش پس‌زمینه | جدید | ورکر دائمی پایش صف با رعایت ساعات خلوتی، کنترل پهنای باند و Auto-Retry |
-| `warehouse-front/.../settings-gdrive-tab.ts` | فرانت‌اند | جدید/ویرایش | کامپوننت کارت اتصال، انتخابگر حالت همگام‌سازی، زمان‌بندی و مانیتورینگ صف |
-| `warehouse-front/.../icon-registry.ts` | فرانت‌اند | ویرایش | رجیستر آیکون‌های استاندارد درایو، زمان‌بندی و وضعیت ابری |
+| `frontend/.../settings-gdrive-tab.ts` | فرانت‌اند | جدید/ویرایش | کامپوننت کارت اتصال، انتخابگر حالت همگام‌سازی، زمان‌بندی و مانیتورینگ صف |
+| `frontend/.../icon-registry.ts` | فرانت‌اند | ویرایش | رجیستر آیکون‌های استاندارد درایو، زمان‌بندی و وضعیت ابری |
 
 </div>
 

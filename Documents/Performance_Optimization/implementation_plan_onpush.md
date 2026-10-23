@@ -9,7 +9,7 @@
 ### فایل‌های مربوط به کامپوننت Counter Dashboard
 تغییرات زیر در کامپوننت اصلی پنل اعمال خواهد شد:
 
-#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - افزودن `ChangeDetectionStrategy` به لیست ایمپورت‌ها از `@angular/core`
 - تنظیم `changeDetection: ChangeDetectionStrategy.OnPush` در دکوراتور `@Component`
 - افزودن دستور `this.cdr.detectChanges()` به پایان توابع زیر برای اعمال آپدیت گرافیکی:

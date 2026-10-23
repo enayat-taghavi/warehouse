@@ -30,10 +30,10 @@
 ---
 
 ### فاز ۲: تنظیمات دسترسی، مشاهده تاریخچه و یادداشت‌های قبلی
-- [ ] **افزودن کلیدهای پیش‌فرض به بک‌اند:** اضافه شدن کلیدهای `financial_can_view_history` و `financial_can_view_previous_notes` (با پیش‌فرض `True`) به `DEFAULT_SETTINGS` در [services.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/services.py).
-- [ ] **تاگل سوئیچ در تنظیمات کلان:** افزودن کنترل‌های کارشناسی مالی در تب قوانین عملیاتی [settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.html).
-- [ ] **تاگل سوئیچ در تنظیمات اختصاصی انبار:** افزودن کنترل‌ها با قابلیت اورراید در [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html) و به‌روزرسانی `opKeys` در [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts).
-- [ ] **اعمال در کارتابل مالی:** استخراج تنظیمات در `fetchFieldSettings` و شرطی‌سازی نمایش کادر تاریخچه (`financialCanViewHistory`) و یادداشت‌های قبلی (`canViewRecordNote(i)`) در [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html).
+- [ ] **افزودن کلیدهای پیش‌فرض به بک‌اند:** اضافه شدن کلیدهای `financial_can_view_history` و `financial_can_view_previous_notes` (با پیش‌فرض `True`) به `DEFAULT_SETTINGS` در [services.py](file:///e:/warehouse%20project/backend/warehouses/services.py).
+- [ ] **تاگل سوئیچ در تنظیمات کلان:** افزودن کنترل‌های کارشناسی مالی در تب قوانین عملیاتی [settings.html](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.html).
+- [ ] **تاگل سوئیچ در تنظیمات اختصاصی انبار:** افزودن کنترل‌ها با قابلیت اورراید در [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html) و به‌روزرسانی `opKeys` در [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts).
+- [ ] **اعمال در کارتابل مالی:** استخراج تنظیمات در `fetchFieldSettings` و شرطی‌سازی نمایش کادر تاریخچه (`financialCanViewHistory`) و یادداشت‌های قبلی (`canViewRecordNote(i)`) در [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html).
 
 ---
 
@@ -45,8 +45,8 @@
 ---
 
 ### فاز ۴: بهینه‌سازی عملکرد و رندرینگ DOM با `trackBy`
-- [ ] **پیاده‌سازی توابع `trackBy`:** تعریف متدهای `trackByTaskId`، `trackByFieldKey` و `trackByColKey` در [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts).
-- [ ] **اتصال `trackBy` به تمپلیت:** متصل کردن متدها به `*ngFor` کارت‌های کالا و فیلدهای پویای مدارک در [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) جهت جلوگیری از پرش فوکوس و ری‌رندر اضافی.
+- [ ] **پیاده‌سازی توابع `trackBy`:** تعریف متدهای `trackByTaskId`، `trackByFieldKey` و `trackByColKey` در [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts).
+- [ ] **اتصال `trackBy` به تمپلیت:** متصل کردن متدها به `*ngFor` کارت‌های کالا و فیلدهای پویای مدارک در [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) جهت جلوگیری از پرش فوکوس و ری‌رندر اضافی.
 
 ---
 

@@ -1,3 +1,4 @@
+import os
 import re
 
 def patch_method(content, method_name):
@@ -18,7 +19,7 @@ def patch_method(content, method_name):
             content = content[:insert_idx] + injection + content[insert_idx:]
     return content
 
-file_path = 'e:/warehouse project/warehouse-backend/inventory/views.py'
+file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'inventory', 'views.py')
 with open(file_path, 'r', encoding='utf-8') as f:
     content = f.read()
 

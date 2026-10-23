@@ -20,8 +20,8 @@
 
 | فایل | بخش تغییر | هدف تغییر |
 | :--- | :--- | :--- |
-| [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts) | منطق کامپوننت | تزریق `SwUpdate` و افزودن متد `onManualAppUpdate()` همراه با کنترل حالت در حال بارگذاری |
-| [`layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) | منوی کاربری (خطوط ۱۰۰ تا ۱۱۵) | قرار دادن دکمه «بروزرسانی نسخه برنامه» با آیکون بروزرسانی و استایل هماهنگ با قالب |
+| [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts) | منطق کامپوننت | تزریق `SwUpdate` و افزودن متد `onManualAppUpdate()` همراه با کنترل حالت در حال بارگذاری |
+| [`layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) | منوی کاربری (خطوط ۱۰۰ تا ۱۱۵) | قرار دادن دکمه «بروزرسانی نسخه برنامه» با آیکون بروزرسانی و استایل هماهنگ با قالب |
 
 ---
 

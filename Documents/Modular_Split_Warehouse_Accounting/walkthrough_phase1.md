@@ -15,7 +15,7 @@
 
 | تسک | تحویل | مسیر | وضعیت |
 |---|---|---|---|
-| ۷ | اپلیکیشن پلتفرمی `settings_core` | `warehouse-backend/settings_core/` | ✅ |
+| ۷ | اپلیکیشن پلتفرمی `settings_core` | `backend/settings_core/` | ✅ |
 | ۸ | انتقال مدل `SystemSetting` با `SeparateDatabaseAndState` و `db_table='warehouses_systemsetting'` | `settings_core/models.py` + `settings_core/migrations/0001_initial.py` + `warehouses/migrations/0004_split_settings_to_settings_core.py` | ✅ |
 | ۹ | تبدیل `warehouse` به `warehouse_id` (عدد صحیح، nullable، db_index) | `settings_core/models.py:19` | ✅ |
 | ۱۰ | بازسازی CASCADE با سیگنال `post_delete` از سمت `wh-warehouse` | `warehouses/signals.py` + `warehouses/apps.py:48` | ✅ |
@@ -87,7 +87,7 @@
 > **اجرای سنگین کامل تست به دست کاربر سپرده می‌شود** (رویهٔ خانه). این اجرا اکنون برای بستن کامل فاز لازم است:
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && ./venv/Scripts/python.exe manage.py test accounts personnel warehouses inventory reports communications
+cd "E:/warehouse project/backend" && ./venv/Scripts/python.exe manage.py test accounts personnel warehouses inventory reports communications
 ```
 
 علاوه بر آن، تأیید نهایی مسیرهای `settings/global/` و `public/config/` روی محیط عملیاتی (پشت Cloudflare Tunnel) به عهدهٔ کاربر است.

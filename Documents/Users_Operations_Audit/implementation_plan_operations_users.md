@@ -17,7 +17,7 @@
 
 صفحه مدیریت کاربران و نقش‌ها در روت `/app/operations/users` به عنوان یکی از ارکان کلیدی مرکز عملیات و زیرساخت سازمان (SOC/NOC) در حال استفاده است. این صفحه مستقیماً با احراز هویت، ماتریس دسترسی‌های RBAC، پرونده‌های پرسنلی، امنیت حساب‌ها، صدور کارت‌های شناسایی و تخصیص قلمروهای سازمانی سر و کار دارد.
 
-بررسی عمیق و کالبدشکافانه کدهای فرانت‌اند (`warehouse-front/src/app/components/users/`)، بک‌اند جنگو (`warehouse-backend/accounts/`)، مسیریابی و گاردها نشان داد که این صفحه با **۲۵ ایراد اساسی** در ۵ حوزه ساختاری مواجه است:
+بررسی عمیق و کالبدشکافانه کدهای فرانت‌اند (`frontend/src/app/components/users/`)، بک‌اند جنگو (`backend/accounts/`)، مسیریابی و گاردها نشان داد که این صفحه با **۲۵ ایراد اساسی** در ۵ حوزه ساختاری مواجه است:
 1. **معماری و تناقض مفهومی با مرکز عملیات (Architectural Alignment)**
 2. **باگ‌های منطقی و محاسباتی فرم پرسنل (User Form Logic & Phantom Fields)**
 3. **ایرادات امنیتی، ماتریس دسترسی و RBAC (Security & Permission Governance)**
@@ -196,7 +196,7 @@ private getRoleScope(role: any): 'warehouse' | 'finance' | 'global' {
 
 > **تصحیح نسخه ۲.۰.۰:** طرح فقط فرانت را پوشش داده بود اما بک‌اند را جا انداخته بود. در «نسخه ۲.۱.۰» بند بک‌اند رسماً اضافه می‌شود:
 
-- **بک‌اند (`warehouse-backend/accounts/serializers.py`):** فیلد `password = serializers.CharField(write_only=True, required=False, allow_blank=False)` باید به `UserSerializer` اضافه و در `fields` درج شود (خودِ متد `create` در `UserSerializer` از قبل `validated_data.pop('password', None)` را دارد و در نبود رمز، مقدار پیش‌فرض `123456` می‌گذارد؛ اما چون فیلد در `fields` نیست، جنگو می‌تواند آن را drop کند — پس حتماً باید به `fields` افزوده شود).
+- **بک‌اند (`backend/accounts/serializers.py`):** فیلد `password = serializers.CharField(write_only=True, required=False, allow_blank=False)` باید به `UserSerializer` اضافه و در `fields` درج شود (خودِ متد `create` در `UserSerializer` از قبل `validated_data.pop('password', None)` را دارد و در نبود رمز، مقدار پیش‌فرض `123456` می‌گذارد؛ اما چون فیلد در `fields` نیست، جنگو می‌تواند آن را drop کند — پس حتماً باید به `fields` افزوده شود).
 - **فرانت (`users.ts` و `users.html`):** در حالت «ایجاد کاربر جدید»، فیلد `password` با گزینهٔ «تولید خودکار» و نمایش موقت رمز پیش‌فرض `123456` همراه با هشدار «کاربر باید بعد از اولین ورود آن را تغییر دهد». در حالت ویرایش، فیلد مخفی و ارسال نمی‌شود.
 - پایش: نگهبان ۴۳.
 
@@ -254,13 +254,13 @@ validateNationalCode(code: string): boolean {
 
 ## ۶. نقشه راه و فازبندی پیاده‌سازی اصلاحات (Action Plan)
 
-### فاز ۱: بهینه‌سازی دیتابیس و امنیت بک‌اند (`warehouse-backend/accounts/`) — تکمیل‌شده ✅
+### فاز ۱: بهینه‌سازی دیتابیس و امنیت بک‌اند (`backend/accounts/`) — تکمیل‌شده ✅
 - [x] افزودن `select_related('supervisor')` و `prefetch_related('groups__customrole', 'assigned_warehouses', 'user_permissions')` در `UserViewSet` (نگهبان ۴۹ تایید شد ✅).
 - [x] پیاده‌سازی اعتبارسنجی فرمت و چک‌سام استاندارد کد ملی در `UserSerializer` (نگهبان ۴۱ تایید شد ✅).
 - [x] یکنواخت‌سازی کدهای دسترسی حساس و رفع تناقض با `OperationsRbacGovernanceComponent` (نگهبان ۵۰ تایید شد ✅).
 - [x] افزودن فیلد `password = serializers.CharField(write_only=True, required=False)` به `UserSerializer` و درج آن در `fields` (در `create()` و `update()` متد موجود `password` پردازش می‌شود) (نگهبان ۴۳ تایید شد ✅).
 
-### فاز ۲: معماری فرانت و بهینه‌سازی مسیرها (`warehouse-front/src/app/`) — تکمیل‌شده ✅
+### فاز ۲: معماری فرانت و بهینه‌سازی مسیرها (`frontend/src/app/`) — تکمیل‌شده ✅
 - [x] اصلاح تابع `getRouteKey` در `CustomRouteReuseStrategy` با مسیر کامل والدها (نگهبان ۳۷ تایید شد ✅).
 - [x] استفاده از `AppPersonaService` برای متون پویا و شرطی‌سازی هدر با `isOperationsMode()` (نگهبان ۳۸ تایید شد ✅).
 - [x] کامل کردن مکانیسم تب نقش‌ها و حذف آلودگی `permTab` از URL و تاریخچه مرورگر (نگهبان ۴۴ تایید شد ✅).

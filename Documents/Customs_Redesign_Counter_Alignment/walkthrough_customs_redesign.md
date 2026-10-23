@@ -41,10 +41,10 @@
 
 | فایل | توضیحات تغییرات |
 | :--- | :--- |
-| [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | تعریف متغیرهای آمار، فیلترها، مرتب‌سازی، متدهای انتخاب چندگانه و هلپرهای وضعیت |
-| [`customs.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html) | بازطراحی کامل هدر، کارت‌های آمار، نوار شیشه‌ای، لیست تک‌ستونه، فرم مالی و تب استخر |
-| [`counter-dashboard.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.html) | هماهنگ‌سازی واژه چیپ و بج به «در انتظار» |
-| [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | به‌روزرسانی متن وضعیت در نگاشت عناوین به «در انتظار» |
+| [`customs.ts`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | تعریف متغیرهای آمار، فیلترها، مرتب‌سازی، متدهای انتخاب چندگانه و هلپرهای وضعیت |
+| [`customs.html`](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html) | بازطراحی کامل هدر، کارت‌های آمار، نوار شیشه‌ای، لیست تک‌ستونه، فرم مالی و تب استخر |
+| [`counter-dashboard.html`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.html) | هماهنگ‌سازی واژه چیپ و بج به «در انتظار» |
+| [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | به‌روزرسانی متن وضعیت در نگاشت عناوین به «در انتظار» |
 
 ---
 

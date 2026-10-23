@@ -33,7 +33,7 @@
 
 برای اجرای مستقل و سریع این تست مرورگر در هر زمان:
 ```powershell
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 node test-accounting-e2e-browser.js
 ```
 

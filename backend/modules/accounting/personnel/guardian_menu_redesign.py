@@ -49,7 +49,7 @@ def verify_frontend_hubs():
     و هاب‌های نقش جانشین آن‌ها هستند.
     """
     print("\n[Check 6/7] Verifying Frontend Module Architecture...")
-    app_dir = os.path.join(backend_dir, '..', 'warehouse-front', 'src', 'app')
+    app_dir = os.path.join(backend_dir, '..', 'frontend', 'src', 'app')
     components_dir = os.path.join(app_dir, 'components')
 
     attendance_path = os.path.join(components_dir, 'finance', 'employee', 'employee-attendance', 'employee-attendance.ts')

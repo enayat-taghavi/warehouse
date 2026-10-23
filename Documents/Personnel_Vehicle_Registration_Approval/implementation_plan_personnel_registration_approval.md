@@ -27,7 +27,7 @@
 
 ## ۳. تغییرات پیشنهادی در لایه بک‌اند (Backend Changes)
 
-### الف) سریالایزرهای پرسنل و خودرو (`warehouse-backend/personnel/serializers.py`)
+### الف) سریالایزرهای پرسنل و خودرو (`backend/personnel/serializers.py`)
 * تنظیم `extra_kwargs` برای فیلد `company` در هر دو مدل جهت جلوگیری از اجباری شدن توسط `UniqueTogetherValidator`.
 * افزودن فیلد خواندنی `company_id` در `ProjectSectionSerializer`.
 
@@ -75,7 +75,7 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
         }
 ```
 
-### ب) ویوهای پرسنل و خودرو (`warehouse-backend/personnel/views.py`)
+### ب) ویوهای پرسنل و خودرو (`backend/personnel/views.py`)
 1. **تزریق خودکار شرکت در متد `create` و `perform_create`:**
    اگر فرانت‌اند به هر دلیلی مقدار `company` را خالی گذاشته باشد، سرور از روی بخش انتخابی (`section.project.company_id`) یا شرکت فعال تانت آن را پیش از اعتبارسنجی پر می‌کند:
 ```python
@@ -130,7 +130,7 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
 ## ۴. تغییرات پیشنهادی در لایه فرانت‌اند (Frontend Changes)
 
 ### الف) فرم‌های ثبت پرسنل و خودرو
-* [employee-new-personnel.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts) و [employee-new-vehicle.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts):
+* [employee-new-personnel.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts) و [employee-new-vehicle.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts):
   - در متد `savePersonnel()` و `saveVehicle()`، مقدار `company` بر اساس اولویت:
     1) `this.selectedSection?.company_id`
     2) `this.activeCompanyService?.activeCompany?.id`
@@ -151,7 +151,7 @@ approvePersonnelManager(id: number, note?: string): Observable<any> {
 ```
 
 ### ج) مودال تایید با ثبت یادداشت و بازبینی احکام در کارتابل‌ها
-* در [supervisor-new-profiles.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts) و [manager-approvals.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/manager-approvals/manager-approvals.ts):
+* در [supervisor-new-profiles.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts) و [manager-approvals.ts](file:///e:/warehouse%20project/frontend/src/app/components/personnel/manager-approvals/manager-approvals.ts):
   - اضافه شدن مودال تایید (`openApproveModal(item)`) شامل کادر متنی توضیحات اختیاری و ثبت در لاگ سیستم.
   - امکان ویرایش و تدقیق فیلدهای مالی در مودال جزئیات قبل از تایید نهایی.
 
@@ -161,16 +161,16 @@ approvePersonnelManager(id: number, note?: string): Observable<any> {
 
 | ردیف | مسیر فایل | نوع عملیات | هدف تغییر |
 | :--- | :--- | :--- | :--- |
-| ۱ | `warehouse-backend/personnel/serializers.py` | `[MODIFY]` | اضافه کردن `extra_kwargs` برای شرکت و `company_id` در بخش |
-| ۲ | `warehouse-backend/personnel/views.py` | `[MODIFY]` | تزریق خودکار شرکت در `create` و ثبت لاگ توضیحات در `approve_*` |
-| ۳ | `warehouse-front/src/app/core/models/personnel.model.ts` | `[MODIFY]` | افزودن `company_id` به اینترفیس `ProjectSection` |
-| ۴ | `warehouse-front/src/app/core/api/personnel-api.service.ts` | `[MODIFY]` | افزودن آرگومان اختیاری `note` به متدهای تایید |
-| ۵ | `warehouse-front/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts` | `[MODIFY]` | ارسال فیلد `company` در ذخیره فرم پرسنل |
-| ۶ | `warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts` | `[MODIFY]` | ارسال فیلد `company` در ذخیره فرم خودرو |
-| ۷ | `warehouse-front/src/app/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts` | `[MODIFY]` | مودال تایید با قابلیت ثبت توضیحات اختیاری |
-| ۸ | `warehouse-front/src/app/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.html` | `[MODIFY]` | رابط کاربری مودال ثبت توضیحات تایید |
-| ۹ | `warehouse-front/src/app/components/personnel/manager-approvals/manager-approvals.ts` | `[MODIFY]` | پشتیبانی از یادداشت تایید مدیر و بازبینی احکام |
-| ۱۰ | `warehouse-front/src/app/components/personnel/manager-approvals/manager-approvals.html` | `[MODIFY]` | رابط کاربری مودال تایید و توضیحات مدیر |
+| ۱ | `backend/personnel/serializers.py` | `[MODIFY]` | اضافه کردن `extra_kwargs` برای شرکت و `company_id` در بخش |
+| ۲ | `backend/personnel/views.py` | `[MODIFY]` | تزریق خودکار شرکت در `create` و ثبت لاگ توضیحات در `approve_*` |
+| ۳ | `frontend/src/app/core/models/personnel.model.ts` | `[MODIFY]` | افزودن `company_id` به اینترفیس `ProjectSection` |
+| ۴ | `frontend/src/app/core/api/personnel-api.service.ts` | `[MODIFY]` | افزودن آرگومان اختیاری `note` به متدهای تایید |
+| ۵ | `frontend/src/app/components/finance/employee/employee-new-personnel/employee-new-personnel.ts` | `[MODIFY]` | ارسال فیلد `company` در ذخیره فرم پرسنل |
+| ۶ | `frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts` | `[MODIFY]` | ارسال فیلد `company` در ذخیره فرم خودرو |
+| ۷ | `frontend/src/app/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts` | `[MODIFY]` | مودال تایید با قابلیت ثبت توضیحات اختیاری |
+| ۸ | `frontend/src/app/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.html` | `[MODIFY]` | رابط کاربری مودال ثبت توضیحات تایید |
+| ۹ | `frontend/src/app/components/personnel/manager-approvals/manager-approvals.ts` | `[MODIFY]` | پشتیبانی از یادداشت تایید مدیر و بازبینی احکام |
+| ۱۰ | `frontend/src/app/components/personnel/manager-approvals/manager-approvals.html` | `[MODIFY]` | رابط کاربری مودال تایید و توضیحات مدیر |
 
 ---
 

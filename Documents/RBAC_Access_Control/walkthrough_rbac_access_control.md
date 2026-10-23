@@ -8,7 +8,7 @@
 
 ## ۱. خلاصه اقدامات و اصلاحات کلیدی انجام‌شده
 1. **ایزولاسیون صددرصدی منوها بر پایه نقش فعال (`Strict Sidebar Role Isolation`):**
-   - در فایل `warehouse-front/src/app/components/layout/layout.ts`، تمام فال‌بک‌های عمومی پرسنلی (`view_sys_personnel`, `view_sys_projects`) حذف شدند.
+   - در فایل `frontend/src/app/components/layout/layout.ts`، تمام فال‌بک‌های عمومی پرسنلی (`view_sys_personnel`, `view_sys_projects`) حذف شدند.
    - سیگنال‌های ناوبری پنج‌گانه (`employeeNavItems`, `supervisorNavItems`, `accountantNavItems`, `managerNavItems`, `treasurerNavItems`) مشروط به `activeRole === 'role_code' || isAdmin` شدند.
    - منوی قدیمی و عمومی «کارکرد و حسابداری» (`accountingNavItems`) برای کاربران تک‌نقشه پنهان شد تا از نشت صفحات و شلوغی سایدبار جلوگیری شود.
    - کارت تغییر انبار در پایین سایدبار منحصراً به کاربران دارای مجوز انبارداری (`hasWarehouseAccess`) مقید گردید.

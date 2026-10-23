@@ -22,27 +22,27 @@
 
 ### 2. ارتقای مدل فیلدهای پویا (Backend)
 
-#### [MODIFY] `warehouse-backend/inventory/models.py`
+#### [MODIFY] `backend/inventory/models.py`
 - افزودن فیلد `default_value = models.CharField(max_length=255, null=True, blank=True)` به `ItemFieldDefinition`.
 
-#### [MODIFY] `warehouse-backend/inventory/serializers.py`
+#### [MODIFY] `backend/inventory/serializers.py`
 - افزودن `default_value` به فیلدهای `DynamicFieldDefinitionSerializer`.
 
-#### [MODIFY] `warehouse-backend/inventory/views.py`
+#### [MODIFY] `backend/inventory/views.py`
 - بازنویسی متد `perform_update` در `DynamicFieldDefinitionViewSet`:
   اگر کاربر `name` (نام سیستمی) یک فیلد را تغییر داد، تمام کالاهای همان انبار که در فیلد JSON خود (`dynamic_data`) کلید قدیمی را دارند جستجو شده و نام آن کلید به کلید جدید آپدیت می‌شود تا هیچ داده‌ای از دست نرود.
 
 ### 3. ارتقای فرم طراحی فیلدهای پویا (Frontend)
 
-#### [MODIFY] `warehouse-front/src/app/core/models/dynamic-field.model.ts`
+#### [MODIFY] `frontend/src/app/core/models/dynamic-field.model.ts`
 - افزودن پراپرتی `default_value?: string` به اینترفیس `DynamicFieldDefinition`.
 
-#### [MODIFY] `warehouse-front/src/app/components/dynamic-fields/dynamic-fields.html`
+#### [MODIFY] `frontend/src/app/components/dynamic-fields/dynamic-fields.html`
 - اضافه کردن یک ورودی جدید برای «مقدار پیش‌فرض» (Default Value) در فرم افزودن.
 - افزودن دکمه «ویرایش» به جدول فیلدها.
 - باز کردن یک مودال ویرایش (Edit Modal) برای تغییر نام، عنوان، نوع، مقدار پیش‌فرض و الزامی بودن فیلد.
 
-#### [MODIFY] `warehouse-front/src/app/components/dynamic-fields/dynamic-fields.ts`
+#### [MODIFY] `frontend/src/app/components/dynamic-fields/dynamic-fields.ts`
 - افزودن منطق و متدهای باز کردن فرم ویرایش `openEditModal(field)` و `saveEditedField()`.
 - ارتباط با متد `update` سمت سرور.
 

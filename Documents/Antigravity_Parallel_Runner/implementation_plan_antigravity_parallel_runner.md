@@ -75,7 +75,7 @@ verify-merged: <فرمان>     پس از ادغام کل گروه روی main
 
 **worktree:**
 - مسیر: `E:\warehouse-worktrees\<run-id>\task-N` (بیرون از مخزن تا ابزارهای جست‌وجو و آزمون آن را نبینند)، شاخهٔ `runner/<run-id>/task-N` از commit پایهٔ گروه.
-- فایل‌های ignore‌شده با junction: `warehouse-front\node_modules` و `warehouse-backend\venv`؛ `warehouse-backend\.env` کپی. تسکی که فایل ignore‌شدهٔ دیگری لازم دارد (مثل `google-services.json`) ترتیبی می‌ماند.
+- فایل‌های ignore‌شده با junction: `frontend\node_modules` و `backend\venv`؛ `backend\.env` کپی. تسکی که فایل ignore‌شدهٔ دیگری لازم دارد (مثل `google-services.json`) ترتیبی می‌ماند.
 - حذف: `git worktree remove`؛ junction فقط با `cmd /c rmdir` (هرگز `rm -rf`). در شکست، worktree برای بررسی می‌ماند.
 - اگر `main` هنگام شروع گروه تغییر کامیت‌نشده دارد، worktree آن‌ها را نمی‌بیند؛ runner هشدار می‌دهد.
 

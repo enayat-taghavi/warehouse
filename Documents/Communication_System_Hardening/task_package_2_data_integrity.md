@@ -11,8 +11,8 @@
 ## 🛠️ اقدامات مرحله‌به‌مرحله بسته ۲ (فاز ۴)
 
 ### ۱. زیرساخت تست و اثبات خودکار (TDD)
-- [x] ساخت فایل `warehouse-backend/communications/tests/test_integrity.py` شامل ۸ آزمون خودکار یکپارچگی داده، یکتایی و Soft Delete
-- [x] تکمیل `warehouse-front/src/app/core/services/communication.service.spec.ts` با ۱۰ تست جامع استیت سه‌حالته و Retry کلاینت
+- [x] ساخت فایل `backend/communications/tests/test_integrity.py` شامل ۸ آزمون خودکار یکپارچگی داده، یکتایی و Soft Delete
+- [x] تکمیل `frontend/src/app/core/services/communication.service.spec.ts` با ۱۰ تست جامع استیت سه‌حالته و Retry کلاینت
 
 ### ۲. پایداری و یکتایی داده در بک‌اند (Backend Data Integrity & Idempotency)
 - [x] افزودن قید یکتایی `UniqueConstraint(conversation, sender, client_temp_id)` در `Message.Meta` و ساخت/اجرای مایگریشن

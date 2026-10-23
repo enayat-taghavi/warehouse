@@ -17,7 +17,7 @@ MODULE_PERMISSIONS: dict[str, tuple[tuple[str, str], ...]] = {}
 
 
 def _discover_modules() -> None:
-    # مسیر ریشه بک‌اند نسبت به این فایل: warehouse-backend/core/platform_core/module_catalog.py
+    # مسیر ریشه بک‌اند نسبت به این فایل: backend/core/platform_core/module_catalog.py
     backend_root = Path(__file__).resolve().parents[2]
     modules_dir = backend_root / 'modules'
     if not modules_dir.is_dir():

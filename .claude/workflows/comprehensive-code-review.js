@@ -43,13 +43,13 @@ const APPS = args;
 const results = await pipeline(
   APPS,
   (app) => agent(
-    `You are a senior security researcher and backend engineer. Review all python files in warehouse-backend/${app}/ (such as models.py, views.py, serializers.py, signals.py) for the following severe issues:
+    `You are a senior security researcher and backend engineer. Review all python files in backend/${app}/ (such as models.py, views.py, serializers.py, signals.py) for the following severe issues:
     1. Logical bugs or improper error handling
     2. Authentication/Permission bypasses (security)
     3. Race conditions
     4. Data integrity and migration problems
 
-    Use 'Read' and 'Bash' to explore files in warehouse-backend/${app}. Focus deeply.
+    Use 'Read' and 'Bash' to explore files in backend/${app}. Focus deeply.
     Return a list of strictly critical/high/medium severity findings. Be precise about 'file' (repo-relative path) and 'line'.
     Ignore minor stylistic or formatting issues.
 

@@ -64,7 +64,7 @@ flowchart TD
 
 ## ۳. مشخصات ماژول‌ها و فایل‌های پروژه
 
-### ۳.۱. ماژول مرکزی بک‌اند: `warehouse-backend/common/date_utils.py`
+### ۳.۱. ماژول مرکزی بک‌اند: `backend/common/date_utils.py`
 این فایل ماژول جدید و مرجع برای تمام تبدیل‌های تاریخ در سمت سرور خواهد بود:
 * **`parse_date_smart(val, as_datetime=False, strict=True)`**:
   * ورودی‌های استاندارد را با کمترین سربار پردازش می‌کند.
@@ -72,10 +72,10 @@ flowchart TD
   * سال‌های ۲ رقمی را بر اساس قاعده `pivot=50` تفکیک می‌کند.
   * در صورت مغایرت و فعال بودن `strict=True`، خطای `django.core.exceptions.ValidationError` صادر می‌کند.
 * **جایگزینی در کدهای موجود:**
-  * متد محلی `_parse_date_flexible` در `warehouse-backend/inventory/views.py` به این ماژول هدایت و متصل می‌شود.
+  * متد محلی `_parse_date_flexible` در `backend/inventory/views.py` به این ماژول هدایت و متصل می‌شود.
   * در فرآیند ایمپورت فایل‌های اکسل و کالاهای دارای اسناد تاییدشده (`Pre-Approved Docs Import`) فراخوانی می‌گردد.
 
-### ۳.۲. ماژول متناظر فرانت‌اند: `warehouse-front/src/app/core/utils/date-utils.ts`
+### ۳.۲. ماژول متناظر فرانت‌اند: `frontend/src/app/core/utils/date-utils.ts`
 این فایل ماژول مرجع برای کنترلرهای فرم، فیلترها و ماسک‌های ورودی رابط کاربری خواهد بود:
 * **`parseSmartDate(val: any, options?: { asTime?: boolean; strict?: boolean }): Date`**:
   * منطق یکپارچه و عینی معادل بک‌اند با رعایت تبدیل ارقام فارسی/عربی، پدینگ تک‌رقمی‌ها و قاعده آستانه ۵۰.
@@ -83,8 +83,8 @@ flowchart TD
   * تولید خروجی استاندارد خورشیدی اسلش‌دار (`YYYY/MM/DD` یا `YYYY/MM/DD HH:mm:ss`) جهت نمایش در UI.
 
 ### ۳.۳. تست‌های خودکار (Unit Tests)
-* **بک‌اند:** `warehouse-backend/common/tests/test_date_utils.py` شامل تست‌های رگرسیون، پوشش تمامی ارقام فارسی، سال‌های ۲ رقمی، پدینگ تک‌رقمی‌ها، و پرتاب استثنای داده نامعتبر.
-* **فرانت‌اند:** `warehouse-front/src/app/core/utils/date-utils.spec.ts` جهت اطمینان از پاس شدن کلیه سناریوهای کلاینت.
+* **بک‌اند:** `backend/common/tests/test_date_utils.py` شامل تست‌های رگرسیون، پوشش تمامی ارقام فارسی، سال‌های ۲ رقمی، پدینگ تک‌رقمی‌ها، و پرتاب استثنای داده نامعتبر.
+* **فرانت‌اند:** `frontend/src/app/core/utils/date-utils.spec.ts` جهت اطمینان از پاس شدن کلیه سناریوهای کلاینت.
 
 ---
 

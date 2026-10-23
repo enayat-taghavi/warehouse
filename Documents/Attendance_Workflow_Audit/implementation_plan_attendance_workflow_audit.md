@@ -80,7 +80,7 @@ flowchart TD
 
 ## ۳. تغییرات ساختار مدل‌های پایگاه داده (Data Model Specifications)
 
-### ۱. مدل `DailyAttendance` در [models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L2020)
+### ۱. مدل `DailyAttendance` در [models.py](file:///e:/warehouse%20project/backend/personnel/models.py#L2020)
 * **افزودن گزینه‌های وضعیت تایید:**
   ```python
   APPROVAL_STATUS_CHOICES = (
@@ -101,7 +101,7 @@ flowchart TD
   * رکوردهای متصل به دوره‌های قفل‌شده (`status__in=['LOCKED', 'FINALIZED', 'PAID']`) به صورت خودکار مقدار `approval_status='APPROVED'` دریافت می‌کنند.
   * رکوردهای متعلق به دوره‌های جاری یا باز مقدار `approval_status='PENDING_SUPERVISOR'` دریافت می‌کنند.
 
-### ۲. مدل `MonthlyWorkPeriod` در [models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py#L1834)
+### ۲. مدل `MonthlyWorkPeriod` در [models.py](file:///e:/warehouse%20project/backend/personnel/models.py#L1834)
 * **افزودن فیلدهای اسکوپ سازمانی بدون نقض انبار:**
   * `project`: کلید خارجی `ForeignKey(FinancialProject, null=True, blank=True, on_delete=models.SET_NULL, related_name='monthly_work_periods')`
   * `section`: کلید خارجی `ForeignKey(ProjectSection, null=True, blank=True, on_delete=models.SET_NULL, related_name='monthly_work_periods')`
@@ -123,7 +123,7 @@ flowchart TD
    - در `bulk_save_matrix` و `bulk_save_monthly_grid`:
      - بررسی وضعیت دوره: اگر دوره در وضعیت‌های `['SUBMITTED_SUPERVISOR', 'SUBMITTED_ACCOUNTANT', 'READY_TO_PAY', 'PAID', 'LOCKED']` باشد، ویرایش بدون مجوز ادمین بلافاصله با خطای ۴۰۰ مسدود گردد.
      - ابطال تاییدیه در صورت ویرایش (State Invalidation): در صورت تغییر ساعات یا وضعیت رکوردی که قبلاً `APPROVED` بوده، وضعیت آن به `PENDING_SUPERVISOR` برگردد و لاگ ممیزی در `AttendanceAuditLog` با فیلد `approval_status` ثبت شود.
-2. **اصلاح موتور محاسبه حقوق ([payroll_engine.py](file:///e:/warehouse%20project/warehouse-backend/personnel/payroll_engine.py)):**
+2. **اصلاح موتور محاسبه حقوق ([payroll_engine.py](file:///e:/warehouse%20project/backend/personnel/payroll_engine.py)):**
    - در خط ۱۲۶، اعمال شرط `approval_status='APPROVED'` روی کوئری `DailyAttendance`، به طوری که رکوردهای در انتظار یا عودت‌داده‌شده وارد محاسبات مالی حقوق نشوند.
 3. **ارتقای اندپوینت `monthly-summary`:**
    - پشتیبانی از فیلتر بر اساس `section_id` و `project_id` علاوه بر `warehouse_id`.
@@ -204,16 +204,16 @@ flowchart TD
 
 | ردیف | مسیر فایل | لایه | شرح دقیق تغییرات |
 | :---: | :--- | :---: | :--- |
-| **۱** | [warehouse-backend/personnel/models.py](file:///e:/warehouse%20project/warehouse-backend/personnel/models.py) | دیتابیس | افزودن `approval_status` و ۵ فیلد ممیزی سرپرست به `DailyAttendance`، و فیلدهای بخش/پروژه به `MonthlyWorkPeriod` |
-| **۲** | [warehouse-backend/personnel/serializers.py](file:///e:/warehouse%20project/warehouse-backend/personnel/serializers.py) | سریالایزر | اکسپوز فیلدهای وضعیت تایید در `DailyAttendanceSerializer` و سازگاری سریالایزرهای ماتریسی |
-| **۳** | [warehouse-backend/personnel/views.py](file:///e:/warehouse%20project/warehouse-backend/personnel/views.py) | کنترلر / API | پشتیبانی از `section_id` در `monthly-summary`، محاسبه `pending_approvals_count`، ابطال تاییدیه در ویرایش، و قفل ویرایش دوره‌های بسته |
-| **۴** | [warehouse-backend/personnel/cartable_views.py](file:///e:/warehouse%20project/warehouse-backend/personnel/cartable_views.py) | کارتابل | تایید و عودت کارکرد در `SupervisorCartableAPIView.post` با لاگ ممیزی، سد امنیتی قفل دوره، و تطبیق دوره با بخش/پروژه |
-| **۵** | [warehouse-backend/personnel/payroll_engine.py](file:///e:/warehouse%20project/warehouse-backend/personnel/payroll_engine.py) | موتور حقوق | فیلتر منحصراً کارکردهای `approval_status='APPROVED'` در محاسبه ناخالص و ساعات کارکرد پرسنل |
-| **۶** | [personnel-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/personnel-api.service.ts) | سرویس فرانت‌اند | افزودن پارامتر `section_id` و `project_id` به متد `getAttendanceMonthlySummary` و اصلاح اینترفیس خروجی |
-| **۷** | [supervisor-attendance.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-attendance/supervisor-attendance.ts) | کامپوننت | فیلتر تب‌ها بر اساس `approval_status`، اتصال تایید و عودت به کارتابل، مودال عودت و حفظ یادداشت‌ها |
-| **۸** | [supervisor-attendance.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-attendance/supervisor-attendance.html) | قالب فرانت‌اند | نمایش ستون‌های تفکیک‌شده حضور و تایید، مودال ارگونومیک عودت کارکرد |
-| **۹** | [supervisor-period-lock.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.ts) | کامپوننت | اتصال `pending_approvals` به شمارنده واقعی بخش، غیرفعال‌سازی قفل، و ارسال پارامترهای صحیح بخش/پروژه |
-| **۱۰** | [supervisor-period-lock.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.html) | قالب فرانت‌اند | دکمه غیرفعال قفل در صورت وجود کارکرد معلق و بنر راهنمای بصری ارگونومیک |
-| **۱۱** | `warehouse-backend/personnel/test_attendance_approval_workflow.py` | آزمون بک‌اند | سوئیت تست اختصاصی جامع برای کلیه سناریوهای تایید، عودت، ممیزی، سد قفل و حقوق |
+| **۱** | [backend/personnel/models.py](file:///e:/warehouse%20project/backend/personnel/models.py) | دیتابیس | افزودن `approval_status` و ۵ فیلد ممیزی سرپرست به `DailyAttendance`، و فیلدهای بخش/پروژه به `MonthlyWorkPeriod` |
+| **۲** | [backend/personnel/serializers.py](file:///e:/warehouse%20project/backend/personnel/serializers.py) | سریالایزر | اکسپوز فیلدهای وضعیت تایید در `DailyAttendanceSerializer` و سازگاری سریالایزرهای ماتریسی |
+| **۳** | [backend/personnel/views.py](file:///e:/warehouse%20project/backend/personnel/views.py) | کنترلر / API | پشتیبانی از `section_id` در `monthly-summary`، محاسبه `pending_approvals_count`، ابطال تاییدیه در ویرایش، و قفل ویرایش دوره‌های بسته |
+| **۴** | [backend/personnel/cartable_views.py](file:///e:/warehouse%20project/backend/personnel/cartable_views.py) | کارتابل | تایید و عودت کارکرد در `SupervisorCartableAPIView.post` با لاگ ممیزی، سد امنیتی قفل دوره، و تطبیق دوره با بخش/پروژه |
+| **۵** | [backend/personnel/payroll_engine.py](file:///e:/warehouse%20project/backend/personnel/payroll_engine.py) | موتور حقوق | فیلتر منحصراً کارکردهای `approval_status='APPROVED'` در محاسبه ناخالص و ساعات کارکرد پرسنل |
+| **۶** | [personnel-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/personnel-api.service.ts) | سرویس فرانت‌اند | افزودن پارامتر `section_id` و `project_id` به متد `getAttendanceMonthlySummary` و اصلاح اینترفیس خروجی |
+| **۷** | [supervisor-attendance.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-attendance/supervisor-attendance.ts) | کامپوننت | فیلتر تب‌ها بر اساس `approval_status`، اتصال تایید و عودت به کارتابل، مودال عودت و حفظ یادداشت‌ها |
+| **۸** | [supervisor-attendance.html](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-attendance/supervisor-attendance.html) | قالب فرانت‌اند | نمایش ستون‌های تفکیک‌شده حضور و تایید، مودال ارگونومیک عودت کارکرد |
+| **۹** | [supervisor-period-lock.ts](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.ts) | کامپوننت | اتصال `pending_approvals` به شمارنده واقعی بخش، غیرفعال‌سازی قفل، و ارسال پارامترهای صحیح بخش/پروژه |
+| **۱۰** | [supervisor-period-lock.html](file:///e:/warehouse%20project/frontend/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.html) | قالب فرانت‌اند | دکمه غیرفعال قفل در صورت وجود کارکرد معلق و بنر راهنمای بصری ارگونومیک |
+| **۱۱** | `backend/personnel/test_attendance_approval_workflow.py` | آزمون بک‌اند | سوئیت تست اختصاصی جامع برای کلیه سناریوهای تایید، عودت، ممیزی، سد قفل و حقوق |
 
 </div>

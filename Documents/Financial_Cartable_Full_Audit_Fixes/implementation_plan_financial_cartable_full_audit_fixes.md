@@ -87,9 +87,9 @@
 
 ## ۳. تغییرات در فایل‌های پروژه
 
-#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts)
-#### [MODIFY] [customs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.html)
-#### [MODIFY] [doc-task-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/doc-task-store.ts)
-#### [MODIFY] [warehouse-backend/inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts)
+#### [MODIFY] [customs.html](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.html)
+#### [MODIFY] [doc-task-store.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/doc-task-store.ts)
+#### [MODIFY] [backend/inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 
 </div>

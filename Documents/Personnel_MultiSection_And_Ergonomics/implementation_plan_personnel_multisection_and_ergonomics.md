@@ -25,7 +25,7 @@
 ## ۲. معماری فنی و تغییرات مدل‌ها (Database & Architecture Design)
 
 ### الف) مدل انتساب پرسنل به چند بخش (`PersonnelSectionAssignment`)
-در فایل `warehouse-backend/personnel/models.py` مدل جدیدی برای نگهداری رابطه چندبه‌چند انتساب پرسنل به بخش‌ها با ویژگی‌های اختصاصی هر بخش ایجاد می‌شود:
+در فایل `backend/personnel/models.py` مدل جدیدی برای نگهداری رابطه چندبه‌چند انتساب پرسنل به بخش‌ها با ویژگی‌های اختصاصی هر بخش ایجاد می‌شود:
 
 ```python
 class PersonnelSectionAssignment(models.Model):
@@ -93,7 +93,7 @@ class PersonnelSectionAssignment(models.Model):
 ## ۳. تغییرات در لایه بک‌اند (Backend Changes)
 
 ### ۱. اندپوینت استعلام کد ملی (`lookup-by-national-code`)
-در فایل `warehouse-backend/personnel/views.py` روی `PersonnelProfileViewSet`:
+در فایل `backend/personnel/views.py` روی `PersonnelProfileViewSet`:
 
 ```python
     @action(detail=False, methods=['get'], url_path='lookup-by-national-code')

@@ -37,11 +37,11 @@
 
 ### Frontend (فرانت‌اند)
 
-#### [MODIFY] `warehouse-front/src/app/components/layout/layout.ts` & `layout.html`
+#### [MODIFY] `frontend/src/app/components/layout/layout.ts` & `layout.html`
 - تغییر عنوان منوی `مدیریت کاربران و ساختار سازمانی` به `کاربران و نقش‌ها`.
 - تغییر عنوان منوی `مدیریت انبارها` به `انبارها`.
 
-#### [MODIFY] `warehouse-front/src/app/components/users/users.ts` & `users.html`
+#### [MODIFY] `frontend/src/app/components/users/users.ts` & `users.html`
 - تغییر تایتل صفحه به `کاربران و نقش‌ها`.
 - اصلاح تابع `deleteRole(id: number)`:
   - به جای نمایش خطای توقف (Error Toast)، ابتدا تعداد کاربران متصل را محاسبه می‌کنیم.
@@ -51,7 +51,7 @@
 
 ### Backend (بک‌اند)
 
-#### [MODIFY] `warehouse-backend/accounts/views.py`
+#### [MODIFY] `backend/accounts/views.py`
 - در کلاس `GroupViewSet`، تابع `destroy` را بازنویسی (Override) می‌کنیم تا اگر کسی از طریق API (یا دور زدن فرانت‌اند) قصد حذف نقش‌های کلیدی را داشت، سیستم خطای `400 Bad Request` برگرداند.
 - *نکته فنی:* در جنگو، زمانی که یک `Group` (نقش) حذف می‌شود، رکورد آن به صورت خودکار از جدول واسط (`user_groups`) نیز حذف می‌گردد و نیازی به کدنویسی اضافی برای حذف نقش از کاربران در بک‌اند نداریم.
 

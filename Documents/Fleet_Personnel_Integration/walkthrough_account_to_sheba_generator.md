@@ -5,7 +5,7 @@
 ## ۱. امکانات پیاده‌سازی‌شده با گارد نگهبان
 
 ### 🔹 ۱. موتور تولید خودکار شبا از شماره حساب و بانک (`generateShebaFromAccount`)
-- پیاده‌سازی در [`sheba-utils.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/utils/sheba-utils.ts) و [`sheba_utils.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/sheba_utils.py).
+- پیاده‌سازی در [`sheba-utils.ts`](file:///e:/warehouse%20project/frontend/src/app/core/utils/sheba-utils.ts) و [`sheba_utils.py`](file:///e:/warehouse%20project/backend/personnel/sheba_utils.py).
 - محاسبات دقیق ISO 7064 Mod 97-10 بدون وابستگی خارجی.
 - پشتیبانی از انتخاب بانک با کد یا نام و شماره حساب با ارقام فارسی/انگلیسی.
 

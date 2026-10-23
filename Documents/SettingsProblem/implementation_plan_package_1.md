@@ -24,16 +24,16 @@
 
 ### ۱. فاز ۰ — برپایی زیرساخت تست‌های واحد (Test Infrastructure)
 
-#### ۱.۱ ساخت `warehouse-backend/warehouses/tests_settings.py`
+#### ۱.۱ ساخت `backend/warehouses/tests_settings.py`
 - ایجاد کلاس تست پایه برای endpoint تنظیمات سراسری `GET /api/settings/global/`.
 - ساخت توابع کمکی ساخت کاربر با و بدون مجوز `perm_sys_settings` و کاربر سوپریوزر.
 - تست اولیه دسترس‌پذیری endpoint برای کاربران احراز هویت شده (Smoke Test).
 
-#### ۱.۲ ساخت `warehouse-backend/config/tests_backup.py`
+#### ۱.۲ ساخت `backend/config/tests_backup.py`
 - شبیه‌سازی کامل (Mock) برای توابع حساس `subprocess.run`، `config.views_backup._find_pg_tool` و بستن دسترسی به دیتابیس واقعی در طول تست‌ها.
 - تست‌های دود رد درخواست‌های کاربران احراز هویت‌نشده (Anonymous) با خطای ۴۰۱/۴۰۳.
 
-#### ۱.۳ سبزسازی تست‌های کامپوننت فرانت‌اند `warehouse-front/src/app/components/settings/settings.spec.ts`
+#### ۱.۳ سبزسازی تست‌های کامپوننت فرانت‌اند `frontend/src/app/components/settings/settings.spec.ts`
 - افزودن Providerهای `provideHttpClient()` و `provideHttpClientTesting()`.
 - پیاده‌سازی Stubها و Mockهای مورد نیاز برای `ActivatedRoute`، `ToastService`، `AuthService` و `SettingsService`.
 
@@ -41,7 +41,7 @@
 
 ### ۲. فاز ۱ — ایمن‌سازی دیتابیس و بکاپ (Database & Backup Armor)
 
-#### ۲.۱ اصلاح و ارتقای `warehouse-backend/config/views_backup.py`
+#### ۲.۱ اصلاح و ارتقای `backend/config/views_backup.py`
 - **رفع باگ متغیر حذف فایل نجات (ایراد ۲-۳):**
   - در متد `BackupRestoreView.post` متغیرهای `restore_failed = False` و `rollback_succeeded = False` در ابتدا مقداردهی می‌شوند.
   - در بلوک `except Exception as exc:` مقدار `restore_failed = True` تنظیم می‌شود.
@@ -62,15 +62,15 @@
   - در `BackupCreateView`: بررسی `len(password) >= 12` و رد رمزهای کوتاه با خطای ۴۰۰.
   - در `BackupRestoreView`: بررسی طول انجام **نمی‌شود** تا فایل‌های قدیمی با رمزهای کوتاه همچنان قابل بازیابی باشند.
 
-#### ۲.۲ ارتقای دیالوگ تاییدیه در `warehouse-front/src/app/shared/components/confirm-dialog/`
+#### ۲.۲ ارتقای دیالوگ تاییدیه در `frontend/src/app/shared/components/confirm-dialog/`
 - افزودن `requireText?: string;` و `requireTextLabel?: string;` به اینترفیس `ConfirmDialogConfig`.
 - افزودن ورودی متنی در قالب دیالوگ در صورت تعریف بودن `requireText`.
 - غیرفعال ماندن دکمه تأیید تا زمان تایپ دقیق عبارت توسط کاربر.
 
 #### ۲.۳ به‌روزرسانی سرویس و کامپوننت فرانت‌اند
-- **در `warehouse-front/src/app/services/settings.ts`:**
+- **در `frontend/src/app/services/settings.ts`:**
   - ارسال پارامتر `confirm_text: 'RESTORE_DATABASE_CONFIRM'` به عنوان پارامتر فرم در `restoreBackup()`.
-- **در `warehouse-front/src/app/components/settings/settings.ts` و `settings.html`:**
+- **در `frontend/src/app/components/settings/settings.ts` و `settings.html`:**
   - اعتبارسنجی حداقل ۱۲ کاراکتر برای رمز عبور در متد `downloadBackup()`.
   - الزام تایپ عبارت تأییدیه در مدال تایید بازیابی دیتابیس.
   - نمایش پیام‌های متناسب با پاسخ سرور بر اساس فیلد `rollback_state`.
@@ -79,7 +79,7 @@
 
 ## 🧪 برنامه راستی‌آزمایی و تست‌های خودکار (Verification Plan)
 
-### ۱. تست‌های بک‌اند (`warehouse-backend`)
+### ۱. تست‌های بک‌اند (`backend`)
 
 | نام تست | هدف و ادعای تست |
 |---|---|
@@ -100,14 +100,14 @@
 
 ### دستور اجرای تست‌های بک‌اند:
 ```bash
-cd "E:/warehouse project/warehouse-backend"
+cd "E:/warehouse project/backend"
 python manage.py test warehouses.tests_settings config.tests_backup -v 2 --keepdb
 ```
 
-### ۲. تست‌های فرانت‌اند (`warehouse-front`)
+### ۲. تست‌های فرانت‌اند (`frontend`)
 - اجرای تست‌های کامپوننت با Karma/Jasmine:
 ```bash
-cd "E:/warehouse project/warehouse-front"
+cd "E:/warehouse project/frontend"
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 

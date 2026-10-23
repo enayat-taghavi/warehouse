@@ -15,9 +15,9 @@
 
 | لایه | مسیرها |
 | :--- | :--- |
-| بک‌اند | `warehouse-backend/communications/**`، `common/media_urls.py`، `config/settings.py` (فقط `CHANNEL_LAYERS` و `REST_FRAMEWORK`) |
+| بک‌اند | `backend/communications/**`، `common/media_urls.py`، `config/settings.py` (فقط `CHANNEL_LAYERS` و `REST_FRAMEWORK`) |
 | فرانت‌اند | `core/services/communication.service.ts`، `components/communications/**`، `components/layout/layout.ts`، `ngsw-config.json` |
-| تست | `warehouse-backend/communications/tests/**` (جدید)، `*.spec.ts` کنار سورس |
+| تست | `backend/communications/tests/**` (جدید)، `*.spec.ts` کنار سورس |
 
 **خارج از دامنه این طرح** (نیازمند تصمیم و طرح جداگانه): سیستم Presence واقعی، رمزنگاری سرتاسری، Virtual Scrolling، جستجوی full-text در پیام‌ها، Web Push کامل با VAPID، بازنویسی `notifications/consumers.py` (که مستقل از چت، بدون احراز هویت است).
 
@@ -81,11 +81,11 @@ communications/tests/test_access_rest.py
 **دستور اجرا:**
 
 ```bash
-cd "E:/warehouse project/warehouse-backend" && python manage.py test communications -v 2
+cd "E:/warehouse project/backend" && python manage.py test communications -v 2
 ```
 
 ```bash
-cd "E:/warehouse project/warehouse-front" && npm test
+cd "E:/warehouse project/frontend" && npm test
 ```
 
 > ابزار تست فرانت این پروژه `@angular/build:unit-test` با **vitest + jsdom** است (۱۶ فایل spec موجود). اگر اجرای پایه `npm test` خطا داد، رفع آن بخشی از فاز ۰ است.
@@ -96,23 +96,23 @@ cd "E:/warehouse project/warehouse-front" && npm test
 
 ## ۵. فاز ۱ — لایه دسترسی واحد در REST
 
-**هدف:** بستن IDORها. امروز هر کاربر لاگین‌شده می‌تواند تمام پیام‌های خصوصی سازمان را بخواند ([views.py:175](../../warehouse-backend/communications/views.py:175)) و هر کامنتی را ویرایش کند ([views.py:237](../../warehouse-backend/communications/views.py:237)).
+**هدف:** بستن IDORها. امروز هر کاربر لاگین‌شده می‌تواند تمام پیام‌های خصوصی سازمان را بخواند ([views.py:175](../../backend/communications/views.py:175)) و هر کامنتی را ویرایش کند ([views.py:237](../../backend/communications/views.py:237)).
 
 **اقدامات:**
 
 | # | اقدام | فایل | ایراد |
 | :---: | :--- | :--- | :---: |
 | ۱.۱ | ساخت `communications/access.py` به‌عنوان **تنها منبع حقیقت** دسترسی: `visible_conversations(user)`، `can_read_conversation`، `can_post_to_conversation`، `can_access_comment_target`. پیاده‌سازی روی `common/warehouse_scope.py` که منبع رسمی پروژه است | `access.py` (جدید) | ۱۵ |
-| ۱.۲ | بازنویسی `permissions.py`: حذف شاخه مرده `accessible_warehouses` (که در مدل کاربر **وجود ندارد**) و جایگزینی `managed_warehouses` با `user_warehouse_ids()` | [permissions.py:20](../../warehouse-backend/communications/permissions.py:20) | ۱۵ |
-| ۱.۳ | `MessageViewSet.get_queryset`: فیلتر اجباری `conversation__participants=user` (یا دسترسی انبار برای گروه/اطلاعیه) | [views.py:175](../../warehouse-backend/communications/views.py:175) | ۱ |
-| ۱.۴ | `MessageViewSet.perform_create`: بررسی عضویت → `PermissionDenied`؛ `DoesNotExist` → `ValidationError` (۴۰۰ به‌جای ۵۰۰) | [views.py:192](../../warehouse-backend/communications/views.py:192) | ۲ |
-| ۱.۵ | ویرایش/حذف پیام فقط توسط نویسنده (`IsMessageAuthor`) | [permissions.py:26](../../warehouse-backend/communications/permissions.py:26) | ۱۷ |
-| ۱.۶ | افزودن `is_system`، `conv_type`، `participants`، `warehouse`، `author`، `mentioned_users` به `read_only_fields` | [serializers.py:50](../../warehouse-backend/communications/serializers.py:50)، [:63](../../warehouse-backend/communications/serializers.py:63)، [:137](../../warehouse-backend/communications/serializers.py:137) | ۳، ۸، ۹ |
-| ۱.۷ | `ConversationViewSet`: افزودن `IsConversationParticipantOrAdmin` به `permission_classes`، محدود کردن ساخت `announcement`/`warehouse_group` به نقش مدیر، فعال کردن صفحه‌بندی | [views.py:31](../../warehouse-backend/communications/views.py:31) | ۸، ۹، ۴۸ |
-| ۱.۸ | `GenericCommentViewSet`: بدون `model_name` + `object_id` → ۴۰۰؛ فیلتر انبار؛ ویرایش/حذف فقط نویسنده؛ صفحه‌بندی | [views.py:237](../../warehouse-backend/communications/views.py:237) | ۱۰، ۴۸ |
-| ۱.۹ | اعتبارسنجی `content_type_str` با allowlist مدل‌های مجاز + بررسی وجود `object_id` (پایان خطاهای ۵۰۰) | [serializers.py:142](../../warehouse-backend/communications/serializers.py:142) | ۴۰، ۴۱ |
-| ۱.۱۰ | `ChatContactsListView`: محدود به هم‌انباری‌های کاربر، مصرف واقعی `warehouse_id` (که امروز خوانده و نادیده گرفته می‌شود)، صفحه‌بندی | [views.py:272](../../warehouse-backend/communications/views.py:272) | ۷ |
-| ۱.۱۱ | تفکیک فایل‌ها طبق قاعده ۵۰۰ خط: انتقال `broadcast_message_ws`/`broadcast_comment_ws` به `broadcast.py` | [views.py:80](../../warehouse-backend/communications/views.py:80) | قاعده |
+| ۱.۲ | بازنویسی `permissions.py`: حذف شاخه مرده `accessible_warehouses` (که در مدل کاربر **وجود ندارد**) و جایگزینی `managed_warehouses` با `user_warehouse_ids()` | [permissions.py:20](../../backend/communications/permissions.py:20) | ۱۵ |
+| ۱.۳ | `MessageViewSet.get_queryset`: فیلتر اجباری `conversation__participants=user` (یا دسترسی انبار برای گروه/اطلاعیه) | [views.py:175](../../backend/communications/views.py:175) | ۱ |
+| ۱.۴ | `MessageViewSet.perform_create`: بررسی عضویت → `PermissionDenied`؛ `DoesNotExist` → `ValidationError` (۴۰۰ به‌جای ۵۰۰) | [views.py:192](../../backend/communications/views.py:192) | ۲ |
+| ۱.۵ | ویرایش/حذف پیام فقط توسط نویسنده (`IsMessageAuthor`) | [permissions.py:26](../../backend/communications/permissions.py:26) | ۱۷ |
+| ۱.۶ | افزودن `is_system`، `conv_type`، `participants`، `warehouse`، `author`، `mentioned_users` به `read_only_fields` | [serializers.py:50](../../backend/communications/serializers.py:50)، [:63](../../backend/communications/serializers.py:63)، [:137](../../backend/communications/serializers.py:137) | ۳، ۸، ۹ |
+| ۱.۷ | `ConversationViewSet`: افزودن `IsConversationParticipantOrAdmin` به `permission_classes`، محدود کردن ساخت `announcement`/`warehouse_group` به نقش مدیر، فعال کردن صفحه‌بندی | [views.py:31](../../backend/communications/views.py:31) | ۸، ۹، ۴۸ |
+| ۱.۸ | `GenericCommentViewSet`: بدون `model_name` + `object_id` → ۴۰۰؛ فیلتر انبار؛ ویرایش/حذف فقط نویسنده؛ صفحه‌بندی | [views.py:237](../../backend/communications/views.py:237) | ۱۰، ۴۸ |
+| ۱.۹ | اعتبارسنجی `content_type_str` با allowlist مدل‌های مجاز + بررسی وجود `object_id` (پایان خطاهای ۵۰۰) | [serializers.py:142](../../backend/communications/serializers.py:142) | ۴۰، ۴۱ |
+| ۱.۱۰ | `ChatContactsListView`: محدود به هم‌انباری‌های کاربر، مصرف واقعی `warehouse_id` (که امروز خوانده و نادیده گرفته می‌شود)، صفحه‌بندی | [views.py:272](../../backend/communications/views.py:272) | ۷ |
+| ۱.۱۱ | تفکیک فایل‌ها طبق قاعده ۵۰۰ خط: انتقال `broadcast_message_ws`/`broadcast_comment_ws` به `broadcast.py` | [views.py:80](../../backend/communications/views.py:80) | قاعده |
 
 **تست‌های این فاز** — `communications/tests/test_access_rest.py`:
 
@@ -150,11 +150,11 @@ cd "E:/warehouse project/warehouse-front" && npm test
 | # | اقدام | فایل | ایراد |
 | :---: | :--- | :--- | :---: |
 | ۲.۱ | افزودن `chat_attachments/` و `comment_attachments/` به `PROTECTED_PREFIXES` | `common/media_urls.py` | ۵ |
-| ۲.۲ | استفاده از `signed_media_url()` در `get_file_url` به‌جای `obj.file.url` خام | [serializers.py:28](../../warehouse-backend/communications/serializers.py:28) | ۵ |
-| ۲.۳ | allowlist سرورسمتی: پسوند + **magic bytes** واقعی فایل؛ `content_type` کلاینت دیگر معتبر نیست | [views.py:203](../../warehouse-backend/communications/views.py:203) | ۶ |
+| ۲.۲ | استفاده از `signed_media_url()` در `get_file_url` به‌جای `obj.file.url` خام | [serializers.py:28](../../backend/communications/serializers.py:28) | ۵ |
+| ۲.۳ | allowlist سرورسمتی: پسوند + **magic bytes** واقعی فایل؛ `content_type` کلاینت دیگر معتبر نیست | [views.py:203](../../backend/communications/views.py:203) | ۶ |
 | ۲.۴ | نام‌گذاری فایل روی دیسک با UUID؛ نام اصلی فقط متادیتا | `views.py` / `models.py` | ۶ |
 | ۲.۵ | `Content-Disposition: attachment` برای هر نوع غیر از تصویرِ تأییدشده؛ رد کامل SVG | `common/media_urls.py` | ۶ |
-| ۲.۶ | بررسی مالکیت و عضویت پیش از ساخت پیوست | [views.py:218](../../warehouse-backend/communications/views.py:218) | ۴ |
+| ۲.۶ | بررسی مالکیت و عضویت پیش از ساخت پیوست | [views.py:218](../../backend/communications/views.py:218) | ۴ |
 | ۲.۷ | تولید `thumbnail` (فیلد موجود است ولی هرگز پر نمی‌شود) | `views.py` | — |
 | ۲.۸ | افزودن `dataGroup` برای پیوست‌های چت در سرویس‌ورکر | `ngsw-config.json` | ۳۷ |
 
@@ -181,16 +181,16 @@ cd "E:/warehouse project/warehouse-front" && npm test
 
 ## ۷. فاز ۳ — امن‌سازی WebSocket
 
-**هدف:** بستن شنود زندهٔ گفتگوهای دیگران. امروز `join_conversation` هیچ بررسی عضویتی ندارد ([consumers.py:72](../../warehouse-backend/communications/consumers.py:72)) و `typing` هم به هر اتاقی ارسال می‌شود ([consumers.py:84](../../warehouse-backend/communications/consumers.py:84)).
+**هدف:** بستن شنود زندهٔ گفتگوهای دیگران. امروز `join_conversation` هیچ بررسی عضویتی ندارد ([consumers.py:72](../../backend/communications/consumers.py:72)) و `typing` هم به هر اتاقی ارسال می‌شود ([consumers.py:84](../../backend/communications/consumers.py:84)).
 
 **اقدامات:**
 
 | # | اقدام | فایل | ایراد |
 | :---: | :--- | :--- | :---: |
-| ۳.۱ | مجوزسنجی `join_conversation` با `database_sync_to_async` روی `access.py` فاز ۱؛ در صورت رد، رویداد خطا | [consumers.py:72](../../warehouse-backend/communications/consumers.py:72) | ۱۱ |
-| ۳.۲ | مجوزسنجی `typing` (فقط اعضای همان گفتگو) | [consumers.py:84](../../warehouse-backend/communications/consumers.py:84) | ۱۱ |
-| ۳.۳ | بررسی دسترسی انبار پیش از `group_add` روی `chat_warehouse_{id}` | [consumers.py:46](../../warehouse-backend/communications/consumers.py:46) | ۱۱ |
-| ۳.۴ | مجوزسنجی `subscribe_comments` + تبدیل `current_target_group` تک‌مقداری به `set` (امروز اشتراک دوم، گروه اول را نشت می‌دهد) | [consumers.py:161](../../warehouse-backend/communications/consumers.py:161) | ۱۱، ۲۵ |
+| ۳.۱ | مجوزسنجی `join_conversation` با `database_sync_to_async` روی `access.py` فاز ۱؛ در صورت رد، رویداد خطا | [consumers.py:72](../../backend/communications/consumers.py:72) | ۱۱ |
+| ۳.۲ | مجوزسنجی `typing` (فقط اعضای همان گفتگو) | [consumers.py:84](../../backend/communications/consumers.py:84) | ۱۱ |
+| ۳.۳ | بررسی دسترسی انبار پیش از `group_add` روی `chat_warehouse_{id}` | [consumers.py:46](../../backend/communications/consumers.py:46) | ۱۱ |
+| ۳.۴ | مجوزسنجی `subscribe_comments` + تبدیل `current_target_group` تک‌مقداری به `set` (امروز اشتراک دوم، گروه اول را نشت می‌دهد) | [consumers.py:161](../../backend/communications/consumers.py:161) | ۱۱، ۲۵ |
 | ۳.۵ | انتقال توکن از query string به پیام `auth` پس از `accept` (خروج توکن از access log و لاگ Cloudflare) | `consumers.py` + `communication.service.ts` | ۱۲ |
 | ۳.۶ | خواندن `exp` توکن و بستن اتصال در انقضا (کد ۴۴۰۱) | `consumers.py` | ۱۲ |
 | ۳.۷ | محدودیت نرخ پیام‌های ورودی سوکت | `consumers.py` | ۱۳ |
@@ -216,7 +216,7 @@ cd "E:/warehouse project/warehouse-front" && npm test
 
 ## ۸. فاز ۴ — یکپارچگی داده و تحویل مطمئن پیام
 
-**هدف:** رفع مستقیم تضاد با قاعده ثبت‌شده «داده کاربر هرگز نباید از بین برود». امروز در خطای ارسال، فقط `console.error` اجرا می‌شود و متن کاربر برای همیشه از بین می‌رود ([communication.service.ts:344](../../warehouse-front/src/app/core/services/communication.service.ts:344)).
+**هدف:** رفع مستقیم تضاد با قاعده ثبت‌شده «داده کاربر هرگز نباید از بین برود». امروز در خطای ارسال، فقط `console.error` اجرا می‌شود و متن کاربر برای همیشه از بین می‌رود ([communication.service.ts:344](../../frontend/src/app/core/services/communication.service.ts:344)).
 
 **اقدامات — بک‌اند:**
 
@@ -225,7 +225,7 @@ cd "E:/warehouse project/warehouse-front" && npm test
 | ۴.۱ | `client_temp_id` به‌عنوان کلید idempotency واقعی: `unique_together(conversation, sender, client_temp_id)` + `get_or_create` در ساخت پیام | `models.py`، `views.py` + مایگریشن | ۱۸ |
 | ۴.۲ | `perform_destroy` با `soft_delete()` در هر سه ViewSet + حذف رکوردهای حذف‌شده از `get_queryset` | `views.py` | ۱۶ |
 | ۴.۳ | سقف طول متن (۴۰۰۰ کاراکتر) در سریالایزرهای پیام و کامنت | `serializers.py` | ۱۴ |
-| ۴.۴ | `DEFAULT_THROTTLE_CLASSES` + scope مجزا برای ارسال پیام و آپلود | [settings.py:177](../../warehouse-backend/config/settings.py:177) | ۱۳ |
+| ۴.۴ | `DEFAULT_THROTTLE_CLASSES` + scope مجزا برای ارسال پیام و آپلود | [settings.py:177](../../backend/config/settings.py:177) | ۱۳ |
 | ۴.۵ | ثبت رویدادهای حساس در `accounts.AuditLog`: حذف/ویرایش پیام، حذف کانال، تغییر اعضا | `views.py` | ۲۴ |
 | ۴.۶ | رویداد جدید `chat.message.updated` برای پیوست (امروز پیوست به گیرنده نمی‌رسد چون dedupe روی `id` آن را دور می‌ریزد) | `broadcast.py` | ۲۲ |
 
@@ -235,7 +235,7 @@ cd "E:/warehouse project/warehouse-front" && npm test
 | :---: | :--- | :--- | :---: |
 | ۴.۷ | وضعیت سه‌حالته `pending / sent / failed` + ذخیره پیام‌های در انتظار در Dexie (نه فقط حافظه) | `communication.service.ts`، `core/services/offline-db.ts` | ۱۹ |
 | ۴.۸ | در خطا: علامت `failed` + دکمه «تلاش مجدد» و «کپی متن»؛ متن کاربر هرگز دور ریخته نمی‌شود | `communication.service.ts:344`، `chat-drawer.component.html` | ۱۹ |
-| ۴.۹ | تشخیص `_offlinePending` و نگه داشتن پیام در حالت `pending` (امروز ✓✓ دروغین نشان می‌دهد) | [communication.service.ts:342](../../warehouse-front/src/app/core/services/communication.service.ts:342) | ۲۰ |
+| ۴.۹ | تشخیص `_offlinePending` و نگه داشتن پیام در حالت `pending` (امروز ✓✓ دروغین نشان می‌دهد) | [communication.service.ts:342](../../frontend/src/app/core/services/communication.service.ts:342) | ۲۰ |
 | ۴.۱۰ | صف اختصاصی آپلود پیوست با الگوی موجود و آزموده `photo-upload-queue.service.ts` | فایل جدید در `core/services/` | ۲۱ |
 | ۴.۱۱ | تلاش مجدد با **همان** `client_temp_id` (تضمین عدم تکثیر) | `communication.service.ts` | ۱۸ |
 
@@ -271,7 +271,7 @@ cd "E:/warehouse project/warehouse-front" && npm test
 
 ## ۹. فاز ۵ — بازطراحی وضعیت خوانده‌شدن و کارایی
 
-**هدف:** حذف N+1ها. امروز `broadcast_message_ws` برای **هر عضو** یک COUNT سنگین روی کل پیام‌های او اجرا می‌کند ([views.py:101](../../warehouse-backend/communications/views.py:101)) و `mark_as_read` به‌ازای هر پیام یک INSERT جدا می‌زند ([views.py:69](../../warehouse-backend/communications/views.py:69)).
+**هدف:** حذف N+1ها. امروز `broadcast_message_ws` برای **هر عضو** یک COUNT سنگین روی کل پیام‌های او اجرا می‌کند ([views.py:101](../../backend/communications/views.py:101)) و `mark_as_read` به‌ازای هر پیام یک INSERT جدا می‌زند ([views.py:69](../../backend/communications/views.py:69)).
 
 **اقدامات:**
 
@@ -396,7 +396,7 @@ cd "E:/warehouse project/warehouse-front" && npm test
 | ۸.۴ | `chat_file_sharing=False` → رد آپلود در سرور | `views.py:203` | ۲۷ |
 | ۸.۵ | `purge_expired_chat_media` روی `all_objects` (امروز پیوست‌های حذف‌نرم‌شده هرگز پاک نمی‌شوند و فایلشان یتیم می‌ماند) + tombstone به‌جای `delete()` سخت | `management/commands/purge_expired_chat_media.py` | ۲۳ |
 | ۸.۶ | ساخت `communications/admin.py` (read-only با فیلتر انبار) | فایل جدید | ۵۱ |
-| ۸.۷ | انتقال یا حذف اسکریپت‌های موقت ریشه بک‌اند: `check_conversation.py`، `send_manager_message.py`، `send_manager_reply_with_file.py`، `send_manager_live_reply.py`، `send_test_live_msg.py` | `warehouse-backend/` | ۵۲ |
+| ۸.۷ | انتقال یا حذف اسکریپت‌های موقت ریشه بک‌اند: `check_conversation.py`، `send_manager_message.py`، `send_manager_reply_with_file.py`، `send_manager_live_reply.py`، `send_test_live_msg.py` | `backend/` | ۵۲ |
 | ۸.۸ | حذف ایمپورت‌های بی‌استفاده (`uuid`، `filters`، `GenericForeignKey`) و مرتب‌سازی `logging` | `models.py`، `views.py:8` | ۵۳ |
 | ۸.۹ | هم‌تراز کردن `task_communication_system.md` با واقعیت (تیک‌های ✅ نادرست بندهای ۳.۲، ۴، ۵.۳، ۶.۱ و Gateها) | `Documents/Communication_System_And_Contextual_Comments/task_communication_system.md` | ۵۴ |
 
@@ -419,7 +419,7 @@ cd "E:/warehouse project/warehouse-front" && npm test
 
 ## ۱۳. فاز ۹ — زیرساخت Redis برای Channels
 
-**هدف:** رفع تنها ایرادی که «بلادرنگ بودن» را در پروداکشن باطل می‌کند. `InMemoryChannelLayer` ([settings.py:99](../../warehouse-backend/config/settings.py:99)) فقط داخل یک پروسه کار می‌کند؛ با بیش از یک worker، پیام کاربرِ متصل به پروسه A **هرگز** به کاربرِ متصل به پروسه B نمی‌رسد و **هیچ خطایی هم دیده نمی‌شود**.
+**هدف:** رفع تنها ایرادی که «بلادرنگ بودن» را در پروداکشن باطل می‌کند. `InMemoryChannelLayer` ([settings.py:99](../../backend/config/settings.py:99)) فقط داخل یک پروسه کار می‌کند؛ با بیش از یک worker، پیام کاربرِ متصل به پروسه A **هرگز** به کاربرِ متصل به پروسه B نمی‌رسد و **هیچ خطایی هم دیده نمی‌شود**.
 
 **اقدامات:** نصب `channels_redis`، تغییر `CHANNEL_LAYERS`، افزودن Redis به راه‌اندازی سرور، و تست دو-پروسه‌ای.
 

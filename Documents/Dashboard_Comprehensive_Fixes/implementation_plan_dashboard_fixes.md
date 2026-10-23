@@ -22,10 +22,10 @@
 
 | ردیف | لایه | فایل هدف | خلاصه تغییرات |
 | :---: | :---: | :--- | :--- |
-| ۱ | بک‌اند | [inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py) | • اصلاح `get_permissions` برای `dashboard_stats`<br>• افزودن `counted` و `docs_approved` به آمار تجمیعی<br>• اصلاح نام روزها بر اساس تقویم شمسی/فارسی و منطقه‌زمانی صحیح |
-| ۲ | فرانت‌اند | [dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.ts) | • خواندن آمار شمارش مستقیم از پاسخ API<br>• سابسکرایب به تغییر انبار فعال هدر<br>• افزودن مدیریت خطا و Toast اطلاع‌رسانی<br>• اصلاح ترند روزانه و پاکسازی کدهای مرده |
-| ۳ | فرانت‌اند | [dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.html) | • بازسازی ساختار تگ‌های HTML<br>• تصحیح موقعیت خط تارگت روزانه<br>• اکشن سنتر تعاملی با لینک به صفحات مرتبط<br>• وضعیت لودینگ و بنر تلاش مجدد در صورت بروز خطا |
-| ۴ | فرانت‌اند | [dashboard.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.css) | • افزودن انیمیشن شاین (`animate-shine`) و استایل‌های بهینه‌ساز |
+| ۱ | بک‌اند | [inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py) | • اصلاح `get_permissions` برای `dashboard_stats`<br>• افزودن `counted` و `docs_approved` به آمار تجمیعی<br>• اصلاح نام روزها بر اساس تقویم شمسی/فارسی و منطقه‌زمانی صحیح |
+| ۲ | فرانت‌اند | [dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.ts) | • خواندن آمار شمارش مستقیم از پاسخ API<br>• سابسکرایب به تغییر انبار فعال هدر<br>• افزودن مدیریت خطا و Toast اطلاع‌رسانی<br>• اصلاح ترند روزانه و پاکسازی کدهای مرده |
+| ۳ | فرانت‌اند | [dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.html) | • بازسازی ساختار تگ‌های HTML<br>• تصحیح موقعیت خط تارگت روزانه<br>• اکشن سنتر تعاملی با لینک به صفحات مرتبط<br>• وضعیت لودینگ و بنر تلاش مجدد در صورت بروز خطا |
+| ۴ | فرانت‌اند | [dashboard.css](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.css) | • افزودن انیمیشن شاین (`animate-shine`) و استایل‌های بهینه‌ساز |
 
 ---
 
@@ -33,7 +33,7 @@
 
 ### لایه بک‌اند (Backend)
 
-#### [MODIFY] [inventory/views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [inventory/views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 * **اصلاح `get_permissions`:**
   مجاز کردن اکشن `dashboard_stats` برای کاربران احرازشده (`IsAuthenticated`).
 * **اصلاح `dashboard_stats`:**
@@ -59,21 +59,21 @@
 
 ### لایه فرانت‌اند (Frontend)
 
-#### [MODIFY] [dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.ts)
+#### [MODIFY] [dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.ts)
 * دریافت مستقیم `overallStats.counted` به عنوان منبع حقیقت درصد پیشرفت کل بدون وابستگی به لود ناقص آرایه `projects`.
 * گوش دادن به تغییرات `AuthStore.activeWarehouseId` برای رفرش خودکار داشبورد هنگام تغییر انبار در هدر.
 * مدیریت بلوک `error` و فعال‌سازی پرچم `hasError` جهت نمایش بنر خطا و امکان «تلاش مجدد» (Retry).
 * اصلاح گتر `todayTrend` برای حالت‌هایی که آمار دیروز صفر است یا تغییرات صفر درصد می‌باشد.
 * حذف توابع بدون استفاده مانند `refreshSingleCard`.
 
-#### [MODIFY] [dashboard.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.html)
+#### [MODIFY] [dashboard.html](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.html)
 * اصلاح تگ‌های والد و تو در تویی و تفکیک منظم ردیف‌های ۱، ۲ و ۳.
 * تراز دقیق خط تارگت روزانه با قرار دادن آن در داخل کانتینر مقیاس ستون‌های نمودار (`h-48`).
 * به‌روزرسانی قیف عملیات (شمارش فیزیکی، تایید مدارک، تغذیه نهایی).
 * افزودن دکمه‌های ناوبری سریع در بخش Action Center (انتقال به مدیریت مغایرت‌ها و بخش تغذیه MT).
 * افزودن پیام خطای زیبا در صورت در دسترس نبودن سرور با دکمه تلاش مجدد.
 
-#### [MODIFY] [dashboard.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/dashboard/dashboard.css)
+#### [MODIFY] [dashboard.css](file:///e:/warehouse%20project/frontend/src/app/components/dashboard/dashboard.css)
 * پیاده‌سازی کی‌فریم و کلاس انیمیشن `animate-shine` برای افکت نوری ستون‌های قیف عملیات.
 
 ---

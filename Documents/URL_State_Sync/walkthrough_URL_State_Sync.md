@@ -24,14 +24,14 @@
 
 | فایل | تغییر |
 |---|---|
-| [supervisor-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | همگام‌سازی `currentTab` ← `?tab=` |
-| [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | همگام‌سازی `currentTab` ← `?tab=` |
-| [manager-review.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) | همگام‌سازی `currentTab` ← `?tab=` |
-| [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | همگام‌سازی `currentTab` ← `?tab=` |
-| [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts) | همگام‌سازی `showOnlyDiscrepancies` ← `?discrepancies=` و `currentPage` ← `?page=` |
-| [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts) | همگام‌سازی `activeTab` ← `?tab=` از طریق `ActivatedRoute` |
-| [settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/settings.ts) | همگام‌سازی `activeTab` ← `?tab=` از طریق `ActivatedRoute` |
-| [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) | همگام‌سازی `activeTab` ← `?tab=` از طریق `ActivatedRoute` |
+| [supervisor-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | همگام‌سازی `currentTab` ← `?tab=` |
+| [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | همگام‌سازی `currentTab` ← `?tab=` |
+| [manager-review.ts](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts) | همگام‌سازی `currentTab` ← `?tab=` |
+| [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | همگام‌سازی `currentTab` ← `?tab=` |
+| [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts) | همگام‌سازی `showOnlyDiscrepancies` ← `?discrepancies=` و `currentPage` ← `?page=` |
+| [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts) | همگام‌سازی `activeTab` ← `?tab=` از طریق `ActivatedRoute` |
+| [settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/settings/settings.ts) | همگام‌سازی `activeTab` ← `?tab=` از طریق `ActivatedRoute` |
+| [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) | همگام‌سازی `activeTab` ← `?tab=` از طریق `ActivatedRoute` |
 ## نتایج بیلد
 
 بیلد Angular بدون خطا انجام شد (`50.487 seconds`). فقط هشدارهای معمول اندازه باندل و ESM وجود داشت.

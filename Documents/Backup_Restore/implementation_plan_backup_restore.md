@@ -3,7 +3,7 @@
 # طرح اصلاحی: رفع ایرادات مهندسی سیستم پشتیبان‌گیری و بازیابی
 
 ## خلاصه مسئله
-در بازبینی دقیق [`views_backup.py`](file:///e:/warehouse%20project/warehouse-backend/config/views_backup.py)، پنج ایراد مهندسی شناسایی شد که در شرایط Production (دیتابیس بزرگ، اتصالات همزمان، وب‌سرور Nginx) می‌توانند باعث خرابی یا رفتار غیرمنتظره شوند.
+در بازبینی دقیق [`views_backup.py`](file:///e:/warehouse%20project/backend/config/views_backup.py)، پنج ایراد مهندسی شناسایی شد که در شرایط Production (دیتابیس بزرگ، اتصالات همزمان، وب‌سرور Nginx) می‌توانند باعث خرابی یا رفتار غیرمنتظره شوند.
 
 ---
 

@@ -17,28 +17,28 @@
 ## ۲. تغییرات کلیدی در اجزای سیستم (Implemented Changes)
 
 ### الف) لایه بک‌اند و سرویس‌های بازیابی (Django Backend)
-* **[accounts/backup_service.py](file:///e:/warehouse%20project/warehouse-backend/accounts/backup_service.py):**
+* **[accounts/backup_service.py](file:///e:/warehouse%20project/backend/accounts/backup_service.py):**
   - تابع `format_shamsi`: تبدیل زمان میلادی به تاریخ و زمان دقیق شمسی (`YYYY/MM/DD HH:MM:SS`).
   - تابع `rotate_snapshots`: مدیریت چرخش و نگهداری حداکثر ۷ نسخه اخیر و حذف نسخه‌های مازاد با متادیتای مربوطه.
   - تابع `create_server_snapshot`: تهیه اسنپ‌شات دیتابیس، ثبت هش امنیتی SHA-256 و ذخیره فایل متادیتای `.meta.json`.
   - تابع `get_snapshot_list` و `get_snapshot_summary`: ارائه اطلاعات تحلیلی و لیست نسخه‌ها.
   - تابع `quick_rollback_snapshot`: اعتبارسنجی فایل، ثبت اسنپ‌شات اضطراری قبل از بازگردانی، اجرای بازگشت و ثبت ردپا در `AuditLog`.
-* **[config/views_backup.py](file:///e:/warehouse%20project/warehouse-backend/config/views_backup.py):**
+* **[config/views_backup.py](file:///e:/warehouse%20project/backend/config/views_backup.py):**
   - پیاده‌سازی کلاس‌های ویو `SnapshotListView`, `SnapshotCreateView`, `SnapshotRollbackView`, `SnapshotSummaryView` با سدهای دسترسی `CanManageDatabaseBackup` و `CanRestoreDatabase`.
-* **[config/urls.py](file:///e:/warehouse%20project/warehouse-backend/config/urls.py):**
+* **[config/urls.py](file:///e:/warehouse%20project/backend/config/urls.py):**
   - ثبت اندپوینت‌های REST `/api/backup/snapshots/`، `/create/`، `/rollback/` و `/summary/`.
 
 ### ب) لایه فرانت‌اند و کلاینت آفلاین (Angular 19 & Dexie)
-* **[offline-db.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-db.ts):**
+* **[offline-db.ts](file:///e:/warehouse%20project/frontend/src/app/core/services/offline-db.ts):**
   - متدهای `exportLocalDatabaseSnapshot()` و `downloadLocalDatabaseSnapshotFile()` جهت تخلیه امن و کامل دیتابیس لوکال بدون تداخل با تراکنش‌های باز.
-* **[settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/services/settings.ts):**
+* **[settings.ts](file:///e:/warehouse%20project/frontend/src/app/services/settings.ts):**
   - تعریف اینترفیس‌های `ServerSnapshot`, `SnapshotSummary` و متدهای ارتباط با اندپوینت‌های بک‌اند.
-* **[settings-backup-tab.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts) & [HTML](file:///e:/warehouse%20project/warehouse-front/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.html):**
+* **[settings-backup-tab.ts](file:///e:/warehouse%20project/frontend/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts) & [HTML](file:///e:/warehouse%20project/frontend/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.html):**
   - کارت مدرن اسنپ‌شات‌های سرور با جدول ۷ نسخه اخیر، بج‌های وضعیت و حجم دیتابیس.
   - مودال تایید دو مرحله‌ای بازگشت اضطراری با لزوم درج عبارت صریح `ROLLBACK_CONFIRM`.
   - گارد اعتبارسنجی صف آفلاین تبلت (`syncQueue`) پیش از بازگردانی.
   - بخش اختصاصی دانلود اسنپ‌شات دیتابیس محلی مرورگر با متادیتای تفکیک‌شده.
-* **[health-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/health-dashboard/health-dashboard.ts):**
+* **[health-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/health-dashboard/health-dashboard.ts):**
   - بنر پایش اسنپ‌شات سرور و هشدار زمان آخرین بک‌آپ با دکمه ناوبری سریع به تنظیمات پشتیبان‌گیری.
 
 ---

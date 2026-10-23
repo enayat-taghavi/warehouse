@@ -25,7 +25,7 @@
 
 | نام فایل | وضعیت | خلاصه تغییرات |
 | :--- | :---: | :--- |
-| [`barcode-scanner.component.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | ✏️ ارتقا یافت | اسکن فوق‌سریع ۴۰ms، رزولوشن ۷۲۰p، فوکوس پیوسته و کنترل‌های زوم |
+| [`barcode-scanner.component.ts`](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | ✏️ ارتقا یافت | اسکن فوق‌سریع ۴۰ms، رزولوشن ۷۲۰p، فوکوس پیوسته و کنترل‌های زوم |
 
 ---
 

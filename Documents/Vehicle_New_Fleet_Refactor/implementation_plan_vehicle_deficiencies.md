@@ -136,9 +136,9 @@
 
 ### فاز ۱: پایگاه داده، مدل‌ها و اعتبارسنجی بک‌اند (Backend Data Layer)
 - **فایل‌ها:**
-  - `warehouse-backend/personnel/models.py`
-  - `warehouse-backend/personnel/serializers.py`
-  - `warehouse-backend/personnel/migrations/0010_vehicledriverprofile_owner_fields.py`
+  - `backend/personnel/models.py`
+  - `backend/personnel/serializers.py`
+  - `backend/personnel/migrations/0010_vehicledriverprofile_owner_fields.py`
 - **اقدامات:**
   1. افزودن فیلدهای مالک به مدل `VehicleDriverProfile`:
      ```python
@@ -153,8 +153,8 @@
 
 ### فاز ۲: منطق کامپوننت فرانت‌اند و مدیریت حالات (Frontend Component Logic)
 - **فایل‌ها:**
-  - `warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts`
-  - `warehouse-front/src/app/core/models/personnel.model.ts`
+  - `frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts`
+  - `frontend/src/app/core/models/personnel.model.ts`
 - **اقدامات:**
   1. به‌روزرسانی اینترفیس `VehicleDriverProfile` با فیلدهای مالک.
   2. پیاده‌سازی منطق تاگل در `setStatusFilter` (بازگشت به 'all' در کلیک مجدد).
@@ -172,7 +172,7 @@
 
 ### فاز ۳: بازطراحی قالب، مودال‌ها، ارگونومی موبایل و هدر (UI & Template Refactor)
 - **فایل‌ها:**
-  - `warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html`
+  - `frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html`
 - **اقدامات:**
   1. بازطراحی مودال ثبت/ویرایش با ساختار Bottom Sheet در موبایل و بستن با Backdrop Click.
   2. تفکیک بخش مالک و راننده در فرم با چک‌باکس «مالک شخص راننده است».
@@ -188,8 +188,8 @@
 
 ### فاز ۴: تست‌های خودکار و تضمین کیفیت (Testing & Verification)
 - **فایل‌ها:**
-  - `warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.spec.ts`
-  - `warehouse-backend/personnel/tests_vehicle_cycle.py`
+  - `frontend/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.spec.ts`
+  - `backend/personnel/tests_vehicle_cycle.py`
 - **اقدامات:**
   1. افزودن تست‌های واحد برای رفتار تاگل تب‌ها (`setStatusFilter`).
   2. افزودن تست حالت `isReadOnlyMode` در رکوردهای معلق و رد شده.

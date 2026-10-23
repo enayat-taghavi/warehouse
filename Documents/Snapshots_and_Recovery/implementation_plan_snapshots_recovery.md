@@ -24,11 +24,11 @@
 | ۱ | Backend | `accounts/backup_service.py` | [MODIFY] | افزودن متدهای چرخش ۷ نسخه، ساخت اسنپ‌شات سروری، و آمار تجمیعی اسنپ‌شات‌ها |
 | ۲ | Backend | `config/views_backup.py` | [MODIFY] | ایجاد اندپوینت‌های REST: لیست اسنپ‌شات‌ها، ایجاد دستی، بازگشت سریع با اسنپ‌شات اضطراری، و خلاصه سلامت |
 | ۳ | Backend | `config/urls.py` | [MODIFY] | ثبت مسیرهای جدید URL در روت API بک‌اند |
-| ۴ | Frontend | `warehouse-front/src/app/services/settings.ts` | [MODIFY] | افزودن متدهای فراخوانی API اسنپ‌شات‌ها و بازگردانی سریع |
-| ۵ | Frontend | `warehouse-front/src/app/core/services/offline-db.ts` | [MODIFY] | متد استخراج ساختاریافته JSON از تمام جداول محلی Dexie با فیلتر داده‌های حساس |
-| ۶ | Frontend | `warehouse-front/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts` | [MODIFY] | منطق تعاملی، بارگذاری لیست اسنپ‌شات‌ها، ایجاد دستی، بازگشت سریع و دانلود بک‌آپ IndexedDB |
-| ۷ | Frontend | `warehouse-front/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.html` | [MODIFY] | طراحی کارت بصری مدرن اسنپ‌شات‌ها، جدول ۷ نسخه اخیر با تاریخ شمسی و دکمه‌های عملیاتی |
-| ۸ | Frontend | `warehouse-front/src/app/components/health-dashboard/health-dashboard.ts` | [MODIFY] | افزودن ویجت زنده وضعیت آخرین اسنپ‌شات سرور با پیوند سریع به تب تنظیمات |
+| ۴ | Frontend | `frontend/src/app/services/settings.ts` | [MODIFY] | افزودن متدهای فراخوانی API اسنپ‌شات‌ها و بازگردانی سریع |
+| ۵ | Frontend | `frontend/src/app/core/services/offline-db.ts` | [MODIFY] | متد استخراج ساختاریافته JSON از تمام جداول محلی Dexie با فیلتر داده‌های حساس |
+| ۶ | Frontend | `frontend/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts` | [MODIFY] | منطق تعاملی، بارگذاری لیست اسنپ‌شات‌ها، ایجاد دستی، بازگشت سریع و دانلود بک‌آپ IndexedDB |
+| ۷ | Frontend | `frontend/src/app/components/settings/tabs/settings-backup-tab/settings-backup-tab.html` | [MODIFY] | طراحی کارت بصری مدرن اسنپ‌شات‌ها، جدول ۷ نسخه اخیر با تاریخ شمسی و دکمه‌های عملیاتی |
+| ۸ | Frontend | `frontend/src/app/components/health-dashboard/health-dashboard.ts` | [MODIFY] | افزودن ویجت زنده وضعیت آخرین اسنپ‌شات سرور با پیوند سریع به تب تنظیمات |
 | ۹ | Testing | `personnel/phase_guardian_approval.py` | [MODIFY] | پیاده‌سازی ایجنت نگهبان ۲۵ (`audit_guardian_25_snapshots_disaster_recovery_and_indexeddb`) |
 
 ---
@@ -83,6 +83,6 @@
 - اجرای کامل هر ۲۵ ایجنت نگهبان در `phase_guardian_approval.py` با نتیجه ۱۰۰٪ PASS.
 
 ### ب) اعتبارسنجی بیلد فرانت‌اند
-- اجرای `npm run build` در `warehouse-front` و تایید Exit Code 0 بدون خطای تایپ یا تمپلیت.
+- اجرای `npm run build` در `frontend` و تایید Exit Code 0 بدون خطای تایپ یا تمپلیت.
 
 </div>

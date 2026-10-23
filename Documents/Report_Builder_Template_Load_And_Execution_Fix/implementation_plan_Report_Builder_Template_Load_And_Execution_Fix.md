@@ -21,17 +21,17 @@
 
 ### 🔹 لایه بکند (Backend)
 
-#### [MODIFY] [`views.py`](file:///e:/warehouse%20project/warehouse-backend/reports/views.py)
+#### [MODIFY] [`views.py`](file:///e:/warehouse%20project/backend/reports/views.py)
 - افزودن `try...except Exception` به `RunReportView` و `ExportReportView` و `EntityFieldsView` جهت ثبت لاگ در سرور و بازگرداندن پاسخ ۴۰۰ تمیز با ساختار `{'error': '...'}` به جای خطای ۵۰۰ خام.
 
 ---
 
 ### 🔹 لایه فرانت‌اند (Frontend)
 
-#### [MODIFY] [`report-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts)
+#### [MODIFY] [`report-store.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/report-store.ts)
 - ارتقای متد `msg(e)` برای استخراج کامل تمام فرمت‌های خطای سرور (شامل `error`, `detail`, `message`, دیکشنری اعتبارسنجی فیلدها و رشته‌های ساده) و نمایش دقیق پیام فارسی.
 
-#### [MODIFY] [`reports.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts)
+#### [MODIFY] [`reports.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts)
 - در `loadTemplate(t)`:
   - نمایش پیام Toast موفقیت‌آمیز: «قالب «نام» با موفقیت بارگذاری شد.»
   - اجرای خودکار و ایمن گزارش پس از بارگذاری با تاخیر کوتاه (Auto-Run) با اعتبارسنجی پیش‌شرط‌ها.
@@ -42,13 +42,13 @@
 
 ### ۱. تست‌های خودکار بکند (Automated Backend Tests)
 ```bash
-cd "e:\warehouse project\warehouse-backend"
+cd "backend"
 venv\Scripts\python.exe manage.py test reports
 ```
 
 ### ۲. اعتبارسنجی کامپایل و بیلد فرانت‌اند (Frontend Build Check)
 ```bash
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

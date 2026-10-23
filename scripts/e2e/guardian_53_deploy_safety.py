@@ -8,7 +8,7 @@
 
 معیارها (کاملاً فقط‌خواندنی و بدون اتصال به دیتابیس):
   ۱) وجود #Requires -Version 7.4 (یا بالاتر) در ابتدای deploy.ps1
-  ۲) بیلد ایزوله: deploy.ps1 هرگز مستقیماً در warehouse-front/dist اصلی پروژه بیلد نکند
+  ۲) بیلد ایزوله: deploy.ps1 هرگز مستقیماً در frontend/dist اصلی پروژه بیلد نکند
   ۳) مدیریت ایمن junction: حذف junction صرفاً با rmdir و با اعتبارسنجی reparse point انجام شود
   ۴) فایل .gitattributes وجود داشته باشد و شامل قاعدهٔ LF برای *.sh و export-ignore فایل‌های تست باشد
   ۵) فایل deploy_config.json فاقد رمز عبور متنی (DbPassword، DjangoSecretKey) و دارای HostKeyFingerprint باشد
@@ -65,7 +65,7 @@ def verify_deploy_safety() -> bool:
     else:
         print("✅ بند ۱: پیش‌نیاز نسخه PowerShell (pwsh 7.4+) رعایت شده است.")
 
-    # 2. Isolated build: deploy.ps1 must not target root warehouse-front/dist
+    # 2. Isolated build: deploy.ps1 must not target root frontend/dist
     if "Build-IsolatedFrontend" not in ps1_text or "scratch" not in ps1_text:
         errors.append("بیلد ایزوله در deploy.ps1 پیاده‌سازی نشده")
         print("❌ بند ۲: تابع بیلد ایزوله در scratch/deploy در deploy.ps1 وجود ندارد.")
@@ -164,8 +164,8 @@ def verify_deploy_safety() -> bool:
             print("✅ بند ۹: قالب Nginx مسیر /media/ را با ^~ پروکسی کرده و media داخلی را با ^~ و internal حفاظت می‌کند.")
 
     # 10. Dependency locking (Phase 2 & Guardian 53 spec)
-    req_txt = REPO_ROOT / "warehouse-backend" / "requirements.txt"
-    req_lock = REPO_ROOT / "warehouse-backend" / "requirements.lock"
+    req_txt = REPO_ROOT / "backend" / "requirements.txt"
+    req_lock = REPO_ROOT / "backend" / "requirements.lock"
     if not req_txt.exists() or not req_lock.exists():
         errors.append("فایل‌های requirements.txt یا requirements.lock یافت نشدند")
         print("❌ بند ۱۰: فایل‌های requirements.txt یا requirements.lock وجود ندارند.")
@@ -286,9 +286,9 @@ def verify_deploy_safety() -> bool:
 
     # 14. Domain migration and legacy domain safety (plan Modular_Deploy_Options step 5)
     domain_problems = []
-    settings_py = REPO_ROOT / "warehouse-backend" / "config" / "settings.py"
+    settings_py = REPO_ROOT / "backend" / "config" / "settings.py"
     settings_text = settings_py.read_text(encoding="utf-8") if settings_py.exists() else ""
-    views_py = REPO_ROOT / "warehouse-backend" / "core" / "settings_core" / "views.py"
+    views_py = REPO_ROOT / "backend" / "core" / "settings_core" / "views.py"
     views_text = views_py.read_text(encoding="utf-8") if views_py.exists() else ""
 
     remove_start = deploy_text.find('if [[ "${1:-}" == "--remove-legacy-domain" ]]')
@@ -315,9 +315,9 @@ def verify_deploy_safety() -> bool:
     # 15. Dynamic module list (plan Modular_Middle_Path step 1)
     dyn_mod_problems = []
     has_hardcoded_sh = bool(re.search(r'KNOWN_MODULES=\s*\(\s*warehouse\s+accounting\s*\)', deploy_text))
-    has_dynamic_sh = "discover_known_modules" in deploy_text and "warehouse-backend/modules" in deploy_text
+    has_dynamic_sh = "discover_known_modules" in deploy_text and "backend/modules" in deploy_text
     has_hardcoded_ps1 = bool(re.search(r'\$KnownModules\s*=\s*@\(\s*[\'"]warehouse[\'"]\s*,\s*[\'"]accounting[\'"]\s*\)', ps1_text))
-    has_dynamic_ps1 = "Get-KnownModules" in ps1_text and "warehouse-backend/modules" in ps1_text
+    has_dynamic_ps1 = "Get-KnownModules" in ps1_text and re.search(r"ls-tree.*/modules/", ps1_text) is not None
 
     if has_hardcoded_sh or not has_dynamic_sh:
         dyn_mod_problems.append("فهرست ماژول‌ها در warehouse-deploy.sh نباید ثابت باشد و باید با discover_known_modules به صورت پویا ساخته شود")

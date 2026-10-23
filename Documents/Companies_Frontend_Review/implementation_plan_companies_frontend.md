@@ -6,7 +6,7 @@
 
 ## ۱. دامنه
 
-مسیرها (تعریف در `warehouse-front/src/app/app.routes.ts:88-90`):
+مسیرها (تعریف در `frontend/src/app/app.routes.ts:88-90`):
 
 | مسیر | نما |
 |---|---|
@@ -48,7 +48,7 @@
 ## ۴. فهرست ایرادات
 
 شدت: **ب** = بالا (کار یا داده را می‌شکند)، **م** = متوسط (موبایل، دسترس‌پذیری یا قاعدهٔ پروژه)، **ک** = کم.
-مسیرها نسبت به `warehouse-front/src/app/modules/common/components/operations/companies/` هستند، مگر خلافش آمده باشد.
+مسیرها نسبت به `frontend/src/app/modules/common/components/operations/companies/` هستند، مگر خلافش آمده باشد.
 
 ### ۴-الف. رفتار، مسیر و وضعیت
 
@@ -115,7 +115,7 @@
 
 | شناسه | شدت | محل | ایراد | راه‌حل |
 |---|---|---|---|---|
-| D1 | م | سراسر قالب‌ها | این کلاس‌ها در Tailwind 3.4 ساخته نمی‌شوند و هیچ اثری ندارند (در CSS ساخته‌شده صفرند): `shadow-xs`، `shadow-2xs`، `backdrop-blur-xs`، `bg-linear-to-b` (`:1095`)، `border-3` (`:2705`)، `py-0.2`، `animate-in` (`:407`)، `animate-fade-in` (`:1427`) و `dir-ltr` (`:1127`) | با معادل 3.4 یا کلاس موجود در `styles.css` جایگزین شوند (`shadow-sm`، `backdrop-blur-sm`، `bg-gradient-to-b`، `border-2`، `py-0.5`، `modal-enter`/`fade-in`، `dir="ltr"`). جستجوی سراسری در `warehouse-front/src` جداگانه انجام شود (§۸) |
+| D1 | م | سراسر قالب‌ها | این کلاس‌ها در Tailwind 3.4 ساخته نمی‌شوند و هیچ اثری ندارند (در CSS ساخته‌شده صفرند): `shadow-xs`، `shadow-2xs`، `backdrop-blur-xs`، `bg-linear-to-b` (`:1095`)، `border-3` (`:2705`)، `py-0.2`، `animate-in` (`:407`)، `animate-fade-in` (`:1427`) و `dir-ltr` (`:1127`) | با معادل 3.4 یا کلاس موجود در `styles.css` جایگزین شوند (`shadow-sm`، `backdrop-blur-sm`، `bg-gradient-to-b`، `border-2`، `py-0.5`، `modal-enter`/`fade-in`، `dir="ltr"`). جستجوی سراسری در `frontend/src` جداگانه انجام شود (§۸) |
 | D2 | م | `companies.html:1704-1708`، `:1762-1767`، `:2118-2141`، `:2171-2179`، `:1254`، `:1433`، `:2063`، `:2599-2689`؛ `company-gdrive-tab.html:727` | دکمه‌های آیکونی بدون `aria-label`. پیوندهای آیکونی `<a>` (کارت ملی، حکم و دانلود) فقط `title` دارند | `aria-label` فارسی برای همه. دکمه‌ها با `appAction` (برچسب از `label`) ساخته شوند |
 | D3 | م | `companies.html:2383`، `:2412`، `:2576` | مودال‌ها `role="dialog"`، `aria-modal` و تله‌کانون ندارند. Esc فقط برای پیش‌نمایش کار می‌کند | از `shared/components/modal` یا `ConfirmDialogService` استفاده شود. Esc و بازگشت کانون |
 | D4 | ک | `company-gdrive-tab.html` (مثلاً `:6`، `:612`) | کلاس‌های `dark:`، و `[class.dark:bg-surface]` که اتصال بی‌اثری است. این خلاف قاعدهٔ «`dark:` تازه ننویس» است | حذف شوند. توکن‌های `bg-surface` و `text-fg` بمانند |
@@ -260,7 +260,7 @@ interface CompanyRowAction { id: string; labelFa: string; icon: IconName; tab: s
 ### گام ۰ — خط پایه (۲۹ مهر ۱۴۰۵، روی `a1d7e4e`) — انجام شد
 
 - **tsc** (`tsconfig.app.json`): بدون خطا.
-- **specها:** tsconfig موقت `warehouse-front/tsconfig.companies.spec.json` (در git نیست؛ همهٔ specهای `operations/companies/**`، `company-documents-archive` و `company-documents-route`). نتیجه: ۷ فایل، **۱۱۱ آزمون، همه سبز**. لاگ: `scratch/logs/cf_step0_specs.log`.
+- **specها:** tsconfig موقت `frontend/tsconfig.companies.spec.json` (در git نیست؛ همهٔ specهای `operations/companies/**`، `company-documents-archive` و `company-documents-route`). نتیجه: ۷ فایل، **۱۱۱ آزمون، همه سبز**. لاگ: `scratch/logs/cf_step0_specs.log`.
 - **نگهبان‌ها:** 52، 56 و 57 سبز. **55 از پیش قرمز است:** قاعدهٔ ۱ (دکمهٔ آیکونی بی‌برچسب) ۱۰۵ در برابر baseline ۱۰۱. سهم این صفحه: ۳ در `companies.html` و ۱ در `company-documents-archive.html`. قاعدهٔ ۴ (آیکون کنارگذاشته): ۴ در `companies.html` و ۲ در `company-gdrive-tab.html`. معیار گام‌ها: این عددها نباید بالا بروند.
 - **پروب DOM در ۳۶۰ پیکسل** (`scratch/cf_probe.js`؛ دکمه‌های زیر ۴۰ پیکسل، جعبه‌های اسکرول افقی، `top` هدر چسبان پیش و پس از اسکرول ۶۰۰ پیکسل):
 
@@ -351,7 +351,7 @@ interface CompanyRowAction { id: string; labelFa: string; icon: IconName; tab: s
 - **درخواست فهرست در باز کردن مستقیم:** با ردگیری XHR روشن شد که در ناوبری درون برنامه (فهرست به استودیو) هیچ درخواست فهرستی از استودیو نمی‌رود (A5 درست است). در بارگذاری کامل صفحه یک درخواست `/api/personnel/companies/` هم‌زمان با `user-available` دیده شد. منبع آن در این گام تأیید نشد (احتمالاً بازاعتبارسنجی کش یا راه‌اندازی برنامه). در گام ۹ (A5) دوباره بررسی شود.
 
 **فایل‌های موقت:**
-- `warehouse-front/tsconfig.companies.spec.json` (در git نیست).
+- `frontend/tsconfig.companies.spec.json` (در git نیست).
 - اسکریپت‌های ویرایش: `scratch/cf_step1_*.py`.
 - حساب `qa_admin` هنوز هست.
 

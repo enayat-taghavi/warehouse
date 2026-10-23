@@ -22,8 +22,8 @@
 #### [NEW] `.agentignore`
 - نادیده گرفتن `*.xlsx`, `*.docx`
 - نادیده گرفتن پوشه‌های `warehouse-old/` و `فایل های مهم پروژه انبارداری/`
-- نادیده گرفتن دامپ‌های بک‌اند (مانند `warehouse-backend/*.json` و `error.html`)
-- نادیده گرفتن فایل‌های قفل فرانت‌اند (`warehouse-front/package-lock.json`)
+- نادیده گرفتن دامپ‌های بک‌اند (مانند `backend/*.json` و `error.html`)
+- نادیده گرفتن فایل‌های قفل فرانت‌اند (`frontend/package-lock.json`)
 
 ---
 

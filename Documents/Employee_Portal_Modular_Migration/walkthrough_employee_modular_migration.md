@@ -55,7 +55,7 @@ graph TD
 - رکوردهای تاییدشده در جدول قفل بوده و کارمند تنها مجاز به حذف رکوردهای پیش‌نویس خودش می‌باشد.
 
 ### ۲.۳. نگهبان G3: مصونیت کامل کدهای مبدا (Zero-Regression)
-- فایل ستون فقرات [warehouse-attendance.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) با حجم ۱۱۰ کیلوبایت کاملاً دست‌نخورده و بدون تغییر باقی مانده است.
+- فایل ستون فقرات [warehouse-attendance.ts](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.ts) با حجم ۱۱۰ کیلوبایت کاملاً دست‌نخورده و بدون تغییر باقی مانده است.
 - نسخه ۵ تبی برای مدیران و سرپرستان ارشد به قوت خود باقی بوده و برای کارمندان به ۵ زیرمنوی مستقل منشعب شده است.
 
 ---

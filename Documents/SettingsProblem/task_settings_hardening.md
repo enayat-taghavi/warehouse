@@ -7,7 +7,7 @@
 ## 🗺️ ساختار بسته‌های اجرایی (۴ بسته)
 
 ```
-E:\warehouse project\Documents\SettingsProblem\
+Documents\SettingsProblem\
 ├── implementation_plan.md                                       ◄── طرح جامع فنی و معماری
 ├── task_settings_hardening.md                                   ◄── چک‌لیست کلی (این سند)
 ├── package_1_database_and_backup_armor.md                       ◄── راهنمای بسته ۱ (ایمن‌سازی دیتابیس و بکاپ)
@@ -24,8 +24,8 @@ E:\warehouse project\Documents\SettingsProblem\
 > **سند راهنما:** `package_1_database_and_backup_armor.md`
 
 - [x] **فاز ۰ (زیرساخت تست‌های پایه):**
-  - [x] ساخت `warehouse-backend/warehouses/tests_settings.py` و Mockهای پایه
-  - [x] ساخت `warehouse-backend/config/tests_backup.py` با شبیه‌سازی امن Mock برای `pg_dump`/`pg_restore`
+  - [x] ساخت `backend/warehouses/tests_settings.py` و Mockهای پایه
+  - [x] ساخت `backend/config/tests_backup.py` با شبیه‌سازی امن Mock برای `pg_dump`/`pg_restore`
   - [x] اصلاح و سبزسازی `settings.spec.ts` در فرانت با Providerهای تست
 - [x] **فاز ۱ (ایمن‌سازی بازیابی و بکاپ):**
   - [x] اصلاح باگ حذف فایل نجات در پایتون ۳ با فلگ صریح `restore_failed` (ایراد ۲-۳)

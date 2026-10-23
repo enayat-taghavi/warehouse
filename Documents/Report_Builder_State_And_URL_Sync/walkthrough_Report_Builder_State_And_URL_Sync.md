@@ -10,10 +10,10 @@
 
 | فایل تغییریافته | لایه معماری | شرح دستاوردها و عملکرد |
 | :--- | :--- | :--- |
-| [`report.model.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/models/report.model.ts) | Core Models | تعریف اینترفیس `ReportSavedState` و متدهای کمکی `serializeReportToQueryParams` و `parseReportFromQueryParams` با پشتیبانی از ساختارهای ساده و تودرتو |
-| [`report-store.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts) | Component Store | افزودن متدهای `serializeState` (جهت استخراج اسنپ‌شات کامل) و `applySavedState` (جهت بارگذاری وضعیت و پاک‌سازی صف قبلی) |
-| [`reports.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts) | Component Logic | پیاده‌سازی لیسنر Debounced همگام‌سازی زنده با URL (`replaceUrl: true`) و `localStorage`، بازیابی خودکار و اجرای گزارش (`Auto-Run`)، متد `resetReport()` |
-| [`reports.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.html) | UI Template | افزودن دکمه «گزارش جدید / بازنشانی فرم» با استایل استاندارد در سربرگ چسبان و اتصال رویداد `(changed)` کامپوننت فیلترها |
+| [`report.model.ts`](file:///e:/warehouse%20project/frontend/src/app/core/models/report.model.ts) | Core Models | تعریف اینترفیس `ReportSavedState` و متدهای کمکی `serializeReportToQueryParams` و `parseReportFromQueryParams` با پشتیبانی از ساختارهای ساده و تودرتو |
+| [`report-store.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/report-store.ts) | Component Store | افزودن متدهای `serializeState` (جهت استخراج اسنپ‌شات کامل) و `applySavedState` (جهت بارگذاری وضعیت و پاک‌سازی صف قبلی) |
+| [`reports.ts`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts) | Component Logic | پیاده‌سازی لیسنر Debounced همگام‌سازی زنده با URL (`replaceUrl: true`) و `localStorage`، بازیابی خودکار و اجرای گزارش (`Auto-Run`)، متد `resetReport()` |
+| [`reports.html`](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.html) | UI Template | افزودن دکمه «گزارش جدید / بازنشانی فرم» با استایل استاندارد در سربرگ چسبان و اتصال رویداد `(changed)` کامپوننت فیلترها |
 
 ---
 

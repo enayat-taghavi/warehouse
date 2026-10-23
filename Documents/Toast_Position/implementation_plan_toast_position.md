@@ -15,7 +15,7 @@
 
 ### فرانت‌اند (Angular)
 
-#### [MODIFY] [toast.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/toast/toast.component.ts)
+#### [MODIFY] [toast.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/toast/toast.component.ts)
 تغییر کلاس‌های کانتینر پیام‌ها به صورت زیر:
 - حذف `bottom-6` و جایگزینی با `top-1/2` و اضافه کردن `-translate-y-1/2`
 - تغییر `flex-col-reverse` به `flex-col` برای نمایش متمرکزتر و ترتیبی از بالا به پایین پیام‌ها در مرکز.

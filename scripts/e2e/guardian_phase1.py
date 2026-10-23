@@ -6,7 +6,8 @@ try:
 except Exception:
     pass
 
-backend_dir = r"e:\warehouse project\warehouse-backend"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_dir = os.path.join(REPO_ROOT, "backend")
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 import backend_paths
@@ -75,7 +76,7 @@ def verify_phase1():
             errors.append(f"یادداشت علت رد سرپرست در تاریخچه ثبت نشده یا ناقص است: {rej_hist.note if rej_hist else None}")
 
     # 3. بررسی فایل‌های اسکرین‌شات
-    screenshot_dir = r"e:\warehouse project\Documents\Browser_E2E_Comprehensive_Testing\screenshots"
+    screenshot_dir = os.path.join(REPO_ROOT, "Documents", "Browser_E2E_Comprehensive_Testing", "screenshots")
     expected_screens = [
         'phase1_scenario1_01_dispatch.png',
         'phase1_scenario1_02_counter_submitted.png',

@@ -18,14 +18,14 @@
 ### 📝 جزئیات تسک‌ها
 
 - [x] **فاز ۱: ماژول کش حضور کاربران در بک‌اند** <!-- id: 0 -->
-  - [x] پیاده‌سازی `add_online_user`, `remove_online_user` و `get_online_user_ids` در `warehouse-backend/communications/presence.py` <!-- id: 1 -->
+  - [x] پیاده‌سازی `add_online_user`, `remove_online_user` و `get_online_user_ids` در `backend/communications/presence.py` <!-- id: 1 -->
 
 - [x] **فاز ۲: ادغام اسنپ‌شات در وب‌سوکت بک‌اند** <!-- id: 2 -->
-  - [x] ارسال رویداد `chat.online_users` به کلاینت متصل در `warehouse-backend/communications/consumers.py` <!-- id: 3 -->
+  - [x] ارسال رویداد `chat.online_users` به کلاینت متصل در `backend/communications/consumers.py` <!-- id: 3 -->
   - [x] پشتیبانی از پیام `get_online_users` در `receive` <!-- id: 4 -->
 
 - [x] **فاز ۳: دریافت و مدیریت اسنپ‌شات در فرانت‌اند** <!-- id: 5 -->
-  - [x] شنود `chat.online_users` در `warehouse-front/src/app/core/services/communication.service.ts` <!-- id: 6 -->
+  - [x] شنود `chat.online_users` در `frontend/src/app/core/services/communication.service.ts` <!-- id: 6 -->
   - [x] ارسال درخواست استعلام حضور هنگام باز شدن کشوی چت <!-- id: 7 -->
 
 - [x] **فاز ۴: تست‌ها و راستی‌آزمایی** <!-- id: 8 -->

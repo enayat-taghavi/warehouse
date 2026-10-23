@@ -2,7 +2,7 @@
 
 # طرح جامع رفع کامل ایرادات تب صدور کارت پرسنلی و گیت‌پاس (Personnel ID Cards Comprehensive Fixes)
 
-این سند برنامه جامع برای برطرف کردن تمام ایرادات، نواقص داده‌ای، باگ‌های چیدمان، خروجی تصویر دیجیتال و موتور چاپ در ماژول صدور کارت پرسنلی ([id-cards](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts)) را شرح می‌دهد.
+این سند برنامه جامع برای برطرف کردن تمام ایرادات، نواقص داده‌ای، باگ‌های چیدمان، خروجی تصویر دیجیتال و موتور چاپ در ماژول صدور کارت پرسنلی ([id-cards](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts)) را شرح می‌دهد.
 
 ---
 
@@ -23,9 +23,9 @@
 
 | فایل | نوع تغییر | شرح تغییرات |
 | :--- | :---: | :--- |
-| [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts) | اصلاح | افزودن متد `getWarehouseNames`، الگوریتم تولید QR Code ماتریسی واقعی، بازنویسی رندر Canvas با شکست خطوط و پشتیبانی از استایل افقی، اصلاح فیلتر انبارها و منطق انتخاب چاپ |
-| [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html) | اصلاح | اتصال فیلد مجوز به `getWarehouseNames`، تکمیل المان‌های پشت کارت افقی، حذف بارکد تکراری فوتر، اعمال شرط اعتبار در کارت افقی، اصلاح مقادیر دراپ‌داون انبار، افزودن شیت چاپ پشت کارت در حالت A4 |
-| [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css) | اصلاح | بهینه‌سازی گرید چاپ برای کارت‌های عمودی (۳ ستونه ۵۴ میلی‌متری) و افقی (۲ ستونه ۸۵.۶ میلی‌متری)، بهبود چاپ لمینت با رعایت رنگ‌های سازمانی |
+| [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts) | اصلاح | افزودن متد `getWarehouseNames`، الگوریتم تولید QR Code ماتریسی واقعی، بازنویسی رندر Canvas با شکست خطوط و پشتیبانی از استایل افقی، اصلاح فیلتر انبارها و منطق انتخاب چاپ |
+| [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html) | اصلاح | اتصال فیلد مجوز به `getWarehouseNames`، تکمیل المان‌های پشت کارت افقی، حذف بارکد تکراری فوتر، اعمال شرط اعتبار در کارت افقی، اصلاح مقادیر دراپ‌داون انبار، افزودن شیت چاپ پشت کارت در حالت A4 |
+| [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css) | اصلاح | بهینه‌سازی گرید چاپ برای کارت‌های عمودی (۳ ستونه ۵۴ میلی‌متری) و افقی (۲ ستونه ۸۵.۶ میلی‌متری)، بهبود چاپ لمینت با رعایت رنگ‌های سازمانی |
 
 ---
 

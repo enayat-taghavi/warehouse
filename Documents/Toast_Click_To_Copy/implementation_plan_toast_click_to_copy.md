@@ -14,7 +14,7 @@
 | **بازخورد بصری (Feedback)** | تغییر آیکون به تیک سبز همراه با بج متحرک «کپی شد ✓» به مدت ۱.۵ ثانیه | اطمینان ۱۰۰٪ کاربر از انجام موفق عملیات کپی |
 | **دکمه بستن (Close Button)** | دکمه اختصاصی ✕ با متوقف کردن انتشار رویداد (`stopPropagation`) | بستن سریع پیام در صورت عدم نیاز کاربر |
 | **مکانیزم کپی امن** | استفاده از `navigator.clipboard.writeText` به همراه Fallback استاندارد `execCommand('copy')` | عملکرد بی‌نقص حتی در محیط‌های بدون SSL / شبکه لوکال / مرورگرهای مختلف |
-| **محدوده اعمال (Scope)** | ۱. کل اپلیکیشن اصلی انگولار (`warehouse-front`)<br>۲. داشبورد مستقل تاریخچه چت‌ها (`chat_history_dashboard.html` و اسکریپت `update_chat_history.py`) | پوشش کامل و یکپارچه در تمامی محیط‌های رابط کاربری پروژه |
+| **محدوده اعمال (Scope)** | ۱. کل اپلیکیشن اصلی انگولار (`frontend`)<br>۲. داشبورد مستقل تاریخچه چت‌ها (`chat_history_dashboard.html` و اسکریپت `update_chat_history.py`) | پوشش کامل و یکپارچه در تمامی محیط‌های رابط کاربری پروژه |
 
 ---
 
@@ -22,7 +22,7 @@
 
 | ردیف | محیط | فایل هدف | خلاصه تغییرات |
 | :---: | :---: | :--- | :--- |
-| ۱ | فرانت‌اند انگولار | [toast.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/toast/toast.component.ts) | • افزودن متد کپی متن به کلیپ‌بورد (`copyToast`)<br>• نگهداری وضعیت کپی هر توست (`copiedToastIds`)<br>• تغییر تمپلیت: نمایش بج متحرک «کپی شد ✓»، تفکیک رویداد کلیک متن از دکمه ✕<br>• افزودن افکت‌های CSS و راهنمای Hover (`title`) |
+| ۱ | فرانت‌اند انگولار | [toast.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/toast/toast.component.ts) | • افزودن متد کپی متن به کلیپ‌بورد (`copyToast`)<br>• نگهداری وضعیت کپی هر توست (`copiedToastIds`)<br>• تغییر تمپلیت: نمایش بج متحرک «کپی شد ✓»، تفکیک رویداد کلیک متن از دکمه ✕<br>• افزودن افکت‌های CSS و راهنمای Hover (`title`) |
 | ۲ | اسکریپت داشبورد چت | [update_chat_history.py](file:///e:/warehouse%20project/update_chat_history.py) | • افزودن قابلیت کلیک روی `#toastMessage` برای کپی محتوا با تابع `copyToastText`<br>• افزودن دکمه ✕ بستن سریع و استایل بج کپی شد<br>• بازتولید خودکار داشبورد |
 | ۳ | داشبورد تاریخچه چت | [chat_history_dashboard.html](file:///e:/warehouse%20project/chat_history_dashboard.html) | • اعمال تغییرات استایل، تمپلیت توست و توابع جاوااسکریپت کپی |
 
@@ -30,9 +30,9 @@
 
 ## ۳. جزئیات تغییرات فایل‌ها (File-by-File Details)
 
-### کامپوننت توست انگولار (`warehouse-front`)
+### کامپوننت توست انگولار (`frontend`)
 
-#### [MODIFY] [toast.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/toast/toast.component.ts)
+#### [MODIFY] [toast.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/toast/toast.component.ts)
 - **منطق کپی متن (`copyToast`):**
   - کپی `toast.message` در کلیپ‌بورد کاربر.
   - ثبت شناسه توست در یک Set/Signal واکنشی (`copiedIds`).
@@ -57,7 +57,7 @@
 ## ۴. برنامه راستی‌آزمایی و تست (Verification Plan)
 
 ### ۱. تست بیلد خودکار انگولار (Angular Build Check)
-- اجرای `npx ng build` در دایرکتوری `warehouse-front` و اطمینان از کامپایل بدون خطای تایپ‌اسکریپت.
+- اجرای `npx ng build` در دایرکتوری `frontend` و اطمینان از کامپایل بدون خطای تایپ‌اسکریپت.
 
 ### ۲. تست عملکردی در مرورگر (Manual & Browser Verification)
 - **تست کپی توست انگولار:** نمایش یک پیام توست تستی و کلیک روی آن؛ بررسی محتوای کپی‌شده در کلیپ‌بورد و مشاهده بج «کپی شد ✓».

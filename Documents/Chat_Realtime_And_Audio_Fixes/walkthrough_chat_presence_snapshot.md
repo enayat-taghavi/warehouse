@@ -14,12 +14,12 @@
 
 ## 📁 فایل‌های ایجاد/ویرایش‌شده
 
-- `warehouse-backend/communications/presence.py`: ماژول کش اختصاصی حضور کاربران آنلاین
-- `warehouse-backend/communications/consumers.py`: ارسال اسنپ‌شات اولیه و پاسخ به `get_online_users`
-- `warehouse-backend/communications/tests/test_presence.py`: آزمون‌های واحد کش و وب‌سوکت اسنپ‌شات حضور
-- `warehouse-front/src/app/core/services/communication.service.ts`: شنود `chat.online_users` و متد `refreshPresence`
-- `warehouse-front/src/app/components/communications/chat-drawer/chat-drawer.component.ts`: استعلام حضور در `ngOnInit`
-- `warehouse-front/src/app/core/services/communication.service.spec.ts`: آزمون‌های واحد فرانت‌اند
+- `backend/communications/presence.py`: ماژول کش اختصاصی حضور کاربران آنلاین
+- `backend/communications/consumers.py`: ارسال اسنپ‌شات اولیه و پاسخ به `get_online_users`
+- `backend/communications/tests/test_presence.py`: آزمون‌های واحد کش و وب‌سوکت اسنپ‌شات حضور
+- `frontend/src/app/core/services/communication.service.ts`: شنود `chat.online_users` و متد `refreshPresence`
+- `frontend/src/app/components/communications/chat-drawer/chat-drawer.component.ts`: استعلام حضور در `ngOnInit`
+- `frontend/src/app/core/services/communication.service.spec.ts`: آزمون‌های واحد فرانت‌اند
 
 ---
 

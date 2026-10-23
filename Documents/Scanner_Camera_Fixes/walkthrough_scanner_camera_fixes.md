@@ -26,9 +26,9 @@
 
 | فایل | نوع تغییر | توضیحات |
 | :--- | :---: | :--- |
-| [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | اصلاح | رفع صفحه سیاه، فال‌بک استریم، دکمه چرخش دوربین و استعلام دستگاه‌ها |
-| [customs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | اصلاح | افزودن `normalizeDigits` و تطبیق ۶ فیلد شناسایی کالا در اسکنر |
-| [counter-dashboard.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح | همگام‌سازی تطبیق `item_no` در اسکنر بارکد |
+| [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts) | اصلاح | رفع صفحه سیاه، فال‌بک استریم، دکمه چرخش دوربین و استعلام دستگاه‌ها |
+| [customs.ts](file:///e:/warehouse%20project/frontend/src/app/components/customs/customs.ts) | اصلاح | افزودن `normalizeDigits` و تطبیق ۶ فیلد شناسایی کالا در اسکنر |
+| [counter-dashboard.ts](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | اصلاح | همگام‌سازی تطبیق `item_no` در اسکنر بارکد |
 
 ---
 

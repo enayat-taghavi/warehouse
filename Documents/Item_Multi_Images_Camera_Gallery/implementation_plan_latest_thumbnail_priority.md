@@ -20,26 +20,26 @@
 
 ## تغییرات پیشنهادی (Proposed Changes)
 
-### ۱. بک‌اند (`warehouse-backend`)
+### ۱. بک‌اند (`backend`)
 
-#### [MODIFY] [`serializers.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/serializers.py)
+#### [MODIFY] [`serializers.py`](file:///e:/warehouse%20project/backend/inventory/serializers.py)
 - بازنویسی متد `get_primary_thumbnail` در `ItemSerializer` با رعایت دقیق اولویت شاخص و سپس آخرین عکس ثبت‌شده (`-created_at`, `-id`).
 - پشتیبانی کامل از تولید آدرس Absolute در صورت وجود `request context`.
 
 ---
 
-### ۲. فرانت‌اند (`warehouse-front`)
+### ۲. فرانت‌اند (`frontend`)
 
-#### [MODIFY] [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
+#### [MODIFY] [`counter-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/counter/counter-dashboard/counter-dashboard.ts)
 - به‌روزرسانی متد `onPhotosChanged` برای استخراج آدرس تامب‌نیل شاخص یا آخرین عکس و تزریق فوری آن به `task.item_details.primary_thumbnail` و `selectedTask.item_details.primary_thumbnail`.
 
-#### [MODIFY] [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
+#### [MODIFY] [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/frontend/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts)
 - پیاده‌سازی متد `onPhotosChanged` برای به‌روزرسانی فوری تامب‌نیل در تسک باز شده سرپرست.
 
-#### [MODIFY] [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts)
+#### [MODIFY] [`manager-review.ts`](file:///e:/warehouse%20project/frontend/src/app/components/manager-review/manager-review.ts)
 - پیاده‌سازی متد `onPhotosChanged` برای به‌روزرسانی فوری تامب‌نیل در تسک باز شده مدیر.
 
-#### [MODIFY] [`dispatch.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [`dispatch.ts`](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - پیاده‌سازی متد `onPhotosChanged` برای آپدیت ردیف مربوطه در جدول کالاها.
 
 ---

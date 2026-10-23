@@ -20,7 +20,7 @@
   python scripts/automation/verify_tools.py restart-backend
 
 هر فرمان در موفقیت کد ۰ و در شکست کد ۱ می‌دهد و علت را چاپ می‌کند.
-الگوهای ng-test-compare نسبت به warehouse-front هستند (مثل src/app/shared/icons/*.spec.ts).
+الگوهای ng-test-compare نسبت به frontend هستند (مثل src/app/shared/icons/*.spec.ts).
 """
 
 import argparse
@@ -44,7 +44,7 @@ if sys.platform == "win32":
         pass
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FRONT_DIR = REPO_ROOT / "warehouse-front"
+FRONT_DIR = REPO_ROOT / "frontend"
 RUNNER_FILES = ("tasks.md", "run_tasks.bat", "run_tasks.py", "tasks_history.md")
 BASE_WORK_DIR = REPO_ROOT / "scratch" / "runner-base"
 CACHE_DIR = REPO_ROOT / "scratch" / "runner-cache"
@@ -210,7 +210,7 @@ def cmd_diff_free(args) -> int:
 
 # ---------------------------------------------------------------- backend profiles and build output
 
-BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+BACKEND_DIR = REPO_ROOT / "backend"
 BACKEND_PYTHON = BACKEND_DIR / "venv" / "Scripts" / "python.exe"
 
 
@@ -294,7 +294,7 @@ def cmd_release_mark(args) -> int:
     return 0
 
 
-DAPHNE_TAB = ('wt.exe', '-w', '0', 'new-tab', '-d', str(REPO_ROOT / 'warehouse-backend'), '--title', 'Backend Daphne',
+DAPHNE_TAB = ('wt.exe', '-w', '0', 'new-tab', '-d', str(REPO_ROOT / 'backend'), '--title', 'Backend Daphne',
               'cmd', '/k', r'.\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application')
 
 
@@ -344,7 +344,7 @@ def cmd_restart_backend(args) -> int:
     return 1
 
 
-WORKER_TAB = ('wt.exe', '-w', '0', 'new-tab', '-d', str(REPO_ROOT / 'warehouse-backend'), '--title', 'GDrive Sync Worker',
+WORKER_TAB = ('wt.exe', '-w', '0', 'new-tab', '-d', str(REPO_ROOT / 'backend'), '--title', 'GDrive Sync Worker',
               'cmd', '/k', r'for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py '
               r'run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)')
 
@@ -681,8 +681,8 @@ def cmd_migrate_empty(args) -> int:
     return 1 if failed else 0
 
 
-SAMPLE_ALLOWED = ("warehouse-backend/modules/sample/", "warehouse-front/src/app/modules/sample/",
-                  "warehouse-front/src/app/modules/installed-modules.ts")
+SAMPLE_ALLOWED = ("backend/modules/sample/", "frontend/src/app/modules/sample/",
+                  "frontend/src/app/modules/installed-modules.ts")
 
 
 def cmd_sample_module(args) -> int:
@@ -717,10 +717,10 @@ def cmd_sample_module(args) -> int:
         if not any(k.startswith(SAMPLE_ALLOWED[0]) for k in changed) or not any(k.startswith(SAMPLE_ALLOWED[1]) for k in changed):
             problems.append("new_module.py did not create both the backend and the frontend module folder")
         for profile in ("sample", ""):
-            code, out = run_manage(["check"], profile, backend=work / "warehouse-backend")
+            code, out = run_manage(["check"], profile, backend=work / "backend")
             if code != 0:
                 problems.append(f"manage.py check (WH_MODULES={profile or 'all'}) exit {code}:\n{tail(out)}")
-        front = work / "warehouse-front"
+        front = work / "frontend"
         mk = subprocess.run(["cmd", "/c", "mklink", "/J", str(front / "node_modules"), str(FRONT_DIR / "node_modules")],
                             capture_output=True, text=True)
         if mk.returncode != 0:
@@ -784,7 +784,7 @@ def safe_remove_tree(root: Path):
         return
     if BASE_WORK_DIR.resolve() not in root.resolve().parents:
         raise RuntimeError(f"refusing to delete {root}: outside {BASE_WORK_DIR}")
-    remove_junction(root / "warehouse-front" / "node_modules")
+    remove_junction(root / "frontend" / "node_modules")
     leftovers = links_inside(root)
     if leftovers:
         raise RuntimeError(f"refusing to delete {root}: links still inside: {leftovers[:5]}")
@@ -841,7 +841,7 @@ def run_logged(cmd: list, cwd: Path, log_path: Path) -> str:
 
 
 def type_errors(front: Path, log_path: Path) -> dict:
-    """خطاهای نوع به تفکیک فایل (مسیر نسبت به warehouse-front)."""
+    """خطاهای نوع به تفکیک فایل (مسیر نسبت به frontend)."""
     output = run_logged([npx(), "tsc", "-p", TSCONFIG_NAME, "--noEmit", "--pretty", "false"], front, log_path)
     errors = {}
     for line in output.splitlines():
@@ -900,11 +900,11 @@ def base_suite(full_hash: str, includes: list, excludes: list) -> dict:
     try:
         work.mkdir()
         tar_path = BASE_WORK_DIR / f"{full_hash[:12]}.tar"
-        git("archive", "-o", str(tar_path), full_hash, "warehouse-front")
+        git("archive", "-o", str(tar_path), full_hash, "frontend")
         with tarfile.open(tar_path) as tf:
             tf.extractall(work, filter="data")
         tar_path.unlink()
-        front = work / "warehouse-front"
+        front = work / "frontend"
         r = subprocess.run(["cmd", "/c", "mklink", "/J", str(front / "node_modules"), str(FRONT_DIR / "node_modules")],
                            capture_output=True, text=True)
         if r.returncode != 0:
@@ -919,13 +919,13 @@ def base_suite(full_hash: str, includes: list, excludes: list) -> dict:
 
 
 def front_renames(full_hash: str) -> dict:
-    """فایل‌های جابه‌جاشدهٔ warehouse-front از BASE تا HEAD (مسیر نسبت به warehouse-front)، تا نتیجهٔ پایه با مسیر تازه مقایسه شود."""
-    out = git("-c", "diff.renameLimit=20000", "diff", "--name-status", "-M", full_hash, "HEAD", "--", "warehouse-front/src")
+    """فایل‌های جابه‌جاشدهٔ frontend از BASE تا HEAD (مسیر نسبت به frontend)، تا نتیجهٔ پایه با مسیر تازه مقایسه شود."""
+    out = git("-c", "diff.renameLimit=20000", "diff", "--name-status", "-M", full_hash, "HEAD", "--", "frontend/src")
     renames = {}
     for line in out.splitlines():
         parts = line.split("\t")
         if len(parts) == 3 and parts[0].startswith("R"):
-            renames[parts[1].removeprefix("warehouse-front/")] = parts[2].removeprefix("warehouse-front/")
+            renames[parts[1].removeprefix("frontend/")] = parts[2].removeprefix("frontend/")
     return renames
 
 
@@ -1128,7 +1128,7 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("module-names", help="each backend module still exposes every top-level name it had at BASE")
     p.add_argument("--base", required=True)
-    p.add_argument("--file", nargs="+", required=True, help="repo-relative .py path(s), e.g. warehouse-backend/modules/accounting/personnel/views.py")
+    p.add_argument("--file", nargs="+", required=True, help="repo-relative .py path(s), e.g. backend/modules/accounting/personnel/views.py")
     p.add_argument("--with-imports", action="store_true", help="also require the names the module imported at BASE")
     p.set_defaults(func=cmd_module_names)
 

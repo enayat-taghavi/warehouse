@@ -8,7 +8,7 @@
 ## تغییرات پیشنهادی
 
 ### ۱. لاجیک بک‌اند (API)
-- **فایل:** `warehouse-backend/inventory/views.py`
+- **فایل:** `backend/inventory/views.py`
 - در متد `CountTaskViewSet.get_queryset`، هنگام پردازش نقش پیگیری (`as_role == 'tracking'`)، پارامتری با نام `show_completed` از کلاینت بررسی می‌شود.
 - در صورتی که این پارامتر `true` نباشد، مانند روال فعلی کالاهای `FINAL_APPROVED` فیلتر می‌شوند، اما در صورت `true` بودنِ پارامتر، این کالاها نیز در لیست گنجانده می‌شوند.
 

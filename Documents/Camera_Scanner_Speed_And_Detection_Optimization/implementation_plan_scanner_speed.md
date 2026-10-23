@@ -29,7 +29,7 @@
 
 ### 📦 کامپوننت مشترک اسکنر (`src/app/shared/components/barcode-scanner`)
 
-#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
+#### [MODIFY] [barcode-scanner.component.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/barcode-scanner/barcode-scanner.component.ts)
 - تنظیم `delayBetweenScanAttempts: 40` در گزینه‌های `BrowserMultiFormatReader` جهت اسکن با فرکانس بالا.
 - اصلاح رزولوشن استریم به `1280x720` بهینه و اضافه کردن قیدهای پیشرفته فوکوس خودکار.
 - اولویت‌بندی فرمت‌های پرکاربرد انبارداری برای کاهش تاخیر پردازش CPU.
@@ -55,7 +55,7 @@
 ## ۵. برنامه راستی‌آزمایی (Verification Plan)
 
 ### تست‌های خودکار:
-1. اجرای `npm run build` در پوشه `warehouse-front` و اطمینان از سلامت کامپایل با Exit Code: 0.
+1. اجرای `npm run build` در پوشه `frontend` و اطمینان از سلامت کامپایل با Exit Code: 0.
 
 ### تست‌های دستی توسط شما:
 1. باز کردن دوربین اسکنر در کارتابل و گرفتن بارکد یا QR کد در فاصله ۱۵ الی ۲۵ سانتی‌متری از لنز.

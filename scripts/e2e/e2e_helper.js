@@ -3,7 +3,7 @@ let puppeteer;
 try {
   puppeteer = require('puppeteer');
 } catch (e) {
-  puppeteer = require(path.join(__dirname, '..', '..', 'warehouse-front', 'node_modules', 'puppeteer'));
+  puppeteer = require(path.join(__dirname, '..', '..', 'frontend', 'node_modules', 'puppeteer'));
 }
 
 const fs = require('fs');

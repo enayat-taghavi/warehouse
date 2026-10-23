@@ -10,8 +10,8 @@
 
 | فایل | بخش تغییر | توضیحات |
 | :--- | :--- | :--- |
-| [`layout.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.ts) | ایمپورت و منطق بروزرسانی | تزریق `SwUpdate` و اضافه کردن متد `onManualAppUpdate()` به همراه استیت لودینگ `isCheckingAppUpdate` و نمایش پیام‌های Toast |
-| [`layout.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/layout/layout.html) | پاپ‌آپ منوی کاربری | اضافه شدن دکمه **«بروزرسانی نسخه برنامه (PWA)»** با آیکون چرخشی هنگام بررسی و تگ شناساگر سبز رنگ |
+| [`layout.ts`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.ts) | ایمپورت و منطق بروزرسانی | تزریق `SwUpdate` و اضافه کردن متد `onManualAppUpdate()` به همراه استیت لودینگ `isCheckingAppUpdate` و نمایش پیام‌های Toast |
+| [`layout.html`](file:///e:/warehouse%20project/frontend/src/app/components/layout/layout.html) | پاپ‌آپ منوی کاربری | اضافه شدن دکمه **«بروزرسانی نسخه برنامه (PWA)»** با آیکون چرخشی هنگام بررسی و تگ شناساگر سبز رنگ |
 
 ---
 

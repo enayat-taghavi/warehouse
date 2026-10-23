@@ -80,7 +80,7 @@ npx vitest run src/app/components/settings/settings.spec.ts src/app/shared/compo
 
 **خروجی ترمینال:**
 ```text
- RUN  v4.1.9 E:/warehouse project/warehouse-front
+ RUN  v4.1.9 E:/warehouse project/frontend
 
  ✓ src/app/services/settings.spec.ts (3 tests)
  ✓ src/app/shared/components/confirm-dialog/confirm-dialog.component.spec.ts (5 tests)
@@ -105,15 +105,15 @@ npm run build
 
 | نام فایل | وضعیت | خلاصه تغییرات |
 |---|---|---|
-| `warehouse-backend/config/views_backup.py` | اصلاح | رفع باگ حذف فایل نجات، ساختاردهی `rollback_state`، الزام `RESTORE_DATABASE_CONFIRM`، ثبت `AuditLog`، کنترل سقف حجم و رمز ۱۲ کاراکتری |
-| `warehouse-backend/warehouses/tests_settings.py` | جدید | تست‌های دود و کنترل مجوزهای endpoint تنظیمات سراسری |
-| `warehouse-backend/config/tests_backup.py` | جدید | مجموعه کامل آزمون‌های شبیه‌سازی‌شده (Mock) ایجاد، اعتبارسنجی، بازیابی و رول‌بک بکاپ |
-| `warehouse-front/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts` | اصلاح | افزودن پشتیبانی از `requireText` و اعتبارسنجی تایپ عبارت تاییدیه |
-| `warehouse-front/src/app/shared/components/confirm-dialog/confirm-dialog.component.spec.ts` | جدید | تست‌های واحد تاییدیه متنی صریح دیالوگ |
-| `warehouse-front/src/app/services/settings.ts` | اصلاح | افزودن ارسال پارامتر `confirm_text` در متد `restoreBackup` |
-| `warehouse-front/src/app/services/settings.spec.ts` | جدید/اصلاح | تست‌های واحد سرویس تنظیمات برای ارسال فرم‌دیتا با `confirm_text` |
-| `warehouse-front/src/app/components/settings/settings.ts` | اصلاح | اعتبارسنجی حداقل ۱۲ کاراکتر رمز در دانلود، متغیر `restoreConfirmInput` و اعتبارسنجی در بازیابی |
-| `warehouse-front/src/app/components/settings/settings.html` | اصلاح | افزودن کادر تایپ عبارت تأییدیه `RESTORE_DATABASE_CONFIRM` و غیرفعال‌سازی دکمه تأیید |
-| `warehouse-front/src/app/components/settings/settings.spec.ts` | جدید/اصلاح | آزمون‌های واحد فرانت‌اند برای اعتبارسنجی رمز و بازیابی پایگاه‌داده |
+| `backend/config/views_backup.py` | اصلاح | رفع باگ حذف فایل نجات، ساختاردهی `rollback_state`، الزام `RESTORE_DATABASE_CONFIRM`، ثبت `AuditLog`، کنترل سقف حجم و رمز ۱۲ کاراکتری |
+| `backend/warehouses/tests_settings.py` | جدید | تست‌های دود و کنترل مجوزهای endpoint تنظیمات سراسری |
+| `backend/config/tests_backup.py` | جدید | مجموعه کامل آزمون‌های شبیه‌سازی‌شده (Mock) ایجاد، اعتبارسنجی، بازیابی و رول‌بک بکاپ |
+| `frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts` | اصلاح | افزودن پشتیبانی از `requireText` و اعتبارسنجی تایپ عبارت تاییدیه |
+| `frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.spec.ts` | جدید | تست‌های واحد تاییدیه متنی صریح دیالوگ |
+| `frontend/src/app/services/settings.ts` | اصلاح | افزودن ارسال پارامتر `confirm_text` در متد `restoreBackup` |
+| `frontend/src/app/services/settings.spec.ts` | جدید/اصلاح | تست‌های واحد سرویس تنظیمات برای ارسال فرم‌دیتا با `confirm_text` |
+| `frontend/src/app/components/settings/settings.ts` | اصلاح | اعتبارسنجی حداقل ۱۲ کاراکتر رمز در دانلود، متغیر `restoreConfirmInput` و اعتبارسنجی در بازیابی |
+| `frontend/src/app/components/settings/settings.html` | اصلاح | افزودن کادر تایپ عبارت تأییدیه `RESTORE_DATABASE_CONFIRM` و غیرفعال‌سازی دکمه تأیید |
+| `frontend/src/app/components/settings/settings.spec.ts` | جدید/اصلاح | آزمون‌های واحد فرانت‌اند برای اعتبارسنجی رمز و بازیابی پایگاه‌داده |
 
 </div>

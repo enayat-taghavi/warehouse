@@ -15,19 +15,19 @@
 
 ### بخش بک‌اند
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 > [!NOTE]
 > - اصلاح منطق برش استرینگ: قبل از جدا کردن تگ‌ها، تمام `,` ها به `،` تبدیل خواهند شد.
 > - در مرحله یافتن کالای از پیش موجود (`existing_item`)، اگر کالا تگی از قبل داشته باشد، تگ‌های قدیمی نیز همراه با تگ‌های جدید در لیست `final_tags` ریخته شده و سپس `set` (یونیک) می‌شوند.
 
 ### بخش فرانت‌اند
 
-#### [MODIFY] [docs.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/docs/docs.html)
+#### [MODIFY] [docs.html](file:///e:/warehouse%20project/frontend/src/app/components/docs/docs.html)
 > [!TIP]
 > - افزودن راهنمای متنی کوچک در زیر input تگ.
 > - افزودن کد مودالِ «هشدار خالی بودن تگ» با دو دکمه «ادامه بدون تگ» و «بازگشت».
 
-#### [MODIFY] [docs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/docs/docs.ts)
+#### [MODIFY] [docs.ts](file:///e:/warehouse%20project/frontend/src/app/components/docs/docs.ts)
 > [!IMPORTANT]
 > - در متد `simulateImportProcess` بررسی می‌شود که آیا `importTag` خالی است یا خیر.
 > - در صورت خالی بودن، فِلگ مربوط به مودال هشدار `showEmptyTagWarning` برابر `true` می‌شود و فرایند متوقف می‌گردد تا کاربر تأیید کند.

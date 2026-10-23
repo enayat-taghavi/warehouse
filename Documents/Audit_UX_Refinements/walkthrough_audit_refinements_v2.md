@@ -53,8 +53,8 @@
 ---
 
 ## 📁 پرونده‌های به‌روزشده (Modified Files)
-- [`warehouse-front/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html)
-- [`warehouse-front/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts)
+- [`frontend/src/app/components/audit/audit.html`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html)
+- [`frontend/src/app/components/audit/audit.ts`](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts)
 - [`Documents/Audit_UX_Refinements/implementation_plan_audit_refinements_v2.md`](file:///e:/warehouse%20project/Documents/Audit_UX_Refinements/implementation_plan_audit_refinements_v2.md)
 - [`Documents/Audit_UX_Refinements/task_audit_refinements_v2.md`](file:///e:/warehouse%20project/Documents/Audit_UX_Refinements/task_audit_refinements_v2.md)
 - [`Documents/Master_Log.md`](file:///e:/warehouse%20project/Documents/Master_Log.md)

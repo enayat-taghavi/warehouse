@@ -34,10 +34,10 @@
 
 ### کامپوننت‌های نیازمند تغییر
 
-#### [MODIFY] [item-api.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/api/item-api.service.ts)
+#### [MODIFY] [item-api.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/api/item-api.service.ts)
 اضافه کردن `AuthService` به constructor و تغییر نحوه گرفتن توکن.
 
-#### [MODIFY] [docs.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/docs/docs.ts)
+#### [MODIFY] [docs.ts](file:///e:/warehouse%20project/frontend/src/app/components/docs/docs.ts)
 اضافه کردن `AuthService` به constructor و استفاده از آن در بخش `downloadLog()`.
 
 ## Verification Plan

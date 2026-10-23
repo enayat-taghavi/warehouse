@@ -21,16 +21,16 @@
 
 ## ۲. پرونده‌های اصلاح‌شده (Modified Files)
 
-### ۱. [id-cards.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.ts)
+### ۱. [id-cards.ts](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.ts)
 - پیاده‌سازی الگوریتم چیدمان آینه‌ای `getMirroredPrintableUsers(columns: number)` جهت انطباق فیزیکی دقیق پشت و روی کارت‌ها در پرینترهای دو‌رو.
 - افزودن متغیرها و متدهای کنترل مودال پیش‌نمایش شیت (`isPreviewSheetModalOpen`, `previewSheetActiveTab`, `openSheetPreviewModal`, `closeSheetPreviewModal`).
 
-### ۲. [id-cards.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.html)
+### ۲. [id-cards.html](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.html)
 - افزودن دکمه «پیش‌نمایش شیت چاپ A4» در نوار ابزار بالای صفحه.
 - طراحی و استقرار مودال تعاملی پیش‌نمایش زنده شیت A4 با شبیه‌سازی مقیاس واقعی برگه، سوئیچ صفحات رو و پشت و دکمه ارسال مستقیم به پرینتر.
 - بازنویسی ساختار HTML شیت‌های چاپ A4 و لمینت با وفاداری بصری ۱۰۰٪ به پیش‌نمایش ۳ بعدی زنده.
 
-### ۳. [id-cards.css](file:///e:/warehouse%20project/warehouse-front/src/app/components/id-cards/id-cards.css)
+### ۳. [id-cards.css](file:///e:/warehouse%20project/frontend/src/app/components/id-cards/id-cards.css)
 - افزودن استایل‌های صفحه نمایش برای کامپوننت‌های شیت داخل مودال پیش‌نمایش.
 - تثبیت قوانین `-webkit-print-color-adjust: exact` جهت چاپ کامل پس‌زمینه‌ها، بافت‌های امنیتی و گرادیانت‌ها در پرینتر.
 
@@ -42,7 +42,7 @@
 > ng build && node tools/patch-ngsw-530.js
 √ Building...
 Application bundle generation complete. [19.909 seconds]
-Output location: E:\warehouse project\warehouse-front\dist\warehouse-app
+Output location: frontend\dist\warehouse-app
 [patch-ngsw-530] ✔ ngsw-worker.js وصله شد: جلوگیری از غیرفعال شدن کش در هنگام قطعی کلودفلر.
 ```
 

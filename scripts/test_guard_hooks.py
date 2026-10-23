@@ -5,16 +5,17 @@
 import json
 import os
 import shutil
+import os
 import subprocess
 import sys
 import tempfile
 import uuid
 
 S = chr(92)
-ROOT = 'E:' + S + 'warehouse project'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 G = ROOT + S + '.claude' + S + 'hooks' + S + 'guard.py'
 FA = ''.join(map(chr, [0x627, 0x646, 0x628, 0x627, 0x631]))
-FRONT = ROOT + S + 'warehouse-front' + S + 'src' + S + 'app' + S
+FRONT = ROOT + S + 'frontend' + S + 'src' + S + 'app' + S
 bad = 0
 test_backup_dir = tempfile.mkdtemp(prefix='guard_test_bkp_')
 os.environ['TEST_GUARD_BACKUP_DIR'] = test_backup_dir
@@ -43,11 +44,11 @@ ag('grep Persian -> deny', {'toolCall': {'name': 'run_command', 'args': {'Comman
    lambda ls: len(ls) == 1 and ls[0]['decision'] == 'deny' and ls[0]['reason'] and ls[0]['hookSpecificOutput']['permissionDecision'] == 'deny')
 ag('grep ASCII -> allow', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'grep abc x'}}},
    lambda ls: ls == [{'decision': 'allow'}])
-ag('new root file -> deny', {'toolCall': {'name': 'write_to_file', 'args': {'TargetFile': 'E:/warehouse project/zz_new.txt', 'CodeContent': 'x'}}},
+ag('new root file -> deny', {'toolCall': {'name': 'write_to_file', 'args': {'TargetFile': ROOT + S + 'zz_new.txt', 'CodeContent': 'x'}}},
    lambda ls: len(ls) == 1 and ls[0]['decision'] == 'deny')
-ag('status check -> warn + allow', {'toolCall': {'name': 'write_to_file', 'args': {'TargetFile': 'E:/warehouse project/warehouse-front/src/app/a.ts', 'CodeContent': 'status === 0'}}},
+ag('status check -> warn + allow', {'toolCall': {'name': 'write_to_file', 'args': {'TargetFile': ROOT + S + 'frontend' + S + 'src' + S + 'app' + S + 'a.ts', 'CodeContent': 'status === 0'}}},
    lambda ls: len(ls) == 2 and ls[0]['hookSpecificOutput']['additionalContext'] and ls[1] == {'decision': 'allow'})
-ag('plain replace -> allow', {'toolCall': {'name': 'replace_file_content', 'args': {'TargetFile': 'E:/warehouse project/warehouse-front/src/app/a.ts', 'ReplacementContent': 'x'}}},
+ag('plain replace -> allow', {'toolCall': {'name': 'replace_file_content', 'args': {'TargetFile': ROOT + S + 'frontend' + S + 'src' + S + 'app' + S + 'a.ts', 'ReplacementContent': 'x'}}},
    lambda ls: ls == [{'decision': 'allow'}])
 ag('migrate without backup -> deny', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'python manage.py migrate'}}},
    lambda ls: len(ls) == 1 and ls[0]['decision'] == 'deny' and 'safe-migration' in ls[0]['reason'])
@@ -129,7 +130,7 @@ claude('Post .html outline-none + focus-visible', 'PostToolUse', 'Edit', {'file_
 claude('Post .ts status + img no alt = one JSON', 'PostToolUse', 'Edit', {'file_path': TS, 'new_string': 'status === 0; t = `<img src="a">`'}, 'warn2')
 claude('Post .spec.ts ignored', 'PostToolUse', 'Write', {'file_path': FRONT + 'x.spec.ts', 'content': '<img src=a> status === 0'}, 'pass')
 claude('Post icon-registry.ts ignored', 'PostToolUse', 'Write', {'file_path': FRONT + 'shared' + S + 'icons' + S + 'icon-registry.ts', 'content': '<img src=a>'}, 'pass')
-claude('Post backend .py ignored', 'PostToolUse', 'Edit', {'file_path': ROOT + S + 'warehouse-backend' + S + 'x.py', 'new_string': 'status >= 500 <img src=a>'}, 'pass')
+claude('Post backend .py ignored', 'PostToolUse', 'Edit', {'file_path': ROOT + S + 'backend' + S + 'x.py', 'new_string': 'status >= 500 <img src=a>'}, 'pass')
 
 
 # 3) نگهبان اندازهٔ context: transcript موقت و session یکتا

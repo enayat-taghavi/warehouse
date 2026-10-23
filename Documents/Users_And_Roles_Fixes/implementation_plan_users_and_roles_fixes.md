@@ -30,38 +30,38 @@
 
 ### بخش ۱: بک‌اند (Django Accounts App)
 
-#### [MODIFY] [models.py](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py)
+#### [MODIFY] [models.py](file:///e:/warehouse%20project/backend/accounts/models.py)
 - افزودن `company = models.CharField(max_length=150, null=True, blank=True, verbose_name="شرکت متبوع")`.
 - افزودن `address = models.TextField(null=True, blank=True, verbose_name="آدرس")`.
 
-#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py)
+#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py)
 - افزودن فیلدهای `company` و `address` به فیلدهای `UserSerializer`.
 
-#### [MODIFY] [excel_utils.py](file:///e:/warehouse%20project/warehouse-backend/accounts/excel_utils.py)
+#### [MODIFY] [excel_utils.py](file:///e:/warehouse%20project/backend/accounts/excel_utils.py)
 - رفع باگ سینتکسی فراخوانی `freeze_header_panes`.
 - پیاده‌سازی متدهای پاکسازی داده (`normalize_digits`, `normalize_phone`, `normalize_national_code`).
 - ارتقای `parse_users_excel` با تطبیق نقش‌ها بر اساس عنوان فارسی/کد انگلیسی و انبارها بر اساس نام/کد، و پشتیبانی از پارامتر `update_existing`.
 
-#### [MODIFY] [roles_excel_utils.py](file:///e:/warehouse%20project/warehouse-backend/accounts/roles_excel_utils.py)
+#### [MODIFY] [roles_excel_utils.py](file:///e:/warehouse%20project/backend/accounts/roles_excel_utils.py)
 - هماهنگ‌سازی ۵ ستون کامل نقش‌ها (`name`, `title`, `color`, `parent`, `permissions`) در `ROLES_COLUMNS` با حفظ ساختار ۲ سطری هدر.
 - خروجی و تمپلیت استاندارد ۵ ستونه.
 - ارتقای `parse_roles_excel` با قابلیت نرمال‌سازی، تشخیص ستون‌های داینامیک، تطبیق دسترسی‌ها و پشتیبانی از `update_existing`.
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/accounts/views.py)
 - به‌روزرسانی اکشن‌های `import_excel` در `UserViewSet` و `CustomRoleViewSet` برای خواندن پارامتر `update_existing` و اعمال آپدیت/ایجاد رکوردهای معتبر.
 
 ---
 
 ### بخش ۲: فرانت‌اند (Angular Users Component & Shared Modal)
 
-#### [MODIFY] [excel-import-modal.html](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/excel-import-modal/excel-import-modal.html) & [excel-import-modal.ts](file:///e:/warehouse%20project/warehouse-front/src/app/shared/components/excel-import-modal/excel-import-modal.ts)
+#### [MODIFY] [excel-import-modal.html](file:///e:/warehouse%20project/frontend/src/app/shared/components/excel-import-modal/excel-import-modal.html) & [excel-import-modal.ts](file:///e:/warehouse%20project/frontend/src/app/shared/components/excel-import-modal/excel-import-modal.ts)
 - افزودن سوییچ انتخابی برای کاربر: «در صورت وجود رکورد تکراری، اطلاعات آن به‌روزرسانی شود».
 - ارسال وضعیت این سوییچ به عنوان آرگومان به تابع `importFn(file, updateExisting)`.
 
-#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/http/accounts-http.service.ts)
+#### [MODIFY] [accounts-http.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/http/accounts-http.service.ts)
 - پشتیبانی از پارامتر `updateExisting` در `importUsersExcel` و `importRolesExcel`.
 
-#### [MODIFY] [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts)
+#### [MODIFY] [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts)
 - اتصال پارامتر `updateExisting` به فراخوانی‌های سرویس اکسل.
 - کاهش Debounce جستجو به ۳۵۰ میلی‌ثانیه.
 - ارتقای فیلتر `filteredUsers` (نام، کدملی، نام‌کاربری، شماره تلفن، نقش‌ها).
@@ -72,7 +72,7 @@
 - اضافه کردن مدیریت کامل خطاها (Toast) برای تمام عملیات.
 - تولید خودکار حرف اول آواتار فارسی با رنگ سازمانی نقش.
 
-#### [MODIFY] [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html)
+#### [MODIFY] [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html)
 - نمایش عنوان فارسی نقش‌ها در درخت سازمانی (`{{role.title || role.name}}`).
 - افزودن فیلدهای فرم کاربری: سرپرست مستقیم (`supervisor`)، زون عملیاتی (`operational_zone`)، آدرس (`address`)، شرکت متبوع (`company`)، ایمیل (`email`).
 - اصلاح چک‌باکس انقضا و شرط سوپریوزر.

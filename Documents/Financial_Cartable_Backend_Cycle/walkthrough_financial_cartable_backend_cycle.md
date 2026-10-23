@@ -9,12 +9,12 @@
 ## 🏗️ خلاصه معماری و تغییرات کلیدی اعمال‌شده
 
 1. **تاریخچه‌نگاری مبتنی بر اسنپ‌شات داده‌ها (Audit Trail Snapshots):**
-   - افزودن فیلد `data_snapshot = models.JSONField(null=True, blank=True)` به مدل `DocTaskHistory` در [`models.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py).
-   - ایجاد و اعمال میگریشن فوروارد [`0025_doctaskhistory_data_snapshot.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/migrations/0025_doctaskhistory_data_snapshot.py).
+   - افزودن فیلد `data_snapshot = models.JSONField(null=True, blank=True)` به مدل `DocTaskHistory` در [`models.py`](file:///e:/warehouse%20project/backend/inventory/models.py).
+   - ایجاد و اعمال میگریشن فوروارد [`0025_doctaskhistory_data_snapshot.py`](file:///e:/warehouse%20project/backend/inventory/migrations/0025_doctaskhistory_data_snapshot.py).
    - ثبت خودکار اسنپ‌شات کامل فیلدهای مالی و فیلدهای پویای کالا در تمام متدهای تغییر وضعیت (`perform_update`, `bulk_submit`, `bulk_approve`, `reject`, `manager_reject`, `bulk_manager_approve`).
 
 2. **همگام‌سازی قطعی با جدول کالا (`Item` Master Record):**
-   - در متد `bulk_manager_approve` در [`views.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)، کلیه فیلدهای مالی تاییدشده (مبالغ، تاریخ، نوع فاکتور، تامین‌کننده، نوع ارز، شماره‌های RTI، مهر و امضا) به صورت دسته‌ای روی رکورد اصلی کالا رونویسی و وضعیت کالا به `doc_status = 'approved'` تبدیل می‌شود.
+   - در متد `bulk_manager_approve` در [`views.py`](file:///e:/warehouse%20project/backend/inventory/views.py)، کلیه فیلدهای مالی تاییدشده (مبالغ، تاریخ، نوع فاکتور، تامین‌کننده، نوع ارز، شماره‌های RTI، مهر و امضا) به صورت دسته‌ای روی رکورد اصلی کالا رونویسی و وضعیت کالا به `doc_status = 'approved'` تبدیل می‌شود.
 
 3. **اصلاح بررسی ارجاع مجدد اسناد:**
    - شرط هشدار ارجاع مجدد در `bulk_assign` برای پوشش وضعیت `doc_status == 'processing'` اصلاح گردید.
@@ -64,6 +64,6 @@ Destroying test database for alias 'default'...
 ---
 
 > [!TIP]
-> تمامی ۳۰ آزمون خودکار در فایل‌های [`inventory/tests.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/tests.py) و [`inventory/tests_docs.py`](file:///e:/warehouse%20project/warehouse-backend/inventory/tests_docs.py) به عنوان تست‌های استاندارد و دائمی سامانه ثبت و نگهداری می‌شوند.
+> تمامی ۳۰ آزمون خودکار در فایل‌های [`inventory/tests.py`](file:///e:/warehouse%20project/backend/inventory/tests.py) و [`inventory/tests_docs.py`](file:///e:/warehouse%20project/backend/inventory/tests_docs.py) به عنوان تست‌های استاندارد و دائمی سامانه ثبت و نگهداری می‌شوند.
 
 </div>

@@ -59,11 +59,11 @@ graph TD
 
 ### فاز ۱: اصلاح موتور کوئری و نگاشت داده‌های JOIN در بکند (Backend Query Engine & Data Mapping)
 
-#### [MODIFY] [registry.py](file:///e:/warehouse%20project/warehouse-backend/reports/registry.py)
+#### [MODIFY] [registry.py](file:///e:/warehouse%20project/backend/reports/registry.py)
 1. **پشتیبانی انوتیشن‌ها از پیشوندگذاری داینامیک:**
    - اصلاح `_person_name_annotation(prefix)` برای پذیرش پیشوند والد جهت ساخت مسیرهای چند سطحی مانند `f'{base_prefix}__{prefix}__first_name'`.
 
-#### [MODIFY] [engine.py](file:///e:/warehouse%20project/warehouse-backend/reports/engine.py)
+#### [MODIFY] [engine.py](file:///e:/warehouse%20project/backend/reports/engine.py)
 1. **نگاشت کلیدهای خروجی در مرحله استخراج ردیف‌ها (`_jsonable`):**
    - ساخت دیکشنری نگاشت `source_to_key_map = {fd.source: fd.key for fd in self.fields.values()}` و اعمال در `_jsonable` و خروجی `run()`.
 2. **پشتیبانی از Annotationهای موجودیت مقصد در JOIN:**
@@ -78,22 +78,22 @@ graph TD
 
 ### فاز ۲: پایداری خروجی‌های PDF، Excel و Worker پس‌زمینه (Export & Background Worker)
 
-#### [MODIFY] [pdf.py](file:///e:/warehouse%20project/warehouse-backend/reports/pdf.py)
+#### [MODIFY] [pdf.py](file:///e:/warehouse%20project/backend/reports/pdf.py)
 1. **اصلاح استخراج مقادیر ستون‌های پیوندی و رفع کرش ۰ ردیف:**
    - استفاده از مپینگ ستون‌ها هنگام استخراج داده و شرطی‌سازی `ROWBACKGROUNDS` بر اساس `row_count > 0`.
 
-#### [MODIFY] [excel.py](file:///e:/warehouse%20project/warehouse-backend/reports/excel.py)
+#### [MODIFY] [excel.py](file:///e:/warehouse%20project/backend/reports/excel.py)
 1. **استخراج صحیح سلول‌های پیوندی و گارد همزمانی:**
    - تطابق کلیدهای ستون با فیلدهای واقعی ORM و تغییر وضعیت به `running` پیش از شروع Thread.
 2. **پاکسازی فایل‌های یتیم روی دیسک در `cleanup_old_jobs`.**
 
-#### [MODIFY] [models.py](file:///e:/warehouse%20project/warehouse-backend/reports/models.py)
+#### [MODIFY] [models.py](file:///e:/warehouse%20project/backend/reports/models.py)
 1. **افزودن فیلد شمارنده تلاش:** `attempts = models.PositiveSmallIntegerField(default=0)`.
 
-#### [NEW] [0003_reportexportjob_attempts.py](file:///e:/warehouse%20project/warehouse-backend/reports/migrations/0003_reportexportjob_attempts.py)
+#### [NEW] [0003_reportexportjob_attempts.py](file:///e:/warehouse%20project/backend/reports/migrations/0003_reportexportjob_attempts.py)
 1. **ایجاد مایگریشن جدید جلوبرنده با `makemigrations`.**
 
-#### [MODIFY] [run_export_worker.py](file:///e:/warehouse%20project/warehouse-backend/reports/management/commands/run_export_worker.py)
+#### [MODIFY] [run_export_worker.py](file:///e:/warehouse%20project/backend/reports/management/commands/run_export_worker.py)
 1. **مهار حلقه تسک‌های مسموم در `_recover_orphans`:** تغییر وضعیت به `failed` در صورت `attempts >= 3`.
 
 > 🛡️ **بازرسی ایجنت نگهبان فاز ۲:**
@@ -103,11 +103,11 @@ graph TD
 
 ### فاز ۳: حل مسابقه‌های زمانی و مدیریت وضعیت در Store فرانت‌اند (Frontend State & Race Conditions)
 
-#### [MODIFY] [report-store.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/report-store.ts)
+#### [MODIFY] [report-store.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/report-store.ts)
 1. **اصلاح نرمال‌سازی Aliasها (`.replace(/\./g, '_')`).**
 2. **هرس شروط فیلترهای غیرمجاز در زمان `loadFields`.**
 
-#### [MODIFY] [reports.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts)
+#### [MODIFY] [reports.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts)
 1. **حل Race Condition در `loadTemplate` و بروزرسانی فیلدهای پیوندی با تغییر انبار فعال.**
 
 > 🛡️ **بازرسی ایجنت نگهبان فاز ۳:**
@@ -117,14 +117,14 @@ graph TD
 
 ### فاز ۴: اصلاح اینپوت‌های فیلتر، تاریخ شمسی و اعتبارسنجی فرم‌ها (Filter Inputs & Validation)
 
-#### [MODIFY] [filter-value.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/filter-value.component.ts)
+#### [MODIFY] [filter-value.component.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/filter-value.component.ts)
 1. **اصلاح باگ تایپ کلمات در اپراتور `in` از طریق متغیر محلی `rawText`.**
 2. **نمایش فرمت خوانای تاریخ شمسی در کادر ورودی با حفظ مقدار استاندارد ISO میلادی در State.**
 
-#### [MODIFY] [reports.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/reports.ts)
+#### [MODIFY] [reports.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/reports.ts)
 1. **اعتبارسنجی دقیق فیلترها با حفظ اعتبار مقادیر `0`، `false` و عملگر `isnull`.**
 
-#### [MODIFY] [export-progress.component.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/reports/export-progress.component.ts)
+#### [MODIFY] [export-progress.component.ts](file:///e:/warehouse%20project/frontend/src/app/components/reports/export-progress.component.ts)
 1. **مهار نشت حافظه در Polling هنگام بروز خطاهای متوالی یا ۴۰۴.**
 
 > 🛡️ **بازرسی ایجنت نگهبان فاز ۴:**
@@ -134,7 +134,7 @@ graph TD
 
 ### فاز ۵: تست‌های جامع خودکار و اعتبارسنجی نهایی (Verification & Automated Tests)
 
-#### [MODIFY] [tests.py](file:///e:/warehouse%20project/warehouse-backend/reports/tests.py)
+#### [MODIFY] [tests.py](file:///e:/warehouse%20project/backend/reports/tests.py)
 1. **افزودن تست‌های جامع کوئری، انوتیشن‌ها، PDF خالی و پایداری Worker.**
 
 > 🛡️ **بازرسی ایجنت نگهبان نهایی (فاز ۵):**

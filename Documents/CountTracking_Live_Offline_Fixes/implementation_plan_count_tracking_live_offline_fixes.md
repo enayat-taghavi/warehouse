@@ -2,7 +2,7 @@
 
 # طرح جامع اصلاح به‌روزرسانی‌های زنده، وب‌سوکت و عملیات آفلاین در رهگیری شمارش (Count Tracking Live Updates & Offline Fixes)
 
-این طرح اجرایی با هدف رفع ۴ آسیب و باگ حیاتی در کامپوننت پیگیری وضعیت شمارش ([count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)) تدوین شده است تا پایداری، عملکرد روان بدون Freeze و صحت رفتار آفلاین سیستم تضمین گردد.
+این طرح اجرایی با هدف رفع ۴ آسیب و باگ حیاتی در کامپوننت پیگیری وضعیت شمارش ([count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)) تدوین شده است تا پایداری، عملکرد روان بدون Freeze و صحت رفتار آفلاین سیستم تضمین گردد.
 
 ---
 
@@ -29,7 +29,7 @@
 
 ### فرانت‌اند (Warehouse Frontend)
 
-#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/count-tracking/count-tracking.ts)
+#### [MODIFY] [count-tracking.ts](file:///e:/warehouse%20project/frontend/src/app/components/count-tracking/count-tracking.ts)
 * **اصلاح `wsSub` (به‌روزرسانی وب‌سوکت):**
   * پیاده‌سازی متد `updateTaskInPlace(taskData: any)` جهت به‌روزرسانی سریع رکورد در آرایه `tasks`.
   * حفظ اکید `currentPage` و `selectedTaskIds` در صورت دریافت رویدادهای زنده.
@@ -50,7 +50,7 @@
 ### آزمون‌های خودکار و کامپایل
 ```powershell
 # اجرای بیلد کامل فرانت‌اند جهت اطمینان از عدم خطای TypeScript و قالب
-cd "e:\warehouse project\warehouse-front"
+cd "frontend"
 npm run build
 ```
 

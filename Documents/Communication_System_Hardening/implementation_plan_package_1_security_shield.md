@@ -13,26 +13,26 @@
 
 | لایه | مسیر فایل | نوع تغییر | شرح و هدف تغییر |
 | :--- | :--- | :---: | :--- |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/__init__.py` | [NEW] | ایجاد پکیج تست‌های سیستم ارتباطات |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/base.py` | [NEW] | کلاس پایه `BaseCommsTestCase` شامل ۲ انبار، ۵ کاربر با نقش‌های متفاوت، ۳ گفتگو و توابع کمکی احراز هویت |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_access_rest.py` | [NEW] | آزمون‌های دسترسی REST و اثبات مسدودسازی IDOR (۱۸ تست) |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_attachments.py` | [NEW] | آزمون‌های اعتبارسنجی نوع فایل، لینک امضاشده و امنیت رسانه (۱۲ تست) |
-| **تست بک‌اند** | `warehouse-backend/communications/tests/test_ws_access.py` | [NEW] | آزمون‌های دسترسی وب‌سوکت و تفکیک روم‌ها با `WebsocketCommunicator` (۱۰ تست) |
-| **تست فرانت** | `warehouse-front/src/app/core/services/communication.service.spec.ts` | [NEW] | تست واحد پایه کلاینت ارتباطات در Angular |
-| **بک‌اند** | `warehouse-backend/communications/access.py` | [NEW] | ماژول واحد و متمرکز قوانین دسترسی و اتصال به `warehouse_scope.py` |
-| **بک‌اند** | `warehouse-backend/communications/broadcast.py` | [NEW] | ماژول برودکست رویدادهای چت و کامنت در چنلز جهت رعایت قاعده ۵۰۰ خط |
-| **بک‌اند** | `warehouse-backend/communications/permissions.py` | [MODIFY] | حذف فیلدهای ناموجود (`accessible_warehouses`) و ارجاع به `access.py` |
-| **بک‌اند** | `warehouse-backend/communications/serializers.py` | [MODIFY] | افزودن `read_only_fields`، استفاده از `signed_media_url` و اعتبارسنجی امن `content_type_str` |
-| **بک‌اند** | `warehouse-backend/communications/views.py` | [MODIFY] | بازنویسی و تفکیک متدها، فیلتر اجباری عضویت در `MessageViewSet`، اصلاح کدهای خطا (۴۰۰/۴۰۳) و صفحه‌بندی مخاطبین |
-| **بک‌اند** | `warehouse-backend/communications/consumers.py` | [MODIFY] | اعتبارسنجی دسترسی در `join_conversation` و `typing`، تبدیل گروه‌های اشتراک کامنت به `set` |
-| **بک‌اند** | `warehouse-backend/common/media_urls.py` | [MODIFY] | افزودن پیشوندهای چت و کامنت به `PROTECTED_PREFIXES` |
+| **تست بک‌اند** | `backend/communications/tests/__init__.py` | [NEW] | ایجاد پکیج تست‌های سیستم ارتباطات |
+| **تست بک‌اند** | `backend/communications/tests/base.py` | [NEW] | کلاس پایه `BaseCommsTestCase` شامل ۲ انبار، ۵ کاربر با نقش‌های متفاوت، ۳ گفتگو و توابع کمکی احراز هویت |
+| **تست بک‌اند** | `backend/communications/tests/test_access_rest.py` | [NEW] | آزمون‌های دسترسی REST و اثبات مسدودسازی IDOR (۱۸ تست) |
+| **تست بک‌اند** | `backend/communications/tests/test_attachments.py` | [NEW] | آزمون‌های اعتبارسنجی نوع فایل، لینک امضاشده و امنیت رسانه (۱۲ تست) |
+| **تست بک‌اند** | `backend/communications/tests/test_ws_access.py` | [NEW] | آزمون‌های دسترسی وب‌سوکت و تفکیک روم‌ها با `WebsocketCommunicator` (۱۰ تست) |
+| **تست فرانت** | `frontend/src/app/core/services/communication.service.spec.ts` | [NEW] | تست واحد پایه کلاینت ارتباطات در Angular |
+| **بک‌اند** | `backend/communications/access.py` | [NEW] | ماژول واحد و متمرکز قوانین دسترسی و اتصال به `warehouse_scope.py` |
+| **بک‌اند** | `backend/communications/broadcast.py` | [NEW] | ماژول برودکست رویدادهای چت و کامنت در چنلز جهت رعایت قاعده ۵۰۰ خط |
+| **بک‌اند** | `backend/communications/permissions.py` | [MODIFY] | حذف فیلدهای ناموجود (`accessible_warehouses`) و ارجاع به `access.py` |
+| **بک‌اند** | `backend/communications/serializers.py` | [MODIFY] | افزودن `read_only_fields`، استفاده از `signed_media_url` و اعتبارسنجی امن `content_type_str` |
+| **بک‌اند** | `backend/communications/views.py` | [MODIFY] | بازنویسی و تفکیک متدها، فیلتر اجباری عضویت در `MessageViewSet`، اصلاح کدهای خطا (۴۰۰/۴۰۳) و صفحه‌بندی مخاطبین |
+| **بک‌اند** | `backend/communications/consumers.py` | [MODIFY] | اعتبارسنجی دسترسی در `join_conversation` و `typing`، تبدیل گروه‌های اشتراک کامنت به `set` |
+| **بک‌اند** | `backend/common/media_urls.py` | [MODIFY] | افزودن پیشوندهای چت و کامنت به `PROTECTED_PREFIXES` |
 
 ---
 
 ## ۲. جزئیات معماری و اقدامات فازها
 
 ### فاز ۰: هارنس تست و اثبات قرمز (Phase 0)
-1. **ساختار پکیج:** ایجاد دایرکتوری `warehouse-backend/communications/tests/` با فایل `__init__.py`.
+1. **ساختار پکیج:** ایجاد دایرکتوری `backend/communications/tests/` با فایل `__init__.py`.
 2. **پایه‌ریزی `BaseCommsTestCase`:**
    - ۲ انبار (`wh1`, `wh2`).
    - ۵ کاربر مجزا: `admin`، `manager_wh1`، `staff_wh1`، `staff_wh2`، `unassigned_user`.
@@ -100,13 +100,13 @@
 
 ### الف) آزمون‌های خودکار بک‌اند
 ```powershell
-cd "E:\warehouse project\warehouse-backend"
+cd "backend"
 python manage.py test communications -v 2
 ```
 
 ### ب) آزمون‌های کلاینت فرانت‌اند
 ```powershell
-cd "E:\warehouse project\warehouse-front"
+cd "frontend"
 npm test
 ```
 

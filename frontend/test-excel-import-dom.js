@@ -9,7 +9,7 @@ console.log('===================================================================
 console.log('🧪 BROWSER/DOM & DATA LIFECYCLE TEST: EXCEL IMPORT STATS & SAMPLE PURGE');
 console.log('========================================================================\n');
 
-const backendDir = path.resolve(__dirname, '../warehouse-backend');
+const backendDir = path.resolve(__dirname, '../backend');
 const pythonExe = path.join(backendDir, 'venv/Scripts/python.exe');
 
 try {

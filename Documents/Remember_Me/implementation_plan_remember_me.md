@@ -43,13 +43,13 @@
 
 ### کامپوننت‌های نیازمند تغییر
 
-#### [MODIFY] [login.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.html)
+#### [MODIFY] [login.html](file:///e:/warehouse%20project/frontend/src/app/components/login/login.html)
 تغییر کد `<input type="checkbox" checked="">` به اتصال انگولار.
 
-#### [MODIFY] [login.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/login/login.ts)
+#### [MODIFY] [login.ts](file:///e:/warehouse%20project/frontend/src/app/components/login/login.ts)
 ارسال مقدار `this.rememberMe` به سرویس لاگین.
 
-#### [MODIFY] [auth.service.ts](file:///e:/warehouse%20project/warehouse-front/src/app/core/auth/auth.service.ts)
+#### [MODIFY] [auth.service.ts](file:///e:/warehouse%20project/frontend/src/app/core/auth/auth.service.ts)
 توسعه مکانیزم ذخیره‌سازی داده‌های کاربر (توکن‌ها و پروفایل) متناسب با درخواست او در لحظه ورود.
 
 ## Verification Plan

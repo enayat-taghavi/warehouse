@@ -167,7 +167,7 @@
 به درخواست کاربر: همهٔ کارهای باقی‌مانده انجام شود و پرونده برای همیشه بسته شود. اجرا با Antigravity و `run_tasks.py`، نشست‌های ۲۵ تا ۳۰.
 
 **معیار بستن پرونده:**
-- لیترال نام ماژول (`warehouse`، `finance`، `personnel`، `accounting`) در هستهٔ بک‌اند (`warehouse-backend/core`) و فرانت (`core/` و `shared/`) فقط در دو حالت می‌ماند:
+- لیترال نام ماژول (`warehouse`، `finance`، `personnel`، `accounting`) در هستهٔ بک‌اند (`backend/core`) و فرانت (`core/` و `shared/`) فقط در دو حالت می‌ماند:
   - **قفل داده یا پروتکل:** نام فیلد و ستون (`warehouse`، `warehouse_id`)، مقدار ذخیره‌شده در دیتابیس (`app_module`، `app_scope`)، کلید توکن (`wh_access_token_*`)، مقدار هدر `X-Active-App`، و قفل نام دیتابیس‌های آفلاین.
   - **ابزار توسعه:** فقط `concurrency_stress_*`.
 - بقیه از راه رجیستری و extension ماژول‌ها خوانده می‌شوند.

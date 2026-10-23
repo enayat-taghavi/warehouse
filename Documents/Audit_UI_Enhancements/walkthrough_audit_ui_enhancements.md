@@ -62,8 +62,8 @@
 ---
 
 ## 📁 پرونده‌های ویرایش‌شده
-1. `warehouse-front/src/app/components/audit/audit.html` (بازطراحی کامل قالب)
-2. `warehouse-front/src/app/components/audit/audit.ts` (افزودن متدهای مدیریت فیلترهای فعال، بازه‌های زمانی سریع و کنترل مودال راهنما)
+1. `frontend/src/app/components/audit/audit.html` (بازطراحی کامل قالب)
+2. `frontend/src/app/components/audit/audit.ts` (افزودن متدهای مدیریت فیلترهای فعال، بازه‌های زمانی سریع و کنترل مودال راهنما)
 3. `Documents/Audit_UI_Enhancements/` (اسناد طرح، تسک‌ها و واک‌ترو بر اساس گردش‌کار DUAL-SAVE)
 4. `Documents/Master_Log.md` (ثبت رکورد طرح در لاگ مستر)
 

@@ -8,7 +8,7 @@
 ### Backend (warehouses)
 باید فایل سریالایزر انبار را بروزرسانی کنیم تا از رابطه جدید (`items`) استفاده کند.
 
-#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/warehouse-backend/warehouses/serializers.py)
+#### [MODIFY] [serializers.py](file:///e:/warehouse%20project/backend/warehouses/serializers.py)
 - تغییر `obj.records.count()` به `obj.items.count()`
 - تغییر `obj.records.exclude(field_status='در انتظار شمارش').count()` به `obj.items.exclude(field_status='در انتظار شمارش').count()`
 

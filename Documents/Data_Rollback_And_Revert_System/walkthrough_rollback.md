@@ -43,19 +43,19 @@
 ### ۳. فایل‌های ویرایش‌شده و تغییرات کلیدی (File Modifications)
 
 #### 🔹 لایه بک‌اند (Django):
-- [models.py](file:///e:/warehouse%20project/warehouse-backend/accounts/models.py): افزودن ۳ دسترسی تکمیلی به `CustomUser.Meta.permissions` و تعریف ۶ دسترسی در `SENSITIVE_PERMISSION_CODENAMES`.
-- [0022_alter_customuser_options.py](file:///e:/warehouse%20project/warehouse-backend/accounts/migrations/0022_alter_customuser_options.py): مایگریشن اعمال دسترسی‌های جدید.
-- [serializers.py](file:///e:/warehouse%20project/warehouse-backend/accounts/serializers.py): سریالایز داینامیک `is_sensitive=True` برای کلیه پرمیشن‌های مجموعه حساس.
-- [views.py](file:///e:/warehouse%20project/warehouse-backend/accounts/views.py): گارد مسدودسازی انتساب دسترسی‌های حساس در `CustomRoleViewSet` و `UserViewSet` برای کاربران غیر Superuser.
-- [rollback_service.py](file:///e:/warehouse%20project/warehouse-backend/accounts/rollback_service.py): پشتیبانی کامل از ID و Instance برای پیش‌نمایش و اجرای اتمیک بازگردانی.
-- [backup_service.py](file:///e:/warehouse%20project/warehouse-backend/accounts/backup_service.py): سرویس تولید Dump، هش SHA-256 و ساخت اسنپ‌شات اضطراری پیش از بازیابی.
-- [run_auto_backup.py](file:///e:/warehouse%20project/warehouse-backend/accounts/management/commands/run_auto_backup.py): کامند مدیریتی پشتیبان‌گیری و چرخش دوره‌ای فایل‌ها.
+- [models.py](file:///e:/warehouse%20project/backend/accounts/models.py): افزودن ۳ دسترسی تکمیلی به `CustomUser.Meta.permissions` و تعریف ۶ دسترسی در `SENSITIVE_PERMISSION_CODENAMES`.
+- [0022_alter_customuser_options.py](file:///e:/warehouse%20project/backend/accounts/migrations/0022_alter_customuser_options.py): مایگریشن اعمال دسترسی‌های جدید.
+- [serializers.py](file:///e:/warehouse%20project/backend/accounts/serializers.py): سریالایز داینامیک `is_sensitive=True` برای کلیه پرمیشن‌های مجموعه حساس.
+- [views.py](file:///e:/warehouse%20project/backend/accounts/views.py): گارد مسدودسازی انتساب دسترسی‌های حساس در `CustomRoleViewSet` و `UserViewSet` برای کاربران غیر Superuser.
+- [rollback_service.py](file:///e:/warehouse%20project/backend/accounts/rollback_service.py): پشتیبانی کامل از ID و Instance برای پیش‌نمایش و اجرای اتمیک بازگردانی.
+- [backup_service.py](file:///e:/warehouse%20project/backend/accounts/backup_service.py): سرویس تولید Dump، هش SHA-256 و ساخت اسنپ‌شات اضطراری پیش از بازیابی.
+- [run_auto_backup.py](file:///e:/warehouse%20project/backend/accounts/management/commands/run_auto_backup.py): کامند مدیریتی پشتیبان‌گیری و چرخش دوره‌ای فایل‌ها.
 
 #### 🔹 لایه فرانت‌اند (Angular):
-- [users.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.ts): اصلاح `loadData()` برای نمایش همیشگی تب دسترسی‌های حساس و گارد `isSuperuser()` در `toggleRolePermission`.
-- [users.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/users/users.html): طراحی شکیل تب دسترسی‌های حساس، بنر راهنمای امنیتی برای کاربران عادی، حالت غیرفعال (Disabled) برای غیر Superuser و مدال هشدار قرمز ۲ مرحله‌ای برای مدیر ارشد.
-- [wh-settings.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.ts) & [wh-settings.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/wh-settings/wh-settings.html): تب اختصاصی پشتیبان‌گیری دیتابیس با اعتبارسنجی هش و تاییدیه تایپی `RESTORE_DATABASE_CONFIRM`.
-- [audit.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.ts) & [audit.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/audit/audit.html): دکمه‌های بازگردانی رکوردها و مدال مقایسه زنده وضعیت کنونی با قبل.
+- [users.ts](file:///e:/warehouse%20project/frontend/src/app/components/users/users.ts): اصلاح `loadData()` برای نمایش همیشگی تب دسترسی‌های حساس و گارد `isSuperuser()` در `toggleRolePermission`.
+- [users.html](file:///e:/warehouse%20project/frontend/src/app/components/users/users.html): طراحی شکیل تب دسترسی‌های حساس، بنر راهنمای امنیتی برای کاربران عادی، حالت غیرفعال (Disabled) برای غیر Superuser و مدال هشدار قرمز ۲ مرحله‌ای برای مدیر ارشد.
+- [wh-settings.ts](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.ts) & [wh-settings.html](file:///e:/warehouse%20project/frontend/src/app/components/wh-settings/wh-settings.html): تب اختصاصی پشتیبان‌گیری دیتابیس با اعتبارسنجی هش و تاییدیه تایپی `RESTORE_DATABASE_CONFIRM`.
+- [audit.ts](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.ts) & [audit.html](file:///e:/warehouse%20project/frontend/src/app/components/audit/audit.html): دکمه‌های بازگردانی رکوردها و مدال مقایسه زنده وضعیت کنونی با قبل.
 
 ---
 

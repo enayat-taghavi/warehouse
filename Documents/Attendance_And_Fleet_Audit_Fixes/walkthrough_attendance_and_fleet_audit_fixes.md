@@ -51,7 +51,7 @@ Application bundle generation complete. [36.960s] -> 0 Errors
 | **برنامه اجرایی (DUAL-SAVE)** | [`Documents/Attendance_And_Fleet_Audit_Fixes/implementation_plan_attendance_and_fleet_audit_fixes.md`](file:///e:/warehouse%20project/Documents/Attendance_And_Fleet_Audit_Fixes/implementation_plan_attendance_and_fleet_audit_fixes.md) | ✅ ثبت شد |
 | **لیست تسک‌ها (DUAL-SAVE)** | [`Documents/Attendance_And_Fleet_Audit_Fixes/task_attendance_and_fleet_audit_fixes.md`](file:///e:/warehouse%20project/Documents/Attendance_And_Fleet_Audit_Fixes/task_attendance_and_fleet_audit_fixes.md) | ✅ تکمیل شد |
 | **گزارش نهایی (DUAL-SAVE)** | [`Documents/Attendance_And_Fleet_Audit_Fixes/walkthrough_attendance_and_fleet_audit_fixes.md`](file:///e:/warehouse%20project/Documents/Attendance_And_Fleet_Audit_Fixes/walkthrough_attendance_and_fleet_audit_fixes.md) | ✅ ثبت شد |
-| **تست‌های بک‌اند** | [`warehouse-backend/personnel/test_attendance_fleet_audit.py`](file:///e:/warehouse%20project/warehouse-backend/personnel/test_attendance_fleet_audit.py) | ✅ ۵/۵ سبز |
-| **تست‌های فرانت‌اند** | [`warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.spec.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/personnel/warehouse-attendance/warehouse-attendance.spec.ts) | ✅ ۱۲/۱۲ سبز |
+| **تست‌های بک‌اند** | [`backend/personnel/test_attendance_fleet_audit.py`](file:///e:/warehouse%20project/backend/personnel/test_attendance_fleet_audit.py) | ✅ ۵/۵ سبز |
+| **تست‌های فرانت‌اند** | [`frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.spec.ts`](file:///e:/warehouse%20project/frontend/src/app/components/personnel/warehouse-attendance/warehouse-attendance.spec.ts) | ✅ ۱۲/۱۲ سبز |
 
 </div>

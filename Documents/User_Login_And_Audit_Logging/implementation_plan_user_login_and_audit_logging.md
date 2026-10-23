@@ -33,17 +33,17 @@ graph TD
 
 | ردیف | مسیر فایل | لایه | نوع تغییر | شرح عملکرد |
 | :---: | :--- | :---: | :---: | :--- |
-| ۱ | `warehouse-backend/accounts/models.py` | Backend Model | [MODIFY] | افزودن مدل‌های بهینه `UserLoginLog` و `AuditLog` با ایندکس‌های کامپوزیت |
-| ۲ | `warehouse-backend/accounts/middleware.py` | Backend Core | [NEW] | میان‌افزار `AuditContextMiddleware` با `contextvars` برای ذخیره کانتکست درخواست و IP |
-| ۳ | `warehouse-backend/accounts/audit_utils.py` | Backend Utils | [NEW] | توابع کمکی `log_audit_event`، استخراج IP و پاکسازی داده‌های حساس (Sanitization) |
-| ۴ | `warehouse-backend/accounts/serializers.py` | Backend Serializer | [MODIFY] | افزودن سریالایزرهای لاگ و اتصال به پایپ‌لاین لاگین موفق/ناموفق در `CustomTokenObtainPairSerializer` |
-| ۵ | `warehouse-backend/accounts/views.py` | Backend API | [MODIFY] | پیاده‌سازی `LoginLogViewSet` و `AuditLogViewSet` فقط‌خواندنی، اکشن‌های آماری و خروجی CSV |
-| ۶ | `warehouse-backend/accounts/urls.py` | Backend Routing | [MODIFY] | ثبت مسیرهای اختصاصی API ممیزی و تاریخچه ورود |
-| ۷ | `warehouse-backend/config/settings.py` | Backend Config | [MODIFY] | فعال‌سازی `AuditContextMiddleware` در پایپ‌لاین میدل‌ورهای جنگو |
-| ۸ | `warehouse-front/src/app/services/audit.service.ts` | Frontend Service | [NEW] | سرویس ارتباطی با APIهای لاگ، مدیریت فیلترها، آمار و دانلود فایل‌های گزارش |
-| ۹ | `warehouse-front/src/app/components/audit/audit.ts` | Frontend Component | [MODIFY] | منطق کامپوننت، مدیریت دو تب (Audit و Login)، کارت‌های KPI، فیلترها و مدال تفاضل |
-| ۱۰ | `warehouse-front/src/app/components/audit/audit.html` | Frontend Template | [MODIFY] | بازطراحی کامل قالب با طراحی مدرن، تب‌های تفکیک‌شده، بج‌های وضعیت و مدال Diff |
-| ۱۱ | `warehouse-front/src/app/components/audit/audit.css` | Frontend Styling | [MODIFY] | استایل‌های سفارشی هایلایت تغییرات قبل/بعد و انیمیشن‌های روان |
+| ۱ | `backend/accounts/models.py` | Backend Model | [MODIFY] | افزودن مدل‌های بهینه `UserLoginLog` و `AuditLog` با ایندکس‌های کامپوزیت |
+| ۲ | `backend/accounts/middleware.py` | Backend Core | [NEW] | میان‌افزار `AuditContextMiddleware` با `contextvars` برای ذخیره کانتکست درخواست و IP |
+| ۳ | `backend/accounts/audit_utils.py` | Backend Utils | [NEW] | توابع کمکی `log_audit_event`، استخراج IP و پاکسازی داده‌های حساس (Sanitization) |
+| ۴ | `backend/accounts/serializers.py` | Backend Serializer | [MODIFY] | افزودن سریالایزرهای لاگ و اتصال به پایپ‌لاین لاگین موفق/ناموفق در `CustomTokenObtainPairSerializer` |
+| ۵ | `backend/accounts/views.py` | Backend API | [MODIFY] | پیاده‌سازی `LoginLogViewSet` و `AuditLogViewSet` فقط‌خواندنی، اکشن‌های آماری و خروجی CSV |
+| ۶ | `backend/accounts/urls.py` | Backend Routing | [MODIFY] | ثبت مسیرهای اختصاصی API ممیزی و تاریخچه ورود |
+| ۷ | `backend/config/settings.py` | Backend Config | [MODIFY] | فعال‌سازی `AuditContextMiddleware` در پایپ‌لاین میدل‌ورهای جنگو |
+| ۸ | `frontend/src/app/services/audit.service.ts` | Frontend Service | [NEW] | سرویس ارتباطی با APIهای لاگ، مدیریت فیلترها، آمار و دانلود فایل‌های گزارش |
+| ۹ | `frontend/src/app/components/audit/audit.ts` | Frontend Component | [MODIFY] | منطق کامپوننت، مدیریت دو تب (Audit و Login)، کارت‌های KPI، فیلترها و مدال تفاضل |
+| ۱۰ | `frontend/src/app/components/audit/audit.html` | Frontend Template | [MODIFY] | بازطراحی کامل قالب با طراحی مدرن، تب‌های تفکیک‌شده، بج‌های وضعیت و مدال Diff |
+| ۱۱ | `frontend/src/app/components/audit/audit.css` | Frontend Styling | [MODIFY] | استایل‌های سفارشی هایلایت تغییرات قبل/بعد و انیمیشن‌های روان |
 
 ---
 
@@ -175,7 +175,7 @@ graph LR
 ### فاز ۴: اتصال سرویس و بازطراحی داشبورد ممیزی در فرانت‌اند (Angular Audit Dashboard)
 
 #### شرح جزئیات پیاده‌سازی:
-1. **ایجاد سرویس ممیزی (`warehouse-front/src/app/services/audit.service.ts`):**
+1. **ایجاد سرویس ممیزی (`frontend/src/app/services/audit.service.ts`):**
    * توابع اتصال به بک‌اند: `getAuditLogs(filters, page, pageSize)`، `getLoginLogs(filters, page, pageSize)`، `getAuditStats()`، `getLoginStats()`، `exportAuditCsv(filters)`، `exportLoginCsv(filters)`.
    * مدیریت خطاها و نمایش اعلان‌های مناسب با استفاده از `ToastService`.
 

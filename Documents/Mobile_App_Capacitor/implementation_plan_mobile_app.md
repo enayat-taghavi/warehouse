@@ -258,12 +258,12 @@
   - **درس‌ها:** Antigravity چند بار قطع یا بسته شد (یک بار Claude آن را با `Antigravity IDE.exe "E:\warehouse project"` باز کرد). کش پایهٔ `ng-test-compare` وقتی اجرای پایه نیمه‌کاره بماند (مثلاً ۷۷۰ آزمون به‌جای ~۱۴۰۰) باید پاک شود (`scratch/runner-cache/<hash>*`). در release فاز الف Express روی 4200 و `cloudflared` خاموش بودند؛ پیش از هر release بررسی شوند.
   - **بازبینی‌های نشده:** diff نشست‌های ۴ تا ۶ هنوز با `data-loss-reviewer` (به‌ویژه Live Update: `next` فقط برای شروع سرد بعدی، توقف هنگام همگام‌سازی) و `ui-reviewer` بازبینی نشده است.
   - **اقدام بعدی (نشست تازهٔ Claude):**
-    1. `data-loss-reviewer` روی `git diff 1ea9d32 5c755cb -- warehouse-front/src` و تأیید یافته‌ها با خواندن هدفمند؛ یافته‌های تأییدشده به یک تسک اصلاح پیش از نشست ۷.
+    1. `data-loss-reviewer` روی `git diff 1ea9d32 5c755cb -- frontend/src` و تأیید یافته‌ها با خواندن هدفمند؛ یافته‌های تأییدشده به یک تسک اصلاح پیش از نشست ۷.
     2. اجرای ادامهٔ صف: `.\run_tasks.bat` در تب Windows Terminal (نشست‌های ۷ تا ۱۲: Push بک‌اند و فرانت، صفحهٔ `/download`، امضای APK با کلید در `E:\warehouse-secrets\comanage`، iOS، release روی `app` و انتشار APK آزمایشی).
     3. پیش از نشست ۱۲: بررسی بالا بودن 4200 و `cloudflared`.
     4. پایان: گزارش به کاربر با لینک دانلود APK آزمایشی و فهرست آزمون‌های دستی روی گوشی (ورود، اسکن، خروجی اکسل، چاپ، کار آفلاین، Live Update). Push تا وقتی کاربر فایل کلید Firebase ندهد خاموش است. انتشار روی `soft` فقط با تأیید کاربر.
 - **۲۷ مهر ۱۴۰۵، Claude — بازبینی نشست‌های ۴ تا ۶؛ توقف به‌خاطر سقف هفتگی (۹۷٪):**
-  - `data-loss-reviewer` و `ui-reviewer` روی `git diff 1ea9d32 5c755cb -- warehouse-front/src` اجرا شدند. Live Update سالم است: فقط `next`، توقف هنگام `isSyncing`، بی پاک‌سازی storage.
+  - `data-loss-reviewer` و `ui-reviewer` روی `git diff 1ea9d32 5c755cb -- frontend/src` اجرا شدند. Live Update سالم است: فقط `next`، توقف هنگام `isSyncing`، بی پاک‌سازی storage.
   - **یافته‌های تأییدشده (با خواندن کد):**
     - نوار وضعیت با `prefers-color-scheme` آیکون روشن روی صفحهٔ روشن می‌گذارد.
     - دکمهٔ بازگشت با مودال باز صفحه را ترک می‌کند.

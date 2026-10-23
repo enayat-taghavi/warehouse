@@ -13,11 +13,11 @@
 ### بک‌اند (Backend)
 این قابلیت نیازمند آن است که در دیتابیس مشخص کنیم چه تسک‌هایی قانون انبار را لغو کرده‌اند.
 
-#### [MODIFY] [models.py](file:///e:/warehouse%20project/warehouse-backend/inventory/models.py)
+#### [MODIFY] [models.py](file:///e:/warehouse%20project/backend/inventory/models.py)
 - **شرح تغییر:** اضافه کردن یک فیلد به مدل داده‌ای تسک شمارش.
 - **جزئیات:** افزودن فیلد `skip_supervisor = models.BooleanField(default=False)` به مدل `CountTask` و اجرای Migration.
 
-#### [MODIFY] [views.py](file:///e:/warehouse%20project/warehouse-backend/inventory/views.py)
+#### [MODIFY] [views.py](file:///e:/warehouse%20project/backend/inventory/views.py)
 - **شرح تغییر:** دریافت کلید `skip` و لحاظ کردن آن در منطق‌های ارجاع و ثبت.
 - **جزئیات ۱ (`bulk_assign`):** اگر از فرانت‌اند مقدار `skip` برای سرپرست ارسال شد، تسک با وضعیت `skip_supervisor=True` ایجاد شود.
 - **جزئیات ۲ (`bulk_submit`):** در زمان ارسال کالا توسط انبارگردان، منطق چک‌کننده تغییر می‌کند و به جای اینکه فقط قانون انبار را چک کند، قانون دور زدن این تسک خاص را نیز چک می‌کند (`task_req_sup = req_sup_app and not task.skip_supervisor`). با توجه به اینکه حالا تسک‌های مختلف ممکن است قوانین مختلفی داشته باشند، به‌جای `tasks.update()` از حلقه و `CountTask.objects.bulk_update(tasks, ['status', 'modified_by'])` استفاده خواهد شد.
@@ -25,11 +25,11 @@
 ### فرانت‌اند (Frontend)
 رابط کاربری فرم تخصیص و ارسال درخواست‌ها باید از این تغییر پشتیبانی کند.
 
-#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.html)
+#### [MODIFY] [dispatch.html](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.html)
 - **شرح تغییر:** نمایش همیشگیِ لیست سرپرست‌ها با گزینه‌های پویا.
 - **جزئیات:** برداشتن شرط پنهان شدن کل باکس سرپرست (حذف `*ngIf="requireSupervisor"` از تگ `<select>`) و جابجا کردن گزینه‌ها. اگر تنظیمات انبار `requireSupervisor` برابر `false` بود، گزینه پیش‌فرض اول «بدون نیاز به سرپرست» قرار می‌گیرد و برعکس.
 
-#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/warehouse-front/src/app/components/dispatch/dispatch.ts)
+#### [MODIFY] [dispatch.ts](file:///e:/warehouse%20project/frontend/src/app/components/dispatch/dispatch.ts)
 - **شرح تغییر:** مدیریت انتخاب پیش‌فرض و متن پیام تایید.
 - **جزئیات:** هنگام لود شدن تنظیمات انبار، اگر `requireSupervisor` برابر با `false` بود، مقدار متغیر `selectedSupervisor` را روی `'skip'` تنظیم می‌کنیم. همچنین در زمان نمایش پیام تایید، اگر این مقدار انتخاب شده بود، نام سرپرست در دیالوگ به «بدون نیاز به سرپرست» (با رنگ متمایز) تغییر خواهد کرد.
 
