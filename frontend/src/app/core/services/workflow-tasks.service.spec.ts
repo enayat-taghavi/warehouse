@@ -316,6 +316,15 @@ describe('WorkflowTasksService', () => {
     expect(isWorkflowTaskAlreadyDone({ statusCode: 409, url: '/x/', serverResponse: { code: 'task_already_done' } })).toBe(true);
     expect(isWorkflowTaskAlreadyDone({ statusCode: 409, url: '/api/items/3/', serverResponse: { server_record: {} } })).toBe(false);
     expect(isWorkflowTaskAlreadyDone({ statusCode: 400, url: '/api/workflow/tasks/3/action/', serverResponse: {} })).toBe(false);
+    expect(isWorkflowTaskAlreadyDone({ statusCode: 409, url: '/api/workflow/tasks/3/action/', serverResponse: { code: 'invalid_state' } })).toBe(false);
+  });
+
+  it('after a reload, an action already waiting in the queue is not queued twice', async () => {
+    login();
+    sync.getQueueEntries.mockResolvedValue([{ url: '/api/workflow/tasks/1/action/', userId: UID }]);
+    api.postTaskAction.mockReturnValue(throwError(() => ({ status: 0 })));
+    expect((await service.act(card(1), 'act')).status).toBe('queued');
+    expect(sync.enqueue).not.toHaveBeenCalled();
   });
 });
 

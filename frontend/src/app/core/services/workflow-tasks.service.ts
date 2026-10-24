@@ -75,8 +75,10 @@ export function workflowTaskIdFromUrl(url: string | null | undefined): number | 
  * این رد صریح است، نه تداخل قابل ادغام: پنجرهٔ حل تداخل برایش باز نشود.
  */
 export function isWorkflowTaskAlreadyDone(err: Pick<SyncErrorEntry, 'statusCode' | 'serverResponse' | 'url'>): boolean {
-  return err.statusCode === 409
-    && (err.serverResponse?.code === WORKFLOW_TASK_ALREADY_DONE || workflowTaskIdFromUrl(err.url) !== null);
+  if (err.statusCode !== 409) return false;
+  const code = err.serverResponse?.code;
+  // بدنهٔ بی‌کد (مثلاً پاسخ غیر JSON) روی آدرس اقدام کار هم همین معنا را دارد
+  return code ? code === WORKFLOW_TASK_ALREADY_DONE : workflowTaskIdFromUrl(err.url) !== null;
 }
 
 /**
@@ -309,6 +311,9 @@ export class WorkflowTasksService {
     task: WorkflowTaskCard,
     body: { action: WorkflowTaskAction; revision: number; reason?: string },
   ): Promise<WorkflowActionOutcome> {
+    // پس از بارگذاری دوباره یا تعویض کاربر، مجموعهٔ حافظه هنوز از صف خوانده نشده است: ردیف دوم نسازیم
+    await this.refreshPending();
+    if (this._pending().has(task.task_id)) return { status: 'queued' };
     try {
       await this.sync.enqueue('POST', `${environment.apiUrl}/workflow/tasks/${task.task_id}/action/`, body, {
         userId: this.userId ?? undefined,
@@ -350,7 +355,7 @@ export class WorkflowTasksService {
       ? (err.serverResponse?.detail ? String(err.serverResponse.detail) : WORKFLOW_MESSAGES.alreadyDone)
       : (err.serverMessage || `خطای ${err.statusCode}`);
     this.addNotice(taskId, message);
-    if (err.statusCode === 409) this.dropTask(taskId);
+    if (isWorkflowTaskAlreadyDone(err)) this.dropTask(taskId);
     await this.refreshPending();
     void this.refresh();
   }
