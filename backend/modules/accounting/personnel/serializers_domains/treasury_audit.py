@@ -89,7 +89,9 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExpenseInvoice
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'created_by']
+        # فیلدهای پرداخت و رد فقط از اکشن‌های گردش کار نوشته می‌شوند (ت۲ طرح ۲.۳)
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'payment_ref', 'paid_at', 'paid_by',
+                            'rejection_reason']
 
     def validate(self, attrs):
         attrs = super().validate(attrs)

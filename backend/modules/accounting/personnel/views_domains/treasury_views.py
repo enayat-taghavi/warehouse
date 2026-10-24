@@ -324,9 +324,23 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         obj = self.filter_queryset(self.get_queryset()).filter(pk=pk).first()
         if obj is None and wf_engine.task_grants_view(self.request.user, INVOICE_ENTITY, pk):
             obj = ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty').filter(pk=pk).first()
+            if obj is not None and not self._invoice_company_visible(obj):
+                obj = None
         if obj is None:
             raise Http404
         return obj
+
+    def _invoice_company_visible(self, obj):
+        """راه کار باز فقط در شرکت فعال درخواست و با عضویت زندهٔ کاربر در شرکت فاکتور (ردیف کهنهٔ دریافت‌کننده نه)."""
+        company_id = obj.section.project.company_id
+        active = get_request_company_id(self.request)
+        if active and str(active) != str(company_id):
+            return False
+        try:
+            validate_user_company_access(self.request.user, company_id)
+        except PermissionDenied:
+            return False
+        return True
 
     def retrieve(self, request, *args, **kwargs):
         return Response(self.get_serializer(self._workflow_invoice()).data)

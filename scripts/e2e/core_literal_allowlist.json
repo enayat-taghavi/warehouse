@@ -17,20 +17,6 @@
     },
     {
       "file": "accounts/concurrency_stress_service.py",
-      "text": "app_module='personnel',",
-      "match": "personnel",
-      "category": "dev_tooling",
-      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
-    },
-    {
-      "file": "accounts/concurrency_stress_service.py",
-      "text": "app_module='warehouse',",
-      "match": "warehouse",
-      "category": "dev_tooling",
-      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
-    },
-    {
-      "file": "accounts/concurrency_stress_service.py",
       "text": "return {'worker_id': worker_id, 'type': 'warehouse', 'success': True, 'latency_ms': latency, 'error': None}",
       "match": "warehouse",
       "category": "dev_tooling",
@@ -102,13 +88,6 @@
     {
       "file": "accounts/models.py",
       "text": "seen = {'warehouse', 'personnel'}",
-      "match": "personnel",
-      "category": "stored_value",
-      "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"
-    },
-    {
-      "file": "accounts/models.py",
-      "text": "app_module = models.CharField(max_length=50, choices=get_app_module_choices, default='personnel', db_index=True, verbose_name=\"ماژول کلان\")",
       "match": "personnel",
       "category": "stored_value",
       "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"

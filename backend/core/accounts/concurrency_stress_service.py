@@ -20,7 +20,8 @@ try:
     import jdatetime
 except ImportError:
     jdatetime = None
-from accounts.models import CustomUser, SoDPolicyRule, AuditLog
+from accounts.models import CustomUser, AuditLog
+from settings_core.models import SystemSetting
 from accounts.audit_utils import log_audit_event
 
 logger = logging.getLogger(__name__)
@@ -50,26 +51,14 @@ class ConcurrencyStressService:
 
         try:
             # ۱. ایجاد رکوردهای آزمایشی پروب در محیط ایزوله
-            probe_treasury_rule = SoDPolicyRule.objects.create(
-                app_module='personnel',
-                role_code=f"probe_treasury_{test_session_id}",
-                role_title_fa='پروب آزمایشی تسویه خزانه‌داری',
-                page_route=f"/probe/treasury/{test_session_id}",
-                action_code='DISBURSE_PAYMENT',
-                action_title_fa='تایید و تسویه واریز حقوق',
-                is_prohibited=False,
-                prohibition_reason_fa='READY_TO_PAY'  # وضعیت اولیه: آماده پرداخت
+            probe_treasury_rule = SystemSetting.objects.create(
+                key=f"stress_probe_treasury_{test_session_id}",
+                value='READY_TO_PAY',  # وضعیت اولیه: آماده پرداخت
             )
 
-            probe_warehouse_rule = SoDPolicyRule.objects.create(
-                app_module='warehouse',
-                role_code=f"probe_warehouse_{test_session_id}",
-                role_title_fa='پروب آزمایشی موجودی انبار',
-                page_route=f"/probe/warehouse/{test_session_id}",
-                action_code='DECREMENT_STOCK',
-                action_title_fa='کسر موجودی حواله انبار',
-                is_prohibited=False,
-                prohibition_reason_fa='100'  # مقدار اولیه موجودی پروب: ۱۰۰ واحد
+            probe_warehouse_rule = SystemSetting.objects.create(
+                key=f"stress_probe_stock_{test_session_id}",
+                value='100',  # مقدار اولیه موجودی پروب: ۱۰۰ واحد
             )
 
             latencies = []
@@ -87,12 +76,12 @@ class ConcurrencyStressService:
                     # اتصال اختصاصی ترد به دیتابیس
                     with transaction.atomic():
                         # قفل بدبینانه روی رکورد
-                        row = SoDPolicyRule.objects.select_for_update().get(id=probe_treasury_rule.id)
+                        row = SystemSetting.objects.select_for_update().get(id=probe_treasury_rule.id)
                         # تاخیر میلی‌ثانیه‌ای واقعی جهت شبیه‌سازی محاسبات و همروندی بالا
                         time.sleep(0.005)
-                        if row.prohibition_reason_fa == 'READY_TO_PAY':
-                            row.prohibition_reason_fa = f'PAID_BY_WORKER_{worker_id}'
-                            row.save(update_fields=['prohibition_reason_fa'])
+                        if row.value == 'READY_TO_PAY':
+                            row.value = f'PAID_BY_WORKER_{worker_id}'
+                            row.save(update_fields=['value', 'updated_at'])
                             claimed = True
                         else:
                             claimed = False
@@ -111,11 +100,11 @@ class ConcurrencyStressService:
                 t0 = time.time()
                 try:
                     with transaction.atomic():
-                        row = SoDPolicyRule.objects.select_for_update().get(id=probe_warehouse_rule.id)
-                        current_val = int(row.prohibition_reason_fa or '0')
+                        row = SystemSetting.objects.select_for_update().get(id=probe_warehouse_rule.id)
+                        current_val = int(row.value or '0')
                         time.sleep(0.003)
-                        row.prohibition_reason_fa = str(current_val - 1)
-                        row.save(update_fields=['prohibition_reason_fa'])
+                        row.value = str(current_val - 1)
+                        row.save(update_fields=['value', 'updated_at'])
 
                     latency = round((time.time() - t0) * 1000, 2)
                     return {'worker_id': worker_id, 'type': 'warehouse', 'success': True, 'latency_ms': latency, 'error': None}
@@ -160,7 +149,7 @@ class ConcurrencyStressService:
 
             # وضعیت انبارداری: دقیقاً به تعداد کارگرها کسر شده بدون از دست رفتن ترنزکشن
             probe_warehouse_rule.refresh_from_db()
-            final_stock = int(probe_warehouse_rule.prohibition_reason_fa or '0')
+            final_stock = int(probe_warehouse_rule.value or '0')
             expected_stock = 100 - warehouse_workers
             inventory_integrity_verified = (final_stock == expected_stock) if warehouse_workers > 0 else True
 
@@ -227,8 +216,8 @@ class ConcurrencyStressService:
             # ۷. پاکسازی ۱۰۰٪ ایزوله رکوردهای پروب تستی
             try:
                 if probe_treasury_rule and probe_treasury_rule.id:
-                    SoDPolicyRule.objects.filter(id=probe_treasury_rule.id).delete()
+                    SystemSetting.objects.filter(id=probe_treasury_rule.id).delete()
                 if probe_warehouse_rule and probe_warehouse_rule.id:
-                    SoDPolicyRule.objects.filter(id=probe_warehouse_rule.id).delete()
+                    SystemSetting.objects.filter(id=probe_warehouse_rule.id).delete()
             except Exception as clean_err:
                 logger.warning(f"[StressTest] Cleanup probe error: {clean_err}")

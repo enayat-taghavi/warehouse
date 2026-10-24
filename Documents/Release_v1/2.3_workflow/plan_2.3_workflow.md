@@ -326,5 +326,27 @@
     - تنخواه هنوز روی موتور قدیمی است (مرحلهٔ ۴).
   - **ج۲ (حذف SoD) شروع نشد.** فهرست دقیق فایل‌ها و خط‌ها در `scratch/brief_2.3_c2.md` است.
   - **اقدام بعدی:** ۲.۳-ج۲ در گفتگوی تازه.
+- **۲ آبان ۱۴۰۵ — ۲.۳-ج۲ (حذف SoD، ت۱۸) انجام شد.** ۲.۳-ج کامل است.
+  - **سهم آنتی‌گرویتی** (commit `5e4e139f`، ۲۵ خط verify سبز):
+    - بک‌اند: حذف `sod_cache_service.py`، `check_sod_prohibition`، `resolve_sod_context`، `SoDPolicyPermission`، فیلد `sod_app_module` و `app_code_for_sod` رجیستری (با `module.py` سه ماژول و قالب ماژول)، `sod_rules.py` حسابداری و انبار و اعلامشان در `apps.py`، نگهبان‌های ۹ و ۱۱ و بخش‌های SoD نگهبان‌های ۱۲، ۱۴، ۱۵ و ۲۷ در `phase_guardian_approval.py`، و `integration_tests/test_sod_context_resolution.py`.
+    - فرانت: صفحهٔ `operations-rbac-governance` با مسیر، منو، کارت پیشخوان عملیات، spec و ورودی `dom-verify.js`؛ `ACCOUNTING_SOD_PROHIBITIONS`؛ ۱۴ مورد حسابداری در spec مشخصه‌یابی پرسونا.
+    - `personnel-profiles.ts`: شرط‌های `canPerform` برداشته شد. ویرایش دستمزد حالا فقط برای دارندهٔ مجوز تأیید مالی یا مدیر است، هم‌سو با قاعدهٔ بک‌اند (`WAGE_VIEW_PERMS`).
+    - نگهبان ۵۰ حذف شد، چون فقط همین صفحه را می‌خواند.
+  - **سهم Claude:**
+    - مدل `SoDPolicyRule` حذف شد. `get_app_module_choices` می‌ماند، چون `0001_initial` آن را می‌خواند. migration `accounts/0007_remove_sodpolicyrule` (فقط `DROP TABLE`، ۱۶ ردیف پیش‌فرض، ق۲) ساخته شد. نام با `django_migrations` تصادم نداشت. پشتیبان `backup_20261024_163941.dump` گرفته شد و migrate روی `app` اجرا شد.
+    - ردیف‌های آزمایشی قفل در `concurrency_stress_service.py` به `SystemSetting` (کلید `stress_probe_*`) رفتند.
+    - سه ورودی کهنهٔ `core_literal_allowlist.json` حذف شدند. این کار در دستورکار آنتی‌گرویتی نبود، چون این ورودی‌ها از حذف مدل و probeها کهنه می‌شدند.
+    - **`tenant-scope-reviewer` روی ج۱:** نشتی تأییدشده نبود. دو ایراد محتمل اصلاح شد:
+      - `payment_ref`، `paid_at`، `paid_by` و `rejection_reason` در `ExpenseInvoiceSerializer` فقط‌خواندنی شدند.
+      - راه «کار باز» در جزئیات فاکتور حالا شرکت فعال و عضویت زندهٔ کاربر را هم می‌سنجد (`_invoice_company_visible`).
+    - **تست سناریوهای ۳ و ۵** و این دو اصلاح به `test_invoice_workflow.py` اضافه شد. سناریوی ۵ طبق ت۵ است: فاکتور خزانه‌دار از تأیید مدیر عبور می‌کند و فقط سرپرست رد می‌شود.
+  - **تست‌ها:**
+    - `accounts personnel workflow warehouses`: ۶۴۶ OK.
+    - `ng test` specهای تغییرکرده (runner): ۰ شکست؛ ۲۹۲ پاس در برابر ۳۰۹ پایه، چون ۱۷ تست SoD و صفحهٔ حذف‌شده برداشته شدند.
+    - نگهبان‌های 29، 52، 56، 57 و 58 PASS؛ `check` بی‌خطا؛ `ng build` و `sample-module` (runner) سبز.
+  - **باز:**
+    - لغو انتساب بخش، دریافت‌کننده‌ها را فوراً از نو حساب نمی‌کند؛ هم‌سان‌سازی ساعتی این کار را می‌کند. در ۲.۳-ه دیده شود.
+    - `personas.ts` انبار و `canPerform` می‌مانند (ق۱۳)؛ `canPerform` دیگر مصرف‌کنندهٔ حسابداری ندارد.
+  - **اقدام بعدی:** ۲.۳-د در گفتگوی تازه با `scratch/brief_2.3_d.md`.
 
 </div>

@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from companies.models import Company, Project, ProjectSection, UserCompanyAccess
+from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 from personnel.models import Counterparty, ExpenseInvoice
 from personnel.scoped_test_support import grant_section_perms
 from personnel.workflows import INVOICE_WORKFLOW
@@ -84,6 +84,42 @@ class InvoiceWorkflowTests(TestCase):
         skipped = WorkflowStep.objects.get(instance__entity_id=inv.pk, action='submit').skipped
         self.assertEqual([s['step'] for s in skipped], ['supervisor_ok'])
 
+    def test_3_accountant_invoice_goes_to_second_accountant_or_waits_with_alert(self):
+        from unittest import mock
+        from workflow import events
+        inv = self.invoice(self.acc)
+        self.post(self.acc, inv, 'submit')
+        self.assertEqual(self.step(inv), 'accountant_review')
+        self.assertEqual(self.post(self.acc, inv, 'approve').status_code, 403)  # بررسی سند خود نه
+        self.assertEqual(self.post(self.acc2, inv, 'approve').status_code, 200)
+        self.assertEqual(self.step(inv), 'manager_ok')
+        # بخشی با یک حسابدار: کار بررسی بی‌دریافت‌کننده منتظر می‌ماند و مدیر کل هشدار می‌گیرد
+        self.acc2.is_active = False
+        self.acc2.save()
+        inv2 = self.invoice(self.acc)
+        with mock.patch.object(events, 'emit', wraps=events.emit) as emit:
+            self.post(self.acc, inv2, 'submit')
+        task = wf_engine.open_task(INVOICE_WORKFLOW, inv2.pk)
+        self.assertEqual((task.step_key, task.has_recipients), ('accountant_review', False))
+        self.assertIn(events.SUPERUSER_ALERT, [c.args[0] for c in emit.call_args_list])
+        self.assertEqual(self.post(self.acc, inv2, 'approve').status_code, 403)
+
+    def test_5_treasurer_invoice_keeps_manager_and_goes_to_other_treasurer(self):
+        # ت۵: رتبهٔ خزانه‌دار (۳۰) از مدیر (۴۰) کمتر است؛ تأیید مدیر رد نمی‌شود، فقط سرپرست
+        trs2 = self.user('trs2', 'treasury')
+        inv = self.invoice(self.trs)
+        self.post(self.trs, inv, 'submit')
+        self.assertEqual(self.step(inv), 'accountant_review')
+        self.post(self.acc, inv, 'approve')
+        self.assertEqual(self.step(inv), 'manager_ok')
+        self.post(self.mgr, inv, 'approve')
+        self.assertEqual(self.step(inv), 'treasury_pay')
+        skipped = [s['step'] for st in WorkflowStep.objects.filter(instance__entity_id=inv.pk) for s in st.skipped]
+        self.assertEqual(skipped, ['supervisor_ok'])
+        self.assertEqual(self.post(self.trs, inv, 'pay', tracking_code='TRK-5').status_code, 403)  # پرداخت سند خود نه
+        self.assertEqual(self.post(trs2, inv, 'pay', tracking_code='TRK-5').status_code, 200)
+        self.assertEqual(self.status(inv), 'paid')
+
     def test_4_manager_invoice_goes_to_other_manager_or_no_second_approval(self):
         inv = self.invoice(self.mgr)
         self.post(self.mgr, inv, 'submit')
@@ -128,6 +164,13 @@ class InvoiceWorkflowTests(TestCase):
         c.force_authenticate(self.emp)
         res = c.patch(f'{BASE}{inv.pk}/', {'status': 'draft'}, format='json', HTTP_X_COMPANY_ID=str(self.company.pk))
         self.assertEqual(res.status_code, 403)
+        # فیلدهای پرداخت از ویرایش عادی نوشته نمی‌شوند (پرداخت فقط با اکشن pay)
+        draft = self.invoice(self.emp)
+        res = c.patch(f'{BASE}{draft.pk}/', {'payment_ref': 'X', 'paid_by': self.trs.pk}, format='json',
+                      HTTP_X_COMPANY_ID=str(self.company.pk))
+        self.assertEqual(res.status_code, 200)
+        draft.refresh_from_db()
+        self.assertEqual((draft.payment_ref or '', draft.paid_by_id), ('', None))
 
     def test_8_substitute_sees_and_acts_but_not_own_invoice_nor_list(self):
         other = ProjectSection.objects.create(project=self.sec.project, code='IWF-S2', name='بخش دو')
@@ -142,6 +185,15 @@ class InvoiceWorkflowTests(TestCase):
         c = APIClient()
         c.force_authenticate(helper)
         self.assertEqual(c.get(f'{BASE}{inv.pk}/', HTTP_X_COMPANY_ID=str(self.company.pk)).status_code, 200)
+        other_company = Company.objects.create(code='IWF2', name='شرکت دیگر', is_active=True)
+        self.assertIn(c.get(f'{BASE}{inv.pk}/', HTTP_X_COMPANY_ID=str(other_company.pk)).status_code, (403, 404))
+        # ردیف کار کهنه بدون عضویت زندهٔ شرکت (نه دسترسی شرکت، نه انتساب بخش) سند را نشان نمی‌دهد
+        UserCompanyAccess.objects.filter(user=helper).delete()
+        SectionAssignment.objects.filter(user=helper).update(is_active=False)
+        self.assertIn(c.get(f'{BASE}{inv.pk}/', HTTP_X_COMPANY_ID=str(self.company.pk)).status_code, (403, 404))
+        self.assertEqual(c.get(f'{BASE}{inv.pk}/').status_code, 404)
+        UserCompanyAccess.objects.create(user=helper, company=self.company, is_default=True)
+        SectionAssignment.objects.filter(user=helper).update(is_active=True)
         listed = c.get(BASE, HTTP_X_COMPANY_ID=str(self.company.pk)).json()
         self.assertNotIn(inv.pk, [r['id'] for r in (listed.get('results') if isinstance(listed, dict) else listed)])
         self.assertEqual(self.post(helper, inv, 'approve').status_code, 200)
