@@ -170,6 +170,19 @@ class CompanyPayrollProfileSerializer(serializers.ModelSerializer):
         fields = ['company', *CompanyPayrollProfile.FIELDS, 'updated_at']
         read_only_fields = ['company', 'updated_at']
 
+    @classmethod
+    def visible_data(cls, data, visible):
+        """
+        ت۱۲ طرح ۲.۲: شناسه‌های بیمه و مالیات فقط برای سطح «خواندن» حوزهٔ insurance_tax (ابرکاربر همیشه).
+        عضو بی‌سطح همان شکل پاسخ را با مقدار null همهٔ FIELDS می‌گیرد؛ identifiers_visible به فرانت می‌گوید چرا خالی است.
+        """
+        data = dict(data)
+        if not visible:
+            for field in CompanyPayrollProfile.FIELDS:
+                data[field] = None
+        data['identifiers_visible'] = bool(visible)
+        return data
+
     def validate(self, attrs):
         # ارقام فارسی و عربی کدها به لاتین؛ فاصله‌های دو سر همهٔ فیلدها حذف می‌شود
         for field, value in list(attrs.items()):

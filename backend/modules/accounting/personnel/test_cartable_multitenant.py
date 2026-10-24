@@ -221,19 +221,25 @@ class CartableMultiTenantTestCase(TestCase):
             company=company,
             is_default=True
         )
-        SectionAssignment.objects.create(
-            user=u,
-            section=section,
-            role=role,
-            is_active=True
-        )
         role_perms = {
             'supervisor': ['perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor'],
             'accountant': ['perm_approve_personnel_finance', 'perm_approve_fleet_finance'],
             'manager': ['perm_approve_personnel_manager', 'can_act_as_manager', 'perm_manager_payment_authorize'],
             'treasurer': ['perm_treasury_disburse_action', 'view_sys_treasury']
         }
-        for codename in role_perms.get(role, []):
+        # مجوزهای بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آیند (طرح ۲.۲، ت۱)؛ کلید نقش انتساب
+        # خزانه‌دار «treasury» است. کدی که مجوز بخشی نیست (can_act_as_manager) مثل پیش تیک مستقیم می‌خورد.
+        from accounts.scoped_permissions import section_permission_codes
+        from personnel.scoped_test_support import grant_section_perms
+        codes = role_perms.get(role, [])
+        section_codes = section_permission_codes()
+        grant_section_perms(
+            u, [c for c in codes if c in section_codes], section=section,
+            role='treasury' if role == 'treasurer' else role, exact=False,
+        )
+        for codename in codes:
+            if codename in section_codes:
+                continue
             p = Permission.objects.filter(codename=codename).first()
             if p:
                 u.user_permissions.add(p)

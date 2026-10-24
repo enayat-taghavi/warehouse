@@ -7,6 +7,9 @@ from platform_core.registry import normalize_ws_app_scope
 
 logger = logging.getLogger(__name__)
 
+# کانالی که فقط مدیران کل سامانه عضوش هستند (companies/realtime.py)
+SUPERUSER_GROUP = 'superuser_notifications'
+
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.group_name = 'global_notifications'
@@ -54,6 +57,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                     self.user_group_name,
                     self.channel_name
                 )
+                # ۵. کانال مدیران کل سامانه: رویداد شرکت تازه‌ساخته که هنوز کسی عضو کانال شرکتی‌اش نیست
+                if getattr(user, 'is_superuser', False):
+                    self.superuser_group_name = SUPERUSER_GROUP
+                    await self.channel_layer.group_add(SUPERUSER_GROUP, self.channel_name)
 
             await self.accept()
         except Exception as e:
@@ -77,6 +84,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                         self.user_group_name,
                         self.channel_name
                     )
+                except Exception:
+                    pass
+            if getattr(self, 'superuser_group_name', None):
+                try:
+                    await self.channel_layer.group_discard(self.superuser_group_name, self.channel_name)
                 except Exception:
                     pass
             for cid in getattr(self, 'allowed_company_ids', []):
@@ -235,7 +247,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 'sender_id', 'client_tab_id', 'app_module', 'session_id', 'revoked_tab_id',
                 'fleet_data', 'personnel_id', 'vehicle_id', 'action', 'full_name',
                 'driver_name', 'plate_number', 'entity_type', 'approval_status',
-                'notification_id', 'title', 'target_model', 'target_id', 'created_at', 'notification_type'
+                'notification_id', 'title', 'target_model', 'target_id', 'created_at', 'notification_type',
+                'user_id', 'reason',  # permissions_updated (طرح ۲.۲)
             ):
                 if k in event:
                     out_data[k] = event[k]

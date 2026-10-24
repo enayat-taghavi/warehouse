@@ -154,6 +154,30 @@ class ReadStateAndPerformanceTestCase(BaseCommsTestCase):
         # نباید ۲۰ کوئری COUNT اجرا شده باشد
         self.assertLessEqual(len(ctx.captured_queries), 5)
 
+    def test_broadcast_bulk_notifications_still_schedule_push(self):
+        """اعلان‌ها یکجا ساخته می‌شوند و پوش هر گیرندهٔ دارای توکن، بعد از commit، با یک کوئری توکن زمان‌بندی می‌شود"""
+        from unittest import mock
+        from notifications.models import DeviceToken, Notification
+        group_conv = Conversation.objects.create(
+            title="گروه پوش",
+            conv_type=ConversationType.WAREHOUSE_GROUP,
+            warehouse=self.wh1,
+            created_by=self.admin
+        )
+        users = [User.objects.create_user(username=f"push_user_{i}", password="Password123!") for i in range(3)]
+        group_conv.participants.set([self.admin, *users])
+        DeviceToken.objects.create(user=users[0], token='tok-push-0')
+        DeviceToken.objects.create(user=users[1], token='tok-push-1')
+        msg = Message.objects.create(conversation=group_conv, sender=self.admin, text="پیام پوش")
+
+        with mock.patch('notifications.push._schedule_push') as scheduled:
+            with self.captureOnCommitCallbacks(execute=True):
+                broadcast_message_ws(msg)
+        notifs = Notification.objects.filter(target_model='Conversation', target_id=str(group_conv.id))
+        self.assertEqual(sorted(notifs.values_list('recipient_id', flat=True)), sorted(u.id for u in users))
+        pushed = sorted(c.kwargs['tokens'][0] for c in scheduled.call_args_list)
+        self.assertEqual(pushed, ['tok-push-0', 'tok-push-1'])
+
     def test_since_id_returns_same_timestamp_messages(self):
         """پیام‌هایی که تاریخ ارسال یکسان دارند اما شناسه بالاتر دارند نباید با since_id فیلتر شوند"""
         self.auth(self.manager_wh1)

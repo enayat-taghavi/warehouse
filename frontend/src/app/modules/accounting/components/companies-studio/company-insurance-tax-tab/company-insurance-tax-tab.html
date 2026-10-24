@@ -20,6 +20,11 @@
         <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="load()"></button>
       </div>
     }
+  } @else if (identifiersHidden) {
+    <div class="p-4 text-xs font-bold text-fg-muted bg-surface-muted border border-dashed border-line rounded-2xl flex items-start gap-2" role="status" data-identifiers-hidden>
+      <svg appIcon="lock" class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>برای دیدن شناسه‌های بیمه و مالیات به سطح خواندن حوزهٔ بیمه و مالیات نیاز دارید.</span>
+    </div>
   } @else {
     @if (!canWrite) {
       <p class="p-3 text-[11px] font-bold text-fg-muted bg-surface-muted border border-line rounded-2xl" role="note">این حوزه برای شما فقط خواندنی است.</p>

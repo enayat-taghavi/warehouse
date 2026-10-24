@@ -24,16 +24,29 @@ __MODULE_UPPER___SPEC = ModuleSpec(
 MODULE_SPEC = __MODULE_UPPER___SPEC
 SPEC = __MODULE_UPPER___SPEC
 
-__MODULE_UPPER___PERMISSION_CODENAMES = (
-    'view_sys___MODULE_CODE__',
+# مجوزهای سفارشی این ماژول روی accounts.CustomUser در قالب اعلام طرح ۲.۲ (ت۱، ت۲، ت۳، ت۶).
+# هسته ردیف‌های Permission ماژول نصب‌شده را در post_migrate می‌سازد (فقط ایجاد، هرگز حذف) و فهرست کامل،
+# دسته‌ها و بسته‌های پیش‌فرض نقش‌ها را از همین اعلام به فرانت می‌دهد؛ فرانت ماژول قالب جدید
+# permissionGroup، shortPermissionNames و rolePresets ندارد (نگهبان ۵۷ / module_coupling_scan می‌سنجد).
+
+# دسته‌ها (اختیاری): menu کلید مبهمی است که فرانت به آیتم منوی همین ماژول نگاشت می‌کند، یا None.
+__MODULE_UPPER___PERMISSION_CATEGORIES = (
+    {'key': 'main', 'label_fa': '__MODULE_TITLE_FA__', 'order': 10, 'menu': None},
 )
 
-PERMISSION_CODENAMES = __MODULE_UPPER___PERMISSION_CODENAMES
+PERMISSION_CATEGORIES = __MODULE_UPPER___PERMISSION_CATEGORIES
 
-# مجوزهای سفارشی این ماژول روی accounts.CustomUser (کد، نام فارسی).
-# هسته ردیف‌های Permission ماژول نصب‌شده را در post_migrate می‌سازد (فقط ایجاد، هرگز حذف).
+# هر مجوز:
+#   scope='section': «کجا» فقط از انتساب کاربر به شرکت/پروژه/بخش می‌آید (ق۶)؛ بررسی با
+#     accounts.scoped_permissions.can(user, code, section) / sections_where() / section_q()، نه has_perm سراسری (نگهبان ۵۸).
+#     defaults: کلید نقش‌های انتساب (section_roles) که این مجوز در بستهٔ پیش‌فرض آن‌هاست.
+#   scope='system' (پیش‌فرض): مجوز سامانه‌ای، فقط از نقش سامانه‌ای یا تیک مستقیم؛ defaults ندارد.
+#   قالب قدیم ('code', 'نام') همچنان پذیرفته است و سامانه‌ای حساب می‌شود.
 __MODULE_UPPER___PERMISSIONS = (
-    ('view_sys___MODULE_CODE__', '__MODULE_TITLE_FA__'),
+    {'code': 'view_sys___MODULE_CODE__', 'label_fa': '__MODULE_TITLE_FA__', 'category': 'main',
+     'scope': 'section', 'defaults': ('__MODULE_CODE___member',)},
+    {'code': 'manage___MODULE_CODE___settings', 'label_fa': 'تنظیمات __MODULE_TITLE_FA__', 'category': 'main',
+     'scope': 'system'},
 )
 
 PERMISSIONS = __MODULE_UPPER___PERMISSIONS

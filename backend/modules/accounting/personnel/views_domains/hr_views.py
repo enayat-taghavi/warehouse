@@ -47,7 +47,7 @@ from ..permissions import (
 from .scope_helpers import (
     broadcast_personnel_update,
     ensure_personnel_write_scope,
-    is_personnel_global_auditor,
+    can_access_personnel_section,
     resolve_import_company,
     scope_personnel_queryset,
 )
@@ -59,9 +59,6 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     pagination_class = None
 
-    def _is_global_auditor(self, user):
-        return is_personnel_global_auditor(user)
-
     def _scoped_base_queryset(self):
         """قلمرو امنیتی کاربر (بخش‌ها و شرکت‌های مجاز) بدون فیلترهای نمایشی مثل جستجو یا بخش انتخابی."""
         return scope_personnel_queryset(self.request, super().get_queryset())
@@ -69,7 +66,6 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = self._scoped_base_queryset()
         user = self.request.user
-        is_global_auditor = self._is_global_auditor(user)
 
         warehouse_id = self.request.query_params.get('warehouse_id')
         if warehouse_id:
@@ -77,8 +73,8 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         
         section_id = self.request.query_params.get('section_id')
         if section_id:
-            if not is_global_auditor and user and user.is_authenticated:
-                if str(section_id).isdigit() and not user_has_section_role(user, int(section_id)):
+            if user and user.is_authenticated and not user.is_superuser:
+                if str(section_id).isdigit() and not can_access_personnel_section(user, int(section_id)):
                     return qs.none()
             qs = qs.filter(
                 Q(section_id=section_id) |
@@ -131,13 +127,10 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_personnel_manager') or has_permission_alias(user, 'manager_approver')
-        
         section = serializer.validated_data.get('section')
-        # گارد انتساب بخش: کاربر عادی باید انتساب فعال به بخش انتخاب‌شده داشته باشد
-        if not is_mgr and section and user and user.is_authenticated:
-            if not user_has_section_role(user, section):
-                raise PermissionDenied("شما انتساب فعال در این بخش برای معرفی پرسنل جدید ندارید.")
+        # گارد انتساب بخش: هر کاربر (مدیر هم) باید در بخش انتخاب‌شده مجوز پرونده داشته باشد (ت۸ طرح ۲.۲)
+        if section and user and user.is_authenticated and not can_access_personnel_section(user, section):
+            raise PermissionDenied("شما انتساب فعال در این بخش برای معرفی پرسنل جدید ندارید.")
         # شرکت، بخش و پروژهٔ پرونده باید در قلمرو شرکت‌های مجاز کاربر باشند (حتی برای مدیر؛ عبور هوشمند هم پس از این است)
         ensure_personnel_write_scope(
             user,
@@ -187,7 +180,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             compute_profile_diff,
             user_has_any_perm,
         )
-        is_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS)
+        is_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS, instance)  # در بخش همین پرونده (ت۸ طرح ۲.۲)
         current_status = instance.approval_status
         audit_excluded = {'id', 'pk', 'created_at', 'created_by', 'updated_at'}
 
@@ -422,7 +415,9 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         """
         if not user or not user.is_authenticated:
             return False
-        if user.is_superuser or user.has_perm('accounts.perm_delete_personnel_nomovement'):
+        from ..lifecycle_services import user_has_perm_for_record
+        # مجوز حذف در بخش همین پرونده (ت۸ طرح ۲.۲)، نه «در هر بخشی»
+        if user.is_superuser or user_has_perm_for_record(user, 'perm_delete_personnel_nomovement', instance):
             return True
         if instance.approval_status not in ('draft', 'revision_required'):
             return False
@@ -432,7 +427,8 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
     def _is_creator_or_co_section(user, instance) -> bool:
         if instance.created_by_id == user.id:
             return True
-        return bool(instance.section_id) and user_has_section_role(user, instance.section_id)
+        # هم‌بخش = کسی که در بخش پرونده مجوز پرونده دارد (ت۸ طرح ۲.۲)
+        return bool(instance.section_id) and can_access_personnel_section(user, instance.section_id)
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -890,9 +886,10 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if company_id is None or company_id not in allowed_ids:
                 raise PermissionDenied("بازگشایی فقط برای پرونده‌های شرکت‌های مجاز شما ممکن است.")
-            is_in_section = bool(instance.section_id) and user_has_section_role(user, instance.section_id)
+            is_in_section = bool(instance.section_id) and can_access_personnel_section(user, instance.section_id)
             from ..lifecycle_services import APPROVAL_STAGES, user_has_any_perm
-            is_approver = any(user_has_any_perm(user, rule['perms']) for rule in APPROVAL_STAGES.values())
+            # تأییدکننده در بخش همین پرونده (ت۸ طرح ۲.۲)
+            is_approver = any(user_has_any_perm(user, rule['perms'], instance) for rule in APPROVAL_STAGES.values())
             if not (instance.created_by_id == user.id or is_in_section or is_approver):
                 raise PermissionDenied("شما مجاز به بازگشایی این پرونده نیستید.")
 
@@ -931,6 +928,8 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("ثبت قطع همکاری فقط با دسترسی مدیر ممکن است.")
 
         instance = self.get_object()
+        if not user_has_any_perm(user, MANAGER_STAGE_PERMS, instance):  # مدیرِ بخش همین پرونده (ت۸ طرح ۲.۲)
+            raise PermissionDenied("ثبت قطع همکاری فقط با دسترسی مدیر ممکن است.")
         reason = (request.data.get('reason') or '').strip()
         if not reason:
             return Response({'error': 'ثبت دلیل قطع همکاری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1073,22 +1072,22 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
         user = request.user
-        can_mgr = (
-            user.is_superuser
-            or user.has_perm('accounts.perm_approve_personnel_manager')
-            or has_permission_alias(user, 'manager_approver')
-            or user.has_perm('accounts.perm_approve_personnel_supervisor')
-            or user.has_perm('accounts.can_act_as_workshop_supervisor')
+        from ..lifecycle_services import MANAGER_APPROVER, user_has_any_perm
+        # مجوزهای رد (مدیر، سرپرست یا مالی)؛ اول «در هر بخشی»، سپس در بخش همین پرونده (ت۸ طرح ۲.۲)
+        reject_perms = (
+            'perm_approve_personnel_manager', MANAGER_APPROVER, 'perm_approve_personnel_supervisor',
+            'can_act_as_workshop_supervisor', 'perm_approve_personnel_finance',
         )
-        can_fin = user.is_superuser or user.has_perm('accounts.perm_approve_personnel_finance')
-        if not (can_mgr or can_fin):
+        if not user_has_any_perm(user, reject_perms):
             raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")
-        
+
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'ثبت دلیل رد الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         instance = self.get_object()
+        if not user_has_any_perm(user, reject_perms, instance):
+            raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")
         if instance.approval_status in ('approved', 'manager_approved'):
             return Response({'error': 'امکان رد پرونده تصویب‌شده وجود ندارد. در صورت نیاز، تغییرات باید از مسیر درخواست تغییرات یا قطع همکاری پیگیری شود.'}, status=status.HTTP_400_BAD_REQUEST)
         # تسک ۳.۱ و جدول §۳.۱-الف: رد فقط روی پرونده‌های در جریان؛ پیش‌نویسِ ارسال‌نشده و پروندهٔ ردشده از این مسیر رد نمی‌شوند
@@ -1174,6 +1173,12 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             return Response({'error': 'ثبت توضیحات جهت بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
 
         instance = self.get_object()
+        # نقش‌های مرحله در بخش همین پرونده (ت۸ طرح ۲.۲)
+        is_sup = user_has_any_perm(user, SUPERVISOR_STAGE_PERMS, instance)
+        is_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS, instance)
+        is_mgr = user_has_any_perm(user, MANAGER_STAGE_PERMS, instance)
+        if not (is_mgr or is_fin or is_sup):
+            raise PermissionDenied("شما دسترسی لازم برای ارجاع به بازنگری را ندارید.")
         old_status = instance.approval_status
         if old_status in ('approved', 'manager_approved'):
             return Response({'error': 'امکان عودت پرونده تصویب‌شده وجود ندارد. پرونده‌های مصوب در چرخه ثبت کارکرد هستند و تغییرات آن‌ها صرفاً از مسیر درخواست تغییرات مجاز است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1825,7 +1830,8 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                     editable = (
                         user.is_superuser
                         or st in ('draft', 'revision_required', 'pending_supervisor')
-                        or (st == 'pending_accountant' and is_fin)
+                        or (st == 'pending_accountant' and is_fin
+                            and user_has_any_perm(user, FINANCE_STAGE_PERMS, existing_prof))  # در بخش همین پرونده (ت۸)
                     )
                     if not editable:
                         import_warnings.append({
@@ -2144,6 +2150,8 @@ class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("شما دسترسی بررسی مرحله اول (سرپرست) درخواست تغییرات را ندارید.")
 
         cr = self.get_object()
+        if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS, cr.personnel):  # در بخش پروندهٔ همین درخواست (ت۸)
+            raise PermissionDenied("شما دسترسی بررسی مرحله اول (سرپرست) درخواست تغییرات را ندارید.")
         if cr.status not in ['draft', 'pending_supervisor', 'revision_required']:
             return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل تایید سرپرست نیست.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2164,6 +2172,8 @@ class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("شما دسترسی تایید مرحله دوم (مالی) درخواست تغییرات را ندارید.")
 
         cr = self.get_object()
+        if not user_has_any_perm(user, FINANCE_STAGE_PERMS, cr.personnel):  # در بخش پروندهٔ همین درخواست (ت۸)
+            raise PermissionDenied("شما دسترسی تایید مرحله دوم (مالی) درخواست تغییرات را ندارید.")
         valid_statuses = ['pending_accountant', 'supervisor_approved', 'manager_approved']
         if cr.status not in valid_statuses:
             return Response({'error': f'درخواست ابتدا باید به تایید سرپرست برسد (وضعیت فعلی: {cr.get_status_display()}).'}, status=status.HTTP_400_BAD_REQUEST)
@@ -2192,6 +2202,8 @@ class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("شما دسترسی تصویب نهایی درخواست تغییرات را ندارید.")
 
         cr = self.get_object()
+        if not user_has_any_perm(user, MANAGER_STAGE_PERMS, cr.personnel):  # در بخش پروندهٔ همین درخواست (ت۸)
+            raise PermissionDenied("شما دسترسی تصویب نهایی درخواست تغییرات را ندارید.")
         valid_statuses = ['pending_manager', 'accountant_approved', 'pending_supervisor', 'pending_accountant', 'draft', 'manager_approved']
         if cr.status not in valid_statuses:
             return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل تصویب مدیر نیست.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -2240,6 +2252,8 @@ class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
 
         reason = request.data.get('reason', '').strip()
         cr = self.get_object()
+        if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS + FINANCE_STAGE_PERMS + MANAGER_STAGE_PERMS, cr.personnel):
+            raise PermissionDenied("دسترسی رد این درخواست را ندارید.")  # در بخش پروندهٔ همین درخواست (ت۸)
         if cr.status in ('approved', 'rejected', 'cancelled'):
             return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل رد نیست.'}, status=status.HTTP_400_BAD_REQUEST)
 

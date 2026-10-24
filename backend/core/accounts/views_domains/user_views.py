@@ -259,8 +259,27 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             'direct_permissions': direct_perms,
         }
 
+    @staticmethod
+    def _requested_grants(validated_data):
+        """(شناسهٔ نقش‌ها یا None، شناسهٔ تیک‌های مستقیم یا None) از بدنهٔ ساخت یا ویرایش کاربر."""
+        groups = validated_data.get('groups', None)
+        roles = validated_data.get('roles', None)
+        if groups is not None:
+            group_ids = {getattr(g, 'pk', g) for g in groups}
+        elif roles is not None:
+            group_ids = set(Group.objects.filter(name__in=roles).values_list('id', flat=True))
+        else:
+            group_ids = None
+        perms = validated_data.get('user_permissions', None)
+        perm_ids = None if perms is None else {getattr(p, 'pk', p) for p in perms}
+        return group_ids, perm_ids
+
     def perform_create(self, serializer):
         from ..audit_utils import log_audit_event
+        from ..permission_admin import ensure_user_grant_change
+        # طرح ۲.۲ (ت۱۰): نقش سامانه‌ای و تیک مستقیم فقط با perm_usr_role و فقط کدهایی که خود سازنده دارد
+        new_group_ids, new_perm_ids = self._requested_grants(serializer.validated_data)
+        ensure_user_grant_change(self.request.user, None, new_group_ids=new_group_ids, new_perm_ids=new_perm_ids)
         from rest_framework.exceptions import PermissionDenied
         user_permissions = serializer.validated_data.get('user_permissions', [])
         if user_permissions and not (self.request.user and self.request.user.is_superuser):
@@ -301,12 +320,23 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 raise PermissionDenied("تنها مدیر ارشد سامانه (Superuser) مجاز به اعطا یا تغییر دسترسی‌های حساس است.")
 
         old_instance = self.get_object()
+        from ..permission_admin import ensure_user_grant_change
+        old_group_ids = set(old_instance.groups.values_list('id', flat=True))
+        old_perm_ids = set(old_instance.user_permissions.values_list('id', flat=True))
+        new_group_ids, new_perm_ids = self._requested_grants(serializer.validated_data)
+        ensure_user_grant_change(self.request.user, old_instance, old_group_ids=old_group_ids,
+                                 new_group_ids=new_group_ids, old_perm_ids=old_perm_ids, new_perm_ids=new_perm_ids)
+        grants_changed = ((new_group_ids is not None and new_group_ids != old_group_ids)
+                          or (new_perm_ids is not None and new_perm_ids != old_perm_ids))
         new_is_active = serializer.validated_data.get('is_active', None)
         if old_instance.is_active and new_is_active is False:
             self._validate_user_deactivation(self.request, old_instance, action_name="غیرفعال‌سازی")
 
         before_state = self._get_user_audit_state(old_instance)
         instance = serializer.save(modified_by=self.request.user if self.request.user.is_authenticated else None)
+        if grants_changed:
+            from ..permission_events import notify_role_changed
+            notify_role_changed([instance.pk])
         after_state = self._get_user_audit_state(instance)
         diff_b, diff_a = calculate_model_diff(before_state, after_state)
         if diff_b or diff_a:
@@ -668,6 +698,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         )
         wh_ext = _get_user_warehouse_extension()
         allowed_warehouses = set(wh_ext.get_all_warehouses(user=request.user)) if wh_ext else set()
+        from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+        from ..permission_admin import ensure_user_grant_change
+        role_changed_user_ids = set()
 
         try:
             with transaction.atomic():
@@ -688,6 +721,15 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         if not user:
                             commit_errors.append({'row': row_num, 'field': 'username', 'message': 'کاربر هدف در قلمرو مجاز شما نیست.'})
                             continue
+                        old_role_ids = set(user.groups.values_list('id', flat=True))
+                        new_role_ids = {g.pk for g in roles}
+                        try:
+                            ensure_user_grant_change(request.user, user, old_group_ids=old_role_ids, new_group_ids=new_role_ids)
+                        except DRFPermissionDenied as exc:
+                            commit_errors.append({'row': row_num, 'field': 'roles', 'message': str(exc.detail)})
+                            continue
+                        if old_role_ids != new_role_ids:
+                            role_changed_user_ids.add(user.pk)
                         outside = warehouses_outside_companies(warehouses, target_company_ids_for_warehouses(user))
                         if outside:
                             commit_errors.append({'row': row_num, 'field': 'warehouses', 'message': f'انبار «{outside[0].name}» متعلق به شرکت دیگری است و به شرکت‌های این کاربر تعلق ندارد.'})
@@ -711,6 +753,12 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         commit_errors.append({'row': row_num, 'field': 'warehouses', 'message': f'انبار «{outside[0].name}» متعلق به شرکت دیگری است و به شرکت فعال شما تعلق ندارد.'})
                         continue
 
+                    try:
+                        ensure_user_grant_change(request.user, None, new_group_ids={g.pk for g in roles})
+                    except DRFPermissionDenied as exc:
+                        commit_errors.append({'row': row_num, 'field': 'roles', 'message': str(exc.detail)})
+                        continue
+
                     password = row_data.get('national_code') or '123456'
                     user = CustomUser(**row_data)
                     user.set_password(password)
@@ -730,6 +778,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         UserCompanyAccess.objects.get_or_create(user=user, company_id=cid)
                     created_count += 1
 
+                if role_changed_user_ids:
+                    from ..permission_events import notify_role_changed
+                    notify_role_changed(role_changed_user_ids)
                 from ..audit_utils import log_audit_event
                 log_audit_event(
                     user=request.user,

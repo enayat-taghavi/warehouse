@@ -84,7 +84,8 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('company', 'create', instance.id, instance.name, None, tab_id, self.request.user.id)
+        broadcast_org_structure_updated('company', 'create', instance.id, instance.name, company_id=instance.id,
+                                        client_tab_id=tab_id, sender_id=self.request.user.id, notify_superusers=True)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -103,7 +104,8 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 raise PermissionDenied(f"مجوز ویرایش این فیلدها را ندارید: {', '.join(sorted(denied))}")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('company', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
+        broadcast_org_structure_updated('company', 'update', instance.id, instance.name, company_id=instance.id,
+                                        client_tab_id=tab_id, sender_id=self.request.user.id)
 
     def _ensure_can_delete(self, user):
         if not user.is_superuser:
@@ -133,7 +135,8 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         instance_name = instance.name
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company', 'delete', instance_id, instance_name, None, tab_id, self.request.user.id)
+        broadcast_org_structure_updated('company', 'delete', instance_id, instance_name, company_id=instance_id,
+                                        client_tab_id=tab_id, sender_id=self.request.user.id)
 
     @action(detail=False, methods=['get'], url_path='user-available')
     def user_available(self, request):
@@ -234,8 +237,9 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             if not dry_run:
                 with transaction.atomic():
                     instance = serializer.save()
-                broadcast_org_structure_updated('company', 'create', instance.id, instance.name, None,
-                                                request.headers.get('X-Client-Tab-Id'), request.user.id)
+                broadcast_org_structure_updated('company', 'create', instance.id, instance.name, company_id=instance.id,
+                                                client_tab_id=request.headers.get('X-Client-Tab-Id'),
+                                                sender_id=request.user.id, notify_superusers=True)
             created += 1
         return Response({
             'success': not errors,

@@ -29,7 +29,7 @@ class CustomRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomRole
         fields = [
-            'id', 'name', 'title', 'color', 'parent', 'permissions',
+            'id', 'name', 'title', 'color', 'permissions',
             'user_ids', 'users_count', 'created_at', 'updated_at',
             'created_by', 'modified_by'
         ]
@@ -38,23 +38,6 @@ class CustomRoleSerializer(serializers.ModelSerializer):
     def get_users_count(self, obj):
         # استفاده از len روی کش prefetch_related به جای count دیتابیسی جهت رفع N+1 Query
         return len(obj.user_set.all())
-
-    def validate_parent(self, parent):
-        if parent is None:
-            return None
-        if self.instance and parent.id == self.instance.id:
-            raise serializers.ValidationError("یک نقش سازمانی نمی‌تواند نقش والد خودش باشد.")
-        if self.instance:
-            curr = parent
-            visited = set()
-            while curr:
-                if curr.id == self.instance.id:
-                    raise serializers.ValidationError("انتساب این نقش به عنوان والد موجب بروز وابستگی چرخه‌ای در ساختار درختی نقش‌ها می‌گردد.")
-                if curr.id in visited:
-                    break
-                visited.add(curr.id)
-                curr = curr.parent
-        return parent
 
     def validate_permissions(self, permissions):
         try:
@@ -71,6 +54,11 @@ class CustomRoleSerializer(serializers.ModelSerializer):
             raise
         except Exception:
             pass
+        # طرح ۲.۲ (ت۲ و ت۱۱): نقش سامانه‌ای فقط مجوز سامانه‌ای می‌پذیرد
+        from .permission_admin import section_codes_among, SECTION_CODE_IN_ROLE_MESSAGE
+        section_codes = section_codes_among(permissions)
+        if section_codes:
+            raise serializers.ValidationError(SECTION_CODE_IN_ROLE_MESSAGE.format(code='، '.join(section_codes)))
         return permissions
 
     def create(self, validated_data):
@@ -702,14 +690,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             device_model=device_model
         )
         
-        # Calculate permissions (including hierarchical child roles)
-        user_perms = set(user.user_permissions.values_list('codename', flat=True))
-        all_role_ids = CustomRole.get_all_role_ids_for_user(user)
-        if all_role_ids:
-            user_perms.update(
-                Permission.objects.filter(group__id__in=all_role_ids).values_list('codename', flat=True)
-            )
-        
+        # طرح ۲.۲ (ت۷): مجوزها از موتور مجوزهای ریز (سامانه‌ای + بخشی که دست‌کم در یک بخش دارد)؛
+        # نقشهٔ کامل هم می‌آید تا فرانت بلافاصله پس از ورود آفلاین کار کند
+        from .views_domains.permission_views import my_permissions_payload
+        permission_map = my_permissions_payload(user)
+        user_perms = set(permission_map['all'])
         if user.is_superuser:
             user_perms.add('admin_all') # Or all permissions
             
@@ -747,7 +732,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'requires_password_change': user.requires_password_change,
             'ui_preferences': user.ui_preferences,
             'is_superuser': user.is_superuser,
-            'permissions': list(user_perms),
+            'permissions': sorted(user_perms),
+            'permission_map': permission_map,
             'allowed_apps': allowed_apps,
             'scopes': app_scopes,
             'active_app': default_active_app,

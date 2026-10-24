@@ -106,7 +106,9 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
             self.proj_b = Project.objects.create(company=self.company_b, code='PB_FL', name='پروژه ناوگان ب')
             self.sec_b = ProjectSection.objects.create(project=self.proj_b, code='SB_FL', name='بخش ناوگان ب')
 
-            SectionAssignment.objects.create(user=self.user_a, section=self.sec_a, is_active=True)
+            # Plan 2.2 (T1): section-scope perms (fleet settlement, personnel) come only from the assignment
+            from personnel.scoped_test_support import grant_section_perms
+            grant_section_perms(self.user_a, ['view_sys_fleet_settlement', 'view_sys_personnel'], section=self.sec_a, exact=False)
 
             self.veh_a = VehicleDriverProfile.objects.create(
                 company=self.company_a,
@@ -602,6 +604,10 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
         user_b.user_permissions.set(Permission.objects.filter(
             codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
         ))
+        if apps.is_installed('personnel'):
+            # Plan 2.2 (T1): the section-scope perms above are ignored as ticks; give them through an assignment in B
+            from personnel.scoped_test_support import grant_section_perms
+            grant_section_perms(user_b, ['view_sys_fleet_settlement', 'view_sys_personnel'], section=self.sec_b, exact=False)
         return user_b
 
     def _create_warehouses(self):

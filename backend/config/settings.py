@@ -254,6 +254,9 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+# نام جداگانهٔ پایگاه دادهٔ تست برای اجرای هم‌زمان چند مجموعهٔ تست (بدون آن، قفل متقابل TransactionTestCase)
+if os.environ.get('DB_TEST_NAME'):
+    DATABASES['default']['TEST'] = {'NAME': os.environ['DB_TEST_NAME']}
 
 
 # Password validation

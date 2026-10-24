@@ -1,0 +1,127 @@
+<section class="space-y-3" aria-labelledby="role-bundles-title" dir="rtl">
+  <!-- راهنما -->
+  <div class="bg-surface rounded-2xl border border-line shadow-sm p-3 sm:p-4 flex items-start gap-2.5">
+    <svg appIcon="info" class="w-4 h-4 shrink-0 mt-0.5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+    <div class="min-w-0 space-y-1">
+      <h2 id="role-bundles-title" class="text-sm font-black text-fg">بستهٔ مجوز نقش‌های انتساب</h2>
+      <p class="text-xs text-fg-muted leading-6">
+        هر کس در یک بخش نقشی دارد، مجوزهای بستهٔ همان نقش را در همان بخش می‌گیرد. پیش‌فرض بسته را ماژول‌ها تعیین می‌کنند و تغییرها برای همهٔ شرکت‌ها یکسان است.
+      </p>
+      @if (catalog() && hasBundles() && !canEdit()) {
+        <p class="text-[11px] font-bold text-amber-700 flex items-center gap-1" data-testid="bundles-readonly-note">
+          <svg appIcon="lock" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          فقط مدیر کل سامانه می‌تواند بسته‌ها را ویرایش کند؛ شما فقط می‌بینید.
+        </p>
+      }
+    </div>
+  </div>
+
+  <!-- آفلاین یا کهنه -->
+  @if (offline() && catalog()) {
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800 flex items-center gap-2" role="status" data-testid="bundles-offline">
+      <svg appIcon="wifi-off" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>اتصال به سرور برقرار نیست؛ آخرین نسخهٔ ذخیره‌شده نمایش داده می‌شود و ذخیره تا برقراری اتصال غیرفعال است.</span>
+    </div>
+  }
+
+  @if (loading() && !catalog()) {
+    <app-loading-skeleton type="card" [count]="3" />
+  } @else if (!catalog()) {
+    <!-- خطا -->
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-6 text-center space-y-3" role="alert" data-testid="bundles-error">
+      <svg appIcon="alert-circle" class="w-8 h-8 mx-auto text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <p class="text-sm font-bold text-fg">
+        {{ offline() ? 'فهرست مجوزها هنوز روی این دستگاه ذخیره نشده و اتصال برقرار نیست.' : 'فهرست مجوزها دریافت نشد.' }}
+      </p>
+      <button type="button" appAction="refresh" label="تلاش دوباره" display="label" (click)="reload()"></button>
+    </div>
+  } @else if (!hasBundles()) {
+    <!-- بدون دسترسی به بسته‌ها -->
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-6 text-center space-y-2" data-testid="bundles-empty">
+      <svg appIcon="lock" class="w-8 h-8 mx-auto text-fg-subtle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <p class="text-sm font-bold text-fg">بستهٔ نقش‌ها برای شما نمایش داده نمی‌شود.</p>
+      <p class="text-xs text-fg-muted">دیدن بسته‌ها به مجوز «کاربران و نقش‌ها» یا «مدیریت نقش‌ها» نیاز دارد.</p>
+    </div>
+  } @else if (roles().length === 0) {
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-6 text-center" data-testid="bundles-no-roles">
+      <p class="text-sm font-bold text-fg">هیچ ماژول نصب‌شده‌ای نقش انتساب تعریف نکرده است.</p>
+    </div>
+  } @else {
+    <!-- انتخاب نقش -->
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-2">
+      <div class="flex flex-wrap gap-1.5" role="group" aria-label="انتخاب نقش انتساب">
+        @for (r of roles(); track r.key) {
+          <button type="button" (click)="selectRole(r.key)" [attr.aria-pressed]="activeRole()?.key === r.key"
+            class="min-h-[40px] px-3 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [class]="activeRole()?.key === r.key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-surface-muted text-fg-muted border-line hover:text-fg'"
+            [attr.data-role]="r.key">
+            <span>{{ r.label_fa }}</span>
+            @if (r.rank !== null && r.rank !== undefined) {
+              <span class="text-[10px] font-mono opacity-80" [attr.title]="'رتبهٔ نقش ' + formatFa(r.rank)">#{{ formatFa(r.rank) }}</span>
+            }
+            @if (roleDiffCount(r.key) > 0) {
+              <span class="w-2 h-2 rounded-full bg-amber-400" aria-hidden="true"></span>
+              <span class="sr-only">با پیش‌فرض فرق دارد</span>
+            }
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (activeRole(); as role) {
+      <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden" data-testid="bundle-body">
+        <!-- سربرگ نقش و دکمه‌ها -->
+        <div class="p-3 border-b border-line-subtle flex flex-wrap items-center justify-between gap-2 bg-surface-muted">
+          <div class="min-w-0">
+            <h3 class="text-sm font-black text-fg">{{ role.label_fa }}</h3>
+            <p class="text-[11px] text-fg-muted">
+              <span class="tabular-nums">{{ formatFa(selectedCount()) }}</span> مجوز در بسته
+              @if (isDirty()) { <span class="text-amber-700 font-bold">· تغییر ذخیره‌نشده</span> }
+            </p>
+          </div>
+          @if (canEdit()) {
+            <div class="flex items-center gap-1.5">
+              <button type="button" appAction="restore" label="بازگشت به پیش‌فرض" [disabled]="!canSave() || !hasDiff()"
+                [hint]="offline() ? 'ذخیره در حالت آفلاین ممکن نیست' : (hasDiff() ? '' : 'بسته همان پیش‌فرض است')"
+                (click)="resetToDefault()" data-testid="bundle-reset"></button>
+              <button type="button" appAction="save" label="ذخیره" [busy]="busy()" [disabled]="!canSave() || !isDirty()"
+                [hint]="offline() ? 'ذخیره در حالت آفلاین ممکن نیست' : ''"
+                (click)="save()" data-testid="bundle-save"></button>
+            </div>
+          }
+        </div>
+
+        <div class="p-3 space-y-4">
+          @for (m of groups(); track m.module) {
+            <div class="space-y-2">
+              <h4 class="text-xs font-black text-indigo-700">{{ m.label }}</h4>
+              @for (c of m.categories; track c.key) {
+                <fieldset class="rounded-xl border border-line p-2.5">
+                  <legend class="px-1 text-[11px] font-bold text-fg-muted">{{ c.label }}</legend>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                    @for (p of c.items; track p.code) {
+                      <label class="flex items-center gap-2 min-h-[40px] px-2 rounded-lg border transition-colors"
+                        [class]="isChecked(p.code) ? 'border-indigo-300 bg-indigo-50/60' : 'border-line-subtle bg-surface'"
+                        [class.cursor-pointer]="canEdit()" [attr.data-code]="p.code">
+                        <input type="checkbox" class="w-4 h-4 accent-indigo-600 shrink-0" [checked]="isChecked(p.code)"
+                          [disabled]="!canEdit()" (change)="toggle(p.code, $event)" />
+                        <span class="text-xs text-fg min-w-0 flex-1 break-words">{{ p.label }}</span>
+                        @if (p.diff === 'added') {
+                          <span class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200" data-badge="added">افزوده</span>
+                        } @else if (p.diff === 'removed') {
+                          <span class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200" data-badge="removed">برداشته</span>
+                        }
+                      </label>
+                    }
+                  </div>
+                </fieldset>
+              }
+            </div>
+          } @empty {
+            <p class="text-xs text-fg-muted text-center py-4">هیچ مجوز بخشی در ماژول‌های نصب‌شده تعریف نشده است.</p>
+          }
+        </div>
+      </div>
+    }
+  }
+</section>

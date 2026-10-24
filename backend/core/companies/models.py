@@ -117,19 +117,46 @@ class UserCompanyAccess(models.Model):
         return f"{self.user} -> {self.company.name}"
 
 
-def section_role_choices() -> tuple:
+def _section_role_specs() -> tuple:
     """
-    نقش‌های انتساب به بخش، از ماژول‌های نصب‌شده (contribute('section_roles', [(کد, برچسب), ...])).
-    هسته خودش نقشی نمی‌شناسد (طرح Project_Section_To_Core، ت۱).
+    اعلام‌های نقش انتساب از ماژول‌های نصب‌شده (contribute('section_roles', [...])): هر مورد (کد، برچسب) یا
+    (کد، برچسب، رتبه). رتبه (ت۹ طرح ۲.۲) برای «بالاترین نقش در بخش» در ۲.۳ است و در قالب قدیم None است.
+    یک کلید را چند ماژول می‌توانند اعلام کنند، فقط با برچسب و رتبهٔ یکسان؛ ناهمخوانی ValueError می‌دهد.
+    خروجی: تاپل (کد، برچسب، رتبه) به ترتیب اولین اعلام.
     """
     from platform_core.registry import contributions
-    seen, out = set(), []
+    seen, out = {}, []
     for roles in contributions('section_roles'):
-        for code, label in roles:
-            if code not in seen:
-                seen.add(code)
-                out.append((code, label))
+        for item in roles:
+            if len(item) == 2:
+                code, label, rank = item[0], item[1], None
+            elif len(item) == 3:
+                code, label, rank = item
+            else:
+                raise ValueError(f'section_roles: اعلام نقش نامعتبر {item!r}')
+            if code in seen:
+                if seen[code] != (label, rank):
+                    raise ValueError(
+                        f'section_roles: نقش «{code}» با برچسب یا رتبهٔ ناهمخوان اعلام شده است '
+                        f'({seen[code]!r} در برابر {(label, rank)!r})'
+                    )
+                continue
+            seen[code] = (label, rank)
+            out.append((code, label, rank))
     return tuple(out)
+
+
+def section_role_choices() -> tuple:
+    """
+    نقش‌های انتساب به بخش، از ماژول‌های نصب‌شده: ((کد، برچسب), ...).
+    هسته خودش نقشی نمی‌شناسد (طرح Project_Section_To_Core، ت۱).
+    """
+    return tuple((code, label) for code, label, _rank in _section_role_specs())
+
+
+def section_role_ranks() -> dict:
+    """رتبهٔ هر نقش انتساب {کد: رتبه یا None} (ت۹ طرح ۲.۲؛ مقدار و معنای نهایی در ۲.۳)."""
+    return {code: rank for code, _label, rank in _section_role_specs()}
 
 
 class Project(models.Model):

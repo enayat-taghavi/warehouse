@@ -167,8 +167,8 @@ def _tab_id(request):
 
 
 def _broadcast(request, entity_type, action_name, entity_id, name, project_id, company_id):
-    broadcast_org_structure_updated(entity_type, action_name, entity_id, name, project_id,
-                                    _tab_id(request), request.user.id, company_id)
+    broadcast_org_structure_updated(entity_type, action_name, entity_id, name, project_id=project_id,
+                                    client_tab_id=_tab_id(request), sender_id=request.user.id, company_id=company_id)
 
 
 def _import_response(result, dry_run, request, entity_type, label, company_id):
@@ -383,22 +383,26 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
 
         copied_count = 0
         skipped_count = 0
+        copied_user_ids = set()
         with transaction.atomic():
             for sa in source_assignments:
                 existing = SectionAssignment.objects.filter(user=sa.user, section=target_section, role=sa.role).first()
                 if not existing:
                     SectionAssignment.objects.create(user=sa.user, section=target_section, role=sa.role, is_active=True)
                     copied_count += 1
+                    copied_user_ids.add(sa.user_id)
                 elif not existing.is_active:
                     existing.is_active = True
                     existing.save(update_fields=['is_active', 'updated_at'])
                     copied_count += 1
+                    copied_user_ids.add(sa.user_id)
                 else:
                     skipped_count += 1
 
         _broadcast(request, 'assignment', 'clone', target_section.id,
                    f'کپی چارت از {source_section.name} به {target_section.name}',
                    target_section.project_id, target_company_id)
+        _notify_permissions(*copied_user_ids)
         return Response({
             'success': True,
             'message': f'ساختار پرسنلی با موفقیت کپی شد. ({copied_count} انتساب جدید/فعال‌شده، {skipped_count} بدون تغییر)',
@@ -432,10 +436,17 @@ def _load_target(field, target_id):
     return qs.filter(id=target_id).first()
 
 
-def _broadcast_assignment(request, action_name, instance, name):
+def _broadcast_assignment(request, action_name, instance, name, extra_user_ids=()):
     project = instance.target_project
     _broadcast(request, 'assignment', action_name, instance.id, name,
                project.id if project is not None else None, instance.target_company_id)
+    _notify_permissions(instance.user_id, *extra_user_ids)
+
+
+def _notify_permissions(*user_ids):
+    """طرح ۲.۲ (ق۴): تغییر انتساب، مجوزهای خود کاربر را عوض می‌کند؛ رویداد فقط به کانال شخصی او."""
+    from accounts.permission_events import notify_assignment_changed
+    notify_assignment_changed(user_ids)
 
 
 class SectionAssignmentViewSet(viewsets.ModelViewSet):
@@ -554,8 +565,10 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
         )
         ensure_assignment(self.request.user, final_user.id, final_company_id,
                           deactivating_existing=deactivating_existing)
+        previous_user_id = current.user_id
         instance = serializer.save()
-        _broadcast_assignment(self.request, 'update', instance, str(instance.user))
+        _broadcast_assignment(self.request, 'update', instance, str(instance.user),
+                              extra_user_ids=(previous_user_id,) if previous_user_id != instance.user_id else ())
 
     def perform_destroy(self, instance):
         ensure_write(self.request.user, instance.target_company_id,
@@ -668,6 +681,7 @@ class SectionAssignmentViewSet(viewsets.ModelViewSet):
 
         project_id = target.id if field == 'project' else (target.project_id if field == 'section' else None)
         _broadcast(request, 'assignment', 'bulk_create', None, f"{len(created_ids)} کاربر", project_id, company_id)
+        _notify_permissions(*[uid for uid in valid_user_ids if uid in existing_users])
         qs = SectionAssignment.objects.filter(id__in=created_ids).select_related(
             'user', 'company', 'project__company', 'section__project__company'
         )

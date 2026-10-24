@@ -15,9 +15,9 @@
         </ng-container>
 
         <!-- اکشن‌های تب نقش‌ها -->
-        <ng-container *ngIf="activeTab === 'roles'">
+        <ng-container *ngIf="activeTab === 'roles' && rolesSubTab === 'system'">
           <button type="button" appAction="export-excel" label="خروجی اکسل نقش‌ها" (click)="exportRolesExcel()"></button>
-          <button type="button" appAction="import-excel" label="ورود اکسل نقش‌ها" (click)="openRolesImportModal()"></button>
+          <button *ngIf="canWriteRoles()" type="button" appAction="import-excel" label="ورود اکسل نقش‌ها" (click)="openRolesImportModal()"></button>
         </ng-container>
 
         <!-- اکشن‌های تب کارت پرسنلی / گیت‌پاس -->
@@ -34,7 +34,7 @@
         <button *ngIf="activeTab === 'users'" type="button" appAction="create" label="کاربر جدید" (click)="openUserModal()">
         </button>
 
-        <button *ngIf="activeTab === 'roles'" type="button" appAction="create" label="نقش جدید" (click)="openRoleModal()">
+        <button *ngIf="activeTab === 'roles' && rolesSubTab === 'system' && canWriteRoles()" type="button" appAction="create" label="نقش جدید" (click)="openRoleModal()">
         </button>
       </div>
     </div>
@@ -144,38 +144,24 @@
       </div>
     </div>
 
-    <!-- نوار ابزار اختصاصی تب نقش‌ها -->
+    <!-- نوار ابزار اختصاصی تب نقش‌ها: زیرتب‌ها (راست) و جستجوی نقش سامانه‌ای -->
     <div *ngIf="activeTab === 'roles'" class="bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 fade-in">
-      <div class="flex items-center gap-3 flex-1">
-        <div class="relative w-full sm:w-72">
-          <input type="text" [(ngModel)]="roleSearchQuery" (ngModelChange)="onRoleSearchChange($event)" name="roleSearchQuery" placeholder="جستجوی نقش (عنوان، کد انگلیسی)..." class="w-full pr-9 pl-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-800 placeholder:text-slate-400 shadow-sm">
+      <app-tab-bar [tabs]="roleSubTabs" [active]="rolesSubTab" (activeChange)="switchRolesSubTab($event)" idPrefix="roles-sub" />
+
+      <div *ngIf="rolesSubTab === 'system'" class="flex items-center gap-2 min-w-0 md:justify-end">
+        <div class="relative flex-1 min-w-0 sm:w-72 sm:flex-none">
+          <label for="roleSearchInput" class="sr-only">جستجوی نقش سامانه‌ای</label>
+          <input id="roleSearchInput" type="text" [(ngModel)]="roleSearchQuery" (ngModelChange)="onRoleSearchChange($event)" name="roleSearchQuery" placeholder="جستجوی نقش (عنوان، کد انگلیسی)..." class="w-full pr-9 pl-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-800 placeholder:text-slate-400 shadow-sm">
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
           </div>
-          <button *ngIf="roleSearchQuery" type="button" (click)="roleSearchQuery=''; onRoleSearchChange('')" class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 cursor-pointer">
+          <button *ngIf="roleSearchQuery" type="button" (click)="roleSearchQuery=''; onRoleSearchChange('')" class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           </button>
         </div>
-        <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80">
-          {{ displayedRoles.length }} نقش تعریف‌شده
+        <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80 shrink-0 tabular-nums">
+          {{ formatFa(displayedRoles.length) }} نقش
         </span>
-      </div>
-
-      <div class="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200 shrink-0 gap-1">
-        <button type="button" (click)="setRoleViewMode('tree')"
-          [ngClass]="roleViewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'"
-          class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 text-[11px] font-bold tap-target"
-          title="نمایش درختی سلسله‌مراتب سازمانی (Tree View)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="grid"></svg>
-          <span class="hidden sm:inline">درخت</span>
-        </button>
-        <button type="button" (click)="setRoleViewMode('table')"
-          [ngClass]="roleViewMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'"
-          class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 text-[11px] font-bold tap-target"
-          title="نمایش جدولی ماتریسی جامع نقش‌ها (Table View)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="list"></svg>
-          <span class="hidden sm:inline">جدول</span>
-        </button>
       </div>
     </div>
     </div>
@@ -640,154 +626,55 @@
             </div>
         </ng-container>
 
-        <!-- Roles Tab -->
+        <!-- Roles Tab: نقش‌های انتساب (بسته‌ها) و نقش‌های سامانه‌ای (فهرست تخت، طرح ۲.۲ ت۱۱) -->
         <ng-container *ngIf="activeTab === 'roles'">
-            <div class="space-y-4 fade-in">
-                <!-- نمای درختی سلسله‌مراتب (Tree View) -->
-                <div *ngIf="roleViewMode === 'tree'" class="relative bg-white rounded-2xl border border-slate-200 shadow-sm p-5 overflow-hidden">
-                    <div class="absolute right-9 top-6 bottom-8 w-0.5 bg-slate-100 z-0"></div>
+            <app-role-bundles-panel *ngIf="rolesSubTab === 'assignment'" />
 
-                    <ng-template #roleNode let-role="role" let-depth="depth">
-                        <div class="relative z-10 flex items-start gap-4 mb-3.5" [style.margin-right]="getRoleDepthMargin(depth)">
-                            <div *ngIf="depth > 0" class="absolute right-[-1.25rem] top-6 w-5 h-0.5 bg-slate-200"></div>
+            <div *ngIf="rolesSubTab === 'system'" class="space-y-3 fade-in" data-testid="system-roles">
+                <div class="rounded-xl border border-slate-200 bg-white p-2.5 text-[11px] text-slate-600 flex items-start gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 mt-0.5 text-indigo-600" appIcon="info"></svg>
+                  <span>
+                    نقش سامانه‌ای فقط مجوزهای سامانه‌ای (مدیریت کاربران، تنظیمات، گزارش‌ها و …) را می‌دهد و همه‌جا اعتبار دارد. مجوز کارهای بخشی از نقش انتساب می‌آید.
+                    <span *ngIf="!canWriteRoles()" class="font-bold text-amber-700" data-testid="system-roles-readonly">شما فقط می‌بینید؛ تغییر نقش‌ها به مجوز «مدیریت نقش‌ها» نیاز دارد.</span>
+                  </span>
+                </div>
 
-                            <div class="bg-white border border-slate-200/90 p-3 rounded-xl shadow-sm flex-1 flex flex-col md:flex-row md:justify-between md:items-center gap-3 group hover:border-indigo-400 hover:shadow-sm transition-all cursor-default">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm shrink-0" [style.background]="role.color || '#4f46e5'">
-                                        <!-- Root Role Crown SVG Icon -->
-                                        <svg *ngIf="depth === 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="crown"></svg>
-                                        <!-- Child Role Shield SVG Icon -->
-                                        <svg *ngIf="depth > 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="shield"></svg>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-xs font-black text-slate-800">{{role.title || role.name}}</p>
-                                            <span class="text-[9.5px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded" dir="ltr">({{role.name}})</span>
-                                            <span *ngIf="depth === 0" class="text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">نقش ریشه</span>
-                                        </div>
-                                        <div class="flex items-center gap-2 mt-1 text-[10px]">
-                                            <span class="text-slate-400 font-mono">ID: {{role.id}}</span>
-                                            <span class="text-slate-200">|</span>
-                                            <span class="text-indigo-600 font-bold">{{getUsersInRoleCount(role.id)}} پرسنل منتسب</span>
-                                            <span class="text-slate-200">|</span>
-                                            <span class="text-slate-500 font-medium">{{role.permissions?.length || 0}} دسترسی فعال</span>
-                                        </div>
-                                        <!-- درصد پوشش دسترسی‌ها -->
-                                        <div class="flex items-center gap-2 mt-1.5">
-                                          <div class="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
-                                            <div class="h-full rounded-full transition-all duration-300"
-                                                 [style.width.%]="getRolePermissionPercent(role)"
-                                                 [style.background]="role.color || '#4f46e5'"></div>
-                                          </div>
-                                          <span class="text-[9.5px] font-mono font-bold text-slate-500">
-                                            {{ getRolePermissionPercent(role) }}٪ پوشش مجوزها
-                                          </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- متوازن‌سازی فضای میانی کارت با اطلاعات والد و مسیر سلسله‌مراتب -->
-                                <div class="hidden lg:flex items-center gap-2 text-[10.5px]">
-                                  <span class="text-slate-400 font-medium">مسیر سازمانی:</span>
-                                  <span class="font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-                                    {{ role.parent ? getParentRoleTitle(role.parent) : 'ریشه سازمان' }}
-                                  </span>
-                                  <span class="text-slate-300">←</span>
-                                  <span class="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">
-                                    {{ role.title || role.name }}
-                                  </span>
-                                </div>
-
-                                <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-                                    <!-- نمایش آواتارهای روی‌هم‌افتاده (Stacked Avatars) -->
-                                    <div class="flex items-center -space-x-2 space-x-reverse overflow-hidden py-1">
-                                      <div *ngFor="let u of getUsersInRole(role.id).slice(0, 3)"
-                                        class="inline-block h-7 w-7 rounded-full ring-2 ring-white overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-[10px] text-white font-bold flex items-center justify-center shrink-0 shadow-sm"
-                                        [title]="(u.first_name + ' ' + u.last_name) + ' (@' + u.username + ')'">
-                                        <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="28" height="28" class="h-full w-full object-cover" alt="avatar" />
-                                        <span *ngIf="!u.avatar">{{getUserAvatarLetter(u)}}</span>
-                                      </div>
-                                      <div *ngIf="getUsersInRole(role.id).length > 3"
-                                        class="inline-block h-7 w-7 rounded-full ring-2 ring-white bg-slate-200 text-slate-700 text-[9px] font-black flex items-center justify-center shrink-0 shadow-sm"
-                                        title="سایر پرسنل دارای این نقش">
-                                        +{{ getUsersInRole(role.id).length - 3 }}
-                                      </div>
-                                    </div>
-
-                                    <!-- عملیات و اکشن‌ها با آیکون‌های وکتوری استاندارد -->
-                                    <div class="flex items-center gap-1 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                        <!-- پیش‌نمایش سریع دسترسی‌ها -->
-                                        <div class="relative" appClickOutside (clickedOutside)="activePopoverRoleId === role.id ? closeRolePopover() : null">
-                                          <button type="button" (click)="toggleRolePopover(role.id, $event)"
-                                            class="p-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer"
-                                            title="پیش‌نمایش سریع دسترسی‌ها">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="info"></svg>
-                                          </button>
-
-                                          <!-- پاپ‌اور سریع دسترسی‌ها -->
-                                          <div *ngIf="activePopoverRoleId === role.id"
-                                               (click)="$event.stopPropagation()"
-                                               class="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 z-[120] p-3 text-right fade-in">
-                                            <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                                              <span class="text-xs font-black text-slate-800">{{ role.title || role.name }}</span>
-                                              <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" [style.background]="(role.color || '#4f46e5') + '20'" [style.color]="role.color || '#4f46e5'">
-                                                {{ role.permissions?.length || 0 }} دسترسی
-                                              </span>
-                                            </div>
-                                            <div class="space-y-1.5 text-[10.5px]">
-                                              <div *ngFor="let g of getRoleGroupSummary(role)" class="flex items-center justify-between text-slate-600">
-                                                <span>{{ g.title }}</span>
-                                                <span class="font-mono font-bold text-slate-800 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">{{ g.count }} از {{ g.total }}</span>
-                                              </div>
-                                              <div *ngIf="getRoleGroupSummary(role).length === 0" class="text-slate-400 text-center py-2">
-                                                فاقد مجوز تعریف‌شده
-                                              </div>
-                                            </div>
-                                            <div class="mt-2.5 pt-2 border-t border-slate-100 flex justify-end">
-                                              <button type="button" (click)="closeRolePopover(); openRoleModal(role.id)" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer">
-                                                ویرایش کامل نقش ←
-                                              </button>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <button type="button" (click)="cloneRole(role)" class="p-1.5 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer" title="تکثیر نقش و دسترسی‌ها (Clone Role)">
-                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
-                                        </button>
-                                        <button type="button" (click)="openRoleModal(role.id)" class="p-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer" title="ویرایش نقش">
-                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
-                                        </button>
-                                        <button type="button" (click)="deleteRole(role.id)" class="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer" title="حذف نقش">
-                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Children -->
-                        <ng-container *ngFor="let child of getRoleChildren(role.id)">
-                            <ng-container *ngTemplateOutlet="roleNode; context: { role: child, depth: depth + 1 }"></ng-container>
-                        </ng-container>
-                    </ng-template>
-
-                    <div *ngIf="displayedRootRoles.length === 0" class="text-center py-8">
-                        <p class="text-xs text-slate-400 font-bold">هیچ نقشی با این مشخصات یافت نشد.</p>
+                <!-- فهرست تخت نقش‌های سامانه‌ای در موبایل (کارت) -->
+                <div class="md:hidden space-y-2" data-testid="system-roles-cards">
+                  <div *ngFor="let role of displayedRoles; trackBy: trackById" class="bg-surface rounded-2xl border border-line shadow-sm p-3 flex items-center gap-2.5" [attr.data-role-id]="role.id">
+                    <span class="w-3 h-3 rounded-full shrink-0" [style.background]="role.color || '#94a3b8'"></span>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-black text-fg truncate">{{ role.title || role.name }}</p>
+                      <p class="text-[10px] text-fg-muted truncate">
+                        <span dir="ltr" class="font-mono">{{ role.name }}</span>
+                        · <span class="tabular-nums">{{ formatFa(getUsersInRoleCount(role.id)) }}</span> نفر
+                        · <span class="tabular-nums">{{ formatFa(role.permissions?.length) }}</span> مجوز
+                      </p>
                     </div>
-
-                    <ng-container *ngFor="let root of displayedRootRoles">
-                        <ng-container *ngTemplateOutlet="roleNode; context: { role: root, depth: 0 }"></ng-container>
-                    </ng-container>
+                    <div *ngIf="canWriteRoles()" class="flex items-center gap-1 shrink-0">
+                      <button type="button" (click)="cloneRole(role)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="تکثیر نقش" aria-label="تکثیر نقش">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+                      </button>
+                      <button type="button" (click)="openRoleModal(role.id)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="ویرایش نقش" aria-label="ویرایش نقش">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+                      </button>
+                      <button type="button" (click)="deleteRole(role.id)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="حذف نقش" aria-label="حذف نقش">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div *ngIf="displayedRoles.length === 0" class="bg-surface rounded-2xl border border-line p-6 text-center text-xs text-fg-muted font-bold">
+                    هیچ نقشی با این مشخصات یافت نشد.
+                  </div>
                 </div>
 
                 <!-- نمای جدولی ماتریسی جامع نقش‌ها (Table View) -->
-                <div *ngIf="roleViewMode === 'table'" class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <table class="w-full text-right border-collapse text-xs">
                     <thead>
                       <tr class="bg-slate-50/90 text-slate-600 font-black border-b border-slate-200 text-[11px]">
                         <th class="py-3.5 px-4">عنوان و شناسه نقش</th>
                         <th class="py-3.5 px-4">کد سیستمی</th>
-                        <th class="py-3.5 px-4">نقش والد</th>
                         <th class="py-3.5 px-4">پرسنل منتسب</th>
                         <th class="py-3.5 px-4 text-center">تعداد دسترسی‌ها</th>
                         <th class="py-3.5 px-4 text-center">عملیات</th>
@@ -809,13 +696,6 @@
                         <!-- کد سیستمی -->
                         <td class="py-3 px-4 font-mono text-slate-600 text-[11px]" dir="ltr">
                           {{ role.name }}
-                        </td>
-
-                        <!-- نقش والد -->
-                        <td class="py-3 px-4 text-slate-600 text-[11px]">
-                          <span class="px-2 py-0.5 rounded-lg font-bold" [ngClass]="role.parent ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-500'">
-                            {{ getParentRoleTitle(role.parent) }}
-                          </span>
                         </td>
 
                         <!-- پرسنل منتسب (Stacked Avatars) -->
@@ -861,7 +741,7 @@
                             <div class="relative" appClickOutside (clickedOutside)="activePopoverRoleId === role.id ? closeRolePopover() : null">
                               <button type="button" (click)="toggleRolePopover(role.id, $event)"
                                 class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
-                                title="پیش‌نمایش سریع دسترسی‌ها">
+                                title="پیش‌نمایش سریع دسترسی‌ها" aria-label="پیش‌نمایش سریع دسترسی‌ها">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="info"></svg>
                               </button>
 
@@ -884,27 +764,29 @@
                                     فاقد مجوز تعریف‌شده
                                   </div>
                                 </div>
-                                <div class="mt-2.5 pt-2 border-t border-slate-100 flex justify-end">
+                                <div *ngIf="canWriteRoles()" class="mt-2.5 pt-2 border-t border-slate-100 flex justify-end">
                                   <button type="button" (click)="closeRolePopover(); openRoleModal(role.id)" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer">
                                     ویرایش کامل نقش ←
                                   </button>
                                 </div>
                               </div>
                             </div>
-                            <button type="button" (click)="cloneRole(role)" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="تکثیر نقش و دسترسی‌ها (Clone)">
+                            <ng-container *ngIf="canWriteRoles()">
+                            <button type="button" (click)="cloneRole(role)" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="تکثیر نقش و دسترسی‌ها" aria-label="تکثیر نقش و دسترسی‌ها">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
                             </button>
-                            <button type="button" (click)="openRoleModal(role.id)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش نقش">
+                            <button type="button" (click)="openRoleModal(role.id)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش نقش" aria-label="ویرایش نقش">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                             </button>
-                            <button type="button" (click)="deleteRole(role.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="حذف نقش">
+                            <button type="button" (click)="deleteRole(role.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="حذف نقش" aria-label="حذف نقش">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                             </button>
+                            </ng-container>
                           </div>
                         </td>
                       </tr>
                       <tr *ngIf="displayedRoles.length === 0">
-                        <td colspan="6" class="text-center py-8 text-slate-400 text-xs font-bold">
+                        <td colspan="5" class="text-center py-8 text-slate-400 text-xs font-bold">
                           هیچ نقشی با این مشخصات یافت نشد.
                         </td>
                       </tr>
@@ -974,14 +856,6 @@
               <input type="text" [(ngModel)]="roleForm.name" name="name" placeholder="مثال: supervisor" class="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 focus:border-indigo-400 text-xs outline-none text-left font-mono transition-all shadow-sm" dir="ltr">
             </div>
 
-            <!-- نقش والد -->
-            <div>
-               <label class="block text-[10.5px] font-black text-slate-700 mb-1">نقش والد (سلسله‌مراتب)</label>
-               <select [(ngModel)]="roleForm.parent" name="parent" class="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 focus:border-indigo-400 text-xs outline-none cursor-pointer transition-all shadow-sm">
-                   <option [ngValue]="null">--- ریشه سازمان (بدون والد) ---</option>
-                   <option *ngFor="let r of getSelectableParents()" [ngValue]="r.id">{{r.title || r.name}}</option>
-               </select>
-            </div>
 
             <!-- رنگ سازمانی (پالت فشرده اینلاین با انتخابگر) -->
             <div>
@@ -1375,6 +1249,15 @@
             [ngClass]="userModalInnerTab === 'warehouses' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'">
             {{ userForm.company_ids?.length || 0 }} ش / {{ userForm.assigned_warehouses?.length || 0 }} ا
           </span>
+        </button>
+
+        <!-- تب ۵: مجوزها (طرح ۲.۲)؛ فقط برای کاربر ذخیره‌شده -->
+        <button *ngIf="editingUser?.id" type="button" (click)="setUserModalInnerTab('permissions')" data-user-permissions-tab
+          [ngClass]="userModalInnerTab === 'permissions' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
+          class="flex-1 min-w-[40px] min-h-[40px] py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none"
+          title="مجوزهای کاربر" aria-label="مجوزهای کاربر">
+          <svg appIcon="key" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span class="truncate hidden sm:inline">مجوزها</span>
         </button>
       </div>
     </div>
@@ -1845,6 +1728,11 @@
               <span class="text-sm font-bold">⬅️</span>
             </button>
           </div>
+        </div>
+
+        <!-- تب ۵: مجوزهای کاربر (طرح ۲.۲، ت۴ و ت۱۰) -->
+        <div *ngIf="userModalInnerTab === 'permissions' && editingUser?.id" class="fade-in duration-200">
+          <app-user-permissions-tab [userId]="editingUser.id" (goToAssignments)="openUserAssignments($event)" />
         </div>
 
         <!-- تب ۴: شرکت‌ها و انبارهای مجاز -->

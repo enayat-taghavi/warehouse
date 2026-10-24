@@ -15,6 +15,8 @@ from django.http import HttpResponse
 from django.contrib.auth.models import Permission
 
 from .models import CustomRole
+from .scoped_permissions import SECTION, permission_scope
+from .permission_admin import SECTION_CODE_IN_ROLE_MESSAGE
 
 
 # ── Column Definitions ──────────────────────────────────────────────
@@ -22,7 +24,6 @@ ROLES_COLUMNS = [
     {'label': 'نام یکتا (name)', 'key': 'name', 'width': 22, 'type': 'text'},
     {'label': 'عنوان فارسی (title)', 'key': 'title', 'width': 25, 'type': 'text'},
     {'label': 'رنگ سازمانی (color)', 'key': 'color', 'width': 18, 'type': 'text'},
-    {'label': 'نقش والد (parent)', 'key': 'parent', 'width': 25, 'type': 'text'},
     {'label': 'مجوزها (permissions)', 'key': 'permissions', 'width': 50, 'type': 'text'},
 ]
 
@@ -70,15 +71,10 @@ def generate_roles_excel(queryset):
             perms.append(p.codename)
         perms_str = '، '.join(perms)
 
-        parent_title = ''
-        if role.parent:
-            parent_title = role.parent.title or role.parent.name
-
         row_data = [
             role.name or '',
             role.title or role.name or '',
             role.color or '#94a3b8',
-            parent_title,
             perms_str,
         ]
         ws.append(sanitize_excel_row(row_data))
@@ -138,19 +134,12 @@ def generate_roles_template():
     apply_header_styles_to_row(key_row, is_key_row=True)
     ws.append(key_row)
 
-    # ۱. استخراج نقش‌های فعال برای والد
-    roles_qs = CustomRole.objects.all().order_by('title', 'name')
-    parent_role_titles = [r.title or r.name for r in roles_qs if (r.title or r.name)]
-    if not parent_role_titles:
-        parent_role_titles = ['مدیر سیستم', 'سرپرست انبار']
-
     colors_hex = [c[0] for c in STANDARD_ROLE_COLORS]
 
-    # نمونه داده‌های معتبر
-    sample_parent = parent_role_titles[0]
+    # نمونه داده‌های معتبر (طرح ۲.۲، ت۱۱: نقش سامانه‌ای درخت والد ندارد و فقط مجوز سامانه‌ای می‌پذیرد)
     sample_data = [
-        ['warehouse_supervisor', 'سرپرست انبار', '#4f46e5', '', 'view_sys_dashboard، view_sys_users، view_wh_docs'],
-        ['field_counter', 'انبارگردان میدانی', '#10b981', sample_parent, 'view_sys_counter، view_wh_docs'],
+        ['warehouse_supervisor', 'سرپرست انبار', '#4f46e5', 'view_sys_dashboard، view_sys_users، view_wh_docs'],
+        ['field_counter', 'انبارگردان میدانی', '#10b981', 'view_sys_counter، view_wh_docs'],
     ]
 
     for row in sample_data:
@@ -181,8 +170,7 @@ def generate_roles_template():
         ['نام یکتا (name)', 'الزامی', 'نام انگلیسی سیستمی بدون فاصله (مجاز: حروف کوچک، اعداد و زیرخط _)', 'warehouse_supervisor'],
         ['عنوان فارسی (title)', 'الزامی', 'عنوان نمایشی فارسی نقش در تمامی فرم‌ها و منوها', 'سرپرست انبار'],
         ['رنگ سازمانی (color)', 'اختیاری', 'کد رنگ هگزادسیمال ۷ کاراکتری (انتخاب از منوی کشویی یا جدول پالت زیر)', '#4f46e5'],
-        ['نقش والد (parent)', 'اختیاری', 'عنوان یا نام یکتای نقش بالادستی جهت ارث‌بری دسترسی‌ها', sample_parent],
-        ['مجوزها (permissions)', 'اختیاری', 'کد دسترسی‌ها (codename) یا عناوین فارسی (تفکیک با ویرگول فارسی «،»)', 'view_sys_dashboard، view_wh_docs'],
+        ['مجوزها (permissions)', 'اختیاری', 'کد دسترسی‌های سامانه‌ای (codename) یا عناوین فارسی (تفکیک با ویرگول فارسی «،»)؛ مجوز بخشی پذیرفته نمی‌شود', 'view_sys_dashboard، view_wh_docs'],
     ]
     for r in help_rules:
         ws_help.append(r)
@@ -215,25 +203,19 @@ def generate_roles_template():
     ws_ref.sheet_state = 'hidden'
     ws_ref.sheet_view.rightToLeft = True
 
-    REF_HEADERS = ['نقش‌های والد موجود', 'رنگ‌های استاندارد']
+    REF_HEADERS = ['رنگ‌های استاندارد']
     ref_h = [styled_cell(ws_ref, h) for h in REF_HEADERS]
     apply_header_styles_to_row(ref_h, is_key_row=False)
     ws_ref.append(ref_h)
 
-    max_ref_len = max(len(parent_role_titles), len(colors_hex))
-    for r_idx in range(max_ref_len):
-        row_vals = [
-            parent_role_titles[r_idx] if r_idx < len(parent_role_titles) else '',
-            colors_hex[r_idx] if r_idx < len(colors_hex) else ''
-        ]
-        ws_ref.append(row_vals)
+    for color_hex in colors_hex:
+        ws_ref.append([color_hex])
 
-    set_column_widths(ws_ref, [{'width': 28}, {'width': 20}])
+    set_column_widths(ws_ref, [{'width': 20}])
     freeze_header_panes(ws_ref, row=2)
 
     # تعریف دامنه‌های نام‌گذاری‌شده در ورک‌بوک
-    wb.defined_names['ParentRolesList'] = DefinedName('ParentRolesList', attr_text=f"'مراجع داده'!$A$2:$A${len(parent_role_titles)+1}")
-    wb.defined_names['ColorsList'] = DefinedName('ColorsList', attr_text=f"'مراجع داده'!$B$2:$B${len(colors_hex)+1}")
+    wb.defined_names['ColorsList'] = DefinedName('ColorsList', attr_text=f"'مراجع داده'!$A$2:$A${len(colors_hex)+1}")
 
     # ۴. الصاق اعتبارسنجی کشویی به شیت اول
     # رنگ سازمانی (ستون C)
@@ -244,21 +226,13 @@ def generate_roles_template():
     ws.add_data_validation(dv_color)
     dv_color.add("C3:C500")
 
-    # نقش والد (ستون D)
-    dv_parent = DataValidation(type="list", formula1='=ParentRolesList', allow_blank=True)
-    dv_parent.prompt = 'در صورت نیاز به ارث‌بری، نقش والد را از منوی کشویی انتخاب کنید.'
-    dv_parent.promptTitle = 'نقش والد'
-    dv_parent.showErrorMessage = False
-    ws.add_data_validation(dv_parent)
-    dv_parent.add("D3:D500")
-
-    # مجوزها (ستون E)
+    # مجوزها (ستون D)
     dv_perms = DataValidation(type="custom", formula1='TRUE', allow_blank=True)
     dv_perms.prompt = 'کد دسترسی‌ها یا عناوین را با ویرگول (،) وارد کنید. فهرست کامل در شیت «راهنما و مقادیر مجاز» قرار دارد.'
     dv_perms.promptTitle = 'مجوزهای دسترسی'
     dv_perms.showInputMessage = True
     ws.add_data_validation(dv_perms)
-    dv_perms.add("E3:E500")
+    dv_perms.add("D3:D500")
 
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -293,11 +267,10 @@ def parse_roles_excel(file, update_existing=False):
 
     # مپ نقش‌های موجود برای بررسی یکتایی و اتصال والد
     existing_roles_by_name = {r.name.lower().strip(): r for r in CustomRole.objects.all()}
-    existing_roles_by_title = {r.title.lower().strip(): r for r in CustomRole.objects.filter(title__isnull=False)}
 
     # مپ تمام مجوزهای سیستم (هم codename و هم نام فارسی)
     perms_lookup = {}
-    for p in Permission.objects.all():
+    for p in Permission.objects.select_related('content_type'):
         perms_lookup[p.codename.lower().strip()] = p
         if p.name:
             perms_lookup[p.name.lower().strip()] = p
@@ -305,19 +278,6 @@ def parse_roles_excel(file, update_existing=False):
     valid_rows = []
     errors = []
     seen_names = set()
-    new_role_identifiers_in_file = set()
-
-    # فاز اول: جمع‌آوری تمام شناسه‌ها و اسامی موجود در فایل
-    for row in rows:
-        if row and any(row):
-            idx_name = col_mapping.get('name', 0)
-            if idx_name < len(row) and row[idx_name]:
-                n = str(row[idx_name]).strip().lower()
-                new_role_identifiers_in_file.add(n)
-            idx_title = col_mapping.get('title', 1)
-            if idx_title < len(row) and row[idx_title]:
-                t = str(row[idx_title]).strip().lower()
-                new_role_identifiers_in_file.add(t)
 
     for idx, row in enumerate(rows):
         row_num = idx + data_start_row
@@ -336,8 +296,7 @@ def parse_roles_excel(file, update_existing=False):
         name = get_val('name', 0)
         title = get_val('title', 1)
         color = get_val('color', 2, '#94a3b8')
-        parent_raw = get_val('parent', 3)
-        perms_str = get_val('permissions', 4)
+        perms_str = get_val('permissions', 3)
 
         row_errors = []
 
@@ -372,19 +331,6 @@ def parse_roles_excel(file, update_existing=False):
         if not color or len(color) not in (4, 7):
             color = '#94a3b8'
 
-        # ── اعتبارسنجی نقش والد ──
-        resolved_parent_name = None
-        if parent_raw:
-            p_clean = parent_raw.lower().strip()
-            if p_clean in existing_roles_by_name:
-                resolved_parent_name = existing_roles_by_name[p_clean].name
-            elif p_clean in existing_roles_by_title:
-                resolved_parent_name = existing_roles_by_title[p_clean].name
-            elif p_clean in new_role_identifiers_in_file:
-                resolved_parent_name = parent_raw.strip()
-            else:
-                row_errors.append({'row': row_num, 'field': 'parent', 'message': f'نقش والد «{parent_raw}» در سیستم یافت نشد.'})
-
         # ── اعتبارسنجی مجوزها ──
         resolved_permissions = []
         if perms_str:
@@ -393,6 +339,8 @@ def parse_roles_excel(file, update_existing=False):
                 matched_perm = perms_lookup.get(pitem.lower())
                 if not matched_perm:
                     row_errors.append({'row': row_num, 'field': 'permissions', 'message': f'دسترسی «{pitem}» در سیستم یافت نشد.'})
+                elif permission_scope(f'{matched_perm.content_type.app_label}.{matched_perm.codename}') == SECTION:
+                    row_errors.append({'row': row_num, 'field': 'permissions', 'message': SECTION_CODE_IN_ROLE_MESSAGE.format(code=matched_perm.codename)})
                 elif matched_perm not in resolved_permissions:
                     resolved_permissions.append(matched_perm)
 
@@ -406,7 +354,6 @@ def parse_roles_excel(file, update_existing=False):
                 'name': name,
                 'title': title,
                 'color': color,
-                'parent_name': resolved_parent_name,
                 'permissions': resolved_permissions,
             })
 

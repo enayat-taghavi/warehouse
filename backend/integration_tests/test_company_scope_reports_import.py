@@ -104,8 +104,12 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
                 'perm_usr_add',
             ]
         )
+        # مجوزهای بخشی (پرسنل، حقوق، تسویهٔ ناوگان) از ۲.۲ فقط از انتساب می‌آیند (ت۱)؛ پایین‌تر با انتساب بخش داده
+        # می‌شوند و تیک مستقیم فقط مجوزهای سامانه‌ای است. کاربر بی‌شرکت انتسابی ندارد، پس آن مجوزها را ندارد.
+        from accounts.scoped_permissions import section_permission_codes
+        self.report_section_codes = sorted(set(perms.values_list('codename', flat=True)) & section_permission_codes())
         for u in (self.user_a, self.user_b, self.user_no_company):
-            u.user_permissions.set(perms)
+            u.user_permissions.set(perms.exclude(codename__in=self.report_section_codes))
 
         if apps.is_installed('warehouses'):
             from warehouses.models import Warehouse
@@ -205,9 +209,9 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             )
 
             # کاربر غیرممیز پرسنل فقط بخش‌های منتسب فعال خود را می‌بیند (همان قاعدهٔ صفحهٔ پرسنل)
-            from personnel.models import SectionAssignment
-            SectionAssignment.objects.create(user=self.user_a, section=self.sec_a, is_active=True)
-            SectionAssignment.objects.create(user=self.user_b, section=self.sec_b, is_active=True)
+            from personnel.scoped_test_support import grant_section_perms
+            grant_section_perms(self.user_a, self.report_section_codes, section=self.sec_a)
+            grant_section_perms(self.user_b, self.report_section_codes, section=self.sec_b)
 
     # -------------------------------------------------------------------------
     # ۱. run برای personnel_profiles: کاربر شرکت الف فقط الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ
@@ -235,10 +239,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertGreaterEqual(res_s['count'], 2)
 
         # کاربر بی‌شرکت
+        # کاربر بی‌شرکت انتسابی ندارد، پس مجوز بخشی موجودیت را ندارد (طرح ۲.۲، ت۱) و هیچ ردیفی نمی‌گیرد
         self.client.force_authenticate(self.user_no_company)
-        res_none = self.client.post('/api/reports/run/', spec, format='json').json()
-        self.assertEqual(res_none['count'], 0)
-        self.assertEqual(len(res_none['rows']), 0)
+        res_none = self.client.post('/api/reports/run/', spec, format='json')
+        self.assertEqual(res_none.status_code, 403, res_none.content)
+        self.assertNotIn('rows', res_none.json())
 
     # -------------------------------------------------------------------------
     # ۲. run برای monthly_payrolls: کاربر شرکت الف فقط الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ
@@ -266,10 +271,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertGreaterEqual(res_s['count'], 2)
 
         # کاربر بی‌شرکت
+        # کاربر بی‌شرکت انتسابی ندارد، پس مجوز بخشی موجودیت را ندارد (طرح ۲.۲، ت۱) و هیچ ردیفی نمی‌گیرد
         self.client.force_authenticate(self.user_no_company)
-        res_none = self.client.post('/api/reports/run/', spec, format='json').json()
-        self.assertEqual(res_none['count'], 0)
-        self.assertEqual(len(res_none['rows']), 0)
+        res_none = self.client.post('/api/reports/run/', spec, format='json')
+        self.assertEqual(res_none.status_code, 403, res_none.content)
+        self.assertNotIn('rows', res_none.json())
 
     # -------------------------------------------------------------------------
     # ۳. run برای fleet_trips: کاربر شرکت الف فقط الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ
@@ -297,10 +303,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertGreaterEqual(res_s['count'], 2)
 
         # کاربر بی‌شرکت
+        # کاربر بی‌شرکت انتسابی ندارد، پس مجوز بخشی موجودیت را ندارد (طرح ۲.۲، ت۱) و هیچ ردیفی نمی‌گیرد
         self.client.force_authenticate(self.user_no_company)
-        res_none = self.client.post('/api/reports/run/', spec, format='json').json()
-        self.assertEqual(res_none['count'], 0)
-        self.assertEqual(len(res_none['rows']), 0)
+        res_none = self.client.post('/api/reports/run/', spec, format='json')
+        self.assertEqual(res_none.status_code, 403, res_none.content)
+        self.assertNotIn('rows', res_none.json())
 
     # -------------------------------------------------------------------------
     # ۴. run برای users، به‌علاوهٔ پنهان بودن سوپریوزر برای غیرسوپریوزر
@@ -354,9 +361,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertGreaterEqual(total_s, 2)
 
         # کاربر بی‌شرکت
-        eng_none = ReportEngine(self.user_no_company, spec)
-        _, _, total_none = eng_none.export_queryset()
-        self.assertEqual(total_none, 0)
+        # کاربر بی‌شرکت انتسابی ندارد، پس مجوز بخشی موجودیت را ندارد (طرح ۲.۲، ت۱)
+        from platform_core.query_engine.engine import ReportError
+        with self.assertRaises(ReportError) as ctx:
+            ReportEngine(self.user_no_company, spec).export_queryset()
+        self.assertEqual(ctx.exception.status, 403)
 
         # اعتبارسنجی از مسیر HTTP
         self.client.force_authenticate(self.user_a)
@@ -675,9 +684,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         auditor = User.objects.create_user(username='pers_auditor_a', password='Password123!', national_code='0088888888')
         UserCompanyAccess.objects.create(user=auditor, company=self.company_a, is_default=True)
         grant_membership(auditor, self.company_a)
-        auditor.user_permissions.set(Permission.objects.filter(
-            codename__in=['view_sys_reports', 'view_sys_personnel', 'perm_approve_personnel_finance']
-        ))
+        # ممیز = انتساب سطح شرکت با مجوزهای پرونده و تأیید مالی (طرح ۲.۲، ت۱)، به‌علاوهٔ مجوز سامانه‌ای گزارش‌ها
+        from personnel.scoped_test_support import grant_section_perms
+        auditor.user_permissions.set(Permission.objects.filter(codename__in=['view_sys_reports']))
+        grant_section_perms(auditor, ['view_sys_personnel', 'perm_approve_personnel_finance'],
+                            company=self.company_a, role='accountant')
         self.client.force_authenticate(auditor)
         ids_aud = [r['id'] for r in self.client.post('/api/reports/run/', spec, format='json').json()['rows']]
         self.assertIn(self.profile_a.id, ids_aud)

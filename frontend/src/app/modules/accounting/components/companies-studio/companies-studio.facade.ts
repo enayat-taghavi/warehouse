@@ -19,6 +19,8 @@ export interface CompanyPayrollProfile {
   tax_memory_id: string | null;
   tax_economic_code: string | null;
   updated_at?: string | null;
+  /** false = کاربر سطح «خواندن» حوزهٔ insurance_tax را ندارد و شناسه‌ها null آمده‌اند (ت۱۲ طرح ۲.۲) */
+  identifiers_visible?: boolean;
   /** پاسخ خوش‌بینانهٔ صف آفلاین */
   _offlinePending?: boolean;
 }

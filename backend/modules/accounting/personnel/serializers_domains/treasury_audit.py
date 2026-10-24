@@ -18,6 +18,27 @@ from ..models import (
     WorkflowAuditLog,
 )
 
+def _section_company_id(section):
+    project = getattr(section, 'project', None) if section is not None else None
+    return getattr(project, 'company_id', None)
+
+
+def validate_counterparty_company(serializer, attrs):
+    """
+    اصلاح ۲.۲: طرف‌حساب فاکتور/تنخواه باید سراسری (بی‌شرکت) یا از شرکت همان بخش باشد؛
+    وگرنه ردیف شرکت دیگری ارجاع و نامش در پاسخ نمایش داده می‌شود.
+    """
+    if 'counterparty' not in attrs and 'section' not in attrs:
+        return
+    instance = getattr(serializer, 'instance', None)
+    section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
+    counterparty = attrs['counterparty'] if 'counterparty' in attrs else getattr(instance, 'counterparty', None)
+    if counterparty is None or section is None or counterparty.company_id is None:
+        return
+    if counterparty.company_id != _section_company_id(section):
+        raise serializers.ValidationError({'counterparty': "طرف‌حساب انتخاب‌شده متعلق به شرکت این بخش نیست."})
+
+
 class CounterpartySerializer(serializers.ModelSerializer):
     counterparty_type_display = serializers.CharField(source='get_counterparty_type_display', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
@@ -70,6 +91,11 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by']
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        validate_counterparty_company(self, attrs)
+        return attrs
+
     def get_created_by_name(self, obj):
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.username
@@ -110,6 +136,18 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
         model = PettyCashTransaction
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        validate_counterparty_company(self, attrs)
+        # حساب تنخواه باید از همان بخش سند باشد (نه حساب بخش یا شرکت دیگر)
+        if 'account' in attrs or 'section' in attrs:
+            instance = getattr(self, 'instance', None)
+            account = attrs['account'] if 'account' in attrs else getattr(instance, 'account', None)
+            section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
+            if account is not None and section is not None and account.section_id != section.pk:
+                raise serializers.ValidationError({'account': "حساب تنخواه انتخاب‌شده متعلق به بخش این سند نیست."})
+        return attrs
 
     def get_custodian_name(self, obj):
         if obj.custodian:

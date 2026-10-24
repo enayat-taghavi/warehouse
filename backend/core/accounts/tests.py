@@ -189,53 +189,48 @@ class RoleExcelImportTests(TestCase):
         self.admin = CustomUser.objects.create_superuser('admin_role_test', 'admin@role.com', 'pass1234')
         self.client.force_authenticate(user=self.admin)
 
-    def test_circular_dependency_handled_gracefully_without_500(self):
+    def test_legacy_parent_column_is_ignored(self):
+        # طرح ۲.۲ (ت۱۱): درخت نقش حذف شده؛ فایل قدیمی با ستون «نقش والد» هنوز خوانده می‌شود و آن ستون نادیده می‌ماند
         headers = ['نام یکتا (name)', 'عنوان فارسی (title)', 'رنگ سازمانی (color)', 'نقش والد (parent)', 'مجوزها (permissions)']
         key_row = ['name', 'title', 'color', 'parent', 'permissions']
         rows = [
-            ['role_alpha', 'نقش آلفا', '#4f46e5', 'role_beta', ''],
+            ['role_alpha', 'نقش آلفا', '#4f46e5', 'role_beta', 'view_sys_dashboard'],
             ['role_beta', 'نقش بتا', '#06b6d4', 'role_alpha', ''],
         ]
         excel_file = create_excel_upload_file(headers, key_row, rows)
         res = self.client.post('/api/accounts/roles/import_excel/', {'file': excel_file}, format='multipart')
-
-        # MUST NOT be 500!
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.data['success'])
-        parent_errors = [e for e in res.data['errors'] if e.get('field') == 'parent']
-        self.assertTrue(len(parent_errors) > 0)
-        self.assertIn('چرخه‌ای', parent_errors[0]['message'])
+        self.assertEqual(res.data['summary']['created'], 2)
+        self.assertEqual(list(CustomRole.objects.get(name='role_alpha').permissions.values_list('codename', flat=True)),
+                         ['view_sys_dashboard'])
 
-    def test_clear_empty_permissions_and_parent_on_update(self):
-        parent_role = CustomRole.objects.create(name='parent_lead', title='سرپرست کل', color='#10b981')
+    def test_clear_empty_permissions_on_update(self):
         perm = Permission.objects.filter(codename='view_sys_dashboard').first()
-        child_role = CustomRole.objects.create(name='child_dev', title='توسعه دهنده', color='#6366f1', parent=parent_role)
+        role = CustomRole.objects.create(name='child_dev', title='توسعه دهنده', color='#6366f1')
         if perm:
-            child_role.permissions.add(perm)
+            role.permissions.add(perm)
+            self.assertEqual(role.permissions.count(), 1)
 
-        self.assertIsNotNone(child_role.parent)
-        if perm:
-            self.assertEqual(child_role.permissions.count(), 1)
-
-        headers = ['نام یکتا (name)', 'عنوان فارسی (title)', 'رنگ سازمانی (color)', 'نقش والد (parent)', 'مجوزها (permissions)']
-        key_row = ['name', 'title', 'color', 'parent', 'permissions']
+        headers = ['نام یکتا (name)', 'عنوان فارسی (title)', 'رنگ سازمانی (color)', 'مجوزها (permissions)']
+        key_row = ['name', 'title', 'color', 'permissions']
         rows = [
-            ['child_dev', 'توسعه دهنده بروز', '#6366f1', '', ''],
+            ['child_dev', 'توسعه دهنده بروز', '#6366f1', ''],
         ]
         excel_file = create_excel_upload_file(headers, key_row, rows)
         res = self.client.post('/api/accounts/roles/import_excel/', {'file': excel_file, 'update_existing': 'true'}, format='multipart')
         self.assertEqual(res.status_code, 200)
 
-        child_role.refresh_from_db()
-        self.assertIsNone(child_role.parent)
-        self.assertEqual(child_role.permissions.count(), 0)
+        role.refresh_from_db()
+        self.assertEqual(role.title, 'توسعه دهنده بروز')
+        self.assertEqual(role.permissions.count(), 0)
 
     def test_atomic_rollback_on_role_import_error(self):
-        headers = ['نام یکتا (name)', 'عنوان فارسی (title)', 'رنگ سازمانی (color)', 'نقش والد (parent)', 'مجوزها (permissions)']
-        key_row = ['name', 'title', 'color', 'parent', 'permissions']
+        headers = ['نام یکتا (name)', 'عنوان فارسی (title)', 'رنگ سازمانی (color)', 'مجوزها (permissions)']
+        key_row = ['name', 'title', 'color', 'permissions']
         rows = [
-            ['atomic_role_1', 'نقش اتمیک ۱', '#4f46e5', '', ''],
-            ['atomic_role_2', 'نقش اتمیک ۲', '#06b6d4', '', ''],
+            ['atomic_role_1', 'نقش اتمیک ۱', '#4f46e5', ''],
+            ['atomic_role_2', 'نقش اتمیک ۲', '#06b6d4', ''],
         ]
         excel_file = create_excel_upload_file(headers, key_row, rows)
 
@@ -433,9 +428,8 @@ class CustomRoleSecurityAndHierarchyTests(TestCase):
             phone_number='09121113344',
             is_staff=True
         )
-        perm = Permission.objects.filter(codename='view_sys_users').first()
-        if perm:
-            self.normal_user.user_permissions.add(perm)
+        # نوشتن نقش‌ها از طرح ۲.۲ (ت۱۰ قاعدهٔ ۲) به perm_usr_role نیاز دارد
+        self.normal_user.user_permissions.add(*Permission.objects.filter(codename__in=['view_sys_users', 'perm_usr_role']))
 
     def test_non_superuser_cannot_assign_sensitive_permissions_on_create(self):
         self.client.force_authenticate(user=self.normal_user)
@@ -470,31 +464,22 @@ class CustomRoleSecurityAndHierarchyTests(TestCase):
         self.assertEqual(res.status_code, 201)
         self.assertEqual(res.data['name'], 'superuser_critical_role')
 
-    def test_role_cannot_be_parent_of_itself(self):
+    def test_role_parent_tree_removed(self):
+        # طرح ۲.۲ (ت۱۱): نقش سامانه‌ای فهرست تخت مجوز است؛ فیلد parent دیگر وجود ندارد و از API نمی‌آید
+        self.assertNotIn('parent', [f.name for f in CustomRole._meta.get_fields()])
         self.client.force_authenticate(user=self.admin)
-        role = CustomRole.objects.create(name='self_parent_role', title='نقش خودوالد', color='#4f46e5')
-        res = self.client.patch(f'/api/accounts/roles/{role.id}/', {'parent': role.id}, format='json')
-        self.assertEqual(res.status_code, 400)
-        self.assertIn('والد خودش', str(res.data))
+        role = CustomRole.objects.create(name='flat_role', title='نقش تخت', color='#4f46e5')
+        res = self.client.patch(f'/api/accounts/roles/{role.id}/', {'parent': role.id, 'title': 'نقش تخت ۲'}, format='json')
+        self.assertEqual(res.status_code, 200)
+        self.assertNotIn('parent', res.data)
 
-    def test_role_circular_parent_chain_rejected(self):
-        self.client.force_authenticate(user=self.admin)
-        role_a = CustomRole.objects.create(name='role_chain_a', title='نقش الف', color='#4f46e5')
-        role_b = CustomRole.objects.create(name='role_chain_b', title='نقش ب', color='#0284c7', parent=role_a)
-        role_c = CustomRole.objects.create(name='role_chain_c', title='نقش ج', color='#059669', parent=role_b)
-
-        # Try to make role_c the parent of role_a (A -> B -> C -> A)
-        res = self.client.patch(f'/api/accounts/roles/{role_a.id}/', {'parent': role_c.id}, format='json')
-        self.assertEqual(res.status_code, 400)
-        self.assertIn('چرخه', str(res.data))
-
-    def test_role_model_clean_prevents_circular_parent(self):
-        from django.core.exceptions import ValidationError
-        role_1 = CustomRole.objects.create(name='m_role_1', title='نقش مدل ۱')
-        role_2 = CustomRole.objects.create(name='m_role_2', title='نقش مدل ۲', parent=role_1)
-        role_1.parent = role_2
-        with self.assertRaises(ValidationError):
-            role_1.clean()
+    def test_view_sys_users_alone_cannot_write_roles(self):
+        reader = CustomUser.objects.create_user(username='role_reader', password='x-pass-123', phone_number='09121113399')
+        reader.user_permissions.add(Permission.objects.get(codename='view_sys_users'))
+        self.client.force_authenticate(user=reader)
+        self.assertEqual(self.client.get('/api/accounts/roles/').status_code, 200)
+        res = self.client.post('/api/accounts/roles/', {'name': 'r_x', 'title': 'ر', 'permissions': []}, format='json')
+        self.assertEqual(res.status_code, 403)
 
 
 class UserDeactivationAndSecurityGuardsTests(TestCase):

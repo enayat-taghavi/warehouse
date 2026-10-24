@@ -69,6 +69,14 @@ from .views import (
     get_request_company_id,
     validate_user_company_access
 )
+from accounts.scoped_permissions import can, section_q
+from .workflow_engine import sections_with_tier
+from .views_domains.scope_helpers import scope_personnel_for_user
+from .views_domains.treasury_views import (
+    INVOICE_PERM,
+    PETTY_CASH_MANAGE_PERM,
+    _ensure_petty_cash_manager,
+)
 
 
 def _get_effective_company_ids(request, user):
@@ -241,6 +249,49 @@ def _reject_personnel_profile_action(instance):
         )
 
 
+def _scope_section_rows(qs, user, perm_code, min_tier):
+    """
+    قلمرو بخشی کارتابل برای فاکتور و تنخواه (اصلاح ۲.۲): فقط ردیف‌های بخش‌هایی که کاربر هم مجوز کار
+    (perm_code) و هم سطح لازم همان کارتابل را «در همان بخش» دارد (سطح گردش این دو مدل بخشی است؛
+    workflow_section). مدیر کل سامانه بی‌محدودیت.
+    """
+    if user.is_superuser:
+        return qs
+    return qs.filter(section_q(user, perm_code)).filter(
+        section_id__in=sections_with_tier(user, min_tier).values('id')
+    )
+
+
+def _scope_personnel_rows(qs, user, min_tier):
+    """
+    همان قلمرو پروندهٔ پرسنل scope_personnel_queryset (بخش‌های مجوز پرونده + ثبت خود + بی‌بخشِ سطح شرکت)،
+    و برای پروندهٔ بخش‌دار فقط بخش‌هایی که کاربر سطح لازم کارتابل را در همان بخش دارد.
+    """
+    qs = scope_personnel_for_user(user, qs)
+    if user.is_superuser:
+        return qs
+    return qs.filter(Q(section__isnull=True) | Q(section_id__in=sections_with_tier(user, min_tier).values('id')))
+
+
+def _ensure_cartable_section_permission(instance, user):
+    """
+    سد بخشی اقدام کارتابل (اصلاح ۲.۲): تنخواه ← مدیریت تنخواه همان بخش، فاکتور ← ثبت و دیدن فاکتور
+    همان بخش، پروندهٔ پرسنل ← قلمرو پرونده. سطح در همان بخش را موتور گردش کار می‌سنجد.
+    """
+    if user.is_superuser:
+        return
+    if isinstance(instance, PettyCashTransaction):
+        if instance.section_id is None:
+            raise PermissionDenied("شما مجوز مدیریت تنخواه این بخش را ندارید.")
+        _ensure_petty_cash_manager(user, instance.section_id)
+    elif isinstance(instance, ExpenseInvoice):
+        if instance.section_id is None or not can(user, INVOICE_PERM, instance.section_id):
+            raise PermissionDenied("شما مجوز ثبت و دیدن فاکتور این بخش را ندارید.")
+    elif isinstance(instance, PersonnelProfile):
+        if not scope_personnel_for_user(user, PersonnelProfile.objects.filter(pk=instance.pk)).exists():
+            raise PermissionDenied("شما به پروندهٔ پرسنلی این بخش دسترسی ندارید.")
+
+
 def _get_target_instance(model_name: str, instance_id: int, request_data: dict = None):
     """یافتن نمونه مدل بر اساس نام و شناسه (با پشتیبانی هوشمند از بازیابی/ایجاد خودکار دوره ماهانه بر مبنای year_month)"""
     models_map = {
@@ -340,6 +391,7 @@ class SupervisorCartableAPIView(APIView):
             ).select_related('user'),
             'personnel', company_ids
         )
+        personnel_qs = _scope_personnel_rows(personnel_qs, user, WorkflowTiers.TIER_2_SUPERVISOR)
 
         # رکوردهای ناوگان نیازمند بررسی سرپرست
         vehicles_qs = _filter_by_company(
@@ -380,6 +432,7 @@ class SupervisorCartableAPIView(APIView):
             ).select_related('section', 'counterparty'),
             'invoice', company_ids
         )
+        invoices_qs = _scope_section_rows(invoices_qs, user, INVOICE_PERM, WorkflowTiers.TIER_2_SUPERVISOR)
 
         # اسناد تنخواه‌گردان نیازمند بررسی سرپرست
         petty_cash_qs = _filter_by_company(
@@ -388,6 +441,7 @@ class SupervisorCartableAPIView(APIView):
             ).select_related('section', 'custodian'),
             'petty_cash', company_ids
         )
+        petty_cash_qs = _scope_section_rows(petty_cash_qs, user, PETTY_CASH_MANAGE_PERM, WorkflowTiers.TIER_2_SUPERVISOR)
 
         # کارکردهای نیازمند بررسی سرپرست
         att_qs = _filter_by_company(
@@ -522,6 +576,7 @@ class SupervisorCartableAPIView(APIView):
         # --- ۲. سایر مدل‌ها و دوره کارکرد ماهانه ---
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        _ensure_cartable_section_permission(instance, user)
         _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
@@ -580,6 +635,7 @@ class AccountantCartableAPIView(APIView):
             ).select_related('user'),
             'personnel', company_ids
         )
+        personnel_qs = _scope_personnel_rows(personnel_qs, user, WorkflowTiers.TIER_3_ACCOUNTANT)
 
         vehicles_qs = _filter_by_company(
             VehicleDriverProfile.objects.filter(
@@ -616,6 +672,7 @@ class AccountantCartableAPIView(APIView):
             ).select_related('section', 'counterparty'),
             'invoice', company_ids
         )
+        invoices_qs = _scope_section_rows(invoices_qs, user, INVOICE_PERM, WorkflowTiers.TIER_3_ACCOUNTANT)
 
         # اسناد تنخواه‌گردان نیازمند ممیزی حسابدار
         petty_cash_qs = _filter_by_company(
@@ -624,6 +681,7 @@ class AccountantCartableAPIView(APIView):
             ).select_related('section', 'custodian'),
             'petty_cash', company_ids
         )
+        petty_cash_qs = _scope_section_rows(petty_cash_qs, user, PETTY_CASH_MANAGE_PERM, WorkflowTiers.TIER_3_ACCOUNTANT)
 
         return Response({
             'tier': 'ACCOUNTANT',
@@ -659,6 +717,7 @@ class AccountantCartableAPIView(APIView):
 
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        _ensure_cartable_section_permission(instance, user)
         _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
@@ -699,6 +758,7 @@ class ManagerCartableAPIView(APIView):
             ).select_related('user'),
             'personnel', company_ids
         )
+        personnel_qs = _scope_personnel_rows(personnel_qs, user, WorkflowTiers.TIER_4_MANAGER)
 
         vehicles_qs = _filter_by_company(
             VehicleDriverProfile.objects.filter(
@@ -735,6 +795,7 @@ class ManagerCartableAPIView(APIView):
             ).select_related('section', 'counterparty'),
             'invoice', company_ids
         )
+        invoices_qs = _scope_section_rows(invoices_qs, user, INVOICE_PERM, WorkflowTiers.TIER_4_MANAGER)
 
         # اسناد تنخواه نیازمند تایید مدیر
         petty_cash_qs = _filter_by_company(
@@ -743,6 +804,7 @@ class ManagerCartableAPIView(APIView):
             ).select_related('section', 'custodian'),
             'petty_cash', company_ids
         )
+        petty_cash_qs = _scope_section_rows(petty_cash_qs, user, PETTY_CASH_MANAGE_PERM, WorkflowTiers.TIER_4_MANAGER)
 
         return Response({
             'tier': 'MANAGER',
@@ -778,6 +840,7 @@ class ManagerCartableAPIView(APIView):
 
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        _ensure_cartable_section_permission(instance, user)
         _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
@@ -831,7 +894,10 @@ class TreasuryCartableAPIView(APIView):
         invoices_payable_qs = ExpenseInvoice.objects.filter(
             status__in=[WorkflowStatuses.READY_TO_PAY, 'ready_to_pay']
         ).select_related('section', 'counterparty')
-        invoices_payable = _filter_by_company(invoices_payable_qs, 'invoice', company_ids)[:100]
+        invoices_payable = _scope_section_rows(
+            _filter_by_company(invoices_payable_qs, 'invoice', company_ids),
+            user, INVOICE_PERM, WorkflowTiers.TIER_5_TREASURY,
+        )[:100]
 
         data['invoices'] = ExpenseInvoiceSerializer(invoices_payable, many=True).data
         data['payrolls'] = MonthlyPayrollRecordSerializer(payrolls, many=True).data
@@ -925,6 +991,7 @@ class TreasuryCartableAPIView(APIView):
                 raise ValidationError("شناسه فاکتور (invoice_id) الزامی است.")
             invoice = ExpenseInvoice.objects.get(pk=invoice_id)
             _validate_instance_company_access(invoice, 'invoice', user)
+            _ensure_cartable_section_permission(invoice, user)
             updated_invoice = execute_treasury_disbursement(
                 instance=invoice,
                 user=user,

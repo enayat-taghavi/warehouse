@@ -52,8 +52,10 @@ class CompanyExtensionPointsTests(TestCase):
     def test_user_with_perm_approve_personnel_manager_passes_structure_write_permission(self):
         """کاربر دارای مجوز perm_approve_personnel_manager دسترسی نوشتن ساختار سازمانی دارد."""
         user = User.objects.create_user(username='pm_approver_test', password='password123', phone_number='09170001003')
-        perm = Permission.objects.get(codename='perm_approve_personnel_manager', content_type__app_label='accounts')
-        user.user_permissions.add(perm)
+        # مجوز بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آید (طرح ۲.۲، ت۱)؛ تیک مستقیم دیگر کافی نیست
+        from personnel.scoped_test_support import grant_section_perms
+        comp = Company.objects.create(code='CMP_PM_APPROVER', name='شرکت مدیر تأیید')
+        grant_section_perms(user, ['perm_approve_personnel_manager'], company=comp, exact=True)
         user = User.objects.get(pk=user.pk)
 
         self.assertTrue(has_structure_write_permission(user))

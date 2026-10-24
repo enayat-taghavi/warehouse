@@ -1,19 +1,19 @@
 from django.contrib.auth.backends import ModelBackend
-from django.contrib.auth.models import Permission
-from .models import CustomRole
 
 class RoleInheritanceBackend(ModelBackend):
     """
     Custom authentication backend that extends ModelBackend.
-    Overrides _get_group_permissions to include permissions from all descendant CustomRoles.
+    طرح ۲.۲ (ت۱۱): درخت والد و فرزند CustomRole حذف شده؛ مجوزهای نقش سامانه‌ای فقط از نقش‌های مستقیم کاربر
+    (همان _get_group_permissions خود جنگو) می‌آیند.
+
+    طرح ۲.۲ (ت۷): get_all_permissions (و در نتیجه has_perm) از موتور مجوزهای ریز
+    (accounts/scoped_permissions.py) می‌آید: مجوزهای سامانه‌ای با تفاوت‌های سامانه‌ای کاربر، به‌اضافهٔ
+    مجوزهای بخشی که کاربر دست‌کم در یک بخش دارد. مجوز بخشی از نقش سامانه‌ای یا تیک مستقیم حساب نمی‌شود.
+    کاری که روی یک ردیف انجام می‌شود باید can(user, code, section) بپرسد، نه has_perm (ت۸).
     """
 
-    def _get_group_permissions(self, user_obj):
-        if not user_obj.is_active or user_obj.is_anonymous:
-            return Permission.objects.none()
-
-        all_ids = CustomRole.get_all_role_ids_for_user(user_obj)
-        if not all_ids:
-            return Permission.objects.none()
-        # Return queryset of permissions linked to any of these roles
-        return Permission.objects.filter(group__id__in=all_ids)
+    def get_all_permissions(self, user_obj, obj=None):
+        if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
+            return set()
+        from .scoped_permissions import all_permission_names
+        return all_permission_names(user_obj)

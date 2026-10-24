@@ -50,9 +50,36 @@ from .scope_helpers import (
     resolve_import_company,
 )
 from companies.org_roles import user_has_section_role
+from accounts.scoped_permissions import can, section_q, sections_where
 
-# نقش‌هایی که تنخواه همهٔ متصدیان بخش را می‌بینند؛ انتساب سطح شرکت یا پروژه هم برای بخش‌های زیرمجموعه حساب است (طرح ۲.۱)
-TREASURY_OVERSIGHT_ROLES = ('supervisor', 'accountant', 'manager', 'treasury')
+# مجوزهای بخشی ت۱۳ طرح ۲.۲: «چه کاری» از مجوز و «کجا» از انتساب (ق۶). فهرست‌ها با sections_where/section_q
+# و کار روی هر ردیف با can(user, code, section) سنجیده می‌شود، نه has_perm (ت۸).
+INVOICE_PERM = 'perm_invoice_record'
+PETTY_CASH_MANAGE_PERM = 'perm_petty_cash_manage'
+
+
+def _section_id(value):
+    try:
+        return int(getattr(value, 'pk', value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _ensure_own_petty_cash_section(user, section):
+    """
+    تنخواه خودِ کاربر فقط در بخشی که انتساب فعال (هر نقشی، در هر سطح) آن را می‌پوشاند یا مدیر تنخواه آن است.
+    """
+    if user.is_superuser:
+        return
+    if section is None or not (
+        user_has_section_role(user, section) or can(user, PETTY_CASH_MANAGE_PERM, section)
+    ):
+        raise PermissionDenied("شما در این بخش انتساب فعال ندارید و ثبت تنخواه در آن مجاز نیست.")
+
+
+def _ensure_petty_cash_manager(user, section, message="شما مجوز مدیریت تنخواه این بخش را ندارید."):
+    if not user.is_superuser and not can(user, PETTY_CASH_MANAGE_PERM, section):
+        raise PermissionDenied(message)
 
 class CounterpartyViewSet(viewsets.ModelViewSet):
     """
@@ -135,7 +162,8 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
                     pass
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('counterparty', 'create', instance.id, instance.name, None, tab_id, self.request.user.id)
+        broadcast_org_structure_updated('counterparty', 'create', instance.id, instance.name, company_id=instance.company_id,
+                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -146,7 +174,8 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
                 ensure_scoped_write(user, new_company.id if new_company else None, "تبدیل طرف‌حساب به طرف‌حساب سراسری یا انتقال آن به شرکت دیگر مجاز نیست.")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('counterparty', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
+        broadcast_org_structure_updated('counterparty', 'update', instance.id, instance.name, company_id=instance.company_id,
+                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
 
     def perform_destroy(self, instance):
         if requires_company_scope(self.request.user):
@@ -159,12 +188,14 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
             instance.is_active = False
             instance.save(update_fields=['is_active', 'updated_at'])
             tab_id = self.request.headers.get('X-Client-Tab-Id')
-            broadcast_org_structure_updated('counterparty', 'update', instance_id, instance_name, None, tab_id, self.request.user.id)
+            broadcast_org_structure_updated('counterparty', 'update', instance_id, instance_name, company_id=instance.company_id,
+                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
             return
 
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('counterparty', 'delete', instance_id, instance_name, None, tab_id, self.request.user.id)
+        broadcast_org_structure_updated('counterparty', 'delete', instance_id, instance_name, company_id=instance.company_id,
+                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
@@ -189,7 +220,8 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
         res = import_counterparties_from_excel(file_obj, dry_run=dry_run, company_id=company_id)
         if not dry_run:
             tab_id = request.headers.get('X-Client-Tab-Id')
-            broadcast_org_structure_updated('counterparty', 'import', None, 'Bulk Import', None, tab_id, request.user.id)
+            broadcast_org_structure_updated('counterparty', 'import', None, 'Bulk Import', company_id=company_id,
+                                            global_scope=company_id is None, client_tab_id=tab_id, sender_id=request.user.id)
         return Response(res, status=status.HTTP_200_OK if res['success'] else status.HTTP_400_BAD_REQUEST)
 
 class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
@@ -208,6 +240,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         cid = validate_user_company_access(user, get_request_company_id(self.request))
         if cid:
             qs = qs.filter(section__project__company_id=cid)
+        # فقط بخش‌هایی که کاربر در آن‌ها «ثبت و دیدن فاکتور» دارد (ت۱۳)؛ خروجی اکسل هم همین queryset است
+        qs = qs.filter(section_q(user, INVOICE_PERM))
         section_id = self.request.query_params.get('section_id')
         if section_id:
             qs = qs.filter(section_id=section_id)
@@ -229,6 +263,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if section.project.company_id not in allowed_ids:
                 raise PermissionDenied("شما مجاز به ثبت فاکتور برای این شرکت نیستید.")
+        if not user.is_superuser and (section is None or not can(user, INVOICE_PERM, section)):
+            raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
         # Guardian G2: default to draft status
         req_status = self.request.data.get('status')
         if not user.is_superuser:
@@ -243,10 +279,15 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = self.request.user
         instance = self.get_object()
+        new_section = serializer.validated_data.get('section')
+        if (new_section is not None and new_section.pk != instance.section_id and not user.is_superuser
+                and not can(user, INVOICE_PERM, new_section)):
+            raise PermissionDenied("شما مجوز ثبت فاکتور در بخش مقصد را ندارید.")
         new_status = serializer.validated_data.get('status')
         if new_status and new_status != instance.status and not user.is_superuser:
             from ..workflow_engine import determine_user_tier, WorkflowTiers
-            tier = determine_user_tier(user)
+            # سطح کاربر در بخش همین فاکتور (ت۸)، نه «در هر بخشی»
+            tier = determine_user_tier(user, section=instance.section_id)
             if new_status in ['draft', 'pending_supervisor']:
                 pass
             elif new_status in ['pending_accountant', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_2_SUPERVISOR:
@@ -434,11 +475,12 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         custodian_id = self.request.query_params.get('custodian_id')
         if custodian_id:
             qs = qs.filter(custodian_id=custodian_id)
-        # کارمندان عادی فقط حساب تنخواه خود را مشاهده می‌کنند
+        # مدیر تنخواه حساب‌های بخش‌هایی را می‌بیند که در آن‌ها «مدیریت تنخواه» دارد (با یا بی section_id؛
+        # انتساب سطح شرکت یعنی همهٔ بخش‌های همان شرکت)؛ هر کس حساب‌های تنخواه خودش را هم می‌بیند.
         if not user.is_superuser:
-            is_manager = bool(section_id) and user_has_section_role(user, section_id, TREASURY_OVERSIGHT_ROLES)
-            if not is_manager:
-                qs = qs.filter(custodian=user)
+            qs = qs.filter(
+                Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id')) | Q(custodian=user)
+            )
         return qs.order_by('section', 'custodian')
 
     def perform_create(self, serializer):
@@ -448,7 +490,22 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if section.project.company_id not in allowed_ids:
                 raise PermissionDenied("شما مجاز به تعریف حساب تنخواه برای این شرکت نیستید.")
+        # تعریف حساب و سقف تنخواه کار مدیر تنخواه همان بخش است
+        _ensure_petty_cash_manager(user, section, "شما مجوز تعریف حساب تنخواه در این بخش را ندارید.")
         serializer.save()
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        instance = serializer.instance
+        _ensure_petty_cash_manager(user, instance.section_id, "شما مجوز ویرایش حساب تنخواه این بخش را ندارید.")
+        new_section = serializer.validated_data.get('section')
+        if new_section is not None and new_section.pk != instance.section_id:
+            _ensure_petty_cash_manager(user, new_section, "شما مجوز مدیریت تنخواه بخش مقصد را ندارید.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        _ensure_petty_cash_manager(self.request.user, instance.section_id, "شما مجوز حذف حساب تنخواه این بخش را ندارید.")
+        instance.delete()
 
 class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     """
@@ -490,11 +547,12 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 Q(description__icontains=search)
             )
 
-        # اگر کاربر دسترسی مدیریتی نداشته باشد، فقط اسناد تنخواه خودش در بخش را می‌بیند
-        if not user.is_superuser and not custodian_id:
-            is_manager = bool(section_id) and user_has_section_role(user, section_id, TREASURY_OVERSIGHT_ROLES)
-            if not is_manager:
-                qs = qs.filter(custodian=user)
+        # مدیر تنخواه اسناد بخش‌هایی را می‌بیند که در آن‌ها «مدیریت تنخواه» دارد؛ هر کس اسناد تنخواه خودش را.
+        # پارامتر custodian_id دیگر قلمرو را باز نمی‌کند (پیش‌تر با آن اسناد هر متصدی دیده می‌شد).
+        if not user.is_superuser:
+            qs = qs.filter(
+                Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id')) | Q(custodian=user)
+            )
 
         return qs.order_by('-transaction_date_shamsi', '-created_at')
 
@@ -506,6 +564,10 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             if section.project.company_id not in allowed_ids:
                 raise PermissionDenied("شما مجاز به ثبت سند تنخواه برای این شرکت نیستید.")
         custodian = serializer.validated_data.get('custodian') or user
+        if custodian.pk != user.pk:
+            _ensure_petty_cash_manager(user, section, "ثبت سند تنخواه برای متصدی دیگر فقط با مجوز مدیریت تنخواه همان بخش ممکن است.")
+        else:
+            _ensure_own_petty_cash_section(user, section)
 
         # اتصال خودکار یا ایجاد حساب تنخواه برای بخش و کاربر
         account = serializer.validated_data.get('account')
@@ -530,9 +592,15 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         instance = self.get_object()
         new_status = serializer.validated_data.get('status')
+        new_section = serializer.validated_data.get('section')
+        if new_section is not None and new_section.pk != instance.section_id:
+            _ensure_petty_cash_manager(user, new_section, "شما مجوز مدیریت تنخواه بخش مقصد را ندارید.")
         if new_status and new_status != instance.status and not user.is_superuser:
+            if new_status not in ('draft', 'pending_supervisor'):
+                # Plan 2.2 (T13): moving a petty cash record past submission is management in its own section
+                _ensure_petty_cash_manager(user, instance.section_id)
             from ..workflow_engine import determine_user_tier, WorkflowTiers
-            tier = determine_user_tier(user)
+            tier = determine_user_tier(user, section=instance.section_id)
             if new_status in ['draft', 'pending_supervisor']:
                 pass
             elif new_status in ['pending_accountant', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_2_SUPERVISOR:
@@ -555,6 +623,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_tx(self, request, pk=None):
         instance = self.get_object()
+        # Plan 2.2 (T13): approving petty cash is petty-cash management in the record's own section
+        _ensure_petty_cash_manager(request.user, instance.section_id)
         from ..workflow_engine import advance_workflow_step
         advance_workflow_step(instance, request.user, notes=request.data.get('notes'), is_financial=True)
         return Response({'message': 'تایید تراکنش تنخواه با موفقیت ثبت شد.', 'status': instance.status})
@@ -562,6 +632,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_tx(self, request, pk=None):
         instance = self.get_object()
+        _ensure_petty_cash_manager(request.user, instance.section_id)
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'درج دلیل رد الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -582,9 +653,13 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             )
 
         target_user_id = request.query_params.get('custodian_id')
+        sid = _section_id(section_id)
+        if sid is None:
+            return Response({'error': 'شناسه بخش نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+        section_id = sid
         if target_user_id and (
             request.user.is_superuser
-            or user_has_section_role(request.user, section_id, TREASURY_OVERSIGHT_ROLES)
+            or can(request.user, PETTY_CASH_MANAGE_PERM, sid)
         ):
             custodian = get_user_model().objects.filter(id=target_user_id).first() or request.user
         else:
@@ -673,8 +748,13 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         except Exception:
             return Response({'error': 'مبلغ باید عددی مثبت باشد.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        section = get_object_or_404(ProjectSection, id=section_id)
+        section = get_object_or_404(ProjectSection.objects.select_related('project'), id=section_id)
         custodian = request.user
+        if not request.user.is_superuser:
+            allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+            if section.project.company_id not in allowed_ids:
+                raise PermissionDenied("شما مجاز به ثبت سند تنخواه برای این شرکت نیستید.")
+        _ensure_own_petty_cash_section(request.user, section)
 
         account, _ = PettyCashAccount.objects.get_or_create(
             section=section,

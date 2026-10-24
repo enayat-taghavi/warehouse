@@ -162,6 +162,27 @@ describe('CompanyInsuranceTaxTabComponent (تب «بیمه و مالیات» ا�
     expect(facade.getPayrollProfile).toHaveBeenCalledTimes(1);
   });
 
+  it('ت۱۲: identifiers_visible=false به‌جای فرم خالی پیام می‌دهد و ذخیره نمی‌شود', async () => {
+    facade.getPayrollProfile.mockReturnValue(of({ ...EMPTY, identifiers_visible: false }));
+    await create();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-identifiers-hidden]')?.textContent)
+      .toContain('برای دیدن شناسه‌های بیمه و مالیات به سطح خواندن حوزهٔ بیمه و مالیات نیاز دارید.');
+    expect(el.querySelector('#it_workshop_code')).toBeNull();
+    expect(el.querySelector('button[type="submit"]')).toBeNull();
+    component.form.workshop_code = '1234567890';
+    component.save();
+    expect(facade.updatePayrollProfile).not.toHaveBeenCalled();
+  });
+
+  it('identifiers_visible=true همان فرم معمولی را نشان می‌دهد', async () => {
+    facade.getPayrollProfile.mockReturnValue(of({ ...EMPTY, workshop_code: '1234567890', identifiers_visible: true }));
+    await create();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-identifiers-hidden]')).toBeNull();
+    expect((el.querySelector('#it_workshop_code') as HTMLInputElement).value).toBe('1234567890');
+  });
+
   it('شرکت ذخیره‌نشده هیچ درخواستی نمی‌زند', async () => {
     await create(null);
     expect(facade.getPayrollProfile).not.toHaveBeenCalled();

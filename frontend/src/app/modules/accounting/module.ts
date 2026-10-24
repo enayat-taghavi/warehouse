@@ -19,8 +19,6 @@ import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
 import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 import { ACCOUNTING_PERSONAS } from './personas';
 import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
-import { ACCOUNTING_ROLE_PRESETS } from './role-presets';
-import { ACCOUNTING_PERMISSION_CODENAMES, ACCOUNTING_SHORT_PERMISSION_NAMES } from './permissions';
 import { redirectToCompanyProjects } from '../../core/modules/documents-archive-route';
 import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
 
@@ -259,8 +257,7 @@ export const MODULE: WhFrontendModule = {
       ]
     },
     users: {
-      permissionGroup: { key: 'ACCOUNTING_FINANCE', titleFa: 'حسابداری 💳', order: 20, codenames: ACCOUNTING_PERMISSION_CODENAMES },
-      shortPermissionNames: ACCOUNTING_SHORT_PERMISSION_NAMES,
+      // ت۶: گروه، عنوان کوتاه و بستهٔ نقش مجوزها از فهرست کامل سرور (accounts/permission-catalog/) می‌آیند
       standalonePermissionTooltips: {
         perm_approve_personnel_supervisor: 'تایید مرحله سرپرست برای پرسنل',
         perm_approve_fleet_supervisor: 'تایید مرحله سرپرست برای ناوگان'
@@ -294,8 +291,6 @@ export const MODULE: WhFrontendModule = {
             : [];
         }
       },
-      rolePresets: ACCOUNTING_ROLE_PRESETS,
-      presetCategory: { key: 'accounting', labelFa: 'حسابداری', icon: 'credit-card', tone: 'emerald' },
       roleScope: {
         key: 'finance', order: 20,
         tabLabelFa: '💳 سامانه مالی و پرسنلی', badgeLabelFa: 'سامانه مالی و پرسنلی', shortLabelFa: 'مالی', tinyLabelFa: 'مالی',

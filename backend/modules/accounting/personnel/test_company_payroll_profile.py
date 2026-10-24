@@ -77,6 +77,52 @@ class CompanyPayrollProfileApiTests(TestCase):
         self._as(other)
         self.assertEqual(self.client.get(self.url).status_code, 403)
 
+    # ─── ت۱۲ طرح ۲.۲: شناسه‌ها فقط با سطح «خواندن» insurance_tax ─────────────────
+    def _filled_profile(self):
+        return CompanyPayrollProfile.objects.create(
+            company=self.a, workshop_code='1234567890', social_security_branch_code='12',
+            social_security_branch_name='شعبه', contract_row='7', employer_name='کارفرما',
+            tax_memory_id='A1B2C3', tax_economic_code='1' * 16)
+
+    def test_member_without_level_gets_same_shape_with_null_identifiers(self):
+        self._filled_profile()
+        SectionAssignment.objects.create(user=self.user, role='manager', company=self.a)
+        self._as(self.user)
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, 200, res.content)
+        body = res.json()
+        self.assertEqual(body['company'], self.a.id)
+        self.assertFalse(body['identifiers_visible'])
+        for field in CompanyPayrollProfile.FIELDS:
+            self.assertIn(field, body)
+            self.assertIsNone(body[field], field)
+
+    def test_reader_and_superuser_see_identifiers(self):
+        self._filled_profile()
+        UserCompanyAccess.objects.create(user=self.user, company=self.a, section_levels={'insurance_tax': 'read'})
+        for who in (self.user, self.admin):
+            self._as(who)
+            body = self.client.get(self.url).json()
+            self.assertTrue(body['identifiers_visible'])
+            self.assertEqual((body['workshop_code'], body['tax_memory_id'], body['tax_economic_code']),
+                             ('1234567890', 'A1B2C3', '1' * 16))
+
+    def test_reader_of_other_company_sees_nothing_here(self):
+        self._filled_profile()
+        UserCompanyAccess.objects.create(user=self.user, company=self.b, section_levels={'insurance_tax': 'read'})
+        SectionAssignment.objects.create(user=self.user, role='employee', company=self.a)
+        self._as(self.user)
+        body = self.client.get(self.url).json()
+        self.assertFalse(body['identifiers_visible'])
+        self.assertIsNone(body['workshop_code'])
+
+    def test_writer_patch_response_is_visible(self):
+        UserCompanyAccess.objects.create(user=self.user, company=self.a, section_levels={'insurance_tax': 'write'})
+        self._as(self.user)
+        body = self.client.patch(self.url, {'tax_memory_id': 'Z9'}, format='json').json()
+        self.assertTrue(body['identifiers_visible'])
+        self.assertEqual(body['tax_memory_id'], 'Z9')
+
     def test_foreign_company_is_hidden(self):
         UserCompanyAccess.objects.create(user=self.user, company=self.b, section_levels={'insurance_tax': 'write'})
         self._as(self.user)

@@ -57,9 +57,23 @@ class WorkflowStatuses:
     PAYROLL_REJECTED = 'REJECTED'
 
 
-def determine_user_tier(user) -> int:
+# مدل‌هایی که سطح کاربر در گردش کارشان در بخش خود رکورد سنجیده می‌شود (ت۸ و ت۱۳ طرح ۲.۲).
+# بقیهٔ گردش‌کارها (کارکرد، ناوگان، حقوق) در بازبینی مرحلهٔ ۴ به همین شکل تبدیل می‌شوند.
+SECTION_TIER_MODELS = ('ExpenseInvoice', 'PettyCashTransaction')
+
+
+def workflow_section(instance):
+    """بخشی که سطح کاربر برای این رکورد در آن سنجیده می‌شود، یا None (سنجش «در هر بخشی»)."""
+    if instance is None or instance.__class__.__name__ not in SECTION_TIER_MODELS:
+        return None
+    return getattr(instance, 'section_id', None)
+
+
+def determine_user_tier(user, section=None) -> int:
     """
-    تشخیص بالاترین سطح سازمانی کاربر در ماتریس ۵ سطحی
+    تشخیص بالاترین سطح سازمانی کاربر در ماتریس ۵ سطحی.
+    section: اگر داده شود، سطح با مجوزهای کاربر در همان بخش سنجیده می‌شود (can؛ ق۶)، وگرنه «در هر بخشی».
+    مجوز بخشی فقط از بستهٔ نقش انتساب می‌آید؛ تیک مستقیم یا نقش سامانه‌ای آن را نمی‌دهد (ت۲).
     """
     if not user or not user.is_authenticated:
         return 0
@@ -68,36 +82,60 @@ def determine_user_tier(user) -> int:
 
     tier = WorkflowTiers.TIER_1_OPERATOR
 
+    from accounts.scoped_permissions import can
+
     def check_p(codenames):
         codenames = expand_permission_aliases(codenames)
-        if any(user.has_perm(f'accounts.{c}') for c in codenames):
-            return True
-        if hasattr(user, 'user_permissions') and user.user_permissions.filter(codename__in=codenames).exists():
-            return True
-        if hasattr(user, 'groups') and user.groups.filter(permissions__codename__in=codenames).exists():
-            return True
-        return False
+        if section is not None:
+            return any(can(user, f'accounts.{c}', section) for c in codenames)
+        return any(user.has_perm(f'accounts.{c}') for c in codenames)
 
-    # بررسی دسترسی خزانه‌داری (سطح ۵)
-    if check_p(['perm_treasury_disburse_action', 'view_sys_treasury']):
-        tier = max(tier, WorkflowTiers.TIER_5_TREASURY)
-
-    # بررسی دسترسی مدیر شرکت (سطح ۴)
-    if check_p(['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', permission_alias('manager_approver')]):
-        tier = max(tier, WorkflowTiers.TIER_4_MANAGER)
-
-    # بررسی دسترسی حسابداری (سطح ۳)
-    if check_p(['perm_approve_personnel_finance', 'perm_approve_fleet_finance', 'view_sys_payroll', 'view_sys_fleet_settlement']):
-        tier = max(tier, WorkflowTiers.TIER_3_ACCOUNTANT)
-
-    # بررسی دسترسی سرپرست انبار (سطح ۲)
-    if check_p(['perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor', permission_alias('supervisor_approver')]):
-        tier = max(tier, WorkflowTiers.TIER_2_SUPERVISOR)
+    for level, codenames in _tier_codes():
+        if check_p(codenames):
+            tier = max(tier, level)
 
     return tier
 
 
-def can_user_approve_stage(user, current_stage: str, is_financial: bool = False) -> bool:
+def _tier_codes():
+    """(سطح، کدهای مجوز) ماتریس سطوح؛ کد مستعار هنگام فراخوانی از رجیستری خوانده می‌شود."""
+    return (
+        # خزانه‌داری (سطح ۵)
+        (WorkflowTiers.TIER_5_TREASURY, ['perm_treasury_disburse_action', 'view_sys_treasury']),
+        # مدیر شرکت (سطح ۴)
+        (WorkflowTiers.TIER_4_MANAGER, ['perm_manager_payment_authorize', 'perm_approve_personnel_manager',
+                                        'perm_approve_fleet_manager', permission_alias('manager_approver')]),
+        # حسابداری (سطح ۳)
+        (WorkflowTiers.TIER_3_ACCOUNTANT, ['perm_approve_personnel_finance', 'perm_approve_fleet_finance',
+                                           'view_sys_payroll', 'view_sys_fleet_settlement']),
+        # سرپرست (سطح ۲)
+        (WorkflowTiers.TIER_2_SUPERVISOR, ['perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor',
+                                           permission_alias('supervisor_approver')]),
+    )
+
+
+def sections_with_tier(user, min_tier):
+    """
+    queryset بخش‌هایی که determine_user_tier(user, section=آن بخش) >= min_tier است (زیرپرس‌وجوی کارتابل).
+    سطح، بیشینهٔ سطح کدهای داشته است؛ پس «سطح >= N» یعنی دست‌کم یک کد از سطح‌های >= N در همان بخش.
+    """
+    from accounts.scoped_permissions import sections_where
+    from companies.models import ProjectSection
+    if not user or not user.is_authenticated:
+        return ProjectSection.objects.none()
+    if user.is_superuser:
+        return ProjectSection.objects.all()
+    out = None
+    for level, codenames in _tier_codes():
+        if level < min_tier:
+            continue
+        for c in expand_permission_aliases(codenames):
+            part = sections_where(user, f'accounts.{c}')
+            out = part if out is None else (out | part)
+    return out if out is not None else ProjectSection.objects.none()
+
+
+def can_user_approve_stage(user, current_stage: str, is_financial: bool = False, section=None) -> bool:
     """
     بررسی مجاز بودن کاربر جهت تایید مرحله جاری
     """
@@ -106,7 +144,7 @@ def can_user_approve_stage(user, current_stage: str, is_financial: bool = False)
     if user.is_superuser:
         return True
 
-    tier = determine_user_tier(user)
+    tier = determine_user_tier(user, section=section)
 
     stage_lower = current_stage.lower()
 
@@ -173,7 +211,7 @@ def process_creation_with_auto_pass(instance, creator_user, is_financial: bool =
     و پرونده بدون کاغذبازی به مرحله متناظر همان کاربر یا مرحله بعد هدایت می‌شود.
     """
     now = timezone.now()
-    user_tier = determine_user_tier(creator_user)
+    user_tier = determine_user_tier(creator_user, section=workflow_section(instance))
 
     # ثبت کاربر ایجادکننده
     if hasattr(instance, 'created_by') and not instance.created_by:
@@ -289,10 +327,10 @@ def advance_workflow_step(instance, user, target_status: str = None, notes: str 
         raise ValidationError("وضعیت جاری موجودیت معتبر نیست.")
 
     # بررسی دسترسی کاربر
-    if not can_user_approve_stage(user, current_status, is_financial):
+    if not can_user_approve_stage(user, current_status, is_financial, section=workflow_section(locked_instance)):
         raise PermissionDenied("شما دسترسی لازم برای تایید این مرحله از گردش کار را ندارید.")
 
-    user_tier = determine_user_tier(user)
+    user_tier = determine_user_tier(user, section=workflow_section(instance))
     curr_lower = current_status.lower()
 
     # انتقال از سطح ۱ (پیش‌نویس) ⬅️ سطح ۲ (سرپرست انبار)
@@ -398,7 +436,7 @@ def request_workflow_revision(instance, user, reason: str, target_status: str = 
     model_cls = instance.__class__
     locked_instance = model_cls.objects.select_for_update().get(pk=instance.pk)
 
-    user_tier = determine_user_tier(user)
+    user_tier = determine_user_tier(user, section=workflow_section(instance))
     if user_tier < WorkflowTiers.TIER_2_SUPERVISOR and not user.is_superuser:
         raise PermissionDenied("شما دسترسی لازم برای ارجاع بازنگری پرونده را ندارید.")
 
@@ -440,7 +478,7 @@ def reject_workflow(instance, user, reason: str):
     model_cls = instance.__class__
     locked_instance = model_cls.objects.select_for_update().get(pk=instance.pk)
 
-    user_tier = determine_user_tier(user)
+    user_tier = determine_user_tier(user, section=workflow_section(instance))
     if user_tier < WorkflowTiers.TIER_2_SUPERVISOR and not user.is_superuser:
         raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")
 
@@ -475,7 +513,7 @@ def execute_treasury_disbursement(instance, user, tracking_code: str, batch_id: 
     model_cls = instance.__class__
     locked_instance = model_cls.objects.select_for_update().get(pk=instance.pk)
 
-    user_tier = determine_user_tier(user)
+    user_tier = determine_user_tier(user, section=workflow_section(instance))
     if user_tier < WorkflowTiers.TIER_5_TREASURY and not user.is_superuser:
         raise PermissionDenied("فقط خزانه‌دار یا مدیر ارشد مجاز به ثبت تیک واریز و تسویه نهایی هستند.")
 

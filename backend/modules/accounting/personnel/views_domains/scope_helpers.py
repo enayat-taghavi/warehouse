@@ -18,6 +18,7 @@ from companies.access import (
     validate_user_company_access,
 )
 from companies.org_roles import user_sections
+from accounts.scoped_permissions import can, sections_where, user_permission_map
 from companies.realtime import broadcast_org_structure_updated as core_broadcast_org_structure_updated
 from ..models import (
     Project,
@@ -73,16 +74,39 @@ def readable_company_ids(user):
         return None
     return set(get_user_allowed_companies(user).values_list('id', flat=True))
 
-def is_personnel_global_auditor(user):
-    """نقش‌های مدیر و حسابدار کل که به بخش‌های منتسب محدود نیستند (ولی همچنان به شرکت‌های مجاز خود محدودند)."""
-    return bool(
-        user and (
-            user.is_superuser
-            or user.has_perm('accounts.perm_approve_personnel_manager')
-            or has_permission_alias(user, 'manager_approver')
-            or user.has_perm('accounts.perm_approve_personnel_finance')
-        )
-    )
+# مجوزهای بخشی که دیدن و ثبت پرونده‌های پرسنل یک بخش را ممکن می‌کنند (ت۸ طرح ۲.۲). «کجا» فقط از انتساب
+# می‌آید: مجوز تأیید مدیر یا مالی دیگر قلمرو را به همهٔ بخش‌ها گسترده نمی‌کند (ق۶؛ جای is_personnel_global_auditor).
+# با بسته‌های پیش‌فرض هر پنج نقش انتساب یکی از این‌ها را دارند، پس رفتار امروزِ «هر انتساب» حفظ می‌شود، ولی
+# برداشتن همهٔ این مجوزها از بستهٔ یک نقش یا از کاربر، پرونده‌ها را از او می‌گیرد.
+PERSONNEL_FILE_PERMS = (
+    'view_sys_personnel',
+    'view_sys_personnel_attendance',
+    'view_sys_payroll',
+    'perm_approve_personnel_supervisor',
+    'perm_approve_personnel_manager',
+    'perm_approve_personnel_finance',
+    'perm_delete_personnel_nomovement',
+    'view_sys_treasury',
+    'perm_treasury_disburse_action',
+)
+
+
+def personnel_file_sections(user):
+    """بخش‌هایی (queryset برای زیرپرس‌وجو) که کاربر در آن‌ها یکی از PERSONNEL_FILE_PERMS را دارد."""
+    out = None
+    for code in PERSONNEL_FILE_PERMS:
+        part = sections_where(user, code)
+        out = part if out is None else (out | part)
+    return out
+
+
+def can_access_personnel_section(user, section):
+    """آیا کاربر در این بخش (نمونه یا شناسه) یکی از PERSONNEL_FILE_PERMS را دارد؟ مدیر کل سامانه همیشه."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return any(can(user, code, section) for code in PERSONNEL_FILE_PERMS)
 
 def scope_personnel_queryset(request, qs):
     """
@@ -102,9 +126,18 @@ def scope_personnel_for_user(user, qs, company_id=None):
     """
     if not user or not user.is_authenticated:
         return qs.none()
-    if not is_personnel_global_auditor(user):
-        # بخش‌های تحت پوشش کاربر با انتساب در هر سطح (شرکت، پروژه یا بخش؛ طرح ۲.۱) به‌صورت زیرکوئری
-        qs = qs.filter(Q(section_id__in=user_sections(user, include_inactive=True).values('id')) | Q(created_by=user))
+    if not user.is_superuser:
+        # بخش‌هایی که کاربر در آن‌ها مجوز پرونده دارد (انتساب در هر سطح؛ طرح ۲.۱) به‌صورت زیرکوئری،
+        # به‌علاوهٔ پرونده‌هایی که خودش ثبت کرده است، و پرونده‌های بی‌بخشِ شرکت‌هایی که انتساب سطح شرکتش در آن‌ها
+        # مجوز پرونده دارد (جای «ممیز کل» پیشین که پرونده‌های بی‌بخش شرکت را هم می‌دید؛ ق۶)
+        scope_q = Q(section_id__in=personnel_file_sections(user).values('id')) | Q(created_by=user)
+        file_perms = set(PERSONNEL_FILE_PERMS)
+        company_level = [
+            int(cid) for cid, codes in user_permission_map(user)['company'].items() if file_perms.intersection(codes)
+        ]
+        if company_level:
+            scope_q |= Q(section__isnull=True, company_id__in=company_level)
+        qs = qs.filter(scope_q)
 
     cid = company_id
     if cid:
@@ -143,7 +176,10 @@ def ensure_record_write_scope(user, company=None, section=None, project=None, la
         raise PermissionDenied(f"شرکت، بخش و پروژهٔ {label} باید به یک شرکت تعلق داشته باشند.")
 
 def ensure_personnel_write_scope(user, company=None, section=None, project=None):
-    return ensure_record_write_scope(user, company=company, section=section, project=project, label='پرسنل')
+    ensure_record_write_scope(user, company=company, section=section, project=project, label='پرسنل')
+    # بخش پرونده باید از بخش‌هایی باشد که کاربر در آن مجوز پرونده دارد (ت۸؛ مجوز مدیر هم قلمرو را باز نمی‌کند)
+    if section is not None and not can_access_personnel_section(user, section):
+        raise PermissionDenied("شما در این بخش مجوز ثبت یا تغییر پرونده پرسنل ندارید.")
 
 def is_vehicle_global_auditor(user):
     return bool(
@@ -565,7 +601,8 @@ def _copy_payroll_submodels(source, target):
         )
 
 # ══════════════════════════════════════════════════════════════════════════════
-def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=None, project_id=None, client_tab_id=None, sender_id=None, company_id=None):
+def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=None, *, project_id=None, client_tab_id=None,
+                                    sender_id=None, company_id=None, global_scope=False):
     """
     ارسال بلادرنگ رویداد تغییرات ساختار سازمانی به وب‌سوکت شرکتی؛ اگر فقط پروژه داده شده باشد،
     شرکتِ پروژه پیدا می‌شود و ارسال به هستهٔ companies سپرده می‌شود.
@@ -576,13 +613,16 @@ def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=No
             cid = Project.objects.filter(id=project_id).values_list('company_id', flat=True).first()
         except Exception:
             pass
-    core_broadcast_org_structure_updated(entity_type, action, entity_id, name, project_id, client_tab_id, sender_id, cid)
+    core_broadcast_org_structure_updated(entity_type, action, entity_id, name, project_id=project_id, client_tab_id=client_tab_id,
+                                         sender_id=sender_id, company_id=cid, global_scope=global_scope)
 
 __all__ = [
     'resolve_write_company',
     'resolve_import_company',
     'readable_company_ids',
-    'is_personnel_global_auditor',
+    'PERSONNEL_FILE_PERMS',
+    'personnel_file_sections',
+    'can_access_personnel_section',
     'scope_personnel_queryset',
     'scope_personnel_for_user',
     'ensure_record_write_scope',

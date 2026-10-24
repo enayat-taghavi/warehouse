@@ -18,6 +18,14 @@ def section_or_member_company_ids(user, section, members_read=False):
     return ids
 
 
+def company_section_allows(user, company_id, section, level='read'):
+    """آیا کاربر سطح لازم بخش شرکت را دارد (ابرکاربر همیشه)؛ برخلاف ensure_company_section خطا نمی‌دهد."""
+    if user.is_superuser:
+        return True
+    have = company_section_level(user, company_id, section)
+    return have == 'write' if level == 'write' else have in ('read', 'write')
+
+
 def ensure_company_section(user, company_id, section, level='read', members_read=False):
     """شناسهٔ عددی شرکت را برمی‌گرداند یا PermissionDenied فارسی می‌دهد."""
     try:

@@ -360,7 +360,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
             return;
           }
           const currentCompanyId = this.companyModal.data?.id;
-          const targetCompanyId = msg.company_id || msg.project_id;
+          const targetCompanyId = msg.company_id;
 
           if (msg.entity_type === 'company') {
             this.reloadListIfVisible();

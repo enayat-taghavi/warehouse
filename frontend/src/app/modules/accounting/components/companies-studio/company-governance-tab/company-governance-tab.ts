@@ -126,7 +126,7 @@ export class CompanyGovernanceTabComponent implements OnInit, OnChanges, OnDestr
     this.ws?.notifications$.pipe(takeUntil(this.destroy$)).subscribe((msg) => {
       if (msg?.type_str !== 'org_structure_updated' || msg.entity_type !== 'company_board_member') return;
       if (msg.client_tab_id && msg.client_tab_id === this.ws?.tabId) return;
-      const targetCompanyId = msg.company_id || msg.project_id;
+      const targetCompanyId = msg.company_id;
       if (this.companyId && (!targetCompanyId || targetCompanyId === this.companyId)) {
         this.loadCompanyBoardMembers(this.companyId);
       }

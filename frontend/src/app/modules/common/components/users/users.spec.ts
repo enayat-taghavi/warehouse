@@ -50,8 +50,8 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   ];
 
   const mockRoles = [
-    { id: 10, name: 'admin', title: 'مدیر ارشد', color: '#4f46e5', permissions: [1, 2, 3], user_ids: [1], parent: null, children: [] },
-    { id: 11, name: 'supervisor', title: 'سرپرست انبار', color: '#059669', permissions: [1], user_ids: [2], parent: 10, children: [] },
+    { id: 10, name: 'admin', title: 'مدیر ارشد', color: '#4f46e5', permissions: [1, 2, 3], user_ids: [1] },
+    { id: 11, name: 'supervisor', title: 'سرپرست انبار', color: '#059669', permissions: [1], user_ids: [2] },
   ];
 
   const mockUsers = [
@@ -191,6 +191,8 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
     mockAuth = {
       hasPermission: vi.fn().mockReturnValue(true),
       isSuperUser: vi.fn().mockReturnValue(true),
+      isSuperuser: vi.fn().mockReturnValue(true),
+      userPermissions: vi.fn().mockReturnValue([]),
       user: vi.fn().mockReturnValue(mockUsers[0]),
       currentUser: vi.fn().mockReturnValue(mockUsers[0]),
       updateUserAvatar: vi.fn()
@@ -536,11 +538,71 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   // 6. تب نقش‌ها: سلسله‌مراتب، مجوزها و اعتبارسنجی حلقه (Roles Tab & Hierarchy)
   // ─────────────────────────────────────────────────────────────────
   describe('۶. تب نقش‌های سازمانی (Roles Tab Management)', () => {
-    it('باید تغییر نمای نقش‌ها به درختی (tree) و جدولی (table) انجام شود', () => {
-      component.setRoleViewMode('table');
-      expect(component.roleViewMode).toBe('table');
-      component.setRoleViewMode('tree');
-      expect(component.roleViewMode).toBe('tree');
+    it('باید زیرتب نقش‌ها پیش‌فرض «نقش‌های انتساب» باشد و به «سامانه‌ای» برود (طرح ۲.۲)', () => {
+      expect(component.rolesSubTab).toBe('assignment');
+      component.switchRolesSubTab('system');
+      expect(component.rolesSubTab).toBe('system');
+      expect(mockRouter.navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { roles: 'system' } }));
+    });
+
+    it('باید نقش‌های سامانه‌ای فهرست تخت باشند (بدون درخت و ستون والد)', () => {
+      expect((component as any).getRoleChildren).toBeUndefined();
+      expect((component as any).getSelectableParents).toBeUndefined();
+      expect((component as any).roleViewMode).toBeUndefined();
+      component.activeTab = 'roles';
+      component.rolesSubTab = 'system';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const section = el.querySelector('[data-testid="system-roles"]')!;
+      expect(section).not.toBeNull();
+      expect(section.querySelectorAll('[data-testid="system-roles-cards"] [data-role-id]').length).toBe(2);
+      expect(section.querySelectorAll('table tbody tr').length).toBe(2);
+      const headers = [...section.querySelectorAll('th')].map(th => th.textContent?.trim());
+      expect(headers).not.toContain('نقش والد');
+      expect(headers.length).toBe(5);
+    });
+
+    it('باید زیرتب «نقش‌های انتساب» پنل بسته‌ها را نشان دهد', () => {
+      component.activeTab = 'roles';
+      component.rolesSubTab = 'assignment';
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-role-bundles-panel')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="system-roles"]')).toBeNull();
+    });
+
+    it('بدون perm_usr_role (فقط view_sys_users) نقش سامانه‌ای فقط خواندنی است', () => {
+      (component as any).isSuperuser = () => false;
+      mockAuth.hasPermission.mockImplementation((code: string) => code === 'view_sys_users');
+      expect(component.canWriteRoles()).toBe(false);
+      component.activeTab = 'roles';
+      component.rolesSubTab = 'system';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="system-roles-readonly"]')).not.toBeNull();
+      expect(el.querySelector('[aria-label="ویرایش نقش"]')).toBeNull();
+      expect(el.querySelector('[aria-label="حذف نقش"]')).toBeNull();
+      component.openRoleModal(10);
+      expect(component.isRoleModalOpen).toBe(false);
+      component.deleteRole(10);
+      expect(component.isDeleteModalOpen).toBe(false);
+    });
+
+    it('با perm_usr_role نوشتن نقش سامانه‌ای مجاز است', () => {
+      (component as any).isSuperuser = () => false;
+      mockAuth.hasPermission.mockImplementation((code: string) => code === 'perm_usr_role');
+      expect(component.canWriteRoles()).toBe(true);
+      component.openRoleModal(10);
+      expect(component.isRoleModalOpen).toBe(true);
+    });
+
+    it('«انتخاب همه» و قالب «همه» هرگز مجوز حساس را تیک نمی‌زنند (ت۱۰-۴)', () => {
+      component.openRoleModal();
+      component.roleForm.permissions = [];
+      component.toggleAllPermissions();
+      expect(component.roleForm.permissions).not.toContain(4);
+      expect(component.roleForm.permissions.length).toBeGreaterThan(0);
+      component.applyRolePreset({ id: 'admin_all', title: 'همه', permissionCodenames: 'ALL' });
+      expect(component.roleForm.permissions).not.toContain(4);
     });
 
     it('باید جستجوی نقش‌ها لیست را فیلتر کند', () => {
@@ -563,13 +625,6 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       component.saveRole();
       expect(mockToast.show).toHaveBeenCalledWith('error', expect.stringContaining('الزامی'));
       expect(mockAccountsHttp.createRole).not.toHaveBeenCalled();
-    });
-
-    it('باید از انتخاب نقش به عنوان والد خودش یا زیرمجموعه فرزندانش جلوگیری شود (Anti-Circular Check)', () => {
-      component.openRoleModal(10); // Role 10 (admin)
-      const availableParents = component.getSelectableParents();
-      // Role 10 cannot be its own parent
-      expect(availableParents.some((r: any) => r.id === 10)).toBe(false);
     });
 
     it('باید انتخاب رنگ سازمانی نقش فیلد color را تغییر دهد', () => {

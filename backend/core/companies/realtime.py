@@ -2,12 +2,39 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# همان نام گروه NotificationConsumer (notifications/consumers.py)؛ اینجا تکرار شده تا realtime به channels وابسته نشود
+SUPERUSER_GROUP = 'superuser_notifications'
+GLOBAL_GROUP = 'global_notifications'
 
-def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=None, project_id=None, client_tab_id=None, sender_id=None, company_id=None):
+
+def org_structure_target_groups(company_id=None, global_scope=False, notify_superusers=False):
+    """
+    گروه‌های مقصد رویداد ساختار سازمانی (درس ا۱ طرح ۲.۲): رویداد شرکتی فقط به کانال همان شرکت می‌رود.
+    کانال عمومی فقط با global_scope=True (دادهٔ واقعاً سراسری، مثل طرف‌حساب بی‌شرکت).
+    رویدادِ بی‌شرکت و بی‌global_scope به هیچ کانالی نمی‌رود، تا خطای فراخوان به نشت داده نینجامد.
+    """
+    groups = []
+    if company_id:
+        groups.append(f'company_{company_id}_notifications')
+    elif global_scope:
+        groups.append(GLOBAL_GROUP)
+    if notify_superusers:
+        groups.append(SUPERUSER_GROUP)
+    return groups
+
+
+def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=None, *, company_id=None,
+                                    project_id=None, client_tab_id=None, sender_id=None,
+                                    global_scope=False, notify_superusers=False):
     """
     ارسال بلادرنگ رویداد تغییرات ساختار سازمانی (شرکت، دسترسی شرکت، پروژه، بخش، انتساب، طرف‌حساب) به وب‌سوکت شرکتی.
-    اگر company_id داده نشود، رویداد به کانال سراسری می‌رود. حسابداری پیش از فراخوانی، شرکتِ پروژه را خودش پیدا می‌کند.
+    همهٔ پارامترهای پس از name فقط با نام پذیرفته می‌شوند تا شناسهٔ شرکت به‌اشتباه جای پروژه ننشیند (ا۱).
+    notify_superusers: رویداد ساخت شرکت که هنوز کسی عضو کانال شرکتی‌اش نیست، به مدیران کل سامانه هم می‌رسد.
     """
+    groups = org_structure_target_groups(company_id, global_scope, notify_superusers)
+    if not groups:
+        logger.warning(f"[WebSocket] org_structure_updated بدون شرکت ارسال نشد: {entity_type}/{action}")
+        return
     try:
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
@@ -26,7 +53,7 @@ def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=No
                 'sender_id': sender_id,
                 'message': f"ساختار سازمانی ({entity_type}) به‌روزرسانی شد."
             }
-            target_group = f'company_{company_id}_notifications' if company_id else 'global_notifications'
-            async_to_sync(channel_layer.group_send)(target_group, payload)
+            for group in groups:
+                async_to_sync(channel_layer.group_send)(group, payload)
     except Exception as e:
         logger.warning(f"[WebSocket] Error broadcasting org_structure_updated: {e}")

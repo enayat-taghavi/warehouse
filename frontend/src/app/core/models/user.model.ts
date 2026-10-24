@@ -52,7 +52,6 @@ export type UserUpdatePayload = Partial<Omit<UserCreatePayload, 'username'>>;
 export interface Role {
   id: number;
   title: string;
-  parent_id: number | null;
   color: string;
   permissions: Permission[];
   permission_ids: string[];
@@ -61,7 +60,6 @@ export interface Role {
 
 export interface RoleCreatePayload {
   title: string;
-  parent_id: number | null;
   color: string;
   permission_ids: string[];
 }

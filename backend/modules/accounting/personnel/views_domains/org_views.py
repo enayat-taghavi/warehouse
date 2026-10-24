@@ -62,16 +62,18 @@ class CompanyViewSet(CoreCompanyViewSet):
         if request.method == 'GET':
             ensure_company_section(user, company.id, 'insurance_tax', 'read', members_read=True)
             profile = CompanyPayrollProfile.objects.filter(company=company).first() or CompanyPayrollProfile(company=company)
-            return Response(CompanyPayrollProfileSerializer(profile).data)
+            # ت۱۲: عضو بی‌سطح «خواندن» insurance_tax پاسخ هم‌شکل با شناسه‌های null می‌گیرد
+            visible = company_section_allows(user, company.id, 'insurance_tax', 'read')
+            return Response(CompanyPayrollProfileSerializer.visible_data(CompanyPayrollProfileSerializer(profile).data, visible))
         ensure_company_section(user, company.id, 'insurance_tax', 'write')
         profile = CompanyPayrollProfile.for_company(company)
         serializer = CompanyPayrollProfileSerializer(profile, data=request.data, partial=request.method == 'PATCH')
         serializer.is_valid(raise_exception=True)
         serializer.save()
         tab_id = request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_payroll_profile', 'update', company.id, company.name, None, tab_id,
-                                        user.id, company_id=company.id)
-        return Response(serializer.data)
+        broadcast_org_structure_updated('company_payroll_profile', 'update', company.id, company.name,
+                                        client_tab_id=tab_id, sender_id=user.id, company_id=company.id)
+        return Response(CompanyPayrollProfileSerializer.visible_data(serializer.data, True))
 
     @action(detail=False, methods=['get'], url_path='expiring-documents')
     def expiring_documents(self, request):
@@ -103,7 +105,8 @@ class CompanyViewSet(CoreCompanyViewSet):
         })
 
 from personnel.company_section_gates import (  # noqa: E402
-    company_section_level, companies_with_section, ensure_company_section, section_or_member_company_ids,
+    company_section_allows, company_section_level, companies_with_section, ensure_company_section,
+    section_or_member_company_ids,
     ensure_company_unchanged,
 )
 
@@ -167,7 +170,7 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
 
         instance = serializer.save(uploaded_by=user, file_size=file_size)
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_document', 'create', instance.id, instance.title, instance.company_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_document', 'create', instance.id, instance.title, company_id=instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -191,7 +194,7 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
 
         updated_instance = serializer.save(**kwargs)
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_document', 'update', updated_instance.id, updated_instance.title, updated_instance.company_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_document', 'update', updated_instance.id, updated_instance.title, company_id=updated_instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
     def perform_destroy(self, instance):
         user = self.request.user
@@ -204,7 +207,7 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
         comp_id = instance.company_id
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_document', 'delete', instance_id, instance_title, comp_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_document', 'delete', instance_id, instance_title, company_id=comp_id, client_tab_id=tab_id, sender_id=user.id)
 
     @action(detail=True, methods=['get'], url_path='download')
     def download(self, request, pk=None):
@@ -294,7 +297,7 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
         ensure_company_section(user, company.id, 'bank_sheba', 'write')
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_bank_account', 'create', instance.id, instance.sheba_number, instance.company_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_bank_account', 'create', instance.id, instance.sheba_number, company_id=instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -306,7 +309,7 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
             ensure_company_section(user, instance.company_id, 'bank_sheba', 'write')
         updated_instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_bank_account', 'update', updated_instance.id, updated_instance.sheba_number, updated_instance.company_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_bank_account', 'update', updated_instance.id, updated_instance.sheba_number, company_id=updated_instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
     def perform_destroy(self, instance):
         user = self.request.user
@@ -316,7 +319,7 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
         comp_id = instance.company_id
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_bank_account', 'delete', instance_id, sheba, comp_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_bank_account', 'delete', instance_id, sheba, company_id=comp_id, client_tab_id=tab_id, sender_id=user.id)
 
     @action(detail=True, methods=['post'], url_path='set-primary')
     def set_primary(self, request, pk=None):
@@ -328,7 +331,7 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
         account.is_primary = True
         account.save()
         tab_id = request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_bank_account', 'update', account.id, account.sheba_number, account.company_id, tab_id, request.user.id)
+        broadcast_org_structure_updated('company_bank_account', 'update', account.id, account.sheba_number, company_id=account.company_id, client_tab_id=tab_id, sender_id=request.user.id)
         return Response(CompanyBankAccountSerializer(account).data, status=status.HTTP_200_OK)
 
 class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
@@ -375,7 +378,7 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
         ensure_company_section(user, company.id, 'board', 'write')
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_board_member', 'create', instance.id, f"{instance.first_name} {instance.last_name}", instance.company_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_board_member', 'create', instance.id, f"{instance.first_name} {instance.last_name}", company_id=instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -384,7 +387,7 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
         ensure_company_unchanged(serializer)
         updated_instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_board_member', 'update', updated_instance.id, f"{updated_instance.first_name} {updated_instance.last_name}", updated_instance.company_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_board_member', 'update', updated_instance.id, f"{updated_instance.first_name} {updated_instance.last_name}", company_id=updated_instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
     def perform_destroy(self, instance):
         user = self.request.user
@@ -394,7 +397,7 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
         comp_id = instance.company_id
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_board_member', 'delete', instance_id, title, comp_id, tab_id, user.id)
+        broadcast_org_structure_updated('company_board_member', 'delete', instance_id, title, company_id=comp_id, client_tab_id=tab_id, sender_id=user.id)
 
 class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
     """

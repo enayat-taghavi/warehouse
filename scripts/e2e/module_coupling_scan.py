@@ -8,8 +8,11 @@
   ماژول مجوز ماژول دیگر را فقط با نام «توانایی» می‌شناسد (alias مجوز، گام ۸).
 - locked_scope_refs (فقط فرانت): ارجاع به دو دیتابیس آفلاین قفل‌شده (LOCKED_OFFLINE_SCOPES، warehouseOfflineDb،
   financeOfflineDb) بیرون از سرویس‌های آفلاین هسته و ماژول صاحب هر دیتابیس. باید صفر باشد، جز فایل‌های فهرست مجاز.
-- permission_parity (فقط فرانت): کدهای users.permissionGroup هر ماژول فرانت با PERMISSION_CODENAMES همان ماژول
-  در بک‌اند برابر است.
+- permission_parity (فقط فرانت):
+  * ماژول قالب قدیم (PERMISSIONS تاپلی، بی PERMISSION_CATEGORIES): کدهای users.permissionGroup هر ماژول فرانت
+    با PERMISSION_CODENAMES همان ماژول در بک‌اند برابر است.
+  * ماژول قالب جدید طرح ۲.۲ (PERMISSION_CATEGORIES یا ردیف دیکشنری/فراخوانی در PERMISSIONS): فهرست، نام و بستهٔ
+    نقش‌ها از بک‌اند می‌آید (ت۶)، پس module.ts فرانت آن نباید permissionGroup، shortPermissionNames یا rolePresets داشته باشد.
 
 کدهای مجوز از اعلام‌های خود ماژول‌ها خوانده می‌شوند (PERMISSIONS، PERMISSION_CODENAMES و permission_markers
 با پیشوند accounts.)، نه از فهرست دستی؛ ماژول تازه بی‌تغییر این فایل پوشش داده می‌شود.
@@ -53,6 +56,17 @@ LOCKED_ZONE_PREFIXES = ("core/services/offline-db.ts", "core/services/offline/")
 
 # ─── خواندن اعلام‌های ماژول‌ها ──────────────────────────────────────────────
 
+def _spec_code(elt):
+    """کد یک ردیف قالب جدید: {'code': ...} یا فراخوانی سازنده‌ای مثل _p('code', ...) با رشتهٔ نخست."""
+    if isinstance(elt, ast.Dict):
+        for k, v in zip(elt.keys, elt.values):
+            if isinstance(k, ast.Constant) and k.value == "code" and isinstance(v, ast.Constant) and isinstance(v.value, str):
+                return v.value
+    elif isinstance(elt, ast.Call) and elt.args and isinstance(elt.args[0], ast.Constant) and isinstance(elt.args[0].value, str):
+        return elt.args[0].value
+    return None
+
+
 def _const_strings(node):
     if isinstance(node, (ast.Tuple, ast.List)):
         out = []
@@ -61,18 +75,27 @@ def _const_strings(node):
                 out.append(elt.value)
             elif isinstance(elt, (ast.Tuple, ast.List)) and elt.elts and isinstance(elt.elts[0], ast.Constant):
                 out.append(elt.elts[0].value)
+            elif _spec_code(elt) is not None:
+                out.append(_spec_code(elt))
         return out
     return []
 
 
+def _is_new_format_value(node):
+    return isinstance(node, (ast.Tuple, ast.List)) and any(isinstance(e, (ast.Dict, ast.Call)) for e in node.elts)
+
+
 def module_declarations(modules_dir=None):
-    """{کد ماژول: {'codes': set همهٔ کدها, 'codenames': set PERMISSION_CODENAMES}} از module.py هر ماژول (با ast، بی اجرا)."""
+    """
+    {کد ماژول: {'codes': set همهٔ کدها, 'codenames': set PERMISSION_CODENAMES, 'new_format': bool}}
+    از module.py هر ماژول (با ast، بی اجرا). new_format: قالب اعلام طرح ۲.۲ (PERMISSION_CATEGORIES یا ردیف دیکشنری).
+    """
     modules_dir = pathlib.Path(modules_dir or BACKEND_DIR / "modules")
     result = {}
     for manifest in sorted(modules_dir.glob("*/module.py")):
         code = manifest.parent.name
         tree = ast.parse(manifest.read_text(encoding="utf-8"))
-        codes, codenames = set(), set()
+        codes, codenames, new_format = set(), set(), False
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
@@ -84,11 +107,14 @@ def module_declarations(modules_dir=None):
                         codes.update(values)
                     elif target.id == "PERMISSIONS" or target.id.endswith("_PERMISSIONS"):
                         codes.update(_const_strings(node.value))
+                        new_format |= _is_new_format_value(node.value)
+                    elif target.id == "PERMISSION_CATEGORIES" or target.id.endswith("_PERMISSION_CATEGORIES"):
+                        new_format = True
             elif isinstance(node, ast.keyword) and node.arg == "permission_markers":
                 for marker in _const_strings(node.value):
                     if marker.startswith("accounts."):
                         codes.add(marker.split(".", 1)[1])
-        result[code] = {"codes": codes, "codenames": codenames}
+        result[code] = {"codes": codes, "codenames": codenames, "new_format": new_format}
     return result
 
 
@@ -171,6 +197,21 @@ def _front_group_codenames(module_dir):
     return set(re.findall(r"['\"]([a-z0-9_]+)['\"]", value))
 
 
+# فیلدهای تکراری مجوز در module.ts که ماژول قالب جدید نباید داشته باشد (ت۶ طرح ۲.۲)
+DUPLICATED_PERMISSION_FIELDS_RE = re.compile(r"(?<![\w$])(permissionGroup|shortPermissionNames|rolePresets)\s*:")
+
+
+def _front_duplicated_permission_fields(module_dir):
+    text = (module_dir / "module.ts").read_text(encoding="utf-8")
+    found = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("//", "*", "/*")):
+            continue
+        found.extend(DUPLICATED_PERMISSION_FIELDS_RE.findall(line))
+    return sorted(set(found))
+
+
 def scan_front(front_app_dir=None, backend_dir=None):
     front = pathlib.Path(front_app_dir or FRONT_APP_DIR)
     decl = module_declarations(pathlib.Path(backend_dir or BACKEND_DIR) / "modules")
@@ -201,6 +242,11 @@ def scan_front(front_app_dir=None, backend_dir=None):
                     continue
                 for line, c, text in _scan_file(f, pattern):
                     found["cross_module_permission_literals"].append({"file": f"front:{rel.as_posix()}", "line": line, "match": c, "text": text})
+        if decl.get(code, {}).get("new_format"):
+            dup = _front_duplicated_permission_fields(mdir)
+            if dup:
+                parity.append(f"{code}: بک‌اند قالب اعلام ۲.۲ دارد؛ module.ts فرانت نباید {dup} داشته باشد (از API بک‌اند می‌آید، ت۶)")
+            continue
         group = _front_group_codenames(mdir)
         backend_codes = decl.get(code, {}).get("codenames")
         if backend_codes and group is None:
@@ -277,6 +323,11 @@ def self_test():
         (be / "core" / "x" / "views.py").write_text("ok = user.has_perm('accounts.view_alpha')\nfine = 'view_platform'\n", encoding="utf-8")
         (be / "core" / "x" / "tests.py").write_text("t = 'view_alpha'\n", encoding="utf-8")
         (be / "modules" / "beta" / "beta_app" / "views.py").write_text("p = 'act_alpha'\n", encoding="utf-8")
+        (be / "modules" / "gamma").mkdir(parents=True)
+        (be / "modules" / "gamma" / "module.py").write_text(
+            "GAMMA_PERMISSION_CATEGORIES = ({'key': 'g', 'label_fa': 'g'},)\n"
+            "PERMISSIONS = ({'code': 'view_gamma', 'label_fa': 'x', 'scope': 'section', 'defaults': ('r',)}, _p('act_gamma', 'y'))\n",
+            encoding="utf-8")
         b = scan_backend(be)
         got = ([v["match"] for v in b["module_permission_literals"]], [v["match"] for v in b["cross_module_permission_literals"]])
         exp = (["view_alpha"], ["act_alpha"])
@@ -295,13 +346,26 @@ def self_test():
         (fe / "modules" / "alpha" / "permissions.ts").write_text("export const ALPHA_CODES: string[] = ['view_alpha', 'act_alpha'];\n", encoding="utf-8")
         (fe / "modules" / "beta" / "module.ts").write_text(
             "export const MODULE = { extensions: { users: { permissionGroup: { key: 'B', codenames: ['view_beta', 'extra'] } } } };\nconst n = 'view_alpha';\n", encoding="utf-8")
+        (fe / "modules" / "gamma").mkdir(parents=True)
+        (fe / "modules" / "gamma" / "module.ts").write_text(
+            "export const MODULE = { extensions: { users: {\n  // rolePresets: در توضیح شمرده نمی‌شود\n"
+            "  shortPermissionNames: { act_gamma: 'x' } } } };\nconst c = 'view_gamma';\n", encoding="utf-8")
+        (fe / "core" / "g.ts").write_text("const p = 'act_gamma';\n", encoding="utf-8")
         f, parity = scan_front(fe, be)
         got = (sorted(v["match"] for v in f["module_permission_literals"]),
                [v["match"] for v in f["cross_module_permission_literals"]],
-               [v["match"] for v in f["locked_scope_refs"]], len(parity))
-        exp = (["act_alpha", "view_beta"], ["view_alpha"], ["warehouseOfflineDb"], 1)
+               [v["match"] for v in f["locked_scope_refs"]], len(parity),
+               sorted(p.split(":", 1)[0] for p in parity))
+        # beta: ناهمخوانی قالب قدیم؛ gamma: قالب جدید با shortPermissionNames در فرانت (کد قالب جدید هم در پوسته دیده می‌شود)
+        exp = (["act_alpha", "act_gamma", "view_beta"], ["view_alpha"], ["warehouseOfflineDb"], 2, ["beta", "gamma"])
         print(f"self-test front: {got} (expected {exp})")
         ok &= got == exp
+
+        (fe / "modules" / "gamma" / "module.ts").write_text("export const MODULE = { extensions: {} };\n", encoding="utf-8")
+        _, parity = scan_front(fe, be)
+        clean_ok = sorted(p.split(":", 1)[0] for p in parity) == ["beta"]
+        print(f"self-test new-format module without duplicated fields passes: {clean_ok}")
+        ok &= clean_ok
 
         counters, errors = evaluate({"locked_scope_refs": f["locked_scope_refs"]}, "front",
                                     {"locked_scope_refs": {"front:modules/common/c.ts": "r", "front:gone.ts": "r"}})

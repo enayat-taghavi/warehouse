@@ -28,10 +28,22 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         from ..permissions import HasMenuAccess
-        return [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_usr_role')]
+        # طرح ۲.۲ (ت۱۰ قاعدهٔ ۲): خواندن با view_sys_users یا perm_usr_role؛ نوشتن فقط با perm_usr_role
+        if self.action in ('list', 'retrieve', 'export_excel', 'download_template'):
+            return [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_usr_role')]
+        return [HasMenuAccess('perm_usr_role')]
 
     def get_queryset(self):
         return CustomRole.objects.all().prefetch_related('permissions', 'user_set')
+
+    @staticmethod
+    def _ids(items):
+        return {getattr(i, 'pk', i) for i in (items or [])}
+
+    def _notify_members(self, user_ids):
+        from ..permission_events import notify_role_changed
+        if user_ids:
+            notify_role_changed(user_ids)
 
     def _check_sensitive_permissions(self, permissions):
         user = self.request.user
@@ -50,9 +62,15 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     raise PermissionDenied("تنها مدیر ارشد سامانه (Superuser) مجاز به اعطا یا تغییر دسترسی‌های حساس و بحرانی است.")
 
     def perform_create(self, serializer):
+        from ..permission_admin import ensure_role_change, audit_role_permissions
         permissions = serializer.validated_data.get('permissions', [])
         self._check_sensitive_permissions(permissions)
+        new_perm_ids = self._ids(permissions)
+        new_user_ids = self._ids(serializer.validated_data.get('user_set'))
+        ensure_role_change(self.request.user, new_perm_ids=new_perm_ids, new_user_ids=new_user_ids)
         instance = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        changes = audit_role_permissions(self.request.user, instance, (), new_perm_ids, (), new_user_ids)
+        self._notify_members(new_user_ids)
         from ..audit_utils import log_audit_event
         log_audit_event(
             user=self.request.user,
@@ -62,15 +80,29 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             target_model='CustomRole',
             target_object_id=instance.id,
             target_repr=f"ایجاد نقش {instance.title or instance.name}",
-            details={'role_name': instance.name, 'title': instance.title, 'permissions_count': len(permissions)},
+            details={'role_name': instance.name, 'title': instance.title, 'permissions_count': len(permissions), **changes},
             ip_address=getattr(self.request, 'META', {}).get('REMOTE_ADDR')
         )
 
     def perform_update(self, serializer):
+        from ..permission_admin import ensure_role_change, audit_role_permissions
         permissions = serializer.validated_data.get('permissions', None)
         if permissions is not None:
             self._check_sensitive_permissions(permissions)
+        role = serializer.instance
+        old_perm_ids = set(role.permissions.values_list('id', flat=True))
+        old_user_ids = set(role.user_set.values_list('id', flat=True))
+        new_perm_ids = old_perm_ids if permissions is None else self._ids(permissions)
+        users = serializer.validated_data.get('user_set', None)
+        new_user_ids = old_user_ids if users is None else self._ids(users)
+        ensure_role_change(self.request.user, old_perm_ids=old_perm_ids, new_perm_ids=new_perm_ids,
+                           old_user_ids=old_user_ids, new_user_ids=new_user_ids)
         instance = serializer.save(modified_by=self.request.user if self.request.user.is_authenticated else None)
+        changes = audit_role_permissions(self.request.user, instance, old_perm_ids, new_perm_ids, old_user_ids, new_user_ids)
+        if old_perm_ids != new_perm_ids:
+            self._notify_members(old_user_ids | new_user_ids)
+        else:
+            self._notify_members(old_user_ids ^ new_user_ids)
         from ..audit_utils import log_audit_event
         log_audit_event(
             user=self.request.user,
@@ -80,14 +112,21 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             target_model='CustomRole',
             target_object_id=instance.id,
             target_repr=f"ویرایش نقش {instance.title or instance.name}",
-            details={'role_name': instance.name, 'title': instance.title},
+            details={'role_name': instance.name, 'title': instance.title, **changes},
             ip_address=getattr(self.request, 'META', {}).get('REMOTE_ADDR')
         )
 
     def perform_destroy(self, instance):
+        from ..permission_admin import ensure_role_change
         role_id = instance.id
         role_repr = f"حذف نقش {instance.title or instance.name}"
+        old_perm_ids = set(instance.permissions.values_list('id', flat=True))
+        old_user_ids = set(instance.user_set.values_list('id', flat=True))
+        if not self.request.user.is_superuser:
+            self._check_sensitive_permissions(instance.permissions.all())
+        ensure_role_change(self.request.user, old_perm_ids=old_perm_ids, old_user_ids=old_user_ids)
         super().perform_destroy(instance)
+        self._notify_members(old_user_ids)
         from ..audit_utils import log_audit_event
         log_audit_event(
             user=self.request.user,
@@ -154,7 +193,7 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     'username': r.get('name', ''),
                     'national_code': '-',
                     'phone_number': '-',
-                    'roles': f"والد: {r.get('parent_name') or 'ندارد'}",
+                    'roles': '-',
                     'warehouses': f"{len(r.get('permissions', []))} مجوز دسترسی",
                     'is_update': r.get('is_update', False),
                     'is_active': True,
@@ -178,8 +217,10 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         created_count = 0
         updated_count = 0
         commit_errors = list(result.get('errors', []))
-        # Two-pass creation: first create/update roles without parents, then set parents
-        processed_roles = {}
+        from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+        from ..models import SENSITIVE_PERMISSION_CODENAMES
+        from ..permission_admin import ensure_role_change, MSG_SENSITIVE
+        affected_user_ids = set()
 
         try:
             with transaction.atomic():
@@ -188,63 +229,42 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     is_update = row_data.pop('is_update', False)
                     role_id = row_data.pop('role_id', None)
                     permissions = row_data.pop('permissions', [])
-                    parent_name = row_data.pop('parent_name', None)
 
-                    if is_update and role_id:
-                        role = CustomRole.objects.filter(id=role_id).first()
-                        if role:
-                            role.title = row_data['title']
-                            role.color = row_data['color']
-                            role.save()
-                            # همگام‌سازی قطعی دسترسی‌ها (خالی بودن ستون در اکسل باعث پاک شدن دسترسی‌ها می‌شود)
-                            role.permissions.set(permissions)
-                            processed_roles[row_data['name']] = {'role': role, 'parent_name': parent_name, 'row_num': row_num, 'is_update': True}
-                            updated_count += 1
-                            continue
+                    role = CustomRole.objects.filter(id=role_id).first() if (is_update and role_id) else None
+                    old_perm_ids = set(role.permissions.values_list('id', flat=True)) if role else set()
+                    member_ids = set(role.user_set.values_list('id', flat=True)) if role else set()
+                    new_perm_ids = {p.id for p in permissions}
+                    # ت۱۰: حساس فقط برای مدیر کل سامانه؛ مجوز داده‌شده یا برداشته‌شده باید در اختیار خود واردکننده باشد
+                    try:
+                        if not request.user.is_superuser:
+                            sensitive = sorted(p.codename for p in permissions if p.codename in SENSITIVE_PERMISSION_CODENAMES)
+                            if sensitive:
+                                raise DRFPermissionDenied(MSG_SENSITIVE.format(codes='، '.join(sensitive)))
+                        ensure_role_change(request.user, old_perm_ids=old_perm_ids, new_perm_ids=new_perm_ids,
+                                           old_user_ids=member_ids, new_user_ids=member_ids)
+                    except DRFPermissionDenied as exc:
+                        commit_errors.append({'row': row_num, 'field': 'permissions', 'message': str(exc.detail)})
+                        error_rows_set.add(row_num)
+                        continue
+
+                    if role:
+                        role.title = row_data['title']
+                        role.color = row_data['color']
+                        role.save()
+                        # همگام‌سازی قطعی دسترسی‌ها (خالی بودن ستون در اکسل باعث پاک شدن دسترسی‌ها می‌شود)
+                        role.permissions.set(permissions)
+                        if old_perm_ids != new_perm_ids:
+                            affected_user_ids |= member_ids
+                        updated_count += 1
+                        continue
 
                     role = CustomRole(name=row_data['name'], title=row_data['title'], color=row_data['color'])
                     role.save()
                     role.permissions.set(permissions)
-                    processed_roles[row_data['name']] = {'role': role, 'parent_name': parent_name, 'row_num': row_num, 'is_update': False}
                     created_count += 1
 
-                # Second pass: resolve parents with circular dependency protection
-                for name, info in processed_roles.items():
-                    role_obj = info['role']
-                    p_name = info['parent_name']
-                    row_n = info.get('row_num', 0)
-
-                    if p_name:
-                        parent = CustomRole.objects.filter(name__iexact=p_name).first()
-                        if not parent:
-                            parent = CustomRole.objects.filter(title__iexact=p_name).first()
-                        if parent and parent.id != role_obj.id:
-                            role_obj.parent = parent
-                            try:
-                                # سیوپوینت جهت جلوگیری از توقف کل تراکنش هنگام بروز حلقه چرخه‌ای در یک سطر
-                                with transaction.atomic():
-                                    role_obj.save()
-                            except ValidationError as ve:
-                                role_obj.parent = None
-                                error_msg = ve.message_dict.get('parent', [str(ve)])[0] if hasattr(ve, 'message_dict') else str(ve)
-                                commit_errors.append({
-                                    'row': row_n,
-                                    'field': 'parent',
-                                    'message': f"خطای وابستگی چرخه‌ای نقش «{role_obj.title}»: {error_msg}"
-                                })
-                                error_rows_set.add(row_n)
-                            except Exception as ex:
-                                role_obj.parent = None
-                                commit_errors.append({
-                                    'row': row_n,
-                                    'field': 'parent',
-                                    'message': f"خطا در انتساب والد برای نقش «{role_obj.title}»: {str(ex)}"
-                                })
-                                error_rows_set.add(row_n)
-                    elif info.get('is_update') and role_obj.parent_id is not None:
-                        # اگر در فایل اکسل والد خالی گذاشته شده، والد قبلی پاک می‌شود
-                        role_obj.parent = None
-                        role_obj.save(update_fields=['parent'])
+                if affected_user_ids:
+                    self._notify_members(affected_user_ids)
 
                 from ..audit_utils import log_audit_event
                 log_audit_event(

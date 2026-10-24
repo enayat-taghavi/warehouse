@@ -74,19 +74,13 @@
   - **itself**, for small fixes or work that needs the context it already holds;
   - **an executor subagent** (`general-purpose`); the subagent never commits;
   - **Antigravity** (`tasks.md` + `run_tasks.py`, memory `gemini-flash-prompting`) only when the user asks for it.
-  - **Short executor runs** (user, 23 Oct 2026; measured: one 466-call executor cost 160M tokens because its context grew from 41K to 515K, and cost grows roughly with the square of run length):
-    - Split a heavy step into 3–5 chunks of about 60–120 calls each (service/API, component, old-code removal and routes, specs…), each in a fresh executor. Below ~30 calls a spawn doesn't pay off: do it yourself.
-    - Chunks hand off through a short written note (files changed, interfaces, open points), never through context. Never continue a large executor with SendMessage.
-    - Measured in release step 2.1 (24 Oct 2026, ~127M tokens; master plan rule ق15):
-      - A single 156-call frontend chunk cost 36M and died on the usage limit, so a fresh executor had to re-read 36 files (13.6M more). Keep frontend chunks ≤ ~80 calls and split them, e.g. state/API, then templates, then specs.
-      - Each executor updates its handoff note every ~25 calls, so a cut-off run can be resumed from the note.
-      - Run chunks that share no files in parallel.
-      - Executors run only targeted tests. The full backend suite (~16 min) runs once per step, by the manager.
-      - Plan for the manager to hand off to a new chat once per heavy step: manager context reached 372K.
-    - The prompt carries the plan path, decisions, the chunk's acceptance criteria, exact files/interfaces, and the rules: `codegraph_explore` first, then ranged Read (whole file only when the chunk needs the whole file); independent tool calls in one message; logs to `scratch/logs/` with `tail`; targeted tests in the chunk, the full suite once at the end of the step; no browser work; no commit.
-    - Model and effort are Claude's call per chunk, never below what the chunk needs: Opus + high for architecture, migrations, permissions/tenant scope, data-loss paths and hard debugging; Opus + medium for well-specified implementation with business logic; Sonnet + medium for mechanical work (dead-code removal, renames, specs following an existing pattern). No Haiku. Effort also limits the thinking text that piles up in a long run.
-  - Claude always reads the executor's actual diff (never just its summary; bodies of fully deleted files only as `--stat` plus a reference grep), runs the reviewers, commits, and writes the progress log with each executor's token use. Small confirmed findings Claude fixes itself; larger ones go to a fresh fixer executor given only the findings and the diff. The visual browser check is Claude's own, done in the manager session. Consecutive plan steps run back to back without waiting for the user.
-  - When the context watchdog warns in the manager session, write the report in the chat and suggest continuing in a new chat (the old one stays readable).
+  - **Executors** (measured in 2.1/2.2: cost ≈ context × calls; the biggest waste was the manager's own polling and oversized steps):
+    - A spawn pays off only above ~30 calls; keep each run ≤ ~80 calls; chunks hand off through a short note in `scratch/`, updated every ~25 calls, never through SendMessage. Chunks without shared files run in parallel.
+    - Prompt: plan path, decisions, acceptance criteria, exact files, the review checklist of the relevant reviewer (so findings are fixed before handoff), fast tests only, no browser, no commit.
+    - Model: Opus + high for permissions/tenant scope, migrations, data-loss paths; Opus + medium for business logic; Sonnet + medium for mechanical work, UI following a pattern, specs. No Haiku.
+  - **Manager:** reads each executor's actual diff, fixes small findings itself, commits, writes the progress log. **Never poll with `sleep`** while waiting: end the turn; the task notification wakes the manager (each poll re-sends the whole context).
+  - **Step size:** a plan step that spans backend engine + module + frontend UI is split into sub-steps, each committed on its own and started in a fresh chat (manager context stays under ~150K).
+  - **Tests (user, 24 Oct 2026):** during a step only fast checks (≤ ~2 min): tests of the changed apps/files, static guardians (29, 52, 56, 57, 58), `manage.py check`. Heavy checks run once at the end of a whole master-plan stage or before a release: full backend and frontend suites, both build profiles, visual browser check, Android. `tenant-scope-reviewer` still runs on every step that touches permissions or tenant scope.
   - Ask one short yes/no question only before work that directly affects production (next item) or opens a data-loss path.
   - Replies stay short and in Persian.
 - **Environment roles (`app` vs `soft`):**
@@ -105,9 +99,9 @@ Cost = context size × number of calls. Keep context small; never cut the model,
 - **Broad searches** (unknown location, many files): one `Explore` subagent with `model: "sonnet"`, asked for file:line pointers and short excerpts. For a known file or symbol, Grep+Read directly (a spawn costs ~25K tokens up front, so don't delegate small tasks). Never edit from an Explore summary; read the target lines yourself. Code may be written by the manager or by an executor subagent (see "Claude is the manager").
 - **Plan mode:** read known files directly; at most one Explore agent; a Plan agent only when the change spans backend and frontend or more than 5 files.
 - **Command output:** redirect tests and builds to `scratch/logs/<name>.log`; bring into context only the summary (`tail -n 30`) and the FAIL/ERROR headers; open the log by range when diagnosing.
-- **Reviewers** (`data-loss-reviewer`, `tenant-scope-reviewer`, `ui-reviewer`): once per step on that step's diff, before commit; not after every edit.
+- **Reviewers:** `tenant-scope-reviewer` once per step that touches permissions/scope; `data-loss-reviewer` and `ui-reviewer` with the heavy end-of-stage checks (or when a migration/offline change ships to `soft`).
 - **Skills:** invoke each at most once per session; re-invoke only if it is no longer in context.
-- **Browser:** prefer `read_page`/`get_page_text`; screenshots only as final visual proof. If browser tools are off and a UI check is needed, ask the user to turn them on; never skip the check.
+- **Browser:** visual checks with the heavy end-of-stage checks; prefer `read_page`/`get_page_text`; screenshots only as final proof.
 
 ## Modular split
 

@@ -16,7 +16,6 @@ export interface Role {
   name: string;
   title: string;
   color: string;
-  parent: number | null;
   permissions: number[];
   user_ids?: number[];
   users_count?: number;

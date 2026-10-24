@@ -27,6 +27,7 @@ import { AppRoleSwitcherComponent } from '../../../../shared/components/app-role
 import { CompanySwitcherComponent } from '../organization/company-switcher/company-switcher';
 import { CompanySelectionModalComponent } from '../organization/company-selection-modal/company-selection-modal';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
 import { environment } from '../../../../../environments/environment';
 import { hasRoutePermission } from '../../../../core/auth/auth.guard';
@@ -61,6 +62,7 @@ export class Layout implements OnInit, OnDestroy {
   public personaService = inject(AppPersonaService);
   public moduleRegistry = inject(ModuleRegistryService);
   public activeCompanyService = inject(ActiveCompanyService);
+  private permissionService = inject(PermissionService, { optional: true });
   private shellRoute = inject(ActivatedRoute, { optional: true });
 
   /** پوستهٔ «شرکت‌ها» (حالت محدود استودیو، /app/companies) با همان هدر برنامه‌ها */
@@ -1052,11 +1054,22 @@ export class Layout implements OnInit, OnDestroy {
       if (isAdmin) return true;
       // آیتمی که ماژولش چند مجوز جایگزین اعلام کرده، با هر یک از آن‌ها دیده می‌شود
       if (item.anyPermissions?.length) {
-        return item.anyPermissions.some(p => userPerms.includes(p));
+        return item.anyPermissions.some(p => userPerms.includes(p)) || this.categoryUnlocks(item);
       }
-      return userPerms.includes(item.permission);
+      return userPerms.includes(item.permission) || this.categoryUnlocks(item);
     });
   });
+
+  /**
+   * ت۵: آیتم منو با داشتن دست‌کم یک مجوز از دستهٔ مجوزی که آن را باز می‌کند هم دیده می‌شود
+   * (`permissionCategory` آیتم، یا دسته‌ای از همان ماژول که `menu`ش برابر `id` آیتم است). بررسی‌های مجوز خود آیتم سر جایشان‌اند.
+   */
+  private categoryUnlocks(item: ModuleNavItem): boolean {
+    if (item.permissionCategory && item.module) {
+      return !!this.permissionService?.hasInCategory(item.module, item.permissionCategory);
+    }
+    return !!item.module && !!this.permissionService?.menuUnlocked(item.module, item.id);
+  }
 
   /**
    * منوی یک نقش مالی: فقط در سامانه مالی و فقط برای پرسونای فعال همان نقش (سوپریوزر همه را می‌بیند)؛
@@ -1076,7 +1089,7 @@ export class Layout implements OnInit, OnDestroy {
     const hasRoleMarker = cfg.roleMarkers.length === 0 || cfg.roleMarkers.some(m => userPerms.includes(m));
     return cfg.items.filter(item => {
       if (isAdmin) return true;
-      return (hasRoleMarker || userPerms.includes(item.permission)) && hasRoutePermission(item.id, userPerms);
+      return (hasRoleMarker || userPerms.includes(item.permission) || this.categoryUnlocks(item)) && hasRoutePermission(item.id, userPerms);
     });
   }
 
@@ -1112,7 +1125,7 @@ export class Layout implements OnInit, OnDestroy {
       const spec = this.moduleRegistry.getSpec(modCode) || ext.module;
       const visibleItems = candidateItems.filter(item => {
         if (isAdmin) return true;
-        return userPerms.includes(item.permission);
+        return userPerms.includes(item.permission) || this.categoryUnlocks(item);
       });
 
       if (visibleItems.length > 0) {

@@ -7,6 +7,7 @@
 ردیف مجوز ماژولی که بعداً حذف شود هم دست‌نخورده می‌ماند تا انتساب نقش‌ها از بین نرود.
 """
 from django.apps import apps as global_apps
+from django.conf import settings
 from django.db import DEFAULT_DB_ALIAS, router
 
 
@@ -41,3 +42,31 @@ def create_module_permissions(app_config=None, verbosity=2, using=DEFAULT_DB_ALI
             for perm in missing:
                 print(f"Adding module permission '{perm.codename}'")
     return len(missing)
+
+
+def strip_section_permissions_from_roles(app_config=None, verbosity=2, using=DEFAULT_DB_ALIAS, apps=global_apps, **kwargs):
+    """
+    طرح ۲.۲ (ت۲ و ت۱۱): نقش سامانه‌ای (Group / CustomRole) و تیک مستقیم کاربر فقط مجوز سامانه‌ای می‌پذیرند. پیوند با مجوزی
+    که ماژولش اکنون «بخشی» اعلام کرده برداشته می‌شود؛ موتور مجوز (scoped_permissions) این پیوندها را از پیش
+    نادیده می‌گیرد، پس اثر رفتاری ندارد و فقط فهرست نقش را با واقعیت یکی می‌کند. خود ردیف مجوز، بسته‌ها و
+    تفاوت‌های کاربران دست نمی‌خورند. هر بار migrate اجرا می‌شود و بی‌کد بخشی کاری نمی‌کند.
+    """
+    from accounts.scoped_permissions import section_permission_codes
+
+    codes = section_permission_codes()
+    if not codes:
+        return 0
+    try:
+        Group = apps.get_model('auth', 'Group')
+    except LookupError:
+        return 0
+    if not router.allow_migrate_model(using, Group):
+        return 0
+    section_perm = dict(permission__content_type__app_label='accounts', permission__codename__in=codes)
+    deleted, _ = Group.permissions.through.objects.using(using).filter(**section_perm).delete()
+    # تیک مستقیم کاربر روی مجوز بخشی هم بی‌اثر است (ت۲)؛ همین‌جا پاک می‌شود
+    User = apps.get_model(*settings.AUTH_USER_MODEL.split('.'))
+    ticks, _ = User.user_permissions.through.objects.using(using).filter(**section_perm).delete()
+    if (deleted or ticks) and verbosity >= 2:
+        print(f"Removed {deleted} role links and {ticks} direct ticks of section-scope permissions")
+    return deleted + ticks

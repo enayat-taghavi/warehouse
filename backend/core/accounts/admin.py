@@ -5,8 +5,7 @@ from .models import CustomUser, CustomRole
 
 @admin.register(CustomRole)
 class CustomRoleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'name', 'parent', 'color')
-    list_filter = ('parent',)
+    list_display = ('title', 'name', 'color')
     search_fields = ('title', 'name')
     filter_horizontal = ('permissions',)
 

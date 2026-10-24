@@ -55,8 +55,8 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
   ];
 
   const mockRolesList: Role[] = [
-    { id: 1, name: 'wh_manager', title: 'مدیر انبار', color: '#4f46e5', parent: null, permissions: [] },
-    { id: 2, name: 'wh_clerk', title: 'انباردار', color: '#059669', parent: null, permissions: [] }
+    { id: 1, name: 'wh_manager', title: 'مدیر انبار', color: '#4f46e5', permissions: [] },
+    { id: 2, name: 'wh_clerk', title: 'انباردار', color: '#059669', permissions: [] }
   ];
 
   const mockWarehousesList = [

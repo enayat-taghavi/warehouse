@@ -67,9 +67,23 @@ def serialize_login_log_data(instance):
         }
 
 
-def broadcast_audit_log_created(log_id, warehouse_id, log_data, message=''):
+# کانال مدیران کل سامانه؛ همان ثابت `notifications.consumers.SUPERUSER_GROUP`
+SUPERUSER_GROUP = 'superuser_notifications'
+
+
+def audit_log_target_group(company_id):
+    """کانال مقصد رویداد لاگ ممیزی: کانال شرکت اگر رکورد شرکت دارد، وگرنه فقط مدیران کل.
+
+    هرگز `global_notifications` نیست (نام کاربری، شرکت و کد دسترسی در لاگ‌ها هست).
     """
-    ارسال بلادرنگ رویداد ایجاد لاگ ممیزی به کانال وب‌سوکت سراسری
+    if company_id is not None:
+        return f'company_{company_id}_notifications'
+    return SUPERUSER_GROUP
+
+
+def broadcast_audit_log_created(log_id, warehouse_id, log_data, message='', company_id=None):
+    """
+    ارسال بلادرنگ رویداد ایجاد لاگ ممیزی به کانال شرکت رکورد (یا فقط مدیران کل)
     """
     try:
         channel_layer = get_channel_layer()
@@ -83,9 +97,11 @@ def broadcast_audit_log_created(log_id, warehouse_id, log_data, message=''):
             }
             if warehouse_id is not None:
                 payload['warehouse_id'] = warehouse_id
+            if company_id is not None:
+                payload['company_id'] = company_id
 
             async_to_sync(channel_layer.group_send)(
-                'global_notifications',
+                audit_log_target_group(company_id),
                 payload
             )
     except Exception as e:
@@ -94,7 +110,7 @@ def broadcast_audit_log_created(log_id, warehouse_id, log_data, message=''):
 
 def broadcast_login_log_created(login_id, login_data, message=''):
     """
-    ارسال بلادرنگ رویداد ثبت ورود/خروج به کانال وب‌سوکت سراسری
+    ارسال بلادرنگ رویداد ثبت ورود/خروج فقط به کانال مدیران کل سامانه
     """
     try:
         channel_layer = get_channel_layer()
@@ -107,7 +123,7 @@ def broadcast_login_log_created(login_id, login_data, message=''):
                 'login_log': login_data,
             }
             async_to_sync(channel_layer.group_send)(
-                'global_notifications',
+                SUPERUSER_GROUP,
                 payload
             )
     except Exception as e:
@@ -126,13 +142,15 @@ def audit_log_post_save(sender, instance, created, **kwargs):
         log_data = serialize_audit_log_data(instance)
         log_id = instance.id
         wh_id = instance.warehouse_id
+        company_id = getattr(instance, 'company_id', None)
 
         def send_broadcast():
             broadcast_audit_log_created(
                 log_id=log_id,
                 warehouse_id=wh_id,
                 log_data=log_data,
-                message=''
+                message='',
+                company_id=company_id,
             )
 
         transaction.on_commit(send_broadcast)

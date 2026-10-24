@@ -4,6 +4,9 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from rest_framework.routers import DefaultRouter
+from .views_domains.permission_views import (
+    PermissionCatalogView, MyPermissionsView, RoleBundleView, RoleBundleResetView, UserPermissionsView,
+)
 from .views import (
     UserViewSet, CustomTokenObtainPairView, CustomRoleViewSet, PermissionViewSet,
     UserTableViewStateViewSet, UserLoginLogViewSet, AuditLogViewSet, LogoutView,
@@ -30,5 +33,11 @@ urlpatterns = [
     path('telemetry/heartbeat/', DeviceHeartbeatView.as_view(), name='device_heartbeat'),
     path('telemetry/fleet/', FleetSessionsListView.as_view(), name='fleet_sessions'),
     path('telemetry/sessions/<int:session_id>/revoke/', RevokeDeviceSessionView.as_view(), name='revoke_device_session'),
+    # طرح ۲.۲ (الف۲): مجوزهای ریز؛ پیش از router تا users/<id>/permissions/ به UserViewSet نرسد
+    path('permission-catalog/', PermissionCatalogView.as_view(), name='permission_catalog'),
+    path('my-permissions/', MyPermissionsView.as_view(), name='my_permissions'),
+    path('role-bundles/<str:role_key>/', RoleBundleView.as_view(), name='role_bundle'),
+    path('role-bundles/<str:role_key>/reset/', RoleBundleResetView.as_view(), name='role_bundle_reset'),
+    path('users/<int:user_id>/permissions/', UserPermissionsView.as_view(), name='user_permissions'),
     path('', include(router.urls)),
 ]

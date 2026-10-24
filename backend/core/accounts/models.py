@@ -93,15 +93,11 @@ SENSITIVE_PERMISSION_CODENAMES = {
 class CustomRole(Group):
     """
     نقش سازمانی سفارشی — توسعه مدل Group جنگو
-    فیلدهای اضافه: عنوان فارسی، رنگ سازمانی، والد (سلسله‌مراتب)، نقش سیستمی
+    فیلدهای اضافه: عنوان فارسی و رنگ سازمانی. طرح ۲.۲ (ت۱۱): نقش سامانه‌ای فهرست تخت مجوزهای سامانه‌ای است،
+    بی درخت والد و فرزند.
     """
     title = models.CharField(max_length=150, verbose_name="عنوان فارسی")
     color = models.CharField(max_length=7, default="#94a3b8", verbose_name="رنگ سازمانی")
-    parent = models.ForeignKey(
-        'self', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='children',
-        verbose_name="نقش والد"
-    )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, verbose_name="زمان ایجاد")
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, verbose_name="زمان آخرین ویرایش")
     created_by = models.ForeignKey(
@@ -117,45 +113,9 @@ class CustomRole(Group):
         verbose_name = "نقش سازمانی"
         verbose_name_plural = "نقش‌های سازمانی"
 
-    def clean(self):
-        super().clean()
-        from django.core.exceptions import ValidationError
-        
-        # Prevent circular dependency in parent
-        current = self.parent
-        while current:
-            if current.id == self.id:
-                raise ValidationError({"parent": "حلقه بی‌نهایت! یک نقش نمی‌تواند زیرمجموعه فرزندان خودش باشد."})
-            current = current.parent
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return self.title or self.name
 
-    @classmethod
-    def get_all_role_ids_for_user(cls, user_obj):
-        """
-        دریافت شناسه تمام نقش‌های کاربر به همراه کلیه نقش‌های فرزند در درخت سلسله‌مراتب (Hierarchical Role Traversal)
-        """
-        if not user_obj or not getattr(user_obj, 'is_active', False) or getattr(user_obj, 'is_anonymous', True):
-            return set()
-
-        all_ids = set(user_obj.groups.values_list('id', flat=True))
-        current_layer_ids = list(cls.objects.filter(id__in=all_ids).values_list('id', flat=True))
-
-        while current_layer_ids:
-            children_ids = list(cls.objects.filter(
-                parent_id__in=current_layer_ids
-            ).exclude(id__in=all_ids).values_list('id', flat=True))
-            if not children_ids:
-                break
-            all_ids.update(children_ids)
-            current_layer_ids = children_ids
-
-        return all_ids
 
 
 class UserTableViewState(models.Model):
@@ -420,3 +380,87 @@ class UserDeviceSession(models.Model):
         status = "🚫 ابطال‌شده" if self.is_revoked else "🟢 آنلاین"
         return f"{self.user.username} ({self.device_model}) - {self.tab_id} [{status}]"
 
+
+# ─── مجوزهای ریز (طرح ۲.۲، ت۳ و ت۴): فقط تفاوت با پیش‌فرض ذخیره می‌شود ───────────────────────
+
+OVERRIDE_MODES = (
+    ('add', 'افزوده'),
+    ('remove', 'برداشته'),
+)
+
+
+class RoleBundleOverride(models.Model):
+    """
+    تفاوت بستهٔ مجوز یک نقش انتساب با سهم پیش‌فرض ماژول‌ها (ت۳). یک بسته برای کل نصب است، نه هر شرکت.
+    بستهٔ مؤثر = سهم پیش‌فرض ماژول‌های نصب‌شده + افزوده‌ها − برداشته‌ها (accounts/scoped_permissions.py).
+    «بازگشت به پیش‌فرض» یعنی حذف همین ردیف‌ها.
+    """
+    role_key = models.CharField(max_length=30, db_index=True, verbose_name="کلید نقش انتساب")
+    permission = models.ForeignKey(
+        'auth.Permission', on_delete=models.CASCADE, related_name='role_bundle_overrides', verbose_name="مجوز"
+    )
+    mode = models.CharField(max_length=10, choices=OVERRIDE_MODES, verbose_name="نوع تفاوت")
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='role_bundle_overrides_updated', verbose_name="آخرین ویرایش‌کننده"
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="زمان آخرین ویرایش")
+
+    class Meta:
+        verbose_name = "تفاوت بستهٔ مجوز نقش"
+        verbose_name_plural = "تفاوت‌های بستهٔ مجوز نقش‌ها"
+        constraints = [
+            models.UniqueConstraint(fields=['role_key', 'permission'], name='unique_role_bundle_override'),
+            models.CheckConstraint(check=models.Q(mode__in=['add', 'remove']), name='role_bundle_override_mode'),
+        ]
+
+    def __str__(self):
+        return f"{self.role_key}: {self.mode} {self.permission_id}"
+
+
+class UserPermissionOverride(models.Model):
+    """
+    تفاوت مجوز یک کاربر با آنچه از نقش‌هایش دارد (ت۴). تفاوت مجوز بخشی برای هر شرکت جداست و فقط در
+    بخش‌هایی از همان شرکت اعمال می‌شود که کاربر در آن‌ها انتساب فعال دارد؛ تفاوت مجوز سامانه‌ای شرکت ندارد
+    و همه‌جا اعمال می‌شود. قاعدهٔ «بخشی ⇔ شرکت دارد» در clean() و scoped_permissions.validate_user_override
+    سنجیده می‌شود، چون دامنهٔ مجوز در اعلام ماژول است، نه در پایگاه داده.
+    """
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='permission_overrides', verbose_name="کاربر"
+    )
+    permission = models.ForeignKey(
+        'auth.Permission', on_delete=models.CASCADE, related_name='user_overrides', verbose_name="مجوز"
+    )
+    company = models.ForeignKey(
+        'companies.Company', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='user_permission_overrides', verbose_name="شرکت (فقط برای مجوز بخشی)"
+    )
+    mode = models.CharField(max_length=10, choices=OVERRIDE_MODES, verbose_name="نوع تفاوت")
+    created_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='permission_overrides_created', verbose_name="ثبت‌کننده"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان ثبت")
+
+    class Meta:
+        verbose_name = "تفاوت مجوز کاربر"
+        verbose_name_plural = "تفاوت‌های مجوز کاربران"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'permission', 'company'], condition=models.Q(company__isnull=False),
+                name='unique_user_override_company',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'permission'], condition=models.Q(company__isnull=True),
+                name='unique_user_override_system',
+            ),
+            models.CheckConstraint(check=models.Q(mode__in=['add', 'remove']), name='user_override_mode'),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .scoped_permissions import validate_user_override
+        validate_user_override(self.permission, self.company_id)
+
+    def __str__(self):
+        return f"{self.user_id}: {self.mode} {self.permission_id} @ {self.company_id or '-'}"

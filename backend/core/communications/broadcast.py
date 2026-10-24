@@ -70,10 +70,9 @@ def broadcast_message_ws(msg, request=None):
             elif len(msg_preview) > 120:
                 msg_preview = msg_preview[:117] + '...'
 
-            for p_id in participant_ids:
-                if p_id == msg.sender_id or p_id in muted_user_ids:
-                    continue
-                Notification.objects.create(
+            # یک INSERT برای همهٔ گیرندگان (ق۱۸)؛ bulk_create سیگنال post_save ندارد، پس پوش جدا زمان‌بندی می‌شود
+            created = Notification.objects.bulk_create([
+                Notification(
                     recipient_id=p_id,
                     title=title,
                     message=msg_preview,
@@ -82,6 +81,11 @@ def broadcast_message_ws(msg, request=None):
                     target_id=str(conv.id),
                     is_read=False
                 )
+                for p_id in participant_ids
+                if p_id != msg.sender_id and p_id not in muted_user_ids
+            ])
+            from notifications.push import schedule_push_for_notifications
+            schedule_push_for_notifications(created)
         except Exception as exc:
             logger.exception(f"[Chat Push] Error creating notifications for message {getattr(msg, 'id', None)}: {exc}")
 

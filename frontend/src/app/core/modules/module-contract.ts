@@ -142,13 +142,22 @@ export interface ModuleNavItem {
   permission: string;
   /** آیتم با داشتن هر یک از این مجوزها دیده می‌شود (به‌جای permission تنها) */
   anyPermissions?: string[];
+  /**
+   * کلید دستهٔ مجوز همین ماژول (`PERMISSION_CATEGORIES` بک‌اند، ت۵): آیتم با داشتن دست‌کم یک مجوز از آن دسته هم دیده می‌شود.
+   * بدون آن، دسته‌ای که `menu`اش برابر `id` همین آیتم است به کار می‌رود (PermissionService.menuUnlocked).
+   */
+  permissionCategory?: string;
   module?: string;
   isAccounting?: boolean;
   isPending?: boolean;
   route?: string;
 }
 
-/** قالب آمادهٔ نقش در صفحهٔ کاربران */
+/**
+ * قالب آمادهٔ نقش در صفحهٔ کاربران.
+ * @deprecated قالب قدیم ماژول؛ ماژول قالب تازه (مجوزهای دسته‌دار بک‌اند، ت۶) بسته‌های نقش را از
+ * `accounts/permission-catalog/` می‌گیرد و این را اعلام نمی‌کند. فقط برای ماژول‌های قدیمی (مثل انبار) می‌ماند.
+ */
 export interface ModuleRolePreset {
   id: string;
   title: string;
@@ -161,7 +170,10 @@ export interface ModuleRolePreset {
   permissionCodenames: string[] | 'ALL';
 }
 
-/** گروه مجوزهای یک ماژول در صفحهٔ نقش‌ها */
+/**
+ * گروه مجوزهای یک ماژول در صفحهٔ نقش‌ها.
+ * @deprecated قالب قدیم ماژول؛ برای ماژول قالب تازه گروه و عنوان مجوزها از `accounts/permission-catalog/` می‌آید (ت۶).
+ */
 export interface ModulePermissionGroup {
   /** کلید پایدار گروه در صفحهٔ نقش‌ها */
   key: string;
@@ -398,9 +410,9 @@ export interface ExtensionMap {
    * ۶. گروه‌های دسترسی و پیش‌تنظیم‌های نقش کاربران — مصرف در users.ts، layout.ts، auth.guard.ts و operations-rbac-governance.ts
    */
   users?: {
-    /** گروه مجوزهای این ماژول در صفحهٔ نقش‌ها */
+    /** گروه مجوزهای این ماژول در صفحهٔ نقش‌ها. @deprecated فقط قالب قدیم ماژول (ت۶)؛ قالب تازه از فهرست کامل سرور */
     permissionGroup?: ModulePermissionGroup;
-    /** نام کوتاه مجوزهای این ماژول در چیپ‌های دسترسی */
+    /** نام کوتاه مجوزهای این ماژول در چیپ‌های دسترسی. @deprecated فقط قالب قدیم ماژول (ت۶)؛ قالب تازه `label_fa` فهرست سرور */
     shortPermissionNames?: Record<string, string>;
     /** راهنمای مجوز وقتی محدودهٔ تخصیص کاربران از همین ماژول است (ماژول دیگری پیش از آن در دسترس نیست) */
     standalonePermissionTooltips?: Record<string, string>;
@@ -408,7 +420,7 @@ export interface ExtensionMap {
     structureWritePermissions?: string[];
     /** محدودهٔ تخصیص کاربران (انبار، پروژه، …) و برچسب‌های آن */
     assignmentScope?: UsersAssignmentScope;
-    /** قالب‌های آمادهٔ نقش این ماژول و دستهٔ آن‌ها در پنل قالب‌ها */
+    /** قالب‌های آمادهٔ نقش این ماژول و دستهٔ آن‌ها در پنل قالب‌ها. @deprecated فقط قالب قدیم ماژول (ت۶)؛ قالب تازه بستهٔ نقش‌های انتساب سرور */
     rolePresets?: ModuleRolePreset[];
     presetCategory?: { key: string; labelFa: string; icon: IconName; tone: 'sky' | 'emerald' };
     /** قلمرو نقش‌های این ماژول در مودال کاربر و نشان سامانه‌های مجاز */

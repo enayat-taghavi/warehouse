@@ -62,6 +62,8 @@ export class CompanyInsuranceTaxTabComponent implements OnInit, OnChanges, OnDes
   updatedAt: string | null = null;
   /** تغییر ذخیره‌شده هنوز در صف آفلاین است */
   pendingOffline = false;
+  /** ت۱۲ طرح ۲.۲: سرور شناسه‌ها را پنهان کرده (null + identifiers_visible=false)؛ فرم نمایش و ذخیره نمی‌شود */
+  identifiersHidden = false;
 
   get isOnline(): boolean {
     return this.network.isOnline;
@@ -120,6 +122,7 @@ export class CompanyInsuranceTaxTabComponent implements OnInit, OnChanges, OnDes
     this.errors = {};
     this.updatedAt = profile?.updated_at ?? null;
     this.pendingOffline = false;
+    this.identifiersHidden = profile?.identifiers_visible === false;
   }
 
   load(): void {
@@ -189,7 +192,7 @@ export class CompanyInsuranceTaxTabComponent implements OnInit, OnChanges, OnDes
 
   save(): void {
     const companyId = this.companyId;
-    if (!companyId || !this.canWrite || this.isSaving) return;
+    if (!companyId || !this.canWrite || this.isSaving || this.identifiersHidden) return;
     if (!this.validate()) {
       this.toast.error('برخی فیلدها خطا دارند؛ موارد مشخص‌شده را اصلاح کنید.');
       this.cdr.markForCheck();

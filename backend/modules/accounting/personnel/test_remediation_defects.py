@@ -54,18 +54,16 @@ class RemediationTestBase(TestCase):
         self.sup = User.objects.create_user(username='rm_sup', password='p')
         self.acc = User.objects.create_user(username='rm_acc', password='p')
         self.mgr = User.objects.create_user(username='rm_mgr', password='p')
-        ct, _ = ContentType.objects.get_or_create(app_label='accounts', model='customuser')
-
-        def grant(u, code):
-            perm = Permission.objects.filter(codename=code).first() or Permission.objects.create(codename=code, name=code, content_type=ct)
-            u.user_permissions.add(perm)
-
-        grant(self.sup, 'perm_approve_personnel_supervisor')
-        grant(self.acc, 'perm_approve_personnel_finance')
-        grant(self.mgr, 'perm_approve_personnel_manager')
-        grant(self.mgr, 'perm_delete_personnel_nomovement')
+        # مجوز بخشی فقط از انتساب و تفاوت کاربر برای همان شرکت می‌آید (طرح ۲.۲، ت۱)
+        from personnel.scoped_test_support import grant_section_perms
+        self.granted = {
+            self.emp: (),
+            self.sup: ('perm_approve_personnel_supervisor',),
+            self.acc: ('perm_approve_personnel_finance',),
+            self.mgr: ('perm_approve_personnel_manager', 'perm_delete_personnel_nomovement'),
+        }
         for u in (self.emp, self.sup, self.acc, self.mgr):
-            SectionAssignment.objects.create(user=u, section=self.s1, is_active=True)
+            grant_section_perms(u, self.granted[u], section=self.s1, exact=False)
             UserCompanyAccess.objects.create(user=u, company=self.c1)
 
     def as_user(self, user):
@@ -398,7 +396,8 @@ class Step2HighSeverityTests(RemediationTestBase):
 
     def test_def12_other_company_users_are_not_notified(self):
         outsider = User.objects.create_user(username='rm_acc_b', password='p')
-        outsider.user_permissions.add(*self.acc.user_permissions.all())
+        from personnel.scoped_test_support import grant_section_perms
+        grant_section_perms(outsider, self.granted[self.acc], section=self.s2, exact=False)
         UserCompanyAccess.objects.create(user=outsider, company=self.c2)
         p = self.complete_profile('0098765434', status='pending_supervisor')
         self.as_user(self.sup)

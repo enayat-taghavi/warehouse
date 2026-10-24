@@ -370,3 +370,40 @@ def on_notification_created(sender, instance, created, **kwargs):
         transaction.on_commit(_on_commit_callback)
     except Exception:
         logger.exception("Failed to register on_commit push handler for notification %s", getattr(instance, 'id', None))
+
+
+def schedule_push_for_notifications(notifications):
+    """
+    پوشِ اعلان‌هایی که با bulk_create ساخته شده‌اند (سیگنال post_save برایشان اجرا نمی‌شود).
+    بعد از commit، توکن‌های همهٔ گیرندگان با یک کوئری خوانده می‌شوند (ق۱۸)، نه یک کوئری برای هر اعلان.
+    """
+    items = [
+        (n.id, n.recipient_id, n.title, n.message, n.target_model, n.target_id)
+        for n in notifications if getattr(n, 'id', None)
+    ]
+    if not items:
+        return
+
+    def _on_commit_callback():
+        try:
+            from .models import DeviceToken
+            tokens_by_user = {}
+            for user_id, token in DeviceToken.objects.filter(
+                user_id__in={item[1] for item in items}
+            ).values_list('user_id', 'token'):
+                tokens_by_user.setdefault(user_id, []).append(token)
+            for notification_id, recipient_id, title, message, target_model, target_id in items:
+                tokens = tokens_by_user.get(recipient_id)
+                if tokens:
+                    _schedule_push(
+                        notification_id=notification_id,
+                        tokens=tokens,
+                        title=title,
+                        message=message,
+                        target_model=target_model,
+                        target_id=target_id,
+                    )
+        except Exception:
+            logger.exception("Failed to schedule bulk push on commit")
+
+    transaction.on_commit(_on_commit_callback)

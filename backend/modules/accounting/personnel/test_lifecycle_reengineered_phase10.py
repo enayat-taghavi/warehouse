@@ -35,29 +35,22 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
         self.accountant = User.objects.create_user(username="acc_user", password="p", first_name="حسابدار", last_name="مالی")
         self.manager = User.objects.create_user(username="mgr_user", password="p", first_name="مدیر", last_name="ارشد")
 
-        # تخصیص مجوزهای اپلیکیشن accounts
+        # مجوزهای بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آیند (طرح ۲.۲، ت۱)؛ هر کاربر انتساب
+        # کارمند در همین بخش و مجوزهای مرحلهٔ خودش را دارد (can_act_as_manager مجوز ماژول نیست و تیک مستقیم می‌ماند)
+        from personnel.scoped_test_support import grant_section_perms
         ct_accounts, _ = ContentType.objects.get_or_create(app_label='accounts', model='customuser')
-
-        def grant_perm(user, codename):
-            perm = Permission.objects.filter(codename=codename).first()
-            if not perm:
-                perm = Permission.objects.create(
-                    codename=codename,
-                    name=codename,
-                    content_type=ct_accounts
-                )
-            user.user_permissions.add(perm)
-
-        grant_perm(self.supervisor, "perm_approve_personnel_supervisor")
-        grant_perm(self.supervisor, "can_act_as_workshop_supervisor")
-        grant_perm(self.accountant, "perm_approve_personnel_finance")
-        grant_perm(self.manager, "perm_approve_personnel_manager")
-        grant_perm(self.manager, "can_act_as_manager")
-        grant_perm(self.manager, "perm_delete_personnel_nomovement")
-
-        from personnel.models import SectionAssignment
-        for u in [self.operator, self.supervisor, self.accountant, self.manager]:
-            SectionAssignment.objects.create(user=u, section=self.section, is_active=True)
+        legacy_perm = Permission.objects.filter(codename="can_act_as_manager").first() or Permission.objects.create(
+            codename="can_act_as_manager", name="can_act_as_manager", content_type=ct_accounts
+        )
+        self.manager.user_permissions.add(legacy_perm)
+        grants = {
+            self.operator: (),
+            self.supervisor: ("perm_approve_personnel_supervisor", "can_act_as_workshop_supervisor"),
+            self.accountant: ("perm_approve_personnel_finance",),
+            self.manager: ("perm_approve_personnel_manager", "perm_delete_personnel_nomovement"),
+        }
+        for u, codes in grants.items():
+            grant_section_perms(u, codes, section=self.section, exact=False)
 
     def test_full_successful_approval_cycle_and_audit(self):
         """

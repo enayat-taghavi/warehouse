@@ -5,7 +5,6 @@ import {
   SHORT_PERMISSION_NAMES,
   getShortPermissionName,
   getRolePermissionPercent,
-  getRoleDepthMargin,
   DEFAULT_ASSIGNMENT_SCOPE_LABELS
 } from './users.helpers';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, inject, Injector } from '@angular/core';
@@ -32,24 +31,28 @@ import { debounceTime, finalize, map, catchError } from 'rxjs/operators';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CompanyApiService } from '../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 import { Company } from '../../../../core/models/company.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
+import { RoleBundlesPanel } from './role-bundles-panel/role-bundles-panel';
+import { UserPermissionsTabComponent } from './user-permissions-tab/user-permissions-tab';
 import { saveBlob } from '../../../../core/platform/file-output';
 
 import { IconName } from '../../../../shared/icons/icon-registry';
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent],
   providers: [UsersFacade],
   templateUrl: './users.html',
   styleUrl: './users.css'
 })
 export class Users implements OnInit, OnDestroy {
   @ViewChild(IdCards) idCardsComponent?: IdCards;
+  @ViewChild(RoleBundlesPanel) roleBundlesPanel?: RoleBundlesPanel;
   activeTab = 'users';
 
   get userTabs(): TabDef[] {
@@ -60,7 +63,66 @@ export class Users implements OnInit, OnDestroy {
     ];
   }
 
-  switchTab(tabId: string): void {
+  /** زیرتب تب «نقش‌ها» (طرح ۲.۲): نقش‌های انتساب (بسته‌ها) یا نقش‌های سامانه‌ای (`CustomRole`) */
+  rolesSubTab: 'assignment' | 'system' = 'assignment';
+
+  readonly roleSubTabs: TabDef[] = [
+    { id: 'assignment', label: 'نقش‌های انتساب', shortLabel: 'انتساب', icon: 'users', tone: 'indigo' },
+    { id: 'system', label: 'نقش‌های سامانه‌ای', shortLabel: 'سامانه‌ای', icon: 'shield', tone: 'indigo' },
+  ];
+
+  /** پیش‌نویس ذخیره‌نشدهٔ بستهٔ نقش با ترک پنل از بین می‌رود؛ پیش از آن می‌پرسد */
+  formatFa(n: number | null | undefined): string {
+    return (n ?? 0).toLocaleString('fa-IR');
+  }
+
+  private hasUnsavedBundles(): boolean {
+    return this.activeTab === 'roles' && this.rolesSubTab === 'assignment' && !!this.roleBundlesPanel?.hasUnsavedChanges();
+  }
+
+  private async confirmLeaveBundles(): Promise<boolean> {
+    const ok = await this.confirmDialog.open({
+      title: 'تغییر ذخیره‌نشده',
+      message: 'تغییرهای ذخیره‌نشدهٔ بستهٔ نقش از بین می‌رود. ادامه می‌دهید؟',
+      confirmText: 'ادامه، بدون ذخیره',
+      type: 'warning',
+    });
+    return ok === true;
+  }
+
+  switchRolesSubTab(id: string): void | Promise<void> {
+    const next = id === 'system' ? 'system' : 'assignment';
+    if (next !== this.rolesSubTab && this.hasUnsavedBundles()) {
+      return this.confirmLeaveBundles().then(ok => { if (ok) this.applyRolesSubTab(id); });
+    }
+    this.applyRolesSubTab(id);
+  }
+
+  private applyRolesSubTab(id: string): void {
+    this.rolesSubTab = id === 'system' ? 'system' : 'assignment';
+    this.router.navigate([], { queryParams: { roles: this.rolesSubTab }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.cdr.detectChanges();
+  }
+
+  /** نوشتن نقش سامانه‌ای (ساخت، ویرایش، تکثیر، حذف، ورود اکسل): مدیر کل یا `perm_usr_role` (ت۱۰-۲)؛ `view_sys_users` تنها = فقط خواندن */
+  canWriteRoles(): boolean {
+    return this.isSuperuser() || !!this.auth.hasPermission?.('perm_usr_role');
+  }
+
+  private denyRoleWrite(): boolean {
+    if (this.canWriteRoles()) return false;
+    this.toast.show('error', 'تغییر نقش‌های سامانه‌ای به مجوز «مدیریت نقش‌ها» نیاز دارد.');
+    return true;
+  }
+
+  switchTab(tabId: string): void | Promise<void> {
+    if (tabId !== this.activeTab && this.hasUnsavedBundles()) {
+      return this.confirmLeaveBundles().then(ok => { if (ok) this.applyTab(tabId); });
+    }
+    this.applyTab(tabId);
+  }
+
+  private applyTab(tabId: string): void {
     this.activeTab = tabId;
     this.router.navigate([], { queryParams: { tab: tabId }, queryParamsHandling: 'merge', replaceUrl: true });
     this.openMenuId = null;
@@ -70,7 +132,7 @@ export class Users implements OnInit, OnDestroy {
   activePermTab = 'MAIN_MENU';
   /** 'all'، 'global' یا کلید users.roleScope یکی از ماژول‌ها */
   userRoleModalTab: string = 'global';
-  userModalInnerTab: 'identity' | 'security' | 'roles' | 'warehouses' = 'identity';
+  userModalInnerTab: 'identity' | 'security' | 'roles' | 'warehouses' | 'permissions' = 'identity';
   searchQuery = '';
   searchSubject = new Subject<string>();
   private searchSub?: Subscription;
@@ -87,7 +149,6 @@ export class Users implements OnInit, OnDestroy {
   lockedUsernames = new Set<string>();
   activePopoverRoleId: number | null = null;
   userViewMode: 'grid' | 'table' = 'grid';
-  roleViewMode: 'tree' | 'table' = 'tree';
   activeRolePresetId: string | null = null;
   showPassword = false;
   sortField: string = 'id';
@@ -132,14 +193,6 @@ export class Users implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  setRoleViewMode(mode: 'tree' | 'table') {
-    this.roleViewMode = mode;
-    try {
-      localStorage.setItem('roles_view_mode', mode);
-    } catch (e) {}
-    this.cdr.detectChanges();
-  }
-
   roleSearchQuery: string = '';
 
   onRoleSearchChange(query: string) {
@@ -155,18 +208,6 @@ export class Users implements OnInit, OnDestroy {
       (r.name && r.name.toLowerCase().includes(q)) ||
       (r.title && r.title.toLowerCase().includes(q))
     );
-  }
-
-  get displayedRootRoles(): any[] {
-    if (!this.roleSearchQuery) return this.rootRoles;
-    const q = this.roleSearchQuery.toLowerCase();
-    const matched = this.allRoles.filter((r: any) =>
-      (r.name && r.name.toLowerCase().includes(q)) ||
-      (r.title && r.title.toLowerCase().includes(q))
-    );
-    const matchedIds = new Set(matched.map((r: any) => r.id));
-    // فقط ریشه‌هایی که والدشان جزو نتایج فیلترشده نیست در بالاترین سطح رندر شوند تا از تکرار چندباره جلوگیری شود
-    return matched.filter((r: any) => !r.parent || !matchedIds.has(r.parent));
   }
 
   printIdCards() {
@@ -199,12 +240,10 @@ export class Users implements OnInit, OnDestroy {
   }
 
   // Memoization Caches (O(1) lookups during change detection)
-  roleChildrenMap = new Map<number, any[]>();
   roleUsersCountMap = new Map<number, number>();
   userRolesMap = new Map<number, { name: string, color: string }[]>();
   primaryRoleMap = new Map<number, { name: string, color: string }>();
   permIdToCodenameMap = new Map<number, string>();
-  cachedRootRoles: any[] = [];
 
   openMenuId: string | null = null;
 
@@ -223,7 +262,7 @@ export class Users implements OnInit, OnDestroy {
   // Role Form
   editingRole: any = null;
   roleForm = {
-    id: null as number | null, name: '', title: '', parent: null as number | null, color: '#94a3b8', permissions: [] as number[], user_ids: [] as number[]
+    id: null as number | null, name: '', title: '', color: '#94a3b8', permissions: [] as number[], user_ids: [] as number[]
   };
   roleMemberSearchQuery: string = '';
   isRoleMembersExpanded: boolean = false;
@@ -258,16 +297,20 @@ export class Users implements OnInit, OnDestroy {
       .sort((a, b) => (a.ext.roleScope?.order ?? 100) - (b.ext.roleScope?.order ?? 100));
   }
 
-  /** ماژول نصب‌شده‌ای که گروه مجوزش در فهرست گروه‌های سرور هست */
-  private isUsersExtAvailable(ext: { permissionGroup?: ModulePermissionGroup }): boolean {
+  /**
+   * ماژول نصب‌شده‌ای که گروه مجوزش در فهرست گروه‌های سرور هست؛ ماژول قالب تازه (بی permissionGroup، ت۶)
+   * وقتی در دسترس است که فهرست کامل سرور برایش مجوز داشته باشد.
+   */
+  private isUsersExtAvailable(ext: { permissionGroup?: ModulePermissionGroup }, moduleCode?: string): boolean {
     const key = ext.permissionGroup?.key;
-    return !!key && this.systemPermissionGroups.some(g => g.key === key);
+    if (key) return this.systemPermissionGroups.some(g => g.key === key);
+    return !!moduleCode && (this.permissionService.catalog()?.permissions || []).some(p => p.module === moduleCode);
   }
 
   /** ماژول‌های در دسترسی که محدودهٔ تخصیص کاربران (انبار، پروژه، …) عرضه می‌کنند، به ترتیب priority */
   private assignmentScopeProviders() {
     return this.moduleUsersExts()
-      .filter(e => !!e.ext.assignmentScope && this.isUsersExtAvailable(e.ext))
+      .filter(e => !!e.ext.assignmentScope && this.isUsersExtAvailable(e.ext, e.module?.code))
       .sort((a, b) => a.ext.assignmentScope!.priority - b.ext.assignmentScope!.priority);
   }
 
@@ -288,7 +331,7 @@ export class Users implements OnInit, OnDestroy {
       emerald: { activeClass: 'bg-emerald-600 text-white shadow-sm', hoverClass: 'text-slate-600 hover:text-emerald-600 hover:bg-slate-100/70' },
     };
     return this.moduleUsersExts()
-      .filter(e => !!e.ext.presetCategory && this.isUsersExtAvailable(e.ext))
+      .filter(e => !!e.ext.presetCategory && this.isUsersExtAvailable(e.ext, e.module?.code))
       .map(e => {
         const c = e.ext.presetCategory!;
         return { key: c.key, labelFa: c.labelFa, icon: c.icon, ...tones[c.tone], countFa: (e.ext.rolePresets || []).length.toLocaleString('fa-IR') };
@@ -386,7 +429,7 @@ export class Users implements OnInit, OnDestroy {
   }
   getShortPermissionName(perm: Permission | any): string {
     if (!perm) return '';
-    return this.SHORT_PERMISSION_NAMES[perm.codename] || perm.name;
+    return this.SHORT_PERMISSION_NAMES[perm.codename] || this.permissionService.spec(perm.codename)?.label_fa || perm.name;
   }
 
   getPermissionTooltip(perm: Permission | any): string {
@@ -440,6 +483,8 @@ export class Users implements OnInit, OnDestroy {
   private router = inject(Router);
   public activeCompanyService = inject(ActiveCompanyService);
   private companyApi = inject(CompanyApiService);
+  /** مجوزهای ریز (۲.۲): فهرست کامل سرور برای ماژول‌های قالب تازه (ت۶) */
+  public permissionService = inject(PermissionService);
 
   constructor() {}
 
@@ -449,14 +494,11 @@ export class Users implements OnInit, OnDestroy {
       if (savedMode === 'grid' || savedMode === 'table') {
         this.userViewMode = savedMode;
       }
-      const savedRoleMode = localStorage.getItem('roles_view_mode');
-      if (savedRoleMode === 'tree' || savedRoleMode === 'table') {
-        this.roleViewMode = savedRoleMode;
-      }
     } catch (e) {}
 
     this.route.queryParams.subscribe((params: any) => {
       this.activeTab = params['tab'] || 'users';
+      this.rolesSubTab = params['roles'] === 'system' ? 'system' : 'assignment';
       const q = params['q'] || '';
       if (q !== this.searchQuery) {
         this.searchQuery = q;
@@ -479,67 +521,101 @@ export class Users implements OnInit, OnDestroy {
     }
   }
 
+  /** گروه‌های مجوز صفحهٔ نقش‌های سامانه‌ای: گروه ماژول‌های قالب قدیم، گروه فهرست کامل سرور برای قالب تازه، سیستم، سایر و حساس */
+  private buildPermissionGroups(res: Permission[]): void {
+    
+    // مجوز حساس: نشانهٔ سرور روی خود مجوز یا `sensitive` فهرست مجوزها (ت۱۰-۴)
+    const catalogSensitive = new Set((this.permissionService.catalog()?.permissions || []).filter(p => p.sensitive).map(p => p.code));
+    for (const p of res as any[]) {
+      if (catalogSensitive.has(p.codename)) p.is_sensitive = true;
+    }
+    const sensitivePerms = res.filter((p: any) => p.is_sensitive);
+
+    // گروه مجوزهای هر ماژول از users.permissionGroup همان ماژول (همهٔ ماژول‌های بیلد؛ نمایش با visiblePermissionGroups)
+    const moduleGroupDefs = this.registry.getAllModules()
+      .map(m => m.extensions?.users?.permissionGroup)
+      .filter((g): g is ModulePermissionGroup => !!g)
+      .sort((a, b) => a.order - b.order);
+    const moduleGroups = moduleGroupDefs.map(g => ({
+      key: g.key,
+      title: g.titleFa,
+      items: res.filter((p: any) => g.codenames.includes(p.codename) && !p.is_sensitive)
+    }));
+
+    // ماژول‌های قالب تازه (ت۶): گروه از فهرست کامل سرور؛ مجوز بخشی در نقش سامانه‌ای جایی ندارد (ت۱۱، سرور ۴۰۰ می‌دهد)
+    const catalogSpecs = this.permissionService.catalog()?.permissions || [];
+    const legacyCodes = new Set(moduleGroupDefs.flatMap(g => g.codenames));
+    const sectionScoped = new Set(catalogSpecs.filter(p => p.scope === 'section').map(p => p.code));
+    const moduleOfCode = new Map(catalogSpecs.filter(p => !!p.module).map(p => [p.code, p.module as string]));
+    const catalogModules = [...new Set(moduleOfCode.values())];
+    const catalogGroups = catalogModules.map(mod => ({
+      key: `CATALOG_${mod}`,
+      title: this.registry.getSpec(mod)?.titleFa || mod,
+      items: res.filter((p: any) =>
+        !p.is_sensitive && !sectionScoped.has(p.codename) && !legacyCodes.has(p.codename) && moduleOfCode.get(p.codename) === mod)
+    }));
+    moduleGroups.push(...catalogGroups);
+    const isSectionScoped = (p: any) => sectionScoped.has(p.codename);
+
+    // مدیریت و زیرساخت سیستم
+    const systemCodenames = [
+      'view_sys_dashboard', 'view_sys_users', 'view_sys_projects', 'view_sys_id_cards',
+      'view_sys_export', 'view_sys_settings', 'view_sys_reports',
+      'perm_sys_settings', 'perm_sys_logs', 'perm_usr_add', 'perm_usr_edit', 'perm_usr_role',
+      'view_customuser', 'add_customuser', 'change_customuser', 'delete_customuser',
+      'view_group', 'add_group', 'change_group', 'delete_group'
+    ];
+
+    const systemPerms = res.filter((p: any) => systemCodenames.includes(p.codename) && !p.is_sensitive);
+
+    const otherPerms = res.filter((p: any) =>
+      !p.is_sensitive &&
+      !isSectionScoped(p) &&
+      !moduleGroups.some(g => g.items.includes(p)) &&
+      !systemPerms.includes(p)
+    );
+
+    const groups: { key: string, title: string, items: Permission[], is_sensitive_group?: boolean }[] = [
+      ...moduleGroups,
+      {
+        key: 'MAIN_MENU',
+        title: 'سیستم ⚙️',
+        items: systemPerms
+      },
+      {
+        key: 'BACKEND',
+        title: 'سایر 📑',
+        items: otherPerms
+      },
+      {
+        key: 'SENSITIVE',
+        title: 'حساس 🛡️',
+        items: sensitivePerms,
+        is_sensitive_group: true
+      }
+    ];
+
+    this.systemPermissionGroups = groups.filter(g => g.items.length > 0);
+    this.rebuildMemoizedData();
+  }
+
   loadData() {
     this.companyApi.getAll().pipe(catchError(() => of([]))).subscribe((res: any) => {
       this.availableCompanies = Array.isArray(res) ? res : (res?.results || []);
       this.cdr.detectChanges();
     });
 
+    // ماژول‌های قالب تازه گروه مجوزشان را از فهرست کامل سرور می‌گیرند (ت۶)؛ با رسیدنش گروه‌ها دوباره ساخته می‌شوند
+    void this.permissionService.ensureCatalog().then(() => {
+      if (this.systemPermissions.length) {
+        this.buildPermissionGroups(this.systemPermissions);
+        this.cdr.detectChanges();
+      }
+    });
+
     this.accountsService.getPermissions().subscribe(res => {
       this.systemPermissions = res;
-      
-      const sensitivePerms = res.filter((p: any) => p.is_sensitive);
-
-      // گروه مجوزهای هر ماژول از users.permissionGroup همان ماژول (همهٔ ماژول‌های بیلد؛ نمایش با visiblePermissionGroups)
-      const moduleGroupDefs = this.registry.getAllModules()
-        .map(m => m.extensions?.users?.permissionGroup)
-        .filter((g): g is ModulePermissionGroup => !!g)
-        .sort((a, b) => a.order - b.order);
-      const moduleGroups = moduleGroupDefs.map(g => ({
-        key: g.key,
-        title: g.titleFa,
-        items: res.filter((p: any) => g.codenames.includes(p.codename) && !p.is_sensitive)
-      }));
-
-      // مدیریت و زیرساخت سیستم
-      const systemCodenames = [
-        'view_sys_dashboard', 'view_sys_users', 'view_sys_projects', 'view_sys_id_cards',
-        'view_sys_export', 'view_sys_settings', 'view_sys_reports',
-        'perm_sys_settings', 'perm_sys_logs', 'perm_usr_add', 'perm_usr_edit', 'perm_usr_role',
-        'view_customuser', 'add_customuser', 'change_customuser', 'delete_customuser',
-        'view_group', 'add_group', 'change_group', 'delete_group'
-      ];
-
-      const systemPerms = res.filter((p: any) => systemCodenames.includes(p.codename) && !p.is_sensitive);
-
-      const otherPerms = res.filter((p: any) =>
-        !p.is_sensitive &&
-        !moduleGroups.some(g => g.items.includes(p)) &&
-        !systemPerms.includes(p)
-      );
-
-      const groups: { key: string, title: string, items: Permission[], is_sensitive_group?: boolean }[] = [
-        ...moduleGroups,
-        {
-          key: 'MAIN_MENU',
-          title: 'سیستم ⚙️',
-          items: systemPerms
-        },
-        {
-          key: 'BACKEND',
-          title: 'سایر 📑',
-          items: otherPerms
-        },
-        {
-          key: 'SENSITIVE',
-          title: 'حساس 🛡️',
-          items: sensitivePerms,
-          is_sensitive_group: true
-        }
-      ];
-
-      this.systemPermissionGroups = groups.filter(g => g.items.length > 0);
-      this.rebuildMemoizedData();
+      this.buildPermissionGroups(res);
     }, error => {
       console.warn('[Users] خطا در دریافت مجوزهای سیستم:', error);
     });
@@ -622,19 +698,6 @@ export class Users implements OnInit, OnDestroy {
       this.permIdToCodenameMap.clear();
       for (const p of this.systemPermissions) {
         this.permIdToCodenameMap.set(p.id, p.codename);
-      }
-    }
-
-    // 2. Root roles and children map
-    this.roleChildrenMap.clear();
-    const allRoleIds = new Set<number>(roles.map((r: any) => r.id));
-    this.cachedRootRoles = roles.filter((r: any) => !r.parent || !allRoleIds.has(r.parent));
-
-    for (const r of roles) {
-      if (r.parent) {
-        const list = this.roleChildrenMap.get(r.parent) || [];
-        list.push(r);
-        this.roleChildrenMap.set(r.parent, list);
       }
     }
 
@@ -974,40 +1037,6 @@ export class Users implements OnInit, OnDestroy {
     };
   }
 
-  get rootRoles() {
-    return this.cachedRootRoles.length > 0 ? this.cachedRootRoles : (this.state.appState.roles || []);
-  }
-
-  getRoleChildren(parentId: number) {
-    const children = this.roleChildrenMap.get(parentId) || [];
-    if (!this.roleSearchQuery) return children;
-    const q = this.roleSearchQuery.toLowerCase();
-    return children.filter((r: any) =>
-      (r.name && r.name.toLowerCase().includes(q)) ||
-      (r.title && r.title.toLowerCase().includes(q)) ||
-      (this.roleChildrenMap.get(r.id) || []).length > 0
-    );
-  }
-
-  getSelectableParents() {
-    const roles = Array.isArray(this.state.appState.roles) ? this.state.appState.roles : [];
-    if (!this.roleForm || !this.roleForm.id) return roles;
-
-    const invalidIds = new Set<number>();
-    invalidIds.add(this.roleForm.id);
-
-    const addDescendants = (parentId: number) => {
-      const children = this.getRoleChildren(parentId);
-      children.forEach((c: any) => {
-        invalidIds.add(c.id);
-        addDescendants(c.id);
-      });
-    };
-    addDescendants(this.roleForm.id);
-
-    return roles.filter((r: any) => !invalidIds.has(r.id));
-  }
-
   getAvailableSupervisors() {
     const users = this.state.appState.users || [];
     if (!this.editingUser || !this.editingUser.id) return users;
@@ -1050,12 +1079,6 @@ export class Users implements OnInit, OnDestroy {
 
   get allRoles(): any[] {
     return Array.isArray(this.state.appState?.roles) ? this.state.appState.roles : [];
-  }
-
-  getParentRoleTitle(parentId: number | null): string {
-    if (!parentId) return 'سطح ریشه (بدون والد)';
-    const p = this.allRoles.find((r: any) => r.id === parentId);
-    return p ? (p.title || p.name) : `شناسه ${parentId}`;
   }
 
   getPrimaryRole(u: any) {
@@ -1408,13 +1431,25 @@ export class Users implements OnInit, OnDestroy {
     });
   }
 
-  setUserModalInnerTab(tab: 'identity' | 'security' | 'roles' | 'warehouses') {
+  setUserModalInnerTab(tab: 'identity' | 'security' | 'roles' | 'warehouses' | 'permissions') {
+    // تب «مجوزها» فقط برای کاربر ذخیره‌شده (طرح ۲.۲، ت۴)
+    if (tab === 'permissions' && !this.editingUser?.id) return;
     this.userModalInnerTab = tab;
     this.cdr.detectChanges();
   }
 
+  /** پیوند «پروژه‌ها و بخش‌ها» در تب مجوزها: استودیوی شرکتِ نخستین انتساب کاربر، تب پروژه‌ها */
+  openUserAssignments(companyId: number | null) {
+    this.isUserModalOpen = false;
+    if (companyId) {
+      this.router.navigate(['/app/companies', companyId], { queryParams: { tab: 'projects' } });
+    } else {
+      this.router.navigate(['/app/companies']);
+    }
+  }
+
   nextUserModalInnerTab() {
-    const tabs: ('identity' | 'security' | 'roles' | 'warehouses')[] = ['identity', 'security', 'roles', 'warehouses'];
+    const tabs: (typeof this.userModalInnerTab)[] = ['identity', 'security', 'roles', 'warehouses'];
     const idx = tabs.indexOf(this.userModalInnerTab);
     if (idx < tabs.length - 1) {
       this.setUserModalInnerTab(tabs[idx + 1]);
@@ -1422,7 +1457,7 @@ export class Users implements OnInit, OnDestroy {
   }
 
   prevUserModalInnerTab() {
-    const tabs: ('identity' | 'security' | 'roles' | 'warehouses')[] = ['identity', 'security', 'roles', 'warehouses'];
+    const tabs: (typeof this.userModalInnerTab)[] = ['identity', 'security', 'roles', 'warehouses'];
     const idx = tabs.indexOf(this.userModalInnerTab);
     if (idx > 0) {
       this.setUserModalInnerTab(tabs[idx - 1]);
@@ -1453,11 +1488,6 @@ export class Users implements OnInit, OnDestroy {
       list = list.filter((id: number) => id !== numId);
     }
     this.userForm.assigned_warehouses = list;
-  }
-
-  getRoleDepthMargin(depth: number): string {
-    if (depth === 0) return '0rem';
-    return `clamp(0.5rem, ${depth * 1.2}vw, ${Math.min(depth * 1.5, 3.5)}rem)`;
   }
 
   getContrastTextColor(hexColor: string): string {
@@ -1776,6 +1806,7 @@ export class Users implements OnInit, OnDestroy {
 
   openRoleModal(id: number | null = null) {
     this.closeMenus();
+    if (this.denyRoleWrite()) return;
     this.permSearchQuery = '';
     this.activeRolePresetId = null;
     this.roleMemberSearchQuery = '';
@@ -1793,14 +1824,13 @@ export class Users implements OnInit, OnDestroy {
         id: r.id, 
         name: r.name, 
         title: r.title || r.name, 
-        parent: r.parent !== null && r.parent !== undefined ? r.parent : null, 
         color: r.color || '#94a3b8', 
         permissions: r.permissions ? [...r.permissions] : [],
         user_ids: assignedUserIds
       };
     } else {
       this.editingRole = null;
-      this.roleForm = { id: null, name: '', title: '', parent: null, color: '#94a3b8', permissions: [], user_ids: [] };
+      this.roleForm = { id: null, name: '', title: '', color: '#94a3b8', permissions: [], user_ids: [] };
     }
     this.activePermTab = this.visiblePermissionGroups[0]?.key || 'MAIN_MENU';
     this.isPresetsExpanded = false;
@@ -1810,6 +1840,7 @@ export class Users implements OnInit, OnDestroy {
 
   cloneRole(role: any) {
     this.closeMenus();
+    if (this.denyRoleWrite()) return;
     this.editingRole = null;
     this.activeRolePresetId = null;
     this.permSearchQuery = '';
@@ -1819,7 +1850,6 @@ export class Users implements OnInit, OnDestroy {
       id: null,
       name: `${role.name}_copy`,
       title: `${role.title || role.name} (کپی)`,
-      parent: role.parent !== null && role.parent !== undefined ? role.parent : null,
       color: role.color || '#94a3b8',
       permissions: role.permissions ? [...role.permissions] : [],
       user_ids: []
@@ -1884,13 +1914,12 @@ export class Users implements OnInit, OnDestroy {
   applyRolePreset(preset: any) {
     this.activeRolePresetId = preset.id;
     if (preset.permissionCodenames === 'ALL') {
-      this.roleForm.permissions = this.systemPermissions
-        .filter(p => !p.is_sensitive || this.isSuperuser())
-        .map(p => p.id);
+      this.roleForm.permissions = this.selectableRolePermissionIds();
     } else {
       const targetCodenames = new Set(preset.permissionCodenames);
+      const allowed = new Set(this.selectableRolePermissionIds());
       const matchedIds = this.systemPermissions
-        .filter(p => targetCodenames.has(p.codename))
+        .filter(p => targetCodenames.has(p.codename) && allowed.has(p.id))
         .map(p => p.id);
       this.roleForm.permissions = Array.from(new Set([...matchedIds]));
     }
@@ -2004,9 +2033,18 @@ export class Users implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /** مجوزهای قابل انتخاب گروهی نقش سامانه‌ای: غیرحساس و سامانه‌ای (فقط گروه‌های ساخته‌شده؛ مجوز بخشی هرگز) */
+  selectableRolePermissionIds(): number[] {
+    return this.systemPermissionGroups
+      .filter(g => !g.is_sensitive_group)
+      .flatMap(g => g.items)
+      .filter(p => !p.is_sensitive)
+      .map(p => p.id);
+  }
+
   toggleAllPermissions() {
     // Only toggle normal/non-sensitive permissions. Sensitive permissions are NEVER selected by toggleAll.
-    const normalPermIds = this.systemPermissions.filter(p => !p.is_sensitive).map(p => p.id);
+    const normalPermIds = this.selectableRolePermissionIds();
     const hasAllNormal = normalPermIds.every(id => this.roleForm.permissions.includes(id));
     
     if (hasAllNormal) {
@@ -2039,11 +2077,11 @@ export class Users implements OnInit, OnDestroy {
   }
 
   saveRole() {
+    if (this.denyRoleWrite()) return;
     const payload = {
         name: this.roleForm.name.trim(),
         title: this.roleForm.title.trim(),
         color: this.roleForm.color,
-        parent: this.roleForm.parent !== null && this.roleForm.parent !== undefined ? this.roleForm.parent : null,
         permissions: this.roleForm.permissions,
         user_ids: this.roleForm.user_ids || []
     };
@@ -2100,6 +2138,7 @@ export class Users implements OnInit, OnDestroy {
   }
 
   deleteRole(id: number) {
+    if (this.denyRoleWrite()) return;
     const role = this.state.appState.roles.find((r: any) => r.id === id);
     if (!role) return;
 
@@ -2395,6 +2434,7 @@ export class Users implements OnInit, OnDestroy {
   }
 
   openRolesImportModal() {
+    if (this.denyRoleWrite()) return;
     this.excelModalTitle = 'آپلود دسته‌جمعی نقش‌ها';
     this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.accountsService.importRolesExcel(file, updateExisting, dryRun || false);
     this.excelTemplateFn = () => this.downloadRolesTemplate();

@@ -409,12 +409,39 @@ FINANCE_STAGE_PERMS = ('perm_approve_personnel_finance',)
 MANAGER_STAGE_PERMS = ('perm_approve_personnel_manager', MANAGER_APPROVER, 'can_act_as_company_manager')
 
 
-def user_has_any_perm(user, codenames) -> bool:
+_ANY = object()
+
+
+def user_has_any_perm(user, codenames, record=_ANY) -> bool:
+    """
+    آیا کاربر یکی از codenames (با نام‌های مستعار) را دارد؟
+    record: پروندهٔ مقصد (هر شیء با section_id و company_id). اگر داده شود، مجوز بخشی در بخش همان پرونده سنجیده
+    می‌شود (can؛ ت۸ طرح ۲.۲)، و برای پروندهٔ بی‌بخش در یکی از بخش‌های شرکت آن. بی record: «دست‌کم در یک بخش».
+    """
     if not user or not getattr(user, 'is_authenticated', False):
         return False
     if user.is_superuser:
         return True
-    return any(user.has_perm(f'accounts.{c}') for c in expand_permission_aliases(codenames))
+    codes = expand_permission_aliases(codenames)
+    if record is _ANY:
+        return any(user.has_perm(f'accounts.{c}') for c in codes)
+    return any(user_has_perm_for_record(user, c, record) for c in codes)
+
+
+def user_has_perm_for_record(user, code, record) -> bool:
+    """یک مجوز برای یک پرونده: بخشی ← در بخش پرونده (یا بی‌بخش: در یکی از بخش‌های شرکتش)؛ سامانه‌ای ← has_perm."""
+    from accounts.scoped_permissions import SECTION, can, codes_in_company, permission_scope
+    if user.is_superuser:
+        return True
+    if permission_scope(code) != SECTION:
+        return user.has_perm(code if '.' in code else f'accounts.{code}')
+    section_id = getattr(record, 'section_id', None)
+    if section_id:
+        return can(user, code, section_id)
+    company_id = getattr(record, 'company_id', None)
+    if not company_id or not can(user, code):
+        return False
+    return code.split('.', 1)[-1] in codes_in_company(user, company_id)
 
 
 class PersonnelWorkflowError(Exception):
@@ -498,6 +525,10 @@ def approve_personnel_stage(personnel_id, user, stage: str, note: str = '', batc
         if p is None:
             raise PersonnelWorkflowError('پرونده پرسنلی یافت نشد.', status_code=404)
 
+        # مجوز مرحله در بخش همین پرونده (ت۸ طرح ۲.۲)، نه «در هر بخشی»
+        if not user_has_any_perm(user, rule['perms'], p):
+            raise PersonnelWorkflowError(rule['perm_error'], status_code=403)
+
         old_status = p.approval_status
         if stage == 'manager' and old_status in ('draft', 'revision_required'):
             raise PersonnelWorkflowError('امکان تصویب پرونده در وضعیت پیش‌نویس یا عودت‌داده‌شده برای مدیر وجود ندارد. پرونده ابتدا باید توسط کارمند ارسال و مراحل را طی کند.')
@@ -555,9 +586,10 @@ def auto_pass_personnel(personnel, user, source: str = 'create', draft_on_incomp
     from django.utils import timezone
     from personnel.models import WorkflowAuditLog
 
-    can_mgr = user_has_any_perm(user, MANAGER_STAGE_PERMS)
-    can_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS)
-    can_sup = user_has_any_perm(user, SUPERVISOR_STAGE_PERMS)
+    # سطح ثبت‌کننده در بخش همین پرونده (ت۸ طرح ۲.۲)
+    can_mgr = user_has_any_perm(user, MANAGER_STAGE_PERMS, personnel)
+    can_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS, personnel)
+    can_sup = user_has_any_perm(user, SUPERVISOR_STAGE_PERMS, personnel)
     if not (can_mgr or can_fin or can_sup):
         return {'status': personnel.approval_status, 'passed_stages': [], 'missing_fields': []}
 
@@ -638,7 +670,7 @@ def check_bank_account_edit_allowed(user, personnel):
         return True, ''
     if st in ('draft', 'revision_required'):
         return True, ''
-    if st == 'pending_accountant' and user_has_any_perm(user, FINANCE_STAGE_PERMS):
+    if st == 'pending_accountant' and user_has_any_perm(user, FINANCE_STAGE_PERMS, personnel):
         return True, ''
     return False, f'در وضعیت «{personnel.get_approval_status_display()}» مجاز به تغییر حساب‌های بانکی این پرونده نیستید.'
 
@@ -932,6 +964,47 @@ def build_personnel_snapshot(personnel) -> dict:
     }
 
 
+def _section_perm_holder_ids(section_codes, section_id, company_id) -> set:
+    """
+    کاربران فعالی که یکی از مجوزهای بخشی section_codes را در بخش section_id (یا بی‌بخش: در یکی از بخش‌های
+    شرکت company_id) دارند؛ همان قاعدهٔ can() موتور (بستهٔ مؤثر نقش انتساب‌های پوشاننده + تفاوت‌های کاربر برای
+    همان شرکت)، ولی برای همهٔ کاربران با شمار پرس‌وجوی ثابت (ق۱۸): انتساب‌ها، تفاوت‌ها و تفاوت بسته‌ها.
+    """
+    from accounts.models import UserPermissionOverride
+    from accounts.scoped_permissions import PERMISSION_APP_LABEL, effective_bundles
+    from companies.models import ProjectSection, SectionAssignment
+    from companies.org_roles import assignments_covering_section, assignments_in_companies_q
+
+    if section_id:
+        if not company_id:
+            company_id = ProjectSection.objects.filter(pk=section_id).values_list('project__company_id', flat=True).first()
+        assignments = assignments_covering_section(section_id)
+    else:
+        assignments = SectionAssignment.objects.filter(assignments_in_companies_q({company_id}), is_active=True)
+    rows = list(assignments.filter(user__is_active=True, user__is_superuser=False).values_list('user_id', 'role'))
+    if not rows:
+        return set()
+    codes = set(section_codes)
+    bundles = effective_bundles()
+    have = {}
+    for uid, role in rows:
+        have.setdefault(uid, set()).update(codes & bundles.get(role, frozenset()))
+    if company_id:
+        overrides = UserPermissionOverride.objects.filter(
+            user_id__in=list(have), company_id=company_id,
+            permission__content_type__app_label=PERMISSION_APP_LABEL, permission__codename__in=codes,
+        ).values_list('user_id', 'permission__codename', 'mode')
+        removed = {}
+        for uid, code, mode in overrides:
+            if mode == 'add':
+                have[uid].add(code)
+            else:
+                removed.setdefault(uid, set()).add(code)
+        for uid, codes_removed in removed.items():
+            have[uid] -= codes_removed
+    return {uid for uid, user_codes in have.items() if user_codes}
+
+
 def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, perms_by_stage: dict = None) -> set:
     """
     DEF-12: گیرندگان اعلان هر مرحله در یک کوئری.
@@ -960,11 +1033,22 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
         return set()
 
     User = get_user_model()
-    has_perm_q = (
-        Q(is_superuser=True)
-        | Q(user_permissions__codename__in=perm_codes)
-        | Q(groups__permissions__codename__in=perm_codes)
-    )
+    from accounts.scoped_permissions import SECTION, permission_scope
+    from companies.models import SectionAssignment
+    perm_codes = tuple(perm_codes)
+    section_codes = tuple(c for c in perm_codes if permission_scope(c) == SECTION)
+    system_codes = tuple(c for c in perm_codes if c not in section_codes)
+
+    # مجوز بخشی (ت۱ طرح ۲.۲): گیرنده کسی است که در بخش همین پرونده (یا بی‌بخش: در یکی از بخش‌های همین شرکت)
+    # یکی از مجوزهای مرحله را از بستهٔ نقش انتسابش (+ تفاوت کاربر برای همان شرکت) دارد. شمار پرس‌وجو ثابت است (ق۱۸).
+    candidate_ids = set()
+    if section_codes and (section_id or company_id):
+        candidate_ids = _section_perm_holder_ids(section_codes, section_id, company_id)
+
+    # مدیر کل سامانه و مجوزهای سامانه‌ای (مثلاً نام مستعار مجوز از ماژول دیگر) مثل پیش
+    has_perm_q = Q(is_superuser=True)
+    if system_codes:
+        has_perm_q |= Q(user_permissions__codename__in=system_codes) | Q(groups__permissions__codename__in=system_codes)
     users = User.objects.filter(has_perm_q, is_active=True)
     if company_id:
         # عضو شرکت فقط از منبع‌های خودکار (طرح مجوزهای بخش‌به‌بخش، ق۲)
@@ -978,24 +1062,23 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
         users = users.filter(in_company_q)
     else:
         users = users.filter(is_superuser=True)
-    candidate_ids = set(users.values_list('id', flat=True).distinct())
+    system_ids = set(users.values_list('id', flat=True).distinct())
 
-    # سرپرست: اگر کاربر انتساب سازمانی دارد، فقط کسی اعلان می‌گیرد که بخشِ پرونده را پوشش می‌دهد
+    # سرپرست با مجوز سامانه‌ای: اگر کاربر انتساب سازمانی دارد، فقط کسی اعلان می‌گیرد که بخشِ پرونده را پوشش می‌دهد
     # (انتساب مستقیم بخش یا انتساب سطح پروژه یا شرکتِ آن؛ طرح ۲.۱)
-    if stage in ('pending_supervisor', 'change_request_created') and section_id and candidate_ids:
-        from personnel.models import SectionAssignment
-        from companies.org_roles import assignments_covering_section
-        superuser_ids = set(User.objects.filter(id__in=candidate_ids, is_superuser=True).values_list('id', flat=True))
+    if stage in ('pending_supervisor', 'change_request_created') and section_id and system_ids:
+        superuser_ids = set(User.objects.filter(id__in=system_ids, is_superuser=True).values_list('id', flat=True))
         users_with_any_section = set(
-            SectionAssignment.objects.filter(user_id__in=candidate_ids, is_active=True).values_list('user_id', flat=True)
+            SectionAssignment.objects.filter(user_id__in=system_ids, is_active=True).values_list('user_id', flat=True)
         )
         users_in_this_section = set(
-            assignments_covering_section(section_id).filter(user_id__in=candidate_ids).values_list('user_id', flat=True)
+            assignments_covering_section(section_id).filter(user_id__in=system_ids).values_list('user_id', flat=True)
         )
-        candidate_ids = {
-            uid for uid in candidate_ids
+        system_ids = {
+            uid for uid in system_ids
             if uid in superuser_ids or uid in users_in_this_section or uid not in users_with_any_section
         }
+    candidate_ids |= system_ids
     return candidate_ids
 
 

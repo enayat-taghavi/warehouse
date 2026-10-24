@@ -51,9 +51,19 @@ class PermissionAliasBehaviourTests(TestCase):
         self.ct = ContentType.objects.get_for_model(CustomUser)
 
     def _user(self, username, *codenames):
+        from accounts.scoped_permissions import section_permission_codes
         user = CustomUser.objects.create_user(username=username, password='x')
+        section_codes = section_permission_codes()
+        scoped = [c for c in codenames if c in section_codes]
+        if scoped:
+            # مجوز بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آید (طرح ۲.۲، ت۱)
+            from companies.models import Company
+            from personnel.scoped_test_support import grant_section_perms
+            company = Company.objects.create(code=f'ALIAS-{username}'[:20], name=f'alias {username}')
+            grant_section_perms(user, scoped, company=company, exact=True)
         for code in codenames:
-            user.user_permissions.add(Permission.objects.get(codename=code, content_type=self.ct))
+            if code not in section_codes:
+                user.user_permissions.add(Permission.objects.get(codename=code, content_type=self.ct))
         return CustomUser.objects.get(pk=user.pk)
 
     def test_legacy_manager_still_approves_manager_stages(self):

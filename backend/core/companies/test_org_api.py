@@ -393,10 +393,10 @@ class ThreeLevelAssignmentApiTests(ThreeLevelBase):
             self.client.post(self.base, {'user': self.linked.id, 'company': self.a.id, 'role': 'manager'}, format='json')
             self.client.post(self.base, {'user': self.linked.id, 'project': self.pa.id, 'role': 'manager'}, format='json')
             self.client.post(f'{self.base}bulk-assign/', {'company_id': self.a.id, 'user_ids': [self.reader.id]}, format='json')
-        calls = [c.args for c in sent.call_args_list]
+        calls = [(c.args[0], c.kwargs.get('project_id'), c.kwargs.get('company_id')) for c in sent.call_args_list]
         self.assertEqual(len(calls), 3)
-        # (entity_type, action, entity_id, name, project_id, tab_id, sender_id, company_id)
-        self.assertEqual([(c[0], c[4], c[7]) for c in calls],
+        # (entity_type, project_id, company_id)؛ همه با نام (ا۱ طرح ۲.۲)
+        self.assertEqual(calls,
                          [('assignment', None, self.a.id), ('assignment', self.pa.id, self.a.id), ('assignment', None, self.a.id)])
 
     def test_excel_import_and_export_three_levels(self):

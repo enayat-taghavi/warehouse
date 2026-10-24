@@ -13,7 +13,7 @@ export const SYSTEM_ROLE_PRESETS: RolePreset[] = [
     categoryTitle: 'کلان سیستم',
     color: '#4f46e5',
     icon: '⚡',
-    description: 'اعطای ۱۰۰٪ تمام دسترسی‌های سیستمی، عملیاتی، مالی، اتاق فرماندهی مرکز عملیات و بازیابی',
+    description: 'همهٔ مجوزهای سامانه‌ای غیرحساس؛ مجوزهای حساس جداگانه و با تأیید داده می‌شوند',
     permissionCodenames: 'ALL'
   }
 ];
@@ -67,18 +67,6 @@ export function getRolePermissionPercent(role: any, totalPermsCount: number): nu
   if (!role || !totalPermsCount || totalPermsCount === 0) return 0;
   const count = (role.permissions || []).length;
   return Math.min(100, Math.round((count / totalPermsCount) * 100));
-}
-
-export function getRoleDepthMargin(role: any, allRoles: any[]): number {
-  let depth = 0;
-  let current = role;
-  const visited = new Set<number>();
-  while (current && current.parent_id && !visited.has(current.id)) {
-    visited.add(current.id);
-    depth++;
-    current = allRoles.find(r => r.id === current.parent_id);
-  }
-  return Math.min(depth * 16, 64);
 }
 
 /** برچسب‌های محدودهٔ تخصیص وقتی هیچ ماژول در دسترسی users.assignmentScope ندارد */

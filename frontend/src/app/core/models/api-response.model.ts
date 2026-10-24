@@ -1,3 +1,5 @@
+import type { PermissionMap } from './permission.model';
+
 /**
  * تایپ‌های عمومی پاسخ API
  * مطابق با DRF pagination و error format
@@ -57,6 +59,8 @@ export interface AuthUserProfile {
   allowed_apps?: string[];
   scopes?: Record<string, string[]>;
   active_app?: string;
+  /** نقشهٔ مجوزهای ریز (طرح ۲.۲)؛ PermissionService آن را نگه می‌دارد و تازه می‌کند */
+  permission_map?: PermissionMap;
 }
 
 /** پیلود لاگین */

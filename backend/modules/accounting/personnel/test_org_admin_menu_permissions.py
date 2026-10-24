@@ -26,6 +26,22 @@ User = get_user_model()
 PROJECTS_WRITE = {'projects': 'write'}
 
 
+def _grant(user, codenames, company):
+    """
+    مجوزهای بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آیند (طرح ۲.۲، ت۱): انتساب سطح شرکت با دقیقاً
+    همین مجوزهای بخشی؛ مجوز سامانه‌ای مثل پیش تیک مستقیم می‌خورد.
+    """
+    from accounts.scoped_permissions import section_permission_codes
+    from personnel.scoped_test_support import grant_section_perms
+    section_codes = section_permission_codes()
+    scoped = [c for c in codenames if c in section_codes]
+    if scoped:
+        grant_section_perms(user, scoped, company=company, exact=True)
+    for codename in codenames:
+        if codename not in section_codes:
+            user.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label='accounts'))
+
+
 class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
 
     def setUp(self):
@@ -57,8 +73,7 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         u = User.objects.create_user(username=username, password='password123', email=f'{username}@test.com')
         UserCompanyAccess.objects.create(user=u, company=self.company, is_default=True, section_levels=levels or {})
         grant_membership(u, self.company)
-        for codename in codenames:
-            u.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label='accounts'))
+        _grant(u, codenames, self.company)
         return User.objects.get(pk=u.pk)
 
     # ─── نقش‌های معتبر ───
@@ -167,8 +182,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         u = User.objects.create_user(username=username, password='password123', email=f'{username}@test.com')
         UserCompanyAccess.objects.create(user=u, company=company, is_default=True, section_levels=levels or {})
         grant_membership(u, company)
-        for codename in codenames:
-            u.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label='accounts'))
+        _grant(u, codenames, company)
         return User.objects.get(pk=u.pk)
 
     def _as(self, user):
