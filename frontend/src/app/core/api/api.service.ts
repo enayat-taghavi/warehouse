@@ -36,8 +36,8 @@ export class ApiService {
     return this.http.patch<T>(this.url(endpoint), body);
   }
 
-  put<T>(endpoint: string, body: unknown): Observable<T> {
-    return this.http.put<T>(this.url(endpoint), body);
+  put<T>(endpoint: string, body: unknown, options?: { context?: HttpContext }): Observable<T> {
+    return this.http.put<T>(this.url(endpoint), body, { context: options?.context });
   }
 
   /** پارامتر کوئری را در params بدهید، نه در endpoint؛ url() پس از endpoint اسلش می‌گذارد و مقدار کوئری را خراب می‌کند. */

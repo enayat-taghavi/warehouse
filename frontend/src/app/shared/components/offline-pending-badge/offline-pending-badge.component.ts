@@ -11,6 +11,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service';
+import { isWorkflowTaskAlreadyDone } from '../../../core/services/workflow-tasks.service';
 
 /**
  * مرکز یکپارچه وضعیت اتصال، صف انتظار و صندوق خطاهای همگام‌سازی
@@ -734,6 +735,8 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
   }
 
   isConflictError(err: SyncErrorEntry): boolean {
+    // 409 «نفر دیگری انجام داده» گردش کار رد صریح است، نه تداخل قابل ادغام (ت۱۳ طرح ۲.۳)
+    if (isWorkflowTaskAlreadyDone(err)) return false;
     return (
       err.statusCode === 409 ||
       !!err.serverResponse?.server_record ||

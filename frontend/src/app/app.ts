@@ -9,6 +9,7 @@ import { AuthService } from './core/auth/auth.service';
 import { WebSocketService } from './core/http/websocket.service';
 import { ClientTelemetryService } from './core/services/client-telemetry.service';
 import { PermissionService } from './core/services/permission.service';
+import { WorkflowTasksService } from './core/services/workflow-tasks.service';
 import { AppUpdateService } from './core/platform/app-update.service';
 import { initNativeShell } from './core/platform/native-shell';
 import { setFileOutputErrorNotifier } from './core/platform/file-output';
@@ -30,6 +31,7 @@ export class App {
   private appRef = inject(ApplicationRef);
   private toast = inject(ToastService);
   private permissions = inject(PermissionService);
+  private workflowTasks = inject(WorkflowTasksService);
 
   constructor() {
     setFileOutputErrorNotifier((m) => this.toast.error(m));
@@ -50,6 +52,7 @@ export class App {
         this.auth.sendDailyHeartbeat();
         this.telemetry.sendHeartbeat();
         this.permissions.start();
+        this.workflowTasks.start();
       } else {
         this.ws.disconnect();
       }
