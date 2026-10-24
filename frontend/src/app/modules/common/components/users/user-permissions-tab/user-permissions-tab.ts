@@ -7,6 +7,9 @@ import { PermissionService } from '../../../../../core/services/permission.servi
 import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { SectionRoleSpec } from '../../../../../core/modules/module-contract';
+import { OrgStructureApiService } from '../../../../../core/api/org-structure-api.service';
+import { OrgProject, OrgProjectSection } from '../../../../../core/models/company.model';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
@@ -102,6 +105,126 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
 
   get assignments(): UserPermissionAssignment[] {
     return this.payload?.assignments ?? [];
+  }
+
+  // ─── افزودن انتساب درجا (شرکت › پروژه › بخش + نقش) با همان API انتساب هسته ───
+  /** شرکت‌هایی که مدیر می‌بیند (از صفحهٔ کاربران) */
+  @Input() companies: { id: number; name: string }[] = [];
+  /** مدیر اجازهٔ نوشتن کاربر را دارد (perm_usr_edit یا مدیر کل)؛ سرور هم می‌سنجد */
+  @Input() canAssign = false;
+  private orgApi = inject(OrgStructureApiService);
+  isAssignFormOpen = false;
+  assignCompanyId: number | null = null;
+  assignProjectId: number | null = null;
+  assignSectionId: number | null = null;
+  assignRole = '';
+  assignProjects: OrgProject[] = [];
+  assignSections: OrgProjectSection[] = [];
+  isLoadingAssignOptions = false;
+  isSavingAssign = false;
+  assignError: string | null = null;
+  private _rolesKey = '';
+  private _roles: SectionRoleSpec[] = [];
+
+  /** نقش‌های انتساب از ماژول‌های نصب‌شده (companies.sectionRoles)؛ آرایهٔ پایدار برای قالب */
+  get assignRoles(): SectionRoleSpec[] {
+    const exts = this.registry.getExtensions('companies');
+    const key = exts.map(e => e.moduleCode).join(',');
+    if (key !== this._rolesKey) {
+      this._rolesKey = key;
+      const seen = new Set<string>();
+      this._roles = exts
+        .flatMap(e => e.extension.sectionRoles || [])
+        .filter(r => !seen.has(r.key) && !!seen.add(r.key))
+        .sort((a, b) => a.order - b.order);
+    }
+    return this._roles;
+  }
+
+  toggleAssignForm(): void {
+    this.isAssignFormOpen = !this.isAssignFormOpen;
+    this.assignError = null;
+    if (this.isAssignFormOpen && !this.assignCompanyId && this.companies.length === 1) {
+      this.onAssignCompanyChange(this.companies[0].id);
+    }
+    this.cdr.markForCheck();
+  }
+
+  onAssignCompanyChange(companyId: number | string | null): void {
+    this.assignCompanyId = companyId ? Number(companyId) : null;
+    this.assignProjectId = null;
+    this.assignSectionId = null;
+    this.assignProjects = [];
+    this.assignSections = [];
+    if (!this.assignCompanyId) { this.cdr.markForCheck(); return; }
+    const cid = this.assignCompanyId;
+    this.isLoadingAssignOptions = true;
+    this.orgApi.getProjects({ is_active: true }, cid).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (rows) => {
+        if (cid !== this.assignCompanyId) return;
+        this.assignProjects = Array.isArray(rows) ? rows : ((rows as any)?.results || []);
+        this.isLoadingAssignOptions = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isLoadingAssignOptions = false;
+        this.assignError = UserPermissionsTabComponent.errorMessage(err, 'فهرست پروژه‌ها دریافت نشد.');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  onAssignProjectChange(projectId: number | string | null): void {
+    this.assignProjectId = projectId ? Number(projectId) : null;
+    this.assignSectionId = null;
+    this.assignSections = [];
+    if (!this.assignProjectId) { this.cdr.markForCheck(); return; }
+    const pid = this.assignProjectId;
+    this.isLoadingAssignOptions = true;
+    this.orgApi.getSections({ project_id: pid, is_active: true }, this.assignCompanyId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (rows) => {
+        if (pid !== this.assignProjectId) return;
+        this.assignSections = Array.isArray(rows) ? rows : ((rows as any)?.results || []);
+        this.isLoadingAssignOptions = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isLoadingAssignOptions = false;
+        this.assignError = UserPermissionsTabComponent.errorMessage(err, 'فهرست بخش‌ها دریافت نشد.');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  get canSubmitAssign(): boolean {
+    return !!this.userId && !!this.assignCompanyId && !!this.assignRole && !this.isSavingAssign;
+  }
+
+  /** انتساب در دقیق‌ترین سطح انتخاب‌شده (بخش، وگرنه پروژه، وگرنه شرکت) با `bulk-assign` هسته */
+  submitAssign(): void {
+    if (!this.canSubmitAssign || !this.userId) return;
+    const target = this.assignSectionId
+      ? { section_id: this.assignSectionId }
+      : this.assignProjectId
+        ? { project_id: this.assignProjectId }
+        : { company_id: this.assignCompanyId as number };
+    this.isSavingAssign = true;
+    this.assignError = null;
+    this.cdr.markForCheck();
+    this.orgApi.bulkAssign({ ...target, user_ids: [this.userId], role: this.assignRole }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.isSavingAssign = false;
+        this.isAssignFormOpen = false;
+        this.assignSectionId = null;
+        this.assignRole = '';
+        void this.load();
+      },
+      error: (err) => {
+        this.isSavingAssign = false;
+        this.assignError = UserPermissionsTabComponent.errorMessage(err, 'انتساب ثبت نشد.');
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   ngOnInit(): void {

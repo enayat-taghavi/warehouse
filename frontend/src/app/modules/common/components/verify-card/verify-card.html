@@ -56,16 +56,13 @@
     <div *ngIf="!isLoading && personnel" class="space-y-4 fade-in zoom-in-95 duration-300">
       
       <!-- بنر وضعیت اصالت -->
-      <div [ngClass]="personnel.is_active ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300' : 'bg-amber-950/50 border-amber-500/40 text-amber-300'" class="border rounded-2xl p-3 flex items-center justify-between shadow-lg backdrop-blur-md">
+      <div class="bg-emerald-950/50 border-emerald-500/40 text-emerald-300 border rounded-2xl p-3 flex items-center justify-between shadow-lg backdrop-blur-md">
         <div class="flex items-center gap-3">
-          <div [ngClass]="personnel.is_active ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'" class="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold border shrink-0">
-            <span *ngIf="personnel.is_active">✓</span>
-            <span *ngIf="!personnel.is_active">!</span>
+          <div class="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold border shrink-0">
+            <span>✓</span>
           </div>
           <div>
-            <div class="text-xs font-black">
-              {{ personnel.is_active ? 'کارت شناسایی معتبر و فعال در سامانه' : 'کارت شناسایی پرسنلی غیرفعال / معلق' }}
-            </div>
+            <div class="text-xs font-black">کارت شناسایی معتبر است</div>
             <div class="text-[10px] text-slate-400 mt-0.5">
               تایید شده توسط دیتابیس مرکزی حراست و مدیریت سیستم
             </div>
@@ -76,74 +73,21 @@
         </div>
       </div>
 
-      <!-- کارت پرسنلی رسمی دیجیتال -->
+      <!-- کارت پرسنلی رسمی دیجیتال: فقط عکس و نام -->
       <div class="bg-slate-900/80 border border-slate-800/80 rounded-3xl p-5 shadow-2xl backdrop-blur-xl relative overflow-hidden space-y-4">
-        
+
         <!-- نوار گرادیانت بالایی -->
         <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-emerald-500 to-sky-500"></div>
 
-        <!-- بخش تصویر و نام پرسنل -->
         <div class="flex items-center gap-4 pt-1">
           <!-- تصویر پرسنلی -->
-          <div class="w-20 h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 shadow-md flex items-center justify-center overflow-hidden shrink-0 relative group">
+          <div class="w-20 h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 shadow-md flex items-center justify-center overflow-hidden shrink-0 relative">
             <img *ngIf="personnel.avatar" [ngSrc]="getAvatarUrl(personnel.avatar)!" width="80" height="96" [alt]="personnel.first_name" class="w-full h-full object-cover">
             <span *ngIf="!personnel.avatar" class="text-3xl font-black text-slate-500">{{getAvatarInitial(personnel.first_name)}}</span>
-            <div class="absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-slate-900" [ngClass]="personnel.is_active ? 'bg-emerald-500' : 'bg-amber-500'"></div>
           </div>
 
-          <!-- نام و سمت -->
-          <div class="flex-1 min-w-0 space-y-1.5">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-mono font-black text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">{{personnel.personnel_code}}</span>
-              <span *ngIf="personnel.company" class="text-[10px] text-slate-400 truncate">{{personnel.company}}</span>
-            </div>
-
+          <div class="flex-1 min-w-0">
             <h2 class="text-lg font-black text-white truncate leading-tight">{{personnel.first_name}} {{personnel.last_name}}</h2>
-
-            <!-- نقش‌ها -->
-            <div class="flex flex-wrap gap-1">
-              <span *ngFor="let role of personnel.roles" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full" [style.background]="(role.color || '#4f46e5') + '25'" [style.color]="role.color || '#818cf8'" [style.border]="'1px solid ' + (role.color || '#4f46e5') + '40'">
-                {{role.title}}
-              </span>
-              <span *ngIf="!personnel.roles || personnel.roles.length === 0" class="text-[10px] text-slate-400">بدون نقش سازمانی</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- تفکیک‌کننده -->
-        <div class="border-t border-slate-800/80 my-2"></div>
-
-        <!-- جدول مشخصات کلیدی -->
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
-            <span class="text-[10px] text-slate-400 block font-bold mb-0.5">کد ملی دارنده:</span>
-            <span class="font-mono font-bold text-slate-200 text-xs">{{personnel.national_code || '---'}}</span>
-          </div>
-
-          <div class="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
-            <span class="text-[10px] text-slate-400 block font-bold mb-0.5">گروه خونی:</span>
-            <span class="font-bold text-rose-400 text-xs">{{personnel.blood_type || 'ثبت‌نشده'}}</span>
-          </div>
-
-          <div class="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
-            <span class="text-[10px] text-slate-400 block font-bold mb-0.5">تماس اضطراری:</span>
-            <span class="font-mono font-bold text-slate-300 text-xs">{{personnel.emergency_contact || 'ثبت‌نشده'}}</span>
-          </div>
-
-          <div class="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
-            <span class="text-[10px] text-slate-400 block font-bold mb-0.5">حوزه عملیاتی:</span>
-            <span class="font-bold text-slate-300 text-xs truncate block">{{personnel.operational_zone || 'نامشخص'}}</span>
-          </div>
-        </div>
-
-        <!-- مجوزهای تردد در انبارها -->
-        <div *ngIf="personnel.assigned_warehouses && personnel.assigned_warehouses.length > 0" class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/60 space-y-1.5">
-          <span class="text-[10px] text-slate-400 block font-bold">مجوزهای معتبر ورود و تردد به انبارها:</span>
-          <div class="flex flex-wrap gap-1.5">
-            <span *ngFor="let wh of personnel.assigned_warehouses" class="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-950/60 text-indigo-300 border border-indigo-800/50 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-              <span>{{wh}}</span>
-            </span>
           </div>
         </div>
 

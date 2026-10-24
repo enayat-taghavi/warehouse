@@ -18,6 +18,7 @@ import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../../core/modules/module-registry.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -26,6 +27,8 @@ try {
 describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () => {
   let fixture: ComponentFixture<OperationsSyncMonitorComponent>;
   let component: OperationsSyncMonitorComponent;
+  const permsGranted = new Set<string>();
+  const fleetSpy = vi.fn().mockResolvedValue([]);
 
   beforeAll(async () => {
     let localStore: Record<string, string> = {};
@@ -52,15 +55,18 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
   });
 
   beforeEach(async () => {
+    permsGranted.clear();
+    fleetSpy.mockClear();
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, OperationsSyncMonitorComponent],
       providers: [
         { provide: SessionTabService, useValue: { tabId: 'tab-123' } },
-        { provide: ClientTelemetryService, useValue: { loadFleetSessions: vi.fn().mockResolvedValue([]) } },
+        { provide: ClientTelemetryService, useValue: { loadFleetSessions: vi.fn().mockResolvedValue([]), getFleetSessions: fleetSpy, getDeviceInfo: vi.fn().mockResolvedValue({}) } },
         { provide: OfflineSyncService, useValue: { flushQueueNow: vi.fn() } },
         { provide: WebSocketService, useValue: { connect: vi.fn(), notifications$: of(), connected$: of(true) } },
         { provide: ToastService, useValue: { show: vi.fn() } },
-        { provide: ConfirmDialogService, useValue: { confirm: vi.fn() } }
+        { provide: ConfirmDialogService, useValue: { confirm: vi.fn() } },
+        { provide: PermissionService, useValue: { can: (c: string) => permsGranted.has(c) } }
       ]
     }).compileComponents();
 
@@ -139,5 +145,25 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
     toast.show.mockClear();
     await component.simulateConflictScenario();
     expect(toast.show).not.toHaveBeenCalled();
+  });
+
+  it('۶. بدون مجوز لاگ‌های امنیتی: پنل ناوگان پنهان است و درخواست ناوگان به سرور فرستاده نمی‌شود', async () => {
+    expect(component.canViewFleet()).toBe(false);
+    await component.refreshTelemetry(false);
+    fixture.detectChanges();
+
+    expect(fleetSpy).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('ناوگان تبلت‌ها');
+  });
+
+  it('۷. با مجوز perm_sys_logs: پنل ناوگان دیده می‌شود', async () => {
+    permsGranted.add('perm_sys_logs');
+    fixture = TestBed.createComponent(OperationsSyncMonitorComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    expect(component.canViewFleet()).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('ناوگان تبلت‌ها');
   });
 });

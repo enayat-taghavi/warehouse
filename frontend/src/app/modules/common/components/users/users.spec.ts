@@ -7,7 +7,8 @@ import { ɵresolveComponentResources } from '@angular/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Users } from './users';
-import { of, Subject, firstValueFrom } from 'rxjs';
+import { of, Subject, firstValueFrom, throwError } from 'rxjs';
+import { PermissionService } from '../../../../core/services/permission.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StateService } from '../../../../core/services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
@@ -119,6 +120,12 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   let mockPersona: any;
   let mockRegistry: any;
   let mockConfirmDialog: any;
+  /** mockUsers مشترک است و تست‌ها کاربر اضافه یا وضعیت را عوض می‌کنند؛ هر تست از حالت اولیه شروع می‌کند */
+  const resetSharedMockUsers = () => {
+    mockUsers.splice(0, mockUsers.length, ...mockUsers.filter((u: any) => u.id === 1 || u.id === 2).sort((a: any, b: any) => a.id - b.id));
+    mockUsers[0].is_active = true;
+    mockUsers[1].is_active = false;
+  };
   let mockRouter: any;
   let queryParamsSubject: Subject<any>;
   let activeModuleList: string[];
@@ -273,6 +280,8 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       })
     };
 
+    // mockUsers بین تست‌ها مشترک است و تعلیق/فعال‌سازی آن را تغییر می‌دهد؛ هر تست از حالت اولیه شروع می‌کند
+    resetSharedMockUsers();
     mockConfirmDialog = {
       open: vi.fn().mockResolvedValue(true)
     };
@@ -523,7 +532,10 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
 
       expect(mockAccountsHttp.createUser).toHaveBeenCalled();
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
-      expect(component.isUserModalOpen).toBe(false);
+      // ۲.۹ #1: پنجره باز می‌ماند، حالت ویرایش کاربر تازه و تب «مجوزها»
+      expect(component.isUserModalOpen).toBe(true);
+      expect(component.editingUser?.id).toBe(99);
+      expect(component.userModalInnerTab).toBe('permissions');
     });
 
     it('باید متد resetPassword پس از تایید دیالوگ رمز را ریست کند', async () => {
@@ -535,8 +547,274 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   });
 
   // ─────────────────────────────────────────────────────────────────
+  // ۲.۹-ب: رمز یک‌بارمصرف، مجوز نوشتن، پیام ۴۰۳ و به‌روزرسانی زنده
+  // ─────────────────────────────────────────────────────────────────
+  describe('۲.۹-ب مدیریت کاربران هم‌راستا با سرور', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('هیچ متن 123456 در فرم ساخت و پیام تأیید بازنشانی نیست', async () => {
+      component.openUserModal();
+      component.userModalInnerTab = 'security';
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).innerHTML).not.toContain('123456"');
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toMatch(/پیش‌فرض.*123456|123456 تنظیم/);
+      await component.resetPassword(2);
+      const msg = mockConfirmDialog.open.mock.calls.at(-1)[0].message as string;
+      expect(msg).not.toContain('123456');
+    });
+
+    it('پس از بازنشانی، رمز یک‌بارمصرف یک بار در پنل نمایش داده می‌شود', async () => {
+      mockAccountsHttp.adminResetPassword.mockReturnValue(of({ one_time_password: 'Xy7Kp2Qw' }));
+      await component.resetPassword(2);
+      expect(component.oneTimePasswords?.[0].password).toBe('Xy7Kp2Qw');
+      fixture.detectChanges();
+      const panel = (fixture.nativeElement as HTMLElement).querySelector('[data-otp-panel]');
+      expect(panel?.textContent).toContain('Xy7Kp2Qw');
+      expect(panel?.textContent).toContain('در ورود اول باید عوض شود');
+      component.closeOneTimePasswords();
+      expect(component.oneTimePasswords).toBeNull();
+    });
+
+    it('ساخت کاربر بی رمز: رمز یک‌بارمصرف برگشتی نمایش داده می‌شود', () => {
+      mockAccountsHttp.createUser.mockImplementation((u: any) => of({ ...u, id: 77, one_time_password: 'Tmp9Pass' }));
+      component.openUserModal();
+      Object.assign(component.userForm, { first_name: 'سارا', last_name: 'کریمی', username: 's.karimi', phone_number: '09121112244', password: '' });
+      component.saveUser();
+      expect(mockAccountsHttp.createUser.mock.calls.at(-1)[0].password).toBeUndefined();
+      expect(component.oneTimePasswords?.[0]).toEqual({ username: 's.karimi', password: 'Tmp9Pass' });
+      expect(component.userModalInnerTab).toBe('permissions');
+    });
+
+    it('کاربر دیگر: فیلد رمز پنهان است و PUT بدون password فرستاده می‌شود', () => {
+      mockAccountsHttp.getUser = vi.fn().mockImplementation((id: number) => of({ ...mockUsers.find((u: any) => u.id === id) }));
+      component.openUserModal(2);
+      component.userModalInnerTab = 'security';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(component.isEditingOtherUser).toBe(true);
+      expect(el.querySelector('[data-password-field]')).toBeNull();
+      expect(el.querySelector('[data-reset-password]')).not.toBeNull();
+      Object.assign(component.userForm, { first_name: 'Ali', last_name: 'Rezai', username: 'ali.r', national_code: '', phone_number: '09121112255', email: '', emergency_contact: '' });
+      component.userForm.password = 'Secret99';
+      component.saveUser();
+      const body = mockAccountsHttp.updateUser.mock.calls.at(-1)?.[1];
+      expect(body).toBeDefined();
+      expect('password' in body).toBe(false);
+    });
+
+    it('فقط view_sys_users: دکمه‌ها پنهان و نوشتن‌ها بسته است', async () => {
+      (component as any).isSuperuser = () => false;
+      mockAuth.hasPermission.mockImplementation((code: string) => code === 'view_sys_users');
+      expect(component.canAddUsers()).toBe(false);
+      expect(component.canEditUsers()).toBe(false);
+      component.activeTab = 'users';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[label="کاربر جدید"]')).toBeNull();
+      expect(el.querySelector('[label="ورود اکسل کاربران"]')).toBeNull();
+      component.openUserModal();
+      expect(component.isUserModalOpen).toBe(false);
+      component.toggleUserStatus(2);
+      expect(mockAccountsHttp.toggleUserStatus).not.toHaveBeenCalled();
+      await component.resetPassword(2);
+      expect(mockAccountsHttp.adminResetPassword).not.toHaveBeenCalled();
+    });
+
+    it('۴۰۳ با detail فارسی همان‌طور که هست نمایش داده می‌شود', () => {
+      const detail = 'این کاربر در شرکت دیگری هم عضو است؛ فقط مدیر کل می‌تواند آن را تغییر دهد.';
+      mockAccountsHttp.toggleUserStatus = vi.fn().mockReturnValue(throwError(() => ({ status: 403, error: { detail } })));
+      component.toggleUserStatus(2);
+      expect(mockToast.show).toHaveBeenCalledWith('error', detail);
+    });
+
+    it('users_changed با تأخیر ~۵۰۰ms فهرست را بی‌صدا دوباره می‌خواند و برای کاربر باز نوار نشان می‌دهد', () => {
+      vi.useFakeTimers();
+      mockAccountsHttp.getUser = vi.fn().mockImplementation((id: number) => of({ ...mockUsers.find((u: any) => u.id === id) }));
+      const ps = TestBed.inject(PermissionService);
+      component.openUserModal(2);
+      // ویرایش ذخیره‌نشده: رویداد بی‌صدا رونویسی نمی‌کند و نوار نشان می‌دهد
+      component.userForm.first_name = 'ویرایش‌نشده‌در‌سرور';
+      mockAccountsHttp.getUsers.mockClear();
+      const loadingBefore = component.isLoading;
+      ps.usersChanged$.next({ user_id: 2, reason: 'user', company_id: 1, own: false });
+      ps.permissionsChanged$.next({ user_id: 2, reason: 'role', company_id: 1, own: false });
+      vi.advanceTimersByTime(400);
+      expect(mockAccountsHttp.getUsers).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(200);
+      expect(mockAccountsHttp.getUsers).toHaveBeenCalledTimes(1);
+      expect(component.isLoading).toBe(loadingBefore);
+      expect(component.editingUserChanged).toBe(true);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-user-changed-banner]')?.textContent).toContain('این کاربر تغییر کرده است');
+      component.reloadEditingUser();
+      expect(component.editingUserChanged).toBe(false);
+    });
+
+    it('رویداد کاربر باز با فرم بی‌تغییر (مثلاً ذخیرهٔ خود مدیر) بی‌صدا تازه می‌شود و نوار نمی‌آید', () => {
+      mockAccountsHttp.getUser = vi.fn().mockImplementation((id: number) => of({ ...mockUsers.find((u: any) => u.id === id), first_name: 'نام تازه' }));
+      const ps = TestBed.inject(PermissionService);
+      component.openUserModal(2);
+      ps.usersChanged$.next({ user_id: 2, reason: 'user', company_id: 1, own: false });
+      expect(component.editingUserChanged).toBe(false);
+      expect(component.userForm.first_name).toBe('نام تازه');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────
   // 6. تب نقش‌ها: سلسله‌مراتب، مجوزها و اعتبارسنجی حلقه (Roles Tab & Hierarchy)
   // ─────────────────────────────────────────────────────────────────
+  describe('۲.۹-ب بخش دوم: تأیید، خطا، آفلاین، بستن پنجره، Escape', () => {
+    const tick = () => new Promise(r => setTimeout(r));
+    afterEach(() => {
+      vi.restoreAllMocks();
+      // نمونه‌های mockUsers بین تست‌ها مشترک‌اند؛ وضعیت فعال/معلق را برمی‌گردانیم
+      resetSharedMockUsers();
+    });
+
+    it('تعلیق تکی تأیید می‌خواهد؛ رد تأیید یعنی بدون درخواست و فعال‌سازی بدون تأیید است', async () => {
+      mockConfirmDialog.open.mockClear();
+      mockConfirmDialog.open.mockResolvedValueOnce(false);
+      await component.toggleUserStatus(1);
+      expect(mockConfirmDialog.open).toHaveBeenCalledTimes(1);
+      expect(mockAccountsHttp.toggleUserStatus).not.toHaveBeenCalled();
+      mockConfirmDialog.open.mockResolvedValueOnce(true);
+      await component.toggleUserStatus(1);
+      expect(mockAccountsHttp.toggleUserStatus).toHaveBeenCalledWith(1);
+      mockConfirmDialog.open.mockClear();
+      await component.toggleUserStatus(2);
+      expect(mockConfirmDialog.open).not.toHaveBeenCalled();
+    });
+
+    it('تعلیق گروهی تعداد را با رقم فارسی در پیام تأیید می‌آورد و فعال‌سازی گروهی تأیید نمی‌خواهد', async () => {
+      mockConfirmDialog.open.mockClear();
+      component.toggleSelectUser(1);
+      await component.bulkToggleStatus(false);
+      expect(mockConfirmDialog.open.mock.calls[0][0].message).toContain('۱');
+      expect(mockAccountsHttp.toggleUserStatus).toHaveBeenCalledWith(1, false);
+      mockConfirmDialog.open.mockClear();
+      component.toggleSelectUser(2);
+      await component.bulkToggleStatus(true);
+      expect(mockConfirmDialog.open).not.toHaveBeenCalled();
+    });
+
+    it('خروجی اکسل با فیلتر فعال فقط شناسهٔ فیلترشده‌ها را می‌فرستد و بدون فیلتر همه را', () => {
+      component.exportUsersExcel();
+      expect(mockAccountsHttp.exportUsersExcel).toHaveBeenLastCalledWith(undefined);
+      component.setStatusFilter('active');
+      component.exportUsersExcel();
+      expect(mockAccountsHttp.exportUsersExcel).toHaveBeenLastCalledWith(component.filteredUsers.map((u: any) => u.id));
+    });
+
+    it('خطای بارگذاری فهرست کارت خطا با «تلاش دوباره» می‌سازد؛ سرور در دسترس نیست جدا نشان داده می‌شود', () => {
+      mockAccountsHttp.getUsers.mockReturnValue(throwError(() => ({ status: 0 })));
+      component.loadData();
+      (component as any).cdr.detectChanges();
+      expect(component.isLoading).toBe(false);
+      expect(component.usersLoadError).toBe('سرور در دسترس نیست');
+      const card = (fixture.nativeElement as HTMLElement).querySelector('[data-users-load-error]');
+      expect(card?.textContent).toContain('سرور در دسترس نیست');
+      expect(card?.querySelector('button')).toBeTruthy();
+      mockAccountsHttp.getUsers.mockReturnValue(throwError(() => ({ status: 400, error: { detail: 'خطای دیگر' } })));
+      component.loadData();
+      expect(component.usersLoadError).toBe('خطای دیگر');
+      mockAccountsHttp.getUsers.mockReturnValue(of(mockUsers));
+      component.loadData();
+      expect(component.usersLoadError).toBeNull();
+    });
+
+    it('آفلاین: نوار نشان داده می‌شود و نوشتن‌ها با پیام «در حالت آفلاین ممکن نیست» بسته است', async () => {
+      const net = (component as any).network;
+      vi.spyOn(net, 'isOnline', 'get').mockReturnValue(false);
+      (component as any).cdr.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-offline-banner]')).toBeTruthy();
+      mockToast.show.mockClear();
+      await component.toggleUserStatus(2);
+      expect(mockAccountsHttp.toggleUserStatus).not.toHaveBeenCalled();
+      expect(mockToast.show).toHaveBeenCalledWith('error', 'در حالت آفلاین ممکن نیست');
+      component.openUserModal();
+      expect(component.isUserModalOpen).toBe(false);
+      expect(component.userFormReadonly).toBe(true);
+    });
+
+    it('اندازهٔ صفحه و فیلتر شمار نمایش نمای کارتی را بازنشانی می‌کنند و جستجو انتخاب گروهی را پاک می‌کند', () => {
+      component.visibleCount = 60;
+      component.setPageSize(10);
+      expect(component.visibleCount).toBe(10);
+      component.visibleCount = 60;
+      component.onFilterChange();
+      expect(component.visibleCount).toBe(component.pageSize);
+      component.toggleSelectUser(1);
+      component.onSearchChange('مدیر');
+      expect(component.selectedUserIds.size).toBe(0);
+    });
+
+    it('کنترل صفحه‌بندی فقط در نمای جدول است', () => {
+      component.activeTab = 'users';
+      component.userViewMode = 'table';
+      (component as any).cdr.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-users-pagination]')).toBeTruthy();
+      component.userViewMode = 'grid';
+      (component as any).cdr.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-users-pagination]')).toBeNull();
+    });
+
+    it('بدنهٔ ۴۰۰ سرور به پیام زیر همان فیلد می‌رود و به تب آن می‌پرد', () => {
+      mockAccountsHttp.createUser.mockReturnValueOnce(throwError(() => ({ status: 400, error: { username: ['این نام کاربری قبلاً ثبت شده است.'] } })));
+      component.openUserModal();
+      Object.assign(component.userForm, { first_name: 'علی', last_name: 'رضایی', username: 'ali.r', phone_number: '09123456789' });
+      component.userModalInnerTab = 'identity';
+      component.saveUser();
+      expect(component.userFieldMessages['username']).toBe('این نام کاربری قبلاً ثبت شده است.');
+      expect(component.userModalInnerTab).toBe('security');
+      (component as any).cdr.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-field-error="username"]')?.textContent).toContain('قبلاً ثبت شده');
+      component.clearUserFormError('username');
+      expect(component.userFieldMessages['username']).toBeUndefined();
+    });
+
+    it('بستن پنجرهٔ کاربر با تغییر ذخیره‌نشده می‌پرسد و بدون تغییر مستقیم می‌بندد', async () => {
+      component.openUserModal(2);
+      mockConfirmDialog.open.mockClear();
+      await component.requestCloseUserModal();
+      expect(mockConfirmDialog.open).not.toHaveBeenCalled();
+      expect(component.isUserModalOpen).toBe(false);
+      component.openUserModal(2);
+      component.userForm.first_name = 'تغییر';
+      mockConfirmDialog.open.mockResolvedValueOnce(false);
+      await component.requestCloseUserModal();
+      expect(component.isUserModalOpen).toBe(true);
+      expect(mockConfirmDialog.open.mock.calls[0][0].message).toContain('تغییرات ذخیره‌نشده‌اند');
+      mockConfirmDialog.open.mockResolvedValueOnce(true);
+      await component.requestCloseUserModal();
+      expect(component.isUserModalOpen).toBe(false);
+    });
+
+    it('پنجره‌ها role=dialog و aria-modal دارند و Escape بالاترین را می‌بندد (رمز یک‌بارمصرف با Escape بسته نمی‌شود)', async () => {
+      component.openUserModal(2);
+      (component as any).cdr.detectChanges();
+      const dlg = (fixture.nativeElement as HTMLElement).querySelector('#user-modal-title')?.closest('[role="dialog"]');
+      expect(dlg?.getAttribute('aria-modal')).toBe('true');
+      expect(dlg?.getAttribute('aria-labelledby')).toBe('user-modal-title');
+      component.showOneTimePasswords([{ username: 'u', password: 'Abc12345' }]);
+      // رمز یک‌بارمصرف فقط یک بار دیده می‌شود: Escape نه آن را می‌بندد نه پنجرهٔ زیرین را
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(component.oneTimePasswords).not.toBeNull();
+      expect(component.isUserModalOpen).toBe(true);
+      component.closeOneTimePasswords();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await tick();
+      expect(component.isUserModalOpen).toBe(false);
+    });
+
+    it('آرایه‌های قالب بین دو چرخهٔ تشخیص تغییر پایدارند (NG0103)', () => {
+      expect(component.userTabs).toBe(component.userTabs);
+      const u: any = mockUsers[0];
+      expect(component.getUserCompanyBadges(u)).toBe(component.getUserCompanyBadges(u));
+      expect(component.getUserAuthorizedSystems(u)).toBe(component.getUserAuthorizedSystems(u));
+      expect(component.getUserAuthorizedSystems(u).badges).toBe(component.getUserAuthorizedSystems(u).badges);
+    });
+  });
+
   describe('۶. تب نقش‌های سازمانی (Roles Tab Management)', () => {
     it('باید زیرتب نقش‌ها پیش‌فرض «نقش‌های انتساب» باشد و به «سامانه‌ای» برود (طرح ۲.۲)', () => {
       expect(component.rolesSubTab).toBe('assignment');

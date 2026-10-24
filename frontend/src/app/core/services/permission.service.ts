@@ -86,6 +86,8 @@ export class PermissionService {
 
   /** هر رویداد `permissions_updated` (کانال شخصی یا شرکت)؛ برای صفحهٔ کاربران (ج۲) */
   readonly permissionsChanged$ = new Subject<PermissionsUpdatedEvent>();
+  /** هر رویداد `users_changed` (ساخت/ویرایش/حذف کاربر روی کانال شرکت)؛ برای تازه‌سازی صفحهٔ کاربران */
+  readonly usersChanged$ = new Subject<PermissionsUpdatedEvent>();
 
   private userId: number | null = null;
   private catalogDenied = false;
@@ -314,6 +316,12 @@ export class PermissionService {
 
   private handleSocketMessage(msg: any): void {
     const type = msg?.type_str || msg?.type || msg?.event;
+    if (type === 'users_changed') {
+      const changedId = msg.user_id == null ? null : Number(msg.user_id);
+      const changedCompany = msg.company_id == null ? null : Number(msg.company_id);
+      this.usersChanged$.next({ user_id: changedId, reason: msg.reason, company_id: changedCompany, own: changedId !== null && changedId === this.userId });
+      return;
+    }
     if (type !== 'permissions_updated') return;
     const userId = msg.user_id == null ? null : Number(msg.user_id);
     const own = userId !== null && userId === this.userId;

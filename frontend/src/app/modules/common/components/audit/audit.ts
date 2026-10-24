@@ -1517,11 +1517,19 @@ export class Audit implements OnInit, OnDestroy {
     return this.lockedUsersList.filter(u => u.is_locked);
   }
 
+  /** باز کردن قفل بر پایهٔ آی‌پی فقط کار مدیر کل است؛ دیگران فقط با نام کاربری */
+  isSuperuser = computed(() => !!this.auth.user()?.is_superuser);
+
+  canUnlockTarget(username?: string | null, ip_address?: string | null): boolean {
+    return !!username || (this.isSuperuser() && !!ip_address);
+  }
+
   confirmUnlockUser(username?: string | null, ip_address?: string | null, event?: Event): void {
     if (event) event.stopPropagation();
+    if (!this.canUnlockTarget(username, ip_address)) return;
     this.targetUserToUnlock = {
       username: username || undefined,
-      ip_address: ip_address || undefined
+      ip_address: this.isSuperuser() ? (ip_address || undefined) : undefined
     };
     this.showUnlockConfirmModal = true;
     this.updateScrollLock();
@@ -1557,7 +1565,7 @@ export class Audit implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        this.toast.show('error', err?.error?.error || 'خطا در رفع مسدودیت حساب کاربری.');
+        this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در رفع مسدودیت حساب کاربری.');
         this.isUnlocking = false;
         this.cdr.markForCheck();
       }

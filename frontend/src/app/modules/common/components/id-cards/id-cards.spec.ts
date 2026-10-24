@@ -355,8 +355,8 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
   // -------------------------------------------------------------
   describe('۷. فرمت‌بندی انبارها، تاریخ انقضا و کد پرسنلی', () => {
     it('باید کد پرسنلی استاندارد را تولید کند', () => {
-      const code = component.getUserPersonnelCode(mockUsersList[0]);
-      expect(code).toBe('EMP-1001');
+      const user = { ...mockUsersList[0], card_code: 'EMP-1-0123456789abcdef' } as User;
+      expect(component.getUserPersonnelCode(user)).toBe('EMP-1-0123456789abcdef');
     });
 
     it('باید تاریخ انقضا برای مقدار صفر، نامحدود باشد', () => {
@@ -369,8 +369,14 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
     });
 
     it('باید آدرس لینک اعتبارسنجی QR Code را به درستی بسازد', () => {
-      const url = component.getCardVerificationUrl(mockUsersList[0]);
-      expect(url).toContain('/verify-card/EMP-1001');
+      const user = { ...mockUsersList[0], card_code: 'EMP-1-0123456789abcdef' } as User;
+      const url = component.getCardVerificationUrl(user);
+      expect(url).toContain('/verify-card/EMP-1-0123456789abcdef');
+    });
+
+    it('بدون card_code سرور: هیچ کدی ساخته نمی‌شود و لینک QR خالی است', () => {
+      expect(component.getUserPersonnelCode(mockUsersList[0])).toBe('');
+      expect(component.getCardVerificationUrl(mockUsersList[0])).toBe('');
     });
 
     it('باید خلاصه نام انبارها را به درستی تولید کند', () => {

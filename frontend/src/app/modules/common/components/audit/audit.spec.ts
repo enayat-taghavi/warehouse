@@ -47,4 +47,25 @@ describe('Audit', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('بدون مدیر کل بودن: رفع قفل بر پایهٔ آی‌پی ممکن نیست و آی‌پی هرگز به سرور فرستاده نمی‌شود', () => {
+    (component as any).isSuperuser = () => false;
+
+    expect(component.canUnlockTarget(null, '10.0.0.5')).toBe(false);
+    expect(component.canUnlockTarget('ali', '10.0.0.5')).toBe(true);
+
+    component.confirmUnlockUser(null, '10.0.0.5');
+    expect(component.showUnlockConfirmModal).toBe(false);
+
+    component.confirmUnlockUser('ali', '10.0.0.5');
+    expect(component.targetUserToUnlock).toEqual({ username: 'ali', ip_address: undefined });
+  });
+
+  it('مدیر کل: رفع قفل بر پایهٔ آی‌پی مجاز است', () => {
+    (component as any).isSuperuser = () => true;
+
+    expect(component.canUnlockTarget(null, '10.0.0.5')).toBe(true);
+    component.confirmUnlockUser('ali', '10.0.0.5');
+    expect(component.targetUserToUnlock).toEqual({ username: 'ali', ip_address: '10.0.0.5' });
+  });
 });

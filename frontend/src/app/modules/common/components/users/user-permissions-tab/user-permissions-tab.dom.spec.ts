@@ -9,6 +9,7 @@ import { UserPermissionsTabComponent } from './user-permissions-tab';
 import { PermissionApiService } from '../../../../../core/api/permission-api.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { OrgStructureApiService } from '../../../../../core/api/org-structure-api.service';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { PermissionCatalog, PermissionsUpdatedEvent, UserPermissionsDetail } from '../../../../../core/models/permission.model';
@@ -61,6 +62,7 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
   let changed$: Subject<PermissionsUpdatedEvent>;
   let editorSuperuser: boolean;
   let confirm: { open: ReturnType<typeof vi.fn> };
+  let org: { getProjects: ReturnType<typeof vi.fn>; getSections: ReturnType<typeof vi.fn>; bulkAssign: ReturnType<typeof vi.fn> };
 
   const el = (): HTMLElement => fixture.nativeElement;
   const block = (key: string) => el().querySelector(`[data-block="${key}"]`) as HTMLElement;
@@ -90,6 +92,11 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
       updateUserPermissions: vi.fn().mockImplementation(() => of(payload())),
     };
     confirm = { open: vi.fn().mockResolvedValue(true) };
+    org = {
+      getProjects: vi.fn().mockReturnValue(of([{ id: 9, name: 'پروژه الف' }])),
+      getSections: vi.fn().mockReturnValue(of([{ id: 12, name: 'بخش یک' }])),
+      bulkAssign: vi.fn().mockReturnValue(of([])),
+    };
     TestBed.configureTestingModule({
       imports: [UserPermissionsTabComponent],
       providers: [
@@ -103,8 +110,12 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
             permissionsChanged$: changed$,
           },
         },
-        { provide: ModuleRegistryService, useValue: { getSpec: (c: string) => (c === 'mod_a' ? { titleShortFa: 'ماژول آ' } : undefined) } },
+        { provide: ModuleRegistryService, useValue: {
+          getSpec: (c: string) => (c === 'mod_a' ? { titleShortFa: 'ماژول آ' } : undefined),
+          getExtensions: () => [{ moduleCode: 'mod_a', extension: { sectionRoles: [{ key: 'employee', labelFa: 'کارمند', shortLabelFa: 'کارمند', icon: 'users', tone: 'blue', order: 1 }] } }],
+        } },
         { provide: ConfirmDialogService, useValue: confirm },
+        { provide: OrgStructureApiService, useValue: org },
         { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn(), show: vi.fn() } },
       ],
     });
@@ -249,5 +260,59 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
     expect(api.getUserPermissions).toHaveBeenCalledTimes(1);
     changed$.next({ user_id: null, company_id: 3, reason: 'bundle', own: false });
     expect(api.getUserPermissions).toHaveBeenCalledTimes(2);
+  });
+
+  describe('فرم «افزودن انتساب» (۲.۹-ب)', () => {
+    const q = (sel: string) => el().querySelector(sel) as HTMLSelectElement;
+    const pick = async (sel: string, value: string) => {
+      const node = q(sel);
+      node.value = value;
+      node.dispatchEvent(new Event('change'));
+      await settle();
+    };
+
+    async function openForm(): Promise<void> {
+      fixture = TestBed.createComponent(UserPermissionsTabComponent);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('userId', 7);
+      fixture.componentRef.setInput('canAssign', true);
+      fixture.componentRef.setInput('companies', [{ id: 3, name: 'شرکت الف' }, { id: 5, name: 'شرکت ب' }]);
+      fixture.detectChanges();
+      await settle();
+      (el().querySelector('[data-add-assignment]') as HTMLButtonElement).click();
+      await settle();
+    }
+
+    it('زنجیرهٔ شرکت › پروژه › بخش API ساختار سازمانی را صدا می‌زند و ثبت در دقیق‌ترین سطح انجام می‌شود', async () => {
+      await openForm();
+      await pick('[data-assign-company]', '3');
+      expect(org.getProjects).toHaveBeenCalled();
+      await pick('[data-assign-project]', '9');
+      expect(org.getSections).toHaveBeenCalledWith({ project_id: 9, is_active: true }, 3);
+      await pick('[data-assign-section]', '12');
+      await pick('[data-assign-role]', 'employee');
+      (el().querySelector('[data-assign-submit]') as HTMLButtonElement).click();
+      await settle();
+      expect(org.bulkAssign).toHaveBeenCalledWith({ section_id: 12, user_ids: [7], role: 'employee' });
+    });
+
+    it('بدون پروژه، انتساب در سطح شرکت ثبت می‌شود', async () => {
+      await openForm();
+      await pick('[data-assign-company]', '5');
+      await pick('[data-assign-role]', 'employee');
+      (el().querySelector('[data-assign-submit]') as HTMLButtonElement).click();
+      await settle();
+      expect(org.bulkAssign).toHaveBeenCalledWith({ company_id: 5, user_ids: [7], role: 'employee' });
+    });
+
+    it('خطای ۴۰۳ سرور با متن detail در فرم نشان داده می‌شود', async () => {
+      org.bulkAssign.mockReturnValue(throwError(() => ({ status: 403, error: { detail: 'اجازهٔ انتساب در این شرکت را ندارید.' } })));
+      await openForm();
+      await pick('[data-assign-company]', '3');
+      await pick('[data-assign-role]', 'employee');
+      (el().querySelector('[data-assign-submit]') as HTMLButtonElement).click();
+      await settle();
+      expect(el().querySelector('[data-assign-error]')?.textContent).toContain('اجازهٔ انتساب در این شرکت را ندارید.');
+    });
   });
 });

@@ -5,9 +5,10 @@ import {
   SHORT_PERMISSION_NAMES,
   getShortPermissionName,
   getRolePermissionPercent,
-  DEFAULT_ASSIGNMENT_SCOPE_LABELS
+  DEFAULT_ASSIGNMENT_SCOPE_LABELS,
+  extractApiError
 } from './users.helpers';
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, inject, Injector } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, ElementRef, inject, Injector } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StateService } from '../../../../core/services/state.service';
@@ -26,8 +27,8 @@ import { ExcelImportModal } from '../../../../shared/components/excel-import-mod
 import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { AvatarCropperModal } from '../../../../shared/components/avatar-cropper-modal/avatar-cropper-modal';
 import { environment } from '../../../../../environments/environment';
-import { Observable, Subject, Subscription, forkJoin, of } from 'rxjs';
-import { debounceTime, finalize, map, catchError } from 'rxjs/operators';
+import { Observable, Subject, Subscription, forkJoin, merge, of } from 'rxjs';
+import { debounceTime, finalize, map, catchError, takeUntil, tap } from 'rxjs/operators';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CompanyApiService } from '../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
@@ -41,8 +42,20 @@ import { RoleBundlesPanel } from './role-bundles-panel/role-bundles-panel';
 import { UserPermissionsTabComponent } from './user-permissions-tab/user-permissions-tab';
 import { WorkflowSubstitutesComponent } from '../../../../shared/components/workflow-substitutes/workflow-substitutes.component';
 import { saveBlob } from '../../../../core/platform/file-output';
+import { NetworkStatusService } from '../../../../core/services/network-status.service';
+import { isServerUnreachable } from '../../../../core/services/server-reachability';
 
 import { IconName } from '../../../../shared/icons/icon-registry';
+
+interface AuthorizedSystems {
+  isSuperuser: boolean;
+  hasWarehouse: boolean;
+  hasFinance: boolean;
+  hasGlobal: boolean;
+  warehouseCount: number;
+  badges: { key: string; label: string; icon: string; bgClass: string; textClass: string; borderClass: string }[];
+  isEmpty: boolean;
+}
 
 @Component({
   selector: 'app-users',
@@ -54,14 +67,26 @@ import { IconName } from '../../../../shared/icons/icon-registry';
 export class Users implements OnInit, OnDestroy {
   @ViewChild(IdCards) idCardsComponent?: IdCards;
   @ViewChild(RoleBundlesPanel) roleBundlesPanel?: RoleBundlesPanel;
+  @ViewChild('otpClose') otpCloseBtn?: ElementRef<HTMLButtonElement>;
   activeTab = 'users';
 
+  /** آرایهٔ تب‌ها فقط با تغییر شمارش‌ها تازه می‌شود (NG0103: هر چرخهٔ تشخیص تغییر آرایهٔ نو نگیرد) */
+  private userTabsCache: TabDef[] = [];
+  private userTabsKey = '';
+
   get userTabs(): TabDef[] {
-    return [
-      { id: 'users', label: 'کاربران', shortLabel: 'کاربران', count: this.userCounts.all, icon: 'users', tone: 'indigo' },
-      { id: 'roles', label: 'نقش‌ها', shortLabel: 'نقش‌ها', count: this.allRoles?.length || 0, icon: 'shield', tone: 'indigo' },
-      { id: 'id-cards', label: 'کارت پرسنلی', shortLabel: 'کارت', icon: 'id-card', tone: 'indigo' },
-    ];
+    const usersCount = this.userCounts.all;
+    const rolesCount = this.allRoles?.length || 0;
+    const key = `${usersCount}|${rolesCount}`;
+    if (key !== this.userTabsKey) {
+      this.userTabsKey = key;
+      this.userTabsCache = [
+        { id: 'users', label: 'کاربران', shortLabel: 'کاربران', count: usersCount, icon: 'users', tone: 'indigo' },
+        { id: 'roles', label: 'نقش‌ها', shortLabel: 'نقش‌ها', count: rolesCount, icon: 'shield', tone: 'indigo' },
+        { id: 'id-cards', label: 'کارت پرسنلی', shortLabel: 'کارت', icon: 'id-card', tone: 'indigo' },
+      ];
+    }
+    return this.userTabsCache;
   }
 
   /** زیرتب تب «نقش‌ها» (طرح ۲.۲): نقش‌های انتساب (بسته‌ها) یا نقش‌های سامانه‌ای (`CustomRole`) */
@@ -110,7 +135,174 @@ export class Users implements OnInit, OnDestroy {
     return this.isSuperuser() || !!this.auth.hasPermission?.('perm_usr_role');
   }
 
+  /** ساخت کاربر و ورود اکسل: مدیر کل یا `perm_usr_add`؛ `view_sys_users` تنها = فقط خواندن (۲.۹) */
+  canAddUsers(): boolean {
+    return this.isSuperuser() || !!this.auth.hasPermission?.('perm_usr_add');
+  }
+
+  /** ویرایش، تعلیق/فعال‌سازی، بازنشانی رمز، حذف و تصویر کاربر: مدیر کل یا `perm_usr_edit` (۲.۹) */
+  canEditUsers(): boolean {
+    return this.isSuperuser() || !!this.auth.hasPermission?.('perm_usr_edit');
+  }
+
+  private network = NetworkStatusService.getInstance();
+
+  /** آفلاین: خواندن از حافظهٔ نهان ادامه دارد اما همهٔ نوشتن‌ها بسته است (۲.۹-ب) */
+  get isOffline(): boolean {
+    return !this.network.isOnline;
+  }
+
+  /** فرم پنجرهٔ کاربر فقط‌خواندنی است: بدون مجوز ویرایش/افزودن یا آفلاین (inputها در fieldset غیرفعال می‌شوند) */
+  get userFormReadonly(): boolean {
+    return this.isOffline || !(this.editingUser ? this.canEditUsers() : this.canAddUsers());
+  }
+
+  readonly offlineTitle = 'در حالت آفلاین ممکن نیست';
+
+  private denyUserWrite(kind: 'add' | 'edit'): boolean {
+    if (this.isOffline) {
+      this.toast.show('error', this.offlineTitle);
+      return true;
+    }
+    if (kind === 'add' ? this.canAddUsers() : this.canEditUsers()) return false;
+    this.toast.show('error', kind === 'add' ? 'افزودن کاربر به مجوز «افزودن کاربر» نیاز دارد.' : 'تغییر کاربران به مجوز «ویرایش کاربر» نیاز دارد.');
+    return true;
+  }
+
+  /** ویرایش کاربری غیر از کاربر واردشده؛ رمز چنین کاربری فقط با «بازنشانی رمز» عوض می‌شود (۲.۹، سرور ۴۰۰ می‌دهد) */
+  get isEditingOtherUser(): boolean {
+    return !!this.editingUser?.id && this.editingUser.id !== this.auth.user()?.id;
+  }
+
+  // ─── رمز یک‌بارمصرف (۲.۹): فقط یک بار نمایش داده می‌شود ───
+  /** ردیف‌های رمز یک‌بارمصرف پنل باز؛ null = پنل بسته */
+  oneTimePasswords: { username: string; password: string }[] | null = null;
+
+  showOneTimePasswords(rows: { username: string; password: string }[]): void {
+    const valid = (rows || []).filter(r => !!r?.password);
+    if (!valid.length) return;
+    this.oneTimePasswords = valid;
+    this.cdr.detectChanges();
+    // فوکوس به پنل برود تا صفحه‌خوان و صفحه‌کلید آن را ببینند
+    setTimeout(() => this.otpCloseBtn?.nativeElement.focus());
+  }
+
+  closeOneTimePasswords(): void {
+    this.oneTimePasswords = null;
+    this.cdr.detectChanges();
+  }
+
+  async copyOneTimePasswords(row?: { username: string; password: string }): Promise<void> {
+    const rows = row ? [row] : (this.oneTimePasswords || []);
+    const text = row ? row.password : rows.map(r => `${r.username}\t${r.password}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      this.toast.show('success', row ? 'رمز یک‌بارمصرف کپی شد.' : 'همهٔ رمزها کپی شد.');
+    } catch {
+      this.toast.show('error', 'کپی انجام نشد؛ رمز را دستی یادداشت کنید.');
+    }
+  }
+
+  // ─── به‌روزرسانی زنده (۲.۹): users_changed و permissions_updated ───
+  private destroy$ = new Subject<void>();
+  /** رویدادی برای کاربرِ باز در پنجرهٔ ویرایش رسید؛ نوار «این کاربر تغییر کرده است» */
+  editingUserChanged = false;
+  /** دریافت تازهٔ کاربر باز در پنجره از سرور */
+  isRefetchingEditingUser = false;
+  private editingUserSeq = 0;
+  /** فرم پنجره درست پس از پر شدن از سرور؛ معیار «ویرایش ذخیره‌نشده» */
+  private userFormBaseline = '';
+
+  /** فرم پنجره ویرایش ذخیره‌نشده دارد */
+  get isUserFormDirty(): boolean {
+    return JSON.stringify(this.userForm) !== this.userFormBaseline;
+  }
+
+  private subscribeDirectoryChanges(): void {
+    const ps = this.permissionService;
+    if (!ps?.permissionsChanged$ || !ps?.usersChanged$) return;
+    merge(ps.permissionsChanged$, ps.usersChanged$).pipe(
+      tap(ev => {
+        // فرم بی‌تغییر بی‌صدا تازه می‌شود؛ فقط با ویرایش ذخیره‌نشده نوار «این کاربر تغییر کرده است» می‌آید
+        if (this.isUserModalOpen && this.editingUser?.id && ev?.user_id === this.editingUser.id) this.refetchEditingUser();
+      }),
+      debounceTime(500),
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.refreshDirectorySilently());
+  }
+
+  /** دریافت دوبارهٔ کاربران و نقش‌ها بی اسپینر؛ انتخاب و صفحه حفظ می‌شود */
+  refreshDirectorySilently(): void {
+    this.accountsService.getUsers().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        const list = Array.isArray(res) ? res : [];
+        const ids = new Set(list.map((u: any) => u.id));
+        for (const id of Array.from(this.selectedUserIds)) if (!ids.has(id)) this.selectedUserIds.delete(id);
+        this.state.appState.users = list;
+        if (this.editingUser?.id) {
+          const fresh = list.find((u: any) => u.id === this.editingUser.id);
+          if (fresh && !this.isUserModalOpen) this.editingUser = fresh;
+        }
+        this.rebuildMemoizedData();
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+    this.accountsService.getRoles().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        this.state.appState.roles = Array.isArray(res) ? res : [];
+        this.rebuildMemoizedData();
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  /** کاربر باز در پنجره را از سرور می‌خواند؛ ردیف فهرست تا رسیدن پاسخ جایگزین است و ویرایش ذخیره‌نشده بی‌صدا رونویسی نمی‌شود */
+  refetchEditingUser(force = false): void {
+    const id = this.editingUser?.id;
+    if (!id || typeof this.accountsService.getUser !== 'function') return;
+    const seq = ++this.editingUserSeq;
+    this.isRefetchingEditingUser = true;
+    this.accountsService.getUser(id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (fresh: any) => {
+        if (seq !== this.editingUserSeq || !this.isUserModalOpen || this.editingUser?.id !== id) return;
+        this.isRefetchingEditingUser = false;
+        const row = this.state.appState.users.find((x: any) => x.id === id);
+        if (row) Object.assign(row, fresh);
+        if (force || !this.isUserFormDirty) {
+          this.editingUser = row || fresh;
+          this.applyUserToForm(this.editingUser);
+          this.editingUserChanged = false;
+        } else {
+          this.editingUserChanged = true;
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        if (seq !== this.editingUserSeq) return;
+        this.isRefetchingEditingUser = false;
+        if (force) this.toast.show('error', extractApiError(err, 'اطلاعات تازهٔ کاربر دریافت نشد.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** دکمهٔ «بارگذاری دوباره» نوار تغییر کاربر */
+  reloadEditingUser(): void {
+    this.refetchEditingUser(true);
+  }
+
+  /** بازنشانی رمز کاربر باز در پنجره (تب امنیت) */
+  resetEditingUserPassword(): void {
+    if (this.editingUser?.id) void this.resetPassword(this.editingUser.id);
+  }
+
   private denyRoleWrite(): boolean {
+    if (this.isOffline) {
+      this.toast.show('error', this.offlineTitle);
+      return true;
+    }
     if (this.canWriteRoles()) return false;
     this.toast.show('error', 'تغییر نقش‌های سامانه‌ای به مجوز «مدیریت نقش‌ها» نیاز دارد.');
     return true;
@@ -460,7 +652,11 @@ export class Users implements OnInit, OnDestroy {
   });
 
   isSavingUser = false;
+  /** پیام خطای بارگذاری فهرست کاربران؛ null = بی‌خطا */
+  usersLoadError: string | null = null;
   userFormErrors: { [key: string]: boolean } = {};
+  /** متن خطای هر فیلد فرم کاربر (از اعتبارسنجی محلی یا بدنهٔ ۴۰۰ سرور) */
+  userFieldMessages: { [key: string]: string } = {};
 
   // Excel Import/Export
   isExcelModalOpen = false;
@@ -503,6 +699,7 @@ export class Users implements OnInit, OnDestroy {
       const q = params['q'] || '';
       if (q !== this.searchQuery) {
         this.searchQuery = q;
+        this.selectedUserIds.clear();
       }
       this.cdr.detectChanges();
     });
@@ -514,12 +711,16 @@ export class Users implements OnInit, OnDestroy {
     });
 
     this.loadData();
+    this.subscribeDirectoryChanges();
+    this.network.state$.pipe(takeUntil(this.destroy$)).subscribe(() => this.cdr.detectChanges());
   }
 
   ngOnDestroy() {
     if (this.searchSub) {
       this.searchSub.unsubscribe();
     }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /** گروه‌های مجوز صفحهٔ نقش‌های سامانه‌ای: گروه ماژول‌های قالب قدیم، گروه فهرست کامل سرور برای قالب تازه، سیستم، سایر و حساس */
@@ -643,20 +844,22 @@ export class Users implements OnInit, OnDestroy {
     });
 
     this.isLoading = true;
+    this.usersLoadError = null;
     this.accountsService.getUsers().subscribe({
       next: (res) => {
         this.state.appState.users = Array.isArray(res) ? res : [];
         this.rebuildMemoizedData();
-        setTimeout(() => {
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }, 300);
+        this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        setTimeout(() => {
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }, 300);
+        this.isLoading = false;
+        // خطای بارگذاری فهرست: کارت خطا با «تلاش دوباره» (سرور در دسترس نیست جدا از بقیه)
+        const status = Number(err?.status ?? -1);
+        this.usersLoadError = isServerUnreachable(status)
+          ? 'سرور در دسترس نیست'
+          : extractApiError(err, 'بارگذاری کاربران انجام نشد.');
+        this.cdr.detectChanges();
       }
     });
 
@@ -693,6 +896,7 @@ export class Users implements OnInit, OnDestroy {
   rebuildMemoizedData(): void {
     const roles: any[] = Array.isArray(this.state.appState.roles) ? this.state.appState.roles : [];
     const users: any[] = Array.isArray(this.state.appState.users) ? this.state.appState.users : [];
+    this.authorizedSystemsEpoch++;
 
     // 1. Permissions id -> codename map
     if (this.systemPermissions && this.systemPermissions.length > 0) {
@@ -843,11 +1047,13 @@ export class Users implements OnInit, OnDestroy {
   setPageSize(size: number): void {
     this.pageSize = size;
     this.currentPage = 1;
+    this.visibleCount = size;
     this.cdr.detectChanges();
   }
 
   onFilterChange(): void {
     this.currentPage = 1;
+    this.visibleCount = this.pageSize;
     this.clearUserSelection();
     this.cdr.detectChanges();
   }
@@ -877,6 +1083,7 @@ export class Users implements OnInit, OnDestroy {
   setStatusFilter(filter: 'all' | 'active' | 'inactive' | 'no_warehouse' | 'superuser') {
     this.userStatusFilter = filter;
     this.currentPage = 1;
+    this.visibleCount = this.pageSize;
     this.clearUserSelection();
     this.cdr.detectChanges();
   }
@@ -917,7 +1124,8 @@ export class Users implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  bulkToggleStatus(activate: boolean): void {
+  async bulkToggleStatus(activate: boolean): Promise<void> {
+    if (this.denyUserWrite('edit')) return;
     const targetIds = Array.from(this.selectedUserIds).filter(id => {
       const u = this.state.appState.users.find((x: any) => x.id === id);
       return u && u.is_active !== activate;
@@ -926,6 +1134,17 @@ export class Users implements OnInit, OnDestroy {
     if (targetIds.length === 0) {
       this.toast.show('info', `تمامی کاربران انتخاب‌شده در حال حاضر ${activate ? 'فعال' : 'معلق'} هستند.`);
       return;
+    }
+
+    if (!activate) {
+      const ok = await this.confirmDialog.open({
+        title: 'تعلیق گروهی کاربران',
+        message: `${targetIds.length.toLocaleString('fa-IR')} کاربر معلق می‌شوند و دسترسی آن‌ها فوراً قطع می‌گردد. ادامه می‌دهید؟`,
+        confirmText: 'بله، معلق شوند',
+        cancelText: 'انصراف',
+        type: 'warning',
+      });
+      if (ok !== true) return;
     }
 
     interface BulkToggleItem {
@@ -1095,18 +1314,27 @@ export class Users implements OnInit, OnDestroy {
     return p ? p.name : id;
   }
 
+  private static readonly EMPTY_BADGES: { name: string; is_default: boolean; code?: string }[] = [];
+  private companyBadgesCache = new WeakMap<object, { sig: string; value: { name: string; is_default: boolean; code?: string }[] }>();
+
+  /** نشان شرکت‌ها؛ تا وقتی داده‌ی کاربر عوض نشده همان آرایه برمی‌گردد (NG0103) */
   getUserCompanyBadges(u: any): { name: string; is_default: boolean; code?: string }[] {
-    if (u?.company_accesses && u.company_accesses.length > 0) {
-      return u.company_accesses.map((ca: any) => ({
+    if (!u) return Users.EMPTY_BADGES;
+    const sig = JSON.stringify([u.company_accesses, u.company]);
+    const hit = this.companyBadgesCache.get(u);
+    if (hit && hit.sig === sig) return hit.value;
+    let value: { name: string; is_default: boolean; code?: string }[] = Users.EMPTY_BADGES;
+    if (u.company_accesses && u.company_accesses.length > 0) {
+      value = u.company_accesses.map((ca: any) => ({
         name: ca.company_name || ca.company_code || 'شرکت',
         is_default: !!ca.is_default,
         code: ca.company_code
       }));
+    } else if (u.company) {
+      value = [{ name: u.company, is_default: true }];
     }
-    if (u?.company) {
-      return [{ name: u.company, is_default: true }];
-    }
-    return [];
+    this.companyBadgesCache.set(u, { sig, value });
+    return value;
   }
 
   switchPermTab(tab: string) {
@@ -1116,6 +1344,9 @@ export class Users implements OnInit, OnDestroy {
 
   onSearchChange(val: string) {
     this.currentPage = 1;
+    this.visibleCount = this.pageSize;
+    // نتیجهٔ جستجو عوض می‌شود؛ انتخاب گروهی قبلی نباید روی کاربران پنهان اثر کند (۲.۹-ب)
+    if (this.selectedUserIds.size) this.selectedUserIds.clear();
     this.searchSubject.next(val);
   }
 
@@ -1154,8 +1385,22 @@ export class Users implements OnInit, OnDestroy {
     return item.id;
   }
 
-  toggleUserStatus(id: number) {
+  async toggleUserStatus(id: number): Promise<void> {
     this.closeMenus();
+    if (this.denyUserWrite('edit')) return;
+    const target = this.state.appState.users.find((x: any) => x.id === id);
+    // تعلیق (غیرفعال‌سازی) نیاز به تأیید دارد؛ فعال‌سازی دوباره نه (۲.۹-ب)
+    if (target?.is_active) {
+      const name = `${target.first_name || ''} ${target.last_name || ''}`.trim() || target.username;
+      const ok = await this.confirmDialog.open({
+        title: 'تعلیق کاربر',
+        message: `حساب «${name}» معلق می‌شود و دسترسی او فوراً قطع می‌گردد. ادامه می‌دهید؟`,
+        confirmText: 'بله، معلق شود',
+        cancelText: 'انصراف',
+        type: 'warning',
+      });
+      if (ok !== true) return;
+    }
     this.accountsService.toggleUserStatus(id).subscribe({
       next: (res) => {
         const u = this.state.appState.users.find((x: any) => x.id === id);
@@ -1170,18 +1415,19 @@ export class Users implements OnInit, OnDestroy {
         }
       },
       error: (err) => {
-        const msg = err.error?.detail || err.error?.error || (typeof err.error === 'string' ? err.error : 'خطا در تغییر وضعیت حساب کاربری');
-        this.toast.show('error', msg);
+        this.toast.show('error', extractApiError(err, 'خطا در تغییر وضعیت حساب کاربری'));
       }
     });
   }
 
   async resetPassword(id: number) {
     this.closeMenus();
-    const u = this.state.appState.users.find((x: any) => x.id === id);
+    if (this.denyUserWrite('edit')) return;
+    const u = this.state.appState.users.find((x: any) => x.id === id) || (this.editingUser?.id === id ? this.editingUser : null);
+    const name = u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username : 'این کاربر';
     const confirmed = await this.confirmDialog.open({
-      title: 'ریست رمز عبور',
-      message: `آیا مطمئن هستید که می‌خواهید رمز عبور ${u.first_name} ${u.last_name} را به حالت پیش‌فرض (123456) بازنشانی کنید؟`,
+      title: 'بازنشانی رمز عبور',
+      message: `رمز عبور ${name} بازنشانی و یک رمز یک‌بارمصرف ساخته می‌شود که کاربر در ورود اول باید آن را عوض کند. ادامه می‌دهید؟`,
       confirmText: 'بله، بازنشانی',
       cancelText: 'انصراف',
       type: 'warning',
@@ -1189,11 +1435,14 @@ export class Users implements OnInit, OnDestroy {
     if (confirmed) {
         this.accountsService.adminResetPassword(id).subscribe({
           next: (res) => {
-            this.toast.show('success', res.message || 'رمز عبور با موفقیت به مقدار پیش‌فرض تغییر یافت.');
+            if (res?.one_time_password) {
+              this.showOneTimePasswords([{ username: u?.username || '', password: res.one_time_password }]);
+            } else {
+              this.toast.show('success', res?.message || 'رمز عبور بازنشانی شد.');
+            }
           },
           error: (err) => {
-            const msg = err.error?.detail || err.error?.error || 'خطا در بازنشانی رمز عبور';
-            this.toast.show('error', msg);
+            this.toast.show('error', extractApiError(err, 'خطا در بازنشانی رمز عبور'));
           }
         });
     }
@@ -1201,6 +1450,7 @@ export class Users implements OnInit, OnDestroy {
 
   openAvatarModalForUser(u: any) {
     this.closeMenus();
+    if (this.denyUserWrite('edit')) return;
     this.targetUserForAvatar = u;
     this.isAvatarCropperOpen = true;
     this.cdr.detectChanges();
@@ -1234,8 +1484,7 @@ export class Users implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSavingUserAvatar = false;
-          const msg = err.error?.error || 'خطا در ذخیره تصویر کاربر';
-          this.toast.show('error', msg);
+          this.toast.show('error', extractApiError(err, 'خطا در ذخیره تصویر کاربر'));
           this.cdr.detectChanges();
         }
       });
@@ -1267,9 +1516,9 @@ export class Users implements OnInit, OnDestroy {
           this.toast.show('success', 'تصویر کاربر حذف شد.');
           this.cdr.detectChanges();
         },
-        error: () => {
+        error: (err) => {
           this.isSavingUserAvatar = false;
-          this.toast.show('error', 'خطا در حذف تصویر کاربر');
+          this.toast.show('error', extractApiError(err, 'خطا در حذف تصویر کاربر'));
           this.cdr.detectChanges();
         }
       });
@@ -1280,9 +1529,43 @@ export class Users implements OnInit, OnDestroy {
     this.closeMenus();
     this.userFormErrors = {};
     this.isSavingUser = false;
+    this.editingUserChanged = false;
+    this.isRefetchingEditingUser = false;
+    this.editingUserSeq++;
     if (id) {
+      // بی perm_usr_edit پنجره فقط خواندنی است؛ ذخیره با canEditUsers بسته است
       const u = this.state.appState.users.find((x: any) => x.id === id);
+      if (!u) return;
       this.editingUser = u;
+      this.applyUserToForm(u);
+    } else {
+      if (this.denyUserWrite('add')) return;
+      this.editingUser = null;
+      this.showPassword = false;
+      const activeCid = this.activeCompanyService.activeCompany?.id || (this.availableCompanies[0]?.id ?? null);
+      const activeName = this.activeCompanyService.activeCompany?.name || (this.availableCompanies[0]?.name ?? '');
+      this.userForm = {
+        id: null, first_name: '', last_name: '', national_code: '', username: '', phone_number: '', password: '',
+        operational_zone: '', supervisor: null, address: '', company: activeName, email: '', avatar: null, _pendingAvatarBlob: null,
+        _pendingAvatarDelete: false, blood_type: '', emergency_contact: '', groups: [], assigned_warehouses: [],
+        date_joined: '', last_login: '', is_active: true, is_superuser: false,
+        company_ids: activeCid ? [activeCid] : [],
+        default_company_id: activeCid
+      };
+      this.userFormBaseline = JSON.stringify(this.userForm);
+    }
+    this.userRoleModalTab = this.roleScopes[0]?.key ?? 'global';
+    this.userModalInnerTab = 'identity';
+    this.isUserModalOpen = true;
+    this.updateModalWarehouses();
+    this.cdr.detectChanges();
+    // ردیف فهرست جایگزین است تا نسخهٔ تازهٔ سرور برسد (۲.۹)
+    if (id) this.refetchEditingUser();
+  }
+
+  /** پر کردن فرم پنجره از یک ردیف کاربر (باز کردن، بارگذاری دوباره، پس از ساخت) */
+  private applyUserToForm(u: any): void {
+    {
       const { roles, role_objects, ...userFields } = u;
       const compIds = u.company_ids ? [...u.company_ids].map(Number) : (u.company_accesses ? u.company_accesses.map((a: any) => Number(a.company_id)) : []);
       this.userForm = {
@@ -1312,25 +1595,8 @@ export class Users implements OnInit, OnDestroy {
           this.userForm.default_company_id = matched.id;
         }
       }
-    } else {
-      this.editingUser = null;
-      this.showPassword = false;
-      const activeCid = this.activeCompanyService.activeCompany?.id || (this.availableCompanies[0]?.id ?? null);
-      const activeName = this.activeCompanyService.activeCompany?.name || (this.availableCompanies[0]?.name ?? '');
-      this.userForm = {
-        id: null, first_name: '', last_name: '', national_code: '', username: '', phone_number: '', password: '',
-        operational_zone: '', supervisor: null, address: '', company: activeName, email: '', avatar: null, _pendingAvatarBlob: null,
-        _pendingAvatarDelete: false, blood_type: '', emergency_contact: '', groups: [], assigned_warehouses: [],
-        date_joined: '', last_login: '', is_active: true, is_superuser: false,
-        company_ids: activeCid ? [activeCid] : [],
-        default_company_id: activeCid
-      };
     }
-    this.userRoleModalTab = this.roleScopes[0]?.key ?? 'global';
-    this.userModalInnerTab = 'identity';
-    this.isUserModalOpen = true;
-    this.updateModalWarehouses();
-    this.cdr.detectChanges();
+    this.userFormBaseline = JSON.stringify(this.userForm);
   }
 
   toggleUserCompany(companyId: number) {
@@ -1439,6 +1705,89 @@ export class Users implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /** بستن پنجرهٔ کاربر؛ با ویرایش ذخیره‌نشده اول می‌پرسد (بک‌دراپ، انصراف، ضربدر و Escape همه از همین‌جا) */
+  async requestCloseUserModal(): Promise<void> {
+    if (!this.isUserModalOpen) return;
+    if (this.isSavingUser || this.closeAsking) return;
+    if (this.isUserFormDirty) {
+      this.closeAsking = true;
+      let ok: boolean | string | undefined;
+      try {
+        ok = await this.confirmDialog.open({
+          title: 'تغییرات ذخیره نشده',
+          message: 'تغییرات ذخیره‌نشده‌اند. بسته شود؟',
+          confirmText: 'بله، بسته شود',
+          cancelText: 'ادامه ویرایش',
+          type: 'warning',
+        });
+      } finally {
+        this.closeAsking = false;
+      }
+      if (ok !== true) return;
+    }
+    this.isUserModalOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  /** پرسش «بسته شود؟» باز است؛ Escape دوباره پرسش دوم نمی‌سازد */
+  private closeAsking = false;
+
+  /** فرم نقش درست پس از باز شدن پنجره؛ معیار «ویرایش ذخیره‌نشده» */
+  private roleFormBaseline = '';
+
+  get isRoleFormDirty(): boolean {
+    return JSON.stringify(this.roleForm) !== this.roleFormBaseline;
+  }
+
+  async requestCloseRoleModal(): Promise<void> {
+    if (!this.isRoleModalOpen) return;
+    if (this.closeAsking) return;
+    if (this.isRoleFormDirty) {
+      this.closeAsking = true;
+      let ok: boolean | string | undefined;
+      try {
+        ok = await this.confirmDialog.open({
+          title: 'تغییرات ذخیره نشده',
+          message: 'تغییرات ذخیره‌نشده‌اند. بسته شود؟',
+          confirmText: 'بله، بسته شود',
+          cancelText: 'ادامه ویرایش',
+          type: 'warning',
+        });
+      } finally {
+        this.closeAsking = false;
+      }
+      if (ok !== true) return;
+    }
+    this.isRoleModalOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  /** Escape (و دکمهٔ برگشت اندروید که به Escape نگاشت می‌شود): بالاترین پنجرهٔ باز بسته می‌شود */
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscapeKey(event?: Event): void {
+    if (this.oneTimePasswords) {
+      // رمز یک‌بارمصرف فقط یک بار دیده می‌شود؛ Escape آن را نمی‌بندد و پنجرهٔ زیرین هم بسته نمی‌شود
+      event?.preventDefault?.();
+      return;
+    }
+    if (this.isSensitiveWarningModalOpen) return;
+    if (this.isDeleteModalOpen) {
+      event?.preventDefault?.();
+      this.isDeleteModalOpen = false;
+      this.cdr.detectChanges();
+      return;
+    }
+    if (this.isUserModalOpen) {
+      event?.preventDefault?.();
+      void this.requestCloseUserModal();
+      return;
+    }
+    if (this.isRoleModalOpen) {
+      event?.preventDefault?.();
+      void this.requestCloseRoleModal();
+    }
+  }
+
   /** پیوند «پروژه‌ها و بخش‌ها» در تب مجوزها: استودیوی شرکتِ نخستین انتساب کاربر، تب پروژه‌ها */
   openUserAssignments(companyId: number | null) {
     this.isUserModalOpen = false;
@@ -1523,6 +1872,52 @@ export class Users implements OnInit, OnDestroy {
     if (this.userFormErrors[field]) {
       delete this.userFormErrors[field];
     }
+    if (this.userFieldMessages[field]) {
+      delete this.userFieldMessages[field];
+    }
+  }
+
+  /** تب پنجرهٔ کاربر که هر فیلد در آن است (برای پرش به نخستین فیلد دارای خطا) */
+  private static readonly FIELD_TAB: Record<string, 'identity' | 'security' | 'roles' | 'warehouses'> = {
+    username: 'security',
+    password: 'security',
+    groups: 'roles',
+    assigned_warehouses: 'warehouses',
+  };
+
+  private fieldTab(field: string): 'identity' | 'security' | 'roles' | 'warehouses' {
+    return Users.FIELD_TAB[field] || 'identity';
+  }
+
+  /** خطای یک فیلد: پیام زیر فیلد، رفتن به تب آن و اعلان کوتاه */
+  private failUserField(field: string, tab: 'identity' | 'security' | 'roles' | 'warehouses', message: string): void {
+    this.userModalInnerTab = tab;
+    this.userFormErrors[field] = true;
+    this.userFieldMessages[field] = message;
+    this.toast.show('error', message);
+  }
+
+  /**
+   * بدنهٔ ۴۰۰ سرور به شکل {فیلد: [پیام‌ها]} به خطای همان فیلد زیر ورودی می‌رود و به تب نخستین فیلد خطادار می‌پریم.
+   * true = دست‌کم یک فیلد شناخته‌شده در فرم بود؛ پیام‌های بدون فیلد (detail و ...) را فراخوان با extractApiError اعلان می‌کند.
+   */
+  private applyServerFieldErrors(err: any): boolean {
+    const body = err?.error;
+    if (err?.status !== 400 || !body || typeof body !== 'object' || Array.isArray(body)) return false;
+    let first: string | null = null;
+    for (const key of Object.keys(body)) {
+      if (key === 'detail' || key === 'error' || key === 'non_field_errors') continue;
+      if (!(key in this.userForm)) continue;
+      const raw = body[key];
+      const msg = (Array.isArray(raw) ? raw : [raw]).filter(m => typeof m === 'string').join(' ');
+      if (!msg) continue;
+      this.userFormErrors[key] = true;
+      this.userFieldMessages[key] = msg;
+      if (!first) first = key;
+    }
+    if (!first) return false;
+    this.userModalInnerTab = this.fieldTab(first);
+    return true;
   }
 
   toEnglishDigits(str: string): string {
@@ -1620,28 +2015,24 @@ export class Users implements OnInit, OnDestroy {
   }
 
   saveUser() {
+    if (this.denyUserWrite(this.editingUser ? 'edit' : 'add')) return;
     this.userFormErrors = {};
+    this.userFieldMessages = {};
 
     const fName = (this.userForm.first_name || '').trim();
     const lName = (this.userForm.last_name || '').trim();
     const uName = (this.userForm.username || '').trim();
 
     if (!fName) {
-      this.userModalInnerTab = 'identity';
-      this.userFormErrors['first_name'] = true;
-      return this.toast.show('error', 'وارد کردن «نام» الزامی است.');
+      return this.failUserField('first_name', 'identity', 'وارد کردن «نام» الزامی است.');
     }
 
     if (!lName) {
-      this.userModalInnerTab = 'identity';
-      this.userFormErrors['last_name'] = true;
-      return this.toast.show('error', 'وارد کردن «نام خانوادگی» الزامی است.');
+      return this.failUserField('last_name', 'identity', 'وارد کردن «نام خانوادگی» الزامی است.');
     }
 
     if (!uName) {
-      this.userModalInnerTab = 'security';
-      this.userFormErrors['username'] = true;
-      return this.toast.show('error', 'وارد کردن «کد / نام کاربری (Username)» الزامی است.');
+      return this.failUserField('username', 'security', 'وارد کردن «کد / نام کاربری (Username)» الزامی است.');
     }
 
     const normalizeDigits = (str: string) => {
@@ -1661,9 +2052,7 @@ export class Users implements OnInit, OnDestroy {
     let emergency = normalizeDigits(this.userForm.emergency_contact);
 
     if (nid && !this.validateNationalCode(nid)) {
-      this.userModalInnerTab = 'identity';
-      this.userFormErrors['national_code'] = true;
-      return this.toast.show('error', 'کد ملی وارد شده با الگوریتم استاندارد ۱۰ رقمی همخوانی ندارد.');
+      return this.failUserField('national_code', 'identity', 'کد ملی وارد شده با الگوریتم استاندارد ۱۰ رقمی همخوانی ندارد.');
     }
 
     if (phone) {
@@ -1674,29 +2063,21 @@ export class Users implements OnInit, OnDestroy {
     }
 
     if (!this.editingUser && !phone) {
-      this.userModalInnerTab = 'identity';
-      this.userFormErrors['phone_number'] = true;
-      return this.toast.show('error', 'وارد کردن شماره تلفن همراه برای تعریف کاربر جدید الزامی است.');
+      return this.failUserField('phone_number', 'identity', 'وارد کردن شماره تلفن همراه برای تعریف کاربر جدید الزامی است.');
     }
 
     if (phone && !/^09\d{9}$/.test(phone)) {
-      this.userModalInnerTab = 'identity';
-      this.userFormErrors['phone_number'] = true;
-      return this.toast.show('error', 'فرمت شماره همراه نامعتبر است. شماره همراه باید با 09 شروع شده و ۱۱ رقم باشد (مانند 09123456789).');
+      return this.failUserField('phone_number', 'identity', 'فرمت شماره همراه نامعتبر است. شماره همراه باید با 09 شروع شده و ۱۱ رقم باشد (مانند 09123456789).');
     }
 
     const emailVal = (this.userForm.email || '').trim();
     if (emailVal && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailVal)) {
-      this.userModalInnerTab = 'identity';
-      this.userFormErrors['email'] = true;
-      return this.toast.show('error', 'فرمت آدرس ایمیل واردشده نامعتبر است (مانند user@example.com).');
+      return this.failUserField('email', 'identity', 'فرمت آدرس ایمیل واردشده نامعتبر است (مانند user@example.com).');
     }
 
     const pwdVal = (this.userForm.password || '').trim();
     if (pwdVal && pwdVal.length < 6) {
-      this.userModalInnerTab = 'security';
-      this.userFormErrors['password'] = true;
-      return this.toast.show('error', 'کلمه عبور باید حداقل ۶ کاراکتر باشد.');
+      return this.failUserField('password', 'security', 'کلمه عبور باید حداقل ۶ کاراکتر باشد.');
     }
 
     const pendingBlob = this.userForm._pendingAvatarBlob;
@@ -1706,6 +2087,8 @@ export class Users implements OnInit, OnDestroy {
     delete payload._pendingAvatarDelete;
     delete payload.avatar; // Avatar is uploaded via dedicated endpoint
     if (!payload.password) delete payload.password;
+    // رمز کاربر دیگر هرگز با ویرایش فرستاده نمی‌شود؛ فقط «بازنشانی رمز» (۲.۹، سرور ۴۰۰ می‌دهد)
+    if (this.isEditingOtherUser) delete payload.password;
     payload.first_name = fName;
     payload.last_name = lName;
     payload.username = uName;
@@ -1771,8 +2154,8 @@ export class Users implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          const msg = err.error?.detail || err.error?.error || (typeof err.error === 'object' ? Object.values(err.error).flat().join(' ') : 'خطا در بروزرسانی اطلاعات کاربر');
-          this.toast.show('error', msg);
+          this.applyServerFieldErrors(err);
+          this.toast.show('error', extractApiError(err, 'خطا در بروزرسانی اطلاعات کاربر'));
         }
       });
     } else {
@@ -1793,13 +2176,19 @@ export class Users implements OnInit, OnDestroy {
             });
           }
           this.rebuildMemoizedData();
-          this.toast.show('success', 'کاربر جدید با موفقیت ایجاد شد.');
-          this.isUserModalOpen = false;
+          this.toast.show('success', 'کاربر جدید ایجاد شد؛ اکنون مجوزها و انتساب‌هایش را تنظیم کنید.');
+          // پنجره باز می‌ماند و برای کاربر تازه به حالت ویرایش و تب «مجوزها» می‌رود (۲.۹ #1)
+          const oneTime = (res as any)?.one_time_password;
+          this.editingUser = res;
+          this.applyUserToForm(res);
+          this.editingUserChanged = false;
+          this.userModalInnerTab = 'permissions';
           this.cdr.detectChanges();
+          if (oneTime) this.showOneTimePasswords([{ username: res.username, password: oneTime }]);
         },
         error: (err) => {
-          const msg = err.error?.detail || err.error?.error || (typeof err.error === 'object' ? Object.values(err.error).flat().join(' ') : 'خطا در ایجاد کاربر');
-          this.toast.show('error', msg);
+          this.applyServerFieldErrors(err);
+          this.toast.show('error', extractApiError(err, 'خطا در ایجاد کاربر'));
         }
       });
     }
@@ -1835,6 +2224,7 @@ export class Users implements OnInit, OnDestroy {
     }
     this.activePermTab = this.visiblePermissionGroups[0]?.key || 'MAIN_MENU';
     this.isPresetsExpanded = false;
+    this.roleFormBaseline = JSON.stringify(this.roleForm);
     this.isRoleModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -1856,6 +2246,7 @@ export class Users implements OnInit, OnDestroy {
       user_ids: []
     };
     this.activePermTab = this.visiblePermissionGroups[0]?.key || 'MAIN_MENU';
+    this.roleFormBaseline = JSON.stringify(this.roleForm);
     this.isRoleModalOpen = true;
     this.toast.show('info', `نقش «${role.title || role.name}» با دسترسی‌های مرتبط آماده تکثیر است.`);
     this.cdr.detectChanges();
@@ -2115,8 +2506,7 @@ export class Users implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          const msg = err.error?.detail || err.error?.error || (typeof err.error === 'object' ? Object.values(err.error).flat().join(' ') : 'خطا در ویرایش نقش');
-          this.toast.show('error', msg);
+          this.toast.show('error', extractApiError(err, 'خطا در ویرایش نقش'));
         }
       });
     } else {
@@ -2131,8 +2521,7 @@ export class Users implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          const msg = err.error?.detail || err.error?.error || (typeof err.error === 'object' ? Object.values(err.error).flat().join(' ') : 'خطا در ایجاد نقش');
-          this.toast.show('error', msg);
+          this.toast.show('error', extractApiError(err, 'خطا در ایجاد نقش'));
         }
       });
     }
@@ -2153,6 +2542,7 @@ export class Users implements OnInit, OnDestroy {
   }
 
   deleteUser(id: number) {
+    if (this.denyUserWrite('edit')) return;
     const user = this.state.appState.users.find((u: any) => u.id === id);
     if (!user) return;
 
@@ -2188,7 +2578,7 @@ export class Users implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
             },
             error: (err) => {
-                this.deleteErrorMessage = err.error?.error || err.error?.detail || (typeof err.error === 'string' ? err.error : 'خطا در حذف نقش');
+                this.deleteErrorMessage = extractApiError(err, 'خطا در حذف نقش');
                 this.isDeleting = false;
             }
         });
@@ -2205,7 +2595,7 @@ export class Users implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
             },
             error: (err) => {
-                this.deleteErrorMessage = err.error?.error || err.error?.detail || (typeof err.error === 'string' ? err.error : 'این کاربر به دلیل داشتن تراکنش یا تاریخچه سیستم قابل حذف فیزیکی نیست. می‌توانید آن را تعلیق کنید.');
+                this.deleteErrorMessage = extractApiError(err, 'این کاربر به دلیل داشتن تراکنش یا تاریخچه سیستم قابل حذف فیزیکی نیست. می‌توانید آن را تعلیق کنید.');
                 this.isDeleting = false;
             }
         });
@@ -2279,15 +2669,21 @@ export class Users implements OnInit, OnDestroy {
   /**
    * محاسبه خودکار و هوشمند سامانه‌های مجاز کاربر بر اساس سطح دسترسی و نقش‌های انتخابی (Computed Scope Badge)
    */
-  getUserAuthorizedSystems(u: any): {
-    isSuperuser: boolean;
-    hasWarehouse: boolean;
-    hasFinance: boolean;
-    hasGlobal: boolean;
-    warehouseCount: number;
-    badges: { key: string; label: string; icon: string; bgClass: string; textClass: string; borderClass: string }[];
-    isEmpty: boolean;
-  } {
+  getUserAuthorizedSystems(u: any): AuthorizedSystems {
+    if (!u) return this.computeAuthorizedSystems(u);
+    // نتیجه تا وقتی ورودی (و نقش‌ها) عوض نشده همان شیء است تا قالب هر چرخه آرایهٔ نو نبیند (NG0103)
+    const sig = `${this.authorizedSystemsEpoch}|${u.is_superuser ? 1 : 0}|${Array.isArray(u.assigned_warehouses) ? u.assigned_warehouses.length : 0}|${Array.isArray(u.groups) ? u.groups.join(',') : ''}`;
+    const hit = this.authorizedSystemsCache.get(u);
+    if (hit && hit.sig === sig) return hit.value;
+    const value = this.computeAuthorizedSystems(u);
+    this.authorizedSystemsCache.set(u, { sig, value });
+    return value;
+  }
+
+  private authorizedSystemsEpoch = 0;
+  private authorizedSystemsCache = new WeakMap<object, { sig: string; value: AuthorizedSystems }>();
+
+  private computeAuthorizedSystems(u: any): AuthorizedSystems {
     if (!u) {
       return {
         isSuperuser: false,
@@ -2389,7 +2785,20 @@ export class Users implements OnInit, OnDestroy {
     void saveBlob(blob, filename);
   }
 
+  /** با جستجو یا فیلتر فعال فقط کاربران فیلترشده صادر می‌شوند؛ وگرنه همه (۲.۹-ب) */
+  private get hasActiveUserFilter(): boolean {
+    return !!this.searchQuery.trim() || this.userStatusFilter !== 'all'
+      || this.userRoleFilter !== 'ALL' || this.userWarehouseFilter !== 'ALL';
+  }
+
   exportUsersExcel(ids?: number[]) {
+    if (!ids && this.hasActiveUserFilter) {
+      ids = this.filteredUsers.map((u: any) => u.id);
+      if (ids.length === 0) {
+        this.toast.show('info', 'کاربری برای خروجی اکسل با این فیلتر نیست.');
+        return;
+      }
+    }
     this.facade.exportUsersExcel(ids).subscribe({
       next: (blob) => {
         const filename = ids && ids.length > 0 ? `users_export_${ids.length}_selected.xlsx` : 'users_export.xlsx';
@@ -2403,8 +2812,16 @@ export class Users implements OnInit, OnDestroy {
   }
 
   openUsersImportModal() {
+    if (this.denyUserWrite('add')) return;
     this.excelModalTitle = 'آپلود دسته‌جمعی کاربران';
-    this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.accountsService.importUsersExcel(file, updateExisting, dryRun || false);
+    // رمزهای یک‌بارمصرف کاربران تازه فقط یک بار برگشت داده می‌شوند (۲.۹)
+    this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.accountsService.importUsersExcel(file, updateExisting, dryRun || false).pipe(
+      tap(res => {
+        if (!dryRun && res?.one_time_passwords?.length) {
+          this.showOneTimePasswords(res.one_time_passwords.map(r => ({ username: r.username, password: r.one_time_password })));
+        }
+      })
+    );
     this.excelTemplateFn = () => this.downloadUsersTemplate();
     this.isExcelModalOpen = true;
     this.cdr.detectChanges();

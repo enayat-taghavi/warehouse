@@ -14,6 +14,7 @@ import { OfflineSyncService } from '../../../../../core/services/offline-sync.se
 import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { PermissionService } from '../../../../../core/services/permission.service';
 import { warehouseOfflineDb, financeOfflineDb, SyncErrorEntry } from '../../../../../core/services/offline-db';
 
 try {
@@ -88,7 +89,8 @@ describe('OperationsSyncMonitorComponent Error Source Isolation (Session 17)', (
         { provide: OfflineSyncService, useValue: { flushQueueNow: vi.fn(), resolveConflict: vi.fn().mockResolvedValue({ success: true }) } },
         { provide: WebSocketService, useValue: { connect: vi.fn(), notifications$: of(), connected$: of(true) } },
         { provide: ToastService, useValue: { show: vi.fn() } },
-        { provide: ConfirmDialogService, useValue: { confirm: vi.fn() } }
+        { provide: ConfirmDialogService, useValue: { confirm: vi.fn() } },
+        { provide: PermissionService, useValue: { can: () => true } }
       ]
     })
       .overrideComponent(OperationsSyncMonitorComponent, { set: { template: '<div></div>' } })
@@ -190,5 +192,16 @@ describe('OperationsSyncMonitorComponent Error Source Isolation (Session 17)', (
 
     expect(component.getSourceDb(errFin)).toBe(financeOfflineDb);
     expect(component.getSourceDb(errWh)).toBe(warehouseOfflineDb);
+  });
+
+  it('۹. fleet is requested only with perm_sys_logs (no request, hence no 403, without it)', async () => {
+    const telemetry = TestBed.inject(ClientTelemetryService) as any;
+    await component.refreshTelemetry(false);
+    expect(telemetry.getFleetSessions).toHaveBeenCalled();
+
+    telemetry.getFleetSessions.mockClear();
+    (component as any).canViewFleet = () => false;
+    await component.refreshTelemetry(false);
+    expect(telemetry.getFleetSessions).not.toHaveBeenCalled();
   });
 });

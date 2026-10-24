@@ -449,13 +449,14 @@ export class IdCards implements OnInit {
     return 'پ';
   }
 
+  /** کد امضاشدهٔ کارت از سرور؛ اگر در دسترس نبود رشتهٔ خالی (هیچ کدی ساخته نمی‌شود) */
   getUserPersonnelCode(user: User): string {
-    const rawId = user?.id || 1;
-    return `EMP-${1000 + rawId}`;
+    return (user as User & { card_code?: string | null })?.card_code || '';
   }
 
   getCardVerificationUrl(user: User): string {
     const code = this.getUserPersonnelCode(user);
+    if (!code) return '';
     let base = (this.idCardSettings.customDomain || '').trim();
     if (!base) {
       base = publicOrigin() || 'https://app.farsalish.ir';
@@ -1394,6 +1395,7 @@ export class IdCards implements OnInit {
   }
 
   private drawPure2DBarcode(ctx: CanvasRenderingContext2D, codeStr: string, x: number, y: number, size: number) {
+    if (!codeStr) return; // کد کارت در دسترس نیست
     try {
       const writer = new QRCodeWriter();
       const hints = new Map();
@@ -1418,6 +1420,7 @@ export class IdCards implements OnInit {
   }
 
   private drawCanvas1DBarcode(ctx: CanvasRenderingContext2D, codeStr: string, x: number, y: number, w: number, h: number) {
+    if (!codeStr) return; // کد کارت در دسترس نیست
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x, y, w, h + 15);
     ctx.strokeStyle = '#cbd5e1';
@@ -1442,6 +1445,7 @@ export class IdCards implements OnInit {
   }
 
   private drawCanvas2DBarcode(ctx: CanvasRenderingContext2D, codeStr: string, x: number, y: number, size: number) {
+    if (!codeStr) return; // کد کارت در دسترس نیست
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x - 4, y - 4, size + 8, size + 18);
     ctx.strokeStyle = '#cbd5e1';
@@ -1481,7 +1485,8 @@ export class IdCards implements OnInit {
    * تولید بارکد میله‌ای تک بعدی Code 39
    */
   getBarcodeSvg(text: string): SafeHtml {
-    const code = (text || 'EMP-1001').toUpperCase().replace(/[^0-9A-Z\-.\s\$\/\+\%]/g, '');
+    const code = (text || '').toUpperCase().replace(/[^0-9A-Z\-.\s\$\/\+\%]/g, '');
+    if (!code) return this.sanitizer.bypassSecurityTrustHtml('');
     const cacheKey = '1D_' + code;
     if (this.barcodeCache.has(cacheKey)) {
       return this.barcodeCache.get(cacheKey)!;
@@ -1536,14 +1541,16 @@ export class IdCards implements OnInit {
     if (typeof input === 'object' && input !== null) {
       urlOrText = this.getCardVerificationUrl(input);
     } else if (typeof input === 'string') {
-      if (input.startsWith('http') || input.includes('/verify-card/')) {
+      if (!input) {
+        urlOrText = '';
+      } else if (input.startsWith('http') || input.includes('/verify-card/')) {
         urlOrText = input;
       } else {
         urlOrText = `${publicOrigin()}/verify-card/${input}`;
       }
-    } else {
-      urlOrText = `${publicOrigin()}/verify-card/EMP-1001`;
     }
+
+    if (!urlOrText) return this.sanitizer.bypassSecurityTrustHtml('');
 
     const cacheKey = '2D_' + urlOrText;
     if (this.barcodeCache.has(cacheKey)) {

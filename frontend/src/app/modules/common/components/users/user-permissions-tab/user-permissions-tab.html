@@ -39,6 +39,71 @@
           <svg appIcon="chevron-left" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
+      @if (canAssign) {
+        <button type="button" (click)="toggleAssignForm()" data-add-assignment [attr.aria-expanded]="isAssignFormOpen" [disabled]="!isOnline"
+          title="افزودن انتساب" aria-label="افزودن انتساب"
+          class="tap-target inline-flex items-center gap-1 min-h-[40px] px-2.5 text-[11px] font-bold rounded-xl border border-line text-fg hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>افزودن انتساب</span>
+        </button>
+        @if (isAssignFormOpen) {
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-xl border border-line bg-surface-muted" data-assign-form [attr.aria-busy]="isLoadingAssignOptions || isSavingAssign">
+            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+              <span>شرکت</span>
+              <select data-assign-company class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+                (change)="onAssignCompanyChange($any($event.target).value)">
+                <option value="" [selected]="!assignCompanyId">انتخاب شرکت…</option>
+                @for (c of companies; track c.id) {
+                  <option [value]="c.id" [selected]="c.id === assignCompanyId">{{ c.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+              <span>پروژه (اختیاری)</span>
+              <select data-assign-project class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+                [disabled]="!assignCompanyId" (change)="onAssignProjectChange($any($event.target).value)">
+                <option value="" [selected]="!assignProjectId">کل شرکت</option>
+                @for (p of assignProjects; track p.id) {
+                  <option [value]="p.id" [selected]="p.id === assignProjectId">{{ p.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+              <span>بخش (اختیاری)</span>
+              <select data-assign-section class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+                [disabled]="!assignProjectId" (change)="assignSectionId = $any($event.target).value ? +$any($event.target).value : null">
+                <option value="" [selected]="!assignSectionId">کل پروژه</option>
+                @for (s of assignSections; track s.id) {
+                  <option [value]="s.id" [selected]="s.id === assignSectionId">{{ s.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+              <span>نقش</span>
+              <select data-assign-role class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+                (change)="assignRole = $any($event.target).value">
+                <option value="" [selected]="!assignRole">انتخاب نقش…</option>
+                @for (r of assignRoles; track r.key) {
+                  <option [value]="r.key" [selected]="r.key === assignRole">{{ r.labelFa }}</option>
+                }
+              </select>
+            </label>
+            @if (isLoadingAssignOptions) {
+              <p class="sm:col-span-2 text-[10px] text-fg-muted" role="status">در حال دریافت فهرست…</p>
+            }
+            @if (assignError) {
+              <p class="sm:col-span-2 text-[11px] font-bold text-rose-700" role="alert" data-assign-error>{{ assignError }}</p>
+            }
+            <div class="sm:col-span-2 flex justify-end gap-2">
+              <button type="button" (click)="toggleAssignForm()" class="min-h-[40px] px-3 text-[11px] font-bold rounded-xl text-fg-muted hover:bg-surface">انصراف</button>
+              <button type="button" (click)="submitAssign()" [disabled]="!canSubmitAssign || !isOnline" [attr.title]="isOnline ? null : 'در حالت آفلاین ممکن نیست'" data-assign-submit
+                class="min-h-[40px] px-3 text-[11px] font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                {{ isSavingAssign ? 'در حال ثبت…' : 'ثبت انتساب' }}
+              </button>
+            </div>
+          </div>
+        }
+      }
       @if (assignments.length === 0) {
         <p class="text-[11px] text-fg-muted leading-relaxed" data-no-assignments>
           این کاربر انتساب فعالی ندارد. مجوزهای بخشی از انتساب به شرکت، پروژه یا بخش می‌آیند؛ ابتدا در تب «پروژه‌ها و بخش‌ها» او را به بخشی منتسب کنید.

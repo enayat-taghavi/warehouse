@@ -48,6 +48,8 @@ export class SmartDeleteModalComponent implements OnInit, AfterViewInit, OnDestr
   totalAffected = 0;
   impactLoaded = false;
   impactError = '';
+  /** سرور اجازهٔ دیدن اثر حذف را نداد (۴۰۳)؛ حذف مسدود است */
+  impactForbidden = false;
   /** حذف به‌خاطر قاعدهٔ کسب‌وکار یا رابطهٔ PROTECT ممکن نیست */
   blocked = false;
   blockers: string[] = [];
@@ -103,6 +105,7 @@ export class SmartDeleteModalComponent implements OnInit, AfterViewInit, OnDestr
   fetchImpact() {
     this.isLoadingImpact = true;
     this.impactError = '';
+    this.impactForbidden = false;
     this.impactLoaded = false;
     // اثر حذف همیشه تازه از سرور خوانده می‌شود: نه از کش آفلاین (SWR) و نه در حالت آفلاین
     this.http.get<any>(this.deleteImpactUrl, { context: new HttpContext().set(SKIP_OFFLINE, true) }).subscribe({
@@ -125,9 +128,10 @@ export class SmartDeleteModalComponent implements OnInit, AfterViewInit, OnDestr
       },
       error: (err) => {
         this.isLoadingImpact = false;
+        this.impactForbidden = err?.status === 403;
         this.impactError = (typeof err?.error?.detail === 'string' && err.error.detail)
           || (typeof err?.error?.error === 'string' && err.error.error)
-          || 'اثر حذف محاسبه نشد.';
+          || (this.impactForbidden ? 'اجازهٔ دیدن اثر حذف این مورد را ندارید.' : 'اثر حذف محاسبه نشد.');
         this.cdr.detectChanges();
       }
     });
@@ -145,7 +149,7 @@ export class SmartDeleteModalComponent implements OnInit, AfterViewInit, OnDestr
 
   /** اثر حذف اجازهٔ حذف می‌دهد: مسدود نیست، و اگر لازم است با موفقیت دریافت شده است */
   get impactAllowsDelete(): boolean {
-    if (this.blocked) return false;
+    if (this.blocked || this.impactForbidden) return false;
     if (this.requireImpact) return this.impactLoaded && !this.isLoadingImpact;
     return true;
   }

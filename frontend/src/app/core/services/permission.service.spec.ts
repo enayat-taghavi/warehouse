@@ -277,6 +277,23 @@ describe('PermissionService', () => {
       notifications$.next({ type: 'org_structure_updated', user_id: UID });
       expect(events.length).toBe(2);
     });
+
+    it('users_changed → usersChanged$ only, no permission refetch', async () => {
+      login(makeMap({ all: ['a'], system: ['a'], version: 'v1' }));
+      service.start();
+      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
+      api.getMyPermissions.mockClear();
+      const users: any[] = [];
+      const perms: any[] = [];
+      service.usersChanged$.subscribe((e) => users.push(e));
+      service.permissionsChanged$.subscribe((e) => perms.push(e));
+
+      notifications$.next({ type_str: 'users_changed', user_id: 42, company_id: 3, reason: 'user' });
+      expect(users).toEqual([{ user_id: 42, reason: 'user', company_id: 3, own: false }]);
+      expect(perms.length).toBe(0);
+      expect(api.getMyPermissions).not.toHaveBeenCalled();
+    });
   });
 
   describe('categories and menus (ت۵)', () => {

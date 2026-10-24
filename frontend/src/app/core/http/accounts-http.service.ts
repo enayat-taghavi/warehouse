@@ -77,6 +77,8 @@ export interface ImportResult {
     is_active?: boolean;
   }>;
   errors: { row: number; field: string; message: string }[];
+  /** رمزهای یک‌بارمصرف کاربران تازه (فقط یک بار برگردانده می‌شود) */
+  one_time_passwords?: { row: number; username: string; one_time_password: string }[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -111,8 +113,9 @@ export class AccountsHttpService {
     return this.http.delete(`${this.apiUrl}/auth/users/${id}/`);
   }
 
-  adminResetPassword(id: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/users/${id}/admin_reset_password/`, {});
+  /** بازنشانی رمز توسط مدیر؛ سرور رمز یک‌بارمصرف `one_time_password` برمی‌گرداند */
+  adminResetPassword(id: number): Observable<{ one_time_password?: string; detail?: string; message?: string }> {
+    return this.http.post<{ one_time_password?: string; detail?: string; message?: string }>(`${this.apiUrl}/auth/users/${id}/admin_reset_password/`, {});
   }
 
   toggleUserStatus(id: number, isActive?: boolean): Observable<any> {

@@ -11,13 +11,13 @@
         <!-- اکشن‌های تب کاربران -->
         <ng-container *ngIf="activeTab === 'users'">
           <button type="button" appAction="export-excel" label="خروجی اکسل کاربران" (click)="exportUsersExcel()"></button>
-          <button type="button" appAction="import-excel" label="ورود اکسل کاربران" (click)="openUsersImportModal()"></button>
+          <button *ngIf="canAddUsers()" type="button" appAction="import-excel" label="ورود اکسل کاربران" [disabled]="isOffline" [hint]="isOffline ? offlineTitle : ''" (click)="openUsersImportModal()"></button>
         </ng-container>
 
         <!-- اکشن‌های تب نقش‌ها -->
         <ng-container *ngIf="activeTab === 'roles' && rolesSubTab === 'system'">
           <button type="button" appAction="export-excel" label="خروجی اکسل نقش‌ها" (click)="exportRolesExcel()"></button>
-          <button *ngIf="canWriteRoles()" type="button" appAction="import-excel" label="ورود اکسل نقش‌ها" (click)="openRolesImportModal()"></button>
+          <button *ngIf="canWriteRoles()" type="button" appAction="import-excel" label="ورود اکسل نقش‌ها" [disabled]="isOffline" [hint]="isOffline ? offlineTitle : ''" (click)="openRolesImportModal()"></button>
         </ng-container>
 
         <!-- اکشن‌های تب کارت پرسنلی / گیت‌پاس -->
@@ -31,12 +31,18 @@
         <button type="button" appAction="refresh" label="بروزرسانی داده‌ها" [busy]="isLoading" (click)="loadData()"></button>
 
         <!-- دکمه‌های اصلی ایجاد (کاربر / نقش) -->
-        <button *ngIf="activeTab === 'users'" type="button" appAction="create" label="کاربر جدید" (click)="openUserModal()">
+        <button *ngIf="activeTab === 'users' && canAddUsers()" type="button" appAction="create" label="کاربر جدید" [disabled]="isOffline" [hint]="isOffline ? offlineTitle : ''" (click)="openUserModal()">
         </button>
 
-        <button *ngIf="activeTab === 'roles' && rolesSubTab === 'system' && canWriteRoles()" type="button" appAction="create" label="نقش جدید" (click)="openRoleModal()">
+        <button *ngIf="activeTab === 'roles' && rolesSubTab === 'system' && canWriteRoles()" type="button" appAction="create" label="نقش جدید" [disabled]="isOffline" [hint]="isOffline ? offlineTitle : ''" (click)="openRoleModal()">
         </button>
       </div>
+    </div>
+
+    <!-- نوار آفلاین: خواندن از حافظهٔ نهان ادامه دارد، نوشتن‌ها بسته است -->
+    <div *ngIf="isOffline" data-offline-banner role="status" class="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
+      <span>آفلاین هستید؛ فهرست از حافظهٔ نهان خوانده می‌شود و تغییر دادن کاربران و نقش‌ها تا وصل شدن اینترنت ممکن نیست.</span>
     </div>
 
     <!-- نوار ابزار و فیلترهای اختصاصی جدول/کارت‌های کاربران -->
@@ -173,7 +179,14 @@
                 <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="loader"></svg>
                 <p class="text-xs font-bold text-slate-400">در حال دریافت لیست پرسنل...</p>
             </div>
-            <div *ngIf="!isLoading && filteredUsers.length === 0" class="text-center py-10 text-slate-400 text-xs font-bold">کاربری با این مشخصات یافت نشد.</div>
+            <!-- خطای بارگذاری فهرست: کارت خطا با تلاش دوباره (سرور در دسترس نیست جدا از بقیه) -->
+            <div *ngIf="!isLoading && usersLoadError" data-users-load-error role="alert"
+                 class="flex flex-col items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-8 text-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-500" appIcon="alert-triangle" aria-hidden="true"></svg>
+                <p class="text-xs font-black text-rose-900">{{ usersLoadError }}</p>
+                <button type="button" appAction="refresh" label="تلاش دوباره" [busy]="isLoading" (click)="loadData()"></button>
+            </div>
+            <div *ngIf="!isLoading && !usersLoadError && filteredUsers.length === 0" class="text-center py-10 text-slate-400 text-xs font-bold">کاربری با این مشخصات یافت نشد.</div>
             <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 <div *ngFor="let u of displayedUsers; trackBy: trackById"
                      class="bg-white rounded-2xl border shadow-sm p-3.5 relative group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-indigo-200 flex flex-col justify-between"
@@ -235,13 +248,13 @@
                           <div *ngIf="openMenuId === 'usr-' + u.id" class="absolute left-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 z-[100] py-1.5 text-right fade-in">
                             <button *ngIf="isUserLocked(u.username)" (click)="unlockUser(u, $event)" class="w-full text-right px-3 py-1.5 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-2 font-bold transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-unlock"></svg> رفع مسدودیت ضدنفوذ</button>
                             <button (click)="openUserModal(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 flex items-center gap-2 font-medium transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit"></svg> ویرایش پرونده</button>
-                            <button (click)="openAvatarModalForUser(u)" class="w-full text-right px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 flex items-center gap-2 font-medium transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg> تغییر تصویر</button>
-                            <button (click)="resetPassword(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 flex items-center gap-2 font-medium transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key"></svg> ریست رمز</button>
+                            <button *ngIf="canEditUsers()" (click)="openAvatarModalForUser(u)" class="w-full text-right px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 flex items-center gap-2 font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg> تغییر تصویر</button>
+                            <button *ngIf="canEditUsers()" (click)="resetPassword(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 flex items-center gap-2 font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key"></svg> ریست رمز</button>
                             <div class="border-t border-slate-100 my-1"></div>
-                            <button (click)="deleteUser(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-bold transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg> حذف کاربر</button>
+                            <button *ngIf="canEditUsers()" (click)="deleteUser(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg> حذف کاربر</button>
                             <div class="border-t border-slate-100 my-1"></div>
-                            <button *ngIf="!u.is_active" (click)="toggleUserStatus(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 font-bold flex items-center gap-2 transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg> خروج از تعلیق</button>
-                            <button *ngIf="u.is_active" (click)="toggleUserStatus(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-2 transition-colors cursor-pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-rejected"></svg> تعلیق حساب</button>
+                            <button *ngIf="!u.is_active && canEditUsers()" (click)="toggleUserStatus(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg> خروج از تعلیق</button>
+                            <button *ngIf="u.is_active && canEditUsers()" (click)="toggleUserStatus(u.id)" class="w-full text-right px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-rejected"></svg> تعلیق حساب</button>
                           </div>
                         </div>
                       </div>
@@ -495,26 +508,26 @@
                           </button>
 
                           <!-- Avatar Button -->
-                          <button type="button" (click)="openAvatarModalForUser(u)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="تغییر تصویر">
+                          <button *ngIf="canEditUsers()" type="button" (click)="openAvatarModalForUser(u)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'تغییر تصویر'" [disabled]="isOffline" aria-label="تغییر تصویر">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
                           </button>
 
                           <!-- Password Reset Button -->
-                          <button type="button" (click)="resetPassword(u.id)" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer" title="ریست کلمه عبور">
+                          <button *ngIf="canEditUsers()" type="button" (click)="resetPassword(u.id)" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'ریست کلمه عبور'" [disabled]="isOffline" aria-label="ریست کلمه عبور">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="lock"></svg>
                           </button>
 
                           <!-- Toggle Status (Suspend / Activate) -->
-                          <button type="button" (click)="toggleUserStatus(u.id)"
+                          <button *ngIf="canEditUsers()" type="button" (click)="toggleUserStatus(u.id)"
                                   [ngClass]="u.is_active ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'"
-                                  class="p-1.5 rounded-lg transition-colors cursor-pointer"
-                                  [title]="u.is_active ? 'تعلیق / مسدودسازی حساب' : 'خروج از تعلیق (فعال‌سازی)'">
+                                  class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                                  [attr.title]="isOffline ? offlineTitle : (u.is_active ? 'تعلیق / مسدودسازی حساب' : 'خروج از تعلیق (فعال‌سازی)')" [disabled]="isOffline" [attr.aria-label]="u.is_active ? 'تعلیق / مسدودسازی حساب' : 'خروج از تعلیق (فعال‌سازی)'">
                             <svg *ngIf="u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="slash"></svg>
                             <svg *ngIf="!u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="check"></svg>
                           </button>
 
                           <!-- Delete Button -->
-                          <button type="button" (click)="deleteUser(u.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="حذف کاربر">
+                          <button *ngIf="canEditUsers()" type="button" (click)="deleteUser(u.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'حذف کاربر'" [disabled]="isOffline" aria-label="حذف کاربر">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                           </button>
                         </div>
@@ -525,7 +538,7 @@
               </div>
             </div>
             <!-- نوار کنترل صفحه‌بندی مدرن و استاندارد (Compact Modern Pagination) -->
-            <div *ngIf="!isLoading && filteredUsers.length > 0" class="mt-5 bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'table'" data-users-pagination class="mt-5 bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <!-- سمت راست (شروع RTL): نمایش بازه سطرها و تعداد کل -->
               <div class="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
                 <span>نمایش</span>
@@ -595,16 +608,16 @@
 
               <!-- دکمه‌های عملیات گروهی -->
               <div class="flex items-center gap-2">
-                <button type="button" (click)="bulkToggleStatus(true)"
-                  class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                  title="فعال‌سازی حساب کاربران انتخاب‌شده">
+                <button *ngIf="canEditUsers()" type="button" (click)="bulkToggleStatus(true)"
+                  class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                  [attr.title]="isOffline ? offlineTitle : 'فعال‌سازی حساب کاربران انتخاب‌شده'" [disabled]="isOffline">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   <span>فعال‌سازی</span>
                 </button>
 
-                <button type="button" (click)="bulkToggleStatus(false)"
-                  class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                  title="تعلیق حساب کاربران انتخاب‌شده">
+                <button *ngIf="canEditUsers()" type="button" (click)="bulkToggleStatus(false)"
+                  class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                  [attr.title]="isOffline ? offlineTitle : 'تعلیق حساب کاربران انتخاب‌شده'" [disabled]="isOffline">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="slash"></svg>
                   <span>تعلیق حساب</span>
                 </button>
@@ -652,13 +665,13 @@
                       </p>
                     </div>
                     <div *ngIf="canWriteRoles()" class="flex items-center gap-1 shrink-0">
-                      <button type="button" (click)="cloneRole(role)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="تکثیر نقش" aria-label="تکثیر نقش">
+                      <button type="button" (click)="cloneRole(role)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'تکثیر نقش'" aria-label="تکثیر نقش" [disabled]="isOffline">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                       </button>
                       <button type="button" (click)="openRoleModal(role.id)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="ویرایش نقش" aria-label="ویرایش نقش">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
                       </button>
-                      <button type="button" (click)="deleteRole(role.id)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="حذف نقش" aria-label="حذف نقش">
+                      <button type="button" (click)="deleteRole(role.id)" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'حذف نقش'" aria-label="حذف نقش" [disabled]="isOffline">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
                       </button>
                     </div>
@@ -772,13 +785,13 @@
                               </div>
                             </div>
                             <ng-container *ngIf="canWriteRoles()">
-                            <button type="button" (click)="cloneRole(role)" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="تکثیر نقش و دسترسی‌ها" aria-label="تکثیر نقش و دسترسی‌ها">
+                            <button type="button" (click)="cloneRole(role)" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'تکثیر نقش و دسترسی‌ها'" aria-label="تکثیر نقش و دسترسی‌ها" [disabled]="isOffline">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
                             </button>
                             <button type="button" (click)="openRoleModal(role.id)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش نقش" aria-label="ویرایش نقش">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                             </button>
-                            <button type="button" (click)="deleteRole(role.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="حذف نقش" aria-label="حذف نقش">
+                            <button type="button" (click)="deleteRole(role.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'حذف نقش'" aria-label="حذف نقش" [disabled]="isOffline">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                             </button>
                             </ng-container>
@@ -809,8 +822,8 @@
 
 <!-- Role Modal -->
 <div *ngIf="isRoleModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4" dir="rtl">
-  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="isRoleModalOpen = false"></div>
-  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden relative modal-enter border border-slate-100">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="requestCloseRoleModal()"></div>
+  <div role="dialog" aria-modal="true" aria-labelledby="role-modal-title" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden relative modal-enter border border-slate-100">
     
     <!-- Modal Header (فشرده و تک‌خطی) -->
     <div class="px-5 py-3 border-b border-slate-200 bg-slate-50/90 backdrop-blur-md flex justify-between items-center shrink-0">
@@ -820,14 +833,14 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h3 class="text-sm font-black text-slate-800 tracking-tight">{{editingRole ? 'ویرایش نقش: ' + (roleForm.title || roleForm.name) : 'تعریف نقش سازمانی جدید'}}</h3>
+            <h3 id="role-modal-title" class="text-sm font-black text-slate-800 tracking-tight">{{editingRole ? 'ویرایش نقش: ' + (roleForm.title || roleForm.name) : 'تعریف نقش سازمانی جدید'}}</h3>
             <span *ngIf="!editingRole" class="px-2 py-0.5 rounded-full text-[9.5px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">نقش جدید</span>
             <span *ngIf="editingRole" class="px-2 py-0.5 rounded-full text-[9.5px] font-black bg-amber-50 text-amber-800 border border-amber-200">ویرایش ماتریس</span>
           </div>
           <p class="text-[10px] text-slate-500">هویت سازمانی نقش و ماتریس تفکیک دسترسی‌ها (RBAC)</p>
         </div>
       </div>
-      <button (click)="isRoleModalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-200/60 cursor-pointer" title="بستن پنجره">
+      <button type="button" (click)="requestCloseRoleModal()" class="text-slate-400 hover:text-slate-600 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-200/60 cursor-pointer" title="بستن پنجره" aria-label="بستن پنجره">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
@@ -1147,8 +1160,8 @@
         <span>اعضای منتسب: <span class="font-mono text-emerald-600 font-black">{{ (roleForm.user_ids?.length || 0) }}</span> نفر</span>
       </div>
       <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-        <button (click)="isRoleModalOpen = false" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm active:scale-95">انصراف</button>
-        <button (click)="saveRole()" class="px-5 py-2 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center gap-2 cursor-pointer hover:brightness-110" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
+        <button type="button" (click)="requestCloseRoleModal()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm active:scale-95">انصراف</button>
+        <button (click)="saveRole()" class="px-5 py-2 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center gap-2 cursor-pointer hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
             <span>{{editingRole ? 'بروزرسانی نقش' : 'ایجاد نقش با دسترسی‌ها'}}</span>
         </button>
@@ -1171,8 +1184,8 @@
 
 <!-- User Modal -->
 <div *ngIf="isUserModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 md:p-6" dir="rtl">
-  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="isUserModalOpen = false"></div>
-  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative modal-enter flex flex-col max-h-[90vh] border border-slate-100 my-auto">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="requestCloseUserModal()"></div>
+  <div role="dialog" aria-modal="true" aria-labelledby="user-modal-title" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative modal-enter flex flex-col max-h-[90vh] border border-slate-100 my-auto">
     
     <!-- Modal Header -->
     <div class="px-6 py-4 border-b border-slate-200/80 bg-slate-50/90 backdrop-blur-md flex justify-between items-center shrink-0">
@@ -1182,7 +1195,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h2 class="text-base font-black text-slate-800 tracking-tight">
+            <h2 id="user-modal-title" class="text-base font-black text-slate-800 tracking-tight">
               {{ editingUser ? 'ویرایش پرونده پرسنلی: ' + userForm.first_name + ' ' + userForm.last_name : 'ثبت مشخصات و دسترسی‌های کاربر جدید' }}
             </h2>
             <span *ngIf="!editingUser" class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">حساب جدید</span>
@@ -1193,11 +1206,29 @@
           </p>
         </div>
       </div>
-      <button (click)="isUserModalOpen = false" class="text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all p-2 rounded-xl cursor-pointer" title="بستن پنجره">
+      <button type="button" (click)="requestCloseUserModal()" class="text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl cursor-pointer" title="بستن پنجره" aria-label="بستن پنجره">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
     
+    <!-- فرم فقط‌خواندنی (۲.۹-ب): دلیلش درون پنجره دیده شود -->
+    <div *ngIf="userFormReadonly" role="status" data-user-readonly-note
+      class="px-6 py-2 bg-surface-muted border-b border-line text-[11px] font-bold text-fg-muted shrink-0">
+      {{ isOffline ? 'آفلاین هستید؛ تغییر و ذخیره پس از اتصال ممکن است.' : 'اجازهٔ ویرایش این کاربر را ندارید؛ فقط مشاهده.' }}
+    </div>
+
+    <!-- نوار تغییر کاربر باز (۲.۹): ویرایش ذخیره‌نشده بی‌صدا رونویسی نمی‌شود -->
+    <div *ngIf="editingUser && editingUserChanged" role="status" data-user-changed-banner
+      class="px-6 py-2 bg-amber-50 border-b border-amber-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+      <span class="text-[11px] font-bold text-amber-900">این کاربر تغییر کرده است</span>
+      <button type="button" (click)="reloadEditingUser()" [disabled]="isRefetchingEditingUser" data-user-reload
+        title="بارگذاری دوباره" aria-label="بارگذاری دوباره"
+        class="min-h-[40px] inline-flex items-center gap-1 px-3 text-[11px] font-black rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 disabled:opacity-60 cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" aria-hidden="true"></svg>
+        <span>بارگذاری دوباره</span>
+      </button>
+    </div>
+
     <!-- Inner Tab Bar (نوار تب‌های ۴ گانه تفکیک‌شده) -->
     <div class="px-6 py-2.5 bg-slate-50/90 border-b border-slate-200/90 flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar shrink-0">
       <div class="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm w-full">
@@ -1277,6 +1308,7 @@
         <!-- Fake fields to intercept aggressive browser credential autofill -->
         <input type="text" name="fake_user_remembered" style="display:none" tabindex="-1" autocomplete="off">
         <input type="password" name="fake_password_remembered" style="display:none" tabindex="-1" autocomplete="off">
+        <fieldset [disabled]="userFormReadonly" data-user-form-fieldset class="contents">
         
         <!-- تب ۱: اطلاعات هویتی، پرسنلی و تماس -->
         <div *ngIf="userModalInnerTab === 'identity'" class="space-y-4 fade-in duration-200">
@@ -1301,12 +1333,12 @@
                     <img *ngIf="userForm.avatar" [src]="userForm.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar" />
                     <span *ngIf="!userForm.avatar">{{getUserAvatarLetter(userForm)}}</span>
                   </div>
-                  <button type="button" (click)="openAvatarModalForUser(editingUser || userForm)" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer gap-1">
+                  <button *ngIf="editingUser ? canEditUsers() : canAddUsers()" type="button" (click)="openAvatarModalForUser(editingUser || userForm)" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="camera"></svg>
                     تغییر
                   </button>
                 </div>
-                <button type="button" (click)="openAvatarModalForUser(editingUser || userForm)" class="w-full py-1.5 px-2 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-xl transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer">
+                <button *ngIf="editingUser ? canEditUsers() : canAddUsers()" type="button" (click)="openAvatarModalForUser(editingUser || userForm)" class="w-full py-1.5 px-2 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-xl transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline" [attr.title]="isOffline ? offlineTitle : null">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="camera"></svg>
                   <span>مدیریت تصویر</span>
                 </button>
@@ -1336,6 +1368,7 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
+                  <p *ngIf="userFieldMessages['first_name']" data-field-error="first_name" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['first_name'] }}</p>
                 </div>
 
                 <!-- نام خانوادگی -->
@@ -1359,6 +1392,7 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
+                  <p *ngIf="userFieldMessages['last_name']" data-field-error="last_name" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['last_name'] }}</p>
                 </div>
 
                 <!-- کد ملی -->
@@ -1379,17 +1413,19 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
+                  <p *ngIf="userFieldMessages['national_code']" data-field-error="national_code" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['national_code'] }}</p>
                 </div>
 
                 <!-- زون عملیاتی -->
                 <div>
                   <label class="block text-[11px] font-bold text-slate-600 mb-1.5">منطقه / زون عملیاتی</label>
                   <div class="relative">
-                    <input type="text" [(ngModel)]="userForm.operational_zone" name="operational_zone" placeholder="مثال: منطقه ۱ - اهواز" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('operational_zone')">
+                    <input type="text" [(ngModel)]="userForm.operational_zone" (input)="clearUserFormError('operational_zone')" name="operational_zone" placeholder="مثال: منطقه ۱ - اهواز" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('operational_zone')">
                     <div *ngIf="isFieldValid('operational_zone')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                   </div>
+                  <p *ngIf="userFieldMessages['operational_zone']" data-field-error="operational_zone" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['operational_zone'] }}</p>
                 </div>
 
                 <!-- سرپرست مستقیم -->
@@ -1399,6 +1435,7 @@
                     <option [ngValue]="null">--- بدون سرپرست مستقیم ---</option>
                     <option *ngFor="let s of getAvailableSupervisors()" [ngValue]="s.id">{{s.first_name}} {{s.last_name}} ({{s.username}})</option>
                   </select>
+                  <p *ngIf="userFieldMessages['supervisor']" data-field-error="supervisor" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['supervisor'] }}</p>
                 </div>
               </div>
             </div>
@@ -1438,17 +1475,19 @@
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                   </div>
                 </div>
+                <p *ngIf="userFieldMessages['phone_number']" data-field-error="phone_number" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['phone_number'] }}</p>
               </div>
 
               <!-- تماس اضطراری -->
               <div class="md:col-span-1">
                 <label class="block text-[11px] font-bold text-slate-600 mb-1.5">تماس اضطراری (Emergency)</label>
                 <div class="relative">
-                  <input type="tel" [(ngModel)]="userForm.emergency_contact" name="emergency_contact" placeholder="09... / 021..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('emergency_contact')">
+                  <input type="tel" [(ngModel)]="userForm.emergency_contact" (input)="clearUserFormError('emergency_contact')" name="emergency_contact" placeholder="09... / 021..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('emergency_contact')">
                   <div *ngIf="isFieldValid('emergency_contact')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
+                <p *ngIf="userFieldMessages['emergency_contact']" data-field-error="emergency_contact" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['emergency_contact'] }}</p>
               </div>
 
               <!-- گروه خونی -->
@@ -1465,6 +1504,7 @@
                   <option value="AB+">AB+ (مثبت)</option>
                   <option value="AB-">AB- (منفی)</option>
                 </select>
+                <p *ngIf="userFieldMessages['blood_type']" data-field-error="blood_type" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['blood_type'] }}</p>
               </div>
 
               <!-- ایمیل -->
@@ -1474,22 +1514,24 @@
                   <span class="text-slate-400 font-normal text-[10px]">(اختیاری)</span>
                 </label>
                 <div class="relative">
-                  <input type="email" [(ngModel)]="userForm.email" name="email" placeholder="user@company.com" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('email')">
+                  <input type="email" [(ngModel)]="userForm.email" (input)="clearUserFormError('email')" name="email" placeholder="user@company.com" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('email')">
                   <div *ngIf="isFieldValid('email')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
+                <p *ngIf="userFieldMessages['email']" data-field-error="email" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['email'] }}</p>
               </div>
 
               <!-- نشانی محل سکونت یا کارگاه -->
               <div class="md:col-span-4">
                 <label class="block text-[11px] font-bold text-slate-600 mb-1.5">آدرس محل سکونت یا کارگاه / محل اسکان</label>
                 <div class="relative">
-                  <textarea [(ngModel)]="userForm.address" name="address" rows="2" placeholder="آدرس دقیق و شماره پلاک محل خدمت یا سکونت پرسنل..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('address')"></textarea>
+                  <textarea [(ngModel)]="userForm.address" (input)="clearUserFormError('address')" name="address" rows="2" placeholder="آدرس دقیق و شماره پلاک محل خدمت یا سکونت پرسنل..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('address')"></textarea>
                   <div *ngIf="isFieldValid('address')" class="absolute left-3 bottom-3 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
+                <p *ngIf="userFieldMessages['address']" data-field-error="address" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['address'] }}</p>
               </div>
             </div>
           </div>
@@ -1543,13 +1585,26 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
+                  <p *ngIf="userFieldMessages['username']" data-field-error="username" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['username'] }}</p>
                   <p class="text-[10px] text-slate-400 mt-1 leading-normal">
                     شناسه ورود یکتای پرسنل به سامانه (حداقل ۳ کاراکتر انگلیسی، اعداد، نقطه یا خط تیره).
                   </p>
                 </div>
 
+                <!-- بازنشانی رمز کاربر دیگر (۲.۹): رمز کاربر دیگر با ویرایش فرستاده نمی‌شود -->
+                <div *ngIf="isEditingOtherUser" class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/90 space-y-2" data-reset-password-panel>
+                  <p class="text-[11px] font-black text-indigo-950">کلمه عبور</p>
+                  <p class="text-[10px] text-indigo-700/80 leading-normal">رمز این کاربر را فقط با بازنشانی می‌توانید عوض کنید؛ یک رمز یک‌بارمصرف ساخته می‌شود که کاربر در ورود اول باید عوض کند.</p>
+                  <button *ngIf="canEditUsers()" type="button" (click)="resetEditingUserPassword()" data-reset-password
+                    [attr.title]="isOffline ? offlineTitle : 'بازنشانی رمز'" aria-label="بازنشانی رمز"
+                    class="min-h-[40px] inline-flex items-center gap-1.5 px-3 text-[11px] font-black rounded-xl bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [disabled]="isOffline">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key" aria-hidden="true"></svg>
+                    <span>بازنشانی رمز</span>
+                  </button>
+                </div>
+
                 <!-- کلمه عبور -->
-                <div class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/90 space-y-2">
+                <div *ngIf="!isEditingOtherUser" class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/90 space-y-2" data-password-field>
                   <div class="flex items-center justify-between">
                     <label class="block text-[11px] font-black text-indigo-950">
                       {{ editingUser ? 'تغییر کلمه عبور (Password)' : 'کلمه عبور اولیه (Password)' }}
@@ -1559,7 +1614,7 @@
                     </button>
                   </div>
                   <div class="relative">
-                    <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password" (input)="clearUserFormError('password')" name="personnel_password" autocomplete="new-password" [placeholder]="editingUser ? 'در صورت عدم تغییر خالی بگذارید' : 'پیش‌فرض: 123456'" class="w-full pr-10 pl-10 py-2 rounded-xl bg-white border border-indigo-200 text-xs font-mono outline-none text-left transition-all" dir="ltr" [class]="getFieldClass('password')">
+                    <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password" (input)="clearUserFormError('password')" name="personnel_password" autocomplete="new-password" [placeholder]="editingUser ? 'در صورت عدم تغییر خالی بگذارید' : 'اختیاری'" class="w-full pr-10 pl-10 py-2 rounded-xl bg-white border border-indigo-200 text-xs font-mono outline-none text-left transition-all" dir="ltr" [class]="getFieldClass('password')">
                     <button type="button" (click)="toggleShowPassword()" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 p-1 rounded-md transition-colors cursor-pointer" [title]="showPassword ? 'مخفی‌سازی رمز' : 'نمایش رمز'">
                       <svg *ngIf="!showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-alt"></svg>
                       <svg *ngIf="showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
@@ -1571,8 +1626,9 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
+                  <p *ngIf="userFieldMessages['password']" data-field-error="password" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['password'] }}</p>
                   <p class="text-[9.5px] text-indigo-700/80 font-medium leading-normal">
-                    {{ editingUser ? 'در صورت خالی ماندن، کلمه عبور قبلی کاربر حفظ می‌گردد.' : 'در صورت خالی ماندن، رمز عبور اولیه به صورت خودکار 123456 تنظیم خواهد شد.' }}
+                    {{ editingUser ? 'در صورت خالی ماندن، کلمه عبور قبلی حفظ می‌گردد.' : 'اگر خالی بماند، سرور یک رمز یک‌بارمصرف می‌سازد که پس از ذخیره نمایش داده می‌شود؛ در ورود اول باید عوض شود.' }}
                   </p>
                 </div>
               </div>
@@ -1741,7 +1797,7 @@
 
         <!-- تب ۵: مجوزهای کاربر (طرح ۲.۲، ت۴ و ت۱۰) -->
         <div *ngIf="userModalInnerTab === 'permissions' && editingUser?.id" class="fade-in duration-200">
-          <app-user-permissions-tab [userId]="editingUser.id" (goToAssignments)="openUserAssignments($event)" />
+          <app-user-permissions-tab [userId]="editingUser.id" [companies]="availableCompanies" [canAssign]="canEditUsers()" (goToAssignments)="openUserAssignments($event)" />
         </div>
 
         <!-- تب ۶: جانشین موقت کاربر (طرح ۲.۳) -->
@@ -1908,6 +1964,7 @@
           </div>
         </div>
 
+        </fieldset>
       </form>
     </div>
 
@@ -1922,10 +1979,10 @@
       </div>
 
       <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-        <button (click)="isUserModalOpen = false" [disabled]="isSavingUser" class="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50">
+        <button type="button" (click)="requestCloseUserModal()" [disabled]="isSavingUser" class="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50">
           انصراف
         </button>
-        <button (click)="saveUser()" [disabled]="isSavingUser" class="px-6 py-2.5 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:pointer-events-none" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
+        <button *ngIf="editingUser ? canEditUsers() : canAddUsers()" (click)="saveUser()" [disabled]="isSavingUser || isOffline" class="px-6 py-2.5 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:pointer-events-none" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)" [attr.title]="isOffline ? offlineTitle : null">
           <span *ngIf="isSavingUser" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
           <svg *ngIf="!isSavingUser" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           <span>{{ isSavingUser ? 'در حال ثبت...' : (editingUser ? 'ذخیره و بروزرسانی پرونده' : 'ایجاد حساب کاربری') }}</span>
@@ -2016,3 +2073,46 @@
 
   </div>
 </div>
+
+<!-- رمز یک‌بارمصرف (۲.۹): فقط یک بار نمایش داده می‌شود -->
+@if (oneTimePasswords) {
+  <div class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" data-otp-panel>
+    <div role="dialog" aria-modal="true" aria-labelledby="otp-title" class="w-full max-w-md bg-surface rounded-3xl border border-line shadow-2xl modal-enter p-4 space-y-3" dir="rtl">
+      <div class="flex items-center justify-between gap-2">
+        <h3 id="otp-title" class="text-sm font-black text-fg flex items-center gap-1.5">
+          <svg appIcon="key" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>رمز یک‌بارمصرف</span>
+        </h3>
+        <button type="button" (click)="closeOneTimePasswords()" title="بستن" aria-label="بستن"
+          class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-fg-muted hover:bg-surface-muted cursor-pointer">
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        </button>
+      </div>
+      <p class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2">در ورود اول باید عوض شود. این رمز دوباره نمایش داده نمی‌شود؛ همین حالا آن را به کاربر برسانید.</p>
+      <ul class="space-y-1.5 max-h-72 overflow-y-auto">
+        @for (r of oneTimePasswords; track $index) {
+          <li class="flex items-center justify-between gap-2 p-2 rounded-xl border border-line bg-surface-muted" data-otp-row>
+            <div class="min-w-0 flex flex-col">
+              @if (r.username) { <span class="text-[10px] text-fg-muted truncate" dir="ltr">{{ r.username }}</span> }
+              <span class="text-sm font-black font-mono text-fg select-all" dir="ltr" data-otp-value>{{ r.password }}</span>
+            </div>
+            <button type="button" (click)="copyOneTimePasswords(r)" title="کپی رمز" aria-label="کپی رمز"
+              class="shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-indigo-700 hover:bg-indigo-50 cursor-pointer">
+              <svg appIcon="copy" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            </button>
+          </li>
+        }
+      </ul>
+      <div class="flex justify-end gap-2">
+        @if (oneTimePasswords.length > 1) {
+          <button type="button" (click)="copyOneTimePasswords()" data-otp-copy-all
+            class="min-h-[40px] inline-flex items-center gap-1 px-3 text-[11px] font-black rounded-xl border border-line text-fg hover:bg-surface-muted cursor-pointer">
+            <svg appIcon="copy" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>کپی همه</span>
+          </button>
+        }
+        <button #otpClose type="button" (click)="closeOneTimePasswords()" class="min-h-[40px] px-4 text-[11px] font-black rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">متوجه شدم</button>
+      </div>
+    </div>
+  </div>
+}

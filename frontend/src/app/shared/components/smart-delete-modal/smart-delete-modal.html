@@ -41,8 +41,8 @@
         <!-- Impact Error -->
         <div *ngIf="!isLoadingImpact && impactError" class="flex flex-wrap items-center gap-2 text-xs text-red-800 font-bold">
           <span>{{ impactError }}</span>
-          <span *ngIf="requireImpact">تا اثر حذف دیده نشود، حذف ممکن نیست.</span>
-          <button type="button" appAction="refresh" label="تلاش دوباره" display="label" (click)="retryImpact()"></button>
+          <span *ngIf="requireImpact && !impactForbidden">تا اثر حذف دیده نشود، حذف ممکن نیست.</span>
+          <button *ngIf="!impactForbidden" type="button" appAction="refresh" label="تلاش دوباره" display="label" (click)="retryImpact()"></button>
         </div>
 
         <!-- Blocked -->
@@ -80,7 +80,7 @@
         <label [attr.for]="titleId + '-confirm'" class="block text-xs font-bold text-slate-700 mb-2">
           برای تایید نهایی حذف، کلمه <span class="font-black text-red-600 select-all px-1.5 py-0.5 bg-red-50 rounded border border-red-200">حذف</span> را تایپ کنید:
         </label>
-        <input #confirmInput [id]="titleId + '-confirm'" type="text" [(ngModel)]="confirmationText" [disabled]="blocked" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-bold text-sm disabled:bg-slate-100 disabled:cursor-not-allowed" dir="rtl" autocomplete="off" placeholder="حذف">
+        <input #confirmInput [id]="titleId + '-confirm'" type="text" [(ngModel)]="confirmationText" [disabled]="blocked || impactForbidden" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-bold text-sm disabled:bg-slate-100 disabled:cursor-not-allowed" dir="rtl" autocomplete="off" placeholder="حذف">
       </div>
 
     </div>

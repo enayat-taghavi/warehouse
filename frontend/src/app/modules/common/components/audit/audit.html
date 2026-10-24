@@ -676,7 +676,7 @@
       <div *ngFor="let u of activeLockedAccounts" class="flex items-center gap-2 px-3 py-1.5 bg-white border border-rose-200 rounded-xl shadow-sm">
         <span class="font-mono text-xs font-bold text-slate-800">{{u.username}}</span>
         <span class="text-[10px] text-slate-400 font-mono" dir="ltr" *ngIf="u.ip_address">({{u.ip_address}})</span>
-        <button (click)="confirmUnlockUser(u.username, u.ip_address, $event)" type="button" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 cursor-pointer">
+        <button *ngIf="canUnlockTarget(u.username, u.ip_address)" (click)="confirmUnlockUser(u.username, u.ip_address, $event)" type="button" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 cursor-pointer">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="unlock"></svg>
           <span>رفع مسدودیت</span>
         </button>
@@ -731,7 +731,7 @@
                   <span *ngIf="log.status === 'LOGOUT'" class="bg-slate-50 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-lg text-[9px] font-bold">خروج امن</span>
 
                   <!-- دکمه سریع رفع مسدودیت در سطر -->
-                  <button *ngIf="log.status === 'FAILED_LOCKED'" (click)="confirmUnlockUser(log.username_attempted, log.ip_address, $event)" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black shadow-sm transition-all active:scale-95 cursor-pointer" title="رفع مسدودیت و بازنشانی قفل کاربر">
+                  <button *ngIf="log.status === 'FAILED_LOCKED' && canUnlockTarget(log.username_attempted, log.ip_address)" (click)="confirmUnlockUser(log.username_attempted, log.ip_address, $event)" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black shadow-sm transition-all active:scale-95 cursor-pointer" title="رفع مسدودیت و بازنشانی قفل کاربر">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="unlock"></svg>
                     <span>رفع قفل</span>
                   </button>
@@ -1535,7 +1535,7 @@
       <!-- Modal Footer -->
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <button *ngIf="selectedLoginForDetails.status === 'FAILED_LOCKED'" (click)="confirmUnlockUser(selectedLoginForDetails.username_attempted, selectedLoginForDetails.ip_address)" type="button" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer">
+          <button *ngIf="selectedLoginForDetails.status === 'FAILED_LOCKED' && canUnlockTarget(selectedLoginForDetails.username_attempted, selectedLoginForDetails.ip_address)" (click)="confirmUnlockUser(selectedLoginForDetails.username_attempted, selectedLoginForDetails.ip_address)" type="button" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="unlock"></svg>
             <span>رفع مسدودیت کاربر (آنلاک)</span>
           </button>

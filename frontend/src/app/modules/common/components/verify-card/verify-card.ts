@@ -10,21 +10,9 @@ import { resolveServerUrl } from '../../../../core/platform/server-origin';
 
 export interface VerifiedPersonnel {
   valid: boolean;
-  is_active: boolean;
-  id: number;
-  personnel_code: string;
   first_name: string;
   last_name: string;
-  national_code: string | null;
-  phone_number: string | null;
-  operational_zone: string | null;
-  company: string | null;
   avatar: string | null;
-  blood_type: string | null;
-  emergency_contact: string | null;
-  roles: { id: number; title: string; color: string }[];
-  assigned_warehouses: string[];
-  message?: string;
 }
 
 @Component({

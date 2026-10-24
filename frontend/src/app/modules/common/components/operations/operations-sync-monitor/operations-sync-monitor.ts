@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -23,6 +23,7 @@ import { ConflictResolutionModalComponent } from '../../../../../shared/componen
 import { Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 
@@ -75,6 +76,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   public ws = inject(WebSocketService);
   public moduleRegistry = inject(ModuleRegistryService);
   private toast = inject(ToastService);
+  private permissions = inject(PermissionService);
   private confirmDialog = inject(ConfirmDialogService);
   private cdr = inject(ChangeDetectorRef);
 
@@ -155,6 +157,8 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   public queueItems = signal<SyncQueueEntry[]>([]);
   public conflictErrors = signal<SyncErrorEntry[]>([]);
   public tabletFleet = signal<TabletDeviceTelemetry[]>([]);
+  /** فهرست ناوگان فقط برای دارندگان «لاگ‌های امنیتی» است (سرور بدون آن ۴۰۳ می‌دهد) */
+  public canViewFleet = computed(() => this.permissions.can('perm_sys_logs'));
   public currentDeviceModel = signal<string>('در حال شناسایی...');
 
   /** شمار رکوردهای صف هر قلمرو (کلید: قلمرو نرمال‌شده) */
@@ -265,7 +269,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
       this.conflictErrors.set(combinedErrors);
 
       // ۲. واکشی ناوگان زنده متصل از سرور
-      const serverFleet: FleetSessionItem[] = await this.clientTelemetry.getFleetSessions();
+      const serverFleet: FleetSessionItem[] = this.canViewFleet() ? await this.clientTelemetry.getFleetSessions() : [];
       const currentTab = this.sessionTab.tabId;
       const currentScope = this.sessionTab.getActiveApp();
       const devInfo = await this.clientTelemetry.getDeviceInfo();

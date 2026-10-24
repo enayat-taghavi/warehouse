@@ -87,3 +87,19 @@ export const DEFAULT_ASSIGNMENT_SCOPE_LABELS: AssignmentScopeLabels = {
   emptyText: 'هیچ محدوده‌ای برای شرکت‌های انتخاب‌شده یافت نشد.',
   sensitiveRecords: 'پایگاه داده'
 };
+
+/**
+ * پیام خطای سرور برای نوشتن‌های صفحهٔ کاربران: `detail` فارسی سرور (۴۰۳ کاربر مشترک / رتبهٔ بالاتر) همان‌طور که هست؛
+ * سپس `error`، متن خام و در پایان پیام‌های فیلدی تخت‌شده.
+ */
+export function extractApiError(err: any, fallback: string): string {
+  const body = err?.error;
+  if (body && typeof body === 'object') {
+    if (typeof body.detail === 'string' && body.detail) return body.detail;
+    if (typeof body.error === 'string' && body.error) return body.error;
+    const flat = Object.values(body).flat().filter(v => typeof v === 'string' && v).join(' ');
+    if (flat) return flat;
+  }
+  if (typeof body === 'string' && body && !body.trim().startsWith('<')) return body;
+  return fallback;
+}

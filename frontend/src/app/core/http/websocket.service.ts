@@ -132,7 +132,9 @@ export class WebSocketService implements OnDestroy {
             'personnel_updated',
             'fleet_trips_updated',
             'org_structure_updated',
-            'session_revoked'
+            'session_revoked',
+            'permissions_updated',
+            'users_changed'
           ];
           const validToastTypes: string[] = ['info', 'warning', 'success', 'error'];
           if (data.message && data.type && !silentTypes.includes(data.type) && validToastTypes.includes(data.type)) {
