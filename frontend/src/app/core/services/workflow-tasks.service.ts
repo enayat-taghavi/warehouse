@@ -224,7 +224,8 @@ export class WorkflowTasksService {
       return { status: 'done', state };
     } catch (err: any) {
       const status = typeof err?.status === 'number' ? err.status : 0;
-      if (isServerUnreachable(status)) return this.enqueue(task, body);
+      // مثل اجراکنندهٔ صف: ۴۰۸ و ۴۲۹ موقتی‌اند و اقدام برای ارسال دوباره در صف می‌ماند
+      if (isServerUnreachable(status) || status === 408 || status === 429) return this.enqueue(task, body);
       const errBody = err?.error && typeof err.error === 'object' ? err.error : {};
       if (status === 409) {
         const message = errBody.code === WORKFLOW_TASK_ALREADY_DONE && errBody.detail

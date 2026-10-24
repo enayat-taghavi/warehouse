@@ -25,6 +25,15 @@ import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/t
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { WorkflowReasonDialogComponent } from '../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 
+// برچسب فارسی کلیدهای عمومی خلاصهٔ کارت (قرارداد summary در workflow/registry.py)
+const SUMMARY_LABELS: Record<string, string> = {
+  category: 'دسته',
+  date_shamsi: 'تاریخ',
+  description: 'شرح',
+  item_count: 'تعداد اقلام',
+};
+const SUMMARY_HIDDEN_KEYS = new Set(['title', 'amount']);
+
 function formatPersianDigits(n: number | string): string {
   const faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
   return String(n).replace(/\d/g, (w) => faDigits[+w]);
@@ -120,28 +129,36 @@ export class MyTasksComponent implements OnInit, OnDestroy {
     return this.tabsCache;
   }
 
+  // فهرست‌های فیلتر فقط وقتی آرایهٔ کارت‌ها عوض شود از نو ساخته می‌شوند: آرایهٔ تازه در هر دور، گزینه‌های
+  // ngFor را دوباره می‌سازد و حلقهٔ بی‌پایان تشخیص تغییر (NG0103) می‌دهد.
+  private filterSource: readonly WorkflowTaskCard[] | null = null;
+  private companiesCache: { id: string; name: string }[] = [];
+  private workflowsCache: { key: string; title: string }[] = [];
+
+  private refreshFilterLists(): void {
+    const cards = this.activeTab === 'unassigned' ? this.unassignedTasks : this.workflowTasks.tasks();
+    if (cards === this.filterSource) return;
+    this.filterSource = cards;
+    const companies = new Map<string, string>();
+    const workflows = new Map<string, string>();
+    for (const c of cards) {
+      if (c.company) companies.set(String(c.company.id), c.company.name);
+      if (c.workflow_key && c.workflow_title_fa) workflows.set(c.workflow_key, c.workflow_title_fa);
+    }
+    this.companiesCache = Array.from(companies.entries()).map(([id, name]) => ({ id, name }));
+    this.workflowsCache = Array.from(workflows.entries()).map(([key, title]) => ({ key, title }));
+  }
+
   // فهرست شرکت‌های موجود در کارت‌ها برای فیلتر کلاینت
   get availableCompanies(): { id: string; name: string }[] {
-    const cards = this.activeTab === 'unassigned' ? this.unassignedTasks : this.workflowTasks.tasks();
-    const map = new Map<string, string>();
-    for (const c of cards) {
-      if (c.company) {
-        map.set(String(c.company.id), c.company.name);
-      }
-    }
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+    this.refreshFilterLists();
+    return this.companiesCache;
   }
 
   // فهرست گردش‌های موجود برای فیلتر کلاینت
   get availableWorkflows(): { key: string; title: string }[] {
-    const cards = this.activeTab === 'unassigned' ? this.unassignedTasks : this.workflowTasks.tasks();
-    const map = new Map<string, string>();
-    for (const c of cards) {
-      if (c.workflow_key && c.workflow_title_fa) {
-        map.set(c.workflow_key, c.workflow_title_fa);
-      }
-    }
-    return Array.from(map.entries()).map(([key, title]) => ({ key, title }));
+    this.refreshFilterLists();
+    return this.workflowsCache;
   }
 
   // کارت‌های فیلترشده
@@ -329,7 +346,8 @@ export class MyTasksComponent implements OnInit, OnDestroy {
       this.toast.warning(outcome.message);
       this.reasonDialogOpen = false;
     } else if (outcome.status === 'rejected') {
-      if (outcome.code === 'reason_required') {
+      // دیالوگ دلیل باز می‌ماند تا متن نوشته‌شده از دست نرود
+      if (outcome.code === 'reason_required' || this.reasonDialogOpen) {
         this.reasonServerError = outcome.message;
       } else {
         this.toast.error(outcome.message);
@@ -360,10 +378,23 @@ export class MyTasksComponent implements OnInit, OnDestroy {
     return formatWaitingTime(hours);
   }
 
-  getSummaryEntries(summary: Record<string, unknown> | null | undefined): { key: string; value: string }[] {
+  // عنوان خلاصه جدا نشان داده می‌شود و مبلغ در ردیف کارت آمده است
+  getSummaryTitle(summary: Record<string, unknown> | null | undefined): string {
+    const t = summary?.['title'];
+    return t != null && typeof t !== 'object' ? String(t) : '';
+  }
+
+  // برای هر شیء خلاصه یک بار ساخته می‌شود (آرایهٔ تازه در هر دور، ngFor را بی‌پایان دوباره می‌سازد)
+  private readonly summaryCache = new WeakMap<object, { key: string; label: string; value: string }[]>();
+  getSummaryEntries(summary: Record<string, unknown> | null | undefined): { key: string; label: string; value: string }[] {
     if (!summary || typeof summary !== 'object') return [];
-    return Object.entries(summary)
-      .filter(([k, v]) => v != null && v !== '' && typeof v !== 'object')
-      .map(([key, value]) => ({ key, value: String(value) }));
+    let entries = this.summaryCache.get(summary);
+    if (!entries) {
+      entries = Object.entries(summary)
+        .filter(([k, v]) => !SUMMARY_HIDDEN_KEYS.has(k) && v != null && v !== '' && typeof v !== 'object')
+        .map(([key, value]) => ({ key, label: SUMMARY_LABELS[key] ?? key, value: formatPersianDigits(String(value)) }));
+      this.summaryCache.set(summary, entries);
+    }
+    return entries;
   }
 }

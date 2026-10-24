@@ -263,4 +263,21 @@ describe('MyTasksComponent DOM Spec', () => {
     expect(component.reasonDialogOpen).toBe(false);
     expect(mockTasksService.act).toHaveBeenCalledWith(card, 'act', undefined);
   });
+
+  it('keeps filter and summary lists stable between change-detection passes (NG0103 regression)', () => {
+    component.ngOnInit();
+    const companies = component.availableCompanies;
+    const workflows = component.availableWorkflows;
+    expect(component.availableCompanies).toBe(companies);
+    expect(component.availableWorkflows).toBe(workflows);
+
+    const summary = component.filteredCards[0].summary;
+    const entries = component.getSummaryEntries(summary);
+    expect(component.getSummaryEntries(summary)).toBe(entries);
+    expect(entries).toEqual([{ key: 'item_count', label: 'تعداد اقلام', value: '۵' }]);
+    expect(component.getSummaryTitle(summary)).toBe('خرید تجهیزات شبکه');
+
+    tasksSignal.set([...tasksSignal()]);
+    expect(component.availableCompanies).not.toBe(companies);
+  });
 });

@@ -202,3 +202,10 @@ describe('OfflineSyncService: deep-update probe error classification and reachab
     expect(fetchMock).toHaveBeenCalledTimes(0);
   });
 });
+
+describe('OfflineSyncService: injection returns the app singleton', () => {
+  it('inject(OfflineSyncService) is the same instance as getInstance() (the one that processes the queue)', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    expect(TestBed.inject(OfflineSyncService)).toBe(OfflineSyncService.getInstance());
+  });
+});

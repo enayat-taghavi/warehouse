@@ -210,12 +210,13 @@
       </div>
 
       <!-- خلاصهٔ اعلام‌شدهٔ ماژول (summary) -->
+      <p *ngIf="getSummaryTitle(card.summary)" class="text-sm font-bold text-slate-800">{{ getSummaryTitle(card.summary) }}</p>
       <div
         *ngIf="getSummaryEntries(card.summary).length > 0"
         class="bg-slate-50/80 border border-slate-100 rounded-xl p-2.5 text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1"
       >
         <div *ngFor="let item of getSummaryEntries(card.summary)" class="flex items-center gap-1">
-          <span class="text-slate-400 font-medium">{{ item.key }}:</span>
+          <span class="text-slate-500 font-medium">{{ item.label }}:</span>
           <span class="font-bold text-slate-700">{{ item.value }}</span>
         </div>
       </div>

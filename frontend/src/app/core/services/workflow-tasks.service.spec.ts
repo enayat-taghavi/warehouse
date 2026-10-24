@@ -186,8 +186,8 @@ describe('WorkflowTasksService', () => {
     expect(api.postTaskAction).not.toHaveBeenCalled();
   });
 
-  for (const status of [0, 502, 503, 504, 530]) {
-    it(`server unreachable (${status}): action goes to the existing offline queue, card stays as pending`, async () => {
+  for (const status of [0, 408, 429, 502, 503, 504, 530]) {
+    it(`server unreachable or busy (${status}): action goes to the existing offline queue, card stays as pending`, async () => {
       store([card(1)]);
       login();
       api.postTaskAction.mockReturnValue(throwError(() => ({ status })));

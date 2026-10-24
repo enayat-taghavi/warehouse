@@ -60,8 +60,11 @@ import {
 
 export type { SyncOutcome, DeepUpdateSummary };
 
+// تزریق با inject() هم همان نمونهٔ یکتای getInstance() را می‌دهد؛ بی‌آن نمونهٔ دومی ساخته می‌شد که صف را
+// پردازش نمی‌کند و syncOutcome$/rejected$ آن هرگز رخ نمی‌دهد (کارهای من پس از ارسال صف تازه نمی‌شد).
 @Injectable({
   providedIn: 'root',
+  useFactory: () => OfflineSyncService.getInstance(),
 })
 export class OfflineSyncService {
   private static instance: OfflineSyncService;
