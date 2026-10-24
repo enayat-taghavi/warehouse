@@ -19,6 +19,8 @@ from personnel.models import (
 )
 from personnel.scoped_test_support import _permission, grant_section_perms
 from personnel.serializers import ExpenseInvoiceSerializer, PettyCashTransactionSerializer
+from personnel.workflows import INVOICE_WORKFLOW
+from workflow import engine as wf_engine
 
 User = get_user_model()
 URL = '/api/personnel/cartable/accountant/'
@@ -40,6 +42,10 @@ class AccountantCartableSectionScopeTests(TestCase):
         grant_section_perms(self.user, [], section=self.s2, role='employee', exact=False)
 
         self.custodian = User.objects.create_user(username='css_cust', password='x')
+        self.creator = User.objects.create_user(username='css_creator', password='x')
+        UserCompanyAccess.objects.create(user=self.creator, company=self.company, is_default=True)
+        for sec in (self.s1, self.s2):
+            grant_section_perms(self.creator, [], section=sec, role='employee', exact=False)
         self.cp = Counterparty.objects.create(company=self.company, name='طرف یک', counterparty_type='other')
 
         self.inv = {}
@@ -48,8 +54,10 @@ class AccountantCartableSectionScopeTests(TestCase):
         for i, sec in enumerate((self.s1, self.s2), start=1):
             self.inv[i] = ExpenseInvoice.objects.create(
                 section=sec, counterparty=self.cp, invoice_number=f'CSS-{i}', invoice_date_shamsi='1404/05/01',
-                amount=Decimal('1000'), category='c', description='d', status='pending_accountant',
+                amount=Decimal('1000'), category='c', description='d', status='draft', created_by=self.creator,
             )
+            # ت۱۷ طرح ۲.۳: کارتابل فاکتور از کارهای موتور گردش کار خوانده می‌شود
+            wf_engine.submit(INVOICE_WORKFLOW, self.inv[i], self.creator)
             account = PettyCashAccount.objects.create(section=sec, custodian=self.custodian, ceiling_amount=Decimal('100000'))
             self.pc[i] = PettyCashTransaction.objects.create(
                 account=account, section=sec, custodian=self.custodian, transaction_type='expense',
@@ -101,12 +109,15 @@ class AccountantCartableSectionScopeTests(TestCase):
         self.assertEqual(res.status_code, 403, res.content)
         self.assertNotIn(self.pc[1].id, {r['id'] for r in self._get()['petty_cash']})
 
-    def test_s1_invoice_approval_blocked_without_invoice_permission(self):
-        # سطح حسابدار در S1 بی‌تغییر می‌ماند؛ فقط «ثبت و دیدن فاکتور» برداشته می‌شود
+    def test_s1_invoice_approval_blocked_without_step_permission(self):
+        # ت۳ طرح ۲.۳: دریافت‌کنندهٔ مرحلهٔ بررسی = نقش حسابدار + مجوز مرحله؛ برداشتن مجوز مرحله کار را برمی‌دارد
         UserPermissionOverride.objects.create(
-            user=self.user, permission=_permission('perm_invoice_record'), company_id=self.company.id, mode='remove',
+            user=self.user, permission=_permission('can_act_as_accountant'), company_id=self.company.id, mode='remove',
         )
         clear_scoped_permission_cache(self.user)
+        # ساخت مستقیم ORM سیگنال permissions_changed ندارد (API آن را می‌فرستد)؛ محاسبهٔ دوباره مثل زمان‌بند
+        from workflow.recompute import recompute_open_tasks
+        recompute_open_tasks(user_ids={self.user.pk})
         self.assertEqual(self._post('invoice', self.inv[1]).status_code, 403)
         self.assertEqual(self._get()['invoices'], [])
 
@@ -114,7 +125,8 @@ class AccountantCartableSectionScopeTests(TestCase):
         admin = User.objects.create_superuser(username='css_admin', password='x', email='a@b.c')
         self.client.force_authenticate(user=admin)
         data = self._get()
-        self.assertEqual({r['id'] for r in data['invoices']}, {self.inv[1].id, self.inv[2].id})
+        # ت۳ طرح ۲.۳: مدیر کل دریافت‌کنندهٔ کار نیست؛ کارهای بی‌دریافت‌کننده را در «کارهای من» (تب مدیر کل) می‌بیند
+        self.assertEqual(data['invoices'], [])
         self.assertEqual({r['id'] for r in data['petty_cash']}, {self.pc[1].id, self.pc[2].id})
 
     # ─── ارجاع بین‌شرکتی/بین‌بخشی در سریالایزر ───────────────────────────────────────

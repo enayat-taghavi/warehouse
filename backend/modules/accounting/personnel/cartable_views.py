@@ -79,6 +79,49 @@ from .views_domains.treasury_views import (
 )
 
 
+
+def _invoice_engine_action(user, invoice, action_type, reason):
+    """
+    اقدام کارتابل روی فاکتور از راه موتور گردش کار (ت۱۷ طرح ۲.۳): تأیید = act، بازنگری = عودت، ابطال = رد قطعی.
+    اجازه را موتور می‌سنجد (دریافت‌کنندهٔ کار باز، بی‌تأیید خود)؛ اقدام دوم 409 task_already_done می‌گیرد.
+    """
+    from workflow import engine as wf_engine
+    from workflow.errors import WorkflowError
+    from .workflows import INVOICE_WORKFLOW
+    if action_type not in ('approve', 'revision', 'reject'):
+        raise ValidationError(f"اقدام «{action_type}» نامعتبر است.")
+    if action_type != 'approve' and not reason:
+        raise ValidationError("ثبت دلیل الزامی است.")
+    task = wf_engine.open_task(INVOICE_WORKFLOW, invoice.pk)
+    if task is None:
+        return Response({'code': 'task_already_done', 'error': 'این کار را نفر دیگری انجام داده است'},
+                        status=status.HTTP_409_CONFLICT)
+    try:
+        if action_type == 'approve':
+            wf_engine.act(user, task, obj=invoice)
+        elif action_type == 'revision':
+            wf_engine.return_for_fix(user, task, reason, obj=invoice)
+        else:
+            wf_engine.reject(user, task, reason, obj=invoice)
+    except WorkflowError as exc:
+        return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+    if action_type != 'approve':
+        invoice.rejection_reason = reason
+        invoice.save(update_fields=['rejection_reason', 'updated_at'])
+    return Response({'message': 'اقدام روی فاکتور ثبت شد.', 'status': invoice.status})
+
+
+def _invoice_task_rows(user, step_key):
+    """
+    فاکتورهای کارتابل از کارهای باز همین کاربر در موتور گردش کار (ت۱۷ طرح ۲.۳)، نه از وضعیت و سطح نقش:
+    کار برداشته‌شده از کارتابل بقیه هم می‌رود، و جانشین در بازه‌اش فاکتورهای کار صاحب کار را می‌بیند.
+    """
+    from workflow.queries import tasks_for_user
+    from .workflows import INVOICE_WORKFLOW
+    ids = tasks_for_user(user).filter(instance__workflow_key=INVOICE_WORKFLOW, step_key=step_key).values(
+        'instance__entity_id')
+    return ExpenseInvoice.objects.filter(pk__in=ids).select_related('section', 'counterparty')
+
 def _get_effective_company_ids(request, user):
     """
     استخراج شناسه‌های شرکت مجاز و فعال برای درخواست کارتابل
@@ -426,13 +469,7 @@ class SupervisorCartableAPIView(APIView):
         )
 
         # فاکتورهای هزینه نیازمند بررسی سرپرست
-        invoices_qs = _filter_by_company(
-            ExpenseInvoice.objects.filter(
-                status__in=[WorkflowStatuses.PENDING_SUPERVISOR, 'pending_supervisor', WorkflowStatuses.DRAFT, 'draft', WorkflowStatuses.REVISION_REQUIRED, 'revision_required']
-            ).select_related('section', 'counterparty'),
-            'invoice', company_ids
-        )
-        invoices_qs = _scope_section_rows(invoices_qs, user, INVOICE_PERM, WorkflowTiers.TIER_2_SUPERVISOR)
+        invoices_qs = _filter_by_company(_invoice_task_rows(user, 'supervisor_ok'), 'invoice', company_ids)
 
         # اسناد تنخواه‌گردان نیازمند بررسی سرپرست
         petty_cash_qs = _filter_by_company(
@@ -576,6 +613,8 @@ class SupervisorCartableAPIView(APIView):
         # --- ۲. سایر مدل‌ها و دوره کارکرد ماهانه ---
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        if isinstance(instance, ExpenseInvoice):
+            return _invoice_engine_action(user, instance, action_type, reason)
         _ensure_cartable_section_permission(instance, user)
         _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
@@ -666,13 +705,7 @@ class AccountantCartableAPIView(APIView):
         )
 
         # فاکتورهای نیازمند ممیزی حسابدار
-        invoices_qs = _filter_by_company(
-            ExpenseInvoice.objects.filter(
-                status__in=[WorkflowStatuses.PENDING_ACCOUNTANT, 'pending_accountant']
-            ).select_related('section', 'counterparty'),
-            'invoice', company_ids
-        )
-        invoices_qs = _scope_section_rows(invoices_qs, user, INVOICE_PERM, WorkflowTiers.TIER_3_ACCOUNTANT)
+        invoices_qs = _filter_by_company(_invoice_task_rows(user, 'accountant_review'), 'invoice', company_ids)
 
         # اسناد تنخواه‌گردان نیازمند ممیزی حسابدار
         petty_cash_qs = _filter_by_company(
@@ -717,6 +750,8 @@ class AccountantCartableAPIView(APIView):
 
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        if isinstance(instance, ExpenseInvoice):
+            return _invoice_engine_action(user, instance, action_type, reason)
         _ensure_cartable_section_permission(instance, user)
         _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
@@ -789,13 +824,7 @@ class ManagerCartableAPIView(APIView):
         )
 
         # فاکتورهای نیازمند تایید مدیر
-        invoices_qs = _filter_by_company(
-            ExpenseInvoice.objects.filter(
-                status__in=[WorkflowStatuses.PENDING_MANAGER, 'pending_manager', WorkflowStatuses.READY_TO_PAY, 'ready_to_pay']
-            ).select_related('section', 'counterparty'),
-            'invoice', company_ids
-        )
-        invoices_qs = _scope_section_rows(invoices_qs, user, INVOICE_PERM, WorkflowTiers.TIER_4_MANAGER)
+        invoices_qs = _filter_by_company(_invoice_task_rows(user, 'manager_ok'), 'invoice', company_ids)
 
         # اسناد تنخواه نیازمند تایید مدیر
         petty_cash_qs = _filter_by_company(
@@ -840,6 +869,8 @@ class ManagerCartableAPIView(APIView):
 
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        if isinstance(instance, ExpenseInvoice):
+            return _invoice_engine_action(user, instance, action_type, reason)
         _ensure_cartable_section_permission(instance, user)
         _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
@@ -891,13 +922,7 @@ class TreasuryCartableAPIView(APIView):
         trips = _filter_by_company(trips_qs, 'trip', company_ids)[:100]
 
         # فاکتورهای تایید شده آماده پرداخت خزانه‌داری
-        invoices_payable_qs = ExpenseInvoice.objects.filter(
-            status__in=[WorkflowStatuses.READY_TO_PAY, 'ready_to_pay']
-        ).select_related('section', 'counterparty')
-        invoices_payable = _scope_section_rows(
-            _filter_by_company(invoices_payable_qs, 'invoice', company_ids),
-            user, INVOICE_PERM, WorkflowTiers.TIER_5_TREASURY,
-        )[:100]
+        invoices_payable = _filter_by_company(_invoice_task_rows(user, 'treasury_pay'), 'invoice', company_ids)[:100]
 
         data['invoices'] = ExpenseInvoiceSerializer(invoices_payable, many=True).data
         data['payrolls'] = MonthlyPayrollRecordSerializer(payrolls, many=True).data
@@ -989,16 +1014,28 @@ class TreasuryCartableAPIView(APIView):
             invoice_id = request.data.get('invoice_id')
             if not invoice_id:
                 raise ValidationError("شناسه فاکتور (invoice_id) الزامی است.")
-            invoice = ExpenseInvoice.objects.get(pk=invoice_id)
+            # پرداخت فاکتور روی موتور گردش کار (ت۱۷ طرح ۲.۳): فقط دریافت‌کنندهٔ کار باز مرحلهٔ پرداخت
+            from django.db import transaction
+            from django.utils import timezone
+            from workflow import engine as wf_engine
+            from workflow.errors import WorkflowError
+            from .workflows import INVOICE_WORKFLOW
+            invoice = ExpenseInvoice.objects.filter(pk=invoice_id).first()
+            task = wf_engine.open_task(INVOICE_WORKFLOW, invoice_id) if invoice else None
+            if invoice is None or task is None or task.step_key != 'treasury_pay':
+                raise ValidationError("فاکتور در مرحلهٔ پرداخت نیست یا یافت نشد.")
             _validate_instance_company_access(invoice, 'invoice', user)
-            _ensure_cartable_section_permission(invoice, user)
-            updated_invoice = execute_treasury_disbursement(
-                instance=invoice,
-                user=user,
-                tracking_code=tracking_code,
-                batch_id=batch_id,
-                notes=request.data.get('notes')
-            )
+            try:
+                with transaction.atomic():
+                    invoice.payment_ref = tracking_code
+                    invoice.paid_at = timezone.now()
+                    invoice.paid_by = user
+                    invoice.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_at'])
+                    wf_engine.act(user, task, reason=(request.data.get('notes') or '').strip(), obj=invoice)
+            except WorkflowError as exc:
+                return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
+                                status=exc.status)
+            updated_invoice = invoice
             return Response({
                 'message': f'فاکتور شماره «{invoice.invoice_number}» با موفقیت تسویه و پرداخت شد.',
                 'invoice': ExpenseInvoiceSerializer(updated_invoice).data

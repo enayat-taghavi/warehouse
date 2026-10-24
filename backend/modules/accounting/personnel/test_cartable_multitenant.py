@@ -209,6 +209,17 @@ class CartableMultiTenantTestCase(TestCase):
             is_settled=False
         )
 
+        # ت۱۷ طرح ۲.۳: کارتابل فاکتور از کارهای موتور گردش کار خوانده می‌شود؛ فاکتورها را کارمند هر شرکت ارسال می‌کند
+        from personnel.workflows import INVOICE_WORKFLOW
+        from workflow import engine as wf_engine
+        for inv, company, section, name in ((self.inv_fa, self.company_fa, self.sec_fa, 'fa_emp'),
+                                            (self.inv_pts, self.company_pts, self.sec_pts, 'pts_emp')):
+            creator = self._create_user_with_role(name, 'employee', company, section)
+            inv.status = 'draft'
+            inv.created_by = creator
+            inv.save(update_fields=['status', 'created_by'])
+            wf_engine.submit(INVOICE_WORKFLOW, inv, creator)
+
     def _create_user_with_role(self, username, role, company, section):
         from django.contrib.auth.models import Permission
         u = User.objects.create_user(

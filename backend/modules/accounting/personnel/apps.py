@@ -88,6 +88,11 @@ class PersonnelConfig(AppConfig):
             contribute('sod_route_rules', rule)
         contribute('sod_action_resolvers', resolve_personnel_sod_action)
 
+        # گردش فاکتور روی موتور گردش کار هسته (ت۱۷ طرح ۲.۳)
+        from personnel.workflows import INVOICE_ENTITY, INVOICE_WORKFLOW_SPEC, resolve_invoice
+        contribute('workflows', INVOICE_WORKFLOW_SPEC)
+        contribute(f'entity_resolver:{INVOICE_ENTITY}', resolve_invoice)
+
         # حل‌کننده نقش‌های ماژول حسابداری برای میان‌افزار احراز هویت
         from personnel.role_resolver import resolve_personnel_roles
         contribute('role_resolver', ('accounting', resolve_personnel_roles))

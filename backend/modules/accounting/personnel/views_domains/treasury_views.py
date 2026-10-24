@@ -57,6 +57,29 @@ from accounts.scoped_permissions import can, section_q, sections_where
 INVOICE_PERM = 'perm_invoice_record'
 PETTY_CASH_MANAGE_PERM = 'perm_petty_cash_manage'
 
+# فاکتور روی موتور گردش کار هسته (ت۱۷ طرح ۲.۳): نشانی و ورودی اکشن‌ها همان است، وضعیت در خود فاکتور (ت۲)
+from django.db import transaction
+from django.http import Http404
+from workflow import engine as wf_engine
+from workflow.errors import WorkflowError
+from ..workflows import INVOICE_ENTITY, INVOICE_WORKFLOW
+
+INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
+
+
+def _invoice_wf_call(fn, raise_drf=False):
+    """اجرای یک فراخوان موتور؛ خطای موتور = پاسخ {code, error} با وضعیت همان خطا (مثلاً 409 task_already_done)."""
+    try:
+        fn()
+    except WorkflowError as exc:
+        if raise_drf:
+            from rest_framework.exceptions import APIException
+            err = APIException(exc.message_fa)
+            err.status_code = exc.status
+            raise err
+        return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+    return None
+
 
 def _section_id(value):
     try:
@@ -272,9 +295,10 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         else:
             instance = serializer.save(created_by=user, status=req_status or 'draft')
         if req_status and req_status != 'draft':
-            from ..workflow_engine import process_creation_with_auto_pass
-            process_creation_with_auto_pass(instance, user, is_financial=True)
-            instance.save()
+            # ثبت مستقیم با وضعیت غیر پیش‌نویس (فقط مدیر کل) = ارسال به گردش موتور هسته
+            instance.status = 'draft'
+            instance.save(update_fields=['status', 'updated_at'])
+            _invoice_wf_call(lambda: wf_engine.submit(INVOICE_WORKFLOW, instance, user), raise_drf=True)
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -283,71 +307,133 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if (new_section is not None and new_section.pk != instance.section_id and not user.is_superuser
                 and not can(user, INVOICE_PERM, new_section)):
             raise PermissionDenied("شما مجوز ثبت فاکتور در بخش مقصد را ندارید.")
-        new_status = serializer.validated_data.get('status')
-        if new_status and new_status != instance.status and not user.is_superuser:
-            from ..workflow_engine import determine_user_tier, WorkflowTiers
-            # سطح کاربر در بخش همین فاکتور (ت۸)، نه «در هر بخشی»
-            tier = determine_user_tier(user, section=instance.section_id)
-            if new_status in ['draft', 'pending_supervisor']:
-                pass
-            elif new_status in ['pending_accountant', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_2_SUPERVISOR:
-                pass
-            elif new_status in ['pending_manager', 'ready_to_pay', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_3_ACCOUNTANT:
-                pass
-            elif new_status in ['ready_to_pay', 'approved', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_4_MANAGER:
-                pass
-            elif new_status == 'paid' and tier >= WorkflowTiers.TIER_5_TREASURY:
-                pass
-            else:
-                raise PermissionDenied("شما سطح دسترسی لازم برای تغییر وضعیت فاکتور به این مرحله را ندارید.")
+        new_status = serializer.validated_data.pop('status', None)
+        if new_status and new_status != instance.status:
+            # ت۲ طرح ۲.۳: وضعیت فاکتور فقط از راه گردش کار (ارسال، تأیید، عودت، رد، پرداخت، لغو) عوض می‌شود
+            raise PermissionDenied("وضعیت فاکتور فقط از راه گردش کار تغییر می‌کند.")
+        if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser:
+            raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
         serializer.save()
+
+    def _workflow_invoice(self):
+        """
+        فاکتور برای اقدام گردش کار: از فهرست بخش‌های «ثبت و دیدن فاکتور» کاربر، یا از راه کار باز همین فاکتور
+        (ت۱۱: دریافت‌کننده یا جانشینی که مجوز فهرست آن بخش را ندارد). نادیدنی = 404.
+        """
+        pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        obj = self.filter_queryset(self.get_queryset()).filter(pk=pk).first()
+        if obj is None and wf_engine.task_grants_view(self.request.user, INVOICE_ENTITY, pk):
+            obj = ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty').filter(pk=pk).first()
+        if obj is None:
+            raise Http404
+        return obj
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(self.get_serializer(self._workflow_invoice()).data)
+
+    def _act_on_open_task(self, request, instance, fn):
+        task = wf_engine.open_task(INVOICE_WORKFLOW, instance.pk)
+        if task is None:
+            return Response({'code': 'task_already_done', 'error': 'این فاکتور کار بازی در گردش ندارد.'},
+                            status=status.HTTP_409_CONFLICT)
+        revision = request.data.get('revision')
+        revision = int(revision) if str(revision or '').isdigit() else None
+        return _invoice_wf_call(lambda: fn(task, revision))
 
     @action(detail=True, methods=['post'], url_path='submit')
     def submit_invoice(self, request, pk=None):
         instance = self.get_object()
-        if instance.status not in ['draft', 'revision_required']:
+        if instance.status not in INVOICE_EDITABLE_STATUSES:
             return Response({'error': 'فقط فاکتورهای پیش‌نویس یا نیازمند بازنگری قابل ارسال هستند.'}, status=status.HTTP_400_BAD_REQUEST)
-        from ..workflow_engine import advance_workflow_step
-        advance_workflow_step(instance, request.user, target_status='pending_supervisor', is_financial=True)
-        return Response({'message': 'فاکتور با موفقیت به سرپرست ارسال شد.', 'status': instance.status})
+        # ثبت‌کننده باید در بخش فاکتور «ثبت و دیدن فاکتور» داشته باشد (get_object همین را سنجیده است)
+        if not request.user.is_superuser and not can(request.user, INVOICE_PERM, instance.section):
+            raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
+        err = _invoice_wf_call(lambda: wf_engine.submit(INVOICE_WORKFLOW, instance, request.user))
+        if err is not None:
+            return err
+        return Response({'message': 'فاکتور با موفقیت به گردش کار ارسال شد.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_invoice(self, request, pk=None):
-        instance = self.get_object()
-        from ..workflow_engine import advance_workflow_step
-        notes = request.data.get('notes')
-        advance_workflow_step(instance, request.user, notes=notes, is_financial=True)
+        instance = self._workflow_invoice()
+        notes = (request.data.get('notes') or '').strip()
+        err = self._act_on_open_task(request, instance, lambda task, rev: wf_engine.act(
+            request.user, task, reason=notes, revision=rev, obj=instance))
+        if err is not None:
+            return err
         return Response({'message': 'تایید فاکتور با موفقیت ثبت شد.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_invoice(self, request, pk=None):
-        instance = self.get_object()
+        instance = self._workflow_invoice()
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'درج دلیل رد فاکتور الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        from ..workflow_engine import reject_workflow
-        reject_workflow(instance, request.user, reason=reason)
+        err = self._act_on_open_task(request, instance, lambda task, rev: wf_engine.reject(
+            request.user, task, reason, obj=instance, revision=rev))
+        if err is not None:
+            return err
+        instance.rejection_reason = reason
+        instance.save(update_fields=['rejection_reason', 'updated_at'])
         return Response({'message': 'فاکتور هزینه رد گردید.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='request-revision')
     def request_revision_invoice(self, request, pk=None):
-        instance = self.get_object()
+        instance = self._workflow_invoice()
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'درج دلیل بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        from ..workflow_engine import request_workflow_revision
-        request_workflow_revision(instance, request.user, reason=reason, target_status='draft')
+        err = self._act_on_open_task(request, instance, lambda task, rev: wf_engine.return_for_fix(
+            request.user, task, reason, obj=instance, revision=rev))
+        if err is not None:
+            return err
+        instance.rejection_reason = reason
+        instance.save(update_fields=['rejection_reason', 'updated_at'])
         return Response({'message': 'فاکتور با ثبت اشکال جهت بازنگری ارجاع شد.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='pay')
     def pay_invoice(self, request, pk=None):
-        instance = self.get_object()
-        tracking_code = request.data.get('tracking_code') or request.data.get('payment_ref', '').strip()
+        instance = self._workflow_invoice()
+        tracking_code = (request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
         if not tracking_code:
             return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        from ..workflow_engine import execute_treasury_disbursement
-        execute_treasury_disbursement(instance, request.user, tracking_code=tracking_code, notes=request.data.get('notes'))
+
+        def _pay(task, rev):
+            if task.step_key != 'treasury_pay':
+                from workflow.errors import WorkflowError
+                raise WorkflowError('not_payable', 'فاکتور هنوز به مرحلهٔ پرداخت نرسیده است', 409)
+            # شمارهٔ پیگیری پیش از اقدام روی همان شیء نوشته می‌شود تا on_state_change پایان گردش آن را ببیند؛
+            # خطای موتور کل تراکنش (و همین نوشتن) را برمی‌گرداند
+            instance.payment_ref = tracking_code
+            instance.paid_at = timezone.now()
+            instance.paid_by = request.user
+            instance.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_at'])
+            return wf_engine.act(request.user, task, reason=(request.data.get('notes') or '').strip(),
+                                 revision=rev, obj=instance)
+
+        with transaction.atomic():
+            err = self._act_on_open_task(request, instance, _pay)
+            if err is not None:
+                transaction.set_rollback(True)
+        if err is not None:
+            instance.refresh_from_db()
+            return err
         return Response({'message': 'تسویه فاکتور با موفقیت در خزانه‌داری ثبت گردید.', 'status': instance.status})
+
+    @action(detail=True, methods=['post'], url_path='cancel')
+    def cancel_invoice(self, request, pk=None):
+        """لغو گردش به دست ثبت‌کننده، پیش از اقدام نفر دیگر (ت۸)؛ فاکتور به پیش‌نویس برمی‌گردد."""
+        instance = self.get_object()
+        wf_instance = wf_engine.instance_of(INVOICE_WORKFLOW, instance.pk)
+        if wf_instance is None:
+            return Response({'code': 'cancel_not_allowed', 'error': 'این فاکتور در گردش کار نیست.'},
+                            status=status.HTTP_409_CONFLICT)
+        err = _invoice_wf_call(lambda: wf_engine.cancel(request.user, wf_instance,
+                                                        reason=(request.data.get('reason') or '').strip(),
+                                                        obj=instance))
+        if err is not None:
+            return err
+        return Response({'message': 'گردش فاکتور لغو شد و فاکتور به پیش‌نویس برگشت.', 'status': instance.status})
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):

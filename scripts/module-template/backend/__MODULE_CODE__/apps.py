@@ -21,3 +21,17 @@ class __MODULE_PASCAL__Config(AppConfig):
             register_module(MODULE_CATALOG['__MODULE_CODE__'])
         from platform_core.registry import contribute
         contribute('section_roles', SECTION_ROLES)
+
+        # نمونهٔ اعلام گردش کار روی موتور هسته (طرح ۲.۳؛ نمونهٔ کامل: personnel/workflows.py حسابداری).
+        # هسته مرحله، دریافت‌کننده (نقش انتساب + مجوز بخشی مرحله)، سابقه و «کارهای من» را نگه می‌دارد؛
+        # ماژول وضعیت سند خودش را در on_state_change به‌روز می‌کند.
+        # from workflow.registry import APPROVE, StepSpec, WorkflowSpec
+        # from .models import SampleDocument
+        # contribute('workflows', WorkflowSpec(
+        #     key='__MODULE_CODE___doc', version=1, entity_kind='__MODULE_CODE___doc', title_fa='سند __MODULE_TITLE_FA__',
+        #     steps=(StepSpec('member_ok', 'تأیید عضو', '__MODULE_CODE___member', '<مجوز بخشی module.py>', APPROVE),),
+        #     on_state_change=lambda doc, state, instance: None,
+        #     summary=lambda doc: {'title': str(doc)},
+        #     route='/app/__MODULE_CODE__/docs/{id}',
+        # ))
+        # contribute('entity_resolver:__MODULE_CODE___doc', lambda pk: SampleDocument.objects.filter(pk=pk).first())
