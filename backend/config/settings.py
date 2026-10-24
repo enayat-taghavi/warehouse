@@ -99,6 +99,7 @@ PLATFORM_APPS = [
     'settings_core.apps.SettingsCoreConfig',
     'platform_core.apps.PlatformCoreConfig',
     'notifications.apps.NotificationsConfig',
+    'workflow.apps.WorkflowConfig',
     'communications.apps.CommunicationsConfig',
     'reports.apps.ReportsConfig',
 ]

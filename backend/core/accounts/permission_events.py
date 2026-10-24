@@ -13,8 +13,13 @@
 import logging
 
 from django.db import transaction
+from django.dispatch import Signal
 
 logger = logging.getLogger(__name__)
+
+# permissions_changed.send(sender=None, user_ids=frozenset, company_ids=frozenset, reason=str)
+# وابستگی یک‌طرفه: accounts چیزی از گیرنده‌ها (مثل workflow) نمی‌شناسد.
+permissions_changed = Signal()
 
 EVENT_TYPE = 'permissions_updated'
 REASONS = ('bundle', 'role', 'override', 'assignment')
@@ -57,10 +62,20 @@ def _send(messages):
 
 
 def notify_permissions_updated(user_ids, company_ids, reason):
-    """ارسال رویداد پس از commit تراکنش جاری (یا بی‌درنگ اگر تراکنشی باز نیست)."""
+    """
+    ارسال رویداد پس از commit تراکنش جاری (یا بی‌درنگ اگر تراکنشی باز نیست)، و سیگنال هستهٔ
+    `permissions_changed` همان لحظه و درون تراکنش فراخوان (برای محاسبهٔ دوبارهٔ کارهای گردش کار، ت۴ طرح ۲.۳).
+    گیرنده‌ها خطای خودشان را می‌گیرند؛ send_robust هم خطای گیرنده را به فراخوان نمی‌رساند.
+    """
+    user_ids = {int(u) for u in user_ids if u}
+    company_ids = {int(c) for c in company_ids if c}
     messages = permission_event_messages(user_ids, company_ids, reason)
     if messages:
         transaction.on_commit(lambda: _send(messages))
+    for _receiver, result in permissions_changed.send_robust(
+            sender=None, user_ids=frozenset(user_ids), company_ids=frozenset(company_ids), reason=reason):
+        if isinstance(result, Exception):
+            logger.error('[permissions_changed] receiver failed: %r', result)
     return messages
 
 

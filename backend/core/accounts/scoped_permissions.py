@@ -448,3 +448,71 @@ def user_permission_map(user) -> dict:
         'section': level(state.section),
         'all': sorted(set(system) | state.any_section),
     }
+
+
+def section_permission_holder_ids(code, section, *, bundles=None) -> set:
+    """
+    شناسهٔ کاربران فعال و غیر مدیر کل که مجوز بخشی `code` را در بخش `section` دارند؛ همان قاعدهٔ can()
+    (بستهٔ مؤثر نقش انتساب‌های فعالِ پوشانندهٔ بخش + تفاوت‌های کاربر برای شرکت همان بخش: افزوده فقط برای
+    دارندهٔ انتساب پوشاننده، برداشته همیشه)، ولی برای همهٔ کاربران با شمار پرس‌وجوی ثابت (ق۱۸).
+    مجوز سامانه‌ای یا ناشناخته مجموعهٔ خالی می‌دهد. bundles: خروجی effective_bundles() برای استفادهٔ دسته‌ای.
+    section: نمونهٔ ProjectSection یا شناسهٔ آن. پیاده‌سازی تک‌بخشیِ section_permission_holders (یک قاعده).
+    """
+    from companies.org_roles import _section_chain as _chain
+
+    _app_label, codename = _split_code(code)
+    if permission_scope(code) != SECTION or codename in _sensitive_codes():
+        return set()
+    section_id, project_id, company_id = _chain(section)
+    if section_id is None:
+        return set()
+    out = section_permission_holders({section_id: (project_id, company_id)}, [code], bundles=bundles)
+    return out.get((section_id, codename), set())
+
+
+def section_permission_holders(section_chains, codes, *, bundles=None, rows=None) -> dict:
+    """
+    نسخهٔ دسته‌ای section_permission_holder_ids برای چند بخش و چند مجوز، با شمار پرس‌وجوی ثابت (ق۱۸):
+    یک پرس‌وجوی انتساب‌های پوشاننده (اگر rows داده نشود)، یک پرس‌وجوی تفاوت‌های کاربر و effective_bundles()
+    (اگر bundles داده نشود).
+    section_chains: {section_id: (project_id, company_id)}؛ codes: codename یا 'app_label.codename'.
+    rows: خروجی companies.org_roles.covering_assignment_rows(section_chains) برای استفادهٔ دوباره.
+    خروجی {(section_id, codename): set(user_id)} فقط برای مجوزهای بخشی غیرحساس (بقیه کلید ندارند).
+    """
+    from companies.org_roles import CoveringIndex, covering_assignment_rows
+    from .models import UserPermissionOverride
+
+    sensitive = _sensitive_codes()
+    wanted = set()
+    for code in codes:
+        _app_label, codename = _split_code(code)
+        if permission_scope(code) == SECTION and codename not in sensitive:
+            wanted.add(codename)
+    if not wanted or not section_chains:
+        return {}
+    if rows is None:
+        rows = covering_assignment_rows(section_chains)
+    out = {(sid, c): set() for sid in section_chains for c in wanted}
+    if not rows:
+        return out
+    if bundles is None:
+        bundles = effective_bundles()
+    company_ids = {cid for _pid, cid in section_chains.values() if cid}
+    added, removed = {}, {}
+    for uid, cid, codename, mode in UserPermissionOverride.objects.filter(
+        user_id__in=list({r[0] for r in rows}), company_id__in=list(company_ids),
+        permission__content_type__app_label=PERMISSION_APP_LABEL, permission__codename__in=list(wanted),
+    ).values_list('user_id', 'company_id', 'permission__codename', 'mode'):
+        (added if mode == 'add' else removed).setdefault((cid, codename), set()).add(uid)
+    index = CoveringIndex(rows)
+    empty = frozenset()
+    for sid, (pid, cid) in section_chains.items():
+        covering = index.covering(sid, pid, cid)
+        if not covering:
+            continue
+        covered = {r[0] for r in covering}
+        for codename in wanted:
+            have = {uid for uid, role, *_ in covering if codename in bundles.get(role, empty)}
+            plus = added.get((cid, codename), set()) & covered
+            out[(sid, codename)] = (have | plus) - removed.get((cid, codename), set())
+    return out

@@ -236,9 +236,10 @@ class WorkflowRoutingOverrideTests(ScopedAccessFixture):
 class SectionRoleRankTests(TestCase):
     """ت۹: رتبهٔ نقش انتساب؛ اعلام تکراری فقط با برچسب و رتبهٔ یکسان."""
 
-    def test_accounting_ranks_follow_current_order(self):
+    def test_accounting_ranks_are_final_approval_authority(self):
+        # ت۵ طرح ۲.۳: خزانه‌دار هم‌رتبهٔ حسابدار و پایین‌تر از مدیر است
         ranks = section_role_ranks()
-        expected = {'employee': 10, 'supervisor': 20, 'accountant': 30, 'manager': 40, 'treasury': 50}
+        expected = {'employee': 10, 'supervisor': 20, 'accountant': 30, 'manager': 40, 'treasury': 30}
         for key, rank in expected.items():
             self.assertEqual(ranks.get(key), rank)
         self.assertEqual([code for code, _ in section_role_choices()][:5], list(expected))

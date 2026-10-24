@@ -54,6 +54,46 @@ def assignments_covering_section(section):
     return SectionAssignment.objects.filter(covering_section_q(section), is_active=True)
 
 
+def covering_assignment_rows(section_chains, *, exclude_superusers=True):
+    """
+    نسخهٔ دسته‌ای assignments_covering_section برای چند بخش با یک کوئری (ق۱۸).
+    section_chains: {section_id: (project_id, company_id)}. خروجی ردیف‌های انتساب فعالِ کاربران فعال که دست‌کم
+    یکی از این بخش‌ها را می‌پوشانند: [(user_id, role, section_id, project_id, company_id)] (فقط یکی از سه سطح پر است).
+    exclude_superusers: مدیر کل کنار گذاشته شود (دریافت‌کنندهٔ گردش کار نیست).
+    """
+    if not section_chains:
+        return []
+    section_ids = list(section_chains)
+    project_ids = {p for p, _c in section_chains.values() if p}
+    company_ids = {c for _p, c in section_chains.values() if c}
+    qs = SectionAssignment.objects.filter(
+        Q(section_id__in=section_ids) | Q(project_id__in=list(project_ids)) | Q(company_id__in=list(company_ids)),
+        is_active=True, user__is_active=True,
+    )
+    if exclude_superusers:
+        qs = qs.filter(user__is_superuser=False)
+    return list(qs.values_list('user_id', 'role', 'section_id', 'project_id', 'company_id'))
+
+
+class CoveringIndex:
+    """نمایهٔ بی‌کوئری روی خروجی covering_assignment_rows: ردیف‌های پوشانندهٔ هر بخش."""
+
+    def __init__(self, rows):
+        self.by_section, self.by_project, self.by_company = {}, {}, {}
+        for row in rows:
+            _uid, _role, s_id, p_id, c_id = row
+            if s_id is not None:
+                self.by_section.setdefault(s_id, []).append(row)
+            elif p_id is not None:
+                self.by_project.setdefault(p_id, []).append(row)
+            elif c_id is not None:
+                self.by_company.setdefault(c_id, []).append(row)
+
+    def covering(self, section_id, project_id, company_id):
+        return (self.by_section.get(section_id, []) + self.by_project.get(project_id, [])
+                + self.by_company.get(company_id, []))
+
+
 def section_role_holders(section, role):
     """کاربران فعالی که نقش role را برای این بخش در هر سطحی (بخش، پروژه یا شرکت) دارند."""
     holders = assignments_covering_section(section).filter(role=role).values('user_id')
