@@ -41,7 +41,6 @@ WAREHOUSE_SPEC = ModuleSpec(
         ('manager', 'بررسی نهایی مدیر'),
     ),
     audit_scope_keys=('docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses'),
-    sod_app_module='warehouse',
     aliases=(),
     allowed_app_code='warehouse',
     scope_codes=('warehouse',),

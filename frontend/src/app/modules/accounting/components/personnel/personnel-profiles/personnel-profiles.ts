@@ -219,39 +219,27 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   ) {}
 
   get canApprovePersonnelManager(): boolean {
-    if (!this.persona.canPerform('/profiles', 'approve_personnel_profile')) {
-      return false;
-    }
     return this.auth.userPermissions().includes('perm_approve_personnel_manager') ||
            this.auth.userPermissions().includes('admin_all');
   }
 
   get canApprovePersonnelFinance(): boolean {
-    if (!this.persona.canPerform('/profiles', 'approve_personnel_profile')) {
-      return false;
-    }
     return this.auth.userPermissions().includes('perm_approve_personnel_finance') ||
            this.auth.userPermissions().includes('admin_all');
   }
 
   get canApproveFleetManager(): boolean {
-    if (!this.persona.canPerform('/profiles', 'approve_vehicle_profile')) {
-      return false;
-    }
     return this.auth.userPermissions().includes('perm_approve_fleet_manager') ||
            this.auth.userPermissions().includes('admin_all');
   }
 
   get canApproveFleetFinance(): boolean {
-    if (!this.persona.canPerform('/profiles', 'approve_vehicle_profile')) {
-      return false;
-    }
     return this.auth.userPermissions().includes('perm_approve_fleet_finance') ||
            this.auth.userPermissions().includes('admin_all');
   }
 
   get canEditWageAndAllowances(): boolean {
-    return this.persona.canPerform('/profiles', 'edit_base_wage_and_bonuses');
+    return this.canApprovePersonnelFinance || this.canApprovePersonnelManager;
   }
 
   private onCompanyContextChanged = () => {

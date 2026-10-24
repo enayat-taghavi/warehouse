@@ -14,7 +14,6 @@ import { OperationsLayoutComponent } from './modules/common/components/operation
 import { OperationsCockpitComponent } from './modules/common/components/operations/operations-cockpit/operations-cockpit';
 import { SettingsBackupTabComponent } from './modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab';
 import { OperationsSyncMonitorComponent } from './modules/common/components/operations/operations-sync-monitor/operations-sync-monitor';
-import { OperationsRbacGovernanceComponent } from './modules/common/components/operations/operations-rbac-governance/operations-rbac-governance';
 import { Users } from './modules/common/components/users/users';
 import { CompaniesManagementComponent } from './modules/common/components/operations/companies/companies';
 import { companiesLeaveGuard } from './modules/common/components/operations/companies/companies-leave.guard';
@@ -82,7 +81,6 @@ export const routes: Routes = [
       { path: 'health', component: HealthDashboardComponent, data: { appScope: 'operations', reuse: false } },
       { path: 'audit', component: Audit, data: { appScope: 'security', reuse: true } },
       { path: 'sync-monitor', component: OperationsSyncMonitorComponent, data: { reuse: true } },
-      { path: 'rbac-governance', component: OperationsRbacGovernanceComponent, data: { reuse: true } },
       { path: '', redirectTo: 'cockpit', pathMatch: 'full' }
     ]
   },

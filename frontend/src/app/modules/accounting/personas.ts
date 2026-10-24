@@ -111,26 +111,6 @@ export function resolveAccountingRoleCodes(ctx: {
   return roles;
 }
 
-export const ACCOUNTING_SOD_PROHIBITIONS: Record<string, string[]> = {
-  'personnel:operator:/attendance': ['approve_attendance_period', 'lock_period'],
-  'personnel:operator:/profiles': ['approve_personnel_profile', 'approve_vehicle_profile'],
-  'personnel:operator:/finance-cartable': ['view_and_calculate_payroll', 'calculate_payroll', 'export_dsk'],
-  'personnel:operator:/treasury-cartable': ['disburse_treasury_payment'],
-
-  'personnel:supervisor:/profiles': ['edit_base_wage_and_bonuses'],
-  'personnel:supervisor:/finance-cartable': ['approve_payroll_finance'],
-  'personnel:supervisor:/treasury-cartable': ['disburse_treasury_payment'],
-
-  'personnel:accountant:/attendance': ['create_daily_attendance_entry'],
-  'personnel:accountant:/manager-approvals': ['authorize_manager_payment'],
-  'personnel:accountant:/treasury-cartable': ['disburse_direct_payment'],
-
-  'personnel:manager:/attendance': ['input_bulk_attendance_records'],
-  'personnel:manager:/treasury-cartable': ['disburse_treasury_paya'],
-
-  'personnel:treasury:/finance-cartable': ['modify_payroll_calculations'],
-  'personnel:treasury:/profiles': ['modify_employment_contracts']
-};
 
 export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string): boolean {
   if (role === 'accountant') {
@@ -196,7 +176,6 @@ export const ACCOUNTING_DEFAULT_ROUTES: Record<string, string> = {
 export const ACCOUNTING_PERSONAS: ModulePersonas = {
   roles: ACCOUNTING_ROLES,
   resolveRoleCodes: resolveAccountingRoleCodes,
-  sodProhibitions: ACCOUNTING_SOD_PROHIBITIONS,
   isRouteDeniedForRole: isAccountingRouteDeniedForRole,
   defaultRouteForRole: ACCOUNTING_DEFAULT_ROUTES,
   lastResortRoute: '/app/finance/accountant-payroll'

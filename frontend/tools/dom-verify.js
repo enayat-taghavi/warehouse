@@ -22,7 +22,6 @@ const templateFiles = [
   'src/app/modules/warehouse/components/dashboard/dashboard.html',
   'src/app/modules/warehouse/components/reports/reports.html',
   'src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.html',
-  'src/app/modules/common/components/operations/operations-rbac-governance/operations-rbac-governance.html',
   'src/app/modules/warehouse/components/projects/projects.html',
   'src/app/modules/common/components/audit/audit.html',
   'src/app/modules/common/components/login/login.html'

@@ -407,7 +407,7 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۶. گروه‌های دسترسی و پیش‌تنظیم‌های نقش کاربران — مصرف در users.ts، layout.ts، auth.guard.ts و operations-rbac-governance.ts
+   * ۶. گروه‌های دسترسی و پیش‌تنظیم‌های نقش کاربران — مصرف در users.ts، layout.ts، auth.guard.ts
    */
   users?: {
     /** گروه مجوزهای این ماژول در صفحهٔ نقش‌ها. @deprecated فقط قالب قدیم ماژول (ت۶)؛ قالب تازه از فهرست کامل سرور */

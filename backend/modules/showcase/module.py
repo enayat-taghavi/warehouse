@@ -22,7 +22,6 @@ SHOWCASE_SPEC = ModuleSpec(
         ('showcase', 'ماژول نمایشی'),
     ),
     audit_scope_keys=('showcase',),
-    sod_app_module='showcase',
     allowed_app_code='showcase',
     scope_codes=('showcase',),
     default_priority=90,

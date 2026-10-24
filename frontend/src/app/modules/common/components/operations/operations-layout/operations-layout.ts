@@ -181,12 +181,6 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
       label: 'مانیتورینگ کلاینت‌ها و تداخل',
       route: '/app/operations/sync-monitor',
       icon: ACTION_ICONS.sync
-    },
-    {
-      id: 'rbac-governance',
-      label: 'گاوصندوق و حاکمیت مجوزهای حساس',
-      route: '/app/operations/rbac-governance',
-      icon: PLATFORM_ENTITY_ICONS.permissions
     }
   ];
 

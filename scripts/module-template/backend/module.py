@@ -18,7 +18,6 @@ __MODULE_UPPER___SPEC = ModuleSpec(
     audit_modules=(
         ('__MODULE_CODE__', '__MODULE_TITLE_FA__'),
     ),
-    sod_app_module='__MODULE_CODE__',
 )
 
 MODULE_SPEC = __MODULE_UPPER___SPEC

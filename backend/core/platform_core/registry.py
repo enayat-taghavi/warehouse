@@ -31,7 +31,6 @@ class ModuleSpec:
     url_includes: tuple[tuple[str, str], ...] = ()  # (پیشوند مسیر، urlconf)
     audit_modules: tuple[tuple[str, str], ...] = ()
     audit_scope_keys: tuple[str, ...] = ()
-    sod_app_module: str = ''           # برای حسابداری: 'personnel' (سازگاری داده)
     pull_entities: tuple[str, ...] = ()
     requires_platform: str = '>=1.0,<2.0'
     aliases: tuple[str, ...] = ()
@@ -293,16 +292,6 @@ def default_module():
     if candidates:
         return candidates[0].code
     return ''
-
-
-def app_code_for_sod(module_code):
-    """
-    کدِ `app_module` که برای جدول SoD باید استفاده شود (مطابق `spec.sod_app_module`).
-    """
-    spec = _REGISTRY.get(module_code)
-    if spec and spec.sod_app_module:
-        return spec.sod_app_module
-    return module_code
 
 
 def module_allowed_app_code(module_code):
