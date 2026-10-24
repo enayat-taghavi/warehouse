@@ -49,7 +49,7 @@ FOCUS_REPLACEMENT = re.compile(
 )
 
 # نگهبان اندازهٔ context (فقط Claude Code): هشدار برای تحویل کار به جلسهٔ تازه
-CONTEXT_WARN_FIRST = 150_000
+CONTEXT_WARN_FIRST = 200_000
 CONTEXT_WARN_STEP = 50_000
 TRANSCRIPT_TAIL_BYTES = 2 * 1024 * 1024
 CONTEXT_STATE_DIR = ROOT / '.claude' / 'tmp' / 'context-watch'

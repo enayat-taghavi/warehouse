@@ -1,6 +1,6 @@
 # Project rules and architecture
 
-**Language:** always reply to the user in fluent Persian; English only for file names, paths, commands and code. Keep replies short. All user-facing UI text in the app stays Persian.
+**Language:** always reply to the user in fluent Persian; English only for file names, paths, commands and code. Reports are in very, very simple language and short (user, 24 Oct 2026): results, not technical detail; the continuation message for the next chat stays complete. All user-facing UI text in the app stays Persian.
 
 ## Rules
 
@@ -84,7 +84,7 @@
     - Model: Opus + high for permissions/tenant scope, migrations, data-loss paths; Opus + medium for business logic; Sonnet + medium for mechanical work, UI following a pattern, specs. No Haiku. Pick per chunk explicitly — Opus is not the default (in 2.2 all chunks ran on Opus, UI chunks included).
   - **Manager:** reads each executor's actual diff, fixes small findings itself, commits, writes the progress log. **Never poll with `sleep`** while waiting: end the turn; the task notification wakes the manager (each poll re-sends the whole context).
   - **Step size:** a plan step that spans backend engine + module + frontend UI is split into sub-steps, each committed on its own.
-  - **One chat per sub-step (user, 24 Oct 2026):** each sub-step (e.g. 2.3-الف) runs in its own fresh chat; manager context is capped at ~150K (the hook warns at 150K, then every 50K). At the end of a sub-step: commit, progress-log note, then write the next sub-step's brief `scratch/brief_<next>.md` while the files are still in context (plan line ranges to read, exact files with line ranges, executor split with model/effort, handoff notes to reuse, manager steps after the executors); then the continuation message in the chat, which points to that brief so the next chat starts without exploration (user, 24 Oct 2026: saves ~20–25K per sub-step; 2.3-الف's pre-prompt exploration cost ~30K). The user opens the next chat with it. Never start the next sub-step in the same chat. In 2.2 one chat ran the whole step: 229 manager calls at ~285K average context, 45% of all tokens.
+  - **One chat per sub-step (user, 24 Oct 2026):** each sub-step (e.g. 2.3-الف) runs in its own fresh chat; manager context is capped at ~200K (the hook warns at 200K, then every 50K). At the end of a sub-step: commit, progress-log note, then write the next sub-step's brief `scratch/brief_<next>.md` while the files are still in context (plan line ranges to read, exact files with line ranges, executor split with model/effort, handoff notes to reuse, manager steps after the executors); then the continuation message in the chat, which points to that brief so the next chat starts without exploration (user, 24 Oct 2026: saves ~20–25K per sub-step; 2.3-الف's pre-prompt exploration cost ~30K). The user opens the next chat with it. Never start the next sub-step in the same chat. In 2.2 one chat ran the whole step: 229 manager calls at ~285K average context, 45% of all tokens.
   - **Heavy end-of-stage checks** (full suites, both builds, browser visual check, release on `app`) run in their own fresh chat, never at the tail of a large context (2.2: ~37 browser calls at ~400K ≈ 15M tokens).
   - **Tests (user, 24 Oct 2026):** during a step only fast checks (≤ ~2 min): tests of the changed apps/files, static guardians (29, 52, 56, 57, 58), `manage.py check`. Heavy checks run once at the end of a whole master-plan stage or before a release: full backend and frontend suites, both build profiles, visual browser check, Android. `tenant-scope-reviewer` still runs on every step that touches permissions or tenant scope.
   - Ask one short yes/no question only before work that directly affects production (next item) or opens a data-loss path.
@@ -151,7 +151,7 @@ Plan: warehouse counting and accounting as two independently installable modules
 - Claude Code automation:
   - **Hooks** in `.claude/settings.json` run `.claude/hooks/guard.py`; Antigravity calls the same script from `.agents/hooks.json`.
     - The two tools take different output formats: Claude Code accepts only `hookSpecificOutput`, and at most one JSON per run.
-    - On every `PostToolUse` it also runs the context watchdog: one warning when context passes 150K tokens, then one per additional 50K (state in `.claude/tmp/context-watch/`).
+    - On every `PostToolUse` it also runs the context watchdog: one warning when context passes 200K tokens, then one per additional 50K (state in `.claude/tmp/context-watch/`).
     - It denies Bash `sleep`/`Start-Sleep` longer than 15 seconds (enforces "never poll with sleep").
     - Test: `python scripts/test_guard_hooks.py`.
   - **Subagents** in `.claude/agents/`: `data-loss-reviewer`, `tenant-scope-reviewer` and `ui-reviewer` (all `model: sonnet` to save tokens).

@@ -158,13 +158,13 @@ def transcript(ctx, sidechain_ctx=None):
 
 
 READ = {'file_path': ROOT + S + 'CLAUDE.md'}
-claude('ctx 120K -> silent', 'PostToolUse', 'Read', READ, 'pass', transcript(120_000))
-claude('ctx 160K -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(160_000))
-claude('ctx 160K again -> no repeat', 'PostToolUse', 'Read', READ, 'pass', transcript(160_000))
+claude('ctx 170K -> silent', 'PostToolUse', 'Read', READ, 'pass', transcript(170_000))
 claude('ctx 210K -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(210_000))
+claude('ctx 210K again -> no repeat', 'PostToolUse', 'Read', READ, 'pass', transcript(210_000))
+claude('ctx 260K -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(260_000))
 claude('ctx 50K (compact) -> silent reset', 'PostToolUse', 'Read', READ, 'pass', transcript(50_000))
-claude('ctx 160K after reset -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(160_000))
-claude('sidechain 900K ignored', 'PostToolUse', 'Read', READ, 'pass', transcript(160_000, 900_000))
+claude('ctx 210K after reset -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(210_000))
+claude('sidechain 900K ignored', 'PostToolUse', 'Read', READ, 'pass', transcript(210_000, 900_000))
 claude('subagent (agent_id) silent', 'PostToolUse', 'Read', READ, 'pass', {**transcript(900_000), 'agent_id': 'a1'})
 claude('Edit UI warn + ctx warn = one JSON', 'PostToolUse', 'Edit', {'file_path': TS, 'new_string': 'status === 0'}, 'warn2', transcript(570_000))
 claude('missing transcript -> silent', 'PostToolUse', 'Read', READ, 'pass', {'transcript_path': os.path.join(TMP, 'none.jsonl'), 'session_id': SID})
