@@ -27,6 +27,10 @@ MIGRATE_COMMAND = re.compile(
     r'(?:^|[\s;|&(])(?:"?[.\w\\/:-]*manage\.py"?|django-admin(?:\.py)?)\s+(?:--[\w-]+=?[^\s]*\s+)*migrate\b'
 )
 # تفسیر دستی وضعیت HTTP؛ جای آن باید isServerUnreachable() باشد.
+# انتظار با sleep: هر فراخوان کل context را دوباره می‌فرستد؛ بیش از این چند ثانیه ممنوع است
+SLEEP_COMMAND = re.compile(
+    r'(?:^|[\s;|&(])(?:sleep|Start-Sleep(?:\s+-s(?:econds)?)?)\s+(\d+(?:\.\d+)?)([smh]?)\b', re.I)
+SLEEP_MAX_SECONDS = 15
 STATUS_CHECK = re.compile(r'status\s*(?:===?|!==?|>=?|<=?)\s*(?:0|5\d\d)\b')
 
 # قاعده‌های ظاهری قالب‌های فرانت (فقط هشدار)
@@ -45,8 +49,8 @@ FOCUS_REPLACEMENT = re.compile(
 )
 
 # نگهبان اندازهٔ context (فقط Claude Code): هشدار برای تحویل کار به جلسهٔ تازه
-CONTEXT_WARN_FIRST = 350_000
-CONTEXT_WARN_STEP = 100_000
+CONTEXT_WARN_FIRST = 150_000
+CONTEXT_WARN_STEP = 50_000
 TRANSCRIPT_TAIL_BYTES = 2 * 1024 * 1024
 CONTEXT_STATE_DIR = ROOT / '.claude' / 'tmp' / 'context-watch'
 
@@ -130,6 +134,20 @@ def check_persian_grep(command):
             'جستجوی متن فارسی با grep در Bash ممنوع است: Git Bash ویندوز UTF-8 را '
             'مخدوش می‌کند و نتیجهٔ غلط می‌دهد. از ابزار Grep استفاده کن.'
         )
+
+
+def check_sleep(command):
+    if not command:
+        return
+    units = {'': 1, 's': 1, 'm': 60, 'h': 3600}
+    for amount, unit in SLEEP_COMMAND.findall(command):
+        if float(amount) * units[unit.lower()] > SLEEP_MAX_SECONDS:
+            deny(
+                f'انتظار با sleep بیش از {SLEEP_MAX_SECONDS} ثانیه ممنوع است (CLAUDE.md: never poll with sleep). '
+                'نوبت را تمام کن؛ اعلان پایان کار پس‌زمینه یا ساب‌ایجنت خودش بیدارت می‌کند. '
+                'دستور طولانی را با run_in_background اجرا کن.'
+            )
+            return
 
 
 def check_migrate_backup(command):
@@ -250,7 +268,7 @@ def last_context_tokens(transcript_path):
 
 
 def check_context(event):
-    """با گذشتن context از ۲۰۰ هزار و سپس هر ۱۰۰ هزار بیشتر، یک‌بار هشدار تحویل بده."""
+    """با گذشتن context از ۱۵۰ هزار و سپس هر ۵۰ هزار بیشتر، یک‌بار هشدار تحویل بده."""
     if event.get('agent_id'):
         return  # ساب‌ایجنت؛ تحویل فقط کار جلسهٔ اصلی است
     transcript = event.get('transcript_path')
@@ -330,6 +348,7 @@ def main():
         check_new_root_file(tool_input.get('file_path') or '')
     elif tool == 'Bash':
         check_persian_grep(tool_input.get('command') or '')
+        check_sleep(tool_input.get('command') or '')
         check_migrate_backup(tool_input.get('command') or '')
 
     allow()
