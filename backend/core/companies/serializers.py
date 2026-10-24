@@ -103,6 +103,18 @@ class UserCompanyAccessSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_at']
 
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get('request')
+        actor = getattr(request, 'user', None)
+        if (self.instance is None and 'user' in fields and actor is not None
+                and actor.is_authenticated and not actor.is_superuser):
+            # طرح ۲.۹ (S1): پیوند کاربری که انجام‌دهنده از پیش نمی‌بیند فقط کار مدیر کل است؛
+            # کاربر نادیده مثل کاربر ناموجود رد می‌شود (نه نام کاربری، نه وجودش لو نمی‌رود)
+            from accounts.scope import get_visible_users_for_user
+            fields['user'].queryset = get_visible_users_for_user(actor)
+        return fields
+
     def to_internal_value(self, data):
         # رکورد کهنهٔ صف آفلاین که فقط access_level دارد بی‌صدا پذیرفته نمی‌شود (۲۰۰ بی‌اثر آن را گم می‌کرد):
         # ردِ صریح، تا کاربر سطح بخش‌ها را در تب «دسترسی» دوباره تعیین کند

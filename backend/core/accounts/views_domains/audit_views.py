@@ -643,15 +643,21 @@ class UserLoginLogViewSet(viewsets.ReadOnlyModelViewSet):
         failure_limit = getattr(settings, 'AXES_FAILURE_LIMIT', 5)
 
         attempts = AccessAttempt.objects.all().order_by('-attempt_time')
+        # طرح ۲.۹ (S6): غیرمدیر کل فقط قفل کاربران دامنهٔ خودش (هرگز مدیر کل) را می‌بیند، بی IP و مرورگر دیگران
+        full_view = user.is_superuser
+        if not full_view:
+            from ..scope import get_visible_users_for_user
+            attempts = attempts.filter(username__in=get_visible_users_for_user(user).values('username'))
         results = []
         for att in attempts:
+            show_client = full_view or att.username == user.username
             results.append({
                 'username': att.username,
-                'ip_address': att.ip_address,
+                'ip_address': att.ip_address if show_client else '',
                 'failures': att.failures_since_start,
                 'is_locked': att.failures_since_start >= failure_limit,
                 'attempt_time': att.attempt_time.isoformat() if att.attempt_time else None,
-                'user_agent': att.user_agent or '',
+                'user_agent': (att.user_agent or '') if show_client else '',
             })
 
         return Response({
@@ -676,6 +682,15 @@ class UserLoginLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         if not username and not ip_address:
             return Response({'error': 'نام کاربری یا آدرس آی‌پی جهت رفع مسدودیت الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # طرح ۲.۹ (S6): غیرمدیر کل فقط قفل کاربران دامنهٔ خودش را باز می‌کند؛ باز کردن قفل IP فقط کار مدیر کل
+        if not user.is_superuser:
+            from rest_framework.exceptions import PermissionDenied
+            if ip_address:
+                raise PermissionDenied("باز کردن قفل آدرس آی‌پی فقط در اختیار مدیر کل سامانه است.")
+            from ..scope import get_visible_users_for_user
+            if not get_visible_users_for_user(user).filter(username=username).exists():
+                raise PermissionDenied("این کاربر در دامنهٔ دسترسی شما نیست.")
 
         from axes.utils import reset
         from axes.models import AccessAttempt

@@ -92,13 +92,18 @@ class CoreCompanyApiTests(TestCase):
         target = User.objects.create_user(username='core_target', password='x-pass-123', phone_number='09170000005')
         url = '/api/org/user-company-access/'
         self.client.force_authenticate(writer)
-        self.assertEqual(self.client.post(url, {'user': target.id, 'company': self.c2.id, 'section_levels': {}}, format='json').status_code, 403)
+        # طرح ۲.۹ (S1، تصمیم ۲): کاربری که نویسنده نمی‌بیند (اینجا بی‌شرکت) را فقط مدیر کل پیوند می‌دهد؛ مثل ناموجود ۴۰۰
+        self.assertEqual(self.client.post(url, {'user': target.id, 'company': self.c1.id, 'section_levels': {}}, format='json').status_code, 400)
+        # هدف قابل‌مشاهده: نویسنده عضو c2 است و هدف در c2 پیوند دارد
+        from companies.models import SectionAssignment
+        SectionAssignment.objects.create(user=writer, company=self.c2, role='employee', is_active=True)
+        UserCompanyAccess.objects.create(user=target, company=self.c2)
         self.assertEqual(self.client.post(url, {'user': target.id, 'company': self.c1.id, 'section_levels': {'identity': 'write'}}, format='json').status_code, 403)
         own = UserCompanyAccess.objects.get(user=writer)
         self.assertEqual(self.client.patch(f'{url}{own.id}/', {'section_levels': {'identity': 'write'}}, format='json').status_code, 403)
         r = self.client.post(url, {'user': target.id, 'company': self.c1.id, 'section_levels': {'identity': 'read', 'bogus': 'write'}}, format='json')
         self.assertEqual(r.status_code, 201, r.content)
-        row = UserCompanyAccess.objects.get(user=target)
+        row = UserCompanyAccess.objects.get(user=target, company=self.c1)
         self.assertEqual(row.section_levels, {'identity': 'read'})
         self.assertFalse(get_user_allowed_companies(target).exists())
 

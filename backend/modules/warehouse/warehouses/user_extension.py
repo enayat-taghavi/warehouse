@@ -11,12 +11,14 @@ class WarehouseUserExtension:
     name = 'warehouses'
     user_prefetch_related = ('assigned_warehouses',)
 
-    def get_serializer_field(self):
-        """فیلد انتساب انبار در سریالایزر کاربر پلتفرم."""
-        from warehouses.models import Warehouse
+    def get_serializer_field(self, user=None):
+        """
+        فیلد انتساب انبار در سریالایزر کاربر پلتفرم. user = انجام‌دهنده: غیرسوپریوزر فقط انبارهای دامنهٔ
+        خودش را می‌تواند انتخاب کند (طرح ۲.۹، S3)؛ انبار بیرون از دامنه مثل انبار ناموجود رد می‌شود.
+        """
         return serializers.PrimaryKeyRelatedField(
             many=True,
-            queryset=Warehouse.objects.all(),
+            queryset=self._get_scoped_warehouses_qs(user),
             required=False,
             error_messages={'does_not_exist': 'انبار با شناسه {pk_value} وجود ندارد.'}
         )
@@ -88,6 +90,10 @@ class WarehouseUserExtension:
         # انبارهای قدیمی بی‌شرکت که مستقیم به خود او منتسب‌اند
         q |= Q(company__isnull=True, assigned_users=user)
         return qs.filter(q).distinct()
+
+    def scoped_warehouse_ids(self, user=None) -> set:
+        """شناسهٔ انبارهای دامنهٔ کاربر (یک پرس‌وجو)؛ برای نمایش و ادغام انتساب‌ها."""
+        return set(self._get_scoped_warehouses_qs(user).values_list('id', flat=True))
 
     def get_template_warehouse_names(self, user=None):
         """فهرست نام انبارها جهت منوی آبشاری قالب اکسل."""

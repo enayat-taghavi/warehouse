@@ -436,7 +436,14 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         company = serializer.validated_data.get('company')
-        self._ensure_can_grant(company.id if company else None, serializer.validated_data.get('user'),
+        target = serializer.validated_data.get('user')
+        actor = self.request.user
+        if not actor.is_superuser and target is not None:
+            # طرح ۲.۹ (S1): «کشیدن» کاربر نادیده به شرکت خود فقط کار مدیر کل است (لایهٔ دوم پس از queryset سریالایزر)
+            from accounts.scope import get_visible_users_for_user
+            if not get_visible_users_for_user(actor).filter(pk=target.pk).exists():
+                raise PermissionDenied("پیوند دادن کاربری که در قلمرو شما نیست فقط با مدیر کل سامانه است.")
+        self._ensure_can_grant(company.id if company else None, target,
                                {}, serializer.validated_data.get('section_levels') or {})
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')

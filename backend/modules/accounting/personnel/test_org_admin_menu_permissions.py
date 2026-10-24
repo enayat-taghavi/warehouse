@@ -369,14 +369,15 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         url = '/api/personnel/user-company-access/'
         # بدون «نوشتن» دسترسی کاربران هیچ اعطایی ممکن نیست (طرح مجوزهای بخش‌به‌بخش)
         res = self.client.post(url, {'user': newcomer.id, 'company': self.company.id, 'section_levels': {}}, format='json')
-        self.assertEqual(res.status_code, 403)
+        # طرح ۲.۹: کاربری که مدیر نمی‌بیند (بی هیچ شرکت) مثل کاربر ناموجود رد می‌شود
+        self.assertIn(res.status_code, (400, 403))
         UserCompanyAccess.objects.filter(user=self.manager, company=self.company).update(section_levels={'user_access': 'write'})
+        res = self.client.post(url, {'user': newcomer.id, 'company': self.company.id, 'section_levels': {}}, format='json')
+        self.assertEqual(res.status_code, 400, res.content)
+        self.assertFalse(UserCompanyAccess.objects.filter(user=newcomer).exists())
         # خود را به شرکت دیگر راه دادن
         res = self.client.post(url, {'user': self.manager.id, 'company': self.other_company.id, 'section_levels': {}}, format='json')
         self.assertEqual(res.status_code, 403)
-        # اعطای پیوند در شرکت خودش مجاز است
-        res = self.client.post(url, {'user': newcomer.id, 'company': self.company.id, 'section_levels': {}}, format='json')
-        self.assertEqual(res.status_code, 201, res.content)
         listed_companies = {row['company'] for row in self._rows(self.client.get(url))}
         self.assertNotIn(self.other_company.id, listed_companies)
         outsider_access = UserCompanyAccess.objects.get(user=self.outsider, company=self.other_company)
@@ -480,9 +481,9 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         res = self.client.patch(f'/api/auth/users/{editor.id}/', {'company_ids': [self.company.id, self.other_company.id]}, format='json')
         self.assertEqual(res.status_code, 403)
         self.assertFalse(UserCompanyAccess.objects.filter(user=editor, company=self.other_company).exists())
-        # کاربر مشترک: دسترسی او به شرکتِ بیرون از قلمرو ویرایشگر پاک نمی‌شود
+        # کاربر مشترک: ویرایشگری که عضو شرکت دیگر او نیست اصلاً او را ویرایش نمی‌کند (طرح ۲.۹، S1)
         res = self.client.patch(f'/api/auth/users/{both.id}/', {'company_ids': [self.company.id]}, format='json')
-        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.status_code, 403, res.content)
         self.assertTrue(UserCompanyAccess.objects.filter(user=both, company=self.other_company).exists())
 
     def test_org_admin_directory_search_ignores_personal_fields(self):

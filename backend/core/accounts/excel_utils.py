@@ -142,10 +142,32 @@ def clean_persian_text(val):
 
 # ── Excel Export & Template ──────────────────────────────────────────
 
-def generate_users_excel(queryset):
+def _export_scope(actor):
+    """دامنهٔ نمایش انجام‌دهنده برای خروجی اکسل (S7)؛ None یعنی همه چیز (مدیر کل یا بی‌انجام‌دهنده)."""
+    if actor is None or not getattr(actor, 'is_authenticated', False) or actor.is_superuser:
+        return None
+    from accounts.scope import actor_display_scope
+    return actor_display_scope(actor)
+
+
+def _scoped_user_fields(wh_ext, user, scope, actor):
+    """(متن انبارها، متن شرکت) کاربر، برای غیرسوپریوزر فقط در شرکت‌ها و انبارهای دامنهٔ خودش (S7)."""
+    if scope is None or (actor is not None and user.pk == actor.pk):
+        return (wh_ext.format_excel_warehouses(user) if wh_ext else ''), (user.company or '')
+    from accounts.scope import visible_company_text
+    wh_str = ''
+    if wh_ext:
+        wh_ids = scope.get('warehouse_ids')
+        items = [w for w in wh_ext.get_assigned(user) if wh_ids is None or w.pk in wh_ids]
+        wh_str = '، '.join(f"{w.name} ({w.code})" if w.code else w.name for w in items)
+    return wh_str, visible_company_text(scope, user.company or '')
+
+
+def generate_users_excel(queryset, actor=None):
     """
     تولید فایل اکسل استاندارد دو سطری از لیست کاربران
     """
+    scope = _export_scope(actor)
     wb = Workbook()
     ws = wb.active
     ws.title = 'کاربران'
@@ -179,7 +201,7 @@ def generate_users_excel(queryset):
         roles_str = '، '.join(role_names)
 
         wh_ext = _get_user_warehouse_extension()
-        wh_str = wh_ext.format_excel_warehouses(user) if wh_ext else ''
+        wh_str, company_str = _scoped_user_fields(wh_ext, user, scope, actor)
 
         row_data = [
             user.first_name or '',
@@ -191,7 +213,7 @@ def generate_users_excel(queryset):
             user.blood_type or '',
             user.emergency_contact or '',
             user.operational_zone or '',
-            user.company or '',
+            company_str,
             user.address or '',
             roles_str,
             wh_str,
@@ -211,10 +233,11 @@ def generate_users_excel(queryset):
     return response
 
 
-def generate_id_cards_excel(queryset):
+def generate_id_cards_excel(queryset, actor=None):
     """
     تولید فایل اکسل مشخصات کارت پرسنلی و گیت‌پاس با ساختار ۲ سطری استاندارد
     """
+    scope = _export_scope(actor)
     wb = Workbook()
     ws = wb.active
     ws.title = 'کارت پرسنلی و گیت‌پاس'
@@ -250,7 +273,7 @@ def generate_id_cards_excel(queryset):
         roles_str = '، '.join(role_names)
 
         wh_ext = _get_user_warehouse_extension()
-        wh_str = wh_ext.format_excel_warehouses(user) if wh_ext else ''
+        wh_str, company_str = _scoped_user_fields(wh_ext, user, scope, actor)
 
         barcode_str = f"GP-{user.username or user.pk}"
         if user.national_code:
@@ -265,7 +288,7 @@ def generate_id_cards_excel(queryset):
             roles_str,
             wh_str,
             user.operational_zone or '',
-            user.company or '',
+            company_str,
             'فعال / مجاز به تردد' if user.is_active else 'مسدود / غیرمجاز',
             barcode_str,
             now_shamsi,
@@ -679,8 +702,8 @@ def parse_users_excel(file, update_existing=False, actor=None, active_company_id
                     else:
                         row_errors.append({'row': row_num, 'field': 'username', 'message': 'این شناسه ورود قبلاً در سیستم ثبت شده است.'})
                 elif username.lower() in all_existing_usernames:
-                    # تکرار با کاربری بیرون از قلمرو یا سوپریوزر
-                    row_errors.append({'row': row_num, 'field': 'username', 'message': 'کاربر با این شناسه ورود در سامانه وجود دارد اما در قلمرو دسترسی شما نیست.'})
+                    # تکرار با کاربری بیرون از قلمرو یا سوپریوزر؛ همان پیام کلی (S11: قلمرو را لو ندهد)
+                    row_errors.append({'row': row_num, 'field': 'username', 'message': 'این شناسه ورود قبلاً در سیستم ثبت شده است.'})
                 seen_usernames.add(username)
 
         # ── اعتبارسنجی کد ملی ──
@@ -695,7 +718,7 @@ def parse_users_excel(file, update_existing=False, actor=None, active_company_id
                     if not update_existing or (is_update_record and nid_visible_user.id != target_user_id):
                         row_errors.append({'row': row_num, 'field': 'national_code', 'message': 'این کد ملی به کاربر دیگری تخصیص دارد.'})
                 elif national_code in all_existing_nids:
-                    row_errors.append({'row': row_num, 'field': 'national_code', 'message': 'این کد ملی در سامانه برای کاربر دیگری ثبت شده است که در قلمرو مجاز شما نیست.'})
+                    row_errors.append({'row': row_num, 'field': 'national_code', 'message': 'این کد ملی به کاربر دیگری تخصیص دارد.'})
                 seen_national_codes.add(national_code)
 
         # ── اعتبارسنجی فرمت ایمیل ──

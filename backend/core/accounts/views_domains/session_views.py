@@ -12,6 +12,26 @@ from rest_framework.views import APIView
 
 from .helpers import logger
 
+
+def _fleet_groups(user_id):
+    """کانال‌های رویداد نشست یک کاربر (طرح ۲.۹): مدیران کل و شرکت‌های همان کاربر؛ هرگز کانال عمومی."""
+    from notifications.consumers import SUPERUSER_GROUP
+    from ..permission_events import companies_of_users
+    return [SUPERUSER_GROUP] + [f'company_{cid}_notifications' for cid in sorted(companies_of_users([user_id]))]
+
+
+def _send_fleet_event(groups, payload):
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            for group in groups:
+                async_to_sync(channel_layer.group_send)(group, payload)
+    except Exception as ws_err:  # رویداد بلادرنگ نباید پاسخ اصلی را بشکند
+        logger.warning(f"[fleet] broadcast failed: {ws_err}")
+
+
 class DeviceHeartbeatView(APIView):
     """
     دریافت تله‌متری زنده و پالس ضربان قلب کلاینت/تبلت (Device Heartbeat & Presence API)
@@ -93,28 +113,20 @@ class DeviceHeartbeatView(APIView):
             session.pending_queue_count = pending_queue_count
             session.conflict_count = conflict_count
 
+        is_new_session = session.pk is None
         session.save()
 
-        # برودکست بلادرنگ تغییرات تله‌متری ناوگان به وب‌سوکت سیستم
-        try:
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            channel_layer = get_channel_layer()
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    'global_notifications',
-                    {
-                        'type': 'send_notification',
-                        'type_str': 'fleet_update',
-                        'message': '',
-                        'sender_tab_id': tab_id,
-                        'client_tab_id': tab_id,
-                        'session_id': session.id,
-                        'broadcast_to_sender': False
-                    }
-                )
-        except Exception as ws_err:
-            pass
+        # برودکست بلادرنگ ناوگان (طرح ۲.۹): فقط برای نشست تازه، نه هر ضربان؛ فقط مدیران کل و شرکت‌های همین کاربر
+        if is_new_session:
+            _send_fleet_event(_fleet_groups(user.id), {
+                'type': 'send_notification',
+                'type_str': 'fleet_update',
+                'message': '',
+                'sender_tab_id': tab_id,
+                'client_tab_id': tab_id,
+                'session_id': session.id,
+                'broadcast_to_sender': False
+            })
 
         return Response({
             'status': 'ok',
@@ -131,11 +143,18 @@ class FleetSessionsListView(APIView):
 
     def get(self, request):
         from ..models import UserDeviceSession
+        user = request.user
+        # طرح ۲.۹ (S5): فقط مدیر کل یا دارندهٔ مجوز گزارش سامانه؛ غیرمدیر کل فقط نشست کاربران دامنهٔ خودش
+        if not (user.is_superuser or user.has_perm('accounts.perm_sys_logs')):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("مشاهدهٔ نشست‌های دستگاه‌ها نیاز به مجوز گزارش‌های سامانه دارد.")
         # تبلت‌ها و پایانه‌هایی که در ۲۴ ساعت اخیر حداقل یک پالس ارسال کرده‌اند
         cutoff = timezone.now() - timezone.timedelta(hours=24)
-        active_sessions = UserDeviceSession.objects.filter(
-            last_heartbeat__gte=cutoff
-        ).select_related('user').order_by('-last_heartbeat')[:100]
+        sessions_qs = UserDeviceSession.objects.filter(last_heartbeat__gte=cutoff)
+        if not user.is_superuser:
+            from ..scope import get_visible_users_for_user
+            sessions_qs = sessions_qs.filter(user_id__in=get_visible_users_for_user(user).values('id'))
+        active_sessions = sessions_qs.select_related('user').order_by('-last_heartbeat')[:100]
 
         now_dt = timezone.now()
         fleet_data = []
@@ -183,12 +202,18 @@ class RevokeDeviceSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, session_id):
-        if not (request.user and (request.user.is_superuser or request.user.is_staff)):
+        actor = request.user
+        # طرح ۲.۹: مدیر کل، یا دارندهٔ مجوز گزارش سامانه فقط برای نشست کاربران دامنهٔ خودش
+        if not (actor.is_superuser or actor.has_perm('accounts.perm_sys_logs')):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("ابطال و خروج اجباری دستگاه‌های متصل، صرفاً در صلاحیت مدیر ارشد سیستم (Superuser) می‌باشد.")
+            raise PermissionDenied("ابطال نشست دستگاه‌ها نیاز به مجوز گزارش‌های سامانه دارد.")
 
         from ..models import UserDeviceSession, AuditLog
-        session = UserDeviceSession.objects.filter(id=session_id).first()
+        sessions_qs = UserDeviceSession.objects.all()
+        if not actor.is_superuser:
+            from ..scope import get_visible_users_for_user
+            sessions_qs = sessions_qs.filter(user_id__in=get_visible_users_for_user(actor).values('id'))
+        session = sessions_qs.filter(id=session_id).first()
         if not session:
             return Response({'error': 'نشست مورد نظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -237,26 +262,17 @@ class RevokeDeviceSessionView(APIView):
         except Exception as e:
             logger.warning(f"[RevokeDeviceSessionView] Failed to record audit log: {e}")
 
-        # برودکست فرمان ابطال نشست و اخراج فوری به کلیه کلاینت‌ها و تبلت مورد نظر
-        try:
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            channel_layer = get_channel_layer()
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    'global_notifications',
-                    {
-                        'type': 'send_notification',
-                        'type_str': 'session_revoked',
-                        'message': f'نشست دستگاه «{session.device_model}» ابطال شد.',
-                        'revoked_tab_id': session.tab_id,
-                        'session_id': session.id,
-                        'client_tab_id': session.tab_id,
-                        'broadcast_to_sender': True
-                    }
-                )
-        except Exception as ws_err:
-            pass
+        # فرمان ابطال و خروج فوری: فقط به کانال شخصی صاحب نشست و مدیران کل (طرح ۲.۹)
+        from notifications.consumers import SUPERUSER_GROUP
+        _send_fleet_event([f'user_{session.user_id}', SUPERUSER_GROUP], {
+            'type': 'send_notification',
+            'type_str': 'session_revoked',
+            'message': f'نشست دستگاه «{session.device_model}» ابطال شد.',
+            'revoked_tab_id': session.tab_id,
+            'session_id': session.id,
+            'client_tab_id': session.tab_id,
+            'broadcast_to_sender': True
+        })
 
         return Response({
             'status': 'success',

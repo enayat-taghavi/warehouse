@@ -89,7 +89,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             qs = get_visible_users_for_user(user, qs=qs)
 
         has_perm = self.request.query_params.get('has_perm')
-        if has_perm:
+        # S11: فهرست کمینهٔ راهبر تشکیلات با فیلتر مجوز، دارندگان مجوزها را لو نمی‌دهد
+        if has_perm and not self._is_org_admin_directory():
             qs = qs.filter(
                 Q(user_permissions__codename=has_perm) |
                 Q(groups__permissions__codename=has_perm)
@@ -163,12 +164,13 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             from ..permissions import any_menu_access
             permission_classes = [any_menu_access('view_sys_users', *contributions('user_directory_perms'))
                                   | ProjectsWriterDirectoryAccess()]
-        elif self.action in ['retrieve', 'export_excel', 'download_template']:
+        elif self.action in ['retrieve', 'export_excel', 'export_id_cards_excel', 'download_template']:
             permission_classes = [HasMenuAccess('view_sys_users')]
         elif self.action in ['create', 'import_excel']:
-            permission_classes = [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_usr_add')]
-        else: # update, partial_update, destroy, toggle_status, user_avatar
-            permission_classes = [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_usr_edit')]
+            # طرح ۲.۹: `view_sys_users` تنها فقط خواندن است؛ نوشتن مجوز صریح می‌خواهد
+            permission_classes = [HasMenuAccess('perm_usr_add')]
+        else: # update, partial_update, destroy, toggle_status, admin_reset_password, user_avatar, delete_impact
+            permission_classes = [HasMenuAccess('perm_usr_edit')]
             
         return permission_classes
 
@@ -178,6 +180,28 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             self.throttle_scope = 'verify_card'
             return [ScopedRateThrottle()]
         return super().get_throttles()
+
+    # ─── طرح ۲.۹: تسلط بر کاربر مشترک (S1)، برتری مجوز (S2) و رویداد users_changed ─────────
+
+    def _ensure_controls(self, target):
+        from ..scope import ensure_actor_controls_user
+        ensure_actor_controls_user(self.request.user, target)
+
+    def _ensure_outranks(self, target):
+        from ..scope import ensure_actor_outranks_user
+        ensure_actor_outranks_user(self.request.user, target)
+
+    def check_delete_impact_permission(self, request, instance):
+        # S10: اثر حذف فقط برای کاربری که انجام‌دهنده بر همهٔ شرکت‌هایش تسلط دارد (پس شمارش درون شرکت‌های اوست)
+        self._ensure_controls(instance)
+
+    @staticmethod
+    def _notify_users_changed(user_ids, company_ids=None):
+        from ..permission_events import notify_users_changed
+        try:
+            notify_users_changed(user_ids, company_ids)
+        except Exception:  # رویداد بلادرنگ نباید ذخیرهٔ اصلی را بشکند
+            pass
 
     def _validate_user_deactivation(self, request, user, action_name="حذف"):
         from rest_framework.exceptions import ValidationError
@@ -292,6 +316,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 raise PermissionDenied("تنها مدیر ارشد سامانه (Superuser) مجاز به اعطا یا تغییر دسترسی‌های حساس است.")
 
         instance = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        self._notify_users_changed([instance.pk])
         try:
             log_audit_event(
                 module='users',
@@ -309,6 +334,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     def perform_update(self, serializer):
         from ..audit_utils import log_audit_event, calculate_model_diff
         from rest_framework.exceptions import PermissionDenied
+        # S1: ویرایش کاربر مشترک فقط برای کسی که عضو همهٔ شرکت‌های اوست
+        self._ensure_controls(serializer.instance)
         user_permissions = serializer.validated_data.get('user_permissions', None)
         if user_permissions is not None and not (self.request.user and self.request.user.is_superuser):
             from ..models import SENSITIVE_PERMISSION_CODENAMES
@@ -329,14 +356,26 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         grants_changed = ((new_group_ids is not None and new_group_ids != old_group_ids)
                           or (new_perm_ids is not None and new_perm_ids != old_perm_ids))
         new_is_active = serializer.validated_data.get('is_active', None)
-        if old_instance.is_active and new_is_active is False:
+        deactivating = old_instance.is_active and new_is_active is False
+        if deactivating:
+            # S2 و S9: همان محافظ‌های toggle_status
+            self._ensure_outranks(old_instance)
             self._validate_user_deactivation(self.request, old_instance, action_name="غیرفعال‌سازی")
+        if serializer.validated_data.get('password') and old_instance.pk != self.request.user.pk:
+            raise PermissionDenied('رمز کاربر دیگر فقط با «بازنشانی رمز» عوض می‌شود.')
 
         before_state = self._get_user_audit_state(old_instance)
+        from ..permission_events import companies_of_users
+        before_cids = companies_of_users([old_instance.pk])
         instance = serializer.save(modified_by=self.request.user if self.request.user.is_authenticated else None)
+        if deactivating:
+            instance.password_changed_at = timezone.now()
+            instance.save(update_fields=['password_changed_at'])
+            self._revoke_user_sessions_and_tokens(instance)
         if grants_changed:
             from ..permission_events import notify_role_changed
             notify_role_changed([instance.pk])
+        self._notify_users_changed([instance.pk], before_cids | companies_of_users([instance.pk]))
         after_state = self._get_user_audit_state(instance)
         diff_b, diff_a = calculate_model_diff(before_state, after_state)
         if diff_b or diff_a:
@@ -361,12 +400,18 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
+        # S1 و S2: حذف کاربر مشترک یا بالاتر از انجام‌دهنده ۴۰۳
+        self._ensure_outranks(user)
         self._validate_user_deactivation(request, user, action_name="حذف")
         user_id = user.id
         user_repr = f"{user.username} ({user.first_name} {user.last_name})".strip()
         before_state = self._get_user_audit_state(user)
+        from ..permission_events import companies_of_users
+        before_cids = companies_of_users([user_id])
 
         response = super().destroy(request, *args, **kwargs)
+        if response.status_code == 204:
+            self._notify_users_changed([user_id], before_cids)
 
         from ..audit_utils import log_audit_event
         try:
@@ -389,7 +434,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         user = self.get_object()
         from rest_framework.exceptions import ValidationError
         from ..audit_utils import log_audit_event
-        
+        self._ensure_controls(user)
+
         target_active = request.data.get('is_active') if hasattr(request.data, 'get') else None
         if target_active is not None:
             if isinstance(target_active, str):
@@ -401,8 +447,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
         # If user is currently active and is being deactivated
         if user.is_active and not new_active:
+            self._ensure_outranks(user)
             self._validate_user_deactivation(request, user, action_name="غیرفعال‌سازی")
-                    
+
         old_active = user.is_active
         user.is_active = new_active
         if not new_active:
@@ -410,6 +457,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             user.password_changed_at = timezone.now()
             self._revoke_user_sessions_and_tokens(user)
         user.save()
+        if old_active != user.is_active:
+            self._notify_users_changed([user.pk])
 
         try:
             log_audit_event(
@@ -479,8 +528,13 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def admin_reset_password(self, request, pk=None):
         from django.utils import timezone
+        from ..scope import generate_one_time_password
         user = self.get_object()
-        user.set_password('123456')
+        # S1 و S2: ریست رمز کاربر مشترک یا همکار بالاتر ۴۰۳ (ورود به جای او = ارتقای دسترسی)
+        self._ensure_outranks(user)
+        # S12 و تصمیم ۳: رمز یک‌بارمصرف تصادفی که فقط همین یک بار برگردانده می‌شود
+        one_time_password = generate_one_time_password()
+        user.set_password(one_time_password)
         user.requires_password_change = True
         user.password_changed_at = timezone.now()
         user.save()
@@ -501,7 +555,12 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             ip_address=getattr(request, 'META', {}).get('REMOTE_ADDR')
         )
             
-        return Response({'success': True, 'message': 'رمز عبور با موفقیت به مقدار پیش‌فرض تغییر یافت و کلیه نشست‌ها و توکن‌های فعال کاربر ابطال شدند.'})
+        return Response({
+            'success': True,
+            'one_time_password': one_time_password,
+            'message': 'رمز یک‌بارمصرف تازه ساخته شد و همهٔ نشست‌ها و توکن‌های فعال کاربر ابطال شدند. '
+                       'این رمز فقط همین یک بار نشان داده می‌شود و کاربر در ورود بعدی باید آن را عوض کند.',
+        })
 
     @action(detail=False, methods=['post'])
     def update_preferences(self, request):
@@ -553,7 +612,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         """Update or delete avatar for a specific user (admin action)."""
         from ..avatar_utils import process_and_optimize_avatar, delete_user_avatar_file
         user = self.get_object()
-        
+        self._ensure_controls(user)
+
         if request.method == 'DELETE':
             delete_user_avatar_file(user)
             user.avatar = None
@@ -593,7 +653,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     queryset = queryset.filter(id__in=ids)
             except Exception:
                 pass
-        return generate_users_excel(queryset)
+        return generate_users_excel(queryset, actor=request.user)
 
     @action(detail=False, methods=['get'])
     def export_id_cards_excel(self, request):
@@ -608,7 +668,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     queryset = queryset.filter(id__in=ids)
             except Exception:
                 pass
-        return generate_id_cards_excel(queryset)
+        return generate_id_cards_excel(queryset, actor=request.user)
 
     @action(detail=False, methods=['get'])
     def download_template(self, request):
@@ -699,8 +759,22 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         wh_ext = _get_user_warehouse_extension()
         allowed_warehouses = set(wh_ext.get_all_warehouses(user=request.user)) if wh_ext else set()
         from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+        from rest_framework.exceptions import ValidationError as DRFValidationError
         from ..permission_admin import ensure_user_grant_change
+        from ..scope import (
+            MSG_NOT_CONTROLLED, MSG_OUTRANKED, actor_controls_user, generate_one_time_password,
+            permissions_beyond_actor,
+        )
+        from ..permission_events import companies_of_users
         role_changed_user_ids = set()
+        changed_user_ids = set()
+        deactivated_users = []
+        one_time_passwords = []
+        # S13: پیوند کاربر تازه با شرکت فعال، مثل مسیر سریالایزر، نوشتن «دسترسی کاربران» همان شرکت را می‌خواهد
+        can_link_company = True
+        if cid and not request.user.is_superuser:
+            from companies.access import company_section_level, _level_ok
+            can_link_company = _level_ok(company_section_level(request.user, cid, 'user_access'), 'write')
 
         try:
             with transaction.atomic():
@@ -721,6 +795,24 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         if not user:
                             commit_errors.append({'row': row_num, 'field': 'username', 'message': 'کاربر هدف در قلمرو مجاز شما نیست.'})
                             continue
+                        # S1: کاربر مشترک با شرکت دیگر از اکسل ویرایش نمی‌شود
+                        if not actor_controls_user(request.user, user):
+                            commit_errors.append({'row': row_num, 'field': 'username', 'message': MSG_NOT_CONTROLLED})
+                            continue
+                        deactivating = user.is_active and row_data.get('is_active') is False
+                        if deactivating:
+                            # S2 و S9: همان محافظ‌های toggle_status
+                            beyond = permissions_beyond_actor(request.user, user)
+                            if beyond:
+                                codes = '، '.join(sorted(str(c).split('.', 1)[-1] for c in beyond)[:5])
+                                commit_errors.append({'row': row_num, 'field': 'is_active', 'message': MSG_OUTRANKED.format(codes=codes)})
+                                continue
+                            try:
+                                self._validate_user_deactivation(request, user, action_name="غیرفعال‌سازی")
+                            except DRFValidationError as exc:
+                                detail = exc.detail[0] if isinstance(exc.detail, list) and exc.detail else exc.detail
+                                commit_errors.append({'row': row_num, 'field': 'is_active', 'message': str(detail)})
+                                continue
                         old_role_ids = set(user.groups.values_list('id', flat=True))
                         new_role_ids = {g.pk for g in roles}
                         try:
@@ -745,6 +837,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                             # فقط بخشِ درون دامنهٔ سازنده جایگزین می‌شود؛ انبارهای بیرون از دامنهٔ او دست‌نخورده می‌مانند
                             kept = [w for w in wh_ext.get_assigned(user) if w not in allowed_warehouses]
                             wh_ext.set_assigned(user, kept + list(warehouses))
+                        if deactivating:
+                            deactivated_users.append(user)
+                        changed_user_ids.add(user.pk)
                         updated_count += 1
                         continue
 
@@ -759,7 +854,12 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         commit_errors.append({'row': row_num, 'field': 'roles', 'message': str(exc.detail)})
                         continue
 
-                    password = row_data.get('national_code') or '123456'
+                    if cid and not can_link_company:
+                        commit_errors.append({'row': row_num, 'field': 'company', 'message': 'مجوز نوشتن «دسترسی کاربران» شرکت فعال را ندارید؛ کاربر تازه ساخته نشد.'})
+                        continue
+
+                    # S12 و تصمیم ۳: رمز یک‌بارمصرف تصادفی (نه کد ملی یا 123456)، یک بار در نتیجهٔ ورود
+                    password = generate_one_time_password()
                     user = CustomUser(**row_data)
                     user.set_password(password)
                     user.requires_password_change = True
@@ -776,11 +876,19 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         from companies.models import UserCompanyAccess
                         # پیوند کاربر با شرکت (ت۸)؛ عضویت فقط از انتساب بخش یا انبار می‌آید
                         UserCompanyAccess.objects.get_or_create(user=user, company_id=cid)
+                    one_time_passwords.append({'row': row_num, 'username': user.username, 'one_time_password': password})
+                    changed_user_ids.add(user.pk)
                     created_count += 1
 
+                for user in deactivated_users:
+                    user.password_changed_at = timezone.now()
+                    user.save(update_fields=['password_changed_at'])
+                    self._revoke_user_sessions_and_tokens(user)
                 if role_changed_user_ids:
                     from ..permission_events import notify_role_changed
                     notify_role_changed(role_changed_user_ids)
+                if changed_user_ids:
+                    self._notify_users_changed(changed_user_ids, companies_of_users(changed_user_ids))
                 from ..audit_utils import log_audit_event
                 log_audit_event(
                     user=request.user,
@@ -808,78 +916,29 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 'updated': updated_count,
                 'skipped': len(error_rows_set)
             },
-            'errors': commit_errors
+            'errors': commit_errors,
+            # S12: رمز یک‌بارمصرف کاربران تازه، فقط همین یک بار
+            'one_time_passwords': one_time_passwords,
         })
 
     @action(detail=False, methods=['get'], url_path='verify_card')
     def verify_card(self, request):
-        """Public verification endpoint for personnel ID card scanning."""
-        code = request.query_params.get('code', '').strip().upper()
-        user_id = None
-        if code.startswith('EMP-'):
-            try:
-                user_id = int(code[4:]) - 1000
-            except ValueError:
-                pass
-
-        if user_id is None or user_id <= 0:
-            return Response({
-                'valid': False,
-                'message': 'فرمت شناسه کارت شناسایی نامعتبر است یا در سامانه یافت نشد.'
-            }, status=404)
-
-        user = CustomUser.objects.filter(id=user_id).first()
-        if not user:
-            return Response({
-                'valid': False,
-                'message': 'پرسنل با این شناسه در سامانه یافت نشد یا باطل شده است.'
-            }, status=404)
-
-        def mask_national_code(val):
-            if not val:
-                return None
-            val = str(val).strip()
-            if len(val) >= 8:
-                return val[:3] + '****' + val[-3:]
-            return '****'
-
-        def mask_phone(val):
-            if not val:
-                return None
-            val = str(val).strip()
-            if len(val) >= 7:
-                return val[:4] + '****' + val[-3:]
-            return '****'
-
-        roles = []
-        for g in user.groups.all():
-            try:
-                cr = g.customrole
-                roles.append({'id': cr.id, 'title': cr.title or cr.name, 'color': cr.color or '#4f46e5'})
-            except Exception:
-                roles.append({'id': g.id, 'title': g.name, 'color': '#4f46e5'})
-
-        wh_ext = _get_user_warehouse_extension()
-        wh_names = wh_ext.get_assigned_names(user) if wh_ext else []
-
-        avatar_url = user.avatar.url if user.avatar else None
-
+        """
+        تأیید عمومی کارت شناسایی (بی‌ورود). S4 و تصمیم ۴: کد کارت امضاشده (scope.card_code_for) است و
+        پاسخ فقط «معتبر» با نام و عکس کاربر فعالِ غیرمدیرکل است؛ هر حالت دیگر فقط {valid: false}.
+        """
+        from ..scope import user_id_from_card_code
+        user_id = user_id_from_card_code(request.query_params.get('code', ''))
+        user = None
+        if user_id is not None:
+            user = CustomUser.objects.filter(id=user_id, is_active=True, is_superuser=False).first()
+        if user is None:
+            return Response({'valid': False}, status=404)
         return Response({
             'valid': True,
-            'is_active': user.is_active,
-            'id': user.id,
-            'personnel_code': f"EMP-{1000 + user.id}",
             'first_name': user.first_name,
             'last_name': user.last_name,
-            'national_code': mask_national_code(user.national_code),
-            'phone_number': mask_phone(user.phone_number),
-            'operational_zone': user.operational_zone or None,
-            'company': user.company or None,
-            'avatar': avatar_url,
-            'blood_type': user.blood_type or None,
-            'emergency_contact': mask_phone(user.emergency_contact) if user.emergency_contact else None,
-            'roles': roles,
-            'assigned_warehouses': wh_names
+            'avatar': user.avatar.url if user.avatar else None,
         })
 
 class UserTableViewStateViewSet(viewsets.ModelViewSet):

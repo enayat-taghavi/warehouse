@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 permissions_changed = Signal()
 
 EVENT_TYPE = 'permissions_updated'
-REASONS = ('bundle', 'role', 'override', 'assignment')
+REASONS = ('bundle', 'role', 'override', 'assignment', 'user')
+# reason='user' (طرح ۲.۹): «فهرست کاربران عوض شد» (ساخت، ویرایش، حذف، فعال/غیرفعال، اکسل)؛ نوع جدا و
+# فقط کانال شرکت‌ها، چون مجوز کسی عوض نشده و کانال شخصی نباید مجوزها را دوباره بخواند.
+USERS_EVENT_TYPE = 'users_changed'
 _FORBIDDEN_GROUPS = frozenset({'global_notifications'})
 
 
@@ -33,15 +36,16 @@ def permission_event_messages(user_ids, company_ids, reason):
     user_ids = sorted({int(u) for u in user_ids if u})
     company_ids = sorted({int(c) for c in company_ids if c})
     single = user_ids[0] if len(user_ids) == 1 else None
+    event_type = USERS_EVENT_TYPE if reason == 'user' else EVENT_TYPE
     out = []
-    for uid in user_ids:
+    for uid in (() if reason == 'user' else user_ids):
         out.append((f'user_{uid}', {
             'type': 'send_notification', 'type_str': EVENT_TYPE,
             'user_id': uid, 'reason': reason, 'message': '',
         }))
     for cid in company_ids:
         out.append((f'company_{cid}_notifications', {
-            'type': 'send_notification', 'type_str': EVENT_TYPE,
+            'type': 'send_notification', 'type_str': event_type,
             'user_id': single, 'reason': reason, 'company_id': cid, 'message': '',
         }))
     assert not any(group in _FORBIDDEN_GROUPS for group, _ in out)
@@ -132,3 +136,19 @@ def notify_override_changed(user_id, company_id=None):
 def notify_assignment_changed(user_ids):
     """تغییر انتساب‌های کاربر (ایجاد، ویرایش، حذف) مجوزهایش را عوض می‌کند؛ فقط کانال شخصی."""
     return notify_permissions_updated(user_ids, (), 'assignment')
+
+
+def notify_users_changed(user_ids, company_ids=None):
+    """
+    رویداد users_changed پس از commit، فقط روی کانال شرکت‌های اثرپذیرفته (هرگز global_notifications).
+    company_ids=None یعنی شرکت‌های کنونی همین کاربران؛ برای حذف، شرکت‌ها را پیش از حذف بدهید.
+    سیگنال permissions_changed فرستاده نمی‌شود (مجوزی عوض نشده است).
+    """
+    user_ids = {int(u) for u in user_ids if u}
+    if company_ids is None:
+        company_ids = companies_of_users(user_ids)
+    company_ids = {int(c) for c in company_ids if c}
+    messages = permission_event_messages(user_ids, company_ids, 'user')
+    if messages:
+        transaction.on_commit(lambda: _send(messages))
+    return messages

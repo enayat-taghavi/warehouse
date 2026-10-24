@@ -17,6 +17,12 @@ from ..models import CustomRole
 from ..serializers import CustomRoleSerializer, PermissionSerializer
 from .helpers import OptionalPageNumberPagination
 
+ROLE_IDENTITY_FIELDS = ('name', 'title', 'color')
+MSG_SHARED_ROLE_IDENTITY = (
+    "تغییر نام، عنوان یا رنگ نقشی که اعضایی بیرون از دامنهٔ دسترسی شما دارد فقط در اختیار مدیر کل سامانه است."
+)
+MSG_SHARED_ROLE_DELETE = "این نقش اعضایی بیرون از دامنهٔ دسترسی شما دارد؛ حذف آن فقط در اختیار مدیر کل سامانه است."
+
 class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     queryset = CustomRole.objects.all()
     serializer_class = CustomRoleSerializer
@@ -36,9 +42,41 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         return CustomRole.objects.all().prefetch_related('permissions', 'user_set')
 
+    def _visible_user_ids(self):
+        """طرح ۲.۹ (S8): شناسهٔ کاربران دامنهٔ کاربر جاری با یک پرس‌وجو در هر درخواست؛ None برای مدیر کل."""
+        if not hasattr(self, '_visible_ids_cache'):
+            user = self.request.user
+            if user.is_superuser:
+                self._visible_ids_cache = None
+            else:
+                from ..scope import get_visible_users_for_user
+                self._visible_ids_cache = frozenset(get_visible_users_for_user(user).values_list('pk', flat=True))
+        return self._visible_ids_cache
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if getattr(self, 'request', None) is not None and self.request.user.is_authenticated:
+            context['visible_user_ids'] = self._visible_user_ids()
+        return context
+
+    def check_delete_impact_permission(self, request, instance):
+        # حذف نقشی با عضو بیرون از دامنه برای غیرمدیر کل ممکن نیست (ensure_role_change)؛ شمار اعضای پنهان هم لو نرود
+        if self._hidden_members(instance.user_set.values_list('id', flat=True)):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(MSG_SHARED_ROLE_DELETE)
+
+    def _hidden_members(self, member_ids):
+        visible = self._visible_user_ids()
+        return set() if visible is None else set(member_ids) - visible
+
     @staticmethod
     def _ids(items):
         return {getattr(i, 'pk', i) for i in (items or [])}
+
+    @staticmethod
+    def _identity_changed(role, data):
+        return any(field in data and (data[field] or '') != (getattr(role, field) or '')
+                   for field in ROLE_IDENTITY_FIELDS)
 
     def _notify_members(self, user_ids):
         from ..permission_events import notify_role_changed
@@ -93,11 +131,20 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         old_perm_ids = set(role.permissions.values_list('id', flat=True))
         old_user_ids = set(role.user_set.values_list('id', flat=True))
         new_perm_ids = old_perm_ids if permissions is None else self._ids(permissions)
+        # طرح ۲.۹ (S8): نام، عنوان و رنگ نقشی که عضو بیرون از دامنه دارد فقط با مدیر کل؛
+        # اعضای بیرون از دامنه که کاربر نمی‌بیند (و نمی‌فرستد) با ویرایش اعضا حذف نمی‌شوند.
+        hidden_members = self._hidden_members(old_user_ids)
+        if hidden_members and self._identity_changed(role, serializer.validated_data):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(MSG_SHARED_ROLE_IDENTITY)
         users = serializer.validated_data.get('user_set', None)
-        new_user_ids = old_user_ids if users is None else self._ids(users)
+        new_user_ids = old_user_ids if users is None else (self._ids(users) | hidden_members)
         ensure_role_change(self.request.user, old_perm_ids=old_perm_ids, new_perm_ids=new_perm_ids,
                            old_user_ids=old_user_ids, new_user_ids=new_user_ids)
-        instance = serializer.save(modified_by=self.request.user if self.request.user.is_authenticated else None)
+        save_kwargs = {'modified_by': self.request.user if self.request.user.is_authenticated else None}
+        if users is not None:
+            save_kwargs['user_set'] = sorted(new_user_ids)
+        instance = serializer.save(**save_kwargs)
         changes = audit_role_permissions(self.request.user, instance, old_perm_ids, new_perm_ids, old_user_ids, new_user_ids)
         if old_perm_ids != new_perm_ids:
             self._notify_members(old_user_ids | new_user_ids)
@@ -234,6 +281,12 @@ class CustomRoleViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     old_perm_ids = set(role.permissions.values_list('id', flat=True)) if role else set()
                     member_ids = set(role.user_set.values_list('id', flat=True)) if role else set()
                     new_perm_ids = {p.id for p in permissions}
+                    # طرح ۲.۹ (S8): عنوان و رنگ نقشی با عضو بیرون از دامنه فقط با مدیر کل
+                    if role and self._hidden_members(member_ids) and self._identity_changed(
+                            role, {'title': row_data.get('title'), 'color': row_data.get('color')}):
+                        commit_errors.append({'row': row_num, 'field': 'title', 'message': MSG_SHARED_ROLE_IDENTITY})
+                        error_rows_set.add(row_num)
+                        continue
                     # ت۱۰: حساس فقط برای مدیر کل سامانه؛ مجوز داده‌شده یا برداشته‌شده باید در اختیار خود واردکننده باشد
                     try:
                         if not request.user.is_superuser:

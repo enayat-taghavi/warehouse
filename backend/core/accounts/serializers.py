@@ -35,9 +35,32 @@ class CustomRoleSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'created_by', 'modified_by', 'users_count']
 
+    # طرح ۲.۹ (S8): ویوست برای غیرمدیر کل مجموعهٔ شناسهٔ کاربران دامنه را در context «visible_user_ids» می‌دهد
+    # (None یعنی همه)؛ اعضای بیرون از دامنه نه شمرده، نه نمایش و نه پذیرفته می‌شوند.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        visible = self._visible_user_ids()
+        if visible is not None:
+            self.fields['user_ids'].child_relation.queryset = CustomUser.objects.filter(pk__in=visible)
+
+    def _visible_user_ids(self):
+        return (self.context or {}).get('visible_user_ids')
+
+    def _members(self, obj):
+        # len/فیلتر روی کش prefetch_related به جای پرس‌وجوی جدا برای هر نقش (رفع N+1)
+        members = obj.user_set.all()
+        visible = self._visible_user_ids()
+        return list(members) if visible is None else [u for u in members if u.pk in visible]
+
     def get_users_count(self, obj):
-        # استفاده از len روی کش prefetch_related به جای count دیتابیسی جهت رفع N+1 Query
-        return len(obj.user_set.all())
+        return len(self._members(obj))
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        visible = self._visible_user_ids()
+        if visible is not None and 'user_ids' in data:
+            data['user_ids'] = [pk for pk in data['user_ids'] if pk in visible]
+        return data
 
     def validate_permissions(self, permissions):
         try:
@@ -115,8 +138,19 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
 
     if company_ids is None and company_accesses_data is None:
         if default_company_id is not None:
-            UserCompanyAccess.objects.filter(user=user).update(is_default=False)
-            UserCompanyAccess.objects.filter(user=user, company_id=default_company_id).update(is_default=True)
+            rows = UserCompanyAccess.objects.filter(user=user)
+            if actor is not None and getattr(actor, 'is_authenticated', False) and not actor.is_superuser:
+                # S7: نویسندهٔ غیرسوپریوزر فقط میان شرکت‌های قلمرو خودش شرکت پیش‌فرض را عوض می‌کند
+                from companies.access import companies_with_section
+                scope = set(companies_with_section(actor, 'user_access', 'write').values_list('id', flat=True))
+                if int(default_company_id) not in scope:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('شرکت پیش‌فرض فقط از شرکت‌های مجاز شما انتخاب می‌شود.')
+                rows = rows.filter(company_id__in=scope)
+            if not rows.filter(company_id=default_company_id).exists():
+                return
+            rows.update(is_default=False)
+            rows.filter(company_id=default_company_id).update(is_default=True)
             def_comp = Company.objects.filter(id=default_company_id).first()
             if def_comp and user.company != def_comp.name:
                 user.company = def_comp.name
@@ -247,10 +281,31 @@ class UserSerializer(serializers.ModelSerializer):
         fields = super().get_fields()
         wh_ext = _get_user_warehouse_extension()
         if wh_ext is not None:
-            fields['assigned_warehouses'] = wh_ext.get_serializer_field()
+            # S3: غیرسوپریوزر فقط انبارهای دامنهٔ خودش را انتخاب می‌کند
+            fields['assigned_warehouses'] = wh_ext.get_serializer_field(user=self._actor())
         else:
             fields.pop('assigned_warehouses', None)
         return fields
+
+    def _actor(self):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return user if user is not None and getattr(user, 'is_authenticated', False) else None
+
+    def _non_superuser_actor(self):
+        actor = self._actor()
+        return actor if actor is not None and not actor.is_superuser else None
+
+    def _display_scope(self):
+        """دامنهٔ نمایش انجام‌دهنده (S7)، یک بار برای کل فهرست در context نگه داشته می‌شود."""
+        if '_actor_display_scope' not in self.context:
+            actor = self._non_superuser_actor()
+            if actor is None:
+                self.context['_actor_display_scope'] = None
+            else:
+                from .scope import actor_display_scope
+                self.context['_actor_display_scope'] = actor_display_scope(actor)
+        return self.context['_actor_display_scope']
 
     def get_assigned_warehouses(self, obj):
         wh_ext = _get_user_warehouse_extension()
@@ -275,6 +330,10 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_password(self, value):
         if not value:
             return value
+        actor = self._actor()
+        if self.instance is not None and (actor is None or self.instance.pk != actor.pk):
+            # S2: رمز کاربر دیگر فقط با «بازنشانی رمز» (admin_reset_password) و محافظ‌هایش عوض می‌شود
+            raise serializers.ValidationError("رمز کاربر دیگر فقط با «بازنشانی رمز» عوض می‌شود.")
         if len(value) < 6:
             raise serializers.ValidationError("کلمه عبور باید حداقل ۶ کاراکتر باشد.")
         return value
@@ -310,6 +369,13 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_supervisor(self, supervisor):
         if supervisor is None:
             return None
+        actor = self._non_superuser_actor()
+        unchanged = self.instance is not None and supervisor.id == self.instance.supervisor_id
+        if actor is not None and not unchanged:
+            # S11: سرپرست تازه فقط از کاربران قابل‌مشاهدهٔ انجام‌دهنده؛ پیام یکسان با «ناموجود»
+            from .scope import get_visible_users_for_user
+            if not get_visible_users_for_user(actor).filter(pk=supervisor.pk).exists():
+                raise serializers.ValidationError("سرپرست انتخاب‌شده یافت نشد.")
         if self.instance and supervisor.id == self.instance.id:
             raise serializers.ValidationError("یک کاربر نمی‌تواند سرپرست مستقیم خودش باشد.")
         if self.instance:
@@ -369,11 +435,18 @@ class UserSerializer(serializers.ModelSerializer):
 
         # اعتبارسنجی اینکه انبارهای انتسابی متعلق به شرکت‌های کاربر باشند (به جز ادمین کل)
         assigned_warehouses = attrs.get('assigned_warehouses')
-        is_su = attrs.get('is_superuser', getattr(self.instance, 'is_superuser', False))
-        if not is_su and assigned_warehouses and active_comp_ids:
+        actor = self._non_superuser_actor()
+        # S3: is_superuser فرستاده‌شده به دست غیرسوپریوزر نادیده گرفته می‌شود، پس سنجش را هم دور نمی‌زند
+        is_su = False if actor is not None else attrs.get('is_superuser', getattr(self.instance, 'is_superuser', False))
+        bound = set(active_comp_ids)
+        if actor is not None and not bound:
+            # کاربر بی‌شرکت: انبار فقط از شرکت‌های عضویت خود انجام‌دهنده (S3)
+            from .permission_admin import member_company_ids
+            bound = member_company_ids(actor)
+        if not is_su and assigned_warehouses and (bound or actor is not None):
             for wh in assigned_warehouses:
                 wh_cid = getattr(wh, 'company_id', None)
-                if wh_cid is not None and wh_cid not in active_comp_ids:
+                if wh_cid is not None and wh_cid not in bound:
                     raise serializers.ValidationError({
                         'assigned_warehouses': f'انبار «{getattr(wh, "name", str(wh))}» متعلق به شرکت دیگری است و به شرکت‌های مجاز این کاربر تعلق ندارد.'
                     })
@@ -404,7 +477,8 @@ class UserSerializer(serializers.ModelSerializer):
         try:
             from django.apps import apps
             if apps.is_installed('companies'):
-                accesses = list(instance.company_accesses.select_related('company').all())
+                # .all() از prefetch ویوست (company_accesses__company) استفاده می‌کند؛ select_related آن را دور می‌زد (N+1)
+                accesses = list(instance.company_accesses.all())
                 comp_access_data = []
                 comp_ids = []
                 def_cid = None
@@ -457,7 +531,47 @@ class UserSerializer(serializers.ModelSerializer):
         wh_ext = _get_user_warehouse_extension()
         if instance.is_superuser and wh_ext is not None and 'assigned_warehouses' in ret:
             ret['assigned_warehouses'] = wh_ext.get_all_warehouse_ids()
+
+        self._limit_to_actor_scope(instance, ret)
+
+        # S4: کد کارت شناسایی امضاشده (برای چاپ کارت و QR)؛ صفحهٔ عمومی فقط نام و عکس را تأیید می‌کند
+        from .scope import card_code_for
+        ret['card_code'] = card_code_for(instance)
+        # S12: رمز یک‌بارمصرف تازه فقط یک بار، در پاسخ همان ساخت
+        otp = getattr(instance, '_one_time_password', None)
+        if otp:
+            ret['one_time_password'] = otp
         return ret
+
+    def _limit_to_actor_scope(self, instance, ret):
+        """
+        S7: برای غیرسوپریوزر، شرکت‌ها، انبارها و متن «شرکت» کاربر مشترک فقط در شرکت‌های خود انجام‌دهنده
+        دیده می‌شود (خود انجام‌دهنده همه را می‌بیند).
+        """
+        actor = self._non_superuser_actor()
+        if actor is None or instance.pk == actor.pk:
+            return
+        scope = self._display_scope()
+        if scope is None:
+            return
+        cids = scope['company_ids']
+        if 'company_accesses' in ret:
+            accesses = [a for a in ret.get('company_accesses') or [] if a.get('company_id') in cids]
+            ret['company_accesses'] = accesses
+            ret['company_ids'] = [c for c in ret.get('company_ids') or [] if c in cids]
+            default = ret.get('default_company_id')
+            if default not in cids:
+                default = next((a['company_id'] for a in accesses if a.get('is_default')), None)
+                ret['default_company_id'] = default if default is not None else (
+                    ret['company_ids'][0] if ret['company_ids'] else None)
+        from .scope import visible_company_text
+        ret['company'] = visible_company_text(scope, ret.get('company'))
+        if not ret['company'] and ret.get('company_accesses'):
+            def_item = next((c for c in ret['company_accesses'] if c.get('is_default')), ret['company_accesses'][0])
+            ret['company'] = def_item.get('company_name') or ''
+        wh_ids = scope.get('warehouse_ids')
+        if wh_ids is not None and 'assigned_warehouses' in ret:
+            ret['assigned_warehouses'] = [w for w in ret['assigned_warehouses'] or [] if w in wh_ids]
 
     def create(self, validated_data):
         from django.db import transaction
@@ -484,12 +598,18 @@ class UserSerializer(serializers.ModelSerializer):
                 validated_data['email'] = ''
 
             user = CustomUser(**validated_data)
+            otp = None
             if password:
                 user.set_password(password)
             else:
-                user.set_password('123456')
+                # S12 و تصمیم ۳: رمز یک‌بارمصرف تصادفی که فقط یک بار در پاسخ ساخت برمی‌گردد
+                from .scope import generate_one_time_password
+                otp = generate_one_time_password()
+                user.set_password(otp)
                 user.requires_password_change = True
             user.save()
+            if otp:
+                user._one_time_password = otp
 
             if groups is not None:
                 user.groups.set(groups)
@@ -518,6 +638,13 @@ class UserSerializer(serializers.ModelSerializer):
             default_company_id = validated_data.pop('default_company_id', None)
             company_accesses_data = validated_data.pop('company_accesses', None)
 
+            # S7: متن «شرکت» که برای مدیر خالی نمایش داده شده با ذخیرهٔ فرم او پاک نمی‌شود
+            if not validated_data.get('company') and 'company' in validated_data:
+                from .scope import actor_display_scope, visible_company_text
+                scope = actor_display_scope(self._actor())
+                if scope is not None and instance.company and not visible_company_text(scope, instance.company):
+                    validated_data.pop('company')
+
             if 'email' in validated_data and not validated_data['email']:
                 validated_data['email'] = ''
             
@@ -534,8 +661,12 @@ class UserSerializer(serializers.ModelSerializer):
             assigned_warehouses = validated_data.pop('assigned_warehouses', None) if wh_ext is not None else None
             password = validated_data.pop('password', None)
             if password:
+                # validate_password رمز کاربر دیگر را از پیش رد کرده است؛ اینجا فقط رمز خود انجام‌دهنده
+                actor = self._actor()
+                if actor is None or actor.pk != instance.pk:
+                    raise ValidationError({'password': 'رمز کاربر دیگر فقط با «بازنشانی رمز» عوض می‌شود.'})
                 instance.set_password(password)
-            
+
             # Check if the user is currently an admin (superuser only)
             was_admin = instance.is_superuser
             
@@ -567,8 +698,14 @@ class UserSerializer(serializers.ModelSerializer):
                 instance.user_permissions.set(user_permissions)
 
             if assigned_warehouses is not None and wh_ext is not None:
+                actor = self._non_superuser_actor()
+                if actor is not None:
+                    # S3: فقط بخشِ درون دامنهٔ انجام‌دهنده جایگزین می‌شود؛ انتساب‌های بیرون از دامنه می‌مانند
+                    in_scope = wh_ext.scoped_warehouse_ids(actor)
+                    kept = [w for w in wh_ext.get_assigned(instance) if w.pk not in in_scope]
+                    assigned_warehouses = kept + [w for w in assigned_warehouses if w not in kept]
                 wh_ext.set_assigned(instance, assigned_warehouses)
-            
+
             user = super().update(instance, validated_data)
 
             if company_ids is not None or company_accesses_data is not None or default_company_id is not None:
