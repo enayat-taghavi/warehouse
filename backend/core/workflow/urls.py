@@ -15,5 +15,6 @@ urlpatterns = [
     path('thresholds/<int:threshold_id>/', views.ThresholdDetailView.as_view(), name='workflow-threshold-detail'),
     path('settings/<int:company_id>/', views.CompanySettingsView.as_view(), name='workflow-company-settings'),
     path('substitutes/', views.SubstituteListView.as_view(), name='workflow-substitutes'),
+    path('substitutes/candidates/', views.SubstituteCandidatesView.as_view(), name='workflow-substitute-candidates'),
     path('substitutes/<int:substitute_id>/', views.SubstituteDetailView.as_view(), name='workflow-substitute-detail'),
 ]

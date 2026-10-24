@@ -9,6 +9,7 @@ import {
   WorkflowDefinition,
   WorkflowHistory,
   WorkflowInstanceState,
+  WorkflowPerson,
   WorkflowSubstitute,
   WorkflowSubstituteInput,
   WorkflowTaskAction,
@@ -95,6 +96,14 @@ export class WorkflowApiService {
   getSubstitutes(principal?: number): Observable<WorkflowSubstitute[]> {
     return this.api.get<WorkflowSubstitute[]>(
       `${WF}/substitutes`, principal != null ? { principal } : undefined, WorkflowApiService.direct());
+  }
+
+  /** هم‌شرکتی‌هایی که می‌توانند جانشین صاحب کار شوند (همان شرط ثبت؛ فقط شناسه و نام). */
+  getSubstituteCandidates(principal?: number, company?: number | null): Observable<WorkflowPerson[]> {
+    const params: Record<string, number> = {};
+    if (principal != null) params['principal'] = principal;
+    if (company != null) params['company'] = company;
+    return this.api.get<WorkflowPerson[]>(`${WF}/substitutes/candidates`, params, WorkflowApiService.direct());
   }
 
   createSubstitute(input: WorkflowSubstituteInput): Observable<WorkflowSubstitute> {

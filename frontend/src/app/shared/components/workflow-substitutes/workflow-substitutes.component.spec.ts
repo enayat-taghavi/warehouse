@@ -5,7 +5,6 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { WorkflowSubstitutesComponent } from './workflow-substitutes.component';
 import { WorkflowApiService } from '../../../core/api/workflow-api.service';
-import { UserApiService } from '../../../core/api/user-api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
@@ -14,7 +13,6 @@ import { WorkflowSubstitute } from '../../../core/models/workflow.model';
 describe('WorkflowSubstitutesComponent', () => {
   let component: WorkflowSubstitutesComponent;
   let mockWorkflowApi: any;
-  let mockUserApi: any;
   let mockActiveCompany: any;
   let mockConfirmDialog: any;
   let mockToast: any;
@@ -60,17 +58,12 @@ describe('WorkflowSubstitutesComponent', () => {
     mockWorkflowApi = {
       getSubstitutes: vi.fn().mockReturnValue(of(sampleSubstitutes)),
       createSubstitute: vi.fn().mockReturnValue(of({ id: 99 })),
-      revokeSubstitute: vi.fn().mockReturnValue(of({ success: true }))
-    };
-
-    mockUserApi = {
-      getAll: vi.fn().mockReturnValue(
-        of({
-          results: [
-            { id: 20, first_name: 'رضا', last_name: 'کریمی', username: 'reza' },
-            { id: 30, first_name: 'سارا', last_name: 'احمدی', username: 'sara' }
-          ]
-        })
+      revokeSubstitute: vi.fn().mockReturnValue(of({ success: true })),
+      getSubstituteCandidates: vi.fn().mockReturnValue(
+        of([
+          { id: 20, name: 'رضا کریمی' },
+          { id: 30, name: 'سارا احمدی' }
+        ])
       )
     };
 
@@ -92,7 +85,6 @@ describe('WorkflowSubstitutesComponent', () => {
     const injector = Injector.create({
       providers: [
         { provide: WorkflowApiService, useValue: mockWorkflowApi },
-        { provide: UserApiService, useValue: mockUserApi },
         { provide: ActiveCompanyService, useValue: mockActiveCompany },
         { provide: ConfirmDialogService, useValue: mockConfirmDialog },
         { provide: ToastService, useValue: mockToast }
@@ -112,6 +104,7 @@ describe('WorkflowSubstitutesComponent', () => {
     expect(component.loading).toBe(false);
     expect(component.availableUsers.length).toBe(2);
     expect(component.availableUsers[0].name).toBe('رضا کریمی');
+    expect(mockWorkflowApi.getSubstituteCandidates).toHaveBeenCalledWith(undefined, null);
   });
 
   it('2. displays empty state when substitute list is empty', () => {

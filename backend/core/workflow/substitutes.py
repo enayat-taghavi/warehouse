@@ -223,6 +223,50 @@ def list_substitutes(editor, principal_id=None):
     return qs.order_by('-start_date', '-id'), True
 
 
+MAX_CANDIDATES = 500
+
+
+def substitute_candidates(editor, principal_id=None, company_id=None) -> list:
+    """
+    نامزدهای جانشین برای فرم تعیین (همان شرط create_substitute): فعال، غیر مدیر کل، جز صاحب کار، و عضو فعال همهٔ
+    شرکت‌های اعمال (شرکت داده‌شده یا همهٔ شرکت‌های صاحب کار). صاحب کار دیگر فقط با قاعدهٔ manager_can_handle.
+    خروجی فقط [{id, name}] تا مجوز فهرست کاربران لازم نباشد و چیزی بیش از هم‌شرکتی بودن لو نرود.
+    """
+    if not getattr(editor, 'is_active', False) or not editor.pk:
+        raise WorkflowPermissionDenied('not_allowed', 'اجازهٔ تعیین جانشین ندارید', 403)
+    try:
+        principal_id = int(principal_id) if principal_id not in (None, '') else editor.pk
+        company_id = int(company_id) if company_id not in (None, '') else None
+    except (TypeError, ValueError):
+        raise _bad('invalid_input', 'شناسهٔ کاربر یا شرکت نامعتبر است')
+
+    if principal_id == editor.pk:
+        principal = editor
+    else:
+        principal = CustomUser.objects.filter(pk=principal_id).first()
+        if principal is None or not manager_can_handle(editor, principal, _target_companies(principal_id, company_id)):
+            raise WorkflowPermissionDenied('out_of_scope', 'این کاربر در دامنهٔ مدیریت شما نیست', 403)
+    if getattr(principal, 'is_superuser', False):
+        return []
+    if company_id and (principal.pk, company_id) not in company_member_pairs([principal.pk], [company_id]):
+        raise _bad('principal_not_member', 'صاحب کار عضو این شرکت نیست')
+    companies = _target_companies(principal.pk, company_id)
+    if not companies:
+        return []
+
+    member_of = {}
+    for uid, c, pc, sc in SectionAssignment.objects.filter(
+        Q(company_id__in=companies) | Q(project__company_id__in=companies)
+        | Q(section__project__company_id__in=companies),
+        is_active=True, user__is_active=True, user__is_superuser=False,
+    ).exclude(user_id=principal.pk).values_list('user_id', 'company_id', 'project__company_id',
+                                                'section__project__company_id'):
+        member_of.setdefault(uid, set()).add(c or pc or sc)
+    ids = [uid for uid, cs in member_of.items() if companies <= cs]
+    users = CustomUser.objects.filter(pk__in=ids).only('id', 'username', 'first_name', 'last_name')
+    return sorted((person(u) for u in users), key=lambda p: (p['name'], p['id']))[:MAX_CANDIDATES]
+
+
 def serialize_substitute(row, editor, manager_mode=False, today=None) -> dict:
     today = today or timezone.localdate()
     return {

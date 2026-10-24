@@ -33,7 +33,7 @@ from .queries import count_tasks_for_user, tasks_for_user, unassigned_open_tasks
 from .recipients import company_member_pairs
 from .registry import APPROVE, workflow_specs
 from .substitutes import (AUDIT_MODULE, create_substitute, is_live_superuser, list_substitutes, revoke_substitute,
-                          serialize_substitute)
+                          serialize_substitute, substitute_candidates)
 
 THRESHOLD_PERMISSION = 'accounts.perm_workflow_thresholds'
 MAX_HOURS = 720
@@ -370,6 +370,12 @@ class SubstituteListView(WorkflowAPIView):
         row = (type(row).objects.select_related('principal', 'substitute', 'company', 'created_by', 'revoked_by')
                .get(pk=row.pk))
         return Response(serialize_substitute(row, request.user, row.principal_id != request.user.pk), status=201)
+
+
+class SubstituteCandidatesView(WorkflowAPIView):
+    def get(self, request):
+        p = request.query_params
+        return Response(substitute_candidates(request.user, p.get('principal'), p.get('company')))
 
 
 class SubstituteDetailView(WorkflowAPIView):

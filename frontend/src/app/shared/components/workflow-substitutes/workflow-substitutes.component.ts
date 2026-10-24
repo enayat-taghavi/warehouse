@@ -11,7 +11,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { WorkflowApiService } from '../../../core/api/workflow-api.service';
-import { UserApiService } from '../../../core/api/user-api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import {
   WorkflowSubstitute,
@@ -54,7 +53,6 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
   @Input() principalId?: number;
 
   private workflowApi = inject(WorkflowApiService);
-  private userApi = inject(UserApiService, { optional: true });
   private activeCompany = inject(ActiveCompanyService, { optional: true });
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private toast = inject(ToastService, { optional: true });
@@ -78,7 +76,7 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
   fieldErrors: { substitute?: string; dates?: string } = {};
 
   // لیست کاربران برای جستجو و انتخاب
-  availableUsers: { id: number; name: string; username: string }[] = [];
+  availableUsers: { id: number; name: string }[] = [];
   userSearch = '';
   isLoadingUsers = false;
 
@@ -93,9 +91,7 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
   get filteredUsers() {
     if (!this.userSearch.trim()) return this.availableUsers;
     const q = this.userSearch.trim().toLowerCase();
-    return this.availableUsers.filter(
-      (u) => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q)
-    );
+    return this.availableUsers.filter((u) => u.name.toLowerCase().includes(q));
   }
 
   ngOnInit(): void {
@@ -106,6 +102,7 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['principalId'] && !changes['principalId'].firstChange) {
       this.loadSubstitutes();
+      this.loadUsers();
     }
   }
 
@@ -133,21 +130,21 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
     });
   }
 
+  /** نامزدها از سرور با همان شرط ثبت جانشین (هم‌شرکتی‌های صاحب کار در شرکت انتخاب‌شده یا همهٔ شرکت‌ها). */
   loadUsers(): void {
-    if (!this.userApi) return;
     this.isLoadingUsers = true;
-    this.userApi.getAll({ is_active: true, page: 1 }).subscribe({
-      next: (res) => {
-        const list = res?.results || [];
-        this.availableUsers = list.map((u: any) => ({
-          id: u.id,
-          name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
-          username: u.username
-        }));
+    const company = this.companyId ? Number(this.companyId) : null;
+    this.workflowApi.getSubstituteCandidates(this.principalId, company).subscribe({
+      next: (list) => {
+        this.availableUsers = list || [];
+        if (this.substituteId != null && !this.availableUsers.some((u) => u.id === Number(this.substituteId))) {
+          this.substituteId = null;
+        }
         this.isLoadingUsers = false;
         this.cdr?.markForCheck();
       },
       error: () => {
+        this.availableUsers = [];
         this.isLoadingUsers = false;
         this.cdr?.markForCheck();
       }

@@ -47,7 +47,7 @@
               type="text"
               [(ngModel)]="userSearch"
               name="userSearch"
-              placeholder="جستجوی نام یا نام‌کاربری..."
+              placeholder="جستجوی نام..."
               class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
             />
             <select
@@ -59,7 +59,7 @@
             >
               <option [ngValue]="null" disabled>انتخاب کاربر جانشین...</option>
               <option *ngFor="let u of filteredUsers" [value]="u.id">
-                {{ u.name }} ({{ u.username }})
+                {{ u.name }}
               </option>
             </select>
           </div>
@@ -75,6 +75,7 @@
           </label>
           <select
             [(ngModel)]="companyId"
+            (ngModelChange)="loadUsers()"
             name="companyId"
             class="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
           >

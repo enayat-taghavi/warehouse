@@ -168,3 +168,48 @@ class SubstituteTaskTests(SubstituteApiBase):
         # مدیر در دامنه لغو هم می‌کند
         self.assertEqual(self.client_for(self.manager).delete(
             f'/api/workflow/substitutes/{mine["id"]}/').status_code, 200)
+
+
+class SubstituteCandidatesTests(SubstituteApiBase):
+    """نامزدهای جانشین (۲.۳-ه): همان شرط تعیین، فقط {id, name}، بی‌نیاز به مجوز فهرست کاربران."""
+
+    def ids(self, editor, **params):
+        r = self.get(editor, 'substitutes/candidates/', **params)
+        self.assertEqual(r.status_code, 200, r.data)
+        return {x['id'] for x in r.data}
+
+    def test_self_candidates_are_live_members_only(self):
+        UserCompanyAccess.objects.create(user=self.outsider, company=self.co)  # ردیف دسترسی تنها عضویت نیست
+        self.helper2.is_active = False
+        self.helper2.save()
+        r = self.get(self.lead, 'substitutes/candidates/')
+        self.assertTrue(r.data and all(set(x) == {'id', 'name'} for x in r.data))
+        got = {x['id'] for x in r.data}
+        self.assertIn(self.helper.pk, got)
+        self.assertIn(self.manager.pk, got)
+        for absent in (self.lead, self.helper2, self.outsider, self.far_manager, self.su):
+            self.assertNotIn(absent.pk, got, absent.username)
+        # هر نامزد را create_substitute هم می‌پذیرد
+        self.assertEqual(self.create(self.lead, substitute_id=self.manager.pk).status_code, 201)
+
+    def test_all_principal_companies_or_given_company(self):
+        both = self.user('both', 'wf_member')
+        self.assign(both, 'wf_member', section=self.other_sec)
+        self.assign(self.lead, 'wf_lead', section=self.other_sec)
+        self.assertEqual(self.ids(self.lead) - {self.outsider.pk, self.far_manager.pk}, {both.pk})
+        self.assertIn(self.helper.pk, self.ids(self.lead, company=self.co.pk))
+        self.assertNotIn(self.helper.pk, self.ids(self.lead, company=self.co2.pk))
+
+    def test_company_principal_not_member_and_bad_input(self):
+        r = self.get(self.helper, 'substitutes/candidates/', company=self.co2.pk)
+        self.assertEqual((r.status_code, r.data['code']), (400, 'principal_not_member'))
+        self.assertEqual(self.get(self.helper, 'substitutes/candidates/', company='x').status_code, 400)
+        self.assertEqual(self.get(self.su, 'substitutes/candidates/').data, [])
+
+    def test_manager_mode_same_rule_as_create(self):
+        self.assertIn(self.helper.pk, self.ids(self.manager, principal=self.lead.pk))
+        self.assertNotIn(self.lead.pk, self.ids(self.manager, principal=self.lead.pk))
+        for editor, principal in ((self.far_manager, self.lead.pk), (self.helper2, self.lead.pk),
+                                  (self.manager, self.su.pk), (self.manager, 999999)):
+            r = self.get(editor, 'substitutes/candidates/', principal=principal)
+            self.assertEqual((r.status_code, r.data['code']), (403, 'out_of_scope'), (editor, principal))
