@@ -1,0 +1,291 @@
+<div class="workflow-substitutes-container p-3 sm:p-5 flex flex-col gap-4 text-xs" dir="rtl">
+  <!-- سربرگ -->
+  <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+    <div>
+      <h3 class="text-sm font-black text-slate-800">
+        {{ isManagerMode ? 'مدیریت جانشین موقت کاربر' : 'جانشین موقت من' }}
+      </h3>
+      <p class="text-[11px] text-slate-400 font-medium mt-0.5">
+        انتقال موقت کارهای گردش کار در بازهٔ زمانی مشخص
+      </p>
+    </div>
+    <button
+      type="button"
+      appAction="refresh"
+      display="icon"
+      size="sm"
+      (click)="loadSubstitutes()"
+      [busy]="loading"
+      title="تازه‌سازی لیست"
+      aria-label="تازه‌سازی لیست جانشین‌ها"
+    ></button>
+  </div>
+
+  <!-- حالت ۴۰۳ (عدم دسترسی مدیریت) -->
+  <div *ngIf="is403" class="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-800">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle" class="shrink-0 text-amber-600"></svg>
+    <span class="font-bold">{{ error }}</span>
+  </div>
+
+  <!-- بخش فرم تعریف جانشین جدید (در صورت عدم وجود خطای ۴۰۳) -->
+  <div *ngIf="!is403" class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+    <h4 class="text-xs font-black text-slate-700 flex items-center gap-1.5">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-plus" class="text-indigo-600"></svg>
+      <span>تعریف جانشین موقت جدید</span>
+    </h4>
+
+    <form (ngSubmit)="onSubmit()" class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- کاربر جانشین -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+            کاربر جانشین *
+          </label>
+          <div class="flex flex-col gap-1.5">
+            <input
+              *ngIf="availableUsers.length > 5"
+              type="text"
+              [(ngModel)]="userSearch"
+              name="userSearch"
+              placeholder="جستجوی نام یا نام‌کاربری..."
+              class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+            />
+            <select
+              [(ngModel)]="substituteId"
+              name="substituteId"
+              class="w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-xl focus:outline-none focus:border-indigo-500"
+              [class.border-rose-400]="fieldErrors.substitute"
+              [class.border-slate-200]="!fieldErrors.substitute"
+            >
+              <option [ngValue]="null" disabled>انتخاب کاربر جانشین...</option>
+              <option *ngFor="let u of filteredUsers" [value]="u.id">
+                {{ u.name }} ({{ u.username }})
+              </option>
+            </select>
+          </div>
+          <p *ngIf="fieldErrors.substitute" class="text-[10px] text-rose-600 font-bold mt-1">
+            {{ fieldErrors.substitute }}
+          </p>
+        </div>
+
+        <!-- شرکت (اختیاری) -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+            محدودهٔ شرکت (اختیاری)
+          </label>
+          <select
+            [(ngModel)]="companyId"
+            name="companyId"
+            class="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+          >
+            <option [ngValue]="null">همهٔ شرکت‌ها</option>
+            <option *ngFor="let c of companies" [value]="c.id">
+              {{ c.name }}
+            </option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">
+            در صورت عدم انتخاب، جانشینی در کلیهٔ شرکت‌های مشترک اعمال خواهد شد.
+          </p>
+        </div>
+      </div>
+
+      <!-- بازهٔ زمانی با ng-persian-datepicker -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- تاریخ شروع -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+            تاریخ شروع (شمسی) *
+          </label>
+          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+            <ng-persian-datepicker
+              [(uiIsVisible)]="isStartDatePickerOpen"
+              [dateInitValue]="false"
+              (dateOnSelect)="onStartDateSelect($event)"
+              class="w-full block relative cursor-pointer"
+            >
+              <input
+                type="text"
+                [formControl]="startControl"
+                (click)="isStartDatePickerOpen = !isStartDatePickerOpen"
+                placeholder="۱۴۰۵/۰۱/۰۱"
+                aria-label="تاریخ شروع جانشینی"
+                class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              />
+            </ng-persian-datepicker>
+            <button
+              type="button"
+              (click)="isStartDatePickerOpen = !isStartDatePickerOpen; $event.stopPropagation()"
+              title="انتخاب تقویم شمسی"
+              aria-label="انتخاب تاریخ شروع"
+              class="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- تاریخ پایان (سمت چپ ستون در RTL) -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+            تاریخ پایان (شمسی) *
+          </label>
+          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+            <ng-persian-datepicker
+              [(uiIsVisible)]="isEndDatePickerOpen"
+              [dateInitValue]="false"
+              (dateOnSelect)="onEndDateSelect($event)"
+              class="w-full block relative cursor-pointer datepicker-left to-datepicker"
+            >
+              <input
+                type="text"
+                [formControl]="endControl"
+                (click)="isEndDatePickerOpen = !isEndDatePickerOpen"
+                placeholder="۱۴۰۵/۰۱/۱۵"
+                aria-label="تاریخ پایان جانشینی"
+                class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              />
+            </ng-persian-datepicker>
+            <button
+              type="button"
+              (click)="isEndDatePickerOpen = !isEndDatePickerOpen; $event.stopPropagation()"
+              title="انتخاب تقویم شمسی"
+              aria-label="انتخاب تاریخ پایان"
+              class="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- خطاهای اعتبارسنجی کلاینت -->
+      <p *ngIf="fieldErrors.dates" class="text-[10px] text-rose-600 font-bold">
+        {{ fieldErrors.dates }}
+      </p>
+
+      <!-- خطای پاسخ سرور (400/403) -->
+      <div *ngIf="serverError" class="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold">
+        {{ serverError }}
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button
+          type="button"
+          appAction="close"
+          display="label"
+          label="پاک کردن فرم"
+          size="sm"
+          (click)="resetForm()"
+        ></button>
+        <button
+          type="submit"
+          appAction="create"
+          display="label"
+          label="ثبت جانشین"
+          size="sm"
+          [busy]="isCreating"
+        ></button>
+      </div>
+    </form>
+  </div>
+
+  <!-- حالت بارگذاری لیست -->
+  <div *ngIf="loading && !is403" class="py-8 text-center text-slate-500">
+    <div class="inline-block animate-spin text-2xl mb-2">⏳</div>
+    <p class="text-xs font-bold">در حال بارگذاری لیست جانشین‌ها...</p>
+  </div>
+
+  <!-- حالت خطا با دکمه تلاش دوباره -->
+  <div *ngIf="error && !loading && !is403" class="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col items-center gap-2 text-rose-700">
+    <p class="font-bold">{{ error }}</p>
+    <button
+      type="button"
+      appAction="refresh"
+      display="label"
+      label="تلاش دوباره"
+      size="sm"
+      (click)="loadSubstitutes()"
+    ></button>
+  </div>
+
+  <!-- حالت خالی -->
+  <div
+    *ngIf="!loading && !error && !is403 && substitutes.length === 0"
+    class="bg-white rounded-2xl border border-slate-200/80 p-8 text-center flex flex-col items-center gap-2 shadow-sm"
+  >
+    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
+    </div>
+    <h4 class="text-xs font-black text-slate-700">جانشینی ثبت نشده است</h4>
+    <p class="text-[11px] text-slate-400">در حال حاضر هیچ جانشینی برای این کاربر فعال یا ثبت نشده است.</p>
+  </div>
+
+  <!-- حالت داده: جدول / کارت‌های جانشین‌ها -->
+  <div *ngIf="!loading && !error && !is403 && substitutes.length > 0" class="flex flex-col gap-2">
+    <h4 class="text-xs font-black text-slate-700">فهرست جانشین‌های ثبت‌شده</h4>
+
+    <div class="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm">
+      <table class="w-full text-right border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
+            <th class="py-2.5 px-3">نام جانشین</th>
+            <th *ngIf="isManagerMode" class="py-2.5 px-3">کاربر اصلی</th>
+            <th class="py-2.5 px-3">محدوده شرکت</th>
+            <th class="py-2.5 px-3">بازه زمانی</th>
+            <th class="py-2.5 px-3 text-center">وضعیت</th>
+            <th class="py-2.5 px-3 text-center w-20">عملیات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr *ngFor="let sub of substitutes" class="hover:bg-slate-50/50 transition-colors">
+            <!-- نام جانشین -->
+            <td class="py-2.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+              {{ sub.substitute?.name || 'نامشخص' }}
+            </td>
+
+            <!-- کاربر اصلی (در حالت مدیر) -->
+            <td *ngIf="isManagerMode" class="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+              {{ sub.principal?.name || 'نامشخص' }}
+            </td>
+
+            <!-- محدوده شرکت -->
+            <td class="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+              {{ sub.company ? sub.company.name : 'همهٔ شرکت‌ها' }}
+            </td>
+
+            <!-- بازه زمانی (شمسی) -->
+            <td class="py-2.5 px-3 font-mono text-[11px] text-slate-700 whitespace-nowrap">
+              {{ sub.start_date_shamsi }} تا {{ sub.end_date_shamsi }}
+            </td>
+
+            <!-- برچسب وضعیت -->
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              <span
+                class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block"
+                [ngClass]="getStatusBadgeClass(sub)"
+              >
+                {{ getStatusLabel(sub) }}
+              </span>
+            </td>
+
+            <!-- دکمه لغو (فقط در صورت can_revoke) -->
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              <button
+                *ngIf="sub.can_revoke"
+                type="button"
+                appAction="delete"
+                display="label"
+                label="لغو"
+                size="sm"
+                (click)="onRevoke(sub)"
+                title="لغو جانشینی موقت"
+                aria-label="لغو جانشینی موقت"
+              ></button>
+              <span *ngIf="!sub.can_revoke" class="text-slate-300 text-[11px]">-</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

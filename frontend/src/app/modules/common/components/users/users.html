@@ -1259,6 +1259,15 @@
           <svg appIcon="key" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           <span class="truncate hidden sm:inline">مجوزها</span>
         </button>
+
+        <!-- تب ۶: جانشین موقت (طرح ۲.۳)؛ فقط برای کاربر ذخیره‌شده -->
+        <button *ngIf="editingUser?.id" type="button" (click)="setUserModalInnerTab('substitute')" data-user-substitute-tab
+          [ngClass]="userModalInnerTab === 'substitute' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
+          class="flex-1 min-w-[40px] min-h-[40px] py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none"
+          title="جانشین موقت کاربر" aria-label="جانشین موقت کاربر">
+          <svg appIcon="user-check" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span class="truncate hidden sm:inline">جانشین</span>
+        </button>
       </div>
     </div>
     
@@ -1733,6 +1742,11 @@
         <!-- تب ۵: مجوزهای کاربر (طرح ۲.۲، ت۴ و ت۱۰) -->
         <div *ngIf="userModalInnerTab === 'permissions' && editingUser?.id" class="fade-in duration-200">
           <app-user-permissions-tab [userId]="editingUser.id" (goToAssignments)="openUserAssignments($event)" />
+        </div>
+
+        <!-- تب ۶: جانشین موقت کاربر (طرح ۲.۳) -->
+        <div *ngIf="userModalInnerTab === 'substitute' && editingUser?.id" class="fade-in duration-200">
+          <app-workflow-substitutes [principalId]="editingUser.id" />
         </div>
 
         <!-- تب ۴: شرکت‌ها و انبارهای مجاز -->

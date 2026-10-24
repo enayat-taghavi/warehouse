@@ -28,6 +28,7 @@ import { ActiveCompanyService } from '../../../core/services/active-company.serv
 import { Company } from '../../../core/models/company.model';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ActionButtonComponent } from '../action-button/action-button.component';
+import { WorkflowSubstitutesComponent } from '../workflow-substitutes/workflow-substitutes.component';
 import { BRANDING } from '../../../core/branding';
 
 export interface ShortcutCategory {
@@ -61,6 +62,7 @@ const SUMMARY_BADGE_CLASSES: Record<string, string> = {
     FormsModule,
     AvatarCropperModal,
     DeepSyncModalComponent,
+    WorkflowSubstitutesComponent,
     SvgIconDirective,
     ActionButtonComponent
   ],
@@ -94,6 +96,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   }
 
   public isUserMenuOpen = false;
+  public isSubstituteModalOpen = false;
   public isAvatarModalOpen = false;
   public isSavingAvatar = false;
   public get isCheckingAppUpdate(): boolean {
@@ -787,6 +790,10 @@ export class UserMenuComponent implements OnInit, OnDestroy {
         this.isShortcutsHelpOpen = false;
         this.cdr.detectChanges();
       }
+      if (this.isSubstituteModalOpen) {
+        this.isSubstituteModalOpen = false;
+        this.cdr.detectChanges();
+      }
       if (this.isUserMenuOpen) {
         this.isUserMenuOpen = false;
         this.cdr.detectChanges();
@@ -800,6 +807,11 @@ export class UserMenuComponent implements OnInit, OnDestroy {
 
   public goToMyTasks(): void {
     this.router.navigate(['/app/my-tasks']);
+  }
+
+  public openSubstituteModal(): void {
+    this.isSubstituteModalOpen = true;
+    this.closeUserMenu();
   }
 
   public goToLauncher(): void {

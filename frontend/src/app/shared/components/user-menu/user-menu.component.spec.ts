@@ -474,5 +474,15 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/my-tasks']);
     });
   });
+
+  describe('WorkflowSubstitutes "جانشین من" integration', () => {
+    it('opens substitute modal and closes user menu when openSubstituteModal is called', () => {
+      component.isUserMenuOpen = true;
+      component.isSubstituteModalOpen = false;
+      component.openSubstituteModal();
+      expect(component.isSubstituteModalOpen).toBe(true);
+      expect(component.isUserMenuOpen).toBe(false);
+    });
+  });
 });
 

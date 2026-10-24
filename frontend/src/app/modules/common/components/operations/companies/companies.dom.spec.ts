@@ -1657,7 +1657,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('تب مشارکتی به ترتیب order میان تب‌های هسته می‌نشیند و تب هم‌نام هسته نادیده گرفته می‌شود', () => {
       component.setupStudioForNew();
-      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'x_tab', 'documents', 'projects', 'access']);
+      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'x_tab', 'documents', 'projects', 'access', 'workflow']);
       expect(component.modalTabs.find(t => t.id === 'identity')?.label).toBe('مشخصات هویتی و ثبتی');
     });
 

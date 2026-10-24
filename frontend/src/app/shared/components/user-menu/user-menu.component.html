@@ -80,6 +80,18 @@
         </span>
       </button>
 
+      <!-- جانشین من -->
+      <button
+        type="button"
+        (click)="openSubstituteModal()"
+        class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer"
+        title="جانشین من"
+        aria-label="جانشین من"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-check"></svg>
+        <span>جانشین من</span>
+      </button>
+
       <!-- پورتال لانچر برنامه‌ها -->
       <button (click)="goToLauncher(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer" title="پورتال لانچر برنامه‌ها">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="grid-rounded"></svg>
@@ -252,3 +264,32 @@
     </div>
   </div>
 </div>
+
+<!-- Modal جانشین من -->
+<div
+  *ngIf="isSubstituteModalOpen"
+  class="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md fade-in"
+  (click)="isSubstituteModalOpen = false"
+  dir="rtl"
+>
+  <div
+    class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh] transition-all relative"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="absolute top-4 left-4 z-10">
+      <button
+        type="button"
+        (click)="isSubstituteModalOpen = false"
+        class="w-9 h-9 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+        title="بستن (Esc)"
+        aria-label="بستن"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+      </button>
+    </div>
+    <div class="overflow-y-auto max-h-[90vh]">
+      <app-workflow-substitutes></app-workflow-substitutes>
+    </div>
+  </div>
+</div>
+

@@ -39,13 +39,14 @@ import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/t
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { RoleBundlesPanel } from './role-bundles-panel/role-bundles-panel';
 import { UserPermissionsTabComponent } from './user-permissions-tab/user-permissions-tab';
+import { WorkflowSubstitutesComponent } from '../../../../shared/components/workflow-substitutes/workflow-substitutes.component';
 import { saveBlob } from '../../../../core/platform/file-output';
 
 import { IconName } from '../../../../shared/icons/icon-registry';
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent, WorkflowSubstitutesComponent],
   providers: [UsersFacade],
   templateUrl: './users.html',
   styleUrl: './users.css'
@@ -132,7 +133,7 @@ export class Users implements OnInit, OnDestroy {
   activePermTab = 'MAIN_MENU';
   /** 'all'، 'global' یا کلید users.roleScope یکی از ماژول‌ها */
   userRoleModalTab: string = 'global';
-  userModalInnerTab: 'identity' | 'security' | 'roles' | 'warehouses' | 'permissions' = 'identity';
+  userModalInnerTab: 'identity' | 'security' | 'roles' | 'warehouses' | 'permissions' | 'substitute' = 'identity';
   searchQuery = '';
   searchSubject = new Subject<string>();
   private searchSub?: Subscription;
@@ -1431,9 +1432,9 @@ export class Users implements OnInit, OnDestroy {
     });
   }
 
-  setUserModalInnerTab(tab: 'identity' | 'security' | 'roles' | 'warehouses' | 'permissions') {
-    // تب «مجوزها» فقط برای کاربر ذخیره‌شده (طرح ۲.۲، ت۴)
-    if (tab === 'permissions' && !this.editingUser?.id) return;
+  setUserModalInnerTab(tab: 'identity' | 'security' | 'roles' | 'warehouses' | 'permissions' | 'substitute') {
+    // تب «مجوزها» و «جانشین» فقط برای کاربر ذخیره‌شده (طرح ۲.۲، ۲.۳)
+    if ((tab === 'permissions' || tab === 'substitute') && !this.editingUser?.id) return;
     this.userModalInnerTab = tab;
     this.cdr.detectChanges();
   }
