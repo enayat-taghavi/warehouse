@@ -112,7 +112,6 @@ export class MyTasksComponent implements OnInit, OnDestroy {
         {
           id: 'my-tasks',
           label: 'کارهای من',
-          shortLabel: 'من',
           icon: 'clipboard-check',
           count: myCount
         }
@@ -121,7 +120,7 @@ export class MyTasksComponent implements OnInit, OnDestroy {
         list.push({
           id: 'unassigned',
           label: 'کارهای بی‌دریافت‌کننده',
-          shortLabel: 'بیگیرنده',
+          shortLabel: 'بی‌گیرنده',
           icon: 'users',
           count: unassignedCount
         });

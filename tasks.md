@@ -110,7 +110,7 @@ test(release-v1 2.3-e): invoice workflow scenarios 4 and 7 (no second approval l
 
 ===
 
-Session 1 of 1 — Release v1 2.3 heavy checks: low-risk UI review fixes (accessibility, contrast, labels, states) in the workflow screens
+[DONE] Session 1 of 1 — Release v1 2.3 heavy checks: low-risk UI review fixes (accessibility, contrast, labels, states) in the workflow screens
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

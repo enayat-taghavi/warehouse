@@ -103,7 +103,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <div class="relative ps-4 ms-1 border-s-2 border-indigo-100 flex flex-col gap-3.5 my-1">
             <div *ngFor="let step of instance.steps" class="relative flex flex-col gap-1 text-xs">
               <!-- نقطه اتصال خط زمان -->
-              <div class="absolute -end-[23px] top-1 w-3 h-3 rounded-full bg-white border-2 border-indigo-500 shadow-sm"></div>
+              <div class="absolute -start-[23px] top-1 w-3 h-3 rounded-full bg-white border-2 border-indigo-500 shadow-sm"></div>
 
               <!-- ردیف اقدام‌کننده و عمل -->
               <div class="flex items-center gap-2 flex-wrap">
