@@ -23,7 +23,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
   template: `
     <div class="workflow-history-container flex flex-col gap-3" dir="rtl">
       <!-- حالت در حال بارگذاری -->
-      <div *ngIf="loading" class="flex items-center justify-center py-8 text-slate-400 gap-2 text-xs font-semibold">
+      <div *ngIf="loading" class="flex items-center justify-center py-8 text-slate-500 gap-2 text-xs font-semibold">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="animate-spin text-indigo-500"></svg>
         <span>در حال بارگذاری سابقهٔ گردش کار...</span>
       </div>
@@ -33,7 +33,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
         *ngIf="!loading && notFound"
         class="bg-slate-50 border border-slate-200/80 rounded-2xl p-6 text-center text-xs font-bold text-slate-500 flex flex-col items-center gap-2"
       >
-        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
         </div>
         <span>سابقه‌ای برای این سند ثبت نشده است</span>
@@ -42,6 +42,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
       <!-- حالت خطای غیر ۴۰۴ با دکمه تلاش مجدد -->
       <div
         *ngIf="!loading && hasError && !notFound"
+        role="alert"
         class="bg-rose-50 border border-rose-200/80 rounded-2xl p-4 text-center text-xs flex flex-col items-center gap-2"
       >
         <span class="font-bold text-rose-700">{{ errorMessage || 'خطا در دریافت سابقهٔ گردش کار' }}</span>
@@ -79,7 +80,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             </div>
 
             <div class="flex items-center gap-2 self-end sm:self-auto">
-              <div class="text-[11px] text-slate-400">
+              <div class="text-[11px] text-slate-500">
                 <span *ngIf="instance.created_by">ثبت: {{ instance.created_by.name }} • </span>
                 <span>{{ instance.submitted_at_shamsi }}</span>
               </div>
@@ -99,10 +100,10 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           </div>
 
           <!-- خط زمان عمودی مراحل (Vertical Timeline) -->
-          <div class="relative pr-4 mr-1 border-r-2 border-indigo-100 flex flex-col gap-3.5 my-1">
+          <div class="relative ps-4 ms-1 border-s-2 border-indigo-100 flex flex-col gap-3.5 my-1">
             <div *ngFor="let step of instance.steps" class="relative flex flex-col gap-1 text-xs">
               <!-- نقطه اتصال خط زمان -->
-              <div class="absolute -right-[23px] top-1 w-3 h-3 rounded-full bg-white border-2 border-indigo-500 shadow-sm"></div>
+              <div class="absolute -end-[23px] top-1 w-3 h-3 rounded-full bg-white border-2 border-indigo-500 shadow-sm"></div>
 
               <!-- ردیف اقدام‌کننده و عمل -->
               <div class="flex items-center gap-2 flex-wrap">
@@ -116,7 +117,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 <span class="font-bold text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md text-[11px]">
                   {{ step.action_fa }}
                 </span>
-                <span class="text-[11px] text-slate-400 font-medium mr-auto">
+                <span class="text-[11px] text-slate-500 font-medium ms-auto">
                   {{ step.at_shamsi }}
                 </span>
               </div>

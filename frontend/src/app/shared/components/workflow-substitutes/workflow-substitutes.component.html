@@ -5,7 +5,7 @@
       <h3 class="text-sm font-black text-slate-800">
         {{ isManagerMode ? 'مدیریت جانشین موقت کاربر' : 'جانشین موقت من' }}
       </h3>
-      <p class="text-[11px] text-slate-400 font-medium mt-0.5">
+      <p class="text-[11px] text-slate-500 font-medium mt-0.5">
         انتقال موقت کارهای گردش کار در بازهٔ زمانی مشخص
       </p>
     </div>
@@ -22,7 +22,7 @@
   </div>
 
   <!-- حالت ۴۰۳ (عدم دسترسی مدیریت) -->
-  <div *ngIf="is403" class="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-800">
+  <div *ngIf="is403" role="alert" class="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-800">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle" class="shrink-0 text-amber-600"></svg>
     <span class="font-bold">{{ error }}</span>
   </div>
@@ -38,22 +38,25 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <!-- کاربر جانشین -->
         <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+          <label for="wfsub-substitute" class="block text-[11px] font-bold text-slate-700 mb-1">
             کاربر جانشین *
           </label>
           <div class="flex flex-col gap-1.5">
             <input
               *ngIf="availableUsers.length > 5"
               type="text"
+              id="wfsub-user-search"
               [(ngModel)]="userSearch"
               name="userSearch"
               placeholder="جستجوی نام..."
-              class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+              aria-label="جستجوی کاربر جانشین"
+              class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
             />
             <select
+              id="wfsub-substitute"
               [(ngModel)]="substituteId"
               name="substituteId"
-              class="w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-xl focus:outline-none focus:border-indigo-500"
+              class="w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
               [class.border-rose-400]="fieldErrors.substitute"
               [class.border-slate-200]="!fieldErrors.substitute"
             >
@@ -63,28 +66,29 @@
               </option>
             </select>
           </div>
-          <p *ngIf="fieldErrors.substitute" class="text-[10px] text-rose-600 font-bold mt-1">
+          <p *ngIf="fieldErrors.substitute" role="alert" class="text-[10px] text-rose-600 font-bold mt-1">
             {{ fieldErrors.substitute }}
           </p>
         </div>
 
         <!-- شرکت (اختیاری) -->
         <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+          <label for="wfsub-company" class="block text-[11px] font-bold text-slate-700 mb-1">
             محدودهٔ شرکت (اختیاری)
           </label>
           <select
+            id="wfsub-company"
             [(ngModel)]="companyId"
             (ngModelChange)="loadUsers()"
             name="companyId"
-            class="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+            class="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
           >
             <option [ngValue]="null">همهٔ شرکت‌ها</option>
             <option *ngFor="let c of companies" [value]="c.id">
               {{ c.name }}
             </option>
           </select>
-          <p class="text-[10px] text-slate-400 mt-1">
+          <p class="text-[10px] text-slate-500 mt-1">
             در صورت عدم انتخاب، جانشینی در کلیهٔ شرکت‌های مشترک اعمال خواهد شد.
           </p>
         </div>
@@ -94,7 +98,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <!-- تاریخ شروع -->
         <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+          <label for="wfsub-start-date" class="block text-[11px] font-bold text-slate-700 mb-1">
             تاریخ شروع (شمسی) *
           </label>
           <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
@@ -106,6 +110,7 @@
             >
               <input
                 type="text"
+                id="wfsub-start-date"
                 [formControl]="startControl"
                 (click)="isStartDatePickerOpen = !isStartDatePickerOpen"
                 placeholder="۱۴۰۵/۰۱/۰۱"
@@ -127,7 +132,7 @@
 
         <!-- تاریخ پایان (سمت چپ ستون در RTL) -->
         <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+          <label for="wfsub-end-date" class="block text-[11px] font-bold text-slate-700 mb-1">
             تاریخ پایان (شمسی) *
           </label>
           <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
@@ -139,6 +144,7 @@
             >
               <input
                 type="text"
+                id="wfsub-end-date"
                 [formControl]="endControl"
                 (click)="isEndDatePickerOpen = !isEndDatePickerOpen"
                 placeholder="۱۴۰۵/۰۱/۱۵"
@@ -160,12 +166,12 @@
       </div>
 
       <!-- خطاهای اعتبارسنجی کلاینت -->
-      <p *ngIf="fieldErrors.dates" class="text-[10px] text-rose-600 font-bold">
+      <p *ngIf="fieldErrors.dates" role="alert" class="text-[10px] text-rose-600 font-bold">
         {{ fieldErrors.dates }}
       </p>
 
       <!-- خطای پاسخ سرور (400/403) -->
-      <div *ngIf="serverError" class="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold">
+      <div *ngIf="serverError" role="alert" class="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold">
         {{ serverError }}
       </div>
 
@@ -197,7 +203,7 @@
   </div>
 
   <!-- حالت خطا با دکمه تلاش دوباره -->
-  <div *ngIf="error && !loading && !is403" class="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col items-center gap-2 text-rose-700">
+  <div *ngIf="error && !loading && !is403" role="alert" class="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col items-center gap-2 text-rose-700">
     <p class="font-bold">{{ error }}</p>
     <button
       type="button"
@@ -214,11 +220,11 @@
     *ngIf="!loading && !error && !is403 && substitutes.length === 0"
     class="bg-white rounded-2xl border border-slate-200/80 p-8 text-center flex flex-col items-center gap-2 shadow-sm"
   >
-    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
     </div>
     <h4 class="text-xs font-black text-slate-700">جانشینی ثبت نشده است</h4>
-    <p class="text-[11px] text-slate-400">در حال حاضر هیچ جانشینی برای این کاربر فعال یا ثبت نشده است.</p>
+    <p class="text-[11px] text-slate-500">در حال حاضر هیچ جانشینی برای این کاربر فعال یا ثبت نشده است.</p>
   </div>
 
   <!-- حالت داده: جدول / کارت‌های جانشین‌ها -->
@@ -226,7 +232,7 @@
     <h4 class="text-xs font-black text-slate-700">فهرست جانشین‌های ثبت‌شده</h4>
 
     <div class="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm">
-      <table class="w-full text-right border-collapse text-xs">
+      <table class="w-full text-start border-collapse text-xs">
         <thead>
           <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
             <th class="py-2.5 px-3">نام جانشین</th>

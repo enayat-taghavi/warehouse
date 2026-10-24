@@ -112,6 +112,7 @@ export class MyTasksComponent implements OnInit, OnDestroy {
         {
           id: 'my-tasks',
           label: 'کارهای من',
+          shortLabel: 'من',
           icon: 'clipboard-check',
           count: myCount
         }
@@ -120,6 +121,7 @@ export class MyTasksComponent implements OnInit, OnDestroy {
         list.push({
           id: 'unassigned',
           label: 'کارهای بی‌دریافت‌کننده',
+          shortLabel: 'بیگیرنده',
           icon: 'users',
           count: unassignedCount
         });
@@ -173,6 +175,10 @@ export class MyTasksComponent implements OnInit, OnDestroy {
       }
       return true;
     });
+  }
+
+  get showOffline(): boolean {
+    return !this.workflowTasks.loaded() && !this.workflowTasks.loading() && this.workflowTasks.isStale() && this.workflowTasks.tasks().length === 0;
   }
 
   get showLoading(): boolean {
@@ -280,6 +286,10 @@ export class MyTasksComponent implements OnInit, OnDestroy {
 
   dismissNotice(notice: WorkflowTaskNotice): void {
     this.workflowTasks.dismissNotice(notice.task_id);
+  }
+
+  goBack(): void {
+    this.router.navigateByUrl('/app/launcher');
   }
 
   openDocument(card: WorkflowTaskCard): void {

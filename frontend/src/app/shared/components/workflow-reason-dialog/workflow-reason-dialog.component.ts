@@ -20,14 +20,14 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
   template: `
     <div
       *ngIf="open"
-      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm fade-in"
+      class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm fade-in"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="title"
       dir="rtl"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-lg overflow-hidden flex flex-col transition-all"
+        class="bg-white rounded-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200/90 w-full max-w-lg overflow-hidden flex flex-col transition-all"
         (click)="$event.stopPropagation()"
       >
         <!-- سربرگ -->
@@ -52,7 +52,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
         <!-- بدنه -->
         <div class="p-4 flex flex-col gap-2">
           <label for="workflow-reason-input" class="text-xs font-bold text-slate-700">
-            دلیل اقدام <span class="text-rose-500 font-bold">*</span>
+            دلیل اقدام <span class="text-rose-500 font-bold" aria-hidden="true">*</span>
           </label>
 
           <textarea
@@ -61,8 +61,9 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             [(ngModel)]="reason"
             (input)="onInputChange()"
             rows="4"
+            aria-required="true"
             class="w-full text-xs font-medium p-3 rounded-xl border transition-all focus:outline-none focus:ring-2 resize-y"
-            [ngClass]="hasError ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100 bg-slate-50/40 focus:bg-white'"
+            [ngClass]="hasError ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-200 focus:border-indigo-500 focus-visible:ring-indigo-500 bg-slate-50/40 focus:bg-white'"
             placeholder="دلیل یا توضیحات لازم را بنویسید..."
             [attr.aria-invalid]="hasError ? 'true' : 'false'"
             [attr.aria-describedby]="hasError ? 'workflow-reason-error' : null"
@@ -72,6 +73,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <div
             *ngIf="errorMessage"
             id="workflow-reason-error"
+            role="alert"
             class="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 bg-rose-50/90 border border-rose-200/70 px-2.5 py-1.5 rounded-lg"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle" class="shrink-0"></svg>

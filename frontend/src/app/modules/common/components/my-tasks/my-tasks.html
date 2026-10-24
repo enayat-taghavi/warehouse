@@ -2,6 +2,23 @@
   <!-- سربرگ چسبان و ابزارها -->
   <header class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div class="flex items-center gap-2.5">
+      <button
+        type="button"
+        (click)="goBack()"
+        class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 active:scale-95 transition-all cursor-pointer shadow-sm"
+        title="بازگشت"
+        aria-label="بازگشت"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          appIcon="arrow-right"
+        ></svg>
+      </button>
       <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 flex items-center justify-center shrink-0">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
       </div>
@@ -15,7 +32,7 @@
             {{ workflowTasks.count() }}
           </span>
         </div>
-        <p class="text-[11px] font-semibold text-slate-400">کارتابل وظایف و بررسی‌های گردش کار</p>
+        <p class="text-[11px] font-semibold text-slate-500">کارتابل وظایف و بررسی‌های گردش کار</p>
       </div>
     </div>
 
@@ -44,7 +61,8 @@
 
   <!-- بنر دادهٔ کهنه / آفلاین -->
   <div
-    *ngIf="workflowTasks.isStale() && activeTab === 'my-tasks'"
+    *ngIf="workflowTasks.isStale() && workflowTasks.cachedAt() && activeTab === 'my-tasks'"
+    role="status"
     class="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-3 flex items-center gap-2 text-xs font-bold text-amber-800 shadow-sm"
   >
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="wifi-off" class="text-amber-600 shrink-0"></svg>
@@ -52,7 +70,7 @@
   </div>
 
   <!-- اعلان‌های 409 (نفر دیگری انجام داده) -->
-  <div *ngIf="activeTab === 'my-tasks' && workflowTasks.notices().length > 0" class="flex flex-col gap-2">
+  <div *ngIf="activeTab === 'my-tasks' && workflowTasks.notices().length > 0" role="status" class="flex flex-col gap-2">
     <div
       *ngFor="let notice of workflowTasks.notices()"
       class="bg-amber-50 border border-amber-300/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs shadow-sm"
@@ -94,7 +112,7 @@
           id="company-filter"
           [(ngModel)]="selectedCompany"
           (change)="onFilterChange()"
-          class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-indigo-100 text-slate-700 cursor-pointer"
+          class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 min-h-[40px] focus-visible:outline-none focus:ring-2 focus-visible:ring-indigo-500 text-slate-700 cursor-pointer"
         >
           <option value="">همهٔ شرکت‌ها</option>
           <option *ngFor="let c of availableCompanies" [value]="c.id">{{ c.name }}</option>
@@ -108,7 +126,7 @@
           id="workflow-filter"
           [(ngModel)]="selectedWorkflow"
           (change)="onFilterChange()"
-          class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-indigo-100 text-slate-700 cursor-pointer"
+          class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 min-h-[40px] focus-visible:outline-none focus:ring-2 focus-visible:ring-indigo-500 text-slate-700 cursor-pointer"
         >
           <option value="">همهٔ گردش‌ها</option>
           <option *ngFor="let w of availableWorkflows" [value]="w.key">{{ w.title }}</option>
@@ -120,6 +138,7 @@
   <!-- خطای تب کارهای بی‌دریافت‌کننده -->
   <div
     *ngIf="activeTab === 'unassigned' && unassignedError"
+    role="alert"
     class="bg-rose-50 border border-rose-200/90 rounded-2xl p-4 text-center text-xs flex flex-col items-center gap-2"
   >
     <span class="font-bold text-rose-700">{{ unassignedError }}</span>
@@ -130,6 +149,23 @@
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
       <span>تلاش مجدد</span>
+    </button>
+  </div>
+
+  <!-- حالت خطای آفلاین / عدم برقراری اتصال در اولین بارگذاری -->
+  <div
+    *ngIf="showOffline && activeTab === 'my-tasks'"
+    role="status"
+    class="bg-rose-50 border border-rose-200/90 rounded-2xl p-4 text-center text-xs flex flex-col items-center gap-2"
+  >
+    <span class="font-bold text-rose-700">فهرست کارها هنوز دریافت نشده؛ اتصال برقرار نیست</span>
+    <button
+      type="button"
+      (click)="refresh()"
+      class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-rose-700 bg-white border border-rose-200 rounded-xl hover:bg-rose-100/50 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+      <span>تلاش دوباره</span>
     </button>
   </div>
 
@@ -155,11 +191,16 @@
     *ngIf="showEmpty"
     class="bg-white rounded-2xl border border-slate-200/80 p-8 text-center flex flex-col items-center gap-2 shadow-sm"
   >
-    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
     </div>
-    <h3 class="text-sm font-black text-slate-700">کاری برای انجام وجود ندارد</h3>
-    <p class="text-xs text-slate-400">تمام وظایف و تاییدیه‌های محوله انجام شده است.</p>
+    <ng-container *ngIf="selectedCompany || selectedWorkflow; else defaultEmpty">
+      <h3 class="text-sm font-black text-slate-700">موردی با این فیلتر یافت نشد</h3>
+    </ng-container>
+    <ng-template #defaultEmpty>
+      <h3 class="text-sm font-black text-slate-700">کاری برای انجام وجود ندارد</h3>
+      <p class="text-xs text-slate-500">تمام وظایف و تاییدیه‌های محوله انجام شده است.</p>
+    </ng-template>
   </div>
 
   <!-- ۳. حالت داده: نمایش کارت‌ها -->
@@ -194,7 +235,7 @@
         </div>
 
         <!-- مدت انتظار -->
-        <div class="text-[11px] font-medium text-slate-400 flex items-center gap-1 shrink-0">
+        <div class="text-[11px] font-medium text-slate-500 flex items-center gap-1 shrink-0">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
           <span>انتظار: {{ formatHours(card.waiting_hours) }}</span>
         </div>
@@ -240,7 +281,7 @@
         </div>
 
         <!-- دکمه‌های اقدام روی کار (فقط در تب کارهای من) -->
-        <div *ngIf="activeTab === 'my-tasks'" class="flex items-center gap-2 flex-wrap">
+        <div *ngIf="activeTab === 'my-tasks'" class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           <button
             *ngFor="let act of card.actions"
             type="button"

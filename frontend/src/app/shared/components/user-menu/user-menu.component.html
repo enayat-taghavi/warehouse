@@ -7,7 +7,7 @@
     [title]="'پروفایل کاربری و تنظیمات (' + userName + ')'">
     <img *ngIf="auth.userAvatarUrl()" [ngSrc]="auth.userAvatarUrl()!" width="32" height="32" class="w-8 h-8 rounded-full object-cover border shadow-sm shrink-0" [ngClass]="theme === 'cyan' ? 'border-cyan-200' : 'border-indigo-200'" alt="avatar" />
     <div *ngIf="!auth.userAvatarUrl()" class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-sm" [style.background]="theme === 'cyan' ? 'linear-gradient(135deg,#06b6d4,#4f46e5)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)'">{{userAvatar}}</div>
-    <span *ngIf="taskCount > 0" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white ring-1 ring-rose-200"></span>
+    <span *ngIf="taskCount > 0" class="absolute -top-0.5 -end-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white ring-1 ring-rose-200"><span class="sr-only">{{ taskCount }} کار در انتظار</span></span>
   </button>
 
   <div *ngIf="isUserMenuOpen" class="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden fade-in">
@@ -275,13 +275,16 @@
   <div
     class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 max-w-3xl w-full overflow-hidden flex flex-col max-h-[90vh] transition-all relative"
     (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="جانشین موقت من"
   >
     <div class="absolute top-4 left-4 z-10">
       <button
         type="button"
         (click)="isSubstituteModalOpen = false"
         class="w-9 h-9 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-        title="بستن (Esc)"
+        title="بستن"
         aria-label="بستن"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>

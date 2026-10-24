@@ -280,4 +280,16 @@ describe('MyTasksComponent DOM Spec', () => {
     tasksSignal.set([...tasksSignal()]);
     expect(component.availableCompanies).not.toBe(companies);
   });
+
+  it('computes showOffline accurately based on loaded, loading, isStale and tasks length', () => {
+    loadedSignal.set(false);
+    loadingSignal.set(false);
+    isStaleSignal.set(true);
+    tasksSignal.set([]);
+
+    expect(component.showOffline).toBe(true);
+
+    tasksSignal.set([sampleCard1]);
+    expect(component.showOffline).toBe(false);
+  });
 });
