@@ -107,3 +107,58 @@ Out of scope: production code, other test files.
 - Commit with this message, without push:
 test(release-v1 2.3-e): invoice workflow scenarios 4 and 7 (no second approval label, return for fix restarts from the creator level)
 - Short English report: the test names, the summary line of the test run, and any behaviour that differed from this task. End the turn after the commit and the report.
+
+===
+
+Session 1 of 1 — Release v1 2.3 heavy checks: low-risk UI review fixes (accessibility, contrast, labels, states) in the workflow screens
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/common/components/my-tasks/my-tasks.html" --allow "frontend/src/app/modules/common/components/my-tasks/my-tasks.ts" --allow "frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts" --allow "frontend/src/app/shared/components/workflow-reason-dialog/workflow-reason-dialog.component.ts" --allow "frontend/src/app/shared/components/workflow-history/workflow-history.component.ts" --allow "frontend/src/app/shared/components/workflow-substitutes/workflow-substitutes.component.html" --allow "frontend/src/app/modules/common/components/operations/companies/company-workflow-tab/company-workflow-tab.component.html" --allow "frontend/src/app/shared/components/user-menu/user-menu.component.html"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/my-tasks/my-tasks.html --contains showOffline --contains role="status" --contains goBack
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/modules/common/components/my-tasks/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"
+verify: python -X utf8 scripts/e2e/guardian_52_icon_registry.py
+verify: python -X utf8 scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(release-v1 2.3 heavy checks): UI review fixes"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply. Read `.claude/skills/design-system/SKILL.md` once before editing.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only these files: `frontend/src/app/modules/common/components/my-tasks/my-tasks.html`, `my-tasks.ts` and `my-tasks.dom.spec.ts` (same folder), `frontend/src/app/shared/components/workflow-reason-dialog/workflow-reason-dialog.component.ts`, `frontend/src/app/shared/components/workflow-history/workflow-history.component.ts`, `frontend/src/app/shared/components/workflow-substitutes/workflow-substitutes.component.html`, `frontend/src/app/modules/common/components/operations/companies/company-workflow-tab/company-workflow-tab.component.html`, `frontend/src/app/shared/components/user-menu/user-menu.component.html`.
+- In `.ts` files change only what task items A1, A2 and A6 name, plus inline template markup in B and C. Never remove or rename an existing event handler, input, output, `*ngIf`/`*ngFor` condition or `appIcon` name. Never add inline `<svg>` content: icons only through `<svg appIcon="name">` with names that already exist in `frontend/src/app/shared/icons/icon-registry.ts`.
+- All user-visible text is Persian. No `dark:` classes. No push. Stage only the files above.
+
+2. Context:
+- A UI review of the workflow screens (my-tasks page, reason dialog, history timeline, substitutes form, company workflow tab, user-menu task dot) found accessibility and state gaps. The fixes below are exact; apply them as written.
+- `my-tasks.ts` uses `this.workflowTasks` with signals `loaded()`, `loading()`, `isStale()`, `cachedAt()`, `tasks()` and the method `refresh()`. It already has a `Router` field; read the field declarations before adding A2.
+
+3. Task:
+A. my-tasks
+- A1. In `my-tasks.ts` add the getter `get showOffline(): boolean { return !this.workflowTasks.loaded() && !this.workflowTasks.loading() && this.workflowTasks.isStale() && this.workflowTasks.tasks().length === 0; }`. In `my-tasks.html` add, next to the existing error block of the list, a block `*ngIf="showOffline && activeTab === 'my-tasks'"` with `role="status"`, the text «فهرست کارها هنوز دریافت نشده؛ اتصال برقرار نیست» and a button «تلاش دوباره» that calls `refresh()` (same classes as the existing retry button of the unassigned error block). Show the stale banner only when `workflowTasks.cachedAt()` is truthy (add it to its `*ngIf`), and add `role="status"` to it and to the 409 notices container.
+- A2. In `my-tasks.ts` add `goBack(): void { this.router.navigateByUrl('/app/launcher'); }` using the existing Router field name. In `my-tasks.html` add as the first child of the header title group an icon button (same classes as the existing refresh button) with `appIcon="arrow-right"` (if that name is not in the registry use `chevron-right`), `(click)="goBack()"`, `title="بازگشت"` and `aria-label="بازگشت"`.
+- A3. Card actions: put the action buttons (not the document button) in a wrapper with `grid grid-cols-3 gap-2 sm:flex sm:flex-wrap` so the three actions fit one row on mobile.
+- A4. Replace `text-slate-400` with `text-slate-500` in `my-tasks.html` (all occurrences). On the two filter selects replace `focus:ring-indigo-100` with `focus-visible:ring-indigo-500` and `focus:outline-none` with `focus-visible:outline-none`.
+- A5. Add `role="alert"` to the list error block. In the empty state, when `selectedCompany || selectedWorkflow` show «موردی با این فیلتر یافت نشد» instead of the normal empty text.
+- A6. In the `tabs` getter of `my-tasks.ts` add `shortLabel: 'من'` to the my-tasks tab and `shortLabel: 'بی‌گیرنده'` to the unassigned tab.
+- A7. Add one test to `my-tasks.dom.spec.ts`: `showOffline` is true when `loadedSignal` is false, `loadingSignal` false, `isStaleSignal` true and `tasksSignal` empty; false when `tasksSignal` has one card.
+B. workflow-reason-dialog (inline template in the `.ts`): overlay `z-50` → `z-[100]`; panel `rounded-2xl` → `rounded-3xl` plus `max-h-[90vh] overflow-y-auto`; textarea `focus:ring-indigo-100` → `focus-visible:ring-indigo-500` and add `aria-required="true"`; the red asterisk span gets `aria-hidden="true"`; the error paragraph gets `role="alert"`.
+C. workflow-history (inline template in the `.ts`): `text-slate-400` → `text-slate-500`; `pr-4` → `ps-4`, `mr-1` → `ms-1`, `border-r-2` → `border-s-2`, `-right-[23px]` → `-end-[23px]`, `mr-auto` → `ms-auto`; the error block gets `role="alert"`.
+D. workflow-substitutes.component.html: give every form control an `id` (prefix `wfsub-`) and its `<label>` a matching `for`; add `aria-label="جستجوی کاربر جانشین"` to the user search input; add `role="alert"` to every error paragraph or block; `text-slate-400` → `text-slate-500`; controls with `focus:border-indigo-500` also get `focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none`; `text-right` → `text-start`, `text-left` → `text-end`.
+E. company-workflow-tab.component.html: `p-4.5` → `p-4 sm:p-5` (two places); the same `id`/`for` (prefix `cwf-`), `role="alert"`, contrast, focus-visible and `text-start`/`text-end` changes as in D; `text-amber-600` → `text-amber-700`; add `inputmode="numeric"` and `aria-label="سقف مبلغ"` to the threshold amount input; add above the form `<div *ngIf="error && !loading" role="alert" class="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-sm font-bold text-rose-700">{{ error }}</div>` (the component already has `error` and `loading`).
+F. user-menu.component.html: inside the task dot near line 10 add `<span class="sr-only">{{ taskCount }} کار در انتظار</span>` and change `-right-0.5` → `-end-0.5`; in the substitutes modal (around lines 267–294) add `role="dialog" aria-modal="true" aria-label="جانشین موقت من"` to the panel and set the close button `title="بستن"` (same as its `aria-label`).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- From the repo root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/my-tasks/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"` (at most 4 times) and `python -X utf8 scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+5. Before finishing:
+- The spec command passes with no new failure; guardian 52 passes.
+- `git status --short` shows only files from the list before the commit and nothing after it.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+fix(release-v1 2.3 heavy checks): UI review fixes (offline first-load state, back button, a11y labels and roles, contrast, focus rings, RTL classes)
+- Short English report: what was changed per item A–F, anything skipped and why, the test summary line. End the turn after the commit and the report.
