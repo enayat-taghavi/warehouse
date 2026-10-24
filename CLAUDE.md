@@ -73,10 +73,10 @@
 - **Claude is the manager** (user, 23 Oct 2026; replaces "Antigravity executes, Claude supervises" of 15 Oct 2026): for each step or task Claude estimates the cost and picks the executor:
   - **itself**, for small fixes or work that needs the context it already holds;
   - **an executor subagent** (`general-purpose`); the subagent never commits;
-  - **Antigravity** (`tasks.md` + `run_tasks.py`, memory `gemini-flash-prompting`), user decision 24 Oct 2026: every sub-step's low-risk part goes to Antigravity.
+  - **Antigravity** (`tasks.md` + the CLI runner `scripts/automation/run_tasks_agy.py`, memory `gemini-flash-prompting`), user decision 24 Oct 2026: every sub-step's low-risk part goes to Antigravity. Use the CLI (`agy`), not the IDE runner `run_tasks.py`; probe first and tell the user if it is down. Sessions in `tasks.md` are separated by a line `===`.
     - Low-risk: tests for scenarios already specified, DOM specs, mechanical removals with exact file/line lists, UI that follows an existing pattern, seed data, glossary/Persian texts, allowlist updates.
     - Stays with Claude: permissions/tenant scope, migrations, data-loss paths (offline queue), workflow engine logic and concurrency.
-    - At the end of each sub-step Claude writes a very complete English task for the next sub-step's low-risk part (exact files and line ranges, acceptance criteria, runnable `verify` lines) and launches `run_tasks.py` from a Windows Terminal tab itself (check the Gemini location block first).
+    - At the end of each sub-step Claude writes a very complete English task for the next sub-step's low-risk part (exact files and line ranges, acceptance criteria, runnable `verify` lines) and launches `scripts/automation/run_tasks_agy.bat` from a Windows Terminal tab itself (probe `run_tasks_agy.py ask` first).
     - Meanwhile Claude works on the sensitive part, only on files the task does not touch, and never commits while Antigravity runs. When it finishes: read its commit, run fast tests, guardians and the relevant reviewer, fix small findings, then commit own work and write the progress log.
   - **Executors** (measured in 2.1/2.2: cost ≈ context × calls; the biggest waste was the manager's own polling and oversized steps):
     - A spawn pays off only above ~30 calls; keep each run ≤ ~60 calls (2.2: the 74- and 92-call runs reached ~250K context and cost the most); chunks hand off through a short note in `scratch/`, updated every ~25 calls, never through SendMessage. Chunks without shared files run in parallel.
