@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Injector, runInInjectionContext, ChangeDetectorRef } from '@angular/core';
+import { Injector, runInInjectionContext, ChangeDetectorRef, signal } from '@angular/core';
 import { of, firstValueFrom } from 'rxjs';
 import { UserMenuComponent } from './user-menu.component';
+import { WorkflowTasksService } from '../../../core/services/workflow-tasks.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AuthStore } from '../../../core/stores/auth.store';
 import { StateService } from '../../../core/services/state.service';
@@ -37,6 +38,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
   let mockCdr: any;
   let mockPersona: any;
   let mockApi: any;
+  let mockWorkflowTasks: any;
 
   beforeEach(() => {
     mockAuth = {
@@ -187,6 +189,10 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       });
     } catch {}
 
+    mockWorkflowTasks = {
+      count: signal(3)
+    };
+
     const injector = Injector.create({
       providers: [
         { provide: AuthService, useValue: mockAuth },
@@ -202,7 +208,8 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         { provide: Router, useValue: mockRouter },
         { provide: ChangeDetectorRef, useValue: mockCdr },
         { provide: AppPersonaService, useValue: mockPersona },
-        { provide: ApiService, useValue: mockApi }
+        { provide: ApiService, useValue: mockApi },
+        { provide: WorkflowTasksService, useValue: mockWorkflowTasks }
       ]
     });
 
@@ -455,6 +462,17 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         expect(component.currentScopeContext).toBe(expected);
       });
     }
+  });
+
+  describe('WorkflowTasksService "کارهای من" integration', () => {
+    it('returns task count from WorkflowTasksService.count()', () => {
+      expect(component.taskCount).toBe(3);
+    });
+
+    it('navigates to /app/my-tasks when goToMyTasks is called', () => {
+      component.goToMyTasks();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/my-tasks']);
+    });
   });
 });
 

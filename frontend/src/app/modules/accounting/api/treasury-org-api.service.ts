@@ -184,6 +184,14 @@ export class TreasuryOrgApiService {
     return this.api.delete<void>(`${this.baseUrl}/expense-invoices/${id}`);
   }
 
+  getExpenseInvoice(id: number): Observable<ExpenseInvoice> {
+    return this.api.get<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}`);
+  }
+
+  cancelExpenseInvoice(id: number, reason: string): Observable<ExpenseInvoice> {
+    return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/cancel/`, { reason });
+  }
+
   submitExpenseInvoice(id: number): Observable<ExpenseInvoice> {
     return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/submit/`, {});
   }

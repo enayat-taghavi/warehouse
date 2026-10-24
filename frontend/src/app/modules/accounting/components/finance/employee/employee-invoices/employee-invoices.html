@@ -213,6 +213,17 @@
                   hint="حذف فاکتور پیش‌نویس">
                 </button>
 
+                <!-- مشاهده سابقه گردش کار فاکتور -->
+                <button
+                  type="button"
+                  appAction="history"
+                  display="label"
+                  label="سابقه"
+                  size="sm"
+                  (click)="openInvoiceHistory(inv.id)"
+                  hint="مشاهده سابقه گردش کار فاکتور">
+                </button>
+
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
                 <span *ngIf="inv.status !== 'draft'" class="text-[10px] text-slate-400 font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100">
                   🔒 قفل
@@ -590,6 +601,101 @@
           label="بستن"
           size="sm"
           (click)="closeAttachmentPreview()">
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- مودال ۴: جزئیات و سابقه گردش کار فاکتور                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div *ngIf="isDetailPanelOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+      <!-- هدر -->
+      <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-sm">
+            📜
+          </div>
+          <div>
+            <h3 class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار فاکتور</h3>
+            <p class="text-[10px] text-slate-400 font-medium font-mono" *ngIf="selectedInvoiceDetail">
+              شماره: {{ selectedInvoiceDetail.invoice_number }}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeInvoiceDetail()">
+        </button>
+      </div>
+
+      <!-- بدنه -->
+      <div class="p-5 space-y-4 overflow-y-auto flex-1">
+        <div *ngIf="isLoadingDetail" class="py-8 text-center text-slate-500">
+          <div class="inline-block animate-spin text-2xl mb-2">⏳</div>
+          <p class="text-xs font-bold">در حال بارگذاری اطلاعات فاکتور...</p>
+        </div>
+
+        <div *ngIf="!isLoadingDetail && selectedInvoiceDetail" class="space-y-4">
+          <!-- فیلدهای اصلی فاکتور -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/70 text-xs">
+            <div>
+              <span class="text-slate-400 text-[11px] block">شماره فاکتور:</span>
+              <span class="font-mono font-bold text-slate-800">{{ selectedInvoiceDetail.invoice_number }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[11px] block">تاریخ:</span>
+              <span class="font-mono font-bold text-slate-800">{{ selectedInvoiceDetail.invoice_date_shamsi }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[11px] block">مبلغ:</span>
+              <span class="font-mono font-black text-slate-900">{{ formatNumber(selectedInvoiceDetail.amount) }} ریال</span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[11px] block">طرف‌حساب:</span>
+              <span class="font-bold text-slate-800">{{ selectedInvoiceDetail.counterparty_name || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[11px] block">سرفصل:</span>
+              <span class="font-bold text-slate-800">{{ selectedInvoiceDetail.category || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[11px] block">وضعیت:</span>
+              <span [ngClass]="getStatusBadgeClass(selectedInvoiceDetail.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block">
+                {{ getStatusLabel(selectedInvoiceDetail.status) }}
+              </span>
+            </div>
+            <div class="col-span-2 sm:col-span-3" *ngIf="selectedInvoiceDetail.description">
+              <span class="text-slate-400 text-[11px] block">شرح:</span>
+              <span class="text-slate-700 font-medium">{{ selectedInvoiceDetail.description }}</span>
+            </div>
+          </div>
+
+          <!-- کامپوننت سابقه گردش کار -->
+          <div *ngIf="selectedInvoiceDetail.id as invId">
+            <h4 class="text-xs font-black text-slate-700 mb-2">سابقه گردش کار و اقدامات</h4>
+            <app-workflow-history
+              kind="expense_invoice"
+              [entityId]="invId"
+              (cancelRequested)="onCancelInvoice($event)">
+            </app-workflow-history>
+          </div>
+        </div>
+      </div>
+
+      <!-- فوتر -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button
+          type="button"
+          appAction="close"
+          display="label"
+          label="بستن"
+          size="sm"
+          (click)="closeInvoiceDetail()">
         </button>
       </div>
     </div>

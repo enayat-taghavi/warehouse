@@ -5,6 +5,7 @@ import { AuthService } from './core/auth/auth.service';
 import { Login } from './modules/common/components/login/login';
 import { Layout } from './modules/common/components/layout/layout';
 import { AppLauncherComponent } from './modules/common/components/app-launcher/app-launcher';
+import { MyTasksComponent } from './modules/common/components/my-tasks/my-tasks';
 import { ChangePassword } from './modules/common/components/change-password/change-password';
 import { VerifyCard } from './modules/common/components/verify-card/verify-card';
 import { AuthGuard, AuthGuardChild, moduleCompanyGuard } from './core/auth/auth.guard';
@@ -58,8 +59,9 @@ export const routes: Routes = [
   { path: 'verify-card/:code', component: VerifyCard },
   { path: 'verify-card', component: VerifyCard },
   { path: 'change-password', component: ChangePassword, canActivate: [AuthGuard] },
-  // ─── پورتال لانچر برنامه‌ها (App Launcher) ──────────────
+  // ─── پورتال لانچر برنامه‌ها (App Launcher) و کارهای من ──────────────
   { path: 'app/launcher', component: AppLauncherComponent, canActivate: [AuthGuard] },
+  { path: 'app/my-tasks', component: MyTasksComponent, canActivate: [AuthGuard] },
 
   // ─── روت‌های ماژول‌های نصب‌شده (بارگذاری تنبل و پویا) ───────
   ...dynamicModuleRoutes,

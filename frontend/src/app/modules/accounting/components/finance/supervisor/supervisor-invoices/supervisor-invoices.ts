@@ -11,6 +11,7 @@ import { ProjectSection, ExpenseInvoice } from '../../../../models/personnel.mod
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 
@@ -24,6 +25,7 @@ import { saveBlob } from '../../../../../../core/platform/file-output';
     CommandCenterComponent,
     TabBarComponent,
     ActionButtonComponent,
+    WorkflowReasonDialogComponent,
   ],
   templateUrl: './supervisor-invoices.html',
   styleUrl: './supervisor-invoices.css'
@@ -234,27 +236,47 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  isReasonDialogOpen = false;
+  reasonDialogTitle = '';
+  reasonDialogConfirmLabel = 'عودت فاکتور';
+  reasonDialogServerError = '';
+  pendingRejectInvoice: ExpenseInvoice | null = null;
+
   rejectSingle(item: ExpenseInvoice): void {
     if (!item.id) return;
-    const reason = window.prompt(`علت عودت / رد فاکتور شماره ${item.invoice_number || ''} را وارد کنید:`);
-    if (reason === null) return;
-    if (!reason.trim()) {
-      this.toast.warning('ثبت دلیل عودت الزامی است.');
-      return;
-    }
+    this.pendingRejectInvoice = item;
+    this.reasonDialogTitle = `علت عودت / رد فاکتور شماره ${item.invoice_number || ''}`;
+    this.reasonDialogConfirmLabel = 'عودت فاکتور';
+    this.reasonDialogServerError = '';
+    this.isReasonDialogOpen = true;
+  }
+
+  onReasonConfirmed(reason: string): void {
+    if (!this.pendingRejectInvoice?.id) return;
+    const invNumber = this.pendingRejectInvoice.invoice_number || '';
     this.isLoading = true;
-    this.personnelApi.rejectExpenseInvoice(item.id, reason.trim()).subscribe({
+    this.personnelApi.rejectExpenseInvoice(this.pendingRejectInvoice.id, reason).subscribe({
       next: () => {
         this.isLoading = false;
-        this.toast.warning(`فاکتور شماره ${item.invoice_number || ''} با ثبت اشکال عودت داده شد.`);
+        this.isReasonDialogOpen = false;
+        this.pendingRejectInvoice = null;
+        this.toast.warning(`فاکتور شماره ${invNumber} با ثبت اشکال عودت داده شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در عودت فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+        const detail = err.error?.detail || err.error?.error || err.message || 'خطا در عودت فاکتور';
+        this.reasonDialogServerError = detail;
+        this.toast.error('خطا در عودت فاکتور: ' + detail);
         this.cdr.detectChanges();
       }
     });
+  }
+
+  onReasonCancelled(): void {
+    this.isReasonDialogOpen = false;
+    this.pendingRejectInvoice = null;
+    this.reasonDialogServerError = '';
   }
 
   exportExcel(): void {

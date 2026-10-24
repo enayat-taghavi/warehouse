@@ -458,4 +458,89 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(component.formatNumber(null)).toBe('۰');
     });
   });
+
+  describe('۸. جزئیات فاکتور و لغو گردش کار (Workflow History & Cancel)', () => {
+    let mockTreasuryApi: any;
+    let mockConfirm: any;
+
+    beforeEach(() => {
+      mockTreasuryApi = {
+        getExpenseInvoice: vi.fn().mockReturnValue(of(sampleInvoices[0])),
+        cancelExpenseInvoice: vi.fn().mockReturnValue(of({ ...sampleInvoices[0], status: 'draft' }))
+      };
+      mockConfirm = {
+        open: vi.fn().mockResolvedValue(true)
+      };
+    });
+
+    it('خواندن پارامتر invoice از queryParams باید پنل جزئیات را باز کرده و فاکتور را لود کند', () => {
+      const routeWithInvoice = {
+        queryParams: of({ section_id: '10', invoice: '1' })
+      };
+      const comp = new EmployeeInvoicesHubComponent(
+        mockAuth,
+        mockPersonnelApi,
+        mockToast,
+        mockCdr,
+        routeWithInvoice as any,
+        mockRouter,
+        undefined,
+        mockTreasuryApi,
+        mockConfirm
+      );
+
+      comp.ngOnInit();
+
+      expect(comp.isDetailPanelOpen).toBe(true);
+      expect(mockTreasuryApi.getExpenseInvoice).toHaveBeenCalledWith(1);
+      expect(comp.selectedInvoiceDetail).toEqual(sampleInvoices[0]);
+    });
+
+    it('جریان لغو فاکتور باید پس از تایید دیالوگ خطر، cancelExpenseInvoice را فراخوانی کرده و لیست را بروزرسانی کند', async () => {
+      const comp = new EmployeeInvoicesHubComponent(
+        mockAuth,
+        mockPersonnelApi,
+        mockToast,
+        mockCdr,
+        mockRoute,
+        mockRouter,
+        undefined,
+        mockTreasuryApi,
+        mockConfirm
+      );
+      comp.selectedInvoiceDetail = sampleInvoices[0];
+
+      await comp.onCancelInvoice();
+
+      expect(mockConfirm.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'danger' }));
+      expect(mockTreasuryApi.cancelExpenseInvoice).toHaveBeenCalledWith(sampleInvoices[0].id, 'لغو توسط کاربر');
+      expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('لغو شد'));
+    });
+
+    it('خطای ۴۰۹ در لغو فاکتور باید پیام اخطار toast نمایش دهد', async () => {
+      const { throwError } = await import('rxjs');
+      mockTreasuryApi.cancelExpenseInvoice.mockReturnValue(throwError(() => ({
+        status: 409,
+        error: { detail: 'امکان لغو وجود ندارد چون مرحله بعد اقدام شده است.' }
+      })));
+
+      const comp = new EmployeeInvoicesHubComponent(
+        mockAuth,
+        mockPersonnelApi,
+        mockToast,
+        mockCdr,
+        mockRoute,
+        mockRouter,
+        undefined,
+        mockTreasuryApi,
+        mockConfirm
+      );
+      comp.selectedInvoiceDetail = sampleInvoices[0];
+
+      await comp.onCancelInvoice();
+
+      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('امکان لغو وجود ندارد'));
+    });
+  });
 });
+

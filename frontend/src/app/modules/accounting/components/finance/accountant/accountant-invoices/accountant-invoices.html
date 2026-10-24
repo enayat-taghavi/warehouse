@@ -146,4 +146,14 @@
     </div>
   </div>
 
+  <!-- دیالوگ ثبت علت بازگرداندن فاکتور به سرپرست -->
+  <app-workflow-reason-dialog
+    [open]="isReasonDialogOpen"
+    [title]="reasonDialogTitle"
+    [confirmLabel]="reasonDialogConfirmLabel"
+    [serverError]="reasonDialogServerError"
+    (confirmed)="onReasonConfirmed($event)"
+    (cancelled)="onReasonCancelled()"
+  ></app-workflow-reason-dialog>
+
 </div>

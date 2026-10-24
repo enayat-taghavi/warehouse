@@ -16,13 +16,16 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob, saveUrl } from '../../../../../../core/platform/file-output';
+import { WorkflowHistoryComponent } from '../../../../../../shared/components/workflow-history/workflow-history.component';
+import { TreasuryOrgApiService } from '../../../../api/treasury-org-api.service';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe],
+  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
@@ -111,6 +114,11 @@ export class EmployeeInvoicesHubComponent implements OnInit {
   previewAttachmentUrl: string | null = null;
   previewInvoiceTitle: string = '';
 
+  // ─── پنل جزئیات و سابقه گردش کار فاکتور ───
+  isDetailPanelOpen: boolean = false;
+  selectedInvoiceDetail: ExpenseInvoice | null = null;
+  isLoadingDetail: boolean = false;
+
   constructor(
     public auth: AuthService,
     private personnelApi: PersonnelApiService,
@@ -118,7 +126,9 @@ export class EmployeeInvoicesHubComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private router: Router,
-    @Optional() private activeCompanyService?: ActiveCompanyService
+    @Optional() private activeCompanyService?: ActiveCompanyService,
+    @Optional() private treasuryOrgApi?: TreasuryOrgApiService,
+    @Optional() private confirmDialog?: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -136,7 +146,95 @@ export class EmployeeInvoicesHubComponent implements OnInit {
           }
         }
       }
+      if (params['invoice']) {
+        const invId = Number(params['invoice']);
+        if (!isNaN(invId) && invId > 0) {
+          this.openInvoiceDetail(invId);
+        }
+      }
     });
+  }
+
+  openInvoiceDetail(id: number | undefined): void {
+    if (!id) return;
+    this.isLoadingDetail = true;
+    this.isDetailPanelOpen = true;
+    if (this.treasuryOrgApi) {
+      this.treasuryOrgApi.getExpenseInvoice(id).subscribe({
+        next: (inv) => {
+          this.selectedInvoiceDetail = inv;
+          this.isLoadingDetail = false;
+          this.cdr.detectChanges();
+        },
+        error: (err: any) => {
+          this.isLoadingDetail = false;
+          this.toast.show('error', 'خطا در بارگذاری جزئیات فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      const found = this.invoices.find(i => i.id === id);
+      this.selectedInvoiceDetail = found || null;
+      this.isLoadingDetail = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  openInvoiceHistory(id: number | undefined): void {
+    if (!id) return;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { invoice: id },
+      queryParamsHandling: 'merge'
+    });
+    this.openInvoiceDetail(id);
+  }
+
+  closeInvoiceDetail(): void {
+    this.isDetailPanelOpen = false;
+    this.selectedInvoiceDetail = null;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { invoice: null },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  async onCancelInvoice(instanceId?: number): Promise<void> {
+    const invoiceId = this.selectedInvoiceDetail?.id;
+    if (!invoiceId) return;
+
+    if (this.confirmDialog) {
+      const ok = await this.confirmDialog.open({
+        title: 'لغو فاکتور هزینه',
+        message: 'آیا از لغو این فاکتور هزینه اطمینان دارید؟ این عملیات غیرقابل بازگشت است.',
+        type: 'danger',
+        confirmText: 'لغو فاکتور',
+        cancelText: 'انصراف'
+      });
+      if (!ok) return;
+    }
+
+    if (this.treasuryOrgApi) {
+      this.treasuryOrgApi.cancelExpenseInvoice(invoiceId, 'لغو توسط کاربر').subscribe({
+        next: () => {
+          this.toast.show('success', 'فاکتور هزینه با موفقیت لغو شد.');
+          this.loadInvoices();
+          if (invoiceId) {
+            this.openInvoiceDetail(invoiceId);
+          }
+        },
+        error: (err: any) => {
+          if (err.status === 409) {
+            const detail = err.error?.detail || err.error?.message || 'امکان لغو وجود ندارد چون مرحله بعد اقدام شده است.';
+            this.toast.show('warning', detail);
+          } else {
+            const msg = err.error?.detail || err.error?.error || err.message || 'خطا در لغو فاکتور';
+            this.toast.show('error', msg);
+          }
+        }
+      });
+    }
   }
 
   // ─── تاریخ شمسی امروز ───

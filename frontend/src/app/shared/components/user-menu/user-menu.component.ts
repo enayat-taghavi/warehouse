@@ -11,6 +11,7 @@ import { OfflineSyncService } from '../../../core/services/offline-sync.service'
 import { PwaUpdateService } from '../../../core/services/pwa-update.service';
 import { AppUpdateService } from '../../../core/platform/app-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
+import { WorkflowTasksService } from '../../../core/services/workflow-tasks.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { ScopeDirectoryService } from '../../../core/http/scope-directory.service';
 import { StateService } from '../../../core/services/state.service';
@@ -85,7 +86,12 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private api = inject(ApiService, { optional: true });
   private injector = inject(Injector);
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
+  public workflowTasks = inject(WorkflowTasksService, { optional: true });
   public readonly BRANDING = BRANDING;
+
+  public get taskCount(): number {
+    return this.workflowTasks?.count() ?? 0;
+  }
 
   public isUserMenuOpen = false;
   public isAvatarModalOpen = false;
@@ -790,6 +796,10 @@ export class UserMenuComponent implements OnInit, OnDestroy {
 
   public goToChangePassword(): void {
     this.router.navigate(['/app/change-password']);
+  }
+
+  public goToMyTasks(): void {
+    this.router.navigate(['/app/my-tasks']);
   }
 
   public goToLauncher(): void {

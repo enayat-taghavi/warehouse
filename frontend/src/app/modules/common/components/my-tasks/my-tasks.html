@@ -1,0 +1,299 @@
+<div class="my-tasks-page max-w-5xl mx-auto p-3 sm:p-5 flex flex-col gap-4" dir="rtl">
+  <!-- سربرگ چسبان و ابزارها -->
+  <header class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 flex items-center justify-center shrink-0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base sm:text-lg font-black text-slate-800">کارهای من</h1>
+          <span
+            *ngIf="workflowTasks.count() > 0"
+            class="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700"
+          >
+            {{ workflowTasks.count() }}
+          </span>
+        </div>
+        <p class="text-[11px] font-semibold text-slate-400">کارتابل وظایف و بررسی‌های گردش کار</p>
+      </div>
+    </div>
+
+    <!-- دکمه تازه سازی -->
+    <div class="flex items-center gap-2 self-end sm:self-auto">
+      <button
+        type="button"
+        (click)="refresh()"
+        class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 active:scale-95 transition-all cursor-pointer shadow-sm"
+        title="تازه‌سازی فهرست کارها"
+        aria-label="تازه‌سازی فهرست کارها"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          appIcon="refresh-cw"
+          [class.animate-spin]="workflowTasks.loading() || unassignedLoading"
+        ></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- بنر دادهٔ کهنه / آفلاین -->
+  <div
+    *ngIf="workflowTasks.isStale() && activeTab === 'my-tasks'"
+    class="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-3 flex items-center gap-2 text-xs font-bold text-amber-800 shadow-sm"
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="wifi-off" class="text-amber-600 shrink-0"></svg>
+    <span>{{ staleBannerText }}</span>
+  </div>
+
+  <!-- اعلان‌های 409 (نفر دیگری انجام داده) -->
+  <div *ngIf="activeTab === 'my-tasks' && workflowTasks.notices().length > 0" class="flex flex-col gap-2">
+    <div
+      *ngFor="let notice of workflowTasks.notices()"
+      class="bg-amber-50 border border-amber-300/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs shadow-sm"
+    >
+      <div class="flex items-center gap-2 flex-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle" class="text-amber-600 shrink-0"></svg>
+        <span class="font-bold text-amber-900">{{ notice.message }}</span>
+        <span *ngIf="notice.card?.workflow_title_fa" class="text-[11px] text-amber-700 font-semibold bg-amber-100/70 px-2 py-0.5 rounded-md">
+          {{ notice.card?.workflow_title_fa }}
+        </span>
+      </div>
+      <button
+        type="button"
+        (click)="dismissNotice(notice)"
+        class="w-8 h-8 min-w-[40px] min-h-[40px] rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-200/50 flex items-center justify-center active:scale-95 transition-all cursor-pointer shrink-0"
+        title="بستن اعلان"
+        aria-label="بستن اعلان"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- نوار تب‌ها و فیلترها -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/90 shadow-sm">
+    <app-tab-bar
+      [tabs]="tabs"
+      [active]="activeTab"
+      (activeChange)="onTabChange($event)"
+      mobile="short"
+    ></app-tab-bar>
+
+    <!-- فیلترهای کلاینت: شرکت و گردش کار -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- فیلتر شرکت -->
+      <div *ngIf="availableCompanies.length > 0" class="flex items-center gap-1">
+        <label for="company-filter" class="text-[11px] font-bold text-slate-500 whitespace-nowrap">شرکت:</label>
+        <select
+          id="company-filter"
+          [(ngModel)]="selectedCompany"
+          (change)="onFilterChange()"
+          class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-indigo-100 text-slate-700 cursor-pointer"
+        >
+          <option value="">همهٔ شرکت‌ها</option>
+          <option *ngFor="let c of availableCompanies" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <!-- فیلتر گردش کار -->
+      <div *ngIf="availableWorkflows.length > 0" class="flex items-center gap-1">
+        <label for="workflow-filter" class="text-[11px] font-bold text-slate-500 whitespace-nowrap">گردش:</label>
+        <select
+          id="workflow-filter"
+          [(ngModel)]="selectedWorkflow"
+          (change)="onFilterChange()"
+          class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-indigo-100 text-slate-700 cursor-pointer"
+        >
+          <option value="">همهٔ گردش‌ها</option>
+          <option *ngFor="let w of availableWorkflows" [value]="w.key">{{ w.title }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- خطای تب کارهای بی‌دریافت‌کننده -->
+  <div
+    *ngIf="activeTab === 'unassigned' && unassignedError"
+    class="bg-rose-50 border border-rose-200/90 rounded-2xl p-4 text-center text-xs flex flex-col items-center gap-2"
+  >
+    <span class="font-bold text-rose-700">{{ unassignedError }}</span>
+    <button
+      type="button"
+      (click)="loadUnassigned()"
+      class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-rose-700 bg-white border border-rose-200 rounded-xl hover:bg-rose-100/50 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+      <span>تلاش مجدد</span>
+    </button>
+  </div>
+
+  <!-- ۴ حالت صفحه: بارگذاری، خالی، خطا، داده -->
+
+  <!-- ۱. حالت بارگذاری (Skeleton Loading) -->
+  <div *ngIf="showLoading" class="flex flex-col gap-3">
+    <div
+      *ngFor="let i of [1, 2, 3]"
+      class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col gap-3 animate-pulse"
+    >
+      <div class="flex items-center justify-between">
+        <div class="h-4 bg-slate-200 rounded-md w-1/3"></div>
+        <div class="h-4 bg-slate-200 rounded-md w-20"></div>
+      </div>
+      <div class="h-3 bg-slate-100 rounded-md w-2/3"></div>
+      <div class="h-8 bg-slate-100 rounded-xl w-full"></div>
+    </div>
+  </div>
+
+  <!-- ۲. حالت خالی -->
+  <div
+    *ngIf="showEmpty"
+    class="bg-white rounded-2xl border border-slate-200/80 p-8 text-center flex flex-col items-center gap-2 shadow-sm"
+  >
+    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
+    </div>
+    <h3 class="text-sm font-black text-slate-700">کاری برای انجام وجود ندارد</h3>
+    <p class="text-xs text-slate-400">تمام وظایف و تاییدیه‌های محوله انجام شده است.</p>
+  </div>
+
+  <!-- ۳. حالت داده: نمایش کارت‌ها -->
+  <div *ngIf="!showLoading && !showEmpty" class="flex flex-col gap-3">
+    <div
+      *ngFor="let card of filteredCards"
+      class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm hover:shadow transition-all flex flex-col gap-3"
+      [class.opacity-75]="isPending(card)"
+    >
+      <!-- ردیف بالای کارت: عنوان گردش و مرحله -->
+      <div class="flex items-start justify-between gap-2 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-black text-slate-800">{{ card.workflow_title_fa }}</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100/80">
+            مرحله: {{ card.step_title_fa }}
+          </span>
+          <!-- نشان «به جانشینی از» -->
+          <span
+            *ngIf="card.on_behalf_of"
+            class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/70"
+          >
+            به جانشینی از {{ card.on_behalf_of.name }}
+          </span>
+          <!-- نشان کارت در صف ارسال -->
+          <span
+            *ngIf="isPending(card)"
+            class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 flex items-center gap-1"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
+            <span>در انتظار ارسال</span>
+          </span>
+        </div>
+
+        <!-- مدت انتظار -->
+        <div class="text-[11px] font-medium text-slate-400 flex items-center gap-1 shrink-0">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
+          <span>انتظار: {{ formatHours(card.waiting_hours) }}</span>
+        </div>
+      </div>
+
+      <!-- اطلاعات شرکت و بخش و مبلغ -->
+      <div class="flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+        <span *ngIf="card.company" class="font-bold text-slate-700">{{ card.company.name }}</span>
+        <span *ngIf="card.company && card.section" class="text-slate-300">•</span>
+        <span *ngIf="card.section" class="text-slate-500">{{ card.section.name }}</span>
+        <span *ngIf="card.amount" class="text-slate-300">•</span>
+        <span *ngIf="card.amount" class="font-black text-emerald-700">{{ formatCardAmount(card.amount) }}</span>
+      </div>
+
+      <!-- خلاصهٔ اعلام‌شدهٔ ماژول (summary) -->
+      <div
+        *ngIf="getSummaryEntries(card.summary).length > 0"
+        class="bg-slate-50/80 border border-slate-100 rounded-xl p-2.5 text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1"
+      >
+        <div *ngFor="let item of getSummaryEntries(card.summary)" class="flex items-center gap-1">
+          <span class="text-slate-400 font-medium">{{ item.key }}:</span>
+          <span class="font-bold text-slate-700">{{ item.value }}</span>
+        </div>
+      </div>
+
+      <!-- بخش دکمه‌ها و اقدامات پایین کارت -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+        <!-- دکمه باز کردن سند -->
+        <div>
+          <button
+            *ngIf="card.route"
+            type="button"
+            (click)="openDocument(card)"
+            [disabled]="isPending(card)"
+            class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="مشاهدهٔ جزئیات سند"
+            aria-label="مشاهدهٔ جزئیات سند"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="external-link"></svg>
+            <span class="hidden sm:inline">مشاهدهٔ سند</span>
+          </button>
+        </div>
+
+        <!-- دکمه‌های اقدام روی کار (فقط در تب کارهای من) -->
+        <div *ngIf="activeTab === 'my-tasks'" class="flex items-center gap-2 flex-wrap">
+          <button
+            *ngFor="let act of card.actions"
+            type="button"
+            (click)="onActionClick(card, act)"
+            [disabled]="isPending(card)"
+            class="px-3.5 py-1.5 min-h-[40px] text-xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            [ngClass]="getActionButtonClass(act)"
+            [title]="getActionLabel(act, card.step_kind)"
+            [attr.aria-label]="getActionLabel(act, card.step_kind)"
+          >
+            <svg
+              *ngIf="act === 'act'"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              appIcon="check"
+            ></svg>
+            <svg
+              *ngIf="act === 'return'"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              appIcon="rotate-ccw"
+            ></svg>
+            <svg
+              *ngIf="act === 'reject'"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              appIcon="x"
+            ></svg>
+            <span>{{ getActionLabel(act, card.step_kind) }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- پنجره دریافت دلیل (برای عودت یا رد) -->
+  <app-workflow-reason-dialog
+    [open]="reasonDialogOpen"
+    [title]="reasonDialogTitle"
+    [confirmLabel]="reasonDialogConfirmLabel"
+    [serverError]="reasonServerError"
+    (confirmed)="onReasonConfirmed($event)"
+    (cancelled)="onReasonCancelled()"
+  ></app-workflow-reason-dialog>
+</div>

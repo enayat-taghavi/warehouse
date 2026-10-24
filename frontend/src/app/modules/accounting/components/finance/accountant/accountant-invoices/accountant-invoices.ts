@@ -11,6 +11,7 @@ import { ProjectSection, ExpenseInvoice } from '../../../../models/personnel.mod
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 
@@ -23,7 +24,8 @@ import { saveBlob } from '../../../../../../core/platform/file-output';
     ReactiveFormsModule,
     TabBarComponent,
     ActionButtonComponent,
-    CommandCenterComponent
+    CommandCenterComponent,
+    WorkflowReasonDialogComponent
   ],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'
@@ -239,27 +241,47 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  isReasonDialogOpen = false;
+  reasonDialogTitle = '';
+  reasonDialogConfirmLabel = 'بازگرداندن به سرپرست';
+  reasonDialogServerError = '';
+  pendingRejectInvoice: ExpenseInvoice | null = null;
+
   rejectDocument(item: ExpenseInvoice): void {
     if (!item.id) return;
-    const reason = window.prompt(`علت بازگرداندن فاکتور شماره ${item.invoice_number || ''} به سرپرست را وارد کنید:`);
-    if (reason === null) return;
-    if (!reason.trim()) {
-      this.toast.warning('ثبت دلیل عودت الزامی است.');
-      return;
-    }
+    this.pendingRejectInvoice = item;
+    this.reasonDialogTitle = `علت بازگرداندن فاکتور شماره ${item.invoice_number || ''} به سرپرست`;
+    this.reasonDialogConfirmLabel = 'بازگرداندن به سرپرست';
+    this.reasonDialogServerError = '';
+    this.isReasonDialogOpen = true;
+  }
+
+  onReasonConfirmed(reason: string): void {
+    if (!this.pendingRejectInvoice?.id) return;
+    const invNumber = this.pendingRejectInvoice.invoice_number || '';
     this.isLoading = true;
-    this.personnelApi.requestRevisionExpenseInvoice(item.id, reason.trim()).subscribe({
+    this.personnelApi.requestRevisionExpenseInvoice(this.pendingRejectInvoice.id, reason).subscribe({
       next: () => {
         this.isLoading = false;
-        this.toast.warning(`فاکتور شماره ${item.invoice_number || ''} جهت بازنگری به سرپرست برگردانده شد.`);
+        this.isReasonDialogOpen = false;
+        this.pendingRejectInvoice = null;
+        this.toast.warning(`فاکتور شماره ${invNumber} جهت بازنگری به سرپرست برگردانده شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در ارجاع به بازنگری: ' + (err.error?.error || err.message || 'نامشخص'));
+        const detail = err.error?.detail || err.error?.error || err.message || 'خطا در ارجاع به بازنگری';
+        this.reasonDialogServerError = detail;
+        this.toast.error('خطا در ارجاع به بازنگری: ' + detail);
         this.cdr.detectChanges();
       }
     });
+  }
+
+  onReasonCancelled(): void {
+    this.isReasonDialogOpen = false;
+    this.pendingRejectInvoice = null;
+    this.reasonDialogServerError = '';
   }
 
   exportExcel(): void {
