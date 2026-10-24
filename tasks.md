@@ -165,7 +165,7 @@ fix(release-v1 2.3 heavy checks): UI review fixes (offline first-load state, bac
 
 ===
 
-Session 1 of 1 — Release v1 2.3 follow-up: Android check of the my-tasks page on app (seed scenario, log in on the emulator, one approve action, evidence, purge)
+[DONE] Session 1 of 1 — Release v1 2.3 follow-up: Android check of the my-tasks page on app (seed scenario, log in on the emulator, one approve action, evidence, purge)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
