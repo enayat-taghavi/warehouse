@@ -162,3 +162,51 @@ F. user-menu.component.html: inside the task dot near line 10 add `<span class="
 - Commit with this message, without push:
 fix(release-v1 2.3 heavy checks): UI review fixes (offline first-load state, back button, a11y labels and roles, contrast, focus rings, RTL classes)
 - Short English report: what was changed per item A–F, anything skipped and why, the test summary line. End the turn after the commit and the report.
+
+===
+
+Session 1 of 1 — Release v1 2.3 follow-up: Android check of the my-tasks page on app (seed scenario, log in on the emulator, one approve action, evidence, purge)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py text-check --file scratch/logs/android_check.txt --contains ACTION_OK --contains PURGE_OK
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- This is an operational task on the local test environment `app` (this Windows machine, test data only, no real users). Never touch `soft`.
+- Change no tracked file. Do not commit. Write only under `scratch/logs/`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running. The only exception is the emulator in step C, which runs in its own Windows Terminal tab.
+- The test passwords are in `scratch/qa_scenario_credentials.txt`. Never print a password in your reply, in a log you write, or in a file name. Pass it only to `adb shell input text`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context:
+- The new staging APK (app id `ir.comanage.soft.test`, activity `ir.comanage.soft.MainActivity`) is already installed on the emulator AVD `AndroidTest15`. It talks to `https://app.farsalish.ir`, which this machine serves.
+- The scenario seed creates the company QA-SCN and users `qa_scn_*`; `scratch/heavy/make_invoices.py` creates 5 submitted expense invoices, so some `qa_scn_*` users get open workflow tasks.
+- `scratch/qa_scenario_credentials.txt` has one user per line, tab-separated: username, password, role, place.
+- Helper: `backend\venv\Scripts\python.exe -X utf8 scratch\heavy\android_check_helper.py who|evidence|purge` (run from the repo root). `who` lists users with open tasks; `evidence` appends `ACTION_OK ...` to `scratch/logs/android_check.txt` when a `qa_scn_*` user closed a task in the last 2 hours; `purge` removes all scenario data and appends `PURGE_OK`.
+- Emulator screen is 1080x2400 pixels. On the login page the username field centre is about (540, 1130), the password field about (540, 1338), the login button «ورود به سامانه» about (540, 1655).
+
+3. Task:
+A. Seed. In the `backend` folder (PowerShell): `$env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe -X utf8 manage.py seed_workflow_scenario`. Then, still in `backend`: `.\venv\Scripts\python.exe -X utf8 manage.py shell -c "exec(open('../scratch/heavy/make_invoices.py', encoding='utf-8').read())"`. Every `submit` line must show status 200; if not, stop and report the output.
+B. From the repo root run the helper `who`. Pick the first listed user (most open tasks). If it prints `NO_OPEN_TASKS`, stop and report.
+C. Run `adb devices`. If `emulator-5554` is not listed as `device`, start it with `wt.exe -w 0 new-tab --title "Android Emulator" cmd /k "E:\Android\Sdk\emulator\emulator.exe -avd AndroidTest15"` and repeat `adb shell getprop sys.boot_completed` (with a pause of at most 15 seconds between tries, at most 12 tries) until it prints 1.
+D. `adb shell am force-stop ir.comanage.soft.test`, then `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`, wait about 8 seconds.
+E. To find elements, use `adb shell uiautomator dump /sdcard/ui.xml` then `adb pull /sdcard/ui.xml scratch/logs/ui.xml` and read the XML: find the node by its `text`, `hint` or `content-desc`, and tap the centre of its `bounds` with `adb shell input tap X Y`. If the XML has no web page nodes, use the coordinates from the context and screenshots (`adb exec-out screencap -p > scratch/logs/android_<name>.png`) instead.
+F. Log in: tap the username field, `adb shell input text <username>`; tap the password field, `adb shell input text <password>`; tap «ورود به سامانه». Wait about 8 seconds. If the app asks to choose a system or role, choose the accounting one («مالی» / «حسابداری»).
+G. Open «کارهای من»: find a node whose text contains «کارهای من» and tap it. If none is visible, tap the profile button (its `content-desc` or text contains «پروفایل کاربری») and then «کارهای من». Wait about 5 seconds and save `scratch/logs/android_mytasks_before.png`.
+H. On the first task card tap the green approve button (text «بررسی» or «تایید»). If a dialog with «دلیل اقدام» opens, tap its text box, `adb shell input text test`, then tap its confirm button. Wait about 8 seconds and save `scratch/logs/android_mytasks_after.png`.
+I. Run the helper `evidence`. If it wrote `ACTION_MISSING`, repeat steps G–I once.
+J. Run the helper `purge`. It must print `PURGE_OK`.
+
+4. Tool policy:
+- Reading files is unrestricted. Allowed commands: the commands named above, `adb` (devices, shell input, shell am, shell getprop, shell uiautomator dump, pull, exec-out screencap), `Get-Content`/`Select-String` for reading, and `git status --short`.
+- At most 40 adb calls in total. If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+5. Before finishing:
+- `scratch/logs/android_check.txt` contains a line `ACTION_OK` and a line `PURGE_OK`.
+- `git status --short` prints nothing.
+
+6. Output and stop condition:
+- No commit.
+- Short English report: the user picked (username only), what was visible on the my-tasks page before and after the action (from the screenshots), the `ACTION_OK` line, the purge result, and anything that did not work. End the turn after the report.
