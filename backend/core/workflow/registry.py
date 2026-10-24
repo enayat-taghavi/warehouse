@@ -48,6 +48,7 @@ class WorkflowSpec:
     - summary(obj) -> dict: دست‌کم 'title'؛ موتور آن را JSON-امن ذخیره می‌کند (Decimal به رشته).
     - route: الگوی مسیر صفحهٔ سند در فرانت با '{id}'.
     - بخش سند از getattr(obj, f'{section_field}_id') و مبلغ (اختیاری) از getattr(obj, amount_field).
+    - view_permission (اختیاری): مجوز بخشی که دارنده‌اش در بخش سند سابقهٔ گردش آن را هم می‌بیند (API سابقه).
     """
     key: str
     version: int
@@ -59,6 +60,7 @@ class WorkflowSpec:
     route: str
     section_field: str = 'section'
     amount_field: str | None = None
+    view_permission: str | None = None
     _index: dict = field(default=None, init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self):
@@ -139,6 +141,10 @@ def validate_specs(items=None) -> dict:
             _fail(f'«{spec.key}»: کلید مرحله‌ها تکراری است')
         for step in spec.steps:
             _validate_step(spec, step, ranks, perm_specs)
+        if spec.view_permission is not None:
+            from accounts.scoped_permissions import SECTION, permission_scope
+            if spec.view_permission not in perm_specs or permission_scope(spec.view_permission) != SECTION:
+                _fail(f'«{spec.key}»: مجوز دیدن سابقه «{spec.view_permission}» اعلام نشده یا بخشی نیست')
         if not isinstance(spec.route, str) or '{id}' not in spec.route:
             _fail(f'«{spec.key}»: مسیر صفحهٔ سند باید «{{id}}» داشته باشد')
         if not callable(spec.on_state_change) or not callable(spec.summary):

@@ -45,13 +45,24 @@ def build_payload(kind, instance, task, user_ids, actor_id=None, step_key=None) 
     }
 
 
-def emit(kind, instance, task, user_ids, actor_id=None, step_key=None) -> None:
+def goes_to_superusers(payload) -> bool:
+    """رویدادی که گیرنده‌اش کانال مدیران کل است: هشدار مدیر کل، یا خبر به بالاتر بی‌دارندهٔ رتبهٔ بالاتر."""
+    return payload.get('kind') == SUPERUSER_ALERT or bool(payload.get('to_superusers'))
+
+
+def emit(kind, instance, task, user_ids, actor_id=None, step_key=None, *, to_superusers=False) -> None:
     """
-    ثبت رویداد برای ارسال پس از commit. رویداد بی‌گیرنده فرستاده نمی‌شود، به‌جز هشدار مدیر کل که گیرنده‌اش
-    کانال مدیران کل است (user_ids خالی).
+    ثبت رویداد برای ارسال پس از commit. رویداد بی‌گیرنده فرستاده نمی‌شود، به‌جز هشدار مدیر کل و «خبر به بالاتر»
+    با to_superusers=True (وقتی در بخش کسی با رتبهٔ بالاتر نیست، ت۱۲) که گیرنده‌شان کانال مدیران کل است
+    (user_ids خالی؛ کلید to_superusers فقط در همین حالت در payload می‌آید).
     """
-    payload = build_payload(kind, instance, task, user_ids, actor_id=actor_id, step_key=step_key)
-    if not payload['user_ids'] and kind != SUPERUSER_ALERT:
+    payload = build_payload(kind, instance, task, [] if to_superusers else user_ids, actor_id=actor_id,
+                            step_key=step_key)
+    if to_superusers:
+        if kind != ESCALATION:
+            raise ValueError('to_superusers only for escalation')
+        payload['to_superusers'] = True
+    if not payload['user_ids'] and not goes_to_superusers(payload):
         return
     from .models import WorkflowTask
     transaction.on_commit(lambda: task_event.send(sender=WorkflowTask, event=payload))

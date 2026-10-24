@@ -58,6 +58,7 @@ class CustomUser(AbstractUser):
             ("perm_usr_add", "ثبت پرسنل جدید"),
             ("perm_usr_edit", "ویرایش پرونده پرسنلی"),
             ("perm_usr_role", "تغییر ساختار سازمانی و نقش‌ها"),
+            ("perm_workflow_thresholds", "تنظیم سقف مبلغ و یادآوری گردش کار"),
             # مجوزهای ماژول‌ها در `modules/<m>/module.py` (PERMISSIONS) اعلام می‌شوند
             # و هسته ردیفشان را در post_migrate می‌سازد (accounts/module_permissions.py).
 
@@ -190,6 +191,7 @@ AUDIT_MODULES = {
     'warehouses': 'مدیریت انبارها',
     'settings': 'تنظیمات سیستم و انبار',
     'system': 'رویدادهای سیستمی',
+    'workflow': 'گردش کار (سقف، تنظیمات و جانشین)',
 }
 
 

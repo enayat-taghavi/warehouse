@@ -181,46 +181,68 @@ def desired_rows(principal_ids, sub_rows) -> dict:
     return desired
 
 
+def row_told(behalf, rec, today) -> bool:
+    """
+    آیا دارندهٔ ردیف از این کار خبر دارد (رسید گرفته و برداشته شد نگرفته)؟ ردیف اصلی همیشه؛ ردیف جانشین اگر
+    announced است. rec = (pk, start, end[, announced])؛ بی announced همان «معتبر امروز» (سازگاری).
+    """
+    if behalf is None:
+        return True
+    if len(rec) > 3:
+        return bool(rec[3])
+    return row_valid_on(behalf, rec[1], rec[2], today)
+
+
 def diff_rows(task_id, existing, desired, today):
     """
-    تفاوت ردیف‌های یک کار، بی‌پرس‌وجو. existing: {(uid, behalf): (pk, start, end)}.
-    خروجی (شناسه‌های حذفی، ردیف‌های تازه، ردیف‌های تغییر بازه، دریافت‌کنندگان تازهٔ معتبر امروز،
-    برداشته‌شده‌های معتبر امروز).
+    تفاوت ردیف‌های یک کار، بی‌پرس‌وجو. existing: {(uid, behalf): (pk, start, end, announced)}.
+    خروجی (شناسه‌های حذفی، ردیف‌های تازه، ردیف‌های تغییر بازه یا اعلام، دریافت‌کنندگان تازه، برداشته‌شده‌ها).
+    «رسید» به کسی که تازه ردیف معتبر امروز گرفت و از کار خبر نداشت؛ «برداشته شد» به کسی که خبر داشت و دیگر
+    ردیف معتبر امروز ندارد (ردیف جانشینِ تمام‌شده یا رفته به بازهٔ آینده هم). announced هر ردیف جانشین مطلوب
+    برابر «معتبر امروز» نوشته می‌شود؛ پس هر رسید و برداشته شد یک بار است (زمان‌بند ۲.۳-ب بقیه را می‌فرستد).
     """
-    stale = [pk for key, (pk, _s, _e) in existing.items() if key not in desired]
+    stale = [rec[0] for key, rec in existing.items() if key not in desired]
     new = [
-        WorkflowTaskRecipient(task_id=task_id, user_id=uid, on_behalf_of_id=behalf, valid_from=start, valid_to=end)
+        WorkflowTaskRecipient(task_id=task_id, user_id=uid, on_behalf_of_id=behalf, valid_from=start, valid_to=end,
+                              announced=row_valid_on(behalf, start, end, today))
         for (uid, behalf), (start, end) in desired.items() if (uid, behalf) not in existing
     ]
-    changed = [
-        WorkflowTaskRecipient(pk=existing[key][0], valid_from=start, valid_to=end)
-        for key, (start, end) in desired.items() if key in existing and existing[key][1:] != (start, end)
-    ]
-    before = {uid for (uid, b), (_pk, s, e) in existing.items() if row_valid_on(b, s, e, today)}
+    changed = []
+    for key, (start, end) in desired.items():
+        rec = existing.get(key)
+        if rec is None:
+            continue
+        valid = row_valid_on(key[1], start, end, today)
+        if tuple(rec[1:3]) != (start, end) or (key[1] is not None and row_told(key[1], rec, today) != valid):
+            changed.append(WorkflowTaskRecipient(pk=rec[0], valid_from=start, valid_to=end, announced=valid))
+    before = {uid for (uid, b), rec in existing.items() if row_told(b, rec, today)}
     after = {uid for (uid, b), (s, e) in desired.items() if row_valid_on(b, s, e, today)}
     return stale, new, changed, after - before, before - after
 
 
 def write_row_changes(stale, new, changed) -> None:
-    """نوشتن تفاوت‌ها با شمار پرس‌وجوی ثابت (حذف، افزودن، به‌روزرسانی بازه)."""
+    """نوشتن تفاوت‌ها با شمار پرس‌وجوی ثابت (حذف، افزودن، به‌روزرسانی بازه و اعلام)."""
     if stale:
         WorkflowTaskRecipient.objects.filter(pk__in=stale).delete()
     if new:
         WorkflowTaskRecipient.objects.bulk_create(new)
     if changed:
-        WorkflowTaskRecipient.objects.bulk_update(changed, ['valid_from', 'valid_to'])
+        WorkflowTaskRecipient.objects.bulk_update(changed, ['valid_from', 'valid_to', 'announced'])
+
+
+EXISTING_FIELDS = ('id', 'user_id', 'on_behalf_of_id', 'valid_from', 'valid_to', 'announced')
 
 
 def sync_task_recipients(task, principal_ids, sub_rows, today=None) -> tuple:
     """
     ردیف‌های دریافت‌کنندهٔ کار باز را با مجموعهٔ تازه یکی می‌کند (حذف/افزودن/به‌روزرسانی بازه) با شمار
-    پرس‌وجوی ثابت. خروجی (کاربرانی که تازه کار معتبر امروز گرفتند، کاربرانی که کار معتبر امروزشان برداشته شد).
+    پرس‌وجوی ثابت. خروجی (کاربرانی که تازه کار معتبر امروز گرفتند، کاربرانی که کار اعلام‌شده‌شان برداشته شد).
     """
     today = today or timezone.localdate()
     existing = {
-        (uid, behalf): (pk, start, end)
-        for pk, uid, behalf, start, end in WorkflowTaskRecipient.objects.filter(task=task)
-        .values_list('id', 'user_id', 'on_behalf_of_id', 'valid_from', 'valid_to')
+        (uid, behalf): (pk, start, end, announced)
+        for pk, uid, behalf, start, end, announced in WorkflowTaskRecipient.objects.filter(task=task)
+        .values_list(*EXISTING_FIELDS)
     }
     stale, new, changed, received, removed = diff_rows(task.pk, existing, desired_rows(principal_ids, sub_rows), today)
     write_row_changes(stale, new, changed)
@@ -228,10 +250,10 @@ def sync_task_recipients(task, principal_ids, sub_rows, today=None) -> tuple:
 
 
 def clear_task_recipients(task, today=None) -> set:
-    """حذف همهٔ ردیف‌های کار (هنگام بسته شدن)؛ خروجی کاربرانی که ردیف معتبر امروز داشتند."""
+    """حذف همهٔ ردیف‌های کار (هنگام بسته شدن)؛ خروجی کاربرانی که از کار خبر داشتند (ردیف اصلی یا اعلام‌شده)."""
     today = today or timezone.localdate()
     rows = WorkflowTaskRecipient.objects.filter(task=task)
-    found = list(rows.values_list('user_id', 'on_behalf_of_id', 'valid_from', 'valid_to'))
+    found = list(rows.values_list(*EXISTING_FIELDS))
     if found:
         rows.delete()
-    return {uid for uid, b, s, e in found if row_valid_on(b, s, e, today)}
+    return {uid for pk, uid, b, s, e, ann in found if row_told(b, (pk, s, e, ann), today)}

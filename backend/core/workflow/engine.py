@@ -522,7 +522,7 @@ def _finish_task(instance, task, user, outcome, now):
     """بستن کار با اقدام کاربر و رویدادهای «انجام شد» و «برداشته شد»."""
     holders = _close_task(task, outcome, user, now)
     events.emit(events.DONE, instance, task, [user.pk], actor_id=user.pk)
-    events.emit(events.REMOVED, instance, task, holders - {user.pk}, actor_id=user.pk)
+    events.emit(events.REMOVED, instance, task, holders - {user.pk})
     instance.others_acted = True
     instance.revision += 1
 
@@ -596,7 +596,7 @@ def cancel(user, instance_or_task, *, reason='', obj=None):
         from_step = instance.current_step
         if task is not None:
             holders = _close_task(task, WorkflowTask.CANCELLED, user, now)
-            events.emit(events.REMOVED, instance, task, holders, actor_id=user.pk)
+            events.emit(events.REMOVED, instance, task, holders)
         instance.status = WorkflowInstance.CANCELLED
         instance.current_step = ''
         instance.closed_at = now

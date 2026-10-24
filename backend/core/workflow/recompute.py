@@ -121,10 +121,10 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         computed = compute_recipients_batch(items, bundles=bundles, today=today)
 
         existing = {}
-        for pk, task_id, uid, behalf, start, end in WorkflowTaskRecipient.objects.filter(
+        for pk, task_id, uid, behalf, start, end, announced in WorkflowTaskRecipient.objects.filter(
                 task_id__in=[t.pk for t in tasks]).values_list(
-                'id', 'task_id', 'user_id', 'on_behalf_of_id', 'valid_from', 'valid_to'):
-            existing.setdefault(task_id, {})[(uid, behalf)] = (pk, start, end)
+                'id', 'task_id', 'user_id', 'on_behalf_of_id', 'valid_from', 'valid_to', 'announced'):
+            existing.setdefault(task_id, {})[(uid, behalf)] = (pk, start, end, announced)
 
         all_stale, all_new, all_changed = [], [], []
         gained, alerted, lost = [], [], []

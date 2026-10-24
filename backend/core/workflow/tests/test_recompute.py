@@ -221,6 +221,11 @@ class SameRuleTests(RecomputeBase):
         root = pathlib.Path(engine.__file__).parent
         for path in root.glob('*.py'):
             text = path.read_text(encoding='utf-8')
+            if path.name == 'realtime.py':
+                # تنها فرستندهٔ وب‌سوکت (ت۱۶): هرگز کانال شرکت یا عمومی
+                self.assertNotIn('company_', text.replace('company_id', ''), path.name)
+                self.assertNotIn('global_', text, path.name)
+                continue
             self.assertNotIn('channel_layer', text, path.name)
             self.assertNotIn('group_send', text, path.name)
 
@@ -265,8 +270,9 @@ class QueryCountTests(RecomputeBase):
                          permission='zz_wf_review', revision=1, has_recipients=True)
             for inst in insts])
         WorkflowTaskRecipient.objects.bulk_create(
-            [WorkflowTaskRecipient(task=t, user=rev) for t in tasks]
-            + [WorkflowTaskRecipient(task=t, user=helper, on_behalf_of=rev, valid_from=_days(-1), valid_to=_days(3))
+            [WorkflowTaskRecipient(task=t, user=rev, announced=True) for t in tasks]
+            + [WorkflowTaskRecipient(task=t, user=helper, on_behalf_of=rev, valid_from=_days(-1), valid_to=_days(3),
+                                     announced=True)
                for t in tasks])
         inst = insts[0]
         self.docs[inst.entity_id] = types.SimpleNamespace(

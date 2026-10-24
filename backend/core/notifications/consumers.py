@@ -249,6 +249,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 'driver_name', 'plate_number', 'entity_type', 'approval_status',
                 'notification_id', 'title', 'target_model', 'target_id', 'created_at', 'notification_type',
                 'user_id', 'reason',  # permissions_updated (طرح ۲.۲)
+                # رویداد کار گردش کار (ت۱۶ طرح ۲.۳)؛ task_id، company_id و notification_type از پیش هستند
+                'workflow_event', 'instance_id', 'workflow_key', 'entity_kind', 'entity_id', 'step_key',
+                'section_id', 'actor_id', 'to_superusers',
             ):
                 if k in event:
                     out_data[k] = event[k]

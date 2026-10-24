@@ -126,6 +126,9 @@ class WorkflowTaskRecipient(models.Model):
                                      verbose_name='به جانشینی از')
     valid_from = models.DateField(null=True, blank=True, verbose_name='شروع جانشینی')
     valid_to = models.DateField(null=True, blank=True, verbose_name='پایان جانشینی')
+    # «رسید» این ردیف جانشین فرستاده شده و هنوز «برداشته شد» نگرفته (ت۱۰ و ت۱۲). ردیف بازهٔ آینده False می‌ماند
+    # تا زمان‌بند هنگام شروع بازه «رسید» را بفرستد. ردیف اصلی همیشه اعلام‌شده حساب می‌شود.
+    announced = models.BooleanField(default=False, verbose_name='اعلام‌شده')
 
     class Meta:
         verbose_name = 'دریافت‌کنندهٔ کار'

@@ -23,3 +23,5 @@ class WorkflowConfig(AppConfig):
         checks.register(check_workflow_specs)
         from .hooks import connect
         connect()
+        from . import realtime
+        realtime.connect()

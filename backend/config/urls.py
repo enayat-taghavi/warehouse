@@ -19,6 +19,7 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path('api/communications/', include('communications.urls')),
     path('api/notifications/', include('notifications.urls')),
+    path('api/workflow/', include('workflow.urls')),
     path('api/reports/', include('reports.urls')),
     path('api/org/', include('companies.urls')),
     path('api/settings/global/', SettingsViewSet.as_view({'get': 'global_settings', 'post': 'global_settings'})),

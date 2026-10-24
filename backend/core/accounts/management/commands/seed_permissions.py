@@ -23,6 +23,7 @@ class Command(BaseCommand):
             {'codename': 'perm_usr_add', 'name': 'ثبت پرسنل جدید'},
             {'codename': 'perm_usr_edit', 'name': 'ویرایش پرونده پرسنلی'},
             {'codename': 'perm_usr_role', 'name': 'تغییر ساختار سازمانی و نقش‌ها'},
+            {'codename': 'perm_workflow_thresholds', 'name': 'تنظیم سقف مبلغ و یادآوری گردش کار'},
 
             # Sensitive & Critical (حساس و بحرانی)
             {'codename': 'perm_rollback_data', 'name': 'بازگردانی و احیای جامع داده‌ها'},
