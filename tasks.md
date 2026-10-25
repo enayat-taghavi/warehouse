@@ -1108,3 +1108,46 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 12 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit; the temporary media folders are removed.
 
 6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 2.6-c: tests for the drive models move to core settings_core
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow backend/core/settings_core/test_drive_move_26c.py
+verify: set DB_TEST_NAME=test_agy_drive26c&& python scripts/automation/verify_tools.py django-tests --labels settings_core.test_drive_move_26c --min-tests 6
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.6-c): drive models move"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/settings_core/test_drive_move_26c.py`. Never edit production code, migrations, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Never delete rows from the real database; tests run only on the Django test database.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.6-c): drive models move`.
+
+2. Context (read these, nothing broader):
+- `backend/core/settings_core/models.py` lines 180–445: classes `CompanyGoogleDriveConfig` (OneToOne `company` to `companies.Company`, `related_name='gdrive_config'`, `db_table='personnel_companygoogledriveconfig'`) and `GoogleDriveSyncQueue` (FK `company`, `related_name='gdrive_sync_tasks'`, `db_table='personnel_googledrivesyncqueue'`, six indexes with explicit names). They were moved from the accounting module state-only; `backend/modules/accounting/personnel/models.py` re-exports both names (`from settings_core.models import CompanyGoogleDriveConfig, GoogleDriveSyncQueue`).
+- `backend/modules/accounting/personnel/migrations/0006_move_drive_to_settings_core.py` (whole file): moves the content types of both models to app label `settings_core`.
+- `backend/core/settings_core/management/commands/run_gdrive_sync_worker.py` lines 29–130: flags `--once`, `--interval`, `--limit`, `--company-id`, `--ignore-schedule`.
+- `backend/core/companies/models.py`: Grep `class Company(` and read only that class to see the required fields for `Company.objects.create(...)`.
+
+3. Task, `backend/core/settings_core/test_drive_move_26c.py`:
+- Use `django.test.TestCase`. In `setUpTestData` create one company `cls.company` with the minimal required fields (unique `code` such as `'DRV26C'`).
+- Tests (names exactly):
+  - `test_personnel_reexports_core_classes`: `personnel.models.CompanyGoogleDriveConfig is settings_core.models.CompanyGoogleDriveConfig` and the same for `GoogleDriveSyncQueue`; both have `_meta.app_label == 'settings_core'`.
+  - `test_tables_unchanged`: `_meta.db_table` is `'personnel_companygoogledriveconfig'` and `'personnel_googledrivesyncqueue'`.
+  - `test_index_names_unchanged`: the set of `index.name` in `GoogleDriveSyncQueue._meta.indexes` equals `{'personnel_g_company_f971b0_idx', 'personnel_g_status_50fa27_idx', 'personnel_g_model_n_4c523e_idx', 'personnel_g_status_7b750a_idx', 'personnel_g_status_dcbe53_idx', 'idx_gdrive_dedup_acct'}`; also, with `django.db.connection.introspection.get_constraints(cursor, 'personnel_googledrivesyncqueue')`, all six names exist in the database.
+  - `test_rows_counted_in_same_table`: create one config and three queue rows (`model_name='ZzDoc'`, `source_file_path='x.pdf'`, `target_folder_path='a/b'`, `target_filename='x.pdf'`) through the core models; a raw `SELECT COUNT(*) FROM personnel_googledrivesyncqueue` equals 3 and equals `GoogleDriveSyncQueue.objects.count()`; the same for the config table (1).
+  - `test_related_names_work`: after creating the rows, `self.company.gdrive_config` is the config and `self.company.gdrive_sync_tasks.count() == 3`.
+  - `test_content_types_moved`: `ContentType.objects.get_for_model(GoogleDriveSyncQueue).app_label == 'settings_core'`, the same for the config, and `ContentType.objects.filter(app_label='personnel', model__in=['googledrivesyncqueue', 'companygoogledriveconfig']).count() == 0`.
+  - `test_worker_once_keeps_rows`: create one queue row with `status='pending'` for a company that has NO config; `call_command('run_gdrive_sync_worker', '--once', stdout=io.StringIO(), stderr=io.StringIO())` raises nothing; afterwards `GoogleDriveSyncQueue.objects.count()` is unchanged and the row still exists (its status may be any value, only assert it exists).
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test settings_core.test_drive_move_26c --keepdb --noinput`. At most 6 runs.
+
+5. Before finishing: all 7 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
