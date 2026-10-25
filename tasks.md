@@ -727,7 +727,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 1 of 1 — Release v1 step 2.5-a: tests for live-event tab id, no global channel, and skipLiveEvent
+[DONE] Session 1 of 1 — Release v1 step 2.5-a: tests for live-event tab id, no global channel, and skipLiveEvent
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

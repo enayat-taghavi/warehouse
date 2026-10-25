@@ -11176,3 +11176,69 @@ Session 1 of 1 — Release v1 step 2.4-c: DOM specs for the notification bell an
 > *"Never alter, bypass or shadow a runner check: Do not create, edit or rename anything that changes how a `require:`/`verify:` command behaves: no wrapper or shadow modules... no edits to `verify_tools.py`, `run_tasks.py` or guardian scripts unles...
 
 ---
+
+### Task 1 of 1 — 2026-10-25 20:34:20
+- **Status:** DONE
+- **Conversation:** `5a1c244a-ea93-458c-b855-90c6ee05ebf0`
+- **Steps:** 72
+- **Tokens:** 139858
+- **Duration:** 11m 11s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 1 of 1 — Release v1 step 2.5-a: tests for live-event tab id, no global channel, and skipLiveEvent
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly two new files: `backend/modules/accounting/personnel/test_live_events_25a.py` and `frontend/src/app/core/http/websocket.service.spec.ts`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` (Python) or `it.fails(` (spec) and describe the exact difference in your report.
+- No `it.only`, `describe.only`, `it.skip`, no `fs`/`path` imports in the spec.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.5-a): live event tab id and skipLiveEvent`.
+
+2. Context (read these, nothing broader):
+- `backend/modules/accounting/personnel/views_domains/scope_helpers.py` lines 264–540: `broadcast_personnel_update`, `broadcast_vehicle_update`, `broadcast_attendance_updated`. Facts: when `client_tab_id` is not passed (None), each of the three reads it with `accounts.middleware.get_current_client_tab_id()`; an explicit value wins. Personnel and vehicle without a company send nothing. `broadcast_attendance_updated` without a company (no `company_id`, no `extra_data['company_id']`, no `warehouse_id`) now sends nothing; with `company_id=X` it sends one message to group `company_X_notifications` with `type_str == 'attendance_updated'`, `company_id == X` and `client_tab_id`.
+- `backend/modules/accounting/personnel/test_company_multitenant.py` lines 1–60 (setUp: companies) and 443–480 (`test_websocket_broadcast_isolation_and_privacy`): copy its way of patching `channels.layers.get_channel_layer` with a `MagicMock` whose `group_send` is an `AsyncMock`, and of creating a `PersonnelProfile` with a company.
+- `backend/core/accounts/middleware.py` lines 60–75: `set_current_client_tab_id(tab_id)` returns a token; reset it with `accounts.middleware._current_client_tab_id_var.reset(token)` in a `finally`.
+- `backend/modules/accounting/personnel/views_domains/trip_views.py`: the string `global_notifications` must no longer appear in it.
+- `frontend/src/app/core/http/websocket.service.ts` lines 1–60: `WebSocketService` (constructor takes `AuthService` and `ToastService`), `tabId`, and `skipLiveEvent(msg)`: returns true for a falsy msg; true when `msg.client_tab_id === tabId`; true when the event company (`msg.company_id`, else `msg.metadata?.company_id`) and the active company (`ActiveCompanyService.activeCompanySignal()?.id`, read lazily through the `Injector`) are both set and differ (compared as numbers); otherwise false.
+
+3. Task A, `backend/modules/accounting/personnel/test_live_events_25a.py`, class `LiveEventTabIdTests(TestCase)` with a company created like in `test_company_multitenant.py`:
+- `test_personnel_default_tab_id_from_request`: with `set_current_client_tab_id('tab_a')`, `broadcast_personnel_update(p)` sends one message whose `client_tab_id == 'tab_a'` to `company_<id>_notifications`.
+- `test_personnel_explicit_tab_id_wins`: same context, `client_tab_id='tab_b'` passed; message has `'tab_b'`.
+- `test_personnel_no_context_tab_is_none`: no context value; message `client_tab_id` is None.
+- `test_vehicle_default_tab_id_from_request`: same as the first for `broadcast_vehicle_update` with a `VehicleProfile` (or the vehicle model used in `scope_helpers.py`; create it with the minimum required fields and the company) — if creating the vehicle is hard, use a `types.SimpleNamespace(id=1, company_id=<company id>, plate_number='12ب345', driver_name='x')` instead.
+- `test_attendance_without_company_sends_nothing`: `broadcast_attendance_updated(date_shamsi='1405/08/03')` makes no `group_send` call.
+- `test_attendance_with_company_and_tab`: with context tab `'tab_c'`, `broadcast_attendance_updated(company_id=<id>, date_shamsi='1405/08/03')` sends exactly one message to `company_<id>_notifications` with `client_tab_id == 'tab_c'` and `company_id == <id>`.
+- `test_trip_views_never_use_global_channel`: read the source of `personnel.views_domains.trip_views` with `inspect.getsource` and assert `'global_notifications'` is not in it.
+
+4. Task B, `frontend/src/app/core/http/websocket.service.spec.ts` (Vitest, `TestBed`): provide `WebSocketService` with `{ provide: AuthService, useValue: { getToken: () => null } }`, `{ provide: ToastService, useValue: { show: vi.fn(), error: vi.fn(), warning: vi.fn(), success: vi.fn(), info: vi.fn() } }` and `{ provide: ActiveCompanyService, useValue: { activeCompanySignal: signal<any>(null) } }` (keep a reference to the signal to set it per test). Do not call `connect()`. Tests (names exactly):
+- `1. skips a falsy message`: `null` and `undefined` return true.
+- `2. skips an event from the same tab`: `{ client_tab_id: service.tabId }` returns true.
+- `3. keeps an event from another tab`: `{ client_tab_id: 'tab_other', company_id: 5 }` with active company 5 returns false.
+- `4. skips an event of another company`: active company 5, `{ company_id: 7 }` returns true; `{ company_id: '5' }` returns false (number compare).
+- `5. uses metadata.company_id when company_id is missing`: active 5, `{ metadata: { company_id: 9 } }` returns true.
+- `6. keeps events when no active company or no event company`: active null with `{ company_id: 7 }` returns false; active 5 with `{}` returns false.
+
+5. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. Backend: in `backend` run `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test personnel.test_live_events_25a --keepdb --noinput`. Frontend: in `frontend` create a temporary `tsconfig.agy-2.5a.spec.json` with `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/core/http/websocket.service.spec.ts"], "exclude": [] }` and run `npx ng test --watch=false --ts-config tsconfig.agy-2.5a.spec.json --include src/app/core/http/websocket.service.spec.ts`; delete the temporary tsconfig before committing. At most 5 runs of each.
+
+6. Before finishing: both test files pass (only the marked expected failures allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
+
+7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+I have launched the frontend test command with the temporary tsconfig and will wait for it to complete.
+I am waiting for the frontend test run to complete.
+### Summary of Tests Added & Results
+
+#### 1. Backend (`backend/modules/accounting/personnel/test_live_events_25a.py`)
+Class [`LiveEventTabIdTests`](file:///E:/comanager/backend/modules/accounting/personnel/test_live_events_25a.py#L18-L159):
+- `test_personnel_default_tab_id_from_request`: Verified `broadcast_personnel_update` inherits request tab ID from contextvar.
+- `test_personnel_explicit_tab_id_wins`: Verified explicit `client_tab_id` parameter overrides context.
+- `test_personnel_no_context_tab_is_none`: Verified `client_tab_id` is ...
+
+---
