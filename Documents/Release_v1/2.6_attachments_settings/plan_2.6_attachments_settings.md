@@ -101,4 +101,12 @@
   - انحراف: بند ۴ (سرویس آپلود عمومی به هسته) و بند ۵ (جای نگه‌داری `gdrive` پیوست، ص۷) به ۲.۶-ج۲ رفتند.
   - **اقدام بعدی:** ۲.۶-ج۲ با `scratch/brief_2.6_c2.md`.
 
+- **۴ آبان ۱۴۰۵ (۲۶ اکتبر) — ۲.۶-ج۲ انجام شد (ص۸ کامل، ص۷).**
+  - کد (`f5bbd3b0`): سرویس صف درایو شرکت به `settings_core/company_drive_service.py` رفت (ساخت کلاینت، پوشهٔ ریشه و بایگانی، `sync_single_queue_item`، حلقهٔ دسته‌ای `process_company_batch` و سیاست زمان‌بندی)، خط به خط همان کد پیشین. کارگر هسته صف شرکت را مستقیم می‌دواند؛ `batch_runner` و فرمان هم‌نام `personnel` حذف شدند. `scan_all` (پیمایش اسناد ماژول) با قلاب `gdrive_scan_all` از `personnel/apps.py`؛ بی‌قلاب، ردیف `pending` می‌ماند با `next_retry_at` یک ساعت بعد (هرگز حذف نمی‌شود). `personnel/google_drive_service.py` نام‌ها و کش‌ها را دوباره صادر می‌کند.
+  - پیوست (ص۷): `_storage_for` فقط وقتی `gdrive` می‌دهد که شرکت سند درایو فعال و متصل داشته باشد، سند محرمانه نباشد، برچسب امضا/مهر نباشد (بی‌حساسیت به حروف) و نوع `user` نباشد. فایل همیشه روی سرور می‌ماند و در همان تراکنش یک ردیف `upload` با `model_name='Attachment'` و مسیر فایل در صف ساخته می‌شود (هنگام جایگزینی هم).
+  - تست وابستگی بازصدور از `settings_core/test_drive_move_26c.py` (هسته نباید `personnel` را import کند؛ نگهبان 29 را رد می‌کرد) به `personnel/test_google_drive.py` رفت.
+  - تست‌ها با آنتی‌گرویتی (`9ec58adb`): ۸ تست `attachments/tests/test_storage_26c2.py` سبز. ۶۷ تست `attachments` و `settings_core` روی پایگاه تازه و ۵۵ تست `personnel.test_google_drive` و `attachments` سبز؛ `manage.py check` (پیش‌فرض و فقط انبار)، `makemigrations --check` و نگهبان‌های 29، 57، 58 سبز.
+  - `data-loss-reviewer` و `tenant-scope-reviewer`: بی‌یافته. یادداشت‌ها: پیوستی که بعداً محرمانه شود، رونوشت درایوش می‌ماند؛ نسخهٔ جایگزین‌شده به بایگانی درایو نمی‌رود (TODO برای مرحلهٔ بعد).
+  - **اقدام بعدی:** ۲.۶-د با `scratch/brief_2.6_d.md`.
+
 </div>

@@ -68,7 +68,7 @@ def _storage_for(kind, entity_id, label, company_id):
     جای نگه‌داری (ص۷). امضا و مهر، پیوست کاربر، سند محرمانه و شرکت بی‌درایوِ متصل همیشه سرور؛ وگرنه درایو.
     فایل در هر حال روی سرور هم می‌ماند و درایو فقط رونوشت است.
     """
-    if label in SERVER_ONLY_LABELS or kind == 'user' or not company_id:
+    if (label or '').lower() in SERVER_ONLY_LABELS or kind == 'user' or not company_id:
         return Attachment.STORAGE_SERVER
     from settings_core.models import CompanyGoogleDriveConfig
     connected = CompanyGoogleDriveConfig.objects.filter(
