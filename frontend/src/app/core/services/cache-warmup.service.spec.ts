@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CacheWarmupService } from './cache-warmup.service';
 import { ActiveCompanyService } from './active-company.service';
 import { NetworkStatusService } from './network-status.service';
 import { getModuleRegistry } from '../modules/module-registry.service';
 
-function createMemoryStorage(): Storage {
+function createStorageMock(): Storage {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
@@ -19,32 +19,51 @@ function createMemoryStorage(): Storage {
     clear: () => {
       store = {};
     },
+    key: (index: number) => Object.keys(store)[index] ?? null,
     get length() {
       return Object.keys(store).length;
     },
-    key: (index: number) => Object.keys(store)[index] ?? null,
   };
 }
 
-if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage?.clear !== 'function') {
+if (!globalThis.localStorage) {
   Object.defineProperty(globalThis, 'localStorage', {
-    value: createMemoryStorage(),
+    value: createStorageMock(),
     writable: true,
     configurable: true,
   });
 }
-if (typeof globalThis.sessionStorage === 'undefined' || typeof globalThis.sessionStorage?.clear !== 'function') {
+if (!globalThis.sessionStorage) {
   Object.defineProperty(globalThis, 'sessionStorage', {
-    value: createMemoryStorage(),
+    value: createStorageMock(),
     writable: true,
     configurable: true,
   });
+}
+if (typeof window !== 'undefined') {
+  if (!window.localStorage) {
+    Object.defineProperty(window, 'localStorage', {
+      value: globalThis.localStorage,
+      writable: true,
+      configurable: true,
+    });
+  }
+  if (!window.sessionStorage) {
+    Object.defineProperty(window, 'sessionStorage', {
+      value: globalThis.sessionStorage,
+      writable: true,
+      configurable: true,
+    });
+  }
 }
 
 describe('CacheWarmupService', () => {
   let service: CacheWarmupService;
-  let activeCompanyMock: { activeCompanyId: number | null; activeCompany$: BehaviorSubject<unknown> };
-  let hookA: any;
+  let activeCompanyMock: {
+    activeCompanyId: number | null;
+    activeCompany$: BehaviorSubject<any>;
+  };
+  let hookA: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     localStorage.clear();
@@ -54,22 +73,12 @@ describe('CacheWarmupService', () => {
 
     activeCompanyMock = {
       activeCompanyId: 3,
-      activeCompany$: new BehaviorSubject<unknown>(null),
+      activeCompany$: new BehaviorSubject(null),
     };
-
-    TestBed.configureTestingModule({
-      providers: [
-        CacheWarmupService,
-        { provide: ActiveCompanyService, useValue: activeCompanyMock },
-      ],
-    });
-
-    service = TestBed.inject(CacheWarmupService);
 
     hookA = vi.fn().mockResolvedValue(undefined);
 
     vi.spyOn(NetworkStatusService.getInstance(), 'isOnline', 'get').mockReturnValue(true);
-
     vi.spyOn(getModuleRegistry(), 'getExtensions').mockReturnValue([
       {
         module: {} as any,
@@ -82,6 +91,15 @@ describe('CacheWarmupService', () => {
         },
       },
     ] as any);
+
+    TestBed.configureTestingModule({
+      providers: [
+        CacheWarmupService,
+        { provide: ActiveCompanyService, useValue: activeCompanyMock },
+      ],
+    });
+
+    service = TestBed.inject(CacheWarmupService);
   });
 
   afterEach(() => {
@@ -90,8 +108,10 @@ describe('CacheWarmupService', () => {
 
   it('1. calls each warmCache hook with the injector when online', async () => {
     await service.warm();
-    expect(hookA).toHaveBeenCalledTimes(1);
-    expect(typeof hookA.mock.calls[0][0]?.get).toBe('function');
+    expect(hookA).toHaveBeenCalledOnce();
+    const firstArg = hookA.mock.calls[0][0];
+    expect(firstArg).toBeDefined();
+    expect(typeof firstArg.get).toBe('function');
   });
 
   it('2. does nothing when offline', async () => {
@@ -115,7 +135,7 @@ describe('CacheWarmupService', () => {
   it('4. second call within 10 minutes is skipped, force runs it', async () => {
     await service.warm();
     await service.warm();
-    expect(hookA).toHaveBeenCalledTimes(1);
+    expect(hookA).toHaveBeenCalledOnce();
 
     await service.warm(true);
     expect(hookA).toHaveBeenCalledTimes(2);
@@ -123,9 +143,8 @@ describe('CacheWarmupService', () => {
   });
 
   it('5. a failing hook does not stop the next one and warm never throws', async () => {
-    const hook1 = vi.fn().mockRejectedValue(new Error('x'));
-    const hook2 = vi.fn().mockResolvedValue(undefined);
-
+    const hookFail = vi.fn().mockRejectedValue(new Error('x'));
+    const hookSuccess = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(getModuleRegistry(), 'getExtensions').mockReturnValue([
       {
         module: {} as any,
@@ -134,7 +153,7 @@ describe('CacheWarmupService', () => {
           scopeKind: 'x',
           pullEndpoint: '/p',
           scopeParamKey: 'k',
-          warmCache: hook1,
+          warmCache: hookFail,
         },
       },
       {
@@ -144,19 +163,19 @@ describe('CacheWarmupService', () => {
           scopeKind: 'x',
           pullEndpoint: '/p',
           scopeParamKey: 'k',
-          warmCache: hook2,
+          warmCache: hookSuccess,
         },
       },
     ] as any);
 
     await expect(service.warm()).resolves.toBeUndefined();
-    expect(hook1).toHaveBeenCalledTimes(1);
-    expect(hook2).toHaveBeenCalledTimes(1);
+    expect(hookFail).toHaveBeenCalledOnce();
+    expect(hookSuccess).toHaveBeenCalledOnce();
   });
 
   it('6. throttle key is per company', async () => {
     await service.warm();
-    expect(hookA).toHaveBeenCalledTimes(1);
+    expect(hookA).toHaveBeenCalledOnce();
 
     activeCompanyMock.activeCompanyId = 4;
     await service.warm();
