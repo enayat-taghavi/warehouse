@@ -247,6 +247,23 @@ def is_entity_confidential(kind: str, entity_id) -> bool:
     return False
 
 
+# ─── قلاب چاپ سند (ص۲ طرح ۲.۷) ──────────────────────────────────────────────────────────────────
+# contribute('printable:<kind>', fn): fn(user, entity_id) → reports.document_pdf.PrintableDocument | None.
+
+def printable_document(user, kind: str, entity_id):
+    """دادهٔ چاپ سند از ماژول صاحب: اولین پاسخ غیر None؛ خطای قلاب = None (۴۰۴ بی‌نشت)؛ نوع بی‌قلاب = None."""
+    if not kind or not entity_id:
+        return None
+    for hook in contributions(f'printable:{kind}'):
+        try:
+            doc = hook(user, entity_id)
+        except Exception:
+            return None
+        if doc is not None:
+            return doc
+    return None
+
+
 def _verify_platform_compatibility(spec: ModuleSpec) -> None:
     """
     بررسی بازه نسخه پلتفرم مورد نیاز ماژول — فاز ۷ (تسک ۶۶).
