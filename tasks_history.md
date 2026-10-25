@@ -12016,3 +12016,138 @@ I am waiting for the background verification task to finish.
 رفتار متدهای GET و PATCH در اند...
 
 ---
+
+### Task 1 of 2 — 2026-10-26 01:40:43
+- **Status:** DONE
+- **Conversation:** `0f085fb5-2c3a-4ea3-aa52-2ef53ae355de`
+- **Steps:** 38
+- **Tokens:** 85875
+- **Duration:** 3m 58s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 2 — Release v1 step 2.6-e: tests for section on/off switches (disabled_sections)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/settings_core/test_toggle_sections_26e.py`. Never edit production code, migrations, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Core test files must not import accounting or warehouse modules (no `personnel`, `warehouses`, `inventory` imports). Use only `accounts`, `settings_core`, `platform_core` and Django.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Never delete rows from the real database; tests run only on the Django test database.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.6-e): section switches`.
+
+2. Context (read these, nothing broader):
+- `backend/core/settings_core/services.py`: `DEFAULT_SETTINGS` (key `disabled_sections`, default `[]`), functions `declared_toggle_sections()` (reads `contributions('toggle_sections')`, items are `(code, title_fa)` tuples), `get_disabled_sections()` (drops codes that are not declared) and the `disabled_sections` branch of `validate_settings_payload` (value must be a list of unique declared codes). Also `clear_setting_cache`.
+- `backend/core/settings_core/views.py`: `SettingsViewSet.global_settings` POST (route `/api/settings/global/`, see `backend/config/urls.py` line 27): a non-superuser whose payload changes `disabled_sections` gets 403 with `invalid_keys == ['disabled_sections']`, even with permission `accounts.perm_sys_settings`; `PublicConfigViewSet.list` (route `/api/public/config/`, line 29) returns `disabled_sections` for everyone and `toggle_sections` (list of `{code, title_fa}`) only for an authenticated superuser.
+- `backend/core/settings_core/test_settings_validation.py`: read its first 60 lines for how users, permission `perm_sys_settings` and the POST to `/api/settings/global/` are set up; copy that.
+- Registry patching: copy the pattern in `backend/core/attachments/tests/test_attachments_26b.py` lines 1–40 (`patch.dict(platform_core.registry._CONTRIBUTIONS, {...})`).
+
+3. Task, `backend/core/settings_core/test_toggle_sections_26e.py`. Use `rest_framework.test.APITestCase`. In `setUp` call `cache.clear()` (from `django.core.cache`). Patch `_CONTRIBUTIONS` in every test with `{'toggle_sections': [('zz.alpha', 'Alpha'), ('zz.beta', 'Beta')]}`. Users: a superuser; user P (active, not superuser) with Django permission `accounts.perm_sys_settings` (re-fetch after adding). Post JSON with `format='json'`. Tests (names exactly):
+  - `test_superuser_can_disable_declared_section`: superuser POST `{'disabled_sections': ['zz.alpha']}` → 200; then anonymous GET `/api/public/config/` → `disabled_sections == ['zz.alpha']`.
+  - `test_undeclared_code_rejected`: superuser POST `{'disabled_sections': ['zz.nope']}` → 400 and `'disabled_sections' in invalid_keys`.
+  - `test_wrong_shape_rejected`: superuser POST `{'disabled_sections': 'zz.alpha'}` → 400; `{'disabled_sections': ['zz.alpha', 'zz.alpha']}` → 400; `{'disabled_sections': [1]}` → 400.
+  - `test_non_superuser_cannot_change`: user P POST `{'disabled_sections': ['zz.alpha']}` → 403; `SystemSetting.objects.filter(key='disabled_sections').exists()` is False.
+  - `test_non_superuser_unchanged_value_allowed`: user P POST `{'disabled_sections': []}` (same as the default) → 200.
+  - `test_public_config_toggle_sections_only_for_superuser`: anonymous GET → no `toggle_sections` key; user P GET → no key; superuser GET → `toggle_sections == [{'code': 'zz.alpha', 'title_fa': 'Alpha'}, {'code': 'zz.beta', 'title_fa': 'Beta'}]`.
+  - `test_stale_code_dropped_from_public_config`: create `SystemSetting(key='disabled_sections', warehouse_id=None, value=['zz.alpha', 'zz.gone'])` directly, `clear_setting_cache()`, anonymous GET → `disabled_sections == ['zz.alpha']`.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; $env:DB_TEST_NAME='test_agy_toggle26e'; .\venv\Scripts\python.exe manage.py test settings_core.test_toggle_sections_26e --noinput`. At most 6 runs.
+
+5. Before finishing: all 7 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اجرای تست‌های سوییچ‌های بخش (`disabled_sections`) با دیتابیس تست ایزوله در حال اجراست و منتظر اتمام آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### الگوی ۴ مرحله‌ای:
+
+۱. **توضیح ساده:** درخواست اجرای نشست ۱ از ۲ (گام ۲.۶-e از انتشار نگارش ۱) برای پیاده‌سازی و اجرای تست‌های مربوط به سوییچ‌های روشن/خاموش بخش‌ها (`disabled_sections`) در هسته تنظیمات، ساخت دقیقاً یک فایل جدید در مسیر `backend/core/settings_core/test_toggle_sections_26e.py` بدون تغییر کدهای پروداکشن، اجرای آزمون‌ها روی دیتابیس تست ایزوله، و ثبت commit بدون push.
+
+۲. **اعتبارسنجی:** فایل‌های مربوطه (`services.py`، `views.py` و الگوی رجیستری) بررسی شدند و رفتار متدهای `SettingsViewSet.globa...
+
+---
+
+### Task 2 of 2 — 2026-10-26 01:51:38
+- **Status:** DONE
+- **Conversation:** `d6d44b62-053e-4876-91b3-72c560f3540d`
+- **Steps:** 68
+- **Tokens:** 145757
+- **Duration:** 10m 51s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/7 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Release v1 step 2.6-e: DOM specs for the attachments component, company settings tab and section switches
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly three new files: `frontend/src/app/shared/components/attachments/attachments.dom.spec.ts`, `frontend/src/app/modules/common/components/operations/companies/company-settings-tab/company-settings-tab.dom.spec.ts`, `frontend/src/app/core/services/section-toggle.service.spec.ts`. Never edit production code, other specs, `Documents/`, `tasks.md` or `tasks_history.md`.
+- No `it.skip`, `it.only`, `describe.skip`, no `fs` or `path` imports.
+- If a test fails because production code behaves differently from this task, do not change production code: delete that one expectation, keep the rest, and describe the exact difference in your report.
+- No push. Stage only your files. Commit message subject exactly: `test(release-v1 2.6-e): attachments and company settings specs`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts`: the spec style to copy (first line `// @vitest-environment jsdom`, `import '@angular/compiler'`, the `getTestBed().initTestEnvironment(...)` try block, `TestBed` with mocked providers, `vi.fn()`).
+- `frontend/src/app/shared/components/attachments/attachments.component.ts` and `.html` (whole files): uses `ApiService` methods `get`, `upload`, `delete`, `download` (all return Observables), `ConfirmDialogService.open(...)` (returns a Promise of boolean), `ToastService.success` and `ToastService.error`.
+- `frontend/src/app/modules/common/components/operations/companies/company-settings-tab/company-settings-tab.component.ts` and `.html` (whole files): uses `ApiService.get` and `ApiService.patch`.
+- `frontend/src/app/core/services/section-toggle.service.ts` (whole file).
+
+3. Task A, `attachments.dom.spec.ts`. Provide `{ provide: ApiService, useValue: api }` where `api = { get: vi.fn(), upload: vi.fn(), delete: vi.fn(), download: vi.fn() }` (return `of(...)` or `throwError(() => ({ error: { detail: 'boom' } }))` from rxjs), a fake `ConfirmDialogService` with `open: vi.fn().mockResolvedValue(true)` and a fake `ToastService` with `success: vi.fn(), error: vi.fn()`. Create the component, set inputs with `fixture.componentRef.setInput('kind', 'zz_doc')` and `setInput('entityId', 7)`, call `fixture.detectChanges()` and `await fixture.whenStable()` (then `detectChanges()` again). Tests (names exactly):
+  - `loads list with kind and id`: `api.get` called with `'attachments'` and an object containing `kind: 'zz_doc', id: 7`; two returned items render both `original_name` texts in the DOM.
+  - `shows empty state`: `api.get` returns `of([])` → the empty-state text from the template appears.
+  - `shows error detail and retries`: `api.get` fails with detail `boom` → `boom` appears; clicking the retry button calls `api.get` again.
+  - `hides edit buttons without canEdit`: with `canEdit` false there is no upload and no delete button (find them by their `aria-label` values in the template).
+  - `delete asks confirm and reloads`: with `canEdit` true, clicking delete calls `confirm.open`, then `api.delete` with `'attachments/<id>'`, then `api.get` a second time.
+  - `download uses api not a link`: there is no `a[href*="/api/attachments/"]` in the DOM; clicking download calls `api.download` with `'attachments/<id>/download/'` or the same path without the trailing slash (accept either).
+  - `sends label on list request`: `setInput('label', 'signature')` → `api.get` params contain `label: 'signature'`.
+
+4. Task B, `company-settings-tab.dom.spec.ts`. Fake `ApiService` with `get` and `patch`; fake `ToastService`. `setInput('companyId', 3)`. Response for `get`: `{ company_id: 3, results: [ {module:'zzmod', key:'flag', type:'bool', title_fa:'Flag', default:false, value:false, is_default:true, can_edit:true}, {module:'zzmod', key:'limit', type:'int', title_fa:'Limit', default:5, value:5, is_default:true, can_edit:false} ] }`. Tests (names exactly):
+  - `loads settings of the company`: `api.get` called with `'settings/company/3'`; texts `Flag` and `Limit` appear.
+  - `shows empty state`: results `[]` → the empty-state text from the template appears.
+  - `read only row is disabled`: the input of `limit` is disabled.
+  - `toggle sends patch`: call `component.onToggle(row, true)` for the `flag` row (from `component.groups[0].rows`) → `api.patch` called with `'settings/company/3'` and `{ module: 'zzmod', key: 'flag', value: true }`.
+  - `shows server detail on error`: `api.patch` fails with `{ error: { detail: 'bad' } }` → after `onToggle` and `whenStable`, `bad` appears in the DOM and the row draft is back to false.
+
+5. Task C, `section-toggle.service.spec.ts` (plain service test; `localStorage.clear()` and `TestBed.resetTestingModule()` in `beforeEach`, then `TestBed.inject(SectionToggleService)`). Tests (names exactly):
+  - `item without key is enabled`: `isEnabled(undefined)` and `isEnabled('')` are true.
+  - `applyConfig disables listed codes`: `applyConfig({ disabled_sections: ['a.x'] })` → `isEnabled('a.x')` false, `isEnabled('a.y')` true.
+  - `config without key keeps previous list`: after the above, `applyConfig({})` keeps `a.x` disabled.
+  - `stores list for offline boot`: after `applyConfig({ disabled_sections: ['a.x'] })`, `localStorage.getItem('wh_disabled_sections')` equals `'["a.x"]'`.
+  - `declared keeps only valid items`: `applyConfig({ toggle_sections: [{code:'a.x', title_fa:'X'}, {code: 1}] })` → `declared()` has length 1.
+
+6. Tool policy: read only the files listed in section 2, `CLAUDE.md` section "Frontend tests (ng test)" and `.agents/AGENTS.md`. Run only these specs: in `frontend` run `npx ng test --watch=false --include src/app/shared/components/attachments/attachments.dom.spec.ts --include src/app/modules/common/components/operations/companies/company-settings-tab/company-settings-tab.dom.spec.ts --include src/app/core/services/section-toggle.service.spec.ts`. If the build fails to compile because of other spec files, use the temporary tsconfig workaround from that `CLAUDE.md` section (temporary tsconfig under `scratch/` only, never committed). At most 8 runs.
+
+7. Before finishing: all tests pass; `git status --short` shows no change to tracked files after your commit.
+
+8. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any removed expectation with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+دستور اجرای آزمون‌ها (ng test) اجرا شد و منتظر پایان اجرای آن هستیم...
+</div>
+<div dir="rtl" align="right">
+دستور آزمون مجدد پس از کامیت اجرا شد و منتظر نتیجهٔ نهایی هستیم...
+</div>
+<div dir="rtl" align="right">
+
+### توضیح ساده و بررسی صحت (Step 1 & 2)
+در این مرحله (Release v1 step 2.6-e)، آزمون‌های DOM و سرویس برای سه بخش خواسته شده ایجاد شدند:
+۱. کامپوننت پیوست‌ها ([`attachments.dom.spec.ts`](file:///E:/comanager/frontend/src/app/shared/components/attachments/attachments.dom.spec.ts)) شامل رفتار بارگذاری، وضعیت خالی، نمایش خطا و تلاش مجدد، پنهان‌سازی دکمه‌های ویرایش، تأییدیه و حذف، دانلود مستقیم از API و ارسال فیلتر label.
+۲. کامپوننت تنظیمات شرکت ([`company-s...
+
+---

@@ -1287,7 +1287,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 2 — Release v1 step 2.6-e: tests for section on/off switches (disabled_sections)
+[DONE] [ ] Session 1 of 2 — Release v1 step 2.6-e: tests for section on/off switches (disabled_sections)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -1329,7 +1329,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 2 — Release v1 step 2.6-e: DOM specs for the attachments component, company settings tab and section switches
+[DONE] [ ] Session 2 of 2 — Release v1 step 2.6-e: DOM specs for the attachments component, company settings tab and section switches
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

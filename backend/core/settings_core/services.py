@@ -26,6 +26,9 @@ DEFAULT_SETTINGS = {
     'disabled_sections': [],
 }
 
+# کلیدهایی که فقط سراسری‌اند و ردیف تنظیمات انبار برایشان پذیرفته نمی‌شود (ص۱۲ طرح ۲.۶: نوشتن فقط با مدیر کل)
+GLOBAL_ONLY_SETTINGS_KEYS = {'disabled_sections'}
+
 BOOLEAN_SETTINGS_KEYS = {
     'chat_enabled',
     'chat_file_sharing',
@@ -116,9 +119,10 @@ def is_valid_download_url(val):
     return True
 
 
-def validate_settings_payload(data):
+def validate_settings_payload(data, global_scope=True):
     """
     اعتبارسنجی کلیدها و مقادیر payload بر پایهٔ قواعد سخت دامنه.
+    global_scope=False (تنظیمات یک انبار): کلیدهای فقط‌سراسری پذیرفته نمی‌شوند.
     برمی‌گرداند: فهرست کلیدهای نامعتبر (تهی = payload معتبر است).
     """
     if not isinstance(data, dict):
@@ -126,7 +130,7 @@ def validate_settings_payload(data):
 
     invalid_keys = []
     for key, value in data.items():
-        if key not in DEFAULT_SETTINGS:
+        if key not in DEFAULT_SETTINGS or (not global_scope and key in GLOBAL_ONLY_SETTINGS_KEYS):
             invalid_keys.append(key)
             continue
 

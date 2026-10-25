@@ -262,7 +262,7 @@ class WarehouseSettingsViewSet(viewsets.ViewSet):
             if not isinstance(data, dict):
                 return Response({'error': 'فرمت داده ارسالی باید دیکشنری باشد.'}, status=400)
 
-            invalid_keys = validate_settings_payload(data)
+            invalid_keys = validate_settings_payload(data, global_scope=False)
             if invalid_keys:
                 return Response({
                     'error': 'کلیدهای ارسالی نامعتبر یا دارای نوع/مقدار اشتباه هستند.',
