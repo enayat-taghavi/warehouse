@@ -550,3 +550,78 @@ G. Open the user menu (the profile button; its `content-desc` or text contains �
 6. Output and stop condition:
 - No commit.
 - Short English report: what was visible on the users page (cards or table, any horizontal scroll), what the substitute modal showed, whether it closed, and anything that did not work. End the turn after the report.
+
+===
+
+Session 1 of 2 — Release v1 step 2.4-a operations on app: delete the temporary QA user, back up the database and apply migration notifications 0003
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py text-check --file scratch/logs/qa29_user.txt --contains QA_USER_DELETED
+verify: python scripts/automation/verify_tools.py text-check --file scratch/logs/migrate24a.txt --contains 0003_notification_url --absent "[ ]"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- Operational task on the local test environment `app` (this Windows machine, test data only). Never touch `soft`.
+- Change no tracked file. Do not commit. Write only under `scratch/logs/`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+2. Context: step 2.4-a added an additive migration `notifications/0003_notification_url` (one new text column with an empty default). The temporary QA superuser `qa_h29_admin` from the 2.9 Android check must now be deleted.
+
+3. Task, in this order, all in `backend`:
+- a) Delete the QA user: `.\venv\Scripts\python.exe -X utf8 manage.py shell -c "import sys; sys.argv=['x','delete']; exec(open('../scratch/heavy/qa29_user.py', encoding='utf-8').read())"`. It must print `QA_USER_DELETED` (the helper also writes `scratch/logs/qa29_user.txt`).
+- b) Backup (stop if it fails or the size is 0): `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-migrate app 2.4-a'); print(m['filename'], m['size'])"`. Never run `run_auto_backup`.
+- c) `.\venv\Scripts\python.exe manage.py migrate notifications`. It must apply only `0003_notification_url`.
+- d) `.\venv\Scripts\python.exe manage.py showmigrations notifications > ..\scratch\logs\migrate24a.txt` and read that file: every line must show `[X]`.
+
+4. Tool policy: only the commands above, `git status --short` and `Get-Content`. If a step fails, read the error and stop with a report; do not retry with other flags.
+
+5. Before finishing: `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report (QA user result, backup file and size, migrate output, showmigrations lines). No commit. End the turn after the report.
+
+===
+
+Session 2 of 2 — Release v1 step 2.4-a: scenario tests for in-app notifications created from workflow task events
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/core/workflow/tests/test_notify.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/workflow/tests/test_notify.py --contains test_received_creates_row_per_holder --contains test_substitute_gets_on_behalf_text --contains test_no_row_for_removed_or_own_done --contains test_superuser_alert_rows --contains test_reason_in_return_and_reject --contains test_completed_url --contains test_inactive_user_no_row --contains test_failure_does_not_break_engine --contains test_constant_queries_per_event
+verify: set DB_TEST_NAME=test_agy_notify&& python scripts/automation/verify_tools.py django-tests --labels workflow.tests.test_notify workflow.tests.test_realtime --min-tests 14
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.4-a): workflow notification scenarios"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/workflow/tests/test_notify.py`. Change no other file: never edit production code, other tests, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code and do not weaken the expectation silently: keep the test as written, mark it `@unittest.expectedFailure`, and describe the difference in your report.
+- Test docstrings and comments are Persian, like the existing tests in that folder.
+- No push. Stage only your own file. Commit message subject exactly: `test(release-v1 2.4-a): workflow notification scenarios`.
+
+2. Context (read these, nothing broader):
+- `backend/core/workflow/notify.py` (whole file, about 165 lines): `create_for_event(event)` builds `notifications.Notification` rows for one task event; `TITLES_FA`, `COMPLETED_TITLE_FA`, `MY_TASKS_URL`, `NOTIFICATION_TYPE`, `TARGET_MODEL`.
+- `backend/core/workflow/realtime.py` (whole file): `on_task_event` calls `notify.create_for_event` first, then sends the personal websocket messages with `notification_id`, `title`, `url`, `created_at`.
+- `backend/core/workflow/tests/test_realtime.py` (whole file): copy its `FakeLayer`, the `setUp` that patches `channels.layers.get_channel_layer`, and `run_flow` (which wraps a call in `self.captureOnCommitCallbacks(execute=True)` so events and notifications are produced).
+- `backend/core/workflow/tests/base.py` lines 1-150 (`WorkflowTestBase`: users `member`, `lead`, `reviewer`, `boss`, `payer`, superuser `su`, sections `sec`, `sec2`; helpers `user`, `fresh`, `doc`; the test spec `summary(obj)` gives the document title used in the message) and `backend/core/workflow/tests/test_engine.py` lines 20-55 (`EngineBase.submit`, `task`, `act`, and `test_member_to_lead_reviewer_boss_payer` for the order of actors) and lines 277-283 (`SubstituteTests.sub` helper that creates a `WorkflowSubstitute`; copy it).
+
+3. Task: write class `NotifyTests(EngineBase)` in `test_notify.py` with the same `setUp` as `RealtimeTests`, and these tests (use these exact method names):
+- `test_received_creates_row_per_holder`: add a second lead (`self.user('lead2', 'wf_lead')`), submit. Exactly one `Notification` per lead with `notification_type == 'workflow_task'`, `title == TITLES_FA['received']`, `url == '/app/my-tasks'`, `target_model == 'WorkflowInstance'`, `target_id == str(instance.pk)`; the message contains the step title of the first step; the member (creator) got no row.
+- `test_substitute_gets_on_behalf_text`: `helper = self.user('helper', 'wf_member')`, `self.sub(self.lead, helper)`, submit. The helper has one row whose message contains `به جانشینی از` and the lead's display name (`get_full_name()` or username); the lead's own row does not contain `به جانشینی از`. A user who is both principal and substitute for the same task gets exactly one row: create `lead2 = self.user('lead2', 'wf_lead')` and `self.sub(self.lead, lead2)` before submitting; lead2 has exactly one row and it does not contain `به جانشینی از`.
+- `test_no_row_for_removed_or_own_done`: with lead and lead2, submit, then `self.act(self.lead, d)` inside `run_flow`. Each lead still has exactly one row (the `done` to the actor and the `removed` to lead2 create none); the reviewer got one `received` row.
+- `test_superuser_alert_rows`: create an inactive superuser (`is_active=False`) first, then submit with `section=self.sec2` (no reviewer there, see `test_realtime.py` line 61). Every active superuser has one row with `title == TITLES_FA['superuser_alert']`; the inactive superuser has none; the websocket message to `realtime.SUPERUSER_GROUP` has a non-empty `title` and no `notification_id` key.
+- `test_reason_in_return_and_reject`: submit; return with reason `'مبلغ اشتباه است'` (`engine.return_for_fix(self.fresh(self.lead), self.task(d), reason)` inside `run_flow`); resubmit (`engine.submit('zz_wf_flow', d, self.member)` inside `run_flow`); act as lead; reject with reason `'تکراری'` (`engine.reject(self.fresh(self.reviewer), self.task(d), reason)`). The member has a row with `title == TITLES_FA['returned']` whose message contains the first reason and a row with `title == TITLES_FA['rejected']` whose message contains the second; both have a `url` that is not `/app/my-tasks` and contains `str(d.pk)`.
+- `test_completed_url`: take a document through all steps (order of actors as in `test_member_to_lead_reviewer_boss_payer`). The member gets exactly one row with `title == COMPLETED_TITLE_FA` and its `url` contains `str(d.pk)`.
+- `test_inactive_user_no_row`: set `self.lead.is_active = False` and save before submit; the lead gets no row.
+- `test_failure_does_not_break_engine`: patch `notifications.models.Notification.objects.bulk_create` with `side_effect=RuntimeError('db down')`; submit and act as lead inside `run_flow` still work (the task moves to step `review`), and `received` websocket messages are still sent, without a `notification_id` key.
+- `test_constant_queries_per_event`: call `notify.create_for_event` directly with a hand-built payload `events.build_payload(events.RECEIVED, instance, task, user_ids)` for 2 users and then for 12 users (create the extra users with role `wf_lead`), each time inside `CaptureQueriesContext(connection)` and inside `self.captureOnCommitCallbacks(execute=False)` so the push callback does not run; the two query counts are equal.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. Run tests only with `.\venv\Scripts\python.exe manage.py test workflow.tests.test_notify workflow.tests.test_realtime --noinput` in `backend` (set `$env:PYTHONUTF8='1';` first). At most 6 test runs.
+
+5. Before finishing: the test command passes (expected failures allowed only as described in rule 1); `git status --short` is clean after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests written, pass/fail counts, any expectedFailure with the exact difference. End the turn after the report.
