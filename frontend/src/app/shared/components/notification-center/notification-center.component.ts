@@ -25,6 +25,11 @@ export interface NotificationItem {
   created_at: string;
 }
 
+/** فقط مسیرهای درون برنامه (`/app/...`)؛ آدرس بیرونی یا `//host` پذیرفته نمی‌شود. */
+export function isInAppUrl(url: unknown): url is string {
+  return typeof url === 'string' && url.startsWith('/app/') && !url.startsWith('//');
+}
+
 @Component({
   selector: 'app-notification-center',
   standalone: true,
@@ -35,31 +40,33 @@ export interface NotificationItem {
       <button
         type="button"
         (click)="toggleDropdown($event)"
-        class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center tap-target"
-        [ngClass]="{'bg-slate-100 dark:bg-slate-800 text-indigo-600': isOpen()}"
+        class="relative w-10 h-10 rounded-xl hover:bg-surface-muted dark:hover:bg-slate-800 text-fg-muted dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center tap-target"
+        [ngClass]="{'bg-surface-muted dark:bg-slate-800 text-brand-600': isOpen()}"
+        [attr.aria-expanded]="isOpen()"
         title="مرکز اعلان‌های سامانه"
         aria-label="مرکز اعلان‌های سامانه"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="bell"></svg>
         <span
           *ngIf="unreadCount() > 0"
-          class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-slate-900 shadow-sm transition-all"
-          [ngClass]="hasNewPulse() ? 'animate-bounce bg-rose-600 ring-2 ring-rose-300' : 'bg-indigo-600'"
+          class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-surface dark:border-slate-900 shadow-sm transition-all"
+          [ngClass]="hasNewPulse() ? 'animate-bounce bg-rose-600 ring-2 ring-rose-300' : 'bg-brand-600'"
         >
           {{ unreadCount() > 99 ? '+99' : unreadCount() }}
         </span>
       </button>
 
-      <!-- Dropdown Popover -->
+      <!-- Dropdown Popover: در موبایل ثابت و تمام‌عرض تا از صفحه بیرون نزند -->
       <div
         *ngIf="isOpen()"
-        class="absolute left-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
+        id="notification-center-panel"
+        class="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
-        <div class="px-4 py-3 bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-black text-slate-800 dark:text-white">مرکز اعلان‌ها</span>
-            <span *ngIf="unreadCount() > 0" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+        <div class="px-4 py-1 bg-surface-muted/90 dark:bg-slate-800/80 border-b border-line dark:border-slate-700/80 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xs font-black text-fg dark:text-white">مرکز اعلان‌ها</span>
+            <span *ngIf="unreadCount() > 0" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800">
               {{ unreadCount() }} جدید
             </span>
           </div>
@@ -67,20 +74,21 @@ export interface NotificationItem {
             *ngIf="unreadCount() > 0"
             type="button"
             (click)="markAllAsRead($event)"
-            class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 cursor-pointer transition-colors"
+            class="min-h-10 px-2 shrink-0 text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 cursor-pointer transition-colors"
+            title="علامت‌گذاری همهٔ اعلان‌ها به عنوان خوانده‌شده"
           >
             خواندم همه
           </button>
         </div>
 
         <!-- Body: Notification List -->
-        <div class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
-          <div *ngIf="isLoading()" class="p-6 text-center text-xs text-slate-400">
+        <div class="max-h-80 overflow-y-auto overflow-x-hidden divide-y divide-line-subtle dark:divide-slate-800/60">
+          <div *ngIf="isLoading()" class="p-6 text-center text-xs text-fg-subtle">
             در حال بارگذاری اعلان‌ها...
           </div>
 
-          <div *ngIf="!isLoading() && notifications().length === 0" class="p-8 text-center text-slate-400">
-            <div class="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-600 flex items-center justify-center">
+          <div *ngIf="!isLoading() && notifications().length === 0" class="p-8 text-center text-fg-subtle">
+            <div class="w-10 h-10 mx-auto mb-2 text-fg-subtle dark:text-slate-600 flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
             </div>
             <p class="text-xs font-medium">هیچ اعلانی یافت نشد.</p>
@@ -89,30 +97,34 @@ export interface NotificationItem {
           <div
             *ngFor="let item of notifications()"
             (click)="onNotificationClick(item)"
-            class="p-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer flex items-start gap-3"
-            [ngClass]="{'bg-indigo-50/30 dark:bg-indigo-950/20': !item.is_read}"
+            (keydown.enter)="onNotificationClick(item)"
+            role="button"
+            tabindex="0"
+            class="notification-item p-3 hover:bg-surface-muted/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer flex items-start gap-3"
+            [ngClass]="{'bg-brand-50/40 dark:bg-brand-950/20': !item.is_read}"
           >
             <div
               class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs shadow-sm mt-0.5"
-              [ngClass]="item.is_read ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'"
+              [ngClass]="item.is_read ? 'bg-surface-muted text-fg-muted dark:bg-slate-800 dark:text-slate-400' : 'bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300'"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
             </div>
 
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1 mb-1">
-                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{{ item.title }}</span>
-                <span class="text-[10px] text-slate-400 shrink-0">{{ formatTimeAgo(item.created_at) }}</span>
+                <span class="text-xs font-bold text-fg dark:text-slate-200 truncate">{{ item.title }}</span>
+                <span class="text-[10px] text-fg-subtle shrink-0">{{ formatTimeAgo(item.created_at) }}</span>
               </div>
-              <p class="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">{{ item.message }}</p>
+              <p class="text-[11px] text-fg-muted dark:text-slate-300 line-clamp-2 leading-relaxed break-words">{{ item.message }}</p>
             </div>
 
             <button
               *ngIf="!item.is_read"
               type="button"
               (click)="markAsRead(item, $event)"
-              class="shrink-0 p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors rounded-lg hover:bg-white dark:hover:bg-slate-700 shadow-sm cursor-pointer"
+              class="shrink-0 w-10 h-10 flex items-center justify-center text-fg-subtle hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded-lg hover:bg-surface dark:hover:bg-slate-700 cursor-pointer"
               title="علامت‌گذاری به عنوان خوانده‌شده"
+              aria-label="علامت‌گذاری به عنوان خوانده‌شده"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
             </button>
@@ -137,7 +149,10 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   hasNewPulse = signal<boolean>(false);
   notifications = signal<NotificationItem[]>([]);
 
+  static readonly REFRESH_DEBOUNCE_MS = 500;
+
   private sub: Subscription | null = null;
+  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.loadUnreadCount();
@@ -147,6 +162,10 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.sub) {
       this.sub.unsubscribe();
+    }
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
     }
   }
 
@@ -227,8 +246,8 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
     this.markAsRead(item);
     this.isOpen.set(false);
 
-    // اگر آدرس مستقیم در پی‌لود اعلان وجود داشته باشد
-    if (item.url) {
+    // اگر آدرس مستقیم درون برنامه در پی‌لود اعلان وجود داشته باشد
+    if (isInAppUrl(item.url)) {
       this.router.navigateByUrl(item.url);
       return;
     }
@@ -285,13 +304,24 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
 
   private listenToWebSocket(): void {
     this.sub = this.ws.notifications$.subscribe((msg) => {
-      if (msg?.type_str === 'personnel_workflow' || msg?.type_str === 'fleet_workflow' || msg?.notification_id) {
-        this.unreadCount.update((cnt) => cnt + 1);
+      if (msg?.title || msg?.notification_id || msg?.type_str === 'personnel_workflow' || msg?.type_str === 'fleet_workflow') {
         this.hasNewPulse.set(true);
-        if (this.isOpen()) {
-          this.loadNotifications();
-        }
+        this.scheduleRefresh();
       }
     });
+  }
+
+  /** شمارنده از سرور خوانده می‌شود (نه +۱ محلی)؛ پیام‌های پشت‌سرهم یک درخواست می‌سازند. */
+  private scheduleRefresh(): void {
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      this.loadUnreadCount();
+      if (this.isOpen()) {
+        this.loadNotifications();
+      }
+    }, NotificationCenterComponent.REFRESH_DEBOUNCE_MS);
   }
 }

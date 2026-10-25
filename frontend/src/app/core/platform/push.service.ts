@@ -239,9 +239,9 @@ export class PushService {
       const notif = action?.notification;
       const data = notif?.data ?? {};
 
-      // ۱. اگر آدرس URL مستقیم در داده‌های اعلان وجود دارد
+      // ۱. اگر آدرس مستقیم درون برنامه (`/app/...`) در داده‌های اعلان وجود دارد؛ آدرس بیرونی نادیده گرفته می‌شود
       const url = data.url || notif?.link || null;
-      if (url) {
+      if (typeof url === 'string' && url.startsWith('/app/')) {
         this.router.navigateByUrl(url);
         return;
       }

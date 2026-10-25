@@ -203,6 +203,7 @@ class NotificationAPITestCase(TestCase):
                     notification_type='mention',
                     target_model='item',
                     target_id='555',
+                    url='/app/my-tasks',
                 )
 
             if push._last_push_thread:
@@ -221,6 +222,7 @@ class NotificationAPITestCase(TestCase):
             data = call_kwargs.get('data') if 'data' in call_kwargs else (call_args[3] if len(call_args) > 3 else {})
             self.assertEqual(data.get('target_model'), 'item')
             self.assertEqual(data.get('target_id'), '555')
+            self.assertEqual(data.get('url'), '/app/my-tasks')
 
     def test_provider_errors_do_not_raise(self):
         DeviceToken.objects.create(user=self.user1, token='user1-token-for-err')

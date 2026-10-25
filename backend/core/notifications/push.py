@@ -61,6 +61,7 @@ class PushProvider:
             'notification_id': str(getattr(notification, 'id', '')),
             'target_model': str(getattr(notification, 'target_model', '') or ''),
             'target_id': str(getattr(notification, 'target_id', '') or ''),
+            'url': str(getattr(notification, 'url', '') or ''),
         }
         self.send(
             tokens=tokens,
@@ -269,6 +270,7 @@ def _send_push_worker(
     message: str | None = None,
     target_model: str | None = None,
     target_id: str | None = None,
+    url: str | None = None,
 ) -> None:
     """Worker task executed in background thread pool to dispatch push for a notification."""
     close_old_connections()
@@ -282,6 +284,7 @@ def _send_push_worker(
                 message = notification.message
                 target_model = notification.target_model
                 target_id = notification.target_id
+                url = notification.url
                 tokens = list(
                     DeviceToken.objects.filter(user_id=notification.recipient_id).values_list('token', flat=True)
                 )
@@ -296,6 +299,7 @@ def _send_push_worker(
             'notification_id': str(notification_id or ''),
             'target_model': str(target_model or ''),
             'target_id': str(target_id or ''),
+            'url': str(url or ''),
         }
         provider.send(
             tokens=tokens,
@@ -316,6 +320,7 @@ def _schedule_push(
     message: str | None = None,
     target_model: str | None = None,
     target_id: str | None = None,
+    url: str | None = None,
 ) -> Future:
     """Submit worker task to the module-level ThreadPoolExecutor."""
     global _last_push_thread, _last_push_future
@@ -327,6 +332,7 @@ def _schedule_push(
         message,
         target_model,
         target_id,
+        url,
     )
     _last_push_future = future
     _last_push_thread = _FutureThreadAdapter(future)
@@ -346,6 +352,7 @@ def on_notification_created(sender, instance, created, **kwargs):
         message = instance.message
         target_model = instance.target_model
         target_id = instance.target_id
+        url = instance.url
 
         def _on_commit_callback():
             try:
@@ -363,6 +370,7 @@ def on_notification_created(sender, instance, created, **kwargs):
                     message=message,
                     target_model=target_model,
                     target_id=target_id,
+                    url=url,
                 )
             except Exception:
                 logger.exception("Failed to schedule push on commit for notification %s", notification_id)
@@ -378,7 +386,7 @@ def schedule_push_for_notifications(notifications):
     بعد از commit، توکن‌های همهٔ گیرندگان با یک کوئری خوانده می‌شوند (ق۱۸)، نه یک کوئری برای هر اعلان.
     """
     items = [
-        (n.id, n.recipient_id, n.title, n.message, n.target_model, n.target_id)
+        (n.id, n.recipient_id, n.title, n.message, n.target_model, n.target_id, n.url)
         for n in notifications if getattr(n, 'id', None)
     ]
     if not items:
@@ -392,7 +400,7 @@ def schedule_push_for_notifications(notifications):
                 user_id__in={item[1] for item in items}
             ).values_list('user_id', 'token'):
                 tokens_by_user.setdefault(user_id, []).append(token)
-            for notification_id, recipient_id, title, message, target_model, target_id in items:
+            for notification_id, recipient_id, title, message, target_model, target_id, url in items:
                 tokens = tokens_by_user.get(recipient_id)
                 if tokens:
                     _schedule_push(
@@ -402,6 +410,7 @@ def schedule_push_for_notifications(notifications):
                         message=message,
                         target_model=target_model,
                         target_id=target_id,
+                        url=url,
                     )
         except Exception:
             logger.exception("Failed to schedule bulk push on commit")
