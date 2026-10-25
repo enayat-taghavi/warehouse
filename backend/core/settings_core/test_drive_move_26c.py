@@ -78,7 +78,6 @@ class DriveMove26cTests(TestCase):
         self.assertEqual(self.company.gdrive_config, config)
         self.assertEqual(self.company.gdrive_sync_tasks.count(), 3)
 
-    @unittest.expectedFailure
     def test_content_types_moved(self):
         self.assertEqual(ContentType.objects.get_for_model(GoogleDriveSyncQueue).app_label, 'settings_core')
         self.assertEqual(ContentType.objects.get_for_model(CompanyGoogleDriveConfig).app_label, 'settings_core')
