@@ -628,7 +628,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 1 of 1 — Release v1 step 2.4-b: guard against direct Notification use in modules, and tests for notifications.services.notify_users
+[DONE] (by Claude: agy auth timed out) Session 1 of 1 — Release v1 step 2.4-b: guard against direct Notification use in modules, and tests for notifications.services.notify_users
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

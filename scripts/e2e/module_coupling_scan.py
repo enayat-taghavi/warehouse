@@ -50,6 +50,8 @@ ALLOWED_FILES = {
 
 LOCKED_SCOPE_RE = re.compile(r"\b(LOCKED_OFFLINE_SCOPES|warehouseOfflineDb|financeOfflineDb)\b")
 # دیتابیس قفل‌شدهٔ هر ماژول؛ ماژول صاحب می‌تواند دیتابیس خودش را مستقیم بخواند
+# ساختن مستقیم اعلان در ماژول ممنوع است؛ ماژول‌ها notifications.services.notify_users را صدا می‌زنند (طرح ۲.۴، ص۷)
+DIRECT_NOTIFICATION_RE = re.compile(r"\bfrom\s+notifications\.models\s+import\b|\bimport\s+notifications\.models\b|\bNotification\.objects\b")
 LOCKED_DB_OWNER = {"warehouseOfflineDb": "warehouse", "financeOfflineDb": "accounting"}
 LOCKED_ZONE_PREFIXES = ("core/services/offline-db.ts", "core/services/offline/")
 
@@ -156,7 +158,7 @@ def scan_backend(backend_dir=None):
     backend_dir = pathlib.Path(backend_dir or BACKEND_DIR)
     decl = module_declarations(backend_dir / "modules")
     all_codes = set().union(*(d["codes"] for d in decl.values())) if decl else set()
-    found = {"module_permission_literals": [], "cross_module_permission_literals": []}
+    found = {"module_permission_literals": [], "cross_module_permission_literals": [], "direct_notification_refs": []}
     core_re = _literal_re(all_codes)
     if core_re:
         for f in _iter_files(backend_dir / "core", ("*.py",)):
@@ -176,6 +178,13 @@ def scan_backend(backend_dir=None):
                 continue
             for line, c, text in _scan_file(f, pattern):
                 found["cross_module_permission_literals"].append({"file": f"backend:{rel.as_posix()}", "line": line, "match": c, "text": text})
+    for f in _iter_files(backend_dir / "modules", ("*.py",)):
+        rel = f.relative_to(backend_dir)
+        if _is_test_file(rel):
+            continue
+        for i, text in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            if DIRECT_NOTIFICATION_RE.search(text):
+                found["direct_notification_refs"].append({"file": f"backend:{rel.as_posix()}", "line": i, "match": "Notification", "text": text.strip()})
     return found
 
 
@@ -328,11 +337,17 @@ def self_test():
             "GAMMA_PERMISSION_CATEGORIES = ({'key': 'g', 'label_fa': 'g'},)\n"
             "PERMISSIONS = ({'code': 'view_gamma', 'label_fa': 'x', 'scope': 'section', 'defaults': ('r',)}, _p('act_gamma', 'y'))\n",
             encoding="utf-8")
+        (be / "modules" / "beta" / "beta_app" / "notify.py").write_text(
+            "from notifications.models import Notification\nNotification.objects.create(title='x')\n", encoding="utf-8")
+        (be / "modules" / "beta" / "beta_app" / "tests.py").write_text("from notifications.models import Notification\n", encoding="utf-8")
         b = scan_backend(be)
         got = ([v["match"] for v in b["module_permission_literals"]], [v["match"] for v in b["cross_module_permission_literals"]])
         exp = (["view_alpha"], ["act_alpha"])
         print(f"self-test backend: {got} (expected {exp})")
         ok &= got == exp
+        lines = [v["line"] for v in b["direct_notification_refs"]]
+        print(f"self-test direct notification refs: {lines} (expected [1, 2])")
+        ok &= lines == [1, 2]
 
         (fe / "core").mkdir(parents=True)
         (fe / "modules" / "common").mkdir(parents=True)
