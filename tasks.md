@@ -814,3 +814,50 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: the spec passes (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
 
 6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 2.5-b2: cache warm-up specs (core trigger and accounting warmCache)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/services/cache-warmup.service.spec.ts --allow frontend/src/app/modules/accounting/api/warm-cache.spec.ts
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/cache-warmup.service.spec.ts --min-tests 6
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/api/warm-cache.spec.ts --min-tests 3
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/core/services/cache-warmup.service.spec.ts --include src/app/modules/accounting/api/warm-cache.spec.ts --no-skip --max-failed 0
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.5-b2): cache warm-up specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly two new files: `frontend/src/app/core/services/cache-warmup.service.spec.ts` and `frontend/src/app/modules/accounting/api/warm-cache.spec.ts`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `it.fails(` and describe the exact difference in your report.
+- No `it.only`, `describe.only`, `it.skip`, no `fs`/`path` imports.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.5-b2): cache warm-up specs`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/core/services/cache-warmup.service.ts` (whole file, about 125 lines). Facts: `CacheWarmupService` (providedIn root) injects `Injector` and `ActiveCompanyService`. `warm(force = false)` returns a Promise and never throws. It does nothing when `NetworkStatusService.getInstance().isOnline` is false, when no `wh_access_token` is in sessionStorage or localStorage, when `activeCompany.activeCompanyId` is null, or when `getStoredCurrentUserId()` is null (reads `wh_user_profile` JSON `{ id }` from sessionStorage or localStorage). It collects `syncConfig.warmCache` functions from `getModuleRegistry().getExtensions('syncConfig')` and calls each with the injector, one after another; an error in one hook is caught and the next hook still runs. Throttle: localStorage key `wh_cache_warmup:<userId>:<companyId>` holds the last run time; a second `warm()` within `CACHE_WARMUP_INTERVAL_MS` (10 minutes) does nothing unless `force` is true.
+- `frontend/src/app/modules/accounting/api/warm-cache.ts` (whole file, about 45 lines). Facts: `warmAccountingCache(injector)` uses `injector.get(ApiService)` and calls `api.get(endpoint, params, { context })` where the context has `SKIP_GLOBAL_ERROR_TOAST` true. First `org/section-assignments/my-sections/` and `org/project-sections` with `{ is_active: true }`; then for each section id (my sections, or the active sections when my sections is empty; at most `WARM_SECTION_LIMIT` = 5) seven GETs: `personnel/profiles` with `{ section_id, approval_status: 'pending_supervisor' }`, `personnel/profiles` with `{ section_id }`, `personnel/personnel-change-requests`, `personnel/attendance`, `personnel/vehicles` with and without `approval_status: 'pending_supervisor'`, `personnel/vehicle-change-requests` (all with `{ section_id }`). Any failed GET is ignored.
+- `frontend/src/app/core/error/error.interceptor.ts` line 15 (`SKIP_GLOBAL_ERROR_TOAST`).
+
+3. Task A, `frontend/src/app/core/services/cache-warmup.service.spec.ts` (Vitest + `TestBed`). Setup: `localStorage.clear()` and `sessionStorage.clear()` in `beforeEach`; set `sessionStorage.setItem('wh_access_token', 't')` and `sessionStorage.setItem('wh_user_profile', JSON.stringify({ id: 7 }))`. Provide `{ provide: ActiveCompanyService, useValue: { activeCompanyId: 3, activeCompany$: new BehaviorSubject(null) } }` (keep a reference to change `activeCompanyId`). Mock online state with `vi.spyOn(NetworkStatusService.getInstance(), 'isOnline', 'get').mockReturnValue(true)` (or `false`). Register hooks with `vi.spyOn(getModuleRegistry(), 'getExtensions').mockReturnValue([{ module: {} as any, moduleCode: 'm1', extension: { scopeKind: 'x', pullEndpoint: '/p', scopeParamKey: 'k', warmCache: hookA } }] as any)` where `hookA = vi.fn().mockResolvedValue(undefined)`. Do not call `start()`. `vi.restoreAllMocks()` in `afterEach`. Tests (names exactly):
+- `1. calls each warmCache hook with the injector when online`: `await service.warm()`; `hookA` called once and its first argument is an object with a `get` function.
+- `2. does nothing when offline`: `isOnline` false; `hookA` not called.
+- `3. does nothing without a token or without an active company`: remove the token, `warm()`, `hookA` not called; then restore the token, set `activeCompanyId` to null, `warm()`, still not called.
+- `4. second call within 10 minutes is skipped, force runs it`: two `await service.warm()`; `hookA` called once; then `await service.warm(true)`; called twice; `localStorage.getItem('wh_cache_warmup:7:3')` is not null.
+- `5. a failing hook does not stop the next one and warm never throws`: two hooks, the first `vi.fn().mockRejectedValue(new Error('x'))`, the second resolves; `await expect(service.warm()).resolves.toBeUndefined()`; the second hook called once.
+- `6. throttle key is per company`: `warm()` with company 3, then set `activeCompanyId` to 4 and `warm()` again; `hookA` called twice.
+
+4. Task B, `frontend/src/app/modules/accounting/api/warm-cache.spec.ts` (Vitest + `TestBed`): providers `provideHttpClient()`, `provideHttpClientTesting()`. Call `const p = warmAccountingCache(TestBed.inject(Injector))`, then answer requests with `HttpTestingController`: use `httpMock.match(r => r.url.endsWith('/org/section-assignments/my-sections/'))` etc. Between flushes `await` a few macrotasks (for example `await new Promise(r => setTimeout(r, 0))`) so the next requests are issued; finally `await p`. Tests (names exactly):
+- `1. warms my sections and seven lists per section with the toast skipped`: my-sections returns `[{ id: 11 }]`, project-sections returns `[]`; then exactly 7 requests carry `section_id=11` in `urlWithParams`; two of them (`/personnel/profiles/` and `/personnel/vehicles/`) also carry `approval_status=pending_supervisor`; every request has `context.get(SKIP_GLOBAL_ERROR_TOAST) === true` and method GET. The project-sections request has `is_active=true`.
+- `2. falls back to active sections when my sections is empty`: my-sections `[]`, project-sections `[{ id: 21 }, { id: 22 }]`; requests are issued for `section_id=21` and then `section_id=22` (7 each).
+- `3. a failed my-sections request does not throw`: my-sections flushed with status 500, project-sections `[]`; `await expect(p).resolves.toBeUndefined()` and no `/personnel/` request is made.
+- End each test with `httpMock.verify()`.
+
+5. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `frontend` create a temporary `tsconfig.agy-2.5b2.spec.json` with `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/core/services/cache-warmup.service.spec.ts", "src/app/modules/accounting/api/warm-cache.spec.ts"], "exclude": [] }` and run `npx ng test --watch=false --ts-config tsconfig.agy-2.5b2.spec.json --include src/app/core/services/cache-warmup.service.spec.ts --include src/app/modules/accounting/api/warm-cache.spec.ts`; delete the temporary tsconfig before committing. At most 5 runs.
+
+6. Before finishing: both specs pass (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
+
+7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
