@@ -241,7 +241,7 @@
                           <h4 class="font-black text-slate-800 text-xs flex items-center gap-1.5" [ngClass]="!u.is_active ? 'line-through text-slate-500' : ''">
                             <span class="truncate">{{u.first_name}} {{u.last_name}}</span>
                             <span *ngIf="u.is_superuser" class="text-[8.5px] px-1 py-0.5 rounded font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">ادمین</span>
-                            <span *ngIf="isUserLocked(u.username)" class="text-[8px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0 flex items-center gap-0.5" title="مسدود شده توسط سیستم ضدنفوذ">
+                            <span *ngIf="isUserLocked(u.username)" class="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0 flex items-center gap-0.5" title="مسدود شده توسط سیستم ضدنفوذ">
                               <svg appIcon="lock" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg> قفل
                             </span>
                           </h4>
@@ -286,7 +286,7 @@
                         <span class="text-slate-400 shrink-0 font-medium">نقش:</span>
                         <div class="flex flex-wrap gap-1 justify-end max-w-[75%]">
                           <span *ngFor="let role of getUserRoles(u)" class="px-1.5 py-0.5 rounded-md font-bold text-[9.5px] border border-transparent" [style.background]="role.color + '18'" [style.color]="role.color" [style.borderColor]="role.color + '30'">{{role.name}}</span>
-                          <span *ngIf="getUserRoles(u).length === 0" class="text-slate-400 text-[9px]">فاقد نقش</span>
+                          <span *ngIf="getUserRoles(u).length === 0" class="text-slate-400 text-[10px]">فاقد نقش</span>
                         </div>
                       </div>
 
@@ -297,12 +297,12 @@
                           <ng-container *ngIf="!getUserAuthorizedSystems(u).isEmpty">
                             <span *ngFor="let b of getUserAuthorizedSystems(u).badges"
                                   [class]="b.bgClass + ' ' + b.textClass + ' ' + b.borderClass"
-                                  class="px-1.5 py-0.5 rounded-md text-[9px] border font-bold flex items-center gap-0.5">
+                                  class="px-1.5 py-0.5 rounded-md text-[10px] border font-bold flex items-center gap-0.5">
                               <span>{{ b.icon }}</span>
                               <span>{{ badgeShortLabel(b.key) }}</span>
                             </span>
                           </ng-container>
-                          <span *ngIf="getUserAuthorizedSystems(u).isEmpty" class="text-slate-400 text-[9px]">فاقد سامانه</span>
+                          <span *ngIf="getUserAuthorizedSystems(u).isEmpty" class="text-slate-400 text-[10px]">فاقد سامانه</span>
                         </div>
                       </div>
 
@@ -311,11 +311,11 @@
                         <span class="text-slate-400 shrink-0 font-medium">{{ scopeLabels.listPrefix }}</span>
                         <div class="flex gap-1 flex-wrap justify-end">
                           <ng-container *ngIf="!u.assigned_warehouses || u.assigned_warehouses.length === 0">
-                            <span class="text-[9px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">بدون دسترسی</span>
+                            <span class="text-[10px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">بدون دسترسی</span>
                           </ng-container>
                           <ng-container *ngIf="u.assigned_warehouses && u.assigned_warehouses.length > 0">
-                            <span *ngFor="let pid of u.assigned_warehouses | slice:0:2" class="bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-slate-200">{{getProjectName(pid)}}</span>
-                            <span *ngIf="u.assigned_warehouses.length > 2" class="bg-indigo-50 text-indigo-700 px-1 py-0.5 rounded text-[9px] font-black border border-indigo-200">+{{u.assigned_warehouses.length - 2}}</span>
+                            <span *ngFor="let pid of u.assigned_warehouses | slice:0:2" class="bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-slate-200">{{getProjectName(pid)}}</span>
+                            <span *ngIf="u.assigned_warehouses.length > 2" class="bg-indigo-50 text-indigo-700 px-1 py-0.5 rounded text-[10px] font-black border border-indigo-200">+{{u.assigned_warehouses.length - 2}}</span>
                           </ng-container>
                         </div>
                       </div>
@@ -328,12 +328,12 @@
                       <ng-container *ngIf="getUserCompanyBadges(u).length > 0">
                         <span *ngFor="let cb of getUserCompanyBadges(u) | slice:0:2"
                               [ngClass]="cb.is_default ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
-                              class="px-1.5 py-0.5 rounded-md font-sans text-[9px] font-bold border truncate"
+                              class="px-1.5 py-0.5 rounded-md font-sans text-[10px] font-bold border truncate"
                               [title]="cb.name + (cb.is_default ? ' (اصلی)' : '')">
                           <svg *ngIf="cb.is_default && getUserCompanyBadges(u).length > 1" appIcon="star" class="w-2.5 h-2.5 text-amber-500 fill-current inline-block" aria-hidden="true" title="شرکت پیش‌فرض" viewBox="0 0 24 24" fill="none"></svg>
                           {{ cb.name }}
                         </span>
-                        <span *ngIf="getUserCompanyBadges(u).length > 2" class="text-[9px] font-mono text-indigo-600 font-bold">
+                        <span *ngIf="getUserCompanyBadges(u).length > 2" class="text-[10px] font-mono text-indigo-600 font-bold">
                           +{{ getUserCompanyBadges(u).length - 2 }}
                         </span>
                       </ng-container>
@@ -420,7 +420,7 @@
                           <div class="min-w-0">
                             <div class="font-black text-slate-800 text-xs flex items-center gap-1.5" [ngClass]="!u.is_active ? 'line-through text-slate-500' : ''">
                               <span class="truncate">{{u.first_name}} {{u.last_name}}</span>
-                              <span *ngIf="u.is_superuser" class="text-[9px] px-1.5 py-0.5 rounded-md font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">ادمین</span>
+                              <span *ngIf="u.is_superuser" class="text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">ادمین</span>
                             </div>
                             <div class="text-[10px] font-mono text-slate-400 mt-0.5 truncate">@{{u.username}}</div>
                           </div>
@@ -508,7 +508,7 @@
                             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                             معلق
                           </span>
-                          <span *ngIf="isUserLocked(u.username)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-300" title="مسدود شده توسط سیستم ضدنفوذ">
+                          <span *ngIf="isUserLocked(u.username)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300" title="مسدود شده توسط سیستم ضدنفوذ">
                             <svg appIcon="lock" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg> قفل
                           </span>
                         </div>
@@ -735,13 +735,13 @@
                           <div class="flex items-center gap-2">
                             <div class="flex items-center -space-x-2 space-x-reverse overflow-hidden py-0.5">
                               <div *ngFor="let u of getUsersInRole(role.id).slice(0, 3)"
-                                class="inline-block h-6 w-6 rounded-full ring-2 ring-white overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-[9px] text-white font-bold flex items-center justify-center shrink-0 shadow-sm"
+                                class="inline-block h-6 w-6 rounded-full ring-2 ring-white overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-[10px] text-white font-bold flex items-center justify-center shrink-0 shadow-sm"
                                 [title]="(u.first_name + ' ' + u.last_name) + ' (@' + u.username + ')'">
                                 <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="24" height="24" class="h-full w-full object-cover" alt="avatar" />
                                 <span *ngIf="!u.avatar">{{getUserAvatarLetter(u)}}</span>
                               </div>
                               <div *ngIf="getUsersInRole(role.id).length > 3"
-                                class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-200 text-slate-700 text-[8px] font-black flex items-center justify-center shrink-0 shadow-sm"
+                                class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-200 text-slate-700 text-[10px] font-black flex items-center justify-center shrink-0 shadow-sm"
                                 title="سایر پرسنل">
                                 +{{ getUsersInRole(role.id).length - 3 }}
                               </div>
@@ -972,7 +972,7 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center justify-between gap-1">
                     <p class="text-[10.5px] font-black truncate" [ngClass]="activeRolePresetId === preset.id ? 'text-indigo-700' : 'text-slate-800 group-hover:text-indigo-600'">{{preset.title}}</p>
-                    <span *ngIf="activeRolePresetId === preset.id" class="text-[8px] bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-full shrink-0 inline-flex items-center gap-0.5"><svg appIcon="check" class="w-2.5 h-2.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>فعال</span>
+                    <span *ngIf="activeRolePresetId === preset.id" class="text-[10px] bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-full shrink-0 inline-flex items-center gap-0.5"><svg appIcon="check" class="w-2.5 h-2.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>فعال</span>
                   </div>
                   <div class="flex items-center gap-1 mt-0.5">
                     <span class="text-[7.5px] font-bold px-1 py-0.5 rounded text-slate-500 bg-slate-100">{{preset.categoryTitle}}</span>
@@ -1028,7 +1028,7 @@
             <div *ngIf="(roleForm.user_ids?.length || 0) > 0" class="flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
               <span class="text-[10px] font-bold text-slate-400 shrink-0">منتخبین:</span>
               <div *ngFor="let member of getSelectedRoleMembers()" class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-emerald-300 text-[10.5px] font-bold text-emerald-900 shadow-sm shrink-0 animate-fadeIn">
-                <span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white font-black" [style.background]="getPrimaryRole(member).color">
+                <span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[10px] text-white font-black" [style.background]="getPrimaryRole(member).color">
                   {{ getUserAvatarLetter(member) }}
                 </span>
                 <span>{{ member.first_name }} {{ member.last_name }}</span>
@@ -1051,7 +1051,7 @@
                     <p class="text-[11px] font-black truncate" [ngClass]="isRoleMemberSelected(u.id) ? 'text-emerald-950' : 'text-slate-800 group-hover:text-emerald-700'">
                       {{ u.first_name }} {{ u.last_name }}
                     </p>
-                    <p class="text-[9px] font-mono text-slate-400 truncate" dir="ltr">@{{ u.username }}</p>
+                    <p class="text-[10px] font-mono text-slate-400 truncate" dir="ltr">@{{ u.username }}</p>
                   </div>
                 </div>
 
@@ -1114,7 +1114,7 @@
                   <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
                       <h5 class="text-xs font-black flex items-center gap-2" [ngClass]="group.is_sensitive_group ? 'text-rose-700' : 'text-indigo-700'">
                         <span>{{group.title}} ({{group.items.length}} مورد)</span>
-                        <span *ngIf="group.is_sensitive_group" class="text-[9px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">بسیار حساس و پرریسک</span>
+                        <span *ngIf="group.is_sensitive_group" class="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">بسیار حساس و پرریسک</span>
                       </h5>
                       <button *ngIf="!group.is_sensitive_group" type="button" (click)="toggleGroupPermissions(group.key)" class="text-[9.5px] bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 px-2 py-1 rounded-lg border border-slate-200 transition-all font-bold cursor-pointer shadow-sm">
                         انتخاب / لغو این بخش
@@ -1296,7 +1296,7 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="camera"></svg>
                   <span>مدیریت تصویر</span>
                 </button>
-                <span class="text-[9px] text-slate-400">فرمت PNG یا JPG</span>
+                <span class="text-[10px] text-slate-400">فرمت PNG یا JPG</span>
               </div>
 
               <!-- فیلدهای نام، نام خانوادگی، کد ملی، شرکت و زون -->
@@ -1308,11 +1308,11 @@
                       کد / نام کاربری (Personnel ID)
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
-                    <span *ngIf="isFieldValid('username')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                    <span *ngIf="isFieldValid('username')" class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       شناسه معتبر
                     </span>
-                    <span *ngIf="editingUser" class="text-[9px] text-slate-400 font-medium">غیرقابل تغییر در ویرایش</span>
+                    <span *ngIf="editingUser" class="text-[10px] text-slate-400 font-medium">غیرقابل تغییر در ویرایش</span>
                   </div>
                   <div class="relative">
                     <input type="text" [(ngModel)]="userForm.username" (input)="clearUserFormError('username')" name="personnel_username" id="user-username" autocomplete="new-password" placeholder="مثال: h.alishavandi یا 10054" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono font-bold text-indigo-800 transition-all" dir="ltr" [readonly]="editingUser != null" [class]="getFieldClass('username')" [attr.aria-invalid]="userFieldMessages['username'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['username'] ? 'user-field-error-username' : null">
@@ -1336,7 +1336,7 @@
                       نام (First Name)
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
-                    <span *ngIf="isFieldValid('first_name')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                    <span *ngIf="isFieldValid('first_name')" class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       معتبر
                     </span>
@@ -1360,7 +1360,7 @@
                       نام خانوادگی (Last Name)
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
-                    <span *ngIf="isFieldValid('last_name')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                    <span *ngIf="isFieldValid('last_name')" class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       معتبر
                     </span>
@@ -1381,7 +1381,7 @@
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <label for="user-national-code" class="block text-[11px] font-bold text-slate-600">کد ملی (National ID)</label>
-                    <span *ngIf="isFieldValid('national_code')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                    <span *ngIf="isFieldValid('national_code')" class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       تایید الگوریتم ۱۰ رقمی
                     </span>
@@ -1445,7 +1445,7 @@
                     تلفن همراه
                     <span class="text-rose-500 text-xs font-black">*</span>
                   </label>
-                  <span *ngIf="isFieldValid('phone_number')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                  <span *ngIf="isFieldValid('phone_number')" class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                     معتبر
                   </span>
@@ -1687,7 +1687,7 @@
                   <svg appIcon="zap" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                   <span>سراسری / ادمین</span>
                 </span>
-                <span *ngIf="getSelectedRolesCountForScope('global') > 0" class="px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[9px] font-black border border-purple-200">
+                <span *ngIf="getSelectedRolesCountForScope('global') > 0" class="px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black border border-purple-200">
                   {{getSelectedRolesCountForScope('global')}}
                 </span>
               </button>
@@ -1711,7 +1711,7 @@
                   <input type="checkbox" [checked]="userForm.groups.includes(r.id)" (change)="toggleUserRoleCheckbox(r.id, $event)" class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
                   <span class="text-xs text-slate-800 font-bold truncate" [title]="r.title || r.name">{{getRoleTitleForForm(r)}}</span>
                 </div>
-                <span class="text-[9px] px-2 py-0.5 rounded-md shrink-0 font-bold"
+                <span class="text-[10px] px-2 py-0.5 rounded-md shrink-0 font-bold"
                   [ngClass]="roleScopeBadgeClass(getRoleAppScope(r))">
                   {{ roleScopeFor(getRoleAppScope(r))?.tinyLabelFa ?? 'سراسری' }}
                 </span>
@@ -1790,7 +1790,7 @@
                       class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
                     <div class="truncate">
                       <div class="flex items-center gap-1.5">
-                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                        <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                           {{ comp.code }}
                         </span>
                         <span class="text-xs font-black text-slate-800 truncate" [title]="comp.name">
@@ -1868,7 +1868,7 @@
                   <input type="checkbox" [checked]="isWarehouseAssigned(p.id)" (change)="toggleUserProjCheckbox(p.id, $event)" class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
                   <div class="min-w-0 flex-1 truncate">
                     <span class="text-xs text-slate-800 font-bold truncate block" [title]="p.name">{{p.name}}</span>
-                    <span *ngIf="p.company_name" class="text-[9px] text-slate-400 font-semibold truncate block">
+                    <span *ngIf="p.company_name" class="text-[10px] text-slate-400 font-semibold truncate block">
                       {{ p.company_name }}
                     </span>
                   </div>

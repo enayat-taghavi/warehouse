@@ -213,7 +213,7 @@ J. Run the helper `purge`. It must print `PURGE_OK`.
 
 ===
 
-Session 1 of 4 — Release v1 step 2.9-c part 1: users page layout at 360px and accessibility (users.html, users.ts)
+[DONE] Session 1 of 4 — Release v1 step 2.9-c part 1: users page layout at 360px and accessibility (users.html, users.ts)
 
 <!-- runner
 parallel: u1
@@ -299,7 +299,7 @@ feat(release-v1 2.9-c): users page at 360px (collapsible filters, cards below md
 
 ===
 
-Session 2 of 4 — Release v1 step 2.9-d part 1: server scenario tests for user management (company manager, project manager, shared user)
+[DONE] Session 2 of 4 — Release v1 step 2.9-d part 1: server scenario tests for user management (company manager, project manager, shared user)
 
 <!-- runner
 parallel: u1

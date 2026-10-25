@@ -128,7 +128,7 @@ export class Users implements OnInit, OnDestroy {
         },
         {
           id: 'roles',
-          label: 'نقشهای سازمانی',
+          label: 'نقش‌های سازمانی',
           shortLabel: 'نقش‌ها',
           icon: 'shield',
           tone: 'indigo',
@@ -1904,6 +1904,11 @@ export class Users implements OnInit, OnDestroy {
 
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
+    if (!topDialog.contains(document.activeElement)) {
+      event.preventDefault();
+      first.focus();
+      return;
+    }
 
     if (event.shiftKey) {
       if (document.activeElement === first) {
