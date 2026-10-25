@@ -311,3 +311,34 @@ class ReviewFollowupTests(UserScope29Base):
             self.assertIsNone(scope.user_id_from_card_code(code))
         r = APIClient().get(f'{USERS}verify_card/', {'code': 'EMP-²-AAAAAAAAAAAAAAAA'})
         self.assertIn(r.status_code, (200, 404))
+
+
+class HeavyCheckReviewTests(UserScope29Base):
+    """Heavy checks of 2.9: reactivation and audit rollback follow the rank rule too."""
+
+    def test_reactivating_peer_with_more_permissions_denied(self):
+        CustomUser.objects.filter(pk__in=[self.peer.pk, self.local.pk]).update(is_active=False)
+        c = self.as_user(self.manager)
+        url = f'{USERS}{self.peer.id}/'
+        self.assertEqual(c.patch(f'{url}toggle_status/', {'is_active': True}, format='json').status_code, 403)
+        self.assertEqual(c.patch(url, {'is_active': True}, format='json').status_code, 403)
+        self.peer.refresh_from_db()
+        self.assertFalse(self.peer.is_active)
+        r = c.patch(f'{USERS}{self.local.id}/toggle_status/', {'is_active': True}, format='json')
+        self.assertEqual(r.status_code, 200)
+
+    def test_rollback_of_user_records_follows_rank_rule(self):
+        from types import SimpleNamespace
+        from accounts.rollback_service import _rollback_scope_error, execute_point_in_time_rollback
+        from django.utils import timezone
+        manager = CustomUser.objects.get(pk=self.manager.pk)
+        user_log = SimpleNamespace(target_model='CustomUser')
+        self.assertIsNotNone(_rollback_scope_error(manager, user_log, self.peer))
+        self.assertIsNotNone(_rollback_scope_error(manager, user_log, self.admin))
+        self.assertIsNotNone(_rollback_scope_error(manager, user_log, None))
+        self.assertIsNotNone(_rollback_scope_error(manager, SimpleNamespace(target_model='CustomRole'), None))
+        self.assertIsNone(_rollback_scope_error(manager, user_log, self.local))
+        self.assertIsNone(_rollback_scope_error(self.admin, user_log, None))
+        self.assertIsNone(_rollback_scope_error(manager, SimpleNamespace(target_model='Warehouse'), None))
+        res = execute_point_in_time_rollback(timezone.now(), manager)
+        self.assertFalse(res['success'])

@@ -540,6 +540,8 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         ])
 
         file = SimpleUploadedFile('import.xlsx', excel_data, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        # ۲.۹ (S13): ساخت کاربر تازه در شرکت فعال نوشتن «دسترسی کاربران» همان شرکت را می‌خواهد
+        UserCompanyAccess.objects.filter(user=self.user_a, company=self.company_a).update(section_levels={'user_access': 'write'})
         self.client.force_authenticate(self.user_a)
         res = self.client.post(
             '/api/auth/users/import_excel/',
@@ -731,7 +733,7 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertEqual(sum(int(r['n']) for r in grouped['rows']), flat['count'])
 
     def test_excel_import_update_keeps_warehouses_outside_actor_scope(self):
-        """به‌روزرسانی با سازندهٔ فقط‌الف، انبار شرکت ب کاربر دوشرکتی را پاک نمی‌کند."""
+        """سازندهٔ فقط‌الف کاربر دوشرکتی را ویرایش نمی‌کند (قاعدهٔ کاربر مشترک ۲.۹) و انبار شرکت ب او دست‌نخورده می‌ماند."""
         if not apps.is_installed('warehouses'):
             self.skipTest('ماژول انبار نصب نیست.')
         target = self._make_user_ab('target_ab_wh', '0014141414')
@@ -742,7 +744,8 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             'national_code': target.national_code, 'warehouses': self.wh_a.name, 'is_active': 'بله',
         }], update_existing=True, company=self.company_a)
         self.assertEqual(res.status_code, 200, res.content)
-        self.assertEqual(res.json().get('summary', {}).get('updated'), 1, res.json())
+        self.assertEqual(res.json().get('summary', {}).get('updated'), 0, res.json())
+        self.assertTrue(any(e.get('field') == 'username' for e in res.json().get('errors', [])), res.json())
 
         target.refresh_from_db()
         self.assertEqual(set(target.assigned_warehouses.all()), {self.wh_a, self.wh_b})
@@ -753,6 +756,7 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             self.skipTest('ماژول انبار نصب نیست.')
         actor = self._make_user_ab('actor_ab_wh', '0015151515')
         actor.user_permissions.set(Permission.objects.filter(codename__in=['view_sys_users', 'perm_usr_add']))
+        UserCompanyAccess.objects.filter(user=actor, company=self.company_a).update(section_levels={'user_access': 'write'})
 
         res = self._import(actor, [
             {'first_name': 'تازه', 'last_name': 'یک', 'username': 'new_wh_b_user', 'national_code': '0016161616',

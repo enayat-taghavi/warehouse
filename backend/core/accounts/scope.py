@@ -178,6 +178,11 @@ def generate_one_time_password(length=OTP_LENGTH):
 def _effective_codes(user):
     # مجوزهای سامانه‌ای به‌اضافهٔ مجوزهای بخشی که کاربر دست‌کم در یک بخش دارد (حقوق، خزانه، انبار…)
     from . import scoped_permissions as sp
+    if user is not None and user.pk and not user.is_active:
+        # حساب غیرفعال مجوزهایش را نگه می‌دارد؛ برای فعال‌سازی دوباره رتبه با همان مجوزها سنجیده می‌شود (۲.۹)
+        probe = type(user).objects.get(pk=user.pk)
+        probe.is_active = True
+        return set(sp.all_permission_names(probe))
     return set(sp.all_permission_names(user))
 
 

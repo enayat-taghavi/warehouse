@@ -357,6 +357,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                           or (new_perm_ids is not None and new_perm_ids != old_perm_ids))
         new_is_active = serializer.validated_data.get('is_active', None)
         deactivating = old_instance.is_active and new_is_active is False
+        if not old_instance.is_active and new_is_active is True:
+            # فعال‌سازی دوباره هم مثل غیرفعال‌سازی نیازمند رتبهٔ بالاتر است (۲.۹)
+            self._ensure_outranks(old_instance)
         if deactivating:
             # S2 و S9: همان محافظ‌های toggle_status
             self._ensure_outranks(old_instance)
@@ -445,6 +448,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         else:
             new_active = not user.is_active
 
+        if not user.is_active and new_active:
+            # فعال‌سازی دوباره هم مثل غیرفعال‌سازی نیازمند رتبهٔ بالاتر است (۲.۹)
+            self._ensure_outranks(user)
         # If user is currently active and is being deactivated
         if user.is_active and not new_active:
             self._ensure_outranks(user)

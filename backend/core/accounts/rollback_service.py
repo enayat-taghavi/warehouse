@@ -368,6 +368,27 @@ def get_revert_preview(log_entry):
     }
 
 
+def _rollback_scope_error(user, log_entry, instance):
+    """
+    قاعدهٔ رتبه (۲.۹) در بازگردانی: بازگردانی حساب کاربر دیگر فقط وقتی مجاز است که انجام‌دهنده بر او
+    تسلط داشته و رتبه‌اش بالاتر باشد؛ بازسازی کاربر حذف‌شده و بازگردانی نقش‌ها فقط برای مدیر کل.
+    خروجی: متن خطا یا None.
+    """
+    if log_entry.target_model not in ('CustomUser', 'User', 'CustomRole'):
+        return None
+    if getattr(user, 'is_superuser', False) and getattr(user, 'is_active', False):
+        return None
+    if log_entry.target_model == 'CustomRole' or instance is None:
+        return 'بازگردانی نقش‌ها و بازسازی کاربر حذف‌شده فقط برای مدیر کل مجاز است.'
+    from rest_framework.exceptions import PermissionDenied
+    from .scope import ensure_actor_outranks_user
+    try:
+        ensure_actor_outranks_user(user, instance)
+    except PermissionDenied as e:
+        return str(e.detail)
+    return None
+
+
 def revert_log_entry(log_entry, user, reason=None, ip_address=None):
     """
     اجرای بازگردانی تراکنش لاگ در یک تراکنش اتمیک و ثبت لاگ ROLLBACK جدید
@@ -393,6 +414,9 @@ def revert_log_entry(log_entry, user, reason=None, ip_address=None):
             instance = get_instance_for_model(model_cls, log_entry.target_object_id, for_update=True)
             if not instance and log_entry.action in ('UPDATE', 'BULK_UPDATE'):
                 return {'success': False, 'error': 'رکورد هدف در حال حاضر در پایگاه داده وجود ندارد (احتمالاً پیش از این حذف شده است).'}
+            scope_error = _rollback_scope_error(user, log_entry, instance)
+            if scope_error:
+                return {'success': False, 'error': scope_error}
 
             rollback_log = None
             
@@ -472,7 +496,7 @@ def revert_log_entry(log_entry, user, reason=None, ip_address=None):
                     # ایجاد مجدد رکورد در جدول
                     create_kwargs = {}
                     for field_name, old_val in before_state.items():
-                        if field_name in ('id', 'pk', 'password', 'photo') or is_masked_or_sensitive(field_name, old_val):
+                        if field_name in ('id', 'pk', 'password', 'photo', 'is_superuser', 'is_staff') or is_masked_or_sensitive(field_name, old_val):
                             continue
                         if hasattr(model_cls, field_name):
                             coerced_val = coerce_field_value(model_cls, field_name, old_val)
@@ -667,6 +691,9 @@ def execute_point_in_time_rollback(target_datetime, user, warehouse_id=None, mod
     """
     if not target_datetime:
         return {'success': False, 'error': 'تاریخ هدف مشخص نشده است.'}
+    # بازگردانی جامع از همهٔ شرکت‌ها می‌گذرد؛ فقط مدیر کل (۲.۹)
+    if not (getattr(user, 'is_superuser', False) and getattr(user, 'is_active', False)):
+        return {'success': False, 'error': 'بازگردانی جامع به یک تاریخ فقط برای مدیر کل مجاز است.'}
 
     # لاگ‌ها به ترتیب معکوس زمانی لغو می‌شوند
     qs = AuditLog.objects.filter(
