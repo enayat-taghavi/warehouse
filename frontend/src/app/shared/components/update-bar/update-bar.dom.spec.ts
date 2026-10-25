@@ -76,12 +76,12 @@ describe('UpdateBarComponent DOM', () => {
     expect(section).toBeNull();
   });
 
-  it.fails('5. buttons have Persian aria-labels', () => {
+  it('5. buttons have Persian aria-labels', () => {
     fake.updateReady.set(true);
     fixture.detectChanges();
     const applyBtn = fixture.nativeElement.querySelector('[data-testid="update-bar-apply"]');
     const laterBtn = fixture.nativeElement.querySelector('[data-testid="update-bar-later"]');
-    expect(applyBtn.getAttribute('aria-label')).toBe('بهروزرسانی');
+    expect(applyBtn.getAttribute('aria-label')).toBe('به‌روزرسانی');
     expect(laterBtn.getAttribute('aria-label')).toBe('بعداً');
   });
 });

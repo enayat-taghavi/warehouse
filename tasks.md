@@ -960,7 +960,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 2.5-d: specs for the update bar and the update-ready state
+[DONE] [ ] Session 1 of 1 — Release v1 step 2.5-d: specs for the update bar and the update-ready state
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
