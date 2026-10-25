@@ -90,6 +90,10 @@ class PersonnelConfig(AppConfig):
         contribute(f'company_of:{INVOICE_ENTITY}', invoice_company_id)
         # لاگ ممیزی فاکتور از قلاب دیدن همان سند پیروی می‌کند (ص۱۰ طرح ۲.۶)
         contribute('audit_entity_kinds', ('ExpenseInvoice', INVOICE_ENTITY))
+        # بخش‌های قابل خاموش شدن (ص۱۲ طرح ۲.۶)؛ همین کدها در sectionKey منو و مسیر فرانت می‌آیند
+        contribute('toggle_sections', ('accounting.fleet', 'ناوگان و تردد خودرو'))
+        contribute('toggle_sections', ('accounting.invoices', 'فاکتورها'))
+        contribute('toggle_sections', ('accounting.petty_cash', 'تن‌خواه'))
 
         # حل‌کننده نقش‌های ماژول حسابداری برای میان‌افزار احراز هویت
         from personnel.role_resolver import resolve_personnel_roles

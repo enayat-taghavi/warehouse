@@ -1,0 +1,73 @@
+<div class="space-y-4" dir="rtl">
+  @if (loading) {
+    <div class="space-y-2" role="status" aria-live="polite">
+      <div class="h-14 rounded-xl bg-slate-100 animate-pulse"></div>
+      <div class="h-14 rounded-xl bg-slate-100 animate-pulse"></div>
+      <span class="sr-only">در حال بارگذاری تنظیمات شرکت…</span>
+    </div>
+  } @else if (error) {
+    <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" (click)="load()" title="تلاش دوباره" aria-label="تلاش دوباره"
+        class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-300 bg-white font-semibold cursor-pointer hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+        <span class="hidden sm:inline">تلاش دوباره</span>
+      </button>
+    </div>
+  } @else if (groups.length === 0) {
+    <div class="py-8 text-center text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-2xl" role="status">
+      هنوز هیچ ماژولی تنظیمی برای شرکت اعلام نکرده است.
+    </div>
+  } @else {
+    @for (group of groups; track group.module) {
+      <section class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <h3 class="px-4 py-2.5 text-xs font-black text-slate-700 bg-slate-50 border-b border-slate-200">{{ group.title }}</h3>
+        <ul class="divide-y divide-slate-100">
+          @for (row of group.rows; track row.key) {
+            <li class="p-3 sm:p-4 space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-slate-800">{{ row.title_fa }}</span>
+                @if (row.is_default) {
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">پیش‌فرض</span>
+                }
+                @if (!row.can_edit) {
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700">فقط خواندنی</span>
+                }
+              </div>
+              @if (row.type === 'bool') {
+                <app-toggle-switch
+                  [checked]="row.draft === true"
+                  [label]="row.title_fa"
+                  [title]="row.title_fa"
+                  (checkedChange)="onToggle(row, $event)"
+                  [class.opacity-50]="!row.can_edit || row.saving"
+                  [class.pointer-events-none]="!row.can_edit || row.saving"
+                ></app-toggle-switch>
+              } @else {
+                <div class="flex items-center gap-2">
+                  @if (row.type === 'str') {
+                    <input type="text" [(ngModel)]="row.draft" [disabled]="!row.can_edit || row.saving" [attr.aria-label]="row.title_fa"
+                      class="flex-1 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 disabled:bg-slate-50 disabled:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                      (keydown.enter)="save(row)" />
+                  } @else {
+                    <input type="number" inputmode="decimal" [attr.step]="row.type === 'int' ? 1 : 'any'" [(ngModel)]="row.draft" [disabled]="!row.can_edit || row.saving" [attr.aria-label]="row.title_fa"
+                      class="flex-1 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 disabled:bg-slate-50 disabled:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                      (keydown.enter)="save(row)" />
+                  }
+                  <button type="button" (click)="save(row)" [disabled]="!row.can_edit || row.saving" title="ذخیره" aria-label="ذخیره"
+                    class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                    <span class="hidden sm:inline">{{ row.saving ? 'در حال ذخیره…' : 'ذخیره' }}</span>
+                  </button>
+                </div>
+              }
+              @if (row.error) {
+                <p class="text-[11px] text-rose-600" role="alert">{{ row.error }}</p>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>

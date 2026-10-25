@@ -1236,6 +1236,19 @@
           </div>
         }
 
+        <!-- تب هستهٔ «تنظیمات شرکت»: کلیدهای تنظیم اعلام‌شدهٔ ماژول‌ها -->
+        @if (activeModalTab === 'settings') {
+          <div class="space-y-4" role="tabpanel" id="co-studio-panel-settings" aria-labelledby="co-studio-tab-settings">
+            @if (!hasSavedCompany) {
+              <div class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
+                برای دیدن تنظیمات شرکت، ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید.
+              </div>
+            } @else {
+              <app-company-settings-tab [companyId]="companyModal.data.id!" />
+            }
+          </div>
+        }
+
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب‌های مشارکتی ماژول‌ها (studioTabs) با بارگذاری تنبل کامپوننت       -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->

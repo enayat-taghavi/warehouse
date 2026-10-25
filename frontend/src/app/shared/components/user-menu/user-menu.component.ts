@@ -20,6 +20,7 @@ import { normalizeScope, DEFAULT_OFFLINE_SCOPE, LOCKED_OFFLINE_SCOPES } from '..
 import { DeepSyncSectionSpec } from '../../../core/modules/module-contract';
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
+import { AttachmentsComponent } from '../attachments/attachments.component';
 import { AvatarCropperModal } from '../avatar-cropper-modal/avatar-cropper-modal';
 import { DeepSyncContextMode, DeepSyncModalComponent, DeepSyncSectionView } from '../deep-sync-modal/deep-sync-modal.component';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
@@ -64,7 +65,8 @@ const SUMMARY_BADGE_CLASSES: Record<string, string> = {
     DeepSyncModalComponent,
     WorkflowSubstitutesComponent,
     SvgIconDirective,
-    ActionButtonComponent
+    ActionButtonComponent,
+    AttachmentsComponent
   ],
   templateUrl: './user-menu.component.html',
   styleUrl: './user-menu.component.css'
@@ -498,6 +500,17 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
   }
 
+  public isSignatureModalOpen = false;
+
+  public openSignatureModal(): void {
+    this.isSignatureModalOpen = true;
+    this.closeUserMenu();
+  }
+
+  public closeSignatureModal(): void {
+    this.isSignatureModalOpen = false;
+  }
+
   public openAvatarModal(): void {
     this.isAvatarModalOpen = true;
     this.closeUserMenu();
@@ -791,6 +804,10 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.toggleShortcutsHelp();
     } else if (event.key === 'Escape') {
+      if (this.isSignatureModalOpen) {
+        this.isSignatureModalOpen = false;
+        this.cdr.detectChanges();
+      }
       if (this.isShortcutsHelpOpen) {
         this.isShortcutsHelpOpen = false;
         this.cdr.detectChanges();

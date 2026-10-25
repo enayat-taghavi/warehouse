@@ -27,6 +27,12 @@
         <span>ویرایش تصویر پروفایل</span>
       </button>
 
+      <!-- امضا و مهر -->
+      <button type="button" (click)="openSignatureModal()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-pen"></svg>
+        <span>امضا و مهر</span>
+      </button>
+
       <!-- تغییر رمز ورود -->
       <button (click)="goToChangePassword(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
@@ -147,6 +153,33 @@
   (saved)="onSaveAvatar($event)"
   (removed)="onRemoveAvatar()"
 ></app-avatar-cropper-modal>
+
+<!-- امضا و مهر کاربر -->
+@if (isSignatureModalOpen) {
+  <div class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm fade-in" (click)="closeSignatureModal()" dir="rtl">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]" role="dialog" aria-modal="true" aria-labelledby="user-signature-title" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between p-4 border-b border-slate-100">
+        <h3 id="user-signature-title" class="text-sm font-black text-slate-800">امضا و مهر</h3>
+        <button type="button" (click)="closeSignatureModal()" class="inline-flex items-center justify-center min-h-[40px] min-w-[40px] rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" title="بستن (Esc)" aria-label="بستن">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        </button>
+      </div>
+      <div class="p-4 space-y-5 overflow-y-auto">
+        <p class="text-xs text-slate-500">این تصویرها فقط روی سرور نگه‌داری می‌شوند و در اسناد تأییدشدهٔ شما به کار می‌روند.</p>
+        @if (auth.user()?.id; as uid) {
+          <section class="space-y-2">
+            <h4 class="text-xs font-bold text-slate-700">امضا</h4>
+            <app-attachments kind="user" [entityId]="uid" label="signature" [canEdit]="true" [single]="true" [imagePreview]="true" accept="image/png,image/jpeg,image/webp" />
+          </section>
+          <section class="space-y-2">
+            <h4 class="text-xs font-bold text-slate-700">مهر</h4>
+            <app-attachments kind="user" [entityId]="uid" label="stamp" [canEdit]="true" [single]="true" [imagePreview]="true" accept="image/png,image/jpeg,image/webp" />
+          </section>
+        }
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Keyboard Shortcuts Help Modal -->
 <div *ngIf="isShortcutsHelpOpen" class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md fade-in" (click)="isShortcutsHelpOpen = false" dir="rtl">

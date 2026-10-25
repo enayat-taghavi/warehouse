@@ -22,6 +22,8 @@ DEFAULT_SETTINGS = {
     'app_download_url_direct': '',
     'app_download_url_bazaar': '',
     'app_download_url_myket': '',
+    # کد بخش‌های خاموش (ص۱۲ طرح ۲.۶)؛ فقط کدهای اعلام‌شده با contribute('toggle_sections', ...) پذیرفته می‌شوند
+    'disabled_sections': [],
 }
 
 BOOLEAN_SETTINGS_KEYS = {
@@ -49,6 +51,32 @@ def get_installed_modules():
     """
     from platform_core.registry import installed_modules
     return ['platform'] + list(installed_modules())
+
+
+def declared_toggle_sections():
+    """بخش‌های قابل خاموش شدنِ ماژول‌های نصب‌شده: [(code, title_fa), ...] به ترتیب اعلام، بی‌تکرار."""
+    from platform_core.registry import contributions
+    seen = {}
+    for item in contributions('toggle_sections'):
+        try:
+            code, title_fa = item
+        except (TypeError, ValueError):
+            continue
+        if isinstance(code, str) and code and code not in seen:
+            seen[code] = str(title_fa)
+    return list(seen.items())
+
+
+def get_disabled_sections():
+    """کدهای خاموش معتبر؛ مقدار خراب یا کد اعلام‌نشده (مثلاً ماژول حذف‌شده) نادیده گرفته می‌شود."""
+    try:
+        value = get_setting('disabled_sections')
+    except Exception:
+        return []
+    if not isinstance(value, list):
+        return []
+    declared = {code for code, _ in declared_toggle_sections()}
+    return [code for code in dict.fromkeys(value) if isinstance(code, str) and code in declared]
 
 
 def is_strict_int(val):
@@ -145,6 +173,14 @@ def validate_settings_payload(data):
                 invalid_keys.append(key)
         elif key in ['app_download_url_direct', 'app_download_url_bazaar', 'app_download_url_myket']:
             if not is_valid_download_url(value):
+                invalid_keys.append(key)
+        elif key == 'disabled_sections':
+            declared = {code for code, _ in declared_toggle_sections()}
+            if (
+                not isinstance(value, list)
+                or not all(is_strict_str(code) and code in declared for code in value)
+                or len(set(value)) != len(value)
+            ):
                 invalid_keys.append(key)
         else:
             default_val = DEFAULT_SETTINGS.get(key)

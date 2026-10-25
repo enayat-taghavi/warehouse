@@ -1,0 +1,70 @@
+<div class="space-y-2" dir="rtl">
+  @if (loading) {
+    <div class="space-y-2" role="status" aria-live="polite">
+      <div class="h-12 rounded-xl bg-slate-100 animate-pulse"></div>
+      <span class="sr-only">در حال بارگذاری پیوست‌ها…</span>
+    </div>
+  } @else if (error) {
+    <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" (click)="load()" title="تلاش دوباره" aria-label="تلاش دوباره"
+        class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-300 bg-white font-semibold cursor-pointer hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+        <span class="hidden sm:inline">تلاش دوباره</span>
+      </button>
+    </div>
+  } @else {
+    @if (items.length === 0) {
+      <p class="text-xs text-slate-500 py-3 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl">پیوستی ثبت نشده است</p>
+    }
+    <ul class="space-y-2">
+      @for (item of items; track item.id) {
+        <li class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white">
+          @if (imagePreview && isImage(item)) {
+            @if (previews[item.id]) {
+              <img [src]="previews[item.id]" [alt]="item.original_name" class="w-14 h-14 rounded-lg object-contain bg-slate-50 border border-slate-200 shrink-0" />
+            } @else {
+              <div class="w-14 h-14 rounded-lg bg-slate-100 animate-pulse shrink-0"></div>
+            }
+          } @else {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file" class="text-slate-400 shrink-0"></svg>
+          }
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-bold text-slate-800 truncate" [title]="item.original_name">{{ item.original_name }}</p>
+            <p class="text-[10px] text-slate-500">{{ formatSize(item.size) }}</p>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" (click)="download(item)" [disabled]="busy" title="دانلود" aria-label="دانلود"
+              class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+              <span class="hidden sm:inline">دانلود</span>
+            </button>
+            @if (canEdit) {
+              @if (!single) {
+                <button type="button" (click)="pickFile(fileInput, item.id)" [disabled]="busy" title="جایگزینی" aria-label="جایگزینی"
+                  class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+                  <span class="hidden sm:inline">جایگزینی</span>
+                </button>
+              }
+              <button type="button" (click)="remove(item)" [disabled]="busy" title="حذف" aria-label="حذف"
+                class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
+                <span class="hidden sm:inline">حذف</span>
+              </button>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    @if (canEdit) {
+      <button type="button" (click)="pickFile(fileInput, single && items.length > 0 ? items[0].id : null)" [disabled]="busy"
+        [title]="uploadLabel" [attr.aria-label]="uploadLabel"
+        class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+        <span class="hidden sm:inline">{{ uploadLabel }}</span>
+      </button>
+    }
+  }
+  <input #fileInput type="file" class="hidden" tabindex="-1" aria-hidden="true" [attr.accept]="accept || null" (change)="onFileChosen($event)" />
+</div>

@@ -252,4 +252,27 @@
 
           </div>
         </div>
+
+        @if (toggleSections().length > 0) {
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" data-testid="section-toggles">
+            <div class="bg-slate-50 border-b border-slate-100 p-5">
+              <h4 class="font-black text-slate-800 text-[13px] flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="layout"></svg>
+                روشن و خاموش کردن بخش‌ها
+              </h4>
+              <p class="text-[11px] text-slate-500 mt-1.5">بخش خاموش از منو و مسیرها برای همه پنهان می‌شود؛ داده‌های آن پاک نمی‌شود و با روشن کردن دوباره برمی‌گردد. پس از تغییر، دکمهٔ ذخیره را بزنید.</p>
+            </div>
+            <div class="p-6 space-y-3">
+              @for (section of toggleSections(); track section.code) {
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div>
+                    <h6 class="text-xs font-bold text-slate-800">{{ section.title_fa }}</h6>
+                    <p class="text-[11px] text-slate-500 mt-0.5">{{ isSectionOn(section.code) ? 'روشن' : 'خاموش' }}</p>
+                  </div>
+                  <app-toggle-switch [checked]="isSectionOn(section.code)" (checkedChange)="setSectionOn(section.code, $event)" [label]="'بخش ' + section.title_fa"></app-toggle-switch>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>

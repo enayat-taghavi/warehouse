@@ -5,6 +5,7 @@ import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { ApiService } from './api.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
+import { SectionToggleService, ToggleSection } from '../services/section-toggle.service';
 
 export interface PublicConfig {
   system_version: string;
@@ -15,6 +16,8 @@ export interface PublicConfig {
   offline_cache_ttl_minutes?: number;
   chat_enabled?: boolean;
   chat_file_sharing?: boolean;
+  disabled_sections?: string[];
+  toggle_sections?: ToggleSection[];
   app_min_version?: string;
   app_recommended_version?: string;
   app_download_urls?: {
@@ -29,6 +32,7 @@ export interface PublicConfig {
 export class ConfigApiService {
   private apiService = inject(ApiService);
   private moduleRegistry = inject(ModuleRegistryService);
+  private sectionToggles = inject(SectionToggleService);
 
   getPublicConfig(): Observable<PublicConfig> {
     return this.apiService.get<PublicConfig>('public/config').pipe(
@@ -36,6 +40,7 @@ export class ConfigApiService {
         if (config?.installed_modules && Array.isArray(config.installed_modules)) {
           this.moduleRegistry.setInstalledModules(config.installed_modules);
         }
+        this.sectionToggles.applyConfig(config);
       })
     );
   }

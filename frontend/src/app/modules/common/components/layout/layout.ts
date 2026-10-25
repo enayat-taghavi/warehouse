@@ -32,6 +32,7 @@ import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-
 import { environment } from '../../../../../environments/environment';
 import { hasRoutePermission } from '../../../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
+import { SectionToggleService } from '../../../../core/services/section-toggle.service';
 import { ModuleNavItem, WhFrontendModule } from '../../../../core/modules/module-contract';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { InstallButtonComponent } from '../../../../shared/components/install-button/install-button.component';
@@ -63,6 +64,7 @@ export class Layout implements OnInit, OnDestroy {
   public wsService = inject(WebSocketService);
   public personaService = inject(AppPersonaService);
   public moduleRegistry = inject(ModuleRegistryService);
+  private sectionToggles = inject(SectionToggleService);
   public activeCompanyService = inject(ActiveCompanyService);
   private permissionService = inject(PermissionService, { optional: true });
   private shellRoute = inject(ActivatedRoute, { optional: true });
@@ -1050,6 +1052,7 @@ export class Layout implements OnInit, OnDestroy {
     
     return items.filter(item => {
       if (item.isAccounting) return false;
+      if (!this.sectionToggles.isEnabled(item.sectionKey)) return false;
       // آیتم متعلق به ماژول دیگر در منوی انبارداری نمی‌آید
       const owner = item.module ? this.moduleRegistry.getSpec(item.module) : undefined;
       if (owner && owner.code !== switcherCode) return false;
@@ -1090,6 +1093,7 @@ export class Layout implements OnInit, OnDestroy {
     // نشانگر تهی: پرسونای فعال (که بالاتر سنجیده شد) خودش نشانگر نقش است
     const hasRoleMarker = cfg.roleMarkers.length === 0 || cfg.roleMarkers.some(m => userPerms.includes(m));
     return cfg.items.filter(item => {
+      if (!this.sectionToggles.isEnabled(item.sectionKey)) return false;
       if (isAdmin) return true;
       return (hasRoleMarker || userPerms.includes(item.permission) || this.categoryUnlocks(item)) && hasRoutePermission(item.id, userPerms);
     });
@@ -1126,6 +1130,7 @@ export class Layout implements OnInit, OnDestroy {
 
       const spec = this.moduleRegistry.getSpec(modCode) || ext.module;
       const visibleItems = candidateItems.filter(item => {
+        if (!this.sectionToggles.isEnabled(item.sectionKey)) return false;
         if (isAdmin) return true;
         return userPerms.includes(item.permission) || this.categoryUnlocks(item);
       });

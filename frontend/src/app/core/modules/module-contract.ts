@@ -151,6 +151,8 @@ export interface ModuleNavItem {
   isAccounting?: boolean;
   isPending?: boolean;
   route?: string;
+  /** کد بخش قابل خاموش شدن (بک‌اند `contribute('toggle_sections', ...)`)؛ تا بخش خاموش است آیتم پنهان می‌ماند */
+  sectionKey?: string;
 }
 
 /**

@@ -12,6 +12,7 @@ import {
 } from '../../../../core/models/field-config.model';
 import { ApiService } from '../../../../core/api/api.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
+import { SectionToggleService } from '../../../../core/services/section-toggle.service';
 import { finalize } from 'rxjs/operators';
 import { SystemSettingsConfig } from '../../../../core/models/system-settings.model';
 import { DestroyRef, inject } from '@angular/core';
@@ -45,6 +46,7 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
 })
 export class Settings implements OnInit {
   private destroyRef = inject(DestroyRef);
+  private sectionToggles = inject(SectionToggleService);
   private api = inject(ApiService);
   private moduleRegistry = inject(ModuleRegistryService);
   isLoading = true;
@@ -332,6 +334,9 @@ export class Settings implements OnInit {
         }
         this.toast.show('success', 'تنظیمات کلان سیستم و فیلدهای کارتابل‌ها با موفقیت ذخیره شد.');
         this.originalSettings = structuredClone(this.settings);
+        if ('disabled_sections' in delta) {
+          this.sectionToggles.applyConfig({ disabled_sections: delta.disabled_sections });
+        }
         this.isLoading = false;
         this.cdr.detectChanges();
       },

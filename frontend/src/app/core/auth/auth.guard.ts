@@ -7,6 +7,7 @@ import { expandPermissionAliases } from '../modules/permission-aliases';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
 import { companyHasModule } from '../models/company.model';
+import { SectionToggleService } from '../services/section-toggle.service';
 
 /**
  * گارد روشن بودن ماژول `moduleCode` برای شرکت فعال (`enabled_modules`) — در غیر این صورت هدایت به پرتال لانچر
@@ -111,6 +112,15 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     // اگر مسیر launcher باشد، هر کاربر احراز هویت شده مجاز است
     if (state.url.includes('/app/launcher') || route.routeConfig?.path === 'launcher') {
       return true;
+    }
+
+    // بخش خاموش (ص۱۲ طرح ۲.۶): برای همه، مدیر کل هم، بسته است تا دوباره روشن شود
+    const sectionToggles = inject(SectionToggleService);
+    const sectionKey = route.pathFromRoot
+      .map(r => r.routeConfig?.data?.['sectionKey'] as string | undefined)
+      .find(Boolean);
+    if (sectionKey && !sectionToggles.isEnabled(sectionKey)) {
+      return router.parseUrl('/app/launcher');
     }
 
     const moduleRegistry = inject(ModuleRegistryService);

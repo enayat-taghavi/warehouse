@@ -11,6 +11,8 @@ from .services import (
     compute_settings_etag,
     clear_setting_cache,
     get_installed_modules,
+    declared_toggle_sections,
+    get_disabled_sections,
     is_valid_app_version,
     is_valid_download_url,
 )
@@ -66,6 +68,17 @@ class SettingsViewSet(viewsets.ViewSet):
                         'code': 'CONCURRENT_MODIFICATION',
                         'current_etag': current_etag
                     }, status=412)
+
+            # ص۱۲ طرح ۲.۶: خاموش و روشن کردن بخش‌ها فقط با مدیر کل (حتی با perm_sys_settings)
+            if (
+                'disabled_sections' in data
+                and not request.user.is_superuser
+                and data.get('disabled_sections') != get_setting('disabled_sections')
+            ):
+                return Response({
+                    'error': 'تنها مدیر کل سیستم می‌تواند بخش‌ها را روشن یا خاموش کند.',
+                    'invalid_keys': ['disabled_sections'],
+                }, status=403)
 
             invalid_keys = validate_settings_payload(data)
             if invalid_keys:
@@ -130,7 +143,7 @@ class PublicConfigViewSet(viewsets.ViewSet):
             except Exception:
                 return ''
 
-        return Response({
+        payload = {
             'system_version': get_setting('system_version'),
             'system_name': 'سامانه یکپارچه مدیریت شرکت ها',
             'canonical_domain': getattr(settings, 'WH_CANONICAL_DOMAIN', ''),
@@ -147,4 +160,12 @@ class PublicConfigViewSet(viewsets.ViewSet):
                 'bazaar': safe_url('app_download_url_bazaar'),
                 'myket': safe_url('app_download_url_myket'),
             },
-        })
+            # ص۱۲ طرح ۲.۶: فرانت منو و مسیر این بخش‌ها را می‌بندد؛ داده‌ای پاک نمی‌شود
+            'disabled_sections': get_disabled_sections(),
+        }
+        user = getattr(request, 'user', None)
+        if user is not None and user.is_authenticated and user.is_superuser:
+            payload['toggle_sections'] = [
+                {'code': code, 'title_fa': title_fa} for code, title_fa in declared_toggle_sections()
+            ]
+        return Response(payload)
