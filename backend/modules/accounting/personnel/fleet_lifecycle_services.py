@@ -723,9 +723,7 @@ def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reas
 
     def _execute():
         try:
-            from notifications.models import Notification
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
+            from notifications.services import notify_users
 
             if is_return and stage not in ('revision_required',):
                 title_tpl, message_tpl = FLEET_RETURN_NOTIFICATION_TEXT
@@ -752,38 +750,18 @@ def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reas
             if not target_user_ids:
                 return
 
-            channel_layer = get_channel_layer()
-            veh_id_str = str(veh_id) if veh_id is not None else ''
-            cartable_url = FLEET_STAGE_URLS.get(stage, '/app/finance/employee-fleet')
-            notif_type = 'fleet_change_request' if stage.startswith('change_request_') else 'fleet_workflow'
-
-            for uid in sorted(target_user_ids):
-                notif = Notification.objects.create(
-                    recipient_id=uid,
-                    title=title,
-                    message=message,
-                    notification_type=notif_type,
-                    target_model='VehicleDriverProfile',
-                    target_id=veh_id_str,
-                )
-                if channel_layer:
-                    async_to_sync(channel_layer.group_send)(
-                        f'user_{uid}',
-                        {
-                            'type': 'send_notification',
-                            'type_str': notif_type,
-                            'notification_id': notif.id,
-                            'title': title,
-                            'message': message,
-                            'target_model': 'VehicleDriverProfile',
-                            'target_id': veh_id_str,
-                            'vehicle_id': veh_id,
-                            'company_id': cid,
-                            'approval_status': approval_status,
-                            'url': cartable_url,
-                            'created_at': notif.created_at.isoformat(),
-                        }
-                    )
+            # راه عمومی هسته (ص۷ طرح ۲.۴): ردیف‌ها، پیام شخصی وب‌سوکت و FCM
+            notify_users(
+                target_user_ids,
+                title=title,
+                message=message,
+                notification_type='fleet_change_request' if stage.startswith('change_request_') else 'fleet_workflow',
+                target_model='VehicleDriverProfile',
+                target_id=str(veh_id) if veh_id is not None else '',
+                url=FLEET_STAGE_URLS.get(stage, '/app/finance/employee-fleet'),
+                company_id=cid,
+                extra={'vehicle_id': veh_id, 'approval_status': approval_status},
+            )
         except Exception:
             logger.exception("[Notification] Error dispatching fleet workflow notification (stage=%s, vehicle=%s)", stage, veh_id)
 

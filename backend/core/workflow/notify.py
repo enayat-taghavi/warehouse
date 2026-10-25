@@ -10,7 +10,6 @@ Notification می‌سازد (یک bulk_create) و FCM را پس از commit ز�
 کدام حداکثر یک پرس‌وجو.
 """
 from django.contrib.auth import get_user_model
-from django.db import transaction
 
 from . import events
 
@@ -136,22 +135,16 @@ def create_for_event(event) -> dict:
     behalf = _behalf_names(event, user_ids)
     url = _url(event, spec)
 
-    from notifications.models import Notification
-    from notifications.push import schedule_push_for_notifications
-    rows = [
-        Notification(
-            recipient_id=uid,
-            title=title,
-            message=f'{body} (به جانشینی از {behalf[uid]})' if uid in behalf else body,
-            notification_type=NOTIFICATION_TYPE,
-            target_model=TARGET_MODEL,
-            target_id=str(event.get('instance_id') or ''),
-            url=url,
-        )
-        for uid in user_ids
-    ]
-    # savepoint: خطای پایگاه داده اینجا تراکنش بیرونی احتمالی را خراب نکند
-    with transaction.atomic():
-        created = Notification.objects.bulk_create(rows)
-    schedule_push_for_notifications(created)
+    from notifications.services import create_notifications
+    created = create_notifications(
+        user_ids,
+        title=title,
+        message=body,
+        message_for={uid: f'{body} (به جانشینی از {names})' for uid, names in behalf.items()},
+        notification_type=NOTIFICATION_TYPE,
+        target_model=TARGET_MODEL,
+        target_id=str(event.get('instance_id') or ''),
+        url=url,
+        active_only=False,  # _recipients فقط کاربران فعال را برمی‌گرداند
+    )
     return {n.recipient_id: n for n in created}

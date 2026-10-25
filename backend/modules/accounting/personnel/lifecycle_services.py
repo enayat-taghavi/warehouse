@@ -1121,9 +1121,7 @@ def dispatch_workflow_notification(personnel, stage: str, actor=None, reason=Non
     def _execute():
         import logging
         try:
-            from notifications.models import Notification
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
+            from notifications.services import notify_users
 
             if is_return and stage != 'revision_required':
                 title_tpl, message_tpl = RETURN_NOTIFICATION_TEXT
@@ -1144,35 +1142,17 @@ def dispatch_workflow_notification(personnel, stage: str, actor=None, reason=Non
             if not target_user_ids:
                 return
 
-            channel_layer = get_channel_layer()
-            pers_id_str = str(pers_id) if pers_id is not None else ''
-
-            for uid in sorted(target_user_ids):
-                notif = Notification.objects.create(
-                    recipient_id=uid,
-                    title=title,
-                    message=message,
-                    notification_type='personnel_workflow',
-                    target_model='PersonnelProfile',
-                    target_id=pers_id_str,
-                )
-                if channel_layer:
-                    async_to_sync(channel_layer.group_send)(
-                        f'user_{uid}',
-                        {
-                            'type': 'send_notification',
-                            'type_str': 'personnel_workflow',
-                            'notification_id': notif.id,
-                            'title': title,
-                            'message': message,
-                            'target_model': 'PersonnelProfile',
-                            'target_id': pers_id_str,
-                            'personnel_id': pers_id,
-                            'company_id': cid,
-                            'approval_status': approval_status,
-                            'created_at': notif.created_at.isoformat(),
-                        }
-                    )
+            # راه عمومی هسته (ص۷ طرح ۲.۴): ردیف‌ها، پیام شخصی وب‌سوکت و FCM
+            notify_users(
+                target_user_ids,
+                title=title,
+                message=message,
+                notification_type='personnel_workflow',
+                target_model='PersonnelProfile',
+                target_id=str(pers_id) if pers_id is not None else '',
+                company_id=cid,
+                extra={'personnel_id': pers_id, 'approval_status': approval_status},
+            )
         except Exception:
             logging.getLogger(__name__).exception(
                 "[Notification] Error dispatching workflow notification (stage=%s, personnel=%s)", stage, pers_id
