@@ -58,6 +58,10 @@ export const routes: Routes = [
   },
   { path: 'verify-card/:code', component: VerifyCard },
   { path: 'verify-card', component: VerifyCard },
+  {
+    path: 'verify/:token',
+    loadComponent: () => import('./modules/common/components/document-verify/document-verify').then(m => m.DocumentVerify),
+  },
   { path: 'change-password', component: ChangePassword, canActivate: [AuthGuard] },
   // ─── پورتال لانچر برنامه‌ها (App Launcher) و کارهای من ──────────────
   { path: 'app/launcher', component: AppLauncherComponent, canActivate: [AuthGuard] },
