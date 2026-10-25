@@ -22,6 +22,7 @@ export class CacheWarmupService {
   private activeCompany = inject(ActiveCompanyService);
   private subscription: Subscription | null = null;
   private running: Promise<void> | null = null;
+  private runningCompanyId: number | null = null;
 
   /** یک بار از app.config صدا زده می‌شود */
   start(): void {
@@ -61,11 +62,19 @@ export class CacheWarmupService {
    * هرگز خطا پرتاب نمی‌کند.
    */
   async warm(force = false): Promise<void> {
-    if (this.running) return this.running;
-    this.running = this.runWarmup(force).finally(() => {
-      this.running = null;
+    const companyId = this.activeCompany.activeCompanyId;
+    if (this.running && this.runningCompanyId === companyId) return this.running;
+    // شرکت عوض شده: پیش‌خوانی شرکت تازه بعد از اجرای جاری انجام می‌شود (نه نادیده)
+    const previous = this.running ?? Promise.resolve();
+    this.runningCompanyId = companyId;
+    const run: Promise<void> = previous.then(() => this.runWarmup(force)).finally(() => {
+      if (this.running === run) {
+        this.running = null;
+        this.runningCompanyId = null;
+      }
     });
-    return this.running;
+    this.running = run;
+    return run;
   }
 
   private async runWarmup(force: boolean): Promise<void> {
@@ -85,7 +94,6 @@ export class CacheWarmupService {
       const stampKey = `${WARMUP_STAMP_PREFIX}${userId}:${companyId}`;
       const last = readStamp(stampKey);
       if (!force && last && Date.now() - last < CACHE_WARMUP_INTERVAL_MS) return;
-      writeStamp(stampKey, Date.now());
 
       for (const hook of hooks) {
         try {
@@ -94,6 +102,8 @@ export class CacheWarmupService {
           console.warn('[CacheWarmup] پیش‌خوانی یک ماژول ناموفق بود:', err);
         }
       }
+      // زمان فقط وقتی ثبت می‌شود که اتصال تا پایان برقرار ماند؛ وگرنه برگشت اتصال دوباره پیش‌خوانی می‌کند
+      if (NetworkStatusService.getInstance().isOnline) writeStamp(stampKey, Date.now());
     } catch (err) {
       console.warn('[CacheWarmup] پیش‌خوانی انجام نشد:', err);
     }
