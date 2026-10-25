@@ -244,6 +244,10 @@ class Attachment26bTests(APITestCase):
         res_dotdot = self.client.get(f'/media/x/../{name}')
         self.assertEqual(res_dotdot.status_code, 403)
 
+        # دیسک ویندوز به حروف حساس نیست: Attachments/ هم بسته است
+        res_case = self.client.get('/media/A' + name[1:])
+        self.assertEqual(res_case.status_code, 403)
+
     def test_personnel_docs_requires_signature(self):
         p_path = os.path.join(settings.MEDIA_ROOT, 'personnel_docs', 'p.pdf')
         os.makedirs(os.path.dirname(p_path), exist_ok=True)

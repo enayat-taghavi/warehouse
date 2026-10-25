@@ -73,15 +73,19 @@ def _signature(path: str, expiry: int) -> str:
     return salted_hmac(_KEY_SALT, f'{path}:{expiry}', algorithm='sha256').hexdigest()[:32]
 
 
+def _prefix_key(path: str) -> str:
+    # normpath تا `x/../attachments/...` یا `./attachments/...` هم بسته شوند؛ lower چون دیسک ویندوز به حروف حساس نیست
+    return posixpath.normpath(unquote(path or '').replace('\\', '/')).lstrip('/').lower()
+
+
 def is_protected(path: str) -> bool:
-    unquoted = posixpath.normpath(unquote(path or '').replace('\\', '/')).lstrip('/')
-    return any(unquoted.startswith(p) for p in PROTECTED_PREFIXES)
+    key = _prefix_key(path)
+    return any(key.startswith(p) for p in PROTECTED_PREFIXES)
 
 
 def is_forbidden(path: str) -> bool:
-    # normpath تا مسیرهایی مثل `x/../attachments/...` یا `./attachments/...` هم بسته شوند
-    unquoted = posixpath.normpath(unquote(path or '').replace('\\', '/')).lstrip('/')
-    return any(unquoted.startswith(p) for p in FORBIDDEN_PREFIXES)
+    key = _prefix_key(path)
+    return any(key.startswith(p) for p in FORBIDDEN_PREFIXES)
 
 
 def signed_file_url(field_file, request=None):
