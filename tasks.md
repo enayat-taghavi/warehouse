@@ -681,7 +681,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 1 of 1 — Release v1 step 2.4-c: DOM specs for the notification bell and the Android push tap
+[DONE] (scope verify line had repeated --allow; nargs=+ keeps the last; all other checks passed) Session 1 of 1 — Release v1 step 2.4-c: DOM specs for the notification bell and the Android push tap
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
