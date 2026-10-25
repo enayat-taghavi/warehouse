@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from settings_core.models import SystemGoogleDriveConfig, SystemDriveUploadTask
 from settings_core.google_drive_service import sync_single_system_task
-from settings_core.google_drive_client import get_gdrive_target_handler
+from settings_core.company_drive_service import process_company_batch
 
 logger = logging.getLogger(__name__)
 
@@ -192,16 +192,15 @@ class Command(BaseCommand):
         return len(candidate_ids)
 
     def process_company_tasks(self, limit: int = 20, ignore_schedule: bool = False, company_id: int = None) -> int:
-        """پردازش صف شرکت‌ها از طریق رجیستری در صورت فعال بودن ماژول حسابداری"""
-        handler_info = get_gdrive_target_handler('company')
-        if handler_info and handler_info.get('batch_runner'):
-            try:
-                return handler_info['batch_runner'](
-                    limit=limit,
-                    ignore_schedule=ignore_schedule,
-                    company_id=company_id
-                )
-            except Exception as exc:
-                logger.error(f"[Worker] Error in registered company batch runner: {exc}")
-                return 0
-        return 0
+        """Company queue batch, now in core (2.6-c2); scan_all rows go to the module hook or stay pending."""
+        try:
+            return process_company_batch(
+                limit=limit,
+                company_id=company_id,
+                ignore_schedule=ignore_schedule,
+                log=lambda msg, style=None: self._log(msg, getattr(self.style, style) if style else None),
+                keep_running=lambda: self.keep_running,
+            )
+        except Exception as exc:
+            logger.error(f"[Worker] Error in company batch: {exc}", exc_info=True)
+            return 0

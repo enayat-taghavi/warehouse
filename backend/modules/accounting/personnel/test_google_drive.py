@@ -418,7 +418,7 @@ class GoogleDriveCoreTestCase(TestCase):
     def test_worker_schedule_time_window_and_midnight_crossing(self):
         """تست تطبیق بازه زمانی ساعات خلوتی و پشتیبانی کامل از عبور از نیمه‌شب"""
         from datetime import time as dt_time
-        from personnel.management.commands.run_gdrive_sync_worker import is_time_in_range
+        from settings_core.company_drive_service import is_time_in_range
 
         start = dt_time(23, 0)
         end = dt_time(6, 0)
@@ -807,9 +807,9 @@ class GoogleDriveCoreTestCase(TestCase):
             mock_req.next_chunk.return_value = (None, {'id': 'drv_file_123', 'md5Checksum': 'bad_fake_md5_hash'})
             mock_files.create.return_value = mock_req
 
-            with patch('personnel.google_drive_service.get_google_drive_service', return_value=mock_service), \
-                 patch('personnel.google_drive_service.ensure_company_drive_folders', return_value=('root_id', 'arch_id')), \
-                 patch('personnel.google_drive_service.resolve_folder_hierarchy', return_value='folder_id'):
+            with patch('settings_core.company_drive_service.get_google_drive_service', return_value=mock_service), \
+                 patch('settings_core.company_drive_service.ensure_company_drive_folders', return_value=('root_id', 'arch_id')), \
+                 patch('settings_core.company_drive_service.resolve_folder_hierarchy', return_value='folder_id'):
                 from personnel.google_drive_service import sync_single_queue_item
                 res = sync_single_queue_item(task.id)
                 self.assertFalse(res)
@@ -1108,8 +1108,8 @@ class GoogleDriveCoreTestCase(TestCase):
             source_file_path='x.pdf', target_folder_path='f', target_filename='x.pdf',
             status='pending', retry_count=9
         )
-        with patch('personnel.google_drive_service.get_google_drive_service', return_value=object()), \
-             patch('personnel.google_drive_service.ensure_company_drive_folders', side_effect=socket.timeout('timed out')):
+        with patch('settings_core.company_drive_service.get_google_drive_service', return_value=object()), \
+             patch('settings_core.company_drive_service.ensure_company_drive_folders', side_effect=socket.timeout('timed out')):
             self.assertFalse(sync_single_queue_item(task.id))
         task.refresh_from_db()
         self.assertEqual(task.status, 'pending')
@@ -1118,7 +1118,7 @@ class GoogleDriveCoreTestCase(TestCase):
 
     def test_worker_skips_company_that_needs_reauth(self):
         """ورکر تسک‌های شرکت needs_reauth را برندارد تا حلقهٔ داغ ساخته نشود (GD-11)"""
-        from personnel.management.commands.run_gdrive_sync_worker import Command
+        from settings_core.company_drive_service import process_company_batch
         CompanyGoogleDriveConfig.objects.create(
             company=self.company, is_enabled=True, sync_mode='immediate',
             refresh_token=encrypt_secret('tok'), auth_status='needs_reauth'
@@ -1127,4 +1127,18 @@ class GoogleDriveCoreTestCase(TestCase):
             company=self.company, model_name='CompanyDocument', object_id=1, field_name='file',
             source_file_path='x.pdf', target_folder_path='f', target_filename='x.pdf', status='pending'
         )
-        self.assertEqual(Command().process_batch(limit=5), 0)
+        self.assertEqual(process_company_batch(limit=5), 0)
+
+
+class DriveMoveReexport26cTests(TestCase):
+    """2.6-c/c2: personnel names still point at the core drive models and service."""
+
+    def test_personnel_reexports_core_drive(self):
+        from personnel import models as personnel_models
+        from personnel import google_drive_service as personnel_service
+        from settings_core import models as core_models
+        from settings_core import company_drive_service as core_service
+        self.assertIs(personnel_models.CompanyGoogleDriveConfig, core_models.CompanyGoogleDriveConfig)
+        self.assertIs(personnel_models.GoogleDriveSyncQueue, core_models.GoogleDriveSyncQueue)
+        self.assertIs(personnel_service.sync_single_queue_item, core_service.sync_single_queue_item)
+        self.assertIs(personnel_service._FOLDER_CACHE, core_service._FOLDER_CACHE)

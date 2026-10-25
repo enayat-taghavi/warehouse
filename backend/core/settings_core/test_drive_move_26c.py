@@ -6,8 +6,6 @@ from django.db import connection
 from django.test import TestCase
 
 from companies.models import Company
-from personnel import models as personnel_models
-from settings_core import models as settings_core_models
 from settings_core.models import CompanyGoogleDriveConfig, GoogleDriveSyncQueue
 
 
@@ -16,9 +14,8 @@ class DriveMove26cTests(TestCase):
     def setUpTestData(cls):
         cls.company = Company.objects.create(code='DRV26C', name='Test Company DRV26C')
 
-    def test_personnel_reexports_core_classes(self):
-        self.assertIs(personnel_models.CompanyGoogleDriveConfig, settings_core_models.CompanyGoogleDriveConfig)
-        self.assertIs(personnel_models.GoogleDriveSyncQueue, settings_core_models.GoogleDriveSyncQueue)
+    def test_models_live_in_core(self):
+        # the personnel re-export check lives in personnel/test_google_drive.py (core must not import modules)
         self.assertEqual(CompanyGoogleDriveConfig._meta.app_label, 'settings_core')
         self.assertEqual(GoogleDriveSyncQueue._meta.app_label, 'settings_core')
 

@@ -55,18 +55,15 @@ class PersonnelConfig(AppConfig):
                 company = Company.objects.filter(id=company_id).first() if company_id else None
                 return check_user_company_access(user, company, require_write=True)
 
-            def _company_batch_runner(limit=20, ignore_schedule=False, company_id=None):
-                from personnel.management.commands.run_gdrive_sync_worker import Command as PersonnelWorkerCommand
-                pw = PersonnelWorkerCommand()
-                return pw.process_batch(limit=limit, company_id=company_id, ignore_schedule=ignore_schedule)
-
             register_gdrive_target_handler(
                 target='company',
                 exchange_handler=lambda code, **kwargs: exchange_code_and_store_credentials(code, kwargs.get('company_id')),
                 access_checker=_company_access_checker,
                 redirect_builder=lambda company_id, status: f"/app/operations/companies/{company_id}?tab=gdrive&gdrive={status}",
-                batch_runner=_company_batch_runner,
             )
+            # the core worker runs the company queue (2.6-c2); scan_all walks module documents, so it stays a module hook
+            from personnel.google_drive_service import execute_company_scan_all
+            _contribute('gdrive_scan_all', execute_company_scan_all)
         except Exception:
             pass
 
