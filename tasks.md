@@ -553,7 +553,7 @@ G. Open the user menu (the profile button; its `content-desc` or text contains �
 
 ===
 
-Session 1 of 2 — Release v1 step 2.4-a operations on app: delete the temporary QA user, back up the database and apply migration notifications 0003
+[DONE] Session 1 of 2 — Release v1 step 2.4-a operations on app: delete the temporary QA user, back up the database and apply migration notifications 0003
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -584,7 +584,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 2 of 2 — Release v1 step 2.4-a: scenario tests for in-app notifications created from workflow task events
+[DONE] Session 2 of 2 — Release v1 step 2.4-a: scenario tests for in-app notifications created from workflow task events
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
