@@ -12151,3 +12151,74 @@ I am waiting for the background verification task to finish.
 ۲. کامپوننت تنظیمات شرکت ([`company-s...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 02:16:30
+- **Status:** DONE
+- **Conversation:** `f4b7ae05-4b94-4f3c-9abd-78adf39f20c1`
+- **Steps:** 62
+- **Tokens:** 123501
+- **Duration:** 5m 55s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 2.7-b: server tests for the single-sheet document PDF, print API and public verify API
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/reports/test_document_pdf_27b.py`. Never edit production code, migrations, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Core test files must not import accounting or warehouse modules (no `personnel`, `warehouses`, `inventory` imports) and must not contain the words `invoice` or `warehouse`. Use only `accounts`, `attachments`, `companies`, `reports`, `platform_core` and Django.
+- Do not install packages. `pypdf` is not installed; do not use it.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Never delete rows from the real database; tests run only on the Django test database.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.7-b): document pdf and verify`.
+
+2. Context (read these, nothing broader):
+- `backend/core/reports/document_pdf.py` (whole file): dataclasses `PrintableDocument` and `Signer`, `render_document_pdf(doc) -> bytes`, `signer_images(signer)`, `verify_token(kind, entity_id, number, *, company_id=None, title='', date='', confidential=False)`, `read_verify_token(token)`, `fa_digits`, module-level names `Image` (reportlab flowable) and `_rtl_lines`.
+- `backend/core/reports/document_views.py` (whole file): `PrintPdfView` (route `GET /api/print/<kind>/<entity_id>/pdf/?size=A4|A5`) and `PublicVerifyView` (route `GET /api/public/verify/<token>/`, no login).
+- `backend/core/platform_core/registry.py`: functions `printable_document`, `can_view`, `is_entity_confidential` (Grep `def printable_document`, read 15 lines from there; Grep `def entity_view_decision`, read 25 lines).
+- Registry patching: copy the pattern in `backend/core/attachments/tests/test_view_log_26d.py` lines 1–40 and 80–100 (`patch.dict(platform_core.registry._CONTRIBUTIONS, {...})`, user creation, `EntityViewLog`).
+- `backend/core/attachments/models.py` lines 1–45 (`Attachment` fields: `entity_kind`, `entity_id`, `label`, `file`, `status`, `archived_at`).
+
+3. Task, `backend/core/reports/test_document_pdf_27b.py`. Use `rest_framework.test.APITestCase` (and `django.test.TestCase` where no HTTP is needed). Kind used everywhere: `zz_doc`. Helper `make_doc(**kw)` returns `PrintableDocument(company_id=None, title='Test title', number='1404-17', attachments_count=1, paragraphs=['Body text'], **kw)`. Users: superuser S, normal active user U (no permissions), both with `force_authenticate`. Hooks dict for allowed cases: `{'can_view:zz_doc': [lambda user, eid: True], 'printable:zz_doc': [lambda user, eid: make_doc()]}`. Tests (names exactly):
+  - `test_pdf_a4_and_a5_bytes`: call `render_document_pdf(make_doc(size='A4'))` and `make_doc(size='A5')`; both start with `b'%PDF'`; the A4 bytes contain `b'/MediaBox [ 0 0 595.2756 841.8898 ]'` and the A5 bytes contain `b'/MediaBox [ 0 0 419.5276 595.2756 ]'` (if the exact spacing differs, instead assert with a regex `rb'/MediaBox \[\s*0 0 595'` and `rb'/MediaBox \[\s*0 0 419'`).
+  - `test_persian_text_reshaped`: patch `reports.document_pdf._rtl_lines` with `wraps=` the real function, render a doc whose title is `'سلام دنیا'`; assert the mock was called with that exact title as first argument; separately call the real `_rtl_lines(that_title, 'Helvetica', 12, 500)` and assert the single returned line is not equal to the input (it was reshaped and reordered).
+  - `test_print_requires_can_view`: with hooks `{'can_view:zz_doc': [lambda user, eid: False], 'printable:zz_doc': [lambda user, eid: make_doc()]}`, U GETs `/api/print/zz_doc/5/pdf/` → 404. With no `can_view:zz_doc` hook at all (only the printable hook), U → 404.
+  - `test_unknown_kind_404`: S GETs `/api/print/zz_unknown/5/pdf/` with empty patched `_CONTRIBUTIONS` (`patch.dict(..., {}, clear=False)` is fine; the kind has no hooks) → 404.
+  - `test_hook_error_or_none_404`: hooks with `can_view` True and `printable:zz_doc` raising `RuntimeError` → U gets 404; `printable:zz_doc` returning `None` → 404.
+  - `test_print_ok_no_store_and_view_log`: allowed hooks, U GETs `/api/print/zz_doc/5/pdf/?size=A5` → 200, `response['Content-Type'] == 'application/pdf'`, `response['Cache-Control'] == 'no-store'`, body (`b''.join(response.streaming_content)` if streaming else `response.content`) starts with `b'%PDF'`, and `EntityViewLog.objects.filter(user=U, entity_kind='zz_doc', entity_id='5').count() == 1`.
+  - `test_unsigned_signer_image_not_drawn`: create an `Attachment(entity_kind='user', entity_id=str(U.pk), label='signature', status='accepted')` whose `file` is a `SimpleUploadedFile('s.png', <bytes of a 10x10 PNG made with PIL.Image.new('RGB', (10, 10)) saved to BytesIO>, content_type='image/png')`. Assert `signer_images(Signer('A', 'R', U.pk, False)) == []` and `len(signer_images(Signer('A', 'R', U.pk, True))) == 1`. Then patch `reports.document_pdf.Image` with `wraps=` the real class, render `make_doc(signers=[Signer('A', 'R', U.pk, False)])` → mock call count 0; render `make_doc(signers=[Signer('A', 'R', U.pk, True)])` → call count 1. Use `override_settings(MEDIA_ROOT=<a tempfile.mkdtemp() directory>)` for this test and remove the directory in `addCleanup` with `shutil.rmtree(..., ignore_errors=True)`.
+  - `test_archived_signature_not_used`: same as above but set `archived_at=timezone.now()` → `signer_images(Signer('A', 'R', U.pk, True)) == []`.
+  - `test_verify_valid_and_tampered`: `t = verify_token('zz_doc', 5, '1404-17', title='Test title', date='1404/08/04')`; anonymous client GET `/api/public/verify/<t>/` → 200, `valid` True, `number == '1404-17'`, `title == 'Test title'`, `date == '1404/08/04'`, and the response has no key `amount`. Change the last character of `t` to a different character → 200 and JSON exactly `{'valid': False}`. GET `/api/public/verify/garbage/` → `{'valid': False}`.
+  - `test_verify_confidential_hides_title`: with hooks `{'is_confidential:zz_doc': [lambda eid: True]}` and the token from the previous test → JSON exactly `{'valid': True, 'number': '1404-17'}`. Also `read_verify_token(verify_token('zz_doc', 5, '9', title='Secret', confidential=True))` has no key `t`.
+  - `test_print_token_in_pdf_is_verifiable`: allowed hooks; patch `reports.document_views.render_document_pdf` with a `MagicMock(return_value=b'%PDF-1.4 x')`; U GETs the print URL → 200; take the `PrintableDocument` passed to the mock, assert its `verify_url` contains `/verify/`, extract the token after `/verify/`, and assert `read_verify_token(token)['n'] == '1404-17'`.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; $env:DB_TEST_NAME='test_agy_r27b'; .\venv\Scripts\python.exe manage.py test reports.test_document_pdf_27b --noinput`. Always pass the label; never run `manage.py test` without a label. At most 6 runs.
+
+5. Before finishing: all 11 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست‌های سرور مربوط به گام ۲.۷-ب (تولید PDF سند تک‌برگی، API چاپ و API صحت‌سنجی عمومی) در فایل `backend/core/reports/test_document_pdf_27b.py` ایجاد شد. اجرای دستور تست در پایگاه‌داده تست جنگو در حال انجام است و به محض پایان نتیجه بررسی خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+### گزارش تست سرور گام ۲.۷-ب (Release v1 step 2.7-b)
+
+تست‌های سرور مربوط به تولید فایل PDF سند تک‌برگی، API چاپ سند (`PrintPdfView`) و API عمومی صحت‌سنجی سند (`PublicVerifyView`) با موفقیت پیاده‌سازی و اجرا شدند.
+
+</div>
+
+### Release v1 Step 2.7-b Test Report
+
+- **File Created:** [`backend/core/reports/test_document_pdf_27b.py`](file:///E:/comanager/backend/core/reports/test_docume...
+
+---

@@ -60,7 +60,7 @@ class PrintableDocument:
     table_rows: list = field(default_factory=list)
     signers: list = field(default_factory=list)
     letterhead_image: bytes | None = None
-    verify_url: str = ''
+    verify_url: str = ''  # خالی بماند تا API چاپ توکن را بسازد؛ ماژولی که خودش می‌دهد، محرمانگی را خودش رعایت کند
 
 
 def fa_digits(value) -> str:

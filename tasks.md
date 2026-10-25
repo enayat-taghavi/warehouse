@@ -1387,7 +1387,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 2.7-b: server tests for the single-sheet document PDF, print API and public verify API
+[DONE] [ ] Session 1 of 1 — Release v1 step 2.7-b: server tests for the single-sheet document PDF, print API and public verify API
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
