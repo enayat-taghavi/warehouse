@@ -102,8 +102,9 @@
                     @for (p of c.items; track p.code) {
                       <label class="flex items-center gap-2 min-h-[40px] px-2 rounded-lg border transition-colors"
                         [class]="isChecked(p.code) ? 'border-indigo-300 bg-indigo-50/60' : 'border-line-subtle bg-surface'"
-                        [class.cursor-pointer]="canEdit()" [attr.data-code]="p.code">
-                        <input type="checkbox" class="w-4 h-4 accent-indigo-600 shrink-0" [checked]="isChecked(p.code)"
+                        [class.cursor-pointer]="canEdit()" [attr.data-code]="p.code"
+                        [attr.for]="'rbp-perm-' + p.code">
+                        <input type="checkbox" [id]="'rbp-perm-' + p.code" class="w-4 h-4 accent-indigo-600 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" [checked]="isChecked(p.code)"
                           [disabled]="!canEdit()" (change)="toggle(p.code, $event)" />
                         <span class="text-xs text-fg min-w-0 flex-1 break-words">{{ p.label }}</span>
                         @if (p.diff === 'added') {

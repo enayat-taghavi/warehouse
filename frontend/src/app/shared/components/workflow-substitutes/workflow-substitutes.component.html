@@ -18,6 +18,7 @@
       [busy]="loading"
       title="تازه‌سازی لیست"
       aria-label="تازه‌سازی لیست جانشین‌ها"
+      class="min-w-[40px] min-h-[40px]"
     ></button>
   </div>
 
@@ -42,6 +43,7 @@
             کاربر جانشین *
           </label>
           <div class="flex flex-col gap-1.5">
+            <label *ngIf="availableUsers.length > 5" for="wfsub-user-search" class="sr-only">جستجوی کاربر جانشین</label>
             <input
               *ngIf="availableUsers.length > 5"
               type="text"
@@ -65,6 +67,20 @@
                 {{ u.name }}
               </option>
             </select>
+            <div
+              *ngIf="usersLoadError"
+              role="alert"
+              class="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2 text-rose-700 text-xs"
+            >
+              <span class="font-bold">{{ usersLoadError }}</span>
+              <button
+                type="button"
+                (click)="loadUsers()"
+                class="min-h-[40px] px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors shrink-0"
+              >
+                تلاش دوباره
+              </button>
+            </div>
           </div>
           <p *ngIf="fieldErrors.substitute" role="alert" class="text-[10px] text-rose-600 font-bold mt-1">
             {{ fieldErrors.substitute }}
@@ -198,7 +214,7 @@
 
   <!-- حالت بارگذاری لیست -->
   <div *ngIf="loading && !is403" class="py-8 text-center text-slate-500">
-    <div class="inline-block animate-spin text-2xl mb-2">⏳</div>
+    <svg appIcon="loader" class="w-6 h-6 animate-spin text-slate-500 mb-2 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
     <p class="text-xs font-bold">در حال بارگذاری لیست جانشین‌ها...</p>
   </div>
 
@@ -231,7 +247,55 @@
   <div *ngIf="!loading && !error && !is403 && substitutes.length > 0" class="flex flex-col gap-2">
     <h4 class="text-xs font-black text-slate-700">فهرست جانشین‌های ثبت‌شده</h4>
 
-    <div class="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm">
+    <!-- نمایش کارت‌ها در موبایل (زیر md) -->
+    <div class="md:hidden flex flex-col gap-2.5" data-testid="substitutes-cards">
+      <div
+        *ngFor="let sub of substitutes"
+        class="rounded-2xl border border-line bg-surface p-3 flex flex-col gap-2 text-xs shadow-sm"
+        data-testid="substitute-card"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="font-bold text-fg break-words">{{ sub.substitute?.name || 'نامشخص' }}</span>
+            <span *ngIf="isManagerMode" class="text-[10px] text-fg-muted">
+              (برای: {{ sub.principal?.name || 'نامشخص' }})
+            </span>
+          </div>
+          <span
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0"
+            [ngClass]="getStatusBadgeClass(sub)"
+          >
+            {{ getStatusLabel(sub) }}
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-fg-muted pt-1 border-t border-line-subtle">
+          <div class="flex items-center gap-1">
+            <svg appIcon="building" class="w-3.5 h-3.5 shrink-0 text-fg-subtle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>{{ sub.company ? sub.company.name : 'همهٔ شرکت‌ها' }}</span>
+          </div>
+          <div class="font-mono text-[10px] text-fg-muted dir-ltr">
+            <span class="tabular-nums">{{ sub.start_date_shamsi }}</span> تا <span class="tabular-nums">{{ sub.end_date_shamsi }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="sub.can_revoke" class="flex justify-end pt-1">
+          <button
+            type="button"
+            appAction="delete"
+            display="label"
+            label="لغو"
+            size="sm"
+            (click)="onRevoke(sub)"
+            title="لغو جانشینی موقت"
+            aria-label="لغو جانشینی موقت"
+          ></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- جدول در نمایش دسکتاپ (md به بالا) -->
+    <div class="hidden md:block overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm">
       <table class="w-full text-start border-collapse text-xs">
         <thead>
           <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">

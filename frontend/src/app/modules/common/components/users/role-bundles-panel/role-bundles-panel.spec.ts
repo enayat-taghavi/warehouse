@@ -199,4 +199,12 @@ describe('RoleBundlesPanel (نقش‌های انتساب، طرح ۲.۲)', () =>
     expect(el.querySelector('[data-testid="bundles-offline"]')).not.toBeNull();
     expect(el.querySelector<HTMLButtonElement>('[data-testid="bundle-save"]')!.disabled).toBe(true);
   });
+
+  it('چک‌باکس‌های مجوز بسته دارای شناسه با پیشوند rbp- و برچسب متصل با for هستند', async () => {
+    await setup();
+    const checkbox = el.querySelector('#rbp-perm-perm_inv') as HTMLInputElement;
+    expect(checkbox).toBeTruthy();
+    const label = el.querySelector('label[for="rbp-perm-perm_inv"]');
+    expect(label).toBeTruthy();
+  });
 });

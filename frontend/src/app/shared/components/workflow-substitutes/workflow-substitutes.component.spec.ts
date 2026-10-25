@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Injector, runInInjectionContext } from '@angular/core';
+import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { of, throwError } from 'rxjs';
 import { WorkflowSubstitutesComponent } from './workflow-substitutes.component';
 import { WorkflowApiService } from '../../../core/api/workflow-api.service';
@@ -9,6 +11,10 @@ import { ActiveCompanyService } from '../../../core/services/active-company.serv
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
 import { WorkflowSubstitute } from '../../../core/models/workflow.model';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
 
 describe('WorkflowSubstitutesComponent', () => {
   let component: WorkflowSubstitutesComponent;
@@ -82,6 +88,16 @@ describe('WorkflowSubstitutesComponent', () => {
       show: vi.fn()
     };
 
+    TestBed.configureTestingModule({
+      imports: [WorkflowSubstitutesComponent],
+      providers: [
+        { provide: WorkflowApiService, useValue: mockWorkflowApi },
+        { provide: ActiveCompanyService, useValue: mockActiveCompany },
+        { provide: ConfirmDialogService, useValue: mockConfirmDialog },
+        { provide: ToastService, useValue: mockToast }
+      ]
+    });
+
     const injector = Injector.create({
       providers: [
         { provide: WorkflowApiService, useValue: mockWorkflowApi },
@@ -94,6 +110,10 @@ describe('WorkflowSubstitutesComponent', () => {
     runInInjectionContext(injector, () => {
       component = new WorkflowSubstitutesComponent();
     });
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('1. loads substitutes and users on init', () => {
@@ -199,5 +219,43 @@ describe('WorkflowSubstitutesComponent', () => {
     );
     expect(mockWorkflowApi.revokeSubstitute).toHaveBeenCalledWith(subToRevoke.id);
     expect(mockToast.show).toHaveBeenCalledWith('success', 'جانشینی موقت لغو شد.');
+  });
+
+  it('8. loadUsers() with an erroring getSubstituteCandidates sets usersLoadError and renders the alert with a retry button that calls loadUsers again', async () => {
+    mockWorkflowApi.getSubstituteCandidates.mockReturnValue(
+      throwError(() => new Error('Server error'))
+    );
+    const fixture = TestBed.createComponent(WorkflowSubstitutesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const comp = fixture.componentInstance;
+    expect(comp.usersLoadError).toBe('فهرست کاربران قابل انتخاب دریافت نشد');
+    expect(comp.availableUsers.length).toBe(0);
+
+    const alertEl = Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]'))
+      .find((el: any) => el.textContent.includes('فهرست کاربران قابل انتخاب دریافت نشد')) as HTMLElement;
+    expect(alertEl).toBeTruthy();
+
+    const retryBtn = alertEl.querySelector('button') as HTMLButtonElement;
+    expect(retryBtn).toBeTruthy();
+    expect(retryBtn.textContent).toContain('تلاش دوباره');
+
+    const loadUsersSpy = vi.spyOn(comp, 'loadUsers');
+    retryBtn.click();
+    expect(loadUsersSpy).toHaveBeenCalled();
+    fixture.destroy();
+  });
+
+  it('9. with two substitutes the md:hidden card list renders two cards', async () => {
+    const fixture = TestBed.createComponent(WorkflowSubstitutesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('[data-testid="substitute-card"]');
+    expect(cards.length).toBe(2);
+    fixture.destroy();
   });
 });

@@ -314,5 +314,29 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
       await settle();
       expect(el().querySelector('[data-assign-error]')?.textContent).toContain('اجازهٔ انتساب در این شرکت را ندارید.');
     });
+
+    it('کنترل‌های فرم انتساب درون‌خطی با شناسه uptab- و label دارای for متصل هستند', async () => {
+      await openForm();
+      const controlIds = [
+        'uptab-assign-company',
+        'uptab-assign-project',
+        'uptab-assign-section',
+        'uptab-assign-role'
+      ];
+      for (const id of controlIds) {
+        const inputOrSelect = el().querySelector(`#${id}`);
+        expect(inputOrSelect).toBeTruthy();
+        const label = el().querySelector(`label[for="${id}"]`);
+        expect(label).toBeTruthy();
+      }
+    });
+
+    it('دست‌کم یک دکمهٔ فقط‌آیکون دارای aria-label و کلاس min-w-[40px] است', async () => {
+      await create(7);
+      const selectAllBtn = el().querySelector('[data-select-all]') as HTMLButtonElement;
+      expect(selectAllBtn).toBeTruthy();
+      expect(selectAllBtn.getAttribute('aria-label')).toBeTruthy();
+      expect(selectAllBtn.classList.contains('min-w-[40px]')).toBe(true);
+    });
   });
 });

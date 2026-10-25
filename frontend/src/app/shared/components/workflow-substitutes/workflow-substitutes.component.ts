@@ -79,6 +79,7 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
   availableUsers: { id: number; name: string }[] = [];
   userSearch = '';
   isLoadingUsers = false;
+  usersLoadError = '';
 
   get isManagerMode(): boolean {
     return this.principalId != null && this.principalId > 0;
@@ -133,6 +134,7 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
   /** نامزدها از سرور با همان شرط ثبت جانشین (هم‌شرکتی‌های صاحب کار در شرکت انتخاب‌شده یا همهٔ شرکت‌ها). */
   loadUsers(): void {
     this.isLoadingUsers = true;
+    this.usersLoadError = '';
     const company = this.companyId ? Number(this.companyId) : null;
     this.workflowApi.getSubstituteCandidates(this.principalId, company).subscribe({
       next: (list) => {
@@ -145,6 +147,7 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
       },
       error: () => {
         this.availableUsers = [];
+        this.usersLoadError = 'فهرست کاربران قابل انتخاب دریافت نشد';
         this.isLoadingUsers = false;
         this.cdr?.markForCheck();
       }

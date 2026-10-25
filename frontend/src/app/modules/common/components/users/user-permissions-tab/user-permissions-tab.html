@@ -48,9 +48,9 @@
         </button>
         @if (isAssignFormOpen) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-xl border border-line bg-surface-muted" data-assign-form [attr.aria-busy]="isLoadingAssignOptions || isSavingAssign">
-            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+            <label for="uptab-assign-company" class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
               <span>شرکت</span>
-              <select data-assign-company class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+              <select id="uptab-assign-company" data-assign-company class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 (change)="onAssignCompanyChange($any($event.target).value)">
                 <option value="" [selected]="!assignCompanyId">انتخاب شرکت…</option>
                 @for (c of companies; track c.id) {
@@ -58,9 +58,9 @@
                 }
               </select>
             </label>
-            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+            <label for="uptab-assign-project" class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
               <span>پروژه (اختیاری)</span>
-              <select data-assign-project class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+              <select id="uptab-assign-project" data-assign-project class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [disabled]="!assignCompanyId" (change)="onAssignProjectChange($any($event.target).value)">
                 <option value="" [selected]="!assignProjectId">کل شرکت</option>
                 @for (p of assignProjects; track p.id) {
@@ -68,9 +68,9 @@
                 }
               </select>
             </label>
-            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+            <label for="uptab-assign-section" class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
               <span>بخش (اختیاری)</span>
-              <select data-assign-section class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+              <select id="uptab-assign-section" data-assign-section class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [disabled]="!assignProjectId" (change)="assignSectionId = $any($event.target).value ? +$any($event.target).value : null">
                 <option value="" [selected]="!assignSectionId">کل پروژه</option>
                 @for (s of assignSections; track s.id) {
@@ -78,9 +78,9 @@
                 }
               </select>
             </label>
-            <label class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
+            <label for="uptab-assign-role" class="flex flex-col gap-1 text-[10px] font-bold text-fg-muted">
               <span>نقش</span>
-              <select data-assign-role class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg"
+              <select id="uptab-assign-role" data-assign-role class="min-h-[40px] px-2 rounded-lg border border-line bg-surface text-xs text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 (change)="assignRole = $any($event.target).value">
                 <option value="" [selected]="!assignRole">انتخاب نقش…</option>
                 @for (r of assignRoles; track r.key) {
@@ -95,9 +95,9 @@
               <p class="sm:col-span-2 text-[11px] font-bold text-rose-700" role="alert" data-assign-error>{{ assignError }}</p>
             }
             <div class="sm:col-span-2 flex justify-end gap-2">
-              <button type="button" (click)="toggleAssignForm()" class="min-h-[40px] px-3 text-[11px] font-bold rounded-xl text-fg-muted hover:bg-surface">انصراف</button>
+              <button type="button" (click)="toggleAssignForm()" class="min-h-[40px] px-3 text-[11px] font-bold rounded-xl text-fg-muted hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">انصراف</button>
               <button type="button" (click)="submitAssign()" [disabled]="!canSubmitAssign || !isOnline" [attr.title]="isOnline ? null : 'در حالت آفلاین ممکن نیست'" data-assign-submit
-                class="min-h-[40px] px-3 text-[11px] font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                class="min-h-[40px] px-3 text-[11px] font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 {{ isSavingAssign ? 'در حال ثبت…' : 'ثبت انتساب' }}
               </button>
             </div>
