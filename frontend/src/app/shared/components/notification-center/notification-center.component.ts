@@ -40,16 +40,18 @@ export function isInAppUrl(url: unknown): url is string {
       <button
         type="button"
         (click)="toggleDropdown($event)"
-        class="relative w-10 h-10 rounded-xl hover:bg-surface-muted dark:hover:bg-slate-800 text-fg-muted dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center tap-target"
+        class="relative w-10 h-10 rounded-xl hover:bg-surface-muted dark:hover:bg-slate-800 text-fg-muted dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         [ngClass]="{'bg-surface-muted dark:bg-slate-800 text-brand-600': isOpen()}"
         [attr.aria-expanded]="isOpen()"
+        aria-controls="notification-center-panel"
+        aria-haspopup="true"
         title="مرکز اعلان‌های سامانه"
         aria-label="مرکز اعلان‌های سامانه"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="bell"></svg>
         <span
           *ngIf="unreadCount() > 0"
-          class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-surface dark:border-slate-900 shadow-sm transition-all"
+          class="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 border-2 border-surface dark:border-slate-900 shadow-sm transition-all"
           [ngClass]="hasNewPulse() ? 'animate-bounce bg-rose-600 ring-2 ring-rose-300' : 'bg-brand-600'"
         >
           {{ unreadCount() > 99 ? '+99' : unreadCount() }}
@@ -63,7 +65,7 @@ export function isInAppUrl(url: unknown): url is string {
         class="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
-        <div class="px-4 py-1 bg-surface-muted/90 dark:bg-slate-800/80 border-b border-line dark:border-slate-700/80 flex items-center justify-between gap-2">
+        <div class="px-4 py-1 min-h-10 bg-surface-muted/90 dark:bg-slate-800/80 border-b border-line dark:border-slate-700/80 flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-xs font-black text-fg dark:text-white">مرکز اعلان‌ها</span>
             <span *ngIf="unreadCount() > 0" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800">
@@ -74,7 +76,7 @@ export function isInAppUrl(url: unknown): url is string {
             *ngIf="unreadCount() > 0"
             type="button"
             (click)="markAllAsRead($event)"
-            class="min-h-10 px-2 shrink-0 text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 cursor-pointer transition-colors"
+            class="min-h-10 px-2 shrink-0 text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 cursor-pointer transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             title="علامت‌گذاری همهٔ اعلان‌ها به عنوان خوانده‌شده"
           >
             خواندم همه
@@ -83,11 +85,11 @@ export function isInAppUrl(url: unknown): url is string {
 
         <!-- Body: Notification List -->
         <div class="max-h-80 overflow-y-auto overflow-x-hidden divide-y divide-line-subtle dark:divide-slate-800/60">
-          <div *ngIf="isLoading()" class="p-6 text-center text-xs text-fg-subtle">
+          <div *ngIf="isLoading()" class="p-6 text-center text-xs text-fg-muted">
             در حال بارگذاری اعلان‌ها...
           </div>
 
-          <div *ngIf="!isLoading() && notifications().length === 0" class="p-8 text-center text-fg-subtle">
+          <div *ngIf="!isLoading() && notifications().length === 0" class="p-8 text-center text-fg-muted">
             <div class="w-10 h-10 mx-auto mb-2 text-fg-subtle dark:text-slate-600 flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
             </div>
@@ -97,10 +99,11 @@ export function isInAppUrl(url: unknown): url is string {
           <div
             *ngFor="let item of notifications()"
             (click)="onNotificationClick(item)"
-            (keydown.enter)="onNotificationClick(item)"
+            (keydown.enter)="onRowKey($event, item)"
+            (keydown.space)="onRowKey($event, item)"
             role="button"
             tabindex="0"
-            class="notification-item p-3 hover:bg-surface-muted/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer flex items-start gap-3"
+            class="notification-item p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 hover:bg-surface-muted/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer flex items-start gap-3"
             [ngClass]="{'bg-brand-50/40 dark:bg-brand-950/20': !item.is_read}"
           >
             <div
@@ -113,7 +116,7 @@ export function isInAppUrl(url: unknown): url is string {
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1 mb-1">
                 <span class="text-xs font-bold text-fg dark:text-slate-200 truncate">{{ item.title }}</span>
-                <span class="text-[10px] text-fg-subtle shrink-0">{{ formatTimeAgo(item.created_at) }}</span>
+                <span class="text-[10px] text-fg-muted shrink-0">{{ formatTimeAgo(item.created_at) }}</span>
               </div>
               <p class="text-[11px] text-fg-muted dark:text-slate-300 line-clamp-2 leading-relaxed break-words">{{ item.message }}</p>
             </div>
@@ -122,7 +125,7 @@ export function isInAppUrl(url: unknown): url is string {
               *ngIf="!item.is_read"
               type="button"
               (click)="markAsRead(item, $event)"
-              class="shrink-0 w-10 h-10 flex items-center justify-center text-fg-subtle hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded-lg hover:bg-surface dark:hover:bg-slate-700 cursor-pointer"
+              class="shrink-0 w-10 h-10 flex items-center justify-center text-fg-subtle hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded-lg hover:bg-surface dark:hover:bg-slate-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               title="علامت‌گذاری به عنوان خوانده‌شده"
               aria-label="علامت‌گذاری به عنوان خوانده‌شده"
             >
@@ -240,6 +243,13 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
     this.http.post(`${environment.apiUrl}/notifications/mark-all-read/`, {}, { context }).subscribe({
       error: () => {}
     });
+  }
+
+  /** Enter/Space روی ردیف؛ کلیدی که از دکمهٔ «خوانده شد» درون ردیف بالا آمده نادیده گرفته می‌شود. */
+  onRowKey(event: Event, item: NotificationItem): void {
+    if (event.target !== event.currentTarget) return;
+    event.preventDefault();
+    this.onNotificationClick(item);
   }
 
   onNotificationClick(item: NotificationItem): void {
