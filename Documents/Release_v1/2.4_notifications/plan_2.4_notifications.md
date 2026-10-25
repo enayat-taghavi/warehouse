@@ -76,5 +76,11 @@
   - درس اجرا: باز کردن اجراکننده در زبانهٔ Windows Terminal اجرا نشد؛ اجرا در پس‌زمینهٔ Bash با `python` روی PATH کار کرد (در `scratch/brief_2.4_b.md`).
   - باز: `url` در دادهٔ FCM نیست (۲.۴-ج).
   - **اقدام بعدی:** ۲.۴-ب با `scratch/brief_2.4_b.md`.
+- **۳ آبان ۱۴۰۵ (۲۵ اکتبر) — ۲.۴-ب انجام شد.**
+  - کد (`824f4a08`): `notifications/services.py` با `create_notifications` (یک `bulk_create` و FCM) و `notify_users` (پس از commit: فقط کاربران فعال، ردیف، پیام شخصی `user_{id}` با `notification_id`، `url`، `company_id` و کلیدهای اضافه که کلیدهای پایه را عوض نمی‌کنند؛ خطاها فقط ثبت می‌شوند). پرسنل و ناوگان و `workflow/notify.py` از آن استفاده می‌کنند؛ متن‌ها و گیرندگان همان است؛ ردیف ناوگان حالا `url` هم دارد.
+  - نگهبان (`13cbe6a5`): شمارندهٔ `direct_notification_refs` در `module_coupling_scan.py` (داخل نگهبان‌های 29/57)؛ صفر است. ۷ تست `notifications/test_services.py` (شمار ثابت پرس‌وجو برای ۲ و ۱۲ نفر، کاربر غیرفعال، فقط کانال شخصی، ثبت خطا، اجرا پس از commit).
+  - تست‌ها: ۲۶۲ تست `notifications`، `workflow` و دو فایل پرسنل سبز، و ۷ تست تازه سبز؛ نگهبان‌های 29، 57، 58 و `manage.py check` سبز؛ `tenant-scope-reviewer`: بی‌یافته.
+  - انحراف: نشست آنتی‌گرویتی به خطای ورود (authentication timed out) خورد و کاری نکرد؛ با تأیید کاربر، نگهبان و تست‌ها را Claude نوشت.
+  - **اقدام بعدی:** ۲.۴-ج با `scratch/brief_2.4_c.md`.
 
 </div>
