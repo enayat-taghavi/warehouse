@@ -1,4 +1,6 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -30,7 +32,7 @@ export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'appro
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
-export class EmployeePettyCashHubComponent implements OnInit {
+export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   readonly Math = Math;
 
   // Memoized tabs for app-tab-bar
@@ -135,17 +137,32 @@ export class EmployeePettyCashHubComponent implements OnInit {
   // ─── تاریخ شمسی امروز ───
   todayShamsi: string = '';
 
+  private docSub?: Subscription;
+
   constructor(
     public auth: AuthService,
     private personnelApi: PersonnelApiService,
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    @Optional() private ws?: WebSocketService
   ) {}
+
+  ngOnDestroy(): void {
+    this.docSub?.unsubscribe();
+  }
 
   ngOnInit(): void {
     this.initTodayShamsi();
+    // ص۶ طرح ۲.۵: سند تنخواهی از این بخش که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    this.docSub = this.ws?.documentChanges$?.(['petty_cash']).subscribe(ev => {
+      if (patchDocumentRow(this.transactions, ev)) {
+        this.cdr.detectChanges();
+      } else if (this.selectedSectionId && (!ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId))) {
+        this.loadTransactions(true);
+      }
+    });
     this.loadMySections();
     this.route.queryParams.subscribe(params => {
       if (params['section_id']) {
@@ -246,9 +263,10 @@ export class EmployeePettyCashHubComponent implements OnInit {
   }
 
   // ─── بارگذاری تراکنش‌ها و اسناد تنخواه ───
-  loadTransactions(): void {
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
+  loadTransactions(silent = false): void {
     if (!this.selectedSectionId) return;
-    this.isLoading = true;
+    if (!silent) this.isLoading = true;
     this.personnelApi.getPettyCashTransactions({ section_id: this.selectedSectionId }).subscribe({
       next: (res: PettyCashTransaction[]) => {
         this.transactions = res || [];
@@ -257,6 +275,7 @@ export class EmployeePettyCashHubComponent implements OnInit {
       },
       error: (err: any) => {
         this.isLoading = false;
+        if (silent) return;
         this.toast.show('error', 'خطا در بارگذاری تراکنش‌های تنخواه: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }

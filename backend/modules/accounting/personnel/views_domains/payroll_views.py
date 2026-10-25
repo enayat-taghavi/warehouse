@@ -687,6 +687,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
             return Response({'error': f'دوره {period.year_month} قفل شده است و امکان محاسبه مجدد ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
 
         records = calculate_monthly_payroll_for_period(period, user=request.user)
+        from ..workflow_engine import notify_document_changed
+        notify_document_changed(period, 'recalculated')
         serialized = MonthlyPayrollRecordSerializer(records, many=True).data
 
         # Summary Metrics
@@ -1039,6 +1041,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         record.payment_hold_released_at = timezone.now()
         record.payment_hold_released_by = request.user
         record.save(update_fields=['payment_hold', 'payment_hold_released_at', 'payment_hold_released_by', 'updated_at'])
+        from ..workflow_engine import notify_document_changed
+        notify_document_changed(record, 'updated')
 
         log_audit_event(
             module='personnel',

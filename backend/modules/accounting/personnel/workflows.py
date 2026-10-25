@@ -33,6 +33,8 @@ def _invoice_state_change(invoice, state, instance):
     if status and invoice.status != status:
         invoice.status = status
         invoice.save(update_fields=['status', 'updated_at'])
+        from .workflow_engine import notify_document_changed
+        notify_document_changed(invoice)
 
 
 def _invoice_summary(invoice):

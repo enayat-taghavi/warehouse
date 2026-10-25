@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,6 +12,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { WebSocketService } from '../../../../../../core/http/websocket.service';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -77,6 +78,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   refills: PettyCashRefillItem[] = [];
 
   private routeSub?: Subscription;
+  private docSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -85,7 +87,8 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private ws?: WebSocketService
   ) {}
 
   ngOnInit(): void {
@@ -102,10 +105,14 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     });
 
     this.loadSections();
+
+    // ص۶ طرح ۲.۵: ردیف‌های این صفحه برچسب وضعیت خودشان را دارند، پس هر تغییر فاکتور یا تنخواه = بازخوانی بی‌صدا
+    this.docSub = this.ws?.documentChanges$?.(['expense_invoice', 'petty_cash']).subscribe(() => this.loadTreasuryData(true));
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.docSub?.unsubscribe();
   }
 
   loadSections(): void {
@@ -171,8 +178,9 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadTreasuryData(): void {
-    this.isLoading = true;
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
+  loadTreasuryData(silent = false): void {
+    if (!silent) this.isLoading = true;
     this.personnelApi.getTreasuryCartable().subscribe({
       next: (res: any) => {
         const rawInvoices = res?.invoices || [];
@@ -216,6 +224,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
+        if (silent) return;
         this.toast.error('خطا در دریافت اطلاعات خزانه‌داری: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }

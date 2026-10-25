@@ -1,10 +1,34 @@
 import { Injectable, Injector, OnDestroy, inject } from '@angular/core';
-import { Subject, BehaviorSubject } from 'rxjs';
+import { Subject, BehaviorSubject, Observable, filter } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../../shared';
 import { wsUrl } from '../platform/server-origin';
 import { normalizeScope, resolveOfflineDbStrict, DEFAULT_OFFLINE_SCOPE } from '../services/offline-db';
 import { ActiveCompanyService } from '../services/active-company.service';
+
+/** رویداد عمومی «سند تغییر کرد» سرور (ص۶ طرح ۲.۵)؛ doc_type دادهٔ ماژول است. */
+export interface DocumentChangedEvent {
+  type: 'document_changed';
+  doc_type: string;
+  doc_id: number;
+  action: string;
+  status?: string | null;
+  company_id?: number;
+  section_id?: number | null;
+}
+
+/**
+ * ص۶: تغییر وضعیت سند را درجا روی ردیف همان شناسه می‌نشاند و true می‌دهد.
+ * false یعنی ردیف در فهرست نیست یا تغییر چیزی جز وضعیت است؛ صفحه بی‌صدا دوباره می‌خواند.
+ */
+export function patchDocumentRow(rows: readonly any[] | null | undefined, ev: DocumentChangedEvent,
+                                 statusField = 'status'): boolean {
+  if (ev.action !== 'status_changed' || ev.status == null || !rows) return false;
+  const row = rows.find(r => r && Number(r.id) === Number(ev.doc_id));
+  if (!row) return false;
+  row[statusField] = ev.status;
+  return true;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -38,6 +62,15 @@ export class WebSocketService implements OnDestroy {
     // تزریق دیرهنگام تا وابستگی چرخه‌ای ساخته نشود
     const activeCompanyId = this.injector.get(ActiveCompanyService, null)?.activeCompanySignal()?.id;
     return !!(eventCompanyId && activeCompanyId && Number(eventCompanyId) !== Number(activeCompanyId));
+  }
+
+  /** ص۶: رویدادهای «سند تغییر کرد» از نوع‌های داده‌شده، پس از skipLiveEvent. */
+  documentChanges$(docTypes: readonly string[]): Observable<DocumentChangedEvent> {
+    return this.notifications$.pipe(
+      filter((msg: any): msg is DocumentChangedEvent =>
+        !!msg && (msg.type === 'document_changed' || msg.type_str === 'document_changed')
+        && docTypes.includes(msg.doc_type) && !this.skipLiveEvent(msg))
+    );
   }
 
   private isExplicitlyClosed = false;

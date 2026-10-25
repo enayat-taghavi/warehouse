@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -118,6 +119,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
   private readonly batchFocus = new ModalFocus();
 
   private routeSub?: Subscription;
+  private docSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -126,7 +128,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private ws?: WebSocketService
   ) {}
 
   ngOnInit(): void {
@@ -143,10 +146,15 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     });
 
     this.loadSections();
+
+    // ص۶ طرح ۲.۵: صف پرداخت از فاکتور، تنخواه و حقوق ساخته می‌شود؛ هر تغییرشان = بازخوانی بی‌صدا
+    this.docSub = this.ws?.documentChanges$?.(['expense_invoice', 'petty_cash', 'payroll_record', 'payroll_period'])
+      .subscribe(() => this.refreshData(true));
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.docSub?.unsubscribe();
   }
 
   loadSections(): void {
@@ -448,9 +456,12 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     });
   }
 
-  refreshData(): void {
-    this.isLoading = true;
-    this.loadError = false;
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام */
+  refreshData(silent = false): void {
+    if (!silent) {
+      this.isLoading = true;
+      this.loadError = false;
+    }
     this.personnelApi.getTreasuryCartable().subscribe({
       next: (data: any) => {
         this.isLoading = false;
@@ -513,10 +524,11 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
         }
 
         this.items = newItems;
-        this.toast.info('صف دستور پرداخت‌های مصوب خزانه‌داری به‌روزرسانی شد.');
+        if (!silent) this.toast.info('صف دستور پرداخت‌های مصوب خزانه‌داری به‌روزرسانی شد.');
         this.cdr.detectChanges();
       },
       error: () => {
+        if (silent) return;
         this.isLoading = false;
         this.loadError = true;
         this.toast.error('خطا در بارگذاری کارتابل پرداخت خزانه‌داری.');

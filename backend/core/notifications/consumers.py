@@ -253,6 +253,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 'workflow_event', 'instance_id', 'workflow_key', 'entity_kind', 'entity_id', 'step_key',
                 'section_id', 'actor_id', 'to_superusers',
                 'url',  # آدرس اعلان (طرح ۲.۴، ص۵)
+                'doc_type', 'doc_id', 'status',  # رویداد عمومی «سند تغییر کرد» (ص۶ طرح ۲.۵)
             ):
                 if k in event:
                     out_data[k] = event[k]

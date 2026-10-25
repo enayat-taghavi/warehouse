@@ -69,6 +69,37 @@ def workflow_section(instance):
     return getattr(instance, 'section_id', None)
 
 
+def _document_event_fields(instance):
+    """(doc_type، شرکت، بخش، وضعیت) سندهای حسابداری که رویداد «سند تغییر کرد» دارند (ص۶ طرح ۲.۵)، یا None."""
+    name = instance.__class__.__name__
+    if name in ('ExpenseInvoice', 'PettyCashTransaction'):
+        section = getattr(instance, 'section', None)
+        project = getattr(section, 'project', None) if section is not None else None
+        doc_type = 'expense_invoice' if name == 'ExpenseInvoice' else 'petty_cash'
+        return doc_type, getattr(project, 'company_id', None), instance.section_id, instance.status
+    if name == 'MonthlyPayrollRecord':
+        personnel = getattr(instance, 'personnel', None)
+        return ('payroll_record', getattr(personnel, 'company_id', None), getattr(personnel, 'section_id', None),
+                instance.payment_status)
+    if name == 'MonthlyWorkPeriod':
+        return 'payroll_period', instance.company_id, None, instance.status
+    return None
+
+
+def notify_document_changed(instance, action='status_changed'):
+    """
+    پخش «سند تغییر کرد» برای فاکتور، تنخواه، فیش و دورهٔ حقوق از راه تابع هسته (فقط کانال شرکت، پس از commit).
+    مدل‌های دیگر (پرسنل، خودرو و درخواست‌های تغییرشان) رویداد خودشان را دارند و این‌جا نادیده گرفته می‌شوند.
+    """
+    fields = _document_event_fields(instance) if instance is not None else None
+    if fields is None:
+        return
+    doc_type, company_id, section_id, status = fields
+    from companies.realtime import broadcast_document_changed
+    broadcast_document_changed(doc_type, instance.pk, company_id=company_id, section_id=section_id,
+                               status=status, action=action)
+
+
 def determine_user_tier(user, section=None) -> int:
     """
     تشخیص بالاترین سطح سازمانی کاربر در ماتریس ۵ سطحی.
@@ -421,6 +452,7 @@ def advance_workflow_step(instance, user, target_status: str = None, notes: str 
 
     locked_instance.save()
     _record_audit_log(locked_instance, user, current_status, getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', '')), 'approve', reason=notes)
+    notify_document_changed(locked_instance)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} advanced to {getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', ''))} by user {user.username}")
     return locked_instance
 
@@ -463,6 +495,7 @@ def request_workflow_revision(instance, user, reason: str, target_status: str = 
         locked_instance.vehicle.has_pending_changes = False
         locked_instance.vehicle.save(update_fields=['has_pending_changes'])
     _record_audit_log(locked_instance, user, current_status, next_status, 'revision', reason=reason)
+    notify_document_changed(locked_instance)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} marked REVISION_REQUIRED by {user.username}. Reason: {reason}")
     return locked_instance
 
@@ -501,6 +534,7 @@ def reject_workflow(instance, user, reason: str):
         locked_instance.vehicle.save(update_fields=['has_pending_changes'])
     target_st = getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', 'rejected'))
     _record_audit_log(locked_instance, user, current_status, target_st, 'reject', reason=reason)
+    notify_document_changed(locked_instance)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} REJECTED by {user.username}. Reason: {reason}")
     return locked_instance
 
@@ -560,6 +594,7 @@ def execute_treasury_disbursement(instance, user, tracking_code: str, batch_id: 
     except Exception as e:
         logger.warning(f"[WorkflowEngine] Failed to emit accounting event for {locked_instance}: {e}")
     _record_audit_log(locked_instance, user, 'ready_to_pay', 'paid', 'disburse', reason=notes, metadata={'tracking_code': tracking_code, 'batch_id': batch_id})
+    notify_document_changed(locked_instance)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} PAID & SETTLED by {user.username}. Tracking: {tracking_code}")
     return locked_instance
 

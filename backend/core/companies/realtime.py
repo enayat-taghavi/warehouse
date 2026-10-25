@@ -57,3 +57,46 @@ def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=No
                 async_to_sync(channel_layer.group_send)(group, payload)
     except Exception as e:
         logger.warning(f"[WebSocket] Error broadcasting org_structure_updated: {e}")
+
+
+def broadcast_document_changed(doc_type, doc_id, *, company_id, section_id=None, status=None, action='updated',
+                               client_tab_id=None, sender_id=None):
+    """
+    رویداد عمومی «سند تغییر کرد» (ص۶ طرح ۲.۵) برای هر نوع سند ماژول‌ها؛ doc_type دادهٔ ماژول است و هسته نامی از آن نمی‌داند.
+    فقط به کانال همان شرکت می‌رود؛ سند بی‌شرکت به هیچ کانالی نمی‌رود (ص۲). پی‌لود فقط شناسه و وضعیت دارد، نه دادهٔ سند؛
+    صفحه ردیف را درجا به‌روز می‌کند یا بی‌صدا دوباره می‌خواند (با دامنهٔ دسترسی خود کاربر).
+    ارسال پس از commit تراکنش، تا تراکنش برگشتی رویداد دروغ نفرستد.
+    """
+    if not company_id:
+        logger.warning(f"[WebSocket] document_changed بدون شرکت ارسال نشد: {doc_type}/{doc_id}")
+        return
+    if client_tab_id is None:
+        # شناسهٔ زبانهٔ درخواست جاری (X-Client-Tab-Id) تا زبانهٔ فرستنده رویداد خودش را نادیده بگیرد (ص۱)
+        from accounts.middleware import get_current_client_tab_id
+        client_tab_id = get_current_client_tab_id()
+    payload = {
+        'type': 'send_notification',
+        'type_str': 'document_changed',
+        'doc_type': doc_type,
+        'doc_id': doc_id,
+        'action': action,
+        'status': status,
+        'company_id': company_id,
+        'section_id': section_id,
+        'client_tab_id': client_tab_id,
+        'sender_id': sender_id,
+    }
+    group = f'company_{company_id}_notifications'
+
+    def _send():
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer is not None:
+                async_to_sync(channel_layer.group_send)(group, payload)
+        except Exception as e:
+            logger.warning(f"[WebSocket] Error broadcasting document_changed: {e}")
+
+    from django.db import transaction
+    transaction.on_commit(_send)

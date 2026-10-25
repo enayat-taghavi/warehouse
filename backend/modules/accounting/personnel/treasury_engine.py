@@ -29,6 +29,7 @@ from .workflow_engine import (
     WorkflowTiers,
     determine_user_tier,
     execute_treasury_disbursement,
+    notify_document_changed,
     record_isolated_sheba_failure
 )
 from .sheba_utils import validate_sheba, clean_sheba
@@ -197,6 +198,8 @@ class TreasuryDisbursementService:
             )
         except Exception as ex:
             logger.warning(f"[TreasuryOutbox] Error emitting period event for {locked_period.pk}: {ex}")
+        # یک رویداد برای کل دوره، نه یکی برای هر فیش (ص۶ طرح ۲.۵)
+        notify_document_changed(locked_period)
 
         logger.info(
             f"[TREASURY] Period {locked_period.year_month} disbursed by {treasury_user.username}. "
@@ -261,6 +264,7 @@ class TreasuryDisbursementService:
             )
         except Exception as ex:
             logger.warning(f"[TreasuryOutbox] Error emitting event for record {locked_rec.pk}: {ex}")
+        notify_document_changed(locked_rec)
 
         return locked_rec
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,6 +14,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -90,6 +91,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
   };
 
   private routeSub?: Subscription;
+  private docSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -98,7 +100,8 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private ws?: WebSocketService
   ) {}
 
   ngOnInit(): void {
@@ -115,10 +118,21 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     });
 
     this.loadSections();
+
+    // ص۶ طرح ۲.۵: فاکتوری که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
+      if (patchDocumentRow(this.allInvoices, ev)) {
+        this.updateViewAndCounters();
+        this.cdr.detectChanges();
+      } else if (!this.selectedSectionId || !ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId)) {
+        this.fetchInvoices(true);
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.docSub?.unsubscribe();
   }
 
   loadSections(): void {
@@ -186,8 +200,9 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  fetchInvoices(): void {
-    this.isLoading = true;
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
+  fetchInvoices(silent = false): void {
+    if (!silent) this.isLoading = true;
     const params: { section_id?: number; search?: string } = {};
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;
     if (this.searchQuery?.trim()) params.search = this.searchQuery.trim();
@@ -201,6 +216,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
+        if (silent) return;
         this.toast.error('خطا در دریافت فاکتورهای حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }

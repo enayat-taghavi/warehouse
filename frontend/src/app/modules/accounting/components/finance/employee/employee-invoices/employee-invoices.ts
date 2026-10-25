@@ -1,4 +1,6 @@
-import { Component, OnInit, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
+import { Subscription } from 'rxjs';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -29,7 +31,7 @@ export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
-export class EmployeeInvoicesHubComponent implements OnInit {
+export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   readonly Math = Math;
 
   // Memoized tabs for app-tab-bar
@@ -119,6 +121,8 @@ export class EmployeeInvoicesHubComponent implements OnInit {
   selectedInvoiceDetail: ExpenseInvoice | null = null;
   isLoadingDetail: boolean = false;
 
+  private docSub?: Subscription;
+
   constructor(
     public auth: AuthService,
     private personnelApi: PersonnelApiService,
@@ -128,11 +132,24 @@ export class EmployeeInvoicesHubComponent implements OnInit {
     private router: Router,
     @Optional() private activeCompanyService?: ActiveCompanyService,
     @Optional() private treasuryOrgApi?: TreasuryOrgApiService,
-    @Optional() private confirmDialog?: ConfirmDialogService
+    @Optional() private confirmDialog?: ConfirmDialogService,
+    @Optional() private ws?: WebSocketService
   ) {}
+
+  ngOnDestroy(): void {
+    this.docSub?.unsubscribe();
+  }
 
   ngOnInit(): void {
     this.initTodayShamsi();
+    // ص۶ طرح ۲.۵: فاکتوری از این بخش که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
+      if (patchDocumentRow(this.invoices, ev)) {
+        this.cdr.detectChanges();
+      } else if (this.selectedSectionId && (!ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId))) {
+        this.loadInvoices(true);
+      }
+    });
     this.loadMySections();
     this.route.queryParams.subscribe(params => {
       if (params['section_id']) {
@@ -303,9 +320,10 @@ export class EmployeeInvoicesHubComponent implements OnInit {
   }
 
   // ─── بارگذاری فاکتورهای بخش فعال (Guardian G1: Section Isolation) ───
-  loadInvoices(): void {
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
+  loadInvoices(silent = false): void {
     if (!this.selectedSectionId) return;
-    this.isLoading = true;
+    if (!silent) this.isLoading = true;
     this.personnelApi.getExpenseInvoices({ section_id: this.selectedSectionId }).subscribe({
       next: (res: ExpenseInvoice[]) => {
         this.invoices = res || [];
@@ -314,6 +332,7 @@ export class EmployeeInvoicesHubComponent implements OnInit {
       },
       error: (err: any) => {
         this.isLoading = false;
+        if (silent) return;
         this.toast.show('error', 'خطا در بارگذاری فاکتورها: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }

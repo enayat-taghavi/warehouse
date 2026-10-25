@@ -63,6 +63,7 @@ from django.http import Http404
 from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
 from ..workflows import INVOICE_ENTITY, INVOICE_WORKFLOW
+from ..workflow_engine import notify_document_changed
 
 INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
 
@@ -299,6 +300,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             instance.status = 'draft'
             instance.save(update_fields=['status', 'updated_at'])
             _invoice_wf_call(lambda: wf_engine.submit(INVOICE_WORKFLOW, instance, user), raise_drf=True)
+        notify_document_changed(instance, 'created')
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -313,7 +315,13 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("وضعیت فاکتور فقط از راه گردش کار تغییر می‌کند.")
         if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser:
             raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
-        serializer.save()
+        notify_document_changed(serializer.save(), 'updated')
+
+    def perform_destroy(self, instance):
+        # in a transaction, so the event goes out only after the delete commits
+        with transaction.atomic():
+            notify_document_changed(instance, 'deleted')
+            instance.delete()
 
     def _workflow_invoice(self):
         """
@@ -687,6 +695,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         from ..workflow_engine import process_creation_with_auto_pass
         process_creation_with_auto_pass(instance, user, is_financial=True)
         instance.save()
+        notify_document_changed(instance, 'created')
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -711,7 +720,13 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 pass
             else:
                 raise PermissionDenied("شما سطح دسترسی لازم برای تغییر وضعیت سند تنخواه به این مرحله را ندارید.")
-        serializer.save()
+        notify_document_changed(serializer.save(), 'updated')
+
+    def perform_destroy(self, instance):
+        # in a transaction, so the event goes out only after the delete commits
+        with transaction.atomic():
+            notify_document_changed(instance, 'deleted')
+            instance.delete()
 
     @action(detail=True, methods=['post'], url_path='submit')
     def submit_tx(self, request, pk=None):

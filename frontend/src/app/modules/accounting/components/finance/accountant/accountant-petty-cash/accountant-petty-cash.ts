@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,6 +13,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 
 @Component({
   selector: 'app-accountant-petty-cash-hub',
@@ -88,6 +89,7 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
   };
 
   private routeSub?: Subscription;
+  private docSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -96,7 +98,8 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private ws?: WebSocketService
   ) {}
 
   ngOnInit(): void {
@@ -113,10 +116,21 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     });
 
     this.loadSections();
+
+    // ص۶ طرح ۲.۵: سند تنخواهی که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    this.docSub = this.ws?.documentChanges$?.(['petty_cash']).subscribe(ev => {
+      if (patchDocumentRow(this.allTransactions, ev)) {
+        this.updateViewAndCounters();
+        this.cdr.detectChanges();
+      } else if (!this.selectedSectionId || !ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId)) {
+        this.fetchPettyCash(true);
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.docSub?.unsubscribe();
   }
 
   loadSections(): void {
@@ -184,8 +198,9 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  fetchPettyCash(): void {
-    this.isLoading = true;
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
+  fetchPettyCash(silent = false): void {
+    if (!silent) this.isLoading = true;
     const params: { section_id?: number; search?: string } = {};
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;
     if (this.searchQuery?.trim()) params.search = this.searchQuery.trim();
@@ -199,6 +214,7 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
+        if (silent) return;
         this.toast.error('خطا در دریافت اسناد تنخواه حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }

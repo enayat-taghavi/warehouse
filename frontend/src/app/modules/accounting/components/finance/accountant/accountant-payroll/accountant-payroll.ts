@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -174,6 +175,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   } | null = null;
 
   private routeSub?: Subscription;
+  private docSub?: Subscription;
   private readonly payslipFocus = new ModalFocus();
   private readonly taxFocus = new ModalFocus();
 
@@ -187,7 +189,8 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     @Optional() private scopeDirectory?: ScopeDirectoryService,
     @Optional() private moduleRegistry?: ModuleRegistryService,
-    @Optional() private confirmDialog?: ConfirmDialogService
+    @Optional() private confirmDialog?: ConfirmDialogService,
+    @Optional() private ws?: WebSocketService
   ) {}
 
   get yearMonth(): string {
@@ -257,10 +260,21 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     }
 
     this.loadSections();
+
+    // ص۶ طرح ۲.۵: وضعیت پرداخت فیش درجا به‌روز می‌شود؛ تغییر دورهٔ همین فهرست (محاسبه، پرداخت) یا فیش ناپیدا = بازخوانی بی‌صدا
+    this.docSub = this.ws?.documentChanges$?.(['payroll_record', 'payroll_period']).subscribe(ev => {
+      if (ev.doc_type === 'payroll_record' && patchDocumentRow(this.allRecords, ev, 'payment_status')) {
+        this.applyFilters();
+        this.cdr.detectChanges();
+      } else if (ev.doc_type === 'payroll_record' || (this.currentPeriodId && Number(ev.doc_id) === Number(this.currentPeriodId))) {
+        this.fetchPayrollData(true);
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.docSub?.unsubscribe();
   }
 
   onEscapeKey(): void {
@@ -364,9 +378,12 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     this.fetchPayrollData();
   }
 
-  fetchPayrollData(): void {
-    this.isLoading = true;
-    this.loadError = false;
+  /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری؛ خطایش فهرست فعلی را دست نمی‌زند */
+  fetchPayrollData(silent = false): void {
+    if (!silent) {
+      this.isLoading = true;
+      this.loadError = false;
+    }
     const params: any = { year_month: this.yearMonth };
     if (this.selectedWarehouseId) {
       params.warehouse_id = this.selectedWarehouseId;
@@ -386,6 +403,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: () => {
+        if (silent) return;
         this.isLoading = false;
         this.loadError = true;
         this.allRecords = [];
