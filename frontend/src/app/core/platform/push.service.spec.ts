@@ -337,4 +337,28 @@ describe('PushService', () => {
       expect.anything()
     );
   });
+
+  it('10. tap url guard: /app/ url navigates, external url is ignored and falls back', () => {
+    // 10a. in-app URL navigates via navigateByUrl
+    service.handleNotificationTap({
+      actionId: 'tap',
+      notification: {
+        id: '101',
+        data: { url: '/app/my-tasks' },
+      } as any,
+    });
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/my-tasks');
+
+    // 10b. external URL is ignored, navigateByUrl is never called with it, falls back to /app
+    mockModuleRegistry.getExtensions.mockReturnValue([]);
+    service.handleNotificationTap({
+      actionId: 'tap',
+      notification: {
+        id: '102',
+        data: { url: 'https://evil.example/x' },
+      } as any,
+    });
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalledWith('https://evil.example/x');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app']);
+  });
 });

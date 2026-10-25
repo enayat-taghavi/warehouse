@@ -3,11 +3,11 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
-import { NotificationCenterComponent, NotificationItem } from './notification-center.component';
+import { NotificationCenterComponent, NotificationItem, isInAppUrl } from './notification-center.component';
 import { INSTALLED_MODULES } from '../../../modules/installed-modules';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -131,6 +131,7 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
     try {
       localStorage.clear();
     } catch {}
+    vi.useRealTimers();
     vi.clearAllMocks();
     TestBed.resetTestingModule();
   });
@@ -481,5 +482,255 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
     expect(mockRouter.navigate).not.toHaveBeenCalled();
     expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     expect(component.isOpen()).toBe(false);
+  });
+
+  it('i) A titled websocket message reloads the count from the server after the debounce, not by +1', () => {
+    vi.useFakeTimers();
+    try {
+      currentUnreadCount = 2;
+      fixture.detectChanges();
+      expect(component.unreadCount()).toBe(2);
+
+      currentUnreadCount = 5;
+      mockWs.notifications$.next({
+        type: 'send_notification',
+        type_str: 'workflow_task',
+        title: 'کار تازه',
+        url: '/app/my-tasks'
+      });
+
+      // Before 500 ms debounce finishes
+      expect(component.unreadCount()).toBe(2);
+      expect(component.hasNewPulse()).toBe(true);
+
+      vi.advanceTimersByTime(500);
+
+      // Reloaded from server (5), not local increment (3)
+      expect(component.unreadCount()).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('j) A burst of three messages makes exactly one unread-count request', () => {
+    vi.useFakeTimers();
+    try {
+      currentUnreadCount = 1;
+      fixture.detectChanges();
+
+      const initialCalls = mockHttp.get.mock.calls.filter((c: any[]) =>
+        typeof c[0] === 'string' && c[0].includes('/notifications/unread-count/')
+      ).length;
+
+      // Burst of three messages 100 ms apart
+      mockWs.notifications$.next({ title: 'پیام ۱' });
+      vi.advanceTimersByTime(100);
+      mockWs.notifications$.next({ title: 'پیام ۲' });
+      vi.advanceTimersByTime(100);
+      mockWs.notifications$.next({ title: 'پیام ۳' });
+
+      // Advance debounce delay
+      vi.advanceTimersByTime(500);
+
+      const callsAfter = mockHttp.get.mock.calls.filter((c: any[]) =>
+        typeof c[0] === 'string' && c[0].includes('/notifications/unread-count/')
+      ).length;
+
+      expect(callsAfter - initialCalls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('k) Open panel: a titled message also reloads the list', () => {
+    vi.useFakeTimers();
+    try {
+      currentUnreadCount = 1;
+      currentNotifications = [];
+      fixture.detectChanges();
+
+      openPanel();
+
+      const newItem: NotificationItem = {
+        id: 991,
+        title: 'اعلان بارگذاری مجدد',
+        message: 'متن اعلان تستی برای ریلود لیست',
+        notification_type: 'info',
+        target_model: null,
+        target_id: null,
+        is_read: false,
+        created_at: '2026-10-16T10:00:00Z'
+      };
+      currentNotifications = [newItem];
+
+      mockWs.notifications$.next({ title: 'پیام تازه' });
+      vi.advanceTimersByTime(500);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('اعلان بارگذاری مجدد');
+      expect(el.textContent).toContain('متن اعلان تستی برای ریلود لیست');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('l) Offline: when the server is unreachable the count and list stay and nothing throws', () => {
+    vi.useFakeTimers();
+    const errorSpy = vi.spyOn(console, 'error');
+    try {
+      currentUnreadCount = 4;
+      const initialItem: NotificationItem = {
+        id: 404,
+        title: 'اعلان پایدار آفلاین',
+        message: 'اطلاعات در زمان قطعی سرور حفظ می‌شود',
+        notification_type: 'info',
+        target_model: null,
+        target_id: null,
+        is_read: false,
+        created_at: '2026-10-16T10:00:00Z'
+      };
+      currentNotifications = [initialItem];
+      fixture.detectChanges();
+      openPanel();
+
+      expect(component.unreadCount()).toBe(4);
+      expect(component.notifications().length).toBe(1);
+
+      mockHttp.get.mockImplementation(() => throwError(() => new HttpErrorResponse({ status: 0 })));
+
+      expect(() => {
+        mockWs.notifications$.next({ title: 'پیام در حالت آفلاین' });
+        vi.advanceTimersByTime(500);
+        fixture.detectChanges();
+      }).not.toThrow();
+
+      expect(component.unreadCount()).toBe(4);
+      expect(component.notifications().length).toBe(1);
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('m) Click with an in-app url navigates; an external url does not', () => {
+    mockRegistry.getExtensions.mockReturnValue([]);
+
+    const inAppItem: NotificationItem = {
+      id: 901,
+      title: 'پیوند درون‌برنامه',
+      message: 'هدایت به کارتابل',
+      notification_type: 'info',
+      target_model: null,
+      target_id: null,
+      url: '/app/my-tasks',
+      is_read: false,
+      created_at: '2026-10-16T10:00:00Z'
+    };
+
+    const externalItem: NotificationItem = {
+      id: 902,
+      title: 'پیوند بیرونی فیشینگ',
+      message: 'تلاش برای هدایت به بیرون',
+      notification_type: 'info',
+      target_model: null,
+      target_id: null,
+      url: 'https://evil.example/x',
+      is_read: false,
+      created_at: '2026-10-16T10:00:00Z'
+    };
+
+    currentUnreadCount = 2;
+    currentNotifications = [inAppItem, externalItem];
+    fixture.detectChanges();
+    openPanel();
+
+    // 1. Click inAppItem
+    const inAppRow = getNotificationRow('پیوند درون‌برنامه');
+    inAppRow.click();
+    fixture.detectChanges();
+
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/my-tasks');
+    expect(inAppItem.is_read).toBe(true);
+    expect(mockHttp.post).toHaveBeenCalledWith(
+      expect.stringContaining('/notifications/901/mark-read/'),
+      {},
+      expect.any(Object)
+    );
+
+    // 2. Re-open panel and click externalItem
+    openPanel();
+    const externalRow = getNotificationRow('پیوند بیرونی فیشینگ');
+    externalRow.click();
+    fixture.detectChanges();
+
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalledWith('https://evil.example/x');
+    expect(externalItem.is_read).toBe(true);
+    expect(mockHttp.post).toHaveBeenCalledWith(
+      expect.stringContaining('/notifications/902/mark-read/'),
+      {},
+      expect.any(Object)
+    );
+  });
+
+  it('n) 360px and accessibility', () => {
+    const unreadItem: NotificationItem = {
+      id: 911,
+      title: 'اعلان تستی دسترس‌پذیری',
+      message: 'بررسی کلاس‌ها و نشان‌ها',
+      notification_type: 'info',
+      target_model: null,
+      target_id: null,
+      is_read: false,
+      created_at: '2026-10-16T10:00:00Z'
+    };
+    currentUnreadCount = 1;
+    currentNotifications = [unreadItem];
+    fixture.detectChanges();
+
+    const bellBtn = fixture.nativeElement.querySelector('button[aria-label="مرکز اعلان‌های سامانه"]') as HTMLButtonElement;
+    expect(bellBtn).toBeTruthy();
+    expect(bellBtn.classList.contains('w-10')).toBe(true);
+    expect(bellBtn.classList.contains('h-10')).toBe(true);
+    expect(bellBtn.getAttribute('aria-label')).toBe('مرکز اعلان‌های سامانه');
+    expect(bellBtn.getAttribute('title')).toBe('مرکز اعلان‌های سامانه');
+
+    openPanel();
+
+    const panel = fixture.nativeElement.querySelector('#notification-center-panel') as HTMLElement;
+    expect(panel).toBeTruthy();
+    expect(panel.classList.contains('fixed')).toBe(true);
+    expect(panel.classList.contains('inset-x-2')).toBe(true);
+    expect(panel.classList.contains('sm:w-96')).toBe(true);
+    expect(panel.classList.contains('w-80')).toBe(false);
+
+    const markReadBtn = fixture.nativeElement.querySelector('.notification-item button') as HTMLButtonElement;
+    expect(markReadBtn).toBeTruthy();
+    expect(markReadBtn.classList.contains('w-10')).toBe(true);
+    expect(markReadBtn.classList.contains('h-10')).toBe(true);
+    const markReadAriaLabel = markReadBtn.getAttribute('aria-label');
+    expect(markReadAriaLabel).toBeTruthy();
+    expect(markReadAriaLabel?.trim().length).toBeGreaterThan(0);
+
+    const items = fixture.nativeElement.querySelectorAll('.notification-item') as NodeListOf<HTMLElement>;
+    expect(items.length).toBeGreaterThan(0);
+    items.forEach((item: HTMLElement) => {
+      expect(item.getAttribute('role')).toBe('button');
+      expect(item.getAttribute('tabindex')).toBe('0');
+    });
+  });
+
+  it('o) isInAppUrl', () => {
+    expect(isInAppUrl('/app/x')).toBe(true);
+    expect(isInAppUrl('/app/finance/employee-fleet')).toBe(true);
+
+    expect(isInAppUrl('//evil.example/app/')).toBe(false);
+    expect(isInAppUrl('https://a.b/app/x')).toBe(false);
+    expect(isInAppUrl('/admin')).toBe(false);
+    expect(isInAppUrl('')).toBe(false);
+    expect(isInAppUrl(null)).toBe(false);
+    expect(isInAppUrl(undefined)).toBe(false);
+    expect(isInAppUrl(42)).toBe(false);
   });
 });
