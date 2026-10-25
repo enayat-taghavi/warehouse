@@ -1059,7 +1059,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 2.6-b: tests for the core attachments API and protected media
+[DONE] [ ] Session 1 of 1 — Release v1 step 2.6-b: tests for the core attachments API and protected media
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
