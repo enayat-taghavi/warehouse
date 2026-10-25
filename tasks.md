@@ -1111,7 +1111,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 2.6-c: tests for the drive models move to core settings_core
+[DONE] [ ] Session 1 of 1 — Release v1 step 2.6-c: tests for the drive models move to core settings_core
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
