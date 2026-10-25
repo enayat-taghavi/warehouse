@@ -1,9 +1,10 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, Injector, OnDestroy, inject } from '@angular/core';
 import { Subject, BehaviorSubject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../../shared';
 import { wsUrl } from '../platform/server-origin';
 import { normalizeScope, resolveOfflineDbStrict, DEFAULT_OFFLINE_SCOPE } from '../services/offline-db';
+import { ActiveCompanyService } from '../services/active-company.service';
 
 @Injectable({
   providedIn: 'root'
@@ -22,6 +23,21 @@ export class WebSocketService implements OnDestroy {
     const id = 'tab_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
     try { sessionStorage.setItem('wh_tab_session_id', id); } catch {}
     return id;
+  }
+
+  private injector = inject(Injector);
+
+  /**
+   * ق۴: رویداد زندهٔ همین زبانه، یا رویداد شرکتی جز شرکت فعال، کنار گذاشته می‌شود.
+   * سرور هم اکوی زبانه را می‌گیرد؛ این بررسی برای کاربر چندشرکتی و پیام‌های بی‌شناسهٔ زبانه است.
+   */
+  skipLiveEvent(msg: any): boolean {
+    if (!msg) return true;
+    if (msg.client_tab_id && msg.client_tab_id === this.tabId) return true;
+    const eventCompanyId = msg.company_id ?? msg.metadata?.company_id;
+    // تزریق دیرهنگام تا وابستگی چرخه‌ای ساخته نشود
+    const activeCompanyId = this.injector.get(ActiveCompanyService, null)?.activeCompanySignal()?.id;
+    return !!(eventCompanyId && activeCompanyId && Number(eventCompanyId) !== Number(activeCompanyId));
   }
 
   private isExplicitlyClosed = false;

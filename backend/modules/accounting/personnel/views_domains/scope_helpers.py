@@ -282,6 +282,11 @@ def broadcast_personnel_update(personnel, action_type='updated', message=None, s
                 logging.getLogger(__name__).debug(f"[WebSocket] Skipping global broadcast for personnel without company: {full_name}")
                 return
 
+            if client_tab_id is None:
+                # شناسهٔ زبانهٔ درخواست جاری (X-Client-Tab-Id) تا زبانهٔ فرستنده رویداد خودش را نادیده بگیرد (ق۴)
+                from accounts.middleware import get_current_client_tab_id
+                client_tab_id = get_current_client_tab_id()
+
             payload = {
                 'type': 'send_notification',
                 'type_str': 'personnel_updated',
@@ -334,6 +339,11 @@ def broadcast_vehicle_update(vehicle, action_type='updated', message=None, sende
             proj_id = getattr(vehicle, 'project_id', None)
             if not proj_id and hasattr(vehicle, 'section') and vehicle.section:
                 proj_id = getattr(vehicle.section, 'project_id', None)
+
+            if client_tab_id is None:
+                # شناسهٔ زبانهٔ درخواست جاری (X-Client-Tab-Id) تا زبانهٔ فرستنده رویداد خودش را نادیده بگیرد (ق۴)
+                from accounts.middleware import get_current_client_tab_id
+                client_tab_id = get_current_client_tab_id()
 
             payload = {
                 'type': 'send_notification',
@@ -504,6 +514,14 @@ def broadcast_attendance_updated(warehouse_id=None, date_shamsi=None, year_month
                     pass
 
 
+            if not cid:
+                # بی‌شرکت پخش نمی‌شود (هرگز کانال سراسری؛ ق۴)
+                return
+            if client_tab_id is None:
+                # شناسهٔ زبانهٔ درخواست جاری (X-Client-Tab-Id) تا زبانهٔ فرستنده رویداد خودش را نادیده بگیرد (ق۴)
+                from accounts.middleware import get_current_client_tab_id
+                client_tab_id = get_current_client_tab_id()
+
             payload = {
                 'type': 'send_notification',
                 'type_str': 'attendance_updated',
@@ -519,7 +537,7 @@ def broadcast_attendance_updated(warehouse_id=None, date_shamsi=None, year_month
             if extra_data and isinstance(extra_data, dict):
                 payload.update(extra_data)
 
-            target_group = f'company_{cid}_notifications' if cid else 'global_notifications'
+            target_group = f'company_{cid}_notifications'
             async_to_sync(channel_layer.group_send)(
                 target_group,
                 payload

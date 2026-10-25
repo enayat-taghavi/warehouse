@@ -130,6 +130,8 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     });
 
     this.wsSub = this.ws.notifications$.subscribe((msg: any) => {
+      // ق۴: رویداد همین زبانه یا شرکت دیگر نادیده گرفته می‌شود
+      if (this.ws.skipLiveEvent?.(msg)) return;
       if (msg && (msg.type_str === 'personnel_updated' || msg.type === 'personnel_updated')) {
         if (!this.selectedSectionId || msg.section_id === this.selectedSectionId) {
           this.fetchData();

@@ -399,22 +399,24 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             if channel_layer:
                 from common.tenant_scope import get_current_tenant_company_id
                 cid = get_current_tenant_company_id(request=request, user=request.user)
-                target_group = f'company_{cid}_notifications' if cid else 'global_notifications'
-                async_to_sync(channel_layer.group_send)(
-                    target_group,
-                    {
-                        'type': 'send_notification',
-                        'type_str': 'fleet_trips_updated',
-                        'message': f'تردد ناوگان برای تاریخ {date_shamsi} ثبت/به‌روزرسانی شد.',
-                        'company_id': cid,
-                        'warehouse_id': warehouse_id,
-                        'section_id': section_id,
-                        'date_shamsi': date_shamsi,
-                        'year_month': year_month,
-                        'sender_id': request.user.id if request.user and request.user.is_authenticated else None,
-                        'client_tab_id': client_tab_id
-                    }
-                )
+                target_group = f'company_{cid}_notifications'
+                # بی‌شرکت پخش نمی‌شود (هرگز کانال سراسری؛ ق۴)
+                if cid:
+                    async_to_sync(channel_layer.group_send)(
+                        target_group,
+                        {
+                            'type': 'send_notification',
+                            'type_str': 'fleet_trips_updated',
+                            'message': f'تردد ناوگان برای تاریخ {date_shamsi} ثبت/به‌روزرسانی شد.',
+                            'company_id': cid,
+                            'warehouse_id': warehouse_id,
+                            'section_id': section_id,
+                            'date_shamsi': date_shamsi,
+                            'year_month': year_month,
+                            'sender_id': request.user.id if request.user and request.user.is_authenticated else None,
+                            'client_tab_id': client_tab_id
+                        }
+                    )
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"[WebSocket] Error broadcasting fleet_trips_updated: {e}")
@@ -820,22 +822,24 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 cid = getattr(v_obj, 'company_id', None)
                 if not cid and hasattr(v_obj, 'section') and v_obj.section and v_obj.section.project:
                     cid = v_obj.section.project.company_id
-                target_group = f'company_{cid}_notifications' if cid else 'global_notifications'
-                async_to_sync(channel_layer.group_send)(
-                    target_group,
-                    {
-                        'type': 'send_notification',
-                        'type_str': 'fleet_trips_updated',
-                        'message': f'تردد خودرو {v_obj.driver_name} در تاریخ {date_shamsi} به‌روزرسانی شد.',
-                        'company_id': cid,
-                        'warehouse_id': warehouse_id,
-                        'section_id': section_id,
-                        'date_shamsi': date_shamsi,
-                        'year_month': year_month,
-                        'sender_id': request.user.id if request.user and request.user.is_authenticated else None,
-                        'client_tab_id': client_tab_id
-                    }
-                )
+                target_group = f'company_{cid}_notifications'
+                # بی‌شرکت پخش نمی‌شود (هرگز کانال سراسری؛ ق۴)
+                if cid:
+                    async_to_sync(channel_layer.group_send)(
+                        target_group,
+                        {
+                            'type': 'send_notification',
+                            'type_str': 'fleet_trips_updated',
+                            'message': f'تردد خودرو {v_obj.driver_name} در تاریخ {date_shamsi} به‌روزرسانی شد.',
+                            'company_id': cid,
+                            'warehouse_id': warehouse_id,
+                            'section_id': section_id,
+                            'date_shamsi': date_shamsi,
+                            'year_month': year_month,
+                            'sender_id': request.user.id if request.user and request.user.is_authenticated else None,
+                            'client_tab_id': client_tab_id
+                        }
+                    )
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"[WebSocket] Error broadcasting fleet_trips_updated: {e}")
@@ -966,21 +970,23 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             if channel_layer:
                 from common.tenant_scope import get_current_tenant_company_id
                 cid = get_current_tenant_company_id(request=request, user=request.user)
-                target_group = f'company_{cid}_notifications' if cid else 'global_notifications'
-                async_to_sync(channel_layer.group_send)(
-                    target_group,
-                    {
-                        'type': 'send_notification',
-                        'type_str': 'fleet_trips_updated',
-                        'message': f'ماتریس ۳۱ روزه ناوگان برای دوره {year_month} ذخیره شد.',
-                        'company_id': cid,
-                        'warehouse_id': warehouse_id,
-                        'section_id': section_id,
-                        'year_month': year_month,
-                        'sender_id': request.user.id if request.user and request.user.is_authenticated else None,
-                        'client_tab_id': client_tab_id
-                    }
-                )
+                target_group = f'company_{cid}_notifications'
+                # بی‌شرکت پخش نمی‌شود (هرگز کانال سراسری؛ ق۴)
+                if cid:
+                    async_to_sync(channel_layer.group_send)(
+                        target_group,
+                        {
+                            'type': 'send_notification',
+                            'type_str': 'fleet_trips_updated',
+                            'message': f'ماتریس ۳۱ روزه ناوگان برای دوره {year_month} ذخیره شد.',
+                            'company_id': cid,
+                            'warehouse_id': warehouse_id,
+                            'section_id': section_id,
+                            'year_month': year_month,
+                            'sender_id': request.user.id if request.user and request.user.is_authenticated else None,
+                            'client_tab_id': client_tab_id
+                        }
+                    )
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"[WebSocket] Error broadcasting fleet_trips_updated: {e}")
