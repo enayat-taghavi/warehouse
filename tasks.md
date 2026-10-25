@@ -1056,3 +1056,55 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 11 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
 
 6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 2.6-b: tests for the core attachments API and protected media
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow backend/core/attachments/tests/__init__.py backend/core/attachments/tests/test_attachments_26b.py
+verify: set DB_TEST_NAME=test_agy_att26b&& python scripts/automation/verify_tools.py django-tests --labels attachments.tests.test_attachments_26b --min-tests 10
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.6-b): attachments API"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly two new files: `backend/core/attachments/tests/__init__.py` (empty) and `backend/core/attachments/tests/test_attachments_26b.py`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Every hook a test adds must be removed after the test: use `unittest.mock.patch.dict(platform_core.registry._CONTRIBUTIONS, {...})` as a context manager or decorator, never a bare `contribute(...)`. Note `patch.dict` with a new key adds it and removes it afterwards; for the key `can_view:user` keep the existing list (do not patch it).
+- Every test class uses a temporary media folder: `tempfile.mkdtemp()` in `setUpClass`, `override_settings(MEDIA_ROOT=tmp)` on the class (or `self.settings(...)` per test), and `shutil.rmtree(tmp, ignore_errors=True)` in `tearDownClass`. Never write into the real `backend/media`.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.6-b): attachments API`.
+
+2. Context (read these, nothing broader):
+- `backend/core/attachments/views.py` (whole file, about 210 lines) and `backend/core/attachments/models.py` (whole file). Facts:
+  - URLs under `/api/attachments/`: `GET ?kind=<k>&id=<id>` list (403 when `can_view` is not True), `POST` multipart with `kind`, `id`, `file`, optional `label`, `order`, `description` (403 when `can_attach` is not True; 201 with JSON fields including `sha256`, `storage`, `download_url`), `DELETE <pk>/` (204; soft delete sets `archived_at`; 403 without `can_attach`; 409 when the entity is locked), `POST <pk>/replace/` with `file` (201, new row; old row gets `archived_at` and `replaced_by`; 409 when locked), `GET <pk>/download/` (403 without `can_view`, checked on every request; archived rows give 404 to non-superusers).
+  - Allowed file extensions include `.pdf` and `.png`; use `django.core.files.uploadedfile.SimpleUploadedFile('a.pdf', b'%PDF-1.4 test', content_type='application/pdf')`.
+  - `company_id` of a new row comes from `platform_core.registry.company_of(kind, id)`, which calls hooks under the key `company_of:<kind>` as `hook(entity_id)`.
+- `backend/core/platform_core/registry.py`: functions `can_view`, `can_attach`, `is_entity_locked`, `company_of` (Grep them; about 10–25 lines each). Hook keys: `can_view:<kind>` and `can_attach:<kind>` called as `hook(user, entity_id)` returning True, False or None; `is_locked:<kind>` called as `hook(entity_id)`. Active superusers always pass `can_view` and `can_attach`.
+- `backend/core/accounts/apps.py`: `ready()` registers `can_view:user` and `can_attach:user`: True only when `str(user.pk) == str(entity_id)`, else None.
+- `backend/core/common/media_urls.py` (whole file, about 170 lines): `signed_media_url(name)` returns `/media/<path>?e=..&s=..` for protected prefixes (now including `personnel_docs/` and `vehicle_docs/`); `serve_media` answers 403 for any path starting with `attachments/` even with a valid signature, and 403 for protected paths without a valid signature.
+
+3. Task, `backend/core/attachments/tests/test_attachments_26b.py`:
+- Use `rest_framework.test.APITestCase` and `self.client.force_authenticate(user)`. Users from `django.contrib.auth.get_user_model().objects.create_user(...)`: `self.owner`, `self.other` (both normal, active) and `self.su` (`is_superuser=True`, `is_staff=True`). Kind string `'zz_doc'`, entity id `'7'`. Helper `_hooks(view=None, attach=None, locked=None, company=None)` returning a `patch.dict(registry._CONTRIBUTIONS, {...})` with only the given keys, where each value is a one-item list. Helper `_upload(user, kind='zz_doc', entity_id='7', name='a.pdf', content=b'%PDF-1.4 test', label='')` posting multipart to `/api/attachments/`.
+- Tests (names exactly):
+  - `test_list_denied_without_can_view`: no hooks; `GET /api/attachments/?kind=zz_doc&id=7` as `self.owner` is 403.
+  - `test_upload_denied_without_can_attach`: view hook allows, no attach hook; upload is 403 and `Attachment.objects.count() == 0`.
+  - `test_upload_ok_sha256_company`: attach and view hooks allow, `company` hook returns 42; upload 201; row has `sha256 == hashlib.sha256(content).hexdigest()`, `company_id == 42`, `storage == 'server'`, `uploaded_by == self.owner`; the list as `self.owner` returns 1 item whose `download_url` ends with `/download/`.
+  - `test_delete_locked_refused`: upload with hooks allowing; then with a `locked` hook returning True, `DELETE /api/attachments/<pk>/` is 409 and the row still has `archived_at is None`; the same with the superuser is also 409.
+  - `test_replace_locked_refused`: same as above with `POST /api/attachments/<pk>/replace/` (new file); 409 and the count of rows is still 1.
+  - `test_soft_delete_keeps_file`: upload, remember `path = Attachment.objects.get().file.path`; `DELETE` (no lock) is 204; the row has `archived_at` set; `os.path.exists(path)` is True; the list no longer shows it; download as `self.owner` is 404; download as `self.su` is 200.
+  - `test_replace_archives_old`: upload, then replace is 201; the old row has `archived_at` set and `replaced_by_id` equal to the new row id; the list shows only the new row.
+  - `test_download_checks_can_view_each_request`: upload; with the view hook allowing, download is 200 and the body (join `response.streaming_content`) equals the uploaded bytes; then with a view hook returning False the same URL is 403.
+  - `test_media_attachments_always_forbidden`: upload; `name = Attachment.objects.get().file.name`; `url = signed_media_url(name)` from `common.media_urls`, but for this prefix build a signed URL yourself: `from common.media_urls import _current_expiry, _signature`; `e = _current_expiry(); s = _signature(name, e)`; `self.client.get(f'/media/{name}?e={e}&s={s}')` is 403. Also `/media/x/../{name}` is 403.
+  - `test_personnel_docs_requires_signature`: write a file `personnel_docs/p.pdf` under the temp MEDIA_ROOT; unauthenticated `GET /media/personnel_docs/p.pdf` is 403; `GET` of `signed_media_url('personnel_docs/p.pdf')` is 200. Same for `vehicle_docs/2026/01/v.pdf`.
+  - `test_user_signature_self_only`: no patching. `self.owner` uploads with `kind='user'`, `entity_id=str(self.owner.pk)`, `name='sig.png'`, content a few bytes, `label='signature'`: 201 and `storage == 'server'`. `self.other` uploading to the owner's user id is 403; `self.other` listing `?kind=user&id=<owner pk>` is 403; `self.other` downloading the owner's signature is 403; `self.owner` downloading it is 200.
+  - `test_bad_kind_rejected`: with allow hooks for `zz_doc`, uploading with `kind='Bad-Kind'` is 400.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test attachments.tests.test_attachments_26b --keepdb --noinput`. At most 6 runs.
+
+5. Before finishing: all 12 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit; the temporary media folders are removed.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
