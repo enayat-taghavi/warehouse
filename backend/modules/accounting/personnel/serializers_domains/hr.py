@@ -3,7 +3,7 @@ import re
 from rest_framework import serializers
 from django.db import transaction
 from common.date_utils import normalize_digits, parse_date_smart, format_to_shamsi_str
-from common.media_urls import signed_media_url
+from common.media_urls import signed_file_url, signed_media_url
 from common.serializer_fields import (
     ALLOWED_DOCUMENT_EXTENSIONS,
     MAX_DOCUMENT_SIZE_BYTES,
@@ -68,6 +68,12 @@ class PersonnelDocumentSerializer(serializers.ModelSerializer):
         if obj.file:
             return os.path.basename(obj.file.name)
         return None
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # personnel_docs/ محافظت‌شده است (ص۶ طرح ۲.۶): همان کلید `file` با پیوند امضاشده
+        ret['file'] = signed_file_url(instance.file, self.context.get('request'))
+        return ret
 
 class PersonnelProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
@@ -302,6 +308,8 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
                         ret['daily_base_wage'] = float(assignment.daily_base_wage)
                     ret['is_assigned_to_section'] = True
                     ret['assignment_id'] = assignment.id
+        if 'attachment' in ret:
+            ret['attachment'] = signed_file_url(instance.attachment, request)
         if self._request_user_hides_wages():
             from ..lifecycle_services import WAGE_FIELDS
             for wage_field in WAGE_FIELDS:

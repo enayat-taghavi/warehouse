@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
 from common.date_utils import normalize_digits, parse_date_smart, format_to_shamsi_str
-from common.media_urls import signed_media_url
+from common.media_urls import signed_file_url, signed_media_url
 from common.serializer_fields import (
     ALLOWED_DOCUMENT_EXTENSIONS,
     MAX_DOCUMENT_SIZE_BYTES,
@@ -83,6 +83,12 @@ class VehicleDocumentSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['id', 'vehicle', 'created_at', 'uploaded_by']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # vehicle_docs/ محافظت‌شده است (ص۶ طرح ۲.۶): همان کلید `file` با پیوند امضاشده
+        ret['file'] = signed_file_url(instance.file, self.context.get('request'))
+        return ret
 
     def get_uploaded_by_name(self, obj):
         if obj.uploaded_by:

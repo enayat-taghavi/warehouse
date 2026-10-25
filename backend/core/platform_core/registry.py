@@ -205,6 +205,42 @@ def is_entity_locked(kind: str, entity_id) -> bool:
     return False
 
 
+# ─── قلاب پیوست و محرمانگی (ص۵ و ص۷ طرح ۲.۶) ─────────────────────────────────────────────────────
+# contribute('can_attach:<kind>', fn): fn(user, entity_id) → True | False | None، مثل can_view.
+# contribute('is_confidential:<kind>', fn): fn(entity_id) → bool.
+
+def can_attach(user, kind: str, entity_id) -> bool:
+    """افزودن، حذف نرم یا جایگزینی پیوست: فقط اجازهٔ صریح؛ هر منع برنده؛ خطای قلاب = منع؛ نوع بی‌قلاب = منع."""
+    if user is None or not getattr(user, 'is_active', False):
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    if not kind or not entity_id:
+        return False
+    allowed = False
+    for hook in contributions(f'can_attach:{kind}'):
+        try:
+            verdict = hook(user, entity_id)
+        except Exception:
+            return False
+        if verdict is False:
+            return False
+        if verdict is True:
+            allowed = True
+    return allowed
+
+
+def is_entity_confidential(kind: str, entity_id) -> bool:
+    """سند محرمانه است اگر هر قلابی بگوید؛ خطای قلاب = محرمانه (فایلش فقط روی سرور می‌ماند)."""
+    for hook in contributions(f'is_confidential:{kind}'):
+        try:
+            if hook(entity_id):
+                return True
+        except Exception:
+            return True
+    return False
+
+
 def _verify_platform_compatibility(spec: ModuleSpec) -> None:
     """
     بررسی بازه نسخه پلتفرم مورد نیاز ماژول — فاز ۷ (تسک ۶۶).

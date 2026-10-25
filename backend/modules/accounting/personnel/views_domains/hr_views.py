@@ -737,12 +737,8 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             # وجود کد ملی در شرکت‌های بیرون از قلمرو کاربر افشا نمی‌شود (یکتایی کد ملی درون هر شرکت است)
             return Response({'found': False}, status=status.HTTP_200_OK)
         
-        attachment_url = None
-        if personnel.attachment:
-            try:
-                attachment_url = request.build_absolute_uri(personnel.attachment.url)
-            except Exception:
-                attachment_url = personnel.attachment.url
+        from common.media_urls import signed_file_url
+        attachment_url = signed_file_url(personnel.attachment, request)
         
         is_reopenable = (personnel.approval_status == 'rejected')
         from ..lifecycle_services import user_can_view_wages

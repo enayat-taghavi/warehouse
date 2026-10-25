@@ -46,7 +46,7 @@ accounting = "personnel.module_spec:SPEC"
 dependencies = { file = ["backend/requirements.txt"] }
 
 [tool.setuptools]
-package-dir = { "" = "backend", accounts = "backend/core/accounts", common = "backend/core/common", communications = "backend/core/communications", companies = "backend/core/companies", notifications = "backend/core/notifications", platform_core = "backend/core/platform_core", reports = "backend/core/reports", settings_core = "backend/core/settings_core", workflow = "backend/core/workflow", warehouses = "backend/modules/warehouse/warehouses", inventory = "backend/modules/warehouse/inventory", personnel = "backend/modules/accounting/personnel" }
+package-dir = { "" = "backend", accounts = "backend/core/accounts", attachments = "backend/core/attachments", common = "backend/core/common", communications = "backend/core/communications", companies = "backend/core/companies", notifications = "backend/core/notifications", platform_core = "backend/core/platform_core", reports = "backend/core/reports", settings_core = "backend/core/settings_core", workflow = "backend/core/workflow", warehouses = "backend/modules/warehouse/warehouses", inventory = "backend/modules/warehouse/inventory", personnel = "backend/modules/accounting/personnel" }
 
 [tool.setuptools.packages.find]
 where = [
@@ -57,6 +57,7 @@ where = [
 ]
 include = [
     "accounts*",
+    "attachments*",
     "common*",
     "communications*",
     "companies*",
@@ -85,11 +86,12 @@ version = "1.0.0"
 title_fa = "هستهٔ مشترک"
 layer = "platform"
 mandatory = true
-packages = ["accounts", "common", "communications", "config", "notifications", "settings_core", "workflow"]
+packages = ["accounts", "attachments", "common", "communications", "config", "notifications", "settings_core", "workflow"]
 future_packages = ["platform_core"]
 django_apps = [
     "accounts.apps.AccountsConfig",
     "settings_core.apps.SettingsCoreConfig",
+    "attachments.apps.AttachmentsConfig",
     "notifications.apps.NotificationsConfig",
     "workflow.apps.WorkflowConfig",
     "communications.apps.CommunicationsConfig",

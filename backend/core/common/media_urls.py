@@ -24,6 +24,7 @@ URL امضاشده را در اختیار دیگری بگذارد، تا پای�
 ورود را لازم دارد.
 """
 import os
+import posixpath
 import time
 from urllib.parse import quote, unquote
 
@@ -39,7 +40,15 @@ PROTECTED_PREFIXES = (
     'chat_attachments/',
     'comment_attachments/',
     'company_documents/',
-    'company_core_docs/'
+    'company_core_docs/',
+    'personnel_docs/',
+    'vehicle_docs/',
+)
+
+# پیشوندهایی که از مسیر `/media` هرگز سرو نمی‌شوند، حتی با امضای معتبر (ص۶ طرح ۲.۶):
+# پیوست عمومی فقط از `/api/attachments/<id>/download/` باز می‌شود که در هر درخواست `can_view` را می‌سنجد.
+FORBIDDEN_PREFIXES = (
+    'attachments/',
 )
 
 # طول پنجره اعتبار/پایداری امضا (۷ روز برای چت و رسانه‌ها)
@@ -65,8 +74,22 @@ def _signature(path: str, expiry: int) -> str:
 
 
 def is_protected(path: str) -> bool:
-    unquoted = unquote(path or '').lstrip('/')
+    unquoted = posixpath.normpath(unquote(path or '').replace('\\', '/')).lstrip('/')
     return any(unquoted.startswith(p) for p in PROTECTED_PREFIXES)
+
+
+def is_forbidden(path: str) -> bool:
+    # normpath تا مسیرهایی مثل `x/../attachments/...` یا `./attachments/...` هم بسته شوند
+    unquoted = posixpath.normpath(unquote(path or '').replace('\\', '/')).lstrip('/')
+    return any(unquoted.startswith(p) for p in FORBIDDEN_PREFIXES)
+
+
+def signed_file_url(field_file, request=None):
+    """پیوند امضاشدهٔ مطلق (اگر request باشد) برای یک FieldFile؛ بی‌فایل = None."""
+    if not field_file or not getattr(field_file, 'name', ''):
+        return None
+    url = signed_media_url(field_file.name)
+    return request.build_absolute_uri(url) if request else url
 
 
 def signed_media_url(name: str) -> str:
@@ -104,6 +127,9 @@ def serve_media(request, path):
     """
     # حتماً مسیر را رمزگشایی می‌کنیم چون در درخواست‌های وب فایل‌های فارسی به صورت URL-encoded (%D8%AF...) می‌آیند
     normalized = unquote(path or '').lstrip('/')
+
+    if is_forbidden(normalized):
+        return HttpResponseForbidden('این فایل فقط از مسیر دانلود پیوست باز می‌شود.')
 
     if is_protected(normalized) and not verify(
         normalized, request.GET.get('e'), request.GET.get('s')

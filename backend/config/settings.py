@@ -97,6 +97,7 @@ PLATFORM_APPS = [
     'accounts.apps.AccountsConfig',
     'companies.apps.CompaniesConfig',
     'settings_core.apps.SettingsCoreConfig',
+    'attachments.apps.AttachmentsConfig',
     'platform_core.apps.PlatformCoreConfig',
     'notifications.apps.NotificationsConfig',
     'workflow.apps.WorkflowConfig',

@@ -72,3 +72,51 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     amount_field='amount',
     view_permission='perm_invoice_record',
 )
+
+
+# ─── قلاب‌های دیدن، پیوست و قفل فاکتور (ص۱، ص۴ و ص۵ طرح ۲.۶) ─────────────────────────────────────
+# همان دامنهٔ ExpenseInvoiceViewSet.get_queryset: دسترسی به شرکت + «ثبت و دیدن فاکتور» در بخش فاکتور.
+# بیرون از این دامنه None (بی‌نظر) تا قاعدهٔ گردش کار (دریافت‌کنندهٔ مرحله و…) دست نخورد.
+INVOICE_PERM = 'perm_invoice_record'
+INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
+INVOICE_LOCKED_STATUSES = ('paid',)
+
+
+def invoice_company_id(entity_id):
+    from .models import ExpenseInvoice
+    return (ExpenseInvoice.objects.filter(pk=entity_id)
+            .values_list('section__project__company_id', flat=True).first())
+
+
+def _invoice_company_allowed(user, invoice) -> bool:
+    from companies.access import get_user_allowed_companies
+    company_id = invoice_company_id(invoice.pk)
+    return company_id is not None and get_user_allowed_companies(user).filter(id=company_id).exists()
+
+
+def _invoice_in_scope(user, invoice) -> bool:
+    from accounts.scoped_permissions import can
+    return _invoice_company_allowed(user, invoice) and can(user, INVOICE_PERM, invoice.section)
+
+
+def can_view_invoice(user, entity_id):
+    invoice = resolve_invoice(entity_id)
+    if invoice is None:
+        return None
+    return True if _invoice_in_scope(user, invoice) else None
+
+
+def can_attach_invoice(user, entity_id):
+    invoice = resolve_invoice(entity_id)
+    if invoice is None:
+        return None
+    if (invoice.created_by_id == user.pk and invoice.status in INVOICE_EDITABLE_STATUSES
+            and _invoice_company_allowed(user, invoice)):
+        return True
+    return True if _invoice_in_scope(user, invoice) else None
+
+
+def is_invoice_locked(entity_id):
+    from .models import ExpenseInvoice
+    status = ExpenseInvoice.objects.filter(pk=entity_id).values_list('status', flat=True).first()
+    return status in INVOICE_LOCKED_STATUSES

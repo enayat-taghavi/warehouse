@@ -28,6 +28,7 @@
 [importlinter]
 root_packages =
     accounts
+    attachments
     common
     communications
     companies
@@ -56,7 +57,7 @@ type = layers
 layers =
     config
     warehouses : inventory : personnel
-    accounts : common : communications : companies : notifications : reports : settings_core : platform_core : workflow
+    accounts : attachments : common : communications : companies : notifications : reports : settings_core : platform_core : workflow
 
 # ---------------------------------------------------------------------------
 #  C2 — استقلال ماژول‌ها (دو طرفه). هیچ یالی در هیچ جهتی مجاز نیست.
@@ -88,6 +89,7 @@ name = C3 — پاکی هستهٔ پلتفرم نسبت به هر دو ماژو�
 type = forbidden
 source_modules =
     accounts
+    attachments
     common
     communications
     companies

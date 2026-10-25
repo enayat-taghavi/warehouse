@@ -16,3 +16,5 @@ class AccountsConfig(AppConfig):
         # نوع «کاربر» برای قلاب دیدن (ص۳ طرح ۲.۶): خود کاربر می‌بیند؛ بقیه بی‌نظر (ماژول‌ها «مدیر مجاز» را اضافه می‌کنند)
         from platform_core.registry import contribute
         contribute('can_view:user', lambda user, entity_id: True if str(user.pk) == str(entity_id) else None)
+        # امضا و مهر کاربر (ص۹ طرح ۲.۶): فقط خود کاربر پیوست می‌گذارد یا برمی‌دارد
+        contribute('can_attach:user', lambda user, entity_id: True if str(user.pk) == str(entity_id) else None)

@@ -85,6 +85,12 @@ class PersonnelConfig(AppConfig):
         from personnel.workflows import INVOICE_ENTITY, INVOICE_WORKFLOW_SPEC, resolve_invoice
         contribute('workflows', INVOICE_WORKFLOW_SPEC)
         contribute(f'entity_resolver:{INVOICE_ENTITY}', resolve_invoice)
+        # دیدن، پیوست و قفل فاکتور (ص۱، ص۴ و ص۵ طرح ۲.۶)
+        from personnel.workflows import can_attach_invoice, can_view_invoice, invoice_company_id, is_invoice_locked
+        contribute(f'can_view:{INVOICE_ENTITY}', can_view_invoice)
+        contribute(f'can_attach:{INVOICE_ENTITY}', can_attach_invoice)
+        contribute(f'is_locked:{INVOICE_ENTITY}', is_invoice_locked)
+        contribute(f'company_of:{INVOICE_ENTITY}', invoice_company_id)
 
         # حل‌کننده نقش‌های ماژول حسابداری برای میان‌افزار احراز هویت
         from personnel.role_resolver import resolve_personnel_roles
