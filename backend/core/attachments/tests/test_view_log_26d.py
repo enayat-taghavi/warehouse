@@ -145,7 +145,6 @@ class ViewLog26dTests(APITestCase):
             self.assertEqual(res_unregistered.status_code, 403)
             self.assertEqual(EntityViewLog.objects.count(), 0)
 
-    @unittest.expectedFailure
     def test_audit_list_hides_denied_rows(self):
         row1, row2 = self._setup_audit_logs_and_user()
 
@@ -154,13 +153,12 @@ class ViewLog26dTests(APITestCase):
             'can_view:zz_doc': [lambda user, eid: False if str(eid) == '1' else None],
         }):
             self.client.force_authenticate(self.user)
-            res = self.client.get('/api/audit-logs/')
+            res = self.client.get('/api/accounts/audit-logs/')
             self.assertEqual(res.status_code, 200)
             ids = [item['id'] for item in res.data['results']]
             self.assertIn(row2.id, ids)
             self.assertNotIn(row1.id, ids)
 
-    @unittest.expectedFailure
     def test_audit_detail_denied_is_404(self):
         row1, row2 = self._setup_audit_logs_and_user()
 
@@ -169,13 +167,12 @@ class ViewLog26dTests(APITestCase):
             'can_view:zz_doc': [lambda user, eid: False if str(eid) == '1' else None],
         }):
             self.client.force_authenticate(self.user)
-            res1 = self.client.get(f'/api/audit-logs/{row1.id}/')
+            res1 = self.client.get(f'/api/accounts/audit-logs/{row1.id}/')
             self.assertEqual(res1.status_code, 404)
 
-            res2 = self.client.get(f'/api/audit-logs/{row2.id}/')
+            res2 = self.client.get(f'/api/accounts/audit-logs/{row2.id}/')
             self.assertEqual(res2.status_code, 200)
 
-    @unittest.expectedFailure
     def test_superuser_sees_denied_rows(self):
         row1, row2 = self._setup_audit_logs_and_user()
 
@@ -184,7 +181,7 @@ class ViewLog26dTests(APITestCase):
             'can_view:zz_doc': [lambda user, eid: False if str(eid) == '1' else None],
         }):
             self.client.force_authenticate(self.su)
-            res = self.client.get('/api/audit-logs/')
+            res = self.client.get('/api/accounts/audit-logs/')
             self.assertEqual(res.status_code, 200)
             ids = [item['id'] for item in res.data['results']]
             self.assertIn(row1.id, ids)

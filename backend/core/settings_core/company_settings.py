@@ -6,6 +6,7 @@
   GET   /api/settings/company/<company_id>/[?module=]   فهرست کلیدهای اعلام‌شده با مقدار فعلی یا پیش‌فرض
   PATCH /api/settings/company/<company_id>/             {module, key, value}
 """
+import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -20,6 +21,7 @@ from platform_core.registry import contributions
 from .models import CompanySetting
 
 SETTING_TYPES = ('bool', 'int', 'float', 'str', 'list', 'dict', 'json')
+MAX_VALUE_CHARS = 20000  # سقف اندازهٔ مقدار JSON (هر عضو شرکت آن را می‌خواند)
 
 
 @dataclass(frozen=True)
@@ -122,6 +124,8 @@ class CompanySettingsView(APIView):
         value = data.get('value')
         if not value_matches_type(value, spec.type):
             return Response({'detail': 'نوع مقدار با این تنظیم جور نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(json.dumps(value, ensure_ascii=False)) > MAX_VALUE_CHARS:
+            return Response({'detail': 'مقدار این تنظیم بیش از حد بزرگ است.'}, status=status.HTTP_400_BAD_REQUEST)
         if not can_write_company_setting(request.user, spec, company.pk):
             return Response({'detail': 'اجازهٔ تغییر این تنظیم را ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         with transaction.atomic():

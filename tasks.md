@@ -1199,7 +1199,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 2 — Release v1 step 2.6-d: tests for the document view log and the audit log view-hook filter
+[DONE] [ ] Session 1 of 2 — Release v1 step 2.6-d: tests for the document view log and the audit log view-hook filter
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -1244,7 +1244,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 2 — Release v1 step 2.6-d: tests for the company settings API
+[DONE] [ ] Session 2 of 2 — Release v1 step 2.6-d: tests for the company settings API
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

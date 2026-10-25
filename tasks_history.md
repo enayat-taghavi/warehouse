@@ -11890,3 +11890,129 @@ I am waiting for the background verification task to finish.
 ### ۲. اعتبارسنجی فنی (Verify Immediately)...
 
 ---
+
+### Task 1 of 2 — 2026-10-26 01:14:11
+- **Status:** DONE
+- **Conversation:** `941f2b6a-937b-4578-9db1-f1819ba21e2f`
+- **Steps:** 93
+- **Tokens:** 182386
+- **Duration:** 9m 46s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 2 — Release v1 step 2.6-d: tests for the document view log and the audit log view-hook filter
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/attachments/tests/test_view_log_26d.py`. Never edit production code, migrations, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Core test files must not import accounting or warehouse modules (no `personnel`, `warehouses`, `inventory` imports). Use only `accounts`, `companies`, `attachments`, `platform_core` and Django.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Never delete rows from the real database; tests run only on the Django test database.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.6-d): view log and audit filter`.
+
+2. Context (read these, nothing broader):
+- `backend/core/attachments/models.py`: classes `Attachment` and `EntityViewLog` (fields `user`, `entity_kind`, `entity_id` (string), `company_id`, `viewed_at`).
+- `backend/core/attachments/services.py` (whole file, 30 lines): `record_entity_view(user, kind, entity_id, company_id=None)` writes at most one row per user and document per 10 minutes (`VIEW_LOG_WINDOW`) and returns True only when it wrote a row.
+- `backend/core/attachments/views.py` lines 211–245: `AttachmentDownloadView.get` calls `record_entity_view` only after the `can_view` check passes and the file exists.
+- `backend/core/attachments/tests/test_attachments_26b.py` lines 1–110: copy its pattern exactly: the `_hooks(...)` helper with `patch.dict(platform_core.registry._CONTRIBUTIONS, ...)`, the temporary `MEDIA_ROOT` with `override_settings`, the users and the upload request to `/api/attachments/`. The download URL is `/api/attachments/<id>/download/`.
+- `backend/core/accounts/views_domains/audit_views.py` lines 733–795: `audit_entity_kinds()` reads `contribute('audit_entity_kinds', (target_model, kind))`; `denied_audit_ids(user, logs)`; `AuditLogViewSet.list` hides rows whose document the `can_view:<kind>` hook denies with exactly `False` (a `None` verdict keeps the row); `get_object` raises 404 for such rows. Lines 1413–1470: `revert` and `bulk_revert`.
+- `backend/core/accounts/models.py` line 208: class `AuditLog` (read only its field list: `target_model`, `target_object_id`, `module`, `action`, `user`, `company_id`).
+- The audit list route is `/api/audit-logs/` (router in `backend/core/accounts/urls.py` line 23); the list response is paginated with a `results` key.
+
+3. Task, `backend/core/attachments/tests/test_view_log_26d.py`. Use `rest_framework.test.APITestCase`. Use entity kind `zz_doc`. Tests (names exactly):
+  - `test_download_writes_one_row`: superuser uploads an attachment (as in 26b), then a normal active user with `can_view:zz_doc` hook returning True downloads it → 200 and exactly one `EntityViewLog` row for that user with `entity_kind='zz_doc'` and `entity_id='7'`.
+  - `test_second_download_within_window_writes_none`: same user downloads twice → still exactly one row.
+  - `test_download_after_window_writes_again`: after the first download, update the row with `EntityViewLog.objects.update(viewed_at=timezone.now() - timedelta(minutes=11))`, download again → two rows.
+  - `test_denied_download_writes_none`: hook returns False → 403 and zero rows; hook not registered at all → 403 and zero rows.
+  - `test_audit_list_hides_denied_rows`: create two `AuditLog` rows directly with `target_model='ZzDoc'`, `target_object_id='1'` and `'2'`, `module='security'`, `action='UPDATE'`, `company_id=None`. Superusers bypass the filter, so the requesting user is a normal active user with `is_staff=False` who has the Django permission `accounts.perm_sys_logs` (add it with `Permission.objects.get(codename='perm_sys_logs')` and `user.user_permissions.add(...)`, then re-fetch the user). Patch `_CONTRIBUTIONS` with `{'audit_entity_kinds': [('ZzDoc', 'zz_doc')], 'can_view:zz_doc': [lambda user, eid: False if str(eid) == '1' else None]}`. GET `/api/audit-logs/` → 200; the ids in `results` contain row 2 and not row 1.
+  - `test_audit_detail_denied_is_404`: same setup; GET `/api/audit-logs/<row1 id>/` → 404; GET for row 2 → 200.
+  - `test_superuser_sees_denied_rows`: same hooks; superuser GET `/api/audit-logs/` → both row ids present.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; $env:DB_TEST_NAME='test_agy_viewlog26d'; .\venv\Scripts\python.exe manage.py test attachments.tests.test_view_log_26d --noinput`. At most 6 runs. If the audit list returns 403 for the normal user, add the user to whatever is needed only inside the test (for example also grant `accounts.perm_sys_audit_export`) and report it.
+
+5. Before finishing: all 7 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+اجرای آزمون‌های `attachments.tests.test_view_log_26d` با متغیرهای محیطی تعیین‌شده آغاز شد و در انتظار تکمیل اجرای تست‌ها روی پایگاه‌داده آزمایشی (`test_agy_viewlog26d`) هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+اجرای آزمون‌های `attachments.tests.test_view_log_26d` آغاز شد و در انتظار اتمام اجرا هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explain Simply)
+کاربر درخواست پیاده‌سازی آزمون‌های مربوط به مرحلهٔ Release v1 step 2.6-d برای ثبت سابقهٔ دیدن سند (`EntityViewLog`) و فیلتر قلاب دیدن در لاگ‌های ممیزی (`AuditLog`) را داشتند؛ به این صورت که دقیقاً یک فایل جدید در `backend/core/attachments/tests/test_view_log_26d.py` بدون تغییر کدهای اصلی...
+
+---
+
+### Task 2 of 2 — 2026-10-26 01:19:50
+- **Status:** DONE
+- **Conversation:** `b009796e-a113-471e-866f-c753253843ee`
+- **Steps:** 55
+- **Tokens:** 110887
+- **Duration:** 5m 35s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Release v1 step 2.6-d: tests for the company settings API
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/settings_core/test_company_settings_26d.py`. Never edit production code, migrations, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Core test files must not import accounting or warehouse modules (no `personnel`, `warehouses`, `inventory` imports). Use only `accounts`, `companies`, `settings_core`, `platform_core` and Django.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Never delete rows from the real database; tests run only on the Django test database.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.6-d): company settings api`.
+
+2. Context (read these, nothing broader):
+- `backend/core/settings_core/company_settings.py` (whole file, ~130 lines): `CompanySettingSpec(module, key, default, type, title_fa, perm)`, `company_setting_specs()` reads `contribute('company_settings', spec)`, `can_write_company_setting`, `CompanySettingsView` (GET list, PATCH/PUT one key). Route `/api/settings/company/<company_id>/` (`backend/config/urls.py`, name `company-settings`).
+- `backend/core/settings_core/models.py`: Grep `class CompanySetting` and read that class only.
+- `backend/core/companies/access.py` lines 152–235: `get_user_allowed_companies` and `validate_user_company_access` (no access → 403).
+- `backend/core/settings_core/test_drive_move_26c.py`: read its first 60 lines to see how it creates a `Company` and gives a normal user access to it; reuse the same way. If it does not give access, Grep `CompanyMembership\|UserCompanyAccess\|assigned_companies` in `backend/core/companies/models.py` and use the simplest membership model there.
+- For registry patching copy the pattern in `backend/core/attachments/tests/test_attachments_26b.py` lines 1–40 (`patch.dict(platform_core.registry._CONTRIBUTIONS, {...})`).
+
+3. Task, `backend/core/settings_core/test_company_settings_26d.py`. Use `rest_framework.test.APITestCase`. Register fake specs with `patch.dict(platform_core.registry._CONTRIBUTIONS, {'company_settings': [CompanySettingSpec('zzmod', 'flag', False, 'bool', 'Flag', 'accounts.perm_sys_settings'), CompanySettingSpec('zzmod', 'limit', 5, 'int', 'Limit', 'accounts.perm_sys_settings')]})`. Users: a superuser; user A (normal, active) with access to company 1 and the Django permission `accounts.perm_sys_settings` (if that codename does not exist, pick any existing system-scope permission from `Permission.objects.filter(content_type__app_label='accounts')` that is NOT returned by `accounts.scoped_permissions.section_permission_codes()` and use it in both specs); user B with access to company 1 but no permission; user C with access only to company 2. Tests (names exactly):
+  - `test_default_returned_when_no_row`: user A GET company 1 → 200; `results` has `flag` with `value False` and `is_default True`, `limit` with `value 5`.
+  - `test_undeclared_key_400`: user A PATCH `{module: 'zzmod', key: 'nope', value: 1}` → 400; no `CompanySetting` row.
+  - `test_wrong_type_400`: user A PATCH `{module: 'zzmod', key: 'flag', value: 1}` → 400; `{key: 'limit', value: True}` → 400; `{key: 'limit', value: '7'}` → 400.
+  - `test_write_ok_then_read_back`: user A PATCH `{module: 'zzmod', key: 'limit', value: 9}` with `format='json'` → 200 and value 9; one `CompanySetting` row with `updated_by` = user A; GET returns `limit` value 9 and `is_default False`. A second PATCH with 10 updates the same row (still one row).
+  - `test_user_without_perm_403`: user B PATCH → 403, no row; user B GET → 200 with `can_edit False` on both items.
+  - `test_other_company_user_cannot_read_or_write`: user C GET company 1 → 403; PATCH company 1 → 403; no row.
+  - `test_unknown_company_404`: superuser GET `/api/settings/company/999999/` → 404.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; $env:DB_TEST_NAME='test_agy_compset26d'; .\venv\Scripts\python.exe manage.py test settings_core.test_company_settings_26d --noinput`. At most 6 runs.
+
+5. Before finishing: all 7 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+دستور اجرای تست‌های مربوط به تنظیمات شرکت در پس‌زمینه اجرا شد و منتظر اتمام آن هستیم...
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explain Simply)
+کاربر درخواست پیاده‌سازی آزمون‌های مربوط به مرحلهٔ Release v1 step 2.6-d برای API تنظیمات شرکت (`CompanySettingsView`) را داشتند. برای این منظور، دقیقاً یک فایل جدید در [test_company_settings_26d.py](file:///E:/comanager/backend/core/settings_core/test_company_settings_26d.py) با فریم‌ورک `rest_framework.test.APITestCase` بدون دستکاری کدهای پروداکشن، مایگریشن‌ها یا سایر تست‌ها و بدون وارد کردن ماژول‌های انبار و حسابداری ایجاد شد.
+
+### ۲. اعتبارسنجی فنی (Verify Immediately)
+رفتار متدهای GET و PATCH در اند...
+
+---
