@@ -96,10 +96,6 @@ class PersonnelConfig(AppConfig):
         from personnel.role_resolver import resolve_personnel_roles
         contribute('role_resolver', ('accounting', resolve_personnel_roles))
 
-        # ثبت مدل پیکربندی گوگل‌درایو شرکت‌ها در رجیستری برای هسته
-        from personnel.models import CompanyGoogleDriveConfig
-        contribute('company_gdrive_config_model', CompanyGoogleDriveConfig)
-
         # مسدودکننده‌های حذف شرکت ماژول حسابداری (گام ۴)
         contribute('company_delete_blockers', (30, 'personnel_profiles', "این شرکت دارای پرونده‌های پرسنلی ثبت‌شده است و نمی‌توان آن را حذف کرد."))
         contribute('company_delete_blockers', (40, 'monthly_work_periods', "این شرکت دارای دوره‌های کارکرد ثبت‌شده است و نمی‌توان آن را حذف کرد."))

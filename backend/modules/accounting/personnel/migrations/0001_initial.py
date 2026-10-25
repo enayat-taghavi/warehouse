@@ -37,6 +37,21 @@ class UnlessCoreOrgTables(migrations.SeparateDatabaseAndState):
             super().database_backwards(app_label, schema_editor, from_state, to_state)
 
 
+class UnlessCoreDriveTables(UnlessCoreOrgTables):
+    """
+    Company drive config and sync queue tables now belong to core settings_core (migration
+    settings_core.0002_company_drive_moved_from_personnel, same db_table and index names). Same rule as above.
+    """
+
+    @staticmethod
+    def _core_created(schema_editor):
+        if not hasattr(schema_editor, '_core_drive_tables'):
+            schema_editor._core_drive_tables = (
+                'personnel_googledrivesyncqueue' in schema_editor.connection.introspection.table_names()
+            )
+        return schema_editor._core_drive_tables
+
+
 class Migration(migrations.Migration):
 
     initial = True
@@ -810,7 +825,7 @@ class Migration(migrations.Migration):
                 'ordering': ['-fiscal_year'],
             },
         ),
-        migrations.CreateModel(
+        UnlessCoreDriveTables(migrations.CreateModel(
             name='CompanyGoogleDriveConfig',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -841,7 +856,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'تنظیمات گوگل\u200cدرایو شرکت',
                 'verbose_name_plural': 'تنظیمات گوگل\u200cدرایو شرکت\u200cها',
             },
-        ),
+        )),
         migrations.CreateModel(
             name='Counterparty',
             fields=[
@@ -965,7 +980,7 @@ class Migration(migrations.Migration):
             name='project',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='daily_attendances', to='personnel.financialproject', verbose_name='پروژه مالی/عملیاتی'),
         ),
-        migrations.CreateModel(
+        UnlessCoreDriveTables(migrations.CreateModel(
             name='GoogleDriveSyncQueue',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -995,7 +1010,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'وظایف صف گوگل\u200cدرایو',
                 'ordering': ['priority', 'created_at'],
             },
-        ),
+        )),
         migrations.AddConstraint(
             model_name='insurancejobtitle',
             constraint=models.UniqueConstraint(fields=('title', 'job_code'), name='unique_insurance_job_title_code'),
@@ -1462,30 +1477,30 @@ class Migration(migrations.Migration):
             model_name='financialproject',
             constraint=models.UniqueConstraint(condition=models.Q(('company__isnull', True)), fields=('code',), name='unique_global_project_code'),
         )),
-        migrations.AddIndex(
+        UnlessCoreDriveTables(migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['company', 'status'], name='personnel_g_company_f971b0_idx'),
-        ),
-        migrations.AddIndex(
+        )),
+        UnlessCoreDriveTables(migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['status', 'created_at'], name='personnel_g_status_50fa27_idx'),
-        ),
-        migrations.AddIndex(
+        )),
+        UnlessCoreDriveTables(migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['model_name', 'object_id'], name='personnel_g_model_n_4c523e_idx'),
-        ),
-        migrations.AddIndex(
+        )),
+        UnlessCoreDriveTables(migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['status', 'priority', 'created_at'], name='personnel_g_status_7b750a_idx'),
-        ),
-        migrations.AddIndex(
+        )),
+        UnlessCoreDriveTables(migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['status', 'next_retry_at'], name='personnel_g_status_dcbe53_idx'),
-        ),
-        migrations.AddIndex(
+        )),
+        UnlessCoreDriveTables(migrations.AddIndex(
             model_name='googledrivesyncqueue',
             index=models.Index(fields=['company', 'model_name', 'object_id', 'field_name', 'drive_account'], name='idx_gdrive_dedup_acct'),
-        ),
+        )),
         migrations.AddConstraint(
             model_name='payrollyearlysettings',
             constraint=models.UniqueConstraint(condition=models.Q(('company__isnull', True), ('project__isnull', True)), fields=('fiscal_year', 'effective_from'), name='unique_global_effective_period_setting'),

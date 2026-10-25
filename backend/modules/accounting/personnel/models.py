@@ -56,9 +56,8 @@ from .models_domains.treasury_audit import (
     AccountingEvent,
     emit_accounting_event,
     WorkflowAuditLog,
-    CompanyGoogleDriveConfig,
-    GoogleDriveSyncQueue,
 )
+from settings_core.models import CompanyGoogleDriveConfig, GoogleDriveSyncQueue
 
 __all__ = [
     'Company',

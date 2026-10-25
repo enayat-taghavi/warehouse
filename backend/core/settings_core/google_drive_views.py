@@ -269,19 +269,16 @@ class SystemGoogleDriveConfigView(APIView):
         # Query companies configured for google drive to toggle backup sync
         backup_companies = []
         try:
-            from platform_core.registry import contributions
-            models = contributions('company_gdrive_config_model')
-            if models:
-                CompanyGoogleDriveConfig = models[0]
-                cfgs = CompanyGoogleDriveConfig.objects.filter(company__is_active=True).select_related('company').order_by('company__id')
-                for c in cfgs:
-                    backup_companies.append({
-                        'company_id': c.company.id,
-                        'company_name': c.company.name,
-                        'account_email': c.account_email,
-                        'is_connected': bool(c.refresh_token),
-                        'sync_backups': bool(c.sync_backups),
-                    })
+            from settings_core.models import CompanyGoogleDriveConfig
+            cfgs = CompanyGoogleDriveConfig.objects.filter(company__is_active=True).select_related('company').order_by('company__id')
+            for c in cfgs:
+                backup_companies.append({
+                    'company_id': c.company.id,
+                    'company_name': c.company.name,
+                    'account_email': c.account_email,
+                    'is_connected': bool(c.refresh_token),
+                    'sync_backups': bool(c.sync_backups),
+                })
         except Exception:
             pass
 
