@@ -1,8 +1,8 @@
 """
 State of the automatic sub-step chain (Release v1 2.4–2.8, memory `feedback_auto_chain_substeps`).
 
-One recurring scheduled task (`release-v1-chain`, every 30 minutes) and an immediate run at the end of each chat both
-start a fresh chat whose first action is `claim`. Only one chat can hold the lock (`scratch/chain.lock`, created with
+One recurring scheduled task (`release-v1-chain`, every 10 minutes) starts a fresh chat whose first action is `claim`
+(a scheduled run can neither create nor start another scheduled task, so there is no immediate hand-off). Only one chat can hold the lock (`scratch/chain.lock`, created with
 O_EXCL); a lock older than STALE_HOURS is taken over (the previous chat died).
 
     python scripts/automation/chain_state.py claim
