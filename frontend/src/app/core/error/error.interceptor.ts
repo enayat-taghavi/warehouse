@@ -71,6 +71,20 @@ export const errorInterceptor: HttpInterceptorFn = (
         return throwError(() => error);
       }
 
+      // خواندن (GET) در قطعی سرور خطای قرمز ندارد (ق۳، AGENTS §3): یک هشدار زرد
+      // با همان فاصله‌گذاری. نوشتن‌ها و خطاهای واقعی Django همان پیام قبلی را دارند.
+      if (req.method === 'GET' && isServerUnreachable(error.status)) {
+        const now = Date.now();
+        if (now - lastOfflineToastAt > OFFLINE_TOAST_GAP_MS) {
+          lastOfflineToastAt = now;
+          toast.show(
+            'warning',
+            'ارتباط با سرور برقرار نیست؛ اطلاعات تازه پس از برقراری اتصال نمایش داده می‌شود.'
+          );
+        }
+        return throwError(() => error);
+      }
+
       let message = 'خطای ارتباط با سرور. لطفا دوباره تلاش کنید.';
 
       if (isServerUnreachable(error.status)) {
