@@ -762,10 +762,10 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       mockAccountsHttp.createUser.mockReturnValueOnce(throwError(() => ({ status: 400, error: { username: ['این نام کاربری قبلاً ثبت شده است.'] } })));
       component.openUserModal();
       Object.assign(component.userForm, { first_name: 'علی', last_name: 'رضایی', username: 'ali.r', phone_number: '09123456789' });
-      component.userModalInnerTab = 'identity';
+      component.userModalInnerTab = 'security';
       component.saveUser();
       expect(component.userFieldMessages['username']).toBe('این نام کاربری قبلاً ثبت شده است.');
-      expect(component.userModalInnerTab).toBe('security');
+      expect(component.userModalInnerTab).toBe('identity');
       (component as any).cdr.detectChanges();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-field-error="username"]')?.textContent).toContain('قبلاً ثبت شده');
       component.clearUserFormError('username');
@@ -1002,13 +1002,16 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
 
     it('باید ورودی‌های نام کاربری و رمز در مودال دارای autocomplete="new-password" باشند تا مرورگر تکمیل خودکار نکند', () => {
       component.openUserModal();
-      component.userModalInnerTab = 'security';
+      component.setUserModalInnerTab('identity');
       fixture.detectChanges();
       const usernameInput = fixture.debugElement.query(By.css('input[name="personnel_username"]'));
-      const passwordInput = fixture.debugElement.query(By.css('input[name="personnel_password"]'));
       expect(usernameInput).not.toBeNull();
-      expect(passwordInput).not.toBeNull();
       expect(usernameInput.nativeElement.getAttribute('autocomplete')).toBe('new-password');
+
+      component.setUserModalInnerTab('security');
+      fixture.detectChanges();
+      const passwordInput = fixture.debugElement.query(By.css('input[name="personnel_password"]'));
+      expect(passwordInput).not.toBeNull();
       expect(passwordInput.nativeElement.getAttribute('autocomplete')).toBe('new-password');
       expect(component.userForm.username).toBe('');
       expect(component.userForm.password).toBe('');
@@ -1288,6 +1291,114 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       const compiled = fixture.nativeElement as HTMLElement;
       expect(compiled.textContent).toContain('شرکت‌ها و پروژه‌ها');
       expect(compiled.textContent).not.toContain('شرکت‌ها و انبارها');
+    });
+  });
+
+  describe('۲.۹-ج — ظاهر و دسترسپذیری', () => {
+    it('دکمه فیلتر وضعیت showUserFilters و aria-expanded را تغییر می‌دهد', () => {
+      expect(component.showUserFilters).toBe(false);
+      fixture.detectChanges();
+      const btn = fixture.debugElement.query(By.css('button[aria-controls="users-filters"]'));
+      expect(btn).toBeTruthy();
+      expect(btn.nativeElement.getAttribute('aria-expanded')).toBe('false');
+
+      btn.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.showUserFilters).toBe(true);
+      expect(btn.nativeElement.getAttribute('aria-expanded')).toBe('true');
+
+      btn.nativeElement.click();
+      fixture.detectChanges();
+      expect(component.showUserFilters).toBe(false);
+      expect(btn.nativeElement.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('در حالت userViewMode = table، بلاک گرید کلاس md:hidden و بلاک جدول کلاس hidden دارد', () => {
+      component.setViewMode('table');
+      fixture.detectChanges();
+      const gridEl = fixture.nativeElement.querySelector('[data-users-grid]');
+      const tableEl = fixture.nativeElement.querySelector('[data-users-table]');
+      expect(gridEl).toBeTruthy();
+      expect(tableEl).toBeTruthy();
+      expect(gridEl.classList.contains('md:hidden')).toBe(true);
+      expect(tableEl.classList.contains('hidden')).toBe(true);
+      expect(tableEl.classList.contains('md:block')).toBe(true);
+    });
+
+    it('در صورت وجود editingUser.id، کامپوننت app-tab-bar دکمه #user-modal-tab-permissions را رندر کرده و با کلیک روی آن userModalInnerTab برابر با permissions می‌شود', () => {
+      component.openUserModal(1);
+      fixture.detectChanges();
+      const permTabBtn = fixture.nativeElement.querySelector('#user-modal-tab-permissions');
+      expect(permTabBtn).toBeTruthy();
+      permTabBtn.click();
+      fixture.detectChanges();
+      expect(component.userModalInnerTab).toBe('permissions');
+    });
+
+    it('فیلد نام کاربری داخل #user-modal-panel-identity قرار دارد', () => {
+      component.openUserModal();
+      fixture.detectChanges();
+      const identityPanel = fixture.nativeElement.querySelector('#user-modal-panel-identity');
+      expect(identityPanel).toBeTruthy();
+      const usernameInput = identityPanel.querySelector('#user-username');
+      expect(usernameInput).toBeTruthy();
+      const usernameLabel = identityPanel.querySelector('label[for="user-username"]');
+      expect(usernameLabel).toBeTruthy();
+    });
+
+    it('با تنظیم userFieldMessages = { phone_number: "x" }، ورودی تلفن ویژگی‌های aria-invalid="true" و aria-describedby="user-field-error-phone_number" دارد', () => {
+      component.openUserModal();
+      component.userFieldMessages = { phone_number: 'شماره همراه نامعتبر است' };
+      fixture.detectChanges();
+      const phoneInput = fixture.nativeElement.querySelector('#user-phone-number');
+      expect(phoneInput).toBeTruthy();
+      expect(phoneInput.getAttribute('aria-invalid')).toBe('true');
+      expect(phoneInput.getAttribute('aria-describedby')).toBe('user-field-error-phone_number');
+      const errEl = fixture.nativeElement.querySelector('#user-field-error-phone_number');
+      expect(errEl).toBeTruthy();
+      expect(errEl.textContent).toContain('شماره همراه نامعتبر است');
+    });
+
+    it('با تنظیم userFieldMessages = { groups: "x" }، المان [data-field-error="groups"] نمایش داده می‌شود', () => {
+      component.openUserModal();
+      component.setUserModalInnerTab('roles');
+      component.userFieldMessages = { groups: 'انتخاب حداقل یک نقش الزامی است' };
+      fixture.detectChanges();
+      const groupsErr = fixture.nativeElement.querySelector('[data-field-error="groups"]');
+      expect(groupsErr).toBeTruthy();
+      expect(groupsErr.getAttribute('id')).toBe('user-field-error-groups');
+      expect(groupsErr.textContent).toContain('انتخاب حداقل یک نقش الزامی است');
+    });
+
+    it('متد openUserAssignments(5) روی فرم تغییریافته (dirty) ابتدا دیالوگ تایید را باز کرده و در صورت پاسخ منفی ناوبری نمی‌کند', async () => {
+      component.openUserModal(2);
+      component.userForm.first_name = 'تغییر نام';
+      mockConfirmDialog.open.mockClear();
+      mockRouter.navigate.mockClear();
+
+      mockConfirmDialog.open.mockResolvedValueOnce(false);
+      await component.openUserAssignments(5);
+      expect(mockConfirmDialog.open).toHaveBeenCalled();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+      expect(component.isUserModalOpen).toBe(true);
+
+      mockConfirmDialog.open.mockResolvedValueOnce(true);
+      await component.openUserAssignments(5);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/companies', 5], { queryParams: { tab: 'projects' } });
+      expect(component.isUserModalOpen).toBe(false);
+    });
+
+    it('کلید وضعیت حساب کاربری از نوع app-toggle-switch است و رویداد checkedChange مقدار userForm.is_active را به‌روز می‌کند', () => {
+      component.openUserModal();
+      component.setUserModalInnerTab('security');
+      fixture.detectChanges();
+      const toggleComp = fixture.debugElement.query(By.css('app-toggle-switch[title="وضعیت حساب"]'));
+      expect(toggleComp).toBeTruthy();
+      component.userForm.is_active = true;
+      toggleComp.triggerEventHandler('checkedChange', false);
+      expect(component.userForm.is_active).toBe(false);
+      toggleComp.triggerEventHandler('checkedChange', true);
+      expect(component.userForm.is_active).toBe(true);
     });
   });
 });

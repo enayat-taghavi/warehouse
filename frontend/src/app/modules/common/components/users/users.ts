@@ -37,6 +37,7 @@ import { Company } from '../../../../core/models/company.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ToggleSwitchComponent } from '../../../../shared/components/toggle-switch/toggle-switch.component';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { RoleBundlesPanel } from './role-bundles-panel/role-bundles-panel';
 import { UserPermissionsTabComponent } from './user-permissions-tab/user-permissions-tab';
@@ -59,7 +60,7 @@ interface AuthorizedSystems {
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent, WorkflowSubstitutesComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ToggleSwitchComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent, WorkflowSubstitutesComponent],
   providers: [UsersFacade],
   templateUrl: './users.html',
   styleUrl: './users.css'
@@ -69,10 +70,102 @@ export class Users implements OnInit, OnDestroy {
   @ViewChild(RoleBundlesPanel) roleBundlesPanel?: RoleBundlesPanel;
   @ViewChild('otpClose') otpCloseBtn?: ElementRef<HTMLButtonElement>;
   activeTab = 'users';
+  showUserFilters = false;
 
   /** آرایهٔ تب‌ها فقط با تغییر شمارش‌ها تازه می‌شود (NG0103: هر چرخهٔ تشخیص تغییر آرایهٔ نو نگیرد) */
   private userTabsCache: TabDef[] = [];
   private userTabsKey = '';
+
+  /** آرایهٔ تب‌های مودال کاربر فقط با تغییر وضعیت یا خطا تازه می‌شود (NG0103) */
+  private userModalTabsCache: TabDef[] = [];
+  private userModalTabsKey = '';
+
+  get userModalTabs(): TabDef[] {
+    const editId = this.editingUser?.id ? String(this.editingUser.id) : '';
+    const companiesTabLabel = this.scopeLabels.companiesTab;
+    const hasIdentityErr = !!(this.userFormErrors['first_name'] || this.userFormErrors['last_name'] || this.userFormErrors['phone_number'] || this.userFormErrors['national_code']);
+    const isIdentityValid = this.isFieldValid('first_name') && this.isFieldValid('last_name') && this.isFieldValid('phone_number');
+    const hasSecurityErr = !!(this.userFormErrors['username'] || this.userFormErrors['password']);
+    const isSecurityValid = this.isFieldValid('username');
+    const rolesCount = this.userForm.groups?.length || 0;
+    const companyCount = this.userForm.company_ids?.length || 0;
+    const whCount = this.userForm.assigned_warehouses?.length || 0;
+
+    const key = `${editId}|${companiesTabLabel}|${hasIdentityErr}|${isIdentityValid}|${hasSecurityErr}|${isSecurityValid}|${rolesCount}|${companyCount}|${whCount}`;
+    if (key !== this.userModalTabsKey) {
+      this.userModalTabsKey = key;
+
+      let identityIndicator: TabDef['indicator'] = undefined;
+      if (hasIdentityErr) {
+        identityIndicator = { tone: 'rose', label: 'خطا در این بخش', pulse: true };
+      } else if (isIdentityValid) {
+        identityIndicator = { tone: 'emerald', label: 'تکمیل شده' };
+      }
+
+      let securityIndicator: TabDef['indicator'] = undefined;
+      if (hasSecurityErr) {
+        securityIndicator = { tone: 'rose', label: 'خطا در این بخش', pulse: true };
+      } else if (isSecurityValid) {
+        securityIndicator = { tone: 'emerald', label: 'تکمیل شده' };
+      }
+
+      const tabs: TabDef[] = [
+        {
+          id: 'identity',
+          label: 'هویت و تماس',
+          shortLabel: 'هویت',
+          icon: 'user',
+          tone: 'indigo',
+          indicator: identityIndicator,
+        },
+        {
+          id: 'security',
+          label: 'امنیت و ورود',
+          shortLabel: 'امنیت',
+          icon: 'key',
+          tone: 'indigo',
+          indicator: securityIndicator,
+        },
+        {
+          id: 'roles',
+          label: 'نقشهای سازمانی',
+          shortLabel: 'نقش‌ها',
+          icon: 'shield',
+          tone: 'indigo',
+          count: rolesCount,
+        },
+        {
+          id: 'warehouses',
+          label: companiesTabLabel,
+          shortLabel: 'شرکت‌ها',
+          icon: 'building',
+          tone: 'indigo',
+        },
+      ];
+
+      if (this.editingUser?.id) {
+        tabs.push(
+          {
+            id: 'permissions',
+            label: 'مجوزها',
+            shortLabel: 'مجوزها',
+            icon: 'lock',
+            tone: 'indigo',
+          },
+          {
+            id: 'substitute',
+            label: 'جانشین موقت',
+            shortLabel: 'جانشین',
+            icon: 'users',
+            tone: 'indigo',
+          }
+        );
+      }
+
+      this.userModalTabsCache = tabs;
+    }
+    return this.userModalTabsCache;
+  }
 
   get userTabs(): TabDef[] {
     const usersCount = this.userCounts.all;
@@ -1762,8 +1855,19 @@ export class Users implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Escape (و دکمهٔ برگشت اندروید که به Escape نگاشت می‌شود): بالاترین پنجرهٔ باز بسته می‌شود */
-  @HostListener('document:keydown.escape', ['$event'])
+  /** Escape و کلیدهای Tab (فوکوس‌ترپ): بالاترین پنجرهٔ باز */
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.onEscapeKey(event);
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      this.handleFocusTrap(event);
+    }
+  }
+
   onEscapeKey(event?: Event): void {
     if (this.oneTimePasswords) {
       // رمز یک‌بارمصرف فقط یک بار دیده می‌شود؛ Escape آن را نمی‌بندد و پنجرهٔ زیرین هم بسته نمی‌شود
@@ -1788,29 +1892,40 @@ export class Users implements OnInit, OnDestroy {
     }
   }
 
-  /** پیوند «پروژه‌ها و بخش‌ها» در تب مجوزها: استودیوی شرکتِ نخستین انتساب کاربر، تب پروژه‌ها */
-  openUserAssignments(companyId: number | null) {
-    this.isUserModalOpen = false;
+  private handleFocusTrap(event: KeyboardEvent): void {
+    const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]');
+    if (!dialogs || dialogs.length === 0) return;
+    const topDialog = dialogs[dialogs.length - 1];
+
+    const focusable = topDialog.querySelectorAll<HTMLElement>(
+      'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable || focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey) {
+      if (document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  }
+
+  /** پیوند «پروژه‌ها و بخش‌ها» در تب مجوزها: استودیوی شرکتِ نخستین انتساب کاربر، تب پروژه‌ها (با بررسی تغییرات ذخیره‌نشده) */
+  async openUserAssignments(companyId: number | null): Promise<void> {
+    await this.requestCloseUserModal();
+    if (this.isUserModalOpen) return;
     if (companyId) {
       this.router.navigate(['/app/companies', companyId], { queryParams: { tab: 'projects' } });
     } else {
       this.router.navigate(['/app/companies']);
-    }
-  }
-
-  nextUserModalInnerTab() {
-    const tabs: (typeof this.userModalInnerTab)[] = ['identity', 'security', 'roles', 'warehouses'];
-    const idx = tabs.indexOf(this.userModalInnerTab);
-    if (idx < tabs.length - 1) {
-      this.setUserModalInnerTab(tabs[idx + 1]);
-    }
-  }
-
-  prevUserModalInnerTab() {
-    const tabs: (typeof this.userModalInnerTab)[] = ['identity', 'security', 'roles', 'warehouses'];
-    const idx = tabs.indexOf(this.userModalInnerTab);
-    if (idx > 0) {
-      this.setUserModalInnerTab(tabs[idx - 1]);
     }
   }
 
@@ -1879,9 +1994,10 @@ export class Users implements OnInit, OnDestroy {
 
   /** تب پنجرهٔ کاربر که هر فیلد در آن است (برای پرش به نخستین فیلد دارای خطا) */
   private static readonly FIELD_TAB: Record<string, 'identity' | 'security' | 'roles' | 'warehouses'> = {
-    username: 'security',
+    username: 'identity',
     password: 'security',
     groups: 'roles',
+    company_ids: 'warehouses',
     assigned_warehouses: 'warehouses',
   };
 

@@ -1,6 +1,6 @@
-<div class="space-y-5 text-right pb-10" (click)="closeMenus()" dir="rtl">
+<div class="space-y-5 text-right pb-10" [ngClass]="{ 'pb-32': selectedUserIds.size > 0 }" (click)="closeMenus()" dir="rtl">
     <!-- کانتینر چسبان هدر و ابزارهای جستجو و فیلتر (Unified Sticky Command Center) -->
-    <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md -mt-1 pt-1 pb-2 space-y-2.5 transition-all">
+    <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md -mt-1 pt-1 pb-1.5 md:pb-2 space-y-2 md:space-y-2.5 transition-all">
       <!-- نوار اصلی هدر: تب‌ها در راست و دکمه‌های اکشن استاندارد در چپ -->
       <div class="bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       <!-- لیست تب‌ها (سمت راست در RTL) -->
@@ -46,92 +46,111 @@
     </div>
 
     <!-- نوار ابزار و فیلترهای اختصاصی جدول/کارت‌های کاربران -->
-    <div *ngIf="activeTab === 'users'" class="bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 fade-in">
+    <div *ngIf="activeTab === 'users'" class="bg-white p-2.5 md:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 fade-in">
       <!-- سمت راست (شروع در RTL): فیلد جستجو و سپس چیپ‌های فیلتر سریع -->
       <div class="flex flex-wrap items-center gap-2.5 flex-1">
-        <!-- جستجوی متنی -->
-        <div class="relative w-full sm:w-64">
-          <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange($event)" name="searchQuery" placeholder="جستجو (نام، کدملی، تلفن، نقش)..." class="w-full pr-9 pl-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-800 placeholder:text-slate-400 shadow-sm">
-          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+        <!-- جستجوی متنی و دکمه باز/بستن فیلترها در موبایل -->
+        <div class="flex items-center gap-2 w-full md:w-auto flex-1">
+          <div class="relative flex-1 sm:w-64">
+            <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange($event)" name="searchQuery" aria-label="جستجوی کاربران" placeholder="جستجو (نام، کدملی، تلفن، نقش)..." class="w-full ps-9 pe-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none transition-all text-slate-800 placeholder:text-slate-500 shadow-sm">
+            <div class="absolute inset-y-0 end-0 flex items-center pe-3 pointer-events-none text-slate-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+            </div>
+            <button *ngIf="searchQuery" type="button" (click)="searchQuery=''; onSearchChange('')" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute inset-y-0 start-0 flex items-center ps-2.5 min-w-[40px] min-h-[40px] justify-center text-slate-400 hover:text-slate-600 cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+            </button>
           </div>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery=''; onSearchChange('')" class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+
+          <!-- دکمه فیلتر در موبایل -->
+          <button type="button"
+            (click)="showUserFilters = !showUserFilters"
+            [attr.aria-expanded]="showUserFilters"
+            aria-controls="users-filters"
+            title="فیلترها"
+            aria-label="فیلترها"
+            class="md:hidden min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="filter"></svg>
           </button>
         </div>
 
-        <!-- فیلتر انبار -->
-        <div class="relative w-full sm:w-40 shrink-0">
-          <select [(ngModel)]="userWarehouseFilter" (ngModelChange)="onFilterChange()"
-            class="w-full pr-8 pl-6 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer shadow-sm">
-            <option value="ALL">{{ scopeLabels.allOption }}</option>
-            <option *ngFor="let p of state.appState.projects" [value]="p.id">{{ p.name }}</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-slate-400">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="box-outline"></svg>
+        <!-- فیلترهای جمع‌شونده در موبایل -->
+        <div id="users-filters"
+          [ngClass]="showUserFilters ? 'flex flex-wrap items-center gap-2.5 w-full md:w-auto' : 'hidden md:flex flex-wrap items-center gap-2.5'">
+          <!-- فیلتر انبار -->
+          <div class="relative w-full sm:w-40 shrink-0">
+            <label for="usersWarehouseFilter" class="sr-only">فیلتر انبار</label>
+            <select id="usersWarehouseFilter" [(ngModel)]="userWarehouseFilter" (ngModelChange)="onFilterChange()"
+              class="w-full ps-8 pe-6 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer shadow-sm">
+              <option value="ALL">{{ scopeLabels.allOption }}</option>
+              <option *ngFor="let p of state.appState.projects" [value]="p.id">{{ p.name }}</option>
+            </select>
+            <div class="absolute inset-y-0 end-0 flex items-center pe-2.5 pointer-events-none text-slate-400">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="box-outline"></svg>
+            </div>
+            <div class="absolute inset-y-0 start-0 flex items-center ps-2 pointer-events-none text-slate-400">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
+            </div>
           </div>
-          <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
-          </div>
-        </div>
 
-        <!-- فیلتر نقش سازمانی -->
-        <div class="relative w-full sm:w-40 shrink-0">
-          <select [(ngModel)]="userRoleFilter" (ngModelChange)="onFilterChange()"
-            class="w-full pr-8 pl-6 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer shadow-sm">
-            <option value="ALL">همه نقش‌ها</option>
-            <option *ngFor="let r of allRoles" [value]="r.id">{{ r.title || r.name }}</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-slate-400">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
+          <!-- فیلتر نقش سازمانی -->
+          <div class="relative w-full sm:w-40 shrink-0">
+            <label for="usersRoleFilter" class="sr-only">فیلتر نقش سازمانی</label>
+            <select id="usersRoleFilter" [(ngModel)]="userRoleFilter" (ngModelChange)="onFilterChange()"
+              class="w-full ps-8 pe-6 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer shadow-sm">
+              <option value="ALL">همه نقش‌ها</option>
+              <option *ngFor="let r of allRoles" [value]="r.id">{{ r.title || r.name }}</option>
+            </select>
+            <div class="absolute inset-y-0 end-0 flex items-center pe-2.5 pointer-events-none text-slate-400">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
+            </div>
+            <div class="absolute inset-y-0 start-0 flex items-center ps-2 pointer-events-none text-slate-400">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
+            </div>
           </div>
-          <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
-          </div>
-        </div>
 
-        <!-- چیپ‌های وضعیت پرسنل -->
-        <div class="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200 overflow-x-auto text-[11px] font-bold">
-          <button type="button" (click)="setStatusFilter('all')"
-            [ngClass]="userStatusFilter === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-            class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
-            <span>همه</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.all }}</span>
-          </button>
-          <button type="button" (click)="setStatusFilter('active')"
-            [ngClass]="userStatusFilter === 'active' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-            class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
-            <span>فعال</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.active }}</span>
-          </button>
-          <button type="button" (click)="setStatusFilter('inactive')"
-            [ngClass]="userStatusFilter === 'inactive' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-            class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
-            <span>معلق</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'inactive' ? 'bg-rose-50 text-rose-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.inactive }}</span>
-          </button>
-          <button type="button" (click)="setStatusFilter('no_warehouse')"
-            [ngClass]="userStatusFilter === 'no_warehouse' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-            class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
-            <span>{{ scopeLabels.noneOption }}</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'no_warehouse' ? 'bg-amber-50 text-amber-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.noWarehouse }}</span>
-          </button>
-          <button type="button" (click)="setStatusFilter('superuser')"
-            [ngClass]="userStatusFilter === 'superuser' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-            class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
-            <span>ادمین کل</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'superuser' ? 'bg-purple-50 text-purple-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.superuser }}</span>
-          </button>
+          <!-- چیپ‌های وضعیت پرسنل -->
+          <div class="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200 overflow-x-auto text-[11px] font-bold">
+            <button type="button" (click)="setStatusFilter('all')"
+              [ngClass]="userStatusFilter === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+              class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
+              <span>همه</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.all }}</span>
+            </button>
+            <button type="button" (click)="setStatusFilter('active')"
+              [ngClass]="userStatusFilter === 'active' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+              class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
+              <span>فعال</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.active }}</span>
+            </button>
+            <button type="button" (click)="setStatusFilter('inactive')"
+              [ngClass]="userStatusFilter === 'inactive' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+              class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
+              <span>معلق</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'inactive' ? 'bg-rose-50 text-rose-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.inactive }}</span>
+            </button>
+            <button type="button" (click)="setStatusFilter('no_warehouse')"
+              [ngClass]="userStatusFilter === 'no_warehouse' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+              class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
+              <span>{{ scopeLabels.noneOption }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'no_warehouse' ? 'bg-amber-50 text-amber-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.noWarehouse }}</span>
+            </button>
+            <button type="button" (click)="setStatusFilter('superuser')"
+              [ngClass]="userStatusFilter === 'superuser' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+              class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
+              <span>ادمین کل</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'superuser' ? 'bg-purple-50 text-purple-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.superuser }}</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- سمت چپ (انتهای RTL): تعداد پرسنل و سوئیچ دوگانه نما -->
       <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-        <span class="text-[11px] font-bold text-slate-400 font-mono hidden md:inline">
+        <span class="text-[11px] font-bold text-slate-500 font-mono hidden md:inline">
           {{ filteredUsers.length }} از {{ state.appState.users?.length || 0 }} پرسنل
         </span>
 
-        <div class="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200 shrink-0 gap-1">
+        <div class="hidden md:flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200 shrink-0 gap-1">
           <button type="button" (click)="setViewMode('grid')"
             [ngClass]="userViewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'"
             class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 text-[11px] font-bold tap-target"
@@ -187,7 +206,7 @@
                 <button type="button" appAction="refresh" label="تلاش دوباره" [busy]="isLoading" (click)="loadData()"></button>
             </div>
             <div *ngIf="!isLoading && !usersLoadError && filteredUsers.length === 0" class="text-center py-10 text-slate-400 text-xs font-bold">کاربری با این مشخصات یافت نشد.</div>
-            <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div *ngIf="!isLoading && filteredUsers.length > 0" data-users-grid [ngClass]="{ 'md:hidden': userViewMode === 'table' }" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 <div *ngFor="let u of displayedUsers; trackBy: trackById"
                      class="bg-white rounded-2xl border shadow-sm p-3.5 relative group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-indigo-200 flex flex-col justify-between"
                      [ngClass]="!u.is_active ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200'"
@@ -223,7 +242,7 @@
                             <span class="truncate">{{u.first_name}} {{u.last_name}}</span>
                             <span *ngIf="u.is_superuser" class="text-[8.5px] px-1 py-0.5 rounded font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">ادمین</span>
                             <span *ngIf="isUserLocked(u.username)" class="text-[8px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0 flex items-center gap-0.5" title="مسدود شده توسط سیستم ضدنفوذ">
-                              <span>🔒</span> قفل
+                              <svg appIcon="lock" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg> قفل
                             </span>
                           </h4>
                           <div class="text-[10px] font-mono text-slate-400 mt-0.5 flex items-center gap-1.5 truncate">
@@ -241,7 +260,7 @@
                         </button>
 
                         <div class="relative action-dropdown" appClickOutside (clickedOutside)="openMenuId === 'usr-' + u.id ? closeMenus() : null">
-                          <button type="button" (click)="toggleMenu($event, 'usr-' + u.id)" class="p-1 sm:min-w-[28px] sm:min-h-[28px] tap-target text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative z-[100] cursor-pointer" title="عملیات بیشتر" aria-label="عملیات بیشتر">
+                          <button type="button" (click)="toggleMenu($event, 'usr-' + u.id)" class="p-1 min-w-[40px] min-h-[40px] inline-flex items-center justify-center tap-target text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative z-[100] cursor-pointer" title="عملیات بیشتر" aria-label="عملیات بیشتر">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="more-vertical"></svg>
                           </button>
                           
@@ -311,7 +330,7 @@
                               [ngClass]="cb.is_default ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
                               class="px-1.5 py-0.5 rounded-md font-sans text-[9px] font-bold border truncate"
                               [title]="cb.name + (cb.is_default ? ' (اصلی)' : '')">
-                          <span *ngIf="cb.is_default && getUserCompanyBadges(u).length > 1" class="text-amber-500 text-[8px]">★</span>
+                          <svg *ngIf="cb.is_default && getUserCompanyBadges(u).length > 1" appIcon="star" class="w-2.5 h-2.5 text-amber-500 fill-current inline-block" aria-hidden="true" title="شرکت پیش‌فرض" viewBox="0 0 24 24" fill="none"></svg>
                           {{ cb.name }}
                         </span>
                         <span *ngIf="getUserCompanyBadges(u).length > 2" class="text-[9px] font-mono text-indigo-600 font-bold">
@@ -321,7 +340,7 @@
                       <span *ngIf="getUserCompanyBadges(u).length === 0" class="font-sans text-slate-400 text-[9.5px]">بدون شرکت</span>
                     </div>
                     <span *ngIf="u.phone_number" class="flex items-center gap-1 text-slate-600 font-bold shrink-0">
-                      <span class="text-slate-400 text-[9px]">📱</span>
+                      <svg appIcon="smartphone" class="w-3 h-3 text-slate-400 inline-block" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                       <span>{{u.phone_number}}</span>
                     </span>
                     <span *ngIf="!u.phone_number" class="text-slate-400 text-[9.5px] font-sans shrink-0">بدون تماس</span>
@@ -330,14 +349,14 @@
             </div>
 
             <!-- دکمه بارگذاری تدریجی کارت‌ها (Chunking Load More) -->
-            <div *ngIf="userViewMode === 'grid' && visibleCount < filteredUsers.length" class="text-center mt-4">
+            <div *ngIf="visibleCount < filteredUsers.length" [ngClass]="{ 'md:hidden': userViewMode === 'table' }" class="text-center mt-4">
               <button type="button" (click)="loadMoreUsers()" class="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-200 transition-all cursor-pointer shadow-sm hover:shadow-sm active:scale-95">
                 نمایش پرسنل بیشتر ({{ filteredUsers.length - visibleCount }} کاربر دیگر)
               </button>
             </div>
 
             <!-- نمای جدول سازمانی (DataGrid Table View) -->
-            <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'table'" class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden fade-in">
+            <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'table'" data-users-table class="hidden md:block bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden fade-in">
               <div class="overflow-x-auto">
                 <table class="w-full text-right text-xs border-collapse">
                   <thead class="bg-slate-50/90 text-slate-700 border-b border-slate-200 text-[11px] font-black uppercase tracking-wider">
@@ -414,7 +433,7 @@
                           <div class="font-mono text-xs text-slate-700 font-bold" *ngIf="u.national_code">{{ u.national_code }}</div>
                           <div class="text-[10px] text-slate-400 font-mono" *ngIf="!u.national_code">فاقد کد ملی</div>
                           <div class="font-mono text-[10.5px] text-slate-500 flex items-center gap-1" *ngIf="u.phone_number">
-                            <span class="text-slate-400">📱</span>
+                            <svg appIcon="smartphone" class="w-3.5 h-3.5 text-slate-400 inline-block" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                             <span>{{ u.phone_number }}</span>
                           </div>
                         </div>
@@ -470,7 +489,7 @@
                                   [ngClass]="cb.is_default ? 'bg-indigo-50 text-indigo-700 border-indigo-200/90 shadow-sm font-black' : 'bg-slate-50 text-slate-700 border-slate-200 font-bold'"
                                   class="px-2 py-0.5 rounded-lg text-[10.5px] border flex items-center gap-1 transition-all"
                                   [title]="cb.name + (cb.is_default ? ' (شرکت اصلی / پیش‌فرض)' : '')">
-                              <span *ngIf="cb.is_default && getUserCompanyBadges(u).length > 1" class="text-amber-500 text-[9px]" title="شرکت اصلی">★</span>
+                              <svg *ngIf="cb.is_default && getUserCompanyBadges(u).length > 1" appIcon="star" class="w-2.5 h-2.5 text-amber-500 fill-current inline-block" aria-hidden="true" title="شرکت اصلی" viewBox="0 0 24 24" fill="none"></svg>
                               <span class="truncate">{{ cb.name }}</span>
                             </span>
                           </ng-container>
@@ -490,7 +509,7 @@
                             معلق
                           </span>
                           <span *ngIf="isUserLocked(u.username)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-300" title="مسدود شده توسط سیستم ضدنفوذ">
-                            <span>🔒</span> قفل
+                            <svg appIcon="lock" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg> قفل
                           </span>
                         </div>
                       </td>
@@ -499,35 +518,35 @@
                       <td class="py-3.5 px-4 text-center">
                         <div class="flex items-center justify-center gap-1">
                           <!-- Unlock Button (Axes) -->
-                          <button *ngIf="isUserLocked(u.username)" type="button" (click)="unlockUser(u, $event)" class="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer" title="رفع مسدودیت ضدنفوذ (آنلاک)">
+                          <button *ngIf="isUserLocked(u.username)" type="button" (click)="unlockUser(u, $event)" class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer" title="رفع مسدودیت ضدنفوذ (آنلاک)" aria-label="رفع مسدودیت ضدنفوذ (آنلاک)">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="unlock"></svg>
                           </button>
                           <!-- Edit Button -->
-                          <button type="button" (click)="openUserModal(u.id)" class="p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center tap-target text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
+                          <button type="button" (click)="openUserModal(u.id)" class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center tap-target text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده" aria-label="ویرایش پرونده">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                           </button>
 
                           <!-- Avatar Button -->
-                          <button *ngIf="canEditUsers()" type="button" (click)="openAvatarModalForUser(u)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'تغییر تصویر'" [disabled]="isOffline" aria-label="تغییر تصویر">
+                          <button *ngIf="canEditUsers()" type="button" (click)="openAvatarModalForUser(u)" class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'تغییر تصویر'" [disabled]="isOffline" aria-label="تغییر تصویر">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
                           </button>
 
                           <!-- Password Reset Button -->
-                          <button *ngIf="canEditUsers()" type="button" (click)="resetPassword(u.id)" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'ریست کلمه عبور'" [disabled]="isOffline" aria-label="ریست کلمه عبور">
+                          <button *ngIf="canEditUsers()" type="button" (click)="resetPassword(u.id)" class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'ریست کلمه عبور'" [disabled]="isOffline" aria-label="ریست کلمه عبور">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="lock"></svg>
                           </button>
 
                           <!-- Toggle Status (Suspend / Activate) -->
                           <button *ngIf="canEditUsers()" type="button" (click)="toggleUserStatus(u.id)"
                                   [ngClass]="u.is_active ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'"
-                                  class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                                  class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
                                   [attr.title]="isOffline ? offlineTitle : (u.is_active ? 'تعلیق / مسدودسازی حساب' : 'خروج از تعلیق (فعال‌سازی)')" [disabled]="isOffline" [attr.aria-label]="u.is_active ? 'تعلیق / مسدودسازی حساب' : 'خروج از تعلیق (فعال‌سازی)'">
                             <svg *ngIf="u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="slash"></svg>
                             <svg *ngIf="!u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="check"></svg>
                           </button>
 
                           <!-- Delete Button -->
-                          <button *ngIf="canEditUsers()" type="button" (click)="deleteUser(u.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'حذف کاربر'" [disabled]="isOffline" aria-label="حذف کاربر">
+                          <button *ngIf="canEditUsers()" type="button" (click)="deleteUser(u.id)" class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none" [attr.title]="isOffline ? offlineTitle : 'حذف کاربر'" [disabled]="isOffline" aria-label="حذف کاربر">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                           </button>
                         </div>
@@ -538,7 +557,7 @@
               </div>
             </div>
             <!-- نوار کنترل صفحه‌بندی مدرن و استاندارد (Compact Modern Pagination) -->
-            <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'table'" data-users-pagination class="mt-5 bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div *ngIf="!isLoading && filteredUsers.length > 0 && userViewMode === 'table'" data-users-pagination class="hidden md:flex mt-5 bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex-col sm:flex-row sm:items-center justify-between gap-3">
               <!-- سمت راست (شروع RTL): نمایش بازه سطرها و تعداد کل -->
               <div class="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
                 <span>نمایش</span>
@@ -598,8 +617,8 @@
 
             <!-- نوار شناور عملیات گروهی (Floating Bulk Action Bar) -->
             <div *ngIf="selectedUserIds.size > 0"
-                 class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3.5 transition-all duration-300 fade-in slide-in-from-bottom-4">
-              <div class="flex items-center gap-2 border-l border-slate-700 pl-3">
+                 class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:inset-x-0 sm:mx-auto sm:w-fit z-50 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-wrap justify-center items-center gap-3.5 transition-all duration-300 fade-in slide-in-from-bottom-4">
+              <div class="flex items-center gap-2 border-e border-slate-700 pe-3">
                 <span class="w-6 h-6 rounded-full bg-indigo-500 text-white font-mono font-black text-xs flex items-center justify-center">
                   {{ selectedUserIds.size }}
                 </span>
@@ -609,21 +628,21 @@
               <!-- دکمه‌های عملیات گروهی -->
               <div class="flex items-center gap-2">
                 <button *ngIf="canEditUsers()" type="button" (click)="bulkToggleStatus(true)"
-                  class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                  class="px-3 py-1.5 min-h-[40px] rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
                   [attr.title]="isOffline ? offlineTitle : 'فعال‌سازی حساب کاربران انتخاب‌شده'" [disabled]="isOffline">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   <span>فعال‌سازی</span>
                 </button>
 
                 <button *ngIf="canEditUsers()" type="button" (click)="bulkToggleStatus(false)"
-                  class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                  class="px-3 py-1.5 min-h-[40px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
                   [attr.title]="isOffline ? offlineTitle : 'تعلیق حساب کاربران انتخاب‌شده'" [disabled]="isOffline">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="slash"></svg>
                   <span>تعلیق حساب</span>
                 </button>
 
                 <button type="button" (click)="bulkExportSelectedUsers()"
-                  class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-600 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  class="px-3 py-1.5 min-h-[40px] rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-600 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                   title="دانلود فایل اکسل از کاربران انتخاب‌شده">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
                   <span>خروجی اکسل</span>
@@ -632,8 +651,8 @@
 
               <!-- لغو انتخاب -->
               <button type="button" (click)="clearUserSelection()"
-                class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer mr-1"
-                title="لغو انتخاب">
+                class="p-1.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer me-1"
+                title="لغو انتخاب" aria-label="لغو انتخاب">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
               </button>
             </div>
@@ -848,6 +867,7 @@
     <!-- Modal Body (پدینگ بهینه و ارگونومیک) -->
     <div class="p-4 overflow-y-auto flex-1 custom-scrollbar">
       <form class="space-y-3 text-right" (submit)="$event.preventDefault()">
+        <fieldset [disabled]="isOffline" class="contents">
         <!-- ۱. مشخصات اصلی نقش (چیدمان افقی و تک‌خطی فوق‌العاده فشرده) -->
         <div class="bg-slate-50/90 rounded-xl border border-slate-200/80 p-3 shadow-sm">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-end">
@@ -885,7 +905,7 @@
                     [class.ring-2]="roleForm.color?.toLowerCase() === c.toLowerCase()"
                     [class.ring-indigo-600]="roleForm.color?.toLowerCase() === c.toLowerCase()"
                     [title]="c">
-                    <span *ngIf="roleForm.color?.toLowerCase() === c.toLowerCase()" class="text-white text-[7px] font-black">✓</span>
+                    <svg *ngIf="roleForm.color?.toLowerCase() === c.toLowerCase()" appIcon="check" class="w-2.5 h-2.5 text-white" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                   </button>
                 </div>
                 <!-- انتخابگر رنگ سفارشی -->
@@ -901,11 +921,11 @@
         <div class="bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-slate-50 rounded-xl border border-indigo-100/80 p-2.5 transition-all">
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2 min-w-0">
-              <span class="text-xs">⚡</span>
+              <svg appIcon="zap" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
               <span class="text-xs font-black text-indigo-950 whitespace-nowrap">قالب‌های آماده نقش:</span>
               <span *ngIf="activeRolePresetId" class="text-[10px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1 truncate">
                 <span>قالب فعال: {{ getActivePresetTitle() }}</span>
-                <span>✓</span>
+                <svg appIcon="check" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
               </span>
               <span *ngIf="!activeRolePresetId" class="text-[10.5px] text-slate-500 truncate hidden sm:inline">{{ scopeLabels.presetsHint }}</span>
             </div>
@@ -952,7 +972,7 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center justify-between gap-1">
                     <p class="text-[10.5px] font-black truncate" [ngClass]="activeRolePresetId === preset.id ? 'text-indigo-700' : 'text-slate-800 group-hover:text-indigo-600'">{{preset.title}}</p>
-                    <span *ngIf="activeRolePresetId === preset.id" class="text-[8px] bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-full shrink-0">فعال ✓</span>
+                    <span *ngIf="activeRolePresetId === preset.id" class="text-[8px] bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-full shrink-0 inline-flex items-center gap-0.5"><svg appIcon="check" class="w-2.5 h-2.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>فعال</span>
                   </div>
                   <div class="flex items-center gap-1 mt-0.5">
                     <span class="text-[7.5px] font-bold px-1 py-0.5 rounded text-slate-500 bg-slate-100">{{preset.categoryTitle}}</span>
@@ -968,12 +988,12 @@
         <div class="bg-gradient-to-r from-emerald-50/70 via-teal-50/30 to-slate-50 rounded-xl border border-emerald-200/80 p-2.5 transition-all">
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2 min-w-0">
-              <span class="text-sm">👥</span>
+              <svg appIcon="users" class="w-4 h-4 text-emerald-700" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
               <span class="text-xs font-black text-slate-800 whitespace-nowrap">اعضا و پرسنل این نقش:</span>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 transition-all"
                 [ngClass]="(roleForm.user_ids?.length || 0) > 0 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200 text-slate-600'">
                 <span>{{ (roleForm.user_ids?.length || 0) }} کاربر منتخب</span>
-                <span *ngIf="(roleForm.user_ids?.length || 0) > 0">✓</span>
+                <svg *ngIf="(roleForm.user_ids?.length || 0) > 0" appIcon="check" class="w-3 h-3 text-white inline-block" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
               </span>
               <span class="text-[10px] text-slate-500 truncate hidden md:inline">انتساب مستقیم اعضا بدون نیاز به مراجعه جداگانه به تک‌تک پرونده‌ها</span>
             </div>
@@ -1133,7 +1153,7 @@
                           </div>
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1 flex-wrap">
-                              <span *ngIf="perm.is_sensitive" class="text-[10px]">🛡️</span>
+                              <svg *ngIf="perm.is_sensitive" appIcon="shield" class="w-3 h-3 text-rose-600 inline-block" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                               <span class="text-[11px] font-black truncate" [ngClass]="perm.is_sensitive ? 'text-rose-900' : (roleForm.permissions.includes(perm.id) ? 'text-indigo-950' : 'text-slate-800')">{{getShortPermissionName(perm)}}</span>
                             </div>
                             <span class="text-[8.5px] font-mono block truncate" [ngClass]="perm.is_sensitive ? 'text-rose-600' : 'text-slate-400'">{{perm.codename}}</span>
@@ -1149,6 +1169,7 @@
              </div>
           </div>
         </div>
+        </fieldset>
       </form>
     </div>
 
@@ -1229,77 +1250,9 @@
       </button>
     </div>
 
-    <!-- Inner Tab Bar (نوار تب‌های ۴ گانه تفکیک‌شده) -->
+    <!-- Inner Tab Bar (نوار تب‌های چندگانه ارگونومیک) -->
     <div class="px-6 py-2.5 bg-slate-50/90 border-b border-slate-200/90 flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar shrink-0">
-      <div class="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm w-full">
-        <!-- تب ۱: هویت و تماس -->
-        <button type="button" (click)="setUserModalInnerTab('identity')"
-          [ngClass]="userModalInnerTab === 'identity' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
-          class="flex-1 py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none">
-          <span class="text-sm">👤</span>
-          <span class="truncate">هویت و تماس</span>
-          <span *ngIf="isFieldValid('first_name') && isFieldValid('last_name') && isFieldValid('phone_number')" 
-                [ngClass]="userModalInnerTab === 'identity' ? 'text-emerald-300' : 'text-emerald-600'" 
-                class="text-xs font-bold">✓</span>
-          <span *ngIf="userFormErrors['first_name'] || userFormErrors['last_name'] || userFormErrors['phone_number'] || userFormErrors['national_code']"
-                class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-        </button>
-
-        <!-- تب ۲: امنیت و ورود -->
-        <button type="button" (click)="setUserModalInnerTab('security')"
-          [ngClass]="userModalInnerTab === 'security' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
-          class="flex-1 py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none">
-          <span class="text-sm">🔐</span>
-          <span class="truncate">امنیت و ورود</span>
-          <span *ngIf="isFieldValid('username')" 
-                [ngClass]="userModalInnerTab === 'security' ? 'text-emerald-300' : 'text-emerald-600'" 
-                class="text-xs font-bold">✓</span>
-          <span *ngIf="userFormErrors['username'] || userFormErrors['password']"
-                class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-        </button>
-
-        <!-- تب ۳: نقش‌های سازمانی -->
-        <button type="button" (click)="setUserModalInnerTab('roles')"
-          [ngClass]="userModalInnerTab === 'roles' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
-          class="flex-1 py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none">
-          <span class="text-sm">🛡️</span>
-          <span class="truncate">نقش‌های سازمانی</span>
-          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold"
-            [ngClass]="userModalInnerTab === 'roles' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'">
-            {{ userForm.groups?.length || 0 }}
-          </span>
-        </button>
-
-        <!-- تب ۴: شرکت‌ها و انبارها -->
-        <button type="button" (click)="setUserModalInnerTab('warehouses')"
-          [ngClass]="userModalInnerTab === 'warehouses' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
-          class="flex-1 py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none">
-          <span class="text-sm">🏢</span>
-          <span class="truncate">{{ scopeLabels.companiesTab }}</span>
-          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold"
-            [ngClass]="userModalInnerTab === 'warehouses' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'">
-            {{ userForm.company_ids?.length || 0 }} ش / {{ userForm.assigned_warehouses?.length || 0 }} ا
-          </span>
-        </button>
-
-        <!-- تب ۵: مجوزها (طرح ۲.۲)؛ فقط برای کاربر ذخیره‌شده -->
-        <button *ngIf="editingUser?.id" type="button" (click)="setUserModalInnerTab('permissions')" data-user-permissions-tab
-          [ngClass]="userModalInnerTab === 'permissions' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
-          class="flex-1 min-w-[40px] min-h-[40px] py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none"
-          title="مجوزهای کاربر" aria-label="مجوزهای کاربر">
-          <svg appIcon="key" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-          <span class="truncate hidden sm:inline">مجوزها</span>
-        </button>
-
-        <!-- تب ۶: جانشین موقت (طرح ۲.۳)؛ فقط برای کاربر ذخیره‌شده -->
-        <button *ngIf="editingUser?.id" type="button" (click)="setUserModalInnerTab('substitute')" data-user-substitute-tab
-          [ngClass]="userModalInnerTab === 'substitute' ? 'bg-indigo-600 text-white shadow-sm font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
-          class="flex-1 min-w-[40px] min-h-[40px] py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none"
-          title="جانشین موقت کاربر" aria-label="جانشین موقت کاربر">
-          <svg appIcon="user-check" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-          <span class="truncate hidden sm:inline">جانشین</span>
-        </button>
-      </div>
+      <app-tab-bar [tabs]="userModalTabs" [active]="userModalInnerTab" (activeChange)="setUserModalInnerTab($any($event))" mobile="icon" idPrefix="user-modal" class="w-full" />
     </div>
     
     <!-- Modal Body -->
@@ -1311,18 +1264,19 @@
         <fieldset [disabled]="userFormReadonly" data-user-form-fieldset class="contents">
         
         <!-- تب ۱: اطلاعات هویتی، پرسنلی و تماس -->
-        <div *ngIf="userModalInnerTab === 'identity'" class="space-y-4 fade-in duration-200">
+        <div *ngIf="userModalInnerTab === 'identity'" id="user-modal-panel-identity" role="tabpanel" aria-labelledby="user-modal-tab-identity" class="space-y-4 fade-in duration-200">
           <!-- کارت الف: اطلاعات هویتی و پرسنلی -->
-          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4.5 space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">👤</span>
+                <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                  <svg appIcon="user" class="w-4 h-4" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                </span>
                 <div>
                   <h3 class="text-xs font-black text-slate-800">اطلاعات هویتی و پرسنلی</h3>
                   <p class="text-[10px] text-slate-400">مشخصات شناسنامه‌ای، تصویر رسمی و رده سازمانی</p>
                 </div>
               </div>
-              <span class="text-[10px] font-bold text-slate-400">گام ۱ از ۴</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -1347,10 +1301,38 @@
 
               <!-- فیلدهای نام، نام خانوادگی، کد ملی، شرکت و زون -->
               <div class="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- شناسه ورود (منتقل‌شده از گام امنیت به بالای هویت) -->
+                <div class="md:col-span-2">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label for="user-username" class="block text-[11px] font-black text-slate-700">
+                      کد / نام کاربری (Personnel ID)
+                      <span class="text-rose-500 text-xs font-black">*</span>
+                    </label>
+                    <span *ngIf="isFieldValid('username')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+                      شناسه معتبر
+                    </span>
+                    <span *ngIf="editingUser" class="text-[9px] text-slate-400 font-medium">غیرقابل تغییر در ویرایش</span>
+                  </div>
+                  <div class="relative">
+                    <input type="text" [(ngModel)]="userForm.username" (input)="clearUserFormError('username')" name="personnel_username" id="user-username" autocomplete="new-password" placeholder="مثال: h.alishavandi یا 10054" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono font-bold text-indigo-800 transition-all" dir="ltr" [readonly]="editingUser != null" [class]="getFieldClass('username')" [attr.aria-invalid]="userFieldMessages['username'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['username'] ? 'user-field-error-username' : null">
+                    <div *ngIf="isFieldValid('username')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                    </div>
+                    <div *ngIf="userFormErrors['username']" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
+                    </div>
+                  </div>
+                  <p *ngIf="userFieldMessages['username']" id="user-field-error-username" data-field-error="username" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['username'] }}</p>
+                  <p class="text-[10px] text-slate-400 mt-1 leading-normal">
+                    شناسه ورود یکتای پرسنل به سامانه (حداقل ۳ کاراکتر انگلیسی، اعداد، نقطه یا خط تیره).
+                  </p>
+                </div>
+
                 <!-- نام -->
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-[11px] font-black text-slate-700">
+                    <label for="user-first-name" class="block text-[11px] font-black text-slate-700">
                       نام (First Name)
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
@@ -1360,7 +1342,7 @@
                     </span>
                   </div>
                   <div class="relative">
-                    <input type="text" [(ngModel)]="userForm.first_name" (input)="clearUserFormError('first_name')" name="first_name" placeholder="مثال: حبیب" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('first_name')">
+                    <input type="text" [(ngModel)]="userForm.first_name" (input)="clearUserFormError('first_name')" name="first_name" id="user-first-name" placeholder="مثال: حبیب" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('first_name')" [attr.aria-invalid]="userFieldMessages['first_name'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['first_name'] ? 'user-field-error-first_name' : null">
                     <div *ngIf="isFieldValid('first_name')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
@@ -1368,13 +1350,13 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
-                  <p *ngIf="userFieldMessages['first_name']" data-field-error="first_name" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['first_name'] }}</p>
+                  <p *ngIf="userFieldMessages['first_name']" id="user-field-error-first_name" data-field-error="first_name" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['first_name'] }}</p>
                 </div>
 
                 <!-- نام خانوادگی -->
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-[11px] font-black text-slate-700">
+                    <label for="user-last-name" class="block text-[11px] font-black text-slate-700">
                       نام خانوادگی (Last Name)
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
@@ -1384,7 +1366,7 @@
                     </span>
                   </div>
                   <div class="relative">
-                    <input type="text" [(ngModel)]="userForm.last_name" (input)="clearUserFormError('last_name')" name="last_name" placeholder="مثال: عالیشوندی" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('last_name')">
+                    <input type="text" [(ngModel)]="userForm.last_name" (input)="clearUserFormError('last_name')" name="last_name" id="user-last-name" placeholder="مثال: عالیشوندی" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('last_name')" [attr.aria-invalid]="userFieldMessages['last_name'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['last_name'] ? 'user-field-error-last_name' : null">
                     <div *ngIf="isFieldValid('last_name')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
@@ -1392,20 +1374,20 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
-                  <p *ngIf="userFieldMessages['last_name']" data-field-error="last_name" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['last_name'] }}</p>
+                  <p *ngIf="userFieldMessages['last_name']" id="user-field-error-last_name" data-field-error="last_name" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['last_name'] }}</p>
                 </div>
 
                 <!-- کد ملی -->
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-[11px] font-bold text-slate-600">کد ملی (National ID)</label>
+                    <label for="user-national-code" class="block text-[11px] font-bold text-slate-600">کد ملی (National ID)</label>
                     <span *ngIf="isFieldValid('national_code')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       تایید الگوریتم ۱۰ رقمی
                     </span>
                   </div>
                   <div class="relative">
-                    <input type="text" [(ngModel)]="userForm.national_code" (input)="clearUserFormError('national_code')" name="national_code" placeholder="۱۰ رقم (مانند 2280000000)" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('national_code')">
+                    <input type="text" [(ngModel)]="userForm.national_code" (input)="clearUserFormError('national_code')" name="national_code" id="user-national-code" placeholder="۱۰ رقم (مانند 2280000000)" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('national_code')" [attr.aria-invalid]="userFieldMessages['national_code'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['national_code'] ? 'user-field-error-national_code' : null">
                     <div *ngIf="isFieldValid('national_code')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
@@ -1413,39 +1395,41 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
-                  <p *ngIf="userFieldMessages['national_code']" data-field-error="national_code" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['national_code'] }}</p>
+                  <p *ngIf="userFieldMessages['national_code']" id="user-field-error-national_code" data-field-error="national_code" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['national_code'] }}</p>
                 </div>
 
                 <!-- زون عملیاتی -->
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1.5">منطقه / زون عملیاتی</label>
+                  <label for="user-operational-zone" class="block text-[11px] font-bold text-slate-600 mb-1.5">منطقه / زون عملیاتی</label>
                   <div class="relative">
-                    <input type="text" [(ngModel)]="userForm.operational_zone" (input)="clearUserFormError('operational_zone')" name="operational_zone" placeholder="مثال: منطقه ۱ - اهواز" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('operational_zone')">
+                    <input type="text" [(ngModel)]="userForm.operational_zone" (input)="clearUserFormError('operational_zone')" name="operational_zone" id="user-operational-zone" placeholder="مثال: منطقه ۱ - اهواز" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('operational_zone')" [attr.aria-invalid]="userFieldMessages['operational_zone'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['operational_zone'] ? 'user-field-error-operational_zone' : null">
                     <div *ngIf="isFieldValid('operational_zone')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                   </div>
-                  <p *ngIf="userFieldMessages['operational_zone']" data-field-error="operational_zone" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['operational_zone'] }}</p>
+                  <p *ngIf="userFieldMessages['operational_zone']" id="user-field-error-operational_zone" data-field-error="operational_zone" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['operational_zone'] }}</p>
                 </div>
 
                 <!-- سرپرست مستقیم -->
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1.5">سرپرست مستقیم (Supervisor)</label>
-                  <select [(ngModel)]="userForm.supervisor" name="supervisor" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none cursor-pointer transition-all" [class]="getFieldClass('supervisor')">
+                  <label for="user-supervisor" class="block text-[11px] font-bold text-slate-600 mb-1.5">سرپرست مستقیم (Supervisor)</label>
+                  <select [(ngModel)]="userForm.supervisor" name="supervisor" id="user-supervisor" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none cursor-pointer transition-all" [class]="getFieldClass('supervisor')" [attr.aria-invalid]="userFieldMessages['supervisor'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['supervisor'] ? 'user-field-error-supervisor' : null">
                     <option [ngValue]="null">--- بدون سرپرست مستقیم ---</option>
                     <option *ngFor="let s of getAvailableSupervisors()" [ngValue]="s.id">{{s.first_name}} {{s.last_name}} ({{s.username}})</option>
                   </select>
-                  <p *ngIf="userFieldMessages['supervisor']" data-field-error="supervisor" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['supervisor'] }}</p>
+                  <p *ngIf="userFieldMessages['supervisor']" id="user-field-error-supervisor" data-field-error="supervisor" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['supervisor'] }}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- کارت ب: اطلاعات تماس و نشانی -->
-          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4.5 space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-sm">📱</span>
+                <span class="w-7 h-7 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-sm">
+                  <svg appIcon="smartphone" class="w-4 h-4" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                </span>
                 <div>
                   <h3 class="text-xs font-black text-slate-800">اطلاعات تماس و نشانی</h3>
                   <p class="text-[10px] text-slate-400">شماره‌های همراه، تماس اضطراری، گروه خونی و آدرس محل خدمت</p>
@@ -1457,7 +1441,7 @@
               <!-- تلفن همراه -->
               <div class="md:col-span-1">
                 <div class="flex items-center justify-between mb-1.5">
-                  <label class="block text-[11px] font-black text-slate-700">
+                  <label for="user-phone-number" class="block text-[11px] font-black text-slate-700">
                     تلفن همراه
                     <span class="text-rose-500 text-xs font-black">*</span>
                   </label>
@@ -1467,7 +1451,7 @@
                   </span>
                 </div>
                 <div class="relative">
-                  <input type="tel" [(ngModel)]="userForm.phone_number" (input)="clearUserFormError('phone_number')" name="phone_number" placeholder="09123456789" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('phone_number')">
+                  <input type="tel" [(ngModel)]="userForm.phone_number" (input)="clearUserFormError('phone_number')" name="phone_number" id="user-phone-number" placeholder="09123456789" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('phone_number')" [attr.aria-invalid]="userFieldMessages['phone_number'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['phone_number'] ? 'user-field-error-phone_number' : null">
                   <div *ngIf="isFieldValid('phone_number')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
@@ -1475,25 +1459,25 @@
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                   </div>
                 </div>
-                <p *ngIf="userFieldMessages['phone_number']" data-field-error="phone_number" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['phone_number'] }}</p>
+                <p *ngIf="userFieldMessages['phone_number']" id="user-field-error-phone_number" data-field-error="phone_number" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['phone_number'] }}</p>
               </div>
 
               <!-- تماس اضطراری -->
               <div class="md:col-span-1">
-                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">تماس اضطراری (Emergency)</label>
+                <label for="user-emergency-contact" class="block text-[11px] font-bold text-slate-600 mb-1.5">تماس اضطراری (Emergency)</label>
                 <div class="relative">
-                  <input type="tel" [(ngModel)]="userForm.emergency_contact" (input)="clearUserFormError('emergency_contact')" name="emergency_contact" placeholder="09... / 021..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('emergency_contact')">
+                  <input type="tel" [(ngModel)]="userForm.emergency_contact" (input)="clearUserFormError('emergency_contact')" name="emergency_contact" id="user-emergency-contact" placeholder="09... / 021..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('emergency_contact')" [attr.aria-invalid]="userFieldMessages['emergency_contact'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['emergency_contact'] ? 'user-field-error-emergency_contact' : null">
                   <div *ngIf="isFieldValid('emergency_contact')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
-                <p *ngIf="userFieldMessages['emergency_contact']" data-field-error="emergency_contact" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['emergency_contact'] }}</p>
+                <p *ngIf="userFieldMessages['emergency_contact']" id="user-field-error-emergency_contact" data-field-error="emergency_contact" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['emergency_contact'] }}</p>
               </div>
 
               <!-- گروه خونی -->
               <div class="md:col-span-1">
-                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">گروه خونی (Blood Type)</label>
-                <select [(ngModel)]="userForm.blood_type" name="blood_type" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none cursor-pointer transition-all" [class]="getFieldClass('blood_type')">
+                <label for="user-blood-type" class="block text-[11px] font-bold text-slate-600 mb-1.5">گروه خونی (Blood Type)</label>
+                <select [(ngModel)]="userForm.blood_type" name="blood_type" id="user-blood-type" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none cursor-pointer transition-all" [class]="getFieldClass('blood_type')" [attr.aria-invalid]="userFieldMessages['blood_type'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['blood_type'] ? 'user-field-error-blood_type' : null">
                   <option value="">--- نامشخص ---</option>
                   <option value="O+">O+ (مثبت)</option>
                   <option value="O-">O- (منفی)</option>
@@ -1504,93 +1488,57 @@
                   <option value="AB+">AB+ (مثبت)</option>
                   <option value="AB-">AB- (منفی)</option>
                 </select>
-                <p *ngIf="userFieldMessages['blood_type']" data-field-error="blood_type" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['blood_type'] }}</p>
+                <p *ngIf="userFieldMessages['blood_type']" id="user-field-error-blood_type" data-field-error="blood_type" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['blood_type'] }}</p>
               </div>
 
               <!-- ایمیل -->
               <div class="md:col-span-1">
-                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">
+                <label for="user-email" class="block text-[11px] font-bold text-slate-600 mb-1.5">
                   پست الکترونیک (Email)
                   <span class="text-slate-400 font-normal text-[10px]">(اختیاری)</span>
                 </label>
                 <div class="relative">
-                  <input type="email" [(ngModel)]="userForm.email" (input)="clearUserFormError('email')" name="email" placeholder="user@company.com" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('email')">
+                  <input type="email" [(ngModel)]="userForm.email" (input)="clearUserFormError('email')" name="email" id="user-email" placeholder="user@company.com" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('email')" [attr.aria-invalid]="userFieldMessages['email'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['email'] ? 'user-field-error-email' : null">
                   <div *ngIf="isFieldValid('email')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
-                <p *ngIf="userFieldMessages['email']" data-field-error="email" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['email'] }}</p>
+                <p *ngIf="userFieldMessages['email']" id="user-field-error-email" data-field-error="email" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['email'] }}</p>
               </div>
 
               <!-- نشانی محل سکونت یا کارگاه -->
               <div class="md:col-span-4">
-                <label class="block text-[11px] font-bold text-slate-600 mb-1.5">آدرس محل سکونت یا کارگاه / محل اسکان</label>
+                <label for="user-address" class="block text-[11px] font-bold text-slate-600 mb-1.5">آدرس محل سکونت یا کارگاه / محل اسکان</label>
                 <div class="relative">
-                  <textarea [(ngModel)]="userForm.address" (input)="clearUserFormError('address')" name="address" rows="2" placeholder="آدرس دقیق و شماره پلاک محل خدمت یا سکونت پرسنل..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('address')"></textarea>
+                  <textarea [(ngModel)]="userForm.address" (input)="clearUserFormError('address')" name="address" id="user-address" rows="2" placeholder="آدرس دقیق و شماره پلاک محل خدمت یا سکونت پرسنل..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('address')" [attr.aria-invalid]="userFieldMessages['address'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['address'] ? 'user-field-error-address' : null"></textarea>
                   <div *ngIf="isFieldValid('address')" class="absolute left-3 bottom-3 pointer-events-none text-emerald-600 flex items-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
-                <p *ngIf="userFieldMessages['address']" data-field-error="address" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['address'] }}</p>
+                <p *ngIf="userFieldMessages['address']" id="user-field-error-address" data-field-error="address" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['address'] }}</p>
               </div>
             </div>
-          </div>
-
-          <!-- دکمه ناوبری به گام بعدی -->
-          <div class="flex items-center justify-between p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80">
-            <span class="text-[11px] text-slate-500 font-medium">گام اول تکمیل شد. به بخش امنیت و شناسه ورود بروید.</span>
-            <button type="button" (click)="setUserModalInnerTab('security')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-              <span>گام بعدی: امنیت و ورود</span>
-              <span class="text-sm font-bold">⬅️</span>
-            </button>
           </div>
         </div>
 
         <!-- تب ۲: حساب کاربری و اطلاعات ورود -->
-        <div *ngIf="userModalInnerTab === 'security'" class="space-y-4 fade-in duration-200">
-          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4.5 space-y-4">
+        <div *ngIf="userModalInnerTab === 'security'" id="user-modal-panel-security" role="tabpanel" aria-labelledby="user-modal-tab-security" class="space-y-4 fade-in duration-200">
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold text-sm">🔐</span>
+                <span class="w-7 h-7 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold text-sm">
+                  <svg appIcon="key" class="w-4 h-4" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                </span>
                 <div>
                   <h3 class="text-xs font-black text-slate-800">حساب کاربری و اطلاعات ورود</h3>
                   <p class="text-[10px] text-slate-400">شناسه ورود، کلمه عبور و کنترل دسترسی فعال</p>
                 </div>
               </div>
-              <span class="text-[10px] font-bold text-slate-400">گام ۲ از ۴</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-              <!-- ستون چپ: شناسه ورود و کلمه عبور -->
+              <!-- ستون چپ: کلمه عبور -->
               <div class="lg:col-span-7 space-y-3.5">
-                <!-- شناسه ورود -->
-                <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-[11px] font-black text-slate-700">
-                      کد / نام کاربری (Personnel ID)
-                      <span class="text-rose-500 text-xs font-black">*</span>
-                    </label>
-                    <span *ngIf="isFieldValid('username')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
-                      شناسه معتبر
-                    </span>
-                    <span *ngIf="editingUser" class="text-[9px] text-slate-400 font-medium">غیرقابل تغییر در ویرایش</span>
-                  </div>
-                  <div class="relative">
-                    <input type="text" [(ngModel)]="userForm.username" (input)="clearUserFormError('username')" name="personnel_username" autocomplete="new-password" placeholder="مثال: h.alishavandi یا 10054" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono font-bold text-indigo-800 transition-all" dir="ltr" [readonly]="editingUser != null" [class]="getFieldClass('username')">
-                    <div *ngIf="isFieldValid('username')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-                    </div>
-                    <div *ngIf="userFormErrors['username']" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
-                    </div>
-                  </div>
-                  <p *ngIf="userFieldMessages['username']" data-field-error="username" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['username'] }}</p>
-                  <p class="text-[10px] text-slate-400 mt-1 leading-normal">
-                    شناسه ورود یکتای پرسنل به سامانه (حداقل ۳ کاراکتر انگلیسی، اعداد، نقطه یا خط تیره).
-                  </p>
-                </div>
-
                 <!-- بازنشانی رمز کاربر دیگر (۲.۹): رمز کاربر دیگر با ویرایش فرستاده نمی‌شود -->
                 <div *ngIf="isEditingOtherUser" class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/90 space-y-2" data-reset-password-panel>
                   <p class="text-[11px] font-black text-indigo-950">کلمه عبور</p>
@@ -1606,15 +1554,16 @@
                 <!-- کلمه عبور -->
                 <div *ngIf="!isEditingOtherUser" class="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/90 space-y-2" data-password-field>
                   <div class="flex items-center justify-between">
-                    <label class="block text-[11px] font-black text-indigo-950">
+                    <label for="user-password" class="block text-[11px] font-black text-indigo-950">
                       {{ editingUser ? 'تغییر کلمه عبور (Password)' : 'کلمه عبور اولیه (Password)' }}
                     </label>
                     <button type="button" (click)="generateRandomPassword()" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-black flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-indigo-200/80 shadow-sm hover:shadow-sm transition-all" title="تولید رمز تصادفی و ایمن">
-                      <span>🎲 رمز تصادفی</span>
+                      <svg appIcon="zap" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                      <span>رمز تصادفی</span>
                     </button>
                   </div>
                   <div class="relative">
-                    <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password" (input)="clearUserFormError('password')" name="personnel_password" autocomplete="new-password" [placeholder]="editingUser ? 'در صورت عدم تغییر خالی بگذارید' : 'اختیاری'" class="w-full pr-10 pl-10 py-2 rounded-xl bg-white border border-indigo-200 text-xs font-mono outline-none text-left transition-all" dir="ltr" [class]="getFieldClass('password')">
+                    <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password" (input)="clearUserFormError('password')" name="personnel_password" id="user-password" autocomplete="new-password" [placeholder]="editingUser ? 'در صورت عدم تغییر خالی بگذارید' : 'اختیاری'" class="w-full pr-10 pl-10 py-2 rounded-xl bg-white border border-indigo-200 text-xs font-mono outline-none text-left transition-all" dir="ltr" [class]="getFieldClass('password')" [attr.aria-invalid]="userFieldMessages['password'] ? 'true' : null" [attr.aria-describedby]="userFieldMessages['password'] ? 'user-field-error-password' : null">
                     <button type="button" (click)="toggleShowPassword()" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 p-1 rounded-md transition-colors cursor-pointer" [title]="showPassword ? 'مخفی‌سازی رمز' : 'نمایش رمز'">
                       <svg *ngIf="!showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-alt"></svg>
                       <svg *ngIf="showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
@@ -1626,7 +1575,7 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
-                  <p *ngIf="userFieldMessages['password']" data-field-error="password" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['password'] }}</p>
+                  <p *ngIf="userFieldMessages['password']" id="user-field-error-password" data-field-error="password" role="alert" class="text-[10px] font-bold text-rose-600 mt-1">{{ userFieldMessages['password'] }}</p>
                   <p class="text-[9.5px] text-indigo-700/80 font-medium leading-normal">
                     {{ editingUser ? 'در صورت خالی ماندن، کلمه عبور قبلی حفظ می‌گردد.' : 'اگر خالی بماند، سرور یک رمز یک‌بارمصرف می‌سازد که پس از ذخیره نمایش داده می‌شود؛ در ورود اول باید عوض شود.' }}
                   </p>
@@ -1646,51 +1595,35 @@
                       {{ userForm.is_active ? 'حساب فعال است و پرسنل امکان لاگین دارد' : 'حساب معلق است و ورود مسدود می‌باشد' }}
                     </p>
                   </div>
-                  <label class="toggle-switch shrink-0 mr-2">
-                    <input type="checkbox" [(ngModel)]="userForm.is_active" name="is_active">
-                    <span class="toggle-slider"></span>
-                  </label>
+                  <app-toggle-switch [checked]="userForm.is_active" (checkedChange)="userForm.is_active = $event" title="وضعیت حساب" />
                 </div>
 
                 <!-- دسترسی مدیر ارشد (برای سوپریوزرها) -->
                 <div *ngIf="auth.user()?.is_superuser" class="p-3.5 rounded-2xl border transition-all flex items-center justify-between" [ngClass]="userForm.is_superuser ? 'bg-purple-50/60 border-purple-200 shadow-sm' : 'bg-slate-50 border-slate-200'">
                   <div class="space-y-0.5">
                     <div class="flex items-center gap-1.5">
-                      <span class="text-sm">🛡️</span>
+                      <svg appIcon="shield" class="w-4 h-4 text-purple-700" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                       <span class="text-xs font-black text-purple-900">مدیر ارشد (Superuser)</span>
                     </div>
                     <p class="text-[10px] text-purple-700/80">
                       {{ userForm.is_superuser ? 'دسترسی ۱۰۰٪ به تمام تنظیمات و ماژول‌ها' : 'دسترسی محدود به نقش‌ها و پروژه‌های تخصیصی' }}
                     </p>
                   </div>
-                  <label class="toggle-switch shrink-0 mr-2">
-                    <input type="checkbox" [(ngModel)]="userForm.is_superuser" name="is_superuser">
-                    <span class="toggle-slider"></span>
-                  </label>
+                  <app-toggle-switch [checked]="userForm.is_superuser" (checkedChange)="userForm.is_superuser = $event" title="مدیر ارشد" />
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- دکمه‌های ناوبری -->
-          <div class="flex items-center justify-between p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80">
-            <button type="button" (click)="setUserModalInnerTab('identity')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-              <span class="text-sm font-bold">➡️</span>
-              <span>گام قبلی: هویت و تماس</span>
-            </button>
-            <button type="button" (click)="setUserModalInnerTab('roles')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-              <span>گام بعدی: نقش‌های سازمانی</span>
-              <span class="text-sm font-bold">⬅️</span>
-            </button>
-          </div>
         </div>
 
         <!-- تب ۳: تخصیص نقش‌های سازمانی -->
-        <div *ngIf="userModalInnerTab === 'roles'" class="space-y-4 fade-in duration-200">
-          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4.5 space-y-3.5">
+        <div *ngIf="userModalInnerTab === 'roles'" id="user-modal-panel-roles" role="tabpanel" aria-labelledby="user-modal-tab-roles" class="space-y-4 fade-in duration-200">
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 space-y-3.5">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">🛡️</span>
+                <span class="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
+                  <svg appIcon="shield" class="w-4 h-4" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                </span>
                 <div>
                   <h3 class="text-xs font-black text-slate-800">تخصیص نقش‌های سازمانی (Roles)</h3>
                   <p class="text-[10px] text-slate-400">سطوح دسترسی، گروه‌های RBAC و اختیارات کاری پرسنل</p>
@@ -1705,7 +1638,9 @@
             <!-- نشانگر خودکار و هوشمند سامانه‌های مجاز کاربر (Computed Scope Badge Indicator) -->
             <div class="p-3 rounded-2xl bg-gradient-to-r from-slate-50 via-indigo-50/30 to-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
               <div class="flex items-center gap-2.5">
-                <span class="w-7 h-7 rounded-xl bg-white border border-slate-200 text-indigo-600 flex items-center justify-center text-xs shadow-sm">🧭</span>
+                <span class="w-7 h-7 rounded-xl bg-white border border-slate-200 text-indigo-600 flex items-center justify-center text-xs shadow-sm">
+                  <svg appIcon="info" class="w-4 h-4" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                </span>
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-black text-slate-800">سامانه‌های مجاز کاربر:</span>
@@ -1728,7 +1663,7 @@
 
                 <span *ngIf="currentFormAuthorizedSystems.isEmpty" 
                       class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                  <span>⚠️</span>
+                  <svg appIcon="alert-triangle" class="w-4 h-4 text-amber-700 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                   <span>فاقد دسترسی به سامانه‌ها (هنوز نقشی انتخاب نشده)</span>
                 </span>
               </div>
@@ -1748,7 +1683,10 @@
               <button type="button" (click)="userRoleModalTab = 'global'"
                 [ngClass]="userRoleModalTab === 'global' ? 'bg-white text-purple-700 shadow-sm font-black' : 'text-slate-500 hover:text-slate-800'"
                 class="flex-1 py-1.5 px-2.5 rounded-lg text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-                <span>⚡ سراسری / ادمین</span>
+                <span class="flex items-center gap-1">
+                  <svg appIcon="zap" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                  <span>سراسری / ادمین</span>
+                </span>
                 <span *ngIf="getSelectedRolesCountForScope('global') > 0" class="px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[9px] font-black border border-purple-200">
                   {{getSelectedRolesCountForScope('global')}}
                 </span>
@@ -1760,6 +1698,9 @@
                 <span>همه</span>
               </button>
             </div>
+
+            <!-- پیام خطای اعتبارسنجی سرور برای فیلد گروه‌ها / نقش‌ها (۲.۹-ج) -->
+            <p *ngIf="userFieldMessages['groups']" id="user-field-error-groups" data-field-error="groups" role="alert" class="text-[10px] font-bold text-rose-600 mt-2">{{ userFieldMessages['groups'] }}</p>
 
             <!-- لیست نقش‌ها متناسب با تب فعال -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50/70 p-3 rounded-2xl border border-slate-200 max-h-56 overflow-y-auto custom-scrollbar">
@@ -1781,37 +1722,27 @@
               </div>
             </div>
           </div>
-
-          <!-- دکمه‌های ناوبری -->
-          <div class="flex items-center justify-between p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80">
-            <button type="button" (click)="setUserModalInnerTab('security')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-              <span class="text-sm font-bold">➡️</span>
-              <span>گام قبلی: امنیت و ورود</span>
-            </button>
-            <button type="button" (click)="setUserModalInnerTab('warehouses')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-              <span>گام بعدی: {{ scopeLabels.nextStep }}</span>
-              <span class="text-sm font-bold">⬅️</span>
-            </button>
-          </div>
         </div>
 
         <!-- تب ۵: مجوزهای کاربر (طرح ۲.۲، ت۴ و ت۱۰) -->
-        <div *ngIf="userModalInnerTab === 'permissions' && editingUser?.id" class="fade-in duration-200">
+        <div *ngIf="userModalInnerTab === 'permissions' && editingUser?.id" id="user-modal-panel-permissions" role="tabpanel" aria-labelledby="user-modal-tab-permissions" class="fade-in duration-200">
           <app-user-permissions-tab [userId]="editingUser.id" [companies]="availableCompanies" [canAssign]="canEditUsers()" (goToAssignments)="openUserAssignments($event)" />
         </div>
 
         <!-- تب ۶: جانشین موقت کاربر (طرح ۲.۳) -->
-        <div *ngIf="userModalInnerTab === 'substitute' && editingUser?.id" class="fade-in duration-200">
+        <div *ngIf="userModalInnerTab === 'substitute' && editingUser?.id" id="user-modal-panel-substitute" role="tabpanel" aria-labelledby="user-modal-tab-substitute" class="fade-in duration-200">
           <app-workflow-substitutes [principalId]="editingUser.id" />
         </div>
 
         <!-- تب ۴: شرکت‌ها و انبارهای مجاز -->
-        <div *ngIf="userModalInnerTab === 'warehouses'" class="space-y-4 fade-in duration-200">
-          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4.5 space-y-4">
+        <div *ngIf="userModalInnerTab === 'warehouses'" id="user-modal-panel-warehouses" role="tabpanel" aria-labelledby="user-modal-tab-warehouses" class="space-y-4 fade-in duration-200">
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 space-y-4">
             <!-- سربرگ تب -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">🏢</span>
+                <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                  <svg appIcon="building" class="w-4 h-4" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                </span>
                 <div>
                   <h3 class="text-xs font-black text-slate-800">{{ scopeLabels.allowedTitle }}</h3>
                   <p class="text-[10px] text-slate-400">ابتدا شرکت‌های کاری را انتخاب کرده و سپس {{ scopeLabels.pluralAttributive }} متناظر آنها را مشخص فرمایید</p>
@@ -1824,7 +1755,6 @@
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                   {{ userForm.assigned_warehouses?.length || 0 }} {{ scopeLabels.singular }}
                 </span>
-                <span class="text-[10px] font-bold text-slate-400">گام ۴ از ۴</span>
               </div>
             </div>
 
@@ -1835,11 +1765,15 @@
                   <span class="w-6 h-6 rounded-lg bg-indigo-100/80 text-indigo-800 flex items-center justify-center font-bold text-xs">۱</span>
                   <label class="block text-xs font-black text-slate-800">انتخاب شرکت‌های کاری مجاز (شرکت اصلی / پیش‌فرض را نیز تعیین کنید)</label>
                 </div>
-                <span *ngIf="userForm.company_ids?.length > 0" class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  ✓ لیست {{ scopeLabels.plural }} بر این اساس فیلتر شده است
+                <span *ngIf="userForm.company_ids?.length > 0" class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-flex items-center gap-1">
+                  <svg appIcon="check" class="w-3 h-3 text-emerald-600" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                  <span>لیست {{ scopeLabels.plural }} بر این اساس فیلتر شده است</span>
                 </span>
               </div>
               <p class="text-[11px] text-slate-500 leading-relaxed">تیک شرکت فقط کاربر را با شرکت پیوند می‌دهد تا قابل انتساب شود؛ عضویت از انتساب {{ scopeLabels.singular }} یا بخش می‌آید و مجوز حوزه‌های اطلاعات شرکت در تب «دسترسی» استودیوی شرکت داده می‌شود.</p>
+
+              <!-- پیام خطای اعتبارسنجی سرور برای شرکت‌ها (۲.۹-ج) -->
+              <p *ngIf="userFieldMessages['company_ids']" id="user-field-error-company_ids" data-field-error="company_ids" role="alert" class="text-[10px] font-bold text-rose-600 mt-2">{{ userFieldMessages['company_ids'] }}</p>
 
               <!-- گرید شرکت‌ها -->
               <div *ngIf="availableCompanies && availableCompanies.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
@@ -1874,8 +1808,14 @@
                       [title]="userForm.default_company_id === comp.id ? 'شرکت پیش‌فرض فعال' : 'تنظیم به عنوان شرکت پیش‌فرض'"
                       [ngClass]="userForm.default_company_id === comp.id ? 'bg-emerald-600 text-white shadow-sm font-black' : 'bg-slate-100 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 font-bold'"
                       class="px-2 py-0.5 rounded-lg text-[10px] transition-all cursor-pointer flex items-center gap-1">
-                      <span *ngIf="userForm.default_company_id === comp.id">★ اصلی</span>
-                      <span *ngIf="userForm.default_company_id !== comp.id">☆ پیش‌فرض</span>
+                      <span *ngIf="userForm.default_company_id === comp.id" class="flex items-center gap-1">
+                        <svg appIcon="star" class="w-3 h-3 fill-current" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                        <span>اصلی</span>
+                      </span>
+                      <span *ngIf="userForm.default_company_id !== comp.id" class="flex items-center gap-1">
+                        <svg appIcon="star" class="w-3 h-3" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
+                        <span>پیش‌فرض</span>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1906,13 +1846,16 @@
               <!-- هشدار در صورت عدم انتخاب شرکت -->
               <div *ngIf="!userForm.company_ids || userForm.company_ids.length === 0" 
                    class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-center gap-2.5">
-                <span class="text-base">⚠️</span>
+                <svg appIcon="alert-triangle" class="w-4 h-4 text-amber-700 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                 <span>برای مشاهده و تخصیص {{ scopeLabels.plural }}، لطفاً ابتدا حداقل یک شرکت را در کادر بالا علامت بزنید. {{ scopeLabels.plural }} بلافاصله نمایش داده خواهند شد.</span>
               </div>
 
+              <!-- پیام خطای اعتبارسنجی سرور برای انبارها (۲.۹-ج) -->
+              <p *ngIf="userFieldMessages['assigned_warehouses']" id="user-field-error-assigned_warehouses" data-field-error="assigned_warehouses" role="alert" class="text-[10px] font-bold text-rose-600 mt-2">{{ userFieldMessages['assigned_warehouses'] }}</p>
+
               <!-- لودینگ بارگذاری انبارها -->
               <div *ngIf="isLoadingModalWarehouses" class="py-6 text-center text-xs text-indigo-700 font-bold flex items-center justify-center gap-2 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-                <span class="animate-spin text-indigo-600">⏳</span>
+                <svg appIcon="refresh-cw" class="w-4 h-4 animate-spin text-indigo-600 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                 <span>در حال به‌روزرسانی آنی لیست {{ scopeLabels.plural }} متناسب با شرکت‌های انتخابی...</span>
               </div>
 
@@ -1949,18 +1892,6 @@
               <span class="text-slate-400 font-bold">:آخرین لاگین</span>
               <span class="font-mono font-bold text-slate-700">{{userForm.last_login ? formatDate(userForm.last_login) : '---'}}</span>
             </div>
-          </div>
-
-          <!-- دکمه‌های ناوبری -->
-          <div class="flex items-center justify-between p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80">
-            <button type="button" (click)="setUserModalInnerTab('roles')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-              <span class="text-sm font-bold">➡️</span>
-              <span>گام قبلی: نقش‌های سازمانی</span>
-            </button>
-            <span class="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/80">
-              <span class="text-sm">✓</span>
-              <span>تمامی اطلاعات تکمیل شده است. می‌توانید پرونده را ذخیره فرمایید.</span>
-            </span>
           </div>
         </div>
 
