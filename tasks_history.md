@@ -10658,3 +10658,131 @@ test(release-v1 2.9-d): user management scenarios (company manager, project mana
 تغییرات اعمال شدند، هر ۸ سناریوی تست مجدداً در دیتابیس تست اجرا شده و همگی با موفقیت پاس شدند. تغییرات ن...
 
 ---
+
+### Task 1 of 2 — 2026-10-25 06:32:10
+- **Status:** DONE
+- **Conversation:** `5ce1ef03-3b9c-40e4-ae0a-2381865869b7`
+- **Steps:** 376
+- **Tokens:** 555211
+- **Duration:** 17m 30s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 3 of 4 — Release v1 step 2.9-c part 2: permissions tab, role bundles, my substitute and user menu at 360px and accessibility
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply. Read `.claude/skills/design-system/SKILL.md` once before editing.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only these files: everything in `frontend/src/app/modules/common/components/users/user-permissions-tab/`, everything in `frontend/src/app/modules/common/components/users/role-bundles-panel/`, everything in `frontend/src/app/shared/components/workflow-substitutes/`, and `frontend/src/app/shared/components/user-menu/user-menu.component.html`. Never edit `users.html`, `users.ts`, `users.spec.ts`, other shared components, anything under `scripts/` or `Documents/`, `tasks.md` or `tasks_history.md`.
+- In `.ts` files change only what the task items name. Never remove or rename an existing event handler, input, output, `*ngIf`/`*ngFor` condition or `appIcon` name. Never add inline `<svg>` content: icons only through `<svg appIcon="name">` with names that already exist in `frontend/src/app/shared/icons/icon-registry.ts`.
+- Never remove an existing `it(` test. All user-visible text is Persian; numbers shown to the user in Persian digits (use the component's existing formatting helper or a shared helper it already imports; if none, `Number(x).toLocaleString('fa-IR')`). No `dark:` classes. No push. Stage only the files above.
+- Do not change permission or scope logic (which assignments, roles or substitutes a user may see or change), API calls or their payloads.
+
+2. Context:
+- Plan `Documents/Release_v1/2.9_users/plan_2.9_users.md`, section `## ۳. کارها`, subsection `### ۲.۹-ج` (bullet «جانشین من» and the visual/accessibility bullets), and section `## ۵. معیار پذیرش` (at 360px no horizontal scroll and no button smaller than 40px).
+- `workflow-substitutes.component.ts`: `loadUsers()` (lines 134–152) loads substitute candidates with `getSubstituteCandidates`; its `error` callback only empties `availableUsers` and gives no message. `loadSubstitutes()` (109–132) sets `error`. The template shows the substitutes as a `<table>` (around lines 231–235 of the html) on every screen size; the header close button was already moved (do not move it again).
+- `user-menu.component.html`: the «جانشین موقت من» modal (around lines 265–298) hosts `app-workflow-substitutes`.
+
+3. Definitions:
+- "Mobile" = below the Tailwind `md` breakpoint (768px).
+- "Logical classes" = `ms-/me-/ps-/pe-/start-/end-/text-start/text-end/border-s/border-e` instead of `ml-/mr-/pl-/pr-/left-/right-/text-left/text-right/border-l/border-r`.
+
+4. Task:
+A. workflow-substitutes:
+- A1. Add `usersLoadError = ''` to the component. In `loadUsers()` clear it at start and set it in the `error` callback to «فهرست کاربران قابل انتخاب دریافت نشد». In the template, next to the candidate select, show `<div *ngIf="usersLoadError" role="alert" ...>` with the message and a button «تلاش دوباره» (min height 40px) calling `loadUsers()`.
+- A2. Show the substitutes list as cards below `md`: keep the existing table inside a wrapper with `hidden md:block`, and add before it a `md:hidden` list of cards (`*ngFor` over the same array, same fields and the same action buttons with the same handlers and conditions, each card `rounded-2xl border border-line bg-surface p-3`).
+- A3. Every icon-only button at least 40x40px with Persian `title` and `aria-label`; every control has an `id` with prefix `wfsub-` and a `<label for>` (add only the missing ones); physical → logical classes; `text-[8px]`/`text-[9px]` → `text-[10px]`.
+- A4. Tests in `workflow-substitutes.component.spec.ts`: `loadUsers()` with an erroring `getSubstituteCandidates` sets `usersLoadError` and renders the alert with a retry button that calls `loadUsers` again; with two substitutes the `md:hidden` card list renders two cards.
+B. user-permissions-tab (`user-permissions-tab.html`, `.ts` only for helpers used by the template):
+- `p-4.5` → `p-4`; emoji → `<svg appIcon="..." class="w-4 h-4" aria-hidden="true">` with existing names; icon-only buttons ≥40x40px with Persian `title`/`aria-label`; text below 10px → `text-[10px]`; physical → logical classes; every select/input of the inline «افزودن انتساب» form has an `id` (prefix `uptab-`) and a `<label for>`; focus styles `focus-visible:ring-2 focus-visible:ring-indigo-500`; numbers shown with Persian digits; tables that would scroll horizontally at 360px get a `md:hidden` card version like A2 (same handlers and conditions).
+- Add tests to `user-permissions-tab.dom.spec.ts`: the inline form controls have labels linked by `for`; at least one icon-only button has `aria-label` and the class `min-w-[40px]`.
+C. role-bundles-panel (`role-bundles-panel.html`): the same rules as B (prefix `rbp-` for ids). Add one test to `role-bundles-panel.spec.ts` that checks a label/`for` pair or an `aria-label` you added.
+D. user-menu.component.html, the substitutes modal only (around 265–298): the modal panel gets `max-h-[90vh] overflow-y-auto` and full width on mobile (`w-full` plus the existing max width), inner padding `p-4 sm:p-5`, physical → logical classes in that block. Do not change anything outside that block.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From the repo root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/users/**/*.spec.ts" --include "src/app/shared/components/user-menu/**/*.spec.ts" --include "src/app/shared/components/workflow-substitutes/**/*.spec.ts"` (at most 5 times), `python -X utf8 scripts/e2e/guardian_52_icon_registry.py`, `python -X utf8 scripts/e2e/guardian_56_change_integrity.py --base HEAD`.
+- If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+6. Before finishing:
+- The spec command passes with no new failure; guardians 52 and 56 pass.
+- `git status --short` shows only files from the list before the commit and nothing after it.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(release-v1 2.9-c): permissions tab, role bundles, my substitute and user menu at 360px (cards below md, candidate load error with retry, 40px buttons, labels, icons, logical classes)
+- Short English report: what was changed per item A–D, anything skipped and why, the test summary line. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های ۱ تا ۴ پروتکل (Protocol Steps 1 to 4)
+
+۱. **توضیح ساده (Explain Simply):**  
+در این بخش از مرحلهٔ ۲.۹-ج انتشار نسخهٔ ۱، بهبودهای ارگونومی و دسترس‌پذیری در ابعاد ۳۶۰ پیکسل (موبایل) و استانداردهای WCAG 2.2 AA برای چهار بخش پیاده‌سازی شد: کامپوننت جانشین‌های گردش کار (`workflow-substitutes`) با افزودن کارت‌های واکنش‌گرا در موبایل و مدیریت خطای بارگذاری نامزدها با دکمه تلاش دوباره؛ تب مجوزهای کاربر (`user-permissions-tab`) با افزودن شناسه‌های یکتا، برچسب‌های متصل و استایل فوکوس فرم درون‌خطی؛ پنل بسته‌های نقش (`role-bundles-panel`) با شناسه‌ها و برچسب‌های متصل؛ و مودال جانشین در منوی کاربر (`user-menu.component.html`) با تنظیم اسکرول و عرض کامل در موبایل...
+
+---
+
+### Task 2 of 2 — 2026-10-25 06:50:11
+- **Status:** DONE
+- **Conversation:** `c6cddafb-52d6-405c-8a88-f78e90cfc151`
+- **Steps:** 371
+- **Tokens:** 560132
+- **Duration:** 17m 56s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 4 of 4 — Release v1 step 2.9-d part 2: DOM flow test of the users page (create, stay on permissions, inline assignment, substitute tab)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Create exactly one new file: `frontend/src/app/modules/common/components/users/users-flow.dom.spec.ts`. Change no other file (no production code, no other spec, nothing under `scripts/` or `Documents/`, not `tasks.md` or `tasks_history.md`).
+- If a step of the flow behaves differently from this task, do not change production code: keep the expectation, mark that `it` with `it.fails(` (Vitest), and describe the difference in your report.
+- Test names are Persian. No push. Stage only your own file.
+
+2. Context:
+- Plan `Documents/Release_v1/2.9_users/plan_2.9_users.md`, section `## ۳. کارها`, subsection `### ۲.۹-د` (DOM flow create → permissions → substitute), and the 2.9-ب entry of section `## ۷. گزارش پیشرفت` (after create the form stays in edit mode on the «مجوزها» tab; «افزودن انتساب» is inline in that tab).
+- Setup to copy: `frontend/src/app/modules/common/components/users/users.spec.ts` lines 1 to the end of the top-level `beforeEach` (imports, `initTestEnvironment`, resource resolution with `fs`/`path`, the provider mocks for `PermissionService`, `StateService`, `AccountsHttpService`, `ScopeDirectoryService`, `CompanyApiService`, `ApiService`, `ConfirmDialogService`, `Router`, `ActivatedRoute` and the rest). Find the existing test that checks that the modal stays on the permissions tab after create (search `users.spec.ts` for `permissions`) and reuse how it mocks the create response.
+- The user modal tabs are rendered by `app-tab-bar` with `idPrefix="user-modal"`: tab buttons have ids `user-modal-tab-<id>` (`identity`, `security`, `roles`, `warehouses`, `permissions`, `substitute`); `permissions` and `substitute` exist only when `editingUser.id` is set. The permissions tab hosts `app-user-permissions-tab` (its inline form opens with a button whose `aria-label` is «افزودن انتساب»; see `user-permissions-tab/user-permissions-tab.html` around line 44 and the describe «فرم «افزودن انتساب» (۲.۹-ب)» in `user-permissions-tab.dom.spec.ts` for the providers it needs). The substitute tab hosts `app-workflow-substitutes`.
+
+3. Task — `describe('جریان ساخت کاربر → مجوزها → جانشین (۲.۹-د)', ...)` with at least these four `it(` cases, each driving the DOM (click buttons, `fixture.detectChanges()`, `await fixture.whenStable()`), not only calling methods:
+- a) before create: in a new-user modal the buttons `#user-modal-tab-permissions` and `#user-modal-tab-substitute` do not exist.
+- b) after a successful create (mocked response with an `id` and a `one_time_password`): the modal is still open, `editingUser.id` is set, `#user-modal-tab-permissions` exists and is the active tab (`aria-selected="true"`), and `app-user-permissions-tab` is rendered.
+- c) in the permissions tab, clicking the button with `aria-label="افزودن انتساب"` shows the inline form (its first select is present). Add the providers that `UserPermissionsTab` needs as mocks if the copied setup lacks them.
+- d) clicking `#user-modal-tab-substitute` renders `app-workflow-substitutes`, and clicking `#user-modal-tab-permissions` again brings back `app-user-permissions-tab`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- From the repo root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/users/**/*.spec.ts"` (at most 5 times).
+- If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+5. Before finishing:
+- The spec command passes with no failure (or only your documented `it.fails` cases).
+- `git status --short` shows only your new file before the commit and nothing after it.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+test(release-v1 2.9-d): users page DOM flow (create, stay on permissions, inline assignment, substitute tab)
+- Short English report: the test names, the test summary line, and any behaviour that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### پروتکل ۴ مرحله‌ای (4-Step Mandatory Protocol)
+
+۱. **توضیح ساده (Explain Simply):**  
+در این بخش از گام ۲.۹-د انتشار نسخهٔ ۱، یک فایل تست اختصاصی جریان DOM تحت عنوان [users-flow.dom.spec.ts](file:///E:/comanager/frontend/src/app/modules/common/components/users/users-flow.dom.spec.ts) پیاده‌سازی شد تا جریان کامل «ایجاد کاربر جدید ← باز ماندن پنجره روی تب مجوزها ← فرم درون‌خطی افزودن انتساب ← تب جانشین موقت و بازگشت به تب مجوزها» را به شکل تعاملی و با کلیک روی المان‌های DOM و برانگیختن رویدادها راستی‌آزمایی نماید.
+
+۲. **بررسی صحت فنی (Verify Immediately):**  
+نیازمندی‌ها با مستندات طرح انتشار (`plan_2.9_users.md` بخش ۲.۹-د و ۲.۹-ب) و رفتار کامپوننت‌های [Users]...
+
+---

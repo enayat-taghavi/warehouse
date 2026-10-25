@@ -2122,7 +2122,7 @@ export class Users implements OnInit, OnDestroy {
     if (this.isFieldValid(field)) {
       return 'border-emerald-500 bg-emerald-50/20 text-slate-800 ring-1.5 ring-emerald-400/80 focus:border-emerald-500 focus:ring-emerald-300';
     }
-    return 'border-slate-200 bg-slate-50/60 text-slate-800 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100';
+    return 'border-slate-200 bg-slate-50/60 text-slate-800 focus:border-indigo-500 focus:bg-white focus-visible:ring-2 focus-visible:ring-indigo-500';
   }
 
   generateRandomPassword() {

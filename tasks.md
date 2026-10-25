@@ -362,7 +362,7 @@ test(release-v1 2.9-d): user management scenarios (company manager, project mana
 
 ===
 
-Session 3 of 4 — Release v1 step 2.9-c part 2: permissions tab, role bundles, my substitute and user menu at 360px and accessibility
+[DONE] Session 3 of 4 — Release v1 step 2.9-c part 2: permissions tab, role bundles, my substitute and user menu at 360px and accessibility
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -425,7 +425,7 @@ feat(release-v1 2.9-c): permissions tab, role bundles, my substitute and user me
 
 ===
 
-Session 4 of 4 — Release v1 step 2.9-d part 2: DOM flow test of the users page (create, stay on permissions, inline assignment, substitute tab)
+[DONE] Session 4 of 4 — Release v1 step 2.9-d part 2: DOM flow test of the users page (create, stay on permissions, inline assignment, substitute tab)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
