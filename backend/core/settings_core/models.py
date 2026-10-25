@@ -437,3 +437,25 @@ class GoogleDriveSyncQueue(models.Model):
 
     def __str__(self):
         return f"[{self.company.code}] {self.target_filename} ({self.status})"
+
+
+class CompanySetting(models.Model):
+    """
+    Per-company module setting (plan 2.6, S11). Only keys declared by a module via
+    contribute('company_settings', CompanySettingSpec(...)) are accepted by the API; core names no module.
+    """
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name='module_settings')
+    module = models.CharField(max_length=50)
+    key = models.CharField(max_length=100)
+    value = models.JSONField(null=True, blank=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name='+')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'module', 'key'], name='uniq_company_setting'),
+        ]
+
+    def __str__(self):
+        return f'{self.company_id}:{self.module}.{self.key}'

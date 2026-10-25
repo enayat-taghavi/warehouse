@@ -42,3 +42,28 @@ class Attachment(models.Model):
 
     def __str__(self):
         return f'{self.entity_kind}:{self.entity_id} {self.original_name}'
+
+
+class EntityViewLog(models.Model):
+    """
+    سابقهٔ دیدن یک سند (ص۱۰ طرح ۲.۶). سبک است: برای هر کاربر و سند حداکثر یک ردیف در هر ۱۰ دقیقه
+    (record_entity_view در services.py). سند مثل Attachment با (entity_kind, entity_id) نشانی می‌شود.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+',
+                             verbose_name='کاربر')
+    entity_kind = models.CharField(max_length=50, verbose_name='نوع سند')
+    entity_id = models.CharField(max_length=64, verbose_name='شناسهٔ سند')
+    company_id = models.IntegerField(null=True, blank=True, verbose_name='شرکت')
+    viewed_at = models.DateTimeField(auto_now_add=True, verbose_name='زمان دیدن')
+
+    class Meta:
+        verbose_name = 'سابقهٔ دیدن'
+        verbose_name_plural = 'سابقه‌های دیدن'
+        ordering = ('-viewed_at',)
+        indexes = [
+            models.Index(fields=['entity_kind', 'entity_id', 'viewed_at'], name='viewlog_entity_idx'),
+            models.Index(fields=['user', 'viewed_at'], name='viewlog_user_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.user_id} {self.entity_kind}:{self.entity_id} {self.viewed_at}'

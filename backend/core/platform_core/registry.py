@@ -192,6 +192,12 @@ def can_view(user, kind: str, entity_id) -> bool:
     return entity_view_decision(user, kind, entity_id) is True
 
 
+def record_entity_view(user, kind: str, entity_id, company_id=None) -> bool:
+    """سابقهٔ دیدن سند (ص۱۰ طرح ۲.۶): حداکثر یک ردیف برای هر کاربر و سند در هر ۱۰ دقیقه."""
+    from attachments.services import record_entity_view as _record
+    return _record(user, kind, entity_id, company_id)
+
+
 def is_entity_locked(kind: str, entity_id) -> bool:
     """سند قفل است اگر هر قلابی بگوید قفل؛ خطای قلاب = قفل (تا پیوست اشتباهی پاک یا جایگزین نشود)."""
     if not kind or not entity_id:

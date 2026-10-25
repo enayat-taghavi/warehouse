@@ -26,6 +26,7 @@ from common.serializer_fields import validate_uploaded_document
 from platform_core.registry import can_attach, can_view, company_of, is_entity_confidential, is_entity_locked
 
 from .models import Attachment
+from .services import record_entity_view
 
 _KIND_RE = re.compile(r'^[a-z][a-z0-9_]{0,49}$')
 # برچسب‌هایی که همیشه فقط روی سرور می‌مانند (امضا و مهر کاربر، ص۹)
@@ -219,6 +220,7 @@ class AttachmentDownloadView(APIView):
             return Response({'detail': 'اجازهٔ دیدن این پیوست را ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         if not obj.file or not obj.file.name:
             raise Http404
+        record_entity_view(request.user, obj.entity_kind, obj.entity_id, obj.company_id)
 
         name = obj.original_name or os.path.basename(obj.file.name)
         content_type = mimetypes.guess_type(name)[0] or 'application/octet-stream'

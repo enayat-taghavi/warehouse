@@ -88,6 +88,8 @@ class PersonnelConfig(AppConfig):
         contribute(f'can_attach:{INVOICE_ENTITY}', can_attach_invoice)
         contribute(f'is_locked:{INVOICE_ENTITY}', is_invoice_locked)
         contribute(f'company_of:{INVOICE_ENTITY}', invoice_company_id)
+        # لاگ ممیزی فاکتور از قلاب دیدن همان سند پیروی می‌کند (ص۱۰ طرح ۲.۶)
+        contribute('audit_entity_kinds', ('ExpenseInvoice', INVOICE_ENTITY))
 
         # حل‌کننده نقش‌های ماژول حسابداری برای میان‌افزار احراز هویت
         from personnel.role_resolver import resolve_personnel_roles

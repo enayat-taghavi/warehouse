@@ -18,7 +18,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from common.excel_utils import sanitize_excel_row
-from platform_core.registry import contributions
+from platform_core.registry import contributions, entity_view_decision
 from ..models import UserLoginLog, AuditLog
 from ..serializers import UserLoginLogSerializer, AuditLogSerializer, AuditLogListSerializer
 from ..audit_utils import log_login_event
@@ -730,10 +730,68 @@ class UserLoginLogViewSet(viewsets.ReadOnlyModelViewSet):
             'message': f"قفل امنیتی {target_name} با موفقیت بازنشانی شد و کاربر مجدداً مجاز به ورود است."
         })
 
+def audit_entity_kinds() -> dict:
+    """نگاشت AuditLog.target_model به نوع سند (ص۱۰ طرح ۲.۶): contribute('audit_entity_kinds', (target_model, kind))."""
+    out = {}
+    for item in contributions('audit_entity_kinds'):
+        try:
+            model_name, kind = item
+        except (TypeError, ValueError):
+            continue
+        if model_name and kind:
+            out[str(model_name)] = str(kind)
+    return out
+
+
+def denied_audit_ids(user, logs) -> set:
+    """
+    شناسهٔ ردیف‌هایی از `logs` که قلاب دیدن سندشان برای کاربر منع صریح می‌دهد (entity_view_decision is False).
+    برای هر (نوع، شناسه) فقط یک بار تصمیم گرفته می‌شود؛ مدیر کل فعال چیزی را از دست نمی‌دهد. بی‌نظر = نمایش.
+    """
+    if user is None or (getattr(user, 'is_superuser', False) and getattr(user, 'is_active', False)):
+        return set()
+    kinds = audit_entity_kinds()
+    if not kinds:
+        return set()
+    decided = {}
+    denied = set()
+    for log in logs:
+        kind = kinds.get(log.target_model or '')
+        if not kind or not log.target_object_id:
+            continue
+        key = (kind, str(log.target_object_id))
+        if key not in decided:
+            decided[key] = entity_view_decision(user, kind, key[1]) is False
+        if decided[key]:
+            denied.add(log.pk)
+    return denied
+
+
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all().select_related('user').prefetch_related('user__groups__customrole').order_by('-created_at')
     serializer_class = AuditLogSerializer
     pagination_class = StandardLogPagination
+
+    def list(self, request, *args, **kwargs):
+        # ردیف سندی که قلاب دیدن برای کاربر منع می‌دهد پنهان می‌شود (ص۱۰)؛ تصمیم فقط برای ردیف‌های همین صفحه
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        rows = page if page is not None else list(queryset)
+        denied = denied_audit_ids(request.user, rows)
+        if denied:
+            rows = [log for log in rows if log.pk not in denied]
+        serializer = self.get_serializer(rows, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def get_object(self):
+        # جزئیات، پیش‌نمایش بازگردانی و بازگردانی تکی: سند منع‌شده مثل ناموجود (۴۰۴)
+        obj = super().get_object()
+        if denied_audit_ids(self.request.user, [obj]):
+            from rest_framework.exceptions import NotFound
+            raise NotFound()
+        return obj
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -1402,6 +1460,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         allowed_qs = self.get_queryset()
         for lid in log_ids:
             log_item = allowed_qs.filter(id=lid).first()
+            if log_item and denied_audit_ids(request.user, [log_item]):
+                log_item = None
             if not log_item:
                 errors.append(f"لاگ #{lid} یافت نشد یا در قلمرو انبار مجاز شما قرار ندارد.")
                 continue
