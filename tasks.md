@@ -777,7 +777,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
 ===
 
-Session 1 of 1 — Release v1 step 2.5-b: error interceptor spec (reads never show a red error on server unreachable)
+[DONE] Session 1 of 1 — Release v1 step 2.5-b: error interceptor spec (reads never show a red error on server unreachable)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

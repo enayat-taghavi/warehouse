@@ -11242,3 +11242,55 @@ Class [`LiveEventTabIdTests`](file:///E:/comanager/backend/modules/accounting/pe
 - `test_personnel_no_context_tab_is_none`: Verified `client_tab_id` is ...
 
 ---
+
+### Task 1 of 1 — 2026-10-25 20:52:12
+- **Status:** DONE
+- **Conversation:** `10490f74-6331-45ed-b650-3cf49233e67c`
+- **Steps:** 34
+- **Tokens:** 95300
+- **Duration:** 9m 53s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 1 of 1 — Release v1 step 2.5-b: error interceptor spec (reads never show a red error on server unreachable)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `frontend/src/app/core/error/error.interceptor.spec.ts`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `it.fails(` and describe the exact difference in your report.
+- No `it.only`, `describe.only`, `it.skip`, no `fs`/`path` imports.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.5-b): error interceptor read toasts`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/core/error/error.interceptor.ts` (whole file, about 130 lines). Facts: `errorInterceptor` is a functional `HttpInterceptorFn`; it injects `ToastService` (from `../../shared/components/toast/toast.component`) and `AuthStore` (from `../stores/auth.store`). A module-level variable `lastOfflineToastAt` with `OFFLINE_TOAST_GAP_MS = 3000` throttles the warning toasts. New rule: a `GET` whose error status is server-unreachable (0, 502, 503, 504, 520 to 530) calls `toast.show('warning', <text>)` at most once per 3000 ms and never `toast.show('error', ...)`. Non-GET requests with those statuses still call `toast.show('error', 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.')`. GET with 403 shows `toast.show('error', 'شما مجوز دسترسی به این عملیات را ندارید.')`; GET with 500 shows `toast.show('error', 'خطای داخلی سرور. لطفا با پشتیبانی تماس بگیرید.')`. A request whose context sets `SKIP_GLOBAL_ERROR_TOAST` to true shows nothing.
+- `frontend/src/app/core/services/server-reachability.ts` lines 31–36.
+
+3. Task, `frontend/src/app/core/error/error.interceptor.spec.ts` (Vitest + `TestBed`): providers `provideHttpClient(withInterceptors([errorInterceptor]))`, `provideHttpClientTesting()`, `{ provide: ToastService, useValue: { show: vi.fn() } }`, `{ provide: AuthStore, useValue: { setActiveWarehouse: vi.fn() } }`. Use `HttpClient` and `HttpTestingController`; fail a request with `req.flush(null, { status, statusText: 'x' })` (for status 0 use `req.error(new ProgressEvent('error'))`). Subscribe with an `error` callback so the test does not throw. Because the throttle is module-level, call `vi.useFakeTimers()` in `beforeEach` and move the clock forward by 10000 ms with `vi.setSystemTime(Date.now() + 10000)` at the start of every test; `vi.useRealTimers()` and `httpMock.verify()` in `afterEach`. Tests (names exactly):
+- `1. GET with 502 shows one warning, no error`: `show` called once with first argument `'warning'`; never with `'error'`.
+- `2. GET with status 0 shows a warning, no error`.
+- `3. GET with 530 twice within 3 seconds shows one warning`: two GETs failing with 530 in the same clock time; `show` called exactly once.
+- `4. POST with 503 still shows the red unreachable error`: `show` called with `('error', 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.')`.
+- `5. GET with 403 shows the permission error`.
+- `6. GET with 500 shows the internal server error`.
+- `7. GET with SKIP_GLOBAL_ERROR_TOAST shows nothing`: pass `{ context: new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true) }` with a 502; `show` not called.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `frontend` create a temporary `tsconfig.agy-2.5b.spec.json` with `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/core/error/error.interceptor.spec.ts"], "exclude": [] }` and run `npx ng test --watch=false --ts-config tsconfig.agy-2.5b.spec.json --include src/app/core/error/error.interceptor.spec.ts`; delete the temporary tsconfig before committing. At most 5 runs.
+
+5. Before finishing: the spec passes (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+در حال اجرای تست‌های `error.interceptor.spec.ts` و منتظر پایان اجرای دستور...
+در حال اجرای مجدد تست‌های `error.interceptor.spec.ts` (تلاش ۲) و منتظر نتیجه...
+<div dir="rtl" align="right">
+
+### توضیح ساده درخواست (Explanation)
+درخواست مربوط به نگارش تست‌های واحد (`spec`) برای `errorInterceptor` در مسیر [frontend/src/app/core/error/error.interceptor.spec.ts](file:///E:/comanager/frontend/src/app/core/error/error.interceptor.spec.ts) بود تا اطمینان حاصل شود که در هنگام قطعی سرور (کدهای وضعیت 0، 502، 503، 504 و 520 تا 530)، درخواست‌های متد `GET` هیچ‌گاه پیام خطای قرمز نشان نمی‌دهند بلکه صرفاً یک توست هشدار زرد (`warning`) نمایش داده شده و با فاصله زمانی ۳ ثانیه کنترل می‌شود، در حالی که سایر متده...
+
+---
