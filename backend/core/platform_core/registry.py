@@ -158,6 +158,52 @@ def resolve_entity_map(kind: str, entity_ids) -> dict:
     return {}
 
 
+# ─── قلاب دیدن و قفل سند (ص۱ و ص۴ طرح ۲.۶) ───────────────────────────────────────────────────────
+# ماژول مالک با contribute('can_view:<kind>', fn) و contribute('is_locked:<kind>', fn) اعلام می‌کند.
+# fn دیدن: fn(user, entity_id) → True (اجازه) | False (منع) | None (بی‌نظر). fn قفل: fn(entity_id) → bool.
+
+def entity_view_decision(user, kind: str, entity_id):
+    """
+    تصمیم سه‌حالتهٔ دیدن یک سند: True، False یا None (هیچ قلابی نظر نداد).
+    هر منع برنده است؛ خطای قلاب = منع (بسته در برابر خطا). مدیر کل فعال همیشه می‌بیند.
+    """
+    if user is None or not getattr(user, 'is_active', False):
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    if not kind or not entity_id:
+        return False
+    allowed = None
+    for hook in contributions(f'can_view:{kind}'):
+        try:
+            verdict = hook(user, entity_id)
+        except Exception:
+            return False
+        if verdict is False:
+            return False
+        if verdict is True:
+            allowed = True
+    return allowed
+
+
+def can_view(user, kind: str, entity_id) -> bool:
+    """دیدن سند برای پیوست و دانلود: فقط اجازهٔ صریح (نوع بی‌قلاب = منع)."""
+    return entity_view_decision(user, kind, entity_id) is True
+
+
+def is_entity_locked(kind: str, entity_id) -> bool:
+    """سند قفل است اگر هر قلابی بگوید قفل؛ خطای قلاب = قفل (تا پیوست اشتباهی پاک یا جایگزین نشود)."""
+    if not kind or not entity_id:
+        return False
+    for hook in contributions(f'is_locked:{kind}'):
+        try:
+            if hook(entity_id):
+                return True
+        except Exception:
+            return True
+    return False
+
+
 def _verify_platform_compatibility(spec: ModuleSpec) -> None:
     """
     بررسی بازه نسخه پلتفرم مورد نیاز ماژول — فاز ۷ (تسک ۶۶).

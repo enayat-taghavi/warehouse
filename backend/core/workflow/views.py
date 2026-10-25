@@ -23,6 +23,7 @@ from accounts.audit_utils import log_audit_event
 from accounts.permission_admin import member_company_ids
 from accounts.scoped_permissions import can
 from companies.models import Company, ProjectSection
+from platform_core.registry import entity_view_decision
 
 from . import engine
 from . import serializers as ser
@@ -173,7 +174,11 @@ def visible_instances(user, instances, kind, entity_id) -> list:
     """
     if not instances or not getattr(user, 'is_active', False):
         return []
-    if is_live_superuser(user) or engine.task_grants_view(user, kind, entity_id):
+    # قلاب دیدن ماژول (ص۲ طرح ۲.۶): منع = هیچ سابقه‌ای، اجازه = همه، بی‌نظر = قاعدهٔ زیر
+    decision = entity_view_decision(user, kind, entity_id)
+    if decision is False:
+        return []
+    if decision is True or is_live_superuser(user) or engine.task_grants_view(user, kind, entity_id):
         return list(instances)
     specs = workflow_specs()
     out = []
