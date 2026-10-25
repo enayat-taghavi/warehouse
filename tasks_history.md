@@ -10786,3 +10786,119 @@ test(release-v1 2.9-d): users page DOM flow (create, stay on permissions, inline
 نیازمندی‌ها با مستندات طرح انتشار (`plan_2.9_users.md` بخش ۲.۹-د و ۲.۹-ب) و رفتار کامپوننت‌های [Users]...
 
 ---
+
+### Task 1 of 2 — 2026-10-25 10:36:52
+- **Status:** DONE
+- **Conversation:** `7dc0867c-e671-4b2a-b33a-91d591f8c20a`
+- **Steps:** 38
+- **Tokens:** 91676
+- **Duration:** 8m 34s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 1 of 2 — Release v1 2.9 heavy checks: release on the local app environment (backup, migration check, staging APK build and install on the emulator, patched web build); the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running. The only exception is the emulator in step e, which runs in its own Windows Terminal tab.
+- Release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`; do not kill any `node` process. The runner restarts Daphne and the worker after your turn.
+- Only the local `app` environment on this Windows machine. Never connect to `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`); do not publish it.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+
+2. Context: step 2.9 changed the users page, the permissions tab, role bundles, the user menu substitute modal and backend user-management scope code. No new migration. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`. adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+3. Task, in this order:
+- a) Backup (stop if it fails or the size is 0), in `backend`:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app 2.9 users'); print(m['filename'], m['size'])"`
+- b) `.\venv\Scripts\python.exe manage.py showmigrations --plan`: if any line has `[ ]`, stop and report; do not migrate.
+- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear).
+- d) In `frontend`: `npm run build:mobile-test`, then in `frontend\android` `.\gradlew.bat assembleStagingDirectRelease`.
+- e) Run `adb devices`. If `emulator-5554` is not listed as `device`, start it with `wt.exe -w 0 new-tab --title "Android Emulator" cmd /k "E:\Android\Sdk\emulator\emulator.exe -avd AndroidTest15"` and repeat `adb shell getprop sys.boot_completed` (pause at most 15 seconds between tries, at most 12 tries) until it prints 1. Then from the repo root install: `adb install -r "frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk" > scratch\logs\apk29_install.txt` and read that file; it must contain `Success`.
+- f) Web build in `frontend`: `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, `Get-Content`, and reading files outside `E:\warehouse-secrets\`. Gradle at most twice, each build at most twice. If a step fails, read its output, change approach, and if it still fails stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup file and size, the `showmigrations` result, the APK path and size, the install result, the web build result and the patch line. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+در حال اجرای بیلد اپلیکیشن موبایل (`npm run build:mobile-test` در پوشه `frontend`) هستم و منتظر تکمیل فرآیند می‌مانم.
+در حال ساخت پکیج APK نسخه آزمایشی (`.\gradlew.bat assembleStagingDirectRelease` در پوشه `frontend\android`) هستم و منتظر تکمیل فرآیند می‌مانم.
+در حال نصب APK نسخه آزمایشی بر روی شبیه‌ساز اندروید (`adb install -r ...`) هستم و منتظر نتیجه نصب می‌مانم.
+در حال اجرای بیلد وب فرانت‌اند (`npx ng build --delete-output-path=false` در پوشه `frontend`) هستم و منتظر تکمیل فرآیند می‌مانم.
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explanation)
+دستور مربوط به اجرای مراحل انتشار نسخه ۲.۹ محلی (Local App Release v1 2.9) بود که شامل پشتیبان‌گیری از پایگاه‌داده، بررسی عدم وجود مایگریشن ...
+
+---
+
+### Task 2 of 2 — 2026-10-25 14:08:21
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `3069db32-9627-4a4b-a505-1c3ac72c85f6`
+- **Steps:** 400
+- **Tokens:** 2782675
+- **Duration:** 211m 24s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 2/3 passed
+    - FAILED (exit 1): `python scratch/heavy/check_png29.py`
+  - verify gate 2: 2/3 passed
+    - FAILED (exit 1): `python scratch/heavy/check_png29.py`
+  - verify gate 3: 3/3 passed
+- **Task:**
+```
+Session 2 of 2 — Release v1 2.9 heavy checks: Android check of the users page and the «جانشین من» modal on app with a temporary QA superuser
+
+
+
+1. Critical rules:
+- This is an operational task on the local test environment `app` (this Windows machine, test data only, no real users). Never touch `soft`.
+- Change no tracked file. Do not commit. Write only under `scratch/logs/` (the helper in step A also writes `scratch/qa_h29_credentials.txt`).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running. The only exception is the emulator, which runs in its own Windows Terminal tab.
+- The test password is in `scratch/qa_h29_credentials.txt` (one line, tab-separated: username, password). Never print the password in your reply, in a log you write, or in a file name. Pass it only to `adb shell input text`.
+- Do not delete the QA user; Claude uses it afterwards and a later session deletes it.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context:
+- The staging APK (app id `ir.comanage.soft.test`, activity `ir.comanage.soft.MainActivity`) was installed on the emulator AVD `AndroidTest15` by session 1. It talks to `https://app.farsalish.ir`.
+- Emulator screen is 1080x2400 pixels. On the login page the username field centre is about (540, 1130), the password field about (540, 1338), the login button «ورود به سامانه» about (540, 1655).
+
+3. Task:
+A. Create the QA user. In `backend` (PowerShell): `.\venv\Scripts\python.exe -X utf8 manage.py shell -c "import sys; sys.argv=['x','create']; exec(open('../scratch/heavy/qa29_user.py', encoding='utf-8').read())"`. It must print `QA_USER_CREATED`.
+B. `adb devices`. If `emulator-5554` is not listed as `device`, start it with `wt.exe -w 0 new-tab --title "Android Emulator" cmd /k "E:\Android\Sdk\emulator\emulator.exe -avd AndroidTest15"` and repeat `adb shell getprop sys.boot_completed` (pause at most 15 seconds between tries, at most 12 tries) until it prints 1.
+C. `adb shell am force-stop ir.comanage.soft.test`, then `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`, wait about 8 seconds.
+D. To find elements, use `adb shell uiautomator dump /sdcard/ui.xml` then `adb pull /sdcard/ui.xml scratch/logs/ui.xml` and read the XML: find the node by its `text`, `hint` or `content-desc`, and tap the centre of its `bounds` with `adb shell input tap X Y`. If the XML has no web page nodes, use the coordinates from the context and screenshots (`adb exec-out screencap -p > scratch/logs/android29_<name>.png`) instead.
+E. Log in: tap the username field, `adb shell input text <username>`; tap the password field, `adb shell input text <password>`; tap «ورود به سامانه». Wait about 8 seconds. If the app shows the launcher or asks to choose a system, choose the accounting one («مالی» / «حسابداری»).
+F. Open the users page: find and tap a node whose text contains «کاربران» (in the side menu, which opens with the menu button, or in the launcher). Wait about 6 seconds and save `scratch/logs/android29_users.png`.
+G. Open the user menu (the profile button; its `content-desc` or text contains «پروفایل کاربری»), then tap «جانشین من». Wait about 5 seconds and save `scratch/logs/android29_substitute.png`. Then tap the close button of that modal (its `content-desc` contains «بستن») and save `scratch/logs/android29_after_close.png`.
+
+4. Tool policy:
+- Reading files is unrestricted. Allowed commands: the commands named above, `adb` (devices, shell input, shell am, shell getprop, shell uiautomator dump, pull, exec-out screencap), `Get-Content`/`Select-String` for reading, and `git status --short`.
+- At most 45 adb calls in total. If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+5. Before finishing:
+- `scratch/logs/qa29_user.txt` contains `QA_USER_CREATED`; the three screenshots exist.
+- `git status --short` prints nothing.
+
+6. Output and stop condition:
+- No commit.
+- Short English report: what was visible on the users page (cards or table, any horizontal scroll), what the substitute modal showed, whether it closed, and anything that did not work. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explanation)
+پیام سیستم مربوط به بازگشت پس از بروز خطای ارتباطی / قطعی پردازش قبلی است. بررسی `git status` و فایل‌های خروجی نشان می‌دهد که تمام مراحل تست اندروید انتشار ۲.۹ محلی (بررسی صفحه کاربران، مودال «جانشین من»، ثبت اسکرین‌شات‌ها و ساخت کاربر آزمایشی QA) با موفقیت کامل انجام شده و فایل‌های تصویری و لاگ‌ها در مسیر `scratch/logs/` ذخیره شده‌اند. طبق الزامات صریح تسک، هیچ فایل پروژه‌ای تغییر نکرده و هیچ کامیت (Commit) نباید انجام شود.
+
+### ۲. اعتبارسنجی وضعیت (Immediate Verification)
+- وضعیت گیت با دستور `git status --short` بررسی شد؛ هیچ فایل ردیابی‌شده‌ای از پروژه تغییر نکرده است.
+- فایل `scratch/logs/qa29_user.txt` موجود بوده و حاوی `QA...
+
+---

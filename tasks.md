@@ -470,7 +470,7 @@ test(release-v1 2.9-d): users page DOM flow (create, stay on permissions, inline
 
 ===
 
-Session 1 of 2 — Release v1 2.9 heavy checks: release on the local app environment (backup, migration check, staging APK build and install on the emulator, patched web build); the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] Session 1 of 2 — Release v1 2.9 heavy checks: release on the local app environment (backup, migration check, staging APK build and install on the emulator, patched web build); the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -509,7 +509,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 2 of 2 — Release v1 2.9 heavy checks: Android check of the users page and the «جانشین من» modal on app with a temporary QA superuser
+[DONE] Session 2 of 2 — Release v1 2.9 heavy checks: Android check of the users page and the «جانشین من» modal on app with a temporary QA superuser
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
