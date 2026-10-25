@@ -534,6 +534,11 @@ export interface ExtensionMap {
     purgeBeforeDeepUpdate?: (scopeId: number, userId: number | null) => Promise<void>;
     /** پاکسازی دادهٔ محلی یک هدف وقتی سرور دسترسی به آن را با ۴۰۳ ابطال کرد */
     purgeOnAccessRevoked?: (scopeId: number) => Promise<void>;
+    /**
+     * پیش‌خوانی کش GET (ص۵ طرح ۲.۵): همان GETهای بار اول صفحه‌های کلیدی تا رهگیر آفلاین کش کند.
+     * فقط کش را جایگزین می‌کند، هرگز پاک نمی‌کند. مصرف در cache-warmup.service.ts (فاصله‌دار، فقط آنلاین).
+     */
+    warmCache?: (injector: Injector) => Promise<void>;
   };
 
   /**

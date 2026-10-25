@@ -387,6 +387,11 @@ export const MODULE: WhFrontendModule = {
         try {
           await financeOfflineDb.apiCache.filter((entry) => entry.url.includes(`project_id=${id}`)).delete();
         } catch {}
+      },
+      // ص۵ طرح ۲.۵: پیش‌خوانی فهرست‌های پرکاربرد (بخش‌ها، پرسنل، خودرو، کارکرد) در کش رهگیر
+      warmCache: async (injector) => {
+        const { warmAccountingCache } = await import('./api/warm-cache');
+        await warmAccountingCache(injector);
       }
     },
     offlineSync: {

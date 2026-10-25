@@ -13,6 +13,7 @@ import { offlineInterceptor } from './core/interceptors/offline.interceptor';
 import { apiOriginInterceptor } from './core/interceptors/api-origin.interceptor';
 import { CustomRouteReuseStrategy } from './core/strategies/custom-route-reuse-strategy';
 import { OfflineSyncService } from './core/services/offline-sync.service';
+import { CacheWarmupService } from './core/services/cache-warmup.service';
 import { ConfigApiService } from './core/api/config-api.service';
 import { resolveServerUrl } from './core/platform/server-origin';
 import { isNativePlatform } from './core/platform/platform';
@@ -67,6 +68,8 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       OfflineSyncService.getInstance().initialize();
+      // ص۵ طرح ۲.۵: پیش‌خوانی کش GET ماژول‌ها بعد از ورود، برگشت اتصال و بروزرسانی عمیق
+      inject(CacheWarmupService).start();
       // درخواست ماندگاری storage — بدون آن مرورگر می‌تواند تحت فشار دیسک
       // IndexedDB (صف و دادهٔ آفلاین کاربر) را پاک کند. fire-and-forget.
       navigator.storage?.persist?.().then(
