@@ -662,8 +662,8 @@ export class Users implements OnInit, OnDestroy {
 
   roleScopeCountClass(tone: string): string {
     return tone === 'emerald'
-      ? 'px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black border border-emerald-200'
-      : 'px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 text-[9px] font-black border border-sky-200';
+      ? 'px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black border border-emerald-200'
+      : 'px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 text-[10px] font-black border border-sky-200';
   }
 
   /** برچسب کوتاه نشان سامانه (اندازهٔ عادی یا ریز) */
@@ -1650,7 +1650,8 @@ export class Users implements OnInit, OnDestroy {
     this.userRoleModalTab = this.roleScopes[0]?.key ?? 'global';
     this.userModalInnerTab = 'identity';
     this.isUserModalOpen = true;
-    this.updateModalWarehouses();
+    // باز کردن پنجره انبارهای ثبت‌شده را دست نمی‌زند؛ فقط تغییر شرکت‌ها انتخاب را هرس می‌کند
+    this.updateModalWarehouses(false);
     this.cdr.detectChanges();
     // ردیف فهرست جایگزین است تا نسخهٔ تازهٔ سرور برسد (۲.۹)
     if (id) this.refetchEditingUser();
@@ -1748,13 +1749,13 @@ export class Users implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  updateModalWarehouses() {
+  updateModalWarehouses(pruneSelection = true) {
     this.isLoadingModalWarehouses = true;
     const selectedCompanyIds = (this.userForm.company_ids || []).map(Number);
     
     if (selectedCompanyIds.length === 0) {
       this.modalWarehouses = [];
-      this.userForm.assigned_warehouses = [];
+      if (pruneSelection) this.userForm.assigned_warehouses = [];
       this.isLoadingModalWarehouses = false;
       this.cdr.detectChanges();
       return;
@@ -1776,7 +1777,7 @@ export class Users implements OnInit, OnDestroy {
         });
         this.modalWarehouses = Array.from(combined.values());
         this.isLoadingModalWarehouses = false;
-        if (this.userForm.assigned_warehouses && this.userForm.assigned_warehouses.length > 0) {
+        if (pruneSelection && this.userForm.assigned_warehouses && this.userForm.assigned_warehouses.length > 0) {
           const currentValidWhIds = new Set(this.modalWarehouses.map((w: any) => Number(w.id)));
           this.userForm.assigned_warehouses = this.userForm.assigned_warehouses.filter(
             (id: number) => currentValidWhIds.has(Number(id))

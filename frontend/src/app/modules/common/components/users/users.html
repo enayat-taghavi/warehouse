@@ -240,7 +240,7 @@
                         <div class="min-w-0">
                           <h4 class="font-black text-slate-800 text-xs flex items-center gap-1.5" [ngClass]="!u.is_active ? 'line-through text-slate-500' : ''">
                             <span class="truncate">{{u.first_name}} {{u.last_name}}</span>
-                            <span *ngIf="u.is_superuser" class="text-[8.5px] px-1 py-0.5 rounded font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">ادمین</span>
+                            <span *ngIf="u.is_superuser" class="text-[10px] px-1 py-0.5 rounded font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">ادمین</span>
                             <span *ngIf="isUserLocked(u.username)" class="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0 flex items-center gap-0.5" title="مسدود شده توسط سیستم ضدنفوذ">
                               <svg appIcon="lock" class="w-3.5 h-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg> قفل
                             </span>
@@ -456,7 +456,7 @@
                           <ng-container *ngIf="!getUserAuthorizedSystems(u).isEmpty">
                             <span *ngFor="let b of getUserAuthorizedSystems(u).badges"
                                   [class]="b.bgClass + ' ' + b.textClass + ' ' + b.borderClass"
-                                  class="px-1.5 py-0.5 rounded-md text-[8.5px] border font-bold flex items-center gap-0.5">
+                                  class="px-1.5 py-0.5 rounded-md text-[10px] border font-bold flex items-center gap-0.5">
                               <span>{{ b.icon }}</span>
                               <span>{{ badgeShortLabel(b.key, true) }}</span>
                             </span>
@@ -976,7 +976,7 @@
                   </div>
                   <div class="flex items-center gap-1 mt-0.5">
                     <span class="text-[7.5px] font-bold px-1 py-0.5 rounded text-slate-500 bg-slate-100">{{preset.categoryTitle}}</span>
-                    <span class="text-[8.5px] text-slate-400 font-mono truncate" dir="ltr">{{preset.id}}</span>
+                    <span class="text-[10px] text-slate-400 font-mono truncate" dir="ltr">{{preset.id}}</span>
                   </div>
                 </div>
               </button>
@@ -1156,7 +1156,7 @@
                               <svg *ngIf="perm.is_sensitive" appIcon="shield" class="w-3 h-3 text-rose-600 inline-block" aria-hidden="true" viewBox="0 0 24 24" fill="none"></svg>
                               <span class="text-[11px] font-black truncate" [ngClass]="perm.is_sensitive ? 'text-rose-900' : (roleForm.permissions.includes(perm.id) ? 'text-indigo-950' : 'text-slate-800')">{{getShortPermissionName(perm)}}</span>
                             </div>
-                            <span class="text-[8.5px] font-mono block truncate" [ngClass]="perm.is_sensitive ? 'text-rose-600' : 'text-slate-400'">{{perm.codename}}</span>
+                            <span class="text-[10px] font-mono block truncate" [ngClass]="perm.is_sensitive ? 'text-rose-600' : 'text-slate-400'">{{perm.codename}}</span>
                           </div>
                         </div>
                         <input type="checkbox" [checked]="roleForm.permissions.includes(perm.id)" [disabled]="perm.is_sensitive && !isSuperuser()" (change)="toggleRolePermission(perm, $event)" class="sr-only">
