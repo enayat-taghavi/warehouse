@@ -864,7 +864,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 2 — Release v1 step 2.5-c: backend tests for the document_changed live event
+[DONE] [ ] Session 1 of 2 — Release v1 step 2.5-c: backend tests for the document_changed live event
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -913,7 +913,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 2 — Release v1 step 2.5-c: frontend specs for document_changed (core helper and accountant invoices page)
+[DONE] [ ] Session 2 of 2 — Release v1 step 2.5-c: frontend specs for document_changed (core helper and accountant invoices page)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

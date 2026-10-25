@@ -11431,3 +11431,136 @@ Outside the allowed scope: ['frontend/src/app/core/services/cache-warmup.service
 فای...
 
 ---
+
+### Task 1 of 2 — 2026-10-25 22:26:26
+- **Status:** DONE
+- **Conversation:** `97fae3dd-6f62-4339-a12e-ef5c18e38763`
+- **Steps:** 50
+- **Tokens:** 103445
+- **Duration:** 6m 22s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 2 — Release v1 step 2.5-c: backend tests for the document_changed live event
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_document_event_25c.py`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, decorate that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.5-c): document_changed backend tests`.
+
+2. Context (read these ranges, nothing broader):
+- `backend/core/companies/realtime.py` lines 60 to 105: `broadcast_document_changed(doc_type, doc_id, *, company_id, section_id=None, status=None, action='updated', client_tab_id=None, sender_id=None)`. Without `company_id` it logs a warning and registers nothing. Otherwise it builds the payload at call time (`type` is `send_notification`, `type_str` is `document_changed`, keys `doc_type`, `doc_id`, `action`, `status`, `company_id`, `section_id`, `client_tab_id`, `sender_id`); when `client_tab_id` is None it takes `accounts.middleware.get_current_client_tab_id()`. It sends with `transaction.on_commit` to group `company_<id>_notifications` through `channels.layers.get_channel_layer()` and `asgiref.sync.async_to_sync(layer.group_send)`.
+- `backend/modules/accounting/personnel/workflow_engine.py` lines 70 to 105: `notify_document_changed(instance, action='status_changed')` maps `ExpenseInvoice` to `expense_invoice` and `PettyCashTransaction` to `petty_cash` (company = `section.project.company_id`, section = `section_id`, status = `status`), `MonthlyPayrollRecord` to `payroll_record`, `MonthlyWorkPeriod` to `payroll_period`; every other model sends nothing. It is called at the end of `advance_workflow_step`, `request_workflow_revision`, `reject_workflow` and `execute_treasury_disbursement`.
+- `backend/modules/accounting/personnel/workflows.py` lines 27 to 40: invoice state changes from the core workflow engine call `notify_document_changed(invoice)` when the invoice status changes.
+- `backend/modules/accounting/personnel/views_domains/treasury_views.py`: `ExpenseInvoiceViewSet.perform_create` (about line 283) sends action `created`, `perform_update` sends `updated`, `perform_destroy` sends `deleted`; `PettyCashTransactionViewSet.perform_create` (about line 670) sends `created`.
+- `backend/modules/accounting/personnel/test_invoice_workflow_flow.py` lines 1 to 66: reuse this fixture pattern (company, project, section, counterparty, `grant_section_perms`, `APIClient` with `HTTP_X_COMPANY_ID`, `self.captureOnCommitCallbacks(execute=True)`, `BASE = '/api/personnel/expense-invoices/'`).
+- `backend/modules/accounting/personnel/test_live_events_25a.py` lines 1 to 55: the mock pattern for the channel layer (`patch('channels.layers.get_channel_layer')`, `group_send = AsyncMock()`) and `set_current_client_tab_id` / `_current_client_tab_id_var.reset(token)`.
+- `backend/core/notifications/consumers.py` lines 214 to 262 (`NotificationConsumer.send_notification`, forwarded keys).
+- For the petty cash POST body only: `backend/modules/accounting/personnel/serializers_domains/treasury_audit.py` lines 127 to 160 and `backend/modules/accounting/personnel/models_domains/treasury_audit.py` lines 211 to 320.
+
+3. Definitions: a "document event" is a `group_send` call whose second argument has `type_str == 'document_changed'`. Collect them with a helper `events(mock_layer)` that returns the payloads of such calls in order.
+
+4. Task: write `test_document_event_25c.py` with one `TestCase` class `DocumentChangedEventTests`. In `setUp` build the fixture like `test_invoice_workflow_flow.py` (codes `DOC25C`, `DOC25C-P`, `DOC25C-S`) plus a superuser `User.objects.create_superuser(username='doc25c_admin', password='x')` with a `UserCompanyAccess` row for the company. Patch the channel layer in each test. Tests (names exactly):
+- `test_1_helper_without_company_sends_nothing`: inside `with self.captureOnCommitCallbacks(execute=True) as callbacks:` call `broadcast_document_changed('expense_invoice', 1, company_id=None)`; `callbacks` is empty and `group_send` is not called.
+- `test_2_helper_sends_only_after_commit`: `with self.captureOnCommitCallbacks(execute=False) as callbacks:` call the helper with `company_id=self.company.pk`; `group_send` not called; then run each callback; exactly one document event, group `company_<pk>_notifications`, `doc_type`, `doc_id`, `action == 'updated'`.
+- `test_3_helper_default_tab_id_and_explicit_wins`: with `set_current_client_tab_id('tab_doc')` the payload has `client_tab_id == 'tab_doc'`; with `client_tab_id='tab_x'` passed explicitly the payload has `tab_x`. Reset the context var in `finally`.
+- `test_4_invoice_create_sends_created`: POST to `BASE` as the superuser with section, counterparty, invoice_number, invoice_date_shamsi, amount, category, description (use `format='multipart'` or `'json'` as the existing tests do) inside `captureOnCommitCallbacks(execute=True)`; status 201; exactly one document event with `doc_type == 'expense_invoice'`, `action == 'created'`, `doc_id` equal to the new invoice id, `section_id == self.sec.pk`, `company_id == self.company.pk`.
+- `test_5_invoice_submit_sends_status_changed_with_new_status`: create an invoice with the ORM (as in `invoice()`), POST `submit/` as the employee user; at least one document event with `action == 'status_changed'`, and the last one has `status` equal to the refreshed `invoice.status`.
+- `test_6_invoice_update_and_delete`: PATCH a draft invoice description as the superuser: one event with `action == 'updated'`; DELETE it: one event with `action == 'deleted'` and the old id.
+- `test_7_petty_cash_create_sends_created`: POST to `/api/personnel/petty-cash-transactions/` (check the route in `backend/modules/accounting/personnel/urls.py` with a search for `petty`) as the superuser; status 201; at least one document event with `doc_type == 'petty_cash'` and `action == 'created'`.
+- `test_8_engine_advance_sends_one_event`: create a `PettyCashTransaction` with the ORM in status `pending_supervisor` (fill the required fields), call `advance_workflow_step(tx, self.admin, is_financial=True)` inside `captureOnCommitCallbacks(execute=True)`; exactly one document event, `doc_type == 'petty_cash'`, `status` equal to the refreshed status.
+- `test_9_other_models_send_nothing`: `notify_document_changed(PersonnelProfile.objects.create(first_name='a', last_name='b', national_code='0012345679', company=self.company))` inside `captureOnCommitCallbacks(execute=True)` sends no document event.
+- `test_10_consumer_forwards_document_fields`: `inspect.getsource(NotificationConsumer.send_notification)` contains `'doc_type'`, `'doc_id'` and `'status'`.
+
+5. Tool policy: read only the files and ranges in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; $env:DB_TEST_NAME='test_agy_docevent'; .\venv\Scripts\python.exe manage.py test personnel.test_document_event_25c --keepdb --noinput`. At most 6 runs.
+
+6. Before finishing: all 10 tests pass (only `expectedFailure` allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `expectedFailure` with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+دستور اجرای آزمون‌های بک‌اند برای رویداد `document_changed` در حال اجراست و منتظر اتمام آن هستیم.
+</div>
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانه اجرایی (4-Step Protocol)
+
+1. **توضیح ساده (Explain Simply):**
+کاربر درخواست پیاده‌سازی آزمون‌های خودکار بک‌اند (backend tests) برای رویداد زنده `document_changed` در انتشار نسخه یک (Release v1 گام ۲.۵-ج) را دارد. این آزمون‌ها باید دقیقاً در یک فایل جدید به نام `backend/modules/accounting/personnel/test_document_event_25c.py` با ۱۰ متد تست مشخص قرار گیرند و هیچ فایل دیگری تغییر نکند.
+
+2. **بررسی صحت فنی (Verify Immediately):**
+ساختار رویداد `broadcast_document_changed` در `realtime.py`، فراخوانی‌های `notify_d...
+
+---
+
+### Task 2 of 2 — 2026-10-25 22:33:51
+- **Status:** DONE
+- **Conversation:** `c61bf7a8-5522-4ff6-a914-cad58f390067`
+- **Steps:** 34
+- **Tokens:** 79837
+- **Duration:** 7m 20s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Release v1 step 2.5-c: frontend specs for document_changed (core helper and accountant invoices page)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly two new files: `frontend/src/app/core/http/websocket.document-changed.spec.ts` and `frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `it.fails(` and describe the exact difference in your report.
+- No `it.only`, `describe.only`, `it.skip`, no `fs`/`path` imports.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.5-c): document_changed frontend specs`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/core/http/websocket.service.ts` lines 1 to 80. Facts: exported `DocumentChangedEvent` and `patchDocumentRow(rows, ev, statusField = 'status')`: returns false when `ev.action !== 'status_changed'`, when `ev.status` is null or undefined, when rows is null, or when no row has `Number(row.id) === Number(ev.doc_id)`; otherwise sets `row[statusField] = ev.status` and returns true. `WebSocketService.documentChanges$(docTypes)` emits messages from `notifications$` whose `type` (or `type_str`) is `document_changed`, whose `doc_type` is in `docTypes`, and for which `skipLiveEvent(msg)` is false (`skipLiveEvent` drops a message whose `client_tab_id` equals `service.tabId`, and a message whose `company_id` differs from `ActiveCompanyService.activeCompanySignal()?.id`).
+- `frontend/src/app/core/http/websocket.service.spec.ts` (the existing setup: how `WebSocketService` is created with its `AuthService`, `ToastService` and `ActiveCompanyService` mocks). Copy that setup.
+- `frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.ts` lines 1 to 240. Facts: `AccountantInvoicesHubComponent`; `ngOnInit` subscribes to `ws.documentChanges$(['expense_invoice'])`; for an event, if `patchDocumentRow(this.allInvoices, ev)` is true it calls `updateViewAndCounters()`; otherwise, when `selectedSectionId` is null or `ev.section_id` is empty or equals `selectedSectionId`, it calls `fetchInvoices(true)`. `fetchInvoices(silent)` with `silent = true` never sets `isLoading` to true and shows no error toast.
+
+3. Task A, `websocket.document-changed.spec.ts` (Vitest + `TestBed`). Tests (names exactly):
+- `1. patchDocumentRow sets the status of the matching row`: rows `[{ id: 1, status: 'draft' }, { id: 2, status: 'draft' }]`, event `{ type: 'document_changed', doc_type: 'expense_invoice', doc_id: 2, action: 'status_changed', status: 'paid' }` returns true and only row 2 becomes `paid`.
+- `2. patchDocumentRow returns false for a missing row, a non-status action or a null status`: three checks, rows unchanged.
+- `3. patchDocumentRow uses the given status field`: rows `[{ id: 5, payment_status: 'PENDING' }]`, statusField `payment_status`.
+- `4. documentChanges$ emits only the requested doc types`: subscribe with `['petty_cash']`; push through `service.notifications$.next(...)` one `expense_invoice` and one `petty_cash` message; exactly one emission (`petty_cash`).
+- `5. documentChanges$ drops events of the same tab`: message with `client_tab_id: service.tabId` is not emitted.
+- `6. documentChanges$ drops events of another company`: active company id 3 in the mock, message with `company_id: 4` not emitted; `company_id: 3` emitted.
+
+4. Task B, `accountant-invoices.live.spec.ts` (Vitest + `TestBed`). Use `TestBed.overrideComponent(AccountantInvoicesHubComponent, { set: { template: '', imports: [] } })` so no child component is needed. Providers: `{ provide: PersonnelApiService, useValue: api }` where `api.getMySections` returns `of([{ id: 11 }])`, `api.getProjectSections` returns `of([])`, `api.getExpenseInvoices` is `vi.fn(() => of([{ id: 1, status: 'pending_accountant' }, { id: 2, status: 'pending_accountant' }]))`; `ActivatedRoute` with `queryParams: of({})`; `Router` with `navigate: vi.fn()`; `ToastService` with `vi.fn()` methods; `AuthService` and `StateService` as `{}`; `{ provide: WebSocketService, useValue: ws }` where `ws.documentChanges$ = vi.fn(() => subject.asObservable())` and `subject = new Subject<any>()`. Create the component, call `fixture.detectChanges()`, then reset the `getExpenseInvoices` call count with `api.getExpenseInvoices.mockClear()`. Tests (names exactly):
+- `1. subscribes to expense_invoice document events`: `ws.documentChanges$` called with `['expense_invoice']`.
+- `2. a status change of a listed invoice is patched in place without a refetch`: `subject.next({ type: 'document_changed', doc_type: 'expense_invoice', doc_id: 1, action: 'status_changed', status: 'pending_manager', section_id: 11 })`; `component.allInvoices[0].status` is `pending_manager`; `getExpenseInvoices` not called; `component.statusCounters.pending_audit` is 1.
+- `3. an unknown invoice triggers a silent refetch`: event with `doc_id: 99`, `action: 'created'`, `section_id: 11`; `getExpenseInvoices` called once and `component.isLoading` is false.
+- `4. an event of another section is ignored`: set `component.selectedSectionId = 11`, event with `doc_id: 99`, `section_id: 12`; `getExpenseInvoices` not called.
+
+5. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `frontend` create a temporary `tsconfig.agy-2.5c.spec.json` with `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/core/http/websocket.document-changed.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts"], "exclude": [] }` and run `npx ng test --watch=false --ts-config tsconfig.agy-2.5c.spec.json --include src/app/core/http/websocket.document-changed.spec.ts --include src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts`; delete the temporary tsconfig before committing. At most 5 runs.
+
+6. Before finishing: both specs pass (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
+
+7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست‌های مربوط به `document_changed` در دو فایل مشخص‌شده ایجاد شدند و اجرای تست‌ها از طریق Angular CLI آغاز شده است. منتظر اتمام اجرای تست‌ها هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانه اجرایی
+
+1. **توضیح ساده درخواست:**
+   کاربر خواسته است تا تست‌های بخش فرانت برای رویدادهای زنده `document_changed` در دو فایل مشخص ایجاد شوند:
+   - فایل اول: `websocket.document-changed.spec.ts` برای بررسی هلپر هسته `patchDocumentRow` و فیلتر جریان `documentChanges$`.
+   - فایل دوم: `accountant-invoices.live.spec.ts` برای بررسی رفتار مؤلفه فاکتورهای حسابداری در مواجهه با رویدادهای زنده (به‌روزرسانی درجا، بازخوانی بی‌صدا، و نادیده گرفتن رویدادهای بخش‌های دیگ...
+
+---
