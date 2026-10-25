@@ -957,3 +957,51 @@ verify: python scripts/automation/verify_tools.py clean-tree
 6. Before finishing: both specs pass (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
 
 7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 2.5-d: specs for the update bar and the update-ready state
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/shared/components/update-bar/update-bar.dom.spec.ts frontend/src/app/core/services/pwa-update.state.spec.ts
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/shared/components/update-bar/update-bar.dom.spec.ts --min-tests 4
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/services/pwa-update.state.spec.ts --min-tests 4
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/shared/components/update-bar/update-bar.dom.spec.ts --include src/app/core/services/pwa-update.state.spec.ts --no-skip --max-failed 0
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.5-d): update bar and update-ready specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly two new files: `frontend/src/app/shared/components/update-bar/update-bar.dom.spec.ts` and `frontend/src/app/core/services/pwa-update.state.spec.ts`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `it.fails(` and describe the exact difference in your report.
+- No `it.only`, `describe.only`, `it.skip`, no `fs`/`path` imports.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.5-d): update bar and update-ready specs`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/core/services/pwa-update.service.ts` lines 1 to 130. Facts: `PwaUpdateService` has public signals `updateReady` (initially false) and `updateDismissed` (initially false). In `init()`, a `VERSION_READY` event from `swUpdate.versionUpdates` sets `updateReady` to true and `updateDismissed` to false, and opens no dialog; while a manual update is in progress (`checkAndApplyManualUpdate` running) the event is ignored. `applyUpdate()` awaits `swUpdate.activateUpdate()` (errors are caught) and then calls `window.location.reload()`. `dismissUpdate()` sets `updateDismissed` to true. In `checkAndApplyManualUpdate()`, when online, `swUpdate.isEnabled` is true and `updateReady()` is true, it calls `applyUpdate()` and does not call `swUpdate.checkForUpdate()`.
+- `frontend/src/app/core/services/pwa-update.service.spec.ts` lines 1 to 80 (the existing setup: `SwUpdate`, `ToastService` and `ConfirmDialogService` mocks, `TestBed`, and how `NetworkStatusService.getInstance()` getters `isBrowserOnline` / `isServerUnreachable` are mocked with `vi.spyOn(..., 'get')`). Copy that setup.
+- `frontend/src/app/shared/components/update-bar/update-bar.component.ts` (whole file, 66 lines). Facts: standalone `UpdateBarComponent`, selector `app-update-bar`, injects `PwaUpdateService` as `pwaUpdate`. It renders a `section[role="status"]` only when `pwaUpdate.updateReady()` is true and `pwaUpdate.updateDismissed()` is false. Button `[data-testid="update-bar-apply"]` calls `onApply()`, which calls `pwaUpdate.applyUpdate()`. Button `[data-testid="update-bar-later"]` calls `pwaUpdate.dismissUpdate()`. Text `نسخهٔ تازهٔ برنامه آماده است.` is in the bar.
+- To stub the reload in jsdom: `Object.defineProperty(window, 'location', { configurable: true, value: { ...window.location, reload: vi.fn() } })` in `beforeEach`, and restore the original object in `afterEach`.
+
+3. Task A, `update-bar.dom.spec.ts` (Vitest + `TestBed`, first line `// @vitest-environment jsdom`, same `initTestEnvironment` try-block as the existing spec). Provide `{ provide: PwaUpdateService, useValue: fake }` where `fake = { updateReady: signal(false), updateDismissed: signal(false), applyUpdate: vi.fn().mockResolvedValue(undefined), dismissUpdate: vi.fn(() => fake.updateDismissed.set(true)) }` (`signal` from `@angular/core`). Tests (names exactly):
+- `1. hidden when no update is ready`: after `fixture.detectChanges()`, no `section[role="status"]`.
+- `2. shown when an update is ready`: set `fake.updateReady.set(true)`, detect changes; the section exists and its text contains `نسخهٔ تازهٔ برنامه آماده است.`.
+- `3. the update button calls applyUpdate`: ready, click `[data-testid="update-bar-apply"]`, `await fixture.whenStable()`; `fake.applyUpdate` called once.
+- `4. the later button dismisses and hides the bar`: ready, click `[data-testid="update-bar-later"]`, detect changes; `fake.dismissUpdate` called once and the section is gone.
+- `5. buttons have Persian aria-labels`: ready; apply button `aria-label` is `به‌روزرسانی`, later button `aria-label` is `بعداً`.
+
+4. Task B, `pwa-update.state.spec.ts` (Vitest + `TestBed`, first line `// @vitest-environment jsdom`, copy the existing spec setup with a `Subject` for `versionUpdates`; call `service.ngOnDestroy()` in `afterEach`). Tests (names exactly):
+- `1. VERSION_READY sets updateReady and opens no dialog`: `service.init()`, push `{ type: 'VERSION_READY', currentVersion: { hash: '1' }, latestVersion: { hash: '2' } }`; `service.updateReady()` is true, `service.updateDismissed()` is false, `mockConfirmDialog.open` not called.
+- `2. dismissUpdate sets updateDismissed and a new VERSION_READY clears it`: after test 1 state, `service.dismissUpdate()` makes `updateDismissed()` true; another `VERSION_READY` makes it false again.
+- `3. applyUpdate activates the update and reloads`: `await service.applyUpdate()`; `mockSwUpdate.activateUpdate` called once and `window.location.reload` called once.
+- `4. applyUpdate still reloads when activateUpdate fails`: `mockSwUpdate.activateUpdate.mockRejectedValue(new Error('x'))`; `await service.applyUpdate()`; reload called once.
+- `5. manual update with an update already ready applies it without a new check`: online mocks as in the existing spec, `service.updateReady.set(true)`, `await service.checkAndApplyManualUpdate()`; `mockSwUpdate.checkForUpdate` not called, `mockSwUpdate.activateUpdate` called once, reload called once.
+
+5. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `frontend` create a temporary `tsconfig.agy-2.5d.spec.json` with `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/shared/components/update-bar/update-bar.dom.spec.ts", "src/app/core/services/pwa-update.state.spec.ts"], "exclude": [] }` and run `npx ng test --watch=false --ts-config tsconfig.agy-2.5d.spec.json --include src/app/shared/components/update-bar/update-bar.dom.spec.ts --include src/app/core/services/pwa-update.state.spec.ts`; delete the temporary tsconfig before committing. At most 5 runs.
+
+6. Before finishing: both specs pass (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` shows no change to tracked files after your commit.
+
+7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
