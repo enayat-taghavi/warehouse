@@ -252,6 +252,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 # رویداد کار گردش کار (ت۱۶ طرح ۲.۳)؛ task_id، company_id و notification_type از پیش هستند
                 'workflow_event', 'instance_id', 'workflow_key', 'entity_kind', 'entity_id', 'step_key',
                 'section_id', 'actor_id', 'to_superusers',
+                'url',  # آدرس اعلان (طرح ۲.۴، ص۵)
             ):
                 if k in event:
                     out_data[k] = event[k]

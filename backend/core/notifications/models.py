@@ -19,6 +19,8 @@ class Notification(models.Model):
     )
     target_model = models.CharField(max_length=100, blank=True, null=True, verbose_name='مدل هدف')
     target_id = models.CharField(max_length=100, blank=True, null=True, verbose_name='شناسه هدف')
+    # مسیر صفحه در فرانت برای کلیک روی اعلان (طرح ۲.۴، ص۵)؛ خالی یعنی مسیر از راه notificationHandlers
+    url = models.CharField(max_length=300, blank=True, default='', verbose_name='آدرس صفحه')
     is_read = models.BooleanField(default=False, db_index=True, verbose_name='خوانده‌شده')
     created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='تاریخ ایجاد')
 

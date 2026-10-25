@@ -7,9 +7,10 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = [
             'id', 'title', 'message', 'notification_type',
-            'target_model', 'target_id', 'is_read', 'created_at'
+            'target_model', 'target_id', 'url', 'is_read', 'created_at'
         ]
-        read_only_fields = ['id', 'title', 'message', 'notification_type', 'target_model', 'target_id', 'created_at']
+        read_only_fields = ['id', 'title', 'message', 'notification_type', 'target_model', 'target_id', 'url',
+                            'created_at']
 
 
 class DeviceTokenSerializer(serializers.ModelSerializer):

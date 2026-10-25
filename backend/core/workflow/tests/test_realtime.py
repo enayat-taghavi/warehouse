@@ -15,7 +15,7 @@ from .test_engine import EngineBase
 
 PERSONAL = re.compile(r'^user_\d+$')
 ALLOWED_KEYS = {'type', 'type_str', 'notification_type', 'workflow_event', 'message', 'to_superusers',
-                *realtime.PUBLIC_KEYS}
+                'notification_id', 'title', 'url', 'created_at', *realtime.PUBLIC_KEYS}
 
 
 class FakeLayer:
@@ -118,6 +118,20 @@ class RealtimeTests(EngineBase):
         esc = dict(payload, kind=events.ESCALATION, user_ids=[], to_superusers=True)
         self.assertEqual([g for g, _m in realtime.target_messages(esc)], [realtime.SUPERUSER_GROUP])
         self.assertEqual(realtime.target_messages(dict(payload, user_ids=[])), [])
+
+    def test_personal_message_carries_own_notification(self):
+        from notifications.models import Notification
+        d, _inst = self.run_flow(self.submit)
+        received = [(g, m) for g, m in self.layer.sent if m['workflow_event'] == 'received']
+        self.assertTrue(received)
+        for group, msg in received:
+            note = Notification.objects.get(pk=msg['notification_id'])
+            self.assertEqual(group, f'user_{note.recipient_id}')
+            self.assertEqual((msg['title'], msg['url']), (note.title, '/app/my-tasks'))
+        self.run_flow(engine.return_for_fix, self.fresh(self.lead), self.task(d), 'مبلغ اشتباه است')
+        note = Notification.objects.filter(recipient=self.member).latest('id')
+        self.assertIn('مبلغ اشتباه است', note.message)
+        self.assertNotIn('my-tasks', note.url)
 
     def test_channel_layer_failure_does_not_break_engine(self):
         self.layer.fail = True

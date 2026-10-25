@@ -214,7 +214,9 @@ class SchedulerQueryCountTests(SchedulerBase):
 
     def measure(self):
         self.events.clear()
-        with CaptureQueriesContext(connection) as ctx:
+        # ساخت اعلان پس از commit و برای هر رویداد است (شمار ثابت برای هر رویداد در test_notify)؛ اینجا فقط زمان‌بند
+        with mock.patch('workflow.notify.create_for_event', return_value={}), \
+                CaptureQueriesContext(connection) as ctx:
             with self.captureOnCommitCallbacks(execute=True):
                 stats = run_tick(self.t0, last_reconciled_at=self.t0)
         self.assertEqual(stats['errors'], [])

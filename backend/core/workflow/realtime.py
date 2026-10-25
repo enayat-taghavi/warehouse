@@ -7,11 +7,14 @@
 (درس ا۱ طرح ۲.۲): عنوان و مبلغ سند نباید به همهٔ اعضای شرکت برسد؛ برای همین خلاصهٔ سند هم فرستاده نمی‌شود و
 کارتابل آن را از API می‌خواند.
 
-channels هنگام import بار نمی‌شود و خطای لایهٔ کانال هرگز به موتور نمی‌رسد (فقط ثبت می‌شود).
+پیش از فرستادن، ردیف‌های اعلان داخل برنامه با notify.create_for_event ساخته می‌شوند (طرح ۲.۴-الف، ق۵) و پیام
+شخصی هر نفر شناسه، عنوان و آدرس اعلان خودش را دارد؛ پیام کانال مدیران کل فقط عنوان و آدرس (شناسه‌ها شخصی‌اند).
+
+channels هنگام import بار نمی‌شود و خطای ساخت اعلان یا لایهٔ کانال هرگز به موتور نمی‌رسد (فقط ثبت می‌شود).
 """
 import logging
 
-from . import events
+from . import events, notify
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ MESSAGES_FA = {
 COMPLETED_FA = 'گردش سند شما پایان یافت'
 
 
-def _message(event) -> dict:
+def _message(event, note=None, title='', url='') -> dict:
     kind = event.get('kind')
     text = COMPLETED_FA if kind == events.DONE and event.get('task_id') is None else MESSAGES_FA.get(kind, '')
     msg = {
@@ -51,23 +54,42 @@ def _message(event) -> dict:
         msg[key] = event.get(key)
     if events.goes_to_superusers(event):
         msg['to_superusers'] = True
+    if note is not None:
+        msg['notification_id'] = note.pk
+        msg['created_at'] = note.created_at.isoformat() if note.created_at else None
+        title, url = note.title, note.url
+    if title:
+        msg['title'] = title
+        msg['url'] = url
     return msg
 
 
-def target_messages(event) -> list:
-    """[(group, message)] یک رویداد؛ فقط کانال‌های شخصی یا کانال مدیران کل."""
+def target_messages(event, notes=None) -> list:
+    """
+    [(group, message)] یک رویداد؛ فقط کانال‌های شخصی یا کانال مدیران کل. notes: {user_id: Notification}
+    خروجی notify.create_for_event (شناسهٔ اعلان فقط در پیام شخصی همان نفر).
+    """
+    notes = notes or {}
     if events.goes_to_superusers(event):
-        return [(SUPERUSER_GROUP, _message(event))]
+        any_note = next(iter(notes.values()), None)
+        title = any_note.title if any_note is not None else ''
+        url = any_note.url if any_note is not None else ''
+        return [(SUPERUSER_GROUP, _message(event, title=title, url=url))]
     out = []
     for uid in sorted({int(u) for u in event.get('user_ids') or () if u}):
-        out.append((f'user_{uid}', _message(event)))
+        out.append((f'user_{uid}', _message(event, note=notes.get(uid))))
     return out
 
 
 def on_task_event(sender, event, **kwargs):
-    """گیرندهٔ task_event (پس از commit)؛ خطای لایهٔ کانال فقط ثبت می‌شود."""
+    """گیرندهٔ task_event (پس از commit)؛ خطای ساخت اعلان یا لایهٔ کانال فقط ثبت می‌شود."""
     try:
-        messages = target_messages(event)
+        notes = notify.create_for_event(event)
+    except Exception:
+        logger.exception('[workflow] creating notifications failed')
+        notes = {}
+    try:
+        messages = target_messages(event, notes)
     except Exception:
         logger.exception('[workflow] building websocket messages failed')
         return
