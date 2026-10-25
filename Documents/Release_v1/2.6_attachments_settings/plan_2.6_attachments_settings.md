@@ -109,4 +109,13 @@
   - `data-loss-reviewer` و `tenant-scope-reviewer`: بی‌یافته. یادداشت‌ها: پیوستی که بعداً محرمانه شود، رونوشت درایوش می‌ماند؛ نسخهٔ جایگزین‌شده به بایگانی درایو نمی‌رود (TODO برای مرحلهٔ بعد).
   - **اقدام بعدی:** ۲.۶-د با `scratch/brief_2.6_d.md`.
 
+- **۴ آبان ۱۴۰۵ (۲۶ اکتبر) — ۲.۶-د انجام شد (ص۱۰ و ص۱۱).**
+  - کد (`fc3da7e8`، اصلاح `dc72dcae`): مدل `EntityViewLog` در `core/attachments` (مهاجرت `attachments/0002`، فقط جدول تازه) و `record_entity_view` در `attachments/services.py` (حداکثر یک ردیف برای هر کاربر و سند در ۱۰ دقیقه؛ ماژول‌ها از `platform_core.registry.record_entity_view`). دانلود پیوست پس از `can_view` و وجود فایل آن را صدا می‌زند.
+  - فیلتر لاگ ممیزی: `audit_entity_kinds()` و `denied_audit_ids()` در `audit_views.py`؛ فهرست (فقط ردیف‌های همان صفحه، یک تصمیم برای هر نوع و شناسه)، جزئیات، پیش‌نمایش بازگردانی، بازگردانی و بازگردانی گروهی ردیف منع‌شده را پنهان یا ۴۰۴ می‌کنند. فقط منع صریح (`False`) پنهان می‌کند؛ بی‌نظر (`None`) نمایش. نگاشت `ExpenseInvoice` → `expense_invoice` در `personnel/apps.py` ثبت شد، ولی قلاب دیدن فاکتور بیرون از دامنه `None` می‌دهد (برای قاعدهٔ گردش کار)، پس امروز چیزی از لاگ فاکتور پنهان نمی‌شود؛ ماژولی که منع صریح بدهد خودکار پوشش داده می‌شود.
+  - `CompanySetting` (مهاجرت `settings_core/0003`، یکتا روی شرکت+ماژول+کلید) و `CompanySettingSpec` در `settings_core/company_settings.py`؛ API `GET/PATCH /api/settings/company/<id>/`: کلید اعلام‌نشده ۴۰۰، نوع نادرست ۴۰۰، مقدار بزرگ‌تر از ۲۰۰۰۰ نویسه ۴۰۰، بی‌دسترسی به شرکت ۴۰۳، شرکت ناموجود ۴۰۴، نوشتن با مجوز اعلام‌شده (سامانه‌ای با `can`، بخشی با `codes_in_company` همان شرکت). تابع `get_company_setting` برای کد ماژول‌ها.
+  - تست‌ها با آنتی‌گرویتی (`5b9daf66`، `f52c0f6a`): ۷ تست `attachments/tests/test_view_log_26d.py` و ۷ تست `settings_core/test_company_settings_26d.py`. سه تست لاگ ممیزی با مسیر غلط متن تسک (`/api/audit-logs/`) «شکست مورد انتظار» خورده بودند؛ مسیر به `/api/accounts/audit-logs/` اصلاح شد و هر ۱۴ تست سبزند. ۲۱۹ تست `attachments`، `settings_core`، `platform_core`، `workflow` و `accounts.test_export_unlock` روی پایگاه تازه سبز؛ `manage.py check` (پیش‌فرض و فقط انبار)، `makemigrations --check` و نگهبان‌های 29، 57، 58 سبز.
+  - `tenant-scope-reviewer`: بی‌یافتهٔ جدی؛ سقف اندازهٔ مقدار JSON اضافه شد. `data-loss-reviewer`: بی‌یافته. باز: آمار (`stats`) و شمار صفحه‌بندی ردیف‌های پنهان را هم می‌شمارند؛ خروجی اکسل و بازگردانی به تاریخ فیلتر نمی‌شوند (پیشین، بیرون از این مرحله).
+  - مهاجرت‌های تازه برای انتشار بعدی روی `app`: `attachments/0002`، `settings_core/0003`.
+  - **اقدام بعدی:** ۲.۶-ه (فرانت) با `scratch/brief_2.6_e.md`.
+
 </div>
