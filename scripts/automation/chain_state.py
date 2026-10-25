@@ -15,6 +15,10 @@ O_EXCL); a lock older than STALE_HOURS is taken over (the previous chat died).
     python scripts/automation/chain_state.py wait --note "question for the user"
     python scripts/automation/chain_state.py done
     python scripts/automation/chain_state.py show
+    python scripts/automation/chain_state.py peek   -> READY | STALE | BUSY | WAITING | DONE | NO_STATE (no lock taken)
+
+`gate` is the UserPromptSubmit hook in .claude/settings.json: a scheduled `release-v1-chain` prompt is blocked (exit 2,
+no model call, no tokens) unless peek says READY or STALE; every other prompt passes untouched.
 """
 import argparse
 import json
@@ -82,6 +86,42 @@ def claim():
     return f"{word} next={state.get('next', '')} brief={state.get('brief', '')}"
 
 
+def peek():
+    """Read-only twin of claim(): the word claim() would print first, without taking the lock."""
+    state = read_state()
+    if state is None:
+        return 'NO_STATE'
+    if state.get('status') == 'done':
+        return 'DONE'
+    if state.get('status') == 'waiting_user':
+        return 'WAITING'
+    try:
+        since = datetime.fromisoformat(LOCK.read_text(encoding='utf-8').strip())
+    except FileNotFoundError:
+        return 'READY'
+    except (OSError, ValueError):
+        return 'STALE'
+    return 'BUSY' if now() - since < timedelta(hours=STALE_HOURS) else 'STALE'
+
+
+def gate():
+    """UserPromptSubmit hook: stop a scheduled chain run before the model is called when there is nothing to do.
+
+    Exit 2 blocks the prompt (no model call, no tokens). Any other prompt, READY/STALE, or any error passes (fail open).
+    """
+    try:
+        prompt = json.load(sys.stdin).get('prompt') or ''
+        if '<scheduled-task name="release-v1-chain"' not in prompt:
+            return 0
+        word = peek()
+    except Exception:
+        return 0
+    if word in ('READY', 'STALE'):
+        return 0
+    print(f'release-v1-chain: {word}; run skipped before the model (chain_state.py gate).', file=sys.stderr)
+    return 2
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest='cmd', required=True)
@@ -93,9 +133,15 @@ def main(argv=None):
     p.add_argument('--note', required=True)
     sub.add_parser('done')
     sub.add_parser('show')
+    sub.add_parser('peek')
+    sub.add_parser('gate')
     args = parser.parse_args(argv)
 
-    if args.cmd == 'claim':
+    if args.cmd == 'gate':
+        return gate()
+    if args.cmd == 'peek':
+        print(peek())
+    elif args.cmd == 'claim':
         print(claim())
     elif args.cmd == 'release':
         write_state(status='ready', next=args.next, brief=args.brief, note='')
