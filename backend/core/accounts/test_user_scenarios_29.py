@@ -172,13 +172,13 @@ class UserScenarios29Tests(UserScenarios29Base):
         self.assertTrue(created_user.requires_password_change)
 
         # بارگذاری آواتار و حذف آن
-        r_avatar_up = c.post(f'{user_url}avatar/', {'avatar': self.make_small_png()}, format='multipart')
+        r_avatar_up = c.post(f'{USERS}{created_user.id}/avatar/', {'avatar': self.make_small_png()}, format='multipart')
         self.assertEqual(r_avatar_up.status_code, 200, r_avatar_up.content)
         self.assertTrue(r_avatar_up.data.get('avatar'))
         created_user.refresh_from_db()
         self.assertTrue(bool(created_user.avatar))
 
-        r_avatar_del = c.delete(f'{user_url}avatar/')
+        r_avatar_del = c.delete(f'{USERS}{created_user.id}/avatar/')
         self.assertEqual(r_avatar_del.status_code, 200, r_avatar_del.content)
         self.assertIsNone(r_avatar_del.data.get('avatar'))
         created_user.refresh_from_db()
@@ -252,10 +252,10 @@ class UserScenarios29Tests(UserScenarios29Base):
         r_reset = c.post(f'{url}admin_reset_password/')
         self.assertEqual(r_reset.status_code, 403, r_reset.content)
 
-        r_avatar = c.post(f'{url}avatar/', {'avatar': self.make_small_png()}, format='multipart')
+        r_avatar = c.post(f'{USERS}{self.shared.id}/avatar/', {'avatar': self.make_small_png()}, format='multipart')
         self.assertEqual(r_avatar.status_code, 403, r_avatar.content)
 
-        r_avatar_del = c.delete(f'{url}avatar/')
+        r_avatar_del = c.delete(f'{USERS}{self.shared.id}/avatar/')
         self.assertEqual(r_avatar_del.status_code, 403, r_avatar_del.content)
 
         r_del = c.delete(url)
@@ -276,8 +276,8 @@ class UserScenarios29Tests(UserScenarios29Base):
         self.assertEqual(c.patch(url, {'first_name': 'دستکاری_pm'}, format='json').status_code, 403)
         self.assertEqual(c.patch(f'{url}toggle_status/', {'is_active': False}, format='json').status_code, 403)
         self.assertEqual(c.post(f'{url}admin_reset_password/').status_code, 403)
-        self.assertEqual(c.post(f'{url}avatar/', {'avatar': self.make_small_png()}, format='multipart').status_code, 403)
-        self.assertEqual(c.delete(f'{url}avatar/').status_code, 403)
+        self.assertEqual(c.post(f'{USERS}{self.shared.id}/avatar/', {'avatar': self.make_small_png()}, format='multipart').status_code, 403)
+        self.assertEqual(c.delete(f'{USERS}{self.shared.id}/avatar/').status_code, 403)
         self.assertEqual(c.delete(url).status_code, 403)
 
         self.shared.refresh_from_db()
