@@ -817,7 +817,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 2.5-b2: cache warm-up specs (core trigger and accounting warmCache)
+[x] Session 1 of 1 — Release v1 step 2.5-b2: cache warm-up specs (core trigger and accounting warmCache)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
