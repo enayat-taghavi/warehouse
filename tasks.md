@@ -625,3 +625,56 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: the test command passes (expected failures allowed only as described in rule 1); `git status --short` is clean after your commit.
 
 6. Output and stop condition: commit, then a short English report: tests written, pass/fail counts, any expectedFailure with the exact difference. End the turn after the report.
+
+===
+
+Session 1 of 1 — Release v1 step 2.4-b: guard against direct Notification use in modules, and tests for notifications.services.notify_users
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "scripts/e2e/module_coupling_scan.py" --allow "backend/core/notifications/test_services.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/notifications/test_services.py --contains test_rows_and_personal_messages --contains test_inactive_user_skipped --contains test_constant_queries --contains test_extra_keys_kept --contains test_websocket_failure_logged --contains test_row_failure_logged --contains test_runs_after_commit
+verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/module_coupling_scan.py --contains direct_notification_refs
+verify: python scripts/e2e/module_coupling_scan.py --self-test
+verify: set DB_TEST_NAME=test_agy_notify_svc&& python scripts/automation/verify_tools.py django-tests --labels notifications.test_services --min-tests 7
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.4-b): notify_users tests and module Notification guard"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Change exactly two files: edit `scripts/e2e/module_coupling_scan.py` and create `backend/core/notifications/test_services.py`. Never edit production code under `backend/`, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code and do not weaken the expectation silently: keep the test as written, mark it `@unittest.expectedFailure`, and describe the difference in your report.
+- Test docstrings and code comments are Persian, like the existing code in those folders.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.4-b): notify_users tests and module Notification guard`.
+
+2. Context (read these, nothing broader):
+- `backend/core/notifications/services.py` (whole file, about 120 lines): `create_notifications(...)` and `notify_users(user_ids, *, title, message, notification_type, target_model='', target_id='', url='', company_id=None, extra=None)`. `notify_users` registers `transaction.on_commit(_run)`; `_run` keeps only active users (one query), creates rows with one `bulk_create`, schedules FCM with `notifications.push.schedule_push_for_notifications`, then sends one message per row with `channel_layer.group_send` to group `user_{id}`. Errors are only logged with `logger.exception` (logger name `notifications.services`).
+- `backend/core/workflow/tests/test_realtime.py` lines 1-60: copy the `FakeLayer` class idea and the `setUp` that patches `channels.layers.get_channel_layer` with `mock.patch`.
+- `backend/core/notifications/tests.py` lines 1-50: how users are created in tests (`get_user_model().objects.create_user`).
+- `scripts/e2e/module_coupling_scan.py` lines 120-180 (`_is_test_file`, `_iter_files`, `scan_backend`) and lines 276-377 (`evaluate`, `self_test`).
+
+3. Definitions:
+- Direct Notification reference: in a non-test Python file under `backend/modules/`, a line that matches the regular expression `\bfrom\s+notifications\.models\s+import\b|\bimport\s+notifications\.models\b|\bNotification\.objects\b`. Test files are the ones `_is_test_file` already treats as tests.
+
+4. Task A, guard in `scripts/e2e/module_coupling_scan.py`:
+- In `scan_backend`, add a third key `"direct_notification_refs": []` to `found`. Walk `_iter_files(backend_dir / "modules", ("*.py",))`, skip test files with `_is_test_file(rel)`, and for every matching line append `{"file": f"backend:{rel.as_posix()}", "line": i, "match": "Notification", "text": line.strip()}`. Compile the regular expression once at module level as `DIRECT_NOTIFICATION_RE` with a one-line Persian comment saying modules must use `notifications.services.notify_users` (plan 2.4, decision 7).
+- Do not add anything to `ALLOWED_FILES`.
+- In `self_test`, before `b = scan_backend(be)`, write `be / "modules" / "beta" / "beta_app" / "notify.py"` with the two lines `from notifications.models import Notification` and `Notification.objects.create(title='x')`, and `be / "modules" / "beta" / "beta_app" / "tests.py"` with the line `from notifications.models import Notification`. After the existing backend check, add a check that `[v["line"] for v in b["direct_notification_refs"]] == [1, 2]`, print it like the other checks (`self-test direct notification refs: ...`), and fold it into `ok`.
+- After the change, `python scripts/e2e/module_coupling_scan.py` must print `'direct_notification_refs': 0` in the backend counters line, and `python scripts/e2e/module_coupling_scan.py --self-test` must exit 0.
+
+5. Task B, tests in `backend/core/notifications/test_services.py`, class `NotifyUsersTests(TestCase)`. In `setUp` patch `channels.layers.get_channel_layer` to return a fake layer that records `(group, message)` for every `group_send` (an `async def group_send`), and create users with `create_user`. Call `notify_users` inside `with self.captureOnCommitCallbacks(execute=True):`. Use these exact method names:
+- `test_rows_and_personal_messages`: notify 3 active users with `title='t'`, `message='m'`, `notification_type='personnel_workflow'`, `target_model='PersonnelProfile'`, `target_id=7`, `url='/app/x'`, `company_id=5`. Exactly 3 `Notification` rows with those fields (`target_id == '7'`, `url == '/app/x'`); exactly 3 messages, each to group `user_<that user id>` only (no other group), with `type == 'send_notification'`, `type_str == 'personnel_workflow'`, `notification_id` equal to that user row id, `title`, `message`, `url`, `company_id == 5` and a non-empty `created_at`.
+- `test_inactive_user_skipped`: one active and one inactive user (`is_active=False`); only the active user gets a row and a message.
+- `test_constant_queries`: build lists of 2 and of 12 active users; for each, measure queries with `CaptureQueriesContext(connection)` around `with self.captureOnCommitCallbacks(execute=True): notify_users(...)`; the two counts are equal. Also duplicate ids and `None` in the id list (`[u1.id, u1.id, None]`) produce one row.
+- `test_extra_keys_kept`: `extra={'vehicle_id': 9, 'approval_status': 'pending_supervisor', 'type': 'bad'}`; the message has `vehicle_id == 9` and `approval_status == 'pending_supervisor'`, and `type` is still `'send_notification'` (base keys win).
+- `test_websocket_failure_logged`: the fake `group_send` raises `RuntimeError`; with `self.assertLogs('notifications.services', level='ERROR')` the call does not raise, rows are still created, and one error is logged per user.
+- `test_row_failure_logged`: patch `notifications.models.Notification.objects.bulk_create` with `side_effect=RuntimeError('db down')`; inside `assertLogs('notifications.services', level='ERROR')` the call does not raise and no message is sent.
+- `test_runs_after_commit`: call `notify_users` inside `with self.captureOnCommitCallbacks(execute=False) as callbacks:`; right after the call there is no row and no message and the return value is `{}`; then run every callback in `callbacks` and check the row and the message exist.
+
+6. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. Run tests only with `.\venv\Scripts\python.exe manage.py test notifications.test_services --noinput` in `backend` (set `$env:PYTHONUTF8='1';` first). Run the scan from the repository root with `python scripts/e2e/module_coupling_scan.py` and `python scripts/e2e/module_coupling_scan.py --self-test`. At most 6 test runs.
+
+7. Before finishing: the test command passes (expected failures allowed only as described in rule 1); both scan commands behave as in Task A; `git status --short` is clean after your commit.
+
+8. Output and stop condition: commit, then a short English report: guard change, tests written, pass/fail counts, any expectedFailure with the exact difference. End the turn after the report.
