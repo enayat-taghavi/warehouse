@@ -11627,3 +11627,71 @@ Outside the allowed scope: ['frontend/src/app/core/services/cache-warmup.service
 ۲. **اعتبارسنجی فوری (Verify Immediately):** نیازمندی‌ها با کدهای موجود در کامپوننت `UpdateBarComponent` و سرویس `PwaUpdateService` ...
 
 ---
+
+### Task 1 of 1 — 2026-10-25 23:19:18
+- **Status:** DONE
+- **Conversation:** `765dcc15-6a62-4c2a-a894-675f27311985`
+- **Steps:** 46
+- **Tokens:** 92512
+- **Duration:** 5m 38s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 2.6-a: tests for can_view and is_locked registry hooks and workflow history
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly one new file: `backend/core/workflow/tests/test_view_hooks_26a.py`. Never edit production code, other tests, `Documents/`, `tasks.md` or `tasks_history.md`.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `@unittest.expectedFailure` and describe the exact difference in your report.
+- Every hook a test adds must be removed after the test: use `unittest.mock.patch.dict(platform_core.registry._CONTRIBUTIONS, {...})` as a context manager or decorator, never a bare `contribute(...)`.
+- No push. Stage only your file. Commit message subject exactly: `test(release-v1 2.6-a): can_view and is_locked hooks`.
+
+2. Context (read these, nothing broader):
+- `backend/core/platform_core/registry.py`, the block starting at the comment line that contains `can_view:<kind>` (about 50 lines, after `resolve_entity_map`). Facts:
+  - `entity_view_decision(user, kind, entity_id)` returns True, False or None. Inactive user or None user: False. Active superuser: True, even with a deny hook. Empty kind or falsy entity_id: False. Then it calls every `contributions(f'can_view:{kind}')` hook as `hook(user, entity_id)`: a hook returning False makes the result False at once; a hook raising any exception makes the result False; if at least one hook returned True and none returned False, the result is True; if no hooks exist or all returned None, the result is None.
+  - `can_view(user, kind, entity_id)` is True only when `entity_view_decision` is True.
+  - `is_entity_locked(kind, entity_id)`: empty kind or falsy id returns False; True when any `contributions(f'is_locked:{kind}')` hook called as `hook(entity_id)` returns a truthy value; a hook raising an exception makes it True; no hooks returns False.
+  - Hooks are stored in the module dict `_CONTRIBUTIONS` (key is the point name, value is a list of callables).
+- `backend/core/accounts/apps.py`: `ready()` registers `contribute('can_view:user', ...)`: for kind `user`, the hook returns True when `str(user.pk) == str(entity_id)`, otherwise None.
+- `backend/core/workflow/views.py`, function `visible_instances` (about 25 lines): it first calls `entity_view_decision(user, kind, entity_id)`; False returns no instances (history GET answers 404), True returns all instances (200), None falls back to the old rules.
+- `backend/core/workflow/tests/test_api.py` lines 1–48 (class `ApiBase`, helpers `get`, `submit`) and lines 152–185 (`HistoryApiTests`): copy the way `test_history_rows` creates a document with `self.submit()` and calls `self.get(user, 'history/', kind=KIND, id=d.pk)`. Users available from the base: `self.member` (the submitter, sees history by the old rules), `self.payer` (does not see it by the old rules, 404), `self.su` (superuser). `KIND` comes from `.base`.
+
+3. Task, `backend/core/workflow/tests/test_view_hooks_26a.py`:
+- Class `RegistryHookTests(django.test.TestCase)`; create one active normal user and one active superuser with `django.contrib.auth.get_user_model().objects.create_user(...)` (superuser with `is_superuser=True`). Use the kind string `'zz_doc'` and entity id 7. Tests (names exactly):
+  - `test_no_hook_is_none_and_can_view_false`: decision is None; `can_view` is False.
+  - `test_allow_hook_gives_true`: one hook returning True; decision True; `can_view` True.
+  - `test_deny_wins_over_allow`: hooks `[allow, deny]` and also `[deny, allow]`; decision False both times.
+  - `test_hook_error_is_deny`: a hook raising `RuntimeError`; decision False.
+  - `test_superuser_and_inactive`: with a deny hook the superuser gets True; an inactive normal user (`is_active=False`) gets False with an allow hook; `None` user gets False.
+  - `test_falsy_entity_or_kind_is_false`: allow hook present; entity id 0 and None give False; kind `''` gives False.
+  - `test_user_kind_self_only`: no patching; `entity_view_decision(user, 'user', user.pk)` is True and with `str(user.pk)` is True; for another user's pk it is None; `can_view` for the other pk is False.
+  - `test_is_locked`: no hook gives False; hook returning True gives True; hooks `[lambda i: False]` give False; a raising hook gives True; entity id 0 gives False even with a True hook.
+- Class `HistoryHookTests(ApiBase)` importing `ApiBase` from `.test_api` and `KIND` from `.base`. Tests (names exactly):
+  - `test_deny_hook_hides_history_from_submitter`: `d, _ = self.submit()`; with a `can_view:{KIND}` hook returning False, `self.member` gets 404 and `self.su` gets 200; without the hook (after the patch ends) `self.member` gets 200 again.
+  - `test_allow_hook_shows_history_to_outsider`: with a hook returning True only for `self.payer.pk` (else None), `self.payer` gets 200; without it, 404.
+  - `test_none_hook_keeps_old_rules`: hook returning None for everyone; `self.member` 200, `self.payer` 404.
+
+4. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. In `backend` run `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test workflow.tests.test_view_hooks_26a --keepdb --noinput`. At most 5 runs.
+
+5. Before finishing: all 11 tests pass (only marked expected failures allowed, as in rule 1); `git status --short` shows no change to tracked files after your commit.
+
+6. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any expected failure with the exact difference. End the turn after the report.
+```
+- **Agent's last reply:**
+Running the test suite for `workflow.tests.test_view_hooks_26a` in the foreground. Waiting for the execution to finish.
+### Release v1 step 2.6-a: can_view and is_locked hooks test report
+
+#### Tests Added
+Created [backend/core/workflow/tests/test_view_hooks_26a.py](file:///E:/comanager/backend/core/workflow/tests/test_view_hooks_26a.py) with 11 tests:
+
+- `RegistryHookTests(django.test.TestCase)`:
+  - `test_no_hook_is_none_and_can_view_false`: Verifies `entity_view_decision` returns `None` and `can_view` returns `False` when no hook is registered.
+  - `test_allow_hook_gives_true`: Verifies hook returning `True` results in decision `True` and `can_view` `True`.
+  - `test_deny_wins_over_allow`...
+
+---

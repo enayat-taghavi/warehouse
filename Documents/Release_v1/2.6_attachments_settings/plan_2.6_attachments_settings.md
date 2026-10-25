@@ -73,4 +73,12 @@
 
 ## ۷. گزارش پیشرفت
 
+- **۳ آبان ۱۴۰۵ (۲۵ اکتبر) — ۲.۶-الف انجام شد.**
+  - بررسی کد با یک عامل جست‌وجو (بخش ۱، ک۱ تا ک۹) و نوشتن همین طرح.
+  - کد (`8300f086`): ص۱ و ص۴ در `platform_core/registry.py` (`entity_view_decision`، `can_view`، `is_entity_locked`)، ص۲ در `workflow/views.py` (`visible_instances`؛ لغو گردش هم از همین می‌گذرد)، ص۳ در `accounts/apps.py`. قرارداد: فقط `False` دقیق منع و فقط `True` دقیق اجازه است (یادداشت `tenant-scope-reviewer`، در توضیح کد آمد).
+  - تست‌ها با آنتی‌گرویتی (`d6f2777d`): ۱۱ تست `workflow/tests/test_view_hooks_26a.py`؛ سبز. ۱۵۷ تست `workflow` و `accounts.tests`، `manage.py check` و نگهبان‌های 29، 52، 56، 57، 58 سبز.
+  - `tenant-scope-reviewer`: بی‌یافته؛ بی‌قلاب رفتار قبلی است و دسترسی گشاد نمی‌شود.
+  - انحراف: فاکتور هنوز قلاب `can_view` ندارد (رفتار قبلی)؛ قلاب‌های فاکتور با پیوست در ۲.۶-ب.
+  - **اقدام بعدی:** ۲.۶-ب با `scratch/brief_2.6_b.md`.
+
 </div>

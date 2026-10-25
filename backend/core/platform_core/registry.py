@@ -160,7 +160,8 @@ def resolve_entity_map(kind: str, entity_ids) -> dict:
 
 # ─── قلاب دیدن و قفل سند (ص۱ و ص۴ طرح ۲.۶) ───────────────────────────────────────────────────────
 # ماژول مالک با contribute('can_view:<kind>', fn) و contribute('is_locked:<kind>', fn) اعلام می‌کند.
-# fn دیدن: fn(user, entity_id) → True (اجازه) | False (منع) | None (بی‌نظر). fn قفل: fn(entity_id) → bool.
+# fn دیدن: fn(user, entity_id) → True (اجازه) | False (منع) | None (بی‌نظر). فقط False دقیق منع است و
+# فقط True دقیق اجازه؛ 0 یا '' بی‌نظر حساب می‌شود. fn قفل: fn(entity_id) → bool.
 
 def entity_view_decision(user, kind: str, entity_id):
     """
