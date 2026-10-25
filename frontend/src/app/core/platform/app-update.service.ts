@@ -19,6 +19,18 @@ export class AppUpdateService {
   /** نشان‌دهنده وضعیت در حال استعلام دستی نسخه */
   public readonly isChecking = this.pwaUpdate.isChecking;
 
+  /** نسخهٔ تازهٔ وب آماده است (روی اندروید بومی هرگز true نمی‌شود چون init وب اجرا نمی‌شود) */
+  public readonly updateReady = this.pwaUpdate.updateReady;
+  public readonly updateDismissed = this.pwaUpdate.updateDismissed;
+
+  public applyUpdate(): Promise<void> {
+    return this.pwaUpdate.applyUpdate();
+  }
+
+  public dismissUpdate(): void {
+    this.pwaUpdate.dismissUpdate();
+  }
+
   /**
    * مقداردهی اولیه و رجیستر کردن شنوندگان PWA / Live Update
    */

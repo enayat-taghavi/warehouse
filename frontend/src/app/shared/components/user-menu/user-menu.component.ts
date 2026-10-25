@@ -103,6 +103,11 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     return this.pwaUpdate.isChecking();
   }
 
+  /** نسخهٔ تازه آماده است و کاربر نوار پایین را با «بعداً» بسته است */
+  public get hasPendingUpdate(): boolean {
+    return !!(this.pwaUpdate.updateReady?.() && this.pwaUpdate.updateDismissed?.());
+  }
+
   public isOffline = false;
   public isSyncing = false;
   public pendingCount = 0;

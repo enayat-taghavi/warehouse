@@ -4,6 +4,7 @@ import { ToastContainerComponent, ToastService } from './shared/components/toast
 import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
 import { DomainMigrationBannerComponent } from './shared/components/domain-migration-banner/domain-migration-banner.component';
 import { AppVersionLockComponent } from './shared/components/app-version-lock/app-version-lock.component';
+import { UpdateBarComponent } from './shared/components/update-bar/update-bar.component';
 import { DomainMigrationService } from './core/services/domain-migration.service';
 import { AuthService } from './core/auth/auth.service';
 import { WebSocketService } from './core/http/websocket.service';
@@ -16,7 +17,7 @@ import { setFileOutputErrorNotifier } from './core/platform/file-output';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent, AppVersionLockComponent],
+  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent, AppVersionLockComponent, UpdateBarComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

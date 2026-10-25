@@ -19,6 +19,12 @@ export class PwaUpdateService implements OnDestroy {
   /** پرچم جلوگیری از باز شدن همزمان مدال تایید در جریان بروزرسانی دستی (حل Race Condition) */
   private isManualUpdateInProgress = false;
 
+  /** نسخهٔ تازه دانلود شده و آمادهٔ فعال‌سازی است */
+  public readonly updateReady = signal(false);
+
+  /** کاربر نوار نسخهٔ تازه را با «بعداً» بسته است (نشان کوچک در منوی کاربر می‌ماند) */
+  public readonly updateDismissed = signal(false);
+
   private subs: Subscription[] = [];
   private periodicTimer: any = null;
 
@@ -40,23 +46,11 @@ export class PwaUpdateService implements OnDestroy {
           return;
         }
 
-        const confirmed = await this.confirmDialog.open({
-          title: 'بروزرسانی برنامه',
-          message: 'نسخه جدیدی از سامانه دریافت شده است. آیا مایلید برنامه برای اعمال تغییرات هم‌اکنون نوسازی شود؟',
-          confirmText: 'بروزرسانی',
-          cancelText: 'بعداً',
-          type: 'info'
+        // به‌جای مدال، نوار ماندگار پایین صفحه (UpdateBarComponent) این وضعیت را نشان می‌دهد
+        this.ngZone.run(() => {
+          this.updateReady.set(true);
+          this.updateDismissed.set(false);
         });
-
-        if (confirmed) {
-          try {
-            await this.swUpdate.activateUpdate();
-            window.location.reload();
-          } catch (err) {
-            console.error('[PwaUpdate] خطا در فعال‌سازی نسخه:', err);
-            window.location.reload();
-          }
-        }
       });
     this.subs.push(versionSub);
 
@@ -94,6 +88,23 @@ export class PwaUpdateService implements OnDestroy {
       });
       this.subs.push(onlineSub);
     }
+  }
+
+  /**
+   * فعال‌سازی نسخهٔ آماده و بارگذاری دوبارهٔ صفحه (صف آفلاین در IndexedDB می‌ماند؛ کشی پاک نمی‌شود)
+   */
+  public async applyUpdate(): Promise<void> {
+    try {
+      await this.swUpdate.activateUpdate();
+    } catch (err) {
+      console.error('[PwaUpdate] خطا در فعال‌سازی نسخه:', err);
+    }
+    window.location.reload();
+  }
+
+  /** بستن نوار نسخهٔ تازه تا وقتی کاربر از منو به‌روزرسانی کند */
+  public dismissUpdate(): void {
+    this.updateDismissed.set(true);
   }
 
   /**
@@ -140,6 +151,12 @@ export class PwaUpdateService implements OnDestroy {
       if (!proceed) {
         return;
       }
+    }
+
+    // نسخهٔ تازه از قبل دانلود شده است (نوار پایین صفحه): همان را فعال کن
+    if (this.swUpdate.isEnabled && this.updateReady()) {
+      await this.applyUpdate();
+      return;
     }
 
     // در صورت غیرفعال بودن ورکر (محیط توسعه یا عدم پشتیبانی مرورگر)

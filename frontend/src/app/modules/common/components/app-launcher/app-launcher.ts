@@ -165,11 +165,12 @@ export interface RichLauncherCard {
 
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { InstallButtonComponent } from '../../../../shared/components/install-button/install-button.component';
 
 @Component({
   selector: 'app-launcher',
   standalone: true,
-  imports: [CommonModule, FirstBootWizardComponent, SvgIconDirective],
+  imports: [CommonModule, FirstBootWizardComponent, SvgIconDirective, InstallButtonComponent],
   templateUrl: './app-launcher.html'
 })
 export class AppLauncherComponent implements OnInit {

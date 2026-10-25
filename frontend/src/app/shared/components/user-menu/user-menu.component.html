@@ -8,6 +8,7 @@
     <img *ngIf="auth.userAvatarUrl()" [ngSrc]="auth.userAvatarUrl()!" width="32" height="32" class="w-8 h-8 rounded-full object-cover border shadow-sm shrink-0" [ngClass]="theme === 'cyan' ? 'border-cyan-200' : 'border-indigo-200'" alt="avatar" />
     <div *ngIf="!auth.userAvatarUrl()" class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs text-white shrink-0 shadow-sm" [style.background]="theme === 'cyan' ? 'linear-gradient(135deg,#06b6d4,#4f46e5)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)'">{{userAvatar}}</div>
     <span *ngIf="taskCount > 0" class="absolute -top-0.5 -end-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white ring-1 ring-rose-200"><span class="sr-only">{{ taskCount }} کار در انتظار</span></span>
+    <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-dot" class="absolute -top-0.5 -start-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-200"><span class="sr-only">نسخهٔ تازهٔ برنامه آماده است</span></span>
   </button>
 
   <div *ngIf="isUserMenuOpen" class="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden fade-in">
@@ -51,7 +52,8 @@
       <button (click)="onManualAppUpdate()" [disabled]="isCheckingAppUpdate" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-emerald-600 hover:bg-emerald-50 active:scale-95 cursor-pointer" title="استعلام و دریافت فوری آخرین نسخه فرانت‌اند">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.animate-spin]="isCheckingAppUpdate" appIcon="refresh-cw"></svg>
         <span class="flex-1">بروزرسانی نسخه برنامه</span>
-        <span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold font-mono">PWA</span>
+        <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-badge" class="text-[10px] bg-emerald-700 text-white px-1.5 py-0.5 rounded-full font-bold">نسخهٔ تازه</span>
+        <span *ngIf="!hasPendingUpdate" class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold font-mono">PWA</span>
       </button>
 
       <!-- بروزرسانی عمیق داده‌ها -->

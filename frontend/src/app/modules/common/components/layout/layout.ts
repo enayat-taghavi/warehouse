@@ -34,6 +34,7 @@ import { hasRoutePermission } from '../../../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { ModuleNavItem, WhFrontendModule } from '../../../../core/modules/module-contract';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { InstallButtonComponent } from '../../../../shared/components/install-button/install-button.component';
 import { IconName } from '../../../../shared/icons/icon-registry';
 import { NotificationCenterComponent } from '../../../../shared/components/notification-center/notification-center.component';
 
@@ -51,7 +52,8 @@ import { NotificationCenterComponent } from '../../../../shared/components/notif
     CompanySwitcherComponent,
     CompanySelectionModalComponent,
     FirstBootWizardComponent,
-    SvgIconDirective
+    SvgIconDirective,
+    InstallButtonComponent
   ],
   templateUrl: './layout.html',
   styleUrl: './layout.css'
