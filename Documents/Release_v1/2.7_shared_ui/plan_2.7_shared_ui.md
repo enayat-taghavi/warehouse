@@ -87,4 +87,12 @@
   - انتخاب خودم: شماره و تاریخ کادر بالا بی bidi کشیده می‌شوند تا شماره‌ای مثل ۱۴۰۴-۱۷ وارونه نشود؛ نشانی QR از `build_absolute_uri` درخواست ساخته می‌شود.
   - **اقدام بعدی:** ۲.۷-ج با `scratch/brief_2.7_c.md`.
 
+- **۴ آبان ۱۴۰۵ (۲۶ اکتبر) — ۲.۷-ج انجام شد.**
+  - اجراکننده (Sonnet + medium، ۲۹ فراخوانی): `core/services/print.service.ts` (`PrintService.downloadPdf`، ۴۰۴ = «سند برای چاپ در دسترس نیست»، قطع سرور با `isServerUnreachable`، `isOnline` و `PRINT_OFFLINE_TITLE`)؛ صفحهٔ عمومی `modules/common/components/document-verify/` با مسیر `/verify/:token` (بی‌ورود، پنج حالت)؛ `shared/components/person-role-picker/` (CVA، تراشه، صفحه‌کلید، `aria`، چهار حالت، `allowUsers`/`allowRoles`/`max`)؛ `shared/components/amount-input/` (CVA، ارقام فارسی و عربی، جداکنندهٔ هزارگان، رشتهٔ ریال یا `null`، متن تومان).
+  - جست‌وجوی کاربر از نقطهٔ موجود `GET /api/auth/users/?search=` (همان دامنهٔ فهرست کاربران؛ بی‌API تازه)؛ نقش‌ها از `GET /api/auth/roles/` یک‌بار و صافی در مرورگر. کاربری که اجازهٔ فهرست کاربران ندارد حالت «جست‌وجو ناموفق بود» می‌بیند.
+  - مدیر: خواندن diff، حذف `distinctUntilChanged` تا باز کردن دوبارهٔ فهرست بعد از خطا دوباره جست‌وجو کند.
+  - آنتی‌گرویتی: ۲۵ تست DOM در چهار فایل (سرویس چاپ، صفحهٔ صحت‌سنجی، انتخابگر، ورود مبلغ)؛ همه سبز، بی‌حذف انتظار.
+  - بررسی‌ها: `tsc` سبز؛ نگهبان‌های 52، 56، 57 سبز. `ui-reviewer` و بررسی دیداری در ۳۶۰ پیکسل با بررسی‌های سنگین پایان مرحلهٔ ۲.
+  - **اقدام بعدی:** ۲.۷-د با `scratch/brief_2.7_d.md`.
+
 </div>

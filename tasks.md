@@ -1435,7 +1435,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 2.7-c: DOM specs for PrintService, document verify page, person-role picker and amount input
+[DONE] [ ] Session 1 of 1 — Release v1 step 2.7-c: DOM specs for PrintService, document verify page, person-role picker and amount input
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

@@ -12222,3 +12222,88 @@ I am waiting for the background verification task to finish.
 - **File Created:** [`backend/core/reports/test_document_pdf_27b.py`](file:///E:/comanager/backend/core/reports/test_docume...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 02:48:13
+- **Status:** DONE
+- **Conversation:** `fa4c914f-ed23-4417-a0ef-baf36fafd275`
+- **Steps:** 291
+- **Tokens:** 407438
+- **Duration:** 14m 12s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 2.7-c: DOM specs for PrintService, document verify page, person-role picker and amount input
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Create exactly four new files: `frontend/src/app/core/services/print.service.spec.ts`, `frontend/src/app/modules/common/components/document-verify/document-verify.dom.spec.ts`, `frontend/src/app/shared/components/person-role-picker/person-role-picker.dom.spec.ts`, `frontend/src/app/shared/components/amount-input/amount-input.dom.spec.ts`. Never edit production code, other specs, `Documents/`, `tasks.md` or `tasks_history.md`.
+- No `it.skip`, `it.only`, `describe.skip`, no `fs` or `path` imports.
+- Persian strings in expectations: copy them exactly from the production source file named in each task (do not retype them).
+- If a test fails because production code behaves differently from this task, do not change production code: delete that one expectation, keep the rest, and describe the exact difference in your report.
+- No push. Stage only your files. Commit message subject exactly: `test(release-v1 2.7-c): print, verify, picker and amount specs`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts`: the spec style to copy (first line `// @vitest-environment jsdom`, `import '@angular/compiler'`, the `getTestBed().initTestEnvironment(...)` try block, `TestBed` with mocked providers, `vi.fn()`).
+- `frontend/src/app/core/services/print.service.ts` (whole file).
+- `frontend/src/app/modules/common/components/document-verify/document-verify.ts` and `.html` (whole files).
+- `frontend/src/app/shared/components/person-role-picker/person-role-picker.component.ts` (whole file, inline template).
+- `frontend/src/app/shared/components/amount-input/amount-input.component.ts` (whole file, inline template).
+- `frontend/src/app/core/services/network-status.service.ts` lines 55–95 (singleton `NetworkStatusService.getInstance()`, getters `state` and `isBrowserOnline`, observable `state$`).
+- HTTP: these files use `HttpClient` directly. In specs use `provideHttpClient()` and `provideHttpClientTesting()` and `HttpTestingController` (`expectOne` with a function matcher on `req.url`, `flush`, `verify`). `environment.apiUrl` is `/api`.
+- Offline: use `vi.spyOn(NetworkStatusService.getInstance(), 'isBrowserOnline', 'get').mockReturnValue(false)` (and the same for `state` returning `'offline'` when needed); call `vi.restoreAllMocks()` in `afterEach`.
+
+3. Task A, `print.service.spec.ts`. Provide fake `FileOutputService` (`{ saveBlob: vi.fn().mockResolvedValue(undefined) }`) and fake `ToastService` (`{ error: vi.fn(), success: vi.fn() }`). Tests (names exactly):
+  - `downloads pdf and saves blob`: `downloadPdf('zz_doc', 7, 'A5')`; the request URL is `/api/print/zz_doc/7/pdf/` with `size=A5` (check `req.urlWithParams` or `req.url` contains `size=A5`) and `responseType` `blob`; flush a `new Blob(['%PDF'])`; result `true`; `saveBlob` called with a Blob and `'zz_doc-7.pdf'`.
+  - `404 shows not available toast`: flush with `{ status: 404, statusText: 'Not Found' }` (body `new Blob([''])`); result `false`; `toast.error` called with the not-available text from `print.service.ts`; `saveBlob` not called.
+  - `server unreachable shows offline toast`: flush with status 530; `toast.error` called with the offline text from `print.service.ts`.
+  - `offline does not send request`: with `isBrowserOnline` mocked false, result `false`, `httpMock.expectNone(() => true)`, `toast.error` called once.
+  - `other error shows generic toast`: status 500 → the generic failure text.
+
+4. Task B, `document-verify.dom.spec.ts`. Provide `{ provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ token: 'abc:def' })), snapshot: { paramMap: convertToParamMap({ token: 'abc:def' }) } } }` and the HTTP testing providers. Tests (names exactly):
+  - `requests public verify with encoded token`: one request whose URL is `/api/public/verify/abc%3Adef/`.
+  - `renders full valid result`: flush `{ valid: true, number: '1404-17', title: 'T1', date: '1404/08/04', company_name: 'C1' }` → DOM text contains `1404-17`, `T1`, `1404/08/04` and `C1` (also accept the same number written with Persian digits only if the template converts; read the template).
+  - `confidential shows only number`: flush `{ valid: true, number: '9' }` → number shown; no `T1`/`C1`; the valid message from the template appears.
+  - `invalid token message`: flush `{ valid: false }` → the invalid text from `document-verify.html` appears.
+  - `error shows retry and retries`: flush with status 530 → the unreachable text from `document-verify.ts` appears; clicking the retry button sends a second request.
+  - `never renders an amount`: after flushing `{ valid: true, number: '1', title: 'T', date: 'D', company_name: 'C', amount: '999999' }` the DOM text does not contain `999999`.
+
+5. Task C, `person-role-picker.dom.spec.ts`. Use fake timers (`vi.useFakeTimers()`, `vi.advanceTimersByTime(300)`) for the 300 ms debounce; restore real timers in `afterEach`. Users endpoint `/api/auth/users/` with param `search`; roles endpoint `/api/auth/roles/`. Users response `{ results: [ { id: 1, first_name: 'Ali', last_name: 'A', username: 'ali' }, { id: 2, first_name: '', last_name: '', username: 'bob' } ] }`; roles response `[ { id: 10, title: 'Manager' } ]`. Tests (names exactly):
+  - `search is debounced`: type `al` into the input (set value and dispatch `input`); before 300 ms there is no request; after 300 ms one users request with `search=al`.
+  - `enter adds active option as chip`: after flushing both responses, press ArrowDown/Enter (dispatch `keydown` on the input) → a chip with `Ali A` appears and the registered `onChange` mock is called with an array containing `{ type: 'user', id: 1, label: 'Ali A' }`.
+  - `username fallback label`: option for id 2 shows `bob`.
+  - `backspace on empty input removes last chip`: after `writeValue([{ type: 'role', id: 10, label: 'Manager' }])` and an empty input, `keydown` Backspace → chip gone and `onChange` called with `[]`.
+  - `max is respected`: `setInput('max', 1)`, `writeValue` one item → input or adding is blocked (calling `add(...)` on the component does not change the value length).
+  - `allowRoles false hides roles`: `setInput('allowRoles', false)`; after search there is no request to `/api/auth/roles/` and no `Manager` option.
+  - `remove button has aria label`: the chip remove button has an `aria-label` containing the chip label.
+  - `error state shown`: users request flushed with status 500 → the failure text from the component appears.
+
+6. Task D, `amount-input.dom.spec.ts`. Tests (names exactly):
+  - `persian digits become plain rial string`: set input value to Persian digits for 1250000 (build the string with `'1250000'.replace(/\d/g, d => String.fromCharCode(0x06F0 + Number(d)))`) and dispatch `input` → `onChange` called with `'1250000'` and the input value is `1,250,000`.
+  - `arabic digits accepted`: same with base `0x0660` → `'1250000'`.
+  - `empty gives null`: value `''` → `onChange` called with `null`; no toman text.
+  - `toman text shown`: `writeValue(1250000)` → the input shows `1,250,000` and the DOM contains the toman word from the template and the Persian-digit form of 125,000 (use `new Intl.NumberFormat('fa-IR').format(125000)`).
+  - `leading zeros stripped`: value `00012` → `onChange` called with `'12'`.
+  - `disabled state`: `setDisabledState(true)` → the input is disabled.
+
+7. Verification you run before committing: from `frontend/`, `npx ng test --watch=false --include src/app/core/services/print.service.spec.ts --include src/app/modules/common/components/document-verify/document-verify.dom.spec.ts --include src/app/shared/components/person-role-picker/person-role-picker.dom.spec.ts --include src/app/shared/components/amount-input/amount-input.dom.spec.ts` must pass. If the full-suite compile fails because of the 18 known broken specs, use `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include ...` from the repo root instead.
+
+8. Output: commit, then report in English: the test names per file, results, and any deleted expectation with the exact difference.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### الگوی ۴ مرحله‌ای (4-Step Execution Protocol)
+
+1. **توضیح ساده (Explain Simply):**
+   کاربر درخواست کرده است که در قالب گام ۲.۷-c انتشار نسخه ۱، چهار فایل تست DOM / سرویس برای بخش‌های زیر ایجاد شوند:
+   - تست‌های `PrintService` (دانلود PDF، مدیریت آفلاین و کدهای خطای مختلف ۴۰۴، ۵۳۰، ۵۰۰)
+   - تست‌های صفحه احراز اصالت سند `DocumentVerify` (درخواست عمومی با توکن انکودشده، حالت کامل و محرمانه، پیام نامعتبر و دکمه تلاش مجدد)
+   - تست‌های کامپوننت انتخاب شخص/نقش `PersonRolePickerComponent` (تأخیر ۳۰۰ میلی‌ثانیه‌ای جستجو، کلید اینتر و چیپ‌ها، سقف تعداد، و حالت خطا)
+   - تست‌های کامپوننت ورودی مبلغ `AmountInputComponent` (پشتیبانی از ارقام فارسی و عربی، ریال به توم...
+
+---
