@@ -1504,3 +1504,131 @@ verify: python scripts/automation/verify_tools.py clean-tree
 7. Verification you run before committing: from `frontend/`, `npx ng test --watch=false --include src/app/core/services/print.service.spec.ts --include src/app/modules/common/components/document-verify/document-verify.dom.spec.ts --include src/app/shared/components/person-role-picker/person-role-picker.dom.spec.ts --include src/app/shared/components/amount-input/amount-input.dom.spec.ts` must pass. If the full-suite compile fails because of the 18 known broken specs, use `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include ...` from the repo root instead.
 
 8. Output: commit, then report in English: the test names per file, results, and any deleted expectation with the exact difference.
+
+===
+
+[ ] Session 1 of 3 — Release v1 step 2.7-d: remove browser confirm() fallbacks in company studio and companies
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/modules/accounting/components/companies-studio/** frontend/src/app/modules/common/components/operations/companies/companies.ts frontend/src/app/modules/common/components/operations/companies/companies.dom.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab.ts --absent window.confirm
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/companies-studio/company-governance-tab/company-governance-tab.ts --absent window.confirm
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/companies-studio/company-archive-section/company-archive-section.ts --absent window.confirm
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.ts --absent window.confirm
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/operations/companies/companies.ts --absent window.confirm
+verify: cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/common/components/operations/companies/companies.dom.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab.dom.spec.ts --include src/app/modules/accounting/components/companies-studio/company-governance-tab/company-governance-tab.dom.spec.ts --include src/app/modules/accounting/components/companies-studio/company-archive-section/company-archive-section.dom.spec.ts --include src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.dom.spec.ts --include src/app/modules/accounting/components/companies-studio/company-finance-tabs.dom.spec.ts --include src/app/modules/common/components/operations/companies/companies.dom.spec.ts
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(release-v1 2.7-d): drop window.confirm fallbacks in company studio"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Mechanical change only. Edit only the files named below (and their existing specs only when a spec breaks, see rule 5). No other refactors, no formatting changes, no new files. Never edit `Documents/`, `tasks.md` or `tasks_history.md`.
+- Keep every Persian message text exactly as it is.
+- If an existing spec spied on `window.confirm` for a changed path, change that spec to mock `ConfirmDialogService.open` (`vi.fn().mockResolvedValue(true)` or `false`) instead. Never delete or skip a test.
+- No push. Stage only your files. Commit message subject exactly: `refactor(release-v1 2.7-d): drop window.confirm fallbacks in company studio`.
+
+2. Context: `ConfirmDialogService` (`frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts` lines 12–73) is `providedIn: 'root'` and always available; `open(config)` returns `Promise<boolean | string>` and `true` means confirmed. In these files it is injected as optional (`inject(ConfirmDialogService, { optional: true })`), so each helper has a dead `window.confirm` fallback branch.
+
+3. Task. In each place below replace the `window.confirm(...)` fallback with `false` (the dialog branch above it stays unchanged):
+- `frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab.ts` line 190 (`return window.confirm(message);` → `return false;`) and line 392 (`: window.confirm('...');` → `: false;`).
+- `frontend/src/app/modules/accounting/components/companies-studio/company-governance-tab/company-governance-tab.ts` line 160 (`return window.confirm(message);` → `return false;`).
+- `frontend/src/app/modules/accounting/components/companies-studio/company-archive-section/company-archive-section.ts` line 192 (same).
+- `frontend/src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.ts` line 140 (`return window.confirm(config.message);` → `return false;`).
+- `frontend/src/app/modules/common/components/operations/companies/companies.ts` lines 305 and 428 (`return window.confirm(...)` → `return false;`) and line 2038 (`: window.confirm('...');` → `: false;`).
+
+4. Verification before committing (repo root): `cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"` must exit 0, then the `ng-test-compare` line from the runner block above must pass.
+
+5. Output: commit, then report in English: each file and line changed, any spec you changed and why, test results.
+
+===
+
+[ ] Session 2 of 3 — Release v1 step 2.7-d: replace browser confirm() in employee personnel, vehicle, invoices and petty cash
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/** frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/** frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/** frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/**
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.ts --regex-absent "[^.\w]confirm\("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts --regex-absent "[^.\w]confirm\("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.ts --regex-absent "[^.\w]confirm\("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.ts --regex-absent "[^.\w]confirm\("
+verify: cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-phase7.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-phase7.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.dom.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts --include src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.spec.ts
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(release-v1 2.7-d): confirm dialog in employee forms"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Mechanical change only. Edit only the four component files below (and their existing specs only when a spec breaks, see the next rule). No other refactors, no formatting changes, no new files. Never edit `Documents/`, `tasks.md` or `tasks_history.md`.
+- If an existing spec spied on `window.confirm` (or global `confirm`) for a changed method, change that spec to mock `ConfirmDialogService.open` (`vi.fn().mockResolvedValue(true)` or `false`) and `await` the now-async method. Never delete or skip a test.
+- Keep every Persian message text exactly as it is (copy it, do not retype it).
+- No push. Stage only your files. Commit message subject exactly: `refactor(release-v1 2.7-d): confirm dialog in employee forms`.
+
+2. Context: `ConfirmDialogService` in `frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts` lines 12–73. `open({ title, message, type, confirmText })` returns `Promise<boolean | string>`; only `=== true` means confirmed. It is `providedIn: 'root'`.
+
+3. Replacement pattern for every call. If the component does not already have it, add `private readonly confirmDialog = inject(ConfirmDialogService);` (import `inject` from `@angular/core` and `ConfirmDialogService` from the shared confirm-dialog component with a relative path like the other shared imports in that file). If the field name `confirmDialog` already exists with the same service, reuse it. Then
+`if (!confirm(MSG)) { ... }` becomes
+`if ((await this.confirmDialog.open({ title: TITLE, message: MSG, type: TYPE })) !== true) { ... }`
+and the containing method gets `async` (return type `void` becomes `Promise<void>`; if the method returned a value, wrap it in `Promise<...>`). Callers in templates need no change. MSG is the exact original expression (template literals stay template literals).
+- Delete-type messages (the text contains `حذف`): TITLE `'حذف'`, TYPE `'danger'`, add `confirmText: 'حذف'`.
+- Revoke-type messages (the text contains `ابطال`): TITLE `'ابطال درخواست'`, TYPE `'danger'`.
+- Send messages (the text contains `ارسال`): TITLE `'ارسال برای سرپرست'`, TYPE `'info'`.
+- Draft replace message: TITLE `'جایگزینی با پیش‌نویس'`, TYPE `'warning'`.
+
+4. Calls (line numbers as of the base commit):
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.ts` lines 726, 1066 (keep the `hasTypedData &&` condition: `if (hasTypedData && (await this.confirmDialog.open({...})) !== true) return;`), 1088, 1991, 2636.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts` lines 1712, 2185, 2486.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.ts` lines 630, 656.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.ts` lines 485, 511.
+If a call sits inside a non-async callback (for example inside `subscribe({ next: ... })`), make that arrow function `async`.
+
+5. Verification before committing (repo root): `cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"` must exit 0, then the `ng-test-compare` line from the runner block above must pass.
+
+6. Output: commit, then report in English: each file and line changed, any spec you changed and why, test results.
+
+===
+
+[ ] Session 3 of 3 — Release v1 step 2.7-d: replace browser confirm()/alert() in diskettes, base settings, backup tab and avatar cropper
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/modules/accounting/components/finance/accountant/accountant-diskettes/** frontend/src/app/modules/accounting/components/personnel/base-settings/** frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/** frontend/src/app/shared/components/avatar-cropper-modal/**
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-diskettes/accountant-diskettes.ts --regex-absent "[^.\w]confirm\("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.ts --regex-absent "[^.\w]confirm\("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts --regex-absent "[^.\w]confirm\("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts --regex-absent "[^.\w]alert\("
+verify: cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-diskettes/accountant-diskettes.spec.ts frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.spec.ts frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/modules/accounting/components/finance/accountant/accountant-diskettes/accountant-diskettes.spec.ts --include src/app/modules/accounting/components/personnel/base-settings/base-settings.spec.ts --include src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(release-v1 2.7-d): confirm dialog and toast in settings, diskettes, cropper"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Mechanical change only. Edit only the four component files below (and their existing specs only when a spec breaks, see the next rule). No other refactors, no formatting changes, no new files. Never edit `Documents/`, `tasks.md` or `tasks_history.md`.
+- If an existing spec spied on `window.confirm` (or global `confirm`) for a changed method, change that spec to mock `ConfirmDialogService.open` (`vi.fn().mockResolvedValue(true)` or `false`) and `await` the now-async method (or flush promises with `await Promise.resolve()` for callbacks). Never delete or skip a test.
+- Keep every Persian message text exactly as it is (copy it, do not retype it).
+- No push. Stage only your files. Commit message subject exactly: `refactor(release-v1 2.7-d): confirm dialog and toast in settings, diskettes, cropper`.
+
+2. Context: `ConfirmDialogService` in `frontend/src/app/shared/components/confirm-dialog/confirm-dialog.component.ts` lines 12–73: `open({ title, message, type, confirmText })` returns `Promise<boolean | string>`; only `=== true` means confirmed; `providedIn: 'root'`. `ToastService` in `frontend/src/app/shared/components/toast/toast.component.ts` has `error(message)`.
+
+3. Replacement pattern. If the component does not already have it, add `private readonly confirmDialog = inject(ConfirmDialogService);` (import `inject` from `@angular/core`, the service from the shared confirm-dialog component with a relative path like other shared imports in that file). Reuse an existing field for the same service if there is one. `confirm(MSG)` becomes `(await this.confirmDialog.open({ title: TITLE, message: MSG, type: TYPE })) === true`, and the containing function becomes `async`. MSG is the exact original expression.
+
+4. Calls (line numbers as of the base commit):
+- `frontend/src/app/modules/accounting/components/finance/accountant/accountant-diskettes/accountant-diskettes.ts` line 242 (inside `subscribe({ next: (res) => ... })`: make that arrow `async`; TITLE `'پرسنل منقضی'`, TYPE `'warning'`, `confirmText: 'ادامه'`) and line 254 (inside `error: () => ...`: make it `async`; same TITLE, TYPE and confirmText). Keep the rest of each callback (toast, `onConfirmed()`, `this.cdr.detectChanges()`) in the same order after the await.
+- `frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.ts` line 340: TITLE `'حذف تنظیمات اختصاصی'`, TYPE `'danger'`, `confirmText: 'حذف'`.
+- `frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts` line 581 (`} else if (!confirm(...)) {` becomes `} else if ((await this.confirmDialog.open({...})) !== true) {`): TITLE `'قطع اتصال درایو'`, TYPE `'danger'`, `confirmText: 'قطع اتصال'`.
+- `frontend/src/app/shared/components/avatar-cropper-modal/avatar-cropper-modal.ts` line 100: `alert(MSG)` becomes `this.toast.error(MSG)` with `private readonly toast = inject(ToastService);` (reuse an existing ToastService field if present). The method stays sync.
+
+5. Verification before committing (repo root): `cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"` must exit 0, then the `ng-test-compare` line from the runner block above must pass.
+
+6. Output: commit, then report in English: each file and line changed, any spec you changed and why, test results.
