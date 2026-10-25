@@ -678,3 +678,49 @@ verify: python scripts/automation/verify_tools.py clean-tree
 7. Before finishing: the test command passes (expected failures allowed only as described in rule 1); both scan commands behave as in Task A; `git status --short` is clean after your commit.
 
 8. Output and stop condition: commit, then a short English report: guard change, tests written, pass/fail counts, any expectedFailure with the exact difference. End the turn after the report.
+
+===
+
+Session 1 of 1 — Release v1 step 2.4-c: DOM specs for the notification bell and the Android push tap
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts" --allow "frontend/src/app/core/platform/push.service.spec.ts"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts --min-tests 14 --require "i) " --require "j) " --require "k) " --require "l) " --require "m) "
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/core/platform/push.service.spec.ts --min-tests 10 --require "10. "
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts frontend/src/app/core/platform/push.service.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/shared/components/notification-center/notification-center.dom.spec.ts --include src/app/core/platform/push.service.spec.ts --no-skip --max-failed 0
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 2.4-c): bell and push tap specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Change exactly two files: `frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts` and `frontend/src/app/core/platform/push.service.spec.ts`. Never edit production code, other specs, `Documents/`, `tasks.md` or `tasks_history.md`. Never delete or weaken an existing test.
+- If a test fails because production code behaves differently from this task, do not change production code: keep the expectation, mark that one test with `it.fails(` and describe the exact difference in your report.
+- No `it.only`, `describe.only`, `it.skip`, no `fs`/`path` imports.
+- No push. Stage only your two files. Commit message subject exactly: `test(release-v1 2.4-c): bell and push tap specs`.
+
+2. Context (read these, nothing broader):
+- `frontend/src/app/shared/components/notification-center/notification-center.component.ts` (whole file, about 330 lines). Facts: `isInAppUrl(url)` is exported and accepts only strings that start with `/app/`. `listenToWebSocket` reacts to a websocket message that has `title`, or `notification_id`, or `type_str` `personnel_workflow`/`fleet_workflow`: it sets `hasNewPulse` to true and calls `scheduleRefresh()`. `scheduleRefresh` waits `NotificationCenterComponent.REFRESH_DEBOUNCE_MS` (500 ms; a new message restarts the wait) and then calls `loadUnreadCount()` (GET `.../notifications/unread-count/`) and, only if the panel is open, `loadNotifications()`. There is no local `+1` any more. HTTP errors are swallowed: the count and the list keep their last values. `onNotificationClick` marks the item read, closes the panel, navigates with `router.navigateByUrl(item.url)` only when `isInAppUrl(item.url)`, otherwise falls through to the chat drawer or the module handlers. The panel has `id="notification-center-panel"` and classes `fixed inset-x-2` (mobile full width) plus `sm:absolute sm:w-96`. Each row has class `notification-item`, `role="button"`, `tabindex="0"`. Icon-only buttons are `w-10 h-10` and have Persian `title` and `aria-label`.
+- `frontend/src/app/shared/components/notification-center/notification-center.dom.spec.ts` (whole file, 485 lines): reuse its `beforeEach` mocks (`mockHttp`, `mockRouter`, `mockWs.notifications$` Subject, `currentUnreadCount`). Existing tests are named `a)` to `h)`.
+- `frontend/src/app/core/platform/push.service.ts` lines 225–290 (`handleNotificationTap`): navigates with `router.navigateByUrl(url)` only when `url` (from `data.url` or `notification.link`) is a string starting with `/app/`; otherwise the old behaviour runs (chat drawer, module handlers, fallback).
+- `frontend/src/app/core/platform/push.service.spec.ts` (whole file): reuse its setup; existing tests are numbered `1.` to `9.`.
+
+3. Task A, add to `notification-center.dom.spec.ts` (new `it` blocks after `h)`, use `vi.useFakeTimers()` in the tests that need the debounce and `vi.useRealTimers()` in an `afterEach` or at the end of the test):
+- `i) A titled websocket message reloads the count from the server after the debounce, not by +1`: start with count 2 from the server; set `currentUnreadCount = 5`; emit `{ type: 'send_notification', type_str: 'workflow_task', title: 'کار تازه', url: '/app/my-tasks' }` on `mockWs.notifications$`; before 500 ms the count is still 2 and the pulse is on; after `vi.advanceTimersByTime(500)` the count is 5 (not 3).
+- `j) A burst of three messages makes exactly one unread-count request`: count the `mockHttp.get` calls whose url contains `/notifications/unread-count/` after the initial load; emit three titled messages 100 ms apart; advance 500 ms; exactly one more such call.
+- `k) Open panel: a titled message also reloads the list`: open the panel by clicking the bell, set `currentNotifications` to one new item, emit a titled message, advance 500 ms, `fixture.detectChanges()`; the row text is in the DOM.
+- `l) Offline: when the server is unreachable the count and list stay and nothing throws`: after a count of 4 is loaded, make `mockHttp.get` return `throwError(() => new HttpErrorResponse({ status: 0 }))` for every url; emit a titled message, advance 500 ms; the count is still 4, no exception, and `console.error` (spy with `vi.spyOn(console, 'error')`) was not called.
+- `m) Click with an in-app url navigates; an external url does not`: an item with `url: '/app/my-tasks'` calls `navigateByUrl('/app/my-tasks')`; an item with `url: 'https://evil.example/x'` and no handler match does not call `navigateByUrl`; both are marked read.
+- `n) 360px and accessibility`: open the panel; the element `#notification-center-panel` has the classes `fixed`, `inset-x-2` and `sm:w-96` and has no class `w-80`; the bell button has `aria-label` and `title` with Persian text and classes `w-10` and `h-10`; with one unread item, its mark-read button has classes `w-10` and `h-10` and a non-empty `aria-label`; each `.notification-item` has `role="button"` and `tabindex="0"`.
+- `o) isInAppUrl`: true for `/app/x`; false for `//evil.example/app/`, `https://a.b/app/x`, `/admin`, `''`, `null`, `undefined`, `42`.
+
+4. Task B, add to `push.service.spec.ts` one test named `10. tap url guard: /app/ url navigates, external url is ignored and falls back`: `data.url = '/app/my-tasks'` calls `navigateByUrl('/app/my-tasks')`; `data.url = 'https://evil.example/x'` never calls `navigateByUrl` with that url and runs the same fallback the existing test 5 expects for an item without a handler.
+
+5. Tool policy: read only the files listed in section 2 and `.agents/AGENTS.md`. To run the two specs, in `frontend` create a temporary file `tsconfig.agy-2.4c.spec.json` with the content `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/shared/components/notification-center/notification-center.dom.spec.ts", "src/app/core/platform/push.service.spec.ts"], "exclude": [] }` and run `npx ng test --watch=false --ts-config tsconfig.agy-2.4c.spec.json --include src/app/shared/components/notification-center/notification-center.dom.spec.ts --include src/app/core/platform/push.service.spec.ts` (the build takes about two minutes). Delete the temporary tsconfig before committing. At most 5 test runs.
+
+6. Before finishing: both specs pass (only `it.fails` allowed, as in rule 1); the temporary tsconfig is deleted; `git status --short` is clean after your commit.
+
+7. Output and stop condition: commit, then a short English report: tests added, pass/fail counts, any `it.fails` with the exact difference. End the turn after the report.
