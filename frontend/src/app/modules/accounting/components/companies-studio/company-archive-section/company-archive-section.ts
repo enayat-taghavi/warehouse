@@ -189,7 +189,7 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
       });
       return res === true;
     }
-    return window.confirm(message);
+    return false;
   }
 
   // بارگذاری اسناد آرشیو شرکت

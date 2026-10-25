@@ -302,7 +302,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.confirmDialog) {
       return (await this.confirmDialog.open({ cancelText: 'انصراف', ...config })) === true;
     }
-    return window.confirm(config.message);
+    return false;
   }
 
   // ═════════════════════════════════════════════════════════════════════
@@ -425,7 +425,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       });
       return res === true;
     }
-    return window.confirm(message);
+    return false;
   }
 
   private setupSearch(): void {
@@ -2035,7 +2035,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
             confirmText: 'اعطا',
             cancelText: 'انصراف'
           })) === true
-        : window.confirm('اعطای کار حساس؟');
+        : false;
       if (!ok) return;
     }
     this.savingLevels = true;

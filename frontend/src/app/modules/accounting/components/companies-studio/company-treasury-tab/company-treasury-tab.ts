@@ -187,7 +187,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       });
       return res === true;
     }
-    return window.confirm(message);
+    return false;
   }
 
   retry(): void {
@@ -389,7 +389,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
             confirmText: 'ثبت تکراری',
             cancelText: 'انصراف'
           })) === true
-        : window.confirm('این شماره شبا پیش‌تر ثبت شده است. باز هم ثبت شود؟');
+        : false;
       if (!ok) return;
     }
 

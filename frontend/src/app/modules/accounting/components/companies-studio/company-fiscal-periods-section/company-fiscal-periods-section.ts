@@ -137,7 +137,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
     if (this.confirmDialog) {
       return (await this.confirmDialog.open({ cancelText: 'انصراف', ...config })) === true;
     }
-    return window.confirm(config.message);
+    return false;
   }
 
   // ═════════════════════════════════════════════════════════════════════

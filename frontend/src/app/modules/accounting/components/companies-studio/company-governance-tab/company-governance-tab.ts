@@ -157,7 +157,7 @@ export class CompanyGovernanceTabComponent implements OnInit, OnChanges, OnDestr
       });
       return res === true;
     }
-    return window.confirm(message);
+    return false;
   }
 
   retry(): void {
