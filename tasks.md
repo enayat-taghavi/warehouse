@@ -1635,7 +1635,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 1 of 1 — Release v1 step 2.3-f-c: My-tasks DOM specs for referral cards
+[DONE] Session 1 of 1 — Release v1 step 2.3-f-c: My-tasks DOM specs for referral cards
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

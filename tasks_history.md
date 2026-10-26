@@ -12476,3 +12476,61 @@ If a call sits inside a non-async callback (for example inside `subscribe({ next
 ۳. در تب پشتیبان‌گیری تنظیمات (`se...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 06:34:17
+- **Status:** DONE
+- **Conversation:** `03a1ddfc-9e0e-4a7b-b290-bd8e78f47df3`
+- **Steps:** 227
+- **Tokens:** 322398
+- **Duration:** 12m 15s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 1 of 1 — Release v1 step 2.3-f-c: My-tasks DOM specs for referral cards
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change exactly one file: `frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts`. Never edit production code, any other spec, anything under `scripts/` or `Documents/`, `tasks.md` or `tasks_history.md`.
+- Keep every existing `it(` block unchanged and passing. Add new `it(` blocks only.
+- If a new test fails because production code behaves differently from this task, do not change production code and do not weaken the expectation silently: keep the test, mark it with `it.fails(`, and describe the difference in your report.
+- Test names and comments stay in the style of the file (Persian strings for UI text checks).
+- No push. Stage only that file.
+
+2. Context (read only these):
+- `frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts` (whole file, fixture and fakes).
+- `frontend/src/app/modules/common/components/my-tasks/my-tasks.ts` methods `isReferral`, `isUnread`, `referralKindLabel`, `isOverdue`, `onCardOpened`, `getActionLabel` (or the method that returns action labels), `onActionClick`, `executeAct`, field `replyText`.
+- `frontend/src/app/modules/common/components/my-tasks/my-tasks.html`: the referral block (search `isReferral(card)`), the reply textarea (`'reply-' + card.task_id`), and the action buttons.
+- `frontend/src/app/core/models/workflow.model.ts` interface `WorkflowTaskCard` (new optional fields `track`, `kind`, `instruction`, `due_at`, `due_at_shamsi`, `referred_by`, `parent_task_id`, `read_at`).
+- `frontend/src/app/core/services/workflow-tasks.service.ts` method `markRead(task)` (the component calls it through the service; in the spec the service is a fake, so add a `markRead: vi.fn()` to the fake if it is missing).
+
+3. Definitions:
+- "Referral card" = a `WorkflowTaskCard` with `track: 'referral'`, `step_kind` and `kind` equal to `'refer'` (actions `['done']`) or `'inform'` (actions `['seen']`), `referred_by: { id: 9, name: 'مدیر دفتر' }`, `instruction: 'لطفاً بررسی شود'`, `due_at` an ISO string, `due_at_shamsi: '1405/08/10 10:00'`, `read_at: null` unless the test says otherwise.
+
+4. Task — add these `it(` blocks inside the existing `describe`:
+- a) refer card: `isReferral` is true, `referralKindLabel` returns «ارجاع»; inform card returns «برای اطلاع»; a step card (existing sample) has `isReferral` false and `isUnread` false.
+- b) `isUnread` is true when `read_at` is null and false when `read_at` is set.
+- c) `isOverdue` is true for a `due_at` one hour in the past, false for one day in the future and false when `due_at` is null.
+- d) `onCardOpened` on an unread referral card calls the fake service `markRead` once with that card; on a read referral card or a step card it does not call it.
+- e) `onActionClick(card, 'seen')` on an inform card calls the service `act` with `(card, 'seen', undefined)` (or the exact arguments `executeAct` passes; read the code) and does NOT open the reason dialog (`reasonDialogOpen` stays false).
+- f) `onActionClick(card, 'done')` on a refer card with `component.replyText[card.task_id] = 'انجام شد'` calls the service `act` with the card, `'done'` and `'انجام شد'`; after the fake `act` resolves `{ status: 'done' }`, `replyText[card.task_id]` is undefined.
+- g) The label method returns «انجام شد» for `'done'` and «رؤیت شد» for `'seen'`.
+- h) If the file already renders the template in jsdom for other tests, also add one render test: with one unread refer card in the tasks signal, the rendered text contains «ارجاع», «از طرف: مدیر دفتر», «لطفاً بررسی شود», «مهلت: 1405/08/10 10:00» and «(نخوانده)». If the file does not render the template, skip h and say so in the report.
+
+5. Verification before committing (repo root): `cmd /c "cd frontend && npx tsc -p tsconfig.app.json --noEmit"` must exit 0, then the `ng-test-compare` line from the runner block above must pass. Commit message: `test(release-v1 2.3-f-c): my-tasks referral card specs`.
+
+6. Output: commit, then report in English: tests added (names), any `it.fails` and why, test results.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام اول: توضیح ساده (Explain Simply)
+در این وظیفه، تست‌های DOM کامپوننت «کارهای من» ([`MyTasksComponent`](file:///E:/comanager/frontend/src/app/modules/common/components/my-tasks/my-tasks.ts)) در فایل [`frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts`](file:///E:/comanager/frontend/src/app/modules/common/components/my-tasks/my-tasks.dom.spec.ts) برای کارت‌های ارجاع (Referral cards شامل نوع ارجاع `refer` و اطلاع `inform`) توسعه داده شدند تا منطق تمایز ارجاع، خوانده‌شدن، انقضای مهلت، فراخوانی `markRead`، اقدام‌های `seen` و `done` و پاک‌سازی متن پاسخ (`replyText`) و برچسب‌های اقدام‌ها اعتبارسنجی شوند.
+
+### گام دوم: بررسی صحت و تحلیل کد...
+
+---
