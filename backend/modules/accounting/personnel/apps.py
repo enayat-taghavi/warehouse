@@ -27,8 +27,16 @@ class PersonnelConfig(AppConfig):
         # همان مسیرها (و دسترسی کاربران) برای حالت محدود استودیو بدون قلمرو حسابداری باز است؛ هر view بخش را می‌سنجد
         for _prefix in ('/api/personnel/companies', '/api/personnel/company-documents', '/api/personnel/company-bank-accounts',
                         '/api/personnel/company-board-members', '/api/personnel/company-fiscal-periods',
-                        '/api/personnel/user-company-access'):
+                        '/api/personnel/user-company-access', '/api/personnel/expense-heads'):
             _contribute('company_section_api_prefixes', _prefix)
+        # سرفصل‌های هزینه هم دادهٔ لایهٔ شرکت‌اند و view خودش بخش `expense_heads` را می‌سنجد (ص۳ طرح ۳.۴)
+        _contribute('company_link_api_prefixes', '/api/personnel/expense-heads')
+        # شرکت تازه فهرست پیش‌فرض سرفصل‌های هزینه را می‌گیرد (ص۵ طرح ۳.۴)
+        from django.db.models.signals import post_save
+        from companies.models import Company
+        from personnel.signals import seed_expense_heads_for_new_company
+        post_save.connect(seed_expense_heads_for_new_company, sender=Company,
+                          dispatch_uid='personnel_seed_expense_heads')
 
 
         # بارگذاری سیگنال‌های خودکار همگام‌سازی شرکت و مدارک

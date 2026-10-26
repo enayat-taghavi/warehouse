@@ -20,6 +20,7 @@ from ..models import (
     CompanyBoardMember,
     CompanyFiscalPeriod,
     CompanyPayrollProfile,
+    ExpenseHead,
 )
 
 class CompanySerializer(CoreCompanySerializer):
@@ -273,6 +274,70 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
                             {field: "موجودی اولیه فقط از «تغییر موجودی اولیه» عوض می‌شود."})
                     attrs.pop(field)
         return attrs
+
+class ExpenseHeadSerializer(serializers.ModelSerializer):
+    """سرفصل یا گروه سرفصل هزینه (ص۱ و ص۴ طرح ۳.۴)؛ usage_count فقط برای نویسنده (view آن را annotate می‌کند)."""
+    parent_title = serializers.CharField(source='parent.title', read_only=True, default=None)
+    is_group = serializers.SerializerMethodField()
+    usage_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExpenseHead
+        fields = ['id', 'company', 'parent', 'parent_title', 'is_group', 'code', 'title', 'is_active', 'order',
+                  'usage_count', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+        validators = []  # یکتایی در validate با پیام فارسی
+
+    def get_is_group(self, obj):
+        return obj.parent_id is None
+
+    def get_usage_count(self, obj):
+        return getattr(obj, 'usage_count', None)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not hasattr(instance, 'usage_count'):
+            data.pop('usage_count', None)
+        return data
+
+    def validate_code(self, value):
+        code = normalize_digits(str(value or '')).strip()
+        if not code:
+            raise serializers.ValidationError("کد سرفصل الزامی است.")
+        if not (code.isascii() and code.isdigit()):
+            raise serializers.ValidationError("کد سرفصل فقط رقم است.")
+        return code
+
+    def validate_title(self, value):
+        title = (value or '').strip()
+        if not title:
+            raise serializers.ValidationError("عنوان سرفصل الزامی است.")
+        return title
+
+    def validate(self, attrs):
+        instance = self.instance
+        company = getattr(instance, 'company', None) if instance is not None else attrs.get('company')
+        if company is None:
+            raise serializers.ValidationError({'company': "انتخاب شرکت الزامی است."})
+        parent = attrs['parent'] if 'parent' in attrs else getattr(instance, 'parent', None)
+        if parent is not None:
+            if parent.company_id != company.pk:
+                raise serializers.ValidationError({'parent': "گروه انتخاب‌شده متعلق به همین شرکت نیست."})
+            if parent.parent_id is not None or (instance is not None and parent.pk == instance.pk):
+                raise serializers.ValidationError({'parent': "والد باید یک گروه سرفصل باشد."})
+            if instance is not None and instance.children.exists():
+                raise serializers.ValidationError({'parent': "این گروه زیرمجموعه دارد."})
+        code = attrs.get('code', getattr(instance, 'code', None))
+        title = attrs.get('title', getattr(instance, 'title', None))
+        others = ExpenseHead.objects.filter(company=company)
+        if instance is not None:
+            others = others.exclude(pk=instance.pk)
+        if code and others.filter(code=code).exists():
+            raise serializers.ValidationError({'code': "این کد سرفصل در همین شرکت تکراری است."})
+        if title and others.filter(parent=parent, title=title).exists():
+            raise serializers.ValidationError({'title': "این عنوان در همین گروه تکراری است."})
+        return attrs
+
 
 class CompanyFiscalPeriodSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True)

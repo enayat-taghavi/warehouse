@@ -4,6 +4,7 @@ from .views import (
     CompanyViewSet,
     CompanyDocumentViewSet,
     CompanyBankAccountViewSet,
+    ExpenseHeadViewSet,
     CompanyBoardMemberViewSet,
     CompanyFiscalPeriodViewSet,
     UserCompanyAccessViewSet,
@@ -38,6 +39,7 @@ router = DefaultRouter()
 router.register(r'companies', CompanyViewSet, basename='companies')
 router.register(r'company-documents', CompanyDocumentViewSet, basename='company-documents')
 router.register(r'company-bank-accounts', CompanyBankAccountViewSet, basename='company-bank-accounts')
+router.register(r'expense-heads', ExpenseHeadViewSet, basename='expense-heads')
 router.register(r'company-board-members', CompanyBoardMemberViewSet, basename='company-board-members')
 router.register(r'company-fiscal-periods', CompanyFiscalPeriodViewSet, basename='company-fiscal-periods')
 router.register(r'user-company-access', UserCompanyAccessViewSet, basename='user-company-access')

@@ -135,3 +135,9 @@ def handle_scope_deleted(sender, kind, id, **kwargs):
             import logging
             logging.getLogger(__name__).warning(f"[PersonnelSignals] Error clearing warehouse_id on scope_deleted: {e}")
 
+
+def seed_expense_heads_for_new_company(sender, instance, created, raw=False, **kwargs):
+    """شرکت تازه فهرست پیش‌فرض سرفصل‌های هزینه را می‌گیرد (ص۵ طرح ۳.۴)؛ بارگذاری fixture (raw) نه."""
+    if created and not raw:
+        from .expense_heads import seed_default_expense_heads
+        seed_default_expense_heads(instance)

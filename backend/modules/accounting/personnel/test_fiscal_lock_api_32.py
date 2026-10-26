@@ -6,6 +6,7 @@ import unittest
 
 from personnel.models import ExpenseInvoice, PettyCashTransaction
 from personnel.test_fiscal_period_32 import FiscalFixtures, INVOICES, PERIODS, PETTY
+from personnel.scoped_test_support import expense_head_id
 
 
 class FiscalLockApiTests(FiscalFixtures):
@@ -60,7 +61,7 @@ class FiscalLockApiTests(FiscalFixtures):
             'amount': '10000',
             'transaction_date_shamsi': '1405/08/01',
             'title': 'tx',
-            'category': 'misc',
+            'expense_head': expense_head_id(self.sec),
         }
         res = self.api.post(PETTY, payload, format='json')
         self.assert_closed(res, 'transaction_date_shamsi')

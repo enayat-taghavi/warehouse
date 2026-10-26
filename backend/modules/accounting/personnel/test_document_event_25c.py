@@ -21,7 +21,7 @@ from personnel.models import (
     PettyCashAccount,
     PettyCashTransaction,
 )
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import grant_section_perms, expense_head_id
 from personnel.workflow_engine import (
     notify_document_changed,
     advance_workflow_step,
@@ -62,6 +62,7 @@ class DocumentChangedEventTests(TestCase):
         return ExpenseInvoice.objects.create(
             section=section or self.sec,
             counterparty=self.cp,
+            expense_head_id=expense_head_id(section or self.sec),
             invoice_number=f'DOC25C-INV-{ExpenseInvoice.objects.count() + 1}',
             invoice_date_shamsi='1405/08/01',
             amount=Decimal(amount),
@@ -147,7 +148,7 @@ class DocumentChangedEventTests(TestCase):
                 'invoice_number': 'DOC25C-INV-CREATE',
                 'invoice_date_shamsi': '1405/08/01',
                 'amount': '5000',
-                'category': 'c',
+                'expense_head': expense_head_id(self.sec),
                 'description': 'd',
             }
             with self.captureOnCommitCallbacks(execute=True):
@@ -234,7 +235,7 @@ class DocumentChangedEventTests(TestCase):
                 'amount': '25000',
                 'transaction_date_shamsi': '1405/08/01',
                 'title': 'سند تنخواه آزمایشی',
-                'category': 'متفرقه',
+                'expense_head': expense_head_id(self.sec),
                 'transaction_type': 'expense',
             }
             with self.captureOnCommitCallbacks(execute=True):

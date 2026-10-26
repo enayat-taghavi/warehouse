@@ -13,6 +13,7 @@ from contacts.models import ExternalParty
 from contacts.services import infer_kind, national_id_error, normalize_national_id
 from ..sheba_utils import normalize_sheba, validate_sheba
 from .helpers import normalize_iranian_phone
+from ..expense_heads import PETTY_CASH_FIXED_CATEGORY, apply_expense_head
 from ..counterparty_services import ROLE_FIELDS, can_view_sensitive, is_masked, mask_tail
 from ..models import (
     Counterparty,
@@ -26,6 +27,15 @@ from ..models import (
 PARTY_INPUT_FIELDS = ('kind', 'name', 'national_id', 'economic_code', 'registration_number', 'phone', 'mobile',
                       'email', 'address', 'postal_code', 'notes')
 MASKABLE_BANK_FIELDS = ('sheba_number', 'account_number', 'card_number')
+
+
+def _head_value(obj, key):
+    head = getattr(obj, 'expense_head', None)
+    if head is None:
+        return None
+    if key == 'group_title':
+        return head.parent.title if head.parent_id else None
+    return getattr(head, key)
 
 
 def _section_company_id(section):
@@ -242,18 +252,27 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.SerializerMethodField()
     paid_by_name = serializers.SerializerMethodField()
+    expense_head_code = serializers.SerializerMethodField()
+    expense_head_title = serializers.SerializerMethodField()
+    expense_head_group_title = serializers.SerializerMethodField()
 
     class Meta:
         model = ExpenseInvoice
         fields = '__all__'
-        # فیلدهای پرداخت و رد فقط از اکشن‌های گردش کار نوشته می‌شوند (ت۲ طرح ۲.۳)
+        # فیلدهای پرداخت و رد فقط از اکشن‌های گردش کار نوشته می‌شوند (ت۲ طرح ۲.۳)؛
+        # category را سرور از عنوان سرفصل پر می‌کند (ص۲ طرح ۳.۴)
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'payment_ref', 'paid_at', 'paid_by',
-                            'rejection_reason']
+                            'rejection_reason', 'category']
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
         validate_counterparty_company(self, attrs)
+        apply_expense_head(self, attrs, needs_head=True)
         return attrs
+
+    get_expense_head_code = staticmethod(lambda obj: _head_value(obj, 'code'))
+    get_expense_head_title = staticmethod(lambda obj: _head_value(obj, 'title'))
+    get_expense_head_group_title = staticmethod(lambda obj: _head_value(obj, 'group_title'))
 
     def get_created_by_name(self, obj):
         if obj.created_by:
@@ -290,15 +309,27 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     transaction_type_display = serializers.CharField(source='get_transaction_type_display', read_only=True)
     created_by_name = serializers.SerializerMethodField()
+    expense_head_code = serializers.SerializerMethodField()
+    expense_head_title = serializers.SerializerMethodField()
+    expense_head_group_title = serializers.SerializerMethodField()
 
     class Meta:
         model = PettyCashTransaction
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'created_by']
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'category']
+
+    get_expense_head_code = staticmethod(lambda obj: _head_value(obj, 'code'))
+    get_expense_head_title = staticmethod(lambda obj: _head_value(obj, 'title'))
+    get_expense_head_group_title = staticmethod(lambda obj: _head_value(obj, 'group_title'))
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
         validate_counterparty_company(self, attrs)
+        # سرفصل فقط برای هزینه؛ شارژ و عودت متن ثابت می‌گیرند (ص۲ طرح ۳.۴)
+        instance = getattr(self, 'instance', None)
+        tx_type = attrs.get('transaction_type') or getattr(instance, 'transaction_type', None) or 'expense'
+        apply_expense_head(self, attrs, needs_head=tx_type == 'expense',
+                           fixed_category=PETTY_CASH_FIXED_CATEGORY.get(tx_type))
         # حساب تنخواه باید از همان بخش سند باشد (نه حساب بخش یا شرکت دیگر)
         if 'account' in attrs or 'section' in attrs:
             instance = getattr(self, 'instance', None)

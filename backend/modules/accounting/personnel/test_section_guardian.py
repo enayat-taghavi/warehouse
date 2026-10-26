@@ -15,6 +15,7 @@ from personnel.models import (
     VehicleTripLog
 )
 from personnel.section_guardian import SectionGuardian
+from personnel.scoped_test_support import expense_head_id
 
 User = get_user_model()
 
@@ -216,7 +217,7 @@ class SectionGuardianPhase2APITests(TestCase):
             'invoice_number': 'FAK-9901',
             'invoice_date_shamsi': '1404/05/15',
             'amount': 12500000,
-            'category': 'تعمیرات و تعویض روغن',
+            'expense_head': expense_head_id(sec),
             'description': 'سرویس دوره‌ای کامیون‌ها'
         }, format='json')
         self.assertEqual(inv_res.status_code, 201)

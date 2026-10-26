@@ -27,6 +27,9 @@ COMPANY_PERMISSION_SECTIONS = (
      'studio': 'fiscal_insurance', 'templates': _MANAGER},
     {'key': 'bank', 'label_fa': 'بانک و شبا', 'order': 110, 'kind': 'levels', 'sensitive': False,
      'studio': 'treasury', 'templates': _MANAGER},
+    # فهرست سرفصل‌های هزینهٔ شرکت؛ خواندن برای هر عضو شرکت (ص۳ طرح ۳.۴)
+    {'key': 'expense_heads', 'label_fa': 'سرفصل‌های هزینه', 'order': 120, 'kind': 'levels', 'sensitive': False,
+     'studio': 'expense_heads', 'templates': _MANAGER},
     {'key': 'fiscal', 'label_fa': 'دوره‌های مالی (ثبت، ویرایش و انجماد)', 'order': 130, 'kind': 'levels',
      'sensitive': False, 'studio': 'fiscal', 'templates': _MANAGER},
     {'key': 'docs_archive', 'label_fa': 'بایگانی مدارک', 'order': 140, 'kind': 'levels', 'sensitive': False,

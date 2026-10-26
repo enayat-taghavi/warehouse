@@ -157,6 +157,49 @@ class CompanyBankOpeningBalanceChange(models.Model):
         ordering = ['-changed_at', '-id']
 
 
+class ExpenseHead(models.Model):
+    """
+    سرفصل هزینهٔ شرکت (کدینگ دو سطحی، ص۱ طرح ۳.۴): ردیف بی والد «گروه» است و روی سند فقط سرفصلِ دارای والد می‌نشیند.
+    حذف شرکت سرفصل‌ها را هم می‌برد (شرکتِ دارای پروژه حذف نمی‌شود، پس سندی به آن‌ها اشاره نمی‌کند)؛
+    والد RESTRICT است تا گروه دارای زیرمجموعه جدا حذف نشود ولی همراه شرکت حذف شود.
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='expense_heads',
+        verbose_name="شرکت",
+    )
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+        related_name='children',
+        verbose_name="گروه سرفصل",
+    )
+    code = models.CharField(max_length=20, verbose_name="کد سرفصل")
+    title = models.CharField(max_length=150, verbose_name="عنوان")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    order = models.PositiveIntegerField(default=0, verbose_name="ترتیب")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
+
+    class Meta:
+        verbose_name = "سرفصل هزینه"
+        verbose_name_plural = "سرفصل‌های هزینه"
+        ordering = ['order', 'code']
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'code'], name='unique_expense_head_code'),
+            models.UniqueConstraint(fields=['company', 'parent', 'title'], condition=models.Q(parent__isnull=False),
+                                    name='unique_expense_head_title'),
+            models.UniqueConstraint(fields=['company', 'title'], condition=models.Q(parent__isnull=True),
+                                    name='unique_expense_group_title'),
+        ]
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+
 def primary_bank_account(company):
     """حساب اصلی فعال شرکت (شیء یا شناسه)، یا None. جای فیلدهای حذف‌شدهٔ primary_* روی Company."""
     company_id = getattr(company, 'pk', company)

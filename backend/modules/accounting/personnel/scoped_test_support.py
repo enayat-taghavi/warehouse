@@ -54,3 +54,12 @@ def grant_section_perms(user, codes, *, section=None, project=None, company=None
             )
     clear_scoped_permission_cache(user)
     return assignment
+
+
+def expense_head_id(section, code='9001'):
+    """شناسهٔ یک سرفصل پیش‌فرض شرکتِ بخش (طرح ۳.۴)؛ شرکت تازه با سیگنال فهرست پیش‌فرض را دارد."""
+    from personnel.expense_heads import seed_default_expense_heads
+    from personnel.models import ExpenseHead, ProjectSection
+    sec = section if hasattr(section, 'project') else ProjectSection.objects.select_related('project').get(pk=section)
+    seed_default_expense_heads(sec.project.company_id)
+    return ExpenseHead.objects.get(company_id=sec.project.company_id, code=code).pk

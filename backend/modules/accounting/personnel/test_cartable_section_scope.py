@@ -17,7 +17,7 @@ from personnel.models import (
     Company, Project, ProjectSection, UserCompanyAccess, PersonnelProfile,
     ExpenseInvoice, PettyCashAccount, PettyCashTransaction, Counterparty,
 )
-from personnel.scoped_test_support import _permission, grant_section_perms
+from personnel.scoped_test_support import _permission, grant_section_perms, expense_head_id
 from personnel.serializers import ExpenseInvoiceSerializer, PettyCashTransactionSerializer
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
@@ -134,7 +134,7 @@ class AccountantCartableSectionScopeTests(TestCase):
     def test_invoice_rejects_other_company_counterparty(self):
         foreign = Counterparty.objects.create(company=self.other_company, name='طرف بیگانه', counterparty_type='other')
         base = {'section': self.s1.id, 'invoice_number': 'X1', 'invoice_date_shamsi': '1404/05/01',
-                'amount': '1000', 'category': 'c', 'description': 'd'}
+                'amount': '1000', 'expense_head': expense_head_id(self.s1), 'description': 'd'}
         ser = ExpenseInvoiceSerializer(data={**base, 'counterparty': foreign.id})
         self.assertFalse(ser.is_valid())
         self.assertIn('counterparty', ser.errors)
@@ -147,7 +147,7 @@ class AccountantCartableSectionScopeTests(TestCase):
         ser = PettyCashTransactionSerializer(data={
             'section': self.s1.id, 'account': account_s2.id, 'custodian': self.custodian.id,
             'transaction_type': 'expense', 'amount': '100', 'transaction_date_shamsi': '1404/05/03',
-            'title': 't', 'category': 'c',
+            'title': 't', 'expense_head': expense_head_id(self.s1),
         })
         self.assertFalse(ser.is_valid())
         self.assertIn('account', ser.errors)

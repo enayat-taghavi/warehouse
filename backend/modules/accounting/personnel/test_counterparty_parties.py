@@ -13,7 +13,7 @@ from accounts.scoped_permissions import section_permission_codes
 from companies.models import Company, Project, ProjectSection
 from companies.testing import grant_membership
 from personnel.models import Counterparty, PartyBankAccount, UserCompanyAccess
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import grant_section_perms, expense_head_id
 from personnel.serializers import ExpenseInvoiceSerializer
 
 User = get_user_model()
@@ -132,7 +132,7 @@ class CounterpartyPartiesTests(TestCase):
             'invoice_number': 'INV-TEST-001',
             'invoice_date_shamsi': '1405/01/01',
             'amount': 500000,
-            'category': 'parts',
+            'expense_head': expense_head_id(self.section_a),
             'description': 'تست ناسازگاری شرکت طرف حساب با بخش'
         })
         self.assertFalse(ser.is_valid())

@@ -180,6 +180,15 @@ class ExpenseInvoice(models.Model):
     invoice_date_shamsi = models.CharField(max_length=10, verbose_name="تاریخ فاکتور (شمسی)")
     amount = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="مبلغ فاکتور (ریال)")
     category = models.CharField(max_length=100, verbose_name="سرفصل هزینه")
+    # سرفصل هزینهٔ شرکت (ص۲ طرح ۳.۴)؛ متن category از عنوان آن پر می‌شود. ردیف‌های پیش از ۳.۴ خالی‌اند.
+    expense_head = models.ForeignKey(
+        'personnel.ExpenseHead',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoices',
+        verbose_name="سرفصل هزینه (کدینگ)"
+    )
     description = models.TextField(verbose_name="شرح هزینه")
     attachment = models.FileField(upload_to='invoices/', blank=True, null=True, verbose_name="تصویر یا فایل فاکتور")
     status = models.CharField(max_length=30, choices=INVOICE_STATUS_CHOICES, default='draft', verbose_name="وضعیت فاکتور")
@@ -365,6 +374,15 @@ class PettyCashTransaction(models.Model):
         max_length=100,
         default='متفرقه',
         verbose_name="سرفصل هزینه / منبع شارژ"
+    )
+    # فقط برای نوع expense (ص۲ طرح ۳.۴)
+    expense_head = models.ForeignKey(
+        'personnel.ExpenseHead',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='petty_cash_transactions',
+        verbose_name="سرفصل هزینه (کدینگ)"
     )
     description = models.TextField(
         blank=True,

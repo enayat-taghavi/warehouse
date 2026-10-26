@@ -25,6 +25,7 @@ from ..models import (
     CompanyBoardMember,
     CompanyFiscalPeriod,
     CompanyPayrollProfile,
+    ExpenseHead,
 )
 from ..serializers import (
     CompanySerializer,
@@ -33,10 +34,12 @@ from ..serializers import (
     CompanyBoardMemberSerializer,
     CompanyFiscalPeriodSerializer,
     CompanyPayrollProfileSerializer,
+    ExpenseHeadSerializer,
 )
 from .scope_helpers import broadcast_org_structure_updated
 from ..fiscal import to_shamsi_str, ensure_period_open
 from .. import company_bank
+from ..expense_heads import seed_default_expense_heads
 
 # ویوست‌های مدیریت ساختار سازمانی، شرکت، پروژه، بخش، طرف‌حساب و فاکتور
 # ══════════════════════════════════════════════════════════════════════════════
@@ -408,6 +411,110 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
                 'changed_at_shamsi': to_shamsi_str(row.changed_at),
             })
         return Response({'count': len(results), 'results': results})
+
+def _expense_head_state(head):
+    return {'code': head.code, 'title': head.title, 'parent_id': head.parent_id, 'is_active': head.is_active,
+            'order': head.order}
+
+
+class ExpenseHeadViewSet(viewsets.ModelViewSet):
+    """
+    سرفصل‌های هزینهٔ شرکت (ص۳ و ص۴ طرح ۳.۴): خواندن برای هر عضو شرکت (انتخاب در فرم)،
+    ساخت، ویرایش، غیرفعال‌سازی و حذف با بخش مجوز `expense_heads`/نوشتن.
+    """
+    queryset = ExpenseHead.objects.select_related('parent')
+    serializer_class = ExpenseHeadSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+    SECTION = 'expense_heads'
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = ExpenseHead.objects.select_related('parent')
+        company_id = self.request.query_params.get('company_id')
+        if self.action == 'list' and not company_id:
+            raise serializers.ValidationError({'company_id': "شناسهٔ شرکت الزامی است."})
+        if company_id:
+            cid = ensure_company_section(user, company_id, self.SECTION, 'read', members_read=True)
+            qs = qs.filter(company_id=cid)
+            if self.action == 'list' and company_section_allows(user, cid, self.SECTION, 'write'):
+                qs = qs.annotate(usage_count=Count('invoices', distinct=True)
+                                 + Count('petty_cash_transactions', distinct=True))
+        elif not user.is_superuser:
+            qs = qs.filter(company_id__in=section_or_member_company_ids(user, self.SECTION, members_read=True))
+        if self.request.query_params.get('active') in ('1', 'true'):
+            qs = qs.filter(is_active=True).filter(Q(parent__isnull=True) | Q(parent__is_active=True))
+        return qs.order_by('order', 'code')
+
+    def _broadcast(self, action, head_id, title, company_id):
+        tab_id = self.request.headers.get('X-Client-Tab-Id')
+        broadcast_org_structure_updated('expense_head', action, head_id, title, company_id=company_id,
+                                        client_tab_id=tab_id, sender_id=self.request.user.id)
+
+    def _audit(self, action, head_id, head, before=None):
+        log_audit_event(
+            module='treasury', action=action, target_model='ExpenseHead', target_object_id=head_id,
+            target_repr=f'{head.code} - {head.title}', user=self.request.user, company_id=head.company_id,
+            before_state=before, after_state=None if action == 'expense_head_deleted' else _expense_head_state(head),
+        )
+
+    def create(self, request, *args, **kwargs):
+        # مجوز پیش از سنجش serializer، تا پیام «کد تکراری» چیزی از شرکت دیگر لو ندهد (یافتهٔ tenant-scope-reviewer)
+        if request.data.get('company') in (None, ''):
+            raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
+        ensure_company_section(request.user, request.data.get('company'), self.SECTION, 'write')
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        ensure_company_section(request.user, self.get_object().company_id, self.SECTION, 'write')
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        company = serializer.validated_data.get('company')
+        ensure_company_section(self.request.user, company.id, self.SECTION, 'write')
+        instance = serializer.save()
+        self._audit('expense_head_created', instance.id, instance)
+        self._broadcast('create', instance.id, instance.title, instance.company_id)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        ensure_company_section(self.request.user, instance.company_id, self.SECTION, 'write')
+        ensure_company_unchanged(serializer)
+        before = _expense_head_state(instance)
+        updated = serializer.save()
+        self._audit('expense_head_updated', updated.id, updated, before)
+        self._broadcast('update', updated.id, updated.title, updated.company_id)
+
+    def perform_destroy(self, instance):
+        ensure_company_section(self.request.user, instance.company_id, self.SECTION, 'write')
+        head_id = instance.id
+        before = _expense_head_state(instance)
+        with transaction.atomic():
+            # قفل ردیف تا سندی هم‌زمان میان بررسی و حذف به آن وصل نشود (الگوی ۳.۳-ب)
+            locked = ExpenseHead.objects.select_for_update().get(pk=head_id)
+            if locked.children.exists():
+                raise serializers.ValidationError({'detail': "این گروه زیرمجموعه دارد."})
+            if locked.invoices.exists() or locked.petty_cash_transactions.exists():
+                raise serializers.ValidationError({'detail': "این سرفصل در اسناد به کار رفته؛ آن را غیرفعال کنید."})
+            locked.delete()
+        self._audit('expense_head_deleted', head_id, instance, before)
+        self._broadcast('delete', head_id, instance.title, instance.company_id)
+
+    @action(detail=False, methods=['post'], url_path='seed-defaults')
+    def seed_defaults(self, request):
+        """ساخت فهرست پیش‌فرض برای شرکتی که سرفصلی ندارد (ص۵)؛ برای فهرست ناخالی بی‌اثر است."""
+        cid = ensure_company_section(request.user, request.query_params.get('company_id'), self.SECTION, 'write')
+        company = Company.objects.filter(pk=cid).first()
+        if company is None:
+            raise serializers.ValidationError({'company_id': "شرکت پیدا نشد."})
+        created = seed_default_expense_heads(company)
+        if created:
+            log_audit_event(module='treasury', action='expense_head_created', target_model='ExpenseHead',
+                            target_repr='seed-defaults', user=request.user, company_id=cid,
+                            details={'event': 'seed_defaults', 'created': created})
+            self._broadcast('create', None, None, cid)
+        return Response({'created': created}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
 
 class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
     """

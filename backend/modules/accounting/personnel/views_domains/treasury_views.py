@@ -338,7 +338,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     """
     مدیریت فاکتورهای هزینه‌ای بخش‌ها
     """
-    queryset = ExpenseInvoice.objects.all().select_related('section', 'section__project', 'counterparty__party', 'created_by')
+    queryset = ExpenseInvoice.objects.all().select_related('section', 'section__project', 'counterparty__party', 'created_by',
+                                                       'expense_head__parent')
     serializer_class = ExpenseInvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
@@ -719,7 +720,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     مدیریت اسناد، هزینه‌کردها، درخواست‌های شارژ و تسویه تنخواه‌گردان
     """
     queryset = PettyCashTransaction.objects.all().select_related(
-        'section', 'section__project', 'custodian', 'counterparty__party', 'created_by', 'account'
+        'section', 'section__project', 'custodian', 'counterparty__party', 'created_by', 'account',
+        'expense_head__parent'
     )
     serializer_class = PettyCashTransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -986,9 +988,9 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             defaults={'ceiling_amount': Decimal('100000000')}
         )
 
-        from common.date_utils import gregorian_to_jalali
-        now = timezone.now()
-        shamsi_today = gregorian_to_jalali(now.year, now.month, now.day)
+        # تابع حذف‌شدهٔ gregorian_to_jalali این مسیر را همیشه 500 می‌کرد (یافتهٔ ۳.۴-ب)
+        from ..fiscal import to_shamsi_str
+        shamsi_today = to_shamsi_str(timezone.now())
 
         tx = PettyCashTransaction.objects.create(
             account=account,

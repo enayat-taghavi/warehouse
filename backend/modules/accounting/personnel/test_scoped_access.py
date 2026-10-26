@@ -21,6 +21,7 @@ from companies.models import (
     Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess, section_role_choices, section_role_ranks,
 )
 from personnel.models import Counterparty, ExpenseInvoice, PersonnelProfile, PettyCashTransaction
+from personnel.scoped_test_support import expense_head_id
 
 User = get_user_model()
 
@@ -112,7 +113,7 @@ class AccountantHereEmployeeThereTests(ScopedAccessFixture):
         self.client.force_authenticate(user=User.objects.get(pk=self.user.pk))
         payload = {
             'section': self.sec_c.id, 'counterparty': self.invoices['C'].counterparty_id, 'invoice_number': 'SCP-NEW-C',
-            'invoice_date_shamsi': '1405/05/03', 'amount': '100000', 'category': 'other', 'description': 'x',
+            'invoice_date_shamsi': '1405/05/03', 'amount': '100000', 'expense_head': expense_head_id(self.sec_c), 'description': 'x',
         }
         res = self.client.post(INVOICES, payload, format='json', HTTP_X_COMPANY_ID=str(self.company_x.id))
         self.assertEqual(res.status_code, 403, res.content)

@@ -21,6 +21,7 @@ from personnel.models import (
     CompanyFiscalPeriod, Counterparty, ExpenseInvoice, PettyCashAccount, PettyCashTransaction,
 )
 from personnel.workflows import is_invoice_locked
+from personnel.scoped_test_support import expense_head_id
 
 User = get_user_model()
 PERIODS = '/api/personnel/company-fiscal-periods/'
@@ -53,7 +54,7 @@ class FiscalFixtures(TestCase):
 
     def invoice(self, date='1405/08/01', section=None, status='draft'):
         return ExpenseInvoice.objects.create(
-            section=section or self.sec, counterparty=self.cp,
+            section=section or self.sec, counterparty=self.cp, expense_head_id=expense_head_id(section or self.sec),
             invoice_number=f'FP32-{ExpenseInvoice.objects.count() + 1}', invoice_date_shamsi=date,
             amount=Decimal('1000'), category='c', description='d', created_by=self.admin, status=status)
 
@@ -67,7 +68,7 @@ class FiscalFixtures(TestCase):
 
     def invoice_payload(self, date):
         return {'section': self.sec.id, 'counterparty': self.cp.id, 'invoice_number': 'FP32-NEW',
-                'invoice_date_shamsi': date, 'amount': '1000', 'category': 'c', 'description': 'd'}
+                'invoice_date_shamsi': date, 'amount': '1000', 'expense_head': expense_head_id(self.sec), 'description': 'd'}
 
     def assert_closed(self, res, field):
         self.assertEqual(res.status_code, 400, res.content)
@@ -245,7 +246,7 @@ class ClosedPeriodLockTests(FiscalFixtures):
     def test_petty_cash_closed_rejected(self):
         self.period(status='closed')
         payload = {'section': self.sec.id, 'custodian': self.admin.id, 'amount': '10000', 'transaction_date_shamsi': '1405/08/01',
-                   'title': 'تنخواه', 'category': 'متفرقه'}
+                   'title': 'تنخواه', 'expense_head': expense_head_id(self.sec)}
         self.assert_closed(self.api.post(PETTY, payload, format='json'), 'transaction_date_shamsi')
         tx = self.petty()
         self.assert_closed(self.api.post(f'{PETTY}{tx.id}/submit/'), 'transaction_date_shamsi')

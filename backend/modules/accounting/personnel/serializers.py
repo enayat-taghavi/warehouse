@@ -23,6 +23,7 @@ from .serializers_domains.organization import (
     CompanyDocumentSerializer,
     CompanyBoardMemberSerializer,
     CompanyBankAccountSerializer,
+    ExpenseHeadSerializer,
     CompanyFiscalPeriodSerializer,
     CompanyPayrollProfileSerializer,
 )
@@ -83,6 +84,7 @@ __all__ = [
     'CompanyDocumentSerializer',
     'CompanyBoardMemberSerializer',
     'CompanyBankAccountSerializer',
+    'ExpenseHeadSerializer',
     'CompanyFiscalPeriodSerializer',
     'CompanyPayrollProfileSerializer',
     'PersonnelBankAccountSerializer',

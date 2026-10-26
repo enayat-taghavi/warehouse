@@ -18,6 +18,7 @@ from .models_domains.organization import (
     CompanyBoardMember,
     CompanyFiscalPeriod,
     CompanyPayrollProfile,
+    ExpenseHead,
     primary_bank_account,
 )
 from .models_domains.hr import (
@@ -74,6 +75,7 @@ __all__ = [
     'CompanyBoardMember',
     'CompanyFiscalPeriod',
     'CompanyPayrollProfile',
+    'ExpenseHead',
     'primary_bank_account',
     'Project',
     'ProjectSection',

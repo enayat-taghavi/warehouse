@@ -72,6 +72,7 @@ from .views_domains.org_views import (
     CompanyViewSet,
     CompanyDocumentViewSet,
     CompanyBankAccountViewSet,
+    ExpenseHeadViewSet,
     CompanyBoardMemberViewSet,
     CompanyFiscalPeriodViewSet,
 )
@@ -157,6 +158,7 @@ __all__ = [
     'CompanyViewSet',
     'CompanyDocumentViewSet',
     'CompanyBankAccountViewSet',
+    'ExpenseHeadViewSet',
     'CompanyBoardMemberViewSet',
     'CompanyFiscalPeriodViewSet',
     'CounterpartyViewSet',

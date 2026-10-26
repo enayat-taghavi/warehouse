@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 
 from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 from personnel.models import Counterparty, ExpenseInvoice
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import expense_head_id, grant_section_perms
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.models import WorkflowStep, WorkflowSubstitute, WorkflowThreshold
@@ -39,7 +39,8 @@ class InvoiceWorkflowTests(TestCase):
 
     def invoice(self, creator, amount='1000'):
         return ExpenseInvoice.objects.create(
-            section=self.sec, counterparty=self.cp, invoice_number=f'IWF-{ExpenseInvoice.objects.count() + 1}',
+            section=self.sec, counterparty=self.cp, expense_head_id=expense_head_id(self.sec),
+            invoice_number=f'IWF-{ExpenseInvoice.objects.count() + 1}',
             invoice_date_shamsi='1405/08/01', amount=Decimal(amount), category='c', description='d',
             created_by=creator,
         )
