@@ -2,7 +2,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CompanyApiService } from '../../../../core/api/company-api.service';
 import { ApiService } from '../../../../core/api/api.service';
-import { CompanyBankAccount, CompanyBoardMember, CompanyDocument, CompanyFiscalPeriod } from '../../../../core/models/company.model';
+import { CompanyBankAccount, CompanyBankOpeningBalancePayload, CompanyBankOpeningHistoryEntry, CompanyBoardMember, CompanyDocument, CompanyFiscalPeriod } from '../../../../core/models/company.model';
 
 /**
  * دسترسی دادهٔ تب‌ها و بخش‌های حسابداری استودیوی شرکت (C3).
@@ -73,6 +73,14 @@ export class CompaniesStudioFacade {
 
   setPrimaryBankAccount(id: number): Observable<CompanyBankAccount> {
     return this.api.setPrimaryBankAccount(id);
+  }
+
+  setOpeningBalance(id: number, body: CompanyBankOpeningBalancePayload): Observable<CompanyBankAccount> {
+    return this.api.setOpeningBalance(id, body);
+  }
+
+  getOpeningHistory(id: number): Observable<{ count: number; results: CompanyBankOpeningHistoryEntry[] }> {
+    return this.api.getOpeningHistory(id);
   }
 
   // ═════════════════════════════════════════════════════════════════════

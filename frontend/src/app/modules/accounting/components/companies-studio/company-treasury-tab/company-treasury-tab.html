@@ -78,6 +78,25 @@
           </button>
         </div>
 
+        <!-- موجودی اولیهٔ حساب (۳.۳): رقم، «ثبت نشده» یا «—» برای پوشیده -->
+        <div class="flex items-center justify-between gap-2 mt-1 text-[11px] text-slate-500">
+          <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+            <span class="shrink-0">موجودی اولیه:</span>
+            <span class="font-bold text-slate-700 tabular-nums" data-testid="opening-balance-text">{{ openingText(acc) }}</span>
+          </div>
+          <button
+            *ngIf="canChangeOpening(acc)"
+            type="button"
+            (click)="openOpeningBalance(acc)"
+            title="تغییر موجودی اولیه"
+            aria-label="تغییر موجودی اولیه"
+            data-testid="open-opening-balance"
+            class="min-w-[40px] h-10 lg:h-8 px-2 rounded-lg flex items-center justify-center gap-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="dollar-sign" aria-hidden="true"></svg>
+            <span class="hidden sm:inline text-[11px] font-bold">تغییر موجودی اولیه</span>
+          </button>
+        </div>
+
         <!-- مشخصات شماره حساب و دکمه‌های عملیات -->
         <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
           <div class="flex items-center gap-1.5 min-w-0">
@@ -277,6 +296,52 @@
           />
         </div>
 
+        <!-- موجودی اولیه فقط هنگام ساخت؛ پس از آن از «تغییر موجودی اولیه» (۳.۳) -->
+        <ng-container *ngIf="!isEditingAccount">
+          <div>
+            <label for="treasury_opening_balance" class="block text-[11px] font-bold text-slate-700 mb-1">موجودی اولیه (ریال)</label>
+            <app-amount-input
+              inputId="treasury_opening_balance"
+              placeholder="۰"
+              [(ngModel)]="newAccount.opening_balance"
+              [invalid]="!!createFieldErrors.opening_balance"
+              [describedBy]="createFieldErrors.opening_balance ? 'bank_opening_balance_error' : null">
+            </app-amount-input>
+            <p *ngIf="createFieldErrors.opening_balance" id="bank_opening_balance_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ createFieldErrors.opening_balance }}</p>
+          </div>
+          <div>
+            <label for="treasury_opening_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ موجودی اولیه <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <div [class.border-rose-400]="!!createFieldErrors.opening_balance_date" class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+              <ng-persian-datepicker
+                [(uiIsVisible)]="isCreateDatePickerOpen"
+                [dateInitValue]="false"
+                (dateOnSelect)="onCreateDateSelect($event)"
+                class="w-full block relative cursor-pointer">
+                <input
+                  id="treasury_opening_date"
+                  type="text"
+                  [formControl]="createDateControl"
+                  aria-required="true"
+                  (click)="isCreateDatePickerOpen = !isCreateDatePickerOpen"
+                  placeholder="۱۴۰۵/۰۱/۰۱"
+                  [attr.aria-invalid]="!!createFieldErrors.opening_balance_date"
+                  [attr.aria-describedby]="createFieldErrors.opening_balance_date ? 'bank_opening_date_error' : null"
+                  class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                />
+              </ng-persian-datepicker>
+              <button
+                type="button"
+                (click)="isCreateDatePickerOpen = !isCreateDatePickerOpen; $event.stopPropagation()"
+                title="انتخاب تاریخ موجودی اولیه از تقویم"
+                aria-label="انتخاب تاریخ موجودی اولیه از تقویم"
+                class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
+              </button>
+            </div>
+            <p *ngIf="createFieldErrors.opening_balance_date" id="bank_opening_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ createFieldErrors.opening_balance_date }}</p>
+          </div>
+        </ng-container>
+
         <!-- چک‌باکس حساب اصلی -->
         <div class="flex items-center gap-2 md:pt-5">
           <input
@@ -308,5 +373,114 @@
     </div>
 
   </div>
+
+  <!-- مودال تغییر موجودی اولیه و سابقهٔ آن (۳.۳-ج) -->
+  <app-modal [isOpen]="!!openingAccount" title="تغییر موجودی اولیه" size="md" [closeOnBackdrop]="!isSavingOpening" (closed)="closeOpeningBalance()">
+    <div *ngIf="openingAccount" class="space-y-3">
+      <div class="text-xs font-bold text-slate-700">{{ openingAccount.bank_name }}<span *ngIf="openingAccount.account_title"> – {{ openingAccount.account_title }}</span></div>
+      <p *ngIf="openingAccount.has_movements" class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5 flex items-start gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="status-warning" aria-hidden="true"></svg>
+        <span>این حساب گردش دارد؛ نوشتن علت تغییر الزامی است و تغییر در سابقه می‌ماند.</span>
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="opening_change_amount" class="block text-[11px] font-bold text-slate-700 mb-1">موجودی اولیه (ریال)</label>
+          <app-amount-input
+            inputId="opening_change_amount"
+            placeholder="۰"
+            [(ngModel)]="openingForm.opening_balance"
+            [invalid]="!!openingErrors.opening_balance"
+            [describedBy]="openingErrors.opening_balance ? 'opening_change_amount_error' : null">
+          </app-amount-input>
+          <p *ngIf="openingErrors.opening_balance" id="opening_change_amount_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ openingErrors.opening_balance }}</p>
+        </div>
+        <div>
+          <label for="opening_change_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ موجودی اولیه <span class="text-rose-500" aria-hidden="true">*</span></label>
+          <div [class.border-rose-400]="!!openingErrors.opening_balance_date" class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+            <ng-persian-datepicker
+              [(uiIsVisible)]="isOpeningDatePickerOpen"
+              [dateInitValue]="false"
+              (dateOnSelect)="onOpeningDateSelect($event)"
+              class="w-full block relative cursor-pointer">
+              <input
+                id="opening_change_date"
+                type="text"
+                [formControl]="openingDateControl"
+                aria-required="true"
+                (click)="isOpeningDatePickerOpen = !isOpeningDatePickerOpen"
+                placeholder="۱۴۰۵/۰۱/۰۱"
+                [attr.aria-invalid]="!!openingErrors.opening_balance_date"
+                [attr.aria-describedby]="openingErrors.opening_balance_date ? 'opening_change_date_error' : null"
+                class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              />
+            </ng-persian-datepicker>
+            <button
+              type="button"
+              (click)="isOpeningDatePickerOpen = !isOpeningDatePickerOpen; $event.stopPropagation()"
+              title="انتخاب تاریخ موجودی اولیه از تقویم"
+              aria-label="انتخاب تاریخ موجودی اولیه از تقویم"
+              class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
+            </button>
+          </div>
+          <p *ngIf="openingErrors.opening_balance_date" id="opening_change_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ openingErrors.opening_balance_date }}</p>
+        </div>
+      </div>
+
+      <div>
+        <label for="opening_change_reason" class="block text-[11px] font-bold text-slate-700 mb-1">
+          علت تغییر <span *ngIf="openingAccount.has_movements" class="text-rose-500">*</span>
+        </label>
+        <textarea
+          id="opening_change_reason"
+          rows="2"
+          [(ngModel)]="openingForm.reason"
+          [attr.aria-required]="openingAccount.has_movements || null"
+          (ngModelChange)="openingErrors.reason = undefined"
+          [attr.aria-invalid]="!!openingErrors.reason"
+          [attr.aria-describedby]="openingErrors.reason ? 'opening_change_reason_error' : 'opening_change_reason_hint'"
+          class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white"
+          [class.border-rose-400]="!!openingErrors.reason"></textarea>
+        <p *ngIf="!openingErrors.reason" id="opening_change_reason_hint" class="mt-1 text-[11px] text-slate-500">{{ openingAccount.has_movements ? 'برای حساب دارای گردش، علت الزامی است.' : 'اختیاری؛ در سابقه ثبت می‌شود.' }}</p>
+        <p *ngIf="openingErrors.reason" id="opening_change_reason_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ openingErrors.reason }}</p>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" appAction="close" display="label" label="انصراف" [disabled]="isSavingOpening" (click)="closeOpeningBalance()"></button>
+        <button type="button" appAction="save" display="label" label="ثبت موجودی" [busy]="isSavingOpening" (click)="saveOpeningBalance()"></button>
+      </div>
+
+      <!-- سابقهٔ تغییر موجودی اولیه (فقط با دید «بانک») -->
+      <div *ngIf="canReadBank" class="pt-3 border-t border-slate-100 space-y-2">
+        <div class="text-[11px] font-black text-slate-700 flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="clock" aria-hidden="true"></svg>
+          <span>سابقهٔ موجودی اولیه</span>
+        </div>
+        <div *ngIf="isLoadingHistory" role="status" aria-busy="true" aria-label="در حال بارگذاری سابقه">
+          <app-loading-skeleton type="text" [lines]="2"></app-loading-skeleton>
+        </div>
+        <div *ngIf="historyError" class="text-[11px] text-rose-700 flex items-center gap-2" role="alert">
+          <span>دریافت سابقه انجام نشد.</span>
+          <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="loadOpeningHistory(openingAccount)"></button>
+        </div>
+        <p *ngIf="!isLoadingHistory && !historyError && openingHistory.length === 0" class="text-[11px] text-slate-500" data-testid="opening-history-empty">سابقه‌ای ثبت نشده است.</p>
+        <ul *ngIf="!isLoadingHistory && openingHistory.length > 0" class="divide-y divide-slate-100 max-h-56 overflow-y-auto">
+          <li *ngFor="let h of openingHistory" class="py-2 text-[11px] text-slate-600 space-y-0.5">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span class="font-bold text-slate-800 tabular-nums">{{ h.old_amount === null ? 'ثبت اولیه:' : faAmount(h.old_amount) + ' ←' }}</span>
+              <span class="font-bold text-slate-800 tabular-nums">{{ faAmount(h.new_amount) }} ریال</span>
+              <span class="tabular-nums">تاریخ {{ faDigits(h.new_date) || '—' }}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-x-2 text-slate-500">
+              <span>{{ h.changed_by_name || '—' }}</span>
+              <span class="tabular-nums">{{ faDigits(h.changed_at_shamsi || '') }}</span>
+              <span *ngIf="h.reason">علت: {{ h.reason }}</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </app-modal>
 
 </div>

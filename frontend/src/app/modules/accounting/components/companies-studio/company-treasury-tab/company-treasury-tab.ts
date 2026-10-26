@@ -1,11 +1,12 @@
 import { ChangeDetectorRef, Component, HostListener, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CompaniesStudioFacade } from '../companies-studio.facade';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
-import { CompanyBankAccount } from '../../../../../core/models/company.model';
+import { CompanyBankAccount, CompanyBankOpeningBalancePayload, CompanyBankOpeningHistoryEntry } from '../../../../../core/models/company.model';
 import { CompanyStudioContextService } from '../../../../../core/services/company-studio-context.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
@@ -26,6 +27,8 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
+import { AmountInputComponent } from '../../../../../shared/components/amount-input/amount-input.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 
 /** شناسهٔ تب در استودیوی شرکت (`?tab=treasury`) */
@@ -38,7 +41,7 @@ export const TREASURY_TAB_ID = 'treasury';
 @Component({
   selector: 'app-company-treasury-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, OfflinePendingBadgeComponent, LoadingSkeletonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, OfflinePendingBadgeComponent, LoadingSkeletonComponent, ModalComponent, AmountInputComponent],
   providers: [CompaniesStudioFacade],
   templateUrl: './company-treasury-tab.html'
 })
@@ -76,6 +79,21 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   isBankDropdownOpen = false;
 
   newAccount = this.getEmptyBankAccountData();
+  /** خطای کنار فیلدهای موجودی اولیه در فرم ساخت (۳.۳) */
+  createFieldErrors: Partial<Record<'opening_balance' | 'opening_balance_date', string>> = {};
+  isCreateDatePickerOpen = false;
+  createDateControl = new FormControl('');
+
+  // مودال «تغییر موجودی اولیه» و سابقهٔ آن (۳.۳-ج)
+  openingAccount: CompanyBankAccount | null = null;
+  openingForm = { opening_balance: null as string | null, opening_balance_date: '', reason: '' };
+  openingErrors: Partial<Record<'opening_balance' | 'opening_balance_date' | 'reason', string>> = {};
+  isOpeningDatePickerOpen = false;
+  openingDateControl = new FormControl('');
+  isSavingOpening = false;
+  openingHistory: CompanyBankOpeningHistoryEntry[] = [];
+  isLoadingHistory = false;
+  historyError = false;
 
   readonly bankAccountIcon = ACCOUNTING_ENTITY_ICONS.bankAccounts;
 
@@ -86,6 +104,35 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
 
   get canWriteSheba(): boolean {
     return this.studioContext.canWrite('bank_sheba');
+  }
+
+  /** دید رقم موجودی اولیه و سابقهٔ آن با سطح خواندن «بانک» (سرور برای دیگران پوشیده می‌دهد) */
+  get canReadBank(): boolean {
+    return this.studioContext.canRead('bank');
+  }
+
+  /** پس از اولین گردش، تغییر موجودی اولیه کار حساس جداست */
+  canChangeOpening(acc: CompanyBankAccount): boolean {
+    if (!this.canWriteBank || !acc.id || this.isPendingRecord(acc)) return false;
+    return !acc.has_movements || this.studioContext.canWrite('bank_opening_balance');
+  }
+
+  /** مبلغ ریالی با جداکنندهٔ هزارگان و رقم فارسی */
+  faAmount(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = Number(value);
+    return isNaN(n) ? String(value) : CompanyTreasuryTabComponent.FA_NUMBER.format(n);
+  }
+
+  faDigits(value: string | null | undefined): string {
+    return (value || '').replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d]);
+  }
+
+  /** متن موجودی اولیهٔ کارت: رقم، «ثبت نشده» برای حساب قدیمی یا «—» برای پوشیده */
+  openingText(acc: CompanyBankAccount): string {
+    if (!this.canReadBank || acc.opening_balance === null || acc.opening_balance === undefined) return '—';
+    if (!acc.opening_balance_date) return 'ثبت نشده';
+    return `${this.faAmount(acc.opening_balance)} ریال — تاریخ ${this.faDigits(acc.opening_balance_date)}`;
   }
   private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
 
@@ -113,6 +160,12 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
 
   ngOnInit(): void {
     this.setupRealtimeListeners();
+    this.createDateControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
+      this.newAccount.opening_balance_date = val || '';
+    });
+    this.openingDateControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
+      this.openingForm.opening_balance_date = val || '';
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -127,6 +180,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
 
   ngOnDestroy(): void {
     this.unregisterDirty();
+    this.openingAccount = null;
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -142,7 +196,8 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
 
   hasPendingForm(): boolean {
     const acc = this.newAccount;
-    return this.isEditingAccount || !!(acc.bank_name || acc.sheba_number || acc.account_number || acc.account_title);
+    return this.isEditingAccount || !!this.openingAccount
+      || !!(acc.bank_name || acc.sheba_number || acc.account_number || acc.account_title || acc.opening_balance || acc.opening_balance_date);
   }
 
   /** شمارندهٔ تب از context به هستهٔ استودیو می‌رسد */
@@ -379,6 +434,13 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       return;
     }
 
+    this.createFieldErrors = {};
+    if (!this.isEditingAccount && !this.newAccount.opening_balance_date) {
+      this.createFieldErrors = { opening_balance_date: 'تاریخ موجودی اولیه الزامی است.' };
+      this.cdr.markForCheck();
+      return;
+    }
+
     const duplicate = this.findDuplicateSheba(shebaVal.formattedSheba);
     if (duplicate) {
       const ok = this.confirmDialog
@@ -403,6 +465,11 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       is_primary: this.newAccount.is_primary,
       is_active: true
     };
+    // موجودی اولیه فقط هنگام ساخت فرستاده می‌شود؛ پس از آن فقط از «تغییر موجودی اولیه» (سرور تغییر در ویرایش را رد می‌کند)
+    if (!this.isEditingAccount) {
+      payload.opening_balance = this.newAccount.opening_balance || '0';
+      payload.opening_balance_date = this.newAccount.opening_balance_date;
+    }
 
     if (this.isEditingAccount && this.editingAccountId) {
       this.facade.updateBankAccount(this.editingAccountId, payload).subscribe({
@@ -457,6 +524,11 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
         },
         error: (err) => {
           this.isSavingBankAccount = false;
+          this.createFieldErrors = this.extractErrors(err?.error, ['opening_balance', 'opening_balance_date']);
+          if (Object.keys(this.createFieldErrors).length) {
+            this.cdr.markForCheck();
+            return;
+          }
           const msg = err.error?.detail || err.error?.sheba_number?.[0] || 'خطا در ثبت حساب بانکی';
           this.toast.error(msg);
           this.cdr.markForCheck();
@@ -476,7 +548,9 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       account_number: acc.account_number || '',
       sheba_number: acc.sheba_number,
       account_title: acc.account_title || '',
-      is_primary: acc.is_primary
+      is_primary: acc.is_primary,
+      opening_balance: null,
+      opening_balance_date: ''
     };
     this.shebaValidationResult = validateSheba(acc.sheba_number);
     this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || extractShebaDigits(acc.sheba_number);
@@ -487,9 +561,138 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
     this.isEditingAccount = false;
     this.editingAccountId = null;
     this.newAccount = this.getEmptyBankAccountData();
+    this.createFieldErrors = {};
+    this.isCreateDatePickerOpen = false;
+    this.createDateControl.setValue('', { emitEvent: false });
     this.shebaValidationResult = null;
     this.shebaDigitsDisplay = '';
     this.cdr.markForCheck();
+  }
+
+  onCreateDateSelect(event: any): void {
+    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
+    this.newAccount.opening_balance_date = val;
+    delete this.createFieldErrors.opening_balance_date;
+    this.createDateControl.setValue(val, { emitEvent: false });
+    this.isCreateDatePickerOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // تغییر موجودی اولیه و سابقهٔ آن (۳.۳-ج)
+  // ═════════════════════════════════════════════════════════════════════
+  openOpeningBalance(acc: CompanyBankAccount): void {
+    if (!this.canChangeOpening(acc)) return;
+    this.openingAccount = acc;
+    this.openingForm = {
+      opening_balance: acc.opening_balance ?? null,
+      opening_balance_date: acc.opening_balance_date || '',
+      reason: ''
+    };
+    this.openingDateControl.setValue(this.openingForm.opening_balance_date, { emitEvent: false });
+    this.openingErrors = {};
+    this.isOpeningDatePickerOpen = false;
+    this.loadOpeningHistory(acc);
+    this.cdr.markForCheck();
+  }
+
+  closeOpeningBalance(): void {
+    if (this.isSavingOpening) return;
+    this.openingAccount = null;
+    this.openingHistory = [];
+    this.openingErrors = {};
+    this.isOpeningDatePickerOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  onOpeningDateSelect(event: any): void {
+    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
+    this.openingForm.opening_balance_date = val;
+    delete this.openingErrors.opening_balance_date;
+    this.openingDateControl.setValue(val, { emitEvent: false });
+    this.isOpeningDatePickerOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  loadOpeningHistory(acc: CompanyBankAccount): void {
+    this.openingHistory = [];
+    this.historyError = false;
+    if (!acc.id || !this.canReadBank) return;
+    const accountId = acc.id;
+    this.isLoadingHistory = true;
+    this.facade.getOpeningHistory(accountId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        if (this.openingAccount?.id !== accountId) return;
+        this.isLoadingHistory = false;
+        this.openingHistory = Array.isArray(res?.results) ? res.results : [];
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        if (this.openingAccount?.id !== accountId) return;
+        this.isLoadingHistory = false;
+        this.historyError = true;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  saveOpeningBalance(): void {
+    const acc = this.openingAccount;
+    if (!acc?.id) return;
+    this.openingErrors = {};
+    if (!this.openingForm.opening_balance_date) {
+      this.openingErrors.opening_balance_date = 'تاریخ موجودی اولیه الزامی است.';
+    }
+    if (acc.has_movements && !this.openingForm.reason.trim()) {
+      this.openingErrors.reason = 'علت تغییر برای حساب دارای گردش الزامی است.';
+    }
+    if (Object.keys(this.openingErrors).length) {
+      this.cdr.markForCheck();
+      return;
+    }
+    const body: CompanyBankOpeningBalancePayload = {
+      opening_balance: this.openingForm.opening_balance || '0',
+      opening_balance_date: this.openingForm.opening_balance_date,
+      reason: this.openingForm.reason.trim()
+    };
+    const accountId = acc.id;
+    this.isSavingOpening = true;
+    this.facade.setOpeningBalance(accountId, body).subscribe({
+      next: (saved: any) => {
+        this.isSavingOpening = false;
+        if (saved?._offlinePending) {
+          this.toast.info('تغییر موجودی اولیه در صف ارسال است و پس از اتصال ثبت می‌شود.');
+        } else {
+          this.toast.success('موجودی اولیهٔ حساب ثبت شد.');
+          const idx = this.companyBankAccounts.findIndex(a => a.id === accountId);
+          if (idx !== -1 && saved?.id === accountId) {
+            this.companyBankAccounts[idx] = { ...this.companyBankAccounts[idx], ...saved };
+            this.setAccounts([...this.companyBankAccounts]);
+          }
+        }
+        this.closeOpeningBalance();
+      },
+      error: (err) => {
+        this.isSavingOpening = false;
+        this.openingErrors = this.extractErrors(err?.error, ['opening_balance', 'opening_balance_date', 'reason']);
+        if (!Object.keys(this.openingErrors).length) {
+          this.toast.error(err?.error?.detail || 'خطا در تغییر موجودی اولیه');
+        }
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /** پاسخ 400 سرور به شکل { فیلد: [پیام] } را به پیام کنار فیلد تبدیل می‌کند */
+  private extractErrors<K extends string>(body: any, keys: K[]): Partial<Record<K, string>> {
+    const out: Partial<Record<K, string>> = {};
+    if (!body || typeof body !== 'object') return out;
+    for (const key of keys) {
+      const v = body[key];
+      const msg = Array.isArray(v) ? v[0] : (typeof v === 'string' ? v : '');
+      if (msg) out[key] = String(msg);
+    }
+    return out;
   }
 
   async deleteBankAccount(acc: CompanyBankAccount): Promise<void> {
@@ -509,7 +712,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
         this.setAccounts(this.companyBankAccounts.filter(a => a.id !== acc.id));
         this.cdr.markForCheck();
       },
-      error: () => this.toast.error('خطا در حذف حساب بانکی')
+      error: (err) => this.toast.error(err?.error?.detail || 'خطا در حذف حساب بانکی')
     });
   }
 
@@ -542,7 +745,9 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       account_number: '',
       sheba_number: '',
       account_title: '',
-      is_primary: false
+      is_primary: false,
+      opening_balance: null as string | null,
+      opening_balance_date: ''
     };
   }
 }

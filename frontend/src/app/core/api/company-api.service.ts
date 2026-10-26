@@ -11,6 +11,8 @@ import {
   CompanySectionLevels,
   CompanyDocument,
   CompanyBankAccount,
+  CompanyBankOpeningBalancePayload,
+  CompanyBankOpeningHistoryEntry,
   CompanyBoardMember,
   CompanyFiscalPeriod,
   ExpiringDocumentsResponse,
@@ -309,6 +311,21 @@ export class CompanyApiService {
       return throwError(() => new Error('accounting-module-not-installed'));
     }
     return this.http.post<CompanyBankAccount>(`${this.bankAccountsEndpoint}/${id}/set-primary/`, {});
+  }
+
+  /** تغییر موجودی اولیه فقط از این کنش (ثبت در سابقه) */
+  setOpeningBalance(id: number, body: CompanyBankOpeningBalancePayload): Observable<CompanyBankAccount> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
+    return this.http.post<CompanyBankAccount>(`${this.bankAccountsEndpoint}/${id}/set-opening-balance/`, body);
+  }
+
+  getOpeningHistory(id: number): Observable<{ count: number; results: CompanyBankOpeningHistoryEntry[] }> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
+    return this.http.get<{ count: number; results: CompanyBankOpeningHistoryEntry[] }>(`${this.bankAccountsEndpoint}/${id}/opening-history/`);
   }
 
   // مدیریت اعضای هیئت‌مدیره و ارکان قانونی شرکت

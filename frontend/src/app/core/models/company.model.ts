@@ -142,8 +142,33 @@ export interface CompanyBankAccount {
   account_title?: string | null;
   is_primary: boolean;
   is_active: boolean;
+  /** موجودی اولیه به ریال (رشتهٔ دهدهی)؛ null یعنی پوشیده برای کاربر بی دید «بانک» */
+  opening_balance?: string | null;
+  /** تاریخ موجودی اولیه `YYYY/MM/DD`؛ null یعنی پوشیده یا «ثبت نشده» (حساب قدیمی) */
+  opening_balance_date?: string | null;
+  /** حساب گردش دارد (فقط‌خواندنی) */
+  has_movements?: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CompanyBankOpeningBalancePayload {
+  opening_balance: string;
+  opening_balance_date: string;
+  reason?: string;
+}
+
+export interface CompanyBankOpeningHistoryEntry {
+  id: number;
+  old_amount: string | null;
+  old_date: string | null;
+  new_amount: string | null;
+  new_date: string | null;
+  reason: string;
+  had_movements: boolean;
+  changed_by_name: string | null;
+  changed_at: string;
+  changed_at_shamsi?: string | null;
 }
 
 export interface UserAvailableCompaniesResponse {

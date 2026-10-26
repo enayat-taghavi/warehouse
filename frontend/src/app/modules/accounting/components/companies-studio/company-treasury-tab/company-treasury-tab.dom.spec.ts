@@ -74,6 +74,7 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
       confirm.open.mockResolvedValueOnce(false);
       component.companyBankAccounts[0].sheba_number = 'IR160120000000001234567890';
       component.onShebaInput('IR160120000000001234567890');
+      component.newAccount.opening_balance_date = '1405/01/01';
       await component.saveBankAccount();
       expect(confirm.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning', title: 'شبای تکراری' }));
       expect(mockCompanyApi.createBankAccount).not.toHaveBeenCalled();
@@ -115,6 +116,7 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
     it('E5: حساب ثبت‌شده در صف پیام «در صف ارسال» می‌دهد نه «با موفقیت»', async () => {
       mockCompanyApi.createBankAccount.mockImplementationOnce((data: any) => of({ id: -9, ...data, _offlinePending: true }));
       component.onShebaInput('IR160120000000001234567890');
+      component.newAccount.opening_balance_date = '1405/01/01';
       await component.saveBankAccount();
       expect(mockToast.info).toHaveBeenCalled();
       expect(mockToast.success).not.toHaveBeenCalled();
@@ -198,6 +200,7 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
   describe('سیستم چندشبایی و خزانه‌داری هوشمند شرکت‌ها (Multi-IBAN & Smart Treasury)', () => {
     it('ورود شماره شبای معتبر باید نام بانک و شماره حساب را به صورت خودکار تشخیص دهد', () => {
       component.onShebaInput('IR160120000000001234567890');
+      component.newAccount.opening_balance_date = '1405/01/01';
 
       expect(component.shebaValidationResult?.isValid).toBe(true);
       expect(component.shebaValidationResult?.bank?.name).toBe('بانک ملت');
@@ -218,6 +221,7 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
 
     it('ثبت حساب بانکی معتبر باید وب‌سرویس ایجاد را با شرکت جاری صدا بزند', () => {
       component.onShebaInput('IR160120000000001234567890');
+      component.newAccount.opening_balance_date = '1405/01/01';
       component.newAccount.account_title = 'حساب حقوق پرسنل';
 
       component.saveBankAccount();
@@ -277,6 +281,7 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
     it('افزودن حساب بانکی جدید باید بلافاصله و درجا در companyBankAccounts ظاهر شود و شمارنده بالا رود', () => {
       const initialCount = component.companyBankAccounts.length;
       component.onShebaInput('IR160120000000001234567890');
+      component.newAccount.opening_balance_date = '1405/01/01';
       component.newAccount.account_title = 'حساب تست درجا';
 
       mockCompanyApi.createBankAccount.mockReturnValue(of({

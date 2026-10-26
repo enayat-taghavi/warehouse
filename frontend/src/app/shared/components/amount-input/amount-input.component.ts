@@ -42,6 +42,9 @@ function group(digits: string): string {
         class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg text-end tabular-nums placeholder:text-fg-subtle outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60"
         [attr.id]="inputId() || null"
         [attr.aria-label]="ariaLabel() || null"
+        [attr.aria-describedby]="describedBy() || null"
+        [attr.aria-invalid]="invalid() || null"
+        [class.border-rose-400]="invalid()"
         [placeholder]="placeholder()"
         [disabled]="disabled()"
         [value]="display()"
@@ -58,6 +61,9 @@ export class AmountInputComponent implements ControlValueAccessor {
   readonly placeholder = input('');
   readonly inputId = input('');
   readonly ariaLabel = input('');
+  /** شناسهٔ پیام خطای کنار فیلد */
+  readonly describedBy = input<string | null>(null);
+  readonly invalid = input(false);
 
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
   private readonly digits = signal('');
