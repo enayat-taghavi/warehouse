@@ -2,7 +2,6 @@
 طرح ۳.۵ (ب): تست‌های سناریویی مجوزهای حسابداری برای ۵ نقش در سطح سکشن و طرف‌حساب.
 اجرا: PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py test personnel.test_permissions_api_35 --keepdb --noinput
 """
-import unittest
 
 from accounts.scoped_permissions import can, clear_scoped_permission_cache
 from companies.models import UserCompanyAccess
@@ -100,9 +99,9 @@ class AccountingPermissionsApi35Tests(HeadFixtures):
         self.assertIn(res_b.status_code, (400, 403))
         self.assertEqual(ExpenseInvoice.objects.count(), count_before)
 
-    @unittest.expectedFailure
     def test_counterparty_full_view_by_role(self):
-        # Production counterparty masking logic unmasks bank data for manager role (returns bank_masked=False instead of True).
+        # The manager bundle has perm_approve_personnel_manager, an org-structure write permission, and an
+        # org-structure writer sees full counterparty data (rule from plan 3.1 s4), so only employee and supervisor are masked.
         url = f'/api/personnel/counterparties/{self.cp.id}/'
         for role in ROLES:
             user = self.users[role]
@@ -110,7 +109,7 @@ class AccountingPermissionsApi35Tests(HeadFixtures):
                 c = self.client_for(user)
                 res = c.get(url)
                 self.assertEqual(res.status_code, 200)
-                if role in ('accountant', 'treasury'):
+                if role in ('accountant', 'treasury', 'manager'):
                     self.assertEqual(res.data.get('bank_masked'), False)
                 else:
                     self.assertEqual(res.data.get('bank_masked'), True)

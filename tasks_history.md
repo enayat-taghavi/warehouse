@@ -13172,3 +13172,76 @@ changed (2): ['frontend/src/app/modules/accounting/components/finance/counterpar
 نیازمندی‌ها بررسی و با رفتارهای پیاده‌سازی‌شده در کامپوننت‌های تب سرفصل‌های هزینه (`company-expense-heads-tab.ts`)، تابع کمک...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 01:15:07
+- **Status:** DONE
+- **Conversation:** `8aa18295-eb98-4616-b799-53fd2665c5c6`
+- **Steps:** 36
+- **Tokens:** 89809
+- **Duration:** 5m 47s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.5-b: API scenario tests for the final accounting permissions (five roles x main actions in section A, no assignment in section B, counterparty manage scoped by company)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_permissions_api_35.py`. Change no other file. If a test fails because of production code, do not change production code: keep the test, mark it with `@unittest.expectedFailure` and a one-line comment, and say so in the report.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+- Never run `manage.py test` without app labels.
+
+2. Context (already committed by Claude in the previous commit):
+- The accounting module now declares 21 section permissions. Default role bundles (role key -> codes) relevant here: `employee`: `perm_invoice_record`; `supervisor`: `perm_invoice_record`, `perm_invoice_approve`; `accountant`: `perm_invoice_record`, `perm_invoice_review`, `perm_counterparty_manage`; `manager`: `perm_invoice_record`, `perm_manager_payment_authorize`; `treasury`: `perm_invoice_record`, `perm_treasury_disburse_action`, `perm_counterparty_manage`. Every role except `employee` also has `perm_petty_cash_manage`.
+- `accounts.scoped_permissions.can(user, code, section)` returns True only when the user has an active assignment in that section (or its project or company) whose role bundle contains the code. Call `accounts.scoped_permissions.clear_scoped_permission_cache(user)` after changing assignments.
+- Helper `personnel.scoped_test_support.grant_section_perms(user, [], section=<section>, role=<role key>, exact=False)` creates an active assignment with that role in that section.
+- Reuse fixtures, do not copy them: `from personnel.test_expense_heads_34 import HeadFixtures` and subclass it. Read `backend/modules/accounting/personnel/test_expense_heads_34.py` lines 1-48 only. `HeadFixtures.setUp` gives `self.company`, `self.other` (a second company), `self.sec` (section A of `self.company`), `self.cp` (counterparty of `self.company`), `self.admin` (superuser), `self.head` (expense head of `self.company`); helpers `self.user(name, {})` (user with access to `self.company`), `self.client_for(user)`, `self.invoice_body(**extra)`. Constant `INVOICES` (invoice list URL) can be imported from `personnel.test_expense_heads_34`.
+- Section B: in `setUp` create `ProjectSection.objects.create(project=self.sec.project, code='P35-B', name='B')` (`from personnel.models import Project, ProjectSection`). A section of the other company: `Project.objects.create(company=self.other, code='P35-O', name='O')` and a `ProjectSection` on it with code `'P35-OS'`.
+- Counterparty detail URL: `/api/personnel/counterparties/<self.cp.id>/`. GET returns key `bank_masked` (False means the caller sees full bank and national id data). PATCH `{'phone': '09120000000'}` with `format='json'`.
+- Invoice create: POST `INVOICES` with `self.invoice_body(expense_head=self.head.id)` and `format='json'`; 201 on success.
+
+3. Task: write one class `AccountingPermissionsApi35Tests(HeadFixtures)`. In `setUp`, after `super().setUp()`, create five users with `self.user('p35_<role>', {})` for the roles `employee`, `supervisor`, `accountant`, `manager`, `treasury`, and give each an assignment with its own role in section A (`self.sec`) via `grant_section_perms`. Store them in a dict `self.users`. Exactly these test methods (names are checked):
+- a) `test_role_matrix_in_section_a`: for each of the five users and each code in `perm_invoice_record`, `perm_invoice_approve`, `perm_invoice_review`, `perm_manager_payment_authorize`, `perm_treasury_disburse_action`, `perm_counterparty_manage`, assert `can(user, code, self.sec)` equals the bundle table above (use `self.subTest(role=..., code=...)`).
+- b) `test_no_assignment_in_section_b_denies_all`: for the same five users and six codes, `can(user, code, section_b)` is False.
+- c) `test_invoice_post_by_assignment`: the employee user posts an invoice in section A and gets 201. A new user `p35_emp_b` with access to `self.company` and an `employee` assignment only in section B posts the same body (section A, another `invoice_number`) and gets a status in (400, 403); the invoice count does not change for that request.
+- d) `test_counterparty_full_view_by_role`: GET the counterparty detail: accountant and treasury get `bank_masked` False; employee, supervisor and manager get `bank_masked` True.
+- e) `test_counterparty_patch_by_role`: PATCH by the accountant gives 200; PATCH by the supervisor gives 403.
+- f) `test_counterparty_manage_in_other_company_is_not_enough`: a new user `p35_acc_other` with `self.user('p35_acc_other', {})` (access to `self.company`, no assignment there) and an `accountant` assignment in the other company's section; GET gives 200 with `bank_masked` True and PATCH gives 403.
+
+4. Tool policy: only reading the listed file range, writing the new test file, the test command below, `git add` of the new file, `git commit`, `git status --short`. Test command, in `backend`: `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test personnel.test_permissions_api_35 --keepdb --noinput`. If it fails, read the error, fix the test (not production code), and rerun at most 4 times.
+
+5. Before finishing: all 6 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.5-b): accounting permissions API scenarios`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+اجرای آزمون‌های سناریویی سطح دسترسی و نقش‌های حسابداری (`personnel.test_permissions_api_35`) آغاز شد و منتظر اتمام خروجی کامل آن در پس‌زمینه هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+دستور اجرای تست‌ها در حال اجرا است و منتظر نتیجهٔ لاگ خروجی هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+دستور اجرا شده است و منتظر نتیجهٔ نهایی تست‌ها هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+دستور اجرا شده است و منتظر دریافت نتیجهٔ تست‌ها هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### خلاصه اقدامات (4-Step Protocol)
+۱. **توضیح درخواست:** کاربر درخواست پیاده‌سازی آزمون‌های سناریویی API برای ماتریس مجوزهای حسابداری در ۵ نقش اصلی (`employee`, `supervisor`, `accountant`,...
+
+---

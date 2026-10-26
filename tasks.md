@@ -2062,7 +2062,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.5-b: API scenario tests for the final accounting permissions (five roles x main actions in section A, no assignment in section B, counterparty manage scoped by company)
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.5-b: API scenario tests for the final accounting permissions (five roles x main actions in section A, no assignment in section B, counterparty manage scoped by company)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
