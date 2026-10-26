@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
+import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
 import { PayrollYearlySettings, FinancialProject } from '../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
@@ -22,6 +23,7 @@ import { saveBlob } from '../../../../../core/platform/file-output';
   styleUrl: './base-settings.css'
 })
 export class BaseSettings implements OnInit, OnDestroy {
+  private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   readonly settingsTabs: TabDef[] = [
     { id: 'grades', label: 'جدول گروه‌های شغلی', shortLabel: 'گروه‌ها', icon: ACCOUNTING_ENTITY_ICONS.jobGrades },
     { id: 'labor', label: 'مزایای قانون کار', shortLabel: 'مزایا', icon: ACCOUNTING_ENTITY_ICONS.payroll },
@@ -335,9 +337,14 @@ export class BaseSettings implements OnInit, OnDestroy {
     });
   }
 
-  revertToGlobal(): void {
+  async revertToGlobal(): Promise<void> {
     if (!this.yearlySettings?.id || !this.selectedProjectId) return;
-    if (!confirm(`آیا از حذف تنظیمات اختصاصی پروژه «${this.yearlySettings.project_name || 'جاری'}» و بازگشت به تنظیمات سراسری سازمان اطمینان دارید؟`)) {
+    if ((await this.confirmDialog?.open({
+      title: 'حذف تنظیمات اختصاصی',
+      message: `آیا از حذف تنظیمات اختصاصی پروژه «${this.yearlySettings.project_name || 'جاری'}» و بازگشت به تنظیمات سراسری سازمان اطمینان دارید؟`,
+      type: 'danger',
+      confirmText: 'حذف'
+    })) !== true) {
       return;
     }
     this.isLoading = true;

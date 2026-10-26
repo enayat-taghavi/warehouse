@@ -254,7 +254,7 @@ describe('BaseSettings Unit Tests', () => {
     expect(component.showCreateYearModal).toBe(false);
   });
 
-  it('should call revertToGlobal when confirmed for a project setting', () => {
+  it('should call revertToGlobal when confirmed for a project setting', async () => {
     component.ngOnInit();
     component.selectedProjectId = 1;
     component.yearlySettings = {
@@ -262,9 +262,9 @@ describe('BaseSettings Unit Tests', () => {
       project: 1,
       project_name: 'پروژه تست'
     } as any;
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
 
-    component.revertToGlobal();
+    await component.revertToGlobal();
     expect(mockPersonnelApi.revertSettingsToGlobal).toHaveBeenCalledWith(99);
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
   });

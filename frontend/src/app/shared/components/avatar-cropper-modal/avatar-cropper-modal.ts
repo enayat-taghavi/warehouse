@@ -1,8 +1,9 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ActionButtonComponent } from '../action-button/action-button.component';
+import { ToastService } from '../toast/toast.component';
 
 @Component({
   selector: 'app-avatar-cropper-modal',
@@ -12,6 +13,7 @@ import { ActionButtonComponent } from '../action-button/action-button.component'
   styleUrl: './avatar-cropper-modal.css'
 })
 export class AvatarCropperModal implements OnInit, OnDestroy, AfterViewInit {
+  private readonly toast = inject(ToastService);
   @Input() title = 'مدیریت و ویرایش تصویر پرسنلی';
   @Input() currentAvatarUrl: string | null = null;
   @Input() initialAspectRatio: '1:1' | '3:4' = '1:1';
@@ -97,7 +99,7 @@ export class AvatarCropperModal implements OnInit, OnDestroy, AfterViewInit {
 
   private loadFile(file: File) {
     if (!file.type.startsWith('image/')) {
-      alert('لطفاً یک فایل تصویری معتبر (JPG, PNG, WebP) انتخاب کنید.');
+      this.toast.error('لطفاً یک فایل تصویری معتبر (JPG, PNG, WebP) انتخاب کنید.');
       return;
     }
     const reader = new FileReader();

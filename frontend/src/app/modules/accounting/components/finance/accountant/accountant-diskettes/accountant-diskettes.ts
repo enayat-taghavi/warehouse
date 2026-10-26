@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,6 +13,7 @@ import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.direct
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import {
@@ -39,6 +40,7 @@ import {
   styleUrl: './accountant-diskettes.css'
 })
 export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
+  private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   activeSubTab: 'social_security' | 'tax_portal' | 'bank_payroll' = 'social_security';
 
   readonly tabs: TabDef[] = [
@@ -231,7 +233,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     if (!this.currentPeriodId || !this.selectedProjectId) return;
     this.isGenerating = true;
     this.personnelApi.getDisketteExpiredPersonnel(this.currentPeriodId, this.selectedProjectId).subscribe({
-      next: (res) => {
+      next: async (res) => {
         this.isGenerating = false;
         if (!res?.count) {
           onConfirmed();
@@ -239,9 +241,12 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
         }
         const names = res.personnel.slice(0, 15).map(p => `• ${p.full_name} (اعتبار تا ${p.valid_until_date || '—'})`).join('\n');
         const more = res.count > 15 ? `\n… و ${res.count - 15} نفر دیگر` : '';
-        const ok = confirm(
-          `${res.count} نفر به‌دلیل پایان تاریخ اعتبار پرونده از این دیسکت کنار گذاشته می‌شوند و پرداخت و بیمهٔ آن‌ها در فایل نمی‌آید:\n\n${names}${more}\n\nادامه می‌دهید؟`
-        );
+        const ok = (await this.confirmDialog?.open({
+          title: 'پرسنل منقضی',
+          message: `${res.count} نفر به‌دلیل پایان تاریخ اعتبار پرونده از این دیسکت کنار گذاشته می‌شوند و پرداخت و بیمهٔ آن‌ها در فایل نمی‌آید:\n\n${names}${more}\n\nادامه می‌دهید؟`,
+          type: 'warning',
+          confirmText: 'ادامه'
+        })) === true;
         if (ok) {
           onConfirmed();
         } else {
@@ -249,9 +254,14 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
         }
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: async () => {
         this.isGenerating = false;
-        if (confirm('بررسی پرسنل منقضی پیش از صدور دیسکت ممکن نشد؛ ممکن است کسانی بی‌صدا کنار گذاشته شوند. ادامه می‌دهید؟')) {
+        if ((await this.confirmDialog?.open({
+          title: 'پرسنل منقضی',
+          message: 'بررسی پرسنل منقضی پیش از صدور دیسکت ممکن نشد؛ ممکن است کسانی بی‌صدا کنار گذاشته شوند. ادامه می‌دهید؟',
+          type: 'warning',
+          confirmText: 'ادامه'
+        })) === true) {
           onConfirmed();
         }
         this.cdr.detectChanges();
