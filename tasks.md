@@ -2102,3 +2102,50 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 6 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.5-b): accounting permissions API scenarios`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 3.5-c: spec for the accounting menus of the five role bundles (persona resolution and visible menu items per role)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/nav-items-35.spec.ts"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/nav-items-35.spec.ts --min-tests 7 --require "filterRoleNavItems" --require "resolveAccountingRoleCodes" --require "perm_invoice_approve" --require "perm_counterparty_manage"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/modules/accounting/nav-items-35.spec.ts --max-failed 0
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 3.5-c): accounting role menus spec"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `frontend/src/app/modules/accounting/nav-items-35.spec.ts`. Change no other file. Never change production code. If a test fails because of production code, keep the test, mark it `it.fails(...)` with a one-line comment, and say so in the report.
+- No `it.skip`, `it.only`, `describe.skip`, `describe.only`; do not import `fs` or `path`. This is a plain Vitest spec (no TestBed, no DOM needed).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the previous commit, read these three files fully):
+- `frontend/src/app/modules/accounting/nav-items.ts`: exports `EMPLOYEE_NAV_ITEMS`, `SUPERVISOR_NAV_ITEMS`, `ACCOUNTANT_NAV_ITEMS`, `MANAGER_NAV_ITEMS`, `TREASURER_NAV_ITEMS`, the matching `*_ROLE_MARKERS` arrays, and `filterRoleNavItems(items, { isAdmin, userPerms, roleMarkers, routeAllowed })`.
+- `frontend/src/app/modules/accounting/route-access.ts`: exports `ACCOUNTING_ROUTE_ACCESS`; its `pagePermissions` maps a page id to the list of codes that open it.
+- `frontend/src/app/modules/accounting/personas.ts`: exports `resolveAccountingRoleCodes({ perms, userRoles })`.
+- In the spec define this helper: `routeAllowed(perms) = (id) => { const list = ACCOUNTING_ROUTE_ACCESS.pagePermissions?.[id]; return !list || list.some(p => perms.includes(p)); }`, and `menuIds(items, markers, perms) = filterRoleNavItems(items, { isAdmin: false, userPerms: perms, roleMarkers: markers, routeAllowed: routeAllowed(perms) }).map(i => i.id)`.
+- Role bundles (the permission codes each role gets by default):
+  - employee: `view_sys_personnel_attendance`, `view_sys_fleet_attendance`, `perm_invoice_record`
+  - supervisor: `view_sys_personnel_attendance`, `view_sys_fleet_attendance`, `perm_approve_personnel_supervisor`, `perm_approve_fleet_supervisor`, `perm_lock_work_period`, `perm_invoice_record`, `perm_invoice_approve`, `perm_petty_cash_manage`
+  - accountant: `perm_approve_personnel_finance`, `perm_approve_fleet_finance`, `view_sys_payroll`, `view_sys_fleet_settlement`, `perm_invoice_record`, `perm_invoice_review`, `perm_petty_cash_manage`, `perm_counterparty_manage`
+  - manager: `view_sys_personnel`, `perm_delete_personnel_nomovement`, `perm_delete_vehicle_nomovement`, `perm_approve_personnel_manager`, `perm_approve_fleet_manager`, `perm_lock_work_period`, `view_sys_payroll`, `view_sys_fleet_settlement`, `perm_manager_payment_authorize`, `perm_invoice_record`, `perm_petty_cash_manage`
+  - treasurer: `perm_treasury_disburse_action`, `perm_invoice_record`, `perm_petty_cash_manage`, `perm_counterparty_manage`
+
+3. Task — write these tests (one `it` each, use `toEqual` on arrays):
+- a) employee bundle: `resolveAccountingRoleCodes({ perms, userRoles: [] })` equals `['operator']`; `menuIds(EMPLOYEE_NAV_ITEMS, EMPLOYEE_ROLE_MARKERS, perms)` equals `['employee-attendance', 'employee-fleet', 'employee-invoices', 'employee-petty-cash', 'employee-new-vehicle', 'employee-new-personnel']`.
+- b) supervisor bundle: roles equal `['supervisor']`; supervisor menu equals `['supervisor-personnel', 'supervisor-fleet', 'supervisor-invoices', 'supervisor-petty-cash', 'supervisor-period-lock']`.
+- c) accountant bundle: roles equal `['accountant']`; accountant menu equals `['accountant-personnel', 'accountant-payroll', 'accountant-fleet', 'accountant-invoices', 'accountant-petty-cash', 'accountant-diskettes', 'accountant-counterparties', 'base-settings']` (the item `profiles` is hidden).
+- d) manager bundle: roles equal `['manager']`; manager menu equals `['manager-dashboard', 'manager-personnel', 'manager-fleet', 'manager-approvals', 'manager-budget', 'manager-reports', 'base-settings']`.
+- e) treasurer bundle: roles equal `['treasury']`; treasurer menu equals `['treasurer-disbursements', 'treasurer-invoices', 'treasurer-bank-accounts', 'treasurer-cheques', 'treasurer-reconciliation']`.
+- f) supervisor bundle without `perm_invoice_approve`: supervisor menu equals `['supervisor-personnel', 'supervisor-fleet', 'supervisor-period-lock']`.
+- g) cross-role: each of these menus is empty (`[]`): employee bundle on the supervisor menu; accountant bundle on the manager menu; manager bundle on the treasurer menu; treasurer bundle on the accountant menu.
+- h) none of the five removed codes `can_act_as_operator`, `can_act_as_workshop_supervisor`, `can_act_as_accountant`, `can_act_as_company_manager`, `view_sys_treasury` appears in any `*_NAV_ITEMS` item `permission`, in any `*_ROLE_MARKERS` array, or in any list of `ACCOUNTING_ROUTE_ACCESS.pagePermissions`, `guardAccessPermissions` or `loginPermissions`.
+
+4. Tool policy: only reading the three listed files, writing the spec file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/nav-items-35.spec.ts`. If it fails, read the error, fix the spec (not production code), and rerun at most 5 times.
+
+5. Before finishing: the spec passes; commit only that file with the message `test(release-v1 3.5-c): accounting role menus spec`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any `it.fails` with its reason, the commit hash. End the turn after the report.
