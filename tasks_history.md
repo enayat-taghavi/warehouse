@@ -12655,3 +12655,59 @@ NO_BROWSER
 - f) PASS: QA account deletion shell command executed successfully; output: `(0, {})` (user `qa_stage2_check` was not created).
 
 ---
+
+### Task 1 of 1 — 2026-10-26 19:12:58
+- **Status:** DONE
+- **Conversation:** `ca53ec4a-47e5-4a28-9b80-a9ca25d8c219`
+- **Steps:** 169
+- **Tokens:** 619264
+- **Duration:** 18m 47s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.1-b: API scenario tests for company-scoped counterparties on core external parties
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_counterparty_parties.py`. Change no other file. If a test fails because of production code, do not change production code: keep the test, mark it with `@unittest.expectedFailure` and a one-line comment, and say so in the report.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+- Never run `manage.py test` without app labels.
+
+2. Context (already committed by Claude in the previous commit):
+- `Counterparty` (`personnel.models`) is now the financial role of a core `contacts.models.ExternalParty`. Identity fields (`company`, `kind`, `name`, `national_id`, `phone`, …) live on `counterparty.party`. Shortcut for test setup: `Counterparty.objects.create(company=<Company>, name='...', national_id='...', counterparty_type='other')` creates the party too. Read attributes as `cp.company_id`, `cp.name`, `cp.party.national_id`. Query with `Counterparty.objects.filter(party__company=..., party__national_id=...)`.
+- Bank accounts: `personnel.models.PartyBankAccount(party=<ExternalParty>, bank_name, account_number, sheba_number, is_primary)`.
+- API `/api/personnel/counterparties/` (POST create, GET list with optional header `X-Company-ID`). Create resolves the company: body `company` if allowed, else header if allowed, else the user's only company, else the user's first allowed company; a foreign company is ignored, never rejected (the offline queue drops a record on any 4xx). If the same company already has a party with the same `national_id` that has a counterparty, the response is HTTP 200 with `existing: true` and the same `id`, and no new row; otherwise HTTP 201 with `existing: false`.
+- Masking: the response has `bank_masked` (bool). When true, `sheba_number`, `account_number` (flat keys and inside `bank_accounts`) and the `national_id` of a person (`kind='person'`) show only the last 4 characters, the rest `*`. Full view: superuser, the user who created it, a counterparty manager, or a user with `can_act_as_accountant`, `view_sys_treasury` or `perm_treasury_disburse_action` in a section of the same company.
+- Read for patterns only (do not edit): `backend/modules/accounting/personnel/test_counterparty_core.py` (whole file, ~150 lines) and `backend/modules/accounting/personnel/test_org_admin_menu_permissions.py` lines 1-45 (helpers `_grant`, `grant_membership`, `grant_section_perms`) and 160-200 (setUp with two companies).
+- Valid test sheba: `IR450120000000101111111001`. Valid person national id: `0012345678`; legal: `12345678901`.
+
+3. Task: write `test_counterparty_parties.py` (Django `TestCase`, `APIClient`, two companies A and B, sections in each via `companies.models.Project` / `ProjectSection`) with exactly these test methods (names are checked):
+- a) `test_list_shows_only_own_company`: a member of A lists counterparties and sees only A rows; with header `X-Company-ID` of B the response is 403.
+- b) `test_create_ignores_foreign_company`: a member of A posts `{'name': 'x', 'company': B.id}` and gets 201 with `company == A.id`; no counterparty exists in B.
+- c) `test_same_national_id_same_company_returns_existing`: two POSTs with the same `national_id` in A; the second returns 200, `existing` true, the same `id`; one row only.
+- d) `test_same_national_id_other_company_is_new`: the same `national_id` posted by a member of A and by a member of B (or a superuser with `company`) gives two different rows, one per company, both 201.
+- e) `test_invoice_with_other_company_counterparty_rejected`: `personnel.serializers.ExpenseInvoiceSerializer` with a section of A and a counterparty of B is not valid and has the error key `counterparty`.
+- f) `test_duplicate_queued_post_returns_200_without_new_row`: replay the exact same JSON body three times (with `national_id`, `sheba_number`, `bank_name`); first 201, then 200 twice; exactly one `Counterparty` and one `PartyBankAccount`.
+- g) `test_plain_member_sees_masked_bank_and_national_id`: a counterparty of A created by a superuser with a person national id and a sheba; a plain member of A (no extra permissions) gets `bank_masked` true, `sheba_number` and `national_id` contain `*` and end with the last 4 real characters, and `bank_accounts[0]['sheba_number']` contains `*`.
+- h) `test_accountant_and_treasury_of_same_company_see_full`: users with `can_act_as_accountant`, and separately with `view_sys_treasury`, granted on A (use `_grant` like in `test_org_admin_menu_permissions.py`) see `bank_masked` false and the full values; the same permission granted only on B still sees the A row masked if they can list A at all (member of A without permissions in A).
+
+4. Tool policy: only reading the listed files, writing the new test file, the test command below, `git add` of the new file, `git commit`, `git status --short`. Test command, in `backend`: `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test personnel.test_counterparty_parties --keepdb --noinput`. If it fails, read the error, fix the test (not production code), and rerun at most 4 times.
+
+5. Before finishing: all 8 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.1-b): counterparty scope, idempotent create and masking scenarios`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های پروتکل چهارمرحله‌ای:
+
+۱. **توضیح ساده درخواست کاربر:**
+کاربر درخواست نوشتن تست‌های سناریویی API برای طرف‌حساب‌های محدود به شرکت (company-scoped counterparties) بر روی طرف‌های بیرونی هسته (`ExternalParty`) را در فایل جدید `backend/modules/accounting/personnel/test_counterparty_parties.py` دارد. این آزمون‌ها شامل ۸ متد مشخص برای بررسی محدوده شرکت، نادیده گرفتن شناسه شرکت خارجی در درخواست ثبت، بررسی ثبت idempotent طرف حساب با کد ملی یکسان (بازگشت 200 و `existing: true`)، ثبت در شرکت‌های مجزا، رد فاکتور با طرف‌حساب شرکت نامرتبط، تکرار درخواست در صف آفلاین، ماسک‌شدن داده‌های حساس بانکی و کد ملی برای کاربران عادی، و نمایش کامل داده‌ها برای حسابدار و خزانه...
+
+---
