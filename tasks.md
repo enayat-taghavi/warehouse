@@ -2105,7 +2105,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.5-c: spec for the accounting menus of the five role bundles (persona resolution and visible menu items per role)
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.5-c: spec for the accounting menus of the five role bundles (persona resolution and visible menu items per role)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

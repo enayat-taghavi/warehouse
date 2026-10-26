@@ -134,5 +134,14 @@
   - نام مستعار `count_supervisor_exclusion` → `perm_approve_personnel_supervisor`. مبنای نگهبان 58 از ۴۰ به ۳۰ پایین آمد.
   - تست‌ها: `test_permissions_35` (فهرست، بسته‌ها، پویش کد حذف‌شده؛ نیمهٔ فرانت تا ۳.۵-ج skip؛ تابع migration) و `test_permissions_api_35` (آنتی‌گرویتی، شش تست؛ انتظار مدیر در دید کامل را Claude اصلاح کرد) و ۹ ماژول تست به‌روزشده: همه سبز (۱۷۵+ تست). `check`، `makemigrations --check`، نگهبان‌های 29، 52، 56، 57، 58 سبز. `tenant-scope-reviewer` و `data-loss-reviewer`: یافتهٔ لازم‌الاصلاح نماند.
   - **اقدام بعدی:** ۳.۵-ج فرانت (`scratch/brief_3_5_c.md`).
+- **۵ آبان ۱۴۰۵ — ۳.۵-ج (فرانت) انجام شد؛ ۳.۵ بسته شد** (کامیت‌های `eeeb6669`، `4b33e124` و کامیت گزارش):
+  - `nav-items.ts`: مجوز هر آیتم = مجوز کار همان صفحه (ص۸)؛ نشانه‌های نقش بی پنج کد (کارمند `view_sys_personnel_attendance`، سرپرست دو مجوز تأیید سرپرست، حسابدار `view_sys_payroll` و دو تأیید مالی، مدیر سه مجوز مدیر، خزانه‌دار `perm_treasury_disburse_action`).
+  - `route-access.ts`: کدهای حذف‌شده برداشته شد؛ صفحه‌های تأیید فاکتور و تنخواه سرپرست فقط `perm_invoice_approve`، ممیزی حسابدار `perm_invoice_review` (کنار `view_sys_payroll`)، طرف‌حساب‌ها `perm_counterparty_manage` (کنار کدهای قبلی)، ثبت فاکتور و تنخواه کارمند `perm_invoice_record` و `perm_petty_cash_manage` هم می‌پذیرند؛ صفحه‌های خزانه فقط `perm_treasury_disburse_action` (سطح `bank` شرکت در این جدول پشتیبانی نمی‌شود).
+  - `personas.ts` همتای `role_resolver` سرور: کارمند فقط بی نقش دیگر؛ `module.ts`: `permissionMarkers` برابر سرور (به‌اضافهٔ `view_sys_projects` هسته که از قبل بود)، نام مستعار `count_supervisor_exclusion` → `perm_approve_personnel_supervisor`؛ `notification-handlers.ts` و `counterparties.ts`، `manager-fleet.ts`، `manager-personnel.ts`، `personnel-profiles.ts` به جانشین رفتند.
+  - `skip` تست پویش فرانت در `test_permissions_35` برداشته شد (صفر یافته).
+  - **انحراف:** تست DOM صفحهٔ «نقش‌های انتساب» نوشته نشد؛ آن صفحه دسته‌ها را از سرور می‌گیرد و تست سرور (`test_permissions_35`) نبودن دستهٔ «نقش‌های کاری» را می‌سنجد. به‌جایش spec تازهٔ `nav-items-35.spec.ts` (آنتی‌گرویتی، ۸ تست): نقش و منوی هر پنج بسته، سرپرست بی `perm_invoice_approve`، منوی نقش دیگر، نبودن کد حذف‌شده. انتظار نادرست تست «منوی نقش دیگر» (خزانه‌دار روی منوی حسابدار فقط طرف‌حساب‌ها را می‌گیرد، ولی منوی حسابدار به پرسونای خزانه‌دار نشان داده نمی‌شود) را Claude اصلاح کرد.
+  - تست‌ها: `ngc` سبز؛ ۲۱ spec تغییرکرده ۳۲۸ تست سبز (۳ خطای ناگرفته‌شدهٔ `getPersonnelCostEstimate` در ماک‌های `accountant-personnel`، بی ربط به مجوز)؛ `test_permissions_35` ده تست سبز؛ نگهبان‌های 29، 52، 56، 57، 58 سبز. قالبی عوض نشد، پس `ui-reviewer` لازم نبود.
+  - **نکتهٔ باز:** خزانه‌دار `perm_counterparty_manage` دارد ولی منوی خزانه‌دار آیتم «طرف‌حساب‌ها» ندارد (پیش از ۳.۵ هم نداشت)؛ در ۴.۱ یا بررسی سنگین تصمیم گرفته شود.
+  - **اقدام بعدی:** ۳.۶-الف (`scratch/brief_3_6.md`).
 
 </div>

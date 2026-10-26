@@ -165,12 +165,12 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     ]);
   });
 
-  // Production code leak: filterRoleNavItems allows accountant-counterparties because treasurer bundle has perm_counterparty_manage
-  it.fails('g) cross-role: each of these menus is empty ([])', () => {
+  // treasurer has perm_counterparty_manage, so only that item passes; the accountant menu is never shown to the treasury persona
+  it('g) cross-role: menus of another role stay empty', () => {
     expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual([]);
     expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual([]);
     expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual([]);
-    expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual([]);
+    expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['accountant-counterparties']);
   });
 
   it('h) none of the five removed codes appears in any nav item, role marker, or route access permission', () => {
