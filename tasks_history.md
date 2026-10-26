@@ -13008,3 +13008,57 @@ changed (2): ['frontend/src/app/modules/accounting/components/finance/counterpar
 ۲. **بررسی و اعتبارسنجی:** تمامی نیازمندی‌ها و سناریوهای تست پیاده‌سازی شدند و با موفقیت پاس شدند. ...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 23:20:04
+- **Status:** DONE
+- **Conversation:** `396bc925-ddbf-456a-bfb6-82852bab382e`
+- **Steps:** 78
+- **Tokens:** 138818
+- **Duration:** 11m 12s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.3-c: DOM specs for the company bank account opening balance (create date, masked display, change button rules, reason, closed period error, history empty state)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab-opening.dom.spec.ts`. Change no other file. Never change production code. If a test fails because of production code, keep the test, mark it `it.fails(...)` with a one-line comment, and say so in the report.
+- No `it.skip`, `it.only`, `describe.skip`, `describe.only`; do not import `fs` or `path`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the previous commit):
+- `CompanyTreasuryTabComponent` (`company-treasury-tab.ts` and `.html` in the same folder). It uses `CompaniesStudioFacade`, which calls the injected `CompanyApiService`; so mock these methods on the API mock: `matchesCompanyUrl`, `getBankAccounts`, `createBankAccount`, `updateBankAccount`, `deleteBankAccount`, `setPrimaryBankAccount`, `setOpeningBalance(id, body)` and `getOpeningHistory(id)` (returns `of({ count: 0, results: [] })` by default).
+- Permissions come from `CompanyStudioContextService.sectionLevels` (a signal). `null` means full access. To restrict, call `context.sectionLevels.set({ bank: 'read', bank_sheba: 'none', bank_opening_balance: 'none' })` (levels are `'none' | 'read' | 'write'`), then `fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();`.
+- Account JSON fields: `opening_balance` (string or `null` when masked), `opening_balance_date` (`'1405/01/01'` or `null`), `has_movements` (boolean).
+- Card row text: element `[data-testid="opening-balance-text"]` shows `—` when the user has no `bank` read level or `opening_balance` is `null`; shows `ثبت نشده` when visible but `opening_balance_date` is `null`; otherwise contains `ریال`.
+- Button `[data-testid="open-opening-balance"]` (aria-label `تغییر موجودی اولیه`) is shown only when `bank` is `write` and (`has_movements` is false or `bank_opening_balance` is `write`). The method `canChangeOpening(acc)` returns the same boolean.
+- Create form: `saveBankAccount()` (async) with a valid sheba and an empty `newAccount.opening_balance_date` does not call `createBankAccount` and sets `createFieldErrors.opening_balance_date` to `تاریخ موجودی اولیه الزامی است.`; the template then renders `p#bank_opening_date_error`. With `newAccount.opening_balance_date = '1405/01/01'` it calls `createBankAccount` with a payload containing `opening_balance_date: '1405/01/01'` and `opening_balance: '0'` when the amount is empty. Use `component.onShebaInput('IR160120000000001234567890')` for a valid sheba.
+- Modal: `openOpeningBalance(acc)` sets `component.openingAccount`, fills `component.openingForm` (`opening_balance`, `opening_balance_date`, `reason`) and calls `getOpeningHistory(acc.id)` when `bank` is readable. `saveOpeningBalance()` with `has_movements: true` and an empty `openingForm.reason` does not call `setOpeningBalance` and sets `openingErrors.reason`. A rejected `setOpeningBalance` with `{ status: 400, error: { opening_balance_date: ['دوره مالی بسته است.'], code: 'fiscal_period_closed' } }` sets `openingErrors.opening_balance_date` to that message, renders `p#opening_change_date_error` with it, and keeps the modal open (`openingAccount` not null). A successful call updates the account in `companyBankAccounts` and sets `openingAccount` to `null`.
+- History empty state: with `getOpeningHistory` returning `{ count: 0, results: [] }`, the open modal renders `[data-testid="opening-history-empty"]` with the text `سابقه‌ای ثبت نشده است.`. The modal content is rendered by `app-modal` inside the component's own DOM (`fixture.nativeElement`).
+- Read for patterns only (do not edit): `company-treasury-tab.dom.spec.ts` lines 1-70 (jsdom header, mocks, TestBed setup); copy that setup.
+
+3. Task: write at least these 6 tests in the new spec:
+- a) create: no `opening_balance_date` blocks the API call and renders `#bank_opening_date_error`; with the date, `createBankAccount` is called with `opening_balance_date`.
+- b) masked: an account with `opening_balance: null, opening_balance_date: null` and `context.sectionLevels.set({ bank: 'none', bank_sheba: 'none', bank_opening_balance: 'none' })` renders `—` in `[data-testid="opening-balance-text"]`; a visible account with a null date renders `ثبت نشده`.
+- c) button hidden when `bank` is `read`; with `bank: 'write'` and `has_movements: true` it is hidden unless `bank_opening_balance: 'write'`.
+- d) reason required when `has_movements` is true (no `setOpeningBalance` call, `openingErrors.reason` set).
+- e) the `fiscal_period_closed` 400 renders `#opening_change_date_error` and keeps the modal open.
+- f) history empty state renders `سابقه‌ای ثبت نشده است.` and `getOpeningHistory` was called with the account id.
+
+4. Tool policy: only reading the listed files, writing the one spec file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab-opening.dom.spec.ts`. If it fails, read the error, fix the spec (not production code), and rerun at most 5 times.
+
+5. Before finishing: the spec passes; commit only that file with the message `test(release-v1 3.3-c): company bank opening balance DOM specs`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any `it.fails` with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explain Simply)
+کاربر درخواست نوشتن تست‌های DOM برای بخش موجودی اولیه حساب‌های بانکی شرکت در تب خزانه‌داری (`CompanyTreasuryTabComponent`) را دارد. این تست‌ها شامل اعتبارسنجی الزامی بودن تاریخ موجودی اولیه در زمان ساخت، نمایش پوشیده و ثبت‌نشده با سطوح دسترسی مختلف، قواعد پنهان یا نمایان بودن دکمهٔ تغییر موجودی اولیه، الزامی بودن فیلد «علت تغییر» برای حساب‌های دارای گردش، مدیریت خطای ۴۰۰ دوره مالی بسته (`fiscal_period_closed`) و باز ماندن مودال، و نمایش پیام خالی بودن سابقه است. این تست‌ها در یک فایل جدید به آدرس `frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab-opening.dom.spec.ts` بدون...
+
+---

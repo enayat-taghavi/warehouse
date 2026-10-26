@@ -1937,7 +1937,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.3-c: DOM specs for the company bank account opening balance (create date, masked display, change button rules, reason, closed period error, history empty state)
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.3-c: DOM specs for the company bank account opening balance (create date, masked display, change button rules, reason, closed period error, history empty state)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
