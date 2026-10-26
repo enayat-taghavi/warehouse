@@ -12711,3 +12711,67 @@ NO_BROWSER
 کاربر درخواست نوشتن تست‌های سناریویی API برای طرف‌حساب‌های محدود به شرکت (company-scoped counterparties) بر روی طرف‌های بیرونی هسته (`ExternalParty`) را در فایل جدید `backend/modules/accounting/personnel/test_counterparty_parties.py` دارد. این آزمون‌ها شامل ۸ متد مشخص برای بررسی محدوده شرکت، نادیده گرفتن شناسه شرکت خارجی در درخواست ثبت، بررسی ثبت idempotent طرف حساب با کد ملی یکسان (بازگشت 200 و `existing: true`)، ثبت در شرکت‌های مجزا، رد فاکتور با طرف‌حساب شرکت نامرتبط، تکرار درخواست در صف آفلاین، ماسک‌شدن داده‌های حساس بانکی و کد ملی برای کاربران عادی، و نمایش کامل داده‌ها برای حسابدار و خزانه...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 20:25:02
+- **Status:** FAILED (verify still failing)
+- **Conversation:** `a076905e-0672-4d30-a43e-f9108b5bd69a`
+- **Steps:** 262
+- **Tokens:** 467854
+- **Duration:** 48m 54s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base a122b831 --allow "frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts"`
+  - verify round 1: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base a122b831 --allow "frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts"`
+  - verify round 2: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base a122b831 --allow "frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts"`
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.1-c: DOM specs for the counterparties page (bank-accounts sub-list, masked state) and the existing label of the invoice quick modal
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new files: `frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts` and `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts`. Change no other file. Never change production code. If a test fails because of production code, keep the test, mark it `it.fails(...)` with a one-line comment, and say so in the report.
+- No `it.skip`, `it.only`, `describe.skip`, `describe.only`; do not import `fs` or `path` (the new specs do not need them).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the previous commit):
+- `CounterpartiesComponent` (`counterparties.ts`, `counterparties.html` in `frontend/src/app/modules/accounting/components/finance/counterparties/`). Constructor order: `AuthService, StateService, PersonnelApiService, WebSocketService, ToastService, ChangeDetectorRef, ActivatedRoute, Router, ActiveCompanyService (optional)`.
+- Model `Counterparty` and `PartyBankAccount` in `frontend/src/app/modules/accounting/models/personnel.model.ts` (search `export interface PartyBankAccount`). A counterparty has `party` (external party id), `bank_accounts`, `bank_masked` (true means `sheba_number`, `account_number` and a person's `national_id` contain `*` and show only the last 4 digits).
+- `PersonnelApiService` methods used by the page: `getCounterparties`, `createCounterparty`, `updateCounterparty`, `deleteCounterparty`, `getPartyBankAccounts(partyId)`, `createPartyBankAccount(data)`, `updatePartyBankAccount(id, data)`, `deletePartyBankAccount(id)`, `exportCounterpartiesExcel`, `downloadCounterpartiesTemplate`, `importCounterpartiesExcel`.
+- Component members to test: `editCounterparty(cp)` (loads the sub-list with `getPartyBankAccounts(cp.party)` into `bankAccounts`), `addBankAccount()` (posts `{party, sheba_number: 'IR'+24 digits, bank_name, account_number, card_number, owner_name, is_primary}` with `is_primary` true only when the list is empty), `setPrimaryBankAccount(acc)` (PATCH `{is_primary: true}` only), `deleteBankAccount(acc)` (opens `confirmModal`; `executeConfirmDialog()` calls `deletePartyBankAccount`), `isEditingMasked`, `isMaskedValue(v)`, `saveCounterparty()` (edit PATCH never contains `bank_name`, `account_number`, `sheba_number`, `company`, nor a masked `national_id`), `onShebaInput(value)` fills the bank form from a sheba.
+- Template facts: in the table and card views the sheba copy button (`title` text `کپی شماره شبا (بدون IR)`) is rendered only when `!cp.bank_masked`; in the edit sub-list the copy button (`aria-label` `کپی شبا`) is rendered only when not masked; the sub-list section has `aria-labelledby="cp-bank-list-title"`.
+- `EmployeeInvoicesHubComponent` (`employee-invoices.ts`): `saveQuickCounterparty()` calls `personnelApi.createCounterparty`; when the response has `existing: true` it calls `toast.show('info', <text containing تکراری>)`, otherwise `toast.show('success', ...)`, and in both cases sets `newInvoice.counterparty = created.id` when `isNewInvoiceModalOpen` is true.
+- Read for patterns only (do not edit): `frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.dom.spec.ts` lines 1-140 (jsdom header, `ɵfac` override with `ɵɵdirectiveInject`, mocks, TestBed setup) and `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts` lines 1-140 and 324-375 (mocks and the quick counterparty modal tests).
+- Valid test sheba digits (24 digits, without IR): `450120000000101111111001`.
+
+3. Task:
+- a) In `counterparties.dom.spec.ts` write at least these tests (names may be Persian or English; the words below must appear in the file because they are checked: `masked`, `addBankAccount`, `deletePartyBankAccount`):
+  - list with one unmasked counterparty with a sheba renders the sheba copy button; list with one counterparty `bank_masked: true` and sheba `********************1001` renders no sheba copy button (table view);
+  - `editCounterparty` with `party: 7` calls `getPartyBankAccounts(7)` and renders one list item per returned account, with the text `اصلی` on the primary one;
+  - masked edit: `bank_masked: true` hides the sub-list copy buttons and makes the national id input readonly;
+  - `addBankAccount()` after `onShebaInput('450120000000101111111001')` calls `createPartyBankAccount` with `party: 7`, `sheba_number: 'IR450120000000101111111001'` and `is_primary: true` when the list is empty, and `is_primary: false` when one account already exists;
+  - `deleteBankAccount(acc)` then `executeConfirmDialog()` calls `deletePartyBankAccount(acc.id)`;
+  - `saveCounterparty()` in edit mode of a masked counterparty (national id `******5678`) calls `updateCounterparty` with a payload that has no `national_id`, no `sheba_number`, no `bank_name`, no `account_number` and no `company` key;
+  - `saveCounterparty()` in create mode with a valid sheba sends `bank_accounts` with one item that has `is_primary: true`, and a create response with `existing: true` calls `toast.show` with `'info'`.
+- b) In `employee-invoices-existing.dom.spec.ts` write at least 2 tests (the word `existing` must appear): a create response with `existing: true` gives `toast.show('info', ...)` with text containing `تکراری` and selects the id in `newInvoice.counterparty` when the invoice modal is open; a response without `existing` gives `toast.show('success', ...)`. Instantiating the component as in `employee-invoices.spec.ts` (without DOM) is fine for this file if a DOM render is hard; keep the jsdom header.
+
+4. Tool policy: only reading the listed files, writing the two new spec files, the test command below, `git add` of the two files, `git commit`, `git status --short`. Test command, in `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts --include=src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts`. If it fails, read the error, fix the spec (not production code), and rerun at most 5 times.
+
+5. Before finishing: both spec files pass; commit only the two new files with the message `test(release-v1 3.1-c): counterparties page and quick modal DOM specs`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any `it.fails` with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده وضعیت (Explain Simply - Fix Round 2 of 2)
+رانر در دور دوم و نهایی اصلاح (fix round 2 of 2) مجدداً دستور اعتبارسنجی `scope` را با خطای خروج ۱ گزارش کرده است:
+```
+FAILED (exit 1): python scripts/automation/verify_tools.py scope --base a122b831 --allow "frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts"
+changed (2): ['frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts', 'frontend/src/app/modules/accounting/components/finance/e...
+
+---
