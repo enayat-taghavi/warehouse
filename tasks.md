@@ -2149,3 +2149,51 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: the spec passes; commit only that file with the message `test(release-v1 3.5-c): accounting role menus spec`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any `it.fails` with its reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 3.6-b: core workflow tests for company-level documents and the step `required` hook
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/core/workflow/tests/test_company_level_36.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/core/workflow/tests/test_company_level_36.py --require "company_field" --require "not_required" --require "WorkflowSubstitute" --require "WorkflowThreshold" --require "ImproperlyConfigured" --forbid "skip(" --forbid "expectedFailure"
+verify: set DB_TEST_NAME=test_agy_wf36b&& python scripts/automation/verify_tools.py django-tests --labels workflow.tests.test_company_level_36 --min-tests 8
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 3.6-b): company-level workflow tests"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/core/workflow/tests/test_company_level_36.py`. Change no other file. Never change production code. If a test fails because of production code, keep the test as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`. Use only the fake roles, permissions and spec helpers from `backend/core/workflow/tests/base.py` (no real module names, roles or permission codes).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the previous commit `feat(release-v1 3.6-b)`; read these ranges):
+- `backend/core/workflow/tests/base.py` fully (140 lines): `WorkflowTestBase`, `make_spec`, `STEPS`, `self.user(name, role, section=None, **target)` where `target` may be `company=...` or `project=...` for a company-level or project-level assignment, `self.doc`, `self.recipients(task)`, companies `self.co` and `self.co2`, project `self.pr`, section `self.sec`.
+- `backend/core/workflow/tests/test_engine.py:270-290` (the `sub(...)` helper creating a `WorkflowSubstitute`).
+- `backend/core/workflow/registry.py:36-90` (`StepSpec.required`, `WorkflowSpec.section_field` and `company_field`) and `:103-175` (`validate_specs`).
+- `backend/core/workflow/engine.py`: grep `def _load_scope`, `def _plan_skips`, `def submit`, `SKIP_NOT_REQUIRED`.
+- New behaviour: a spec with `section_field=None, company_field='company'` takes the company id from `obj.company_id`; the instance gets `section=None` and `company_id` of that company. Recipients of a step are ONLY users with an ACTIVE company-level assignment (`SectionAssignment.company` set, no project, no section) whose role is the step role and who hold the step permission at company level; section-level and project-level assignments never receive it; the creator never receives it. `creator_rank` uses only company-level roles. Thresholds: only `WorkflowThreshold(company=<same company>)` applies. `StepSpec.required(obj)` (APPROVE steps only) returning False puts the step in `instance.skip_plan` with reason `'not_required'`, and the SUBMIT history row (`WorkflowStep.objects.get(instance=inst, action=WorkflowStep.SUBMIT).skipped`) contains `{'step': <key>, 'reason': 'not_required'}`.
+
+3. Task — in the new file define:
+- `CO_STEPS = (STEPS[0], STEPS[1], dataclasses.replace(STEPS[2], required=lambda o: getattr(o, 'need_boss', True)))` (steps `lead_ok` APPROVE role `wf_lead`, `review` REVIEW role `wf_reviewer`, `boss_ok` APPROVE role `wf_boss`).
+- `class CompanyLevelTests(WorkflowTestBase)` whose `setUp` calls `super().setUp()` then `self.specs.append(make_spec(key='zz_co', steps=CO_STEPS, section_field=None, company_field='company'))`.
+- helper `codoc(self, amount=Decimal('100'), company=None, **extra)`: `d = self.doc(amount); d.section_id = None; d.company_id = (company or self.co).pk`; then set each `extra` attribute on `d`; return `d`.
+- Use `engine.submit('zz_co', doc, user)` and `engine.open_task('zz_co', doc.pk)` (import `from workflow import engine`).
+
+Write these tests (one method each):
+- a) `test_company_assignment_is_recipient`: `co_lead = self.user('co_lead', 'wf_lead', company=self.co)`; also `self.user('sec_lead', 'wf_lead')` (section level) and `self.user('pr_lead', 'wf_lead', project=self.pr)` (project level). Submit `codoc()` by `self.member`. Assert `inst.section_id is None`, `inst.company_id == self.co.pk`, the open task step_key is `'lead_ok'` and `self.recipients(task) == {co_lead.pk}`.
+- b) `test_other_company_never_recipient`: only `x_lead = self.user('x_lead', 'wf_lead', company=self.co2)` holds `wf_lead` at company level (the base setUp section-level `self.lead` exists but must not count); submit `codoc()`; the `lead_ok` step has no recipient so it is skipped: assert the open task (if any) has a step_key other than `'lead_ok'`, and `WorkflowTaskRecipient.objects.filter(user_id=x_lead.pk).exists()` is False and `WorkflowTaskRecipient.objects.filter(user_id=self.lead.pk).exists()` is False.
+- c) `test_substitute_of_company_principal`: `co_lead` as in a); `deputy = self.user('deputy', 'wf_member', company=self.co)`; create `WorkflowSubstitute(principal=co_lead, substitute=deputy, company=None, start_date=today - 1 day, end_date=today + 3 days)` like the `sub` helper; submit `codoc()`; assert `self.recipients(task) == {co_lead.pk, deputy.pk}` and the deputy recipient row has `on_behalf_of_id == co_lead.pk`.
+- d) `test_creator_rank_company_level`: `creator = self.user('co_boss_creator', 'wf_boss', company=self.co)`; `self.user('co_lead', 'wf_lead', company=self.co)`; `self.user('co_rev', 'wf_reviewer', company=self.co)`; submit `codoc()` by `creator`; assert `inst.creator_rank == 40` and `inst.skip_plan.get('lead_ok') == 'creator_level'`. Then a second creator with `wf_boss` only at SECTION level (`self.user('sec_boss_creator', 'wf_boss')`) submits another `codoc()`: assert `inst2.creator_rank == 0` and `'lead_ok' not in inst2.skip_plan`.
+- e) `test_company_threshold_only_same_company`: `self.user('co_lead', 'wf_lead', company=self.co)`; create `WorkflowThreshold(workflow_key='zz_co', step_key='lead_ok', company=self.co2, amount=Decimal('1000'))`; submit `codoc(Decimal('100'))`; assert `'lead_ok' not in inst.skip_plan`. Then create `WorkflowThreshold(workflow_key='zz_co', step_key='lead_ok', company=self.co, amount=Decimal('500'))` and submit a new `codoc(Decimal('100'))`: assert `inst2.skip_plan['lead_ok'] == 'threshold'`.
+- f) `test_required_false_skips_with_reason`: `self.user('co_lead', 'wf_lead', company=self.co)`; submit `codoc(need_boss=False)`; assert `inst.skip_plan.get('boss_ok') == 'not_required'` and `{'step': 'boss_ok', 'reason': 'not_required'}` is in the SUBMIT history row `skipped`. Submit `codoc(need_boss=True)`: assert `'boss_ok' not in inst2.skip_plan`. Also assert `'not_required' in SKIP_REASON_TITLES` (`from workflow.serializers import SKIP_REASON_TITLES`).
+- g) `test_section_document_unchanged`: the default base spec `WF` (from base.py) with `self.doc()` submitted by `self.member`; `co_only = self.user('co_only', 'wf_lead', company=self.co2)`; assert `inst.section_id == self.sec.pk`, the open task step is `'lead_ok'`, `self.lead.pk in self.recipients(task)` and `co_only.pk not in self.recipients(task)`.
+- h) `test_validate_specs_rejects_bad_specs`: `from workflow.registry import validate_specs`; `validate_specs([make_spec(key='zz_bad1', steps=(dataclasses.replace(STEPS[1], required=lambda o: True),))])` raises `django.core.exceptions.ImproperlyConfigured` (required on a REVIEW step); `validate_specs([make_spec(key='zz_bad2', section_field=None, company_field=None)])` raises `ImproperlyConfigured`; `validate_specs([make_spec(key='zz_ok', section_field=None, company_field='company')])` returns a dict with key `'zz_ok'`.
+
+4. Tool policy: only reading the listed files, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test workflow.tests.test_company_level_36 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 3.6-b): company-level workflow tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
