@@ -116,6 +116,12 @@ class UpdateTests(BankFixtures):
         self.account.refresh_from_db()
         self.assertEqual(self.account.opening_balance, Decimal('1000'))
 
+    def test_member_patch_cannot_probe_hidden_balance(self):
+        # پاسخ برای رقم درست و نادرست یکسان (403) است، پس رقم پوشیده حدس زده نمی‌شود (یافتهٔ tenant-scope-reviewer)
+        for guess in ('1000', '999'):
+            r = self.api(self.member).patch(f'{URL}{self.account.id}/', {'opening_balance': guess}, format='json')
+            self.assertEqual(r.status_code, 403, r.content)
+
     def test_patch_same_values_and_other_fields_ok(self):
         r = self.api(self.writer).patch(f'{URL}{self.account.id}/', {
             'opening_balance': '1000', 'opening_balance_date': '1405/01/01', 'account_title': 'حقوق'}, format='json')

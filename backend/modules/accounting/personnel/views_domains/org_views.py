@@ -322,12 +322,15 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         user = self.request.user
         ensure_company_section(user, instance.company_id, 'bank', 'write')
-        if company_bank.bank_account_has_movements(instance):
-            raise serializers.ValidationError({'detail': "این حساب گردش دارد و حذف نمی‌شود؛ آن را غیرفعال کنید."})
         instance_id = instance.id
         sheba = instance.sheba_number
         comp_id = instance.company_id
-        instance.delete()
+        with transaction.atomic():
+            # قفل ردیف تا گردشی هم‌زمان میان بررسی و حذف نیاید (یافتهٔ data-loss-reviewer ۳.۳-ب)
+            locked = CompanyBankAccount.objects.select_for_update().get(pk=instance_id)
+            if company_bank.bank_account_has_movements(locked):
+                raise serializers.ValidationError({'detail': "این حساب گردش دارد و حذف نمی‌شود؛ آن را غیرفعال کنید."})
+            locked.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_bank_account', 'delete', instance_id, sheba, company_id=comp_id, client_tab_id=tab_id, sender_id=user.id)
 

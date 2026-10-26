@@ -261,10 +261,14 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
             if attrs.get('opening_balance') is None:
                 attrs['opening_balance'] = 0
         else:
-            # ویرایش عادی موجودی اولیه را عوض نمی‌کند؛ فقط کنش «تغییر موجودی اولیه» (ص۲)
+            # ویرایش عادی موجودی اولیه را عوض نمی‌کند؛ فقط کنش «تغییر موجودی اولیه» (ص۲).
+            # کسی که رقم را نمی‌بیند مقایسه نمی‌شود: نه حدس رقم از پاسخ 400/403، نه گیر کردن ویرایشِ با null پوشیده
+            from ..company_bank import can_see_opening_balance
+            request = self.context.get('request')
+            visible = can_see_opening_balance(getattr(request, 'user', None), self.instance.company_id)
             for field in self.OPENING_FIELDS:
                 if field in attrs:
-                    if attrs[field] != getattr(self.instance, field):
+                    if visible and attrs[field] != getattr(self.instance, field):
                         raise serializers.ValidationError(
                             {field: "موجودی اولیه فقط از «تغییر موجودی اولیه» عوض می‌شود."})
                     attrs.pop(field)
