@@ -189,4 +189,160 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
     late.next([{ ...period(), title: 'دورهٔ شرکت یک' }]);
     expect(component.companyFiscalPeriods.map(p => p.title)).toEqual(['سال مالی ۱۴۰۳']);
   });
+
+  it('دکمه‌های دورهٔ باز هرگز برچسب «انجماد» ندارند و متد freezeFiscalPeriod وجود ندارد', () => {
+    setCompany(1);
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const labels = buttons.map(b => b.textContent?.trim() || '');
+    expect(labels.some(l => l.includes('انجماد'))).toBe(false);
+    expect((component as any).freezeFiscalPeriod).toBeUndefined();
+  });
+
+  it('دورهٔ مالی بسته شده (با closed_at و closed_by_name) دکمهٔ بازگشایی دارد ولی دکمهٔ بستن سال مالی ندارد، آیکون قفل در نشان وضعیت و نام مدیر مالی رندر می‌شود', () => {
+    const closedPeriod = {
+      ...period(),
+      status: 'closed' as const,
+      status_display: 'بسته شده رسمی',
+      closed_at: '2026-03-20T08:00:00Z',
+      closed_by_name: 'مدیر مالی'
+    };
+    mockApi.getFiscalPeriods.mockReturnValueOnce(of([closedPeriod]));
+    setCompany(1);
+
+    const el: HTMLElement = fixture.nativeElement;
+    const buttons = Array.from(el.querySelectorAll('button')) as HTMLButtonElement[];
+    const labels = buttons.map(b => b.textContent?.trim() || '');
+
+    expect(labels.some(l => l.includes('بازگشایی'))).toBe(true);
+    expect(labels.some(l => l.includes('بستن سال مالی'))).toBe(false);
+
+    const lockIcon = el.querySelector('[appIcon="status-locked"]');
+    expect(lockIcon).not.toBeNull();
+
+    expect(el.textContent).toContain('بسته شده');
+    expect(el.textContent).toContain('مدیر مالی');
+  });
+
+  it('متد closeFiscalPeriod با انصراف mockConfirm.open فراخوانی API انجام نمی‌دهد؛ با تأیید API فراخوانی شده و فهرست دوره‌ها مجدداً با getFiscalPeriods بارگذاری می‌شود', async () => {
+    setCompany(1);
+    const p = component.companyFiscalPeriods[0];
+    mockApi.closeFiscalPeriod.mockClear();
+    mockApi.getFiscalPeriods.mockClear();
+
+    mockConfirm.open.mockResolvedValueOnce(false);
+    await component.closeFiscalPeriod(p);
+    expect(mockApi.closeFiscalPeriod).not.toHaveBeenCalled();
+    expect(mockApi.getFiscalPeriods).not.toHaveBeenCalled();
+
+    mockConfirm.open.mockResolvedValueOnce(true);
+    await component.closeFiscalPeriod(p);
+    expect(mockApi.closeFiscalPeriod).toHaveBeenCalledWith(p.id);
+    expect(mockApi.getFiscalPeriods).toHaveBeenCalledWith(1);
+  });
+
+  it('بازگشایی دوره با اکشن سرور reopen-period از تأیید mockConfirm.open عبور کرده و وضعیت دوره را به open تغییر می‌دهد', async () => {
+    setCompany(1);
+    const p = { ...period(), status: 'closed' as const, is_locked: true };
+    component.companyFiscalPeriods = [p];
+    mockApi.reopenFiscalPeriod.mockClear();
+    mockConfirm.open.mockClear();
+
+    mockConfirm.open.mockResolvedValueOnce(false);
+    await component.reopenFiscalPeriod(p);
+    expect(mockApi.reopenFiscalPeriod).not.toHaveBeenCalled();
+    expect(p.status).toBe('closed');
+
+    // تایید بازگشایی روی اندپوینت reopen-period
+    mockConfirm.open.mockResolvedValueOnce(true);
+    await component.reopenFiscalPeriod(p);
+    expect(mockConfirm.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning' }));
+    expect(mockApi.reopenFiscalPeriod).toHaveBeenCalledWith(p.id);
+    expect(p.status).toBe('open');
+  });
+
+  it('رد شدن createFiscalPeriod با خطای ۴۰۰ فیلددار ({ start_date: [...] }) فرم را باز نگه می‌دارد، fieldErrors.start_date را تنظیم می‌کند، عنصر #fp_start_date_error را رندر کرده و aria-invalid فیلد آغاز را true می‌کند', () => {
+    setCompany(1);
+    component.openCreateFiscalPeriod();
+    fixture.detectChanges();
+
+    component.newFiscalPeriod = {
+      fiscal_year: '1404',
+      title: 'سال مالی ۱۴۰۴',
+      start_date: '1404/01/01',
+      end_date: '1404/12/29',
+      notes: ''
+    };
+
+    const overlapError = {
+      status: 400,
+      error: {
+        start_date: ['این بازه با دورهٔ مالی ۱۴۰۴ همپوشانی دارد.']
+      }
+    };
+    mockApi.createFiscalPeriod.mockReturnValueOnce(throwError(() => overlapError));
+
+    component.saveFiscalPeriod();
+    fixture.detectChanges();
+
+    expect(component.showFiscalPeriodForm).toBe(true);
+    expect(component.fieldErrors.start_date).toBe('این بازه با دورهٔ مالی ۱۴۰۴ همپوشانی دارد.');
+
+    const errorEl = fixture.nativeElement.querySelector('#fp_start_date_error') as HTMLElement;
+    expect(errorEl).not.toBeNull();
+    expect(errorEl.textContent).toContain('این بازه با دورهٔ مالی ۱۴۰۴ همپوشانی دارد.');
+    expect(errorEl.getAttribute('role')).toBe('alert');
+
+    const startInput = fixture.nativeElement.querySelector('input[aria-label="تاریخ شروع دوره"]') as HTMLInputElement;
+    expect(startInput).not.toBeNull();
+    expect(startInput.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('خطای ۴۰۰ با { detail: "x" } پیام را فقط در toast.error نشان می‌دهد و fieldErrors را خالی نگه می‌دارد', () => {
+    setCompany(1);
+    component.openCreateFiscalPeriod();
+    fixture.detectChanges();
+
+    component.newFiscalPeriod = {
+      fiscal_year: '1404',
+      title: 'سال مالی ۱۴۰۴',
+      start_date: '1404/01/01',
+      end_date: '1404/12/29',
+      notes: ''
+    };
+
+    mockApi.createFiscalPeriod.mockReturnValueOnce(throwError(() => ({
+      status: 400,
+      error: { detail: 'خطای اعتبارسنجی کلی دوره مالی' }
+    })));
+
+    component.saveFiscalPeriod();
+    fixture.detectChanges();
+
+    expect(mockToast.error).toHaveBeenCalledWith('خطای اعتبارسنجی کلی دوره مالی');
+    expect(component.fieldErrors).toEqual({});
+  });
+
+  it('ذخیره دوره مالی با سال خالی و عنوان و تاریخ معتبر، createFiscalPeriod را با payload بدون کلید fiscal_year فراخوانی می‌کند', () => {
+    setCompany(1);
+    component.openCreateFiscalPeriod();
+    fixture.detectChanges();
+
+    component.newFiscalPeriod = {
+      fiscal_year: '',
+      title: 'سال مالی بدون سال صریح',
+      start_date: '1405/01/01',
+      end_date: '1405/12/29',
+      notes: ''
+    };
+
+    component.saveFiscalPeriod();
+    fixture.detectChanges();
+
+    expect(mockApi.createFiscalPeriod).toHaveBeenCalledTimes(1);
+    const sentPayload = mockApi.createFiscalPeriod.mock.calls[0][0];
+    expect('fiscal_year' in sentPayload).toBe(false);
+    expect(sentPayload.title).toBe('سال مالی بدون سال صریح');
+    expect(sentPayload.start_date).toBe('1405/01/01');
+    expect(sentPayload.end_date).toBe('1405/12/29');
+  });
 });
