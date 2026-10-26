@@ -8,6 +8,7 @@ from .views import (
     CompanyFiscalPeriodViewSet,
     UserCompanyAccessViewSet,
     CounterpartyViewSet,
+    PartyBankAccountViewSet,
     ExpenseInvoiceViewSet,
     WorkflowAuditLogViewSet,
     PettyCashAccountViewSet,
@@ -41,6 +42,7 @@ router.register(r'company-board-members', CompanyBoardMemberViewSet, basename='c
 router.register(r'company-fiscal-periods', CompanyFiscalPeriodViewSet, basename='company-fiscal-periods')
 router.register(r'user-company-access', UserCompanyAccessViewSet, basename='user-company-access')
 router.register(r'counterparties', CounterpartyViewSet, basename='counterparties')
+router.register(r'party-bank-accounts', PartyBankAccountViewSet, basename='party-bank-accounts')
 router.register(r'expense-invoices', ExpenseInvoiceViewSet, basename='expense-invoices')
 router.register(r'workflow-audit-logs', WorkflowAuditLogViewSet, basename='workflow-audit-logs')
 router.register(r'petty-cash-accounts', PettyCashAccountViewSet, basename='petty-cash-accounts')

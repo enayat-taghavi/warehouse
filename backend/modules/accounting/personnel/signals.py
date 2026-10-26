@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import Company, CompanyBankAccount, CompanyDocument, SectionAssignment, UserCompanyAccess
+from .models import Company, CompanyBankAccount, CompanyDocument, PartyBankAccount, SectionAssignment, UserCompanyAccess
 
 
 @receiver(post_delete, sender=CompanyBankAccount)
@@ -13,6 +13,18 @@ def handle_bank_account_deleted(sender, instance, **kwargs):
         return
     # فقط حساب فعال اصلی می‌شود؛ primary_bank_account() حساب غیرفعال را نمی‌پذیرد (data-loss-reviewer)
     remaining = CompanyBankAccount.objects.filter(company_id=comp_id, is_active=True).order_by('-created_at').first()
+    if remaining:
+        remaining.is_primary = True
+        remaining.save()
+
+
+
+@receiver(post_delete, sender=PartyBankAccount)
+def handle_party_bank_account_deleted(sender, instance, **kwargs):
+    """با حذف حساب اصلی طرف بیرونی، تازه‌ترین حساب فعال باقی‌مانده‌اش اصلی می‌شود (ص۳ طرح ۳.۱)."""
+    if not instance.is_primary:
+        return
+    remaining = PartyBankAccount.objects.filter(party_id=instance.party_id, is_active=True).order_by('-created_at').first()
     if remaining:
         remaining.is_primary = True
         remaining.save()

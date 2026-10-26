@@ -135,8 +135,9 @@ class SectionGuardian:
                 all_passed = False
 
             # چک ۵: فیلدهای Counterparty
+            # ص۱۰ طرح ۳.۱: هویت و بانک روی طرف بیرونی هسته (party) و PartyBankAccount است
             cp_fields = [f.name for f in Counterparty._meta.get_fields()]
-            req_cp = ['name', 'counterparty_type', 'national_id', 'phone', 'bank_name', 'sheba_number', 'account_code', 'is_active']
+            req_cp = ['party', 'counterparty_type', 'account_code', 'is_active']
             cp_ok = all(f in cp_fields for f in req_cp)
             checks.append(("فیلدهای Counterparty", cp_ok, f"فیلدها: {req_cp}"))
             if not cp_ok:
@@ -619,10 +620,11 @@ class SectionGuardian:
                     all_passed = False
 
                 # ─── G2: تحمیل وضعیت Draft ───
-                cp_test = Counterparty.objects.create(
-                    name="تعمیرگاه مرکزی آزمون",
-                    counterparty_type="repair_shop",
-                    is_active=True
+                from .counterparty_services import create_counterparty
+                cp_test, _existing = create_counterparty(
+                    test_company.id,
+                    {'name': "تعمیرگاه مرکزی آزمون"},
+                    {'counterparty_type': "repair_shop", 'is_active': True},
                 )
                 inv_test = ExpenseInvoice.objects.create(
                     section=sec_alpha,

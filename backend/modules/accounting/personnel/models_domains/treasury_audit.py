@@ -5,9 +5,32 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator
 from companies.models import Company
 
+# فیلدهای هویتی که Counterparty.objects.create برای ساخت طرف بیرونی می‌پذیرد (سازگاری با کد و تست‌های پیشین)
+COUNTERPARTY_IDENTITY_FIELDS = ('company', 'company_id', 'kind', 'name', 'national_id', 'economic_code',
+                                'registration_number', 'phone', 'mobile', 'email', 'address', 'postal_code', 'notes')
+
+
+class CounterpartyManager(models.Manager):
+    def create(self, **kwargs):
+        """
+        بی `party`: فیلدهای هویتی (company، name، national_id، phone …) طرف بیرونی تازه‌ای در هسته می‌سازند
+        و طرف حساب روی آن ساخته می‌شود (ص۲ طرح ۳.۱). مسیر API از counterparty_services استفاده می‌کند.
+        """
+        if 'party' in kwargs or 'party_id' in kwargs:
+            return super().create(**kwargs)
+        from contacts.services import create_party
+        identity = {k: kwargs.pop(k) for k in COUNTERPARTY_IDENTITY_FIELDS if k in kwargs}
+        company = identity.pop('company', None)
+        company_id = identity.pop('company_id', None)
+        with transaction.atomic():
+            kwargs['party'] = create_party(company or company_id, identity, kwargs.get('created_by'))
+            return super().create(**kwargs)
+
+
 class Counterparty(models.Model):
     """
-    طرف‌حساب مالی (تأمین‌کننده، راننده، تعمیرگاه، جایگاه سوخت و...)
+    طرف‌حساب مالی (تأمین‌کننده، راننده، تعمیرگاه، جایگاه سوخت و...): نقش مالی یک طرف بیرونی هسته (ص۲ طرح ۳.۱).
+    هویت، تماس و شرکت روی `party` است؛ حساب‌های بانکی در PartyBankAccount.
     """
     TYPE_CHOICES = (
         ('driver', 'راننده / مالک خودرو'),
@@ -16,41 +39,116 @@ class Counterparty(models.Model):
         ('contractor', 'پیمانکار خدماتی'),
         ('other', 'سایر اشخاص حقیقی/حقوقی'),
     )
-    company = models.ForeignKey(
-        Company,
+    party = models.OneToOneField(
+        'contacts.ExternalParty',
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='counterparties',
-        verbose_name="شرکت متبوع"
+        related_name='counterparty',
+        verbose_name="طرف بیرونی"
     )
-    name = models.CharField(max_length=200, verbose_name="نام شخص یا شرکت")
     counterparty_type = models.CharField(
         max_length=30,
         choices=TYPE_CHOICES,
         default='other',
         verbose_name="نوع طرف‌حساب"
     )
-    national_id = models.CharField(max_length=20, blank=True, null=True, verbose_name="کد ملی / شناسه اقتصادی")
-    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="تلفن تماس")
-    bank_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="نام بانک")
-    account_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="شماره حساب")
-    sheba_number = models.CharField(max_length=30, blank=True, null=True, verbose_name="شماره شبا")
     account_code = models.CharField(
         max_length=50, blank=True, null=True, db_index=True,
         verbose_name="کد حساب تفصیلی (رزرو دفتر کل)"
     )
     is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="ثبت‌کننده"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = CounterpartyManager()
 
     class Meta:
         verbose_name = "طرف‌حساب مالی"
         verbose_name_plural = "طرف‌حساب‌های مالی"
-        ordering = ['name']
+        ordering = ['party__name']
+
+    # خواننده‌های پیشین (اعتبار شرکت فاکتور، نام در پاسخ‌ها، خلاصهٔ گردش، اکسل) از طرف بیرونی می‌خوانند
+    @property
+    def company_id(self):
+        return self.party.company_id
+
+    @property
+    def company(self):
+        return self.party.company
+
+    @property
+    def name(self):
+        return self.party.name
+
+    @property
+    def national_id(self):
+        return self.party.national_id
+
+    @property
+    def phone(self):
+        return self.party.phone
 
     def __str__(self):
         return f"{self.name} ({self.get_counterparty_type_display()})"
+
+
+class PartyBankAccount(models.Model):
+    """
+    حساب بانکی طرف بیرونی (ص۳ طرح ۳.۱)؛ به طرف بیرونی وصل است تا در هر نقش مالی یکی باشد.
+    هر طرف حداکثر یک حساب اصلی دارد؛ جایگزینی اصلی پس از حذف در signals.handle_party_bank_account_deleted.
+    """
+    party = models.ForeignKey(
+        'contacts.ExternalParty',
+        on_delete=models.PROTECT,
+        related_name='bank_accounts',
+        verbose_name="طرف بیرونی"
+    )
+    bank_name = models.CharField(max_length=100, blank=True, default='', verbose_name="نام بانک")
+    account_number = models.CharField(max_length=50, blank=True, default='', verbose_name="شماره حساب")
+    sheba_number = models.CharField(max_length=34, verbose_name="شماره شبا (IR...)")
+    card_number = models.CharField(max_length=19, blank=True, default='', verbose_name="شماره کارت")
+    owner_name = models.CharField(max_length=150, blank=True, default='', verbose_name="نام صاحب حساب")
+    is_primary = models.BooleanField(default=False, verbose_name="حساب اصلی")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "حساب بانکی طرف حساب"
+        verbose_name_plural = "حساب‌های بانکی طرف حساب"
+        ordering = ['-is_primary', '-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['party', 'sheba_number'], name='unique_party_bank_sheba'),
+        ]
+
+    def __str__(self):
+        return f"{self.party_id} - {self.bank_name} ({self.sheba_number})"
+
+    def save(self, *args, **kwargs):
+        from ..sheba_utils import normalize_sheba
+        self.sheba_number = normalize_sheba(self.sheba_number)
+        # نخستین حساب طرف خودکار اصلی می‌شود (الگوی CompanyBankAccount)
+        if not self.pk and not PartyBankAccount.objects.filter(party_id=self.party_id).exists():
+            self.is_primary = True
+        super().save(*args, **kwargs)
+        if self.is_primary:
+            PartyBankAccount.objects.filter(party_id=self.party_id, is_primary=True).exclude(pk=self.pk).update(is_primary=False)
+
+
+def primary_party_bank_account(party):
+    """حساب اصلی طرف (شیء)؛ از فهرست prefetch شده اگر هست، تا پرس‌وجوی تازه نخورد."""
+    cache = getattr(party, '_prefetched_objects_cache', {}).get('bank_accounts')
+    if cache is not None:
+        return next((a for a in cache if a.is_primary), None)
+    return PartyBankAccount.objects.filter(party_id=party.pk, is_primary=True).first()
+
 
 class ExpenseInvoice(models.Model):
     """

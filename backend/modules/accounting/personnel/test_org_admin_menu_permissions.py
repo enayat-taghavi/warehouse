@@ -170,7 +170,6 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.other_section = ProjectSection.objects.create(project=self.other_project, code='SEC_B', name='بخش ب')
         # پروژه و بخش سراسری (بی‌شرکت) دیگر وجود ندارد (طرح ۲.۱، ت۲)
         self.counterparty = Counterparty.objects.create(company=self.company, name='طرف‌حساب الف', counterparty_type='other')
-        self.global_counterparty = Counterparty.objects.create(company=None, name='طرف‌حساب سراسری', counterparty_type='other')
 
         self.org_admin = self._user('scope_org_admin', [], self.company, levels=PROJECTS_WRITE)
         self.accountant = self._user('scope_accountant', ['can_act_as_accountant', 'view_sys_payroll'], self.company)
@@ -327,18 +326,15 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self._as(self.accountant)
         url = '/api/personnel/counterparties/import-excel/'
         res = self._import(url, [
-            ('طرف‌حساب سراسری', 'other', '', '09129999999', '', '', '', '', 'بله'),
             ('طرف‌حساب ب', 'other', '', '09128888888', '', '', '', '', 'بله'),
             ('طرف‌حساب الف', 'other', '', '09127777777', '', '', '', '', 'بله'),
         ], self.company)
         self.assertEqual(res.status_code, 200, res.content)
-        self.global_counterparty.refresh_from_db()
         other_cp.refresh_from_db()
         self.counterparty.refresh_from_db()
-        self.assertNotEqual(self.global_counterparty.phone, '09129999999')
         self.assertEqual(other_cp.phone, '0211')
         self.assertEqual(self.counterparty.phone, '09127777777')
-        self.assertEqual(Counterparty.objects.filter(company=self.company).count(), 3)
+        self.assertEqual(Counterparty.objects.filter(party__company=self.company).count(), 2)
         self.assertEqual(self._import(url, [('x', 'other')], self.other_company).status_code, 403)
 
     # ─── خروجی اکسل ───
@@ -360,7 +356,6 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         res = self.client.post(f'{base}bulk-assign/', {'section_id': self.other_section.id, 'user_ids': [self.manager.id], 'role': 'manager'}, format='json')
         self.assertEqual(res.status_code, 403)
         self.assertEqual(self.client.patch(f'/api/org/projects/{self.other_project.id}/', {'name': 'تغییر'}, format='json').status_code, 404)
-        self.assertEqual(self.client.patch(f'/api/personnel/counterparties/{self.global_counterparty.id}/', {'phone': '1'}, format='json').status_code, 403)
         self.assertEqual(self._import('/api/org/projects/import-excel/', [('PRJ_X', 'x')], self.other_company).status_code, 403)
 
     def test_company_access_grants_stay_inside_permitted_companies(self):
@@ -411,12 +406,16 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
     def test_accountant_counterparty_writes_stay_inside_own_company(self):
         self._as(self.accountant)
         url = '/api/personnel/counterparties/'
-        self.assertEqual(self.client.patch(f'{url}{self.global_counterparty.id}/', {'phone': '09120000009'}, format='json').status_code, 403)
-        self.assertEqual(self.client.delete(f'{url}{self.global_counterparty.id}/').status_code, 403)
-        self.assertEqual(self.client.patch(f'{url}{self.counterparty.id}/', {'company': self.other_company.id}, format='json').status_code, 403)
-        self.assertEqual(self.client.patch(f'{url}{self.counterparty.id}/', {'company': None}, format='json').status_code, 403)
+        other_cp = Counterparty.objects.create(company=self.other_company, name='طرف‌حساب ب', counterparty_type='other')
+        self.assertEqual(self.client.patch(f'{url}{other_cp.id}/', {'phone': '09120000009'}, format='json').status_code, 404)
+        self.assertEqual(self.client.delete(f'{url}{other_cp.id}/').status_code, 404)
+        # شرکت طرف حساب هرگز با ویرایش عوض نمی‌شود (ص۲ طرح ۳.۱)
+        self.assertEqual(self.client.patch(f'{url}{self.counterparty.id}/', {'company': self.other_company.id}, format='json').status_code, 200)
+        self.assertEqual(self.client.patch(f'{url}{self.counterparty.id}/', {'company': None}, format='json').status_code, 200)
+        self.counterparty.refresh_from_db()
+        self.assertEqual(self.counterparty.company_id, self.company.id)
         self.assertEqual(self.client.patch(f'{url}{self.counterparty.id}/', {'phone': '09120000010'}, format='json').status_code, 200)
-        self.assertTrue(Counterparty.objects.filter(pk=self.global_counterparty.pk).exists())
+        self.assertTrue(Counterparty.objects.filter(pk=other_cp.pk).exists())
 
     def test_counterparty_create_never_lands_in_foreign_company_or_global(self):
         """شرکت غیرمجاز نادیده گرفته می‌شود و رد نمی‌شود (تا رکورد صف آفلاین حذف نشود)؛ بی‌هدر هم سراسری ساخته نمی‌شود"""
@@ -424,15 +423,15 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         url = '/api/personnel/counterparties/'
         res = self.client.post(url, {'name': 'تزریق به شرکت ب', 'counterparty_type': 'other', 'company': self.other_company.id}, format='json')
         self.assertEqual(res.status_code, 201, res.content)
-        self.assertEqual(Counterparty.objects.get(name='تزریق به شرکت ب').company_id, self.company.id)
+        self.assertEqual(Counterparty.objects.get(party__name='تزریق به شرکت ب').company_id, self.company.id)
         # بازپخش صف آفلاین بدون هدر شرکت و بدون شرکت در بدنه
         res = self.client.post(url, {'name': 'ثبت آفلاین', 'counterparty_type': 'other'}, format='json')
         self.assertEqual(res.status_code, 201, res.content)
-        self.assertEqual(Counterparty.objects.get(name='ثبت آفلاین').company_id, self.company.id)
+        self.assertEqual(Counterparty.objects.get(party__name='ثبت آفلاین').company_id, self.company.id)
         res = self.client.post(url, {'name': 'هدر شرکت ب', 'counterparty_type': 'other'}, format='json', HTTP_X_COMPANY_ID=str(self.other_company.id))
         self.assertEqual(res.status_code, 201, res.content)
-        self.assertEqual(Counterparty.objects.get(name='هدر شرکت ب').company_id, self.company.id)
-        self.assertFalse(Counterparty.objects.filter(company=self.other_company).exists())
+        self.assertEqual(Counterparty.objects.get(party__name='هدر شرکت ب').company_id, self.company.id)
+        self.assertFalse(Counterparty.objects.filter(party__company=self.other_company).exists())
 
     # ─── یافته‌های بازبینی دوم ───
     def test_reactivating_a_users_only_assignment_is_allowed(self):

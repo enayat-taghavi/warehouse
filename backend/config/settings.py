@@ -96,6 +96,7 @@ else:
 PLATFORM_APPS = [
     'accounts.apps.AccountsConfig',
     'companies.apps.CompaniesConfig',
+    'contacts.apps.ContactsConfig',
     'numbering.apps.NumberingConfig',
     'settings_core.apps.SettingsCoreConfig',
     'attachments.apps.AttachmentsConfig',

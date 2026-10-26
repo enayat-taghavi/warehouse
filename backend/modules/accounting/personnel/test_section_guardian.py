@@ -76,6 +76,7 @@ class SectionGuardianPhase1Tests(TestCase):
     def test_counterparty_creation(self):
         """تست ایجاد طرف‌حساب به عنوان موجودیت مالی سراسری مستقل"""
         cp = Counterparty.objects.create(
+            company=self.section.project.company,
             name='تعمیرگاه تخصصی دیزل پارس',
             counterparty_type='repair_shop',
             phone='09171234567'
@@ -86,6 +87,7 @@ class SectionGuardianPhase1Tests(TestCase):
     def test_expense_invoice_draft_invariant(self):
         """تست الزام وضعیت پیش‌نویس (draft) برای فاکتور جدید"""
         cp = Counterparty.objects.create(
+            company=self.section.project.company,
             name='جایگاه سوخت پارسیان',
             counterparty_type='fuel_station'
         )
@@ -201,7 +203,8 @@ class SectionGuardianPhase2APITests(TestCase):
         cp_res = self.client.post('/api/personnel/counterparties/', {
             'name': 'فروشگاه لوازم یدکی سپاهان',
             'counterparty_type': 'repair_shop',
-            'phone': '03131234567'
+            'phone': '03131234567',
+            'company': self.company.id,  # مدیر کل سامانه بی‌شرکت 400 می‌گیرد (ص۵ طرح ۳.۱)
         }, format='json')
         self.assertEqual(cp_res.status_code, 201)
         cp_id = cp_res.data['id']
@@ -308,7 +311,7 @@ class SectionGuardianPhase2APITests(TestCase):
         """تست عدم حذف فیزیکی و تبدیل به غیرفعال‌سازی نرم در صورت وجود فاکتور یا سند مالی"""
         proj = Project.objects.create(company=self.company, code='PRJ-SAFE', name='پروژه حفاظت داده')
         sec = ProjectSection.objects.create(project=proj, code='SEC-SAFE', name='بخش امن')
-        cp = Counterparty.objects.create(name='تأمین‌کننده قطعات امین')
+        cp = Counterparty.objects.create(company=self.company, name='تأمین‌کننده قطعات امین')
         ExpenseInvoice.objects.create(
             section=sec,
             counterparty=cp,

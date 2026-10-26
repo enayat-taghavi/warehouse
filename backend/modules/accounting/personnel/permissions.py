@@ -18,10 +18,16 @@ class IsCounterpartyManagerOrReadOnly(IsOrgStructureManagerOrReadOnly):
     def has_permission(self, request, view):
         if super().has_permission(request, view):
             return True
-        u = request.user
-        if not u or not u.is_authenticated:
-            return False
-        return u.has_perm('accounts.can_act_as_accountant') or u.has_perm('accounts.perm_approve_personnel_finance')
+        return is_counterparty_manager(request.user)
+
+
+def is_counterparty_manager(user):
+    """نوشتن طرف حساب (همان قاعدهٔ IsCounterpartyManagerOrReadOnly)؛ قاعدهٔ دید کامل دادهٔ حساس هم از آن است (ص۴ طرح ۳.۱)."""
+    if not user or not user.is_authenticated:
+        return False
+    if has_structure_write_permission(user):
+        return True
+    return user.has_perm('accounts.can_act_as_accountant') or user.has_perm('accounts.perm_approve_personnel_finance')
 
 
 class IsPayrollSettingsManagerOrReadOnly(permissions.BasePermission):

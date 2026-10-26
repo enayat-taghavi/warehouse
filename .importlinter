@@ -33,6 +33,7 @@ root_packages =
     communications
     companies
     config
+    contacts
     inventory
     notifications
     personnel
@@ -57,7 +58,7 @@ type = layers
 layers =
     config
     warehouses : inventory : personnel
-    accounts : attachments : common : communications : companies : notifications : reports : settings_core : platform_core : workflow
+    accounts : attachments : common : communications : companies : contacts : notifications : reports : settings_core : platform_core : workflow
 
 # ---------------------------------------------------------------------------
 #  C2 — استقلال ماژول‌ها (دو طرفه). هیچ یالی در هیچ جهتی مجاز نیست.
@@ -93,6 +94,7 @@ source_modules =
     common
     communications
     companies
+    contacts
     notifications
     platform_core
     reports

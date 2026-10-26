@@ -150,6 +150,18 @@ def clean_sheba(raw_sheba: str) -> str:
         return ""
     return "IR" + digits
 
+def normalize_sheba(raw_sheba) -> str:
+    """
+    شکل ذخیرهٔ شبا (ص۳ طرح ۳.۱): «IR» و ۲۴ رقم لاتین، بی فاصله. ورودی بی ۲۴ رقم فقط پیراسته می‌شود
+    تا اعتبارسنجی (validate_sheba) خطای درست بدهد. حساب بانکی شرکت و حساب بانکی طرف حساب از همین استفاده می‌کنند.
+    """
+    if not raw_sheba:
+        return ""
+    digits = extract_sheba_digits(raw_sheba)
+    if len(digits) == 24:
+        return "IR" + digits
+    return str(raw_sheba).strip().upper()
+
 def get_bank_from_sheba(raw_sheba: str) -> Optional[Dict[str, str]]:
     """
     استخراج مشخصات بانک از روی کد ۳ رقمی شبا

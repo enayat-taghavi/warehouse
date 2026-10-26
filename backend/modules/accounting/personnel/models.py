@@ -50,6 +50,8 @@ from .models_domains.payroll import (
 )
 from .models_domains.treasury_audit import (
     Counterparty,
+    PartyBankAccount,
+    primary_party_bank_account,
     ExpenseInvoice,
     PettyCashAccount,
     PettyCashTransaction,
@@ -96,6 +98,8 @@ __all__ = [
     'BankExportSettings',
     'MonthlyPayrollRecord',
     'Counterparty',
+    'PartyBankAccount',
+    'primary_party_bank_account',
     'ExpenseInvoice',
     'PettyCashAccount',
     'PettyCashTransaction',

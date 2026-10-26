@@ -78,6 +78,7 @@ from .views_domains.org_views import (
 
 from .views_domains.treasury_views import (
     CounterpartyViewSet,
+    PartyBankAccountViewSet,
     ExpenseInvoiceViewSet,
     PettyCashAccountViewSet,
     PettyCashTransactionViewSet,
@@ -159,6 +160,7 @@ __all__ = [
     'CompanyBoardMemberViewSet',
     'CompanyFiscalPeriodViewSet',
     'CounterpartyViewSet',
+    'PartyBankAccountViewSet',
     'ExpenseInvoiceViewSet',
     'PettyCashAccountViewSet',
     'PettyCashTransactionViewSet',

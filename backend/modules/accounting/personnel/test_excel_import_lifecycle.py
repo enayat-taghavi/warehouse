@@ -4,6 +4,7 @@ from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from companies.models import Company
 from personnel.models import Counterparty, PersonnelProfile
 from personnel.org_excel_engine import (
     download_counterparties_template,
@@ -24,6 +25,7 @@ class ExcelImportLifecycleTests(TestCase):
             password='Password123!',
             email='admin@example.com'
         )
+        self.company = Company.objects.create(code='CMP_XLS_LIFE', name='شرکت آزمون اکسل')
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
@@ -35,7 +37,7 @@ class ExcelImportLifecycleTests(TestCase):
 
         # ۲. اجرای پیش‌نمایش (Dry-Run)
         buf = io.BytesIO(tpl_res.content)
-        dry_res = import_counterparties_from_excel(buf, dry_run=True)
+        dry_res = import_counterparties_from_excel(buf, dry_run=True, company_id=self.company.id)
         self.assertTrue(dry_res['success'])
         summary = dry_res['summary']
 
@@ -59,19 +61,19 @@ class ExcelImportLifecycleTests(TestCase):
 
         # ۳. ثبت نهایی در دیتابیس
         buf.seek(0)
-        actual_res = import_counterparties_from_excel(buf, dry_run=False)
+        actual_res = import_counterparties_from_excel(buf, dry_run=False, company_id=self.company.id)
         self.assertTrue(actual_res['success'])
         self.assertEqual(actual_res['summary']['valid_count'], 2)
         self.assertEqual(actual_res['summary']['error_count'], 0)
 
         # ۴. تایید ایجاد رکوردها در دیتابیس
         sample_names = ['شرکت حمل‌ونقل پیشتاز', 'تعمیرگاه مرکزی ایران']
-        self.assertEqual(Counterparty.objects.filter(name__in=sample_names).count(), 2)
+        self.assertEqual(Counterparty.objects.filter(party__name__in=sample_names).count(), 2)
 
         # ۵. پاکسازی و حذف کامل داده‌های نمونه
-        deleted_count, _ = Counterparty.objects.filter(name__in=sample_names).delete()
+        deleted_count, _ = Counterparty.objects.filter(party__name__in=sample_names).delete()
         self.assertEqual(deleted_count, 2)
-        self.assertEqual(Counterparty.objects.filter(name__in=sample_names).count(), 0)
+        self.assertEqual(Counterparty.objects.filter(party__name__in=sample_names).count(), 0)
 
     def test_api_endpoint_import_excel_with_dry_run_and_commit(self):
         # آزمون فراخوانی اندپوینت واقعی API
@@ -88,7 +90,7 @@ class ExcelImportLifecycleTests(TestCase):
         res_dry = self.client.post(
             '/api/personnel/counterparties/import-excel/',
             {'file': upload_file, 'dry_run': 'true'},
-            format='multipart'
+            format='multipart', HTTP_X_COMPANY_ID=str(self.company.id)
         )
         self.assertEqual(res_dry.status_code, 200)
         dry_summary = res_dry.json()['summary']
@@ -102,16 +104,16 @@ class ExcelImportLifecycleTests(TestCase):
         res_commit = self.client.post(
             '/api/personnel/counterparties/import-excel/',
             {'file': upload_file, 'dry_run': 'false'},
-            format='multipart'
+            format='multipart', HTTP_X_COMPANY_ID=str(self.company.id)
         )
         self.assertEqual(res_commit.status_code, 200)
         sample_names = ['شرکت حمل‌ونقل پیشتاز', 'تعمیرگاه مرکزی ایران']
-        self.assertEqual(Counterparty.objects.filter(name__in=sample_names).count(), 2)
+        self.assertEqual(Counterparty.objects.filter(party__name__in=sample_names).count(), 2)
 
         # پاکسازی نهایی داده‌های نمونه
-        deleted_count, _ = Counterparty.objects.filter(name__in=sample_names).delete()
+        deleted_count, _ = Counterparty.objects.filter(party__name__in=sample_names).delete()
         self.assertEqual(deleted_count, 2)
-        self.assertEqual(Counterparty.objects.filter(name__in=sample_names).count(), 0)
+        self.assertEqual(Counterparty.objects.filter(party__name__in=sample_names).count(), 0)
 
     def test_personnel_excel_template_and_import_lifecycle(self):
         # تست دانلود قالب پرسنل
@@ -129,7 +131,7 @@ class ExcelImportLifecycleTests(TestCase):
         res_dry = self.client.post(
             '/api/personnel/profiles/import-excel/',
             {'file': upload_file, 'dry_run': 'true'},
-            format='multipart'
+            format='multipart', HTTP_X_COMPANY_ID=str(self.company.id)
         )
         self.assertEqual(res_dry.status_code, 200)
         dry_data = res_dry.json()
@@ -148,7 +150,7 @@ class ExcelImportLifecycleTests(TestCase):
         res_commit = self.client.post(
             '/api/personnel/profiles/import-excel/',
             {'file': upload_file, 'dry_run': 'false'},
-            format='multipart'
+            format='multipart', HTTP_X_COMPANY_ID=str(self.company.id)
         )
         self.assertEqual(res_commit.status_code, 200)
         commit_data = res_commit.json()

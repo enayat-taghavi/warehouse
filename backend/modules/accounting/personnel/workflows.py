@@ -49,7 +49,7 @@ def _invoice_summary(invoice):
 
 def resolve_invoice(entity_id):
     from .models import ExpenseInvoice
-    return (ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty')
+    return (ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty__party')
             .filter(pk=entity_id).first())
 
 

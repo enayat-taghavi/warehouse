@@ -64,6 +64,7 @@ from .serializers_domains.payroll import (
 )
 from .serializers_domains.treasury_audit import (
     CounterpartySerializer,
+    PartyBankAccountSerializer,
     ExpenseInvoiceSerializer,
     PettyCashAccountSerializer,
     PettyCashTransactionSerializer,
@@ -113,6 +114,7 @@ __all__ = [
     'PayrollYearlySettingsSerializer',
     'MonthlyPayrollRecordSerializer',
     'CounterpartySerializer',
+    'PartyBankAccountSerializer',
     'ExpenseInvoiceSerializer',
     'PettyCashAccountSerializer',
     'PettyCashTransactionSerializer',

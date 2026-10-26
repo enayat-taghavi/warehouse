@@ -9,7 +9,7 @@ from decimal import Decimal
 from rest_framework import viewsets, permissions, status, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponse
 from django.db.models import Q, Sum
 from django.utils import timezone
@@ -25,6 +25,7 @@ from companies.access import (
 )
 from ..models import (
     Counterparty,
+    PartyBankAccount,
     ExpenseInvoice,
     PettyCashAccount,
     PettyCashTransaction,
@@ -35,6 +36,7 @@ from ..models import (
 )
 from ..serializers import (
     CounterpartySerializer,
+    PartyBankAccountSerializer,
     ExpenseInvoiceSerializer,
     PettyCashAccountSerializer,
     PettyCashTransactionSerializer,
@@ -51,6 +53,14 @@ from .scope_helpers import (
 )
 from companies.org_roles import user_has_section_role
 from accounts.scoped_permissions import can, section_q, sections_where
+from ..counterparty_services import (
+    create_bank_account,
+    create_counterparty,
+    delete_bank_account,
+    remove_counterparty,
+    update_bank_account,
+    update_counterparty,
+)
 
 # مجوزهای بخشی ت۱۳ طرح ۲.۲: «چه کاری» از مجوز و «کجا» از انتساب (ق۶). فهرست‌ها با sections_where/section_q
 # و کار روی هر ردیف با can(user, code, section) سنجیده می‌شود، نه has_perm (ت۸).
@@ -105,11 +115,21 @@ def _ensure_petty_cash_manager(user, section, message="شما مجوز مدیر�
     if not user.is_superuser and not can(user, PETTY_CASH_MANAGE_PERM, section):
         raise PermissionDenied(message)
 
+def _tab_id(request):
+    return request.headers.get('X-Client-Tab-Id') or (request.data.get('client_tab_id') if hasattr(request.data, 'get') else None)
+
+
+def _broadcast_counterparty(request, action_name, cp_id, name, company_id):
+    # طرف حساب سراسری دیگر نیست (ص۲ طرح ۳.۱): رویداد همیشه به شرکت خود طرف می‌رود
+    broadcast_org_structure_updated('counterparty', action_name, cp_id, name, company_id=company_id,
+                                    global_scope=False, client_tab_id=_tab_id(request), sender_id=request.user.id)
+
+
 class CounterpartyViewSet(viewsets.ModelViewSet):
     """
-    مدیریت طرف‌حساب‌های مالی (رانندگان، تعمیرگاه‌ها، جایگاه سوخت و پیمانکاران)
+    مدیریت طرف‌حساب‌های مالی (رانندگان، تعمیرگاه‌ها، جایگاه سوخت و پیمانکاران) روی طرف بیرونی هسته (ص۵ طرح ۳.۱).
     """
-    queryset = Counterparty.objects.all()
+    queryset = Counterparty.objects.select_related('party', 'party__company').prefetch_related('party__bank_accounts')
     serializer_class = CounterpartySerializer
     permission_classes = [permissions.IsAuthenticated, IsCounterpartyManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
@@ -125,107 +145,114 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return qs.none()
 
-        # ایزولاسیون چندمستاجری طرف‌حساب‌ها بر مبنای شرکت فعال
+        # ایزولاسیون چندمستاجری طرف‌حساب‌ها بر مبنای شرکت فعال؛ هر طرف حساب یک شرکت دارد (ق۶)
         company_param = get_request_company_id(self.request)
+        try:
+            cid = int(company_param) if company_param else None
+        except (ValueError, TypeError):
+            cid = None
         if not user.is_superuser:
             allowed_cids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-            if company_param:
-                try:
-                    cid = int(company_param)
-                    if cid not in allowed_cids:
-                        raise PermissionDenied("شما به طرف‌حساب‌های این شرکت دسترسی ندارید.")
-                    qs = qs.filter(Q(company_id=cid) | Q(company__isnull=True))
-                except (ValueError, TypeError):
-                    pass
+            if cid is not None:
+                if cid not in allowed_cids:
+                    raise PermissionDenied("شما به طرف‌حساب‌های این شرکت دسترسی ندارید.")
+                qs = qs.filter(party__company_id=cid)
             else:
-                qs = qs.filter(Q(company_id__in=allowed_cids) | Q(company__isnull=True))
-        elif company_param:
-            try:
-                qs = qs.filter(Q(company_id=int(company_param)) | Q(company__isnull=True))
-            except (ValueError, TypeError):
-                pass
+                qs = qs.filter(party__company_id__in=allowed_cids)
+        elif cid is not None:
+            qs = qs.filter(party__company_id=cid)
 
         c_type = self.request.query_params.get('counterparty_type')
         if c_type:
             qs = qs.filter(counterparty_type=c_type)
+        kind = self.request.query_params.get('kind')
+        if kind:
+            qs = qs.filter(party__kind=kind)
         is_active = self.request.query_params.get('is_active')
         if is_active is not None:
             qs = qs.filter(is_active=is_active.lower() == 'true')
         search = self.request.query_params.get('search')
         if search:
             search_clean = normalize_digits(str(search)).strip()
-            qs = qs.filter(Q(name__icontains=search) | Q(national_id__icontains=search_clean) | Q(phone__icontains=search_clean) | Q(account_code__icontains=search_clean))
-        return qs.order_by('name')
+            qs = qs.filter(Q(party__name__icontains=search) | Q(party__national_id__icontains=search_clean)
+                           | Q(party__phone__icontains=search_clean) | Q(party__mobile__icontains=search_clean)
+                           | Q(account_code__icontains=search_clean))
+        return qs.order_by('party__name', 'id')
 
-    def perform_create(self, serializer):
+    def _resolve_company(self, explicit_company):
+        """
+        شرکت طرف تازه (ص۵): بدنه (اگر مجاز) ← سرآیند شرکت فعال (اگر مجاز) ← تنها شرکت مجاز ← اولین شرکت مجاز.
+        شرکت غیرمجاز نادیده گرفته می‌شود و رد نمی‌شود، چون پاسخ 4xx رکورد صف آفلاین را حذف می‌کند.
+        کاربر بی هیچ شرکت مجاز 403 و مدیر کل سامانهٔ بی‌شرکت 400 می‌گیرد. خروجی: (company_id, fallback).
+        """
         user = self.request.user
-        if requires_company_scope(user):
-            # شرکت به ترتیب: بدنه (اگر مجاز) ← هدر شرکت فعال (اگر مجاز) ← تنها شرکت مجاز کاربر.
-            # شرکت غیرمجاز نادیده گرفته می‌شود و رد نمی‌شود، چون پاسخ 4xx رکورد صف آفلاین را حذف می‌کند؛
-            # پس تزریق به شرکت دیگر ممکن نیست و ثبت مشروعِ صف‌شده هم از دست نمی‌رود.
-            allowed_cids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-            explicit_company = serializer.validated_data.pop('company', None)
-            candidates = [explicit_company.id if explicit_company else None]
-            try:
-                req_cid = get_request_company_id(self.request)
-                candidates.append(int(req_cid) if req_cid else None)
-            except (ValueError, TypeError):
-                pass
-            if len(allowed_cids) == 1:
-                candidates.append(next(iter(allowed_cids)))
-            company_id = next((c for c in candidates if c is not None and c in allowed_cids), None)
-            if company_id is not None:
-                serializer.validated_data['company_id'] = company_id
-        elif not serializer.validated_data.get('company'):
-            # سوپریوزر: شرکت فعال درخواست، اگر در بدنه نیامده باشد
+        try:
             req_cid = get_request_company_id(self.request)
-            if req_cid:
-                try:
-                    serializer.validated_data['company_id'] = int(req_cid)
-                except (ValueError, TypeError):
-                    pass
-        instance = serializer.save()
-        tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('counterparty', 'create', instance.id, instance.name, company_id=instance.company_id,
-                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
+            req_cid = int(req_cid) if req_cid else None
+        except (ValueError, TypeError):
+            req_cid = None
+        if not requires_company_scope(user):
+            company_id = explicit_company.id if explicit_company else req_cid
+            if not company_id:
+                raise ValidationError({'company': "شرکت طرف‌حساب را انتخاب کنید."})
+            return company_id, False
+        allowed_cids = sorted(get_user_allowed_companies(user).values_list('id', flat=True))
+        if not allowed_cids:
+            raise PermissionDenied("شما به هیچ شرکتی دسترسی ندارید و نمی‌توانید طرف‌حساب ثبت کنید.")
+        candidates = [explicit_company.id if explicit_company else None, req_cid]
+        if len(allowed_cids) == 1:
+            candidates.append(allowed_cids[0])
+        company_id = next((c for c in candidates if c is not None and c in allowed_cids), None)
+        if company_id is None:
+            return allowed_cids[0], True
+        return company_id, False
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        company_id, fallback = self._resolve_company(serializer.validated_data.get('company'))
+        party_data, role_data, _flat, bank_rows = serializer.split_validated()
+        details = {'company_fallback': True} if fallback else None
+        cp, existing = create_counterparty(company_id, party_data, role_data, bank_rows, request.user, details=details)
+        cp = Counterparty.objects.select_related('party', 'party__company').prefetch_related(
+            'party__bank_accounts').get(pk=cp.pk)
+        if not existing:
+            _broadcast_counterparty(request, 'create', cp.id, cp.name, cp.company_id)
+        data = dict(self.get_serializer(cp).data)
+        data['existing'] = existing
+        return Response(data, status=status.HTTP_200_OK if existing else status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
         user = self.request.user
+        instance = serializer.instance
         if requires_company_scope(user):
-            ensure_scoped_write(user, serializer.instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید (طرف‌حساب سراسری را فقط مدیر ارشد تغییر می‌دهد).")
-            if 'company' in serializer.validated_data:
-                new_company = serializer.validated_data.get('company')
-                ensure_scoped_write(user, new_company.id if new_company else None, "تبدیل طرف‌حساب به طرف‌حساب سراسری یا انتقال آن به شرکت دیگر مجاز نیست.")
-        instance = serializer.save()
-        tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('counterparty', 'update', instance.id, instance.name, company_id=instance.company_id,
-                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
+            ensure_scoped_write(user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید.")
+        party_data, role_data, flat_bank, _rows = serializer.split_validated()
+        new_nid = party_data.get('national_id')
+        if new_nid and new_nid != instance.party.national_id:
+            from contacts.services import find_party
+            other = find_party(instance.company_id, new_nid)
+            if other is not None and other.pk != instance.party_id:
+                raise ValidationError({'national_id': "طرف دیگری با همین کد یا شناسهٔ ملی در این شرکت هست."})
+        update_counterparty(instance, party_data, role_data, flat_bank, user)
+        serializer.instance = Counterparty.objects.select_related('party', 'party__company').prefetch_related(
+            'party__bank_accounts').get(pk=instance.pk)
+        _broadcast_counterparty(self.request, 'update', instance.id, instance.name, instance.company_id)
 
     def perform_destroy(self, instance):
         if requires_company_scope(self.request.user):
-            ensure_scoped_write(self.request.user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید حذف کنید (طرف‌حساب سراسری را فقط مدیر ارشد تغییر می‌دهد).")
-        instance_id = instance.id
-        instance_name = instance.name
-
-        # بررسی وجود فاکتور وابسته جهت جلوگیری از حذف مخرب
-        if ExpenseInvoice.objects.filter(counterparty=instance).exists():
-            instance.is_active = False
-            instance.save(update_fields=['is_active', 'updated_at'])
-            tab_id = self.request.headers.get('X-Client-Tab-Id')
-            broadcast_org_structure_updated('counterparty', 'update', instance_id, instance_name, company_id=instance.company_id,
-                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
-            return
-
-        instance.delete()
-        tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('counterparty', 'delete', instance_id, instance_name, company_id=instance.company_id,
-                                            global_scope=instance.company_id is None, client_tab_id=tab_id, sender_id=self.request.user.id)
+            ensure_scoped_write(self.request.user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید حذف کنید.")
+        instance_id, instance_name, company_id = instance.id, instance.name, instance.company_id
+        # ص۵: طرف حساب دارای فاکتور یا تراکنش تنخواه فقط غیرفعال می‌شود
+        result = remove_counterparty(instance, self.request.user)
+        _broadcast_counterparty(self.request, 'update' if result == 'deactivated' else 'delete',
+                                instance_id, instance_name, company_id)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         from ..org_excel_engine import export_counterparties_excel
         section_id = request.query_params.get('section_id')
-        return export_counterparties_excel(section_id, company_ids=readable_company_ids(request.user))
+        return export_counterparties_excel(section_id, company_ids=readable_company_ids(request.user), user=request.user)
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -241,18 +268,62 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
         if not file_obj:
             return Response({'error': 'فایلی ارسال نشده است'}, status=status.HTTP_400_BAD_REQUEST)
         dry_run = request.data.get('dry_run') in ['true', 'True', True]
-        res = import_counterparties_from_excel(file_obj, dry_run=dry_run, company_id=company_id)
+        if company_id is None:
+            return Response({'error': 'شرکت مقصد درون‌ریزی را انتخاب کنید.'}, status=status.HTTP_400_BAD_REQUEST)
+        res = import_counterparties_from_excel(file_obj, dry_run=dry_run, company_id=company_id, user=request.user)
         if not dry_run:
-            tab_id = request.headers.get('X-Client-Tab-Id')
-            broadcast_org_structure_updated('counterparty', 'import', None, 'Bulk Import', company_id=company_id,
-                                            global_scope=company_id is None, client_tab_id=tab_id, sender_id=request.user.id)
+            _broadcast_counterparty(request, 'import', None, 'Bulk Import', company_id)
         return Response(res, status=status.HTTP_200_OK if res['success'] else status.HTTP_400_BAD_REQUEST)
+
+class PartyBankAccountViewSet(viewsets.ModelViewSet):
+    """
+    حساب‌های بانکی طرف حساب (ص۵ طرح ۳.۱): `/api/personnel/party-bank-accounts/?party=<id>`.
+    خواندن برای اعضای شرکت طرف (با پوشش ص۴)؛ نوشتن با حق ویرایش طرف حساب و فقط در شرکت‌های مجاز.
+    """
+    serializer_class = PartyBankAccountSerializer
+    permission_classes = [permissions.IsAuthenticated, IsCounterpartyManagerOrReadOnly]
+    pagination_class = OptionalPageNumberPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = PartyBankAccount.objects.select_related('party').filter(party__counterparty__isnull=False)
+        if not user.is_superuser:
+            qs = qs.filter(party__company_id__in=get_user_allowed_companies(user).values('id'))
+        party_id = self.request.query_params.get('party')
+        if party_id:
+            try:
+                qs = qs.filter(party_id=int(party_id))
+            except (ValueError, TypeError):
+                return qs.none()
+        return qs.order_by('-is_primary', '-created_at')
+
+    def _ensure_party_scope(self, party):
+        if requires_company_scope(self.request.user):
+            ensure_scoped_write(self.request.user, party.company_id, "فقط حساب بانکی طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید تغییر دهید.")
+
+    def perform_create(self, serializer):
+        party = serializer.validated_data.get('party')
+        if party is None or not Counterparty.objects.filter(party=party).exists():
+            raise ValidationError({'party': "طرف‌حساب را انتخاب کنید."})
+        self._ensure_party_scope(party)
+        data = {k: v for k, v in serializer.validated_data.items() if k != 'party'}
+        serializer.instance = create_bank_account(party, data, self.request.user)
+
+    def perform_update(self, serializer):
+        self._ensure_party_scope(serializer.instance.party)
+        data = {k: v for k, v in serializer.validated_data.items() if k != 'party'}
+        serializer.instance = update_bank_account(serializer.instance, data, self.request.user)
+
+    def perform_destroy(self, instance):
+        self._ensure_party_scope(instance.party)
+        delete_bank_account(instance, self.request.user)
+
 
 class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     """
     مدیریت فاکتورهای هزینه‌ای بخش‌ها
     """
-    queryset = ExpenseInvoice.objects.all().select_related('section', 'section__project', 'counterparty', 'created_by')
+    queryset = ExpenseInvoice.objects.all().select_related('section', 'section__project', 'counterparty__party', 'created_by')
     serializer_class = ExpenseInvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
@@ -277,7 +348,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             qs = qs.filter(status=inv_status)
         search = self.request.query_params.get('search')
         if search:
-            qs = qs.filter(Q(invoice_number__icontains=search) | Q(counterparty__name__icontains=search) | Q(description__icontains=search))
+            qs = qs.filter(Q(invoice_number__icontains=search) | Q(counterparty__party__name__icontains=search) | Q(description__icontains=search))
         return qs.order_by('-invoice_date_shamsi', '-created_at')
 
     def perform_create(self, serializer):
@@ -331,7 +402,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
         obj = self.filter_queryset(self.get_queryset()).filter(pk=pk).first()
         if obj is None and wf_engine.task_grants_view(self.request.user, INVOICE_ENTITY, pk):
-            obj = ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty').filter(pk=pk).first()
+            obj = ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty__party').filter(pk=pk).first()
             if obj is not None and not self._invoice_company_visible(obj):
                 obj = None
         if obj is None:
@@ -620,7 +691,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     مدیریت اسناد، هزینه‌کردها، درخواست‌های شارژ و تسویه تنخواه‌گردان
     """
     queryset = PettyCashTransaction.objects.all().select_related(
-        'section', 'section__project', 'custodian', 'counterparty', 'created_by', 'account'
+        'section', 'section__project', 'custodian', 'counterparty__party', 'created_by', 'account'
     )
     serializer_class = PettyCashTransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -651,7 +722,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 Q(title__icontains=search) |
                 Q(receipt_number__icontains=search) |
                 Q(category__icontains=search) |
-                Q(counterparty__name__icontains=search) |
+                Q(counterparty__party__name__icontains=search) |
                 Q(description__icontains=search)
             )
 

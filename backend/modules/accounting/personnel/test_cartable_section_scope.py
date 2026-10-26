@@ -138,8 +138,8 @@ class AccountantCartableSectionScopeTests(TestCase):
         ser = ExpenseInvoiceSerializer(data={**base, 'counterparty': foreign.id})
         self.assertFalse(ser.is_valid())
         self.assertIn('counterparty', ser.errors)
-        glob = Counterparty.objects.create(company=None, name='طرف سراسری', counterparty_type='other')
-        ser_ok = ExpenseInvoiceSerializer(data={**base, 'counterparty': glob.id})
+        own = Counterparty.objects.create(company=self.company, name='طرف خودی', counterparty_type='other')
+        ser_ok = ExpenseInvoiceSerializer(data={**base, 'counterparty': own.id})
         self.assertTrue(ser_ok.is_valid(), ser_ok.errors)
 
     def test_petty_cash_rejects_account_of_another_section(self):

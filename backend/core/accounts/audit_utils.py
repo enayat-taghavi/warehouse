@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 SENSITIVE_KEYS = {
     'password', 'token', 'access', 'refresh', 'secret',
-    'national_code', 'card_number', 'auth_token', 'csrf_token'
+    'national_code', 'card_number', 'auth_token', 'csrf_token',
+    'sheba', 'account_number',
 }
 
 def sanitize_value(val):

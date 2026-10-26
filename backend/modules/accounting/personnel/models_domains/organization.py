@@ -107,12 +107,10 @@ class CompanyBankAccount(models.Model):
         return f"{self.company.name} - {self.bank_name} ({self.sheba_number})"
 
     def save(self, *args, **kwargs):
-        # پاک‌سازی و نرمال‌سازی شبا
+        # پاک‌سازی و نرمال‌سازی شبا (تابع مشترک با حساب بانکی طرف حساب، ص۳ طرح ۳.۱)
         if self.sheba_number:
-            raw = self.sheba_number.strip().upper()
-            if not raw.startswith('IR') and raw.isdigit() and len(raw) == 24:
-                raw = f"IR{raw}"
-            self.sheba_number = raw
+            from ..sheba_utils import normalize_sheba
+            self.sheba_number = normalize_sheba(self.sheba_number)
 
         # اگر اولین حساب این شرکت است، خودکار اصلی شود
         if not self.pk and not CompanyBankAccount.objects.filter(company=self.company).exists():

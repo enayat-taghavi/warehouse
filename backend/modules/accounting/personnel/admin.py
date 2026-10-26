@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import (
     Counterparty,
+    PartyBankAccount,
     ExpenseInvoice,
     PettyCashAccount,
     PettyCashTransaction,
@@ -20,15 +21,26 @@ from .models import (
 
 @admin.register(Counterparty)
 class CounterpartyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'counterparty_type', 'phone', 'national_id', 'account_code', 'is_active')
-    search_fields = ('name', 'national_id', 'phone', 'sheba_number', 'account_code')
+    list_display = ('name', 'counterparty_type', 'account_code', 'is_active')
+    search_fields = ('party__name', 'party__national_id', 'party__phone', 'account_code')
     list_filter = ('counterparty_type', 'is_active')
+    list_select_related = ('party',)
+    raw_id_fields = ('party', 'created_by')
+
+
+@admin.register(PartyBankAccount)
+class PartyBankAccountAdmin(admin.ModelAdmin):
+    list_display = ('party', 'bank_name', 'is_primary', 'is_active')
+    search_fields = ('party__name', 'bank_name')
+    list_filter = ('is_primary', 'is_active')
+    list_select_related = ('party',)
+    raw_id_fields = ('party',)
 
 
 @admin.register(ExpenseInvoice)
 class ExpenseInvoiceAdmin(admin.ModelAdmin):
     list_display = ('invoice_number', 'section', 'counterparty', 'amount', 'invoice_date_shamsi', 'status', 'created_by')
-    search_fields = ('invoice_number', 'counterparty__name', 'description')
+    search_fields = ('invoice_number', 'counterparty__party__name', 'description')
     list_filter = ('status', 'section__project', 'section')
 
 

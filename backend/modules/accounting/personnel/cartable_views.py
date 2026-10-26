@@ -120,7 +120,7 @@ def _invoice_task_rows(user, step_key):
     from .workflows import INVOICE_WORKFLOW
     ids = tasks_for_user(user).filter(instance__workflow_key=INVOICE_WORKFLOW, step_key=step_key).values(
         'instance__entity_id')
-    return ExpenseInvoice.objects.filter(pk__in=ids).select_related('section', 'counterparty')
+    return ExpenseInvoice.objects.filter(pk__in=ids).select_related('section', 'counterparty__party')
 
 def _get_effective_company_ids(request, user):
     """

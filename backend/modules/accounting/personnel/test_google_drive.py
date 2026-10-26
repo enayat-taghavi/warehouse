@@ -206,7 +206,7 @@ class GoogleDriveCoreTestCase(TestCase):
             code='SEC_01',
             name='بخش خاکبرداری'
         )
-        cp = Counterparty.objects.create(name='فروشگاه مصالح ساختمانی')
+        cp = Counterparty.objects.create(company=self.company, name='فروشگاه مصالح ساختمانی')
         inv = ExpenseInvoice.objects.create(
             section=sec,
             counterparty=cp,
