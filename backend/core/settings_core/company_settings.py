@@ -68,19 +68,24 @@ def get_company_setting(company_id, module, key):
     return spec.default if spec else None
 
 
-def can_write_company_setting(user, spec, company_id) -> bool:
-    """مدیر کل فعال؛ وگرنه مجوز اعلام‌شده: سامانه‌ای از نقش کاربر، بخشی فقط اگر در همین شرکت داشته باشد."""
+def has_company_perm(user, perm, company_id) -> bool:
+    """مدیر کل فعال؛ وگرنه مجوز داده‌شده: سامانه‌ای از نقش کاربر، بخشی فقط اگر در همین شرکت داشته باشد (خالی = فقط مدیر کل)."""
     if not getattr(user, 'is_active', False):
         return False
     if user.is_superuser:
         return True
-    if not spec.perm:
+    if not perm:
         return False
     from accounts.scoped_permissions import SYSTEM, can, codes_in_company, permission_scope
-    if permission_scope(spec.perm) == SYSTEM:
-        return can(user, spec.perm)
-    codename = spec.perm.split('.', 1)[-1]
+    if permission_scope(perm) == SYSTEM:
+        return can(user, perm)
+    codename = perm.split('.', 1)[-1]
     return codename in codes_in_company(user, company_id)
+
+
+def can_write_company_setting(user, spec, company_id) -> bool:
+    """نوشتن کلید تنظیم با مجوز اعلام‌شدهٔ همان کلید (has_company_perm)."""
+    return has_company_perm(user, spec.perm, company_id)
 
 
 def _company_or_error(request, company_id):
