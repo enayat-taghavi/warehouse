@@ -2021,7 +2021,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.4-c: DOM specs for the company expense heads tab and the expense head selector (tree, read level, delete 400, seed, grouping, payload, 400 field error)
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.4-c: DOM specs for the company expense heads tab and the expense head selector (tree, read level, delete 400, seed, grouping, payload, 400 field error)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
