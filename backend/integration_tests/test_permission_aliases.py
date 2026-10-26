@@ -21,7 +21,7 @@ class PermissionAliasRegistryTests(TestCase):
             self.skipTest('needs accounting + warehouse')
         self.assertEqual(permission_aliases('manager_approver'), ('can_act_as_manager',))
         self.assertEqual(permission_aliases('supervisor_approver'), ('view_sys_supervisor',))
-        self.assertEqual(permission_aliases('count_supervisor_exclusion'), ('can_act_as_workshop_supervisor',))
+        self.assertEqual(permission_aliases('count_supervisor_exclusion'), ('perm_approve_personnel_supervisor',))
 
     def test_expand_keeps_plain_codes_and_order(self):
         if not FULL_INSTALL:
@@ -29,14 +29,13 @@ class PermissionAliasRegistryTests(TestCase):
         from personnel.lifecycle_services import MANAGER_STAGE_PERMS, SUPERVISOR_STAGE_PERMS
         from personnel.fleet_lifecycle_services import FLEET_MANAGER_STAGE_PERMS, FLEET_WORKFLOW_STAGE_PERMS
         self.assertEqual(expand_permission_aliases(MANAGER_STAGE_PERMS),
-                         ('perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'))
+                         ('perm_approve_personnel_manager', 'can_act_as_manager'))
         self.assertEqual(expand_permission_aliases(SUPERVISOR_STAGE_PERMS),
-                         ('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor',
-                          'perm_approve_personnel_manager', 'can_act_as_manager'))
+                         ('perm_approve_personnel_supervisor', 'perm_approve_personnel_manager', 'can_act_as_manager'))
         self.assertEqual(expand_permission_aliases(FLEET_MANAGER_STAGE_PERMS),
-                         ('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'))
+                         ('perm_approve_fleet_manager', 'can_act_as_manager'))
         self.assertEqual(expand_permission_aliases(FLEET_WORKFLOW_STAGE_PERMS['change_request_finance_approved']),
-                         ('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'))
+                         ('perm_approve_fleet_manager', 'can_act_as_manager'))
 
     def test_unknown_capability_expands_to_nothing(self):
         self.assertEqual(expand_permission_aliases(('perm_x', permission_alias('no_such_capability'))), ('perm_x',))
@@ -96,6 +95,6 @@ class PermissionAliasBehaviourTests(TestCase):
     def test_workshop_supervisor_is_not_count_supervisor(self):
         from warehouses.role_resolver import resolve_warehouse_roles
         count_sup = self._user('alias_count_sup', 'view_sys_supervisor')
-        workshop_sup = self._user('alias_workshop_sup', 'view_sys_supervisor', 'can_act_as_workshop_supervisor')
+        workshop_sup = self._user('alias_workshop_sup', 'view_sys_supervisor', 'perm_approve_personnel_supervisor')
         self.assertIn('warehouse_supervisor', resolve_warehouse_roles(count_sup))
         self.assertNotIn('warehouse_supervisor', resolve_warehouse_roles(workshop_sup))

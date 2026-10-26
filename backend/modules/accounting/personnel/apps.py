@@ -118,7 +118,7 @@ class PersonnelConfig(AppConfig):
         contribute('org_structure_write_perms', 'accounts.perm_approve_personnel_manager')
 
         # alias مجوز (گام ۸): سرپرست کارگاه سرپرست شمارش ماژول‌های دیگر حساب نمی‌شود
-        contribute('permission_aliases:count_supervisor_exclusion', 'can_act_as_workshop_supervisor')
+        contribute('permission_aliases:count_supervisor_exclusion', 'perm_approve_personnel_supervisor')
 
         # ثبت فیلتر قلمرو لاگ‌های ممیزی (گام ۲)
         from personnel.audit_scope import accounting_audit_scope_filter

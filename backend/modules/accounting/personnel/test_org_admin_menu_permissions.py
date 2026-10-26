@@ -65,7 +65,7 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         self.counterparty = Counterparty.objects.create(company=self.company, name='طرف‌حساب آزمون', counterparty_type='other')
 
         self.org_admin = self._user('org_admin_user', [], levels=PROJECTS_WRITE)
-        self.accountant = self._user('acc_user', ['can_act_as_accountant', 'view_sys_payroll'])
+        self.accountant = self._user('acc_user', ['perm_counterparty_manage', 'view_sys_payroll'])
         self.finance_approver = self._user('fin_user', ['perm_approve_personnel_finance'])
         self.plain = self._user('plain_user', [])
 
@@ -85,7 +85,7 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         self.assertEqual(get_user_valid_roles_for_app(u, 'accounting'), ['org_admin'])
 
     def test_org_admin_first_so_default_role_is_unchanged(self):
-        u = self._user('org_admin_accountant', ['can_act_as_accountant'], levels=PROJECTS_WRITE)
+        u = self._user('org_admin_accountant', ['perm_approve_personnel_finance'], levels=PROJECTS_WRITE)
         roles = get_user_valid_roles_for_app(u, 'accounting')
         self.assertEqual(roles, ['org_admin', 'accountant'])
         self.assertEqual(resolve_effective_role(u, '', 'accounting'), 'accountant')
@@ -133,10 +133,11 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         res = self.client.delete(f'/api/personnel/counterparties/{self.counterparty.id}/')
         self.assertEqual(res.status_code, 204, res.content)
 
-    def test_finance_approver_can_edit_counterparty(self):
+    def test_finance_approver_without_counterparty_manage_cannot_edit(self):
+        # طرح ۳.۵: نوشتن طرف‌حساب فقط با perm_counterparty_manage (یک تیک)؛ تأیید مالی به‌تنهایی بس نیست
         self.client.force_authenticate(user=self.finance_approver)
         res = self.client.patch(f'/api/personnel/counterparties/{self.counterparty.id}/', {'phone': '09120000001'}, format='json')
-        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.status_code, 403, res.content)
 
     def test_plain_user_cannot_edit_counterparty(self):
         self.client.force_authenticate(user=self.plain)
@@ -172,7 +173,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.counterparty = Counterparty.objects.create(company=self.company, name='طرف‌حساب الف', counterparty_type='other')
 
         self.org_admin = self._user('scope_org_admin', [], self.company, levels=PROJECTS_WRITE)
-        self.accountant = self._user('scope_accountant', ['can_act_as_accountant', 'view_sys_payroll'], self.company)
+        self.accountant = self._user('scope_accountant', ['perm_counterparty_manage', 'view_sys_payroll'], self.company)
         self.manager = self._user('scope_manager', ['perm_approve_personnel_manager'], self.company, levels=PROJECTS_WRITE)
         self.member = self._user('scope_member', [], self.company)
         self.outsider = self._user('scope_outsider', [], self.other_company)

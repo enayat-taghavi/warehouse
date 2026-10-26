@@ -12,7 +12,7 @@ from companies.permissions import (  # noqa: F401
 class IsCounterpartyManagerOrReadOnly(IsOrgStructureManagerOrReadOnly):
     """
     طرف‌حساب‌های مالی: قواعد IsOrgStructureManagerOrReadOnly به‌علاوه حسابدار
-    (can_act_as_accountant یا perm_approve_personnel_finance).
+    (perm_counterparty_manage، طرح ۳.۵).
     محدودسازی شرکت (requires_company_scope) در CounterpartyViewSet اعمال می‌شود.
     """
     def has_permission(self, request, view):
@@ -21,13 +21,29 @@ class IsCounterpartyManagerOrReadOnly(IsOrgStructureManagerOrReadOnly):
         return is_counterparty_manager(request.user)
 
 
-def is_counterparty_manager(user):
-    """نوشتن طرف حساب (همان قاعدهٔ IsCounterpartyManagerOrReadOnly)؛ قاعدهٔ دید کامل دادهٔ حساس هم از آن است (ص۴ طرح ۳.۱)."""
+COUNTERPARTY_MANAGE_PERM = 'perm_counterparty_manage'
+
+
+def is_counterparty_manager(user, company_id=None):
+    """
+    نوشتن طرف حساب (ص۴ طرح ۳.۱ و ص۳ طرح ۳.۵): نویسندهٔ ساختار سازمانی، یا دارندهٔ perm_counterparty_manage.
+    بی company_id «در دست‌کم یک بخش» (دروازهٔ IsCounterpartyManagerOrReadOnly)؛ با company_id فقط در بخشی از
+    همان شرکت (نوشتن روی طرف یک شرکت و دید کامل دادهٔ حساس آن).
+    """
     if not user or not user.is_authenticated:
         return False
     if has_structure_write_permission(user):
         return True
-    return user.has_perm('accounts.can_act_as_accountant') or user.has_perm('accounts.perm_approve_personnel_finance')
+    if company_id is None:
+        return user.has_perm(f'accounts.{COUNTERPARTY_MANAGE_PERM}')
+    from accounts.scoped_permissions import sections_where
+    return sections_where(user, COUNTERPARTY_MANAGE_PERM).filter(project__company_id=company_id).exists()
+
+
+def ensure_counterparty_manager(user, company_id, message="شما مجوز مدیریت طرف‌حساب‌های این شرکت را ندارید."):
+    from rest_framework.exceptions import PermissionDenied
+    if not user.is_superuser and not is_counterparty_manager(user, company_id):
+        raise PermissionDenied(message)
 
 
 class IsPayrollSettingsManagerOrReadOnly(permissions.BasePermission):
@@ -181,7 +197,6 @@ class CanViewTreasury(permissions.BasePermission):
             return False
         return bool(
             request.user.is_superuser or
-            request.user.has_perm('accounts.view_sys_treasury') or
             request.user.has_perm('accounts.perm_treasury_disburse_action')
         )
 

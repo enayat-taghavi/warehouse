@@ -236,7 +236,7 @@ class CartableMultiTenantTestCase(TestCase):
             'supervisor': ['perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor'],
             'accountant': ['perm_approve_personnel_finance', 'perm_approve_fleet_finance'],
             'manager': ['perm_approve_personnel_manager', 'can_act_as_manager', 'perm_manager_payment_authorize'],
-            'treasurer': ['perm_treasury_disburse_action', 'view_sys_treasury']
+            'treasurer': ['perm_treasury_disburse_action']
         }
         # مجوزهای بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آیند (طرح ۲.۲، ت۱)؛ کلید نقش انتساب
         # خزانه‌دار «treasury» است. کدی که مجوز بخشی نیست (can_act_as_manager) مثل پیش تیک مستقیم می‌خورد.

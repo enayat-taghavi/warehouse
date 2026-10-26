@@ -132,7 +132,7 @@ def _tier_codes():
     """(سطح، کدهای مجوز) ماتریس سطوح؛ کد مستعار هنگام فراخوانی از رجیستری خوانده می‌شود."""
     return (
         # خزانه‌داری (سطح ۵)
-        (WorkflowTiers.TIER_5_TREASURY, ['perm_treasury_disburse_action', 'view_sys_treasury']),
+        (WorkflowTiers.TIER_5_TREASURY, ['perm_treasury_disburse_action']),
         # مدیر شرکت (سطح ۴)
         (WorkflowTiers.TIER_4_MANAGER, ['perm_manager_payment_authorize', 'perm_approve_personnel_manager',
                                         'perm_approve_fleet_manager', permission_alias('manager_approver')]),

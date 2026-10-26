@@ -112,7 +112,7 @@ class AccountantCartableSectionScopeTests(TestCase):
     def test_s1_invoice_approval_blocked_without_step_permission(self):
         # ت۳ طرح ۲.۳: دریافت‌کنندهٔ مرحلهٔ بررسی = نقش حسابدار + مجوز مرحله؛ برداشتن مجوز مرحله کار را برمی‌دارد
         UserPermissionOverride.objects.create(
-            user=self.user, permission=_permission('can_act_as_accountant'), company_id=self.company.id, mode='remove',
+            user=self.user, permission=_permission('perm_invoice_review'), company_id=self.company.id, mode='remove',
         )
         clear_scoped_permission_cache(self.user)
         # ساخت مستقیم ORM سیگنال permissions_changed ندارد (API آن را می‌فرستد)؛ محاسبهٔ دوباره مثل زمان‌بند

@@ -215,8 +215,8 @@ class CounterpartyPartiesTests(TestCase):
             is_primary=True
         )
 
-        # ۱) کاربر با مجوز can_act_as_accountant در شرکت الف
-        accountant_a = self._user('cp_accountant_a', ['can_act_as_accountant'], self.company_a)
+        # ۱) کاربر با مجوز perm_counterparty_manage در شرکت الف
+        accountant_a = self._user('cp_accountant_a', ['perm_counterparty_manage'], self.company_a)
         res_acc = self._get(accountant_a, f'{URL}{cp.id}/')
         self.assertEqual(res_acc.status_code, 200, res_acc.content)
         self.assertFalse(res_acc.data['bank_masked'])
@@ -224,8 +224,8 @@ class CounterpartyPartiesTests(TestCase):
         self.assertEqual(res_acc.data['sheba_number'], VALID_SHEBA[2:])
         self.assertEqual(res_acc.data['bank_accounts'][0]['sheba_number'], VALID_SHEBA)
 
-        # ۲) کاربر با مجوز view_sys_treasury در شرکت الف
-        treasury_a = self._user('cp_treasury_a', ['view_sys_treasury'], self.company_a)
+        # ۲) کاربر با مجوز perm_counterparty_manage در شرکت الف
+        treasury_a = self._user('cp_treasury_a', ['perm_counterparty_manage'], self.company_a)
         res_tre = self._get(treasury_a, f'{URL}{cp.id}/')
         self.assertEqual(res_tre.status_code, 200, res_tre.content)
         self.assertFalse(res_tre.data['bank_masked'])
@@ -234,7 +234,7 @@ class CounterpartyPartiesTests(TestCase):
         self.assertEqual(res_tre.data['bank_accounts'][0]['sheba_number'], VALID_SHEBA)
 
         # ۳) کاربر با مجوز اعطا شده فقط در شرکت ب، ولی عضو شرکت الف بدون مجوز در الف
-        treasury_b = self._user('cp_treasury_b', ['view_sys_treasury'], self.company_b)
+        treasury_b = self._user('cp_treasury_b', ['perm_counterparty_manage'], self.company_b)
         grant_membership(treasury_b, self.company_a)
 
         res_b = self._get(treasury_b, f'{URL}{cp.id}/')

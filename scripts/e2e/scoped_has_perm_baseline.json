@@ -1,9 +1,9 @@
 {
-  "total": 40,
+  "total": 30,
   "files": {
-    "modules/accounting/personnel/permissions.py": 14,
-    "modules/accounting/personnel/role_resolver.py": 14,
-    "modules/accounting/personnel/serializers_domains/helpers.py": 4,
+    "modules/accounting/personnel/permissions.py": 11,
+    "modules/accounting/personnel/role_resolver.py": 9,
+    "modules/accounting/personnel/serializers_domains/helpers.py": 2,
     "modules/accounting/personnel/views_domains/fleet_views.py": 6,
     "modules/accounting/personnel/views_domains/scope_helpers.py": 2
   }

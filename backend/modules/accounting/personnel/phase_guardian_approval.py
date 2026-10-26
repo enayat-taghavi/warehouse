@@ -230,9 +230,7 @@ class ApprovalPhaseGuardian:
             treasury.user_permissions.clear()
             treasury.is_superuser = False
             p_tr_disb = Permission.objects.filter(codename='perm_treasury_disburse_action').first()
-            p_tr_view = Permission.objects.filter(codename='view_sys_treasury').first()
             if p_tr_disb: treasury.user_permissions.add(p_tr_disb)
-            if p_tr_view: treasury.user_permissions.add(p_tr_view)
             treasury.save()
 
             # 6. Superuser (Tier 6)

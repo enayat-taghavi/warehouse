@@ -11,13 +11,13 @@ from contacts.models import ExternalParty
 from contacts.services import create_party, find_party, update_party
 
 from .models import Counterparty, ExpenseInvoice, PartyBankAccount, PettyCashTransaction, primary_party_bank_account
-from .permissions import is_counterparty_manager
+from .permissions import COUNTERPARTY_MANAGE_PERM, has_structure_write_permission
 
 AUDIT_MODULE = 'invoices'
 ROLE_FIELDS = ('counterparty_type', 'account_code', 'is_active')
 BANK_FIELDS = ('bank_name', 'account_number', 'sheba_number', 'card_number', 'owner_name', 'is_primary', 'is_active')
-# دید کامل دادهٔ حساس در بخش‌های همان شرکت (قاعدهٔ موقت ص۴ تا ۳.۵)
-FULL_VIEW_SECTION_PERMS = ('can_act_as_accountant', 'view_sys_treasury', 'perm_treasury_disburse_action')
+# دید کامل دادهٔ حساس در بخش‌های همان شرکت (ص۳ طرح ۳.۵: همان مجوز نوشتن طرف حساب)
+FULL_VIEW_SECTION_PERMS = (COUNTERPARTY_MANAGE_PERM,)
 
 
 # ─── پوشش دادهٔ حساس (ص۴) ─────────────────────────────────────────────────────
@@ -38,8 +38,8 @@ def mask_tail(value, keep=4):
 
 def can_view_sensitive(user, party, cache=None):
     """
-    شبا، شماره‌حساب، کارت و کد ملی حقیقی کامل (ص۴): مدیر کل سامانه، دارندهٔ حق ویرایش طرف حساب، ثبت‌کنندهٔ طرف،
-    یا کسی که در بخشی از همان شرکت یکی از FULL_VIEW_SECTION_PERMS را دارد. cache (dict) پرس‌وجو را در فهرست یک‌بار می‌کند.
+    شبا، شماره‌حساب، کارت و کد ملی حقیقی کامل (ص۴): مدیر کل سامانه، نویسندهٔ ساختار سازمانی، ثبت‌کنندهٔ طرف،
+    یا کسی که در بخشی از همان شرکت یکی از FULL_VIEW_SECTION_PERMS را دارد (مجوز در شرکت دیگر بس نیست). cache (dict) پرس‌وجو را در فهرست یک‌بار می‌کند.
     """
     if not user or not user.is_authenticated:
         return False
@@ -47,7 +47,7 @@ def can_view_sensitive(user, party, cache=None):
         return True
     cache = {} if cache is None else cache
     if 'manager' not in cache:
-        cache['manager'] = is_counterparty_manager(user)
+        cache['manager'] = has_structure_write_permission(user)
     if cache['manager']:
         return True
     key = ('company', party.company_id)

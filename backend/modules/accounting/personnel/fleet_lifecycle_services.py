@@ -56,22 +56,19 @@ ROAD_VEHICLE_TYPES = ('pickup', 'nissan', 'khavar', 'sedan', 'truck', 'trailer')
 MANAGER_APPROVER = permission_alias('manager_approver')
 
 FLEET_SUPERVISOR_STAGE_PERMS = (
-    'perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor',
-    'perm_approve_fleet_manager', MANAGER_APPROVER,
+    'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager', MANAGER_APPROVER,
 )
 FLEET_FINANCE_STAGE_PERMS = ('perm_approve_fleet_finance',)
-FLEET_MANAGER_STAGE_PERMS = (
-    'perm_approve_fleet_manager', MANAGER_APPROVER, 'can_act_as_company_manager'
-)
+FLEET_MANAGER_STAGE_PERMS = ('perm_approve_fleet_manager', MANAGER_APPROVER)
 FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 
 FLEET_WORKFLOW_STAGE_PERMS = {
-    'pending_supervisor': ('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor'),
+    'pending_supervisor': ('perm_approve_fleet_supervisor',),
     'pending_accountant': ('perm_approve_fleet_finance',),
-    'pending_manager': ('perm_approve_fleet_manager', MANAGER_APPROVER, 'can_act_as_company_manager'),
-    'change_request_created': ('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor'),
+    'pending_manager': ('perm_approve_fleet_manager', MANAGER_APPROVER),
+    'change_request_created': ('perm_approve_fleet_supervisor',),
     'change_request_supervisor_approved': ('perm_approve_fleet_finance',),
-    'change_request_finance_approved': ('perm_approve_fleet_manager', MANAGER_APPROVER, 'can_act_as_company_manager'),
+    'change_request_finance_approved': ('perm_approve_fleet_manager', MANAGER_APPROVER),
 }
 
 FLEET_RATE_FIELDS = ('default_service_rate',)

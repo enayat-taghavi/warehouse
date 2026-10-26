@@ -10,16 +10,13 @@ def resolve_personnel_roles(user, spec=None) -> list[str]:
     # (جای مجوز قدیمی perm_manage_projects_sections؛ طرح Project_Section_To_Core، ت۲)
     from companies.access import companies_with_section
     is_org_admin = not user.is_superuser and companies_with_section(user, 'projects', 'write').exists()
-    # اپراتور/کارمند: فقط اگر صراحتاً نقش کارمند داشته باشد
-    if user.has_perm('accounts.can_act_as_operator'):
-        roles.append('operator')
-    if user.has_perm('accounts.can_act_as_workshop_supervisor') or user.has_perm('accounts.perm_approve_personnel_supervisor') or user.has_perm('accounts.perm_approve_fleet_supervisor'):
+    if user.has_perm('accounts.perm_approve_personnel_supervisor') or user.has_perm('accounts.perm_approve_fleet_supervisor'):
         roles.append('supervisor')
-    if user.has_perm('accounts.can_act_as_accountant') or user.has_perm('accounts.perm_approve_personnel_finance') or user.has_perm('accounts.perm_approve_fleet_finance'):
+    if user.has_perm('accounts.perm_approve_personnel_finance') or user.has_perm('accounts.perm_approve_fleet_finance'):
         roles.append('accountant')
-    if user.has_perm('accounts.can_act_as_company_manager') or user.has_perm('accounts.perm_manager_payment_authorize') or user.has_perm('accounts.perm_approve_personnel_manager'):
+    if user.has_perm('accounts.perm_manager_payment_authorize') or user.has_perm('accounts.perm_approve_personnel_manager'):
         roles.append('manager')
-    if user.has_perm('accounts.perm_treasury_disburse_action') or user.has_perm('accounts.view_sys_treasury'):
+    if user.has_perm('accounts.perm_treasury_disburse_action'):
         roles.append('treasury')
     if not roles and not is_org_admin and (user.has_perm('accounts.view_sys_personnel_attendance') or user.has_perm('accounts.view_sys_personnel')):
         roles.append('operator')

@@ -45,7 +45,7 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
         self.manager.user_permissions.add(legacy_perm)
         grants = {
             self.operator: (),
-            self.supervisor: ("perm_approve_personnel_supervisor", "can_act_as_workshop_supervisor"),
+            self.supervisor: ("perm_approve_personnel_supervisor",),
             self.accountant: ("perm_approve_personnel_finance",),
             self.manager: ("perm_approve_personnel_manager", "perm_delete_personnel_nomovement"),
         }

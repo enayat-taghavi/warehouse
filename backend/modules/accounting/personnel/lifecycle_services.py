@@ -402,11 +402,10 @@ MANAGER_APPROVER = permission_alias('manager_approver')
 
 # ── مجوزهای مراحل گردش کار پرسنل: منبع واحد برای تأیید تکی، تأیید گروهی و عبور هوشمند ──
 SUPERVISOR_STAGE_PERMS = (
-    'perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor',
-    'perm_approve_personnel_manager', MANAGER_APPROVER,
+    'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager', MANAGER_APPROVER,
 )
 FINANCE_STAGE_PERMS = ('perm_approve_personnel_finance',)
-MANAGER_STAGE_PERMS = ('perm_approve_personnel_manager', MANAGER_APPROVER, 'can_act_as_company_manager')
+MANAGER_STAGE_PERMS = ('perm_approve_personnel_manager', MANAGER_APPROVER)
 
 
 _ANY = object()
@@ -1024,9 +1023,9 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
 
     if perms_by_stage is None:
         perms_by_stage = {
-            'pending_supervisor': ('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor'),
+            'pending_supervisor': ('perm_approve_personnel_supervisor',),
             'pending_accountant': ('perm_approve_personnel_finance',),
-            'pending_manager': ('perm_approve_personnel_manager', MANAGER_APPROVER, 'can_act_as_company_manager'),
+            'pending_manager': ('perm_approve_personnel_manager', MANAGER_APPROVER),
         }
     perm_codes = expand_permission_aliases(perms_by_stage.get(stage) or ())
     if not perm_codes:

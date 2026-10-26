@@ -19,7 +19,7 @@
 
     WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_scenario \
         --level treasury=company --level manager=project \
-        --perm supervisor=can_act_as_workshop_supervisor,perm_approve_personnel_supervisor
+        --perm supervisor=perm_invoice_approve,perm_approve_personnel_supervisor
     WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_scenario --mixed accountant,employee \
         --level treasury=company --remove mixed=perm_invoice_record --bundle employee=-perm_invoice_record
     WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_scenario --purge

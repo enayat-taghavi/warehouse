@@ -1072,7 +1072,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         # مجوزهای رد (مدیر، سرپرست یا مالی)؛ اول «در هر بخشی»، سپس در بخش همین پرونده (ت۸ طرح ۲.۲)
         reject_perms = (
             'perm_approve_personnel_manager', MANAGER_APPROVER, 'perm_approve_personnel_supervisor',
-            'can_act_as_workshop_supervisor', 'perm_approve_personnel_finance',
+            'perm_approve_personnel_finance',
         )
         if not user_has_any_perm(user, reject_perms):
             raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")

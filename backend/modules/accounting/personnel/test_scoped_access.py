@@ -227,7 +227,7 @@ class WorkflowRoutingOverrideTests(ScopedAccessFixture):
         self.assertIn(sup.id, ids)
         self.assertNotIn(self.custodian.id, ids)  # کارمند مجوز مرحلهٔ سرپرست را ندارد
 
-        for code in ('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor'):
+        for code in ('perm_approve_personnel_supervisor',):
             perm = Permission.objects.get(content_type__app_label='accounts', codename=code)
             UserPermissionOverride.objects.create(user=sup, permission=perm, company=self.company_x, mode='remove')
         ids = _workflow_recipient_ids('pending_supervisor', self.company_x.id, self.sec_a.id, None)

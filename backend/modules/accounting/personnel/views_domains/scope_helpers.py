@@ -86,7 +86,6 @@ PERSONNEL_FILE_PERMS = (
     'perm_approve_personnel_manager',
     'perm_approve_personnel_finance',
     'perm_delete_personnel_nomovement',
-    'view_sys_treasury',
     'perm_treasury_disburse_action',
 )
 

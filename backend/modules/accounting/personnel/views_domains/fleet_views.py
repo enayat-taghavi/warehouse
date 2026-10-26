@@ -2082,7 +2082,7 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
     def approve_finance(self, request, pk=None):
         from ..fleet_lifecycle_services import log_vehicle_change_request_event, FLEET_FINANCE_STAGE_PERMS, user_has_any_perm, dispatch_vehicle_workflow_notification
         user = request.user
-        # ب-۸: فقط perm_approve_fleet_finance (بدون can_act_as_accountant)
+        # ب-۸: فقط perm_approve_fleet_finance (بی نشانهٔ نقش حسابدار)
         if not (user.is_superuser or user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS)):
             raise PermissionDenied("شما دسترسی تایید مرحله دوم (مالی) درخواست تغییرات ناوگان را ندارید.")
         

@@ -59,8 +59,8 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     entity_kind=INVOICE_ENTITY,
     title_fa='فاکتور هزینه',
     steps=(
-        StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'can_act_as_workshop_supervisor', APPROVE),
-        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'can_act_as_accountant', REVIEW),
+        StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_invoice_approve', APPROVE),
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_invoice_review', REVIEW),
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', 'perm_manager_payment_authorize', APPROVE),
         # پرداخت فقط از اکشن pay فاکتور (شمارهٔ پیگیری لازم است)؛ رد قطعی در این مرحله نیست
         StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', 'perm_treasury_disburse_action', EXECUTE,

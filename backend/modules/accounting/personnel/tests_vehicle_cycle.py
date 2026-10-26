@@ -36,7 +36,7 @@ class VehicleLifecycleTests(TestCase):
         self.outsider = CustomUser.objects.create(username="veh_outsider", first_name="کاربر", last_name="بی‌دسترسی")
 
         # انتساب مجوزها
-        for codename in ["perm_approve_fleet_supervisor", "can_act_as_workshop_supervisor"]:
+        for codename in ["perm_approve_fleet_supervisor"]:
             p = Permission.objects.filter(codename=codename).first()
             if p:
                 self.supervisor.user_permissions.add(p)

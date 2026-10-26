@@ -43,6 +43,7 @@ from ..serializers import (
     WorkflowAuditLogSerializer,
 )
 from ..permissions import (
+    ensure_counterparty_manager,
     IsCounterpartyManagerOrReadOnly,
     requires_company_scope,
 )
@@ -242,6 +243,7 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
         instance = serializer.instance
         if requires_company_scope(user):
             ensure_scoped_write(user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید.")
+        ensure_counterparty_manager(user, instance.company_id)
         party_data, role_data, flat_bank, _rows = serializer.split_validated()
         new_nid = party_data.get('national_id')
         if new_nid and new_nid != instance.party.national_id:
@@ -257,6 +259,7 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         if requires_company_scope(self.request.user):
             ensure_scoped_write(self.request.user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید حذف کنید.")
+        ensure_counterparty_manager(self.request.user, instance.company_id)
         instance_id, instance_name, company_id = instance.id, instance.name, instance.company_id
         # ص۵: طرف حساب دارای فاکتور یا تراکنش تنخواه فقط غیرفعال می‌شود
         result = remove_counterparty(instance, self.request.user)
@@ -315,6 +318,7 @@ class PartyBankAccountViewSet(viewsets.ModelViewSet):
     def _ensure_party_scope(self, party):
         if requires_company_scope(self.request.user):
             ensure_scoped_write(self.request.user, party.company_id, "فقط حساب بانکی طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید تغییر دهید.")
+        ensure_counterparty_manager(self.request.user, party.company_id)
 
     def perform_create(self, serializer):
         party = serializer.validated_data.get('party')
