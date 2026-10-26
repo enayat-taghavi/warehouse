@@ -35,7 +35,8 @@ from ..serializers import (
     CompanyPayrollProfileSerializer,
 )
 from .scope_helpers import broadcast_org_structure_updated
-from ..fiscal import to_shamsi_str
+from ..fiscal import to_shamsi_str, ensure_period_open
+from .. import company_bank
 
 # ویوست‌های مدیریت ساختار سازمانی، شرکت، پروژه، بخش، طرف‌حساب و فاکتور
 # ══════════════════════════════════════════════════════════════════════════════
@@ -298,7 +299,11 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
 
         # ثبت حساب یعنی ثبت شبا: کار حساس (ت۹)
         ensure_company_section(user, company.id, 'bank_sheba', 'write')
-        instance = serializer.save()
+        # موجودی اولیه پایهٔ دورهٔ بسته نمی‌شود و ثبت آن در سابقه می‌آید (ص۳ و ص۵ طرح ۳.۳)
+        ensure_period_open(company.id, serializer.validated_data.get('opening_balance_date'), 'opening_balance_date')
+        with transaction.atomic():
+            instance = serializer.save()
+            company_bank.record_opening_change(instance, None, None, user)
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_bank_account', 'create', instance.id, instance.sheba_number, company_id=instance.company_id, client_tab_id=tab_id, sender_id=user.id)
 
@@ -317,6 +322,8 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         user = self.request.user
         ensure_company_section(user, instance.company_id, 'bank', 'write')
+        if company_bank.bank_account_has_movements(instance):
+            raise serializers.ValidationError({'detail': "این حساب گردش دارد و حذف نمی‌شود؛ آن را غیرفعال کنید."})
         instance_id = instance.id
         sheba = instance.sheba_number
         comp_id = instance.company_id
@@ -335,7 +342,69 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
         account.save()
         tab_id = request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_bank_account', 'update', account.id, account.sheba_number, company_id=account.company_id, client_tab_id=tab_id, sender_id=request.user.id)
-        return Response(CompanyBankAccountSerializer(account).data, status=status.HTTP_200_OK)
+        return Response(self.get_serializer(account).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='set-opening-balance')
+    def set_opening_balance(self, request, pk=None):
+        """تغییر موجودی اولیه و تاریخ آن با سابقه (ص۳ طرح ۳.۳)؛ تکرار همان بدنه بی‌اثر است."""
+        account = self.get_object()
+        user = request.user
+        ensure_company_section(user, account.company_id, 'bank', 'write')
+        amount_field = serializers.DecimalField(max_digits=15, decimal_places=0, min_value=0)
+        try:
+            amount = amount_field.run_validation(request.data.get('opening_balance', 0) or 0)
+        except serializers.ValidationError as exc:
+            raise serializers.ValidationError({'opening_balance': exc.detail})
+        raw_date = request.data.get('opening_balance_date')
+        if raw_date in (None, ''):
+            raise serializers.ValidationError({'opening_balance_date': "تاریخ موجودی اولیه الزامی است."})
+        day = to_shamsi_str(raw_date)
+        if not day:
+            raise serializers.ValidationError({'opening_balance_date': "تاریخ نامعتبر است."})
+        reason = str(request.data.get('reason') or '').strip()
+
+        with transaction.atomic():
+            account = CompanyBankAccount.objects.select_for_update().get(pk=account.pk)
+            if account.opening_balance == amount and account.opening_balance_date == day:
+                return Response(self.get_serializer(account).data, status=status.HTTP_200_OK)
+            had_movements = company_bank.bank_account_has_movements(account)
+            if had_movements:
+                ensure_company_section(user, account.company_id, 'bank_opening_balance', 'write')
+                if not reason:
+                    raise serializers.ValidationError({'reason': "علت تغییر الزامی است."})
+            ensure_period_open(account.company_id, account.opening_balance_date, 'opening_balance_date')
+            ensure_period_open(account.company_id, day, 'opening_balance_date')
+            old_amount, old_date = account.opening_balance, account.opening_balance_date
+            account.opening_balance, account.opening_balance_date = amount, day
+            account.save(update_fields=['opening_balance', 'opening_balance_date', 'updated_at'])
+            company_bank.record_opening_change(account, old_amount, old_date, user, reason, had_movements)
+
+        tab_id = request.headers.get('X-Client-Tab-Id')
+        broadcast_org_structure_updated('company_bank_account', 'update', account.id, account.sheba_number, company_id=account.company_id, client_tab_id=tab_id, sender_id=user.id)
+        return Response(self.get_serializer(account).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='opening-history')
+    def opening_history(self, request, pk=None):
+        """سابقهٔ ثبت و تغییر موجودی اولیه (ص۵)؛ فقط سطح خواندن `bank`، نه عضو ساده."""
+        account = self.get_object()
+        ensure_company_section(request.user, account.company_id, 'bank', 'read')
+        rows = account.opening_balance_changes.select_related('changed_by').order_by('-changed_at', '-id')
+        results = []
+        for row in rows:
+            by = row.changed_by
+            results.append({
+                'id': row.id,
+                'old_amount': None if row.old_amount is None else str(row.old_amount),
+                'old_date': row.old_date,
+                'new_amount': str(row.new_amount),
+                'new_date': row.new_date,
+                'reason': row.reason,
+                'had_movements': row.had_movements,
+                'changed_by_name': (by.get_full_name() or by.username) if by else None,
+                'changed_at': row.changed_at.isoformat(),
+                'changed_at_shamsi': to_shamsi_str(row.changed_at),
+            })
+        return Response({'count': len(results), 'results': results})
 
 class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
     """

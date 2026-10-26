@@ -40,4 +40,7 @@ COMPANY_PERMISSION_SECTIONS = (
      'sensitive': True, 'studio': 'fiscal'},
     {'key': 'bank_sheba', 'label_fa': 'ثبت و تغییر شبا، و حساب اصلی', 'order': 230, 'kind': 'action',
      'sensitive': True, 'studio': 'treasury'},
+    # پس از اولین گردش حساب، تغییر موجودی اولیه این مجوز جدا را می‌خواهد (ص۴ طرح ۳.۳)
+    {'key': 'bank_opening_balance', 'label_fa': 'تغییر موجودی اولیهٔ حساب بانکی پس از گردش', 'order': 240,
+     'kind': 'action', 'sensitive': True, 'studio': 'treasury'},
 )

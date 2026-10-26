@@ -91,6 +91,9 @@ class CompanyBankAccount(models.Model):
     account_title = models.CharField(max_length=150, blank=True, null=True, verbose_name="عنوان/کاربرد حساب (مثلاً: واریز حقوق، تنخواه، بازرگانی)")
     is_primary = models.BooleanField(default=False, verbose_name="حساب اصلی / پیش‌فرض تسویه حقوق")
     is_active = models.BooleanField(default=True, verbose_name="فعال")
+    # موجودی اولیه (ص۱ طرح ۳.۳): ریال، منفی نه؛ فقط با کنش «تغییر موجودی اولیه» عوض می‌شود
+    opening_balance = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="موجودی اولیه (ریال)")
+    opening_balance_date = models.CharField(max_length=10, null=True, blank=True, verbose_name="تاریخ موجودی اولیه (شمسی)")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
 
@@ -122,6 +125,36 @@ class CompanyBankAccount(models.Model):
         if self.is_primary:
             CompanyBankAccount.objects.filter(company=self.company, is_primary=True).exclude(pk=self.pk).update(is_primary=False)
         # جایگزینی حساب اصلی پس از حذف در سیگنال post_delete است (signals.handle_bank_account_deleted)
+
+
+class CompanyBankOpeningBalanceChange(models.Model):
+    """سابقهٔ ثبت و تغییر موجودی اولیهٔ حساب بانکی شرکت (ص۵ طرح ۳.۳، ق۸)؛ گردش حساب شمرده نمی‌شود."""
+    account = models.ForeignKey(
+        CompanyBankAccount,
+        on_delete=models.CASCADE,
+        related_name='opening_balance_changes',
+        verbose_name="حساب بانکی",
+    )
+    old_amount = models.DecimalField(max_digits=15, decimal_places=0, null=True, blank=True, verbose_name="موجودی قبلی")
+    old_date = models.CharField(max_length=10, null=True, blank=True, verbose_name="تاریخ قبلی")
+    new_amount = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="موجودی تازه")
+    new_date = models.CharField(max_length=10, null=True, blank=True, verbose_name="تاریخ تازه")
+    reason = models.TextField(blank=True, default='', verbose_name="علت تغییر")
+    had_movements = models.BooleanField(default=False, verbose_name="حساب گردش داشت")
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="کاربر",
+    )
+    changed_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان")
+
+    class Meta:
+        verbose_name = "سابقهٔ موجودی اولیهٔ حساب بانکی"
+        verbose_name_plural = "سابقهٔ موجودی اولیهٔ حساب‌های بانکی"
+        ordering = ['-changed_at', '-id']
 
 
 def primary_bank_account(company):

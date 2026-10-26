@@ -14,6 +14,7 @@ from .models_domains.base import (
 from .models_domains.organization import (
     CompanyDocument,
     CompanyBankAccount,
+    CompanyBankOpeningBalanceChange,
     CompanyBoardMember,
     CompanyFiscalPeriod,
     CompanyPayrollProfile,
@@ -69,6 +70,7 @@ __all__ = [
     '_WarehouseCompatMixin',
     'CompanyDocument',
     'CompanyBankAccount',
+    'CompanyBankOpeningBalanceChange',
     'CompanyBoardMember',
     'CompanyFiscalPeriod',
     'CompanyPayrollProfile',

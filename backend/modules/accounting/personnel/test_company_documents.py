@@ -246,7 +246,7 @@ class CompanyDocumentTests(TestCase):
 
         # ۱. ثبت حساب اول (ملت)
         resp1 = self.client.post('/api/personnel/company-bank-accounts/', {
-            'company': self.company_a.id,
+            'company': self.company_a.id, 'opening_balance_date': '1405/01/01',
             'bank_name': 'بانک ملت',
             'account_number': '1234567890',
             'sheba_number': sheba_mellat,
@@ -261,7 +261,7 @@ class CompanyDocumentTests(TestCase):
 
         # ۲. ثبت حساب دوم (ملی) بدون تعیین is_primary
         resp2 = self.client.post('/api/personnel/company-bank-accounts/', {
-            'company': self.company_a.id,
+            'company': self.company_a.id, 'opening_balance_date': '1405/01/01',
             'bank_name': 'بانک ملی ایران',
             'account_number': '9876543210',
             'sheba_number': sheba_melli,
@@ -309,7 +309,7 @@ class CompanyDocumentTests(TestCase):
         sheba_valid = generate_sheba_from_account('012', '5555555555')
         self.client.force_authenticate(user=self.user_b)
         resp_forbidden = self.client.post('/api/personnel/company-bank-accounts/', {
-            'company': self.company_a.id,
+            'company': self.company_a.id, 'opening_balance_date': '1405/01/01',
             'bank_name': 'بانک ملت',
             'account_number': '5555555555',
             'sheba_number': sheba_valid,
@@ -708,7 +708,7 @@ class CompanyProtectAndShebaTests(TestCase):
 
     def test_duplicate_sheba_in_same_company_is_rejected(self):
         url = '/api/personnel/company-bank-accounts/'
-        body = {'company': self.company.id, 'bank_name': 'B', 'account_number': '1', 'sheba_number': 'IR820540102680020817909002'}
+        body = {'company': self.company.id, 'opening_balance_date': '1405/01/01', 'bank_name': 'B', 'account_number': '1', 'sheba_number': 'IR820540102680020817909002'}
         self.assertEqual(self.client.post(url, body, format='json').status_code, 201)
         r = self.client.post(url, {**body, 'account_number': '2'}, format='json')
         self.assertEqual(r.status_code, 400, r.content)
@@ -737,7 +737,7 @@ class CompanySectionGateTests(TestCase):
         url = '/api/personnel/company-bank-accounts/'
         self.assertEqual(self.client.get(f'{url}?company_id={self.a.id}').status_code, 200)
         self.assertEqual(self.client.get(f'{url}?company_id={self.b.id}').status_code, 403)
-        body = {'company': self.a.id, 'bank_name': 'X', 'account_number': '9', 'sheba_number': 'IR820540102680020817909002'}
+        body = {'company': self.a.id, 'opening_balance_date': '1405/01/01', 'bank_name': 'X', 'account_number': '9', 'sheba_number': 'IR820540102680020817909002'}
         self.assertEqual(self.client.post(url, body, format='json').status_code, 403)  # bank_sheba is sensitive
 
     def test_board_member_cannot_be_moved_to_other_company(self):

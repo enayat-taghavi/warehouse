@@ -66,7 +66,7 @@ class CompanySerializer(CoreCompanySerializer):
             accounts = [a for a in obj.bank_accounts.all() if a.is_active]
         else:
             accounts = obj.bank_accounts.filter(is_active=True)
-        return CompanyBankAccountSerializer(accounts, many=True).data
+        return CompanyBankAccountSerializer(accounts, many=True, context=self.context).data
 
     def get_board_members(self, obj):
         if hasattr(obj, '_prefetched_objects_cache') and 'board_members' in obj._prefetched_objects_cache:
@@ -196,16 +196,44 @@ class CompanyPayrollProfileSerializer(serializers.ModelSerializer):
 
 class CompanyBankAccountSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True)
+    has_movements = serializers.SerializerMethodField()
 
     class Meta:
         model = CompanyBankAccount
         fields = [
             'id', 'company', 'company_name', 'bank_name', 'account_number',
             'sheba_number', 'account_title', 'is_primary', 'is_active',
+            'opening_balance', 'opening_balance_date', 'has_movements',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
         validators = []
+        extra_kwargs = {'opening_balance': {'required': False, 'min_value': 0}}
+
+    OPENING_FIELDS = ('opening_balance', 'opening_balance_date')
+
+    def get_has_movements(self, obj):
+        from ..company_bank import bank_account_has_movements
+        return bank_account_has_movements(obj)
+
+    def to_representation(self, instance):
+        # رقم موجودی اولیه فقط برای مدیر کل و سطح خواندن `bank` (ص۶ طرح ۳.۳، ق۱۶)؛ بی request = پوشیده
+        from ..company_bank import can_see_opening_balance
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if not can_see_opening_balance(getattr(request, 'user', None), instance.company_id):
+            for field in self.OPENING_FIELDS:
+                data[field] = None
+        return data
+
+    def validate_opening_balance_date(self, value):
+        if value in (None, ''):
+            return None
+        from ..fiscal import to_shamsi_str
+        day = to_shamsi_str(value)
+        if not day:
+            raise serializers.ValidationError("تاریخ نامعتبر است.")
+        return day
 
     def validate_sheba_number(self, value):
         if not value:
@@ -226,6 +254,20 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
                 dup = dup.exclude(pk=self.instance.pk)
             if dup.exists():
                 raise serializers.ValidationError({'sheba_number': "این شماره شبا قبلاً برای همین شرکت ثبت شده است."})
+        if self.instance is None:
+            # حساب تازه: تاریخ موجودی اولیه الزامی، موجودی خالی = صفر (ص۲ طرح ۳.۳)
+            if not attrs.get('opening_balance_date'):
+                raise serializers.ValidationError({'opening_balance_date': "تاریخ موجودی اولیه الزامی است."})
+            if attrs.get('opening_balance') is None:
+                attrs['opening_balance'] = 0
+        else:
+            # ویرایش عادی موجودی اولیه را عوض نمی‌کند؛ فقط کنش «تغییر موجودی اولیه» (ص۲)
+            for field in self.OPENING_FIELDS:
+                if field in attrs:
+                    if attrs[field] != getattr(self.instance, field):
+                        raise serializers.ValidationError(
+                            {field: "موجودی اولیه فقط از «تغییر موجودی اولیه» عوض می‌شود."})
+                    attrs.pop(field)
         return attrs
 
 class CompanyFiscalPeriodSerializer(serializers.ModelSerializer):
