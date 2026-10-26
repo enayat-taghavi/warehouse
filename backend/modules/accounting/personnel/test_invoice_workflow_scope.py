@@ -167,9 +167,11 @@ class InvoiceScopeScenarioTests(TestCase):
             self.assertEqual(stats['errors'], [])
             counts.append((stats['reminders'], stats['escalations']))
         self.assertEqual(counts, [(1, 1), (0, 0)])
-        kinds = [m['workflow_event'] for _g, m in layer.sent]
+        # فقط پیام‌های رویداد گردش کار (اعلان ۲.۴ و پیام‌های دیگر ماژول از همین لایه هم می‌گذرند)
+        wf_sent = [(g, m) for g, m in layer.sent if 'workflow_event' in m]
+        kinds = [m['workflow_event'] for _g, m in wf_sent]
         self.assertEqual((kinds.count('reminder'), kinds.count('escalation')), (1, 1))
-        for group, _m in layer.sent:
+        for group, _m in wf_sent:
             self.assertTrue(PERSONAL.match(group) or group == realtime.SUPERUSER_GROUP, group)
 
 

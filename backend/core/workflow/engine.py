@@ -32,11 +32,12 @@ from .models import (
     WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient, WorkflowThreshold,
 )
 from .recipients import (
-    clear_task_recipients, compute_recipients_batch, creator_rank as _creator_rank, row_valid_on,
-    sync_task_recipients,
+    clear_task_recipients, company_member_pairs, compute_recipients_batch, creator_rank as _creator_rank,
+    row_valid_on, sync_task_recipients, valid_rows_q,
 )
 from .registry import (
-    ACT, APPROVE, CANCELLED, COMPLETED, REJECT, REJECTED, RETURN, RETURNED, get_spec, workflow_specs,
+    ACT, APPROVE, CANCELLED, COMPLETED, REFER, REFERRAL_KINDS, REJECT, REJECTED, RETURN, RETURNED, get_spec,
+    workflow_specs,
 )
 
 # کدهای دلیل رد شدن مرحله (ت۱۴)
@@ -182,8 +183,16 @@ def _compute_recipients(ctx, instance, step, today=None):
     (دریافت‌کنندگان اصلی، ردیف‌های جانشین، دارندگان نقش) مرحله برای این نمونه؛ همان قاعدهٔ مسیر دسته‌ای
     (compute_recipients_batch با یک کار).
     """
-    item = (0, _section_triplet(ctx.section), step.role, step.permission, instance.created_by_id)
+    item = (0, _section_triplet(ctx.section), step.role, step.permission, instance.created_by_id, None,
+            getattr(instance, "allow_substitute", True))
     return compute_recipients_batch([item], bundles=ctx.bundles, today=today)[0]
+
+
+def _referral_recipients(instance, target_ids, today=None) -> dict:
+    """{target_id: (principals, sub_rows, holders)} کارهای ارجاع این نمونه (ر۵)؛ همان مسیر دسته‌ای."""
+    items = [(t, (None, None, instance.company_id), '', '', instance.created_by_id, t, instance.allow_substitute)
+             for t in target_ids]
+    return compute_recipients_batch(items, today=today)
 
 
 def no_recipient_reason(instance, holders):
@@ -313,7 +322,8 @@ def _ensure_current_version(instance, ctx, now=None) -> bool:
     instance.version = spec.version
     instance.step_keys = new_keys
     instance.skip_plan = {k: v for k, v in (instance.skip_plan or {}).items() if k in new_keys}
-    task = WorkflowTask.objects.select_for_update().filter(instance=instance, is_open=True).first()
+    task = WorkflowTask.objects.select_for_update().filter(
+        instance=instance, is_open=True, track=WorkflowTask.TRACK_STEP).first()
     if current in new_keys:
         step = spec.step(current)
         if task is not None:
@@ -392,6 +402,8 @@ def submit(workflow_key, obj, user):
     مجوز ارسال را ماژول می‌سنجد. نمونهٔ در جریان یا بسته (پایان‌یافته/ردشده) 409 already_in_progress می‌دهد.
     """
     spec = get_spec(workflow_key)
+    if spec.referral_only:
+        raise WorkflowError('referral_only', 'این سند گردش تأیید ندارد و فقط ارجاع می‌گیرد', 400)
     entity_id = obj.pk
     section = _load_section(getattr(obj, f'{spec.section_field}_id', None))
     ctx = _Ctx(spec, obj, section)
@@ -404,8 +416,9 @@ def submit(workflow_key, obj, user):
         if instance is None:
             instance = WorkflowInstance(workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=entity_id)
         else:
-            # کار بازِ جامانده (نباید باشد) کنار گذاشته می‌شود
-            for stale in WorkflowTask.objects.select_for_update().filter(instance=instance, is_open=True):
+            # کار مرحلهٔ بازِ جامانده (نباید باشد) کنار گذاشته می‌شود؛ ارجاع‌های باز (پس از عودت) می‌مانند (ر۹)
+            for stale in WorkflowTask.objects.select_for_update().filter(
+                    instance=instance, is_open=True, track=WorkflowTask.TRACK_STEP):
                 _close_task(stale, WorkflowTask.SUPERSEDED, None, now)
         instance.version = spec.version
         instance.company_id = section.project.company_id
@@ -499,6 +512,9 @@ def _begin_action(user, task, revision, obj, action, reason, require_reason):
         raise TaskAlreadyDone()
     instance = _lock_instance(instance_id)
     locked = _lock_task(task_id)
+    if locked.track != WorkflowTask.TRACK_STEP:
+        # کار ارجاع فقط با «انجام شد» یا «رؤیت شد» بسته می‌شود (complete_referral)
+        raise WorkflowPermissionDenied('action_not_allowed', 'این اقدام در این مرحله مجاز نیست', 403)
     if not locked.is_open or instance.status != WorkflowInstance.IN_PROGRESS:
         raise TaskAlreadyDone()
     ctx = _ctx_for(instance, obj)
@@ -542,13 +558,24 @@ def act(user, task, *, reason='', revision=None, obj=None):
     return instance
 
 
-def _close_instance(user, task, reason, revision, obj, action, outcome, status, state, kind, history_action):
+def _close_referrals(instance, user, now) -> None:
+    """ر۹: رد قطعی و لغو نمونه کارهای ارجاع باز آن را با cancelled می‌بندند (نمونه باید قفل باشد)."""
+    for task in WorkflowTask.objects.select_for_update().filter(
+            instance=instance, is_open=True, track=WorkflowTask.TRACK_REFERRAL).order_by('pk'):
+        holders = _close_task(task, WorkflowTask.CANCELLED, user, now)
+        events.emit(events.REMOVED, instance, task, holders, actor_id=getattr(user, 'pk', None))
+
+
+def _close_instance(user, task, reason, revision, obj, action, outcome, status, state, kind, history_action,
+                    close_referrals=False):
     _sync_version_first(_instance_id_of_task(task), obj)
     now = timezone.now()
     with transaction.atomic():
         instance, task, ctx, (as_su, behalf) = _begin_action(user, task, revision, obj, action, reason, True)
         from_step = task.step_key
         _finish_task(instance, task, user, outcome, now)
+        if close_referrals:
+            _close_referrals(instance, user, now)
         instance.status = status
         instance.current_step = ''
         instance.closed_at = now
@@ -569,7 +596,8 @@ def return_for_fix(user, task, reason, obj=None, *, revision=None):
 def reject(user, task, reason, obj=None, *, revision=None):
     """رد قطعی سند (دلیل اجباری)؛ پایانی است."""
     return _close_instance(user, task, reason, revision, obj, REJECT, WorkflowTask.REJECTED,
-                           WorkflowInstance.REJECTED, REJECTED, events.REJECTED, WorkflowStep.REJECT)
+                           WorkflowInstance.REJECTED, REJECTED, events.REJECTED, WorkflowStep.REJECT,
+                           close_referrals=True)
 
 
 def cancel(user, instance_or_task, *, reason='', obj=None):
@@ -592,11 +620,13 @@ def cancel(user, instance_or_task, *, reason='', obj=None):
             raise WorkflowStateError('cancel_not_allowed', 'پس از اقدام نفر دیگر، لغو ممکن نیست', 409)
         ctx = _ctx_for(instance, obj)
         _ensure_current_version(instance, ctx, now)
-        task = WorkflowTask.objects.select_for_update().filter(instance=instance, is_open=True).first()
+        task = WorkflowTask.objects.select_for_update().filter(
+            instance=instance, is_open=True, track=WorkflowTask.TRACK_STEP).first()
         from_step = instance.current_step
         if task is not None:
             holders = _close_task(task, WorkflowTask.CANCELLED, user, now)
             events.emit(events.REMOVED, instance, task, holders)
+        _close_referrals(instance, user, now)
         instance.status = WorkflowInstance.CANCELLED
         instance.current_step = ''
         instance.closed_at = now
@@ -621,7 +651,7 @@ def open_task(workflow_key, entity_id):
     spec = get_spec(workflow_key)
     return WorkflowTask.objects.filter(
         instance__workflow_key=workflow_key, instance__entity_kind=spec.entity_kind,
-        instance__entity_id=entity_id, is_open=True,
+        instance__entity_id=entity_id, is_open=True, track=WorkflowTask.TRACK_STEP,
     ).select_related('instance').first()
 
 
@@ -638,3 +668,220 @@ def task_grants_view(user, kind, entity_id) -> bool:
     ).filter(
         Q(on_behalf_of__isnull=True) | Q(valid_from__lte=today, valid_to__gte=today)
     ).exists()
+
+
+# ─── ارجاع (طرح ۲.۳-و) ───────────────────────────────────────────────────────────
+
+MAX_REFERRAL_TARGETS = 20
+MAX_TEXT_LENGTH = 4000
+REFERRAL_CLOSED_STATUSES = (WorkflowInstance.CANCELLED, WorkflowInstance.REJECTED)
+
+
+def _instance_id_of(instance_or_id):
+    if isinstance(instance_or_id, WorkflowInstance):
+        return instance_or_id.pk
+    if isinstance(instance_or_id, WorkflowTask):
+        return instance_or_id.instance_id
+    return int(instance_or_id)
+
+
+def _hook_allows_refer(user, instance) -> bool:
+    """قلاب ماژول can_refer:<entity_kind> (ارجاع ریشه، مثل دبیرخانه)؛ خطای قلاب یعنی منع."""
+    from platform_core.registry import contributions
+    for fn in contributions(f'can_refer:{instance.entity_kind}'):
+        try:
+            if fn(user, instance.entity_id) is True:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _clean_targets(user, targets) -> list:
+    out = []
+    try:
+        for t in targets or ():
+            t = int(t)
+            if t not in out:
+                out.append(t)
+    except (TypeError, ValueError):
+        raise WorkflowError('invalid_targets', 'گیرندگان ارجاع نامعتبرند', 400)
+    if not out or len(out) > MAX_REFERRAL_TARGETS:
+        raise WorkflowError('invalid_targets', f'ارجاع باید ۱ تا {MAX_REFERRAL_TARGETS} گیرنده داشته باشد', 400)
+    if user.pk in out:
+        raise WorkflowError('self_target', 'ارجاع به خود ممکن نیست', 400)
+    return out
+
+
+def _refer_not_allowed():
+    return WorkflowPermissionDenied('refer_not_allowed', 'شما اجازهٔ ارجاع این سند را ندارید', 403)
+
+
+def refer(user, instance_or_id, targets, *, kind, instruction='', due_at=None, parent_task=None) -> list:
+    """
+    ر۶: ارجاع سند به ۱ تا ۲۰ کاربر فعال و عضو شرکت نمونه؛ برای هر گیرنده یک شاخهٔ موازی (کار مسیر referral).
+    ارجاع‌دهنده: دریافت‌کنندهٔ معتبر امروز یک کار باز همین نمونه (والد همان کار)، یا کسی که قلاب
+    can_refer:<entity_kind> اجازه دهد، یا مدیر کل فعال. ارجاع کار والد را نمی‌بندد. خروجی کارهای ساخته‌شده.
+    """
+    if kind not in REFERRAL_KINDS:
+        raise WorkflowError('invalid_kind', 'نوع ارجاع باید «ارجاع» یا «برای اطلاع» باشد', 400)
+    if not getattr(user, 'is_active', False) or not user.pk:
+        raise WorkflowPermissionDenied()
+    target_ids = _clean_targets(user, targets)
+    instruction = (instruction or '').strip()
+    if len(instruction) > MAX_TEXT_LENGTH:
+        raise WorkflowError('instruction_too_long', 'دستور ارجاع بیش از اندازه بلند است', 400)
+    now = timezone.now()
+    if due_at is not None and due_at <= now:
+        raise WorkflowError('invalid_due_at', 'مهلت باید در آینده باشد', 400)
+    today = timezone.localdate()
+    with transaction.atomic():
+        instance = _lock_instance(_instance_id_of(instance_or_id))
+        if instance.status in REFERRAL_CLOSED_STATUSES:
+            raise WorkflowStateError('instance_closed', 'این سند بسته شده و ارجاع نمی‌پذیرد', 409)
+        my_rows = WorkflowTaskRecipient.objects.filter(
+            user_id=user.pk, task__instance=instance, task__is_open=True).filter(valid_rows_q(today))
+        parent = None
+        if parent_task is not None:
+            parent = WorkflowTask.objects.select_for_update().filter(pk=_task_id(parent_task)).first()
+            if parent is None or parent.instance_id != instance.pk:
+                raise WorkflowError('invalid_parent', 'کار والد از این سند نیست', 400)
+            if not parent.is_open:
+                raise TaskAlreadyDone()
+            my_rows = my_rows.filter(task_id=parent.pk)
+        row = my_rows.order_by('task_id', 'on_behalf_of_id').first()
+        as_su = False
+        if row is not None:
+            # دریافت‌کنندهٔ کار باز: والد همان کار (اگر داده نشده، اولین کار باز او در این سند)
+            if parent is None:
+                parent = _lock_task(row.task_id)
+        elif user.is_superuser:
+            as_su = True
+        elif parent is not None or not _hook_allows_refer(user, instance):
+            raise _refer_not_allowed()
+        if not as_su and (user.pk, instance.company_id) not in company_member_pairs([user.pk], [instance.company_id]):
+            raise _refer_not_allowed()
+        computed = _referral_recipients(instance, target_ids, today=today)
+        if any(not computed[t][0] for t in target_ids):
+            raise WorkflowError('target_not_member', 'گیرندهٔ ارجاع باید کاربر فعال همین شرکت باشد', 400)
+        created = []
+        for target in target_ids:
+            principals, subs, _holders = computed[target]
+            task = WorkflowTask.objects.create(
+                instance=instance, step_key=kind, step_kind=kind, role='', permission='',
+                revision=instance.revision, is_open=True, has_recipients=True, opened_at=now,
+                track=WorkflowTask.TRACK_REFERRAL, target_user_id=target, parent_task=parent, referred_by=user,
+                instruction=instruction, due_at=due_at,
+            )
+            received, _removed = sync_task_recipients(task, principals, subs, today=today)
+            events.emit(events.RECEIVED, instance, task, received, actor_id=user.pk)
+            _history(instance, WorkflowStep.REFER, task=task, actor=user,
+                     on_behalf_of_id=row.on_behalf_of_id if row is not None else None, as_superuser=as_su,
+                     from_step=parent.step_key if parent is not None else '', to_step=kind, now=now)
+            created.append(task)
+    return created
+
+
+def _authorize_referral(user, instance, task, today):
+    """
+    ر۷: فقط گیرندهٔ کار یا جانشین معتبرش (اگر نمونه جانشین بپذیرد)، تازه در لحظهٔ اقدام؛ مدیر کل استثنا ندارد و
+    قاعدهٔ ثبت‌کننده نیست. خروجی on_behalf_of_id.
+    """
+    if not getattr(user, 'is_active', False) or not user.pk:
+        raise WorkflowPermissionDenied()
+    target = task.target_user_id
+    principals, subs, _holders = _referral_recipients(instance, [target], today=today)[target]
+    if user.pk in principals:
+        return None
+    behalf = min((p for s, p, start, end in subs if s == user.pk and row_valid_on(p, start, end, today)),
+                 default=None)
+    if behalf is None:
+        raise WorkflowPermissionDenied()
+    return behalf
+
+
+def complete_referral(user, task, *, action, reply='', revision=None):
+    """
+    ر۷: بستن کار ارجاع؛ «ارجاع» با done (پاسخ اختیاری) و «برای اطلاع» با seen. همان قفل نمونه و کار و 409
+    task_already_done (ت۱۳). شاخه‌های فرزند باز می‌مانند. خروجی کار بسته‌شده.
+    """
+    now = timezone.now()
+    reply = (reply or '').strip()
+    if len(reply) > MAX_TEXT_LENGTH:
+        raise WorkflowError('reply_too_long', 'پاسخ بیش از اندازه بلند است', 400)
+    with transaction.atomic():
+        instance_id = _instance_id_of_task(task)
+        if instance_id is None:
+            raise TaskAlreadyDone()
+        instance = _lock_instance(instance_id)
+        locked = _lock_task(_task_id(task))
+        if locked.track != WorkflowTask.TRACK_REFERRAL:
+            raise WorkflowPermissionDenied('action_not_allowed', 'این اقدام در این مرحله مجاز نیست', 403)
+        if not locked.is_open:
+            raise TaskAlreadyDone()
+        behalf = _authorize_referral(user, instance, locked, timezone.localdate())
+        if revision is not None and int(revision) != locked.revision:
+            raise TaskAlreadyDone()
+        expected = WorkflowStep.DONE if locked.step_kind == REFER else WorkflowStep.SEEN
+        if action != expected:
+            raise WorkflowPermissionDenied('action_not_allowed', 'این اقدام در این مرحله مجاز نیست', 403)
+        if reply:
+            locked.reply = reply
+            locked.save(update_fields=['reply'])
+        holders = _close_task(locked, WorkflowTask.ACTED, user, now)
+        events.emit(events.DONE, instance, locked, {user.pk, locked.referred_by_id}, actor_id=user.pk)
+        events.emit(events.REMOVED, instance, locked, holders - {user.pk}, actor_id=user.pk)
+        _history(instance, action, task=locked, actor=user, on_behalf_of_id=behalf, from_step=locked.step_key,
+                 reason=reply, now=now)
+    return locked
+
+
+def mark_read(user, task) -> bool:
+    """ر۸: زمان خواندن ردیف‌های معتبر امروز همین کاربر روی کار باز، فقط بار اول. True اگر چیزی نوشت."""
+    if not getattr(user, 'is_active', False) or not getattr(user, 'pk', None):
+        return False
+    return bool(
+        WorkflowTaskRecipient.objects.filter(
+            task_id=_task_id(task), task__is_open=True, user_id=user.pk, read_at__isnull=True,
+        ).filter(valid_rows_q(timezone.localdate())).update(read_at=timezone.now())
+    )
+
+
+def open_for_referral(workflow_key, obj, user):
+    """
+    ر۱۵: نمونهٔ گردش «فقط ارجاع» سند (وضعیت completed، بی‌کار مرحله) را می‌سازد یا نمونهٔ موجود را برمی‌گرداند.
+    مجوز ساختن را ماژول می‌سنجد.
+    """
+    spec = get_spec(workflow_key)
+    if not spec.referral_only:
+        raise WorkflowError('not_referral_only', 'این گردش فقط ارجاع نیست', 400)
+    existing = instance_of(workflow_key, obj.pk)
+    if existing is not None:
+        return existing
+    section = _load_section(getattr(obj, f'{spec.section_field}_id', None))
+    now = timezone.now()
+    instance = WorkflowInstance(
+        workflow_key=workflow_key, version=spec.version, entity_kind=spec.entity_kind, entity_id=obj.pk,
+        company_id=section.project.company_id, section=section, created_by=user,
+        status=WorkflowInstance.COMPLETED, step_keys=[], amount=_amount(spec, obj), summary=_summary(spec, obj),
+        submitted_at=now, closed_at=now,
+    )
+    try:
+        with transaction.atomic():
+            instance.save()
+    except IntegrityError:
+        return instance_of(workflow_key, obj.pk)
+    return instance
+
+
+def set_allow_substitute(instance, value) -> WorkflowInstance:
+    """ر۴: پرچم جانشین نمونه؛ ردیف‌های جانشین کارهای باز بی‌درنگ با محاسبهٔ دوباره تازه می‌شوند."""
+    from .recompute import recompute_open_tasks
+    value = bool(value)
+    with transaction.atomic():
+        locked = _lock_instance(_instance_id_of(instance))
+        if locked.allow_substitute != value:
+            locked.allow_substitute = value
+            locked.save(update_fields=['allow_substitute', 'updated_at'])
+            recompute_open_tasks(company_ids=[locked.company_id])
+    return locked

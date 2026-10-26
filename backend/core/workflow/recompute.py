@@ -91,23 +91,33 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         instance_ids = _affected_instance_ids(company_ids, user_ids, all_tasks)
         if not instance_ids:
             return stats
+        # کار ارجاع باز روی نمونهٔ پایان‌یافته یا عودت‌شده هم می‌ماند (ر۵ و ر۹ طرح ۲.۳-و)
+        open_referrals = WorkflowTask.objects.filter(is_open=True, track=WorkflowTask.TRACK_REFERRAL).values('instance_id')
         instances = {
             inst.pk: inst for inst in WorkflowInstance.objects.select_for_update(of=('self',))
             .select_related('section__project')
-            .filter(pk__in=instance_ids, status=WorkflowInstance.IN_PROGRESS).order_by('pk')
+            .filter(Q(status=WorkflowInstance.IN_PROGRESS) | Q(pk__in=open_referrals), pk__in=instance_ids)
+            .order_by('pk')
         }
         specs = workflow_specs()
         stale_version = [
             inst for inst in instances.values()
-            if inst.workflow_key in specs and specs[inst.workflow_key].version != inst.version
+            if inst.status == WorkflowInstance.IN_PROGRESS and inst.workflow_key in specs
+            and specs[inst.workflow_key].version != inst.version
         ]
+        synced = set()
         for inst in stale_version:
+            # مسیر ت۱۵ فقط کار مرحله را تازه می‌کند؛ کارهای ارجاع همین نمونه پایین‌تر حساب می‌شوند
             _version_sync(inst, stats)
-            instances.pop(inst.pk)
+            synced.add(inst.pk)
         if not instances:
             return stats
-        tasks = list(WorkflowTask.objects.select_for_update().filter(
-            instance_id__in=list(instances), is_open=True).order_by('pk'))
+        tasks = [
+            t for t in WorkflowTask.objects.select_for_update().filter(
+                instance_id__in=list(instances), is_open=True).order_by('pk')
+            if t.track == WorkflowTask.TRACK_REFERRAL
+            or (t.instance_id not in synced and instances[t.instance_id].status == WorkflowInstance.IN_PROGRESS)
+        ]
         if not tasks:
             return stats
         stats['tasks'] = len(tasks)
@@ -116,8 +126,9 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         for task in tasks:
             inst = instances[task.instance_id]
             sec = inst.section
+            target = task.target_user_id if task.track == WorkflowTask.TRACK_REFERRAL else None
             items.append((task.pk, (sec.pk, sec.project_id, sec.project.company_id), task.role, task.permission,
-                          inst.created_by_id))
+                          inst.created_by_id, target, inst.allow_substitute))
         computed = compute_recipients_batch(items, bundles=bundles, today=today)
 
         existing = {}
@@ -131,8 +142,8 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         for task in tasks:
             inst = instances[task.instance_id]
             principals, subs, holders = computed[task.pk]
-            if (not principals and task.step_kind == APPROVE and task.has_recipients
-                    and inst.workflow_key in specs):
+            if (not principals and task.track == WorkflowTask.TRACK_STEP and task.step_kind == APPROVE
+                    and task.has_recipients and inst.workflow_key in specs):
                 lost.append((task, holders))
                 continue
             stale, new, changed, received, removed = diff_rows(

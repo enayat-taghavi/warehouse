@@ -106,32 +106,49 @@ def compute_recipients_batch(items, *, bundles=None, today=None) -> dict:
     دریافت‌کنندگان چند کار با شمار پرس‌وجوی ثابت (ت۳، ت۴، ت۱۰):
     یک پرس‌وجوی انتساب‌های پوشانندهٔ همهٔ بخش‌ها، effective_bundles() (اگر bundles داده نشود)، یک پرس‌وجوی
     تفاوت‌های کاربر، یک پرس‌وجوی جانشین‌ها و یک پرس‌وجوی عضویت جانشین‌ها در شرکت (فقط انتساب فعال).
-    items: [(key, (section_id, project_id, company_id), role, permission, creator_id)].
-    خروجی {key: (principals:set, sub_rows:list, holders:set)} که holders دارندگان فعال و غیر مدیر کل نقش‌اند.
+    items: [(key, (section_id, project_id, company_id), role, permission, creator_id[, target_user_id
+    [, allow_substitute]])]. target_user_id (کار ارجاع، ر۵ طرح ۲.۳-و): دریافت‌کنندهٔ اصلی فقط همین کاربر است، اگر
+    فعال و عضو فعال شرکت نمونه باشد؛ نقش، مجوز و قاعدهٔ ثبت‌کننده سنجیده نمی‌شود (یک پرس‌وجوی کاربر و یک پرس‌وجوی
+    عضویت برای همهٔ کارهای ارجاع). allow_substitute=False (ر۴): ردیف جانشین ساخته نمی‌شود.
+    خروجی {key: (principals:set, sub_rows:list, holders:set)} که holders دارندگان فعال و غیر مدیر کل نقش‌اند
+    (برای کار ارجاع همان principals).
     """
-    items = list(items)
+    items = [(*it[:5], it[5] if len(it) > 5 else None, it[6] if len(it) > 6 else True) for it in items]
     if not items:
         return {}
     today = today or timezone.localdate()
-    chains = {sid: (pid, cid) for _k, (sid, pid, cid), *_rest in items if sid is not None}
-    rows = covering_assignment_rows(chains)
-    if rows and bundles is None:
-        bundles = effective_bundles()
-    perm_holders = section_permission_holders(chains, {it[3] for it in items}, bundles=bundles, rows=rows) if rows else {}
-    index = CoveringIndex(rows)
+    step_items = [it for it in items if it[5] is None]
     out = {}
-    for key, (sid, pid, cid), role, permission, creator_id in items:
-        holders = {uid for uid, r, *_ in index.covering(sid, pid, cid) if r == role} if sid is not None else set()
-        allowed = perm_holders.get((sid, _split_code(permission)[1]), set()) if holders else set()
-        out[key] = ((holders & allowed) - {creator_id}, [], holders)
+    if step_items:
+        chains = {sid: (pid, cid) for _k, (sid, pid, cid), *_rest in step_items if sid is not None}
+        rows = covering_assignment_rows(chains) if chains else []
+        if rows and bundles is None:
+            bundles = effective_bundles()
+        perm_holders = (section_permission_holders(chains, {it[3] for it in step_items}, bundles=bundles, rows=rows)
+                        if rows else {})
+        index = CoveringIndex(rows)
+        for key, (sid, pid, cid), role, permission, creator_id, _t, _a in step_items:
+            holders = {uid for uid, r, *_ in index.covering(sid, pid, cid) if r == role} if sid is not None else set()
+            allowed = perm_holders.get((sid, _split_code(permission)[1]), set()) if holders else set()
+            out[key] = ((holders & allowed) - {creator_id}, [], holders)
+    ref_items = [it for it in items if it[5] is not None]
+    if ref_items:
+        from django.contrib.auth import get_user_model
+        targets = {it[5] for it in ref_items}
+        active = set(get_user_model().objects.filter(pk__in=list(targets), is_active=True)
+                     .values_list('pk', flat=True))
+        target_members = company_member_pairs(active, {it[1][2] for it in ref_items if it[1][2]})
+        for key, (_sid, _pid, cid), _role, _perm, _creator, target, _a in ref_items:
+            principals = {target} if (target, cid) in target_members else set()
+            out[key] = (principals, [], set(principals))
     all_principals = set().union(*(p for p, _s, _h in out.values()))
     companies = {cid for _k, (_s, _p, cid), *_r in items if cid}
     candidates = _substitute_candidates(all_principals, companies, today)
     if candidates:
         members = company_member_pairs({c[0] for c in candidates}, companies)
-        for key, (_sid, _pid, cid), _role, _perm, creator_id in items:
+        for key, (_sid, _pid, cid), _role, _perm, creator_id, _target, allow in items:
             principals = out[key][0]
-            if principals:
+            if principals and allow:
                 out[key][1].extend(_choose_substitutes(candidates, principals, cid, creator_id, today, members))
     return out
 

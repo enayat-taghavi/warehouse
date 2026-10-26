@@ -89,6 +89,10 @@ def escalation_targets(tasks, ranks=None) -> dict:
     index = CoveringIndex(covering_assignment_rows(chains)) if chains else CoveringIndex([])
     out = {}
     for task in tasks:
+        if task.track == WorkflowTask.TRACK_REFERRAL and task.referred_by_id:
+            # ر۱۰ طرح ۲.۳-و: خبر به بالاتر کار ارجاع فقط به ارجاع‌دهنده (نه دارندگان نقش بخش)
+            out[task.pk] = {task.referred_by_id}
+            continue
         sec = task.instance.section
         step_rank = ranks.get(task.role) or 0
         higher = [(uid, ranks.get(role) or 0) for uid, role, *_ in index.covering(sec.pk, sec.project_id,

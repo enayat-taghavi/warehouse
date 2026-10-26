@@ -20,6 +20,11 @@ RETURN = 'return'
 REJECT = 'reject'
 STEP_ACTIONS = (ACT, RETURN, REJECT)
 
+# نوع کار ارجاع (ر۲ طرح ۲.۳-و): «ارجاع» اقدام می‌خواهد، «برای اطلاع» فقط رؤیت؛ هرگز نوع مرحلهٔ اعلام‌شده نیست
+REFER = 'refer'
+INFORM = 'inform'
+REFERRAL_KINDS = (REFER, INFORM)
+
 # وضعیت‌های پایانی که به on_state_change داده می‌شوند (به‌جای کلید مرحله)
 COMPLETED = 'completed'
 RETURNED = 'returned'
@@ -49,6 +54,7 @@ class WorkflowSpec:
     - route: الگوی مسیر صفحهٔ سند در فرانت با '{id}'.
     - بخش سند از getattr(obj, f'{section_field}_id') و مبلغ (اختیاری) از getattr(obj, amount_field).
     - view_permission (اختیاری): مجوز بخشی که دارنده‌اش در بخش سند سابقهٔ گردش آن را هم می‌بیند (API سابقه).
+    - referral_only (ر۱۵ طرح ۲.۳-و): سند بی‌مرحله که فقط ارجاع می‌گیرد (steps=())؛ با engine.open_for_referral.
     """
     key: str
     version: int
@@ -61,6 +67,7 @@ class WorkflowSpec:
     section_field: str = 'section'
     amount_field: str | None = None
     view_permission: str | None = None
+    referral_only: bool = False
     _index: dict = field(default=None, init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self):
@@ -134,7 +141,9 @@ def validate_specs(items=None) -> dict:
             _fail(f'«{spec.key}»: نسخه باید عدد صحیح ۱ یا بیشتر باشد')
         if not spec.entity_kind:
             _fail(f'«{spec.key}»: نوع سند (entity_kind) خالی است')
-        if not spec.steps:
+        if spec.referral_only and spec.steps:
+            _fail(f'«{spec.key}»: گردش فقط ارجاع (referral_only) نباید مرحله داشته باشد')
+        if not spec.steps and not spec.referral_only:
             _fail(f'«{spec.key}»: دست‌کم یک مرحله لازم است')
         keys = [getattr(s, 'key', None) for s in spec.steps]
         if len(set(keys)) != len(keys):

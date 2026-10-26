@@ -48,6 +48,8 @@ class WorkflowInstance(models.Model):
     submitted_at = models.DateTimeField(default=timezone.now, verbose_name='زمان ارسال')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='آخرین تغییر')
     closed_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان بسته شدن')
+    # ر۴ طرح ۲.۳-و: False یعنی هیچ کار این نمونه (مرحله و ارجاع) به جانشین نمی‌رسد (سند محرمانه)
+    allow_substitute = models.BooleanField(default=True, verbose_name='جانشین مجاز است')
 
     class Meta:
         verbose_name = 'نمونهٔ گردش کار'
@@ -66,7 +68,16 @@ class WorkflowInstance(models.Model):
 
 
 class WorkflowTask(models.Model):
-    """یک بار رسیدن گردش به یک مرحله؛ فقط یک کار باز برای هر نمونه."""
+    """
+    یک بار رسیدن گردش به یک مرحله (مسیر step؛ فقط یک کار باز برای هر نمونه)، یا یک شاخهٔ ارجاع به کاربر مشخص
+    (مسیر referral، طرح ۲.۳-و؛ چند شاخهٔ باز هم‌زمان، بی‌نقش و مجوز). ماشین مرحله‌ها کار ارجاع را جابه‌جا نمی‌کند.
+    """
+    TRACK_STEP = 'step'
+    TRACK_REFERRAL = 'referral'
+    TRACK_CHOICES = [
+        (TRACK_STEP, 'مرحله'),
+        (TRACK_REFERRAL, 'ارجاع'),
+    ]
     ACTED = 'acted'
     RETURNED = 'returned'
     REJECTED = 'rejected'
@@ -99,12 +110,24 @@ class WorkflowTask(models.Model):
     reminder_sent_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان یادآوری')
     escalated_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان خبر به بالاتر')
     superuser_alerted_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان هشدار مدیر کل')
+    # ارجاع (ر۱ و ر۲ طرح ۲.۳-و)؛ برای کار مرحله خالی می‌مانند
+    track = models.CharField(max_length=16, choices=TRACK_CHOICES, default=TRACK_STEP, db_index=True,
+                             verbose_name='مسیر')
+    target_user = models.ForeignKey(USER, on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+                                    verbose_name='گیرندهٔ ارجاع')
+    parent_task = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='children', verbose_name='کار والد')
+    referred_by = models.ForeignKey(USER, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+                                    verbose_name='ارجاع‌دهنده')
+    instruction = models.TextField(blank=True, default='', verbose_name='دستور')
+    due_at = models.DateTimeField(null=True, blank=True, verbose_name='مهلت')
+    reply = models.TextField(blank=True, default='', verbose_name='پاسخ')
 
     class Meta:
         verbose_name = 'کار گردش'
         verbose_name_plural = 'کارهای گردش'
         constraints = [
-            models.UniqueConstraint(fields=['instance'], condition=Q(is_open=True),
+            models.UniqueConstraint(fields=['instance'], condition=Q(is_open=True, track='step'),
                                     name='workflow_task_one_open_per_instance'),
         ]
         indexes = [
@@ -129,6 +152,8 @@ class WorkflowTaskRecipient(models.Model):
     # «رسید» این ردیف جانشین فرستاده شده و هنوز «برداشته شد» نگرفته (ت۱۰ و ت۱۲). ردیف بازهٔ آینده False می‌ماند
     # تا زمان‌بند هنگام شروع بازه «رسید» را بفرستد. ردیف اصلی همیشه اعلام‌شده حساب می‌شود.
     announced = models.BooleanField(default=False, verbose_name='اعلام‌شده')
+    # ر۳ طرح ۲.۳-و: اولین باز کردن کار به دست دارندهٔ همین ردیف
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان خواندن')
 
     class Meta:
         verbose_name = 'دریافت‌کنندهٔ کار'
@@ -152,6 +177,9 @@ class WorkflowStep(models.Model):
     REJECT = 'reject'
     CANCEL = 'cancel'
     AUTO = 'auto'
+    REFER = 'refer'
+    DONE = 'done'
+    SEEN = 'seen'
     ACTION_CHOICES = [
         (SUBMIT, 'ارسال'),
         (ACT, 'اقدام'),
@@ -159,6 +187,9 @@ class WorkflowStep(models.Model):
         (REJECT, 'رد قطعی'),
         (CANCEL, 'لغو'),
         (AUTO, 'خودکار'),
+        (REFER, 'ارجاع'),
+        (DONE, 'انجام شد'),
+        (SEEN, 'رؤیت شد'),
     ]
 
     instance = models.ForeignKey(WorkflowInstance, on_delete=models.CASCADE, related_name='steps',
