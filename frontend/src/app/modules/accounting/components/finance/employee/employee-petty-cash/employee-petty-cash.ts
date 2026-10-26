@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
+import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -361,6 +362,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
       return;
     }
+    this.expenseDateError = '';
     this.newExpense = {
       section: this.selectedSectionId,
       title: '',
@@ -405,6 +407,9 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.attachmentFileName = '';
   }
 
+  /** پیام ردِ سرور کنار فیلد تاریخ هزینه (دورهٔ مالی بسته) */
+  expenseDateError = '';
+
   saveExpense(): void {
     if (!this.selectedSectionId) {
       this.toast.show('warning', 'بخش فعال مشخص نیست.');
@@ -424,6 +429,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     }
 
     this.isSaving = true;
+    this.expenseDateError = '';
     let payload: Partial<PettyCashTransaction> | FormData;
 
     if (this.selectedExpenseAttachment) {
@@ -470,7 +476,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ثبت سند تنخواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        const closedMsg = fiscalPeriodClosedMessage(err, 'transaction_date_shamsi');
+        if (closedMsg) {
+          // دورهٔ مالی بسته: پیام کنار فیلد تاریخ (۳.۲ ص۵)
+          this.expenseDateError = closedMsg;
+          this.toast.show('error', closedMsg);
+        } else {
+          this.toast.show('error', 'خطا در ثبت سند تنخواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        }
         this.cdr.detectChanges();
       }
     });
@@ -497,7 +510,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }
@@ -523,7 +536,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در حذف سند: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || ('خطا در حذف سند: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }

@@ -109,10 +109,6 @@ export class CompaniesStudioFacade {
     return this.api.closeFiscalPeriod(id);
   }
 
-  freezeFiscalPeriod(id: number): Observable<{ detail: string }> {
-    return this.api.freezeFiscalPeriod(id);
-  }
-
   reopenFiscalPeriod(id: number): Observable<{ detail: string }> {
     return this.api.reopenFiscalPeriod(id);
   }

@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -249,7 +250,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در تسویه فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || ('خطا در تسویه فاکتور: ' + (err.error?.error || err.message || 'نامشخص')));
         this.cdr.detectChanges();
       }
     });

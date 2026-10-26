@@ -175,8 +175,10 @@ export interface CompanyFiscalPeriod {
   title: string;
   start_date: string;
   end_date: string;
-  status: 'open' | 'frozen' | 'closed';
+  status: 'open' | 'closed';
   status_display?: string;
+  /** برابر status === 'closed'؛ سند این دوره ثبت، ویرایش یا حذف نمی‌شود (۳.۲) */
+  is_locked?: boolean;
   is_active: boolean;
   closed_at?: string | null;
   closed_by?: number | null;

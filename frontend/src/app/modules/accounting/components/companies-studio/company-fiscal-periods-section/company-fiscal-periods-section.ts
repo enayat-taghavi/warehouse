@@ -34,7 +34,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
   private facade = inject(CompaniesStudioFacade);
   private studioContext = inject(CompanyStudioContextService);
 
-  /** حالت محدود استودیو: تعریف و انجماد با «نوشتن» دوره‌ها؛ بستن و بازگشایی با کار حساس */
+  /** حالت محدود استودیو: تعریف با «نوشتن» دوره‌ها؛ بستن و بازگشایی با کار حساس */
   get canWriteFiscal(): boolean {
     return this.studioContext.canWrite('fiscal');
   }
@@ -82,6 +82,8 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
   isSavingFiscalPeriod = false;
   showFiscalPeriodForm = false;
   newFiscalPeriod = this.getEmptyFiscalPeriodData();
+  /** خطای سرور کنار هر فیلد فرم (همپوشانی، تاریخ نادرست، سال تکراری) */
+  fieldErrors: Partial<Record<'fiscal_year' | 'title' | 'start_date' | 'end_date' | 'notes', string>> = {};
 
   isFiscalStartDatePickerOpen = false;
   isFiscalEndDatePickerOpen = false;
@@ -171,6 +173,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
 
   openCreateFiscalPeriod(): void {
     this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
+    this.fieldErrors = {};
     this.fiscalStartControl.setValue('', { emitEvent: false });
     this.fiscalEndControl.setValue('', { emitEvent: false });
     this.showFiscalPeriodForm = true;
@@ -181,6 +184,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
     this.showFiscalPeriodForm = false;
     this.isFiscalStartDatePickerOpen = false;
     this.isFiscalEndDatePickerOpen = false;
+    this.fieldErrors = {};
     this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
     this.fiscalStartControl.setValue('', { emitEvent: false });
     this.fiscalEndControl.setValue('', { emitEvent: false });
@@ -190,6 +194,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
   onFiscalStartSelect(event: any): void {
     const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
     this.newFiscalPeriod.start_date = val;
+    delete this.fieldErrors.start_date;
     this.fiscalStartControl.setValue(val, { emitEvent: false });
     this.isFiscalStartDatePickerOpen = false;
     this.cdr.markForCheck();
@@ -198,6 +203,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
   onFiscalEndSelect(event: any): void {
     const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
     this.newFiscalPeriod.end_date = val;
+    delete this.fieldErrors.end_date;
     this.fiscalEndControl.setValue(val, { emitEvent: false });
     this.isFiscalEndDatePickerOpen = false;
     this.cdr.markForCheck();
@@ -205,10 +211,7 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
 
   saveFiscalPeriod(): void {
     if (!this.companyId) return;
-    if (!this.newFiscalPeriod.fiscal_year.trim()) {
-      this.toast.warning('لطفاً سال مالی (مثال: ۱۴۰۳) را وارد فرمایید.');
-      return;
-    }
+    this.fieldErrors = {};
     if (!this.newFiscalPeriod.title.trim()) {
       this.toast.warning('لطفاً عنوان دوره مالی را وارد فرمایید.');
       return;
@@ -218,14 +221,17 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
       return;
     }
     if (this.newFiscalPeriod.start_date > this.newFiscalPeriod.end_date) {
-      this.toast.warning('تاریخ پایان دوره مالی نمی‌تواند قبل از تاریخ آغاز آن باشد.');
+      this.fieldErrors = { end_date: 'تاریخ پایان دوره مالی نمی‌تواند قبل از تاریخ آغاز آن باشد.' };
+      this.cdr.markForCheck();
       return;
     }
 
     this.isSavingFiscalPeriod = true;
+    const fiscalYear = this.newFiscalPeriod.fiscal_year.trim();
     const payload: Partial<CompanyFiscalPeriod> = {
       company: this.companyId,
-      fiscal_year: this.newFiscalPeriod.fiscal_year.trim(),
+      // سال خالی را سرور از سال تاریخ شروع پر می‌کند (۳.۲ ص۱)
+      ...(fiscalYear ? { fiscal_year: fiscalYear } : {}),
       title: this.newFiscalPeriod.title.trim(),
       start_date: this.newFiscalPeriod.start_date,
       end_date: this.newFiscalPeriod.end_date,
@@ -249,15 +255,19 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
       },
       error: (err) => {
         this.isSavingFiscalPeriod = false;
-        const msg = err.error?.detail || err.error?.fiscal_year?.[0] || 'خطا در تعریف دوره مالی جدید';
-        this.toast.error(msg);
+        this.fieldErrors = this.extractFieldErrors(err?.error);
+        if (Object.keys(this.fieldErrors).length) {
+          this.toast.error('لطفاً خطای کنار فیلدها را برطرف فرمایید.');
+        } else {
+          this.toast.error(err?.error?.detail || 'خطا در تعریف دوره مالی جدید');
+        }
         this.cdr.markForCheck();
       }
     });
   }
 
   /**
-   * بستن، انجماد و بازگشایی دوره‌های مالی کارهای حساس‌اند: فقط برخط (رد سرور در صف دیده نمی‌شود)
+   * بستن و بازگشایی دوره‌های مالی کارهای حساس‌اند: فقط برخط (رد سرور در صف دیده نمی‌شود)
    * و با پرسش تأیید که پیامد هر کار را می‌گوید.
    */
   async closeFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
@@ -273,35 +283,15 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» با موفقیت بسته شد.`);
         period.status = 'closed';
+        period.is_locked = true;
         period.status_display = 'بسته شده رسمی';
         this.companyFiscalPeriods = [...this.companyFiscalPeriods];
         this.cdr.markForCheck();
+        // تاریخ و کاربر بستن از سرور خوانده می‌شود
+        if (this.companyId) this.loadCompanyFiscalPeriods(this.companyId);
       },
       error: (err) => {
         this.toast.error(err.error?.detail || 'خطا در بستن دوره مالی');
-      }
-    });
-  }
-
-  async freezeFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
-    if (!period.id || !this.requireOnline('انجماد دورهٔ مالی')) return;
-    const ok = await this.confirmAction({
-      title: 'انجماد دورهٔ مالی',
-      message: `با انجماد «${period.title}»، ثبت سند تازه در این دوره تا بازگشایی متوقف می‌شود.`,
-      type: 'warning',
-      confirmText: 'انجماد دوره'
-    });
-    if (!ok) return;
-    this.facade.freezeFiscalPeriod(period.id).subscribe({
-      next: () => {
-        this.toast.success(`دوره مالی «${period.title}» منجمد شد.`);
-        period.status = 'frozen';
-        period.status_display = 'منجمد شده';
-        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.toast.error(err.error?.detail || 'خطا در انجماد دوره مالی');
       }
     });
   }
@@ -319,6 +309,9 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» مجدداً بازگشایی شد.`);
         period.status = 'open';
+        period.is_locked = false;
+        period.closed_at = null;
+        period.closed_by_name = null;
         period.status_display = 'جاری و باز';
         this.companyFiscalPeriods = [...this.companyFiscalPeriods];
         this.cdr.markForCheck();
@@ -333,8 +326,6 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
     switch (status) {
       case 'open':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'frozen':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'closed':
         return 'bg-rose-50 text-rose-700 border-rose-200';
       default:
@@ -346,13 +337,31 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
     switch (status) {
       case 'open':
         return 'جاری و باز';
-      case 'frozen':
-        return 'منجمد شده';
       case 'closed':
         return 'بسته شده رسمی';
       default:
         return status || '—';
     }
+  }
+
+  /** تاریخ و ساعت بستن دوره به شمسی با رقم فارسی */
+  formatClosedAt(value?: string | null): string {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('fa-IR-u-ca-persian', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  }
+
+  /** پاسخ 400 سرور به شکل { فیلد: [پیام] } را به پیام کنار فیلد تبدیل می‌کند */
+  private extractFieldErrors(body: any): CompanyFiscalPeriodsSectionComponent['fieldErrors'] {
+    const out: CompanyFiscalPeriodsSectionComponent['fieldErrors'] = {};
+    if (!body || typeof body !== 'object') return out;
+    for (const key of ['fiscal_year', 'title', 'start_date', 'end_date', 'notes'] as const) {
+      const v = body[key];
+      const msg = Array.isArray(v) ? v[0] : (typeof v === 'string' ? v : '');
+      if (msg) out[key] = String(msg);
+    }
+    return out;
   }
 
   private getEmptyFiscalPeriodData() {

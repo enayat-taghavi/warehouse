@@ -328,8 +328,16 @@
             <input
               type="text"
               [(ngModel)]="newInvoice.invoice_date_shamsi"
+              (ngModelChange)="invoiceDateError = ''"
               placeholder="۱۴۰۵/۰۱/۰۱"
+              aria-label="تاریخ فاکتور (شمسی)"
+              [attr.aria-invalid]="!!invoiceDateError"
+              [attr.aria-describedby]="invoiceDateError ? 'invoice_date_error' : null"
+              [class.border-rose-400]="!!invoiceDateError"
               class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+            @if (invoiceDateError) {
+              <p id="invoice_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ invoiceDateError }}</p>
+            }
           </div>
         </div>
 

@@ -179,7 +179,6 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
       ])),
       createFiscalPeriod: vi.fn().mockReturnValue(of({ id: 2, fiscal_year: '1404', status: 'open' })),
       closeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی بسته شد.' })),
-      freezeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی منجمد شد.' })),
       reopenFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی بازگشایی شد.' })),
       getCompanyGdriveUrl: vi.fn().mockReturnValue('/api/personnel/companies/1/gdrive')
     };

@@ -161,10 +161,9 @@ describe('CompanyApiService: نشانی هسته یا حسابداری بر پا
     expectError(api.getFiscalPeriods(1));
     expectError(api.createFiscalPeriod({}));
     expectError(api.closeFiscalPeriod(1));
-    expectError(api.freezeFiscalPeriod(1));
     expectError(api.reopenFiscalPeriod(1));
 
-    expect(errCount).toBe(18);
+    expect(errCount).toBe(17);
     expect(http.get).not.toHaveBeenCalled();
     expect(http.post).not.toHaveBeenCalled();
     expect(http.put).not.toHaveBeenCalled();

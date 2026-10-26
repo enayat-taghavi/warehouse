@@ -376,13 +376,6 @@ export class CompanyApiService {
     return this.http.post<{ detail: string }>(`${this.fiscalPeriodsEndpoint}/${id}/close-period/`, { notes });
   }
 
-  freezeFiscalPeriod(id: number): Observable<{ detail: string }> {
-    if (!this.fiscalPeriodsEndpoint) {
-      return throwError(() => new Error('accounting-module-not-installed'));
-    }
-    return this.http.post<{ detail: string }>(`${this.fiscalPeriodsEndpoint}/${id}/freeze-period/`, {});
-  }
-
   reopenFiscalPeriod(id: number): Observable<{ detail: string }> {
     if (!this.fiscalPeriodsEndpoint) {
       return throwError(() => new Error('accounting-module-not-installed'));

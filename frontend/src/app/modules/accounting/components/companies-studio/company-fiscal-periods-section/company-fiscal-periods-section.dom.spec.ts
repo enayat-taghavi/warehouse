@@ -40,7 +40,6 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
       getFiscalPeriods: vi.fn().mockReturnValue(of([period()])),
       createFiscalPeriod: vi.fn().mockImplementation((payload: any) => of({ id: 2, ...payload, status: 'open', status_display: 'جاری و باز', is_active: true })),
       closeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'ok' })),
-      freezeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'ok' })),
       reopenFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'ok' }))
     };
     mockToast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn(), show: vi.fn() };
@@ -76,7 +75,7 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
     expect(card).not.toBeNull();
     expect(card.textContent).toContain('۱۴۰۳/۰۱/۰۱');
     const labels = Array.from(card.querySelectorAll('button')).map(b => b.textContent?.trim());
-    expect(labels).toContain('انجماد');
+    expect(labels).not.toContain('انجماد');
     expect(labels).toContain('بستن سال مالی');
   });
 
@@ -111,7 +110,7 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
     expect(mockApi.getFiscalPeriods).toHaveBeenCalledTimes(1);
   });
 
-  it('ایجاد، انجماد، بستن و بازگشایی دوره با پرسش تأیید (A10) و انصراف بی‌اجرا', async () => {
+  it('ایجاد، بستن و بازگشایی دوره با پرسش تأیید (A10) و انصراف بی‌اجرا', async () => {
     setCompany(1);
     component.openCreateFiscalPeriod();
     fixture.detectChanges();
@@ -128,10 +127,6 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
     expect(component.companyFiscalPeriods.length).toBe(2);
 
     const p = component.companyFiscalPeriods[1];
-    await component.freezeFiscalPeriod(p);
-    expect(mockApi.freezeFiscalPeriod).toHaveBeenCalledWith(p.id);
-    expect(p.status).toBe('frozen');
-
     await component.closeFiscalPeriod(p);
     expect(mockApi.closeFiscalPeriod).toHaveBeenCalledWith(p.id);
     expect(p.status).toBe('closed');
@@ -148,14 +143,14 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
     expect(p.status).toBe('open');
   });
 
-  it('اعتبارسنجی فرم: بدون سال مالی یا با پایان پیش از آغاز ثبت نمی‌شود', () => {
+  it('اعتبارسنجی فرم: بدون عنوان یا با پایان پیش از آغاز ثبت نمی‌شود', () => {
     setCompany(1);
     component.openCreateFiscalPeriod();
     component.saveFiscalPeriod();
-    expect(mockToast.warning).toHaveBeenCalledWith('لطفاً سال مالی (مثال: ۱۴۰۳) را وارد فرمایید.');
-    component.newFiscalPeriod = { fiscal_year: '1404', title: 'عنوان', start_date: '1404/12/01', end_date: '1404/01/01', notes: '' };
+    expect(mockToast.warning).toHaveBeenCalledWith('لطفاً عنوان دوره مالی را وارد فرمایید.');
+    component.newFiscalPeriod = { fiscal_year: '', title: 'عنوان', start_date: '1404/12/01', end_date: '1404/01/01', notes: '' };
     component.saveFiscalPeriod();
-    expect(mockToast.warning).toHaveBeenCalledWith('تاریخ پایان دوره مالی نمی‌تواند قبل از تاریخ آغاز آن باشد.');
+    expect(component.fieldErrors.end_date).toBe('تاریخ پایان دوره مالی نمی‌تواند قبل از تاریخ آغاز آن باشد.');
     expect(mockApi.createFiscalPeriod).not.toHaveBeenCalled();
   });
 

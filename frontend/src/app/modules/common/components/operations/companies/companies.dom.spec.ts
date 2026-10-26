@@ -216,7 +216,6 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       ])),
       createFiscalPeriod: vi.fn().mockImplementation((payload: any) => of({ id: 2, ...payload, status: 'open', status_display: 'جاری و باز', is_active: true })),
       closeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی با موفقیت بسته شد.' })),
-      freezeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی منجمد شد.' })),
       reopenFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی بازگشایی شد.' }))
     };
 

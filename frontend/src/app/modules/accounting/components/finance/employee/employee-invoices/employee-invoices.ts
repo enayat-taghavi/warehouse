@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
@@ -439,6 +440,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
       return;
     }
+    this.invoiceDateError = '';
     this.newInvoice = {
       section: this.selectedSectionId,
       invoice_number: '',
@@ -478,6 +480,9 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.attachmentFileName = '';
   }
 
+  /** پیام ردِ سرور کنار فیلد تاریخ فاکتور (دورهٔ مالی بسته) */
+  invoiceDateError = '';
+
   saveInvoice(): void {
     if (!this.selectedSectionId) {
       this.toast.show('warning', 'بخش فعال مشخص نیست.');
@@ -501,6 +506,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     }
 
     this.isSaving = true;
+    this.invoiceDateError = '';
 
     // در صورت وجود پیوست از FormData استفاده می‌کنیم
     let payload: Partial<ExpenseInvoice> | FormData;
@@ -539,7 +545,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ثبت فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+        const closedMsg = fiscalPeriodClosedMessage(err, 'invoice_date_shamsi');
+        if (closedMsg) {
+          // دورهٔ مالی بسته: پیام کنار فیلد تاریخ (۳.۲ ص۵)
+          this.invoiceDateError = closedMsg;
+          this.toast.show('error', closedMsg);
+        } else {
+          this.toast.show('error', 'خطا در ثبت فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+        }
         this.cdr.detectChanges();
       }
     });
@@ -645,7 +658,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }
@@ -671,7 +684,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در حذف فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || ('خطا در حذف فاکتور: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }

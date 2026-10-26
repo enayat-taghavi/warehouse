@@ -36,7 +36,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
       <!-- سال مالی -->
       <div>
-        <label for="fp_year" class="block text-[11px] font-bold text-slate-700 mb-1">سال مالی (۴ رقم)</label>
+        <label for="fp_year" class="block text-[11px] font-bold text-slate-700 mb-1">سال مالی (اختیاری؛ از تاریخ شروع)</label>
         <input
           id="fp_year"
           type="text"
@@ -44,8 +44,12 @@
           [(ngModel)]="newFiscalPeriod.fiscal_year"
           placeholder="مثال: ۱۴۰۳"
           maxlength="4"
+          [attr.aria-invalid]="!!fieldErrors.fiscal_year"
+          [attr.aria-describedby]="fieldErrors.fiscal_year ? 'fp_fiscal_year_error' : null"
+          [class.border-rose-400]="!!fieldErrors.fiscal_year"
           class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white tabular-nums"
         />
+        <p *ngIf="fieldErrors.fiscal_year" id="fp_fiscal_year_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.fiscal_year }}</p>
       </div>
 
       <!-- عنوان دوره -->
@@ -58,12 +62,13 @@
           placeholder="مثال: سال مالی ۱۴۰۳"
           class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
         />
+        <p *ngIf="fieldErrors.title" id="fp_title_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.title }}</p>
       </div>
 
       <!-- تاریخ شروع دوره (جلالی) -->
       <div>
         <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ شروع دوره</label>
-        <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+        <div [class.border-rose-400]="!!fieldErrors.start_date" class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
           <ng-persian-datepicker
             [(uiIsVisible)]="isFiscalStartDatePickerOpen"
             [dateInitValue]="false"
@@ -75,6 +80,8 @@
               (click)="isFiscalStartDatePickerOpen = !isFiscalStartDatePickerOpen"
               placeholder="۱۴۰۳/۰۱/۰۱"
               aria-label="تاریخ شروع دوره"
+              [attr.aria-invalid]="!!fieldErrors.start_date"
+              [attr.aria-describedby]="fieldErrors.start_date ? 'fp_start_date_error' : null"
               class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </ng-persian-datepicker>
@@ -87,12 +94,13 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
           </button>
         </div>
+        <p *ngIf="fieldErrors.start_date" id="fp_start_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.start_date }}</p>
       </div>
 
       <!-- تاریخ پایان دوره (جلالی)؛ ستون لبهٔ چپ در lg (AGENTS §۳) -->
       <div>
         <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ پایان دوره</label>
-        <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+        <div [class.border-rose-400]="!!fieldErrors.end_date" class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
           <ng-persian-datepicker
             [(uiIsVisible)]="isFiscalEndDatePickerOpen"
             [dateInitValue]="false"
@@ -104,6 +112,8 @@
               (click)="isFiscalEndDatePickerOpen = !isFiscalEndDatePickerOpen"
               placeholder="۱۴۰۳/۱۲/۲۹"
               aria-label="تاریخ پایان دوره"
+              [attr.aria-invalid]="!!fieldErrors.end_date"
+              [attr.aria-describedby]="fieldErrors.end_date ? 'fp_end_date_error' : null"
               class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </ng-persian-datepicker>
@@ -116,6 +126,7 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
           </button>
         </div>
+        <p *ngIf="fieldErrors.end_date" id="fp_end_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.end_date }}</p>
       </div>
     </div>
 
@@ -129,6 +140,7 @@
         placeholder="اختیاری: مصوبات مجمع عمومی یا نکات تکمیلی"
         class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
       />
+      <p *ngIf="fieldErrors.notes" id="fp_notes_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.notes }}</p>
     </div>
 
     <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
@@ -148,27 +160,17 @@
   <!-- کارهای حساس دوره (A10، E4): فقط برخط و پس از پرسش تأیید؛ برای دوره‌ای که هنوز در صف است غیرفعال (E2) -->
   <ng-template #periodActions let-period="period">
     <button
-      *ngIf="period.status === 'open' && canWriteFiscal"
-      type="button"
-      (click)="freezeFiscalPeriod(period)"
-      [disabled]="!isOnline || isPendingRecord(period)"
-      class="min-h-[40px] lg:min-h-[32px] px-3 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-      [title]="actionHint(period, 'انجماد ثبت اسناد در این دوره مالی')">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-lock" aria-hidden="true"></svg>
-      <span>انجماد</span>
-    </button>
-    <button
-      *ngIf="(period.status === 'open' || period.status === 'frozen') && canCloseFiscal"
+      *ngIf="period.status === 'open' && canCloseFiscal"
       type="button"
       (click)="closeFiscalPeriod(period)"
       [disabled]="!isOnline || isPendingRecord(period)"
       class="min-h-[40px] lg:min-h-[32px] px-3 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-      [title]="actionHint(period, 'بستن قطعی سال مالی و انتقال تراز')">
+      [title]="actionHint(period, 'بستن دورهٔ مالی و قفل اسناد آن')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-locked" aria-hidden="true"></svg>
       <span>بستن سال مالی</span>
     </button>
     <button
-      *ngIf="(period.status === 'frozen' || period.status === 'closed') && canCloseFiscal"
+      *ngIf="period.status === 'closed' && canCloseFiscal"
       type="button"
       (click)="reopenFiscalPeriod(period)"
       [disabled]="!isOnline || isPendingRecord(period)"
@@ -180,10 +182,19 @@
   </ng-template>
 
   <ng-template #periodStatus let-period="period">
-    <span [ngClass]="getFiscalPeriodStatusBadge(period.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap">
+    <span [ngClass]="getFiscalPeriodStatusBadge(period.status)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap">
+      <svg *ngIf="period.status === 'closed'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-locked" aria-hidden="true"></svg>
       {{ getFiscalPeriodStatusLabel(period.status) }}
     </span>
     <app-offline-pending-badge *ngIf="isPendingRecord(period)" class="ms-1"></app-offline-pending-badge>
+  </ng-template>
+
+  <!-- بستن دوره: تاریخ و کاربر بستن، یا یادداشت -->
+  <ng-template #periodInfo let-period="period">
+    <span *ngIf="period.status === 'closed' && (period.closed_at || period.closed_by_name)" class="block">
+      بسته شده<span *ngIf="period.closed_at" class="tabular-nums"> در {{ formatClosedAt(period.closed_at) }}</span><span *ngIf="period.closed_by_name"> توسط {{ period.closed_by_name }}</span>
+    </span>
+    <span *ngIf="period.notes" class="block">{{ period.notes }}</span>
   </ng-template>
 
   <!-- دسکتاپ: جدول دوره‌های مالی -->
@@ -210,7 +221,8 @@
             <ng-container *ngTemplateOutlet="periodStatus; context: { period: period }"></ng-container>
           </td>
           <td class="py-2.5 px-3 text-slate-500 text-[11px]">
-            {{ period.notes || (period.closed_by_name ? ('بسته شده توسط: ' + period.closed_by_name) : '—') }}
+            <ng-container *ngTemplateOutlet="periodInfo; context: { period: period }"></ng-container>
+            <span *ngIf="!period.notes && !(period.status === 'closed' && (period.closed_at || period.closed_by_name))">—</span>
           </td>
           <td class="py-2.5 px-3 text-left">
             <div class="flex items-center justify-end gap-1.5">
@@ -236,8 +248,8 @@
           <ng-container *ngTemplateOutlet="periodStatus; context: { period: period }"></ng-container>
         </div>
       </div>
-      <div *ngIf="period.notes || period.closed_by_name" class="text-[11px] text-slate-500">
-        {{ period.notes || ('بسته شده توسط: ' + period.closed_by_name) }}
+      <div *ngIf="period.notes || (period.status === 'closed' && (period.closed_at || period.closed_by_name))" class="text-[11px] text-slate-500">
+        <ng-container *ngTemplateOutlet="periodInfo; context: { period: period }"></ng-container>
       </div>
       <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-slate-100">
         <ng-container *ngTemplateOutlet="periodActions; context: { period: period }"></ng-container>
