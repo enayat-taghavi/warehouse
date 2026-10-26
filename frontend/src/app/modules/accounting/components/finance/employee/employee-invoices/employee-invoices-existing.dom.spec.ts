@@ -29,6 +29,7 @@ describe('EmployeeInvoicesHubComponent - Quick Counterparty Modal existing Spec 
       getMySections: vi.fn().mockReturnValue(of(sampleSections)),
       getProjectSections: vi.fn().mockReturnValue(of(sampleSections)),
       getExpenseInvoices: vi.fn().mockReturnValue(of([])),
+      getExpenseHeads: vi.fn().mockReturnValue(of([{ id: 1, company: 1, parent: null, code: '10', title: 'G', is_active: true }, { id: 11, company: 1, parent: 1, code: '1001', title: 'H', is_active: true }])),
       getCounterparties: vi.fn().mockReturnValue(of([])),
       createExpenseInvoice: vi.fn().mockImplementation((data: any) => of({ id: 1, ...data })),
       updateExpenseInvoice: vi.fn().mockReturnValue(of({ success: true })),

@@ -24,6 +24,7 @@ import {
   UserSectionAssignment,
   Counterparty,
   PartyBankAccount,
+  ExpenseHead,
   ExpenseInvoice,
   PettyCashAccount,
   PettyCashTransaction,
@@ -218,6 +219,7 @@ export class PersonnelApiService {
   createPartyBankAccount(data: Partial<PartyBankAccount>): Observable<PartyBankAccount> { return this.treasuryOrg.createPartyBankAccount(data); }
   updatePartyBankAccount(id: number, data: Partial<PartyBankAccount>): Observable<PartyBankAccount> { return this.treasuryOrg.updatePartyBankAccount(id, data); }
   deletePartyBankAccount(id: number): Observable<void> { return this.treasuryOrg.deletePartyBankAccount(id); }
+  getExpenseHeads(companyId: number, activeOnly = false): Observable<ExpenseHead[]> { return this.treasuryOrg.getExpenseHeads(companyId, activeOnly); }
   getExpenseInvoices(params?: { section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> { return this.treasuryOrg.getExpenseInvoices(params); }
   createExpenseInvoice(data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> { return this.treasuryOrg.createExpenseInvoice(data); }
   updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice>): Observable<ExpenseInvoice> { return this.treasuryOrg.updateExpenseInvoice(id, data); }

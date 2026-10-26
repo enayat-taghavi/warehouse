@@ -21,6 +21,7 @@ import {
   UserSectionAssignment,
   Counterparty,
   PartyBankAccount,
+  ExpenseHead,
   ExpenseInvoice,
   PettyCashAccount,
   PettyCashTransaction,
@@ -186,7 +187,31 @@ export class TreasuryOrgApiService {
     return this.api.delete<void>(`${this.baseUrl}/party-bank-accounts/${id}`);
   }
 
-  getExpenseInvoices(params?: { section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> {
+  /** سرفصل‌های هزینهٔ شرکت (۳.۴)؛ پاسخ تخت، درخت در فرانت ساخته می‌شود. آدرس با `warm-cache.ts` یکی بماند. */
+  getExpenseHeads(companyId: number, activeOnly = false): Observable<ExpenseHead[]> {
+    const params: Record<string, unknown> = { company_id: companyId };
+    if (activeOnly) params['active'] = 1;
+    return this.api.get<ExpenseHead[]>(`${this.baseUrl}/expense-heads`, params);
+  }
+
+  createExpenseHead(data: Partial<ExpenseHead>): Observable<ExpenseHead> {
+    return this.api.post<ExpenseHead>(`${this.baseUrl}/expense-heads`, data);
+  }
+
+  updateExpenseHead(id: number, data: Partial<ExpenseHead>): Observable<ExpenseHead> {
+    return this.api.patch<ExpenseHead>(`${this.baseUrl}/expense-heads/${id}`, data);
+  }
+
+  deleteExpenseHead(id: number): Observable<void> {
+    return this.api.delete<void>(`${this.baseUrl}/expense-heads/${id}`);
+  }
+
+  /** فهرست پیش‌فرض برای شرکتی که سرفصلی ندارد؛ برای فهرست پر بی‌اثر */
+  seedDefaultExpenseHeads(companyId: number): Observable<{ created: number }> {
+    return this.api.post<{ created: number }>(`${this.baseUrl}/expense-heads/seed-defaults`, {}, { params: { company_id: companyId } });
+  }
+
+  getExpenseInvoices(params?:{ section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> {
     return this.api.get<ExpenseInvoice[]>(`${this.baseUrl}/expense-invoices`, params as Record<string, unknown>);
   }
 

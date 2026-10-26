@@ -103,6 +103,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       getProjectSections: vi.fn().mockReturnValue(of(sampleSections)),
       getExpenseInvoices: vi.fn().mockReturnValue(of(sampleInvoices)),
       getCounterparties: vi.fn().mockReturnValue(of(sampleCounterparties)),
+      getExpenseHeads: vi.fn().mockReturnValue(of([{ id: 1, company: 1, parent: null, code: '10', title: 'عملیاتی', is_active: true }, { id: 11, company: 1, parent: 1, code: '1001', title: 'تعمیرات و نگهداری', is_active: true }])),
       createExpenseInvoice: vi.fn().mockImplementation((data: any) => of({ id: 4, ...data, invoice_number: data.invoice_number || 'INV-1004' })),
       updateExpenseInvoice: vi.fn().mockReturnValue(of({ success: true })),
       deleteExpenseInvoice: vi.fn().mockReturnValue(of({ success: true })),
@@ -271,7 +272,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         invoice_number: 'INV-NEW-99',
         invoice_date_shamsi: '1405/04/10',
         amount: 12000000,
-        category: 'تعمیرات و نگهداری',
+        expense_head: 11,
         description: 'سرویس دوره‌ای بیل مکانیکی',
         status: 'draft'
       };
@@ -283,8 +284,10 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         counterparty: 101,
         invoice_number: 'INV-NEW-99',
         amount: 12000000,
+        expense_head: 11,
         status: 'draft' // Guardian G2
       }));
+      expect(mockPersonnelApi.createExpenseInvoice.mock.calls[0][0]).not.toHaveProperty('category');
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('پیش‌نویس'));
       expect(component.isNewInvoiceModalOpen).toBe(false);
     });
@@ -297,7 +300,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         invoice_number: 'INV-WITH-FILE',
         invoice_date_shamsi: '1405/04/10',
         amount: 5000000,
-        category: 'متفرقه',
+        expense_head: 11,
         description: 'خرید ابزار',
         status: 'draft'
       };
@@ -312,6 +315,8 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(callArg instanceof FormData).toBe(true);
       expect((callArg as FormData).get('status')).toBe('draft');
       expect((callArg as FormData).get('invoice_number')).toBe('INV-WITH-FILE');
+      expect((callArg as FormData).get('expense_head')).toBe('11');
+      expect((callArg as FormData).has('category')).toBe(false);
       expect((callArg as FormData).get('attachment')).toBe(dummyFile);
     });
 

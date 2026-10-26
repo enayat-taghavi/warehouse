@@ -64,6 +64,34 @@ describe('warmAccountingCache', () => {
     httpMock.verify();
   });
 
+  it('1b. warms the active expense heads of each section company once (3.4)', async () => {
+    const p = warmAccountingCache(TestBed.inject(Injector));
+
+    httpMock.match(r => r.url.endsWith('/org/section-assignments/my-sections/'))[0]
+      .flush([{ id: 11, company_id: 5 }, { id: 12, company_id: 5 }, { id: 13, company_id: 6 }]);
+    httpMock.match(r => r.url.includes('org/project-sections'))[0].flush([]);
+
+    await new Promise(r => setTimeout(r, 10));
+
+    const headReqs = httpMock.match(r => r.url.includes('personnel/expense-heads'));
+    expect(headReqs.map(r => r.request.urlWithParams).sort()).toEqual([
+      expect.stringContaining('company_id=5&active=1'),
+      expect.stringContaining('company_id=6&active=1')
+    ]);
+    for (const req of headReqs) {
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_TOAST)).toBe(true);
+      req.flush([]);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      await new Promise(r => setTimeout(r, 10));
+      for (const req of httpMock.match(r => r.url.includes('personnel/'))) req.flush([]);
+    }
+
+    await p;
+    httpMock.verify();
+  });
+
   it('2. falls back to active sections when my sections is empty', async () => {
     const p = warmAccountingCache(TestBed.inject(Injector));
 

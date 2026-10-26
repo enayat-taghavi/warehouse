@@ -30,6 +30,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       getMySections: vi.fn().mockReturnValue(of(sampleSections)),
       getProjectSections: vi.fn().mockReturnValue(of(sampleSections)),
       getExpenseInvoices: vi.fn().mockReturnValue(of([])),
+      getExpenseHeads: vi.fn().mockReturnValue(of([{ id: 1, company: 1, parent: null, code: '10', title: 'G', is_active: true }, { id: 11, company: 1, parent: 1, code: '1001', title: 'H', is_active: true }])),
       getCounterparties: vi.fn().mockReturnValue(of([])),
       createExpenseInvoice: vi.fn().mockImplementation((data: any) => of({ id: 1, ...data })),
       updateExpenseInvoice: vi.fn().mockReturnValue(of({ success: true })),
@@ -85,7 +86,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       invoice_number: 'INV-1042',
       invoice_date_shamsi: '1403/08/15',
       amount: 4500000,
-      category: 'تعمیرات و نگهداری',
+      expense_head: 11,
       description: 'تعمیرات دوره بسته',
       status: 'draft'
     };
@@ -122,7 +123,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       invoice_number: 'INV-1043',
       invoice_date_shamsi: '1404/02/10',
       amount: 2500000,
-      category: 'سوخت و روغن',
+      expense_head: 11,
       description: 'سوخت لودر',
       status: 'draft'
     };

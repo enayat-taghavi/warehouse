@@ -27,9 +27,12 @@ export class ApiService {
   post<T>(
     endpoint: string,
     body: unknown = {},
-    options?: { context?: HttpContext },
+    options?: { context?: HttpContext; params?: Record<string, unknown> },
   ): Observable<T> {
-    return this.http.post<T>(this.url(endpoint), body, { context: options?.context });
+    return this.http.post<T>(this.url(endpoint), body, {
+      context: options?.context,
+      ...(options?.params ? { params: this.buildParams(options.params) } : {}),
+    });
   }
 
   patch<T>(endpoint: string, body: unknown): Observable<T> {

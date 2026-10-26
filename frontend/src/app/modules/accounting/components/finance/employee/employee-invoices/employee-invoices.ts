@@ -22,6 +22,7 @@ import { saveBlob, saveUrl } from '../../../../../../core/platform/file-output';
 import { WorkflowHistoryComponent } from '../../../../../../shared/components/workflow-history/workflow-history.component';
 import { TreasuryOrgApiService } from '../../../../api/treasury-org-api.service';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ExpenseHeadOptionGroup, buildExpenseHeadOptions, expenseHeadErrorMessage, expenseHeadLabel } from '../../expense-head-options';
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
@@ -73,16 +74,12 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   counterparties: Counterparty[] = [];
   isLoadingCounterparties: boolean = false;
 
-  // ─── دسته‌بندی‌های استاندارد هزینه ───
-  readonly expenseCategories: string[] = [
-    'تعمیرات و نگهداری',
-    'سوخت و روغن',
-    'کرایه و حمل',
-    'قطعات یدکی',
-    'تجهیزات و ملزومات',
-    'پذیرایی و اداری',
-    'متفرقه'
-  ];
+  // ─── سرفصل‌های هزینهٔ فعال شرکت بخش (۳.۴ ص۷) ───
+  expenseHeadGroups: ExpenseHeadOptionGroup[] = [];
+  isLoadingExpenseHeads: boolean = false;
+  /** شرکتی که فهرست سرفصلش بار شده (پاسخ دیررس شرکت پیشین نادیده گرفته می‌شود) */
+  private expenseHeadsCompanyId: number | null = null;
+  readonly expenseHeadLabel = expenseHeadLabel;
 
   // ─── مودال ثبت فاکتور جدید (Guardian G2: Draft Invariant) ───
   isNewInvoiceModalOpen: boolean = false;
@@ -90,7 +87,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     invoice_number: '',
     invoice_date_shamsi: '',
     amount: 0,
-    category: 'تعمیرات و نگهداری',
+    expense_head: null,
     counterparty: undefined,
     description: '',
     status: 'draft'
@@ -441,12 +438,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return;
     }
     this.invoiceDateError = '';
+    this.expenseHeadError = '';
+    this.loadExpenseHeads();
     this.newInvoice = {
       section: this.selectedSectionId,
       invoice_number: '',
       invoice_date_shamsi: this.todayShamsi,
       amount: 0,
-      category: 'تعمیرات و نگهداری',
+      expense_head: null,
       counterparty: undefined,
       description: '',
       status: 'draft' // Guardian G2: تحمیل وضعیت پیش‌نویس
@@ -482,6 +481,41 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   /** پیام ردِ سرور کنار فیلد تاریخ فاکتور (دورهٔ مالی بسته) */
   invoiceDateError = '';
+  /** پیام کنار انتخابگر سرفصل هزینه */
+  expenseHeadError = '';
+
+  /** شرکت بخش انتخاب‌شده (برای فهرست سرفصل)؛ وگرنه شرکت فعال */
+  private get sectionCompanyId(): number | null {
+    return this.selectedSection?.company_id ?? this.activeCompanyService?.activeCompanyId ?? null;
+  }
+
+  /** سرفصل‌های فعال شرکت بخش؛ از کش خواندن آفلاین هم پر می‌شود */
+  loadExpenseHeads(): void {
+    const companyId = this.sectionCompanyId;
+    if (!companyId) {
+      this.expenseHeadGroups = [];
+      this.expenseHeadsCompanyId = null;
+      return;
+    }
+    if (companyId === this.expenseHeadsCompanyId && this.expenseHeadGroups.length) return;
+    this.expenseHeadsCompanyId = companyId;
+    this.isLoadingExpenseHeads = true;
+    this.personnelApi.getExpenseHeads(companyId, true).subscribe({
+      next: (heads) => {
+        if (companyId !== this.expenseHeadsCompanyId) return;
+        this.expenseHeadGroups = buildExpenseHeadOptions(heads);
+        this.isLoadingExpenseHeads = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        if (companyId !== this.expenseHeadsCompanyId) return;
+        this.expenseHeadGroups = [];
+        this.expenseHeadsCompanyId = null;
+        this.isLoadingExpenseHeads = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   saveInvoice(): void {
     if (!this.selectedSectionId) {
@@ -504,9 +538,15 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'مبلغ فاکتور باید بزرگتر از صفر ریال باشد.');
       return;
     }
+    if (!this.newInvoice.expense_head) {
+      this.expenseHeadError = 'سرفصل هزینه الزامی است.';
+      this.toast.show('warning', 'لطفاً سرفصل هزینه را انتخاب کنید.');
+      return;
+    }
 
     this.isSaving = true;
     this.invoiceDateError = '';
+    this.expenseHeadError = '';
 
     // در صورت وجود پیوست از FormData استفاده می‌کنیم
     let payload: Partial<ExpenseInvoice> | FormData;
@@ -518,7 +558,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       formData.append('invoice_number', this.newInvoice.invoice_number.trim());
       formData.append('invoice_date_shamsi', this.newInvoice.invoice_date_shamsi.trim());
       formData.append('amount', String(this.newInvoice.amount));
-      formData.append('category', this.newInvoice.category || 'متفرقه');
+      formData.append('expense_head', String(this.newInvoice.expense_head));
       formData.append('description', this.newInvoice.description || '');
       formData.append('status', 'draft'); // Guardian G2
       formData.append('attachment', this.selectedInvoiceAttachment);
@@ -530,7 +570,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         invoice_number: this.newInvoice.invoice_number.trim(),
         invoice_date_shamsi: this.newInvoice.invoice_date_shamsi.trim(),
         amount: this.newInvoice.amount,
-        category: this.newInvoice.category || 'متفرقه',
+        expense_head: this.newInvoice.expense_head,
         description: this.newInvoice.description || '',
         status: 'draft' // Guardian G2
       };
@@ -546,10 +586,15 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isSaving = false;
         const closedMsg = fiscalPeriodClosedMessage(err, 'invoice_date_shamsi');
+        const headMsg = expenseHeadErrorMessage(err);
         if (closedMsg) {
           // دورهٔ مالی بسته: پیام کنار فیلد تاریخ (۳.۲ ص۵)
           this.invoiceDateError = closedMsg;
           this.toast.show('error', closedMsg);
+        } else if (headMsg) {
+          // سرفصل نادرست یا غیرفعال: پیام کنار انتخابگر (۳.۴ ص۷)
+          this.expenseHeadError = headMsg;
+          this.toast.show('error', headMsg);
         } else {
           this.toast.show('error', 'خطا در ثبت فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
         }
@@ -658,7 +703,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }
@@ -684,7 +729,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || ('خطا در حذف فاکتور: ' + (err.error?.error || err.message || 'نامشخص')));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در حذف فاکتور: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }

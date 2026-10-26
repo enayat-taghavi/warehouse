@@ -196,6 +196,12 @@ export const MODULE: WhFrontendModule = {
           loadComponent: () => import('./components/companies-studio/company-treasury-tab/company-treasury-tab').then(m => m.CompanyTreasuryTabComponent)
         },
         {
+          // سرفصل‌های هزینه (۳.۴ ص۶)؛ شناسهٔ تب همان `studio` بخش مجوز expense_heads در سرور است
+          id: 'expense_heads', labelFa: 'سرفصل‌های هزینه', shortLabelFa: 'سرفصل‌ها', icon: 'list', order: 35,
+          requiresSavedCompany: true, permissionSection: 'expense_heads',
+          loadComponent: () => import('./components/companies-studio/company-expense-heads-tab/company-expense-heads-tab').then(m => m.CompanyExpenseHeadsTabComponent)
+        },
+        {
           id: 'governance', labelFa: 'هیئت‌مدیره و امضا', shortLabelFa: 'هیئت‌مدیره', icon: 'users', order: 40,
           requiresSavedCompany: false, permissionSection: 'board',
           loadComponent: () => import('./components/companies-studio/company-governance-tab/company-governance-tab').then(m => m.CompanyGovernanceTabComponent)
@@ -388,7 +394,7 @@ export const MODULE: WhFrontendModule = {
           await financeOfflineDb.apiCache.filter((entry) => entry.url.includes(`project_id=${id}`)).delete();
         } catch {}
       },
-      // ص۵ طرح ۲.۵: پیش‌خوانی فهرست‌های پرکاربرد (بخش‌ها، پرسنل، خودرو، کارکرد) در کش رهگیر
+      // ص۵ طرح ۲.۵: پیش‌خوانی فهرست‌های پرکاربرد (بخش‌ها، سرفصل‌های هزینه، پرسنل، خودرو، کارکرد) در کش رهگیر
       warmCache: async (injector) => {
         const { warmAccountingCache } = await import('./api/warm-cache');
         await warmAccountingCache(injector);

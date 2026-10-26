@@ -24,6 +24,8 @@ import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
+import { ExpenseHeadOptionGroup, buildExpenseHeadOptions, expenseHeadErrorMessage, expenseHeadLabel } from '../../expense-head-options';
 
 export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'approved' | 'allocation' | 'rejected';
 
@@ -81,17 +83,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   counterparties: Counterparty[] = [];
   isLoadingCounterparties: boolean = false;
 
-  // ─── دسته‌بندی‌های استاندارد هزینه تنخواه ───
-  readonly expenseCategories: string[] = [
-    'ملزومات و مصرفی کارگاه',
-    'پذیرایی و آبدارخانه',
-    'سوخت و روغن اضطراری',
-    'کرایه و ایاب و ذهاب',
-    'تعمیرات جزئی و خدمات فنی',
-    'ابزارآلات و قطعات خرد',
-    'شارژ مجدد تنخواه',
-    'متفرقه'
-  ];
+  // ─── سرفصل‌های هزینهٔ فعال شرکت بخش (۳.۴ ص۷)؛ فقط برای نوع «هزینه» ───
+  expenseHeadGroups: ExpenseHeadOptionGroup[] = [];
+  isLoadingExpenseHeads: boolean = false;
+  /** شرکتی که فهرست سرفصلش بار شده (پاسخ دیررس شرکت پیشین نادیده گرفته می‌شود) */
+  private expenseHeadsCompanyId: number | null = null;
+  readonly expenseHeadLabel = expenseHeadLabel;
+  // ساخت دستی در آزمون‌ها بیرون از زمینهٔ تزریق است (مثل confirmDialog)
+  private readonly activeCompanyService = (() => { try { return inject(ActiveCompanyService, { optional: true }); } catch { return null; } })();
 
   // ─── مودال ثبت هزینه از محل تنخواه (Guardian G2: Draft Invariant) ───
   isNewExpenseModalOpen: boolean = false;
@@ -99,7 +98,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     title: '',
     transaction_date_shamsi: '',
     amount: 0,
-    category: 'ملزومات و مصرفی کارگاه',
+    expense_head: null,
     counterparty: undefined,
     receipt_number: '',
     description: '',
@@ -363,12 +362,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       return;
     }
     this.expenseDateError = '';
+    this.expenseHeadError = '';
+    this.loadExpenseHeads();
     this.newExpense = {
       section: this.selectedSectionId,
       title: '',
       transaction_date_shamsi: this.todayShamsi,
       amount: 0,
-      category: 'ملزومات و مصرفی کارگاه',
+      expense_head: null,
       counterparty: undefined,
       receipt_number: '',
       description: '',
@@ -409,6 +410,41 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   /** پیام ردِ سرور کنار فیلد تاریخ هزینه (دورهٔ مالی بسته) */
   expenseDateError = '';
+  /** پیام کنار انتخابگر سرفصل هزینه */
+  expenseHeadError = '';
+
+  /** شرکت بخش انتخاب‌شده (برای فهرست سرفصل)؛ وگرنه شرکت فعال */
+  private get sectionCompanyId(): number | null {
+    return this.selectedSection?.company_id ?? this.activeCompanyService?.activeCompanyId ?? null;
+  }
+
+  /** سرفصل‌های فعال شرکت بخش؛ از کش خواندن آفلاین هم پر می‌شود */
+  loadExpenseHeads(): void {
+    const companyId = this.sectionCompanyId;
+    if (!companyId) {
+      this.expenseHeadGroups = [];
+      this.expenseHeadsCompanyId = null;
+      return;
+    }
+    if (companyId === this.expenseHeadsCompanyId && this.expenseHeadGroups.length) return;
+    this.expenseHeadsCompanyId = companyId;
+    this.isLoadingExpenseHeads = true;
+    this.personnelApi.getExpenseHeads(companyId, true).subscribe({
+      next: (heads) => {
+        if (companyId !== this.expenseHeadsCompanyId) return;
+        this.expenseHeadGroups = buildExpenseHeadOptions(heads);
+        this.isLoadingExpenseHeads = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        if (companyId !== this.expenseHeadsCompanyId) return;
+        this.expenseHeadGroups = [];
+        this.expenseHeadsCompanyId = null;
+        this.isLoadingExpenseHeads = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   saveExpense(): void {
     if (!this.selectedSectionId) {
@@ -427,9 +463,15 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'مبلغ هزینه باید بزرگتر از صفر ریال باشد.');
       return;
     }
+    if (!this.newExpense.expense_head) {
+      this.expenseHeadError = 'سرفصل هزینه الزامی است.';
+      this.toast.show('warning', 'لطفاً سرفصل هزینه را انتخاب کنید.');
+      return;
+    }
 
     this.isSaving = true;
     this.expenseDateError = '';
+    this.expenseHeadError = '';
     let payload: Partial<PettyCashTransaction> | FormData;
 
     if (this.selectedExpenseAttachment) {
@@ -438,7 +480,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       formData.append('title', this.newExpense.title.trim());
       formData.append('transaction_date_shamsi', this.newExpense.transaction_date_shamsi.trim());
       formData.append('amount', String(this.newExpense.amount));
-      formData.append('category', this.newExpense.category || 'متفرقه');
+      formData.append('expense_head', String(this.newExpense.expense_head));
       formData.append('transaction_type', 'expense');
       formData.append('status', 'draft'); // Guardian G2
       if (this.newExpense.counterparty) {
@@ -458,7 +500,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         title: this.newExpense.title.trim(),
         transaction_date_shamsi: this.newExpense.transaction_date_shamsi.trim(),
         amount: this.newExpense.amount,
-        category: this.newExpense.category || 'متفرقه',
+        expense_head: this.newExpense.expense_head,
         counterparty: this.newExpense.counterparty || undefined,
         receipt_number: this.newExpense.receipt_number?.trim() || undefined,
         description: this.newExpense.description?.trim() || '',
@@ -477,10 +519,15 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isSaving = false;
         const closedMsg = fiscalPeriodClosedMessage(err, 'transaction_date_shamsi');
+        const headMsg = expenseHeadErrorMessage(err);
         if (closedMsg) {
           // دورهٔ مالی بسته: پیام کنار فیلد تاریخ (۳.۲ ص۵)
           this.expenseDateError = closedMsg;
           this.toast.show('error', closedMsg);
+        } else if (headMsg) {
+          // سرفصل نادرست یا غیرفعال: پیام کنار انتخابگر (۳.۴ ص۷)
+          this.expenseHeadError = headMsg;
+          this.toast.show('error', headMsg);
         } else {
           this.toast.show('error', 'خطا در ثبت سند تنخواه: ' + (err.error?.error || err.message || 'نامشخص'));
         }
@@ -510,7 +557,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }

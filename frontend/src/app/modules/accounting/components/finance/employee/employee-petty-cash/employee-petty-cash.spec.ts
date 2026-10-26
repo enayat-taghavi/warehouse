@@ -110,6 +110,7 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
       getPettyCashBalance: vi.fn().mockReturnValue(of(sampleBalance)),
       getPettyCashTransactions: vi.fn().mockReturnValue(of(sampleTransactions)),
       getCounterparties: vi.fn().mockReturnValue(of(sampleCounterparties)),
+      getExpenseHeads: vi.fn().mockReturnValue(of([{ id: 1, company: 1, parent: null, code: '10', title: 'عملیاتی', is_active: true }, { id: 11, company: 1, parent: 1, code: '1001', title: 'تعمیرات و نگهداری', is_active: true }])),
       createPettyCashTransaction: vi.fn().mockReturnValue(of({ ...sampleTransactions[0], id: 99 })),
       updatePettyCashTransaction: vi.fn().mockReturnValue(of({ ...sampleTransactions[0], status: 'pending_supervisor' })),
       deletePettyCashTransaction: vi.fn().mockReturnValue(of(undefined)),
@@ -243,7 +244,7 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
       title: 'خرید ابزار',
       transaction_date_shamsi: '1405/04/01',
       amount: 5000000,
-      category: 'ابزارآلات و قطعات خرد',
+      expense_head: 11,
       status: 'draft'
     };
     const mockFile = new File(['test'], 'receipt.jpg', { type: 'image/jpeg' });
@@ -254,6 +255,8 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
     expect(mockPersonnelApi.createPettyCashTransaction).toHaveBeenCalled();
     const payloadArg = mockPersonnelApi.createPettyCashTransaction.mock.calls[0][0];
     expect(payloadArg instanceof FormData).toBe(true);
+    expect((payloadArg as FormData).get('expense_head')).toBe('11');
+    expect((payloadArg as FormData).has('category')).toBe(false);
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('پیش‌نویس'));
     expect(component.isNewExpenseModalOpen).toBe(false);
   });

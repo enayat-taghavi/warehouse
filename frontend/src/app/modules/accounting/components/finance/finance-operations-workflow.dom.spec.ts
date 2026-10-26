@@ -190,6 +190,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
         }
       ])),
       createPettyCashTransaction: vi.fn().mockImplementation((data: any) => of({ id: 502, ...data, status: 'draft' })),
+      getExpenseHeads: vi.fn().mockReturnValue(of([{ id: 1, company: 1, parent: null, code: '10', title: 'G', is_active: true }, { id: 11, company: 1, parent: 1, code: '1001', title: 'H', is_active: true }])),
       getCounterparties: vi.fn().mockReturnValue(of([{ id: 801, name: 'شرکت تامین ابزار پارس' }])),
 
       // فاکتورها
@@ -425,7 +426,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
       pettyCashHub.selectedSectionId = 10;
       pettyCashHub.newExpense.title = 'خرید اقلام شوینده و بهداشتی انبار';
       pettyCashHub.newExpense.amount = 3200000;
-      pettyCashHub.newExpense.category = 'supplies';
+      pettyCashHub.newExpense.expense_head = 11;
       pettyCashHub.newExpense.transaction_date_shamsi = '1405/04/12';
 
       // ۴. ذخیره‌سازی هزینه تنخواه
@@ -477,6 +478,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
       invoicesHub.newInvoice.counterparty = 801;
       invoicesHub.newInvoice.invoice_number = 'INV-1405-102';
       invoicesHub.newInvoice.amount = 200000000;
+      invoicesHub.newInvoice.expense_head = 11;
       invoicesHub.newInvoice.invoice_date_shamsi = '1405/04/11';
 
       // ۴. ذخیره‌سازی فاکتور

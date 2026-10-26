@@ -1,0 +1,208 @@
+<!-- سرفصل‌های هزینهٔ شرکت (۳.۴ ص۶): گروه‌ها و سرفصل‌های زیرشان -->
+<div class="space-y-3">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-xs font-black text-fg">سرفصل‌های هزینه</span>
+      <span class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
+        {{ fa(tree.length) }} گروه · {{ fa(heads.length - tree.length) }} سرفصل
+      </span>
+    </div>
+    @if (companyId && canWrite && !showForm && heads.length > 0) {
+      <button type="button" appAction="create" label="گروه تازه" [disabled]="!isOnline" [hint]="isOnline ? '' : 'فقط در حالت برخط'" (click)="openCreateGroup()"></button>
+    }
+  </div>
+
+  <p class="text-[11px] text-fg-muted">روی فاکتور و هزینهٔ تنخواه فقط سرفصل فعال انتخاب می‌شود؛ گروه فقط دسته‌بندی است. سرفصلی که در اسناد به کار رفته حذف نمی‌شود و باید غیرفعال شود.</p>
+
+  @if (!companyId) {
+    <div class="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-2xl text-xs flex items-center gap-2">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="status-warning" aria-hidden="true"></svg>
+      <span>پس از ثبت اولیهٔ مشخصات شرکت، تعریف سرفصل‌های هزینه ممکن می‌شود.</span>
+    </div>
+  }
+
+  <!-- فرم درجای ساخت و ویرایش -->
+  @if (showForm && companyId) {
+    <div class="p-4 bg-surface-muted border border-line rounded-2xl space-y-3">
+      <div class="flex items-center justify-between gap-2 pb-2 border-b border-line">
+        <span class="text-xs font-black text-fg">{{ formTitle }}</span>
+        <button
+          type="button"
+          (click)="cancelForm()"
+          title="بستن فرم"
+          aria-label="بستن فرم"
+          class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        @if (!isGroupForm) {
+          <div>
+            <label for="eh_parent" class="block text-[11px] font-bold text-slate-700 mb-1">گروه</label>
+            <select
+              id="eh_parent"
+              [(ngModel)]="form.parent"
+              [attr.aria-invalid]="!!fieldErrors.parent"
+              [attr.aria-describedby]="fieldErrors.parent ? 'eh_parent_error' : null"
+              [class.border-rose-400]="!!fieldErrors.parent"
+              class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white">
+              @for (g of groupOptions; track g.id) {
+                <option [ngValue]="g.id">{{ g.code }} — {{ g.title }}</option>
+              }
+            </select>
+            @if (fieldErrors.parent) {
+              <p id="eh_parent_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.parent }}</p>
+            }
+          </div>
+        }
+
+        <div>
+          <label for="eh_code" class="block text-[11px] font-bold text-slate-700 mb-1">کد *</label>
+          <input
+            id="eh_code"
+            type="text"
+            inputmode="numeric"
+            maxlength="20"
+            dir="ltr"
+            [(ngModel)]="form.code"
+            (ngModelChange)="fieldErrors.code = ''"
+            [placeholder]="isGroupForm ? 'مثال: ۳۰' : 'مثال: ۳۰۰۱'"
+            [attr.aria-invalid]="!!fieldErrors.code"
+            [attr.aria-describedby]="fieldErrors.code ? 'eh_code_error' : null"
+            [class.border-rose-400]="!!fieldErrors.code"
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white tabular-nums text-end" />
+          @if (fieldErrors.code) {
+            <p id="eh_code_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.code }}</p>
+          }
+        </div>
+
+        <div>
+          <label for="eh_title" class="block text-[11px] font-bold text-slate-700 mb-1">عنوان *</label>
+          <input
+            id="eh_title"
+            type="text"
+            maxlength="150"
+            [(ngModel)]="form.title"
+            (ngModelChange)="fieldErrors.title = ''"
+            [placeholder]="isGroupForm ? 'مثال: هزینه‌های فروش' : 'مثال: تبلیغات'"
+            [attr.aria-invalid]="!!fieldErrors.title"
+            [attr.aria-describedby]="fieldErrors.title ? 'eh_title_error' : null"
+            [class.border-rose-400]="!!fieldErrors.title"
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white" />
+          @if (fieldErrors.title) {
+            <p id="eh_title_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.title }}</p>
+          }
+        </div>
+
+        <div>
+          <label for="eh_order" class="block text-[11px] font-bold text-slate-700 mb-1">ترتیب نمایش</label>
+          <input
+            id="eh_order"
+            type="number"
+            min="0"
+            inputmode="numeric"
+            [(ngModel)]="form.order"
+            [attr.aria-invalid]="!!fieldErrors.order"
+            [attr.aria-describedby]="fieldErrors.order ? 'eh_order_error' : null"
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white tabular-nums" />
+          @if (fieldErrors.order) {
+            <p id="eh_order_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.order }}</p>
+          }
+        </div>
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer min-h-[40px]">
+        <input type="checkbox" [(ngModel)]="form.is_active" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
+        <span>فعال (قابل انتخاب در اسناد)</span>
+      </label>
+
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="cancelForm()"></button>
+        <button type="button" appAction="save" display="label" label="ذخیره" [busy]="isSaving" [disabled]="!isOnline" [hint]="isOnline ? '' : 'فقط در حالت برخط'" (click)="save()"></button>
+      </div>
+    </div>
+  }
+
+  @if (companyId && isLoading && heads.length === 0) {
+    <div role="status" aria-busy="true" aria-label="در حال بارگذاری سرفصل‌های هزینه">
+      <app-loading-skeleton type="text" [lines]="4"></app-loading-skeleton>
+    </div>
+  }
+  @if (loadError) {
+    <div class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
+      <div class="text-xs font-bold text-slate-600">{{ isOnline ? 'دریافت سرفصل‌های هزینه انجام نشد.' : 'اتصال برقرار نیست و فهرست سرفصل‌ها در حافظهٔ دستگاه نیست.' }}</div>
+      <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retry()"></button>
+    </div>
+  }
+
+  <!-- گروه‌ها و سرفصل‌ها -->
+  @if (companyId && tree.length > 0) {
+    <ul class="space-y-3" aria-label="گروه‌های سرفصل هزینه">
+      @for (node of tree; track node.group.id) {
+        <li class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden" [class.opacity-70]="!node.group.is_active">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-surface-muted border-b border-line">
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="folder" aria-hidden="true"></svg>
+              <bdi class="tabular-nums text-xs font-black text-indigo-700">{{ faDigits(node.group.code) }}</bdi>
+              <span class="text-xs font-black text-fg">{{ node.group.title }}</span>
+              @if (!node.group.is_active) {
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-slate-100 text-slate-600 border-slate-200">غیرفعال</span>
+              }
+            </div>
+            @if (canWrite) {
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" appAction="create" label="سرفصل تازه" [disabled]="!isOnline || showForm" (click)="openCreateHead(node.group)"></button>
+                <button type="button" appAction="edit" label="ویرایش گروه" [disabled]="!isOnline || showForm" (click)="openEdit(node.group)"></button>
+                <button type="button" [appAction]="node.group.is_active ? 'lock' : 'unlock'" [label]="node.group.is_active ? 'غیرفعال' : 'فعال'" [busy]="busyId === node.group.id" [disabled]="!isOnline" (click)="toggleActive(node.group)"></button>
+                <button type="button" appAction="delete" label="حذف" [busy]="busyId === node.group.id" [disabled]="!isOnline || node.heads.length > 0" [hint]="node.heads.length > 0 ? 'گروهی که زیرمجموعه دارد حذف نمی‌شود' : ''" (click)="remove(node.group)"></button>
+              </div>
+            }
+          </div>
+
+          @if (node.heads.length > 0) {
+            <ul class="divide-y divide-slate-100">
+              @for (head of node.heads; track head.id) {
+                <li class="flex flex-wrap items-center justify-between gap-2 px-3 py-2" [class.opacity-60]="!head.is_active">
+                  <div class="flex flex-wrap items-center gap-2 min-w-0 ps-5">
+                    <bdi class="tabular-nums text-xs font-bold text-slate-600">{{ faDigits(head.code) }}</bdi>
+                    <span class="text-xs font-bold text-fg">{{ head.title }}</span>
+                    @if (!head.is_active) {
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-slate-100 text-slate-600 border-slate-200">غیرفعال</span>
+                    }
+                    @if (head.usage_count) {
+                      <span class="text-[10px] text-fg-muted tabular-nums">{{ fa(head.usage_count) }} سند</span>
+                    }
+                  </div>
+                  @if (canWrite) {
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <button type="button" appAction="edit" label="ویرایش" [disabled]="!isOnline || showForm" (click)="openEdit(head)"></button>
+                      <button type="button" [appAction]="head.is_active ? 'lock' : 'unlock'" [label]="head.is_active ? 'غیرفعال' : 'فعال'" [busy]="busyId === head.id" [disabled]="!isOnline" (click)="toggleActive(head)"></button>
+                      <button type="button" appAction="delete" label="حذف" [busy]="busyId === head.id" [disabled]="!isOnline" (click)="remove(head)"></button>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="px-3 py-3 text-[11px] text-fg-muted">این گروه هنوز سرفصلی ندارد.</div>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- حالت خالی -->
+  @if (companyId && heads.length === 0 && !showForm && !isLoading && !loadError) {
+    <div class="p-6 text-center bg-slate-50/60 border border-slate-200/80 rounded-2xl space-y-2">
+      <span class="block text-slate-500 text-sm font-bold">هیچ سرفصل هزینه‌ای برای این شرکت تعریف نشده است.</span>
+      @if (canWrite) {
+        <span class="block text-slate-500 text-xs">فهرست پیش‌فرض را بسازید یا اولین گروه را خودتان تعریف کنید.</span>
+        <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+          <button type="button" appAction="create" display="label" tone="indigo" label="ساخت فهرست پیش‌فرض" [busy]="isSeeding" [disabled]="!isOnline" [hint]="isOnline ? 'ساخت فهرست پیش‌فرض سرفصل‌ها' : 'فقط در حالت برخط'" (click)="seedDefaults()"></button>
+          <button type="button" appAction="create" display="label" label="گروه تازه" [disabled]="!isOnline" (click)="openCreateGroup()"></button>
+        </div>
+      }
+    </div>
+  }
+</div>

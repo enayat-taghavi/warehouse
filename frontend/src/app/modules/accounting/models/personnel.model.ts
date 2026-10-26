@@ -893,7 +893,13 @@ export interface ExpenseInvoice {
   invoice_date_shamsi: string;
   amount: number;
   total_amount?: number;
-  category: string;
+  /** عنوان سرفصل؛ فقط‌خواندنی و پرشده در سرور (۳.۴ ص۲) */
+  category?: string;
+  /** سرفصل هزینه (ردیف دارای والد) */
+  expense_head?: number | null;
+  expense_head_code?: string | null;
+  expense_head_title?: string | null;
+  expense_head_group_title?: string | null;
   description: string;
   attachment?: string | null;
   status: 'draft' | 'pending_supervisor' | 'pending_accountant' | 'pending_manager' | 'ready_to_pay' | 'paid' | 'rejected' | 'revision_required';
@@ -910,6 +916,23 @@ export interface ExpenseInvoice {
   paid_by_name?: string;
   created_by?: number | null;
   created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** سرفصل هزینهٔ شرکت (۳.۴)؛ ردیف بی والد «گروه» است و روی سند انتخاب نمی‌شود */
+export interface ExpenseHead {
+  id: number;
+  company: number;
+  parent: number | null;
+  parent_title?: string | null;
+  is_group?: boolean;
+  code: string;
+  title: string;
+  is_active: boolean;
+  order?: number;
+  /** فقط برای دارندهٔ نوشتن `expense_heads` */
+  usage_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -945,7 +968,13 @@ export interface PettyCashTransaction {
   amount: number;
   transaction_date_shamsi: string;
   title: string;
-  category: string;
+  /** عنوان سرفصل یا متن ثابت شارژ و عودت؛ فقط‌خواندنی (۳.۴ ص۲) */
+  category?: string;
+  /** سرفصل هزینه؛ فقط برای نوع `expense` */
+  expense_head?: number | null;
+  expense_head_code?: string | null;
+  expense_head_title?: string | null;
+  expense_head_group_title?: string | null;
   description?: string;
   counterparty?: number | null;
   counterparty_name?: string;
