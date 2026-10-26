@@ -12775,3 +12775,110 @@ FAILED (exit 1): python scripts/automation/verify_tools.py scope --base a122b831
 changed (2): ['frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts', 'frontend/src/app/modules/accounting/components/finance/e...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 21:13:31
+- **Status:** STOPPED (require failed)
+- **Conversation:** `-`
+- **Steps:** 0
+- **Tokens:** 0
+- **Duration:** 0m 0s
+- **Checks:**
+  - require: 0/1 passed
+    - FAILED (exit 9009): `python scripts/automation/verify_tools.py clean-tree`
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.2-b: API scenario tests for the closed fiscal period lock on invoices and petty cash
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_fiscal_lock_api_32.py`. Change no other file. If a test fails because of production code, do not change production code: keep the test, mark it with `@unittest.expectedFailure` and a one-line comment, and say so in the report.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+- Never run `manage.py test` without app labels.
+
+2. Context (already committed by Claude in the previous commit):
+- A company fiscal period is `personnel.models.CompanyFiscalPeriod` (`company`, `fiscal_year`, `title`, `start_date`, `end_date` as Shamsi strings `YYYY/MM/DD`, `status` in `open` / `closed`, `is_active`). A dated document whose date falls inside a `closed` period of its section's company is locked: create, update (old date or new date), delete and workflow actions return HTTP 400 with a JSON body that has `code == 'fiscal_period_closed'` and a list of messages under the date field key. The date field is `invoice_date_shamsi` for invoices and `transaction_date_shamsi` for petty-cash transactions. A date in no period is never locked. A closed period of another company never locks this company.
+- APIs: `/api/personnel/expense-invoices/` (POST, PATCH `<id>/`, DELETE `<id>/`, POST `<id>/submit/`), `/api/personnel/petty-cash-transactions/` (POST, POST `<id>/submit/`), `/api/personnel/company-fiscal-periods/<id>/reopen-period/` (POST).
+- Reuse the fixtures, do not copy them: `from personnel.test_fiscal_period_32 import FiscalFixtures` and subclass it. Read `backend/modules/accounting/personnel/test_fiscal_period_32.py` lines 1-77 only. `FiscalFixtures.setUp` gives `self.company`, `self.other` (second company), `self.sec` (section of `self.company`), `self.other_sec`, `self.cp` (counterparty), `self.admin` (superuser), `self.api` (APIClient logged in as admin with header `X-Company-ID` of `self.company`). Helpers: `self.period(year='1405', start='1405/01/01', end='1405/12/29', status='open', company=None)`, `self.invoice(date='1405/08/01', section=None, status='draft')`, `self.petty(date='1405/08/01', status='draft')`, `self.invoice_payload(date)` (POST body for an invoice), `self.assert_closed(response, field)` (asserts 400, `code == 'fiscal_period_closed'` and the field key in the body).
+- Petty-cash POST body: `{'section': self.sec.id, 'custodian': self.admin.id, 'amount': '10000', 'transaction_date_shamsi': <date>, 'title': 'tx', 'category': 'misc'}`.
+
+3. Task: write `test_fiscal_lock_api_32.py` with one class `FiscalLockApiTests(FiscalFixtures)` and exactly these test methods (names are checked):
+- a) `test_invoice_create_in_closed_period_rejected`: closed period 1405; POST invoice dated `1405/08/01` gives `assert_closed(..., 'invoice_date_shamsi')`; `ExpenseInvoice` count unchanged.
+- b) `test_invoice_create_in_open_period_or_without_period_allowed`: open period 1405; POST dated `1405/08/01` gives 201; POST dated `1407/01/10` (no period) gives 201.
+- c) `test_invoice_patch_date_into_closed_period_rejected`: closed period 1405; invoice created with `self.invoice(date='1406/02/01')`; PATCH `{'invoice_date_shamsi': '1405/08/01'}` is rejected with `assert_closed`; after `refresh_from_db()` the date is still `1406/02/01`.
+- d) `test_invoice_patch_of_closed_period_invoice_rejected`: closed period 1405; `self.invoice(date='1405/08/01')`; PATCH `{'description': 'changed'}` is rejected with `assert_closed`; the description is unchanged.
+- e) `test_invoice_delete_in_closed_period_rejected`: closed period 1405; DELETE of an invoice dated `1405/08/01` is rejected with `assert_closed`; the row still exists.
+- f) `test_petty_cash_create_and_submit_in_closed_period_rejected`: closed period 1405; POST petty cash dated `1405/08/01` gives `assert_closed(..., 'transaction_date_shamsi')`; `tx = self.petty()` then POST `<tx.id>/submit/` gives `assert_closed`; `tx.refresh_from_db()` status is still `draft`.
+- g) `test_reopen_period_allows_create`: closed period 1405; POST invoice dated `1405/08/01` is rejected; POST `reopen-period/` on that period gives 200; the same POST invoice now gives 201.
+- h) `test_other_company_closed_period_does_not_lock`: closed period 1405 with `company=self.other`; POST invoice dated `1405/08/01` (section of `self.company`) gives 201.
+
+4. Tool policy: only reading the listed file range, writing the new test file, the test command below, `git add` of the new file, `git commit`, `git status --short`. Test command, in `backend`: `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test personnel.test_fiscal_lock_api_32 --keepdb --noinput`. If it fails, read the error, fix the test (not production code), and rerun at most 4 times.
+
+5. Before finishing: all 8 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.2-b): closed fiscal period API scenarios`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+
+
+---
+
+### Task 1 of 1 — 2026-10-26 21:21:03
+- **Status:** DONE
+- **Conversation:** `4a0a9043-9c0d-4925-abce-c999b5402df2`
+- **Steps:** 44
+- **Tokens:** 102955
+- **Duration:** 5m 45s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.2-b: API scenario tests for the closed fiscal period lock on invoices and petty cash
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_fiscal_lock_api_32.py`. Change no other file. If a test fails because of production code, do not change production code: keep the test, mark it with `@unittest.expectedFailure` and a one-line comment, and say so in the report.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+- Never run `manage.py test` without app labels.
+
+2. Context (already committed by Claude in the previous commit):
+- A company fiscal period is `personnel.models.CompanyFiscalPeriod` (`company`, `fiscal_year`, `title`, `start_date`, `end_date` as Shamsi strings `YYYY/MM/DD`, `status` in `open` / `closed`, `is_active`). A dated document whose date falls inside a `closed` period of its section's company is locked: create, update (old date or new date), delete and workflow actions return HTTP 400 with a JSON body that has `code == 'fiscal_period_closed'` and a list of messages under the date field key. The date field is `invoice_date_shamsi` for invoices and `transaction_date_shamsi` for petty-cash transactions. A date in no period is never locked. A closed period of another company never locks this company.
+- APIs: `/api/personnel/expense-invoices/` (POST, PATCH `<id>/`, DELETE `<id>/`, POST `<id>/submit/`), `/api/personnel/petty-cash-transactions/` (POST, POST `<id>/submit/`), `/api/personnel/company-fiscal-periods/<id>/reopen-period/` (POST).
+- Reuse the fixtures, do not copy them: `from personnel.test_fiscal_period_32 import FiscalFixtures` and subclass it. Read `backend/modules/accounting/personnel/test_fiscal_period_32.py` lines 1-77 only. `FiscalFixtures.setUp` gives `self.company`, `self.other` (second company), `self.sec` (section of `self.company`), `self.other_sec`, `self.cp` (counterparty), `self.admin` (superuser), `self.api` (APIClient logged in as admin with header `X-Company-ID` of `self.company`). Helpers: `self.period(year='1405', start='1405/01/01', end='1405/12/29', status='open', company=None)`, `self.invoice(date='1405/08/01', section=None, status='draft')`, `self.petty(date='1405/08/01', status='draft')`, `self.invoice_payload(date)` (POST body for an invoice), `self.assert_closed(response, field)` (asserts 400, `code == 'fiscal_period_closed'` and the field key in the body).
+- Petty-cash POST body: `{'section': self.sec.id, 'custodian': self.admin.id, 'amount': '10000', 'transaction_date_shamsi': <date>, 'title': 'tx', 'category': 'misc'}`.
+
+3. Task: write `test_fiscal_lock_api_32.py` with one class `FiscalLockApiTests(FiscalFixtures)` and exactly these test methods (names are checked):
+- a) `test_invoice_create_in_closed_period_rejected`: closed period 1405; POST invoice dated `1405/08/01` gives `assert_closed(..., 'invoice_date_shamsi')`; `ExpenseInvoice` count unchanged.
+- b) `test_invoice_create_in_open_period_or_without_period_allowed`: open period 1405; POST dated `1405/08/01` gives 201; POST dated `1407/01/10` (no period) gives 201.
+- c) `test_invoice_patch_date_into_closed_period_rejected`: closed period 1405; invoice created with `self.invoice(date='1406/02/01')`; PATCH `{'invoice_date_shamsi': '1405/08/01'}` is rejected with `assert_closed`; after `refresh_from_db()` the date is still `1406/02/01`.
+- d) `test_invoice_patch_of_closed_period_invoice_rejected`: closed period 1405; `self.invoice(date='1405/08/01')`; PATCH `{'description': 'changed'}` is rejected with `assert_closed`; the description is unchanged.
+- e) `test_invoice_delete_in_closed_period_rejected`: closed period 1405; DELETE of an invoice dated `1405/08/01` is rejected with `assert_closed`; the row still exists.
+- f) `test_petty_cash_create_and_submit_in_closed_period_rejected`: closed period 1405; POST petty cash dated `1405/08/01` gives `assert_closed(..., 'transaction_date_shamsi')`; `tx = self.petty()` then POST `<tx.id>/submit/` gives `assert_closed`; `tx.refresh_from_db()` status is still `draft`.
+- g) `test_reopen_period_allows_create`: closed period 1405; POST invoice dated `1405/08/01` is rejected; POST `reopen-period/` on that period gives 200; the same POST invoice now gives 201.
+- h) `test_other_company_closed_period_does_not_lock`: closed period 1405 with `company=self.other`; POST invoice dated `1405/08/01` (section of `self.company`) gives 201.
+
+4. Tool policy: only reading the listed file range, writing the new test file, the test command below, `git add` of the new file, `git commit`, `git status --short`. Test command, in `backend`: `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test personnel.test_fiscal_lock_api_32 --keepdb --noinput`. If it fails, read the error, fix the test (not production code), and rerun at most 4 times.
+
+5. Before finishing: all 8 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.2-b): closed fiscal period API scenarios`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+دستور اعتبارسنجی تست‌های جنگو از طریق ابزار خودکارسازی در حال اجرا در پس‌زمینه است و منتظر تکمیل آن هستیم...
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Explanation)
+کاربر درخواست نوشتن آزمون‌های سناریوی API برای قفل دوره مالی بسته روی فاکتورهای هزینه (`ExpenseInvoice`) و تنخواه‌گردان (`PettyCashTransaction`) در قالب گام ۳.۲-ب انتشار نسخه ۱ را داشتند. الزامات شامل ساخت تنها یک فایل آزمون جدید (`backend/modules/accounting/personnel/test_fiscal_lock_api_32.py`) با ۸ متد آزمون مشخص، بدون دستکاری کد پروداکشن، اجرای آزمون‌ها و ثبت commit با پیام معین بود.
+
+### ۲. اعتبارسنجی فنی (Verification)
+- ساختار آزمون‌ها و فیکسچرهای `FiscalFixtures` در...
+
+---
