@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
+import { SectionToggleService } from '../../../../core/services/section-toggle.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { runInInjectionContext, Injector, signal, ChangeDetectorRef } from '@angular/core';
 import { of, throwError } from 'rxjs';
@@ -102,6 +103,7 @@ describe('Settings Component (Core Settings & Delta Management)', () => {
 
     const injector = Injector.create({
       providers: [
+        { provide: SectionToggleService, useValue: { isEnabled: () => true, applyConfig: () => {}, declared: () => [] } },
         { provide: SettingsService, useValue: settingsServiceMock },
         { provide: ApiService, useValue: apiMock },
         { provide: ModuleRegistryService, useValue: moduleRegistryMock },

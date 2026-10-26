@@ -342,10 +342,10 @@ export class MyTasksComponent implements OnInit, OnDestroy {
 
   getActionButtonClass(action: WorkflowTaskAction): string {
     if (action === 'done' || action === 'seen') {
-      return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm';
+      return 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm';
     }
     if (action === 'act') {
-      return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm';
+      return 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm';
     }
     if (action === 'return') {
       return 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200';

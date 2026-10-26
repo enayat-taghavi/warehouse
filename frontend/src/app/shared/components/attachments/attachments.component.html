@@ -30,7 +30,7 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file" class="text-slate-400 shrink-0"></svg>
           }
           <div class="min-w-0 flex-1">
-            <p class="text-xs font-bold text-slate-800 truncate" [title]="item.original_name">{{ item.original_name }}</p>
+            <p class="text-xs font-bold text-slate-800 truncate" [title]="item.original_name"><bdi>{{ item.original_name }}</bdi></p>
             <p class="text-[10px] text-slate-500">{{ formatSize(item.size) }}</p>
           </div>
           <div class="flex items-center gap-1 shrink-0">

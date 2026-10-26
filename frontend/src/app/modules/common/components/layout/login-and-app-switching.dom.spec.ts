@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
+import { SectionToggleService } from '../../../../core/services/section-toggle.service';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal, Injector, runInInjectionContext } from '@angular/core';
 import { of, Subject } from 'rxjs';
@@ -304,6 +305,7 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
 
       const injector = Injector.create({
         providers: [
+        { provide: SectionToggleService, useValue: { isEnabled: () => true, applyConfig: () => {}, declared: () => [] } },
           { provide: AuthService, useValue: mockAuth },
           { provide: AuthStore, useValue: mockStore },
           { provide: StateService, useValue: { appState: { projects: [] } } },

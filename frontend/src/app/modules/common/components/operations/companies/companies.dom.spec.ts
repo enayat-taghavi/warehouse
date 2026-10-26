@@ -1657,7 +1657,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('تب مشارکتی به ترتیب order میان تب‌های هسته می‌نشیند و تب هم‌نام هسته نادیده گرفته می‌شود', () => {
       component.setupStudioForNew();
-      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'x_tab', 'documents', 'projects', 'access', 'workflow']);
+      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'x_tab', 'documents', 'projects', 'access', 'workflow', 'settings', 'numbering']);
       expect(component.modalTabs.find(t => t.id === 'identity')?.label).toBe('مشخصات هویتی و ثبتی');
     });
 
@@ -1669,7 +1669,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
       component.setupStudioForCompany(1);
       expect(component.studioContext.companyId()).toBe(1);
-      expect(component.modalTabs.map(t => t.id).at(-1)).toBe('saved_only');
+      expect(component.modalTabs.map(t => t.id)).toContain('saved_only');
       component.setModalTab('saved_only');
       expect(component.activeModalTab).toBe('saved_only');
     });

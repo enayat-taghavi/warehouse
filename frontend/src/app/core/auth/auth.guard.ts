@@ -116,7 +116,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
     // بخش خاموش (ص۱۲ طرح ۲.۶): برای همه، مدیر کل هم، بسته است تا دوباره روشن شود
     const sectionToggles = inject(SectionToggleService);
-    const sectionKey = route.pathFromRoot
+    const sectionKey = (route.pathFromRoot ?? [route])
       .map(r => r.routeConfig?.data?.['sectionKey'] as string | undefined)
       .find(Boolean);
     if (sectionKey && !sectionToggles.isEnabled(sectionKey)) {

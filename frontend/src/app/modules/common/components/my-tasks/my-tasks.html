@@ -5,7 +5,7 @@
       <button
         type="button"
         (click)="goBack()"
-        class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 active:scale-95 transition-all cursor-pointer shadow-sm"
+        class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
         title="بازگشت"
         aria-label="بازگشت"
       >
@@ -41,7 +41,7 @@
       <button
         type="button"
         (click)="refresh()"
-        class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 active:scale-95 transition-all cursor-pointer shadow-sm"
+        class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
         title="تازه‌سازی فهرست کارها"
         aria-label="تازه‌سازی فهرست کارها"
       >
@@ -85,7 +85,7 @@
       <button
         type="button"
         (click)="dismissNotice(notice)"
-        class="w-8 h-8 min-w-[40px] min-h-[40px] rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-200/50 flex items-center justify-center active:scale-95 transition-all cursor-pointer shrink-0"
+        class="w-8 h-8 min-w-[40px] min-h-[40px] rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-200/50 flex items-center justify-center active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shrink-0"
         title="بستن اعلان"
         aria-label="بستن اعلان"
       >
@@ -145,7 +145,7 @@
     <button
       type="button"
       (click)="loadUnassigned()"
-      class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-rose-700 bg-white border border-rose-200 rounded-xl hover:bg-rose-100/50 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+      class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-rose-700 bg-white border border-rose-200 rounded-xl hover:bg-rose-100/50 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 flex items-center gap-1.5"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
       <span>تلاش مجدد</span>
@@ -162,7 +162,7 @@
     <button
       type="button"
       (click)="refresh()"
-      class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-rose-700 bg-white border border-rose-200 rounded-xl hover:bg-rose-100/50 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+      class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-rose-700 bg-white border border-rose-200 rounded-xl hover:bg-rose-100/50 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 flex items-center gap-1.5"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
       <span>تلاش دوباره</span>
@@ -210,6 +210,7 @@
       class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm hover:shadow transition-all flex flex-col gap-3"
       [class.opacity-75]="isPending(card)"
       (click)="onCardOpened(card)"
+      (focusin)="onCardOpened(card)"
     >
       <!-- ردیف بالای کارت: عنوان گردش و مرحله -->
       <div class="flex items-start justify-between gap-2 flex-wrap">
@@ -312,7 +313,7 @@
             type="button"
             (click)="openDocument(card)"
             [disabled]="isPending(card)"
-            class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             title="مشاهدهٔ جزئیات سند"
             aria-label="مشاهدهٔ جزئیات سند"
           >
@@ -328,7 +329,7 @@
             type="button"
             (click)="onActionClick(card, act)"
             [disabled]="isPending(card)"
-            class="px-3.5 py-1.5 min-h-[40px] text-xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-3.5 py-1.5 min-h-[40px] text-xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             [ngClass]="getActionButtonClass(act)"
             [title]="getActionLabel(act, card.step_kind)"
             [attr.aria-label]="getActionLabel(act, card.step_kind)"

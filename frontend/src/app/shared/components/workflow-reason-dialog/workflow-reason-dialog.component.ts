@@ -41,7 +41,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="onCancel()"
-            class="w-9 h-9 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 active:scale-95 transition-all cursor-pointer"
+            class="w-9 h-9 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             title="انصراف و بستن"
             aria-label="انصراف و بستن"
           >
@@ -86,7 +86,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="onCancel()"
-            class="px-4 py-2 min-h-[40px] text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl active:scale-95 transition-all cursor-pointer"
+            class="px-4 py-2 min-h-[40px] text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             title="انصراف"
             aria-label="انصراف"
           >
@@ -95,7 +95,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="onConfirm()"
-            class="px-4 py-2 min-h-[40px] text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl active:scale-95 transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+            class="px-4 py-2 min-h-[40px] text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl active:scale-95 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             [title]="confirmLabel"
             [attr.aria-label]="confirmLabel"
           >

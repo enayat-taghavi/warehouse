@@ -116,7 +116,8 @@ def check_rule_2_tab_min_widths(templates):
             tag, attrs = m.group(1), m.group(2)
             if re.search(r'min-w-\[\d+px\]', attrs):
                 attrs_lower = attrs.lower()
-                if any(k in attrs_lower for k in ('tab', 'role="tab"', 'subtab', 'currenttab', 'activetab')):
+                # 'tab' must start a word, so 'selectable' / 'table' don't count
+                if re.search(r'(?<![a-z])tab|subtab|currenttab|activetab', attrs_lower):
                     line_no = text[:m.start()].count('\n') + 1
                     violations.append({
                         'file': rel,
