@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, Optional, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -40,6 +40,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 export type PersonnelStatusFilter = 'all' | 'draft' | 'pending' | 'pending_supervisor' | 'manager_approved' | 'approved' | 'revision_required' | 'rejected';
 export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'documents';
@@ -52,6 +53,7 @@ export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'do
   styleUrl: './employee-new-personnel.css'
 })
 export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
+  private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   readonly Math = Math;
 
   // ─── مدیریت بخش و ایزولاسیون قلمرو (Guardian G1: Section Isolation) ───
@@ -714,7 +716,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── ابطال درخواست تغییرات معلق (فاز ۷ - تسک ۷.۲) ───
-  cancelPendingChangeRequest(p?: PersonnelProfile | null): void {
+  async cancelPendingChangeRequest(p?: PersonnelProfile | null): Promise<void> {
     const target = p || this.pendingDiffPersonnel || this.editingPersonnel;
     if (!target) return;
     const crId = target.pending_change_request?.id;
@@ -723,7 +725,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!confirm('آیا از ابطال این درخواست تغییرات اطمینان دارید؟')) {
+    if ((await this.confirmDialog?.open({ title: 'ابطال درخواست', message: 'آیا از ابطال این درخواست تغییرات اطمینان دارید؟', type: 'danger' })) !== true) {
       return;
     }
 
@@ -1059,11 +1061,11 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       .catch(() => {});
   }
 
-  restoreLocalDraft(): void {
+  async restoreLocalDraft(): Promise<void> {
     const draft = this.localDraftAvailable;
     if (!draft) return;
     const hasTypedData = !this.editingId && !!(this.newPersonnel.national_code || this.newPersonnel.last_name || this.newPersonnel.first_name);
-    if (hasTypedData && !confirm('مقادیر فعلی فرم با پیش‌نویس محلی جایگزین شود؟')) return;
+    if (hasTypedData && (await this.confirmDialog?.open({ title: 'جایگزینی با پیشنویس', message: 'مقادیر فعلی فرم با پیش‌نویس محلی جایگزین شود؟', type: 'warning' })) !== true) return;
     this.newPersonnel = { ...this.newPersonnel, ...(draft.form as Partial<PersonnelProfile>) };
     this.bankAccounts = (draft.bankAccounts || []).map(a => ({ ...(a as unknown as PersonnelBankAccount) }));
     if (this.bankAccounts.length) this.syncPrimaryToProfile();
@@ -1082,10 +1084,10 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  discardLocalDraft(): void {
+  async discardLocalDraft(): Promise<void> {
     const draft = this.localDraftAvailable;
     if (!draft) return;
-    if (!confirm('پیش‌نویس محلی ذخیره‌نشده روی سرور برای همیشه حذف شود؟')) return;
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: 'پیش‌نویس محلی ذخیره‌نشده روی سرور برای همیشه حذف شود؟', type: 'danger', confirmText: 'حذف' })) !== true) return;
     deletePersonnelLocalDraft(draft.key).catch(() => {});
     this.localDraftAvailable = null;
     this.checkLocalDraft();
@@ -1985,10 +1987,10 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  deleteExistingDocument(doc: PersonnelDocument): void {
+  async deleteExistingDocument(doc: PersonnelDocument): Promise<void> {
     if (this.isReadOnlyMode) return;
     if (!this.editingId || !doc.id) return;
-    if (!confirm('آیا از حذف این مدرک اطمینان دارید؟')) return;
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: 'آیا از حذف این مدرک اطمینان دارید؟', type: 'danger', confirmText: 'حذف' })) !== true) return;
 
     this.personnelApi.deletePersonnelDocument(this.editingId, doc.id).subscribe({
       next: () => {
@@ -2625,7 +2627,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── حذف پرسنل پیش‌نویس یا عودت‌داده‌شده ───
-  deleteDraftPersonnel(personnel: PersonnelProfile): void {
+  async deleteDraftPersonnel(personnel: PersonnelProfile): Promise<void> {
     if (!personnel.id) return;
     if (personnel.approval_status !== 'draft' && personnel.approval_status !== 'revision_required') {
       this.toast.show('warning', 'فقط پرونده‌های در وضعیت پیش‌نویس یا عودت‌داده‌شده قابل حذف توسط کارمند هستند.');
@@ -2633,7 +2635,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     }
 
     const typeDesc = personnel.approval_status === 'revision_required' ? 'عودت‌داده‌شده' : 'پیش‌نویس';
-    if (!confirm(`آیا از حذف پرونده ${typeDesc} «${personnel.first_name} ${personnel.last_name}» اطمینان دارید؟`)) {
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف پرونده ${typeDesc} «${personnel.first_name} ${personnel.last_name}» اطمینان دارید؟`, type: 'danger', confirmText: 'حذف' })) !== true) {
       return;
     }
 

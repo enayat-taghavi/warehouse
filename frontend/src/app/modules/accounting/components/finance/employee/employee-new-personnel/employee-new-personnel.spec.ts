@@ -477,8 +477,8 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
       expect(mockPersonnelApi.deletePersonnelProfile).not.toHaveBeenCalled();
     });
 
-    it('پرسنل پیش‌نویس در صورت تایید کاربر باید حذف شوند', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it('پرسنل پیش‌نویس در صورت تایید کاربر باید حذف شوند', async () => {
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
       const draftPerson: PersonnelProfile = {
         id: 201,
         first_name: 'رضا',
@@ -493,7 +493,7 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
         is_active: true
       };
 
-      component.deleteDraftPersonnel(draftPerson);
+      await component.deleteDraftPersonnel(draftPerson);
       expect(mockPersonnelApi.deletePersonnelProfile).toHaveBeenCalledWith(201);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('حذف گردید'));
     });
@@ -904,16 +904,16 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
       expect(loadSpy).not.toHaveBeenCalled();
     });
 
-    it('حذف پرونده‌های در وضعیت revision_required باید مجاز باشد', () => {
+    it('حذف پرونده‌های در وضعیت revision_required باید مجاز باشد', async () => {
       component.selectedSectionId = 101;
       const revisionPerson: PersonnelProfile = {
         ...samplePersonnel[0],
         id: 205,
         approval_status: 'revision_required'
       };
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
 
-      component.deleteDraftPersonnel(revisionPerson);
+      await component.deleteDraftPersonnel(revisionPerson);
 
       expect(mockPersonnelApi.deletePersonnelProfile).toHaveBeenCalledWith(205);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('عودت‌داده‌شده'));

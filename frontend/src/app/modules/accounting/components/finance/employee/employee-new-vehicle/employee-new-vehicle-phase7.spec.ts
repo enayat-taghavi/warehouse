@@ -277,11 +277,11 @@ describe('EmployeeNewVehicleHubComponent - Phase 7 Suite (Employee Cartable & Hu
       expect(component.getProposedValueDisplay('driver_phone', '09129998877')).toBe('09129998877');
     });
 
-    it('cancelPendingChangeRequest با تایید کاربر درخواست را ابطال و پرچم معلق را پاک می‌کند', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it('cancelPendingChangeRequest با تایید کاربر درخواست را ابطال و پرچم معلق را پاک می‌کند', async () => {
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
       const v = sampleVehicles[3];
 
-      component.cancelPendingChangeRequest(v);
+      await component.cancelPendingChangeRequest(v);
 
       expect(mockPersonnelApi.cancelVehicleChangeRequest).toHaveBeenCalledWith(701);
       expect(v.has_pending_changes).toBe(false);

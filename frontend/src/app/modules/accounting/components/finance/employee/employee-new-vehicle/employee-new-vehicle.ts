@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, Optional, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -36,6 +36,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 export type VehicleStatusFilter = 'all' | 'draft' | 'pending_supervisor' | 'revision_required' | 'approved' | 'rejected';
 export type VehicleModalTab = 'technical' | 'driver' | 'owner' | 'banking' | 'documents_expiry';
@@ -65,6 +66,7 @@ export function isRoadVehicleType(type?: string): boolean {
   styleUrl: './employee-new-vehicle.css'
 })
 export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
+  private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   readonly Math = Math;
 
   // ─── مراجع المان‌های DOM جهت ارگونومی و هدایت فوکوس (UI-01 & UI-05) ───
@@ -1707,9 +1709,9 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteExistingDocument(doc: VehicleDocument): void {
+  async deleteExistingDocument(doc: VehicleDocument): Promise<void> {
     if (!doc.id || !this.editingId) return;
-    if (!confirm(`آیا از حذف مدرک «${doc.title || doc.file_name}» اطمینان دارید؟`)) return;
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف مدرک «${doc.title || doc.file_name}» اطمینان دارید؟`, type: 'danger', confirmText: 'حذف' })) !== true) return;
 
     this.personnelApi.deleteVehicleDocument(this.editingId, doc.id).subscribe({
       next: () => {
@@ -2176,13 +2178,13 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── فاز ۷: لغو درخواست تغییرات معلق (تسک ۷.۲ - cancel) ───
-  cancelPendingChangeRequest(v: VehicleDriverProfile): void {
+  async cancelPendingChangeRequest(v: VehicleDriverProfile): Promise<void> {
     const crId = v.pending_change_request?.id;
     if (!crId) {
       this.toast.show('warning', 'شناسه درخواست تغییرات یافت نشد.');
       return;
     }
-    if (!confirm(`آیا از ابطال درخواست تغییرات خودرو «${v.plate_number}» اطمینان دارید؟`)) {
+    if ((await this.confirmDialog?.open({ title: 'ابطال درخواست', message: `آیا از ابطال درخواست تغییرات خودرو «${v.plate_number}» اطمینان دارید؟`, type: 'danger' })) !== true) {
       return;
     }
 
@@ -2475,7 +2477,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── حذف خودرو پیش‌نویس یا عودت‌داده‌شده ───
-  deleteDraftVehicle(vehicle: VehicleDriverProfile): void {
+  async deleteDraftVehicle(vehicle: VehicleDriverProfile): Promise<void> {
     if (!vehicle.id) return;
     if (vehicle.approval_status !== 'draft' && vehicle.approval_status !== 'revision_required') {
       this.toast.show('warning', 'فقط خودروهای در وضعیت پیش‌نویس یا عودت‌داده‌شده قابل حذف توسط کارمند هستند.');
@@ -2483,7 +2485,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
     }
 
     const typeDesc = vehicle.approval_status === 'revision_required' ? 'عودت‌داده‌شده' : 'پیش‌نویس';
-    if (!confirm(`آیا از حذف پرونده ${typeDesc} خودرو شماره «${vehicle.plate_number}» (${vehicle.driver_name}) اطمینان دارید؟`)) {
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف پرونده ${typeDesc} خودرو شماره «${vehicle.plate_number}» (${vehicle.driver_name}) اطمینان دارید؟`, type: 'danger', confirmText: 'حذف' })) !== true) {
       return;
     }
 

@@ -375,13 +375,12 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
   describe('۶. عملیات روی فاکتورها (ارسال به سرپرست، حذف، پیش‌نمایش، اکسل)', () => {
     beforeEach(() => {
       component.ngOnInit();
-      // Mock window.confirm
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
     });
 
-    it('ارسال به سرپرست فقط روی فاکتورهای پیش‌نویس مجاز باشد و وضعیت را به pending_supervisor تغییر دهد', () => {
+    it('ارسال به سرپرست فقط روی فاکتورهای پیش‌نویس مجاز باشد و وضعیت را به pending_supervisor تغییر دهد', async () => {
       const draftInv = sampleInvoices[0];
-      component.sendToSupervisor(draftInv);
+      await component.sendToSupervisor(draftInv);
 
       expect(mockPersonnelApi.updateExpenseInvoice).toHaveBeenCalledWith(draftInv.id, { status: 'pending_supervisor' });
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('کارتابل سرپرست'));
@@ -395,9 +394,9 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(mockPersonnelApi.updateExpenseInvoice).not.toHaveBeenCalled();
     });
 
-    it('حذف فاکتور پیش‌نویس با تایید کاربر باید اجرا شود', () => {
+    it('حذف فاکتور پیش‌نویس با تایید کاربر باید اجرا شود', async () => {
       const draftInv = sampleInvoices[0];
-      component.deleteDraftInvoice(draftInv);
+      await component.deleteDraftInvoice(draftInv);
 
       expect(mockPersonnelApi.deleteExpenseInvoice).toHaveBeenCalledWith(draftInv.id);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('حذف شد'));

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -22,6 +22,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'approved' | 'allocation' | 'rejected';
 
@@ -33,6 +34,7 @@ export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'appro
   styleUrl: './employee-petty-cash.css'
 })
 export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
+  private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   readonly Math = Math;
 
   // Memoized tabs for app-tab-bar
@@ -475,14 +477,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── ارسال سند تنخواه به سرپرست کارگاه ───
-  sendToSupervisor(tx: PettyCashTransaction): void {
+  async sendToSupervisor(tx: PettyCashTransaction): Promise<void> {
     if (!tx.id) return;
     if (tx.status !== 'draft') {
       this.toast.show('warning', 'فقط اسناد در وضعیت پیش‌نویس قابلیت ارسال به سرپرست را دارند.');
       return;
     }
 
-    if (!confirm(`آیا از ارسال سند تنخواه «${tx.title}» به مبلغ ${Number(tx.amount).toLocaleString()} ریال به سرپرست اطمینان دارید؟`)) {
+    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال سند تنخواه «${tx.title}» به مبلغ ${Number(tx.amount).toLocaleString()} ریال به سرپرست اطمینان دارید؟`, type: 'info' })) !== true) {
       return;
     }
 
@@ -501,14 +503,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── حذف سند پیش‌نویس ───
-  deleteDraftTransaction(tx: PettyCashTransaction): void {
+  async deleteDraftTransaction(tx: PettyCashTransaction): Promise<void> {
     if (!tx.id) return;
     if (tx.status !== 'draft') {
       this.toast.show('warning', 'تنها اسناد در وضعیت پیش‌نویس توسط کارمند قابل حذف هستند.');
       return;
     }
 
-    if (!confirm(`آیا از حذف سند پیش‌نویس «${tx.title}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`)) {
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف سند پیش‌نویس «${tx.title}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`, type: 'danger', confirmText: 'حذف' })) !== true) {
       return;
     }
 

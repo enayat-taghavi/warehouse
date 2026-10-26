@@ -329,7 +329,7 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
   describe('۵. فیلترها، جستجو، حذف و اکسل', () => {
     beforeEach(() => {
       component.ngOnInit();
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
     });
 
     it('فیلتر وضعیت خودروها را به درستی محدود کند', () => {
@@ -351,9 +351,9 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
       expect(metrics.contractCount).toBe(2);
     });
 
-    it('حذف خودرو پیش‌نویس را اجرا کند', () => {
+    it('حذف خودرو پیش‌نویس را اجرا کند', async () => {
       const draftVehicle = sampleVehicles[0];
-      component.deleteDraftVehicle(draftVehicle);
+      await component.deleteDraftVehicle(draftVehicle);
 
       expect(mockPersonnelApi.deleteVehicleProfile).toHaveBeenCalledWith(draftVehicle.id);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('حذف گردید'));

@@ -543,17 +543,17 @@ describe('آزمون‌های جامع تمامی سناریوهای ثبت خو
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('سرپرست'));
     });
 
-    it('دکمه ۹ (حذف پیش‌نویس خودرو deleteDraftVehicle): حذف پیش‌نویس با تایید و ممانعت از حذف خودروهای مصوب', () => {
+    it('دکمه ۹ (حذف پیش‌نویس خودرو deleteDraftVehicle): حذف پیش‌نویس با تایید و ممانعت از حذف خودروهای مصوب', async () => {
       // ممانعت از حذف خودروی مصوب
       const approvedVeh: VehicleDriverProfile = { ...activeVehicleRecord, approval_status: 'approved' };
-      component.deleteDraftVehicle(approvedVeh);
+      await component.deleteDraftVehicle(approvedVeh);
       expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('فقط خودروهای در وضعیت پیش‌نویس'));
       expect(mockPersonnelApi.deleteVehicleProfile).not.toHaveBeenCalled();
 
       // حذف خودروی پیش‌نویس با تایید کاربر
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
       const draftVeh: VehicleDriverProfile = { ...activeVehicleRecord, approval_status: 'draft' };
-      component.deleteDraftVehicle(draftVeh);
+      await component.deleteDraftVehicle(draftVeh);
       expect(mockPersonnelApi.deleteVehicleProfile).toHaveBeenCalledWith(501);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('با موفقیت حذف گردید'));
     });

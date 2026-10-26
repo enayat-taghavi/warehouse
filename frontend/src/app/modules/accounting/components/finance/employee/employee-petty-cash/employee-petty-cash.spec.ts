@@ -258,10 +258,11 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
     expect(component.isNewExpenseModalOpen).toBe(false);
   });
 
-  it('10. should send draft transaction to supervisor upon confirmation', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('10. should send draft transaction to supervisor upon confirmation', async () => {
+    const mockConfirm = { open: vi.fn().mockResolvedValue(true) };
+    (component as any).confirmDialog = mockConfirm;
     const tx = sampleTransactions[0]; // draft
-    component.sendToSupervisor(tx);
+    await component.sendToSupervisor(tx);
 
     expect(mockPersonnelApi.updatePettyCashTransaction).toHaveBeenCalledWith(1, { status: 'pending_supervisor' });
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('سرپرست'));
@@ -275,10 +276,11 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
     expect(mockPersonnelApi.updatePettyCashTransaction).not.toHaveBeenCalled();
   });
 
-  it('12. should delete draft transaction upon confirmation', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('12. should delete draft transaction upon confirmation', async () => {
+    const mockConfirm = { open: vi.fn().mockResolvedValue(true) };
+    (component as any).confirmDialog = mockConfirm;
     const tx = sampleTransactions[0];
-    component.deleteDraftTransaction(tx);
+    await component.deleteDraftTransaction(tx);
 
     expect(mockPersonnelApi.deletePettyCashTransaction).toHaveBeenCalledWith(1);
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('حذف شد'));

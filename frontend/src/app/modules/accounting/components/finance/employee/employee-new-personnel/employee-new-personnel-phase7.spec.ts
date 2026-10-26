@@ -238,20 +238,20 @@ describe('EmployeeNewPersonnelHubComponent - Phase 7 Comprehensive Unit Tests', 
       expect(component.modalHeaderTitle).toBe('ویرایش و پیشنهاد تغییرات پرونده مصوب');
     });
 
-    it('متد cancelPendingChangeRequest در صورت رد در تاییدیه confirm نباید API را فراخوانی کند', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(false);
+    it('متد cancelPendingChangeRequest در صورت رد در تاییدیه confirm نباید API را فراخوانی کند', async () => {
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(false) };
 
-      component.cancelPendingChangeRequest(sampleApprovedPersonnel);
+      await component.cancelPendingChangeRequest(sampleApprovedPersonnel);
 
       expect(mockPersonnelApi.cancelPersonnelChangeRequest).not.toHaveBeenCalled();
       expect(mockToast.show).not.toHaveBeenCalled();
     });
 
-    it('متد cancelPendingChangeRequest در صورت تایید باید API را فراخوانی کرده و فلگ را پاک کند', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it('متد cancelPendingChangeRequest در صورت تایید باید API را فراخوانی کرده و فلگ را پاک کند', async () => {
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
       const target = { ...sampleApprovedPersonnel };
 
-      component.cancelPendingChangeRequest(target);
+      await component.cancelPendingChangeRequest(target);
 
       expect(mockPersonnelApi.cancelPersonnelChangeRequest).toHaveBeenCalledWith(55);
       expect(mockToast.show).toHaveBeenCalledWith('success', 'درخواست تغییرات ابطال شد.');
@@ -259,13 +259,13 @@ describe('EmployeeNewPersonnelHubComponent - Phase 7 Comprehensive Unit Tests', 
       expect(target.pending_change_request).toBeNull();
     });
 
-    it('در صورت بروز خطا در ابطال درخواست، باید پیام خطا با توست نمایش داده شود', () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+    it('در صورت بروز خطا در ابطال درخواست، باید پیام خطا با توست نمایش داده شود', async () => {
+      (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
       mockPersonnelApi.cancelPersonnelChangeRequest = vi.fn().mockReturnValue(
         throwError(() => ({ error: { error: 'عدم دسترسی به لغو درخواست' } }))
       );
 
-      component.cancelPendingChangeRequest(sampleApprovedPersonnel);
+      await component.cancelPendingChangeRequest(sampleApprovedPersonnel);
 
       expect(component.isCancellingChangeRequest).toBe(false);
       expect(mockToast.show).toHaveBeenCalledWith('error', expect.stringContaining('عدم دسترسی'));

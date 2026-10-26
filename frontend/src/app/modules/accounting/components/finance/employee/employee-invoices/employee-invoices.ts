@@ -620,14 +620,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── ارسال فاکتور پیش‌نویس به سرپرست کارگاه ───
-  sendToSupervisor(invoice: ExpenseInvoice): void {
+  async sendToSupervisor(invoice: ExpenseInvoice): Promise<void> {
     if (!invoice.id) return;
     if (invoice.status !== 'draft') {
       this.toast.show('warning', 'فقط فاکتورهای پیش‌نویس قابلیت ارسال به سرپرست را دارند.');
       return;
     }
 
-    if (!confirm(`آیا از ارسال فاکتور شماره «${invoice.invoice_number}» به سرپرست جهت بررسی و تایید اطمینان دارید؟`)) {
+    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال فاکتور شماره «${invoice.invoice_number}» به سرپرست جهت بررسی و تایید اطمینان دارید؟`, type: 'info' })) !== true) {
       return;
     }
 
@@ -646,14 +646,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── حذف فاکتور پیش‌نویس ───
-  deleteDraftInvoice(invoice: ExpenseInvoice): void {
+  async deleteDraftInvoice(invoice: ExpenseInvoice): Promise<void> {
     if (!invoice.id) return;
     if (invoice.status !== 'draft') {
       this.toast.show('warning', 'فقط فاکتورهای در وضعیت پیش‌نویس قابل حذف توسط کارمند هستند.');
       return;
     }
 
-    if (!confirm(`آیا از حذف فاکتور پیش‌نویس شماره «${invoice.invoice_number}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`)) {
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف فاکتور پیش‌نویس شماره «${invoice.invoice_number}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`, type: 'danger', confirmText: 'حذف' })) !== true) {
       return;
     }
 
