@@ -824,24 +824,61 @@ export interface UserSectionAssignment {
   updated_at?: string;
 }
 
+/** حساب بانکی طرف بیرونی (`/api/personnel/party-bank-accounts/`)؛ شبا با پیشوند IR ذخیره می‌شود. */
+export interface PartyBankAccount {
+  id?: number;
+  /** شناسهٔ طرف بیرونی (`Counterparty.party`)، نه شناسهٔ طرف حساب */
+  party?: number;
+  bank_name?: string;
+  account_number?: string;
+  sheba_number: string;
+  card_number?: string;
+  owner_name?: string;
+  is_primary?: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type CounterpartyKind = 'person' | 'legal';
+
+/** طرف حساب = نقش مالی یک طرف بیرونی؛ هر طرف حساب یک شرکت دارد. */
 export interface Counterparty {
   id?: number;
-  /** شرکت مالک؛ تهی یعنی طرف‌حساب سراسری */
-  company?: number | null;
+  /** شناسهٔ طرف بیرونی هسته */
+  party?: number;
+  /** شرکت مالک (با ویرایش عوض نمی‌شود) */
+  company?: number;
+  company_name?: string;
+  kind?: CounterpartyKind;
+  kind_display?: string;
   name: string;
   counterparty_type: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
   counterparty_type_display?: string;
   national_id?: string;
+  economic_code?: string;
+  registration_number?: string;
   phone?: string;
+  mobile?: string;
+  email?: string;
+  address?: string;
+  postal_code?: string;
+  notes?: string;
+  /** حساب‌های بانکی؛ در ساخت، حساب اولیه هم با همین فهرست فرستاده می‌شود */
+  bank_accounts?: PartyBankAccount[];
+  /** true یعنی شبا، شماره‌حساب، کارت و کد ملی حقیقی پوشیده‌اند (چهار رقم آخر) */
+  bank_masked?: boolean;
+  /** فیلدهای تخت سازگار = حساب اصلی (شبا بی IR) */
   bank_name?: string;
   account_number?: string;
   sheba_number?: string;
   account_code?: string;
-  project?: number | null;
-  section?: number | null;
   is_active: boolean;
+  created_by?: number | null;
   created_at?: string;
   updated_at?: string;
+  /** فقط در پاسخ ساخت: true یعنی همان طرف حساب موجود برگشت (تکراری) */
+  existing?: boolean;
 }
 
 export interface ExpenseInvoice {

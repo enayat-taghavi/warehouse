@@ -597,12 +597,17 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       is_active: true
     };
 
-    // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب را سراسری نسازد
+    // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب در شرکت درست ساخته شود
     const companyId = this.activeCompanyService?.activeCompanyId;
     this.personnelApi.createCounterparty(companyId ? { ...payload, company: companyId } : payload).subscribe({
       next: (created: Counterparty) => {
         this.isSaving = false;
-        this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت افزوده شد.`);
+        // پاسخ 200 با existing یعنی همان طرف حساب موجود برگشت (تکراری)، نه خطا
+        if (created.existing) {
+          this.toast.show('info', `طرف‌حساب «${created.name}» از قبل ثبت شده بود (تکراری) و انتخاب شد.`);
+        } else {
+          this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت افزوده شد.`);
+        }
         this.closeQuickCounterpartyModal();
         this.loadCounterparties();
         // انتساب خودکار طرف‌حساب تازه تعریف‌شده در فرم ثبت فاکتور

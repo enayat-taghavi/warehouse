@@ -645,7 +645,12 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.personnelApi.createCounterparty(payload).subscribe({
       next: (created: Counterparty) => {
         this.isSaving = false;
-        this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت افزوده شد.`);
+        // پاسخ 200 با existing یعنی همان طرف حساب موجود برگشت (تکراری)، نه خطا
+        if (created.existing) {
+          this.toast.show('info', `طرف‌حساب «${created.name}» از قبل ثبت شده بود (تکراری) و انتخاب شد.`);
+        } else {
+          this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت افزوده شد.`);
+        }
         this.closeQuickCounterpartyModal();
         this.loadCounterparties();
         if (this.isNewExpenseModalOpen && created.id) {

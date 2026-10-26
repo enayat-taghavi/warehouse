@@ -12,7 +12,7 @@ import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ExcelImportModal } from '../../../../../shared/components/excel-import-modal/excel-import-modal';
-import { Counterparty } from '../../../models/personnel.model';
+import { Counterparty, CounterpartyKind, PartyBankAccount } from '../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
   IranianBankInfo,
@@ -28,6 +28,8 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { saveBlob } from '../../../../../core/platform/file-output';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { isServerUnreachable } from '../../../../../core/services/server-reachability';
 
 export interface CounterpartyTypeOption {
   key: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
@@ -40,7 +42,7 @@ export interface CounterpartyTypeOption {
 @Component({
   selector: 'app-counterparties',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, TabBarComponent, ActionButtonComponent, CommandCenterComponent],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, TabBarComponent, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent],
   templateUrl: './counterparties.html',
   styleUrl: './counterparties.css'
 })
@@ -48,6 +50,8 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   counterparties: Counterparty[] = [];
   isLoading = false;
   isRefreshing = false;
+  loadError = '';
+  isOfflineError = false;
 
   // فیلترها و جستجوی سریع
   searchQuery: string = '';
@@ -131,19 +135,23 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     { key: 'other', label: 'سایر اشخاص حقیقی/حقوقی', badgeClass: 'bg-slate-100 text-slate-800 border-slate-200', bgClass: 'bg-slate-50', icon: '🏢' },
   ];
 
+  readonly kindOptions: { key: CounterpartyKind; label: string }[] = [
+    { key: 'person', label: 'حقیقی' },
+    { key: 'legal', label: 'حقوقی' },
+  ];
+
   // مدل فرم ایجاد و ویرایش
-  newCounterparty: Partial<Counterparty> = {
-    name: '',
-    counterparty_type: 'driver',
-    phone: '',
-    national_id: '',
-    bank_name: '',
-    account_number: '',
-    sheba_number: '',
-    account_code: '',
-    is_active: true
-  };
+  newCounterparty: Partial<Counterparty> = this.emptyForm();
   editingCounterparty: Counterparty | null = null;
+
+  // حساب‌های بانکی طرف حساب در حال ویرایش (ص۹ طرح ۳.۱)؛ فیلدهای بانکی فرم در ویرایش «حساب تازه» هستند
+  bankAccounts: PartyBankAccount[] = [];
+  isBankAccountsLoading = false;
+  bankAccountsError = '';
+  isBankSaving = false;
+  bankCardNumber = '';
+  bankOwnerName = '';
+  copiedBankKey = '';
 
   // مدیریت بانک عامل و شماره شبا
   iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
@@ -272,6 +280,8 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     this.api.getCounterparties().subscribe({
       next: (cp) => {
         this.counterparties = cp;
+        this.loadError = '';
+        this.isOfflineError = false;
         const elapsed = Date.now() - startTime;
         const minDuration = isManual ? 650 : 0;
         const remainingTime = Math.max(minDuration - elapsed, 0);
@@ -291,6 +301,10 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
         setTimeout(() => {
           this.isLoading = false;
           this.isRefreshing = false;
+          this.isOfflineError = isServerUnreachable(err?.status ?? 0);
+          this.loadError = this.isOfflineError
+            ? 'سرور در دسترس نیست؛ آخرین فهرست ذخیره‌شده نمایش داده می‌شود.'
+            : this.extractApiErrorMessage(err, 'خطا در بروزرسانی اطلاعات طرف‌حساب‌ها');
           this.toast.show('error', this.extractApiErrorMessage(err, 'خطا در بروزرسانی اطلاعات طرف‌حساب‌ها'));
           this.cdr.detectChanges();
         }, remainingTime);
@@ -346,6 +360,8 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
       list = list.filter(c =>
         (c.name && c.name.toLowerCase().includes(q)) ||
         (c.phone && c.phone.includes(q)) ||
+        (c.mobile && c.mobile.includes(q)) ||
+        (c.economic_code && c.economic_code.includes(q)) ||
         (c.national_id && c.national_id.includes(q)) ||
         (c.account_number && c.account_number.includes(q)) ||
         (c.sheba_number && c.sheba_number.includes(q)) ||
@@ -369,22 +385,21 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const payload = {
-      ...this.newCounterparty,
-      name,
-      phone: this.normalizeInput(this.newCounterparty.phone),
-      national_id: this.normalizeInput(this.newCounterparty.national_id),
-      account_number: this.normalizeInput(this.newCounterparty.account_number),
-      account_code: this.normalizeInput(this.newCounterparty.account_code),
-      sheba_number: this.normalizeInput(this.newCounterparty.sheba_number).toUpperCase().replace(/^IR/i, ''),
-      is_active: this.newCounterparty.is_active !== false
-    };
+    const identity = this.buildIdentityPayload(name);
 
     if (this.editingCounterparty?.id) {
       const editId = this.editingCounterparty.id;
-      this.api.updateCounterparty(editId, payload).subscribe({
+      // ویرایش: بانک فقط از زیرفهرست حساب‌ها؛ شرکت عوض نمی‌شود؛ مقدار پوشیده فرستاده نمی‌شود
+      const pendingBank = this.hasPendingBankAccount() ? this.buildBankAccountPayload() : null;
+      this.api.updateCounterparty(editId, identity).subscribe({
         next: (updated) => {
           this.toast.show('success', `طرف‌حساب «${updated.name}» با موفقیت ویرایش شد.`);
+          if (pendingBank && updated.party) {
+            this.api.createPartyBankAccount({ ...pendingBank, party: updated.party }).subscribe({
+              next: () => this.offlineSync.invalidateCache('counterparties'),
+              error: (err) => this.toast.show('error', this.extractApiErrorMessage(err, 'خطا در ثبت حساب بانکی'))
+            });
+          }
           this.resetForm();
           this.counterparties = this.counterparties.map(c => c.id === editId ? updated : c);
           this.offlineSync.invalidateCache('counterparties');
@@ -397,12 +412,21 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب را سراسری نسازد
+      // ساخت: حساب اولیه (اصلی) تو در تو در همان درخواست، تا صف آفلاین یک رکورد داشته باشد
+      const createPayload: Partial<Counterparty> = { ...identity };
+      if (this.hasPendingBankAccount()) {
+        createPayload.bank_accounts = [{ ...this.buildBankAccountPayload(), is_primary: true }];
+      }
+      // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) در شرکت درست ساخته شود
       const companyId = this.activeCompanyService?.activeCompanyId;
-      const createPayload = companyId ? { ...payload, company: companyId } : payload;
+      if (companyId) createPayload.company = companyId;
       this.api.createCounterparty(createPayload).subscribe({
         next: (created) => {
-          this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت ایجاد شد.`);
+          if (created.existing) {
+            this.toast.show('info', `طرف‌حساب «${created.name}» از قبل ثبت شده بود (تکراری)؛ همان نمایش داده شد.`);
+          } else {
+            this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت ایجاد شد.`);
+          }
           this.resetForm();
           this.counterparties = [created, ...this.counterparties.filter(c => c.id !== created.id)];
           this.offlineSync.invalidateCache('counterparties');
@@ -418,18 +442,28 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   }
 
   editCounterparty(cp: Counterparty): void {
+    this.resetForm();
     this.editingCounterparty = cp;
+    // فیلدهای بانکی فرم در ویرایش خالی می‌مانند و فقط حساب تازه می‌سازند؛ حساب‌های موجود در زیرفهرست‌اند
     this.newCounterparty = {
-      ...cp,
+      ...this.emptyForm(),
+      kind: cp.kind || 'person',
+      name: cp.name,
+      counterparty_type: cp.counterparty_type,
+      national_id: cp.national_id || '',
+      economic_code: cp.economic_code || '',
+      registration_number: cp.registration_number || '',
+      phone: cp.phone || '',
+      mobile: cp.mobile || '',
+      email: cp.email || '',
+      address: cp.address || '',
+      postal_code: cp.postal_code || '',
+      notes: cp.notes || '',
       account_code: cp.account_code || '',
       is_active: cp.is_active !== false
     };
-    if (cp.sheba_number) {
-      this.onShebaInput(cp.sheba_number);
-    } else {
-      this.shebaValidationResult = null;
-      this.shebaDigitsDisplay = '';
-    }
+    this.bankAccounts = [...(cp.bank_accounts || [])];
+    this.loadBankAccounts();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.cdr.detectChanges();
   }
@@ -441,23 +475,212 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
 
   resetForm(): void {
     this.editingCounterparty = null;
-    this.newCounterparty = {
+    this.newCounterparty = this.emptyForm();
+    this.bankAccounts = [];
+    this.isBankAccountsLoading = false;
+    this.bankAccountsError = '';
+    this.resetBankForm();
+  }
+
+  private emptyForm(): Partial<Counterparty> {
+    return {
+      kind: undefined,
       name: '',
       counterparty_type: 'driver',
-      phone: '',
       national_id: '',
+      economic_code: '',
+      registration_number: '',
+      phone: '',
+      mobile: '',
+      email: '',
+      address: '',
+      postal_code: '',
+      notes: '',
       bank_name: '',
       account_number: '',
       sheba_number: '',
       account_code: '',
       is_active: true
     };
+  }
+
+  private resetBankForm(): void {
+    this.newCounterparty.bank_name = '';
+    this.newCounterparty.account_number = '';
+    this.newCounterparty.sheba_number = '';
+    this.bankCardNumber = '';
+    this.bankOwnerName = '';
     this.shebaValidationResult = null;
     this.shebaDigitsDisplay = '';
     this.isBankDropdownOpen = false;
     this.bankSearchQuery = '';
     this.isAccountCopied = false;
     this.isShebaCopied = false;
+  }
+
+  /** مقدار پوشیده (دارای *) از سرور آمده و نباید دوباره فرستاده شود. */
+  isMaskedValue(val?: string | null): boolean {
+    return !!val && val.includes('*');
+  }
+
+  /** طرف حساب در حال ویرایش برای این کاربر پوشیده است (فقط نمایش، بی کپی). */
+  get isEditingMasked(): boolean {
+    return !!this.editingCounterparty?.bank_masked;
+  }
+
+  /** فیلدهای هویتی و مالی بی بانک؛ مقدار پوشیده و `company` (در ویرایش) فرستاده نمی‌شوند. */
+  private buildIdentityPayload(name: string): Partial<Counterparty> {
+    const f = this.newCounterparty;
+    const payload: Partial<Counterparty> = {
+      name,
+      counterparty_type: f.counterparty_type || 'other',
+      economic_code: this.normalizeInput(f.economic_code),
+      registration_number: this.normalizeInput(f.registration_number),
+      phone: this.normalizeInput(f.phone),
+      mobile: this.normalizeInput(f.mobile),
+      email: (f.email || '').trim(),
+      address: (f.address || '').trim(),
+      postal_code: this.normalizeInput(f.postal_code),
+      notes: (f.notes || '').trim(),
+      account_code: this.normalizeInput(f.account_code),
+      is_active: f.is_active !== false
+    };
+    if (f.kind) payload.kind = f.kind;
+    const nationalId = this.normalizeInput(f.national_id);
+    if (!this.isMaskedValue(nationalId)) payload.national_id = nationalId;
+    return payload;
+  }
+
+  /** فرم بانک چیزی برای ثبت دارد (شبا اجباری است). */
+  hasPendingBankAccount(): boolean {
+    return !!this.newCounterparty.sheba_number && !this.isMaskedValue(this.newCounterparty.sheba_number);
+  }
+
+  private buildBankAccountPayload(): PartyBankAccount {
+    const digits = extractShebaDigits(this.newCounterparty.sheba_number || '');
+    return {
+      bank_name: (this.newCounterparty.bank_name || '').trim(),
+      account_number: this.normalizeInput(this.newCounterparty.account_number),
+      sheba_number: digits ? `IR${digits}` : '',
+      card_number: this.normalizeInput(this.bankCardNumber).replace(/\D/g, ''),
+      owner_name: this.bankOwnerName.trim()
+    };
+  }
+
+  // ── زیرفهرست حساب‌های بانکی (`/api/personnel/party-bank-accounts/?party=`) ──
+  loadBankAccounts(): void {
+    const partyId = this.editingCounterparty?.party;
+    if (!partyId) return;
+    this.isBankAccountsLoading = true;
+    this.bankAccountsError = '';
+    this.api.getPartyBankAccounts(partyId).subscribe({
+      next: (rows) => {
+        if (this.editingCounterparty?.party !== partyId) return;
+        this.bankAccounts = rows || [];
+        this.isBankAccountsLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        if (this.editingCounterparty?.party !== partyId) return;
+        this.isBankAccountsLoading = false;
+        this.bankAccountsError = this.extractApiErrorMessage(err, 'خطا در دریافت حساب‌های بانکی');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  addBankAccount(): void {
+    const partyId = this.editingCounterparty?.party;
+    if (!partyId || this.isBankSaving) return;
+    if (!this.hasPendingBankAccount()) {
+      this.toast.show('warning', 'لطفاً شماره شبا را وارد نمایید.');
+      return;
+    }
+    if (this.shebaValidationResult && !this.shebaValidationResult.isValid) {
+      this.toast.show('warning', 'شماره شبا معتبر نیست.');
+      return;
+    }
+    const payload: PartyBankAccount = {
+      ...this.buildBankAccountPayload(),
+      party: partyId,
+      is_primary: this.bankAccounts.length === 0
+    };
+    this.isBankSaving = true;
+    this.api.createPartyBankAccount(payload).subscribe({
+      next: () => {
+        this.isBankSaving = false;
+        this.toast.show('success', 'حساب بانکی ثبت شد.');
+        this.resetBankForm();
+        this.afterBankChange();
+      },
+      error: (err) => {
+        this.isBankSaving = false;
+        this.toast.show('error', this.extractApiErrorMessage(err, 'خطا در ثبت حساب بانکی'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  setPrimaryBankAccount(acc: PartyBankAccount): void {
+    if (!acc.id || acc.is_primary || this.isBankSaving) return;
+    this.isBankSaving = true;
+    // فقط پرچم اصلی فرستاده می‌شود، هرگز مقدار پوشیده
+    this.api.updatePartyBankAccount(acc.id, { is_primary: true }).subscribe({
+      next: () => {
+        this.isBankSaving = false;
+        this.toast.show('success', 'حساب اصلی تغییر کرد.');
+        this.afterBankChange();
+      },
+      error: (err) => {
+        this.isBankSaving = false;
+        this.toast.show('error', this.extractApiErrorMessage(err, 'خطا در تغییر حساب اصلی'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  deleteBankAccount(acc: PartyBankAccount): void {
+    if (!acc.id) return;
+    this.openConfirmDialog({
+      title: 'حذف حساب بانکی',
+      message: `آیا از حذف حساب بانکی ${acc.bank_name || ''} اطمینان دارید؟`,
+      confirmText: 'بله، حذف شود',
+      cancelText: 'انصراف',
+      isDanger: true,
+      onConfirm: () => {
+        this.api.deletePartyBankAccount(acc.id!).subscribe({
+          next: () => {
+            this.toast.show('success', 'حساب بانکی حذف شد.');
+            this.afterBankChange();
+          },
+          error: (err) => this.toast.show('error', this.extractApiErrorMessage(err, 'خطا در حذف حساب بانکی'))
+        });
+      }
+    });
+  }
+
+  private afterBankChange(): void {
+    this.offlineSync.invalidateCache('counterparties');
+    this.loadBankAccounts();
+    this.loadCounterparties();
+    this.cdr.detectChanges();
+  }
+
+  /** کپی یک مقدار حساب (فقط وقتی پوشیده نیست)؛ بازخورد دو ثانیه‌ای با کلید `id:field`. */
+  copyBankValue(acc: PartyBankAccount, field: 'sheba_number' | 'account_number' | 'card_number'): void {
+    const raw = acc[field] || '';
+    if (!raw || this.isMaskedValue(raw)) return;
+    const value = field === 'sheba_number' ? raw.toUpperCase().replace(/^IR/, '') : raw;
+    const key = `${acc.id}:${field}`;
+    navigator.clipboard.writeText(value).then(() => {
+      this.copiedBankKey = key;
+      this.toast.show('success', 'در کلیپ‌بورد کپی شد.');
+      setTimeout(() => {
+        if (this.copiedBankKey === key) this.copiedBankKey = '';
+        this.cdr.detectChanges();
+      }, 2000);
+      this.cdr.detectChanges();
+    });
   }
 
   toggleCounterpartyStatus(cp: Counterparty, event?: MouseEvent): void {
@@ -586,7 +809,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   copyShebaToClipboard(targetSheba?: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     const shebaDigits = targetSheba || this.newCounterparty.sheba_number;
-    if (!shebaDigits) return;
+    if (!shebaDigits || this.isMaskedValue(shebaDigits)) return;
     const cleanDigits = shebaDigits.toString().trim().toUpperCase().replace(/^IR/i, '');
     navigator.clipboard.writeText(cleanDigits).then(() => {
       this.isShebaCopied = true;
@@ -598,7 +821,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
 
   copyAccountNumberToClipboard(): void {
     const acc = this.newCounterparty.account_number || '';
-    if (!acc) return;
+    if (!acc || this.isMaskedValue(acc)) return;
     navigator.clipboard.writeText(acc).then(() => {
       this.isAccountCopied = true;
       this.toast.show('success', `شماره حساب ${acc} کپی شد.`);

@@ -23,6 +23,7 @@ import {
   ProjectSection,
   UserSectionAssignment,
   Counterparty,
+  PartyBankAccount,
   ExpenseInvoice,
   PettyCashAccount,
   PettyCashTransaction,
@@ -209,10 +210,14 @@ export class PersonnelApiService {
   updateUserSectionAssignment(id: number, data: Partial<UserSectionAssignment>): Observable<UserSectionAssignment> { return this.treasuryOrg.updateUserSectionAssignment(id, data); }
   deleteUserSectionAssignment(id: number): Observable<void> { return this.treasuryOrg.deleteUserSectionAssignment(id); }
   getMySections(): Observable<ProjectSection[]> { return this.treasuryOrg.getMySections(); }
-  getCounterparties(params?: { counterparty_type?: string; search?: string }): Observable<Counterparty[]> { return this.treasuryOrg.getCounterparties(params); }
+  getCounterparties(params?: { counterparty_type?: string; kind?: string; is_active?: boolean; search?: string }): Observable<Counterparty[]> { return this.treasuryOrg.getCounterparties(params); }
   createCounterparty(data: Partial<Counterparty>): Observable<Counterparty> { return this.treasuryOrg.createCounterparty(data); }
   updateCounterparty(id: number, data: Partial<Counterparty>): Observable<Counterparty> { return this.treasuryOrg.updateCounterparty(id, data); }
   deleteCounterparty(id: number): Observable<void> { return this.treasuryOrg.deleteCounterparty(id); }
+  getPartyBankAccounts(partyId: number): Observable<PartyBankAccount[]> { return this.treasuryOrg.getPartyBankAccounts(partyId); }
+  createPartyBankAccount(data: Partial<PartyBankAccount>): Observable<PartyBankAccount> { return this.treasuryOrg.createPartyBankAccount(data); }
+  updatePartyBankAccount(id: number, data: Partial<PartyBankAccount>): Observable<PartyBankAccount> { return this.treasuryOrg.updatePartyBankAccount(id, data); }
+  deletePartyBankAccount(id: number): Observable<void> { return this.treasuryOrg.deletePartyBankAccount(id); }
   getExpenseInvoices(params?: { section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> { return this.treasuryOrg.getExpenseInvoices(params); }
   createExpenseInvoice(data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> { return this.treasuryOrg.createExpenseInvoice(data); }
   updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice>): Observable<ExpenseInvoice> { return this.treasuryOrg.updateExpenseInvoice(id, data); }

@@ -112,9 +112,73 @@
           type="text"
           [(ngModel)]="newCounterparty.national_id"
           name="national_id"
+          dir="ltr"
           placeholder="۱۰ یا ۱۱ رقم عددی..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold font-mono focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+          [readonly]="isMaskedValue(newCounterparty.national_id)"
+          [attr.aria-describedby]="isMaskedValue(newCounterparty.national_id) ? 'cp-national-masked' : null"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold font-mono text-left focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+          [class.text-slate-400]="isMaskedValue(newCounterparty.national_id)"
         />
+        <p *ngIf="isMaskedValue(newCounterparty.national_id)" id="cp-national-masked" class="mt-1 text-[10px] font-bold text-slate-500">
+          پوشیده است؛ دسترسی دیدن کامل را ندارید.
+        </p>
+      </div>
+
+      <!-- حقیقی / حقوقی -->
+      <div>
+        <label for="cp-kind" class="block text-xs font-bold text-slate-600 mb-1.5">نوع شخص:</label>
+        <select
+          id="cp-kind"
+          [(ngModel)]="newCounterparty.kind"
+          name="kind"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors text-slate-800 cursor-pointer"
+        >
+          <option [ngValue]="undefined">تشخیص از روی شناسه</option>
+          <option *ngFor="let k of kindOptions" [ngValue]="k.key">{{ k.label }}</option>
+        </select>
+      </div>
+
+      <!-- کد اقتصادی -->
+      <div>
+        <label for="cp-economic" class="block text-xs font-bold text-slate-600 mb-1.5">کد اقتصادی:</label>
+        <input id="cp-economic" type="text" dir="ltr" inputmode="numeric" [(ngModel)]="newCounterparty.economic_code" name="economic_code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+      </div>
+
+      <!-- شماره ثبت (حقوقی) -->
+      <div *ngIf="newCounterparty.kind === 'legal'">
+        <label for="cp-registration" class="block text-xs font-bold text-slate-600 mb-1.5">شماره ثبت:</label>
+        <input id="cp-registration" type="text" dir="ltr" inputmode="numeric" [(ngModel)]="newCounterparty.registration_number" name="registration_number" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+      </div>
+
+      <!-- موبایل -->
+      <div>
+        <label for="cp-mobile" class="block text-xs font-bold text-slate-600 mb-1.5">موبایل:</label>
+        <input id="cp-mobile" type="tel" dir="ltr" inputmode="tel" [(ngModel)]="newCounterparty.mobile" name="mobile" placeholder="09xxxxxxxxx" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+      </div>
+
+      <!-- ایمیل -->
+      <div>
+        <label for="cp-email" class="block text-xs font-bold text-slate-600 mb-1.5">ایمیل:</label>
+        <input id="cp-email" type="email" dir="ltr" [(ngModel)]="newCounterparty.email" name="email" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+      </div>
+
+      <!-- کد پستی -->
+      <div>
+        <label for="cp-postal" class="block text-xs font-bold text-slate-600 mb-1.5">کد پستی:</label>
+        <input id="cp-postal" type="text" dir="ltr" inputmode="numeric" maxlength="10" [(ngModel)]="newCounterparty.postal_code" name="postal_code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+      </div>
+
+      <!-- نشانی -->
+      <div class="md:col-span-2">
+        <label for="cp-address" class="block text-xs font-bold text-slate-600 mb-1.5">نشانی:</label>
+        <input id="cp-address" type="text" [(ngModel)]="newCounterparty.address" name="address" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors" />
+      </div>
+
+      <!-- عنوان بخش حساب بانکی (در ویرایش: فرم حساب تازه) -->
+      <div class="col-span-1 md:col-span-4 pt-2 border-t border-slate-100">
+        <h3 class="text-xs font-black text-slate-700">
+          {{ editingCounterparty ? 'افزودن حساب بانکی تازه' : 'حساب بانکی (اصلی)' }}
+        </h3>
       </div>
 
       <!-- ۵. شماره شبا (۲۴ رقم بدون IR) -->
@@ -214,6 +278,18 @@
         </div>
       </div>
 
+      <!-- شماره کارت -->
+      <div>
+        <label for="cp-card" class="block text-xs font-bold text-slate-600 mb-1.5">شماره کارت:</label>
+        <input id="cp-card" type="text" dir="ltr" inputmode="numeric" maxlength="19" [(ngModel)]="bankCardNumber" name="bank_card_number" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+      </div>
+
+      <!-- نام صاحب حساب -->
+      <div>
+        <label for="cp-owner" class="block text-xs font-bold text-slate-600 mb-1.5">نام صاحب حساب:</label>
+        <input id="cp-owner" type="text" [(ngModel)]="bankOwnerName" name="bank_owner_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors" />
+      </div>
+
       <!-- ۸. کد حساب تفصیلی (دفتر کل) -->
       <div>
         <label class="block text-xs font-bold text-slate-600 mb-1.5">کد حساب تفصیلی:</label>
@@ -246,6 +322,87 @@
           <span>{{ shebaValidationResult.errorMessage || 'شماره شبا نامعتبر است' }}</span>
         </span>
       </div>
+
+      <!-- دکمهٔ افزودن حساب تازه (فقط در ویرایش) -->
+      <div *ngIf="editingCounterparty" class="col-span-1 md:col-span-4 flex justify-end">
+        <button
+          type="button"
+          appAction="create"
+          display="label"
+          size="sm"
+          label="افزودن حساب"
+          [busy]="isBankSaving"
+          [disabled]="isBankSaving || !hasPendingBankAccount()"
+          (click)="addBankAccount()"
+        ></button>
+      </div>
+
+      <!-- زیرفهرست حساب‌های بانکی طرف حساب در حال ویرایش -->
+      <section *ngIf="editingCounterparty" class="col-span-1 md:col-span-4 space-y-2" aria-labelledby="cp-bank-list-title">
+        <div class="flex items-center justify-between gap-2">
+          <h3 id="cp-bank-list-title" class="text-xs font-black text-slate-700">حساب‌های بانکی ثبت‌شده</h3>
+          <span *ngIf="isEditingMasked" class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+            پوشیده؛ فقط چهار رقم آخر
+          </span>
+        </div>
+
+        <app-loading-skeleton *ngIf="isBankAccountsLoading && bankAccounts.length === 0" type="text" [lines]="2" />
+
+        <div *ngIf="bankAccountsError && !isBankAccountsLoading" class="flex items-center justify-between gap-2 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-[11px] font-bold text-rose-700" role="alert">
+          <span>{{ bankAccountsError }}</span>
+          <button type="button" appAction="refresh" size="sm" label="تلاش دوباره" (click)="loadBankAccounts()"></button>
+        </div>
+
+        <p *ngIf="!isBankAccountsLoading && !bankAccountsError && bankAccounts.length === 0" class="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+          حسابی ثبت نشده است. با فرم بالا یک حساب اضافه کنید.
+        </p>
+
+        <ul *ngIf="bankAccounts.length > 0" class="space-y-2">
+          <li
+            *ngFor="let acc of bankAccounts"
+            class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+            [class.opacity-60]="acc.is_active === false"
+          >
+            <div class="min-w-0 space-y-1">
+              <div class="flex items-center gap-1.5 flex-wrap text-[11px] font-bold">
+                <span class="text-slate-800">{{ acc.bank_name || 'بانک نامشخص' }}</span>
+                <span *ngIf="acc.is_primary" class="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">اصلی</span>
+                <span *ngIf="acc.owner_name" class="text-slate-500">{{ acc.owner_name }}</span>
+              </div>
+              <div class="flex items-center gap-1 min-w-0">
+                <span class="font-mono text-[11px] font-bold text-slate-700 truncate" dir="ltr">{{ acc.sheba_number }}</span>
+                <button
+                  *ngIf="!isEditingMasked && !isMaskedValue(acc.sheba_number)"
+                  type="button"
+                  (click)="copyBankValue(acc, 'sheba_number')"
+                  class="tap-target shrink-0 text-slate-400 hover:text-indigo-600 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-500 inline-flex items-center justify-center min-w-[40px] min-h-[40px] cursor-pointer"
+                  title="کپی شبا"
+                  aria-label="کپی شبا"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [appIcon]="copiedBankKey === acc.id + ':sheba_number' ? 'check' : 'copy'"></svg>
+                </button>
+              </div>
+              <div *ngIf="acc.account_number || acc.card_number" class="flex items-center gap-2 flex-wrap text-[10px] font-mono text-slate-500" dir="ltr">
+                <span *ngIf="acc.account_number">{{ acc.account_number }}</span>
+                <span *ngIf="acc.card_number">{{ acc.card_number }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 justify-end shrink-0">
+              <button
+                *ngIf="!acc.is_primary"
+                type="button"
+                appAction="confirm"
+                display="label"
+                size="sm"
+                label="حساب اصلی"
+                [disabled]="isBankSaving"
+                (click)="setPrimaryBankAccount(acc)"
+              ></button>
+              <button type="button" appAction="delete" size="sm" (click)="deleteBankAccount(acc)"></button>
+            </div>
+          </li>
+        </ul>
+      </section>
 
       <!-- وضعیت فعال و دکمه‌های عملیات (مطابق پروژه‌ها و بخش‌ها) -->
       <div class="col-span-1 md:col-span-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
@@ -338,8 +495,18 @@
       </div>
     </div>
 
+    <!-- حالت بارگذاری نخست و خطا (چهار حالت صفحه) -->
+    <div *ngIf="isLoading && counterparties.length === 0" class="p-4">
+      <app-loading-skeleton type="table" [rows]="5" />
+    </div>
+    <div *ngIf="loadError && !isLoading" class="m-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border p-3 text-xs font-bold"
+      [ngClass]="isOfflineError ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-rose-50 border-rose-200 text-rose-700'" role="alert">
+      <span>{{ loadError }}</span>
+      <button type="button" appAction="refresh" size="sm" label="تلاش دوباره" (click)="refreshCounterparties(true)"></button>
+    </div>
+
     <!-- ── نمای ۱: جدول تفصیلی طرف‌حساب‌های مالی ── -->
-    <div *ngIf="viewMode === 'table'" class="overflow-x-auto">
+    <div *ngIf="viewMode === 'table' && !(isLoading && counterparties.length === 0)" class="overflow-x-auto">
       <table class="w-full text-right text-xs">
         <thead class="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200">
           <tr>
@@ -376,8 +543,9 @@
             <!-- ستون شبا با برجستگی و کلید کپی سریع -->
             <td class="p-3">
               <div *ngIf="cp.sheba_number" class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg group hover:border-indigo-300 transition-colors">
-                <span class="font-mono text-slate-800 text-[11px] font-bold dir-ltr select-all">IR{{ cp.sheba_number }}</span>
+                <span class="font-mono text-slate-800 text-[11px] font-bold dir-ltr select-all">{{ cp.bank_masked ? '' : 'IR' }}{{ cp.sheba_number }}</span>
                 <button
+                  *ngIf="!cp.bank_masked"
                   type="button"
                   (click)="copyShebaToClipboard(cp.sheba_number, $event)"
                   class="text-slate-400 hover:text-indigo-600 text-[11px] cursor-pointer"
@@ -441,7 +609,10 @@
     </div>
 
     <!-- ── نمای ۲: کارت‌های تفصیلی طرف‌حساب‌ها ── -->
-    <div *ngIf="viewMode === 'cards'" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div *ngIf="viewMode === 'cards' && !(isLoading && counterparties.length === 0)" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <p *ngIf="filteredCounterparties.length === 0" class="col-span-full p-8 text-center text-slate-500 text-xs font-bold">
+        {{ searchQuery ? 'هیچ طرف‌حسابی مطابق با عبارت جستجو یافت نشد.' : 'هیچ طرف‌حسابی در این دسته یافت نشد.' }}
+      </p>
       <div
         *ngFor="let cp of filteredCounterparties"
         class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 shadow-sm space-y-3 hover:border-indigo-200 transition-colors"
@@ -484,8 +655,9 @@
 
         <!-- شماره شبا (برجسته در نمای کارت) -->
         <div *ngIf="cp.sheba_number" class="bg-white p-2.5 rounded-xl border border-indigo-100 shadow-sm flex items-center justify-between text-[11px] font-mono">
-          <span class="text-slate-800 dir-ltr font-black">IR{{ cp.sheba_number }}</span>
+          <span class="text-slate-800 dir-ltr font-black">{{ cp.bank_masked ? '' : 'IR' }}{{ cp.sheba_number }}</span>
           <button
+            *ngIf="!cp.bank_masked"
             type="button"
             (click)="copyShebaToClipboard(cp.sheba_number, $event)"
             class="text-indigo-600 hover:text-indigo-800 text-[10px] font-sans font-bold cursor-pointer flex items-center gap-1"

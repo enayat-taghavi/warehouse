@@ -20,6 +20,7 @@ import {
   ProjectSection,
   UserSectionAssignment,
   Counterparty,
+  PartyBankAccount,
   ExpenseInvoice,
   PettyCashAccount,
   PettyCashTransaction,
@@ -152,7 +153,7 @@ export class TreasuryOrgApiService {
     return this.org.getMySections();
   }
 
-  getCounterparties(params?: { counterparty_type?: string; search?: string }): Observable<Counterparty[]> {
+  getCounterparties(params?: { counterparty_type?: string; kind?: string; is_active?: boolean; search?: string }): Observable<Counterparty[]> {
     return this.api.get<Counterparty[]>(`${this.baseUrl}/counterparties`, params as Record<string, unknown>);
   }
 
@@ -166,6 +167,23 @@ export class TreasuryOrgApiService {
 
   deleteCounterparty(id: number): Observable<void> {
     return this.api.delete<void>(`${this.baseUrl}/counterparties/${id}`);
+  }
+
+  /** حساب‌های بانکی یک طرف بیرونی؛ `partyId` همان `Counterparty.party` است. */
+  getPartyBankAccounts(partyId: number): Observable<PartyBankAccount[]> {
+    return this.api.get<PartyBankAccount[]>(`${this.baseUrl}/party-bank-accounts`, { party: partyId });
+  }
+
+  createPartyBankAccount(data: Partial<PartyBankAccount>): Observable<PartyBankAccount> {
+    return this.api.post<PartyBankAccount>(`${this.baseUrl}/party-bank-accounts`, data);
+  }
+
+  updatePartyBankAccount(id: number, data: Partial<PartyBankAccount>): Observable<PartyBankAccount> {
+    return this.api.patch<PartyBankAccount>(`${this.baseUrl}/party-bank-accounts/${id}`, data);
+  }
+
+  deletePartyBankAccount(id: number): Observable<void> {
+    return this.api.delete<void>(`${this.baseUrl}/party-bank-accounts/${id}`);
   }
 
   getExpenseInvoices(params?: { section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> {
