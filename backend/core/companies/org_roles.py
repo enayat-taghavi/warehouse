@@ -54,16 +54,24 @@ def assignments_covering_section(section):
     return SectionAssignment.objects.filter(covering_section_q(section), is_active=True)
 
 
+def company_level_key(company_id):
+    """
+    کلید «سند سطح شرکت» (ص۷ طرح ۳.۶) در section_chains به‌جای شناسهٔ بخش، با مقدار (None, company_id): فقط
+    انتساب‌های سطح همان شرکت آن را می‌پوشانند (CoveringIndex.covering(None, None, company_id)).
+    """
+    return ('company', company_id)
+
+
 def covering_assignment_rows(section_chains, *, exclude_superusers=True):
     """
     نسخهٔ دسته‌ای assignments_covering_section برای چند بخش با یک کوئری (ق۱۸).
-    section_chains: {section_id: (project_id, company_id)}. خروجی ردیف‌های انتساب فعالِ کاربران فعال که دست‌کم
+    section_chains: {section_id یا company_level_key(company_id): (project_id, company_id)}. خروجی ردیف‌های انتساب فعالِ کاربران فعال که دست‌کم
     یکی از این بخش‌ها را می‌پوشانند: [(user_id, role, section_id, project_id, company_id)] (فقط یکی از سه سطح پر است).
     exclude_superusers: مدیر کل کنار گذاشته شود (دریافت‌کنندهٔ گردش کار نیست).
     """
     if not section_chains:
         return []
-    section_ids = list(section_chains)
+    section_ids = [s for s in section_chains if not isinstance(s, tuple)]
     project_ids = {p for p, _c in section_chains.values() if p}
     company_ids = {c for _p, c in section_chains.values() if c}
     qs = SectionAssignment.objects.filter(

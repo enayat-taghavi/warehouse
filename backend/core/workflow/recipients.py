@@ -10,6 +10,9 @@
 ردیف «معتبر امروز»: ردیف اصلی همیشه؛ ردیف جانشین فقط اگر بازه‌اش امروز را دارد. رویدادهای «رسید» و «برداشته شد»
 فقط برای ردیف‌های معتبر امروز صادر می‌شوند؛ ردیف جانشینِ بازهٔ آینده رویدادش را هنگام شروع بازه از زمان‌بند
 (۲.۳-ب) می‌گیرد.
+
+سند «سطح شرکت» (ص۷ طرح ۳.۶، نمونه با section=None): زنجیره (None, None, company_id) است و دریافت‌کننده فقط
+انتساب فعال سطح همان شرکت با نقش مرحله و مجوز مرحله در سطح شرکت؛ انتساب پروژه یا بخش آن را نمی‌گیرد.
 """
 from django.db.models import Q
 from django.utils import timezone
@@ -17,19 +20,45 @@ from django.utils import timezone
 from accounts.scoped_permissions import _split_code, effective_bundles, section_permission_holders
 from companies.models import SectionAssignment, section_role_ranks
 from companies.org_roles import (
-    CoveringIndex, _section_chain, assignments_covering_section, covering_assignment_rows,
+    CoveringIndex, _section_chain, assignments_covering_section, company_level_key, covering_assignment_rows,
 )
 
 from .models import WorkflowSubstitute, WorkflowTaskRecipient
 
 
-def creator_rank(user_id, section, ranks=None) -> int:
-    """بالاترین رتبهٔ نقش‌های انتساب فعال کاربر در این بخش؛ بی‌نقش (مثل مدیر کل بی‌انتساب) ۰ (ت۵)."""
+def scope_triplet(section, company_id=None):
+    """
+    (section_id, project_id, company_id) دامنهٔ نمونه: بخش با پروژهٔ بارشده (بی‌پرس‌وجو)، یا برای سند سطح شرکت
+    (section=None) زنجیرهٔ (None, None, company_id).
+    """
+    if section is not None:
+        return section.pk, section.project_id, section.project.company_id
+    return None, None, company_id
+
+
+def scope_chain_key(section_id, company_id):
+    """کلید زنجیرهٔ covering_assignment_rows برای این دامنه؛ None اگر نه بخش دارد نه شرکت."""
+    if section_id is not None:
+        return section_id
+    return company_level_key(company_id) if company_id else None
+
+
+def creator_rank(user_id, section, ranks=None, company_id=None) -> int:
+    """
+    بالاترین رتبهٔ نقش‌های انتساب فعال کاربر در این بخش؛ بی‌نقش (مثل مدیر کل بی‌انتساب) ۰ (ت۵).
+    section=None (سند سطح شرکت): فقط انتساب‌های فعال سطح شرکت company_id.
+    """
     if not user_id:
         return 0
     if ranks is None:
         ranks = section_role_ranks()
-    roles = assignments_covering_section(section).filter(user_id=user_id).values_list('role', flat=True)
+    if section is None:
+        if not company_id:
+            return 0
+        rows = SectionAssignment.objects.filter(company_id=company_id, is_active=True)
+    else:
+        rows = assignments_covering_section(section)
+    roles = rows.filter(user_id=user_id).values_list('role', flat=True)
     return max((ranks.get(role) or 0 for role in roles), default=0)
 
 
@@ -107,6 +136,7 @@ def compute_recipients_batch(items, *, bundles=None, today=None) -> dict:
     یک پرس‌وجوی انتساب‌های پوشانندهٔ همهٔ بخش‌ها، effective_bundles() (اگر bundles داده نشود)، یک پرس‌وجوی
     تفاوت‌های کاربر، یک پرس‌وجوی جانشین‌ها و یک پرس‌وجوی عضویت جانشین‌ها در شرکت (فقط انتساب فعال).
     items: [(key, (section_id, project_id, company_id), role, permission, creator_id[, target_user_id
+    (section_id=None و project_id=None یعنی سند سطح شرکت: فقط انتساب‌های سطح شرکت)
     [, allow_substitute]])]. target_user_id (کار ارجاع، ر۵ طرح ۲.۳-و): دریافت‌کنندهٔ اصلی فقط همین کاربر است، اگر
     فعال و عضو فعال شرکت نمونه باشد؛ نقش، مجوز و قاعدهٔ ثبت‌کننده سنجیده نمی‌شود (یک پرس‌وجوی کاربر و یک پرس‌وجوی
     عضویت برای همهٔ کارهای ارجاع). allow_substitute=False (ر۴): ردیف جانشین ساخته نمی‌شود.
@@ -120,7 +150,11 @@ def compute_recipients_batch(items, *, bundles=None, today=None) -> dict:
     step_items = [it for it in items if it[5] is None]
     out = {}
     if step_items:
-        chains = {sid: (pid, cid) for _k, (sid, pid, cid), *_rest in step_items if sid is not None}
+        chains = {}
+        for _k, (sid, pid, cid), *_rest in step_items:
+            ckey = scope_chain_key(sid, cid)
+            if ckey is not None:
+                chains[ckey] = (pid if sid is not None else None, cid)
         rows = covering_assignment_rows(chains) if chains else []
         if rows and bundles is None:
             bundles = effective_bundles()
@@ -128,8 +162,11 @@ def compute_recipients_batch(items, *, bundles=None, today=None) -> dict:
                         if rows else {})
         index = CoveringIndex(rows)
         for key, (sid, pid, cid), role, permission, creator_id, _t, _a in step_items:
-            holders = {uid for uid, r, *_ in index.covering(sid, pid, cid) if r == role} if sid is not None else set()
-            allowed = perm_holders.get((sid, _split_code(permission)[1]), set()) if holders else set()
+            ckey = scope_chain_key(sid, cid)
+            if sid is None:
+                pid = None
+            holders = {uid for uid, r, *_ in index.covering(sid, pid, cid) if r == role} if ckey is not None else set()
+            allowed = perm_holders.get((ckey, _split_code(permission)[1]), set()) if holders else set()
             out[key] = ((holders & allowed) - {creator_id}, [], holders)
     ref_items = [it for it in items if it[5] is not None]
     if ref_items:

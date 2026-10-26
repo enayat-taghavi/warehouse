@@ -2,6 +2,8 @@
 موتور گردش کار هسته (طرح ۲.۳-الف): ارسال، اقدام، عودت، رد، لغو و دیدن سند از راه کار.
 
 قاعده‌ها:
+- ص۷ طرح ۳.۶: سند بی‌بخش با company_field «سطح شرکت» است (نمونه با section=None)؛ همهٔ قاعده‌ها روی زنجیرهٔ
+  (None, None, company_id) یعنی فقط انتساب‌های سطح شرکت کار می‌کنند. ص۸: قلاب required مرحلهٔ «تأیید».
 - ت۳: دریافت‌کننده = نقش مرحله در بخش ∩ مجوز مرحله در همان بخش − ثبت‌کننده؛ مدیر کل دریافت‌کننده نیست ولی
   روی هر کار جز سند خودش اقدام می‌کند (as_superuser در سابقه).
 - ت۶ (فقط مرحله‌های «تأیید»؛ «بررسی» و «اجرا» همیشه اجباری‌اند): ۱. سقف، ۲. سطح ثبت‌کننده (هنگام ارسال،
@@ -33,7 +35,7 @@ from .models import (
 )
 from .recipients import (
     clear_task_recipients, company_member_pairs, compute_recipients_batch, creator_rank as _creator_rank,
-    row_valid_on, sync_task_recipients, valid_rows_q,
+    row_valid_on, scope_triplet, sync_task_recipients, valid_rows_q,
 )
 from .registry import (
     ACT, APPROVE, CANCELLED, COMPLETED, REFER, REFERRAL_KINDS, REJECT, REJECTED, RETURN, RETURNED, get_spec,
@@ -46,6 +48,7 @@ SKIP_CREATOR_LEVEL = 'creator_level'
 SKIP_NO_RECIPIENT = 'no_recipient'
 SKIP_NO_SECOND_APPROVAL = 'no_second_approval'
 SKIP_VERSION_REMOVED = 'version_removed'
+SKIP_NOT_REQUIRED = 'not_required'
 
 RESTARTABLE = (WorkflowInstance.RETURNED, WorkflowInstance.CANCELLED)
 
@@ -53,12 +56,15 @@ RESTARTABLE = (WorkflowInstance.RETURNED, WorkflowInstance.CANCELLED)
 # ─── کمکی‌ها ───────────────────────────────────────────────────────────────────
 
 class _Ctx:
-    """دادهٔ مشترک یک اقدام: اعلام، سند، بخش (با پروژه) و کش رتبه‌ها و بسته‌ها."""
+    """
+    دادهٔ مشترک یک اقدام: اعلام، سند، بخش (با پروژه؛ None برای سند سطح شرکت)، شرکت و کش رتبه‌ها و بسته‌ها.
+    """
 
-    def __init__(self, spec, obj, section):
+    def __init__(self, spec, obj, section, company_id=None):
         self.spec = spec
         self.obj = obj
         self.section = section
+        self.company_id = section.project.company_id if section is not None else company_id
         self._ranks = None
         self._bundles = None
 
@@ -104,6 +110,21 @@ def _load_section(section_id):
     return section
 
 
+def _load_scope(spec, obj):
+    """
+    (بخش یا None، شناسهٔ شرکت) سند. بخش‌دار: بخش با پروژه. بی‌بخش با company_field: سطح شرکت (ص۷ طرح ۳.۶).
+    نه بخش و نه شرکت: no_section مثل قبل.
+    """
+    section_id = getattr(obj, f'{spec.section_field}_id', None) if spec.section_field else None
+    if section_id:
+        section = _load_section(section_id)
+        return section, section.project.company_id
+    company_id = getattr(obj, f'{spec.company_field}_id', None) if spec.company_field else None
+    if company_id:
+        return None, company_id
+    raise WorkflowError('no_section', 'بخش سند مشخص نیست', 400)
+
+
 def _resolve(spec, entity_id, obj):
     if obj is None:
         obj = resolve_entity(spec.entity_kind, entity_id)
@@ -118,18 +139,23 @@ def _resolve(spec, entity_id, obj):
 def _thresholds(workflow_key, section_id, company_id) -> dict:
     """{step_key: amount} سقف‌های مؤثر؛ سقف بخش بر سقف شرکت مقدم است. یک پرس‌وجو."""
     company, section = {}, {}
-    rows = WorkflowThreshold.objects.filter(workflow_key=workflow_key).filter(
-        Q(section_id=section_id) | Q(company_id=company_id)
-    ).values_list('step_key', 'section_id', 'amount')
+    # سند سطح شرکت (section_id=None) فقط سقف شرکت خودش را می‌گیرد؛ هرگز Q(section_id=None) که سقف شرکت‌های دیگر را هم دارد
+    where = Q(company_id=company_id) if section_id is None else Q(section_id=section_id) | Q(company_id=company_id)
+    rows = WorkflowThreshold.objects.filter(workflow_key=workflow_key).filter(where).values_list(
+        'step_key', 'section_id', 'amount')
     for step_key, sec_id, amount in rows:
         (section if sec_id else company)[step_key] = amount
     return {**company, **section}
 
 
-def _plan_skips(spec, amount, creator_rank, thresholds, ranks) -> dict:
-    """قاعدهٔ ۱ و ۲ ت۶ برای مرحله‌های تأیید: {step_key: reason} به ترتیب مرحله‌ها."""
+def _plan_skips(spec, amount, creator_rank, thresholds, ranks, obj=None) -> dict:
+    """
+    قاعدهٔ ۱ و ۲ ت۶ برای مرحله‌های تأیید: {step_key: reason} به ترتیب مرحله‌ها. پیش از آن‌ها قلاب required مرحله
+    (ص۸ طرح ۳.۶): False یعنی not_required؛ چنین مرحله‌ای مثل مرحلهٔ زیر سقف در قاعدهٔ ۲ حساب نمی‌شود.
+    """
     steps = spec.steps
-    by_threshold = set()
+    not_required = {s.key for s in steps if s.kind == APPROVE and s.required is not None and not s.required(obj)}
+    by_threshold = set(not_required)
     if amount is not None:
         for step in steps:
             limit = thresholds.get(step.key)
@@ -138,6 +164,9 @@ def _plan_skips(spec, amount, creator_rank, thresholds, ranks) -> dict:
     plan = {}
     for i, step in enumerate(steps):
         if step.kind != APPROVE:
+            continue
+        if step.key in not_required:
+            plan[step.key] = SKIP_NOT_REQUIRED
             continue
         if step.key in by_threshold:
             plan[step.key] = SKIP_THRESHOLD
@@ -173,17 +202,12 @@ def _close_task(task, outcome, user=None, now=None) -> set:
     return clear_task_recipients(task)
 
 
-def _section_triplet(section):
-    """(section_id, project_id, company_id) بخش با پروژهٔ بارشده، بی‌پرس‌وجو."""
-    return section.pk, section.project_id, section.project.company_id
-
-
 def _compute_recipients(ctx, instance, step, today=None):
     """
     (دریافت‌کنندگان اصلی، ردیف‌های جانشین، دارندگان نقش) مرحله برای این نمونه؛ همان قاعدهٔ مسیر دسته‌ای
     (compute_recipients_batch با یک کار).
     """
-    item = (0, _section_triplet(ctx.section), step.role, step.permission, instance.created_by_id, None,
+    item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
             getattr(instance, "allow_substitute", True))
     return compute_recipients_batch([item], bundles=ctx.bundles, today=today)[0]
 
@@ -301,7 +325,8 @@ def mark_waiting(instance, task, now) -> bool:
 def _ctx_for(instance, obj=None):
     spec = get_spec(instance.workflow_key)
     obj = _resolve(spec, instance.entity_id, obj)
-    return _Ctx(spec, obj, _load_section(instance.section_id))
+    section = _load_section(instance.section_id) if instance.section_id else None
+    return _Ctx(spec, obj, section, instance.company_id)
 
 
 # ─── ت۱۵: تعریف عوض‌شده ─────────────────────────────────────────────────────────
@@ -411,8 +436,8 @@ def submit(workflow_key, obj, user):
     if spec.referral_only:
         raise WorkflowError('referral_only', 'این سند گردش تأیید ندارد و فقط ارجاع می‌گیرد', 400)
     entity_id = obj.pk
-    section = _load_section(getattr(obj, f'{spec.section_field}_id', None))
-    ctx = _Ctx(spec, obj, section)
+    section, company_id = _load_scope(spec, obj)
+    ctx = _Ctx(spec, obj, section, company_id)
     now = timezone.now()
     _ensure_not_locked(spec.entity_kind, entity_id)
     with transaction.atomic():
@@ -428,10 +453,10 @@ def submit(workflow_key, obj, user):
                     instance=instance, is_open=True, track=WorkflowTask.TRACK_STEP):
                 _close_task(stale, WorkflowTask.SUPERSEDED, None, now)
         instance.version = spec.version
-        instance.company_id = section.project.company_id
+        instance.company_id = company_id
         instance.section = section
         instance.created_by = user
-        instance.creator_rank = _creator_rank(user.pk, section, ctx.ranks)
+        instance.creator_rank = _creator_rank(user.pk, section, ctx.ranks, company_id=company_id)
         instance.status = WorkflowInstance.IN_PROGRESS
         instance.current_step = ''
         instance.step_keys = spec.step_keys
@@ -443,7 +468,7 @@ def submit(workflow_key, obj, user):
         instance.revision += 1
         instance.skip_plan = _plan_skips(
             spec, instance.amount, instance.creator_rank,
-            _thresholds(workflow_key, section.pk, instance.company_id), ctx.ranks,
+            _thresholds(workflow_key, section.pk if section is not None else None, company_id), ctx.ranks, obj,
         )
         try:
             with transaction.atomic():
@@ -867,11 +892,11 @@ def open_for_referral(workflow_key, obj, user):
     existing = instance_of(workflow_key, obj.pk)
     if existing is not None:
         return existing
-    section = _load_section(getattr(obj, f'{spec.section_field}_id', None))
+    section, company_id = _load_scope(spec, obj)
     now = timezone.now()
     instance = WorkflowInstance(
         workflow_key=workflow_key, version=spec.version, entity_kind=spec.entity_kind, entity_id=obj.pk,
-        company_id=section.project.company_id, section=section, created_by=user,
+        company_id=company_id, section=section, created_by=user,
         status=WorkflowInstance.COMPLETED, step_keys=[], amount=_amount(spec, obj), summary=_summary(spec, obj),
         submitted_at=now, closed_at=now,
     )

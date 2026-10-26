@@ -25,6 +25,7 @@ SKIP_REASON_TITLES = {
     'no_recipient': 'بی‌نفر',
     'no_second_approval': 'بدون تأیید دوم',
     'version_removed': 'حذف مرحله در تعریف تازه',
+    'not_required': 'لازم نبود',
 }
 
 

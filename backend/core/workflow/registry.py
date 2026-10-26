@@ -42,6 +42,8 @@ class StepSpec:
     permission: str
     kind: str
     actions: tuple = STEP_ACTIONS
+    # ص۸ طرح ۳.۶: قلاب اختیاری required(obj) -> bool فقط برای مرحلهٔ «تأیید»؛ False یعنی رد شدن هنگام ارسال
+    required: object = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,8 @@ class WorkflowSpec:
     - summary(obj) -> dict: دست‌کم 'title'؛ موتور آن را JSON-امن ذخیره می‌کند (Decimal به رشته).
     - route: الگوی مسیر صفحهٔ سند در فرانت با '{id}'.
     - بخش سند از getattr(obj, f'{section_field}_id') و مبلغ (اختیاری) از getattr(obj, amount_field).
+    - company_field (ص۷ طرح ۳.۶): سند بی‌بخش (section_field=None یا مقدار خالی) «در سطح شرکت» است و شرکتش از
+      getattr(obj, f'{company_field}_id') می‌آید؛ دریافت‌کننده فقط انتساب فعال سطح همان شرکت.
     - view_permission (اختیاری): مجوز بخشی که دارنده‌اش در بخش سند سابقهٔ گردش آن را هم می‌بیند (API سابقه).
     - referral_only (ر۱۵ طرح ۲.۳-و): سند بی‌مرحله که فقط ارجاع می‌گیرد (steps=())؛ با engine.open_for_referral.
     """
@@ -64,7 +68,8 @@ class WorkflowSpec:
     on_state_change: object
     summary: object
     route: str
-    section_field: str = 'section'
+    section_field: str | None = 'section'
+    company_field: str | None = None
     amount_field: str | None = None
     view_permission: str | None = None
     referral_only: bool = False
@@ -118,6 +123,8 @@ def _validate_step(spec, step, ranks, perm_specs):
         _fail(f'{where}: نقش «{step.role}» اعلام نشده یا رتبه ندارد')
     if step.permission not in perm_specs or permission_scope(step.permission) != SECTION:
         _fail(f'{where}: مجوز «{step.permission}» اعلام نشده یا بخشی نیست')
+    if step.required is not None and (step.kind != APPROVE or not callable(step.required)):
+        _fail(f'{where}: قلاب required فقط برای مرحلهٔ «تأیید» و callable مجاز است')
 
 
 def validate_specs(items=None) -> dict:
@@ -141,6 +148,12 @@ def validate_specs(items=None) -> dict:
             _fail(f'«{spec.key}»: نسخه باید عدد صحیح ۱ یا بیشتر باشد')
         if not spec.entity_kind:
             _fail(f'«{spec.key}»: نوع سند (entity_kind) خالی است')
+        for name in ('section_field', 'company_field'):
+            value = getattr(spec, name)
+            if value is not None and (not isinstance(value, str) or not value):
+                _fail(f'«{spec.key}»: {name} باید نام فیلد یا None باشد')
+        if spec.section_field is None and spec.company_field is None:
+            _fail(f'«{spec.key}»: دست‌کم یکی از section_field و company_field لازم است')
         if spec.referral_only and spec.steps:
             _fail(f'«{spec.key}»: گردش فقط ارجاع (referral_only) نباید مرحله داشته باشد')
         if not spec.steps and not spec.referral_only:

@@ -26,7 +26,7 @@ from companies.org_roles import CoveringIndex, covering_assignment_rows
 
 from . import events
 from .models import WorkflowCompanySettings, WorkflowTask, WorkflowTaskRecipient
-from .recipients import valid_rows_q
+from .recipients import scope_chain_key, scope_triplet, valid_rows_q
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +101,10 @@ def escalation_targets(tasks, ranks=None) -> dict:
     ranks = section_role_ranks() if ranks is None else ranks
     chains = {}
     for task in tasks:
-        sec = task.instance.section
-        chains[sec.pk] = (sec.project_id, sec.project.company_id)
+        sid, pid, cid = scope_triplet(task.instance.section, task.instance.company_id)
+        ckey = scope_chain_key(sid, cid)
+        if ckey is not None:
+            chains[ckey] = (pid, cid)
     index = CoveringIndex(covering_assignment_rows(chains)) if chains else CoveringIndex([])
     out = {}
     for task in tasks:
@@ -110,10 +112,9 @@ def escalation_targets(tasks, ranks=None) -> dict:
             # ر۱۰ طرح ۲.۳-و: خبر به بالاتر کار ارجاع فقط به ارجاع‌دهنده (نه دارندگان نقش بخش)
             out[task.pk] = {task.referred_by_id}
             continue
-        sec = task.instance.section
+        sid, pid, cid = scope_triplet(task.instance.section, task.instance.company_id)
         step_rank = ranks.get(task.role) or 0
-        higher = [(uid, ranks.get(role) or 0) for uid, role, *_ in index.covering(sec.pk, sec.project_id,
-                                                                                    sec.project.company_id)]
+        higher = [(uid, ranks.get(role) or 0) for uid, role, *_ in index.covering(sid, pid, cid)]
         higher = [(uid, r) for uid, r in higher if r > step_rank]
         top = max((r for _u, r in higher), default=None)
         out[task.pk] = {uid for uid, r in higher if r == top} if top is not None else set()

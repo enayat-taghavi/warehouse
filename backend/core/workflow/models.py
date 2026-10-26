@@ -32,7 +32,8 @@ class WorkflowInstance(models.Model):
     entity_id = models.PositiveBigIntegerField(verbose_name='شناسهٔ سند')
     company = models.ForeignKey('companies.Company', on_delete=models.PROTECT, related_name='workflow_instances',
                                 verbose_name='شرکت')
-    section = models.ForeignKey('companies.ProjectSection', on_delete=models.PROTECT,
+    # ص۷ طرح ۳.۶: None یعنی سند «سطح شرکت»
+    section = models.ForeignKey('companies.ProjectSection', on_delete=models.PROTECT, null=True, blank=True,
                                 related_name='workflow_instances', verbose_name='بخش')
     created_by = models.ForeignKey(USER, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
                                    verbose_name='ثبت‌کننده')

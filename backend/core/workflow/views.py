@@ -22,7 +22,7 @@ from rest_framework.views import APIView
 
 from accounts.audit_utils import log_audit_event
 from accounts.permission_admin import member_company_ids
-from accounts.scoped_permissions import can
+from accounts.scoped_permissions import can, can_at_company_level
 from companies.models import Company, ProjectSection
 from platform_core.registry import entity_view_decision
 
@@ -216,7 +216,11 @@ def visible_instances(user, instances, kind, entity_id) -> list:
             out.append(inst)
             continue
         spec = specs.get(inst.workflow_key)
-        if spec is not None and spec.view_permission and can(user, spec.view_permission, inst.section):
+        if spec is None or not spec.view_permission:
+            continue
+        # سند سطح شرکت (ص۷ طرح ۳.۶): مجوز دیدن فقط از انتساب سطح همان شرکت
+        if (can(user, spec.view_permission, inst.section) if inst.section_id
+                else can_at_company_level(user, spec.view_permission, inst.company_id)):
             out.append(inst)
     return out
 

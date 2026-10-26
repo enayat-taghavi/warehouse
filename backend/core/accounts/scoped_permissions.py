@@ -320,6 +320,22 @@ def can(user, code, section=None) -> bool:
     return codename in _codes_in_section(state, section_id, project_id, company_id)
 
 
+def can_at_company_level(user, code, company_id) -> bool:
+    """
+    مجوز بخشی `code` فقط از انتساب‌های فعال **سطح شرکت** `company_id` (با تفاوت‌های همان شرکت)؛ برای سند «سطح
+    شرکت» (ص۷ طرح ۳.۶). انتساب پروژه یا بخش حساب نمی‌شود؛ همان قاعدهٔ section_permission_holders با
+    company_level_key. مدیر کل فعال: True.
+    """
+    if not _is_live(user):
+        return False
+    if user.is_superuser:
+        return True
+    if permission_scope(code) != SECTION or not company_id:
+        return False
+    _app_label, codename = _split_code(code)
+    return codename in _state(user).company.get(company_id, ())
+
+
 def sections_where(user, code):
     """
     queryset بخش‌هایی (ProjectSection) که کاربر در آن‌ها کار `code` را می‌تواند؛ برای زیرپرس‌وجو

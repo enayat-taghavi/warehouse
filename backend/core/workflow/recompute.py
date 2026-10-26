@@ -24,7 +24,7 @@ from accounts.scoped_permissions import effective_bundles
 from . import events
 from .errors import WorkflowError
 from .models import WorkflowInstance, WorkflowTask, WorkflowTaskRecipient
-from .recipients import compute_recipients_batch, desired_rows, diff_rows, write_row_changes
+from .recipients import compute_recipients_batch, desired_rows, diff_rows, scope_triplet, write_row_changes
 from .registry import APPROVE, workflow_specs
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def _skip_lost(spec, instance, task, holders, bundles, now, stats) -> bool:
     except WorkflowError:
         logger.warning('[workflow] entity missing, task %s left waiting', task.pk)
         return False
-    ctx = _Ctx(spec, obj, instance.section)
+    ctx = _Ctx(spec, obj, instance.section, instance.company_id)
     ctx._bundles = bundles
     skip_lost_task(ctx, instance, task, holders, now)
     stats['skipped'] += 1
@@ -125,9 +125,8 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         items = []
         for task in tasks:
             inst = instances[task.instance_id]
-            sec = inst.section
             target = task.target_user_id if task.track == WorkflowTask.TRACK_REFERRAL else None
-            items.append((task.pk, (sec.pk, sec.project_id, sec.project.company_id), task.role, task.permission,
+            items.append((task.pk, scope_triplet(inst.section, inst.company_id), task.role, task.permission,
                           inst.created_by_id, target, inst.allow_substitute))
         computed = compute_recipients_batch(items, bundles=bundles, today=today)
 
