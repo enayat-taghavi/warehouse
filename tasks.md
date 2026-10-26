@@ -2018,3 +2018,44 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 6 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.4-b): expense heads API scenarios`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 3.4-c: DOM specs for the company expense heads tab and the expense head selector (tree, read level, delete 400, seed, grouping, payload, 400 field error)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/companies-studio/company-expense-heads-tab/company-expense-heads-tab.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/expense-head-selector.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/components/companies-studio/company-expense-heads-tab/company-expense-heads-tab.dom.spec.ts --min-tests 4 --require "seedDefaultExpenseHeads" --require "deleteExpenseHead" --require "expense_heads"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/components/finance/employee/expense-head-selector.dom.spec.ts --min-tests 3 --require "buildExpenseHeadOptions" --require "expense_head" --require "expenseHeadError"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/modules/accounting/components/companies-studio/company-expense-heads-tab/company-expense-heads-tab.dom.spec.ts --include src/app/modules/accounting/components/finance/employee/expense-head-selector.dom.spec.ts --max-failed 0
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 3.4-c): expense heads tab and selector DOM specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new files: `frontend/src/app/modules/accounting/components/companies-studio/company-expense-heads-tab/company-expense-heads-tab.dom.spec.ts` and `frontend/src/app/modules/accounting/components/finance/employee/expense-head-selector.dom.spec.ts`. Change no other file. Never change production code. If a test fails because of production code, keep the test, mark it `it.fails(...)` with a one-line comment, and say so in the report.
+- No `it.skip`, `it.only`, `describe.skip`, `describe.only`; do not import `fs` or `path`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the previous commit):
+- Tab component `CompanyExpenseHeadsTabComponent` in `company-expense-heads-tab/company-expense-heads-tab.ts` and `.html` (read both). Input `companyId`. It injects `TreasuryOrgApiService` (mock it with `{ provide: TreasuryOrgApiService, useValue: mockApi }`; import from `../../../api/treasury-org-api.service`), `CompanyStudioContextService` (real), `WebSocketService` (optional; mock `{ notifications$: new Subject(), tabId: 't1' }`), `ToastService` (mock `success`, `error`, `warning`, `info`), `ConfirmDialogService` (mock `open: vi.fn().mockResolvedValue(true)`). Mock API methods: `getExpenseHeads(companyId)` returns `of(rows)`, `createExpenseHead`, `updateExpenseHead`, `deleteExpenseHead`, `seedDefaultExpenseHeads` (returns `of({ created: 10 })`).
+- Rows are flat: a group has `parent: null`; a head has `parent: <group id>`. Example: `[{ id: 1, company: 7, parent: null, code: '10', title: 'گروه عملیاتی', is_active: true }, { id: 11, company: 7, parent: 1, code: '1001', title: 'تعمیرات', is_active: true }]`.
+- Set the input with `fixture.componentRef.setInput('companyId', 7); fixture.detectChanges();` (ngOnChanges loads the list).
+- Permissions: `context.sectionLevels.set({ expense_heads: 'read' })` hides all write buttons (text `سرفصل تازه`, `ویرایش`, `حذف`, `ساخت فهرست پیش‌فرض`); `null` (default) means full access. After changing levels call `fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();`.
+- `remove(head)` (async) confirms, then calls `deleteExpenseHead(id)`; on `throwError(() => ({ status: 400, error: { detail: 'این گروه زیرمجموعه دارد.' } }))` it calls `toast.error('این گروه زیرمجموعه دارد.')` and keeps the row in `component.heads`.
+- Empty list (`of([])`) with write access renders a button with text `ساخت فهرست پیش‌فرض`; clicking it calls `seedDefaultExpenseHeads(7)`.
+- Selector helper `expense-head-options.ts` in `frontend/src/app/modules/accounting/components/finance/` (read it): `buildExpenseHeadOptions(rows)` returns one group per active group that has active heads, `{ id, label: 'code — title', heads }`; inactive heads and empty groups are dropped. `expenseHeadErrorMessage(err)` returns `err.error.expense_head[0]` or `''`.
+- Invoice form: `EmployeeInvoicesHubComponent` (`employee/employee-invoices/employee-invoices.ts`). Copy the setup of `employee/employee-invoices/employee-invoices-fiscal-closed.dom.spec.ts` lines 1-75 (component built with `new`, mock `getExpenseHeads` already shown there). `saveInvoice()` with `newInvoice.expense_head = null` (other fields valid) does not call `createExpenseInvoice` and sets `component.expenseHeadError` to `سرفصل هزینه الزامی است.`. With `expense_head: 11` it calls `createExpenseInvoice` with a payload containing `expense_head: 11` and without a `category` key. A rejected create with `{ status: 400, error: { expense_head: ['سرفصل انتخاب‌شده فعال نیست.'] } }` sets `component.expenseHeadError` to that message.
+- Petty cash form: `EmployeePettyCashHubComponent` (`employee/employee-petty-cash/employee-petty-cash.ts`), built like `employee/employee-petty-cash/employee-petty-cash.spec.ts` lines 100-150. `saveExpense()` behaves the same way with `newExpense.expense_head` and `createPettyCashTransaction`.
+
+3. Task:
+- Tab spec, at least these 4 tests: a) tree render: the group title and the head title both appear in `fixture.nativeElement.textContent`; b) read level hides the write buttons listed above; c) delete 400 shows the server message via `toast.error` and the row stays; d) empty list shows `ساخت فهرست پیش‌فرض` and the click calls `seedDefaultExpenseHeads(7)`.
+- Selector spec, at least these 3 tests: e) `buildExpenseHeadOptions` groups heads under their group, labels `'10 — گروه عملیاتی'`, and drops inactive heads and empty groups; f) invoice: missing head blocks the call and sets `expenseHeadError`; with a head the payload has `expense_head` and no `category`; g) petty cash: a 400 `expense_head` error sets `expenseHeadError`.
+
+4. Tool policy: only reading the listed files, writing the two spec files, the test command below, `git add` of those files, `git commit`, `git status --short`. Test command, in `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/companies-studio/company-expense-heads-tab/company-expense-heads-tab.dom.spec.ts --include=src/app/modules/accounting/components/finance/employee/expense-head-selector.dom.spec.ts`. If it fails, read the error, fix the spec (not production code), and rerun at most 5 times.
+
+5. Before finishing: both specs pass; commit only those two files with the message `test(release-v1 3.4-c): expense heads tab and selector DOM specs`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any `it.fails` with its reason, the commit hash. End the turn after the report.
