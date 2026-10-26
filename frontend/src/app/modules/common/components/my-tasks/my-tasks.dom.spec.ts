@@ -91,6 +91,34 @@ describe('MyTasksComponent DOM Spec', () => {
     can_cancel: false
   };
 
+  const sampleReferralReferCard: WorkflowTaskCard = {
+    ...sampleCard1,
+    task_id: 103,
+    track: 'referral',
+    step_kind: 'refer',
+    kind: 'refer',
+    actions: ['done'],
+    referred_by: { id: 9, name: 'مدیر دفتر' },
+    instruction: 'لطفاً بررسی شود',
+    due_at: '2026-10-31T10:00:00Z',
+    due_at_shamsi: '1405/08/10 10:00',
+    read_at: null
+  };
+
+  const sampleReferralInformCard: WorkflowTaskCard = {
+    ...sampleCard1,
+    task_id: 104,
+    track: 'referral',
+    step_kind: 'inform',
+    kind: 'inform',
+    actions: ['seen'],
+    referred_by: { id: 9, name: 'مدیر دفتر' },
+    instruction: 'لطفاً بررسی شود',
+    due_at: '2026-10-31T10:00:00Z',
+    due_at_shamsi: '1405/08/10 10:00',
+    read_at: null
+  };
+
   beforeEach(() => {
     tasksSignal = signal<WorkflowTaskCard[]>([sampleCard1]);
     countSignal = signal(1);
@@ -115,6 +143,7 @@ describe('MyTasksComponent DOM Spec', () => {
       start: vi.fn(),
       refresh: vi.fn().mockResolvedValue(true),
       act: vi.fn().mockResolvedValue({ status: 'done', state: { instance_id: 201 } }),
+      markRead: vi.fn(),
       dismissNotice: vi.fn()
     };
 
@@ -291,5 +320,87 @@ describe('MyTasksComponent DOM Spec', () => {
 
     tasksSignal.set([sampleCard1]);
     expect(component.showOffline).toBe(false);
+  });
+
+  it('identifies referral card tracks and returns appropriate kind labels', () => {
+    expect(component.isReferral(sampleReferralReferCard)).toBe(true);
+    expect(component.referralKindLabel(sampleReferralReferCard)).toBe('ارجاع');
+
+    expect(component.isReferral(sampleReferralInformCard)).toBe(true);
+    expect(component.referralKindLabel(sampleReferralInformCard)).toBe('برای اطلاع');
+
+    expect(component.isReferral(sampleCard1)).toBe(false);
+    expect(component.isUnread(sampleCard1)).toBe(false);
+  });
+
+  it('evaluates isUnread based on read_at presence on referral cards', () => {
+    const unreadCard: WorkflowTaskCard = { ...sampleReferralReferCard, read_at: null };
+    expect(component.isUnread(unreadCard)).toBe(true);
+
+    const readCard: WorkflowTaskCard = { ...sampleReferralReferCard, read_at: '2026-10-25T12:00:00Z' };
+    expect(component.isUnread(readCard)).toBe(false);
+  });
+
+  it('evaluates isOverdue accurately for past, future, and null due_at dates', () => {
+    const pastCard: WorkflowTaskCard = {
+      ...sampleReferralReferCard,
+      due_at: new Date(Date.now() - 3600 * 1000).toISOString()
+    };
+    expect(component.isOverdue(pastCard)).toBe(true);
+
+    const futureCard: WorkflowTaskCard = {
+      ...sampleReferralReferCard,
+      due_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+    };
+    expect(component.isOverdue(futureCard)).toBe(false);
+
+    const noDueCard: WorkflowTaskCard = {
+      ...sampleReferralReferCard,
+      due_at: null
+    };
+    expect(component.isOverdue(noDueCard)).toBe(false);
+  });
+
+  it('calls markRead on unread referral card when opened, and does not call it for read or step cards', () => {
+    const unreadCard: WorkflowTaskCard = { ...sampleReferralReferCard, read_at: null };
+    component.onCardOpened(unreadCard);
+    expect(mockTasksService.markRead).toHaveBeenCalledTimes(1);
+    expect(mockTasksService.markRead).toHaveBeenCalledWith(unreadCard);
+
+    mockTasksService.markRead.mockClear();
+
+    const readCard: WorkflowTaskCard = { ...sampleReferralReferCard, read_at: '2026-10-25T12:00:00Z' };
+    component.onCardOpened(readCard);
+    expect(mockTasksService.markRead).not.toHaveBeenCalled();
+
+    const stepCard: WorkflowTaskCard = { ...sampleCard1 };
+    component.onCardOpened(stepCard);
+    expect(mockTasksService.markRead).not.toHaveBeenCalled();
+  });
+
+  it('calls act directly with seen action without opening reason dialog for inform card', () => {
+    component.ngOnInit();
+    component.onActionClick(sampleReferralInformCard, 'seen');
+
+    expect(component.reasonDialogOpen).toBe(false);
+    expect(mockTasksService.act).toHaveBeenCalledWith(sampleReferralInformCard, 'seen', undefined);
+  });
+
+  it('calls act with replyText on done action and cleans up replyText upon success', async () => {
+    component.ngOnInit();
+    const card = sampleReferralReferCard;
+    component.replyText[card.task_id] = 'انجام شد';
+
+    component.onActionClick(card, 'done');
+
+    expect(mockTasksService.act).toHaveBeenCalledWith(card, 'done', 'انجام شد');
+    await vi.waitFor(() => {
+      expect(component.replyText[card.task_id]).toBeUndefined();
+    });
+  });
+
+  it('returns appropriate Persian action labels for done and seen actions', () => {
+    expect(component.getActionLabel('done', 'refer')).toBe('انجام شد');
+    expect(component.getActionLabel('seen', 'inform')).toBe('رؤیت شد');
   });
 });
