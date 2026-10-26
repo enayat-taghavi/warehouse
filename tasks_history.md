@@ -12534,3 +12534,124 @@ Session 1 of 1 — Release v1 step 2.3-f-c: My-tasks DOM specs for referral card
 ### گام دوم: بررسی صحت و تحلیل کد...
 
 ---
+
+### Task 1 of 2 — 2026-10-26 07:11:25
+- **Status:** DONE
+- **Conversation:** `184f3370-35aa-435a-b62d-aef6d503a060`
+- **Steps:** 46
+- **Tokens:** 65219
+- **Duration:** 3m 53s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 2 — Release v1 stage 2 close-out on the local app environment: backup, apply the stage-2 migrations, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: Release v1 stage 2 (steps 2.1 to 2.9 and 2.3-f) changed backend and frontend code. These migrations may still be unapplied on the app database: `attachments 0001_initial`, `attachments 0002_entityviewlog`, `settings_core 0002_company_drive_moved_from_personnel`, `settings_core 0003_companysetting`, `personnel 0006_move_drive_to_settings_core`, `numbering 0001_initial`, `workflow 0003_referral` (possibly others of stage 2 too). The app database holds test data only. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app stage 2 close-out'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration list. `.\venv\Scripts\python.exe manage.py showmigrations --plan` and note every `[ ]` line.
+- c) Migrate. `.\venv\Scripts\python.exe manage.py migrate --noinput`. If it fails, stop and report the last 40 lines of the error; do not try to fix it, and never fake or skip migrations.
+- d) Check. `.\venv\Scripts\python.exe manage.py migrate --check` exits 0, and `.\venv\Scripts\python.exe manage.py check` prints no errors.
+- e) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `[ ]` migrations found in step b, the migrate result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+فرایند بیلد فرانت‌اند با دستور `npx ng build --delete-output-path=false` در حال اجراست؛ منتظر اتمام آن می‌مانیم...
+
+</div>
+<div dir="rtl" align="right">
+دستور بیلد در حال پیشرفت است و منتظر اتمام آن می‌مانم.
+</div>
+<div dir="rtl" align="right">
+بیلد همچنان در حال انجام است؛ منتظر اتمام آن می‌مانم...
+</div>
+<div dir="rtl" align="right">
+کامپایل و بیلد انگولار در مراحل نهایی است؛ منتظر نتیجه می‌مانم...
+</div>
+<div dir="rtl" align="right">
+بیلد انگولار در حال پردازش باندل‌هاست؛ منتظر اتمام آن می‌مانم...
+</div>
+<div dir="rtl" align="right">
+
+### گام‌های ۱ تا ۴ پروتکل (Mandatory Protocol)
+
+۱. **توضیح ساده (Explain Simply):**
+کاربر درخواست اجرای نشست پایانی مرحلهٔ ۲ ...
+
+---
+
+### Task 2 of 2 — 2026-10-26 07:12:25
+- **Status:** DONE
+- **Conversation:** `7e3e6d1f-425d-4921-b2f1-6da36723b026`
+- **Steps:** 6
+- **Tokens:** 11458
+- **Duration:** 0m 56s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 1/1 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Release v1 stage 2: check pages behind the login on https://app.farsalish.ir in a real browser (company numbering tab, settings leave guard, my-tasks) with a temporary QA account that is deleted at the end
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session only checks pages. Do not edit, create, stage or commit any repository file. Do not restart any service.
+- Only `https://app.farsalish.ir` (or `http://localhost:4200`, the same build) is in scope. Never open or touch `soft.farsalish.ir`.
+- In the app, do not save, submit, delete or change any record: you only open pages, type into one field to test the leave guard, and cancel. Never press a save button.
+- If you have no browser tool, write `NO_BROWSER` as the first line of your report, still run step 3-f (the account was never created, so it prints a count of 0, which is fine in that case) and stop.
+
+2. Context: stage 2 added an unsaved-changes leave guard on the warehouse settings page (an in-app confirm dialog, never the browser `confirm()`), a company studio tab «شماره‌گذاری اسناد» (route `/app/operations/companies/<id>`, short label «شماره‌ها» on mobile), and referral cards on «کارهای من» (`/app/my-tasks`). Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Create a temporary superuser. Generate a random 20-character password yourself. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from django.contrib.auth import get_user_model; U = get_user_model(); u = U.objects.create_superuser('qa_stage2_check', 'qa_stage2@example.test', 'YOUR_PASSWORD'); print('created', u.pk)"`
+  with YOUR_PASSWORD replaced. Never write the password into any file or into your report.
+- b) Log in at `https://app.farsalish.ir/login` with that account. Report whether the dashboard opens and whether the browser console shows red errors (list them; ignore warnings).
+- c) Company numbering tab: open `/app/operations/companies`, open the first company, open the tab «شماره‌گذاری اسناد». Expected: the series cards and the section «دفتر شماره‌های صادرشده» render (an empty-ledger text is fine). If the pager is visible, «صفحهٔ قبل» is on the right with an arrow pointing right and «صفحهٔ بعد» on the left with an arrow pointing left. Take a screenshot. Do not save anything.
+- d) Settings leave guard: open `/app/warehouse/settings` (if the route does not exist or redirects away, write that and skip this item). Change any text field without saving, then click another sidebar menu item. Expected: an in-app dialog asks to confirm leaving (not a browser popup). Click the stay/cancel button: you stay on the page. Then reload the page so the change is dropped. Take a screenshot of the dialog.
+- e) My tasks: open `/app/my-tasks`. Expected: the page renders its tabs and either task cards or the empty state, with no red console errors. If any card shows «ارجاع» or «برای اطلاع», take a screenshot; do not press its buttons.
+- f) Delete the QA account (always, even if a step failed):
+  `.\venv\Scripts\python.exe manage.py shell -c "from django.contrib.auth import get_user_model; print(get_user_model().objects.filter(username='qa_stage2_check').delete())"`
+  If deletion raises an error, set `is_active=False` on that user instead and report it.
+
+4. Tool policy: only the commands above, the browser and `git status --short`. Save screenshots only under `scratch/logs/agy_stage2/`. If a page does not load, report the HTTP status or error text and continue with the next item.
+
+5. Before finishing: the QA account is deleted or deactivated, and `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report, one line per item b to f with PASS / FAIL / SKIPPED and what you saw, the console errors, and the screenshot paths. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+NO_BROWSER
+
+- b) SKIPPED: No browser automation tool is available in this environment to log in to https://app.farsalish.ir/login.
+- c) SKIPPED: Cannot inspect company numbering tab without a browser tool.
+- d) SKIPPED: Cannot test warehouse settings leave guard without a browser tool.
+- e) SKIPPED: Cannot inspect my-tasks without a browser tool.
+- f) PASS: QA account deletion shell command executed successfully; output: `(0, {})` (user `qa_stage2_check` was not created).
+
+---
