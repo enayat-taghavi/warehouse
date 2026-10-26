@@ -306,10 +306,44 @@ export class MyTasksComponent implements OnInit, OnDestroy {
     }
     if (action === 'return') return 'عودت برای اصلاح';
     if (action === 'reject') return 'رد قطعی';
+    if (action === 'done') return 'انجام شد';
+    if (action === 'seen') return 'رؤیت شد';
     return action;
   }
 
+  // ────────── کارت‌های ارجاع ──────────
+
+  /** پاسخ اختیاری هر کارت ارجاع (کلید: شناسهٔ کار) */
+  replyText: Record<number, string> = {};
+
+  isReferral(card: WorkflowTaskCard): boolean {
+    return card.track === 'referral';
+  }
+
+  isUnread(card: WorkflowTaskCard): boolean {
+    return this.isReferral(card) && !card.read_at;
+  }
+
+  referralKindLabel(card: WorkflowTaskCard): string {
+    return card.step_kind === 'inform' || card.kind === 'inform' ? 'برای اطلاع' : 'ارجاع';
+  }
+
+  /** مهلت گذشته است */
+  isOverdue(card: WorkflowTaskCard): boolean {
+    if (!card.due_at) return false;
+    const t = Date.parse(card.due_at);
+    return !isNaN(t) && t < Date.now();
+  }
+
+  /** با باز کردن یا کار کردن روی کارت ارجاعِ نخوانده، علامت خوانده‌شدن می‌رود */
+  onCardOpened(card: WorkflowTaskCard): void {
+    if (this.isUnread(card)) this.workflowTasks.markRead(card);
+  }
+
   getActionButtonClass(action: WorkflowTaskAction): string {
+    if (action === 'done' || action === 'seen') {
+      return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm';
+    }
     if (action === 'act') {
       return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm';
     }
@@ -325,8 +359,11 @@ export class MyTasksComponent implements OnInit, OnDestroy {
   onActionClick(card: WorkflowTaskCard, action: WorkflowTaskAction): void {
     if (this.isPending(card)) return;
 
-    if (action === 'act') {
-      void this.executeAct(card, 'act');
+    if (action === 'act' || action === 'seen') {
+      this.onCardOpened(card);
+      void this.executeAct(card, action);
+    } else if (action === 'done') {
+      void this.executeAct(card, 'done', this.replyText[card.task_id] || '');
     } else {
       this.targetCard = card;
       this.reasonDialogAction = action;
@@ -345,6 +382,9 @@ export class MyTasksComponent implements OnInit, OnDestroy {
   async executeAct(card: WorkflowTaskCard, action: WorkflowTaskAction, reason?: string): Promise<void> {
     const outcome = await this.workflowTasks.act(card, action, reason);
 
+    if (outcome.status === 'done' || outcome.status === 'queued') {
+      delete this.replyText[card.task_id];
+    }
     if (outcome.status === 'done') {
       this.toast.success('اقدام با موفقیت انجام شد');
       this.reasonDialogOpen = false;

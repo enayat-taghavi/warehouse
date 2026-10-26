@@ -209,11 +209,22 @@
       *ngFor="let card of filteredCards"
       class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm hover:shadow transition-all flex flex-col gap-3"
       [class.opacity-75]="isPending(card)"
+      (click)="onCardOpened(card)"
     >
       <!-- ردیف بالای کارت: عنوان گردش و مرحله -->
       <div class="flex items-start justify-between gap-2 flex-wrap">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-black text-slate-800">{{ card.workflow_title_fa }}</span>
+          <span
+            class="text-xs text-slate-800"
+            [class.font-black]="!isReferral(card)"
+            [class.font-bold]="isUnread(card)"
+            [class.font-medium]="isReferral(card) && !isUnread(card)"
+          >{{ card.workflow_title_fa }}<span *ngIf="isUnread(card)" class="sr-only"> (نخوانده)</span></span>
+          <!-- نشان نوع ارجاع -->
+          <span
+            *ngIf="isReferral(card)"
+            class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 border border-indigo-200/70"
+          >{{ referralKindLabel(card) }}</span>
           <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100/80">
             مرحله: {{ card.step_title_fa }}
           </span>
@@ -262,6 +273,36 @@
         </div>
       </div>
 
+      <!-- جزئیات ارجاع: فرستنده، دستور، مهلت -->
+      <div *ngIf="isReferral(card)" class="flex flex-col gap-1.5 text-xs text-slate-600">
+        <span *ngIf="card.referred_by" class="font-semibold text-slate-700">از طرف: {{ card.referred_by?.name }}</span>
+        <p
+          *ngIf="card.instruction"
+          class="whitespace-pre-line break-words text-slate-700 bg-slate-50/80 border border-slate-100 rounded-xl p-2.5"
+        >{{ card.instruction }}</p>
+        <span
+          *ngIf="card.due_at_shamsi"
+          class="flex items-center gap-1 font-semibold"
+          [ngClass]="isOverdue(card) ? 'text-rose-700' : 'text-slate-600'"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
+          <span>مهلت: {{ card.due_at_shamsi }}</span>
+          <span *ngIf="isOverdue(card)" class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 border border-rose-200">گذشته</span>
+        </span>
+        <div *ngIf="activeTab === 'my-tasks' && card.actions.includes('done')" class="flex flex-col gap-1">
+          <label [attr.for]="'reply-' + card.task_id" class="text-[11px] font-bold text-slate-500">پاسخ (اختیاری)</label>
+          <textarea
+            [id]="'reply-' + card.task_id"
+            rows="2"
+            [(ngModel)]="replyText[card.task_id]"
+            [disabled]="isPending(card)"
+            (click)="$event.stopPropagation()"
+            (focus)="onCardOpened(card)"
+            class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 focus-visible:outline-none focus:ring-2 focus-visible:ring-indigo-500 text-slate-700 disabled:opacity-50"
+          ></textarea>
+        </div>
+      </div>
+
       <!-- بخش دکمه‌ها و اقدامات پایین کارت -->
       <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
         <!-- دکمه باز کردن سند -->
@@ -292,6 +333,26 @@
             [title]="getActionLabel(act, card.step_kind)"
             [attr.aria-label]="getActionLabel(act, card.step_kind)"
           >
+            <svg
+              *ngIf="act === 'done'"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              appIcon="check-circle"
+            ></svg>
+            <svg
+              *ngIf="act === 'seen'"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              appIcon="eye"
+            ></svg>
             <svg
               *ngIf="act === 'act'"
               width="14"

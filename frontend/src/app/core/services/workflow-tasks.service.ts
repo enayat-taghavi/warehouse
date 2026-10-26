@@ -244,6 +244,23 @@ export class WorkflowTasksService {
     }
   }
 
+  /**
+   * علامت «خوانده شد» برای کارت ارجاع: درخواست بی‌صدا (بدون صف آفلاین، خطا نادیده)، و `read_at` همان لحظه
+   * محلی گذاشته می‌شود تا کارت دیگر پررنگ نباشد. اگر نرسید، با خواندن بعدی فهرست دوباره نخوانده می‌شود.
+   */
+  markRead(task: WorkflowTaskCard): void {
+    if (task.track !== 'referral' || task.read_at) return;
+    const readAt = new Date().toISOString();
+    const results = this._tasks().map((t) => (t.task_id === task.task_id ? { ...t, read_at: readAt } : t));
+    this._tasks.set(results);
+    if (this.userId) writeStored(this.userId, { results, count: this._count(), cachedAt: this._cachedAt() ?? Date.now() });
+    try {
+      this.api.markTaskRead(task.task_id).subscribe({ error: () => undefined });
+    } catch {
+      // نادیده
+    }
+  }
+
   dismissNotice(taskId: number): void {
     this._notices.update((list) => list.filter((n) => n.task_id !== taskId));
   }

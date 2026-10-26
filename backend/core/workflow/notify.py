@@ -26,18 +26,29 @@ TITLES_FA = {
     events.REJECTED: 'سند شما رد شد',
 }
 COMPLETED_TITLE_FA = 'گردش سند شما پایان یافت'
+REFERRAL_DONE_TITLE_FA = 'ارجاع شما انجام شد'
+REFERRAL_TRACK = 'referral'
+REFERRAL_KIND_FA = {'refer': 'ارجاع', 'inform': 'برای اطلاع'}
+INSTRUCTION_PREVIEW = 200
 
 # رویدادهایی که به دارندهٔ کار باز می‌رسند (آدرس «کارهای من» و متن «به جانشینی از …»)
 TASK_HOLDER_KINDS = (events.RECEIVED, events.REMINDER)
 CREATOR_KINDS = (events.RETURNED, events.REJECTED)
 
 
+def _is_referral(event) -> bool:
+    return event.get('track') == REFERRAL_TRACK
+
+
 def title_for(event) -> str:
     """عنوان اعلان رویداد، یا '' اگر این رویداد ردیف اعلان نمی‌سازد (ص۲)."""
     kind = event.get('kind')
     if kind == events.DONE:
-        # فقط پایان گردش (بی کار) برای ثبت‌کننده؛ «انجام شد» خود اقدام‌کننده نه
-        return COMPLETED_TITLE_FA if event.get('task_id') is None else ''
+        # پایان گردش (بی کار) برای ثبت‌کننده، و بسته شدن شاخهٔ ارجاع برای ارجاع‌دهنده (ر۱۳ طرح ۲.۳-و)؛
+        # «انجام شد» کار مرحله و خود اقدام‌کننده نه
+        if event.get('task_id') is None:
+            return COMPLETED_TITLE_FA
+        return REFERRAL_DONE_TITLE_FA if _is_referral(event) else ''
     return TITLES_FA.get(kind, '')
 
 
@@ -75,6 +86,8 @@ def _recipients(event) -> list:
         qs = User.objects.filter(is_active=True, is_superuser=True)
     else:
         ids = {int(u) for u in event.get('user_ids') or () if u}
+        if event.get('kind') == events.DONE and _is_referral(event) and event.get('actor_id'):
+            ids.discard(int(event['actor_id']))  # «انجام شد» ارجاع فقط برای ارجاع‌دهنده
         if not ids:
             return []
         qs = User.objects.filter(is_active=True, pk__in=ids)
@@ -115,6 +128,25 @@ def _instance_title(event) -> str:
     return str(title).strip() if title else ''
 
 
+def _referral_body(event, body) -> str:
+    """ر۱۳: نوع ارجاع و دستور (تا ۲۰۰ نویسه) برای گیرنده؛ پاسخ کوتاه برای ارجاع‌دهنده در «انجام شد»."""
+    from .models import WorkflowTask
+    row = (WorkflowTask.objects.filter(pk=event.get('task_id'))
+           .values_list('step_kind', 'instruction', 'reply').first())
+    if row is None:
+        return body
+    kind, instruction, reply = row
+    text = f'{body} — {REFERRAL_KIND_FA.get(kind, kind)}'
+    extra = (reply if event.get('kind') == events.DONE else instruction) or ''
+    extra = ' '.join(extra.split())
+    if len(extra) > INSTRUCTION_PREVIEW:
+        extra = extra[:INSTRUCTION_PREVIEW - 1] + '…'
+    if extra:
+        label = 'پاسخ' if event.get('kind') == events.DONE else 'دستور'
+        text = f'{text} — {label}: {extra}'
+    return text
+
+
 def create_for_event(event) -> dict:
     """
     ساخت ردیف‌های اعلان یک رویداد کار و زمان‌بندی FCM. خروجی {user_id: Notification}؛ رویدادی که اعلان ندارد {}.
@@ -132,6 +164,8 @@ def create_for_event(event) -> dict:
         reason = _reason(event)
         if reason:
             body = f'{body} — دلیل: {reason}'
+    if _is_referral(event) and event.get('kind') in TASK_HOLDER_KINDS + (events.DONE,):
+        body = _referral_body(event, body)
     behalf = _behalf_names(event, user_ids)
     url = _url(event, spec)
 

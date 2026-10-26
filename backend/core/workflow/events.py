@@ -6,7 +6,7 @@
 برگشت‌خورده رویدادی نمی‌فرستد.
 
 payload (کلید `event` در send):
-    {'kind', 'task_id', 'instance_id', 'workflow_key', 'entity_kind', 'entity_id', 'step_key',
+    {'kind', 'task_id', 'instance_id', 'workflow_key', 'entity_kind', 'entity_id', 'step_key', 'track',
      'user_ids': [...], 'actor_id', 'company_id', 'section_id'}
 """
 from django.db import transaction
@@ -38,6 +38,7 @@ def build_payload(kind, instance, task, user_ids, actor_id=None, step_key=None) 
         'entity_kind': instance.entity_kind,
         'entity_id': instance.entity_id,
         'step_key': step_key if step_key is not None else getattr(task, 'step_key', ''),
+        'track': getattr(task, 'track', '') or '',
         'user_ids': sorted({int(u) for u in user_ids if u}),
         'actor_id': actor_id,
         'company_id': instance.company_id,

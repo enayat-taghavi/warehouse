@@ -6,8 +6,11 @@ from django.utils import timezone
 
 from common.date_utils import format_to_shamsi_str
 
-from .registry import COMPLETED, CANCELLED, REJECTED, RETURNED, workflow_specs
+from .models import WorkflowStep
+from .registry import COMPLETED, CANCELLED, INFORM, REFER, REJECTED, RETURNED, workflow_specs
 from .substitutes import person
+
+REFERRAL_KIND_TITLES = {REFER: 'ارجاع', INFORM: 'برای اطلاع'}
 
 TERMINAL_TITLES = {
     COMPLETED: 'پایان گردش',
@@ -58,6 +61,14 @@ def task_card(task, now=None) -> dict:
     behalf_row = None
     if rows and all(r.on_behalf_of_id is not None for r in rows):
         behalf_row = rows[0]
+    referral = task.track == task.TRACK_REFERRAL
+    if referral:
+        actions = [WorkflowStep.DONE if task.step_kind == REFER else WorkflowStep.SEEN]
+        step_title_fa = REFERRAL_KIND_TITLES.get(task.step_kind, task.step_kind)
+    else:
+        actions = list(step.actions) if step is not None else []
+        step_title_fa = step.title_fa if step is not None else task.step_key
+    read_at = max((r.read_at for r in rows if r.read_at), default=None)
     return {
         'task_id': task.pk,
         'instance_id': inst.pk,
@@ -67,9 +78,17 @@ def task_card(task, now=None) -> dict:
         'entity_kind': inst.entity_kind,
         'entity_id': inst.entity_id,
         'step_key': task.step_key,
-        'step_title_fa': step.title_fa if step is not None else task.step_key,
+        'step_title_fa': step_title_fa,
         'step_kind': task.step_kind,
-        'actions': list(step.actions) if step is not None else [],
+        'actions': actions,
+        'track': task.track,
+        'kind': task.step_kind,
+        'instruction': task.instruction,
+        'due_at': _dt(task.due_at),
+        'due_at_shamsi': _shamsi_dt(task.due_at),
+        'referred_by': person(task.referred_by) if referral and task.referred_by_id else None,
+        'parent_task_id': task.parent_task_id,
+        'read_at': _dt(read_at),
         'summary': inst.summary or {},
         'route': spec.route.replace('{id}', str(inst.entity_id)) if spec is not None else None,
         'company': _ref(inst.company),
@@ -85,6 +104,33 @@ def task_card(task, now=None) -> dict:
         'valid_from_shamsi': format_to_shamsi_str(behalf_row.valid_from) if behalf_row else '',
         'valid_to_shamsi': format_to_shamsi_str(behalf_row.valid_to) if behalf_row else '',
         'can_cancel': False,
+    }
+
+
+def referral_node(task, with_text=True) -> dict:
+    """
+    یک گره درخت ارجاع (فهرست تخت با شناسهٔ والد)؛ target_user، referred_by و closed_by بارشده.
+    with_text=False: دستور و پاسخ خالی (بیننده طرف این شاخه نیست).
+    """
+    return {
+        'task_id': task.pk,
+        'parent_task_id': task.parent_task_id,
+        'kind': task.step_kind,
+        'kind_fa': REFERRAL_KIND_TITLES.get(task.step_kind, task.step_kind),
+        'target_user': person(task.target_user) if task.target_user_id else None,
+        'referred_by': person(task.referred_by) if task.referred_by_id else None,
+        'instruction': task.instruction if with_text else '',
+        'reply': task.reply if with_text else '',
+        'due_at': _dt(task.due_at),
+        'due_at_shamsi': _shamsi_dt(task.due_at),
+        'is_open': task.is_open,
+        'outcome': task.outcome,
+        'outcome_fa': task.get_outcome_display() if task.outcome else '',
+        'opened_at': _dt(task.opened_at),
+        'opened_at_shamsi': _shamsi_dt(task.opened_at),
+        'closed_at': _dt(task.closed_at),
+        'closed_at_shamsi': _shamsi_dt(task.closed_at),
+        'closed_by': person(task.closed_by) if task.closed_by_id else None,
     }
 
 

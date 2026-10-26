@@ -20,7 +20,7 @@ from decimal import Decimal
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from companies.models import ProjectSection, section_role_ranks
@@ -872,6 +872,21 @@ def open_for_referral(workflow_key, obj, user):
     except IntegrityError:
         return instance_of(workflow_key, obj.pk)
     return instance
+
+
+def referral_grants_view(user, kind, entity_id) -> bool:
+    """
+    ر۱۱: کاربر گیرندهٔ یک کار ارجاع این سند است (باز یا بسته)، یا به جانشینی روی کار ارجاع آن اقدام کرده است.
+    ماژول (قلاب can_view) و سابقه از این برای دیدن سند پس از بستن کار استفاده می‌کنند. یک پرس‌وجو.
+    """
+    if not getattr(user, 'is_active', False) or not getattr(user, 'pk', None) or not entity_id:
+        return False
+    acted_for = WorkflowStep.objects.filter(task_id=OuterRef('pk'), actor_id=user.pk, on_behalf_of__isnull=False)
+    company_ids = set(WorkflowTask.objects.filter(
+        track=WorkflowTask.TRACK_REFERRAL, instance__entity_kind=kind, instance__entity_id=entity_id,
+    ).filter(Q(target_user_id=user.pk) | Exists(acted_for)).values_list('instance__company_id', flat=True))
+    # فقط با عضویت فعال امروز در شرکت نمونه (کسی که از شرکت رفته سابقه را نمی‌بیند)
+    return bool(company_ids) and bool(company_member_pairs([user.pk], list(company_ids)))
 
 
 def set_allow_substitute(instance, value) -> WorkflowInstance:

@@ -15,6 +15,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,11 +28,11 @@ from platform_core.registry import entity_view_decision
 
 from . import engine
 from . import serializers as ser
-from .errors import TaskAlreadyDone, WorkflowError
+from .errors import TaskAlreadyDone, WorkflowError, WorkflowPermissionDenied
 from .models import (WorkflowCompanySettings, WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient,
                      WorkflowThreshold)
 from .queries import count_tasks_for_user, tasks_for_user, unassigned_open_tasks
-from .recipients import company_member_pairs
+from .recipients import company_member_pairs, valid_rows_q
 from .registry import APPROVE, workflow_specs
 from .substitutes import (AUDIT_MODULE, create_substitute, is_live_superuser, list_substitutes, revoke_substitute,
                           serialize_substitute, substitute_candidates)
@@ -104,14 +105,25 @@ class MyTasksView(WorkflowAPIView):
     def get(self, request):
         company = _int(request.query_params.get('company'), 'company')
         workflow = request.query_params.get('workflow') or None
+        track = request.query_params.get('track') or None
+        if track is not None and track not in (WorkflowTask.TRACK_STEP, WorkflowTask.TRACK_REFERRAL):
+            raise _bad('invalid_param', 'پارامتر «track» باید step یا referral باشد')
+        unread = request.query_params.get('unread') in ('1', 'true')
         qs = tasks_for_user(request.user)
-        if company is None and workflow is None:
+        if company is None and workflow is None and track is None and not unread:
             count = count_tasks_for_user(request.user)
         else:
             if company is not None:
                 qs = qs.filter(instance__company_id=company)
             if workflow is not None:
                 qs = qs.filter(instance__workflow_key=workflow)
+            if track is not None:
+                qs = qs.filter(track=track)
+            if unread:
+                # ر۸: هیچ ردیف معتبر امروز این کاربر خوانده نشده (هم‌سان با read_at کارت)
+                read = WorkflowTaskRecipient.objects.filter(user_id=request.user.pk, read_at__isnull=False).filter(
+                    valid_rows_q(timezone.localdate()))
+                qs = qs.exclude(id__in=read.values('task_id'))
             count = qs.count()
         return _paged(request, qs, count)
 
@@ -138,24 +150,40 @@ def _task_visible(user, task) -> bool:
         return True
     if task.is_open:
         return WorkflowTaskRecipient.objects.filter(task_id=task.pk, user_id=user.pk).exists()
+    if task.track == WorkflowTask.TRACK_REFERRAL:
+        # کار بستهٔ ارجاع (دستور و پاسخ): فقط گیرنده، ارجاع‌دهنده و انجام‌دهندگان سابقهٔ همین نمونه
+        if user.pk in (task.target_user_id, task.referred_by_id):
+            return True
+        return WorkflowStep.objects.filter(instance_id=inst.pk).filter(
+            Q(actor_id=user.pk) | Q(on_behalf_of_id=user.pk)).exists()
     return (user.pk, inst.company_id) in company_member_pairs([user.pk], [inst.company_id])
 
 
+def _visible_task(user, task_id):
+    task = WorkflowTask.objects.select_related('instance').filter(pk=task_id).first()
+    if task is None or not getattr(user, 'is_active', False) or not _task_visible(user, task):
+        raise _not_found('کار یافت نشد')
+    return task
+
+
 class TaskActionView(WorkflowAPIView):
-    ACTIONS = ('act', 'return', 'reject')
+    STEP_ACTIONS = ('act', 'return', 'reject')
+    REFERRAL_ACTIONS = (WorkflowStep.DONE, WorkflowStep.SEEN)
 
     def post(self, request, task_id):
         action = request.data.get('action')
-        if action not in self.ACTIONS:
-            raise _bad('invalid_action', 'اقدام باید یکی از act، return یا reject باشد')
+        if action not in self.STEP_ACTIONS + self.REFERRAL_ACTIONS:
+            raise _bad('invalid_action', 'اقدام باید یکی از act، return، reject، done یا seen باشد')
         revision = _int(request.data.get('revision'), 'revision')
-        reason = str(request.data.get('reason') or '').strip()
-        task = WorkflowTask.objects.select_related('instance').filter(pk=task_id).first()
-        if task is None or not getattr(request.user, 'is_active', False) or not _task_visible(request.user, task):
-            raise _not_found('کار یافت نشد')
+        reason = str(request.data.get('reason') or request.data.get('reply') or '').strip()
+        task = _visible_task(request.user, task_id)
         if not task.is_open and not is_live_superuser(request.user):
             # کار بسته: همان 409 موتور، بی‌اجرای موتور (هم‌سان‌سازی نسخه فقط برای کسی که اجازهٔ اقدام دارد)
             raise TaskAlreadyDone()
+        if action in self.REFERRAL_ACTIONS:
+            # ر۷: موتور کار مرحله را با action_not_allowed رد می‌کند (و act روی کار ارجاع را هم)
+            closed = engine.complete_referral(request.user, task, action=action, reply=reason, revision=revision)
+            return Response({**ser.instance_state(closed.instance), 'task_id': closed.pk, 'outcome': closed.outcome})
         if action == 'act':
             inst = engine.act(request.user, task, reason=reason, revision=revision)
         elif action == 'return':
@@ -178,7 +206,8 @@ def visible_instances(user, instances, kind, entity_id) -> list:
     decision = entity_view_decision(user, kind, entity_id)
     if decision is False:
         return []
-    if decision is True or is_live_superuser(user) or engine.task_grants_view(user, kind, entity_id):
+    if (decision is True or is_live_superuser(user) or engine.task_grants_view(user, kind, entity_id)
+            or engine.referral_grants_view(user, kind, entity_id)):
         return list(instances)
     specs = workflow_specs()
     out = []
@@ -221,6 +250,75 @@ class InstanceCancelView(WorkflowAPIView):
         reason = str(request.data.get('reason') or '').strip()
         inst = engine.cancel(request.user, found[0].pk, reason=reason)
         return Response(ser.instance_state(inst))
+
+
+# ─── ارجاع (ر۸ و ر۱۴ طرح ۲.۳-و) ─────────────────────────────────────────────
+# open_for_referral و set_allow_substitute عمداً API ندارند (ماژول با مجوز خودش صدا می‌زند).
+
+class TaskReadView(WorkflowAPIView):
+    def post(self, request, task_id):
+        task = _visible_task(request.user, task_id)
+        return Response({'read': engine.mark_read(request.user, task)})
+
+
+def _parse_due_at(value):
+    if value in (None, ''):
+        return None
+    try:
+        parsed = parse_datetime(str(value))
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        raise _bad('invalid_due_at', 'مهلت نامعتبر است')
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed
+
+
+class InstanceReferView(WorkflowAPIView):
+    def post(self, request, instance_id):
+        user = request.user
+        inst = WorkflowInstance.objects.filter(pk=instance_id).first()
+        # ر۱۴: بی‌دسترسی به سند یا بی‌اجازهٔ ارجاع = 404 (وجود سند لو نرود)
+        if inst is None or not getattr(user, 'is_active', False) or not (
+                visible_instances(user, [inst], inst.entity_kind, inst.entity_id)
+                or engine._hook_allows_refer(user, inst)):
+            raise _not_found('گردش یافت نشد')
+        data = request.data
+        if not hasattr(data, 'get'):
+            raise _bad('invalid_param', 'بدنهٔ درخواست نامعتبر است')
+        targets = data.get('targets')
+        if not isinstance(targets, (list, tuple)):
+            raise _bad('invalid_targets', 'گیرندگان ارجاع نامعتبرند')
+        instruction = data.get('instruction') or ''
+        if not isinstance(instruction, str):
+            raise _bad('invalid_param', 'دستور ارجاع نامعتبر است')
+        try:
+            created = engine.refer(user, inst.pk, targets, kind=str(data.get('kind') or ''),
+                                   instruction=instruction, due_at=_parse_due_at(data.get('due_at')),
+                                   parent_task=_int(data.get('parent_task'), 'parent_task'))
+        except WorkflowPermissionDenied:
+            raise _not_found('گردش یافت نشد')
+        tasks = (WorkflowTask.objects.filter(pk__in=[t.pk for t in created])
+                 .select_related('instance', 'instance__section', 'instance__company', 'referred_by')
+                 .order_by('id'))
+        now = timezone.now()
+        return Response([ser.task_card(t, now) for t in tasks], status=201)
+
+
+class InstanceReferralsView(WorkflowAPIView):
+    def get(self, request, instance_id):
+        found = _instances_of(None, None, pk=instance_id)
+        if not found or not visible_instances(request.user, found, found[0].entity_kind, found[0].entity_id):
+            raise _not_found('گردش یافت نشد')
+        tasks = (WorkflowTask.objects.filter(instance_id=instance_id, track=WorkflowTask.TRACK_REFERRAL)
+                 .select_related('target_user', 'referred_by', 'closed_by').order_by('opened_at', 'id'))
+        user = request.user
+        full = is_live_superuser(user) or found[0].created_by_id == user.pk
+        # دستور و پاسخ هر شاخه فقط برای طرف‌های همان شاخه (گیرنده و ارجاع‌دهنده)، ثبت‌کننده و مدیر کل
+        nodes = [ser.referral_node(t, with_text=full or user.pk in (t.target_user_id, t.referred_by_id))
+                 for t in tasks]
+        return Response({'instance_id': instance_id, 'referrals': nodes})
 
 
 class DefinitionsView(WorkflowAPIView):

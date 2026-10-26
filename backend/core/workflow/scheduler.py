@@ -34,26 +34,42 @@ DEFAULT_RECONCILE_MINUTES = 60
 TOLD_Q = Q(on_behalf_of__isnull=True) | Q(announced=True)
 
 
-def _due_q(now, field, default_hours) -> Q:
-    """شرط «مدت گذشته» با مدت هر شرکت (یک پرس‌وجو روی جدول تنظیمات)؛ شرکت بی‌ردیف پیش‌فرض."""
+REFERRAL_DUE_Q = Q(track=WorkflowTask.TRACK_REFERRAL, due_at__isnull=False)
+REMINDER_LEAD = datetime.timedelta(hours=24)
+
+
+def _due_q(now, field, default_hours, deadline_q) -> Q:
+    """
+    شرط «مدت گذشته» با مدت هر شرکت (یک پرس‌وجو روی جدول تنظیمات)؛ شرکت بی‌ردیف پیش‌فرض. کار ارجاع مهلت‌دار
+    (ر۱۰ طرح ۲.۳-و) به‌جای مدت شرکت با deadline_q سنجیده می‌شود.
+    """
     custom = list(WorkflowCompanySettings.objects.values_list('company_id', field))
     cond = Q(opened_at__lte=now - datetime.timedelta(hours=default_hours))
     if custom:
         cond &= ~Q(instance__company_id__in=[cid for cid, _h in custom])
     for cid, hours in custom:
         cond |= Q(instance__company_id=cid, opened_at__lte=now - datetime.timedelta(hours=hours))
-    return cond
+    return (cond & ~REFERRAL_DUE_Q) | (REFERRAL_DUE_Q & deadline_q)
 
 
-def _claim_due(now, stamp_field, hours_field, default_hours, *related):
+def _reminder_due(task, now) -> bool:
+    """ر۱۰: کار مهلت‌دار وقتی now ≥ due_at − min(۲۴ ساعت، نصف فاصلهٔ باز شدن تا مهلت)؛ بقیه را _due_q سنجیده."""
+    if task.track != WorkflowTask.TRACK_REFERRAL or task.due_at is None:
+        return True
+    return now >= task.due_at - min(REMINDER_LEAD, (task.due_at - task.opened_at) / 2)
+
+
+def _claim_due(now, stamp_field, hours_field, default_hours, deadline_q, *related, keep=None):
     """کارهای باز سررسیده و علامت‌نخورده؛ قفل با skip_locked و علامت در همین تراکنش (فقط یک بار)."""
     tasks = list(
         WorkflowTask.objects.select_for_update(skip_locked=True, of=('self',))
         .select_related(*related)
         .filter(is_open=True, has_recipients=True, **{f'{stamp_field}__isnull': True})
-        .filter(_due_q(now, hours_field, default_hours))
+        .filter(_due_q(now, hours_field, default_hours, deadline_q))
         .order_by('pk')
     )
+    if keep is not None:
+        tasks = [t for t in tasks if keep(t)]
     if tasks:
         WorkflowTask.objects.filter(pk__in=[t.pk for t in tasks], **{f'{stamp_field}__isnull': True}).update(
             **{stamp_field: now})
@@ -64,7 +80,8 @@ def send_reminders(now, today) -> int:
     """گام ۱ (ت۱۲): یادآوری یک‌باره به ردیف‌های معتبر امروز."""
     with transaction.atomic():
         tasks = _claim_due(now, 'reminder_sent_at', 'reminder_hours',
-                           WorkflowCompanySettings.DEFAULT_REMINDER_HOURS, 'instance')
+                           WorkflowCompanySettings.DEFAULT_REMINDER_HOURS, Q(due_at__lte=now + REMINDER_LEAD),
+                           'instance', keep=lambda t: _reminder_due(t, now))
         if not tasks:
             return 0
         users = {}
@@ -107,7 +124,8 @@ def send_escalations(now, today) -> tuple:
     """گام ۲ (ت۱۲): خبر به بالاتر یک‌باره. خروجی (شمار کارها، شمار رفته به مدیران کل)."""
     with transaction.atomic():
         tasks = _claim_due(now, 'escalated_at', 'escalation_hours',
-                           WorkflowCompanySettings.DEFAULT_ESCALATION_HOURS, 'instance__section__project')
+                           WorkflowCompanySettings.DEFAULT_ESCALATION_HOURS, Q(due_at__lte=now),
+                           'instance__section__project')
         if not tasks:
             return 0, 0
         targets = escalation_targets(tasks)

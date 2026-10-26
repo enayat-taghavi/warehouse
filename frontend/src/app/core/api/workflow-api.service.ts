@@ -47,6 +47,11 @@ export class WorkflowApiService {
     return this.api.post<WorkflowInstanceState>(`${WF}/tasks/${taskId}/action`, body, WorkflowApiService.direct());
   }
 
+  /** علامت خواندن کارت ارجاع؛ ناهمسان و تکرارپذیر */
+  markTaskRead(taskId: number): Observable<{ read: boolean }> {
+    return this.api.post<{ read: boolean }>(`${WF}/tasks/${taskId}/read`, {}, WorkflowApiService.direct());
+  }
+
   /** «کارهای بی‌دریافت‌کننده»؛ فقط مدیر کل سامانه (برای بقیه 403) */
   getUnassignedTasks(params?: { company?: number; page?: number; page_size?: number }): Observable<WorkflowTaskPage> {
     return this.api.get<WorkflowTaskPage>(`${WF}/tasks/unassigned`, params, WorkflowApiService.direct());

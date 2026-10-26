@@ -15,7 +15,7 @@ export interface WorkflowPerson {
 }
 
 /** اقدام‌های یک کار (ت۱۳): act = تأیید/بررسی/اجرا، return = عودت برای اصلاح، reject = رد قطعی */
-export type WorkflowTaskAction = 'act' | 'return' | 'reject';
+export type WorkflowTaskAction = 'act' | 'return' | 'reject' | 'done' | 'seen';
 
 /** کارت یک کار باز در «کارهای من» یا «کارهای بی‌دریافت‌کننده» (ت۱۱، ت۱۹) */
 export interface WorkflowTaskCard {
@@ -31,6 +31,8 @@ export interface WorkflowTaskCard {
   step_title_fa: string;
   /** approve | review | execute */
   step_kind: string;
+  /** برای کارت ارجاع: refer | inform (برابر step_kind) */
+  kind?: string;
   actions: WorkflowTaskAction[];
   /** خلاصهٔ اعلام‌شدهٔ ماژول (عنوان، مبلغ و …) */
   summary: Record<string, unknown>;
@@ -50,6 +52,15 @@ export interface WorkflowTaskCard {
   valid_from_shamsi: string;
   valid_to_shamsi: string;
   can_cancel: boolean;
+  /** مسیر کار: مرحلهٔ گردش (step) یا ارجاع (referral)؛ نبودن یعنی step */
+  track?: 'step' | 'referral';
+  instruction?: string;
+  due_at?: string | null;
+  due_at_shamsi?: string;
+  referred_by?: WorkflowPerson | null;
+  parent_task_id?: number | null;
+  /** زمان خواندن کارت ارجاع؛ null یعنی نخوانده */
+  read_at?: string | null;
 }
 
 export interface WorkflowTaskPage {

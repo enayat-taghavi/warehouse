@@ -9,7 +9,7 @@ from django.utils import timezone
 from .models import WorkflowTask, WorkflowTaskRecipient
 from .recipients import valid_rows_q
 
-_RELATED = ('instance', 'instance__section', 'instance__company')
+_RELATED = ('instance', 'instance__section', 'instance__company', 'referred_by')
 
 
 def _my_rows(user, today):
