@@ -2152,7 +2152,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.6-b: core workflow tests for company-level documents and the step `required` hook
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.6-b: core workflow tests for company-level documents and the step `required` hook
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
