@@ -1981,7 +1981,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.4-b: API scenario tests for company expense heads (lifecycle, petty cash, Excel export, usage_count, other company, seed-defaults)
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.4-b: API scenario tests for company expense heads (lifecycle, petty cash, Excel export, usage_count, other company, seed-defaults)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

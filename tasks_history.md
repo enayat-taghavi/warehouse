@@ -13062,3 +13062,58 @@ changed (2): ['frontend/src/app/modules/accounting/components/finance/counterpar
 کاربر درخواست نوشتن تست‌های DOM برای بخش موجودی اولیه حساب‌های بانکی شرکت در تب خزانه‌داری (`CompanyTreasuryTabComponent`) را دارد. این تست‌ها شامل اعتبارسنجی الزامی بودن تاریخ موجودی اولیه در زمان ساخت، نمایش پوشیده و ثبت‌نشده با سطوح دسترسی مختلف، قواعد پنهان یا نمایان بودن دکمهٔ تغییر موجودی اولیه، الزامی بودن فیلد «علت تغییر» برای حساب‌های دارای گردش، مدیریت خطای ۴۰۰ دوره مالی بسته (`fiscal_period_closed`) و باز ماندن مودال، و نمایش پیام خالی بودن سابقه است. این تست‌ها در یک فایل جدید به آدرس `frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab-opening.dom.spec.ts` بدون...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 00:02:09
+- **Status:** DONE
+- **Conversation:** `6bee1b05-30af-4b2e-8b5f-8935ad7e70c9`
+- **Steps:** 20
+- **Tokens:** 48437
+- **Duration:** 3m 42s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.4-b: API scenario tests for company expense heads (lifecycle, petty cash, Excel export, usage_count, other company, seed-defaults)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_expense_heads_api_34.py`. Change no other file. If a test fails because of production code, do not change production code: keep the test, mark it with `@unittest.expectedFailure` and a one-line comment, and say so in the report.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+- Never run `manage.py test` without app labels.
+
+2. Context (already committed by Claude in the previous commit):
+- Model `personnel.models.ExpenseHead`: `company`, `parent` (null for a group), `code` (digits, unique per company), `title`, `is_active`, `order`. A new `Company` automatically gets a default list (groups `10`, `20`, `90`; heads such as `1001`, `1002`, `9001`) through a post_save signal, so every company created in a test already has heads. Function `personnel.expense_heads.seed_default_expense_heads(company)` returns the number of rows created (0 when the company already has heads).
+- API `/api/personnel/expense-heads/`: GET list needs `?company_id=<id>` (400 without it), `&active=1` returns only active rows; each row has `id`, `company`, `parent`, `parent_title`, `is_group`, `code`, `title`, `is_active`, `order`, and `usage_count` only when the caller has company section `expense_heads` at level `write` (superuser always). POST (body `company`, `parent`, `code`, `title`), PATCH `<id>/`, DELETE `<id>/`, POST `seed-defaults/?company_id=<id>` (201 with `{'created': n}` when it created rows, 200 with `{'created': 0}` otherwise).
+- Invoice `/api/personnel/expense-invoices/` and petty cash `/api/personnel/petty-cash-transactions/` now take `expense_head` (id). Invoice and petty cash `transaction_type='expense'` need an active head (with a parent, parent active) of the section's company, otherwise 400 with key `expense_head`. Petty cash `allocation` / `refund` must not send `expense_head` (400). `category` is read-only; the server sets it to the head title. An invoice keeps an unchanged head even after that head is deactivated (PATCH of another field gives 200), but PATCH to a different inactive head gives 400. Invoice Excel export: GET `/api/personnel/expense-invoices/export-excel/` returns an xlsx whose rows contain the `category` text (the head title).
+- Reuse fixtures, do not copy them: `from personnel.test_expense_heads_34 import HeadFixtures` and subclass it. Read `backend/modules/accounting/personnel/test_expense_heads_34.py` lines 1-48 only. `HeadFixtures.setUp` gives `self.company`, `self.other`, `self.sec` (section of `self.company`), `self.cp` (counterparty), `self.admin` (superuser), `self.api` (APIClient as admin with header `X-Company-ID` of `self.company`), `self.writer` (company section `expense_heads` write), `self.member` (plain member), `self.head` (head `1001` of `self.company`), `self.group` (its group), `self.other_head` (head `1001` of `self.other`); helpers `self.client_for(user)`, `self.invoice_body(**extra)`, `self.petty_body(**extra)`. Constants `HEADS`, `INVOICES`, `PETTY` can be imported from `personnel.test_expense_heads_34`.
+
+3. Task: write one class `ExpenseHeadApiScenarioTests(HeadFixtures)` with exactly these test methods (names are checked):
+- a) `test_lifecycle_group_head_invoice_deactivate`: as `self.writer` POST a group (`company`, `code` `'30'`, `title` `'گروه تست'`) gives 201; POST a head under it (`parent` = new group id, `code` `'3001'`) gives 201; as `self.admin` (`self.api`) POST an invoice with that head gives 201 and the invoice `category` equals the head title; as writer PATCH the head `{'is_active': False}` gives 200; PATCH the invoice `{'description': 'x'}` gives 200; create a second head `'3002'`, deactivate it, PATCH the invoice `{'expense_head': <3002 id>}` gives 400.
+- b) `test_petty_cash_expense_with_head_allocation_without`: POST petty cash `transaction_type='expense'` with `expense_head=self.head.id` gives 201; POST `transaction_type='allocation'` without a head gives 201 and the stored `category` is `'شارژ تنخواه'`; POST `transaction_type='refund'` with `expense_head=self.head.id` gives 400.
+- c) `test_invoice_excel_export_contains_head_title`: create an invoice with `self.head` via POST; GET the export with `self.api`; status 200; load `openpyxl.load_workbook(io.BytesIO(response.content))` and assert some cell value equals `self.head.title`.
+- d) `test_usage_count_only_for_writer`: after one invoice with `self.head`, the writer's list row for `self.head` has `usage_count == 1`; the member's rows have no `usage_count` key.
+- e) `test_other_company_head_rejected_on_invoice`: POST an invoice with `expense_head=self.other_head.id` gives 400 with key `expense_head`; also a group id (`self.group.id`) gives 400.
+- f) `test_seed_defaults_idempotent`: as writer POST `seed-defaults/?company_id=<self.company.id>` gives 200 and `created == 0` (defaults already exist); the head count of `self.company` is unchanged.
+
+4. Tool policy: only reading the listed file range, writing the new test file, the test command below, `git add` of the new file, `git commit`, `git status --short`. Test command, in `backend`: `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test personnel.test_expense_heads_api_34 --keepdb --noinput`. If it fails, read the error, fix the test (not production code), and rerun at most 4 times.
+
+5. Before finishing: all 6 tests pass (or are marked expectedFailure with a reason); commit only the new file with the message `test(release-v1 3.4-b): expense heads API scenarios`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any expectedFailure with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اجرای تست‌های سناریوی API سرفصل‌های هزینه اجرا شد و منتظر اتمام آن هستیم...
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Explanation)
+کاربر درخواست نوشتن آزمون‌های سناریویی سطح API را برای سرفصل‌های هزینه شرکت (طرح ۳.۴ بخش ب) در فایل جدید [`backend/modules/accounting/personnel/test_expense_heads_api_34.py`](file:///E:/comanager/backend/modules/accounting/personnel/test_expense_heads_api_34.py) داشت؛ شامل چرخه حیات (ایجاد گروه و سرفصل، ثبت فاکتور و غیرفعال‌سازی)، تنخواه، خروجی اکسل فاکتورها، شمارش موارد استفاده (`usage_count`) فقط برای سطح دسترسی نوشتن، رد سرفصل‌های شرکت‌های دیگر و شناسه گروه روی فاکتور، و ویژگی بی‌اثر بودن تکرار ...
+
+---
