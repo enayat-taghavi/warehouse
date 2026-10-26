@@ -19,6 +19,11 @@ O_EXCL); a lock older than STALE_HOURS is taken over (the previous chat died).
 
 `gate` is the UserPromptSubmit hook in .claude/settings.json: a scheduled `release-v1-chain` prompt is blocked (exit 2,
 no model call, no tokens) unless peek says READY or STALE; every other prompt passes untouched.
+
+Several chains (one per master-plan stage) each have their own task, state file and lock; pick one with
+`--chain <task name>` before the command (default `release-v1-chain`, stage 2), e.g.
+    python scripts/automation/chain_state.py --chain release-v1-stage3-chain claim
+A chain whose state file does not exist yet is NO_STATE, so its task is gated before the model until seeded.
 """
 import argparse
 import json
@@ -28,9 +33,21 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-STATE = ROOT / 'scratch' / 'chain_state.json'
-LOCK = ROOT / 'scratch' / 'chain.lock'
+CHAINS = {  # scheduled task name -> (state file, lock file) under scratch/
+    'release-v1-chain': ('chain_state.json', 'chain.lock'),
+    'release-v1-stage3-chain': ('chain_state_stage3.json', 'chain_stage3.lock'),
+}
+DEFAULT_CHAIN = 'release-v1-chain'
+STATE = ROOT / 'scratch' / CHAINS[DEFAULT_CHAIN][0]
+LOCK = ROOT / 'scratch' / CHAINS[DEFAULT_CHAIN][1]
 STALE_HOURS = 4
+
+
+def select_chain(name):
+    global STATE, LOCK
+    state_name, lock_name = CHAINS[name]
+    STATE = ROOT / 'scratch' / state_name
+    LOCK = ROOT / 'scratch' / lock_name
 
 
 def now():
@@ -111,19 +128,22 @@ def gate():
     """
     try:
         prompt = json.load(sys.stdin).get('prompt') or ''
-        if '<scheduled-task name="release-v1-chain"' not in prompt:
+        name = next((n for n in CHAINS if f'<scheduled-task name="{n}"' in prompt), None)
+        if name is None:
             return 0
+        select_chain(name)
         word = peek()
     except Exception:
         return 0
     if word in ('READY', 'STALE'):
         return 0
-    print(f'release-v1-chain: {word}; run skipped before the model (chain_state.py gate).', file=sys.stderr)
+    print(f'{name}: {word}; run skipped before the model (chain_state.py gate).', file=sys.stderr)
     return 2
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--chain', choices=sorted(CHAINS), default=DEFAULT_CHAIN)
     sub = parser.add_subparsers(dest='cmd', required=True)
     sub.add_parser('claim')
     p = sub.add_parser('release')
@@ -137,8 +157,9 @@ def main(argv=None):
     sub.add_parser('gate')
     args = parser.parse_args(argv)
 
-    if args.cmd == 'gate':
+    if args.cmd == 'gate':  # chain comes from the prompt's task name
         return gate()
+    select_chain(args.chain)
     if args.cmd == 'peek':
         print(peek())
     elif args.cmd == 'claim':
