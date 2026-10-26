@@ -1,0 +1,184 @@
+<div class="space-y-4" dir="rtl">
+  @if (loading) {
+    <div class="space-y-2" role="status" aria-live="polite">
+      <div class="h-14 rounded-xl bg-slate-100 animate-pulse"></div>
+      <div class="h-14 rounded-xl bg-slate-100 animate-pulse"></div>
+      <span class="sr-only">در حال بارگذاری شماره‌گذاری اسناد…</span>
+    </div>
+  } @else if (error) {
+    <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" (click)="load()" title="تلاش دوباره" aria-label="تلاش دوباره"
+        class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-300 bg-white font-semibold cursor-pointer hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+        <span class="hidden sm:inline">تلاش دوباره</span>
+      </button>
+    </div>
+  } @else if (cards.length === 0) {
+    <div class="py-8 text-center text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-2xl" role="status">
+      سری شماره‌ای برای تنظیم ندارید.
+    </div>
+  } @else {
+    <div class="space-y-3">
+      @for (card of cards; track card.key) {
+        <section class="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3" [attr.data-series]="card.key">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-xs font-black text-slate-700">{{ card.title_fa }}</h3>
+            @if (card.can_edit && !card.editing) {
+              <button type="button" (click)="startEdit(card)" title="ویرایش قالب" aria-label="ویرایش قالب"
+                class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+                <span class="hidden sm:inline">ویرایش قالب</span>
+              </button>
+            }
+          </div>
+          <dl class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <div>
+              <dt class="text-slate-500">قالب فعلی</dt>
+              <dd class="font-mono text-slate-800 break-all" dir="ltr">{{ card.template }}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-500">شمارهٔ بعدی</dt>
+              <dd class="font-bold text-slate-800" data-next-preview>{{ fa(card.next_preview) }}</dd>
+            </div>
+            <div>
+              <dt class="text-slate-500">آخرین شمارهٔ صادرشده</dt>
+              <dd class="text-slate-800">{{ fa(card.last_seq) }}</dd>
+            </div>
+          </dl>
+
+          @if (card.editing) {
+            <form class="space-y-3 border-t border-slate-100 pt-3" (ngSubmit)="save(card)">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="block text-xs text-slate-600 sm:col-span-2">
+                  <span class="block mb-1 font-semibold">قالب (شامل {{ '{period}' }} و {{ '{seq}' }}؛ اختیاری {{ '{prefix}' }})</span>
+                  <input type="text" name="template" dir="ltr" [(ngModel)]="card.draft.template" [disabled]="card.saving" maxlength="100" aria-label="قالب"
+                    class="w-full min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" />
+                </label>
+                <label class="block text-xs text-slate-600">
+                  <span class="block mb-1 font-semibold">پیشوند</span>
+                  <input type="text" name="prefix" dir="ltr" [(ngModel)]="card.draft.prefix" [disabled]="card.saving" maxlength="20" aria-label="پیشوند"
+                    class="w-full min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" />
+                </label>
+                <label class="block text-xs text-slate-600">
+                  <span class="block mb-1 font-semibold">تعداد ارقام شماره</span>
+                  <input type="text" inputmode="numeric" name="seq_padding" [(ngModel)]="card.draft.seq_padding" [disabled]="card.saving" aria-label="تعداد ارقام شماره"
+                    class="w-full min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" />
+                </label>
+                <label class="block text-xs text-slate-600">
+                  <span class="block mb-1 font-semibold">شمارهٔ شروع</span>
+                  <input type="text" inputmode="numeric" name="start_number" [(ngModel)]="card.draft.start_number" [disabled]="card.saving" aria-label="شمارهٔ شروع"
+                    class="w-full min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" />
+                </label>
+              </div>
+              <p class="text-xs text-slate-600">
+                پیش‌نمایش: <span class="font-bold text-slate-800" data-live-preview>{{ preview(card) }}</span>
+              </p>
+              @if (card.error) {
+                <p class="text-[11px] text-rose-600" role="alert">{{ card.error }}</p>
+              }
+              <div class="flex items-center gap-2">
+                <button type="submit" [disabled]="card.saving" title="ذخیره" aria-label="ذخیره"
+                  class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                  <span class="hidden sm:inline">{{ card.saving ? 'در حال ذخیره…' : 'ذخیره' }}</span>
+                </button>
+                <button type="button" (click)="cancelEdit(card)" [disabled]="card.saving" title="انصراف" aria-label="انصراف"
+                  class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+                  <span class="hidden sm:inline">انصراف</span>
+                </button>
+              </div>
+            </form>
+          }
+        </section>
+      }
+    </div>
+
+    <section class="bg-white border border-slate-200 rounded-2xl overflow-hidden" aria-label="دفتر شماره‌های صادرشده">
+      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-2">
+        <h3 class="text-xs font-black text-slate-700 ml-auto">دفتر شماره‌های صادرشده</h3>
+        <select [(ngModel)]="filterSeries" (ngModelChange)="onFilterChange()" aria-label="سری شماره"
+          class="min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <option value="">همهٔ سری‌ها</option>
+          @for (card of cards; track card.key) {
+            <option [value]="card.key">{{ card.title_fa }}</option>
+          }
+        </select>
+        <select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()" aria-label="وضعیت"
+          class="min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <option value="">همه</option>
+          <option value="active">فعال</option>
+          <option value="void">باطل‌شده</option>
+        </select>
+      </div>
+
+      @if (ledgerLoading) {
+        <div class="p-3 space-y-2" role="status" aria-live="polite">
+          <div class="h-10 rounded-xl bg-slate-100 animate-pulse"></div>
+          <div class="h-10 rounded-xl bg-slate-100 animate-pulse"></div>
+          <span class="sr-only">در حال بارگذاری دفتر شماره‌ها…</span>
+        </div>
+      } @else if (ledgerError) {
+        <div class="flex items-center justify-between gap-2 p-3 text-xs text-rose-700" role="alert">
+          <span>{{ ledgerError }}</span>
+          <button type="button" (click)="loadLedger(ledgerPage)" title="تلاش دوباره" aria-label="تلاش دوباره"
+            class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-300 bg-white font-semibold cursor-pointer hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+            <span class="hidden sm:inline">تلاش دوباره</span>
+          </button>
+        </div>
+      } @else if (ledger.length === 0) {
+        <div class="py-8 text-center text-xs text-slate-500" role="status">شماره‌ای با این فیلتر ثبت نشده است.</div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-right">
+            <thead class="bg-slate-50 text-slate-500">
+              <tr>
+                <th scope="col" class="px-3 py-2 font-semibold">شمارهٔ سند</th>
+                <th scope="col" class="px-3 py-2 font-semibold">سری شماره</th>
+                <th scope="col" class="px-3 py-2 font-semibold">کلید دوره</th>
+                <th scope="col" class="px-3 py-2 font-semibold">وضعیت</th>
+                <th scope="col" class="px-3 py-2 font-semibold">تاریخ صدور</th>
+                <th scope="col" class="px-3 py-2 font-semibold">صادرکننده</th>
+                <th scope="col" class="px-3 py-2 font-semibold">دلیل ابطال</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (row of ledger; track row.id) {
+                <tr>
+                  <td class="px-3 py-2 font-bold text-slate-800 whitespace-nowrap" data-cell="display">{{ fa(row.display) }}</td>
+                  <td class="px-3 py-2 text-slate-700 whitespace-nowrap">{{ seriesTitle(row.series_key) }}</td>
+                  <td class="px-3 py-2 text-slate-700 whitespace-nowrap">{{ fa(row.period_key) }}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">
+                    @if (row.status === 'void') {
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700">شمارهٔ باطل‌شده</span>
+                    } @else {
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">فعال</span>
+                    }
+                  </td>
+                  <td class="px-3 py-2 text-slate-700 whitespace-nowrap">{{ row.issued_at | persianDate:'short-time' }}</td>
+                  <td class="px-3 py-2 text-slate-700 whitespace-nowrap">{{ row.issued_by || '—' }}</td>
+                  <td class="px-3 py-2 text-slate-700 min-w-[8rem]">{{ row.void_reason || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between gap-2 px-4 py-2 border-t border-slate-100 text-xs text-slate-600">
+          <button type="button" (click)="loadLedger(ledgerPage + 1)" [disabled]="!hasNext" title="صفحهٔ بعد" aria-label="صفحهٔ بعد"
+            class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-slate-200 bg-white font-semibold cursor-pointer hover:bg-slate-50 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+            <span class="hidden sm:inline">صفحهٔ بعد</span>
+          </button>
+          <span>صفحهٔ {{ fa(ledgerPage) }} از {{ fa(pageCount) }} ({{ fa(ledgerCount) }} شماره)</span>
+          <button type="button" (click)="loadLedger(ledgerPage - 1)" [disabled]="!hasPrevious" title="صفحهٔ قبل" aria-label="صفحهٔ قبل"
+            class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-slate-200 bg-white font-semibold cursor-pointer hover:bg-slate-50 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+            <span class="hidden sm:inline">صفحهٔ قبل</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+          </button>
+        </div>
+      }
+    </section>
+  }
+</div>

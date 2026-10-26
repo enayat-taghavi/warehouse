@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/notifications/', include('notifications.urls')),
     path('api/workflow/', include('workflow.urls')),
     path('api/attachments/', include('attachments.urls')),
+    path('api/numbering/', include('numbering.urls')),
     path('api/reports/', include('reports.urls')),
     path('api/org/', include('companies.urls')),
     path('api/settings/global/', SettingsViewSet.as_view({'get': 'global_settings', 'post': 'global_settings'})),

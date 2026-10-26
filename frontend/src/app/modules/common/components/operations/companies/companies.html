@@ -1249,6 +1249,19 @@
           </div>
         }
 
+        <!-- تب هستهٔ «شماره‌گذاری اسناد»: قالب سری‌ها و دفتر شماره‌های صادرشده -->
+        @if (activeModalTab === 'numbering') {
+          <div class="space-y-4" role="tabpanel" id="co-studio-panel-numbering" aria-labelledby="co-studio-tab-numbering">
+            @if (!hasSavedCompany) {
+              <div class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
+                برای دیدن شماره‌گذاری اسناد، ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید.
+              </div>
+            } @else {
+              <app-company-numbering-tab [companyId]="companyModal.data.id!" />
+            }
+          </div>
+        }
+
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب‌های مشارکتی ماژول‌ها (studioTabs) با بارگذاری تنبل کامپوننت       -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->

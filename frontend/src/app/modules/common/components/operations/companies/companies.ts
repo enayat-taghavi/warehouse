@@ -49,11 +49,12 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icon
 import { CompanyProjectsTabComponent } from './company-projects-tab/company-projects-tab';
 import { CompanyWorkflowTabComponent } from './company-workflow-tab/company-workflow-tab.component';
 import { CompanySettingsTabComponent } from './company-settings-tab/company-settings-tab.component';
+import { CompanyNumberingTabComponent } from './company-numbering-tab/company-numbering-tab.component';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal, CompanyProjectsTabComponent, CompanyWorkflowTabComponent, CompanySettingsTabComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal, CompanyProjectsTabComponent, CompanyWorkflowTabComponent, CompanySettingsTabComponent, CompanyNumberingTabComponent],
   providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
@@ -604,7 +605,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** جای تب‌های هسته؛ تب مشارکتی با `order` خودش میان آن‌ها می‌نشیند (§۵-۴) */
   private static readonly CORE_TAB_ORDER: Record<string, number> = {
-    identity: 10, documents: 50, projects: 55, access: 60, workflow: 70, settings: 75
+    identity: 10, documents: 50, projects: 55, access: 60, workflow: 70, settings: 75, numbering: 78
   };
 
   private _contributedTabsKey = '';
@@ -832,6 +833,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: this.icons.permissions, count: this.studioAccesses.length || undefined });
     tabs.push({ id: 'workflow', label: 'گردش کار', shortLabel: 'گردش', icon: 'activity-path' });
     tabs.push({ id: 'settings', label: 'تنظیمات شرکت', shortLabel: 'تنظیمات', icon: 'settings' });
+    tabs.push({ id: 'numbering', label: 'شماره‌گذاری اسناد', shortLabel: 'شماره‌ها', icon: 'file-text' });
     // تب‌های مشارکتی ماژول‌ها با شمارنده و نشان خطای context، به ترتیب order میان تب‌های هسته
     const order = (id: string) => CompaniesManagementComponent.CORE_TAB_ORDER[id] ?? contributed.find(t => t.id === id)?.order ?? 0;
     for (const t of contributed) {
