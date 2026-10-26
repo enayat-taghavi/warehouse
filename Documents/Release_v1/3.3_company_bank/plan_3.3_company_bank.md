@@ -1,0 +1,96 @@
+<div dir="rtl" align="right">
+
+# طرح جزئی ۳.۳ — اطلاعات شرکت، حساب‌های بانکی شرکت و موجودی اولیه
+
+- **تاریخ:** ۴ آبان ۱۴۰۵ (۲۶ اکتبر ۲۰۲۶)
+- **طرح مادر:** `Documents/Release_v1/release_v1_master_plan.md`، مرحلهٔ ۳، ردیف ۳.۳ و بند «موجودی اولیهٔ حساب بانکی»
+- **وضعیت:** طرح نوشته شد (زیرمرحلهٔ ۳.۳-الف، زنجیرهٔ خودکار مرحلهٔ ۳). طبق تصمیم کاربر بدون انتظار برای تأیید اجرا می‌شود.
+
+## ۰. قانون‌های مرتبط از طرح مادر
+
+- ق۶: «چه کاری» را مجوز و «کجا» را عضویت شرکت تعیین می‌کند. حساب بانکی شرکت در لایهٔ شرکت است، پس مجوز تازه یک بخش مجوز شرکت (`COMPANY_PERMISSION_SECTIONS`) است، نه مجوز بخشی ماژول (ص۴).
+- ق۸: هر ثبت و تغییر موجودی اولیه با کاربر، زمان، مقدار و تاریخ قبل و بعد و علت در سابقه می‌ماند.
+- ق۱۶: موجودی اولیه رقم مالی است و فقط برای دارندهٔ سطح خواندن `bank` نمایش داده می‌شود؛ عضو سادهٔ شرکت آن را پوشیده (`null`) می‌بیند (ص۶).
+- ق۲: داده ارزشی ندارد؛ ستون‌ها افزودنی‌اند و حساب‌های فعلی موجودی صفر و تاریخ خالی می‌گیرند.
+- ق۳: رد 4xx در صف آفلاین در `syncErrors` با بدنهٔ کامل می‌ماند؛ مسیر از دست رفتن داده نیست (ص۸).
+- ق۹: تاریخ شمسی `YYYY/MM/DD` (همان `personnel/fiscal.py`) با `ng-persian-datepicker`؛ پیام‌ها فارسی.
+
+## ۱. وضع فعلی (بررسی کد، ۴ آبان ۱۴۰۵)
+
+- **ک۱:** `CompanyBankAccount` (`backend/modules/accounting/personnel/models_domains/organization.py:78-124`): بانک، شماره حساب، شبا (یکسان‌سازی با `normalize_sheba`، یکتا در شرکت)، عنوان، `is_primary` (یکتا در شرکت)، `is_active`. **موجودی اولیه و تاریخ آن وجود ندارد.**
+- **ک۲ (مهم):** هیچ مدلی در کد به `CompanyBankAccount` کلید خارجی ندارد (Grep در `backend/modules/accounting`، بی migrationها). پرداخت فاکتور (`ExpenseInvoice.payment_ref`، `paid_at`)، تنخواه و پرداخت حقوق حساب مبدأ را ثبت نمی‌کنند. پس امروز هیچ «گردشی» روی حساب بانکی شرکت نیست؛ گردش واقعی با خزانه و پرداخت در مرحلهٔ ۴ می‌آید.
+- **ک۳:** `CompanyBankAccountSerializer` (`serializers_domains/organization.py:197-229`) و viewset (`views_domains/org_views.py:259-338`): فهرست با عضو یا `bank`/خواندن؛ ویرایش و حذف با `bank`/نوشتن؛ ساخت، تغییر شبا یا حساب اصلی و `set-primary` با `bank_sheba` (حساس). هر تغییر `broadcast_org_structure_updated('company_bank_account', ...)` می‌فرستد. سابقه‌ای نوشته نمی‌شود.
+- **ک۴:** حساب‌های بانکی در serializer شرکت هم تو در تو می‌آیند (`serializers_domains/organization.py:69`).
+- **ک۵:** بخش‌های مجوز شرکت حسابداری در `personnel/company_access.py:23-43` (`bank` سطحی، `bank_sheba` و `fiscal_close` کنشی و حساس).
+- **ک۶:** فرانت: `company-treasury-tab` (`frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/`)، مدل `CompanyBankAccount` در `core/models/company.model.ts`، API در `core/api/company-api.service.ts`. مجوز نوشتن با `studioContext.canWrite('bank')` و `canWrite('bank_sheba')`.
+- **ک۷:** اطلاعات شرکت (نام، شناسه، نشانی، هیئت‌مدیره، بیمه و مالیات) در ۲.۱ کامل شد؛ ۳.۳ در آن تغییری نمی‌دهد.
+
+## ۲. تصمیم‌ها
+
+- **ص۱ — جای موجودی اولیه:** دو ستون روی خود `CompanyBankAccount` (نه سند جدا، چون دفتر کل در نسخهٔ اول نیست):
+  - `opening_balance` — `DecimalField(max_digits=15, decimal_places=0, default=0)`، ریال، منفی نه.
+  - `opening_balance_date` — `CharField(10, null=True, blank=True)`، شمسی `YYYY/MM/DD` (یکسان‌سازی با `to_shamsi_str`).
+  - migration افزودنی `personnel/0011` (با ص۵)؛ حساب‌های فعلی صفر و تاریخ خالی؛ بی data migration.
+- **ص۲ — ثبت در ساخت:** هنگام ساخت حساب، موجودی و تاریخ با هم فرستاده می‌شوند. تاریخ برای حساب تازه **الزامی** است («تاریخ موجودی اولیه الزامی است.»)؛ موجودی خالی = صفر. در PATCH و PUT عادی این دو فیلد فقط‌خواندنی‌اند (اگر فرستاده شوند و با مقدار فعلی فرق کنند 400: «موجودی اولیه فقط از «تغییر موجودی اولیه» عوض می‌شود.»). حساب قدیمی بی‌تاریخ نمایش «ثبت نشده» دارد و با همان کنش ص۳ پر می‌شود.
+- **ص۳ — کنش جدا:** `POST company-bank-accounts/{id}/set-opening-balance/` با `{opening_balance, opening_balance_date, reason}`:
+  - دسترسی پایه: `ensure_company_section(user, company_id, 'bank', 'write')`.
+  - اگر حساب **گردش دارد** (ص۴): علاوه بر آن `ensure_company_section(user, company_id, 'bank_opening_balance', 'write')` و `reason` الزامی («علت تغییر الزامی است.»).
+  - اگر مقدار و تاریخ عوض نشده‌اند: 200 بی‌اثر و بی سابقه (تکرار صف آفلاین).
+  - داخل `transaction.atomic` با `select_for_update` روی ردیف حساب؛ سابقه (ص۵) در همان تراکنش.
+  - دورهٔ مالی: `ensure_period_open(company_id, تاریخ_قبلی, 'opening_balance_date')` و همان برای تاریخ تازه (موجودی‌ای که پایهٔ دورهٔ بسته است عوض نمی‌شود و به آن هم وارد نمی‌شود). در ساخت هم تاریخ تازه سنجیده می‌شود. تاریخ بی‌دوره باز است.
+  - پاسخ: serializer کامل حساب؛ سپس `broadcast_org_structure_updated('company_bank_account', 'update', ...)`.
+- **ص۴ — «اولین گردش» و مجوز جدا:**
+  - تابع `bank_account_has_movements(account)` در فایل تازهٔ `personnel/company_bank.py`: روی همهٔ رابطه‌های معکوس کلید خارجی و یک‌به‌یک مدل (`account._meta.related_objects`، فقط `one_to_many`/`one_to_one`) می‌گردد و اگر هر کدام ردیفی داشت `True` می‌دهد. امروز همیشه `False` است (ک۲). وقتی مرحلهٔ ۴ پرداخت را با کلید خارجی `paid_from_account` (یا هر نام) به حساب شرکت وصل کند، بی تغییر این تابع گردش شناخته می‌شود. مدل سابقهٔ ص۵ از این شمارش **بیرون** است (سابقه گردش نیست).
+  - بخش مجوز تازه در `personnel/company_access.py`: `{'key': 'bank_opening_balance', 'label_fa': 'تغییر موجودی اولیهٔ حساب بانکی پس از گردش', 'order': 240, 'kind': 'action', 'sensitive': True, 'studio': 'treasury'}`. چون از رجیستری بخش‌های شرکت می‌آید، ساخت ردیف مجوز و نمایش در فرم دسترسی شرکت خودکار است. نگهبان‌های 29 و 57 و `module_coupling_scan.py` روی آن اجرا می‌شوند (اگر کد تازه در فهرست مجاز لازم شد، فقط با دسته و علت).
+  - serializer فیلد فقط‌خواندنی `has_movements` را می‌دهد تا فرانت بداند مجوز جدا لازم است.
+- **ص۵ — سابقه:** مدل تازهٔ `CompanyBankOpeningBalanceChange` در همان فایل مدل (`organization.py`): `account` (FK به `CompanyBankAccount`، `CASCADE`، `related_name='opening_balance_changes'`)، `old_amount`، `old_date`، `new_amount`، `new_date`، `reason` (`TextField`, خالی مجاز)، `had_movements` (`Boolean`)، `changed_by` (FK کاربر، `SET_NULL`)، `changed_at` (`auto_now_add`). ترتیب `-changed_at`.
+  - در ساخت حساب یک ردیف با `old_*` خالی نوشته می‌شود؛ در هر تغییر یک ردیف.
+  - علاوه بر آن `log_audit_event(module='treasury', action='bank_opening_balance_set' یا '..._changed', target_model='CompanyBankAccount', ..., before_state, after_state, company_id=...)` (همان ماژول سابقهٔ ۳.۲).
+  - خواندن: `GET company-bank-accounts/{id}/opening-history/` با سطح `bank`/خواندن (نه عضو ساده)، فهرست با نام کاربر. حذف حساب سابقه را هم حذف می‌کند (CASCADE؛ سابقهٔ `AuditLog` می‌ماند).
+- **ص۶ — نمایش (ق۱۶):** در serializer حساب (و serializer تو در توی شرکت، ک۴) اگر کاربر سطح خواندن `bank` روی آن شرکت را ندارد (فقط عضو است)، `opening_balance` و `opening_balance_date` به‌صورت `null` برمی‌گردند. مدیر کل همیشه می‌بیند. شبای شرکت پوشیده نمی‌شود: دادهٔ تجاری خود شرکت است و برای درخواست پرداخت لازم است (تصمیم این طرح؛ ق۱۶ دربارهٔ دادهٔ شخصی است). کمک‌تابع سطح در همان `company_bank.py`، با همان منطق `ensure_company_section(..., members_read=False)` بی پرتاب خطا.
+- **ص۷ — حذف حساب:** حسابی که گردش دارد حذف نمی‌شود (400: «این حساب گردش دارد و حذف نمی‌شود؛ آن را غیرفعال کنید.»). امروز بی‌اثر است (ک۲) ولی قاعده برای مرحلهٔ ۴ آماده است. جایگزینی حساب اصلی پس از حذف همان سیگنال فعلی.
+- **ص۸ — صف آفلاین:** ساخت حساب و کنش ص۳ از مسیر فعلی صف می‌گذرند. رد 400/403 (دورهٔ بسته، نبود مجوز، علت خالی) رکورد را با بدنهٔ کامل و پیام سرور در `syncErrors` نگه می‌دارد؛ تکرار همان درخواست بی‌اثر است (ص۳). پس پرسش از کاربر لازم نیست؛ `data-loss-reviewer` روی diff ۳.۳-ب آن را تأیید می‌کند.
+- **ص۹ — شبا (`.agents/AGENTS.md` §7):** قاعدهٔ فعلی (یکسان‌سازی، یکتایی در شرکت، `bank_sheba` برای ساخت و تغییر) دست نمی‌خورد.
+- **ص۱۰ — واژه‌نامه:** «موجودی اولیه»، «تاریخ موجودی اولیه»، «گردش حساب» در `Documents/Release_v1/glossary.md`.
+
+## ۳. کارها
+
+- **۳.۳-الف:** همین طرح.
+- **۳.۳-ب (سرور، Claude؛ Opus + high چون migration، مجوز حساس و دامنهٔ شرکت است):** ص۱ تا ص۸ و ص۱۰.
+  - `organization.py` (دو ستون و مدل سابقه)؛ migration `0011` با `safe-migration`؛ `personnel/company_bank.py` (تازه: گردش، سطح دید، ثبت سابقه)؛ `company_access.py` (بخش مجوز)؛ serializer حساب و serializer شرکت (پوشش، `has_movements`، فقط‌خواندنی در ویرایش، تاریخ الزامی در ساخت)؛ viewset (ساخت با سابقه و دورهٔ مالی، کنش `set-opening-balance`، `opening-history`، منع حذف با گردش)؛ واژه‌نامه.
+  - تست‌ها (تازه: `personnel/test_company_bank_33.py`): ساخت بی تاریخ 400؛ ساخت با تاریخ و سابقهٔ اول؛ PATCH موجودی 400؛ کنش بی گردش با `bank`/نوشتن موفق و سابقه؛ تکرار بی‌اثر؛ با گردش (مدل آزمایشی یا `mock` روی `bank_account_has_movements`) بی `bank_opening_balance` 403 و با آن و بی علت 400 و با علت موفق؛ دورهٔ بسته برای تاریخ قبلی و تازه 400 با کد `fiscal_period_closed`؛ پوشش برای عضو ساده و دید برای `bank`/خواندن و مدیر کل؛ `opening-history` برای عضو ساده 403؛ شرکت دیگر 404/403؛ منع حذف با گردش.
+  - بازبین‌ها: `tenant-scope-reviewer` و `data-loss-reviewer` (migration و ص۸) روی diff.
+  - **بخش کم‌خطر آنتی‌گرویتی:** پس از کد سرور، تست‌های سناریوی API در فایل جدا `personnel/test_company_bank_api_33.py` (سناریوها در بریف ۳.۳-ب): چرخهٔ ساخت → تغییر → سابقه، پوشش در serializer تو در توی شرکت، تکرار بی‌اثر.
+- **۳.۳-ج (فرانت؛ اجراکنندهٔ Sonnet + medium یا آنتی‌گرویتی، چون الگوی موجود است):**
+  - مدل و API: فیلدهای `opening_balance`، `opening_balance_date`، `has_movements`؛ متدهای `setOpeningBalance` و `getOpeningHistory`.
+  - `company-treasury-tab`: دو فیلد در فرم ساخت (مبلغ با جداکنندهٔ هزارگان و رقم فارسی، تاریخ با `ng-persian-datepicker`)؛ نمایش موجودی و تاریخ در کارت (یا «ثبت نشده» / «—» برای پوشیده)؛ دکمهٔ «تغییر موجودی اولیه» (برای `canWrite('bank')`، و اگر `has_movements` بود فقط با `canWrite('bank_opening_balance')`) با مودال مشترک و فیلد علت (الزامی وقتی گردش دارد)؛ فهرست سابقه در همان مودال یا پنل کشویی؛ خطای 400 کنار فیلد (کد `fiscal_period_closed`).
+  - فرم دسترسی شرکت بخش تازه را خودکار از رجیستری نشان می‌دهد؛ فقط بررسی که برچسب درست می‌آید.
+  - تست‌های DOM با آنتی‌گرویتی. نگهبان‌های 52 و 56. `ui-reviewer` و بررسی دیداری با بررسی سنگین مرحلهٔ ۳.
+
+## ۴. تست‌ها
+
+- فقط تست‌های سریع: `manage.py test personnel.test_company_bank_33 personnel.test_company_bank_api_33 personnel.test_company_documents personnel.test_company_payroll_profile personnel.test_fiscal_period_32` با `PYTHONUTF8=1` و همیشه با برچسب اپ؛ `manage.py check`؛ `makemigrations --check`؛ نگهبان‌های 29، 52، 56، 57، 58.
+- فرانت: spec زبانهٔ خزانهٔ شرکت.
+- مجموعهٔ کامل، دو پروفایل ساخت و اعمال migration روی `app` در بررسی سنگین مرحلهٔ ۳.
+
+## ۵. معیار پذیرش
+
+- حساب تازه بی تاریخ موجودی اولیه ساخته نمی‌شود و ساخت آن در سابقه می‌آید (پس از ۳.۳-ب).
+- موجودی اولیه فقط با کنش جدا عوض می‌شود؛ هر تغییر با کاربر، زمان، قبل و بعد و علت در سابقه است (ق۸).
+- پس از اولین گردش، تغییر بی مجوز `bank_opening_balance` رد می‌شود و علت الزامی است؛ پیش از گردش `bank`/نوشتن کافی است.
+- تاریخ موجودی در دورهٔ بسته ثبت یا عوض نمی‌شود.
+- عضو سادهٔ شرکت موجودی را نمی‌بیند (ق۱۶).
+- رد در صف آفلاین در صندوق خطا می‌ماند (ص۸).
+- نگهبان‌های 29 و 57 سبزند؛ هسته نام حسابداری را نمی‌برد.
+
+## ۶. نکته‌های باز
+
+- گردش واقعی حساب بانکی شرکت (پرداخت فاکتور، حقوق و شارژ تنخواه از حساب مشخص، و ماندهٔ جاری = موجودی اولیه + گردش‌ها از تاریخ موجودی) در مرحلهٔ ۴ (خزانه). آن‌جا کلید خارجی به `CompanyBankAccount` اضافه می‌شود و ص۴ خودکار فعال می‌شود؛ گردش پیش از تاریخ موجودی اولیه باید رد شود.
+- مانده‌گیری و گزارش حساب (۴.۷).
+- migration `personnel/0011` مانند بقیه پیش از اولین نصب روی `soft` در یکپارچه‌سازی migrationها (مرحلهٔ ۶) دیده می‌شود.
+
+## ۷. گزارش پیشرفت
+
+- **۴ آبان ۱۴۰۵ — ۳.۳-الف:** طرح نوشته شد (زنجیرهٔ خودکار). یافته‌ها: امروز هیچ مدلی به حساب بانکی شرکت وصل نیست، پس «اولین گردش» با جست‌وجوی خودکار رابطه‌های معکوس تشخیص داده می‌شود و تا مرحلهٔ ۴ همیشه «بی گردش» است؛ مجوز جدا بخش مجوز شرکت `bank_opening_balance` (حساس) است، نه مجوز بخشی ماژول؛ سابقه در جدول جدا و `AuditLog`؛ رد 4xx در `syncErrors` می‌ماند، پس پرسش از کاربر لازم نشد. **اقدام بعدی:** ۳.۳-ب (`scratch/brief_3_3_b.md`).
+
+</div>
