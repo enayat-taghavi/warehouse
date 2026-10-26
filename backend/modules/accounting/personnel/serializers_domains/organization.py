@@ -232,11 +232,50 @@ class CompanyFiscalPeriodSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     closed_by_name = serializers.SerializerMethodField()
+    is_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = CompanyFiscalPeriod
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'closed_at', 'closed_by']
+        extra_kwargs = {'fiscal_year': {'required': False, 'allow_blank': True}}
+        validators = []  # یکتایی (شرکت، سال) در validate با پیام فارسی
+
+    def get_is_locked(self, obj):
+        return obj.status == 'closed'
+
+    def _shamsi(self, value, field):
+        from ..fiscal import to_shamsi_str
+        day = to_shamsi_str(value)
+        if not day:
+            raise serializers.ValidationError({field: ["تاریخ شمسی معتبر نیست (مثال ۱۴۰۵/۰۱/۰۱)."]})
+        return day
+
+    def validate(self, attrs):
+        inst = self.instance
+        if 'start_date' in attrs or inst is None:
+            attrs['start_date'] = self._shamsi(attrs.get('start_date'), 'start_date')
+        if 'end_date' in attrs or inst is None:
+            attrs['end_date'] = self._shamsi(attrs.get('end_date'), 'end_date')
+        start = attrs.get('start_date', getattr(inst, 'start_date', None))
+        end = attrs.get('end_date', getattr(inst, 'end_date', None))
+        if start and end and start > end:
+            raise serializers.ValidationError({'end_date': ["تاریخ پایان دوره باید بعد از تاریخ شروع یا همان روز باشد."]})
+        year = normalize_digits(attrs.get('fiscal_year') or '').strip()
+        if 'fiscal_year' in attrs or inst is None:
+            year = year or (start or '')[:4]
+            if not (len(year) == 4 and year.isdigit()):
+                raise serializers.ValidationError({'fiscal_year': ["سال مالی باید چهار رقم باشد (مثال ۱۴۰۵)."]})
+            attrs['fiscal_year'] = year
+        company = attrs.get('company', getattr(inst, 'company', None))
+        year = attrs.get('fiscal_year', getattr(inst, 'fiscal_year', None))
+        if company is not None and year:
+            dup = CompanyFiscalPeriod.objects.filter(company=company, fiscal_year=year)
+            if inst is not None:
+                dup = dup.exclude(pk=inst.pk)
+            if dup.exists():
+                raise serializers.ValidationError({'fiscal_year': [f"دورهٔ مالی سال {year} برای این شرکت از قبل ثبت شده است."]})
+        return attrs
 
     def get_closed_by_name(self, obj):
         if obj.closed_by:

@@ -117,6 +117,12 @@ def can_attach_invoice(user, entity_id):
 
 
 def is_invoice_locked(entity_id):
+    """پرداخت‌شده، یا با تاریخی در دورهٔ مالی بستهٔ شرکت بخش (طرح ۳.۲، ص۵)."""
+    from .fiscal import closed_period_for
     from .models import ExpenseInvoice
-    status = ExpenseInvoice.objects.filter(pk=entity_id).values_list('status', flat=True).first()
-    return status in INVOICE_LOCKED_STATUSES
+    row = (ExpenseInvoice.objects.filter(pk=entity_id)
+           .values_list('status', 'invoice_date_shamsi', 'section__project__company_id').first())
+    if row is None:
+        return False
+    status, invoice_date, company_id = row
+    return status in INVOICE_LOCKED_STATUSES or closed_period_for(company_id, invoice_date) is not None

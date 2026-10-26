@@ -9,9 +9,11 @@ from rest_framework import viewsets, permissions, status, parsers, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 from common.date_utils import normalize_digits
+from accounts.audit_utils import log_audit_event
 from accounts.views import OptionalPageNumberPagination
 
 from companies.views import CompanyViewSet as CoreCompanyViewSet
@@ -33,6 +35,7 @@ from ..serializers import (
     CompanyPayrollProfileSerializer,
 )
 from .scope_helpers import broadcast_org_structure_updated
+from ..fiscal import to_shamsi_str
 
 # ویوست‌های مدیریت ساختار سازمانی، شرکت، پروژه، بخش، طرف‌حساب و فاکتور
 # ══════════════════════════════════════════════════════════════════════════════
@@ -401,7 +404,7 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
 
 class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
     """
-    مدیریت دوره‌ها و سال‌های مالی شرکت‌ها (ایجاد، بستن دوره، انجماد کاردکس، بازگشایی)
+    مدیریت دوره‌ها و سال‌های مالی شرکت‌ها (ایجاد بی‌همپوشانی، یک دورهٔ فعال، بستن، بازگشایی، سابقه)
     """
     queryset = CompanyFiscalPeriod.objects.all().select_related('company', 'closed_by')
     serializer_class = CompanyFiscalPeriodSerializer
@@ -429,72 +432,153 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         if status_param:
             qs = qs.filter(status=status_param)
 
+        # ص۹ طرح ۳.۲: دورهٔ شامل یک تاریخ (برای پیام پیش از ارسال در فرم‌ها)
+        date_param = self.request.query_params.get('date')
+        if date_param:
+            day = to_shamsi_str(date_param)
+            if not day:
+                return qs.none()
+            qs = qs.filter(start_date__lte=day, end_date__gte=day)
+
         return qs.order_by('-fiscal_year')
+
+    def _audit(self, action, period_id, period, before=None, event=None, severity='info'):
+        """ص۸ طرح ۳.۲: ساخت، ویرایش، بستن، بازگشایی و حذف دوره در سابقه."""
+        log_audit_event(
+            module='treasury', action=action, severity=severity,
+            target_model='CompanyFiscalPeriod', target_object_id=period_id,
+            target_repr=f'{period.fiscal_year} - {period.title}', user=self.request.user,
+            company_id=period.company_id, before_state=before,
+            after_state=None if action == 'DELETE' else _fiscal_period_state(period),
+            details={'event': event} if event else None,
+        )
+
+    def _lock_company(self, company_id):
+        # ساخت و ویرایش هم‌زمان دوره‌های یک شرکت پشت سر هم اجرا می‌شوند تا همپوشانی و فعال یکتا درست بماند
+        Company.objects.select_for_update().filter(pk=company_id).first()
+
+    def _check_overlap(self, company_id, start, end, exclude_pk=None):
+        qs = CompanyFiscalPeriod.objects.filter(company_id=company_id, start_date__lte=end, end_date__gte=start)
+        if exclude_pk is not None:
+            qs = qs.exclude(pk=exclude_pk)
+        other = qs.order_by('fiscal_year').first()
+        if other is not None:
+            raise serializers.ValidationError({'start_date': [f'این بازه با دورهٔ مالی {other.fiscal_year} همپوشانی دارد.']})
+
+    def _unset_other_active(self, period):
+        if period.is_active:
+            CompanyFiscalPeriod.objects.filter(company_id=period.company_id, is_active=True).exclude(
+                pk=period.pk).update(is_active=False, updated_at=timezone.now())
 
     def perform_create(self, serializer):
         user = self.request.user
-        company = serializer.validated_data.get('company')
+        data = serializer.validated_data
+        company = data.get('company')
         if not company:
             raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
         ensure_company_section(user, company.id, 'fiscal', 'write')
-        if serializer.validated_data.get('status', 'open') != 'open':
+        new_status = data.get('status', 'open')
+        if new_status != 'open':
             # بستن یا بازگشایی کار حساس است و از راه close/reopen با fiscal_close انجام می‌شود
             ensure_company_section(user, company.id, 'fiscal_close', 'write')
-        serializer.save()
+        with transaction.atomic():
+            self._lock_company(company.id)
+            self._check_overlap(company.id, data['start_date'], data['end_date'])
+            extra = {'closed_at': timezone.now(), 'closed_by': user} if new_status == 'closed' else {}
+            period = serializer.save(**extra)
+            self._unset_other_active(period)
+            self._audit('CREATE', period.pk, period)
 
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
+        data = serializer.validated_data
         ensure_company_section(user, instance.company_id, 'fiscal', 'write')
         ensure_company_unchanged(serializer)
-        new_status = serializer.validated_data.get('status', instance.status)
-        if new_status != instance.status and 'closed' in (new_status, instance.status):
+        new_status = data.get('status', instance.status)
+        status_changed = new_status != instance.status
+        if status_changed:
             ensure_company_section(user, instance.company_id, 'fiscal_close', 'write')
-        if instance.status == 'closed' and not user.is_superuser:
-            raise PermissionDenied("سال مالی بسته شده است و ویرایش آن صرفاً توسط مدیر ارشد امکان‌پذیر است.")
-        serializer.save()
+        if instance.status == 'closed':
+            if not user.is_superuser:
+                raise PermissionDenied("سال مالی بسته شده است و ویرایش آن صرفاً توسط مدیر ارشد امکان‌پذیر است.")
+            for field in ('start_date', 'end_date'):
+                if field in data and data[field] != to_shamsi_str(getattr(instance, field)):
+                    raise serializers.ValidationError(
+                        {field: ['بازهٔ دورهٔ مالی بسته تغییر نمی‌کند؛ نخست دوره را بازگشایی کنید.']})
+        before = _fiscal_period_state(instance)
+        with transaction.atomic():
+            self._lock_company(instance.company_id)
+            start = data.get('start_date', instance.start_date)
+            end = data.get('end_date', instance.end_date)
+            self._check_overlap(instance.company_id, start, end, exclude_pk=instance.pk)
+            extra = {}
+            if status_changed:
+                extra = ({'closed_at': timezone.now(), 'closed_by': user} if new_status == 'closed'
+                         else {'closed_at': None, 'closed_by': None})
+            period = serializer.save(**extra)
+            self._unset_other_active(period)
+            event = ('close' if new_status == 'closed' else 'reopen') if status_changed else None
+            self._audit('UPDATE', period.pk, period, before=before, event=event,
+                        severity='warning' if status_changed else 'info')
 
     def perform_destroy(self, instance):
         user = self.request.user
         ensure_company_section(user, instance.company_id, 'fiscal_close', 'write')
         if instance.status == 'closed':
             raise serializers.ValidationError("دوره مالی بسته شده را نمی‌توان حذف کرد.")
-        instance.delete()
+        period_id = instance.pk
+        before = _fiscal_period_state(instance)
+        with transaction.atomic():
+            instance.delete()
+            self._audit('DELETE', period_id, instance, before=before, severity='warning')
 
     @action(detail=True, methods=['post'], url_path='close-period')
     def close_period(self, request, pk=None):
-        """بستن قطعی دوره و سال مالی"""
+        """بستن قطعی دوره و سال مالی؛ سند تاریخ‌دارِ این بازه دیگر ثبت، ویرایش یا حذف نمی‌شود."""
         period = self.get_object()
         user = request.user
         ensure_company_section(user, period.company_id, 'fiscal_close', 'write')
-        period.status = 'closed'
-        period.closed_at = timezone.now()
-        period.closed_by = user
-        period.notes = request.data.get('notes', period.notes)
-        period.save(update_fields=['status', 'closed_at', 'closed_by', 'notes', 'updated_at'])
+        with transaction.atomic():
+            period = CompanyFiscalPeriod.objects.select_for_update().get(pk=period.pk)
+            if period.status == 'closed':
+                # تکرار همان درخواست (مثلاً از صف آفلاین) بی‌اثر است
+                return Response({'detail': f'سال مالی {period.fiscal_year} از قبل بسته است.'})
+            before = _fiscal_period_state(period)
+            period.status = 'closed'
+            period.closed_at = timezone.now()
+            period.closed_by = user
+            period.notes = request.data.get('notes', period.notes)
+            period.save(update_fields=['status', 'closed_at', 'closed_by', 'notes', 'updated_at'])
+            self._audit('UPDATE', period.pk, period, before=before, event='close', severity='warning')
         return Response({'detail': f'سال مالی {period.fiscal_year} با موفقیت بسته و قطعی شد.'})
-
-    @action(detail=True, methods=['post'], url_path='freeze-period')
-    def freeze_period(self, request, pk=None):
-        """انجماد موقت دوره مالی جهت رسیدگی و انبارگردانی"""
-        period = self.get_object()
-        user = request.user
-        ensure_company_section(user, period.company_id, 'fiscal', 'write')
-        period.status = 'frozen'
-        period.save(update_fields=['status', 'updated_at'])
-        return Response({'detail': f'دوره مالی {period.fiscal_year} موقتاً منجمد شد.'})
 
     @action(detail=True, methods=['post'], url_path='reopen-period')
     def reopen_period(self, request, pk=None):
-        """بازگشایی مجدد دوره مالی منجمد یا بسته شده (سوپریوزر)"""
+        """بازگشایی دورهٔ بسته (فقط از وضعیت بسته)."""
         period = self.get_object()
         user = request.user
         ensure_company_section(user, period.company_id, 'fiscal_close', 'write')
-        period.status = 'open'
-        period.closed_at = None
-        period.closed_by = None
-        period.save(update_fields=['status', 'closed_at', 'closed_by', 'updated_at'])
+        with transaction.atomic():
+            period = CompanyFiscalPeriod.objects.select_for_update().get(pk=period.pk)
+            if period.status != 'closed':
+                return Response({'code': 'not_closed', 'detail': 'فقط دورهٔ مالی بسته بازگشایی می‌شود.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            before = _fiscal_period_state(period)
+            period.status = 'open'
+            period.closed_at = None
+            period.closed_by = None
+            period.save(update_fields=['status', 'closed_at', 'closed_by', 'updated_at'])
+            self._audit('UPDATE', period.pk, period, before=before, event='reopen', severity='warning')
         return Response({'detail': f'دوره مالی {period.fiscal_year} با موفقیت بازگشایی شد.'})
+
+
+def _fiscal_period_state(period):
+    return {
+        'fiscal_year': period.fiscal_year, 'title': period.title, 'start_date': period.start_date,
+        'end_date': period.end_date, 'status': period.status, 'is_active': period.is_active,
+    }
+
 
 __all__ = [
     'CompanyViewSet',

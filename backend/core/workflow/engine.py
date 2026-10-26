@@ -24,7 +24,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from companies.models import ProjectSection, section_role_ranks
-from platform_core.registry import resolve_entity
+from platform_core.registry import is_entity_locked, resolve_entity
 
 from . import events
 from .errors import ReasonRequired, TaskAlreadyDone, WorkflowError, WorkflowPermissionDenied, WorkflowStateError
@@ -396,6 +396,12 @@ def migrate_open_instances(workflow_key=None) -> int:
 
 # ─── رابط عمومی ──────────────────────────────────────────────────────────────────
 
+def _ensure_not_locked(kind, entity_id):
+    """سندی که قلاب قفل ماژول (is_locked:<kind>) آن را قفل می‌داند در گردش جابه‌جا نمی‌شود (409)."""
+    if is_entity_locked(kind, entity_id):
+        raise WorkflowStateError('entity_locked', 'این سند قفل است و کنش گردش روی آن انجام نمی‌شود.', 409)
+
+
 def submit(workflow_key, obj, user):
     """
     ارسال (یا ارسال دوباره پس از عودت یا لغو) سند به گردش؛ ثبت‌کننده = کاربر ارسال‌کننده.
@@ -408,6 +414,7 @@ def submit(workflow_key, obj, user):
     section = _load_section(getattr(obj, f'{spec.section_field}_id', None))
     ctx = _Ctx(spec, obj, section)
     now = timezone.now()
+    _ensure_not_locked(spec.entity_kind, entity_id)
     with transaction.atomic():
         instance = WorkflowInstance.objects.select_for_update().filter(
             workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=entity_id).first()
@@ -517,6 +524,7 @@ def _begin_action(user, task, revision, obj, action, reason, require_reason):
         raise WorkflowPermissionDenied('action_not_allowed', 'این اقدام در این مرحله مجاز نیست', 403)
     if not locked.is_open or instance.status != WorkflowInstance.IN_PROGRESS:
         raise TaskAlreadyDone()
+    _ensure_not_locked(instance.entity_kind, instance.entity_id)
     ctx = _ctx_for(instance, obj)
     if _ensure_current_version(instance, ctx):
         locked = _lock_task(task_id)
@@ -618,6 +626,7 @@ def cancel(user, instance_or_task, *, reason='', obj=None):
             raise WorkflowPermissionDenied('cancel_not_allowed', 'فقط ثبت‌کنندهٔ سند می‌تواند آن را لغو کند', 403)
         if instance.status != WorkflowInstance.IN_PROGRESS or instance.others_acted:
             raise WorkflowStateError('cancel_not_allowed', 'پس از اقدام نفر دیگر، لغو ممکن نیست', 409)
+        _ensure_not_locked(instance.entity_kind, instance.entity_id)
         ctx = _ctx_for(instance, obj)
         _ensure_current_version(instance, ctx, now)
         task = WorkflowTask.objects.select_for_update().filter(

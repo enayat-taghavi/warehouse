@@ -402,7 +402,7 @@ class CompanyMultiTenantTestCase(TestCase):
 
     def test_company_fiscal_period_lifecycle(self):
         """
-        آزمون چرخه عمر سال مالی: ایجاد، بستن سال مالی، انجماد و بازگشایی
+        آزمون چرخه عمر سال مالی: ایجاد، بستن سال مالی و بازگشایی (منجمد در طرح ۳.۲ حذف شد)
         """
         from personnel.models import CompanyFiscalPeriod
         self.client.force_authenticate(user=self.admin_user)
@@ -418,18 +418,12 @@ class CompanyMultiTenantTestCase(TestCase):
         period_id = res_create.json()['id']
         self.assertEqual(res_create.json()['status'], 'open')
 
-        # انجماد دوره مالی
-        res_freeze = self.client.post(f'/api/personnel/company-fiscal-periods/{period_id}/freeze-period/')
-        self.assertEqual(res_freeze.status_code, 200)
-        period = CompanyFiscalPeriod.objects.get(id=period_id)
-        self.assertEqual(period.status, 'frozen')
-
         # بستن سال مالی
         res_close = self.client.post(f'/api/personnel/company-fiscal-periods/{period_id}/close-period/', {
             'notes': 'تصویب مجمع عمومی سالیانه'
         })
         self.assertEqual(res_close.status_code, 200)
-        period.refresh_from_db()
+        period = CompanyFiscalPeriod.objects.get(id=period_id)
         self.assertEqual(period.status, 'closed')
         self.assertIsNotNone(period.closed_at)
         self.assertEqual(period.closed_by, self.admin_user)

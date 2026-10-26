@@ -74,6 +74,7 @@ from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
 from ..workflows import INVOICE_ENTITY, INVOICE_WORKFLOW
 from ..workflow_engine import notify_document_changed
+from ..fiscal import ensure_period_open
 
 INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
 
@@ -90,6 +91,20 @@ def _invoice_wf_call(fn, raise_drf=False):
             raise err
         return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
     return None
+
+
+def _ensure_doc_period_open(section, value, field):
+    """ص۵ طرح ۳.۲: سند تاریخ‌دارِ دورهٔ مالی بستهٔ شرکتِ بخش ثبت، ویرایش، حذف یا در گردش جابه‌جا نمی‌شود (400)."""
+    company_id = getattr(getattr(section, 'project', None), 'company_id', None)
+    ensure_period_open(company_id, value, field)
+
+
+def _ensure_invoice_open(invoice):
+    _ensure_doc_period_open(invoice.section, invoice.invoice_date_shamsi, 'invoice_date_shamsi')
+
+
+def _ensure_petty_cash_open(tx):
+    _ensure_doc_period_open(tx.section, tx.transaction_date_shamsi, 'transaction_date_shamsi')
 
 
 def _section_id(value):
@@ -360,6 +375,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("شما مجاز به ثبت فاکتور برای این شرکت نیستید.")
         if not user.is_superuser and (section is None or not can(user, INVOICE_PERM, section)):
             raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
+        _ensure_doc_period_open(section, serializer.validated_data.get('invoice_date_shamsi'), 'invoice_date_shamsi')
         # Guardian G2: default to draft status
         req_status = self.request.data.get('status')
         if not user.is_superuser:
@@ -386,9 +402,15 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("وضعیت فاکتور فقط از راه گردش کار تغییر می‌کند.")
         if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser:
             raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
+        # سند نه از دورهٔ بسته بیرون می‌رود و نه به آن وارد می‌شود
+        _ensure_invoice_open(instance)
+        _ensure_doc_period_open(new_section or instance.section,
+                                serializer.validated_data.get('invoice_date_shamsi', instance.invoice_date_shamsi),
+                                'invoice_date_shamsi')
         notify_document_changed(serializer.save(), 'updated')
 
     def perform_destroy(self, instance):
+        _ensure_invoice_open(instance)
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
@@ -436,6 +458,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='submit')
     def submit_invoice(self, request, pk=None):
         instance = self.get_object()
+        _ensure_invoice_open(instance)
         if instance.status not in INVOICE_EDITABLE_STATUSES:
             return Response({'error': 'فقط فاکتورهای پیش‌نویس یا نیازمند بازنگری قابل ارسال هستند.'}, status=status.HTTP_400_BAD_REQUEST)
         # ثبت‌کننده باید در بخش فاکتور «ثبت و دیدن فاکتور» داشته باشد (get_object همین را سنجیده است)
@@ -449,6 +472,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_invoice(self, request, pk=None):
         instance = self._workflow_invoice()
+        _ensure_invoice_open(instance)
         notes = (request.data.get('notes') or '').strip()
         err = self._act_on_open_task(request, instance, lambda task, rev: wf_engine.act(
             request.user, task, reason=notes, revision=rev, obj=instance))
@@ -459,6 +483,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_invoice(self, request, pk=None):
         instance = self._workflow_invoice()
+        _ensure_invoice_open(instance)
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'درج دلیل رد فاکتور الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -473,6 +498,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='request-revision')
     def request_revision_invoice(self, request, pk=None):
         instance = self._workflow_invoice()
+        _ensure_invoice_open(instance)
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'درج دلیل بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -487,6 +513,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='pay')
     def pay_invoice(self, request, pk=None):
         instance = self._workflow_invoice()
+        _ensure_invoice_open(instance)
         tracking_code = (request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
         if not tracking_code:
             return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -517,6 +544,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     def cancel_invoice(self, request, pk=None):
         """لغو گردش به دست ثبت‌کننده، پیش از اقدام نفر دیگر (ت۸)؛ فاکتور به پیش‌نویس برمی‌گردد."""
         instance = self.get_object()
+        _ensure_invoice_open(instance)
         wf_instance = wf_engine.instance_of(INVOICE_WORKFLOW, instance.pk)
         if wf_instance is None:
             return Response({'code': 'cancel_not_allowed', 'error': 'این فاکتور در گردش کار نیست.'},
@@ -747,6 +775,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             _ensure_petty_cash_manager(user, section, "ثبت سند تنخواه برای متصدی دیگر فقط با مجوز مدیریت تنخواه همان بخش ممکن است.")
         else:
             _ensure_own_petty_cash_section(user, section)
+        _ensure_doc_period_open(section, serializer.validated_data.get('transaction_date_shamsi'),
+                                'transaction_date_shamsi')
 
         # اتصال خودکار یا ایجاد حساب تنخواه برای بخش و کاربر
         account = serializer.validated_data.get('account')
@@ -791,9 +821,14 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 pass
             else:
                 raise PermissionDenied("شما سطح دسترسی لازم برای تغییر وضعیت سند تنخواه به این مرحله را ندارید.")
+        _ensure_petty_cash_open(instance)
+        _ensure_doc_period_open(new_section or instance.section,
+                                serializer.validated_data.get('transaction_date_shamsi', instance.transaction_date_shamsi),
+                                'transaction_date_shamsi')
         notify_document_changed(serializer.save(), 'updated')
 
     def perform_destroy(self, instance):
+        _ensure_petty_cash_open(instance)
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
@@ -802,6 +837,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='submit')
     def submit_tx(self, request, pk=None):
         instance = self.get_object()
+        _ensure_petty_cash_open(instance)
         from ..workflow_engine import advance_workflow_step
         advance_workflow_step(instance, request.user, target_status='pending_supervisor', is_financial=True)
         return Response({'message': 'تراکنش تنخواه با موفقیت به سرپرست ارسال شد.', 'status': instance.status})
@@ -809,6 +845,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_tx(self, request, pk=None):
         instance = self.get_object()
+        _ensure_petty_cash_open(instance)
         # Plan 2.2 (T13): approving petty cash is petty-cash management in the record's own section
         _ensure_petty_cash_manager(request.user, instance.section_id)
         from ..workflow_engine import advance_workflow_step
@@ -818,6 +855,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_tx(self, request, pk=None):
         instance = self.get_object()
+        _ensure_petty_cash_open(instance)
         _ensure_petty_cash_manager(request.user, instance.section_id)
         reason = request.data.get('reason', '').strip()
         if not reason:

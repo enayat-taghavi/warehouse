@@ -229,11 +229,10 @@ class CompanyBoardMember(models.Model):
 
 class CompanyFiscalPeriod(models.Model):
     """
-    دوره و سال مالی رسمی شرکت (جهت بستن حساب‌ها، انجماد کاردکس و انتقال مانده به سال بعد)
+    دوره و سال مالی رسمی شرکت. سند تاریخ‌دارِ دورهٔ بسته ثبت، ویرایش یا حذف نمی‌شود (personnel/fiscal.py).
     """
     STATUS_CHOICES = (
         ('open', 'باز (امکان ثبت و ویرایش اسناد)'),
-        ('frozen', 'منجمد / در حال رسیدگی و انبارگردانی'),
         ('closed', 'بسته شده / قطعی و غیرقابل ویرایش'),
     )
     company = models.ForeignKey(
