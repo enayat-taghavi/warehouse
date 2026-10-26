@@ -1507,7 +1507,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 3 — Release v1 step 2.7-d: remove browser confirm() fallbacks in company studio and companies
+[DONE] [ ] Session 1 of 3 — Release v1 step 2.7-d: remove browser confirm() fallbacks in company studio and companies
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -1547,7 +1547,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 3 — Release v1 step 2.7-d: replace browser confirm() in employee personnel, vehicle, invoices and petty cash
+[DONE] [ ] Session 2 of 3 — Release v1 step 2.7-d: replace browser confirm() in employee personnel, vehicle, invoices and petty cash
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -1595,7 +1595,7 @@ If a call sits inside a non-async callback (for example inside `subscribe({ next
 
 ===
 
-[ ] Session 3 of 3 — Release v1 step 2.7-d: replace browser confirm()/alert() in diskettes, base settings, backup tab and avatar cropper
+[DONE] [ ] Session 3 of 3 — Release v1 step 2.7-d: replace browser confirm()/alert() in diskettes, base settings, backup tab and avatar cropper
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
