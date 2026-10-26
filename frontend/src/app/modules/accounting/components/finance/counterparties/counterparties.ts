@@ -867,7 +867,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     const user = this.auth.user();
     const perms = this.auth.userPermissions() || [];
     return hasStructureWritePermission(perms, !!user?.is_superuser || !!user?.roles?.includes('admin'))
-      || perms.includes('can_act_as_accountant')
+      || perms.includes('perm_counterparty_manage')
       || perms.includes('perm_approve_personnel_finance');
   }
 

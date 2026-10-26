@@ -1020,7 +1020,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   get canEndCollaboration(): boolean {
     if (this.auth.user()?.is_superuser) return true;
     const perms = this.auth.userPermissions();
-    return ['perm_approve_personnel_manager', ...getPermissionAliases('manager_approver'), 'can_act_as_company_manager'].some(c => perms.includes(c));
+    return ['perm_approve_personnel_manager', ...getPermissionAliases('manager_approver')].some(c => perms.includes(c));
   }
 
   isEndCollaborationModalOpen = false;

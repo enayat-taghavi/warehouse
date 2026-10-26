@@ -104,7 +104,7 @@ describe('ACCOUNTING_NOTIFICATION_HANDLERS', () => {
       it('accountant falls back to accountant-fleet on non-numeric target_id', () => {
         const ctx = createContext({
           item: { target_model: 'VehicleDriverProfile', target_id: 'invalid-id' },
-          userPerms: ['can_act_as_accountant']
+          userPerms: ['perm_approve_fleet_finance']
         });
         fleetProfileHandler.navigate(ctx);
         expect(mockHttp.get).not.toHaveBeenCalled();
@@ -114,7 +114,7 @@ describe('ACCOUNTING_NOTIFICATION_HANDLERS', () => {
       it('supervisor falls back to supervisor-fleet on zero or negative target_id', () => {
         const ctx = createContext({
           item: { target_model: 'VehicleDriverProfile', target_id: '0' },
-          userPerms: ['can_act_as_workshop_supervisor']
+          userPerms: ['perm_approve_fleet_supervisor']
         });
         fleetProfileHandler.navigate(ctx);
         expect(mockHttp.get).not.toHaveBeenCalled();
@@ -313,7 +313,7 @@ describe('ACCOUNTING_NOTIFICATION_HANDLERS', () => {
         mockHttp.get.mockReturnValue(throwError(() => new Error('500')));
         const ctx = createContext({
           item: { target_model: 'PersonnelProfile', target_id: '88' },
-          userPerms: ['can_act_as_workshop_supervisor']
+          userPerms: ['perm_approve_personnel_supervisor']
         });
         personnelProfileHandler.navigate(ctx);
         expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/supervisor-personnel']);

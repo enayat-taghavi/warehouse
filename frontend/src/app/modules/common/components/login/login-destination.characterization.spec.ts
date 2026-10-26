@@ -289,8 +289,8 @@ describe('Login Destination Characterization Spec', () => {
       expect(localStorage.getItem('active_app_module')).toBe('personnel');
     });
 
-    it('view_sys_treasury lands on /app/finance with active_app_module=personnel', async () => {
-      await submitLoginForm(['view_sys_treasury']);
+    it('perm_treasury_disburse_action lands on /app/finance with active_app_module=personnel', async () => {
+      await submitLoginForm(['perm_treasury_disburse_action']);
 
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/finance');
       expect(localStorage.getItem('active_app_module')).toBe('personnel');
@@ -329,8 +329,8 @@ describe('Login Destination Characterization Spec', () => {
       expect(localStorage.getItem('active_app_module')).toBeNull();
     });
 
-    it('redirects to /app/launcher when user has view_sys_counter and view_sys_treasury', async () => {
-      await submitLoginForm(['view_sys_counter', 'view_sys_treasury']);
+    it('redirects to /app/launcher when user has view_sys_counter and perm_treasury_disburse_action', async () => {
+      await submitLoginForm(['view_sys_counter', 'perm_treasury_disburse_action']);
 
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/launcher');
       expect(localStorage.getItem('active_app_module')).toBeNull();
@@ -381,15 +381,15 @@ describe('Login Destination Characterization Spec', () => {
       expect(localStorage.getItem('active_app_module')).toBeNull();
     });
 
-    it('can_act_as_operator alone goes to /app/launcher without active_app_module', async () => {
-      await submitLoginForm(['can_act_as_operator']);
+    it('perm_invoice_approve alone goes to /app/launcher without active_app_module', async () => {
+      await submitLoginForm(['perm_invoice_approve']);
 
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/launcher');
       expect(localStorage.getItem('active_app_module')).toBeNull();
     });
 
-    it('can_act_as_accountant alone goes to /app/launcher without active_app_module', async () => {
-      await submitLoginForm(['can_act_as_accountant']);
+    it('perm_counterparty_manage alone goes to /app/launcher without active_app_module', async () => {
+      await submitLoginForm(['perm_counterparty_manage']);
 
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/launcher');
       expect(localStorage.getItem('active_app_module')).toBeNull();

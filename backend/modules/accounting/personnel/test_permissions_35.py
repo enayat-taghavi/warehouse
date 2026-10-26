@@ -7,7 +7,6 @@
 import importlib
 import importlib.util
 import re
-import unittest
 from decimal import Decimal
 from pathlib import Path
 
@@ -121,7 +120,6 @@ class RemovedCodesScan35Tests(SimpleTestCase):
         hits = _scan(root, ('*.py',), lambda p: 'migrations' in p.parts or p.name == 'module.py')
         self.assertEqual(hits, [])
 
-    @unittest.skip('frontend half lands in 3.5-c')
     def test_frontend_accounting_has_no_removed_code(self):
         root = REPO / 'frontend' / 'src' / 'app' / 'modules' / 'accounting'
         hits = _scan(root, ('*.ts', '*.html'), lambda p: p.name.endswith('.spec.ts'))

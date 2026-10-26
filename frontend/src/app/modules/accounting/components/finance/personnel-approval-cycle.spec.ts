@@ -39,7 +39,7 @@ describe('Complete Personnel 3-Tier Lifecycle DOM & State Integration (Employee 
       user: vi.fn().mockReturnValue({ id: 10, username: 'test_user' }),
       userPermissions: vi.fn().mockReturnValue([
         'perm_approve_personnel_supervisor',
-        'can_act_as_workshop_supervisor',
+        'perm_approve_personnel_supervisor',
         'perm_approve_personnel_finance',
         'perm_approve_personnel_manager',
         'admin_all'

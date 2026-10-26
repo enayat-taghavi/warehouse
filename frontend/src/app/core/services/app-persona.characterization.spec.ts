@@ -292,8 +292,8 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['operator']);
     });
 
-    it('triggers operator via permission can_act_as_operator', () => {
-      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'can_act_as_operator']);
+    it('triggers operator via permission view_sys_personnel_attendance', () => {
+      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'view_sys_personnel_attendance']);
       expect(service.availableRoles().map(r => r.code)).toEqual(['operator']);
     });
 
@@ -308,11 +308,11 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['accountant']);
     });
 
-    it('suppresses operator via view_sys_personnel_attendance when another explicit perm exists (can_act_as_workshop_supervisor)', () => {
+    it('suppresses operator via view_sys_personnel_attendance when another explicit perm exists (perm_approve_personnel_supervisor)', () => {
       mockAuth.userPermissions.set([
         ...ACCESS_USER_BASE_PERMS,
         'view_sys_personnel_attendance',
-        'can_act_as_workshop_supervisor',
+        'perm_approve_personnel_supervisor',
       ]);
       expect(service.availableRoles().map(r => r.code)).toEqual(['supervisor']);
     });
@@ -322,8 +322,8 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['supervisor']);
     });
 
-    it('triggers supervisor via permission can_act_as_workshop_supervisor', () => {
-      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'can_act_as_workshop_supervisor']);
+    it('triggers supervisor via permission perm_approve_personnel_supervisor', () => {
+      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'perm_approve_personnel_supervisor']);
       expect(service.availableRoles().map(r => r.code)).toEqual(['supervisor']);
     });
 
@@ -342,8 +342,8 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['accountant']);
     });
 
-    it('triggers accountant via permission can_act_as_accountant', () => {
-      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'can_act_as_accountant']);
+    it('triggers accountant via permission perm_approve_personnel_finance', () => {
+      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'perm_approve_personnel_finance']);
       expect(service.availableRoles().map(r => r.code)).toEqual(['accountant']);
     });
 
@@ -362,8 +362,8 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['manager']);
     });
 
-    it('triggers manager via permission can_act_as_company_manager', () => {
-      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'can_act_as_company_manager']);
+    it('triggers manager via permission perm_manager_payment_authorize', () => {
+      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'perm_manager_payment_authorize']);
       expect(service.availableRoles().map(r => r.code)).toEqual(['manager']);
     });
 
@@ -392,8 +392,8 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['treasury']);
     });
 
-    it('triggers treasury via permission view_sys_treasury', () => {
-      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'view_sys_treasury']);
+    it('triggers treasury via permission perm_treasury_disburse_action', () => {
+      mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'perm_treasury_disburse_action']);
       expect(service.availableRoles().map(r => r.code)).toEqual(['treasury']);
     });
 
@@ -414,10 +414,10 @@ describe('AppPersonaService Characterization Spec', () => {
       });
       mockAuth.userPermissions.set([
         ...ACCESS_USER_BASE_PERMS,
-        'can_act_as_operator',
-        'can_act_as_workshop_supervisor',
-        'can_act_as_accountant',
-        'can_act_as_company_manager',
+        'view_sys_personnel_attendance',
+        'perm_approve_personnel_supervisor',
+        'perm_approve_personnel_finance',
+        'perm_manager_payment_authorize',
         'perm_treasury_disburse_action',
       ]);
       mockActiveCompany.manageableCompanies.set([{ id: 1, section_levels: { projects: 'write' } }]);
@@ -470,16 +470,16 @@ describe('AppPersonaService Characterization Spec', () => {
       expect(service.availableRoles().map(r => r.code)).toEqual(['warehouse_supervisor']);
     });
 
-    it('triggers warehouse_supervisor via view_sys_supervisor without can_act_as_workshop_supervisor', () => {
+    it('triggers warehouse_supervisor via view_sys_supervisor without perm_approve_personnel_supervisor', () => {
       mockAuth.userPermissions.set([...ACCESS_USER_BASE_PERMS, 'view_sys_supervisor']);
       expect(service.availableRoles().map(r => r.code)).toEqual(['warehouse_supervisor']);
     });
 
-    it('suppresses warehouse_supervisor via view_sys_supervisor when can_act_as_workshop_supervisor is present', () => {
+    it('suppresses warehouse_supervisor via view_sys_supervisor when perm_approve_personnel_supervisor is present', () => {
       mockAuth.userPermissions.set([
         ...ACCESS_USER_BASE_PERMS,
         'view_sys_supervisor',
-        'can_act_as_workshop_supervisor',
+        'perm_approve_personnel_supervisor',
       ]);
       expect(service.availableRoles().map(r => r.code)).toEqual([]);
     });

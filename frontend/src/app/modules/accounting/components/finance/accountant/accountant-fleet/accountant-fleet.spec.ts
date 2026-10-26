@@ -38,7 +38,7 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
   beforeEach(() => {
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 2, username: 'accountant_user' }),
-      userPermissions: vi.fn().mockReturnValue(['view_sys_fleet_settlement', 'can_act_as_accountant'])
+      userPermissions: vi.fn().mockReturnValue(['view_sys_fleet_settlement', 'perm_approve_personnel_finance'])
     };
 
     mockState = {

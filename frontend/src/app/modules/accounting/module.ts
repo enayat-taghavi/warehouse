@@ -40,11 +40,11 @@ export const MODULE: WhFrontendModule = {
   scopeKind: 'finance',
   permissionMarkers: [
     'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
-    'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',
+    'view_sys_payroll', 'view_sys_fleet_settlement',
     'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
     'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
     'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-    'can_act_as_accountant', 'can_act_as_operator', 'view_sys_projects'
+    'perm_invoice_approve', 'perm_invoice_review', 'perm_counterparty_manage', 'view_sys_projects'
   ],
   roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin'],
   personas: ACCOUNTING_PERSONAS,
@@ -441,7 +441,7 @@ export const MODULE: WhFrontendModule = {
     },
     notificationHandlers: ACCOUNTING_NOTIFICATION_HANDLERS,
     permissionAliases: {
-      count_supervisor_exclusion: ['can_act_as_workshop_supervisor'],
+      count_supervisor_exclusion: ['perm_approve_personnel_supervisor'],
       audit_viewer: ['view_sys_payroll']
     }
   }

@@ -105,7 +105,7 @@ describe('۳. صفحات بخش مالی (Finance Pages Workflow)', () => {
 
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 10, username: 'finance_operator', is_superuser: false }),
-      userPermissions: vi.fn().mockReturnValue(['can_act_as_operator', 'view_sys_personnel'])
+      userPermissions: vi.fn().mockReturnValue(['view_sys_personnel_attendance', 'view_sys_personnel'])
     };
 
     mockPersonnelApi = {

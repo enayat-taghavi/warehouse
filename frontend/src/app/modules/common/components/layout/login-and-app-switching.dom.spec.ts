@@ -115,7 +115,7 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
       'view_sys_payroll',
       'view_sys_personnel',
       'perm_approve_fleet_finance',
-      'can_act_as_accountant'
+      'perm_approve_personnel_finance'
     ];
     const USER_FINANCE = {
       id: 5,

@@ -102,7 +102,7 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
 
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 5, username: 'hesabdar_user' }),
-      userPermissions: vi.fn().mockReturnValue(['perm_approve_personnel_finance', 'can_act_as_accountant', 'view_sys_payroll'])
+      userPermissions: vi.fn().mockReturnValue(['perm_approve_personnel_finance', 'view_sys_payroll'])
     };
 
     mockState = {

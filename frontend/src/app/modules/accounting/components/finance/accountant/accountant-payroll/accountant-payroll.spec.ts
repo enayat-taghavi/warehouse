@@ -25,7 +25,7 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
   beforeEach(() => {
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 2, username: 'acc', is_superuser: false }),
-      userPermissions: vi.fn().mockReturnValue(['view_sys_payroll', 'can_act_as_accountant'])
+      userPermissions: vi.fn().mockReturnValue(['view_sys_payroll', 'perm_approve_personnel_finance'])
     };
     mockToast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
     mockPersonnelApi = {

@@ -9,7 +9,7 @@ describe('permission aliases (step 8)', () => {
     expect(getPermissionAliases('manager_approver')).toEqual(['can_act_as_manager']);
     expect(getPermissionAliases('attendance_entry')).toEqual(['view_wh_attendance']);
     expect(getPermissionAliases('attendance_supervisor')).toEqual(['can_act_as_supervisor']);
-    expect(getPermissionAliases('count_supervisor_exclusion')).toEqual(['can_act_as_workshop_supervisor']);
+    expect(getPermissionAliases('count_supervisor_exclusion')).toEqual(['perm_approve_personnel_supervisor']);
     expect(getPermissionAliases('audit_viewer')).toEqual(['view_sys_payroll']);
     expect(getPermissionAliases('no_such_capability')).toEqual([]);
   });
@@ -32,6 +32,6 @@ describe('permission aliases (step 8)', () => {
     expect(personas).toBeTruthy();
     const resolve = (perms: string[]) => personas!.resolveRoleCodes({ perms, userRoles: [], permissionAliases: c => getPermissionAliases(c) });
     expect(resolve(['view_sys_supervisor'])).toContain('warehouse_supervisor');
-    expect(resolve(['view_sys_supervisor', 'can_act_as_workshop_supervisor'])).not.toContain('warehouse_supervisor');
+    expect(resolve(['view_sys_supervisor', 'perm_approve_personnel_supervisor'])).not.toContain('warehouse_supervisor');
   });
 });

@@ -12,19 +12,19 @@ function navigateToFleet(ctx: NotificationNavigationContext, v: any): void {
   const q = v?.plate_number || '';
   switch (v?.approval_status) {
     case 'pending_manager':
-      if (has('perm_approve_fleet_manager', ...managerApprovers(ctx), 'can_act_as_company_manager')) {
+      if (has('perm_approve_fleet_manager', ...managerApprovers(ctx))) {
         router.navigate(['/app/finance/manager-fleet'], { queryParams: { tab: 'new', q } });
         return;
       }
       break;
     case 'pending_accountant':
-      if (has('perm_approve_fleet_finance', 'can_act_as_accountant', 'view_sys_fleet_settlement')) {
+      if (has('perm_approve_fleet_finance', 'view_sys_fleet_settlement')) {
         router.navigate(['/app/finance/accountant-fleet'], { queryParams: { tab: 'new', q } });
         return;
       }
       break;
     case 'pending_supervisor':
-      if (has('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor', 'perm_approve_fleet_manager', ...managerApprovers(ctx))) {
+      if (has('perm_approve_fleet_supervisor', 'perm_approve_fleet_manager', ...managerApprovers(ctx))) {
         router.navigate(['/app/finance/supervisor-fleet'], { queryParams: { tab: 'new', q } });
         return;
       }
@@ -45,9 +45,9 @@ function navigateByRoleForFleet(ctx: NotificationNavigationContext): void {
   const { userPerms: perms, isSuperuser: isSuper, router } = ctx;
   if (isSuper || perms.includes('perm_approve_fleet_manager') || managerApprovers(ctx).some(c => perms.includes(c))) {
     router.navigate(['/app/finance/manager-fleet']);
-  } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('can_act_as_accountant') || perms.includes('view_sys_fleet_settlement')) {
+  } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('view_sys_fleet_settlement')) {
     router.navigate(['/app/finance/accountant-fleet']);
-  } else if (perms.includes('perm_approve_fleet_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
+  } else if (perms.includes('perm_approve_fleet_supervisor')) {
     router.navigate(['/app/finance/supervisor-fleet']);
   } else {
     router.navigate(['/app/finance/employee-new-vehicle']);
@@ -60,7 +60,7 @@ function navigateToPersonnel(ctx: NotificationNavigationContext, p: any): void {
   const q = p?.national_code || '';
   switch (p?.approval_status) {
     case 'pending_manager':
-      if (has('perm_approve_personnel_manager', ...managerApprovers(ctx), 'can_act_as_company_manager')) {
+      if (has('perm_approve_personnel_manager', ...managerApprovers(ctx))) {
         router.navigate(['/app/finance/manager-personnel'], { queryParams: { tab: 'new', q } });
         return;
       }
@@ -72,7 +72,7 @@ function navigateToPersonnel(ctx: NotificationNavigationContext, p: any): void {
       }
       break;
     case 'pending_supervisor':
-      if (has('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor', 'perm_approve_personnel_manager', ...managerApprovers(ctx))) {
+      if (has('perm_approve_personnel_supervisor', 'perm_approve_personnel_manager', ...managerApprovers(ctx))) {
         router.navigate(['/app/finance/supervisor-personnel'], { queryParams: { tab: 'new', q } });
         return;
       }
@@ -90,7 +90,7 @@ function navigateByRole(ctx: NotificationNavigationContext): void {
     router.navigate(['/app/finance/manager-personnel']);
   } else if (perms.includes('perm_approve_personnel_finance')) {
     router.navigate(['/app/finance/accountant-personnel']);
-  } else if (perms.includes('perm_approve_personnel_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
+  } else if (perms.includes('perm_approve_personnel_supervisor')) {
     router.navigate(['/app/finance/supervisor-personnel']);
   } else {
     router.navigate(['/app/finance/employee-new-personnel']);
@@ -105,9 +105,9 @@ export const ACCOUNTING_NOTIFICATION_HANDLERS: NotificationHandler[] = [
       const { userPerms: perms, isSuperuser: isSuper, router } = ctx;
       if (isSuper || perms.includes('perm_approve_fleet_manager') || managerApprovers(ctx).some(c => perms.includes(c))) {
         router.navigate(['/app/finance/manager-fleet'], { queryParams: { tab: 'changes' } });
-      } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('can_act_as_accountant') || perms.includes('view_sys_fleet_settlement')) {
+      } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('view_sys_fleet_settlement')) {
         router.navigate(['/app/finance/accountant-fleet'], { queryParams: { tab: 'changes' } });
-      } else if (perms.includes('perm_approve_fleet_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
+      } else if (perms.includes('perm_approve_fleet_supervisor')) {
         router.navigate(['/app/finance/supervisor-fleet'], { queryParams: { tab: 'changes' } });
       } else {
         router.navigate(['/app/finance/employee-new-vehicle']);

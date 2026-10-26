@@ -45,7 +45,7 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
 
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 2, username: 'accountant_user' }),
-      userPermissions: vi.fn().mockReturnValue(['view_sys_payroll', 'can_act_as_accountant'])
+      userPermissions: vi.fn().mockReturnValue(['view_sys_payroll', 'perm_approve_personnel_finance'])
     };
 
     mockState = {

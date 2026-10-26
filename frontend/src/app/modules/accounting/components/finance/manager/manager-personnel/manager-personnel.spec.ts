@@ -36,7 +36,7 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
 
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 1, username: 'manager_user' }),
-      userPermissions: vi.fn().mockReturnValue(['can_act_as_company_manager', 'perm_approve_personnel_manager', 'perm_delete_personnel_nomovement'])
+      userPermissions: vi.fn().mockReturnValue(['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_delete_personnel_nomovement'])
     };
 
     mockState = {
@@ -265,7 +265,7 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
   });
 
   it('DEF-27: delete button needs the dedicated permission, not manager perms alone', () => {
-    mockAuth.userPermissions.mockReturnValue(['can_act_as_company_manager', 'can_act_as_manager', 'perm_approve_personnel_manager']);
+    mockAuth.userPermissions.mockReturnValue(['perm_manager_payment_authorize', 'can_act_as_manager', 'perm_approve_personnel_manager']);
     expect(component.canDeletePersonnel).toBe(false);
     expect(component.canEndCollaboration).toBe(true);
   });

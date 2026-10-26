@@ -50,7 +50,7 @@ describe('SupervisorNewProfilesHubComponent Unit & DOM Tests', () => {
 
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 1, username: 'supervisor_user' }),
-      userPermissions: vi.fn().mockReturnValue(['perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor'])
+      userPermissions: vi.fn().mockReturnValue(['perm_approve_personnel_supervisor'])
     };
 
     mockState = {

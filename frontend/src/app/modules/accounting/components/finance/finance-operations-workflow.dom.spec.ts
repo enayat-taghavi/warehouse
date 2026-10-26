@@ -86,7 +86,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
         'perm_manage_petty_cash',
         'perm_manage_invoices',
         'perm_manage_treasury',
-        'can_act_as_operator',
+        'view_sys_personnel_attendance',
         'perm_system_super_admin'
       ])
     };

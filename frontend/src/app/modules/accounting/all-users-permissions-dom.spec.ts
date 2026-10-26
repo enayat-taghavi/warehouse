@@ -76,7 +76,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'manager',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_company_manager',
+      'perm_manager_payment_authorize',
       'perm_approve_fleet_manager',
       'perm_approve_personnel_manager',
       'perm_lock_work_period',
@@ -103,7 +103,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'manager',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_company_manager',
+      'perm_manager_payment_authorize',
       'perm_approve_fleet_manager',
       'perm_approve_personnel_manager',
       'perm_lock_work_period',
@@ -129,7 +129,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'accountant',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_accountant',
+      'perm_approve_personnel_finance',
       'perm_approve_fleet_finance',
       'perm_approve_personnel_finance',
       'view_sys_fleet_settlement',
@@ -157,7 +157,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
       'perm_treasury_disburse_action',
       'view_sys_payroll',
       'view_sys_personnel',
-      'view_sys_treasury'
+      'perm_treasury_disburse_action'
     ],
     roles: ['treasury'],
     isSuperuser: false,
@@ -179,7 +179,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
       'perm_treasury_disburse_action',
       'view_sys_payroll',
       'view_sys_personnel',
-      'view_sys_treasury'
+      'perm_treasury_disburse_action'
     ],
     roles: ['treasury'],
     isSuperuser: false,
@@ -193,9 +193,9 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'supervisor',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_workshop_supervisor',
-      'perm_approve_fleet_supervisor',
       'perm_approve_personnel_supervisor',
+      'perm_approve_fleet_supervisor',
+      'perm_invoice_approve',
       'perm_lock_work_period',
       'view_sys_fleet_attendance',
       'view_sys_personnel_attendance'
@@ -212,9 +212,9 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'supervisor',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_workshop_supervisor',
-      'perm_approve_fleet_supervisor',
       'perm_approve_personnel_supervisor',
+      'perm_approve_fleet_supervisor',
+      'perm_invoice_approve',
       'perm_lock_work_period',
       'view_sys_fleet_attendance',
       'view_sys_personnel_attendance'
@@ -231,9 +231,9 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'supervisor',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_workshop_supervisor',
-      'perm_approve_fleet_supervisor',
       'perm_approve_personnel_supervisor',
+      'perm_approve_fleet_supervisor',
+      'perm_invoice_approve',
       'perm_lock_work_period',
       'view_sys_fleet_attendance',
       'view_sys_personnel_attendance'
@@ -250,7 +250,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'operator',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_operator',
+      'view_sys_personnel_attendance',
       'view_sys_fleet_attendance',
       'view_sys_personnel_attendance'
     ],
@@ -266,7 +266,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'operator',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_operator',
+      'view_sys_personnel_attendance',
       'view_sys_fleet_attendance',
       'view_sys_personnel_attendance'
     ],
@@ -282,7 +282,7 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
     expectedRole: 'operator',
     allowedApps: ['finance'],
     permissions: [
-      'can_act_as_operator',
+      'view_sys_personnel_attendance',
       'view_sys_fleet_attendance',
       'view_sys_personnel_attendance'
     ],

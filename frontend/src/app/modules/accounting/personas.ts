@@ -70,12 +70,14 @@ export function resolveAccountingRoleCodes(ctx: {
   const isOrgAdmin = ctx.companySectionLevel?.('projects') === 'write';
 
   // کارمند: صراحتاً در نقش‌های کاربر یا دارای مجوز ثبت کارکرد (بدون تحمیل به حسابدار/سرپرست/مدیر/خزانه‌دار)
-  const hasOperatorRole = userRoles.includes('operator') || perms.includes('can_act_as_operator');
+  const hasOperatorRole = userRoles.includes('operator');
   const hasOperatorPerm = perms.includes('view_sys_personnel_attendance');
   const isOtherExplicitRole = userRoles.some(r => ['accountant', 'supervisor', 'manager', 'treasury'].includes(r)) ||
-    perms.includes('can_act_as_workshop_supervisor') ||
-    perms.includes('can_act_as_accountant') ||
-    perms.includes('can_act_as_company_manager') ||
+    perms.includes('perm_approve_fleet_supervisor') ||
+    perms.includes('perm_approve_personnel_finance') ||
+    perms.includes('perm_approve_fleet_finance') ||
+    perms.includes('perm_manager_payment_authorize') ||
+    perms.includes('perm_approve_personnel_manager') ||
     perms.includes('perm_treasury_disburse_action') ||
     perms.includes('perm_approve_personnel_supervisor') ||
     isOrgAdmin;
@@ -84,22 +86,22 @@ export function resolveAccountingRoleCodes(ctx: {
   }
 
   // سرپرست کارگاه
-  if (userRoles.includes('supervisor') || perms.includes('can_act_as_workshop_supervisor') || perms.includes('perm_approve_personnel_supervisor') || perms.includes('perm_approve_fleet_supervisor')) {
+  if (userRoles.includes('supervisor') || perms.includes('perm_approve_personnel_supervisor') || perms.includes('perm_approve_fleet_supervisor')) {
     roles.push('supervisor');
   }
 
   // حسابدار
-  if (userRoles.includes('accountant') || perms.includes('can_act_as_accountant') || perms.includes('perm_approve_personnel_finance') || perms.includes('perm_approve_fleet_finance')) {
+  if (userRoles.includes('accountant') || perms.includes('perm_approve_personnel_finance') || perms.includes('perm_approve_fleet_finance')) {
     roles.push('accountant');
   }
 
   // مدیر شرکت
-  if (userRoles.includes('manager') || perms.includes('can_act_as_company_manager') || perms.includes('perm_manager_payment_authorize') || perms.includes('perm_approve_personnel_manager')) {
+  if (userRoles.includes('manager') || perms.includes('perm_manager_payment_authorize') || perms.includes('perm_approve_personnel_manager')) {
     roles.push('manager');
   }
 
   // خزانه‌دار
-  if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('perm_treasury_disburse_action') || perms.includes('view_sys_treasury')) {
+  if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('perm_treasury_disburse_action')) {
     roles.push('treasury');
   }
 

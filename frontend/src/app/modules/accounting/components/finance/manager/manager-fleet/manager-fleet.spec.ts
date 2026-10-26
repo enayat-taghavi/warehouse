@@ -48,7 +48,7 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
 
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 1, username: 'manager_user' }),
-      userPermissions: vi.fn().mockReturnValue(['can_act_as_company_manager', 'perm_approve_fleet_manager'])
+      userPermissions: vi.fn().mockReturnValue(['perm_manager_payment_authorize', 'perm_approve_fleet_manager'])
     };
 
     mockState = {
