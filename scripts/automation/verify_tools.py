@@ -1075,7 +1075,7 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("scope", help="every file changed since BASE matches one of the allowed glob patterns")
     p.add_argument("--base", required=True)
-    p.add_argument("--allow", nargs="+", required=True)
+    p.add_argument("--allow", action="extend", nargs="+", required=True)
     p.add_argument("--min-files", type=int, default=0)
     p.set_defaults(func=cmd_scope)
     p = sub.add_parser("tests-kept", help="no listed spec has fewer it()/test() calls than at BASE")

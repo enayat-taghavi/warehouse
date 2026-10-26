@@ -12882,3 +12882,68 @@ changed (2): ['frontend/src/app/modules/accounting/components/finance/counterpar
 - ساختار آزمون‌ها و فیکسچرهای `FiscalFixtures` در...
 
 ---
+
+### Task 1 of 1 — 2026-10-26 22:22:07
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `28db09be-752f-41dd-abd1-6ca6ff94c1ac`
+- **Steps:** 166
+- **Tokens:** 312257
+- **Duration:** 35m 52s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 6be19e4b --allow "frontend/src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-fiscal-closed.dom.spec.ts"`
+  - verify round 1: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 6be19e4b --allow "frontend/src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-fiscal-closed.dom.spec.ts"`
+  - verify gate 1: 6/6 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 3.2-c: DOM specs for the fiscal periods section (no frozen, confirm, field errors, closed info) and the closed-period message on the invoice date field
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Change exactly two files: edit the existing `frontend/src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.dom.spec.ts` (add tests, keep every existing test) and create the new `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-fiscal-closed.dom.spec.ts`. Change no other file. Never change production code. If a test fails because of production code, keep the test, mark it `it.fails(...)` with a one-line comment, and say so in the report.
+- No `it.skip`, `it.only`, `describe.skip`, `describe.only`; do not import `fs` or `path`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the previous commit):
+- `CompanyFiscalPeriodsSectionComponent` (`company-fiscal-periods-section.ts` and `.html` in the same folder as the existing spec). A fiscal period status is only `open` or `closed`; there is no freeze action any more (the API path `freeze-period` and the method `freezeFiscalPeriod` were removed). The `open` period shows the button `بستن سال مالی`; the `closed` period shows the button `بازگشایی` (both only when `canCloseFiscal`, which the existing spec setup already allows). A closed period badge contains an `svg` with attribute `appIcon="status-locked"`.
+- `fieldErrors` (object with optional keys `fiscal_year`, `title`, `start_date`, `end_date`, `notes`) is filled from a 400 response body of `createFiscalPeriod` shaped `{ <field>: ['message'] }`; each message is rendered in a `p` with id `fp_<field>_error` (for example `fp_start_date_error`) and `role="alert"` under its field, and the input gets `aria-invalid="true"`. When the body has no field key, the toast shows `detail`. `fiscal_year` is optional: an empty year is not sent in the payload (the server fills it); `title`, `start_date` and `end_date` stay required.
+- `closeFiscalPeriod(p)` and `reopenFiscalPeriod(p)` ask through the injected `ConfirmDialogService.open(...)` (mocked as `mockConfirm` in the existing spec); after a successful close the component reloads the list with `getFiscalPeriods`. A closed period with `closed_at` (ISO date) and `closed_by_name` renders the text `بسته شده` and `توسط <name>` in the table cell and in the mobile card.
+- The server returns the closed-period rule on the endpoint `reopen-period` (mention the word `reopen-period` in a test name or comment; it is checked).
+- `EmployeeInvoicesHubComponent` (`employee-invoices.ts`, `employee-invoices.html`): `saveInvoice()` calls `personnelApi.createExpenseInvoice(payload)`. When the error body is `{ invoice_date_shamsi: ['msg'], code: 'fiscal_period_closed' }` it sets `invoiceDateError = 'msg'`, calls `toast.show('error', 'msg')`, and the template renders `<p id="invoice_date_error" role="alert">msg</p>` under the date input inside the new-invoice modal (`isNewInvoiceModalOpen`). Any other error keeps the old toast text starting with `خطا در ثبت فاکتور` and leaves `invoiceDateError` empty. Changing the date input (ngModelChange) and `openNewInvoiceModal()` clear `invoiceDateError`. `sendToSupervisor` and `deleteDraftInvoice` show the closed-period message in the toast when the error has that code.
+- Read for patterns only (do not edit): the existing `company-fiscal-periods-section.dom.spec.ts` (all 192 lines) and `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-existing.dom.spec.ts` (all 176 lines: jsdom header, constructor injection override, mocks, TestBed setup). Copy the setup of the second file into the new spec.
+
+3. Task:
+- a) Add to `company-fiscal-periods-section.dom.spec.ts` at least these tests (keep the existing ones):
+  - the rendered buttons of an open period never contain the label `انجماد`, and the component has no `freezeFiscalPeriod` member (`expect((component as any).freezeFiscalPeriod).toBeUndefined()`);
+  - a closed period (`status: 'closed', closed_at: '2026-03-20T08:00:00Z', closed_by_name: 'مدیر مالی'`) renders the button `بازگشایی`, no `بستن سال مالی` button, the lock icon in the badge and the text `مدیر مالی`;
+  - `closeFiscalPeriod` when `mockConfirm.open` resolves `false` does not call the API; when it resolves `true` it calls `closeFiscalPeriod` and then `getFiscalPeriods` again;
+  - `reopenFiscalPeriod` (server action `reopen-period`) goes through `mockConfirm.open` and sets the status to `open`;
+  - `createFiscalPeriod` rejecting with `{ status: 400, error: { start_date: ['این بازه با دورهٔ مالی ۱۴۰۴ همپوشانی دارد.'] } }` keeps the form open, sets `fieldErrors.start_date`, renders `#fp_start_date_error` with that text, and the start input has `aria-invalid="true"`;
+  - a 400 with `{ detail: 'x' }` only shows `toast.error('x')` and leaves `fieldErrors` empty;
+  - saving with an empty year and a valid title and dates calls `createFiscalPeriod` with a payload that has no `fiscal_year` key.
+- b) In the new `employee-invoices-fiscal-closed.dom.spec.ts` write at least 3 tests (the words `fiscal_period_closed` and `invoice_date_error` must appear): the closed-period 400 on `saveInvoice()` renders `#invoice_date_error` with the server message inside the open modal and calls `toast.show('error', <message>)`; a 500 error leaves `invoiceDateError` empty and shows the old toast; `openNewInvoiceModal()` clears a previous `invoiceDateError`. Fill the required invoice fields before saving (`counterparty`, `invoice_number`, `invoice_date_shamsi`, `amount` > 0, and a selected section as in the existing spec).
+
+4. Tool policy: only reading the listed files, editing or writing the two spec files, the test command below, `git add` of the two files, `git commit`, `git status --short`. Test command, in `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section.dom.spec.ts --include=src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-fiscal-closed.dom.spec.ts`. If it fails, read the error, fix the spec (not production code), and rerun at most 5 times.
+
+5. Before finishing: both spec files pass; commit only the two files with the message `test(release-v1 3.2-c): fiscal periods section and closed-period invoice DOM specs`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any `it.fails` with its reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح علت خطا (Explain Simply)
+خطای اعتبارسنجی دامنه (`scope`) به این دلیل رخ داد که در آرگومان‌های فرمان `verify_tools.py scope` در فایل `tasks.md`، پرچم `--allow` دو بار تکرار شده بود (`--allow "path1" --allow "path2"`). از آنجا که در `verify_tools.py` برای آرگومان `--allow` از `nargs="+"` استفاده شده است، تکرار پرچم باعث شد آرگومان دوم جایگزین اولی شود و فایل اول خارج از دامنه مجاز تشخیص داده شود.
+
+### ۲. اعتبارسنجی فنی و اصلاح (Verify & Fix)
+فرم دستوری `--allow` در خط اعتبارسنجی به صورت استاندارد `nargs="+"` اصلاح شد تا هر دو مسیر مجاز به طور هم‌زمان دریافت شوند:
+`--allow "path1" "path2"`
+
+سپس دستور اعتبارسنجی مجدداً اجرا شد و با کد ۰ تأیید گردید:
+``...
+
+---
