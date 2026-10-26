@@ -578,12 +578,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
         cancelText: 'انصراف'
       });
       if (!confirmed) return;
-    } else if ((await (this.confirmDialog as any)?.open({
-      title: 'قطع اتصال درایو',
-      message: 'آیا از قطع اتصال حساب درایو سراسری سامانه اطمینان دارید؟ پشتیبان‌های جدید دیتابیس تا اتصال مجدد بر روی ابر ذخیره نخواهند شد.',
-      type: 'danger',
-      confirmText: 'قطع اتصال'
-    })) !== true) {
+    } else {
       return;
     }
 
