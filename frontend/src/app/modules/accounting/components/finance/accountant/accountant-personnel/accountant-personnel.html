@@ -39,7 +39,7 @@
             placeholder="جستجوی پرسنل، کد ملی، شبا..."
             class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="absolute right-2.5 top-2 text-slate-400 pointer-events-none"></svg>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; onSearchChanged()" class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; onSearchChanged()" class="absolute start-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           </button>
         </div>
@@ -85,7 +85,7 @@
       <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" class="mt-3" (click)="fetchData()"></button>
     </div>
 
-    <div *ngIf="personnelItems.length === 0 && !isLoading && !loadError" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
+    <div *ngIf="personnelItems.length === 0 && !isLoading && !loadError" class="bg-surface rounded-2xl border border-line p-8 text-center text-slate-500">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="user-check" class="mx-auto text-emerald-500 mb-2"></svg>
       <p class="font-bold text-sm">هیچ پرونده پرسنلی معلق برای ممیزی مالی در این بخش وجود ندارد.</p>
     </div>
@@ -111,7 +111,7 @@
                 <div class="font-bold text-slate-800">{{ item.first_name }} {{ item.last_name }}</div>
                 <div class="text-[11px] text-slate-500 font-mono flex items-center gap-1">
                   <span>{{ item.phone_number || '—' }}</span>
-                  <button *ngIf="item.id && item.phone_number" (click)="copyField(item.phone_number, 'ph-' + item.id, 'شماره همراه')" [title]="isFieldCopied('ph-' + item.id) ? 'کپی شد' : 'کپی شماره همراه'" class="text-slate-400 hover:text-blue-600 cursor-pointer flex items-center">
+                  <button type="button" *ngIf="item.id && item.phone_number" (click)="copyField(item.phone_number, 'ph-' + item.id, 'شماره همراه')" [title]="isFieldCopied('ph-' + item.id) ? 'کپی شد' : 'کپی شماره همراه'" [attr.aria-label]="isFieldCopied('ph-' + item.id) ? 'کپی شد' : 'کپی شماره همراه'" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                     <svg *ngIf="isFieldCopied('ph-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                     <svg *ngIf="!isFieldCopied('ph-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                   </button>
@@ -120,7 +120,7 @@
               <td class="p-3 font-mono font-bold text-slate-700">
                 <span dir="ltr">{{ item.national_code }}</span>
                 <span *ngIf="isMasked(item.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
-                <button *ngIf="item.id && !isMasked(item.national_code)" (click)="copyField(item.national_code, 'nc-' + item.id, 'کد ملی')" [title]="isFieldCopied('nc-' + item.id) ? 'کپی شد' : 'کپی کد ملی'" class="text-slate-400 hover:text-blue-600 mr-1 cursor-pointer inline-flex items-center">
+                <button type="button" *ngIf="item.id && !isMasked(item.national_code)" (click)="copyField(item.national_code, 'nc-' + item.id, 'کد ملی')" [title]="isFieldCopied('nc-' + item.id) ? 'کپی شد' : 'کپی کد ملی'" [attr.aria-label]="isFieldCopied('nc-' + item.id) ? 'کپی شد' : 'کپی کد ملی'" class="text-slate-400 hover:text-blue-600 ms-1 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                   <svg *ngIf="isFieldCopied('nc-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                   <svg *ngIf="!isFieldCopied('nc-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                 </button>
@@ -145,7 +145,7 @@
               <td class="p-3">
                 <div *ngIf="item.sheba_number" class="flex items-center gap-1 font-mono text-[11px] font-bold text-slate-700">
                   <span>IR{{ item.sheba_number }}</span>
-                  <button *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField('IR' + item.sheba_number, 'sh-' + item.id, 'شماره شبا')" [title]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" class="text-slate-400 hover:text-blue-600 cursor-pointer flex items-center">
+                  <button type="button" *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField('IR' + item.sheba_number, 'sh-' + item.id, 'شماره شبا')" [title]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" [attr.aria-label]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                     <svg *ngIf="isFieldCopied('sh-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                     <svg *ngIf="!isFieldCopied('sh-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                   </button>
@@ -159,7 +159,7 @@
                 <div class="text-[10px] text-slate-500 flex items-center gap-1">
                   <span>{{ item.bank_name || 'بانک نامشخص' }}</span>
                   <span *ngIf="item.account_number" class="font-mono">({{ item.account_number }})</span>
-                  <button *ngIf="item.id && item.account_number && !isMasked(item.account_number)" (click)="copyField(item.account_number, 'acc-' + item.id, 'شماره حساب')" [title]="isFieldCopied('acc-' + item.id) ? 'کپی شد' : 'کپی شماره حساب'" class="text-slate-400 hover:text-blue-600 cursor-pointer flex items-center">
+                  <button type="button" *ngIf="item.id && item.account_number && !isMasked(item.account_number)" (click)="copyField(item.account_number, 'acc-' + item.id, 'شماره حساب')" [title]="isFieldCopied('acc-' + item.id) ? 'کپی شد' : 'کپی شماره حساب'" [attr.aria-label]="isFieldCopied('acc-' + item.id) ? 'کپی شد' : 'کپی شماره حساب'" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                     <svg *ngIf="isFieldCopied('acc-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                     <svg *ngIf="!isFieldCopied('acc-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                   </button>
@@ -215,7 +215,7 @@
             <div class="font-mono font-bold text-slate-700 flex items-center gap-1">
               <span dir="ltr">{{ item.national_code }}</span>
               <span *ngIf="isMasked(item.national_code)" class="text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
-              <button *ngIf="item.id && !isMasked(item.national_code)" (click)="copyField(item.national_code, 'nc-m-' + item.id, 'کد ملی')" class="text-slate-400 hover:text-blue-600 cursor-pointer flex items-center">
+              <button type="button" *ngIf="item.id && !isMasked(item.national_code)" (click)="copyField(item.national_code, 'nc-m-' + item.id, 'کد ملی')" title="کپی کد ملی" aria-label="کپی کد ملی" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                 <svg *ngIf="isFieldCopied('nc-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                 <svg *ngIf="!isFieldCopied('nc-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
               </button>
@@ -243,7 +243,7 @@
             <span class="text-slate-500 block">شماره شبا:</span>
             <div *ngIf="item.sheba_number" class="font-mono font-bold text-slate-700 flex items-center gap-1">
               <span>IR{{ item.sheba_number }}</span>
-              <button *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField('IR' + item.sheba_number, 'sh-m-' + item.id, 'شماره شبا')" class="text-slate-400 hover:text-blue-600 cursor-pointer flex items-center">
+              <button type="button" *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField('IR' + item.sheba_number, 'sh-m-' + item.id, 'شماره شبا')" title="کپی شماره شبا" aria-label="کپی شماره شبا" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                 <svg *ngIf="isFieldCopied('sh-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                 <svg *ngIf="!isFieldCopied('sh-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
               </button>
@@ -275,14 +275,14 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="personnelCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPersonnelPage(personnelPage - 1)" [disabled]="personnelPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ personnelPage | number }} از {{ personnelTotalPages | number }}</span>
       <button type="button" (click)="goToPersonnelPage(personnelPage + 1)" [disabled]="personnelPage >= personnelTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -292,8 +292,8 @@
 
   <!-- زیرتب ۲: حقوق و دستمزد ماهانه -->
   <div *ngIf="activeSubTab === 'payroll'" class="space-y-3">
-    <div *ngIf="payrollRecords.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="credit-card" class="mx-auto text-slate-400 mb-2"></svg>
+    <div *ngIf="payrollRecords.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-slate-500">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="credit-card" class="mx-auto text-fg-muted mb-2"></svg>
       <p class="font-bold text-sm">هیچ رکورد حقوقی آماده ممیزی برای سال مالی {{ fiscalYear }} در این بخش یافت نشد.</p>
     </div>
 
@@ -341,8 +341,8 @@
         <span>کارهای من</span>
       </a>
     </div>
-    <div *ngIf="changeRequests.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="refresh-cw" class="mx-auto text-slate-400 mb-2"></svg>
+    <div *ngIf="changeRequests.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-slate-500">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="refresh-cw" class="mx-auto text-fg-muted mb-2"></svg>
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای پرسنل وجود ندارد.</p>
     </div>
 
@@ -385,14 +385,14 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="changesCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToChangesPage(changesPage - 1)" [disabled]="changesPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ changesPage | number }} از {{ changesTotalPages | number }}</span>
       <button type="button" (click)="goToChangesPage(changesPage + 1)" [disabled]="changesPage >= changesTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -441,14 +441,14 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="personnelCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPersonnelPage(personnelPage - 1)" [disabled]="personnelPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ personnelPage | number }} از {{ personnelTotalPages | number }}</span>
       <button type="button" (click)="goToPersonnelPage(personnelPage + 1)" [disabled]="personnelPage >= personnelTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>

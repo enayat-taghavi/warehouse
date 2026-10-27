@@ -36,7 +36,7 @@
           placeholder="جستجوی نام، کد ملی، تلفن..."
           class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500" />
         <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
-        <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; onSearchChanged()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
+        <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; onSearchChanged()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute start-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
       </div>
 
       <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_profile' }"
@@ -109,8 +109,8 @@
                     *ngIf="item.id && !isMasked(item.national_code)"
                     (click)="copyField(item.national_code, 'nat_' + item.id)"
                     [title]="isFieldCopied('nat_' + item.id) ? 'کپی شد!' : 'کپی کد ملی'"
-                    [attr.aria-label]="isFieldCopied('nat_' + item.id) ? 'کپی شد' : 'کپی کد ملی'"
-                    class="min-h-[28px] min-w-[28px] text-fg-subtle hover:text-indigo-600 cursor-pointer p-0.5 rounded transition-all">
+                    [attr.aria-label]="isFieldCopied('nat_' + item.id) ? 'کپی شد!' : 'کپی کد ملی'"
+                    class="min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-fg-subtle hover:text-indigo-600 cursor-pointer p-0.5 rounded transition-all">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="isFieldCopied('nat_' + item.id) ? 'check' : 'copy'" aria-hidden="true"></svg>
                   </button>
                 </div>
@@ -184,14 +184,14 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="totals.new > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPage('new', pages.new - 1)" [disabled]="pages.new <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.new) }} از {{ formatNumber(totalPages('new')) }}</span>
       <button type="button" (click)="goToPage('new', pages.new + 1)" [disabled]="pages.new >= totalPages('new') || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -376,14 +376,14 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="totals.changes > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPage('changes', pages.changes - 1)" [disabled]="pages.changes <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.changes) }} از {{ formatNumber(totalPages('changes')) }}</span>
       <button type="button" (click)="goToPage('changes', pages.changes + 1)" [disabled]="pages.changes >= totalPages('changes') || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -479,14 +479,14 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="totals.all > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPage('all', pages.all - 1)" [disabled]="pages.all <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.all) }} از {{ formatNumber(totalPages('all')) }}</span>
       <button type="button" (click)="goToPage('all', pages.all + 1)" [disabled]="pages.all >= totalPages('all') || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -710,7 +710,7 @@
                   *ngIf="selectedViewProfile.phone_number"
                   title="کپی شماره" aria-label="کپی شماره"
                   (click)="copyField(selectedViewProfile.phone_number, 'vp_mob')"
-                  class="text-slate-400 hover:text-indigo-600 p-0.5">
+                  class="min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-slate-400 hover:text-indigo-600 p-0.5">
                   {{ isFieldCopied('vp_mob') ? '✓' : '📋' }}
                 </button>
               </div>
@@ -755,8 +755,9 @@
                 <button
                   type="button"
                   *ngIf="acc.sheba_number && !isMasked(acc.sheba_number)"
+                  title="کپی شماره شبا" aria-label="کپی شماره شبا"
                   (click)="copyField(acc.sheba_number, 'acc_sh_' + acc.id)"
-                  class="text-slate-400 hover:text-indigo-600 p-0.5">
+                  class="min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-slate-400 hover:text-indigo-600 p-0.5">
                   {{ isFieldCopied('acc_sh_' + acc.id) ? '✓' : '📋' }}
                 </button>
               </div>

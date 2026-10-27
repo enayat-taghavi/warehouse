@@ -79,8 +79,9 @@
         <span class="text-[10px] text-slate-400 font-normal">({{ formatNumber(personnelCount) }} نفر)</span>
       </h3>
       <div class="flex items-center gap-2 flex-wrap">
-        <span *ngIf="statusCounters.personnelPending > 0" class="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200">
-          ⚠️ {{ statusCounters.personnelPending }} نفر در انتظار تایید مالی (از کارهای من)
+        <span *ngIf="statusCounters.personnelPending > 0" class="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 inline-flex items-center gap-1">
+          <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>{{ statusCounters.personnelPending }} نفر در انتظار تایید مالی (از کارهای من)</span>
         </span>
         <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_profile'}"
          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
@@ -171,20 +172,20 @@
       <p>خطا در بارگذاری پرونده‌های پرسنل.</p>
       <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" class="mt-3" (click)="fetchData()"></button>
     </div>
-    <div *ngIf="personnelItems.length === 0 && !isLoading && !loadError" class="bg-white rounded-3xl p-8 text-center border border-slate-200 text-xs text-slate-400">
+    <div *ngIf="personnelItems.length === 0 && !isLoading && !loadError" class="bg-surface rounded-3xl p-8 text-center border border-line text-xs text-fg-muted">
       هیچ پرونده پرسنلی با فیلترهای جاری در این بخش یافت نشد.
     </div>
     <!-- صفحه‌بندی -->
     <div *ngIf="personnelCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPersonnelPage(personnelPage - 1)" [disabled]="personnelPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(personnelPage) }} از {{ formatNumber(personnelTotalPages) }}</span>
       <button type="button" (click)="goToPersonnelPage(personnelPage + 1)" [disabled]="personnelPage >= personnelTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -276,7 +277,7 @@
       </div>
     </div>
 
-    <div *ngIf="vehicleItems.length === 0 && !isLoading" class="bg-white rounded-3xl p-8 text-center border border-slate-200 text-xs text-slate-400">
+    <div *ngIf="vehicleItems.length === 0 && !isLoading" class="bg-surface rounded-3xl p-8 text-center border border-line text-xs text-fg-muted">
       هیچ خودرویی با فیلترهای جاری در این بخش یافت نشد.
     </div>
   </div>
@@ -314,20 +315,20 @@
           </button>
         </div>
       </div>
-      <div *ngIf="personnelChangeRequests.length === 0" class="p-6 bg-white rounded-2xl text-center text-xs text-slate-400">
+      <div *ngIf="personnelChangeRequests.length === 0" class="p-6 bg-surface rounded-2xl text-center text-xs text-fg-muted">
         درخواست تغییراتی برای پرسنل وجود ندارد.
       </div>
     <!-- صفحه‌بندی -->
     <div *ngIf="personnelCrCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPersonnelCrPage(personnelCrPage - 1)" [disabled]="personnelCrPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(personnelCrPage) }} از {{ formatNumber(personnelCrTotalPages) }}</span>
       <button type="button" (click)="goToPersonnelCrPage(personnelCrPage + 1)" [disabled]="personnelCrPage >= personnelCrTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -359,7 +360,7 @@
           </button>
         </div>
       </div>
-      <div *ngIf="vehicleChangeRequests.length === 0" class="p-6 bg-white rounded-2xl text-center text-xs text-slate-400">
+      <div *ngIf="vehicleChangeRequests.length === 0" class="p-6 bg-surface rounded-2xl text-center text-xs text-fg-muted">
         درخواست تغییرات معلقی برای خودروها وجود ندارد.
       </div>
     </div>
