@@ -2238,3 +2238,43 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 7 tests pass; commit only that file with the message `test(release-v1 3.6-c): petty cash workflow API tests`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 3.6-d: petty cash frontend spec (charge request, statement builder, line reject, permissions, deep links)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash-36d.spec.ts"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash-36d.spec.ts --min-tests 7 --require "requestPettyCashCharge" --require "createPettyCashStatement" --require "rejectPettyCashStatementLine" --require "canEditCeiling" --require "isServerUnreachable"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash-36d.spec.ts --max-failed 0
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 3.6-d): petty cash frontend spec"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash-36d.spec.ts`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the test, mark it `it.fails(...)` with a one-line comment, and say so in the report.
+- No `it.skip`, `it.only`, `describe.skip`, `describe.only`; do not import `fs` or `path`. Plain Vitest spec with the jsdom header, no TestBed (same style as the existing spec).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commit `feat(release-v1 3.6-d)`; read these ranges only):
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.spec.ts` lines 1-200: COPY its header, imports, sample data and the whole `beforeEach` (mocks `mockAuth`, `mockPersonnelApi`, `mockToast`, `mockCdr`, `mockRoute`, `mockRouter` and the `new EmployeePettyCashHubComponent(...)` call) into your new file. Read lines 200-355 only to see how existing tests are written; do not duplicate them.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.ts`: lines 240-262 (`hasPerm`, `errorText`), 252-254 (`canEditCeiling`, `canTreasuryPay`, `canReviewLines`), 337-360 (`saveCeiling`), 438-450 (`isOpenExpense`, `canModifyExpense`), 728-860 (`openChargeModal`, `submitCharge`, `resendCharge`, `toggleLine`, `toggleAllLines`, `createStatement`, `resendStatement`, `selectedTotal`), 858-1010 (`openDetail`, `loadDetail`, `canRejectLines`, `startRejectLine`, `confirmRejectLine`, `payDetail`), and 203-240 (`ngOnInit`, query params `charge` / `statement`).
+- `frontend/src/app/modules/accounting/api/personnel-api.service.ts`: grep `PettyCash` for the exact method names (e.g. `requestPettyCashCharge`, `createPettyCashStatement`, `rejectPettyCashStatementLine`) and their arguments. Every API method your tests trigger must exist on `mockPersonnelApi` as `vi.fn()` returning `of(...)` or `throwError(...)`.
+- `frontend/src/app/core/services/server-reachability.ts`: function `isServerUnreachable` (which HTTP statuses count as unreachable).
+
+3. Task — `describe('EmployeePettyCashHubComponent 3.6-d', ...)` with these tests (one `it` each):
+- a) charge request: set the charge amount the way `submitCharge` reads it (see lines 728-775), call `submitCharge()`; expect `requestPettyCashCharge` called once with the amount in the unit the component sends, and a success toast.
+- b) charge request offline: `requestPettyCashCharge` returns `throwError(() => ({ status: 0 }))` (a status that `isServerUnreachable` treats as unreachable; import `isServerUnreachable` and assert it is true for that error first); call `submitCharge()`; expect an error toast and NO retry/queue call (no `createPettyCashTransaction` call).
+- c) statement builder: transactions with two open draft expenses and one expense already in a statement; `openExpenses` contains only the two open ones; `toggleLine` both, `selectedTotal` equals their sum; `createStatement()` calls `createPettyCashStatement` with `line_ids` of exactly those two ids.
+- d) `canModifyExpense` is false for an expense with `is_locked: true`, for one with `statement` set, and for one with status not `draft`; true for an open unlocked draft.
+- e) ceiling permission: with auth permissions lacking `perm_manager_payment_authorize`, `canEditCeiling` is false and `saveCeiling()` calls no update API; with that permission it is true (follow how `hasPerm` reads permissions from `mockAuth`).
+- f) line reject: open a statement detail (`openDetail('statement', id)` with the API mock returning a statement owned by another custodian and with lines), user has `perm_invoice_review`; `startRejectLine(line)` then `confirmRejectLine()` with an empty reason must NOT call `rejectPettyCashStatementLine`; with a reason it calls it with the statement id, line id and reason.
+- g) deep link: `mockRoute.queryParams = of({ statement: '7' })` before `ngOnInit()` → the statement detail for id 7 is loaded (the statement get API called with 7); same for `{ charge: '9' }` opening the charge detail.
+
+4. Tool policy: only reading the listed files, writing the spec file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash-36d.spec.ts`. If it fails, read the error, fix the spec (not production code), and rerun at most 5 times.
+
+5. Before finishing: all tests pass (or are marked `it.fails` with a reason); commit only that file with the message `test(release-v1 3.6-d): petty cash frontend spec`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any `it.fails` with the reason, the commit hash. End the turn after the report.
