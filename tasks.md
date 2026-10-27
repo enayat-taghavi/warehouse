@@ -2200,7 +2200,7 @@ Write these tests (one method each):
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.6-c: petty cash company-level workflow API tests
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.6-c: petty cash company-level workflow API tests
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
