@@ -17,7 +17,8 @@ import {
   PersonnelChangeRequest,
   VehicleChangeRequest,
   PayrollYearlySettings,
-  isMaskedValue
+  isMaskedValue,
+  isMaskedSensitive
 } from '../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -885,12 +886,12 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     // مقدار ماسک‌شده (کاربر بدون دید کامل) هرگز در payload نوشتن نمی‌رود
     const payload: Record<string, any> = {};
     for (const [k, v] of Object.entries(rawPayload)) {
-      if (!isMaskedValue(v)) payload[k] = v;
+      if (!isMaskedSensitive(k, v)) payload[k] = v;
     }
     if (this.editingPersonnel.id) {
       const changes = this.changedPersonnelFields(payload);
       for (const k of Object.keys(changes)) {
-        if (isMaskedValue(changes[k])) delete changes[k];
+        if (isMaskedSensitive(k, changes[k])) delete changes[k];
       }
       delete changes['is_active'];
       if (!Object.keys(changes).length) {

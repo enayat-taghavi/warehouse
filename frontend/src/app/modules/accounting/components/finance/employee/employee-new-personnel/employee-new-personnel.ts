@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
 import { Observable, Subject, Subscription, concat, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, toArray } from 'rxjs/operators';
-import { ProjectSection, PersonnelProfile, PersonnelBankAccount, PersonnelDocument, WorkflowAuditLog, isMaskedValue } from '../../../../models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelBankAccount, PersonnelDocument, WorkflowAuditLog, isMaskedValue, stripMaskedSensitive } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
@@ -47,11 +47,13 @@ export type PersonnelStatusFilter = 'all' | 'draft' | 'pending' | 'pending_super
 export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'documents';
 
 function stripMaskedValues<T extends Record<string, any>>(obj: T): T {
-  const out: Record<string, any> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (!isMaskedValue(v)) out[k] = v;
-  }
-  return out as T;
+  return stripMaskedSensitive(obj);
+}
+
+/** شبای ستاره‌دار پیش از پاک‌سازی شناخته می‌شود (cleanShebaInput ستاره را حذف می‌کند) */
+function shebaOrMasked(raw: unknown): string {
+  const s = String(raw || '');
+  return isMaskedValue(s) ? s : cleanShebaInput(s);
 }
 
 @Component({
@@ -2184,7 +2186,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     const body = (a: PersonnelBankAccount) => stripMaskedValues({
       bank_name: a.bank_name,
       account_number: a.account_number || '',
-      sheba_number: cleanShebaInput(String(a.sheba_number || '')),
+      sheba_number: shebaOrMasked(a.sheba_number),
       card_number: a.card_number || '',
       description: a.description || ''
     });
@@ -2354,7 +2356,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
         body['bank_accounts'] = this.bankAccounts.map(a => stripMaskedValues({
           bank_name: a.bank_name,
           account_number: a.account_number || '',
-          sheba_number: cleanShebaInput(String(a.sheba_number || '')),
+          sheba_number: shebaOrMasked(a.sheba_number),
           card_number: a.card_number || '',
           is_primary: !!a.is_primary,
           is_active: a.is_active !== false

@@ -987,6 +987,25 @@ export function isMaskedValue(value: unknown): boolean {
   return typeof value === 'string' && value.includes('*');
 }
 
+/** فیلدهای حساسی که سرور برای بینندهٔ بی دید کامل ستاره‌دار می‌کند (هم‌تراز PERSONNEL_SENSITIVE_FIELDS سرور) */
+export const PERSONNEL_SENSITIVE_FIELDS: readonly string[] = [
+  'national_code', 'id_number', 'id_series', 'id_serial', 'account_number', 'card_number', 'sheba_number'
+];
+
+/** فقط فیلد حساسِ ستاره‌دار پوشیده است؛ «*» در نشانی، توضیح یا نام دادهٔ واقعی کاربر است و نباید حذف شود */
+export function isMaskedSensitive(field: string, value: unknown): boolean {
+  return PERSONNEL_SENSITIVE_FIELDS.includes(field) && isMaskedValue(value);
+}
+
+/** کلیدهای حساسِ ستاره‌دار را از payload برمی‌دارد؛ بقیه دست نمی‌خورند */
+export function stripMaskedSensitive<T extends object>(obj: T): T {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (!isMaskedSensitive(k, v)) out[k] = v;
+  }
+  return out as T;
+}
+
 /** پاسخ جستجوی کد ملی؛ برای کاربر بی دید کامل فقط «هست/نیست» و نام (masked) */
 export interface PersonnelLookupResult {
   found: boolean;

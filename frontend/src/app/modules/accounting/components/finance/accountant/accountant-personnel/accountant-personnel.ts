@@ -17,7 +17,8 @@ import {
   PayrollYearlySettings,
   PersonnelCostEstimate,
   PersonnelWorkflowError,
-  isMaskedValue
+  isMaskedValue,
+  isMaskedSensitive
 } from '../../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -773,7 +774,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     const changes: Record<string, any> = {};
     for (const field of AccountantPersonnelHubComponent.ACCOUNTANT_EDITABLE_FIELDS) {
       if (!(field in edited)) continue;
-      if (isMaskedValue(edited[field])) continue; // مقدار پوشیدهٔ سرور هرگز پس فرستاده نمی‌شود (ق۱۶)
+      if (isMaskedSensitive(field, edited[field])) continue; // مقدار پوشیدهٔ سرور هرگز پس فرستاده نمی‌شود (ق۱۶)
       if (this.normalizeAccountantValue(field, edited[field]) !== this.normalizeAccountantValue(field, original[field])) {
         changes[field] = field === 'sheba_number' && edited[field] ? cleanShebaInput(String(edited[field])) : edited[field];
       }

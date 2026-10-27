@@ -17,7 +17,8 @@ import {
   VehicleChangeRequest,
   PayrollYearlySettings,
   PersonnelWorkflowError,
-  isMaskedValue
+  isMaskedValue,
+  isMaskedSensitive
 } from '../../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -697,7 +698,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   private withoutMaskedValues<T extends object>(obj: T): Partial<T> {
     const out: any = {};
     for (const [k, v] of Object.entries(obj)) {
-      if (isMaskedValue(v)) continue;
+      if (isMaskedSensitive(k, v)) continue;
       out[k] = v;
     }
     return out;
