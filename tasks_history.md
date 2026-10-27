@@ -13738,3 +13738,81 @@ Body: error code: 1033
 درخواست مربوط به اجرای گام ۴.۱-ب (زیرمرحلهٔ پرداخت چندمرحله‌ای اقساط فاکتور هزینه) بود؛ ایجاد یک فایل تست جامع جدید با نام [`backend/modules/accounting/personnel/test_invoice_payments_41.py`](file:///E:/comanager/backend/modules/accounting/p...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 17:07:08
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `ff52a9dc-7bcd-42dd-b3ad-e53805ddd9c7`
+- **Steps:** 359
+- **Tokens:** 608646
+- **Duration:** 47m 54s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/9 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts --min-tests 6 --require "TestBed" --require "addInvoicePayment" --require "voidInvoicePayment"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-lines.dom.spec.ts --min-tests 5 --require "TestBed" --require "submitExpenseInvoice"`
+  - verify gate 1: 9/9 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.1-c: invoice payment modal and lines form DOM specs, glossary
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new spec files and edit one doc file (paths below). Change no other file (never touch `scripts/automation/*`). Never change production code (`*.ts` that is not `*.spec.ts`, `*.html`). If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `it.skip`, `describe.skip`, `it.todo`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commit `e9488532 feat(release-v1 4.1-c)`; read these only):
+- TestBed pattern to COPY (imports, `initTestEnvironment`, `resetTestingModule`, `configureTestingModule` with `providers` of mocks, `createComponent`, `detectChanges`): `frontend/src/app/modules/accounting/components/personnel/manager-approvals/manager-approvals.dom.spec.ts` lines 1-150.
+- Treasurer component: `frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.ts` (constructor at line ~106; payment modal code lines ~266-575: `payInvoice`, `submitPayment`, `handlePayError`, `askVoid`, `onVoidConfirmed`, `needsCompanyAccount`) and its template `treasurer-invoices.html` (search for `pay-amount`, `pay-company-account`, `pay-tracking`, `app-workflow-reason-dialog`). Existing unit spec `treasurer-invoices.spec.ts` shows the mock shapes for `PersonnelApiService` (`getTreasuryCartable` etc.).
+- Employee component: `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.ts` (form/lines/totals lines ~470-760, submit ~968-1020) and template `employee-invoices.html` lines ~400-570 (lines table, discount, VAT, duplicate warning `duplicateInfo`) and ~940-954 (duplicate reason dialog). Existing unit spec `employee-invoices.spec.ts` shows the mocks (`mockTreasuryOrgApi` with `getExpenseInvoicesPage`, `getExpenseInvoiceDuplicates`, `submitExpenseInvoice`).
+- API shapes: `scratch/handoff_4_1_b.md` section "API" (payments list `{results, paid_amount, remaining}`, add payment result `{message, paid_amount, remaining, ...}`, error 400 field dict, 409 `{code, error}`).
+- Services to mock by class token in `providers`: `PersonnelApiService`, `TreasuryOrgApiService`, `CompanyApiService`, `PrintService`, `ToastService`, `AuthService`, `StateService`, `ActivatedRoute`, `Router`, `ConfirmDialogService` (Grep the import paths in the two component files). `CompanyApiService.getBankAccounts` returns `of([{ id: 5, bank_name: 'Mellat', account_title: 'Main', is_primary: true, is_active: true }])`.
+
+3. Task A — new file `frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts` (`// @vitest-environment jsdom` first line). The treasury cartable mock returns one invoice `{ id: 7, invoice_number: 'F-7', number: 'INV-1405-0007', amount: 1000000, paid_amount: '400000', remaining: '600000', status: 'partially_paid', counterparty: null }`. One `it` each:
+- a) the row shows the label for `partially_paid` and a button whose text contains the payment label; clicking it opens the modal (`app-modal` content visible) and calls `getInvoicePayments(7)`; the amount input default equals the remaining 600000.
+- b) the payments list renders one row per payment from `getInvoicePayments` (two payments, one with `is_voided: true` shown with class `line-through` on its amount cell).
+- c) with method `cash` the company account select (`#pay-company-account`) is not rendered; with `transfer` it is rendered.
+- d) submitting with an empty tracking code shows the field error element `#pay-tracking-err` and does not call `addInvoicePayment`.
+- e) a valid submit calls `addInvoicePayment(7, body)` with `amount`, `payment_date_shamsi`, `tracking_code`, `method`, `company_bank_account: 5`; when the result has `remaining: '0'` the modal closes.
+- f) a 400 response `{ amount: ['too much'] }` shows `#pay-amount-err` with that text; a 409 `{ code: 'void_after_full_payment', error: 'X' }` on void shows `X` in the reason dialog (`serverError`).
+- g) clicking the void button of a payment opens the reason dialog; confirming with a reason calls `voidInvoicePayment(7, paymentId, reason)`.
+- h) the component source has no `window.prompt` call for invoices: read nothing from disk; instead assert `vi.spyOn(window, 'prompt')` is never called during a) to g) (put the spy in `beforeEach`).
+
+4. Task B — new file `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices-lines.dom.spec.ts`. Open the new invoice modal through `component.openNewInvoiceModal()` then `fixture.detectChanges()`. One `it` each:
+- a) the lines table renders one row; clicking the add-line button renders two rows; the remove button of row 2 removes it.
+- b) setting two lines (quantity × unit price) updates the displayed subtotal and payable total text (Persian digits: compare with `component.formatNumber(value)`).
+- c) turning the VAT checkbox on shows the VAT amount input; turning it off hides it.
+- d) when `getExpenseInvoiceDuplicates` returns `{ count: 1, results: [...] }` after `onDuplicateKeyChange()` and `vi.advanceTimersByTime(500)` (fake timers), the duplicate warning block is rendered.
+- e) `submitExpenseInvoice` returning 400 `{ code: 'duplicate_reason_required' }` opens `app-workflow-reason-dialog` (`open` true); confirming calls `submitExpenseInvoice(id, reason)`.
+- f) `window.prompt` is never called (spy in `beforeEach`).
+
+5. Task C — `Documents/Release_v1/glossary.md`: add five rows at the end of the existing table (before the closing `</div>`), same 4 columns as the rows above (term, simple definition, words to avoid, code name):
+- «پرداخت ناقص» — invoice with some instalments paid and some amount remaining — `status='partially_paid'`.
+- «قسط» — one payment toward an invoice, with date, method, bank account and tracking code — `InvoicePayment`.
+- «ابطال قسط» — cancelling a wrong instalment with a reason; the amount returns to the remaining; not allowed after full payment — `is_voided` / `void_reason`.
+- «مشمول مالیات» — invoice that carries value-added tax; the amount is suggested and can be changed by hand — `vat_applicable` / `vat_manual`.
+- «شمارهٔ تکراری» — same supplier invoice number from the same counterparty already registered; submit needs a reason — `possible_duplicate` / `duplicate_reason`.
+Write the definitions in simple Persian like the rows above.
+
+6. Tool policy: only reading the listed files, Grep in `frontend/src/app/modules/accounting/` and `frontend/src/app/shared/`, writing the three files, the test command below, `git add` of those files, `git commit`, `git status --short`. Test command, in the repository root (it builds a temporary test config, so plain `ng test` is not used): `python scripts/automation/verify_tools.py ng-test-compare --base e9488532 --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts"`; the per-test log is `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+7. Before finishing: all tests in both folders pass; commit only the three files with the message `test(release-v1 4.1-c): invoice payment modal and lines form DOM specs, glossary`; `git status --short` prints nothing.
+
+8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های پروتکل اجباری (4-Step Protocol)
+
+۱. **توضیح ساده (Explain Simply):**
+بررسی خودکار رانر (`spec-check`) به دلیل وجود importهای `fs`/`path` و متغیر `__dirname` در دو فایل تست DOM با خطا مواجه شد و درخواست اصلاح این مورد را داد.
+
+۲. **بررسی فوری (Verify Immediately):**
+- ابزار `verify_tools.py spec-check` وارد کردن پکیج‌های Node (`fs`, `path`) و `__dirname` را در تست‌های مرورگر/DOM مجاز نمی‌داند؛ چرا که فرایند کامپایل و باندل کلاینت Angular خودش قالب‌ها را پردازش می‌کند و نیازی به `ɵresolveComponentResources` دستی با `fs.readFileSync` نیست (همان‌طور که در سایر تست‌های DOM مانند `counterparties.dom.spec.ts` عمل شده است).
+
+۳. **رد یا تایید فرضیه (Decision...
+
+---

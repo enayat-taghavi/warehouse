@@ -2439,7 +2439,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.1-c: invoice payment modal and lines form DOM specs, glossary
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.1-c: invoice payment modal and lines form DOM specs, glossary
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
