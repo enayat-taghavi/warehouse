@@ -200,13 +200,9 @@ class DocumentTests(HeadFixtures):
         self.assertEqual(PettyCashTransaction.objects.get(pk=r.json()['id']).category, self.head.title)
 
     def test_replenishment_keeps_its_text(self):
+        # طرح ۳.۶ (ص۱۰): مسیر قدیمی شارژ کنار رفته است (جایش request-charge روی موتور) و سندی نمی‌سازد
+        before = PettyCashTransaction.objects.count()
         r = self.api.post(f'{PETTY}request-replenishment/', {'section_id': self.sec.id, 'amount': '5000'},
                           format='json')
-        self.assertEqual(r.status_code, 201, r.content)
-        tx = PettyCashTransaction.objects.get(pk=r.json()['id'])
-        self.assertEqual(tx.category, 'شارژ مجدد تنخواه')
-        self.assertIsNone(tx.expense_head_id)
-        r = self.api.patch(f'{PETTY}{tx.id}/', {'title': 'عنوان تازه'}, format='json')
-        self.assertEqual(r.status_code, 200, r.content)
-        tx.refresh_from_db()
-        self.assertEqual(tx.category, 'شارژ مجدد تنخواه')
+        self.assertEqual(r.status_code, 410, r.content)
+        self.assertEqual(PettyCashTransaction.objects.count(), before)

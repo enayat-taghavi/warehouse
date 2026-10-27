@@ -20,6 +20,7 @@ from ..models import (
     PartyBankAccount,
     ExpenseInvoice,
     PettyCashAccount,
+    PettyCashStatement,
     PettyCashTransaction,
     WorkflowAuditLog,
 )
@@ -284,16 +285,60 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
             return f"{obj.paid_by.first_name} {obj.paid_by.last_name}".strip() or obj.paid_by.username
         return None
 
+def _section_value(obj, path):
+    """مقدار از بخش (یا پروژهٔ بخش)؛ بخش در حساب و ردیف تنخواه اختیاری است (ص۹ طرح ۳.۶)."""
+    value = obj
+    for attr in path:
+        value = getattr(value, attr, None)
+        if value is None:
+            return None
+    return value
+
+
+def _petty_locked(serializer, company_id, day):
+    """قفل دورهٔ مالی بسته (ص۱۱ طرح ۳.۶) با کش هر پاسخ تا فهرست برای هر ردیف پرس‌وجو نزند."""
+    from personnel.fiscal import closed_period_for
+    cache = serializer.context.setdefault('_petty_lock_cache', {})
+    key = (company_id, day)
+    if key not in cache:
+        cache[key] = closed_period_for(company_id, day) is not None
+    return cache[key]
+
+
 class PettyCashAccountSerializer(serializers.ModelSerializer):
-    section_name = serializers.CharField(source='section.name', read_only=True)
-    project_id = serializers.IntegerField(source='section.project.id', read_only=True)
-    project_name = serializers.CharField(source='section.project.name', read_only=True)
+    section_name = serializers.SerializerMethodField()
+    project_id = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
     custodian_name = serializers.SerializerMethodField()
+    company_name = serializers.CharField(source='company.name', read_only=True, default=None)
+    # بدهی = جمع ردیف‌های ردشده (ص۵)؛ queryset با PettyCashAccount.annotate_debt یک کوئری کمتر می‌زند
+    debt = serializers.DecimalField(max_digits=15, decimal_places=0, read_only=True)
 
     class Meta:
         model = PettyCashAccount
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at', 'company']
+
+    get_section_name = staticmethod(lambda obj: _section_value(obj, ('section', 'name')))
+    get_project_id = staticmethod(lambda obj: _section_value(obj, ('section', 'project', 'id')))
+    get_project_name = staticmethod(lambda obj: _section_value(obj, ('section', 'project', 'name')))
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        # یک حساب فعال برای هر (شرکت، تنخواه‌گردان) — همان قید پایگاه داده با پیام فارسی
+        instance = getattr(self, 'instance', None)
+        section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
+        company_id = getattr(instance, 'company_id', None) or (section.project.company_id if section else None)
+        custodian = attrs['custodian'] if 'custodian' in attrs else getattr(instance, 'custodian', None)
+        is_active = attrs['is_active'] if 'is_active' in attrs else getattr(instance, 'is_active', True)
+        if company_id and custodian is not None and is_active:
+            clash = PettyCashAccount.objects.filter(company_id=company_id, custodian=custodian, is_active=True)
+            if instance is not None:
+                clash = clash.exclude(pk=instance.pk)
+            if clash.exists():
+                raise serializers.ValidationError(
+                    {'custodian': "این شخص در این شرکت از قبل یک حساب تنخواه فعال دارد."})
+        return attrs
 
     def get_custodian_name(self, obj):
         if obj.custodian:
@@ -301,9 +346,11 @@ class PettyCashAccountSerializer(serializers.ModelSerializer):
         return None
 
 class PettyCashTransactionSerializer(serializers.ModelSerializer):
-    section_name = serializers.CharField(source='section.name', read_only=True)
-    project_id = serializers.IntegerField(source='section.project.id', read_only=True)
-    project_name = serializers.CharField(source='section.project.name', read_only=True)
+    section_name = serializers.SerializerMethodField()
+    # پروژهٔ ردیف: پروژهٔ اختیاری خود ردیف، وگرنه پروژهٔ بخش (ص۱ طرح ۳.۶)
+    project_id = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
+    line_status_display = serializers.CharField(source='get_line_status_display', read_only=True)
     custodian_name = serializers.SerializerMethodField()
     counterparty_name = serializers.CharField(source='counterparty.party.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -312,11 +359,26 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
     expense_head_code = serializers.SerializerMethodField()
     expense_head_title = serializers.SerializerMethodField()
     expense_head_group_title = serializers.SerializerMethodField()
+    is_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = PettyCashTransaction
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'category']
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'category',
+                            'statement', 'line_status', 'line_reject_reason']
+
+    get_section_name = staticmethod(lambda obj: _section_value(obj, ('section', 'name')))
+
+    def get_is_locked(self, obj):
+        return _petty_locked(self, obj.wf_company_id, obj.transaction_date_shamsi)
+
+    def get_project_id(self, obj):
+        return obj.project_id or _section_value(obj, ('section', 'project', 'id'))
+
+    def get_project_name(self, obj):
+        if obj.project_id:
+            return obj.project.name
+        return _section_value(obj, ('section', 'project', 'name'))
 
     get_expense_head_code = staticmethod(lambda obj: _head_value(obj, 'code'))
     get_expense_head_title = staticmethod(lambda obj: _head_value(obj, 'title'))
@@ -335,8 +397,28 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
             instance = getattr(self, 'instance', None)
             account = attrs['account'] if 'account' in attrs else getattr(instance, 'account', None)
             section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
-            if account is not None and section is not None and account.section_id != section.pk:
-                raise serializers.ValidationError({'account': "حساب تنخواه انتخاب‌شده متعلق به بخش این سند نیست."})
+            if account is not None and section is not None:
+                # حساب قدیمی بخش‌دار: همان بخش؛ حساب سطح شرکت: بخش باید از همان شرکت باشد
+                if account.section_id is not None and account.section_id != section.pk:
+                    raise serializers.ValidationError({'account': "حساب تنخواه انتخاب‌شده متعلق به بخش این سند نیست."})
+                if account.section_id is None and account.company_id != section.project.company_id:
+                    raise serializers.ValidationError({'section': "بخش انتخاب‌شده از شرکت این حساب تنخواه نیست."})
+        # پروژهٔ اختیاری باید با بخش و شرکت حساب جور باشد
+        if 'project' in attrs and attrs['project'] is not None:
+            project = attrs['project']
+            account = attrs['account'] if 'account' in attrs else getattr(instance, 'account', None)
+            section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
+            if section is not None and section.project_id != project.pk:
+                raise serializers.ValidationError({'project': "پروژهٔ انتخاب‌شده با بخش این سند جور نیست."})
+            if account is not None and account.company_id and account.company_id != project.company_id:
+                raise serializers.ValidationError({'project': "پروژهٔ انتخاب‌شده از شرکت این حساب تنخواه نیست."})
+        # ردیف بی‌بخش: طرف‌حساب با شرکت حساب سنجیده می‌شود (validate_counterparty_company بخش می‌خواهد)
+        account = attrs['account'] if 'account' in attrs else getattr(instance, 'account', None)
+        section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
+        counterparty = attrs['counterparty'] if 'counterparty' in attrs else getattr(instance, 'counterparty', None)
+        if section is None and account is not None and counterparty is not None \
+                and counterparty.company_id != account.company_id:
+            raise serializers.ValidationError({'counterparty': "طرف‌حساب انتخاب‌شده متعلق به شرکت این حساب تنخواه نیست."})
         return attrs
 
     def get_custodian_name(self, obj):
@@ -348,6 +430,40 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.username
         return None
+
+
+class PettyCashStatementSerializer(serializers.ModelSerializer):
+    """صورت‌حساب تنخواه (ص۴ و ص۹ طرح ۳.۶). وضعیت و مبلغ‌ها را فقط سرور و گردش کار عوض می‌کنند."""
+    company_name = serializers.CharField(source='company.name', read_only=True, default=None)
+    custodian_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    lines_count = serializers.SerializerMethodField()
+    is_locked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PettyCashStatement
+        fields = '__all__'
+        read_only_fields = ['company', 'custodian', 'total_amount', 'approved_amount', 'status',
+                            'document_number', 'created_by', 'created_at', 'updated_at']
+
+    def get_custodian_name(self, obj):
+        if obj.custodian:
+            return f"{obj.custodian.first_name} {obj.custodian.last_name}".strip() or obj.custodian.username
+        return None
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.username
+        return None
+
+    def get_is_locked(self, obj):
+        return obj.status == 'paid' or _petty_locked(self, obj.company_id, obj.statement_date_shamsi)
+
+    def get_lines_count(self, obj):
+        annotated = getattr(obj, 'lines_count', None)
+        return annotated if annotated is not None else obj.lines.count()
+
 
 class WorkflowAuditLogSerializer(serializers.ModelSerializer):
     actor_name = serializers.SerializerMethodField()

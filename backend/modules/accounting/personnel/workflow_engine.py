@@ -76,7 +76,13 @@ def _document_event_fields(instance):
         section = getattr(instance, 'section', None)
         project = getattr(section, 'project', None) if section is not None else None
         doc_type = 'expense_invoice' if name == 'ExpenseInvoice' else 'petty_cash'
-        return doc_type, getattr(project, 'company_id', None), instance.section_id, instance.status
+        company_id = getattr(project, 'company_id', None)
+        if company_id is None and name == 'PettyCashTransaction':
+            # ردیف تنخواه سطح شرکت (بی‌بخش، ص۱ طرح ۳.۶): شرکت از حساب
+            company_id = instance.wf_company_id
+        return doc_type, company_id, instance.section_id, instance.status
+    if name == 'PettyCashStatement':
+        return 'petty_cash_statement', instance.company_id, None, instance.status
     if name == 'MonthlyPayrollRecord':
         personnel = getattr(instance, 'personnel', None)
         return ('payroll_record', getattr(personnel, 'company_id', None), getattr(personnel, 'section_id', None),

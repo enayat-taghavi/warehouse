@@ -321,9 +321,15 @@ def _ensure_cartable_section_permission(instance, user):
     سد بخشی اقدام کارتابل (اصلاح ۲.۲): تنخواه ← مدیریت تنخواه همان بخش، فاکتور ← ثبت و دیدن فاکتور
     همان بخش، پروندهٔ پرسنل ← قلمرو پرونده. سطح در همان بخش را موتور گردش کار می‌سنجد.
     """
+    if isinstance(instance, PettyCashTransaction) and \
+            instance.status not in ('pending_supervisor', 'pending_accountant'):
+        raise PermissionDenied("این سند تنخواه از راه گردش کار تازه (کارهای من) پیش می‌رود.")
     if user.is_superuser:
         return
     if isinstance(instance, PettyCashTransaction):
+        # ص۱۰ طرح ۳.۶: کارتابل قدیمی فقط سند قدیمی در انتظار سرپرست یا حسابدار را می‌بندد
+        if instance.status not in ('pending_supervisor', 'pending_accountant'):
+            raise PermissionDenied("این سند تنخواه از راه گردش کار تازه (کارهای من) پیش می‌رود.")
         if instance.section_id is None:
             raise PermissionDenied("شما مجوز مدیریت تنخواه این بخش را ندارید.")
         _ensure_petty_cash_manager(user, instance.section_id)
@@ -474,7 +480,8 @@ class SupervisorCartableAPIView(APIView):
         # اسناد تنخواه‌گردان نیازمند بررسی سرپرست
         petty_cash_qs = _filter_by_company(
             PettyCashTransaction.objects.filter(
-                status__in=[WorkflowStatuses.PENDING_SUPERVISOR, 'pending_supervisor', WorkflowStatuses.DRAFT, 'draft', WorkflowStatuses.REVISION_REQUIRED, 'revision_required']
+                # ص۱۰ طرح ۳.۶: فقط سند قدیمی در انتظار سرپرست؛ پیش‌نویس‌های تازه به گردش موتور (شارژ/صورت‌حساب) می‌روند
+                status__in=[WorkflowStatuses.PENDING_SUPERVISOR, 'pending_supervisor']
             ).select_related('section', 'custodian'),
             'petty_cash', company_ids
         )

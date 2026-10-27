@@ -83,6 +83,7 @@ from .views_domains.treasury_views import (
     ExpenseInvoiceViewSet,
     PettyCashAccountViewSet,
     PettyCashTransactionViewSet,
+    PettyCashStatementViewSet,
     WorkflowAuditLogViewSet,
 )
 
@@ -166,6 +167,7 @@ __all__ = [
     'ExpenseInvoiceViewSet',
     'PettyCashAccountViewSet',
     'PettyCashTransactionViewSet',
+    'PettyCashStatementViewSet',
     'WorkflowAuditLogViewSet',
     'PayrollYearlySettingsViewSet',
     'MonthlyPayrollViewSet',

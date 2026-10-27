@@ -2,7 +2,10 @@ from decimal import Decimal
 from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.db.models import Q, Sum, Value
+from django.db.models.functions import Coalesce
 from companies.models import Company
 
 # فیلدهای هویتی که Counterparty.objects.create برای ساخت طرف بیرونی می‌پذیرد (سازگاری با کد و تست‌های پیشین)
@@ -267,13 +270,24 @@ class ExpenseInvoice(models.Model):
 
 class PettyCashAccount(models.Model):
     """
-    حساب / صندوق تنخواه‌گردان بخش پروژه منتسب به کارمند (تنخواه‌دار)
+    حساب / صندوق تنخواه‌گردان در سطح شرکت منتسب به کارمند (تنخواه‌دار) — ص۱ و ص۹ طرح ۳.۶.
+    در هر شرکت برای هر نفر فقط یک حساب فعال. `section` فقط برای حساب‌های قدیمی پر است.
     """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='petty_cash_accounts',
+        verbose_name="شرکت"
+    )
     section = models.ForeignKey(
         'companies.ProjectSection',
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='petty_cash_accounts',
-        verbose_name="بخش پروژه"
+        verbose_name="بخش پروژه (فقط حساب‌های قدیمی)"
     )
     custodian = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -307,12 +321,138 @@ class PettyCashAccount(models.Model):
     class Meta:
         verbose_name = "حساب تنخواه‌گردان"
         verbose_name_plural = "حساب‌های تنخواه‌گردان"
-        unique_together = ('section', 'custodian')
         ordering = ['section', 'custodian']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['company', 'custodian'],
+                condition=Q(is_active=True),
+                name='uniq_active_petty_cash_per_company_custodian',
+            ),
+        ]
 
     def __str__(self):
         custodian_name = f"{self.custodian.first_name} {self.custodian.last_name}".strip() or self.custodian.username
-        return f"تنخواه {self.section.name} - {custodian_name} (سقف: {self.ceiling_amount:,.0f} ریال)"
+        owner = self.section.name if self.section_id else (self.company.name if self.company_id else '-')
+        return f"تنخواه {owner} - {custodian_name} (سقف: {self.ceiling_amount:,.0f} ریال)"
+
+    def clean(self):
+        super().clean()
+        if not self.company_id and not self.section_id:
+            raise ValidationError({'company': "شرکت حساب تنخواه مشخص نیست."})
+
+    def save(self, *args, **kwargs):
+        # سازگاری با مسیرهای قدیمی که فقط بخش می‌دهند: شرکت از بخش ← پروژه گرفته می‌شود
+        if not self.company_id and self.section_id:
+            self.company_id = self.section.project.company_id
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def debt_expression():
+        """عبارت جمع ردیف‌های ردشده (بدهی تنخواه‌گردان، ص۵) برای annotate روی queryset حساب‌ها."""
+        return Coalesce(
+            Sum('transactions__amount', filter=Q(transactions__line_status='rejected')),
+            Value(Decimal('0')),
+            output_field=models.DecimalField(max_digits=15, decimal_places=0),
+        )
+
+    @classmethod
+    def annotate_debt(cls, queryset):
+        """queryset را با `debt_amount` (جمع ردیف‌های ردشده) برمی‌گرداند؛ سریالایزر اول آن را می‌خواند."""
+        return queryset.annotate(debt_amount=cls.debt_expression())
+
+    @property
+    def debt(self):
+        """بدهی تنخواه‌گردان: جمع مبلغ ردیف‌های ردشدهٔ همین حساب (ص۵ طرح ۳.۶)."""
+        annotated = getattr(self, 'debt_amount', None)
+        if annotated is not None:
+            return annotated
+        if not self.pk:
+            return Decimal('0')
+        total = self.transactions.filter(line_status='rejected').aggregate(s=Sum('amount'))['s']
+        return total or Decimal('0')
+
+
+class PettyCashStatement(models.Model):
+    """
+    صورت‌حساب تنخواه (ص۴ و ص۹ طرح ۳.۶): چند هزینهٔ ثبت‌شدهٔ یک حساب که با هم فرستاده می‌شوند.
+    `status` وضعیت سند است؛ وضعیت گردش کار جداست (موتور ۲.۳).
+    """
+    STATUS_CHOICES = (
+        ('draft', 'پیش‌نویس'),
+        ('submitted', 'ارسال‌شده'),
+        ('approved', 'تأییدشده'),
+        ('paid', 'پرداخت‌شده'),
+        ('returned', 'عودت‌شده'),
+    )
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name='petty_cash_statements',
+        verbose_name="شرکت"
+    )
+    account = models.ForeignKey(
+        PettyCashAccount,
+        on_delete=models.PROTECT,
+        related_name='statements',
+        verbose_name="حساب تنخواه"
+    )
+    custodian = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='petty_cash_statements',
+        verbose_name="تنخواه‌دار"
+    )
+    statement_date_shamsi = models.CharField(
+        max_length=10,
+        verbose_name="تاریخ صورت‌حساب (شمسی)"
+    )
+    total_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=0,
+        default=0,
+        verbose_name="جمع مبلغ ردیف‌ها (ریال)"
+    )
+    approved_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=0,
+        default=0,
+        verbose_name="جمع مبلغ ردیف‌های تأییدشده (ریال)"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        verbose_name="وضعیت"
+    )
+    document_number = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        verbose_name="شماره سند"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_petty_cash_statements',
+        verbose_name="ثبت‌کننده"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "صورت‌حساب تنخواه"
+        verbose_name_plural = "صورت‌حساب‌های تنخواه"
+        ordering = ['-statement_date_shamsi', '-created_at']
+        indexes = [
+            models.Index(fields=['company', 'status']),
+        ]
+
+    def __str__(self):
+        return f"صورت‌حساب تنخواه {self.pk} - {self.statement_date_shamsi} ({self.total_amount:,.0f} ریال)"
+
 
 class PettyCashTransaction(models.Model):
     """
@@ -333,7 +473,7 @@ class PettyCashTransaction(models.Model):
 
     account = models.ForeignKey(
         PettyCashAccount,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name='transactions',
@@ -342,14 +482,50 @@ class PettyCashTransaction(models.Model):
     section = models.ForeignKey(
         'companies.ProjectSection',
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='petty_cash_transactions',
-        verbose_name="بخش پروژه"
+        verbose_name="بخش پروژه (اختیاری)"
+    )
+    # پروژهٔ اختیاری برای گزارش (ص۱ طرح ۳.۶)
+    project = models.ForeignKey(
+        'companies.Project',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='petty_cash_transactions',
+        verbose_name="پروژه (اختیاری)"
     )
     custodian = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='petty_cash_transactions',
         verbose_name="تنخواه‌دار"
+    )
+    # ردیف صورت‌حساب تنخواه (ص۴ و ص۹ طرح ۳.۶)
+    LINE_STATUS_CHOICES = (
+        ('open', 'باز'),
+        ('approved', 'تأییدشده'),
+        ('rejected', 'ردشده'),
+    )
+    statement = models.ForeignKey(
+        PettyCashStatement,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='lines',
+        verbose_name="صورت‌حساب تنخواه"
+    )
+    line_status = models.CharField(
+        max_length=10,
+        choices=LINE_STATUS_CHOICES,
+        default='open',
+        verbose_name="وضعیت ردیف در صورت‌حساب"
+    )
+    line_reject_reason = models.TextField(
+        blank=True,
+        default='',
+        verbose_name="دلیل رد ردیف"
     )
     transaction_type = models.CharField(
         max_length=20,
@@ -442,6 +618,15 @@ class PettyCashTransaction(models.Model):
 
     def __str__(self):
         return f"{self.get_transaction_type_display()} - {self.title} ({self.amount:,.0f} ریال)"
+
+    @property
+    def wf_company_id(self):
+        """شرکت ردیف برای گردش سطح شرکت (company_field='wf_company'، ص۷ طرح ۳.۶): شرکت حساب، وگرنه شرکت بخش."""
+        if self.account_id and self.account.company_id:
+            return self.account.company_id
+        if self.section_id:
+            return self.section.project.company_id
+        return None
 
 class AccountingEvent(models.Model):
     """

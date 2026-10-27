@@ -58,7 +58,9 @@ class AccountantCartableSectionScopeTests(TestCase):
             )
             # ت۱۷ طرح ۲.۳: کارتابل فاکتور از کارهای موتور گردش کار خوانده می‌شود
             wf_engine.submit(INVOICE_WORKFLOW, self.inv[i], self.creator)
-            account = PettyCashAccount.objects.create(section=sec, custodian=self.custodian, ceiling_amount=Decimal('100000'))
+            # طرح ۳.۶ (ص۹): یک حساب فعال برای هر (شرکت، تنخواه‌گردان)؛ حساب قدیمی دوم مثل migration 0014 غیرفعال است
+            account = PettyCashAccount.objects.create(section=sec, custodian=self.custodian,
+                                                      ceiling_amount=Decimal('100000'), is_active=(i == 1))
             self.pc[i] = PettyCashTransaction.objects.create(
                 account=account, section=sec, custodian=self.custodian, transaction_type='expense',
                 amount=Decimal('500'), transaction_date_shamsi='1404/05/02', title='t', category='c',

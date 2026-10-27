@@ -105,7 +105,8 @@ def _ensure_invoice_open(invoice):
 
 
 def _ensure_petty_cash_open(tx):
-    _ensure_doc_period_open(tx.section, tx.transaction_date_shamsi, 'transaction_date_shamsi')
+    # شرکت ردیف از حساب سطح شرکت، وگرنه از بخش (ردیف قدیمی)؛ ص۱۱ طرح ۳.۶
+    ensure_period_open(tx.wf_company_id, tx.transaction_date_shamsi, 'transaction_date_shamsi')
 
 
 def _section_id(value):
@@ -130,6 +131,82 @@ def _ensure_own_petty_cash_section(user, section):
 def _ensure_petty_cash_manager(user, section, message="شما مجوز مدیریت تنخواه این بخش را ندارید."):
     if not user.is_superuser and not can(user, PETTY_CASH_MANAGE_PERM, section):
         raise PermissionDenied(message)
+
+
+# ─── تنخواه سطح شرکت (طرح ۳.۶) ─────────────────────────────────────────────────────────────────────
+from accounts.scoped_permissions import can_at_company_level, codes_in_company
+from workflow.models import WorkflowInstance
+from ..models import PettyCashStatement
+from ..serializers import PettyCashStatementSerializer
+from ..fiscal import to_shamsi_str
+from ..expense_heads import PETTY_CASH_FIXED_CATEGORY
+from ..workflows import (
+    PETTY_CHARGE_ENTITY, PETTY_CHARGE_WORKFLOW, PETTY_MANAGER_PERM, PETTY_REVIEW_PERM,
+    PETTY_STATEMENT_ENTITY, PETTY_STATEMENT_LINE_REJECT_STEPS, PETTY_STATEMENT_WORKFLOW, PETTY_COMPANY_VIEW_PERMS,
+    is_petty_statement_locked, petty_company_allowed, petty_fund_level, recompute_statement,
+)
+from .scope_helpers import resolve_write_company
+
+# ص۱۰: اسناد قدیمی در این وضعیت‌ها فقط با اکشن قدیمی حسابدار بسته می‌شوند؛ سند تازه هرگز به آن‌ها نمی‌رود
+LEGACY_PETTY_PENDING = ('pending_supervisor', 'pending_accountant')
+PETTY_RETIRED_MSG = 'این مسیر قدیمی تنخواه کنار رفته است؛ از درخواست شارژ یا صورت‌حساب تنخواه استفاده کنید.'
+
+
+def _petty_retired():
+    return Response({'code': 'petty_cash_path_retired', 'error': PETTY_RETIRED_MSG, 'detail': PETTY_RETIRED_MSG},
+                    status=status.HTTP_410_GONE)
+
+
+def _petty_viewer_company_ids(user):
+    """شرکت‌های مجاز کاربر که در آن‌ها تنخواه دیگران را در سطح شرکت می‌بیند (مدیریت تنخواه یا مجوز مرحله‌ها)."""
+    allowed = get_user_allowed_companies(user).values_list('id', flat=True)
+    return [cid for cid in allowed
+            if any(can_at_company_level(user, code, cid) for code in PETTY_COMPANY_VIEW_PERMS)]
+
+
+def _petty_tx_company_q(company_ids):
+    return Q(account__company_id__in=company_ids) | Q(account__isnull=True, section__project__company_id__in=company_ids)
+
+
+def _ensure_petty_custodian(user, company_id):
+    """ص۱: ثبت هزینه و درخواست تنخواه فقط با «مدیریت تنخواه» در همان شرکت (هر سطح انتساب) و فقط برای حساب خود."""
+    if not petty_company_allowed(user, company_id):
+        raise PermissionDenied("شما به این شرکت دسترسی ندارید.")
+    if not user.is_superuser and PETTY_CASH_MANAGE_PERM not in codes_in_company(user, company_id):
+        raise PermissionDenied("شما در این شرکت مجوز ثبت تنخواه ندارید.")
+
+
+def _own_petty_account(user, company_id, create=False):
+    account = PettyCashAccount.objects.filter(company_id=company_id, custodian=user, is_active=True).first()
+    if account is None and create:
+        from django.db import IntegrityError
+        try:
+            with transaction.atomic():
+                # سقف تعیین‌نشده (۰): هر شارژ تا تعیین سقف به دست مدیر، به تأیید مدیر می‌رسد (ص۳)
+                account = PettyCashAccount.objects.create(company_id=company_id, custodian=user, ceiling_amount=0)
+        except IntegrityError:
+            account = PettyCashAccount.objects.filter(company_id=company_id, custodian=user, is_active=True).first()
+    return account
+
+
+def _charge_in_progress(tx):
+    inst = wf_engine.instance_of(PETTY_CHARGE_WORKFLOW, tx.pk)
+    return inst is not None and inst.status == WorkflowInstance.IN_PROGRESS
+
+
+def _ensure_petty_tx_editable(tx):
+    if tx.status != 'draft' or tx.statement_id or _charge_in_progress(tx):
+        raise PermissionDenied("این سند تنخواه در گردش کار، در صورت‌حساب یا بسته‌شده است و تغییر نمی‌کند.")
+
+
+def _petty_wf_error(exc):
+    return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+
+
+def _log_petty_audit(user, content_type, object_id, action_name, from_status='', to_status='', reason='', **metadata):
+    WorkflowAuditLog.objects.create(content_type=content_type, object_id=object_id, actor=user,
+                                    from_status=from_status, to_status=to_status, action=action_name,
+                                    reason=reason, metadata=metadata)
 
 def _tab_id(request):
     return request.headers.get('X-Client-Tab-Id') or (request.data.get('client_tab_id') if hasattr(request.data, 'get') else None)
@@ -676,47 +753,88 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = PettyCashAccount.annotate_debt(super().get_queryset().select_related('company'))
         user = self.request.user
         cid = validate_user_company_access(user, get_request_company_id(self.request))
         if cid:
-            qs = qs.filter(section__project__company_id=cid)
+            qs = qs.filter(company_id=cid)
         section_id = self.request.query_params.get('section_id')
         if section_id:
             qs = qs.filter(section_id=section_id)
         custodian_id = self.request.query_params.get('custodian_id')
         if custodian_id:
             qs = qs.filter(custodian_id=custodian_id)
-        # مدیر تنخواه حساب‌های بخش‌هایی را می‌بیند که در آن‌ها «مدیریت تنخواه» دارد (با یا بی section_id؛
-        # انتساب سطح شرکت یعنی همهٔ بخش‌های همان شرکت)؛ هر کس حساب‌های تنخواه خودش را هم می‌بیند.
+        # ص۱ طرح ۳.۶: حساب سطح شرکت است. همیشه فقط شرکت‌های مجاز کاربر؛ در آن‌ها حساب خودش، همهٔ حساب‌های شرکتی
+        # که در آن انتساب سطح شرکت با مدیریت تنخواه یا مجوز مرحله‌ها دارد، و حساب قدیمی بخش‌هایی که مدیر تنخواه آن‌هاست.
         if not user.is_superuser:
-            qs = qs.filter(
-                Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id')) | Q(custodian=user)
+            qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
+                Q(custodian=user)
+                | Q(company_id__in=_petty_viewer_company_ids(user))
+                | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
             )
-        return qs.order_by('section', 'custodian')
+        return qs.order_by('company', 'custodian')
+
+    def _can_manage(self, user, account_or_company_id, section_id=None):
+        company_id = getattr(account_or_company_id, 'company_id', account_or_company_id)
+        return (can_at_company_level(user, PETTY_CASH_MANAGE_PERM, company_id)
+                or can_at_company_level(user, PETTY_MANAGER_PERM, company_id)
+                or bool(section_id and can(user, PETTY_CASH_MANAGE_PERM, section_id)))
 
     def perform_create(self, serializer):
         user = self.request.user
-        section = serializer.validated_data.get('section')
-        if section and section.project and section.project.company and not user.is_superuser:
-            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-            if section.project.company_id not in allowed_ids:
-                raise PermissionDenied("شما مجاز به تعریف حساب تنخواه برای این شرکت نیستید.")
-        # تعریف حساب و سقف تنخواه کار مدیر تنخواه همان بخش است
-        _ensure_petty_cash_manager(user, section, "شما مجوز تعریف حساب تنخواه در این بخش را ندارید.")
-        serializer.save()
+        vd = serializer.validated_data
+        section = vd.pop('section', None)
+        # کلاینت قدیمی بخش می‌فرستد: شرکت از بخش؛ وگرنه شرکت فعال درخواست. حساب تازه بخش نمی‌گیرد (ص۹).
+        company_id = section.project.company_id if section is not None else resolve_write_company(self.request)
+        if not petty_company_allowed(user, company_id):
+            raise PermissionDenied("شما مجاز به تعریف حساب تنخواه برای این شرکت نیستید.")
+        if not self._can_manage(user, company_id):
+            raise PermissionDenied("تعریف حساب تنخواه فقط با مجوز مدیریت تنخواه در سطح شرکت ممکن است.")
+        custodian = vd.get('custodian')
+        if custodian is None or not (custodian.is_superuser or
+                                     get_user_allowed_companies(custodian).filter(id=company_id).exists()):
+            raise ValidationError({'custodian': "تنخواه‌گردان باید عضو همین شرکت باشد."})
+        if vd.get('is_active', True) and PettyCashAccount.objects.filter(
+                company_id=company_id, custodian=custodian, is_active=True).exists():
+            raise ValidationError({'custodian': "این شخص در این شرکت از قبل یک حساب تنخواه فعال دارد."})
+        ceiling = vd.get('ceiling_amount') or Decimal('0')
+        if ceiling and not can_at_company_level(user, PETTY_MANAGER_PERM, company_id):
+            raise PermissionDenied("سقف حساب تنخواه را فقط مدیر تعیین می‌کند.")
+        account = serializer.save(company_id=company_id, section=None)
+        if ceiling:
+            _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change', '0', str(int(ceiling)),
+                             company_id=company_id, custodian_id=account.custodian_id)
 
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
-        _ensure_petty_cash_manager(user, instance.section_id, "شما مجوز ویرایش حساب تنخواه این بخش را ندارید.")
-        new_section = serializer.validated_data.get('section')
-        if new_section is not None and new_section.pk != instance.section_id:
-            _ensure_petty_cash_manager(user, new_section, "شما مجوز مدیریت تنخواه بخش مقصد را ندارید.")
-        serializer.save()
+        vd = serializer.validated_data
+        if not self._can_manage(user, instance, instance.section_id):
+            raise PermissionDenied("شما مجوز ویرایش حساب تنخواه این شرکت را ندارید.")
+        vd.pop('section', None)
+        if 'custodian' in vd and vd['custodian'].pk != instance.custodian_id:
+            raise ValidationError({'custodian': "تنخواه‌گردان حساب عوض نمی‌شود؛ حساب تازه تعریف کنید."})
+        old_ceiling = instance.ceiling_amount
+        new_ceiling = vd.get('ceiling_amount', old_ceiling)
+        if new_ceiling != old_ceiling and not can_at_company_level(user, PETTY_MANAGER_PERM, instance.company_id):
+            # ص۳: سقف را فقط مدیر (مجوز تأیید پرداخت در سطح شرکت) تعیین یا عوض می‌کند، نه حسابدار
+            raise PermissionDenied("سقف حساب تنخواه را فقط مدیر تعیین یا عوض می‌کند.")
+        if vd.get('is_active') and not instance.is_active and PettyCashAccount.objects.filter(
+                company_id=instance.company_id, custodian_id=instance.custodian_id, is_active=True).exists():
+            raise ValidationError({'custodian': "این شخص در این شرکت از قبل یک حساب تنخواه فعال دارد."})
+        with transaction.atomic():
+            account = serializer.save()
+            if new_ceiling != old_ceiling:
+                _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change',
+                                 str(int(old_ceiling)), str(int(new_ceiling)),
+                                 company_id=account.company_id, custodian_id=account.custodian_id)
 
     def perform_destroy(self, instance):
-        _ensure_petty_cash_manager(self.request.user, instance.section_id, "شما مجوز حذف حساب تنخواه این بخش را ندارید.")
+        if not self._can_manage(self.request.user, instance, instance.section_id):
+            raise PermissionDenied("شما مجوز حذف حساب تنخواه این شرکت را ندارید.")
+        if instance.transactions.exists() or instance.statements.exists():
+            # هیچ سند تنخواهی بی‌حساب نمی‌ماند؛ حساب دارای سند فقط غیرفعال می‌شود
+            raise ValidationError({'error': "این حساب سند تنخواه دارد و حذف نمی‌شود؛ آن را غیرفعال کنید."})
         instance.delete()
 
 class PettyCashTransactionViewSet(viewsets.ModelViewSet):
@@ -737,13 +855,19 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         cid = validate_user_company_access(user, get_request_company_id(self.request))
         if cid:
-            qs = qs.filter(section__project__company_id=cid)
+            qs = qs.filter(_petty_tx_company_q([cid]))
         section_id = self.request.query_params.get('section_id')
         if section_id:
             qs = qs.filter(section_id=section_id)
         custodian_id = self.request.query_params.get('custodian_id')
         if custodian_id:
             qs = qs.filter(custodian_id=custodian_id)
+        statement_id = self.request.query_params.get('statement_id')
+        if statement_id:
+            qs = qs.filter(statement_id=statement_id)
+        line_status = self.request.query_params.get('line_status')
+        if line_status:
+            qs = qs.filter(line_status=line_status)
         tx_type = self.request.query_params.get('transaction_type')
         if tx_type:
             qs = qs.filter(transaction_type=tx_type)
@@ -760,81 +884,100 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 Q(description__icontains=search)
             )
 
-        # مدیر تنخواه اسناد بخش‌هایی را می‌بیند که در آن‌ها «مدیریت تنخواه» دارد؛ هر کس اسناد تنخواه خودش را.
-        # پارامتر custodian_id دیگر قلمرو را باز نمی‌کند (پیش‌تر با آن اسناد هر متصدی دیده می‌شد).
+        # همیشه فقط شرکت‌های مجاز کاربر. در آن‌ها: اسناد خودش، همهٔ اسناد شرکتی که در آن انتساب سطح شرکت با
+        # مدیریت تنخواه یا مجوز مرحله‌ها دارد (ص۷ طرح ۳.۶)، و اسناد قدیمی بخش‌هایی که مدیر تنخواه آن‌هاست.
+        # پارامتر custodian_id قلمرو را باز نمی‌کند.
         if not user.is_superuser:
-            qs = qs.filter(
-                Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id')) | Q(custodian=user)
+            allowed = list(get_user_allowed_companies(user).values_list('id', flat=True))
+            qs = qs.filter(_petty_tx_company_q(allowed)).filter(
+                Q(custodian=user)
+                | _petty_tx_company_q(_petty_viewer_company_ids(user))
+                | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
             )
 
         return qs.order_by('-transaction_date_shamsi', '-created_at')
 
+    def _petty_tx_object(self):
+        """سند برای اقدام گردش: از فهرست قلمرو کاربر، یا از راه کار باز همین سند در شرکت فعال (مثل فاکتور)."""
+        pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        obj = self.filter_queryset(self.get_queryset()).filter(pk=pk).first()
+        if obj is None and wf_engine.task_grants_view(self.request.user, PETTY_CHARGE_ENTITY, pk):
+            obj = PettyCashTransaction.objects.select_related('account', 'section__project', 'custodian').filter(pk=pk).first()
+            active = get_request_company_id(self.request)
+            if obj is not None and (not petty_company_allowed(self.request.user, obj.wf_company_id)
+                                    or (active and str(active) != str(obj.wf_company_id))):
+                obj = None
+        if obj is None:
+            raise Http404
+        return obj
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(self.get_serializer(self._petty_tx_object()).data)
+
+    @staticmethod
+    def _ensure_same_company(company_id, section, project):
+        if section is not None and section.project.company_id != company_id:
+            raise ValidationError({'section': "بخش انتخاب‌شده از شرکت این حساب تنخواه نیست."})
+        if project is not None and project.company_id != company_id:
+            raise ValidationError({'project': "پروژهٔ انتخاب‌شده از شرکت این حساب تنخواه نیست."})
+
     def perform_create(self, serializer):
+        """ص۱ طرح ۳.۶: تنخواه‌گردان فقط روی حساب خودش ثبت می‌کند؛ بخش و پروژه اختیاری ولی از شرکت همان حساب."""
         user = self.request.user
-        section = serializer.validated_data.get('section')
-        if section and section.project and section.project.company and not user.is_superuser:
-            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-            if section.project.company_id not in allowed_ids:
-                raise PermissionDenied("شما مجاز به ثبت سند تنخواه برای این شرکت نیستید.")
-        custodian = serializer.validated_data.get('custodian') or user
-        if custodian.pk != user.pk:
-            _ensure_petty_cash_manager(user, section, "ثبت سند تنخواه برای متصدی دیگر فقط با مجوز مدیریت تنخواه همان بخش ممکن است.")
+        vd = serializer.validated_data
+        custodian = vd.get('custodian') or user
+        if custodian.pk != user.pk and not user.is_superuser:
+            raise PermissionDenied("ثبت سند تنخواه فقط روی حساب تنخواه خود شما ممکن است.")
+        section, project, account = vd.get('section'), vd.get('project'), vd.get('account')
+        if account is not None:
+            if account.custodian_id != custodian.pk or not account.is_active:
+                raise ValidationError({'account': "حساب تنخواه انتخاب‌شده حساب فعال خود شما نیست."})
+            company_id = account.company_id
+        elif section is not None:
+            company_id = section.project.company_id
+        elif project is not None:
+            company_id = project.company_id
         else:
-            _ensure_own_petty_cash_section(user, section)
-        _ensure_doc_period_open(section, serializer.validated_data.get('transaction_date_shamsi'),
-                                'transaction_date_shamsi')
-
-        # اتصال خودکار یا ایجاد حساب تنخواه برای بخش و کاربر
-        account = serializer.validated_data.get('account')
-        if not account and section:
-            account, _ = PettyCashAccount.objects.get_or_create(
-                section=section,
-                custodian=custodian,
-                defaults={'ceiling_amount': Decimal('100000000')}
-            )
-
-        instance = serializer.save(
-            created_by=user,
-            custodian=custodian,
-            account=account,
-            status='draft'
-        )
-        from ..workflow_engine import process_creation_with_auto_pass
-        process_creation_with_auto_pass(instance, user, is_financial=True)
-        instance.save()
+            company_id = resolve_write_company(self.request)
+        _ensure_petty_custodian(user, company_id)
+        self._ensure_same_company(company_id, section, project)
+        ensure_period_open(company_id, vd.get('transaction_date_shamsi'), 'transaction_date_shamsi')
+        if account is None:
+            account = _own_petty_account(custodian, company_id, create=True)
+        # ص۱۰: سند تازه پیش‌نویس می‌ماند؛ شارژ با request-charge و هزینه با صورت‌حساب به گردش موتور می‌رود
+        instance = serializer.save(created_by=user, custodian=custodian, account=account, status='draft')
         notify_document_changed(instance, 'created')
 
     def perform_update(self, serializer):
         user = self.request.user
-        instance = self.get_object()
-        new_status = serializer.validated_data.get('status')
-        new_section = serializer.validated_data.get('section')
-        if new_section is not None and new_section.pk != instance.section_id:
-            _ensure_petty_cash_manager(user, new_section, "شما مجوز مدیریت تنخواه بخش مقصد را ندارید.")
-        if new_status and new_status != instance.status and not user.is_superuser:
-            if new_status not in ('draft', 'pending_supervisor'):
-                # Plan 2.2 (T13): moving a petty cash record past submission is management in its own section
-                _ensure_petty_cash_manager(user, instance.section_id)
-            from ..workflow_engine import determine_user_tier, WorkflowTiers
-            tier = determine_user_tier(user, section=instance.section_id)
-            if new_status in ['draft', 'pending_supervisor']:
-                pass
-            elif new_status in ['pending_accountant', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_2_SUPERVISOR:
-                pass
-            elif new_status in ['approved', 'revision_required', 'rejected'] and tier >= WorkflowTiers.TIER_3_ACCOUNTANT:
-                pass
-            elif new_status in ['paid'] and tier >= WorkflowTiers.TIER_5_TREASURY:
-                pass
-            else:
-                raise PermissionDenied("شما سطح دسترسی لازم برای تغییر وضعیت سند تنخواه به این مرحله را ندارید.")
+        instance = serializer.instance
+        vd = serializer.validated_data
+        if not user.is_superuser and instance.custodian_id != user.pk:
+            raise PermissionDenied("فقط تنخواه‌گردان سند خودش را ویرایش می‌کند.")
+        new_status = vd.pop('status', None)
+        if new_status and new_status != instance.status:
+            raise PermissionDenied("وضعیت سند تنخواه فقط از راه گردش کار تغییر می‌کند.")
+        for name in ('custodian', 'account'):
+            if name in vd and getattr(vd[name], 'pk', None) != getattr(instance, f'{name}_id'):
+                raise ValidationError({name: "تنخواه‌گردان و حساب سند تنخواه عوض نمی‌شود."})
+        _ensure_petty_tx_editable(instance)
         _ensure_petty_cash_open(instance)
-        _ensure_doc_period_open(new_section or instance.section,
-                                serializer.validated_data.get('transaction_date_shamsi', instance.transaction_date_shamsi),
-                                'transaction_date_shamsi')
+        company_id = instance.wf_company_id
+        if not user.is_superuser:
+            _ensure_petty_custodian(user, company_id)
+        self._ensure_same_company(company_id, vd.get('section'), vd.get('project'))
+        ensure_period_open(company_id, vd.get('transaction_date_shamsi', instance.transaction_date_shamsi),
+                           'transaction_date_shamsi')
         notify_document_changed(serializer.save(), 'updated')
 
     def perform_destroy(self, instance):
+        user = self.request.user
+        if not user.is_superuser and instance.custodian_id != user.pk:
+            raise PermissionDenied("فقط تنخواه‌گردان سند خودش را حذف می‌کند.")
+        _ensure_petty_tx_editable(instance)
         _ensure_petty_cash_open(instance)
+        if not user.is_superuser:
+            _ensure_petty_custodian(user, instance.wf_company_id)
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
@@ -844,14 +987,15 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     def submit_tx(self, request, pk=None):
         instance = self.get_object()
         _ensure_petty_cash_open(instance)
-        from ..workflow_engine import advance_workflow_step
-        advance_workflow_step(instance, request.user, target_status='pending_supervisor', is_financial=True)
-        return Response({'message': 'تراکنش تنخواه با موفقیت به سرپرست ارسال شد.', 'status': instance.status})
+        # ص۱۰: ارسال قدیمی به سرپرست کنار رفته است
+        return _petty_retired()
 
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_tx(self, request, pk=None):
         instance = self.get_object()
         _ensure_petty_cash_open(instance)
+        if instance.status not in LEGACY_PETTY_PENDING:
+            return _petty_retired()
         # Plan 2.2 (T13): approving petty cash is petty-cash management in the record's own section
         _ensure_petty_cash_manager(request.user, instance.section_id)
         from ..workflow_engine import advance_workflow_step
@@ -862,6 +1006,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     def reject_tx(self, request, pk=None):
         instance = self.get_object()
         _ensure_petty_cash_open(instance)
+        if instance.status not in LEGACY_PETTY_PENDING:
+            return _petty_retired()
         _ensure_petty_cash_manager(request.user, instance.section_id)
         reason = request.data.get('reason', '').strip()
         if not reason:
@@ -873,70 +1019,59 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='my-balance')
     def my_balance(self, request):
         """
-        محاسبه مانده زنده تنخواه، سقف مصوب، هزینه‌های تاییدشده و در جریان (Guardian G1)
+        ماندهٔ تنخواه حساب سطح شرکت (ص۱ و ص۵ طرح ۳.۶): سقف، شارژهای دریافتی، هزینه‌های تأییدشده، در جریان و بدهی.
+        شرکت: section_id (کلاینت قدیمی) یا company_id یا شرکت فعال درخواست.
         """
+        user = request.user
         section_id = request.query_params.get('section_id')
-        if not section_id:
-            return Response(
-                {'error': 'شناسه بخش پروژه (section_id) الزامی است.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        target_user_id = request.query_params.get('custodian_id')
-        sid = _section_id(section_id)
-        if sid is None:
-            return Response({'error': 'شناسه بخش نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
-        section_id = sid
-        if target_user_id and (
-            request.user.is_superuser
-            or can(request.user, PETTY_CASH_MANAGE_PERM, sid)
-        ):
-            custodian = get_user_model().objects.filter(id=target_user_id).first() or request.user
+        if section_id:
+            sid = _section_id(section_id)
+            section = ProjectSection.objects.select_related('project').filter(pk=sid).first() if sid else None
+            if section is None:
+                return Response({'error': 'شناسه بخش نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+            company_id = section.project.company_id
         else:
-            custodian = request.user
+            raw = request.query_params.get('company_id') or get_request_company_id(request)
+            try:
+                company_id = int(raw) if raw else None
+            except (TypeError, ValueError):
+                company_id = None
+            if company_id is None:
+                allowed = list(get_user_allowed_companies(user).values_list('id', flat=True)[:2])
+                company_id = allowed[0] if len(allowed) == 1 else None
+            if company_id is None:
+                return Response({'error': 'شرکت فعال مشخص نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not petty_company_allowed(user, company_id):
+            raise PermissionDenied("شما به این شرکت دسترسی ندارید.")
 
-        account = PettyCashAccount.objects.filter(
-            section_id=section_id, custodian=custodian, is_active=True
-        ).first()
+        custodian = user
+        target_user_id = request.query_params.get('custodian_id')
+        if target_user_id and str(target_user_id) != str(user.pk) and (
+                user.is_superuser or company_id in _petty_viewer_company_ids(user)):
+            custodian = get_user_model().objects.filter(id=target_user_id).first() or user
 
+        account = PettyCashAccount.annotate_debt(PettyCashAccount.objects.filter(
+            company_id=company_id, custodian=custodian, is_active=True)).first()
         ceiling = account.ceiling_amount if account else Decimal('0')
+        rows = PettyCashTransaction.objects.filter(account=account) if account else PettyCashTransaction.objects.none()
+        allocations_sum = rows.filter(transaction_type='allocation', status__in=['approved', 'paid']) \
+            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        spent_sum = rows.filter(transaction_type='expense', status='approved') \
+            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        pending_settlement = rows.filter(
+            transaction_type='expense', status__in=['draft', 'pending_supervisor', 'pending_accountant'],
+        ).exclude(line_status='rejected').aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        debt = account.debt if account else Decimal('0')
+        current_balance = petty_fund_level(account) if account else Decimal('0')
 
-        # مجموع شارژهای دریافت شده (approved / paid)
-        allocations_sum = PettyCashTransaction.objects.filter(
-            section_id=section_id,
-            custodian=custodian,
-            transaction_type='allocation',
-            status__in=['approved', 'paid']
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        # مجموع هزینه‌های تایید شده و تسویه شده
-        spent_sum = PettyCashTransaction.objects.filter(
-            section_id=section_id,
-            custodian=custodian,
-            transaction_type='expense',
-            status='approved'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        # مجموع هزینه‌های در جریان تایید (draft / pending)
-        pending_settlement = PettyCashTransaction.objects.filter(
-            section_id=section_id,
-            custodian=custodian,
-            transaction_type='expense',
-            status__in=['draft', 'pending_supervisor', 'pending_accountant']
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        # مانده نقد در دست تنخواه‌دار
-        current_balance = allocations_sum - spent_sum
-
-        # درصد مصرف از سقف تنخواه
         utilization_rate = 0.0
         if ceiling > Decimal('0'):
             utilization_rate = float(min(Decimal('100.0'), (spent_sum / ceiling) * Decimal('100.0')))
-
         custodian_full_name = f"{custodian.first_name} {custodian.last_name}".strip() or custodian.username
 
         return Response({
             'account_id': account.id if account else None,
+            'company_id': company_id,
             'ceiling_amount': int(ceiling),
             'ceiling_amount_tomans': int(ceiling // 10),
             'total_allocated': int(allocations_sum),
@@ -947,6 +1082,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             'current_balance_tomans': int(current_balance // 10),
             'pending_settlement': int(pending_settlement),
             'pending_settlement_tomans': int(pending_settlement // 10),
+            'debt': int(debt),
+            'debt_tomans': int(debt // 10),
             'utilization_rate': round(utilization_rate, 1),
             'card_or_account_number': account.card_or_account_number if account else '',
             'sheba_number': account.sheba_number if account else '',
@@ -956,63 +1093,93 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='request-replenishment')
     def request_replenishment(self, request):
-        """
-        ثبت سریع درخواست شارژ مجدد / واریز به حساب تنخواه
-        """
-        section_id = request.data.get('section_id')
-        amount = request.data.get('amount')
-        title = request.data.get('title') or 'درخواست شارژ مجدد تنخواه'
-        description = request.data.get('description', '')
-        receipt_number = request.data.get('receipt_number', '')
+        """ص۱۰: مسیر قدیمی شارژ کنار رفته است؛ جایش request-charge است."""
+        return _petty_retired()
 
-        if not section_id or not amount:
-            return Response(
-                {'error': 'شناسه بخش و مبلغ الزامی هستند.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+    def _submit_charge(self, tx, user):
         try:
-            amount_dec = Decimal(str(amount))
-            if amount_dec <= 0:
+            with transaction.atomic():
+                wf_engine.submit(PETTY_CHARGE_WORKFLOW, tx, user)
+        except WorkflowError as exc:
+            return exc
+        return None
+
+    @action(detail=False, methods=['post'], url_path='request-charge')
+    def request_charge(self, request):
+        """
+        ص۲ طرح ۳.۶: درخواست شارژ تنخواه‌گردان روی حساب فعال خودش در شرکت؛ سند allocation ساخته و به گردش
+        petty_cash_charge فرستاده می‌شود (حسابدار ← مدیر اگر از سقف بگذرد ← خزانه‌دار).
+        """
+        user = request.user
+        try:
+            amount = Decimal(str(request.data.get('amount')))
+            if amount <= 0 or amount != amount.to_integral_value():
                 raise ValueError()
         except Exception:
-            return Response({'error': 'مبلغ باید عددی مثبت باشد.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'مبلغ باید عددی صحیح و مثبت باشد.'}, status=status.HTTP_400_BAD_REQUEST)
+        company_id = resolve_write_company(request)
+        _ensure_petty_custodian(user, company_id)
+        today = to_shamsi_str(timezone.now())
+        ensure_period_open(company_id, today, 'transaction_date_shamsi')
+        with transaction.atomic():
+            account = _own_petty_account(user, company_id, create=True)
+            tx = PettyCashTransaction.objects.create(
+                account=account, custodian=user, created_by=user, transaction_type='allocation', amount=amount,
+                transaction_date_shamsi=today,
+                title=(str(request.data.get('title') or '').strip() or 'درخواست شارژ تنخواه')[:200],
+                category=PETTY_CASH_FIXED_CATEGORY['allocation'],
+                description=str(request.data.get('description') or ''), status='draft',
+            )
+            err = self._submit_charge(tx, user)
+            if err is not None:
+                transaction.set_rollback(True)
+        if err is not None:
+            return _petty_wf_error(err)
+        notify_document_changed(tx, 'created')
+        return Response(self.get_serializer(tx).data, status=status.HTTP_201_CREATED)
 
-        section = get_object_or_404(ProjectSection.objects.select_related('project'), id=section_id)
-        custodian = request.user
-        if not request.user.is_superuser:
-            allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
-            if section.project.company_id not in allowed_ids:
-                raise PermissionDenied("شما مجاز به ثبت سند تنخواه برای این شرکت نیستید.")
-        _ensure_own_petty_cash_section(request.user, section)
+    @action(detail=True, methods=['post'], url_path='send-charge')
+    def send_charge(self, request, pk=None):
+        """ارسال دوبارهٔ درخواست شارژ پیش‌نویس (پس از عودت یا لغو) به دست خود تنخواه‌گردان."""
+        tx = self.get_object()
+        if tx.custodian_id != request.user.pk or tx.transaction_type != 'allocation':
+            raise PermissionDenied("فقط تنخواه‌گردان درخواست شارژ خودش را می‌فرستد.")
+        _ensure_petty_tx_editable(tx)
+        _ensure_petty_cash_open(tx)
+        _ensure_petty_custodian(request.user, tx.wf_company_id)
+        err = self._submit_charge(tx, request.user)
+        if err is not None:
+            return _petty_wf_error(err)
+        return Response(self.get_serializer(tx).data)
 
-        account, _ = PettyCashAccount.objects.get_or_create(
-            section=section,
-            custodian=custodian,
-            defaults={'ceiling_amount': Decimal('100000000')}
-        )
-
-        # تابع حذف‌شدهٔ gregorian_to_jalali این مسیر را همیشه 500 می‌کرد (یافتهٔ ۳.۴-ب)
-        from ..fiscal import to_shamsi_str
-        shamsi_today = to_shamsi_str(timezone.now())
-
-        tx = PettyCashTransaction.objects.create(
-            account=account,
-            section=section,
-            custodian=custodian,
-            created_by=request.user,
-            transaction_type='allocation',
-            amount=amount_dec,
-            transaction_date_shamsi=shamsi_today,
-            title=title,
-            category='شارژ مجدد تنخواه',
-            description=description,
-            receipt_number=receipt_number,
-            status='draft'
-        )
-
-        serializer = self.get_serializer(tx)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @action(detail=True, methods=['post'], url_path='pay-charge')
+    def pay_charge(self, request, pk=None):
+        """واریز خزانه‌دار (مرحلهٔ EXECUTE) با شمارهٔ پیگیری؛ شارژ تأیید و به ماندهٔ حساب افزوده می‌شود."""
+        tx = self._petty_tx_object()
+        _ensure_petty_cash_open(tx)
+        tracking = str(request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
+        if not tracking:
+            return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        task = wf_engine.open_task(PETTY_CHARGE_WORKFLOW, tx.pk)
+        if task is None or task.step_key != 'treasury_pay':
+            return Response({'code': 'not_payable', 'error': 'درخواست شارژ هنوز به مرحلهٔ واریز نرسیده است.'},
+                            status=status.HTTP_409_CONFLICT)
+        revision = request.data.get('revision')
+        revision = int(revision) if str(revision or '').isdigit() else None
+        err = None
+        with transaction.atomic():
+            tx.receipt_number = tracking[:100]
+            tx.save(update_fields=['receipt_number', 'updated_at'])
+            try:
+                wf_engine.act(request.user, task, reason=str(request.data.get('notes') or '').strip(),
+                              revision=revision, obj=tx)
+            except WorkflowError as exc:
+                err = exc
+                transaction.set_rollback(True)
+        if err is not None:
+            tx.refresh_from_db()
+            return _petty_wf_error(err)
+        return Response(self.get_serializer(tx).data)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
@@ -1121,6 +1288,192 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
+class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    صورت‌حساب تنخواه (ص۴ طرح ۳.۶): تنخواه‌گردان هزینه‌های باز خودش را در یک صورت‌حساب می‌فرستد ← بررسی حسابدار ←
+    تأیید مدیر (سقف شرکت ردش می‌کند) ← شارژ دوباره به دست خزانه‌دار به مبلغ ردیف‌های تأییدشده.
+    بررسی، تأیید و عودت کل با دلیل از اقدام‌های عمومی «کارهای من» موتور؛ رد ردیف و پرداخت از همین‌جا.
+    """
+    serializer_class = PettyCashStatementSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        from django.db.models import Count
+        user = self.request.user
+        qs = PettyCashStatement.objects.select_related('company', 'account', 'custodian', 'created_by') \
+            .annotate(lines_count=Count('lines'))
+        cid = validate_user_company_access(user, get_request_company_id(self.request))
+        if cid:
+            qs = qs.filter(company_id=cid)
+        st = self.request.query_params.get('status')
+        if st:
+            qs = qs.filter(status=st)
+        custodian_id = self.request.query_params.get('custodian_id')
+        if custodian_id:
+            qs = qs.filter(custodian_id=custodian_id)
+        if not user.is_superuser:
+            qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
+                Q(custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user)))
+        return qs.order_by('-statement_date_shamsi', '-created_at')
+
+    def _statement_object(self):
+        pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        obj = self.get_queryset().filter(pk=pk).first()
+        if obj is None and wf_engine.task_grants_view(self.request.user, PETTY_STATEMENT_ENTITY, pk):
+            obj = PettyCashStatement.objects.select_related('company', 'account', 'custodian').filter(pk=pk).first()
+            active = get_request_company_id(self.request)
+            if obj is not None and (not petty_company_allowed(self.request.user, obj.company_id)
+                                    or (active and str(active) != str(obj.company_id))):
+                obj = None
+        if obj is None:
+            raise Http404
+        return obj
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(self.get_serializer(self._statement_object()).data)
+
+    @staticmethod
+    def _submit(statement, user):
+        try:
+            with transaction.atomic():
+                wf_engine.submit(PETTY_STATEMENT_WORKFLOW, statement, user)
+        except WorkflowError as exc:
+            return exc
+        return None
+
+    def create(self, request, *args, **kwargs):
+        """ساخت صورت‌حساب از ردیف‌های هزینهٔ باز خود (یک حساب، یک شرکت) و فرستادن آن به گردش."""
+        user = request.user
+        raw_ids = request.data.get('line_ids') or []
+        try:
+            ids = sorted({int(x) for x in raw_ids})
+        except (TypeError, ValueError):
+            ids = []
+        if not ids:
+            return Response({'error': 'دست‌کم یک ردیف هزینه برای صورت‌حساب لازم است.'}, status=status.HTTP_400_BAD_REQUEST)
+        date = to_shamsi_str(request.data.get('statement_date_shamsi')) or to_shamsi_str(timezone.now())
+        err = None
+        with transaction.atomic():
+            lines = list(PettyCashTransaction.objects.select_for_update()
+                         .filter(pk__in=ids, custodian=user, transaction_type='expense'))
+            if len(lines) != len(ids):
+                return Response({'error': 'برخی ردیف‌ها پیدا نشدند یا هزینهٔ خود شما نیستند.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if any(l.statement_id or l.line_status != 'open' or l.status != 'draft' for l in lines):
+                return Response({'error': 'برخی ردیف‌ها از قبل در صورت‌حساب یا گردش دیگری هستند.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            account_ids = {l.account_id for l in lines}
+            account = lines[0].account
+            if len(account_ids) != 1 or account is None or not account.is_active or not account.company_id:
+                return Response({'error': 'همهٔ ردیف‌ها باید از یک حساب تنخواه فعال باشند.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            company_id = account.company_id
+            _ensure_petty_custodian(user, company_id)
+            for line in lines:
+                ensure_period_open(company_id, line.transaction_date_shamsi, 'transaction_date_shamsi')
+            ensure_period_open(company_id, date, 'statement_date_shamsi')
+            statement = PettyCashStatement.objects.create(
+                company_id=company_id, account=account, custodian=user, statement_date_shamsi=date,
+                created_by=user, status='draft')
+            PettyCashTransaction.objects.filter(pk__in=ids).update(statement=statement)
+            recompute_statement(statement)
+            err = self._submit(statement, user)
+            if err is not None:
+                transaction.set_rollback(True)
+        if err is not None:
+            return _petty_wf_error(err)
+        return Response(self.get_serializer(statement).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='send')
+    def send(self, request, pk=None):
+        """ارسال دوبارهٔ صورت‌حساب پیش‌نویس (پس از لغو) به دست خود تنخواه‌گردان."""
+        statement = self._statement_object()
+        if statement.custodian_id != request.user.pk:
+            raise PermissionDenied("فقط تنخواه‌گردان صورت‌حساب خودش را می‌فرستد.")
+        if statement.status != 'draft' or not statement.lines.exists():
+            return Response({'error': 'فقط صورت‌حساب پیش‌نویس دارای ردیف فرستاده می‌شود.'}, status=status.HTTP_400_BAD_REQUEST)
+        _ensure_petty_custodian(request.user, statement.company_id)
+        ensure_period_open(statement.company_id, statement.statement_date_shamsi, 'statement_date_shamsi')
+        recompute_statement(statement)
+        err = self._submit(statement, request.user)
+        if err is not None:
+            return _petty_wf_error(err)
+        return Response(self.get_serializer(statement).data)
+
+    @action(detail=True, methods=['post'], url_path='reject-line')
+    def reject_line(self, request, pk=None):
+        """
+        رد یک ردیف با دلیل (ص۴) به دست حسابدار یا مدیری که مرحلهٔ جاری را دارد (دریافت‌کننده یا مجوز همان مرحله در
+        سطح شرکت). ردیف ردشده شارژ دوباره نمی‌گیرد و بدهی تنخواه‌گردان می‌شود (ص۵). هیچ ردیفی حذف نمی‌شود.
+        """
+        user = request.user
+        statement = self._statement_object()
+        reason = str(request.data.get('reason') or '').strip()
+        if not reason:
+            return Response({'error': 'درج دلیل رد ردیف الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        if is_petty_statement_locked(statement.pk):
+            return Response({'code': 'entity_locked', 'error': 'این صورت‌حساب قفل است.'}, status=status.HTTP_409_CONFLICT)
+        task = wf_engine.open_task(PETTY_STATEMENT_WORKFLOW, statement.pk)
+        if task is None or task.step_key not in PETTY_STATEMENT_LINE_REJECT_STEPS:
+            return Response({'code': 'not_reviewable', 'error': 'صورت‌حساب در مرحلهٔ بررسی یا تأیید نیست.'},
+                            status=status.HTTP_409_CONFLICT)
+        step_perm = PETTY_REVIEW_PERM if task.step_key == 'accountant_review' else PETTY_MANAGER_PERM
+        holder = wf_engine.task_grants_view(user, PETTY_STATEMENT_ENTITY, statement.pk) \
+            or can_at_company_level(user, step_perm, statement.company_id)
+        if not petty_company_allowed(user, statement.company_id) or not holder \
+                or (statement.custodian_id == user.pk and not user.is_superuser):
+            raise PermissionDenied("رد ردیف فقط کار حسابدار یا مدیر مرحلهٔ جاری است.")
+        try:
+            line_id = int(request.data.get('line_id'))
+        except (TypeError, ValueError):
+            return Response({'error': 'شناسهٔ ردیف نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            line = statement.lines.select_for_update().filter(pk=line_id).first()
+            if line is None:
+                raise Http404
+            if line.line_status == 'rejected':
+                return Response({'error': 'این ردیف از قبل رد شده است.'}, status=status.HTTP_400_BAD_REQUEST)
+            old = line.line_status
+            line.line_status = 'rejected'
+            line.line_reject_reason = reason
+            line.save(update_fields=['line_status', 'line_reject_reason', 'updated_at'])
+            recompute_statement(statement)
+            _log_petty_audit(user, 'pettycashstatement', statement.pk, 'line_reject', old, 'rejected', reason,
+                             company_id=statement.company_id, line_id=line.pk, amount=str(line.amount),
+                             step=task.step_key)
+        notify_document_changed(statement)
+        return Response(self.get_serializer(statement).data)
+
+    @action(detail=True, methods=['post'], url_path='pay')
+    def pay(self, request, pk=None):
+        """شارژ دوباره به دست خزانه‌دار (EXECUTE) با شمارهٔ پیگیری: ردیف‌های باز تأیید و شارژ تازه ساخته می‌شود."""
+        statement = self._statement_object()
+        tracking = str(request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
+        if not tracking:
+            return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        task = wf_engine.open_task(PETTY_STATEMENT_WORKFLOW, statement.pk)
+        if task is None or task.step_key != 'treasury_pay':
+            return Response({'code': 'not_payable', 'error': 'صورت‌حساب هنوز به مرحلهٔ شارژ دوباره نرسیده است.'},
+                            status=status.HTTP_409_CONFLICT)
+        revision = request.data.get('revision')
+        revision = int(revision) if str(revision or '').isdigit() else None
+        statement._payment_ref = tracking[:100]
+        statement._paid_by = request.user
+        err = None
+        with transaction.atomic():
+            try:
+                wf_engine.act(request.user, task, reason=str(request.data.get('notes') or '').strip(),
+                              revision=revision, obj=statement)
+            except WorkflowError as exc:
+                err = exc
+                transaction.set_rollback(True)
+        if err is not None:
+            statement.refresh_from_db()
+            return _petty_wf_error(err)
+        return Response(self.get_serializer(statement).data)
+
+
 class WorkflowAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     مشاهده تاریخچه ممیزی گردش کار و رویدادهای تایید/رد با ایزولاسیون شرکتی
@@ -1225,5 +1578,6 @@ __all__ = [
     'ExpenseInvoiceViewSet',
     'PettyCashAccountViewSet',
     'PettyCashTransactionViewSet',
+    'PettyCashStatementViewSet',
     'WorkflowAuditLogViewSet',
 ]

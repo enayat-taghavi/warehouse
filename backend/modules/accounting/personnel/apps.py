@@ -96,6 +96,21 @@ class PersonnelConfig(AppConfig):
         contribute(f'can_attach:{INVOICE_ENTITY}', can_attach_invoice)
         contribute(f'is_locked:{INVOICE_ENTITY}', is_invoice_locked)
         contribute(f'company_of:{INVOICE_ENTITY}', invoice_company_id)
+        # تنخواه سطح شرکت: شارژ و صورت‌حساب روی موتور، با دیدن، پیوست و قفل (ص۲ تا ص۴ و ص۱۱ طرح ۳.۶)
+        from personnel import workflows as _wf
+        for _spec, _kind, _resolver, _view, _attach, _locked, _company in (
+            (_wf.PETTY_CHARGE_WORKFLOW_SPEC, _wf.PETTY_CHARGE_ENTITY, _wf.resolve_petty_tx, _wf.can_view_petty_tx,
+             _wf.can_attach_petty_tx, _wf.is_petty_tx_locked, _wf.petty_tx_company_id),
+            (_wf.PETTY_STATEMENT_WORKFLOW_SPEC, _wf.PETTY_STATEMENT_ENTITY, _wf.resolve_petty_statement,
+             _wf.can_view_petty_statement, _wf.can_attach_petty_statement, _wf.is_petty_statement_locked,
+             _wf.petty_statement_company_id),
+        ):
+            contribute('workflows', _spec)
+            contribute(f'entity_resolver:{_kind}', _resolver)
+            contribute(f'can_view:{_kind}', _view)
+            contribute(f'can_attach:{_kind}', _attach)
+            contribute(f'is_locked:{_kind}', _locked)
+            contribute(f'company_of:{_kind}', _company)
         # لاگ ممیزی فاکتور از قلاب دیدن همان سند پیروی می‌کند (ص۱۰ طرح ۲.۶)
         contribute('audit_entity_kinds', ('ExpenseInvoice', INVOICE_ENTITY))
         # بخش‌های قابل خاموش شدن (ص۱۲ طرح ۲.۶)؛ همین کدها در sectionKey منو و مسیر فرانت می‌آیند

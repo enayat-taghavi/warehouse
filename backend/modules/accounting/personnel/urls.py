@@ -14,6 +14,7 @@ from .views import (
     WorkflowAuditLogViewSet,
     PettyCashAccountViewSet,
     PettyCashTransactionViewSet,
+    PettyCashStatementViewSet,
     PersonnelProfileViewSet,
     VehicleDriverProfileViewSet,
     PersonnelChangeRequestViewSet,
@@ -49,6 +50,7 @@ router.register(r'expense-invoices', ExpenseInvoiceViewSet, basename='expense-in
 router.register(r'workflow-audit-logs', WorkflowAuditLogViewSet, basename='workflow-audit-logs')
 router.register(r'petty-cash-accounts', PettyCashAccountViewSet, basename='petty-cash-accounts')
 router.register(r'petty-cash-transactions', PettyCashTransactionViewSet, basename='petty-cash-transactions')
+router.register(r'petty-cash-statements', PettyCashStatementViewSet, basename='petty-cash-statements')
 router.register(r'profiles', PersonnelProfileViewSet, basename='personnel-profile')
 router.register(r'vehicles', VehicleDriverProfileViewSet, basename='vehicle-profile')
 router.register(r'personnel-change-requests', PersonnelChangeRequestViewSet, basename='personnel-change-requests')
