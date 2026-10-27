@@ -14,6 +14,7 @@ from django.http import HttpResponse
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from common.date_utils import normalize_digits
 from accounts.views import OptionalPageNumberPagination
@@ -190,6 +191,14 @@ from ..petty_settlements import (
 from ..workflows import (
     petty_allocation_category, petty_charge_exceeds_ceiling, petty_fund_level_breakdown,
 )
+from ..models import PettyCashReconciliation
+from ..serializers import PettyCashReconciliationSerializer
+from ..serializers_domains.treasury_audit import petty_bank_full_view
+from ..counterparty_services import mask_tail
+from ..petty_lifecycle import (
+    PettyLifecycleError, close_account, create_reconciliation, deputy_account_q, ensure_account_open,
+    ensure_period_unlocked, ensure_statement_number, handover_account, is_petty_deputy,
+)
 
 
 class _PettyApiError(APIException):
@@ -198,6 +207,29 @@ class _PettyApiError(APIException):
     def __init__(self, code, message, status_code=status.HTTP_400_BAD_REQUEST):
         self.status_code = status_code
         super().__init__({'code': code, 'error': message, 'detail': message})
+
+
+def _lifecycle(fn, *args, **kwargs):
+    """خطای چرخهٔ عمر تنخواه (د۵ تا د۸) با همان شکل {code, error, detail}."""
+    try:
+        return fn(*args, **kwargs)
+    except PettyLifecycleError as exc:
+        raise _PettyApiError(exc.code, exc.message_fa, exc.status)
+
+
+def _ensure_account_open(account):
+    """د۶: حساب بسته فقط خواندنی است (400 account_closed)."""
+    _lifecycle(ensure_account_open, account)
+
+
+def _ensure_period_unlocked(account_id, day, tx_type='expense'):
+    """د۵: هزینه با تاریخ تا آخرین تطبیق حساب ثبت یا ویرایش نمی‌شود (400 period_locked؛ صف آفلاین «ردشده» می‌ماند)."""
+    _lifecycle(ensure_period_unlocked, account_id, day, tx_type)
+
+
+def _shamsi_param(request, name):
+    raw = request.query_params.get(name)
+    return to_shamsi_str(raw) if raw else None
 
 
 def _petty_offset_subquery():
@@ -274,6 +306,10 @@ def _ensure_petty_custodian(user, company_id):
 def _own_petty_account(user, company_id, create=False):
     account = PettyCashAccount.objects.filter(company_id=company_id, custodian=user, is_active=True).first()
     if account is None and create:
+        # د۶: حساب بسته دوباره باز یا خودکار جایگزین نمی‌شود؛ حساب تازه را مدیریت تنخواه می‌سازد
+        if PettyCashAccount.objects.filter(company_id=company_id, custodian=user, closed_at__isnull=False).exists():
+            raise _PettyApiError('account_closed', "حساب تنخواه شما در این شرکت بسته شده است؛ "
+                                                   "برای حساب تازه با مدیریت تنخواه هماهنگ کنید.")
         from django.db import IntegrityError
         try:
             with transaction.atomic():
@@ -1042,8 +1078,61 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
                 Q(custodian=user)
                 | Q(company_id__in=_petty_viewer_company_ids(user))
                 | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
+                | deputy_account_q(user)
             )
         return qs.order_by('company', 'custodian')
+
+    @staticmethod
+    def _ensure_bank_editor(user, company_id, vd, instance=None):
+        """د۱۱: کارت و شبا را فقط مدیریت تنخواه در سطح شرکت عوض می‌کند؛ برمی‌گرداند آیا عوض شده است."""
+        changed = any(name in vd and (vd[name] or None) != (getattr(instance, name, None) or None)
+                      for name in ('card_or_account_number', 'sheba_number'))
+        if changed and not user.is_superuser and not can_at_company_level(user, PETTY_CASH_MANAGE_PERM, company_id):
+            raise PermissionDenied("کارت و شبای تنخواه‌گردان را فقط مدیریت تنخواه در سطح شرکت عوض می‌کند.")
+        return changed
+
+    @staticmethod
+    def _log_bank_change(user, account, before):
+        after = {name: mask_tail(getattr(account, name, None)) for name in ('card_or_account_number', 'sheba_number')}
+        _log_petty_audit(user, 'pettycashaccount', account.pk, 'petty_bank_info_changed', '', 'changed',
+                         company_id=account.company_id, custodian_id=account.custodian_id,
+                         before={k: mask_tail(v) for k, v in before.items()}, after=after)
+
+    def _ensure_lifecycle_actor(self, user, account):
+        """د۶ و د۷: مدیریت تنخواه یا مدیر در سطح شرکت؛ نه خود تنخواه‌گردان و نه جانشین او (د۸)."""
+        if user.is_superuser:
+            return
+        if account.custodian_id == user.pk or is_petty_deputy(user, account) or not self._can_manage(user, account):
+            raise PermissionDenied("بستن و تحویل حساب تنخواه فقط با مدیریت تنخواه یا مدیر در سطح همین شرکت ممکن است.")
+
+    @action(detail=True, methods=['post'], url_path='close')
+    def close(self, request, pk=None):
+        """د۶: بستن حساب؛ مانده > ۰ با سند عودت (شمارهٔ پیگیری لازم). حساب بسته دوباره باز نمی‌شود."""
+        account = self.get_object()
+        self._ensure_lifecycle_actor(request.user, account)
+        account, refund = _lifecycle(close_account, request.user, account, request.data.get('reference'),
+                                     request.data.get('note'))
+        if refund is not None:
+            notify_document_changed(refund, 'created')
+        data = self.get_serializer(self.get_queryset().filter(pk=account.pk).first() or account).data
+        data['refund_id'] = refund.pk if refund else None
+        return Response(data)
+
+    @action(detail=True, methods=['post'], url_path='handover')
+    def handover(self, request, pk=None):
+        """د۷: تحویل به تنخواه‌گردان تازه در یک تراکنش (عودت و بستن حساب قدیمی، حساب تازه با همان سقف و مانده)."""
+        account = self.get_object()
+        self._ensure_lifecycle_actor(request.user, account)
+        raw = request.data.get('new_custodian') or request.data.get('new_custodian_id')
+        new_id = _section_id(raw)
+        new_custodian = get_user_model().objects.filter(pk=new_id).first() if new_id else None
+        old, new = _lifecycle(handover_account, request.user, account, new_custodian,
+                              request.data.get('reference'), request.data.get('note'))
+        qs = PettyCashAccount.annotate_debt(PettyCashAccount.objects.select_related('company', 'custodian', 'section'))
+        return Response({
+            'old_account': self.get_serializer(qs.filter(pk=old.pk).first()).data,
+            'new_account': self.get_serializer(qs.filter(pk=new.pk).first()).data,
+        }, status=status.HTTP_201_CREATED)
 
     def _can_manage(self, user, account_or_company_id, section_id=None):
         company_id = getattr(account_or_company_id, 'company_id', account_or_company_id)
@@ -1071,8 +1160,11 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         ceiling = vd.get('ceiling_amount') or Decimal('0')
         if ceiling and not can_at_company_level(user, PETTY_MANAGER_PERM, company_id):
             raise PermissionDenied("سقف حساب تنخواه را فقط مدیر تعیین می‌کند.")
+        bank_changed = self._ensure_bank_editor(user, company_id, vd)
         with transaction.atomic():
             account = serializer.save(company_id=company_id, section=None)
+            if bank_changed:
+                self._log_bank_change(user, account, {})
             if ceiling:
                 _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change', '0', str(int(ceiling)),
                                  company_id=company_id, custodian_id=account.custodian_id)
@@ -1087,6 +1179,10 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         vd = serializer.validated_data
         if not self._can_manage(user, instance, instance.section_id):
             raise PermissionDenied("شما مجوز ویرایش حساب تنخواه این شرکت را ندارید.")
+        # د۶: حساب بسته فقط خواندنی است و دوباره باز نمی‌شود
+        _ensure_account_open(instance)
+        bank_before = {name: getattr(instance, name, None) for name in ('card_or_account_number', 'sheba_number')}
+        bank_changed = self._ensure_bank_editor(user, instance.company_id, vd, instance)
         vd.pop('section', None)
         if 'custodian' in vd and vd['custodian'].pk != instance.custodian_id:
             raise ValidationError({'custodian': "تنخواه‌گردان حساب عوض نمی‌شود؛ حساب تازه تعریف کنید."})
@@ -1123,11 +1219,15 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             if opening_changed:
                 _log_opening_balance(user, account, old_opening, old_opening_date, reason=reason,
                                      had_activity=had_activity)
+            if bank_changed:
+                self._log_bank_change(user, account, bank_before)
 
     def perform_destroy(self, instance):
         if not self._can_manage(self.request.user, instance, instance.section_id):
             raise PermissionDenied("شما مجوز حذف حساب تنخواه این شرکت را ندارید.")
-        if instance.transactions.exists() or instance.statements.exists():
+        _ensure_account_open(instance)
+        if (instance.transactions.exists() or instance.statements.exists()
+                or instance.reconciliations.exists() or instance.debt_settlements.exists()):
             # هیچ سند تنخواهی بی‌حساب نمی‌ماند؛ حساب دارای سند فقط غیرفعال می‌شود
             raise ValidationError({'error': "این حساب سند تنخواه دارد و حذف نمی‌شود؛ آن را غیرفعال کنید."})
         instance.delete()
@@ -1170,7 +1270,8 @@ class PettyCashDebtSettlementViewSet(viewsets.ReadOnlyModelViewSet):
         """حسابدار همان شرکت (سطح شرکت)؛ کسی بدهی خودش را تسویه نمی‌کند."""
         if user.is_superuser:
             return
-        if account.custodian_id == user.pk or not can_at_company_level(user, PETTY_REVIEW_PERM, account.company_id):
+        if account.custodian_id == user.pk or is_petty_deputy(user, account) \
+                or not can_at_company_level(user, PETTY_REVIEW_PERM, account.company_id):
             raise PermissionDenied("ثبت و ابطال تسویهٔ بدهی تنخواه فقط با مجوز حسابدار در سطح همین شرکت ممکن است.")
 
     def create(self, request, *args, **kwargs):
@@ -1184,6 +1285,7 @@ class PettyCashDebtSettlementViewSet(viewsets.ReadOnlyModelViewSet):
                 or (active and str(active) != str(account.company_id)):
             raise Http404
         self._ensure_reviewer(user, account)
+        _ensure_account_open(account)
         charge = request.data.get('charge') or request.data.get('charge_id')
         try:
             settlement = create_settlement(
@@ -1198,11 +1300,50 @@ class PettyCashDebtSettlementViewSet(viewsets.ReadOnlyModelViewSet):
     def void(self, request, pk=None):
         settlement = self.get_object()
         self._ensure_reviewer(request.user, settlement.account)
+        _ensure_account_open(settlement.account)
         try:
             settlement = void_settlement(request.user, settlement, request.data.get('reason'))
         except SettlementError as exc:
             return self._error(exc)
         return Response(self.get_serializer(settlement).data)
+
+class PettyCashReconciliationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    تطبیق و بستن دورهٔ تنخواه (د۵ طرح ۴.۲): فهرست با همان قلمرو تسویه‌ها؛ ثبت فقط با حسابدار سطح شرکت (نه
+    تنخواه‌گردان و نه جانشینش). تطبیق ویرایش یا حذف نمی‌شود؛ اشتباه با تطبیق تازه درست می‌شود.
+    """
+    queryset = PettyCashReconciliation.objects.all().select_related('account', 'created_by')
+    serializer_class = PettyCashReconciliationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        cid = validate_user_company_access(user, get_request_company_id(self.request))
+        if cid:
+            qs = qs.filter(company_id=cid)
+        account_id = self.request.query_params.get('account_id')
+        if account_id:
+            qs = qs.filter(account_id=account_id)
+        if not user.is_superuser:
+            qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
+                Q(account__custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user)))
+        return qs.order_by('-period_end_date', '-id')
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        account_id = _section_id(request.data.get('account') or request.data.get('account_id'))
+        account = PettyCashAccount.objects.filter(pk=account_id).first() if account_id else None
+        active = get_request_company_id(request)
+        if account is None or not petty_company_allowed(user, account.company_id) \
+                or (active and str(active) != str(account.company_id)):
+            raise Http404
+        PettyCashDebtSettlementViewSet._ensure_reviewer(user, account)
+        row = _lifecycle(create_reconciliation, user, account, request.data.get('period_end_date'),
+                         request.data.get('counted_cash'), request.data.get('note'))
+        return Response(self.get_serializer(row).data, status=status.HTTP_201_CREATED)
+
 
 class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     """
@@ -1215,7 +1356,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     serializer_class = PettyCashTransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-    pagination_class = None
+    # د۱۳: فقط با page صفحه‌بندی می‌شود؛ کلاینت قدیمی و صف آفلاین همان فهرست کامل را می‌گیرند
+    pagination_class = InvoicePagePagination
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -1241,6 +1383,12 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         status_val = self.request.query_params.get('status')
         if status_val:
             qs = qs.filter(status=status_val)
+        date_from = _shamsi_param(self.request, 'date_from')
+        if date_from:
+            qs = qs.filter(transaction_date_shamsi__gte=date_from)
+        date_to = _shamsi_param(self.request, 'date_to')
+        if date_to:
+            qs = qs.filter(transaction_date_shamsi__lte=date_to)
         search = self.request.query_params.get('search')
         if search:
             qs = qs.filter(
@@ -1248,7 +1396,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 Q(receipt_number__icontains=search) |
                 Q(category__icontains=search) |
                 Q(counterparty__party__name__icontains=search) |
-                Q(description__icontains=search)
+                Q(description__icontains=search) |
+                Q(statement__document_number__icontains=search)
             )
 
         # همیشه فقط شرکت‌های مجاز کاربر. در آن‌ها: اسناد خودش، همهٔ اسناد شرکتی که در آن انتساب سطح شرکت با
@@ -1260,6 +1409,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 Q(custodian=user)
                 | _petty_tx_company_q(_petty_viewer_company_ids(user))
                 | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
+                | deputy_account_q(user, prefix='account__')  # د۸: حساب صاحب کار در بازهٔ جانشینی
             )
 
         return qs.annotate(offset_total_amount=_petty_offset_subquery()).order_by('-transaction_date_shamsi', '-created_at')
@@ -1292,11 +1442,22 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         """ص۱ طرح ۳.۶: تنخواه‌گردان فقط روی حساب خودش ثبت می‌کند؛ بخش و پروژه اختیاری ولی از شرکت همان حساب."""
         user = self.request.user
         vd = serializer.validated_data
-        custodian = vd.get('custodian') or user
-        if custodian.pk != user.pk and not user.is_superuser:
-            raise PermissionDenied("ثبت سند تنخواه فقط روی حساب تنخواه خود شما ممکن است.")
         section, project, account = vd.get('section'), vd.get('project'), vd.get('account')
+        # د۸: جانشین فعال روی حساب صاحب کار ثبت می‌کند (custodian همان صاحب حساب، created_by جانشین)
+        deputy_account = None
+        if not user.is_superuser:
+            target = account
+            if target is None and vd.get('custodian') is not None and vd['custodian'].pk != user.pk:
+                target = PettyCashAccount.objects.filter(
+                    custodian=vd['custodian'], is_active=True,
+                    company_id=resolve_write_company(self.request)).first()
+            if target is not None and target.custodian_id != user.pk and is_petty_deputy(user, target):
+                deputy_account = account = target
+        custodian = vd.get('custodian') or (deputy_account.custodian if deputy_account else user)
+        if custodian.pk != user.pk and not user.is_superuser and deputy_account is None:
+            raise PermissionDenied("ثبت سند تنخواه فقط روی حساب تنخواه خود شما ممکن است.")
         if account is not None:
+            _ensure_account_open(account)
             if account.custodian_id != custodian.pk or not account.is_active:
                 raise ValidationError({'account': "حساب تنخواه انتخاب‌شده حساب فعال خود شما نیست."})
             company_id = account.company_id
@@ -1306,21 +1467,43 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             company_id = project.company_id
         else:
             company_id = resolve_write_company(self.request)
-        _ensure_petty_custodian(user, company_id)
+        if deputy_account is None:
+            _ensure_petty_custodian(user, company_id)
         self._ensure_same_company(company_id, section, project)
         ensure_period_open(company_id, vd.get('transaction_date_shamsi'), 'transaction_date_shamsi')
         if account is None:
             account = _own_petty_account(custodian, company_id, create=True)
-        # ص۱۰: سند تازه پیش‌نویس می‌ماند؛ شارژ با request-charge و هزینه با صورت‌حساب به گردش موتور می‌رود
-        instance = serializer.save(created_by=user, custodian=custodian, account=account, status='draft')
+        with transaction.atomic():
+            # قفل حساب: بستن، تحویل یا تطبیق هم‌زمان میان سنجش و ذخیره جا نمی‌گیرد
+            if account is not None:
+                account = PettyCashAccount.objects.select_for_update().get(pk=account.pk)
+                _ensure_account_open(account)
+            _ensure_period_unlocked(account.pk if account else None, vd.get('transaction_date_shamsi'),
+                                    vd.get('transaction_type') or 'expense')
+            # ص۱۰: سند تازه پیش‌نویس می‌ماند؛ شارژ با request-charge و هزینه با صورت‌حساب به گردش موتور می‌رود
+            instance = serializer.save(created_by=user, custodian=custodian, account=account, status='draft')
         notify_document_changed(instance, 'created')
+
+    def update(self, request, *args, **kwargs):
+        # د۵ و د۶: حساب بسته و ردیف دورهٔ تطبیق‌شده پیش از اعتبارسنجی بدنه با کد روشن رد می‌شوند (صف آفلاین)
+        instance = self.get_object()
+        _ensure_account_open(instance.account)
+        _ensure_period_unlocked(instance.account_id, instance.transaction_date_shamsi, instance.transaction_type)
+        return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
         vd = serializer.validated_data
-        if not user.is_superuser and instance.custodian_id != user.pk:
+        deputy = (not user.is_superuser and instance.custodian_id != user.pk
+                  and is_petty_deputy(user, instance.account))
+        if not user.is_superuser and instance.custodian_id != user.pk and not deputy:
             raise PermissionDenied("فقط تنخواه‌گردان سند خودش را ویرایش می‌کند.")
+        _ensure_account_open(instance.account)
+        # د۵: ردیف دورهٔ تطبیق‌شده و جابه‌جایی به آن دوره هر دو 400 period_locked
+        _ensure_period_unlocked(instance.account_id, instance.transaction_date_shamsi, instance.transaction_type)
+        _ensure_period_unlocked(instance.account_id, vd.get('transaction_date_shamsi', instance.transaction_date_shamsi),
+                                vd.get('transaction_type', instance.transaction_type))
         new_status = vd.pop('status', None)
         if new_status and new_status != instance.status:
             raise PermissionDenied("وضعیت سند تنخواه فقط از راه گردش کار تغییر می‌کند.")
@@ -1330,21 +1513,34 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         _ensure_petty_tx_editable(instance)
         _ensure_petty_cash_open(instance)
         company_id = instance.wf_company_id
-        if not user.is_superuser:
+        if not user.is_superuser and not deputy:
             _ensure_petty_custodian(user, company_id)
         self._ensure_same_company(company_id, vd.get('section'), vd.get('project'))
         ensure_period_open(company_id, vd.get('transaction_date_shamsi', instance.transaction_date_shamsi),
                            'transaction_date_shamsi')
-        notify_document_changed(serializer.save(), 'updated')
+        with transaction.atomic():
+            # قفل حساب و سنجش دوباره: بستن یا تطبیق هم‌زمان میان سنجش و ذخیره جا نمی‌گیرد
+            if instance.account_id:
+                _ensure_account_open(PettyCashAccount.objects.select_for_update().get(pk=instance.account_id))
+                _ensure_period_unlocked(instance.account_id,
+                                        vd.get('transaction_date_shamsi', instance.transaction_date_shamsi),
+                                        vd.get('transaction_type', instance.transaction_type))
+            saved = serializer.save()
+        notify_document_changed(saved, 'updated')
 
     def perform_destroy(self, instance):
         user = self.request.user
         if not user.is_superuser and instance.custodian_id != user.pk:
             raise PermissionDenied("فقط تنخواه‌گردان سند خودش را حذف می‌کند.")
+        _ensure_account_open(instance.account)
+        _ensure_period_unlocked(instance.account_id, instance.transaction_date_shamsi, instance.transaction_type)
         _ensure_petty_tx_editable(instance)
         _ensure_petty_cash_open(instance)
         if not user.is_superuser:
             _ensure_petty_custodian(user, instance.wf_company_id)
+        if instance.debt_offsets.exists():
+            # د۴: شارژی که کسر بدهی رویش ثبت شده (حتی باطل‌شده) حذف نمی‌شود؛ سابقهٔ تسویه می‌ماند
+            raise _PettyApiError('has_settlements', "روی این شارژ کسر بدهی ثبت شده و حذف نمی‌شود.")
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
@@ -1413,9 +1609,14 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
 
         custodian = user
         target_user_id = request.query_params.get('custodian_id')
-        if target_user_id and str(target_user_id) != str(user.pk) and (
-                user.is_superuser or company_id in _petty_viewer_company_ids(user)):
-            custodian = get_user_model().objects.filter(id=target_user_id).first() or user
+        if target_user_id and str(target_user_id) != str(user.pk):
+            if user.is_superuser or company_id in _petty_viewer_company_ids(user):
+                custodian = get_user_model().objects.filter(id=target_user_id).first() or user
+            else:
+                principal_account = PettyCashAccount.objects.filter(
+                    company_id=company_id, custodian_id=_section_id(target_user_id), is_active=True).first()
+                if principal_account is not None and is_petty_deputy(user, principal_account):
+                    custodian = principal_account.custodian
 
         account = PettyCashAccount.objects.filter(company_id=company_id, custodian=custodian, is_active=True).first()
         ceiling = account.ceiling_amount if account else Decimal('0')
@@ -1438,6 +1639,12 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         if ceiling > Decimal('0'):
             utilization_rate = float(min(Decimal('100.0'), (spent_sum / ceiling) * Decimal('100.0')))
         custodian_full_name = f"{custodian.first_name} {custodian.last_name}".strip() or custodian.username
+        # د۱۱: کارت و شبای کامل فقط برای خود تنخواه‌گردان، خزانه‌دار و مدیریت تنخواه سطح شرکت
+        full_bank = custodian.pk == user.pk or petty_bank_full_view(user, company_id)
+        card = account.card_or_account_number if account else ''
+        sheba = account.sheba_number if account else ''
+        if not full_bank:
+            card, sheba = mask_tail(card), mask_tail(sheba)
 
         return Response({
             'account_id': account.id if account else None,
@@ -1463,8 +1670,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             'pending_debt_settlements': int(pending_debt_settlements),
             'payroll_deduction_available': payroll_deduction_available(),
             'utilization_rate': round(utilization_rate, 1),
-            'card_or_account_number': account.card_or_account_number if account else '',
-            'sheba_number': account.sheba_number if account else '',
+            'card_or_account_number': card,
+            'sheba_number': sheba,
             'custodian_name': custodian_full_name,
             'custodian_id': custodian.id
         })
@@ -1496,13 +1703,23 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         except Exception:
             return Response({'error': 'مبلغ باید عددی صحیح و مثبت باشد.'}, status=status.HTTP_400_BAD_REQUEST)
         company_id = resolve_write_company(request)
-        _ensure_petty_custodian(user, company_id)
+        principal_account = None
+        raw_custodian = request.data.get('custodian') or request.data.get('custodian_id')
+        if raw_custodian and str(raw_custodian) != str(user.pk):
+            # د۸: جانشین برای حساب فعال صاحب کار شارژ می‌خواهد
+            principal_account = PettyCashAccount.objects.filter(
+                company_id=company_id, custodian_id=_section_id(raw_custodian), is_active=True).first()
+            if principal_account is None or not is_petty_deputy(user, principal_account):
+                raise PermissionDenied("درخواست شارژ فقط برای حساب خود شما یا صاحب کاری که جانشین اوست ممکن است.")
+        else:
+            _ensure_petty_custodian(user, company_id)
         today = to_shamsi_str(timezone.now())
         ensure_period_open(company_id, today, 'transaction_date_shamsi')
         with transaction.atomic():
-            account = _own_petty_account(user, company_id, create=True)
+            account = principal_account or _own_petty_account(user, company_id, create=True)
             tx = PettyCashTransaction.objects.create(
-                account=account, custodian=user, created_by=user, transaction_type='allocation', amount=amount,
+                account=account, custodian=account.custodian, created_by=user, transaction_type='allocation',
+                amount=amount,
                 transaction_date_shamsi=today,
                 title=(str(request.data.get('title') or '').strip() or 'درخواست شارژ تنخواه')[:200],
                 category=petty_allocation_category('charge'), source='charge',
@@ -1520,11 +1737,14 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     def send_charge(self, request, pk=None):
         """ارسال دوبارهٔ درخواست شارژ پیش‌نویس (پس از عودت یا لغو) به دست خود تنخواه‌گردان."""
         tx = self.get_object()
-        if tx.custodian_id != request.user.pk or tx.transaction_type != 'allocation':
+        deputy = tx.custodian_id != request.user.pk and is_petty_deputy(request.user, tx.account)
+        if (tx.custodian_id != request.user.pk and not deputy) or tx.transaction_type != 'allocation':
             raise PermissionDenied("فقط تنخواه‌گردان درخواست شارژ خودش را می‌فرستد.")
+        _ensure_account_open(tx.account)
         _ensure_petty_tx_editable(tx)
         _ensure_petty_cash_open(tx)
-        _ensure_petty_custodian(request.user, tx.wf_company_id)
+        if not deputy:
+            _ensure_petty_custodian(request.user, tx.wf_company_id)
         err = self._submit_charge(tx, request.user)
         if err is not None:
             return _petty_wf_error(err)
@@ -1686,7 +1906,7 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = PettyCashStatementSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
+    pagination_class = InvoicePagePagination  # د۱۳
 
     def get_queryset(self):
         from django.db.models import Count
@@ -1702,9 +1922,26 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
         custodian_id = self.request.query_params.get('custodian_id')
         if custodian_id:
             qs = qs.filter(custodian_id=custodian_id)
+        account_id = self.request.query_params.get('account_id')
+        if account_id:
+            qs = qs.filter(account_id=account_id)
+        date_from = _shamsi_param(self.request, 'date_from')
+        if date_from:
+            qs = qs.filter(statement_date_shamsi__gte=date_from)
+        date_to = _shamsi_param(self.request, 'date_to')
+        if date_to:
+            qs = qs.filter(statement_date_shamsi__lte=date_to)
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            term = Q(document_number__icontains=search) | Q(custodian__first_name__icontains=search) \
+                | Q(custodian__last_name__icontains=search) | Q(custodian__username__icontains=search)
+            if search.isdigit():
+                term |= Q(pk=int(search))
+            qs = qs.filter(term)
         if not user.is_superuser:
             qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
-                Q(custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user)))
+                Q(custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user))
+                | deputy_account_q(user, prefix='account__'))
         return qs.order_by('-statement_date_shamsi', '-created_at')
 
     def _statement_object(self):
@@ -1727,6 +1964,8 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
     def _submit(statement, user):
         try:
             with transaction.atomic():
+                # د۹: شمارهٔ ۲.۸ در اولین ارسال، در همان تراکنش؛ ارسال دوباره همان شماره را نگه می‌دارد
+                ensure_statement_number(statement, user)
                 wf_engine.submit(PETTY_STATEMENT_WORKFLOW, statement, user)
         except WorkflowError as exc:
             return exc
@@ -1746,7 +1985,13 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
         err = None
         with transaction.atomic():
             lines = list(PettyCashTransaction.objects.select_for_update()
-                         .filter(pk__in=ids, custodian=user, transaction_type='expense'))
+                         .filter(pk__in=ids, transaction_type='expense'))
+            owner_id = lines[0].custodian_id if lines else None
+            # د۸: جانشین فعال برای ردیف‌های حساب صاحب کار صورت‌حساب می‌سازد
+            deputy = bool(lines) and owner_id != user.pk and all(l.custodian_id == owner_id for l in lines) \
+                and is_petty_deputy(user, lines[0].account)
+            if not deputy:
+                lines = [l for l in lines if l.custodian_id == user.pk]
             if len(lines) != len(ids):
                 return Response({'error': 'برخی ردیف‌ها پیدا نشدند یا هزینهٔ خود شما نیستند.'},
                                 status=status.HTTP_400_BAD_REQUEST)
@@ -1755,16 +2000,18 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
                                 status=status.HTTP_400_BAD_REQUEST)
             account_ids = {l.account_id for l in lines}
             account = lines[0].account
+            _ensure_account_open(account)
             if len(account_ids) != 1 or account is None or not account.is_active or not account.company_id:
                 return Response({'error': 'همهٔ ردیف‌ها باید از یک حساب تنخواه فعال باشند.'},
                                 status=status.HTTP_400_BAD_REQUEST)
             company_id = account.company_id
-            _ensure_petty_custodian(user, company_id)
+            if not deputy:
+                _ensure_petty_custodian(user, company_id)
             for line in lines:
                 ensure_period_open(company_id, line.transaction_date_shamsi, 'transaction_date_shamsi')
             ensure_period_open(company_id, date, 'statement_date_shamsi')
             statement = PettyCashStatement.objects.create(
-                company_id=company_id, account=account, custodian=user, statement_date_shamsi=date,
+                company_id=company_id, account=account, custodian_id=account.custodian_id, statement_date_shamsi=date,
                 created_by=user, status='draft')
             PettyCashTransaction.objects.filter(pk__in=ids).update(statement=statement)
             recompute_statement(statement)
@@ -1779,11 +2026,14 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
     def send(self, request, pk=None):
         """ارسال دوبارهٔ صورت‌حساب پیش‌نویس (پس از لغو) به دست خود تنخواه‌گردان."""
         statement = self._statement_object()
-        if statement.custodian_id != request.user.pk:
+        deputy = statement.custodian_id != request.user.pk and is_petty_deputy(request.user, statement.account)
+        if statement.custodian_id != request.user.pk and not deputy:
             raise PermissionDenied("فقط تنخواه‌گردان صورت‌حساب خودش را می‌فرستد.")
+        _ensure_account_open(statement.account)
         if statement.status != 'draft' or not statement.lines.exists():
             return Response({'error': 'فقط صورت‌حساب پیش‌نویس دارای ردیف فرستاده می‌شود.'}, status=status.HTTP_400_BAD_REQUEST)
-        _ensure_petty_custodian(request.user, statement.company_id)
+        if not deputy:
+            _ensure_petty_custodian(request.user, statement.company_id)
         ensure_period_open(statement.company_id, statement.statement_date_shamsi, 'statement_date_shamsi')
         recompute_statement(statement)
         err = self._submit(statement, request.user)

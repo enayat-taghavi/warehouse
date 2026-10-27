@@ -28,6 +28,7 @@ from ..models import (
     PettyCashAccount,
     PettyCashStatement,
     PettyCashDebtSettlement,
+    PettyCashReconciliation,
     PettyCashTransaction,
     WorkflowAuditLog,
 )
@@ -552,6 +553,15 @@ def _petty_locked(serializer, company_id, day):
     return cache[key]
 
 
+def petty_bank_full_view(user, company_id) -> bool:
+    """د۱۱: خزانه‌دار یا مدیریت تنخواه در سطح شرکت (بی‌توجه به تنخواه‌گردان بودن)."""
+    from accounts.scoped_permissions import can_at_company_level
+    if user.is_superuser:
+        return True
+    return any(can_at_company_level(user, code, company_id)
+               for code in ('perm_treasury_disburse_action', 'perm_petty_cash_manage'))
+
+
 class PettyCashAccountSerializer(serializers.ModelSerializer):
     section_name = serializers.SerializerMethodField()
     project_id = serializers.SerializerMethodField()
@@ -573,6 +583,51 @@ class PettyCashAccountSerializer(serializers.ModelSerializer):
     get_section_name = staticmethod(lambda obj: _section_value(obj, ('section', 'name')))
     get_project_id = staticmethod(lambda obj: _section_value(obj, ('section', 'project', 'id')))
     get_project_name = staticmethod(lambda obj: _section_value(obj, ('section', 'project', 'name')))
+
+    def validate_sheba_number(self, value):
+        """د۱۱ طرح ۴.۲: اختیاری؛ با همان اعتبارسنج پرسنل. مقدار پوشیده (برگشت همان نمایش) یعنی بی‌تغییر."""
+        if value is None or not str(value).strip():
+            return None
+        if is_masked(value) or str(value).strip() == (getattr(self.instance, 'sheba_number', None) or ''):
+            return getattr(self.instance, 'sheba_number', None)  # unchanged (masked echo or legacy value)
+        from ..sheba_utils import clean_sheba
+        cleaned = clean_sheba(value)
+        is_valid, err_msg, _ = validate_sheba(cleaned)
+        if not is_valid:
+            raise serializers.ValidationError(err_msg or "شماره شبا نامعتبر است.")
+        return cleaned
+
+    def validate_card_or_account_number(self, value):
+        """د۱۱: کارت ۱۶ رقمی (ارقام فارسی و عربی به لاتین، فاصله و خط تیره حذف)؛ اختیاری."""
+        if value is None or not str(value).strip():
+            return None
+        if is_masked(value) or str(value).strip() == (getattr(self.instance, 'card_or_account_number', None) or ''):
+            return getattr(self.instance, 'card_or_account_number', None)  # unchanged (masked echo or legacy value)
+        digits = normalize_digits(str(value)).replace(' ', '').replace('-', '')
+        if not digits.isdigit() or len(digits) != 16:
+            raise serializers.ValidationError("شماره کارت باید ۱۶ رقم باشد.")
+        return digits
+
+    def _full_bank_view(self, obj):
+        """کارت و شبای کامل: خود تنخواه‌گردان، خزانه‌دار یا مدیریت تنخواه در سطح همان شرکت؛ بقیه پوشیده."""
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return False
+        if user.is_superuser or obj.custodian_id == user.pk:
+            return True
+        cache = self.context.setdefault('_petty_bank_view_cache', {})
+        if obj.company_id not in cache:
+            cache[obj.company_id] = petty_bank_full_view(user, obj.company_id)
+        return cache[obj.company_id]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self._full_bank_view(instance):
+            for name in ('card_or_account_number', 'sheba_number'):
+                data[name] = mask_tail(data.get(name))
+        data['is_closed'] = instance.closed_at is not None
+        return data
 
     def validate_opening_balance_date(self, value):
         if value in (None, ''):
@@ -660,6 +715,13 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
         return None if total is None else int(obj.amount - total)
 
     def get_is_locked(self, obj):
+        # د۵ و د۶ طرح ۴.۲: هزینهٔ دورهٔ تطبیق‌شده و ردیف حساب بسته هم قفل است
+        from ..petty_lifecycle import is_account_closed, is_period_locked
+        if obj.account_id and is_account_closed(obj.account):
+            return True
+        cache = self.context.setdefault('_petty_period_cache', {})
+        if is_period_locked(obj.account_id, obj.transaction_date_shamsi, obj.transaction_type, cache=cache):
+            return True
         return _petty_locked(self, obj.wf_company_id, obj.transaction_date_shamsi)
 
     def get_project_id(self, obj):
@@ -740,6 +802,27 @@ class PettyCashDebtSettlementSerializer(serializers.ModelSerializer):
         return None
 
 
+class PettyCashReconciliationSerializer(serializers.ModelSerializer):
+    """تطبیق تنخواه (د۵ طرح ۴.۲). فقط خواندنی؛ ثبت از راه petty_lifecycle.create_reconciliation."""
+    custodian_id = serializers.IntegerField(source='account.custodian_id', read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    result = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PettyCashReconciliation
+        fields = '__all__'
+        read_only_fields = [f.name for f in PettyCashReconciliation._meta.fields]
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.username
+        return None
+
+    @staticmethod
+    def get_result(obj):
+        return 'shortage' if obj.difference < 0 else ('surplus' if obj.difference > 0 else 'balanced')
+
+
 class PettyCashStatementSerializer(serializers.ModelSerializer):
     """صورت‌حساب تنخواه (ص۴ و ص۹ طرح ۳.۶). وضعیت و مبلغ‌ها را فقط سرور و گردش کار عوض می‌کنند."""
     company_name = serializers.CharField(source='company.name', read_only=True, default=None)
@@ -753,7 +836,7 @@ class PettyCashStatementSerializer(serializers.ModelSerializer):
         model = PettyCashStatement
         fields = '__all__'
         read_only_fields = ['company', 'custodian', 'total_amount', 'approved_amount', 'status',
-                            'document_number', 'created_by', 'created_at', 'updated_at']
+                            'document_number', 'issued_number', 'created_by', 'created_at', 'updated_at']
 
     def get_custodian_name(self, obj):
         if obj.custodian:

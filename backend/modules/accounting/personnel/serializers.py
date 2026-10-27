@@ -71,6 +71,7 @@ from .serializers_domains.treasury_audit import (
     PettyCashAccountSerializer,
     PettyCashStatementSerializer,
     PettyCashDebtSettlementSerializer,
+    PettyCashReconciliationSerializer,
     PettyCashTransactionSerializer,
     WorkflowAuditLogSerializer,
 )
@@ -125,6 +126,7 @@ __all__ = [
     'PettyCashAccountSerializer',
     'PettyCashStatementSerializer',
     'PettyCashDebtSettlementSerializer',
+    'PettyCashReconciliationSerializer',
     'PettyCashTransactionSerializer',
     'WorkflowAuditLogSerializer',
 ]

@@ -453,6 +453,8 @@ def _petty_tx_in_scope(user, tx) -> bool:
         return False
     if tx.custodian_id == user.pk or petty_company_viewer(user, company_id):
         return True
+    if _petty_deputy(user, tx.account):
+        return True
     # سند قدیمی بخش‌دار: مدیر تنخواه همان بخش
     return bool(tx.section_id) and can(user, PETTY_CASH_PERM, tx.section)
 
@@ -468,25 +470,39 @@ def can_attach_petty_tx(user, entity_id):
     tx = resolve_petty_tx(entity_id)
     if tx is None:
         return None
-    if tx.custodian_id == user.pk:
+    if tx.custodian_id == user.pk or _petty_deputy(user, tx.account):
         editable = tx.status in PETTY_EDITABLE_STATUSES and tx.statement_id is None
         return True if editable and petty_company_allowed(user, tx.wf_company_id) else None
     return True if _petty_tx_in_scope(user, tx) else None
 
 
 def is_petty_tx_locked(entity_id):
-    """ردیف تنخواه با تاریخی در دورهٔ مالی بستهٔ شرکت (قلاب ۳.۲)."""
+    """
+    ردیف تنخواه با تاریخی در دورهٔ مالی بستهٔ شرکت (قلاب ۳.۲)، هزینه با تاریخی تا آخرین دورهٔ تطبیق‌شدهٔ حساب
+    (د۵ طرح ۴.۲)، یا ردیف حساب بسته (د۶).
+    """
     from .fiscal import closed_period_for
+    from .petty_lifecycle import is_account_closed, is_period_locked
     tx = resolve_petty_tx(entity_id)
     if tx is None:
         return False
+    if is_account_closed(tx.account) or is_period_locked(tx.account_id, tx.transaction_date_shamsi,
+                                                         tx.transaction_type):
+        return True
     return closed_period_for(tx.wf_company_id, tx.transaction_date_shamsi) is not None
 
 
 def _petty_statement_in_scope(user, statement) -> bool:
     if not petty_company_allowed(user, statement.company_id):
         return False
-    return statement.custodian_id == user.pk or petty_company_viewer(user, statement.company_id)
+    return (statement.custodian_id == user.pk or petty_company_viewer(user, statement.company_id)
+            or _petty_deputy(user, statement.account))
+
+
+def _petty_deputy(user, account) -> bool:
+    """جانشین فعال تنخواه‌گردان (د۸ طرح ۴.۲) مثل خود او سند را می‌بیند و پیوست می‌کند."""
+    from .petty_lifecycle import is_petty_deputy
+    return account is not None and is_petty_deputy(user, account)
 
 
 def can_view_petty_statement(user, entity_id):

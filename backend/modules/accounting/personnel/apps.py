@@ -118,6 +118,11 @@ class PersonnelConfig(AppConfig):
             contribute(f'can_attach:{_kind}', _attach)
             contribute(f'is_locked:{_kind}', _locked)
             contribute(f'company_of:{_kind}', _company)
+        # شمارهٔ ۲.۸ و چاپ صورت‌حساب تنخواه (د۹ و د۱۳ طرح ۴.۲)
+        from personnel.petty_lifecycle import PETTY_STATEMENT_NUMBER_SERIES
+        from personnel.petty_print import printable_petty_statement
+        contribute('numbering_series', PETTY_STATEMENT_NUMBER_SERIES)
+        contribute(f'printable:{_wf.PETTY_STATEMENT_ENTITY}', printable_petty_statement)
         # لاگ ممیزی فاکتور از قلاب دیدن همان سند پیروی می‌کند (ص۱۰ طرح ۲.۶)
         contribute('audit_entity_kinds', ('ExpenseInvoice', INVOICE_ENTITY))
         # بخش‌های قابل خاموش شدن (ص۱۲ طرح ۲.۶)؛ همین کدها در sectionKey منو و مسیر فرانت می‌آیند
