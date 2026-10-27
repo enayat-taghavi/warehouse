@@ -32,6 +32,12 @@ import {
   PettyCashTransaction,
   PettyCashBalanceSummary,
   PettyCashStatement,
+  PettyCashDebtSettlement,
+  PettyCashDebtSettlementCreate,
+  PettyCashReconciliation,
+  PettyCashReconciliationCreate,
+  PettyCashAccountCloseResult,
+  PettyCashHandoverResult,
   WorkflowAuditLog,
   PersonnelBankAccount,
   PersonnelDocument,
@@ -356,8 +362,76 @@ export class TreasuryOrgApiService {
     return this.api.patch<PettyCashAccount>(`${this.baseUrl}/petty-cash-accounts/${id}`, data);
   }
 
+  /** ساخت حساب سطح شرکت (تنخواه‌گردان، سقف، موجودی اولیه، کارت و شبا) */
+  createPettyCashAccount(data: Partial<PettyCashAccount>): Observable<PettyCashAccount> {
+    return this.api.post<PettyCashAccount>(`${this.baseUrl}/petty-cash-accounts/`, data);
+  }
+
+  /** بستن حساب (د۶)؛ با مانده > ۰ شمارهٔ پیگیری عودت لازم است. فقط آنلاین */
+  closePettyCashAccount(id: number, data: { reference?: string; note?: string }): Observable<PettyCashAccountCloseResult> {
+    return this.api.post<PettyCashAccountCloseResult>(`${this.baseUrl}/petty-cash-accounts/${id}/close/`, data);
+  }
+
+  /** تحویل به تنخواه‌گردان تازه (د۷). فقط آنلاین */
+  handoverPettyCashAccount(id: number, data: { new_custodian: number; reference?: string; note?: string }): Observable<PettyCashHandoverResult> {
+    return this.api.post<PettyCashHandoverResult>(`${this.baseUrl}/petty-cash-accounts/${id}/handover/`, data);
+  }
+
+  /** صفحه‌بندی سرور (د۱۳)؛ بی `page` فهرست کامل برمی‌گردد */
+  getPettyCashTransactionsPage(params: {
+    page: number;
+    page_size?: number;
+    custodian_id?: number;
+    transaction_type?: string;
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+    search?: string;
+    statement_id?: number;
+    line_status?: string;
+  }): Observable<PagedResult<PettyCashTransaction>> {
+    return this.api.get<PagedResult<PettyCashTransaction>>(`${this.baseUrl}/petty-cash-transactions`, params as Record<string, unknown>);
+  }
+
+  getPettyCashSettlements(params?: { account_id?: number; status?: string; method?: string; charge_id?: number }): Observable<PettyCashDebtSettlement[]> {
+    return this.api.get<PettyCashDebtSettlement[]>(`${this.baseUrl}/petty-cash-settlements/`, params as Record<string, unknown>);
+  }
+
+  createPettyCashSettlement(data: PettyCashDebtSettlementCreate): Observable<PettyCashDebtSettlement> {
+    return this.api.post<PettyCashDebtSettlement>(`${this.baseUrl}/petty-cash-settlements/`, data);
+  }
+
+  voidPettyCashSettlement(id: number, reason: string): Observable<PettyCashDebtSettlement> {
+    return this.api.post<PettyCashDebtSettlement>(`${this.baseUrl}/petty-cash-settlements/${id}/void/`, { reason });
+  }
+
+  getPettyCashReconciliations(params?: { account_id?: number }): Observable<PettyCashReconciliation[]> {
+    return this.api.get<PettyCashReconciliation[]>(`${this.baseUrl}/petty-cash-reconciliations/`, params as Record<string, unknown>);
+  }
+
+  createPettyCashReconciliation(data: PettyCashReconciliationCreate): Observable<PettyCashReconciliation> {
+    return this.api.post<PettyCashReconciliation>(`${this.baseUrl}/petty-cash-reconciliations/`, data);
+  }
+
   getPettyCashStatements(params?: { status?: string; custodian_id?: number }): Observable<PettyCashStatement[]> {
     return this.api.get<PettyCashStatement[]>(`${this.baseUrl}/petty-cash-statements`, params as Record<string, unknown>);
+  }
+
+  getPettyCashStatementsPage(params: {
+    page: number;
+    page_size?: number;
+    status?: string;
+    custodian_id?: number;
+    account_id?: number;
+    date_from?: string;
+    date_to?: string;
+    search?: string;
+  }): Observable<PagedResult<PettyCashStatement>> {
+    return this.api.get<PagedResult<PettyCashStatement>>(`${this.baseUrl}/petty-cash-statements`, params as Record<string, unknown>);
+  }
+
+  pettyCashStatementPrintUrl(id: number): string {
+    return `/api/print/petty_cash_statement/${id}/pdf/`;
   }
 
   getPettyCashStatement(id: number): Observable<PettyCashStatement> {

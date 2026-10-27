@@ -1068,9 +1068,23 @@ export interface PettyCashAccount {
   sheba_number?: string;
   is_active?: boolean;
   description?: string;
+  /** موجودی اولیه (ریال، د۲ طرح ۴.۲) و تاریخ شمسی آن */
+  opening_balance?: number;
+  opening_balance_date?: string | null;
+  /** فقط نوشتنی: دلیل تغییر موجودی اولیه بعد از اولین گردش */
+  reason?: string;
+  /** حساب بسته فقط خواندنی است (د۶) */
+  is_closed?: boolean;
+  closed_at?: string | null;
+  closed_by?: number | null;
+  /** تحویل به تنخواه‌گردان تازه (د۷) */
+  handover_from?: number | null;
+  handover_to?: number | null;
   created_at?: string;
   updated_at?: string;
 }
+
+export type PettyCashTransactionSource = '' | 'charge' | 'statement_refill' | 'handover_in';
 
 export interface PettyCashTransaction {
   id?: number;
@@ -1111,10 +1125,84 @@ export interface PettyCashTransaction {
   status: 'draft' | 'pending_supervisor' | 'pending_accountant' | 'pending_manager' | 'approved' | 'rejected' | 'revision_required';
   status_display?: string;
   rejection_reason?: string;
+  /** منبع شارژ (فقط allocation، د۳) */
+  source?: PettyCashTransactionSource;
+  source_display?: string;
+  source_statement?: number | null;
+  /** کسر بدهی از این شارژ و مبلغ خالص واریز (د۴)؛ برای غیرشارژ null */
+  offset_total?: number | null;
+  net_amount?: number | null;
   created_by?: number | null;
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export type PettyCashSettlementMethod = 'cash' | 'charge_offset' | 'payroll';
+export type PettyCashSettlementStatus = 'pending' | 'done' | 'void';
+
+/** تسویهٔ بدهی تنخواه‌گردان (د۴) */
+export interface PettyCashDebtSettlement {
+  id: number;
+  account: number;
+  company?: number;
+  amount: number;
+  method: PettyCashSettlementMethod;
+  method_display?: string;
+  status: PettyCashSettlementStatus;
+  status_display?: string;
+  reference?: string;
+  charge?: number | null;
+  payroll_ref?: string;
+  note?: string;
+  created_by?: number | null;
+  created_by_name?: string | null;
+  done_at?: string | null;
+  voided_by?: number | null;
+  void_reason?: string;
+  created_at?: string;
+}
+
+export interface PettyCashDebtSettlementCreate {
+  account: number;
+  amount: number;
+  method: PettyCashSettlementMethod;
+  reference?: string;
+  charge?: number | null;
+  note?: string;
+}
+
+/** تطبیق دورهٔ تنخواه (د۵)؛ difference = شمارش − انتظار، منفی یعنی کسری */
+export interface PettyCashReconciliation {
+  id: number;
+  account: number;
+  company?: number;
+  custodian_id?: number;
+  period_end_date: string;
+  expected_cash: number;
+  counted_cash: number;
+  difference: number;
+  result?: 'shortage' | 'surplus' | 'balanced';
+  note?: string;
+  created_by?: number | null;
+  created_by_name?: string | null;
+  created_at?: string;
+}
+
+export interface PettyCashReconciliationCreate {
+  account: number;
+  period_end_date: string;
+  counted_cash: number;
+  note?: string;
+}
+
+export interface PettyCashAccountCloseResult extends PettyCashAccount {
+  refund_id?: number | null;
+}
+
+export interface PettyCashHandoverResult {
+  old_account: PettyCashAccount;
+  new_account: PettyCashAccount;
 }
 
 export type PettyCashStatementStatus = 'draft' | 'submitted' | 'approved' | 'paid' | 'returned';
@@ -1132,7 +1220,9 @@ export interface PettyCashStatement {
   approved_amount: number;
   status: PettyCashStatementStatus;
   status_display?: string;
+  /** شمارهٔ رسمی صورت‌حساب (د۹)؛ در اولین ارسال داده می‌شود */
   document_number?: string | null;
+  issued_number?: number | null;
   lines_count?: number;
   is_locked?: boolean;
   created_by_name?: string | null;
@@ -1160,6 +1250,17 @@ export interface PettyCashBalanceSummary {
   sheba_number?: string;
   custodian_name?: string;
   custodian_id?: number;
+  /** د۱ و د۲ طرح ۴.۲ */
+  opening_balance?: number;
+  opening_balance_date?: string | null;
+  refund_total?: number;
+  /** ریز بدهی: ردشده + کسری تطبیق − تسویهٔ قطعی */
+  rejected_total?: number;
+  shortage_total?: number;
+  settled_total?: number;
+  pending_debt_settlements?: number;
+  /** کسر از حقوق فقط وقتی ماژول حقوق ثبت شده باشد */
+  payroll_deduction_available?: boolean;
 }
 
 
