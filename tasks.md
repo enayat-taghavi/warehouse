@@ -2593,7 +2593,7 @@ Write the definitions in simple Persian like the rows above.
 
 ===
 
-[ ] Session 1 of 1 — Release v1 stage 4 mid-stage close-out on the local app environment: backup, apply the stage-4 migrations, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] [ ] Session 1 of 1 — Release v1 stage 4 mid-stage close-out on the local app environment: backup, apply the stage-4 migrations, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
