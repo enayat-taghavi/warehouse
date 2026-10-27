@@ -2672,3 +2672,84 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.3-b): personnel file scenario API tests`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 2 — Release v1 step 4.3-c: personnel DOM specs (masking, paging, reason dialog)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles-43c.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles-43c.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles-43c.dom.spec.ts --contains "getPersonnelProfilesPage" --contains "documents_count" --contains "isMaskedSensitive" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles-43c.dom.spec.ts --contains "app-workflow-reason-dialog" --contains "prompt" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/personnel/personnel-profiles/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 4.3-c): personnel DOM specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new files: `frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles-43c.dom.spec.ts` and `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles-43c.dom.spec.ts`. Change no other file (never touch `scripts/automation/*`, never change production code). If a test fails because of production code, keep the assertion, stop, and describe the failure in the report.
+- No `it.skip`, no `xit(`, no `fit(`.
+- Run every command in the foreground and wait until it finishes.
+
+2. Context (committed by Claude in the `feat(release-v1 4.3-c...)` and `fix(release-v1 4.3-c...)` commits; read only these):
+- `frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles.spec.ts`: COPY its TestBed setup, providers and API mocks (it already mocks `getPersonnelProfilesPage` with a paged reply `{count, next, previous, results}`).
+- `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.spec.ts`: COPY its TestBed setup and mocks.
+- `frontend/src/app/modules/accounting/models/personnel.model.ts`: functions `isMaskedValue`, `isMaskedSensitive`, `stripMaskedSensitive`, constant `PERSONNEL_SENSITIVE_FIELDS` (Grep them).
+- In `personnel-profiles.ts` / `.html` Grep: `getPersonnelProfilesPage`, `isMasked`, `documents_count`, `maskedHint` or the hint text, the pager next/previous handlers, `isMaskedSensitive`.
+- In `supervisor-new-profiles.ts` / `.html` Grep: `app-workflow-reason-dialog` and the vehicle reject handler that opens it.
+
+3. Definitions: a masked value is a string containing `*` (example `******1234`). Only the fields in `PERSONNEL_SENSITIVE_FIELDS` are treated as masked when saving; a `*` in `address` or `notes` is real user data and must be kept.
+
+4. Task:
+- File A `personnel-profiles-43c.dom.spec.ts`, one `it` each:
+  a) a profile row with `national_code: '******1234'` renders that text and the Persian hint text used by the component next to it (read the exact hint from the html);
+  b) a profile with `documents_count: 3` and `documents: []` shows the documents count text with the number 3 in Persian digits (read the exact template);
+  c) on load the component calls `getPersonnelProfilesPage` with `page: 1`; clicking the next-page button calls it again with `page: 2` (reply `count` larger than one page);
+  d) `isMaskedSensitive('national_code', '***12')` is true, `isMaskedSensitive('address', 'a * b')` is false, and `stripMaskedSensitive({national_code: '***1', address: 'a * b'})` equals `{address: 'a * b'}`;
+  e) saving an edited profile whose `national_code` is masked and whose `address` contains `*` sends a payload without `national_code` and with the address unchanged (spy on the update method the component calls).
+- File B `supervisor-new-profiles-43c.dom.spec.ts`:
+  f) `window.prompt` is never called: spy on it, open the vehicle reject flow, and assert the spy was not called and an `app-workflow-reason-dialog` element is present;
+  g) confirming the reason dialog with a reason calls the vehicle reject API once with that reason;
+  h) cancelling the dialog calls no API.
+
+5. Tool policy: only reading the listed files, Grep in `frontend/src/app/modules/accounting/` and `frontend/src/app/shared/`, writing the two files, the test command below, `git add` of those two files, `git commit`, `git status --short`. Test command, in the repository root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --no-skip --max-failed 0 --include "src/app/modules/accounting/components/personnel/personnel-profiles/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/*.spec.ts"`; per-test log `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), rerun at most 5 times.
+
+6. Verification: the test command passes with 0 failed.
+
+7. Output: commit with message `test(release-v1 4.3-c): personnel DOM specs (masking, paging, reason dialog)`. Report in English: files, number of tests, result. Then stop.
+
+===
+
+[ ] Session 2 of 2 — Release v1 step 4.3-c: UI review fixes on personnel cartables
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-personnel/accountant-personnel.html" --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-personnel/supervisor-personnel.html" --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-personnel/manager-personnel.html"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-personnel/accountant-personnel.html --contains "aria-label" --absent "left-2.5"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-personnel/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-personnel/*.spec.ts" --include "src/app/modules/accounting/components/finance/manager/manager-personnel/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(release-v1 4.3-c): personnel cartable accessibility"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply.
+- Change only these four html files: `accountant-personnel.html`, `accountant-new-profiles.html` (under `frontend/src/app/modules/accounting/components/finance/accountant/`), `supervisor-personnel.html` (under `.../finance/supervisor/supervisor-personnel/`) and `manager-personnel.html` (under `.../finance/manager/manager-personnel/`). Never change `.ts` files, specs or `scripts/automation/*`.
+- Never remove or rename an event binding, handler call, `*ngIf`/`@if` condition or `[title]` binding; only add attributes and change CSS classes.
+- Run every command in the foreground and wait until it finishes.
+
+2. Context: read `.claude/skills/design-system/SKILL.md` sections on tokens, icons and touch targets. Grep `copyField(` in the four files.
+
+3. Task (one edit kind per item):
+- a) Every icon-only button that calls `copyField(` gets `type="button"`, an `aria-label` with the same Persian text as its title (when the title is a binding, use `[attr.aria-label]` with the same expression; when there is no title, add `title` and `aria-label` «کپی» followed by the field name used in the call), and the classes `min-w-[40px] min-h-[40px] inline-flex items-center justify-center` (replace `min-h-[28px]` where present).
+- b) Physical direction classes on those copy buttons and on the search-clear buttons: `mr-1` → `ms-1`, `ml-1` → `me-1`, `left-2.5` → `start-2.5`, `right-2.5` → `end-2.5`.
+- c) In empty-state blocks (the «موردی یافت نشد» / empty list panels) of `accountant-personnel.html` and `accountant-new-profiles.html`: `bg-white` → `bg-surface`, `border-slate-200` → `border-line`, `text-slate-400` → `text-fg-muted`, and keep their `dark:` classes only if they are not already covered by the tokens (remove `dark:bg-slate-*`/`dark:border-slate-*` duplicates on those same elements).
+- d) In `accountant-new-profiles.html` replace the `⚠️` emoji in the pending-finance badge with `<svg appIcon="alert-triangle" class="w-3.5 h-3.5" aria-hidden="true"></svg>`.
+- e) The pager previous/next buttons in the four files get `focus-visible:ring-2 focus-visible:ring-indigo-500` if they lack it.
+
+4. Tool policy: only reading the listed files and the skill, Grep in `frontend/src/app/modules/accounting/` and `frontend/src/app/shared/icons/`, editing the four files, the test command below, `python scripts/e2e/guardian_56_change_integrity.py --base HEAD~1 --head HEAD` after the commit, `git add` of those four files, `git commit`, `git status --short`. Test command, in the repository root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-personnel/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-personnel/*.spec.ts" --include "src/app/modules/accounting/components/finance/manager/manager-personnel/*.spec.ts"`. If a test fails because a selector changed, restore the original markup for that element rather than editing the spec.
+
+5. Verification: the test command passes with 0 failed and guardian 56 ends with its success line.
+
+6. Output: commit with message `fix(release-v1 4.3-c): personnel cartable accessibility and tokens`. Report in English: items done per file, test and guardian 56 result. Then stop.
