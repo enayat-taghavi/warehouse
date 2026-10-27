@@ -12,7 +12,8 @@ import {
   PettyCashAccount,
   PettyCashStatement,
   PettyCashTransaction,
-  PettyCashBalanceSummary
+  PettyCashBalanceSummary,
+  PettyCashDebtSettlement
 } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
@@ -29,6 +30,11 @@ import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
+import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
+import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { OfflinePendingBadgeComponent } from '../../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
+import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { ExpenseHeadOptionGroup, buildExpenseHeadOptions, expenseHeadErrorMessage, expenseHeadLabel } from '../../expense-head-options';
 
 /** تب‌های وضعیت ردیف‌های هزینه (۳.۶-د): وضعیت ردیف در گردش صورت‌حساب */
@@ -48,7 +54,7 @@ import { AmountInputComponent } from '../../../../../../shared/components/amount
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent],
+  imports: [CommonModule, FormsModule, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
@@ -200,6 +206,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.docSub?.unsubscribe();
+    if (this.searchTimer) clearTimeout(this.searchTimer);
   }
 
   ngOnInit(): void {
@@ -259,7 +266,161 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   /** پیام فارسی خطا؛ قطع اتصال با isServerUnreachable تشخیص داده می‌شود (نه status >= 500) */
   private errorText(err: any, fallback: string): string {
     if (isServerUnreachable(Number(err?.status ?? 0))) return OFFLINE_MSG;
-    return err?.error?.error || err?.error?.detail || fallback;
+    return this.codeMessage(err) || err?.error?.error || err?.error?.detail || fallback;
+  }
+
+  /** پیام فارسی روشن برای کدهای خطای تنخواه (period_locked و account_closed) */
+  private codeMessage(err: any): string {
+    const code = err?.error?.code;
+    if (code === 'period_locked') {
+      return 'تاریخ این هزینه در دورهٔ تطبیق‌شده است؛ تاریخ دیرتری انتخاب کنید.';
+    }
+    if (code === 'account_closed') {
+      this.accountClosedByServer = true;
+      return 'حساب تنخواه بسته شده است؛ از حسابدار یا مدیر حساب تازه بخواهید.';
+    }
+    return '';
+  }
+
+  /** فارسی‌سازی مبلغ با جداکنندهٔ هزارگان (جایگزین pipe number) */
+  faAmount(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = Number(value);
+    return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
+  }
+
+  /** حساب بسته: از خود حساب یا از پاسخ account_closed سرور */
+  accountClosedByServer = false;
+  get accountClosed(): boolean {
+    return !!this.account?.is_closed || this.accountClosedByServer;
+  }
+  readonly lockedTitle = 'ردیف قفل است: در صورت‌حساب، دورهٔ تطبیق‌شده یا حساب بسته';
+
+  isPendingRecord(rec: any): boolean {
+    return !!rec?._offlinePending || (typeof rec?.id === 'number' && rec.id < 0);
+  }
+
+  // ─── صفحه‌بندی و فیلتر هزینه‌ها (سمت سرور؛ بدون اتصال از کش فهرست کامل) ───
+  readonly pageSize = 25;
+  page = 1;
+  pageTotal = 0;
+  /** ردیف‌های صفحهٔ سرور؛ null یعنی فهرست کامل (کش/آفلاین) سمت کلاینت صفحه‌بندی می‌شود */
+  pageRows: PettyCashTransaction[] | null = null;
+  isLoadingPage = false;
+  loadError = '';
+  dateFrom = '';
+  dateTo = '';
+  isDateFromOpen = false;
+  isDateToOpen = false;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  settlements: PettyCashDebtSettlement[] = [];
+
+  private toAsciiDigits(v: string): string {
+    return (v || '').replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  }
+
+  onDateSelect(which: 'from' | 'to', event: any): void {
+    const raw = typeof event === 'string' ? event : (event?.shamsi || '');
+    const val = this.toAsciiDigits(raw).replace(/-/g, '/');
+    if (which === 'from') { this.dateFrom = val; this.isDateFromOpen = false; }
+    else { this.dateTo = val; this.isDateToOpen = false; }
+    this.onFilterChange();
+  }
+
+  clearDates(): void {
+    this.dateFrom = '';
+    this.dateTo = '';
+    this.onFilterChange();
+  }
+
+  onFilterChange(): void {
+    this.page = 1;
+    this.loadExpensePage();
+  }
+
+  /** جستجوی سمت سرور با تأخیر کوتاه */
+  onSearchChange(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.onFilterChange(), 350);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+  }
+
+  get totalCount(): number {
+    return this.pageRows ? this.pageTotal : this.filteredTransactions.length;
+  }
+
+  goToPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.totalPages);
+    if (next === this.page) return;
+    this.page = next;
+    this.loadExpensePage();
+  }
+
+  /** ردیف‌های نمایش‌داده‌شده: صفحهٔ سرور (به‌اضافهٔ ردیف‌های در صف آفلاین در صفحهٔ ۱) یا برش فهرست کش */
+  get displayedExpenses(): PettyCashTransaction[] {
+    if (this.pageRows) {
+      if (this.page !== 1) return this.pageRows;
+      const ids = new Set(this.pageRows.map(r => r.id));
+      const pending = this.expenseRows.filter(t => this.isPendingRecord(t) && !ids.has(t.id));
+      return [...pending, ...this.pageRows];
+    }
+    const start = (this.page - 1) * this.pageSize;
+    return this.filteredTransactions.slice(start, start + this.pageSize);
+  }
+
+  /** خواندن صفحهٔ سرور؛ هر خطا (از جمله قطع اتصال) به فهرست کش برمی‌گردد */
+  loadExpensePage(silent = false): void {
+    const api = this.personnelApi.treasuryOrg;
+    if (!api?.getPettyCashTransactionsPage) { this.pageRows = null; return; }
+    const params: Record<string, any> = { page: this.page, page_size: this.pageSize, transaction_type: 'expense' };
+    if (this.statusFilter !== 'all') params['status'] = this.statusFilter;
+    if (this.dateFrom) params['date_from'] = this.dateFrom;
+    if (this.dateTo) params['date_to'] = this.dateTo;
+    const q = this.transactionSearch.trim();
+    if (q) params['search'] = q;
+    if (this.selectedSectionId) params['section_id'] = this.selectedSectionId;
+    if (!silent) this.isLoadingPage = true;
+    api.getPettyCashTransactionsPage(params as any).subscribe({
+      next: (res) => {
+        this.pageRows = res?.results || [];
+        this.pageTotal = res?.count ?? this.pageRows.length;
+        this.isLoadingPage = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.isLoadingPage = false;
+        if (err?.status === 404 && this.page > 1) {
+          this.page = 1;
+          this.loadExpensePage(silent);
+          return;
+        }
+        this.pageRows = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  retryLoad(): void {
+    this.loadError = '';
+    this.refreshData();
+  }
+
+  printStatement(st: PettyCashStatement): void {
+    const url = this.personnelApi.treasuryOrg?.pettyCashStatementPrintUrl?.(st.id);
+    if (url) window.open(url, '_blank');
+  }
+
+  loadSettlements(): void {
+    const id = this.account?.id;
+    const api = this.personnelApi.treasuryOrg;
+    if (!id || !api?.getPettyCashSettlements) return;
+    api.getPettyCashSettlements({ account_id: id }).subscribe({
+      next: (list) => { this.settlements = list || []; this.cdr.detectChanges(); },
+      error: () => { this.settlements = []; }
+    });
   }
 
   private get companyId(): number | null {
@@ -293,6 +454,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       queryParams: { section_id: this.selectedSectionId },
       queryParamsHandling: 'merge'
     });
+    this.page = 1;
     this.loadTransactions();
   }
 
@@ -330,6 +492,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         const cid = this.companyId;
         this.account = rows.find(a => !cid || a.company === cid) || rows[0] || null;
         this.ceilingDraft = this.account ? Number(this.account.ceiling_amount) : null;
+        this.loadSettlements();
         this.cdr.detectChanges();
       },
       error: () => { this.account = null; }
@@ -367,13 +530,16 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.personnelApi.getPettyCashTransactions(params).subscribe({
       next: (res: PettyCashTransaction[]) => {
         this.transactions = res || [];
+        this.loadError = '';
         this.pruneSelection();
         this.isLoading = false;
+        this.loadExpensePage(silent);
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isLoading = false;
         if (silent) return;
+        this.loadError = this.errorText(err, 'بارگذاری هزینه‌های تنخواه انجام نشد.');
         this.toast.show('error', 'خطا در بارگذاری تراکنش‌های تنخواه: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
@@ -489,6 +655,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   setStatusFilter(tab: string): void {
     if (tab === 'all' || tab === 'draft' || tab === 'approved' || tab === 'rejected') {
       this.statusFilter = tab;
+      this.onFilterChange();
     }
   }
 
@@ -523,6 +690,10 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   // ─── مودال ثبت هزینه (آفلاین مثل قبل) ───
   openNewExpenseModal(): void {
+    if (this.accountClosed) {
+      this.toast.show('warning', 'حساب تنخواه بسته است و ثبت هزینهٔ تازه ممکن نیست.');
+      return;
+    }
     this.expenseDateError = '';
     this.expenseHeadError = '';
     this.loadExpenseHeads();
@@ -684,7 +855,11 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         this.isSaving = false;
         const closedMsg = fiscalPeriodClosedMessage(err, 'transaction_date_shamsi');
         const headMsg = expenseHeadErrorMessage(err);
-        if (closedMsg) {
+        const codeMsg = this.codeMessage(err);
+        if (codeMsg) {
+          if (err?.error?.code === 'period_locked') this.expenseDateError = codeMsg;
+          this.toast.show('error', codeMsg);
+        } else if (closedMsg) {
           // دورهٔ مالی بسته: پیام کنار فیلد تاریخ
           this.expenseDateError = closedMsg;
           this.toast.show('error', closedMsg);
@@ -721,13 +896,17 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || ('خطا در حذف سند: ' + (err.error?.error || err.message || 'نامشخص')));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || this.codeMessage(err) || ('خطا در حذف سند: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }
 
   // ─── درخواست شارژ (فقط آنلاین) ───
   openChargeModal(): void {
+    if (this.accountClosed) {
+      this.toast.show('warning', 'حساب تنخواه بسته است و درخواست شارژ ممکن نیست.');
+      return;
+    }
     const defAmount = Math.max(
       0,
       (this.balanceSummary?.ceiling_amount || 0) - (this.balanceSummary?.current_balance || 0)
@@ -763,7 +942,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (tx: PettyCashTransaction) => {
         this.isSaving = false;
-        this.toast.show('success', `درخواست شارژ به مبلغ ${Number(tx.amount).toLocaleString()} ریال ثبت و ارسال شد.`);
+        this.toast.show('success', `درخواست شارژ به مبلغ ${this.faAmount(tx.amount)} ریال ثبت و ارسال شد.`);
         this.closeChargeModal();
         this.refreshData();
       },
@@ -925,6 +1104,12 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  get detailTitle(): string {
+    return this.detailKind === 'petty_cash_statement'
+      ? `صورت‌حساب تنخواه ${this.detailStatement?.document_number || this.detailId}`
+      : `درخواست شارژ تنخواه ${this.detailId}`;
   }
 
   /** رد ردیف: بازبین (حسابدار یا مدیر) و نه صاحب صورت‌حساب، تا وقتی در بررسی است */

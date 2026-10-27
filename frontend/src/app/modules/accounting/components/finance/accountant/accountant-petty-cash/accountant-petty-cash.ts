@@ -11,8 +11,11 @@ import { ProjectSection, PettyCashTransaction } from '../../../../models/personn
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { PettyAccountManagerComponent } from './petty-account-manager/petty-account-manager';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 
 @Component({
@@ -24,13 +27,15 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
     ReactiveFormsModule,
     TabBarComponent,
     ActionButtonComponent,
-    CommandCenterComponent
+    CommandCenterComponent,
+    WorkflowReasonDialogComponent,
+    PettyAccountManagerComponent
   ],
   templateUrl: './accountant-petty-cash.html',
   styleUrl: './accountant-petty-cash.css'
 })
 export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
-  activeSubTab: 'pending_review' | 'settled' | 'all' = 'pending_review';
+  activeSubTab: 'pending_review' | 'settled' | 'all' | 'accounts' = 'pending_review';
 
   // Memoized tabs for app-tab-bar (NG0100 prevention)
   private tabsKey = '';
@@ -64,6 +69,13 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
           icon: STATUS_ICONS.all,
           count: sc.all,
           tone: 'slate'
+        },
+        {
+          id: 'accounts',
+          label: 'حساب‌های تنخواه',
+          shortLabel: 'حساب‌ها',
+          icon: ACCOUNTING_ENTITY_ICONS.pettyCash,
+          tone: 'indigo'
         }
       ];
     }
@@ -104,7 +116,7 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
-      if (params['tab'] && ['pending_review', 'settled', 'all'].includes(params['tab'])) {
+      if (params['tab'] && ['pending_review', 'settled', 'all', 'accounts'].includes(params['tab'])) {
         this.activeSubTab = params['tab'];
       }
       if (params['section_id']) {
@@ -178,7 +190,7 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   switchSubTab(tab: string): void {
-    if (tab !== 'pending_review' && tab !== 'settled' && tab !== 'all') {
+    if (tab !== 'pending_review' && tab !== 'settled' && tab !== 'all' && tab !== 'accounts') {
       return;
     }
     this.activeSubTab = tab;
@@ -256,16 +268,32 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  isReasonDialogOpen = false;
+  reasonDialogTitle = '';
+  reasonDialogServerError = '';
+  private pendingRejectItem: PettyCashTransaction | null = null;
+
   rejectReplenishment(item: PettyCashTransaction): void {
     if (!item.id) return;
-    const reason = window.prompt(`علت عودت سند تن‌خواه «${item.title || ''}» را وارد کنید:`);
-    if (reason === null) return;
-    if (!reason.trim()) {
-      this.toast.warning('ثبت علت عودت الزامی است.');
-      return;
-    }
+    this.pendingRejectItem = item;
+    this.reasonDialogTitle = `علت عودت سند تن‌خواه «${item.title || ''}»`;
+    this.reasonDialogServerError = '';
+    this.isReasonDialogOpen = true;
+  }
+
+  onReasonCancelled(): void {
+    this.isReasonDialogOpen = false;
+    this.pendingRejectItem = null;
+    this.reasonDialogServerError = '';
+  }
+
+  onReasonConfirmed(reason: string): void {
+    const item = this.pendingRejectItem;
+    if (!item?.id) return;
+    this.isReasonDialogOpen = false;
+    this.pendingRejectItem = null;
     this.isLoading = true;
-    this.personnelApi.rejectPettyCashTransaction(item.id, reason.trim()).subscribe({
+    this.personnelApi.rejectPettyCashTransaction(item.id, reason).subscribe({
       next: () => {
         this.isLoading = false;
         this.toast.warning(`سند تن‌خواه «${item.title || ''}» جهت بازنگری عودت شد.`);

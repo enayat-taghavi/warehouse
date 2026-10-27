@@ -1,0 +1,385 @@
+<section class="space-y-3" dir="rtl" aria-label="حساب‌های تنخواه">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 class="text-sm font-black text-fg">حساب‌های تنخواه</h2>
+    <div class="flex items-center gap-2">
+      <button type="button" appAction="refresh" [busy]="isLoading" (click)="load()"></button>
+      <button
+        type="button"
+        appAction="create"
+        label="حساب جدید"
+        display="label"
+        size="sm"
+        [disabled]="!canManageAccounts || !isOnline"
+        [attr.title]="!canManageAccounts ? 'اجازهٔ ساخت حساب را ندارید' : (!isOnline ? offlineTitle : 'ساخت حساب تنخواه')"
+        (click)="openCreate()"
+      ></button>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading && accounts.length === 0" class="p-10 text-center space-y-3 bg-surface border border-line rounded-2xl">
+    <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+    <p class="text-xs text-fg-muted font-bold">در حال بارگذاری حساب‌های تنخواه...</p>
+  </div>
+
+  <div *ngIf="loadError" role="alert" class="flex items-center justify-between gap-2 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+    <span>{{ loadError }}</span>
+    <button type="button" class="min-h-[40px] px-3 rounded-lg border border-rose-200 bg-surface text-rose-700 cursor-pointer" (click)="load()">تلاش دوباره</button>
+  </div>
+
+  <div *ngIf="!isLoading && !loadError && accounts.length === 0" class="p-10 text-center bg-surface border border-line rounded-2xl">
+    <h3 class="text-sm font-black text-fg">هنوز حساب تنخواهی ساخته نشده</h3>
+    <p class="text-xs text-fg-muted mt-1">با «حساب جدید» برای یک تنخواه‌گردان حساب بسازید.</p>
+  </div>
+
+  <div class="space-y-2">
+    <article *ngFor="let acc of accounts" class="bg-surface border border-line rounded-2xl overflow-hidden">
+      <div class="p-3 md:p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div class="min-w-[160px] flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-black text-fg">{{ acc.custodian_name || 'تنخواه‌گردان' }}</span>
+            <span *ngIf="acc.is_closed" class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-surface-muted text-fg-muted border-line">بسته‌شده</span>
+          </div>
+          <p class="text-[11px] text-fg-muted mt-0.5">{{ acc.company_name || acc.section_name || '' }}</p>
+        </div>
+        <dl class="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px]">
+          <div *ngIf="isManager">
+            <dt class="text-fg-muted">سقف (ریال)</dt>
+            <dd class="font-mono font-bold text-fg">{{ faAmount(acc.ceiling_amount) }}</dd>
+          </div>
+          <div>
+            <dt class="text-fg-muted">موجودی اولیه (ریال)</dt>
+            <dd class="font-mono font-bold text-fg">{{ faAmount(acc.opening_balance) }}</dd>
+          </div>
+          <div>
+            <dt class="text-fg-muted">بدهی (ریال)</dt>
+            <dd class="font-mono font-bold" [ngClass]="(acc.debt || 0) > 0 ? 'text-rose-700' : 'text-fg'">{{ faAmount(acc.debt || 0) }}</dd>
+          </div>
+          <div *ngIf="acc.card_or_account_number">
+            <dt class="text-fg-muted">کارت / حساب</dt>
+            <dd class="font-mono text-fg" dir="ltr">{{ acc.card_or_account_number }}</dd>
+          </div>
+        </dl>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <ng-container *ngIf="!acc.is_closed">
+            <button type="button" appAction="edit" label="ویرایش" display="label" size="sm"
+              [disabled]="!canManageAccounts || !isOnline"
+              [attr.title]="!isOnline ? offlineTitle : 'ویرایش حساب'" (click)="openEdit(acc)"></button>
+            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ثبت تسویهٔ بدهی'" aria-label="تسویهٔ بدهی" (click)="openSettle(acc)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
+              <span class="hidden md:inline">تسویه</span>
+            </button>
+            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'تطبیق دوره‌ای نقد'" aria-label="تطبیق نقد" (click)="openReconcile(acc)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calculator" aria-hidden="true"></svg>
+              <span class="hidden md:inline">تطبیق</span>
+            </button>
+            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'تحویل به تنخواه‌گردان جدید'" aria-label="تحویل حساب" (click)="openHandover(acc)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-plus" aria-hidden="true"></svg>
+              <span class="hidden md:inline">تحویل</span>
+            </button>
+            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-xs font-bold text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+              [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'بستن حساب'" aria-label="بستن حساب" (click)="openClose(acc)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock" aria-hidden="true"></svg>
+              <span class="hidden md:inline">بستن</span>
+            </button>
+          </ng-container>
+          <button type="button" class="w-10 h-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface text-fg-muted hover:bg-surface-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [attr.aria-expanded]="expandedId === acc.id" title="تسویه‌ها و تطبیق‌ها" aria-label="نمایش تسویه‌ها و تطبیق‌ها" (click)="toggleDetail(acc)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="expandedId === acc.id ? 'chevron-up' : 'chevron-down'" aria-hidden="true"></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- جزئیات: تسویه‌ها و تطبیق‌ها -->
+      <div *ngIf="expandedId === acc.id" class="border-t border-line bg-surface-muted/50 p-3 md:p-4 space-y-4">
+        <div *ngIf="isLoadingDetail" class="text-xs text-fg-muted font-bold">در حال بارگذاری...</div>
+
+        <div *ngIf="!isLoadingDetail">
+          <h3 class="text-xs font-black text-fg mb-2">تسویه‌های بدهی</h3>
+          <p *ngIf="settlements.length === 0" class="text-[11px] text-fg-muted">تسویه‌ای ثبت نشده.</p>
+          <div *ngIf="settlements.length > 0" class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+              <thead class="text-fg-muted">
+                <tr>
+                  <th class="p-2">مبلغ (ریال)</th>
+                  <th class="p-2">روش</th>
+                  <th class="p-2">وضعیت</th>
+                  <th class="p-2">مرجع</th>
+                  <th class="p-2">ثبت‌کننده</th>
+                  <th class="p-2 text-center">عملیات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line">
+                <tr *ngFor="let s of settlements">
+                  <td class="p-2 font-mono font-bold text-fg">{{ faAmount(s.amount) }}</td>
+                  <td class="p-2 text-fg">{{ s.method_display || s.method }}</td>
+                  <td class="p-2 text-fg">{{ s.status_display || s.status }}</td>
+                  <td class="p-2 font-mono text-fg-muted">{{ s.reference || (s.charge ? ('شارژ ' + s.charge) : '—') }}</td>
+                  <td class="p-2 text-fg-muted">{{ s.created_by_name || '—' }}</td>
+                  <td class="p-2 text-center">
+                    <button *ngIf="canVoid(s) && !acc.is_closed" type="button"
+                      class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-xs font-bold text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                      [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ابطال این تسویه'" aria-label="ابطال تسویه" (click)="openVoid(s)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" aria-hidden="true"></svg>
+                      <span class="hidden md:inline">ابطال</span>
+                    </button>
+                    <span *ngIf="s.status === 'void' || s.void_reason" class="text-[11px] text-fg-muted">{{ s.void_reason }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div *ngIf="!isLoadingDetail">
+          <h3 class="text-xs font-black text-fg mb-2">تطبیق‌های دوره‌ای</h3>
+          <p *ngIf="reconciliations.length === 0" class="text-[11px] text-fg-muted">تطبیقی ثبت نشده.</p>
+          <div *ngIf="reconciliations.length > 0" class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+              <thead class="text-fg-muted">
+                <tr>
+                  <th class="p-2">پایان دوره</th>
+                  <th class="p-2">مبلغ مورد انتظار</th>
+                  <th class="p-2">شمارش‌شده</th>
+                  <th class="p-2">اختلاف</th>
+                  <th class="p-2">نتیجه</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line">
+                <tr *ngFor="let r of reconciliations">
+                  <td class="p-2 font-mono text-fg">{{ r.period_end_date }}</td>
+                  <td class="p-2 font-mono text-fg">{{ faAmount(r.expected_cash) }}</td>
+                  <td class="p-2 font-mono text-fg">{{ faAmount(r.counted_cash) }}</td>
+                  <td class="p-2 font-mono font-bold" [ngClass]="r.difference < 0 ? 'text-rose-700' : 'text-fg'" dir="ltr">{{ faAmount(r.difference) }}</td>
+                  <td class="p-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" [ngClass]="resultClass(r.result)">{{ resultLabel(r.result) }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <!-- ── پنجرهٔ ساخت و ویرایش حساب ── -->
+  <app-modal [isOpen]="modal === 'form'" size="lg" [title]="current ? 'ویرایش حساب تنخواه' : 'حساب تنخواه جدید'" (closed)="closeModal()">
+    <form class="space-y-3" (ngSubmit)="saveAccount()" novalidate>
+      <div *ngIf="!current">
+        <label class="block text-[11px] font-bold text-fg mb-1">تنخواه‌گردان <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <app-person-role-picker [allowRoles]="false" [max]="1" placeholder="جست‌وجوی تنخواه‌گردان" [(ngModel)]="custodianPick" name="custodian"></app-person-role-picker>
+      </div>
+      <div *ngIf="current" class="text-xs font-bold text-fg">تنخواه‌گردان: {{ current.custodian_name }}</div>
+
+      <div *ngIf="isManager">
+        <label for="pam_ceiling" class="block text-[11px] font-bold text-fg mb-1">سقف تنخواه (ریال)</label>
+        <app-amount-input inputId="pam_ceiling" placeholder="۰" [(ngModel)]="form.ceiling" name="ceiling"></app-amount-input>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="pam_opening" class="block text-[11px] font-bold text-fg mb-1">موجودی اولیه (ریال)</label>
+          <app-amount-input inputId="pam_opening" placeholder="۰" [(ngModel)]="form.opening" name="opening"></app-amount-input>
+        </div>
+        <div>
+          <label for="pam_opening_date" class="block text-[11px] font-bold text-fg mb-1">تاریخ موجودی اولیه</label>
+          <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500/20">
+            <ng-persian-datepicker [(uiIsVisible)]="isFormDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onFormDateSelect($event)" class="w-full block relative cursor-pointer">
+              <input id="pam_opening_date" type="text" [(ngModel)]="form.openingDate" name="openingDate" (click)="isFormDatePickerOpen = !isFormDatePickerOpen"
+                placeholder="۱۴۰۵/۰۱/۰۱" class="w-full text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
+            </ng-persian-datepicker>
+            <button type="button" (click)="isFormDatePickerOpen = !isFormDatePickerOpen; $event.stopPropagation()" title="انتخاب تاریخ از تقویم" aria-label="انتخاب تاریخ از تقویم"
+              class="w-10 h-10 flex items-center justify-center text-fg-muted hover:text-indigo-600 rounded-lg hover:bg-surface-muted cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <p *ngIf="current && !isManager" class="text-[11px] text-fg-muted">بعد از اولین گردش حساب، فقط مدیر می‌تواند موجودی اولیه را تغییر دهد.</p>
+
+      <div *ngIf="current && openingChanged">
+        <label for="pam_reason" class="block text-[11px] font-bold text-fg mb-1">دلیل تغییر موجودی اولیه</label>
+        <textarea id="pam_reason" rows="2" [(ngModel)]="form.reason" name="reason" placeholder="اگر حساب گردش داشته باشد نوشتن دلیل لازم است"
+          class="w-full text-xs p-2.5 rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="pam_card" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ کارت یا حساب</label>
+          <input id="pam_card" type="text" inputmode="numeric" dir="ltr" [(ngModel)]="form.card" name="card" [disabled]="!canManageAccounts"
+            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60" />
+        </div>
+        <div>
+          <label for="pam_sheba" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ شبا</label>
+          <input id="pam_sheba" type="text" dir="ltr" placeholder="IR..." [(ngModel)]="form.sheba" name="sheba" [disabled]="!canManageAccounts"
+            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60" />
+        </div>
+      </div>
+      <p class="text-[11px] text-fg-muted">کارت و شبا برای بیشتر کاربران پوشیده نمایش داده می‌شود؛ اگر دست نزنید، تغییری نمی‌کند.</p>
+
+      <div>
+        <label for="pam_desc" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
+        <input id="pam_desc" type="text" [(ngModel)]="form.description" name="description"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+
+      <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeModal()"></button>
+        <button type="submit" appAction="save" label="ذخیره" display="label" size="sm" [busy]="isBusy" [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ذخیرهٔ حساب'"></button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- ── پنجرهٔ تسویهٔ بدهی ── -->
+  <app-modal [isOpen]="modal === 'settle'" size="lg" [title]="'تسویهٔ بدهی ' + (current?.custodian_name || '')" (closed)="closeModal()">
+    <form class="space-y-3" (ngSubmit)="saveSettlement()" novalidate>
+      <div *ngIf="balance" class="flex flex-wrap gap-x-6 gap-y-1 text-[11px] bg-surface-muted rounded-xl p-3">
+        <span class="text-fg-muted">بدهی کل: <b class="font-mono text-rose-700">{{ faAmount(balance.debt) }}</b></span>
+        <span class="text-fg-muted">ردشده: <b class="font-mono text-fg">{{ faAmount(balance.rejected_total) }}</b></span>
+        <span class="text-fg-muted">کسری تطبیق: <b class="font-mono text-fg">{{ faAmount(balance.shortage_total) }}</b></span>
+        <span class="text-fg-muted">تسویه‌شده: <b class="font-mono text-fg">{{ faAmount(balance.settled_total) }}</b></span>
+        <span *ngIf="balance.pending_debt_settlements" class="text-fg-muted">تسویهٔ در انتظار: <b class="font-mono text-fg">{{ faAmount(balance.pending_debt_settlements) }}</b></span>
+      </div>
+      <div *ngIf="!balance && !modalError" class="text-xs text-fg-muted font-bold">در حال دریافت بدهی...</div>
+
+      <fieldset>
+        <legend class="block text-[11px] font-bold text-fg mb-1">روش تسویه</legend>
+        <div class="flex flex-wrap gap-3 text-xs text-fg">
+          <label class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="cash" [(ngModel)]="settleForm.method" /> نقدی (واریز یا دریافت)</label>
+          <label class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="charge_offset" [(ngModel)]="settleForm.method" /> کسر از شارژ بعدی</label>
+          <label *ngIf="balance?.payroll_deduction_available" class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="payroll" [(ngModel)]="settleForm.method" /> کسر از حقوق</label>
+        </div>
+      </fieldset>
+
+      <div>
+        <label for="pam_settle_amount" class="block text-[11px] font-bold text-fg mb-1">مبلغ (ریال) <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <app-amount-input inputId="pam_settle_amount" placeholder="۰" [(ngModel)]="settleForm.amount" name="amount"></app-amount-input>
+        <p *ngIf="balance" class="text-[11px] text-fg-muted mt-1">حداکثر: {{ faAmount(settleMax) }} ریال</p>
+      </div>
+
+      <div *ngIf="settleForm.method === 'cash'">
+        <label for="pam_settle_ref" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری یا مرجع <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <input id="pam_settle_ref" type="text" [(ngModel)]="settleForm.reference" name="reference"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+
+      <div *ngIf="settleForm.method === 'charge_offset'">
+        <label for="pam_settle_charge" class="block text-[11px] font-bold text-fg mb-1">شارژ باز <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <p *ngIf="isLoadingCharges" class="text-[11px] text-fg-muted">در حال دریافت شارژها...</p>
+        <p *ngIf="!isLoadingCharges && openCharges.length === 0" class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">شارژ بازی برای این حساب نیست.</p>
+        <select *ngIf="openCharges.length > 0" id="pam_settle_charge" [(ngModel)]="settleForm.charge" name="charge"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+          <option [ngValue]="null">انتخاب کنید</option>
+          <option *ngFor="let c of openCharges" [ngValue]="c.id">{{ c.title || ('شارژ ' + c.id) }} — باقی‌مانده {{ faAmount(chargeRemaining(c)) }} ریال</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="pam_settle_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
+        <input id="pam_settle_note" type="text" [(ngModel)]="settleForm.note" name="note"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+
+      <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeModal()"></button>
+        <button type="submit" appAction="confirm" label="ثبت تسویه" display="label" size="sm" [busy]="isBusy" [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ثبت تسویه'"></button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- ── پنجرهٔ تطبیق دوره‌ای ── -->
+  <app-modal [isOpen]="modal === 'reconcile'" size="md" [title]="'تطبیق نقد ' + (current?.custodian_name || '')" (closed)="closeModal()">
+    <form class="space-y-3" (ngSubmit)="saveReconciliation()" novalidate>
+      <p *ngIf="balance" class="text-[11px] text-fg-muted bg-surface-muted rounded-xl p-3">موجودی دفتری فعلی: <b class="font-mono text-fg">{{ faAmount(balance.current_balance) }}</b> ریال. اگر نقد شمارش‌شده کمتر باشد، کسری به بدهی تنخواه‌گردان اضافه می‌شود.</p>
+      <div>
+        <label for="pam_rec_date" class="block text-[11px] font-bold text-fg mb-1">پایان دوره <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500/20">
+          <ng-persian-datepicker [(uiIsVisible)]="isRecDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onRecDateSelect($event)" class="w-full block relative cursor-pointer">
+            <input id="pam_rec_date" type="text" [(ngModel)]="recForm.date" name="recDate" (click)="isRecDatePickerOpen = !isRecDatePickerOpen"
+              placeholder="۱۴۰۵/۰۱/۳۱" class="w-full text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
+          </ng-persian-datepicker>
+          <button type="button" (click)="isRecDatePickerOpen = !isRecDatePickerOpen; $event.stopPropagation()" title="انتخاب تاریخ از تقویم" aria-label="انتخاب تاریخ از تقویم"
+            class="w-10 h-10 flex items-center justify-center text-fg-muted hover:text-indigo-600 rounded-lg hover:bg-surface-muted cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
+          </button>
+        </div>
+      </div>
+      <div>
+        <label for="pam_rec_counted" class="block text-[11px] font-bold text-fg mb-1">نقد شمارش‌شده (ریال) <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <app-amount-input inputId="pam_rec_counted" placeholder="۰" [(ngModel)]="recForm.counted" name="counted"></app-amount-input>
+      </div>
+      <div>
+        <label for="pam_rec_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
+        <input id="pam_rec_note" type="text" [(ngModel)]="recForm.note" name="recNote"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+      <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeModal()"></button>
+        <button type="submit" appAction="confirm" label="ثبت تطبیق" display="label" size="sm" [busy]="isBusy" [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ثبت تطبیق'"></button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- ── پنجرهٔ بستن حساب ── -->
+  <app-modal [isOpen]="modal === 'close'" size="md" [title]="'بستن حساب ' + (current?.custodian_name || '')" (closed)="closeModal()">
+    <form class="space-y-3" (ngSubmit)="saveClose()" novalidate>
+      <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">بعد از بستن، حساب فقط خواندنی می‌شود و برگشت ندارد.</p>
+      <p *ngIf="balance" class="text-[11px] text-fg-muted">موجودی فعلی حساب: <b class="font-mono text-fg">{{ faAmount(balance.current_balance) }}</b> ریال<span *ngIf="fundLevel > 0"> (باید به خزانه برگردد)</span></p>
+      <div>
+        <label for="pam_close_ref" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری برگشت وجه <span *ngIf="fundLevel > 0" class="text-rose-600" aria-hidden="true">*</span></label>
+        <input id="pam_close_ref" type="text" [(ngModel)]="closeForm.reference" name="closeRef"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+      <div>
+        <label for="pam_close_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
+        <input id="pam_close_note" type="text" [(ngModel)]="closeForm.note" name="closeNote"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+      <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeModal()"></button>
+        <button type="submit" appAction="confirm" label="بستن حساب" display="label" size="sm" [busy]="isBusy" [disabled]="!isOnline || !balance" [attr.title]="!isOnline ? offlineTitle : 'بستن حساب'"></button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- ── پنجرهٔ تحویل به تنخواه‌گردان جدید ── -->
+  <app-modal [isOpen]="modal === 'handover'" size="md" [title]="'تحویل حساب ' + (current?.custodian_name || '')" (closed)="closeModal()">
+    <form class="space-y-3" (ngSubmit)="saveHandover()" novalidate>
+      <p class="text-[11px] text-fg-muted">حساب فعلی بسته می‌شود و موجودی و بدهی آن به حساب تازهٔ تنخواه‌گردان جدید می‌رود.</p>
+      <div>
+        <label class="block text-[11px] font-bold text-fg mb-1">تنخواه‌گردان جدید <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <app-person-role-picker [allowRoles]="false" [max]="1" placeholder="جست‌وجوی تنخواه‌گردان جدید" [(ngModel)]="handoverPick" name="newCustodian"></app-person-role-picker>
+      </div>
+      <div>
+        <label for="pam_ho_ref" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری یا مرجع</label>
+        <input id="pam_ho_ref" type="text" [(ngModel)]="handoverForm.reference" name="hoRef"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+      <div>
+        <label for="pam_ho_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
+        <input id="pam_ho_note" type="text" [(ngModel)]="handoverForm.note" name="hoNote"
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+      <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeModal()"></button>
+        <button type="submit" appAction="confirm" label="تحویل حساب" display="label" size="sm" [busy]="isBusy" [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'تحویل حساب'"></button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- ── دلیل ابطال تسویه ── -->
+  <app-workflow-reason-dialog
+    [open]="voidOpen"
+    title="دلیل ابطال تسویه"
+    confirmLabel="ابطال تسویه"
+    [serverError]="voidError"
+    (confirmed)="onVoidConfirmed($event)"
+    (cancelled)="onVoidCancelled()"
+  ></app-workflow-reason-dialog>
+</section>

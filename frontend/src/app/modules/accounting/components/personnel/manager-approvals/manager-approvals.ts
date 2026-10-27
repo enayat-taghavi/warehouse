@@ -973,9 +973,26 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     });
   }
 
+  isPcReasonOpen = false;
+  pcReasonTitle = '';
+  private pendingPcReject: any = null;
+
   rejectPettyCashManager(pc: any): void {
-    const reason = window.prompt(`علت بازنگری یا رد سند تنخواه «${pc.title || pc.id}» را وارد کنید:`);
-    if (!reason) return;
+    this.pendingPcReject = pc;
+    this.pcReasonTitle = `علت بازنگری یا رد سند تنخواه «${pc.title || pc.id}»`;
+    this.isPcReasonOpen = true;
+  }
+
+  onPcReasonCancelled(): void {
+    this.isPcReasonOpen = false;
+    this.pendingPcReject = null;
+  }
+
+  onPcReasonConfirmed(reason: string): void {
+    const pc = this.pendingPcReject;
+    if (!pc) return;
+    this.isPcReasonOpen = false;
+    this.pendingPcReject = null;
     this.api.postCartableAction('manager', { action: 'revision', model: 'petty_cash', id: pc.id, reason }).subscribe({
       next: () => {
         this.toast.show('warning', 'سند تنخواه جهت بازنگری عودت گردید.');

@@ -322,6 +322,38 @@
     </div>
   </app-modal>
 
+  <!-- شمارهٔ پیگیری واریز شارژ تنخواه -->
+  <app-modal [isOpen]="refillModalOpen" size="md" [title]="'واریز شارژ تنخواه ' + (refillItem?.custodian_name || '')" (closed)="closeRefillModal()">
+    <form class="space-y-3" (ngSubmit)="confirmRefill()" novalidate>
+      <dl *ngIf="refillItem" class="grid grid-cols-3 gap-2 text-[11px] bg-surface-muted rounded-xl p-3">
+        <div>
+          <dt class="text-fg-muted">مبلغ شارژ</dt>
+          <dd class="font-mono font-bold text-fg">{{ faAmount(refillItem.requested_refill_amount) }}</dd>
+        </div>
+        <div>
+          <dt class="text-fg-muted">کسر بدهی</dt>
+          <dd class="font-mono font-bold text-rose-700">{{ faAmount(refillItem.offset_total || 0) }}</dd>
+        </div>
+        <div>
+          <dt class="text-fg-muted">خالص واریز</dt>
+          <dd class="font-mono font-black text-emerald-700">{{ faAmount(refillItem.net_amount) }}</dd>
+        </div>
+      </dl>
+      <p class="text-[11px] text-fg-muted">مبلغ خالص واریز را به حساب تنخواه‌گردان واریز کنید و شمارهٔ پیگیری را بنویسید (ریال).</p>
+      <div>
+        <label for="refill_tracking_code" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری واریز <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <input id="refill_tracking_code" type="text" [(ngModel)]="refillTrackingCode" name="refillTrackingCode" aria-required="true"
+          [attr.aria-invalid]="refillError ? 'true' : 'false'"
+          class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+      </div>
+      <div *ngIf="refillError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ refillError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeRefillModal()"></button>
+        <button type="submit" appAction="confirm" label="ثبت واریز" display="label" size="sm"></button>
+      </div>
+    </form>
+  </app-modal>
+
   <!-- دلیل ابطال قسط -->
   <app-workflow-reason-dialog
     [open]="voidDialogOpen"

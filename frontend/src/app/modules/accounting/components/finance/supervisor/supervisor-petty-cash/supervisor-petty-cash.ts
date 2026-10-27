@@ -12,6 +12,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 
 @Component({
@@ -24,6 +25,7 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
     ActionButtonComponent,
     TabBarComponent,
     CommandCenterComponent,
+    WorkflowReasonDialogComponent,
   ],
   templateUrl: './supervisor-petty-cash.html',
   styleUrl: './supervisor-petty-cash.css'
@@ -230,16 +232,32 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  isReasonDialogOpen = false;
+  reasonDialogTitle = '';
+  reasonDialogServerError = '';
+  private pendingRejectItem: PettyCashTransaction | null = null;
+
   rejectSingle(item: PettyCashTransaction): void {
     if (!item.id) return;
-    const reason = window.prompt(`علت عودت سند تن‌خواه «${item.title || ''}» را وارد کنید:`);
-    if (reason === null) return;
-    if (!reason.trim()) {
-      this.toast.warning('ثبت دلیل عودت الزامی است.');
-      return;
-    }
+    this.pendingRejectItem = item;
+    this.reasonDialogTitle = `علت عودت سند تن‌خواه «${item.title || ''}»`;
+    this.reasonDialogServerError = '';
+    this.isReasonDialogOpen = true;
+  }
+
+  onReasonCancelled(): void {
+    this.isReasonDialogOpen = false;
+    this.pendingRejectItem = null;
+    this.reasonDialogServerError = '';
+  }
+
+  onReasonConfirmed(reason: string): void {
+    const item = this.pendingRejectItem;
+    if (!item?.id) return;
+    this.isReasonDialogOpen = false;
+    this.pendingRejectItem = null;
     this.isLoading = true;
-    this.personnelApi.rejectPettyCashTransaction(item.id, reason.trim()).subscribe({
+    this.personnelApi.rejectPettyCashTransaction(item.id, reason).subscribe({
       next: () => {
         this.isLoading = false;
         this.toast.warning(`سند تن‌خواه «${item.title || ''}» جهت بازنگری عودت شد.`);

@@ -55,6 +55,9 @@ export interface PettyCashRefillItem {
   card_number: string;
   status: 'pending_refill' | 'refilled';
   tracking_code?: string;
+  /** کسر بدهی و خالص واریز (د۴)؛ در شارژهای قدیمی خالی است */
+  offset_total?: number;
+  net_amount?: number;
 }
 
 @Component({
@@ -244,7 +247,9 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
               requested_refill_amount: t.amount,
               card_number: t.receipt_number || '---',
               status: t.status === 'approved' ? 'refilled' : 'pending_refill',
-              tracking_code: t.receipt_number
+              tracking_code: t.receipt_number,
+              offset_total: Number(t.offset_total || 0),
+              net_amount: t.net_amount !== null && t.net_amount !== undefined ? Number(t.net_amount) : Number(t.amount || 0) - Number(t.offset_total || 0)
             }));
             this.cdr.detectChanges();
           },
@@ -575,25 +580,52 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     void this.printService.downloadPdf('expense_invoice', item.id);
   }
 
+  // ─── پنجرهٔ ثبت شمارهٔ پیگیری واریز شارژ تنخواه ───
+  refillModalOpen = false;
+  refillItem: PettyCashRefillItem | null = null;
+  refillTrackingCode = '';
+  refillError = '';
+
   refillPettyCash(item: PettyCashRefillItem): void {
-    const code = window.prompt(`شماره پیگیری واریز به کارت ${item.custodian_name} را وارد نمایید:`);
-    if (code === null) return;
-    if (!code.trim()) {
-      this.toast.warning('ورود شماره پیگیری الزامی است.');
+    this.refillItem = item;
+    this.refillTrackingCode = '';
+    this.refillError = '';
+    this.refillModalOpen = true;
+  }
+
+  closeRefillModal(): void {
+    this.refillModalOpen = false;
+    this.refillItem = null;
+    this.refillError = '';
+  }
+
+  confirmRefill(): void {
+    const item = this.refillItem;
+    if (!item) return;
+    const code = this.refillTrackingCode.trim();
+    if (!code) {
+      this.refillError = 'ورود شماره پیگیری الزامی است.';
       return;
     }
+    this.refillModalOpen = false;
+    this.refillError = '';
     this.isLoading = true;
     this.personnelApi.approvePettyCashTransaction(item.id).subscribe({
       next: () => {
         this.isLoading = false;
         item.status = 'refilled';
-        item.tracking_code = code.trim();
+        item.tracking_code = code;
+        this.refillItem = null;
         this.toast.success(`شارژ تن‌خواه به حساب ${item.custodian_name} با موفقیت ثبت شد.`);
         this.loadTreasuryData();
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در ثبت شارژ تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        if (err?.status === 409 && err?.error?.code === 'ceiling_exceeded_at_pay') {
+          this.toast.error('مبلغ این شارژ از سقف تنخواه بیشتر شده است. شارژ باید برگردانده شود و دوباره برای مدیر ارسال شود.');
+        } else {
+          this.toast.error('خطا در ثبت شارژ تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        }
         this.cdr.detectChanges();
       }
     });

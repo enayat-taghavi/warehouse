@@ -678,4 +678,13 @@
     (cancelled)="onInvoiceReasonCancelled()"
   ></app-workflow-reason-dialog>
 
+  <!-- دلیل بازنگری سند تنخواه -->
+  <app-workflow-reason-dialog
+    [open]="isPcReasonOpen"
+    [title]="pcReasonTitle"
+    confirmLabel="بازگرداندن برای بازنگری"
+    (confirmed)="onPcReasonConfirmed($event)"
+    (cancelled)="onPcReasonCancelled()"
+  ></app-workflow-reason-dialog>
+
 </div>

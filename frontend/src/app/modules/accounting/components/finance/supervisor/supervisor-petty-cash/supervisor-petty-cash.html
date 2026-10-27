@@ -159,4 +159,14 @@
     </div>
   </div>
 
+  <!-- دلیل عودت سند تنخواه -->
+  <app-workflow-reason-dialog
+    [open]="isReasonDialogOpen"
+    [title]="reasonDialogTitle"
+    confirmLabel="عودت سند"
+    [serverError]="reasonDialogServerError"
+    (confirmed)="onReasonConfirmed($event)"
+    (cancelled)="onReasonCancelled()"
+  ></app-workflow-reason-dialog>
+
 </div>
