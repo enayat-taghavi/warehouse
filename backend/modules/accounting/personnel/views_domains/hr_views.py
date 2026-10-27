@@ -51,6 +51,91 @@ from .scope_helpers import (
     resolve_import_company,
     scope_personnel_queryset,
 )
+from workflow import engine as wf_engine
+from workflow.errors import WorkflowError
+from workflow.registry import get_spec as wf_get_spec
+from ..workflows import (
+    PERSONNEL_CHANGE_WORKFLOW,
+    PERSONNEL_STAGE_STEP,
+    PERSONNEL_WORKFLOW,
+    open_legacy_personnel_workflow,
+)
+
+
+# ─── پوستهٔ نازک اکشن‌های قدیمی پرونده و درخواست تغییر روی موتور ۲.۳ (د۴ طرح ۴.۳) ─────────────────────
+def _wf_error_response(exc):
+    """خطای موتور = {code, error, detail} با وضعیت همان خطا؛ missing_fields و errors اگر باشند."""
+    data = {'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}
+    for key in ('missing_fields', 'errors'):
+        value = getattr(exc, key, None)
+        if value:
+            data[key] = value
+    return Response(data, status=exc.status)
+
+
+def _request_revision(request):
+    revision = request.data.get('revision')
+    return int(revision) if str(revision or '').isdigit() else None
+
+
+def _open_personnel_task(workflow_key, obj):
+    """کار باز سند؛ سند در جریانِ پیش از موتور بی نمونه همین‌جا نمونه می‌گیرد (همان دستور personnel_open_workflows)."""
+    task = wf_engine.open_task(workflow_key, obj.pk)
+    if task is None:
+        task = open_legacy_personnel_workflow(workflow_key, obj)
+    if task is None:
+        raise WorkflowError('invalid_state', 'این مورد در گردش تأیید نیست و کار بازی ندارد.', 400)
+    return task
+
+
+def personnel_workflow_act(user, workflow_key, obj, kind, *, stage=None, reason='', revision=None):
+    """
+    kind: 'act' (تأیید مرحلهٔ جاری)، 'return' (عودت به ثبت‌کننده) یا 'reject' (رد قطعی). خطا: WorkflowError.
+    stage (supervisor/finance/manager): اکشن approve-X فقط وقتی مرحلهٔ جاری همان X است (مدیر حسابدار را دور نمی‌زند).
+    """
+    task = _open_personnel_task(workflow_key, obj)
+    step_key = PERSONNEL_STAGE_STEP.get(stage) if stage else None
+    if step_key and task.step_key != step_key:
+        current = wf_get_spec(workflow_key).step(task.step_key)
+        raise WorkflowError('wrong_step', f'این مورد اکنون در مرحلهٔ «{current.title_fa if current else task.step_key}» است و این تأیید در این مرحله ممکن نیست.', 400)
+    if kind == 'act':
+        if workflow_key == PERSONNEL_WORKFLOW and task.step_key == 'accountant_review' and wf_engine.can_act(user, task):
+            # همان گیت قلاب can_act موتور، اینجا با فهرست فیلدهای ناقص برای فرانت قدیمی
+            from ..lifecycle_services import get_missing_fields
+            from ..workflows import personnel_missing_message
+            missing = get_missing_fields(obj, stage='accountant')
+            if missing:
+                exc = WorkflowError('action_blocked', personnel_missing_message(missing), 400)
+                exc.missing_fields = missing
+                raise exc
+        return wf_engine.act(user, task, reason=reason, revision=revision, obj=obj)
+    obj._wf_reason = reason
+    if kind == 'return':
+        return wf_engine.return_for_fix(user, task, reason, obj=obj, revision=revision)
+    return wf_engine.reject(user, task, reason, obj=obj, revision=revision)
+
+
+def personnel_auto_submit(instance, user):
+    """
+    جای عبور هوشمند قدیمی (auto_pass_personnel): ثبت‌کننده‌ای که مجوز یکی از مرحله‌ها را در بخش پرونده دارد و
+    پروندهٔ کامل ثبت می‌کند، پرونده همان‌جا به موتور می‌رود و موتور مرحله‌های سطح او را رد می‌کند. هر خطا یعنی
+    پرونده پیش‌نویس می‌ماند (ساخت هرگز به‌خاطر گردش شکست نمی‌خورد؛ رکورد صف آفلاین سالم). خروجی True اگر ارسال شد.
+    """
+    from ..lifecycle_services import (
+        FINANCE_STAGE_PERMS, MANAGER_STAGE_PERMS, SUPERVISOR_STAGE_PERMS, get_missing_fields, user_has_any_perm,
+    )
+    if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS + FINANCE_STAGE_PERMS + MANAGER_STAGE_PERMS, instance):
+        return False
+    if instance.approval_status not in ('draft', 'revision_required') or get_missing_fields(instance, stage='submit'):
+        return False
+    try:
+        with transaction.atomic():
+            wf_engine.submit(PERSONNEL_WORKFLOW, instance, user, restart_closed=True)
+    except WorkflowError:
+        instance.refresh_from_db()
+        return False
+    return True
+
 
 class PersonnelProfileViewSet(viewsets.ModelViewSet):
     queryset = PersonnelProfile.objects.all().select_related('user').prefetch_related('bank_accounts', 'documents')
@@ -147,13 +232,12 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                 extra_kwargs['company_id'] = section.project.company_id
 
         # DEF-02: پرونده همیشه پیش‌نویس ساخته می‌شود و فقط اکشن submit آن را با گیت به سرپرست می‌فرستد.
-        # تنها استثنا عبور هوشمند نقش‌های بالاتر است که آن هم با گیت انجام می‌شود (DEF-14).
+        # تنها استثنا نقش‌های مرحله‌اند که پروندهٔ کامل را همان‌جا به موتور می‌فرستند (طرح ۴.۳، جای DEF-14).
         req_status = self.request.data.get('approval_status')
         extra_kwargs['approval_status'] = 'draft'
         instance = serializer.save(**extra_kwargs)
         if req_status != 'draft':
-            from ..lifecycle_services import auto_pass_personnel
-            auto_pass_personnel(instance, user, source='create')
+            personnel_auto_submit(instance, user)
         broadcast_personnel_update(instance, action_type='created', message=f'پرونده پرسنل «{instance.full_name}» ثبت شد.', sender_id=user.id if user else None)
 
     def _ensure_update_scope(self, instance, validated_data):
@@ -258,26 +342,32 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                     raise PermissionDenied(f"کارکنان عادی صرفاً مجاز به پیشنهاد تغییر در مشخصات فردی، تماس و اطلاعات بانکی هستند و فیلد «{locked[0]}» قفل است.")
 
             if diff:
-                with transaction.atomic():
-                    cr = PersonnelChangeRequest.objects.create(
-                        personnel=instance,
-                        requested_by=user,
-                        proposed_changes=diff,
-                        previous_values=old_diff,
-                        status='pending_supervisor'
-                    )
-                    instance.has_pending_changes = True
-                    instance.save(update_fields=['has_pending_changes'])
-                    WorkflowAuditLog.objects.create(
-                        content_type='personnel',
-                        object_id=instance.id,
-                        actor=user,
-                        from_status=instance.approval_status,
-                        to_status=instance.approval_status,
-                        action='change_request_created',
-                        reason=request.data.get('note', '') or 'ثبت درخواست تغییرات پرسنل فعال',
-                        metadata={'change_request_id': cr.id, 'diff': diff, 'company_id': instance.company_id}
-                    )
+                try:
+                    with transaction.atomic():
+                        cr = PersonnelChangeRequest.objects.create(
+                            personnel=instance,
+                            requested_by=user,
+                            proposed_changes=diff,
+                            previous_values=old_diff,
+                            status='pending_supervisor'
+                        )
+                        instance.has_pending_changes = True
+                        instance.save(update_fields=['has_pending_changes'])
+                        WorkflowAuditLog.objects.create(
+                            content_type='personnel',
+                            object_id=instance.id,
+                            actor=user,
+                            from_status=instance.approval_status,
+                            to_status=instance.approval_status,
+                            action='change_request_created',
+                            reason=request.data.get('note', '') or 'ثبت درخواست تغییرات پرسنل فعال',
+                            metadata={'change_request_id': cr.id, 'diff': diff, 'company_id': instance.company_id}
+                        )
+                        # د۳ طرح ۴.۳: درخواست تغییر در همان تراکنش به موتور می‌رود
+                        wf_engine.submit(PERSONNEL_CHANGE_WORKFLOW, cr, user)
+                except WorkflowError as exc:
+                    instance.refresh_from_db()
+                    return _wf_error_response(exc)
 
                 return Response({
                     'message': 'درخواست تغییرات با موفقیت ثبت شد و جهت بررسی در کارتابل سرپرست قرار گرفت. اطلاعات قبلی تا زمان تصویب نهایی مدیر معتبر باقی می‌ماند.',
@@ -344,26 +434,25 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         from_status = personnel.approval_status
-        to_status = 'pending_supervisor'
 
-        with transaction.atomic():
-            personnel.approval_status = to_status
-            personnel.rejection_reason = None
-            personnel.save(update_fields=['approval_status', 'rejection_reason', 'updated_at'])
+        # د۴ طرح ۴.۳: ارسال روی موتور؛ مرحله‌های سطح ثبت‌کننده، اعلان و سابقه با موتور است
+        try:
+            with transaction.atomic():
+                wf_engine.submit(PERSONNEL_WORKFLOW, personnel, user, restart_closed=True)
+                WorkflowAuditLog.objects.create(
+                    content_type='personnel',
+                    object_id=personnel.id,
+                    action='submit',
+                    from_status=from_status,
+                    to_status=personnel.approval_status,
+                    actor=user,
+                    reason=request.data.get('note', '') or 'ارسال پرونده توسط ثبت‌کننده به گردش تأیید'
+                )
+        except WorkflowError as exc:
+            personnel.refresh_from_db()
+            return _wf_error_response(exc)
 
-            WorkflowAuditLog.objects.create(
-                content_type='personnel',
-                object_id=personnel.id,
-                action='submit',
-                from_status=from_status,
-                to_status=to_status,
-                actor=user,
-                reason=request.data.get('note', '') or 'ارسال پرونده توسط ثبت‌کننده به کارتابل سرپرست'
-            )
-
-        from ..lifecycle_services import dispatch_workflow_notification
-        dispatch_workflow_notification(personnel, stage='pending_supervisor', actor=user, note=request.data.get('note', ''))
-        broadcast_personnel_update(personnel, action_type='updated', message=f'پرونده پرسنل «{personnel.full_name}» به کارتابل سرپرست ارسال شد.', sender_id=user.id if user else None)
+        broadcast_personnel_update(personnel, action_type='updated', message=f'پرونده پرسنل «{personnel.full_name}» به گردش تأیید ارسال شد.', sender_id=user.id if user else None)
         return Response(self.get_serializer(personnel).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'], url_path='delete_impact')
@@ -1036,16 +1125,15 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
     }
 
     def _approve_single(self, request, stage):
-        from ..lifecycle_services import APPROVAL_STAGES, PersonnelWorkflowError, approve_personnel_stage, user_has_any_perm
+        """د۴ طرح ۴.۳: approve-X = اقدام موتور روی کار باز، فقط وقتی مرحلهٔ جاری همان X است."""
         user = request.user
-        if not user_has_any_perm(user, APPROVAL_STAGES[stage]['perms']):
-            raise PermissionDenied(APPROVAL_STAGES[stage]['perm_error'])
         instance = self.get_object()
         note = (request.data.get('note') or request.data.get('approval_note') or '').strip()
         try:
-            instance = approve_personnel_stage(instance.pk, user, stage, note=note)
-        except PersonnelWorkflowError as e:
-            return Response(e.to_response_data(), status=e.status_code)
+            personnel_workflow_act(user, PERSONNEL_WORKFLOW, instance, 'act', stage=stage, reason=note,
+                                   revision=_request_revision(request))
+        except WorkflowError as exc:
+            return _wf_error_response(exc)
         action_type, broadcast_msg, response_msg = self.APPROVAL_STAGE_MESSAGES[stage]
         broadcast_personnel_update(instance, action_type=action_type, message=broadcast_msg.format(name=instance.full_name), sender_id=user.id)
         return Response({
@@ -1067,165 +1155,43 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
+        """د۴ طرح ۴.۳: رد قطعی = rejectِ موتور روی کار باز (دلیل اجباری). هیچ پرونده‌ای حذف فیزیکی نمی‌شود."""
         user = request.user
-        from ..lifecycle_services import MANAGER_APPROVER, user_has_any_perm
-        # مجوزهای رد (مدیر، سرپرست یا مالی)؛ اول «در هر بخشی»، سپس در بخش همین پرونده (ت۸ طرح ۲.۲)
-        reject_perms = (
-            'perm_approve_personnel_manager', MANAGER_APPROVER, 'perm_approve_personnel_supervisor',
-            'perm_approve_personnel_finance',
-        )
-        if not user_has_any_perm(user, reject_perms):
-            raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")
-
-        reason = request.data.get('reason', '').strip()
+        reason = (request.data.get('reason') or '').strip()
         if not reason:
-            return Response({'error': 'ثبت دلیل رد الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'code': 'reason_required', 'error': 'ثبت دلیل رد الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
         instance = self.get_object()
-        if not user_has_any_perm(user, reject_perms, instance):
-            raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")
-        if instance.approval_status in ('approved', 'manager_approved'):
-            return Response({'error': 'امکان رد پرونده تصویب‌شده وجود ندارد. در صورت نیاز، تغییرات باید از مسیر درخواست تغییرات یا قطع همکاری پیگیری شود.'}, status=status.HTTP_400_BAD_REQUEST)
-        # تسک ۳.۱ و جدول §۳.۱-الف: رد فقط روی پرونده‌های در جریان؛ پیش‌نویسِ ارسال‌نشده و پروندهٔ ردشده از این مسیر رد نمی‌شوند
-        in_progress_statuses = ('pending_supervisor', 'pending_accountant', 'pending_manager', 'revision_required', 'supervisor_approved', 'accountant_approved')
-        if instance.approval_status not in in_progress_statuses:
-            return Response({'error': f'امکان رد پرونده در وضعیت «{instance.get_approval_status_display()}» وجود ندارد؛ رد قطعی فقط برای پرونده‌های در جریان تایید است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        from ..lifecycle_services import build_personnel_snapshot, check_personnel_history, dispatch_workflow_notification
-        purge_statuses = ('revision_required', 'pending_supervisor', 'pending_accountant', 'pending_manager')
-        with transaction.atomic():
-            # قفل ردیف پرونده و سنجش دوبارهٔ وضعیت و سابقه درون همان تراکنش: ثبت هم‌زمان کارکرد یا فیش
-            # (کلید خارجی به همین ردیف) تا پایان تراکنش منتظر می‌ماند و سابقه‌ای با CASCADE پاک نمی‌شود
-            instance = PersonnelProfile.objects.select_for_update().get(pk=instance.pk)
-            if instance.approval_status not in in_progress_statuses:
-                return Response({'error': f'امکان رد پرونده در وضعیت «{instance.get_approval_status_display()}» وجود ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
-            history = check_personnel_history(instance)
-            was_never_approved = not instance.manager_approved_at
-            full_name = instance.full_name
-
-            # شرط Purge (تسک ۳.۱ و بخش ۳.۱-ب): حذف فیزیکی فقط برای پرونده‌های بدون سابقه که هرگز تایید نهایی نشده‌اند
-            purged = was_never_approved and not history['has_history'] and instance.approval_status in purge_statuses
-            if purged:
-                # DEF-11: عکس کامل پرونده، همهٔ حساب‌ها و فهرست مدارک پیش از حذف فیزیکی (شرط ۳ بخش ۳.۱-ب)
-                snapshot = build_personnel_snapshot(instance)
-                snapshot['reason'] = reason
-                snapshot['purged_by'] = user.username
-                WorkflowAuditLog.objects.create(
-                    content_type='personnel',
-                    object_id=instance.id,
-                    actor=user,
-                    from_status=instance.approval_status,
-                    to_status='purged',
-                    action='purge',
-                    reason=reason,
-                    metadata={'snapshot': snapshot, 'purged': True, 'company_id': instance.company_id}
-                )
-                dispatch_workflow_notification(instance, stage='purged', actor=user, reason=reason)
-                deleted_id = instance.id
-                instance.delete()
-                instance.id = deleted_id
-            else:
-                old_status = instance.approval_status
-                instance.approval_status = 'rejected'
-                instance.rejection_reason = reason
-                instance.save()
-
-                WorkflowAuditLog.objects.create(
-                    content_type='personnel',
-                    object_id=instance.id,
-                    actor=user,
-                    from_status=old_status,
-                    to_status='rejected',
-                    action='reject',
-                    reason=reason,
-                    metadata={'actor_role': 'rejecter', 'company_id': instance.company_id}
-                )
-                dispatch_workflow_notification(instance, stage='rejected', actor=user, reason=reason)
-
-        if purged:
-            broadcast_personnel_update(instance, action_type='deleted', message=f'پرونده «{full_name}» به دلیل رد قطعی و عدم وجود سابقه پاک‌سازی (Purge) شد.', sender_id=user.id)
-            return Response({'message': f'پرونده پیش‌نویس «{full_name}» به دلیل عدم وجود هرگونه سابقه پاک‌سازی شد.', 'purged': True}, status=status.HTTP_200_OK)
+        try:
+            personnel_workflow_act(user, PERSONNEL_WORKFLOW, instance, 'reject', reason=reason,
+                                   revision=_request_revision(request))
+        except WorkflowError as exc:
+            return _wf_error_response(exc)
         broadcast_personnel_update(instance, action_type='rejected', message=f'پرونده پرسنل «{instance.full_name}» رد شد: {reason}', sender_id=user.id)
         return Response({'message': 'پرونده پرسنل رد شد.', 'purged': False, 'data': self.get_serializer(instance).data}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='request-revision')
     def request_revision(self, request, pk=None):
-        from ..lifecycle_services import (
-            FINANCE_STAGE_PERMS,
-            MANAGER_STAGE_PERMS,
-            SUPERVISOR_STAGE_PERMS,
-            dispatch_workflow_notification,
-            user_has_any_perm,
-        )
+        """د۴ طرح ۴.۳: عودت = return_for_fix موتور (به ثبت‌کننده، revision_required)؛ ارسال دوباره از اول گردش."""
         user = request.user
-        is_sup = user_has_any_perm(user, SUPERVISOR_STAGE_PERMS)
-        is_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS)
-        is_mgr = user_has_any_perm(user, MANAGER_STAGE_PERMS)
-        if not (is_mgr or is_fin or is_sup):
-            raise PermissionDenied("شما دسترسی لازم برای ارجاع به بازنگری را ندارید.")
-
-        reason = request.data.get('reason', '').strip()
+        reason = (request.data.get('reason') or '').strip()
         if not reason:
-            return Response({'error': 'ثبت توضیحات جهت بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'code': 'reason_required', 'error': 'ثبت توضیحات جهت بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
         instance = self.get_object()
-        # نقش‌های مرحله در بخش همین پرونده (ت۸ طرح ۲.۲)
-        is_sup = user_has_any_perm(user, SUPERVISOR_STAGE_PERMS, instance)
-        is_fin = user_has_any_perm(user, FINANCE_STAGE_PERMS, instance)
-        is_mgr = user_has_any_perm(user, MANAGER_STAGE_PERMS, instance)
-        if not (is_mgr or is_fin or is_sup):
-            raise PermissionDenied("شما دسترسی لازم برای ارجاع به بازنگری را ندارید.")
-        old_status = instance.approval_status
-        if old_status in ('approved', 'manager_approved'):
-            return Response({'error': 'امکان عودت پرونده تصویب‌شده وجود ندارد. پرونده‌های مصوب در چرخه ثبت کارکرد هستند و تغییرات آن‌ها صرفاً از مسیر درخواست تغییرات مجاز است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # DEF-13: جدول گذار بخش ۳.۱-الف طرح. مقصد بر اساس وضعیت فعلی پرونده تعیین می‌شود، نه بالاترین نقش کاربر.
-        if old_status == 'pending_supervisor':
-            if not is_sup:
-                raise PermissionDenied("عودت پرونده در انتظار سرپرست فقط با دسترسی سرپرست ممکن است.")
-            target_status = 'revision_required'
-        elif old_status == 'pending_accountant':
-            if not is_fin:
-                raise PermissionDenied("عودت پرونده در انتظار حسابداری فقط با دسترسی حسابدار ممکن است.")
-            req_dest = request.data.get('target_status') or request.data.get('destination')
-            target_status = req_dest if req_dest in ('pending_supervisor', 'revision_required') else 'revision_required'
-        elif old_status == 'pending_manager':
-            if not is_mgr:
-                raise PermissionDenied("عودت پرونده در انتظار مدیر فقط با دسترسی مدیر ممکن است.")
-            target_status = 'pending_accountant'
-        else:
-            return Response({'error': f'امکان عودت پرونده در وضعیت «{instance.get_approval_status_display()}» وجود ندارد. عودت فقط از مراحل در انتظار سرپرست، حسابدار یا مدیر ممکن است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        with transaction.atomic():
-            instance.approval_status = target_status
-            instance.rejection_reason = reason
-            instance.revision_requested_by = user
-            instance.revision_requested_at = timezone.now()
-            instance.save()
-
-            WorkflowAuditLog.objects.create(
-                content_type='personnel',
-                object_id=instance.id,
-                actor=user,
-                from_status=old_status,
-                to_status=target_status,
-                action='request_revision',
-                reason=reason,
-                metadata={'destination': target_status, 'company_id': instance.company_id}
-            )
-            # DEF-12: گیرندهٔ اعلان عودت همان مقصد است (کارمند، سرپرست یا حسابدار)
-            dispatch_workflow_notification(instance, stage=target_status, actor=user, reason=reason, is_return=True)
-        dest_title = 'کارمند' if target_status == 'revision_required' else ('سرپرست' if target_status == 'pending_supervisor' else 'حسابدار')
-        broadcast_personnel_update(instance, action_type='revision_required', message=f'پرونده پرسنل «{instance.full_name}» به {dest_title} عودت داده شد: {reason}', sender_id=user.id)
+        try:
+            personnel_workflow_act(user, PERSONNEL_WORKFLOW, instance, 'return', reason=reason,
+                                   revision=_request_revision(request))
+        except WorkflowError as exc:
+            return _wf_error_response(exc)
+        broadcast_personnel_update(instance, action_type='revision_required', message=f'پرونده پرسنل «{instance.full_name}» به کارمند عودت داده شد: {reason}', sender_id=user.id)
         return Response({
-            'message': f'پرونده جهت بازنگری به {dest_title} عودت داده شد.',
+            'message': 'پرونده جهت بازنگری به کارمند عودت داده شد.',
             'data': self.get_serializer(instance).data
         })
 
     @action(detail=False, methods=['post'], url_path='batch-approve')
     def batch_approve(self, request):
         """
-        تسک ۳.۵: اکشن تایید گروهی پرونده‌های پرسنلی با پردازش مستقل هر رکورد در تراکنش جداگانه
+        تسک ۳.۵ و د۴ طرح ۴.۳: تأیید گروهی؛ برای هر پرونده جدا اقدام موتور (تراکنش خودش) و نتیجهٔ هر ردیف.
         """
         ids = request.data.get('ids', [])
         if not ids or not isinstance(ids, list):
@@ -1234,10 +1200,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         stage = request.data.get('stage')  # 'supervisor', 'finance', 'manager'
         note = (request.data.get('note') or '').strip()
         user = request.user
-
-        from ..lifecycle_services import APPROVAL_STAGES, PersonnelWorkflowError, approve_personnel_stage
-
-        if stage not in APPROVAL_STAGES:
+        if stage not in PERSONNEL_STAGE_STEP:
             return Response({'error': 'مرحله ارسالی نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # DEF-09: فقط پرونده‌های داخل قلمرو کاربر (همان get_queryset تکی) قابل تأیید گروهی‌اند
@@ -1247,32 +1210,34 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                 clean_ids.append(int(pid))
             except (TypeError, ValueError):
                 clean_ids.append(None)
-        scoped_names = {
-            row[0]: f"{row[1]} {row[2]}"
-            for row in self.get_queryset().filter(id__in=[i for i in clean_ids if i is not None]).values_list('id', 'first_name', 'last_name')
+        scoped = {
+            p.id: p for p in PersonnelProfile.objects.filter(
+                id__in=self.get_queryset().filter(id__in=[i for i in clean_ids if i is not None]).values('id'))
         }
 
         action_type, broadcast_msg, _ = self.APPROVAL_STAGE_MESSAGES[stage]
         results = []
         for raw_pid, pid in zip(ids, clean_ids):
-            if pid is None or pid not in scoped_names:
+            p = scoped.get(pid) if pid is not None else None
+            if p is None:
                 results.append({'id': raw_pid, 'success': False, 'error': 'پرونده پرسنلی یافت نشد.'})
                 continue
             try:
-                p = approve_personnel_stage(pid, user, stage, note=note, batch=True)
-            except PersonnelWorkflowError as e:
-                row = {'id': pid, 'full_name': scoped_names[pid], 'success': False, 'error': e.message}
-                if e.missing_fields:
-                    row['missing_fields'] = e.missing_fields
+                p._wf_audit_meta = {'batch': True}
+                personnel_workflow_act(user, PERSONNEL_WORKFLOW, p, 'act', stage=stage, reason=note)
+            except WorkflowError as exc:
+                row = {'id': pid, 'full_name': p.full_name, 'success': False, 'error': exc.message_fa, 'code': exc.code}
+                if getattr(exc, 'missing_fields', None):
+                    row['missing_fields'] = exc.missing_fields
                 results.append(row)
                 continue
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).exception('[batch-approve] personnel %s failed', pid)
-                results.append({'id': pid, 'full_name': scoped_names[pid], 'success': False, 'error': str(e)})
+                results.append({'id': pid, 'full_name': p.full_name, 'success': False, 'error': str(e)})
                 continue
             broadcast_personnel_update(p, action_type=action_type, message=broadcast_msg.format(name=p.full_name), sender_id=user.id)
-            results.append({'id': pid, 'full_name': p.full_name, 'success': True})
+            results.append({'id': pid, 'full_name': p.full_name, 'success': True, 'approval_status': p.approval_status})
 
         successful_count = sum(1 for r in results if r.get('success'))
         return Response({
@@ -1769,7 +1734,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                 MANAGER_STAGE_PERMS,
                 WAGE_FIELDS,
                 _snapshot_value,
-                auto_pass_personnel,
+                get_missing_fields,
                 user_can_view_wages,
                 user_has_any_perm,
             )
@@ -1868,8 +1833,12 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
 
                 # DEF-14: گیت برای هر ردیف؛ ردیف ناقص با گزارش، پیش‌نویس می‌ماند و عبور هوشمند لاگ auto_pass دارد
                 for r, prof in created_by_manager:
-                    result = auto_pass_personnel(prof, user, source='excel_import', draft_on_incomplete=True)
-                    if result['status'] == 'draft':
+                    # 4.3: engine submit replaces auto_pass; incomplete rows stay draft with a warning
+                    missing = get_missing_fields(prof, stage='accountant')
+                    if not missing:
+                        personnel_auto_submit(prof, user)
+                    result = {'missing_fields': missing}
+                    if missing:
                         import_warnings.append({
                             'row': r,
                             'field': 'گیت تکمیل پرونده',
@@ -2138,129 +2107,55 @@ class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
             )
         return super().destroy(request, *args, **kwargs)
 
+    def _cr_act(self, request, stage, message):
+        """د۴ طرح ۴.۳: approve-X درخواست تغییر = اقدام موتور فقط در مرحلهٔ X؛ پایان گردش تغییرات را اعمال می‌کند."""
+        cr = self.get_object()
+        cr._wf_request = request
+        note = (request.data.get('note') or '').strip()
+        try:
+            personnel_workflow_act(request.user, PERSONNEL_CHANGE_WORKFLOW, cr, 'act', stage=stage, reason=note,
+                                   revision=_request_revision(request))
+        except WorkflowError as exc:
+            return _wf_error_response(exc)
+        if cr.status == 'approved':
+            broadcast_personnel_update(cr.personnel, action_type='updated', message=f'درخواست تغییرات پرسنل «{cr.personnel.full_name}» تصویب و اعمال شد.', sender_id=request.user.id)
+        return Response({'message': message, 'data': self.get_serializer(cr).data})
+
     @action(detail=True, methods=['post'], url_path='approve-supervisor')
     def approve_supervisor(self, request, pk=None):
-        from ..lifecycle_services import SUPERVISOR_STAGE_PERMS, log_change_request_event, user_has_any_perm
-        user = request.user
-        if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS):
-            raise PermissionDenied("شما دسترسی بررسی مرحله اول (سرپرست) درخواست تغییرات را ندارید.")
-
-        cr = self.get_object()
-        if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS, cr.personnel):  # در بخش پروندهٔ همین درخواست (ت۸)
-            raise PermissionDenied("شما دسترسی بررسی مرحله اول (سرپرست) درخواست تغییرات را ندارید.")
-        if cr.status not in ['draft', 'pending_supervisor', 'revision_required']:
-            return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل تایید سرپرست نیست.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        note = (request.data.get('note') or '').strip()
-        with transaction.atomic():
-            cr.status = 'pending_accountant'
-            cr.supervisor_reviewed_by = user
-            cr.supervisor_reviewed_at = timezone.now()
-            cr.save()
-            log_change_request_event(cr, user, 'change_request_approve_supervisor', reason=note)
-        return Response({'message': 'درخواست تغییرات به تایید سرپرست رسید و به کارتابل حسابداری ارسال شد.', 'data': self.get_serializer(cr).data})
+        return self._cr_act(request, 'supervisor', 'درخواست تغییرات به تایید سرپرست رسید و به کارتابل حسابداری ارسال شد.')
 
     @action(detail=True, methods=['post'], url_path='approve-finance')
     def approve_finance(self, request, pk=None):
-        from ..lifecycle_services import FINANCE_STAGE_PERMS, log_change_request_event, user_has_any_perm
-        user = request.user
-        if not user_has_any_perm(user, FINANCE_STAGE_PERMS):
-            raise PermissionDenied("شما دسترسی تایید مرحله دوم (مالی) درخواست تغییرات را ندارید.")
-
-        cr = self.get_object()
-        if not user_has_any_perm(user, FINANCE_STAGE_PERMS, cr.personnel):  # در بخش پروندهٔ همین درخواست (ت۸)
-            raise PermissionDenied("شما دسترسی تایید مرحله دوم (مالی) درخواست تغییرات را ندارید.")
-        valid_statuses = ['pending_accountant', 'supervisor_approved', 'manager_approved']
-        if cr.status not in valid_statuses:
-            return Response({'error': f'درخواست ابتدا باید به تایید سرپرست برسد (وضعیت فعلی: {cr.get_status_display()}).'}, status=status.HTTP_400_BAD_REQUEST)
-
-        note = (request.data.get('note') or '').strip()
-        with transaction.atomic():
-            cr.status = 'pending_manager'
-            cr.accountant_reviewed_by = user
-            cr.accountant_reviewed_at = timezone.now()
-            cr.save()
-            log_change_request_event(cr, user, 'change_request_approve_finance', reason=note)
-        return Response({'message': 'درخواست تغییرات به تایید مالی رسید و به کارتابل مدیر ارسال شد.', 'data': self.get_serializer(cr).data})
+        return self._cr_act(request, 'finance', 'درخواست تغییرات به تایید مالی رسید و به کارتابل مدیر ارسال شد.')
 
     @action(detail=True, methods=['post'], url_path='approve-manager')
     def approve_manager(self, request, pk=None):
-        from ..lifecycle_services import (
-            MANAGER_STAGE_PERMS,
-            PersonnelWorkflowError,
-            apply_personnel_change_request,
-            log_change_request_event,
-            refresh_has_pending_changes,
-            user_has_any_perm,
-        )
-        user = request.user
-        if not user_has_any_perm(user, MANAGER_STAGE_PERMS):
-            raise PermissionDenied("شما دسترسی تصویب نهایی درخواست تغییرات را ندارید.")
-
-        cr = self.get_object()
-        if not user_has_any_perm(user, MANAGER_STAGE_PERMS, cr.personnel):  # در بخش پروندهٔ همین درخواست (ت۸)
-            raise PermissionDenied("شما دسترسی تصویب نهایی درخواست تغییرات را ندارید.")
-        valid_statuses = ['pending_manager', 'accountant_approved', 'pending_supervisor', 'pending_accountant', 'draft', 'manager_approved']
-        if cr.status not in valid_statuses:
-            return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل تصویب مدیر نیست.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # DEF-06: اعمال تغییرات فقط از منبع واحد و با سریالایزر؛ اگر نامعتبر باشد ۴۰۰ و درخواست معلق می‌ماند
-        try:
-            with transaction.atomic():
-                personnel = apply_personnel_change_request(cr, request=request)
-                previous_status = cr.status
-                now = timezone.now()
-                cr.status = 'approved'
-                cr.manager_reviewed_by = user
-                cr.manager_reviewed_at = now
-                if not cr.supervisor_reviewed_by:
-                    cr.supervisor_reviewed_by = user
-                    cr.supervisor_reviewed_at = now
-                if not cr.accountant_reviewed_by:
-                    cr.accountant_reviewed_by = user
-                    cr.accountant_reviewed_at = now
-                cr.save()
-                refresh_has_pending_changes(personnel)
-                log_change_request_event(
-                    cr, user, 'change_request_applied',
-                    reason=(request.data.get('note') or '').strip() or 'تصویب و اعمال درخواست تغییرات توسط مدیر',
-                    extra={'diff': cr.proposed_changes, 'old_diff': cr.previous_values, 'from_change_request_status': previous_status},
-                )
-        except PersonnelWorkflowError as e:
-            return Response(e.to_response_data(), status=e.status_code)
-
-        broadcast_personnel_update(personnel, action_type='updated', message=f'درخواست تغییرات پرسنل «{personnel.full_name}» تصویب و اعمال شد.', sender_id=user.id)
-        return Response({'message': 'درخواست تغییرات توسط مدیر تصویب و روی پرونده پرسنل اعمال گردید.', 'data': self.get_serializer(cr).data})
+        return self._cr_act(request, 'manager', 'درخواست تغییرات توسط مدیر تصویب و روی پرونده پرسنل اعمال گردید.')
 
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
-        from ..lifecycle_services import (
-            FINANCE_STAGE_PERMS,
-            MANAGER_STAGE_PERMS,
-            SUPERVISOR_STAGE_PERMS,
-            log_change_request_event,
-            refresh_has_pending_changes,
-            user_has_any_perm,
-        )
-        user = request.user
-        if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS + FINANCE_STAGE_PERMS + MANAGER_STAGE_PERMS):
-            raise PermissionDenied("دسترسی رد این درخواست را ندارید.")
-
-        reason = request.data.get('reason', '').strip()
+        reason = (request.data.get('reason') or '').strip() or 'رد درخواست تغییرات'
         cr = self.get_object()
-        if not user_has_any_perm(user, SUPERVISOR_STAGE_PERMS + FINANCE_STAGE_PERMS + MANAGER_STAGE_PERMS, cr.personnel):
-            raise PermissionDenied("دسترسی رد این درخواست را ندارید.")  # در بخش پروندهٔ همین درخواست (ت۸)
-        if cr.status in ('approved', 'rejected', 'cancelled'):
-            return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل رد نیست.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        with transaction.atomic():
-            cr.status = 'rejected'
-            cr.rejection_reason = reason
-            cr.save()
-            refresh_has_pending_changes(cr.personnel)
-            log_change_request_event(cr, user, 'change_request_rejected', reason=reason)
-
+        try:
+            personnel_workflow_act(request.user, PERSONNEL_CHANGE_WORKFLOW, cr, 'reject', reason=reason,
+                                   revision=_request_revision(request))
+        except WorkflowError as exc:
+            return _wf_error_response(exc)
         return Response({'message': 'درخواست تغییرات رد شد.', 'data': self.get_serializer(cr).data})
+
+    @action(detail=True, methods=['post'], url_path='request-revision')
+    def request_revision(self, request, pk=None):
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return Response({'code': 'reason_required', 'error': 'ثبت توضیحات جهت بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        cr = self.get_object()
+        try:
+            personnel_workflow_act(request.user, PERSONNEL_CHANGE_WORKFLOW, cr, 'return', reason=reason,
+                                   revision=_request_revision(request))
+        except WorkflowError as exc:
+            return _wf_error_response(exc)
+        return Response({'message': 'درخواست تغییرات جهت بازنگری به ثبت‌کننده عودت داده شد.', 'data': self.get_serializer(cr).data})
 
     @action(detail=True, methods=['post'], url_path='cancel')
     def cancel(self, request, pk=None):
@@ -2278,13 +2173,29 @@ class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
             )
 
         reason = (request.data.get('reason') or 'لغو شده توسط ثبت‌کننده').strip()
-        with transaction.atomic():
-            cr.status = 'cancelled'
-            cr.rejection_reason = reason
-            cr.save(update_fields=['status', 'rejection_reason'])
-            refresh_has_pending_changes(cr.personnel)
-            # ثبت مستقیم در لاگ ممیزی گردش کار، روی تایملاین همان پرونده
-            log_change_request_event(cr, user, 'change_request_cancelled', reason=reason)
+        cr._wf_reason = reason
+        wf_instance = wf_engine.instance_of(PERSONNEL_CHANGE_WORKFLOW, cr.pk)
+        if wf_instance is not None and wf_instance.status == wf_instance.IN_PROGRESS:
+            try:
+                if cr.requested_by_id == user.id:
+                    wf_engine.cancel(user, wf_instance, reason=reason, obj=cr)
+                else:
+                    # مدیر کل (نه ثبت‌کننده): بستن نمونه از مسیر رد موتور، با وضعیت «لغو» برای درخواست
+                    cr._wf_cancel = True
+                    task = wf_engine.open_task(PERSONNEL_CHANGE_WORKFLOW, cr.pk)
+                    if task is None:
+                        raise WorkflowError('invalid_state', 'این درخواست کار بازی در گردش ندارد.', 400)
+                    wf_engine.reject(user, task, reason, obj=cr)
+            except WorkflowError as exc:
+                return _wf_error_response(exc)
+        else:
+            # درخواستِ پیش‌نویس یا عودت‌داده‌شده (نمونهٔ در جریان ندارد)
+            with transaction.atomic():
+                cr.status = 'cancelled'
+                cr.rejection_reason = reason
+                cr.save(update_fields=['status', 'rejection_reason', 'updated_at'])
+                refresh_has_pending_changes(cr.personnel)
+                log_change_request_event(cr, user, 'change_request_cancelled', reason=reason)
 
         return Response({
             'message': 'درخواست تغییرات با موفقیت لغو شد.',

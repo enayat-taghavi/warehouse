@@ -762,3 +762,12 @@ class PersonnelChangeRequest(models.Model):
 
     def __str__(self):
         return f"درخواست تغییرات {self.personnel.full_name} ({self.get_status_display()})"
+
+    # بخش و شرکت گردش موتور از پروندهٔ هدف (طرح ۴.۳، د۳؛ فقط‌خواندنی، بی ستون تازه)
+    @property
+    def wf_section_id(self):
+        return self.personnel.section_id if self.personnel_id else None
+
+    @property
+    def wf_company_id(self):
+        return self.personnel.company_id if self.personnel_id else None

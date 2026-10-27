@@ -32,6 +32,12 @@ class RoleBasedCartablesTestCase(TestCase):
         self.company = Company.objects.create(name='شرکت تست کارتابل', code='CMP-CR')
         self.project = Project.objects.create(company=self.company, name='پروژه تست', code='PRJ-CR')
         self.section = ProjectSection.objects.create(project=self.project, name='بخش تست', code='SEC-CR')
+        # 4.3: a manager-role holder keeps the engine's manager step (a recipient-less approve step is skipped)
+        from personnel.scoped_test_support import grant_section_perms
+        self.wf_manager = User.objects.create_user(username='cartable_wf_mgr', password='p')
+        grant_section_perms(self.wf_manager, ('perm_approve_personnel_manager',), section=self.section, exact=False, role='manager')
+        # the engine never lets the requester approve their own change request
+        self.requester = User.objects.create_user(username='cartable_requester', password='p')
 
         # Base Yearly Settings & Job Grades
         self.settings = PayrollYearlySettings.objects.create(
@@ -158,7 +164,7 @@ class RoleBasedCartablesTestCase(TestCase):
             proposed_changes={'first_name': 'علیرضا'},
             previous_values={'first_name': 'علی'},
             status='pending_accountant',
-            requested_by=self.admin
+            requested_by=self.requester
         )
         # Finance Approval of CR -> pending_manager
         res_f = self.client.post(f'/api/personnel/personnel-change-requests/{cr.id}/approve-finance/')

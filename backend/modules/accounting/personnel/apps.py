@@ -118,6 +118,21 @@ class PersonnelConfig(AppConfig):
             contribute(f'can_attach:{_kind}', _attach)
             contribute(f'is_locked:{_kind}', _locked)
             contribute(f'company_of:{_kind}', _company)
+        # پروندهٔ پرسنل و درخواست تغییر روی موتور، با دیدن، پیوست، قفل و گیت پیش از اقدام (د۱ تا د۳ طرح ۴.۳)
+        for _spec, _kind, _resolver, _view, _attach, _locked, _company in (
+            (_wf.PERSONNEL_PROFILE_WORKFLOW_SPEC, _wf.PERSONNEL_ENTITY, _wf.resolve_personnel, _wf.can_view_personnel,
+             _wf.can_attach_personnel, _wf.is_personnel_locked, _wf.personnel_company_id),
+            (_wf.PERSONNEL_CHANGE_WORKFLOW_SPEC, _wf.PERSONNEL_CHANGE_ENTITY, _wf.resolve_personnel_change,
+             _wf.can_view_personnel_change, _wf.can_attach_personnel_change, _wf.is_personnel_change_locked,
+             _wf.personnel_change_company_id),
+        ):
+            contribute('workflows', _spec)
+            contribute(f'entity_resolver:{_kind}', _resolver)
+            contribute(f'can_view:{_kind}', _view)
+            contribute(f'can_attach:{_kind}', _attach)
+            contribute(f'is_locked:{_kind}', _locked)
+            contribute(f'company_of:{_kind}', _company)
+        contribute(f'can_act:{_wf.PERSONNEL_ENTITY}', _wf.can_act_personnel)
         # شمارهٔ ۲.۸ و چاپ صورت‌حساب تنخواه (د۹ و د۱۳ طرح ۴.۲)
         from personnel.petty_lifecycle import PETTY_STATEMENT_NUMBER_SERIES
         from personnel.petty_print import printable_petty_statement

@@ -49,8 +49,10 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
             self.accountant: ("perm_approve_personnel_finance",),
             self.manager: ("perm_approve_personnel_manager", "perm_delete_personnel_nomovement"),
         }
+        # 4.3: the engine routes each step to its section role
+        roles = {self.operator: 'employee', self.supervisor: 'supervisor', self.accountant: 'accountant', self.manager: 'manager'}
         for u, codes in grants.items():
-            grant_section_perms(u, codes, section=self.section, exact=False)
+            grant_section_perms(u, codes, section=self.section, exact=False, role=roles[u])
 
     def test_full_successful_approval_cycle_and_audit(self):
         """
@@ -92,7 +94,8 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
         # ۳. سرپرست نمی‌تواند مستقیم پرونده را approve_manager کند (کنترل RBAC)
         self.client.force_authenticate(user=self.supervisor)
         res_illegal = self.client.post(f"/api/personnel/profiles/{p_id}/approve-manager/", {}, format="json")
-        self.assertEqual(res_illegal.status_code, 403)
+        # 4.3: approve-manager outside the manager step is refused (400 wrong_step) or not the recipient (403)
+        self.assertIn(res_illegal.status_code, (400, 403))
 
         # ۴. تایید سرپرست و ارسال به حسابداری
         res_sup = self.client.post(f"/api/personnel/profiles/{p_id}/approve-supervisor/", {"note": "احراز هویت میدانی تایید شد"}, format="json")
@@ -161,12 +164,7 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
         self.assertIn("phone_number", cr.proposed_changes)
 
     def test_conditional_purge_on_rejection(self):
-        """
-        تست پاک‌سازی مشروط (Purge):
-        ۱. پیش‌نویس بدون سابقه در رد قطعی کاملاً Purge می‌شود.
-        ۲. پرسنل دارای کارکرد در رد قطعی، Purge نمی‌شود و وضعیتش rejected می‌شود.
-        """
-        # پرونده ۱: پیش‌نویس بدون سابقه
+        """4.3: reject goes through the engine and never purges; both profiles stay with status rejected."""
         p1 = PersonnelProfile.objects.create(
             first_name="آرش",
             last_name="کمانگیر",
@@ -176,11 +174,11 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
         )
         self.client.force_authenticate(user=self.supervisor)
         res_rej1 = self.client.post(f"/api/personnel/profiles/{p1.id}/reject/", {"reason": "عدم حضور در مصاحبه"}, format="json")
-        self.assertEqual(res_rej1.status_code, 200)
-        self.assertTrue(res_rej1.data.get("purged", False))
-        self.assertFalse(PersonnelProfile.objects.filter(id=p1.id).exists())
+        self.assertEqual(res_rej1.status_code, 200, res_rej1.data)
+        self.assertFalse(res_rej1.data.get("purged", False))
+        p1.refresh_from_db()
+        self.assertEqual(p1.approval_status, "rejected")
 
-        # پرونده ۲: پرسنل دارای کارکرد
         p2 = PersonnelProfile.objects.create(
             first_name="سیاوش",
             last_name="کاووسی",
@@ -195,8 +193,9 @@ class PersonnelReengineeredLifecyclePhase10Tests(TestCase):
             section=self.section,
             effective_hours=10
         )
+        self.client.force_authenticate(user=self.manager)
         res_rej2 = self.client.post(f"/api/personnel/profiles/{p2.id}/reject/", {"reason": "نقص فنی"}, format="json")
-        self.assertEqual(res_rej2.status_code, 200)
+        self.assertEqual(res_rej2.status_code, 200, res_rej2.data)
         self.assertFalse(res_rej2.data.get("purged", False))
         p2.refresh_from_db()
         self.assertEqual(p2.approval_status, "rejected")

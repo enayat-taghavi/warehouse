@@ -62,8 +62,10 @@ class RemediationTestBase(TestCase):
             self.acc: ('perm_approve_personnel_finance',),
             self.mgr: ('perm_approve_personnel_manager', 'perm_delete_personnel_nomovement'),
         }
+        # 4.3: the engine routes each step to its section role (supervisor / accountant / manager)
+        self.roles = {self.emp: 'employee', self.sup: 'supervisor', self.acc: 'accountant', self.mgr: 'manager'}
         for u in (self.emp, self.sup, self.acc, self.mgr):
-            grant_section_perms(u, self.granted[u], section=self.s1, exact=False)
+            grant_section_perms(u, self.granted[u], section=self.s1, exact=False, role=self.roles[u])
             UserCompanyAccess.objects.create(user=u, company=self.c1)
 
     def as_user(self, user):
@@ -257,14 +259,18 @@ class Step1CriticalBackendTests(RemediationTestBase):
         self.assertFalse(WorkflowAuditLog.objects.filter(object_id=r.data['id'], action='auto_pass').exists())
 
     def test_def14_manager_complete_create_auto_passes_with_log(self):
+        # 4.3: the manager's complete profile goes straight to the engine; steps below the creator's level are
+        # skipped, the accountant review is never skipped (q7) and there is no legacy auto_pass row
+        from workflow.models import WorkflowInstance
         self.as_user(self.mgr)
         payload = self.employee_form_payload('0076543218', 'pending_supervisor', job_code='000255', start_date='1405/01/01', daily_base_wage=7000000)
         r = self.client.post('/api/personnel/profiles/', payload, format='json')
         self.assertEqual(r.status_code, 201, r.data)
-        self.assertEqual(r.data['approval_status'], 'approved')
-        log = WorkflowAuditLog.objects.get(object_id=r.data['id'], action='auto_pass')
-        self.assertEqual(log.content_type, 'personnel')
-        self.assertEqual(log.metadata['passed_stages'], ['supervisor', 'accountant', 'manager'])
+        self.assertEqual(r.data['approval_status'], 'pending_accountant')
+        self.assertFalse(WorkflowAuditLog.objects.filter(object_id=r.data['id'], action='auto_pass').exists())
+        inst = WorkflowInstance.objects.get(workflow_key='personnel_profile', entity_id=r.data['id'])
+        self.assertEqual(inst.current_step, 'accountant_review')
+        self.assertIn('supervisor_ok', inst.skip_plan)
 
     def test_def14_supervisor_create_passes_only_submit_gate(self):
         self.as_user(self.sup)
@@ -288,7 +294,12 @@ class Step1CriticalBackendTests(RemediationTestBase):
         self.as_user(self.mgr)
         r = self.client.post('/api/personnel/profiles/batch-approve/', {'ids': [rejected.id, incomplete.id], 'stage': 'manager'}, format='json')
         self.assertEqual(r.data['successful_count'], 0)
-        self.assertTrue(r.data['results'][1].get('missing_fields'))
+        # 4.3 (q7): the manager can no longer approve before the accountant review
+        self.assertEqual(r.data['results'][1]['code'], 'wrong_step')
+        self.as_user(self.acc)
+        r = self.client.post('/api/personnel/profiles/batch-approve/', {'ids': [incomplete.id], 'stage': 'finance'}, format='json')
+        self.assertEqual(r.data['results'][0]['code'], 'action_blocked')
+        self.assertTrue(r.data['results'][0].get('missing_fields'))
         rejected.refresh_from_db()
         incomplete.refresh_from_db()
         self.assertEqual(rejected.approval_status, 'rejected')
@@ -339,17 +350,17 @@ class Step1CriticalBackendTests(RemediationTestBase):
         self.assertEqual(snapshot['documents'][0]['uploaded_by_username'], 'rm_emp')
 
     def test_def11_purge_snapshot_is_complete_and_restorable(self):
+        # 4.3: rejection goes through the engine and never deletes the profile (the purge path is gone)
         p = self._profile_with_accounts_and_docs('pending_supervisor')
-        pid = p.id
-        original = {f.attname: getattr(p, f.attname) for f in p._meta.concrete_fields}
-        original['attachment'] = p.attachment.name or None
         self.as_user(self.sup)
-        r = self.client.post(f'/api/personnel/profiles/{pid}/reject/', {'reason': 'ناقص'}, format='json')
-        self.assertTrue(r.data['purged'])
-        self.assertFalse(PersonnelProfile.objects.filter(pk=pid).exists())
-        log = WorkflowAuditLog.objects.get(object_id=pid, action='purge')
-        self.assertEqual(log.metadata['company_id'], self.c1.id)
-        self._assert_snapshot_rebuilds(log.metadata['snapshot'], original)
+        r = self.client.post(f'/api/personnel/profiles/{p.id}/reject/', {'reason': 'ناقص'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertFalse(r.data['purged'])
+        p.refresh_from_db()
+        self.assertEqual((p.approval_status, p.rejection_reason), ('rejected', 'ناقص'))
+        self.assertTrue(p.bank_accounts.exists())
+        self.assertFalse(WorkflowAuditLog.objects.filter(object_id=p.id, action='purge').exists())
+        self.assertTrue(WorkflowAuditLog.objects.filter(object_id=p.id, action='reject').exists())
 
     def test_def11_destroy_snapshot_is_complete(self):
         p = self._profile_with_accounts_and_docs('draft')
@@ -371,28 +382,32 @@ class Step2HighSeverityTests(RemediationTestBase):
 
     # ── DEF-12: اعلان‌ها ──
     def test_def12_next_stage_and_return_recipients(self):
+        # 4.3: the engine opens each step's task for its role holders; a return goes back to the creator
+        from workflow.models import WorkflowTaskRecipient
         p = self.complete_profile('0098765434', status='pending_supervisor')
+
+        def open_for(u):
+            return WorkflowTaskRecipient.objects.filter(
+                user=u, task__is_open=True, task__instance__entity_kind='personnel_profile',
+                task__instance__entity_id=p.id).exists()
+
         self.as_user(self.sup)
-        with self.captureOnCommitCallbacks(execute=True):
-            r = self.client.post(f'/api/personnel/profiles/{p.id}/approve-supervisor/', {'note': 'ok'}, format='json')
+        r = self.client.post(f'/api/personnel/profiles/{p.id}/approve-supervisor/', {'note': 'ok'}, format='json')
         self.assertEqual(r.status_code, 200, r.data)
-        self.assertEqual(self.Notification.objects.filter(recipient=self.acc).count(), 1)
-        n = self.Notification.objects.get(recipient=self.acc)
-        self.assertEqual(n.target_id, str(p.id))
-
         p.refresh_from_db()
-        p.approval_status = 'pending_manager'
-        p.save(update_fields=['approval_status'])
-        self.as_user(self.mgr)
-        with self.captureOnCommitCallbacks(execute=True):
-            self.client.post(f'/api/personnel/profiles/{p.id}/request-revision/', {'reason': 'اصلاح'}, format='json')
-        self.assertEqual(self.Notification.objects.filter(recipient=self.acc).count(), 2, 'عودت مدیر باید به حسابدار اعلان دهد')
-        self.assertEqual(self.Notification.objects.filter(recipient=self.emp).count(), 0, 'ثبت‌کننده نباید اعلان عودت به حسابدار را بگیرد')
-
+        self.assertEqual(p.approval_status, 'pending_accountant')
+        self.assertTrue(open_for(self.acc))
+        self.assertFalse(open_for(self.sup))
         self.as_user(self.acc)
-        with self.captureOnCommitCallbacks(execute=True):
-            self.client.post(f'/api/personnel/profiles/{p.id}/request-revision/', {'reason': 'بررسی میدانی', 'target_status': 'pending_supervisor'}, format='json')
-        self.assertEqual(self.Notification.objects.filter(recipient=self.sup).count(), 1)
+        r = self.client.post(f'/api/personnel/profiles/{p.id}/approve-finance/', {}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(open_for(self.mgr))
+        self.as_user(self.mgr)
+        r = self.client.post(f'/api/personnel/profiles/{p.id}/request-revision/', {'reason': 'اصلاح'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        p.refresh_from_db()
+        self.assertEqual(p.approval_status, 'revision_required')
+        self.assertFalse(open_for(self.acc) or open_for(self.mgr))
 
     def test_def12_other_company_users_are_not_notified(self):
         outsider = User.objects.create_user(username='rm_acc_b', password='p')
@@ -406,37 +421,42 @@ class Step2HighSeverityTests(RemediationTestBase):
         self.assertFalse(self.Notification.objects.filter(recipient=outsider).exists())
 
     def test_def12_purge_notification_keeps_target_id(self):
+        # 4.3: no purge; the rejected profile stays and the engine closes its task
+        from workflow import engine
         p = self.complete_profile('0010376488', status='pending_supervisor')
-        pid = p.id
         self.as_user(self.sup)
-        with self.captureOnCommitCallbacks(execute=True):
-            self.client.post(f'/api/personnel/profiles/{pid}/reject/', {'reason': 'ناقص'}, format='json')
-        n = self.Notification.objects.get(recipient=self.emp)
-        self.assertEqual(n.target_id, str(pid))
+        r = self.client.post(f'/api/personnel/profiles/{p.id}/reject/', {'reason': 'ناقص'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(PersonnelProfile.objects.filter(pk=p.id, approval_status='rejected').exists())
+        self.assertIsNone(engine.open_task('personnel_profile', p.id))
 
-    # ── DEF-13: جدول گذار عودت ──
     def test_def13_revision_transition_table(self):
+        # 4.3: a return is the engine's return_for_fix: always back to the creator (revision_required)
+        from workflow.models import WorkflowStep
         draft = self.complete_profile('0010376488')
         self.as_user(self.mgr)
         self.assertEqual(self.client.post(f'/api/personnel/profiles/{draft.id}/request-revision/', {'reason': 'x'}, format='json').status_code, 400)
         rejected = self.complete_profile('0076543218', status='rejected')
         self.as_user(self.acc)
-        self.assertEqual(self.client.post(f'/api/personnel/profiles/{rejected.id}/request-revision/', {'reason': 'x', 'target_status': 'pending_supervisor'}, format='json').status_code, 400)
+        self.assertEqual(self.client.post(f'/api/personnel/profiles/{rejected.id}/request-revision/', {'reason': 'x'}, format='json').status_code, 400)
         pa = self.complete_profile('0061122335', status='pending_accountant')
         self.as_user(self.sup)
         self.assertEqual(self.client.post(f'/api/personnel/profiles/{pa.id}/request-revision/', {'reason': 'x'}, format='json').status_code, 403)
         self.as_user(self.acc)
-        r = self.client.post(f'/api/personnel/profiles/{pa.id}/request-revision/', {'reason': 'x', 'target_status': 'pending_supervisor'}, format='json')
+        r = self.client.post(f'/api/personnel/profiles/{pa.id}/request-revision/', {'reason': 'x'}, format='json')
         self.assertEqual(r.status_code, 200, r.data)
         pa.refresh_from_db()
-        self.assertEqual(pa.approval_status, 'pending_supervisor')
+        self.assertEqual(pa.approval_status, 'revision_required')
         pm = self.complete_profile('0098765434', status='pending_manager')
         self.as_user(self.mgr)
-        self.client.post(f'/api/personnel/profiles/{pm.id}/request-revision/', {'reason': 'x'}, format='json')
+        r = self.client.post(f'/api/personnel/profiles/{pm.id}/request-revision/', {'reason': 'x'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
         pm.refresh_from_db()
-        self.assertEqual(pm.approval_status, 'pending_accountant')
+        self.assertEqual(pm.approval_status, 'revision_required')
         log = WorkflowAuditLog.objects.filter(object_id=pm.id, action='request_revision').latest('id')
-        self.assertEqual((log.from_status, log.to_status), ('pending_manager', 'pending_accountant'))
+        self.assertEqual((log.from_status, log.to_status), ('pending_manager', 'revision_required'))
+        self.assertTrue(WorkflowStep.objects.filter(instance__workflow_key='personnel_profile', instance__entity_id=pm.id,
+                                                    action=WorkflowStep.RETURN).exists())
 
     def test_def13_reject_only_in_progress(self):
         draft = self.complete_profile('0010376488')

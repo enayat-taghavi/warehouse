@@ -427,10 +427,12 @@ def _ensure_not_locked(kind, entity_id):
         raise WorkflowStateError('entity_locked', 'این سند قفل است و کنش گردش روی آن انجام نمی‌شود.', 409)
 
 
-def submit(workflow_key, obj, user):
+def submit(workflow_key, obj, user, *, restart_closed=False):
     """
     ارسال (یا ارسال دوباره پس از عودت یا لغو) سند به گردش؛ ثبت‌کننده = کاربر ارسال‌کننده.
     مجوز ارسال را ماژول می‌سنجد. نمونهٔ در جریان یا بسته (پایان‌یافته/ردشده) 409 already_in_progress می‌دهد.
+    restart_closed (طرح ۴.۳): نمونهٔ پایان‌یافته یا ردشده هم از نو شروع می‌شود؛ فقط وقتی ماژول خودش سند را به
+    پیش‌نویس برگردانده است (مثل بازگشایی پروندهٔ ردشده). نمونهٔ در جریان همیشه 409 است.
     """
     spec = get_spec(workflow_key)
     if spec.referral_only:
@@ -443,7 +445,8 @@ def submit(workflow_key, obj, user):
     with transaction.atomic():
         instance = WorkflowInstance.objects.select_for_update().filter(
             workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=entity_id).first()
-        if instance is not None and instance.status not in RESTARTABLE:
+        restartable = RESTARTABLE + ((WorkflowInstance.COMPLETED, WorkflowInstance.REJECTED) if restart_closed else ())
+        if instance is not None and instance.status not in restartable:
             raise WorkflowStateError('already_in_progress', 'این سند از قبل در گردش کار است', 409)
         if instance is None:
             instance = WorkflowInstance(workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=entity_id)
@@ -564,7 +567,64 @@ def _begin_action(user, task, revision, obj, action, reason, require_reason):
         raise WorkflowPermissionDenied('action_not_allowed', 'این اقدام در این مرحله مجاز نیست', 403)
     if require_reason and not (reason or '').strip():
         raise ReasonRequired()
+    _check_action_hook(user, instance, locked, ctx, action)
     return instance, locked, ctx, auth
+
+
+def _check_action_hook(user, instance, task, ctx, action):
+    """
+    د۲ طرح ۴.۳: قلاب پیش از اقدام ماژول `can_act:<entity_kind>` با fn(user, obj, task, action) -> پیام یا None.
+    زیر قفل نمونه و کار و پس از مجوز اجرا می‌شود، پس هم اکشن ماژول و هم API «کارهای من» از آن می‌گذرند.
+    پیام = 400 action_blocked. خطای قلاب پنهان نمی‌شود (گیت بسته می‌ماند).
+    """
+    from platform_core.registry import contributions
+    for fn in contributions(f'can_act:{instance.entity_kind}'):
+        message = fn(user, ctx.obj, task, action)
+        if message:
+            raise WorkflowError('action_blocked', str(message), 400)
+
+
+def open_at_step(workflow_key, obj, creator, step_key, *, reason=''):
+    """
+    د۵ طرح ۴.۳: نمونهٔ گردش سندی که پیش از موتور در میانهٔ گردش بوده، با کار باز در همان مرحله (force؛ هرگز
+    برگشت به پیش‌نویس و هرگز پایان خودکار). تکرارپذیر: اگر سند هر نمونه‌ای داشته باشد کاری نمی‌کند و None می‌دهد.
+    ثبت‌کننده = ثبت‌کنندهٔ اصلی سند. ردیف سابقه از نوع auto است. خروجی کار باز یا None.
+    """
+    spec = get_spec(workflow_key)
+    step = spec.step(step_key)
+    if step is None:
+        raise WorkflowError('unknown_step', f'مرحلهٔ «{step_key}» در گردش «{workflow_key}» نیست', 400)
+    section, company_id = _load_scope(spec, obj)
+    ctx = _Ctx(spec, obj, section, company_id)
+    now = timezone.now()
+    with transaction.atomic():
+        exists = WorkflowInstance.objects.select_for_update().filter(
+            workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=obj.pk).exists()
+        if exists:
+            return None
+        creator_id = getattr(creator, 'pk', None)
+        instance = WorkflowInstance(
+            workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=obj.pk, version=spec.version,
+            company_id=company_id, section=section, created_by=creator,
+            creator_rank=_creator_rank(creator_id, section, ctx.ranks, company_id=company_id) if creator_id else 0,
+            status=WorkflowInstance.IN_PROGRESS, current_step='', step_keys=spec.step_keys,
+            amount=_amount(spec, obj), summary=_summary(spec, obj), others_acted=True, submitted_at=now,
+        )
+        plan = _plan_skips(spec, instance.amount, instance.creator_rank,
+                           _thresholds(workflow_key, section.pk if section is not None else None, company_id),
+                           ctx.ranks, obj)
+        index = spec.step_keys.index(step_key)
+        instance.skip_plan = {k: v for k, v in plan.items() if k in spec.step_keys[index + 1:]}
+        instance.revision = 1
+        try:
+            with transaction.atomic():
+                instance.save()
+        except IntegrityError:
+            return None
+        task, _skip = _enter_step(ctx, instance, step, now, force=True)
+        instance.save()
+        _history(instance, WorkflowStep.AUTO, task=task, to_step=step_key, reason=reason, now=now)
+    return task
 
 
 def _finish_task(instance, task, user, outcome, now):

@@ -203,10 +203,18 @@ class PersonnelFullCycleTests(TestCase):
         self.assertEqual(resp_rev.data["data"]["rejection_reason"], "نقص مدارک شناسایی")
 
         # رد پرونده توسط سرپرست
+        # 4.3: a returned profile has no open task, so it cannot be rejected until resubmitted (no purge)
         resp_rej = self.client.post(f"/api/personnel/profiles/{profile.id}/reject/", {"reason": "عدم تطابق با شرایط کارگاه"}, format="json")
-        self.assertEqual(resp_rej.status_code, 200)
-        self.assertTrue(resp_rej.data["purged"])
-        self.assertFalse(PersonnelProfile.objects.filter(id=profile.id).exists())
+        self.assertEqual(resp_rej.status_code, 400)
+        other = PersonnelProfile.objects.create(
+            first_name="x", last_name="y", national_code="0061122335", section=self.section,
+            approval_status="pending_supervisor", is_active=True,
+        )
+        resp_rej = self.client.post(f"/api/personnel/profiles/{other.id}/reject/", {"reason": "عدم تطابق با شرایط کارگاه"}, format="json")
+        self.assertEqual(resp_rej.status_code, 200, resp_rej.data)
+        self.assertFalse(resp_rej.data["purged"])
+        other.refresh_from_db()
+        self.assertEqual(other.approval_status, "rejected")
 
         # پیش‌نویسِ ارسال‌نشده نزد کارمند است و سرپرست آن را عودت یا رد نمی‌کند (جدول گذار ۳.۱-الف)
         draft = PersonnelProfile.objects.create(
@@ -318,19 +326,24 @@ class PersonnelFullCycleTests(TestCase):
         # گام ۲: بررسی درخواست در کارتابل تغییرات
         from personnel.models import PersonnelChangeRequest
         cr = PersonnelChangeRequest.objects.get(pk=cr_id)
-        self.assertEqual(cr.status, "pending_supervisor")
-
-        # گام ۳: تایید مرحله اول تغییرات توسط سرپرست ⬅️ ارسال به حسابداری
+        # 4.3: the engine skips the supervisor step below the requester's (accountant) level
+        self.assertEqual(cr.status, "pending_accountant")
         self.client.force_authenticate(user=self.supervisor)
         resp_sup = self.client.post(f"/api/personnel/personnel-change-requests/{cr_id}/approve-supervisor/", {}, format="json")
-        self.assertEqual(resp_sup.status_code, 200)
-        cr.refresh_from_db()
-        self.assertEqual(cr.status, "pending_accountant")
+        self.assertEqual(resp_sup.status_code, 400)
 
-        # گام ۴: تایید مرحله دوم (مالی) تغییرات توسط حسابدار ⬅️ ارسال به مدیر
+        # the requester never reviews their own request; a second accountant does
+        from personnel.models import UserCompanyAccess
+        from personnel.scoped_test_support import grant_section_perms
+        acc2, _ = CustomUser.objects.get_or_create(username="test_accountant_2")
+        grant_section_perms(acc2, ("perm_approve_personnel_finance",), section=self.section, exact=False, role="accountant")
+        UserCompanyAccess.objects.get_or_create(user=acc2, company=self.company, defaults={"is_default": True})
         self.client.force_authenticate(user=self.accountant)
+        resp_self = self.client.post(f"/api/personnel/personnel-change-requests/{cr_id}/approve-finance/", {}, format="json")
+        self.assertEqual(resp_self.status_code, 403)
+        self.client.force_authenticate(user=acc2)
         resp_fin = self.client.post(f"/api/personnel/personnel-change-requests/{cr_id}/approve-finance/", {}, format="json")
-        self.assertEqual(resp_fin.status_code, 200)
+        self.assertEqual(resp_fin.status_code, 200, resp_fin.data)
         cr.refresh_from_db()
         self.assertEqual(cr.status, "pending_manager")
 

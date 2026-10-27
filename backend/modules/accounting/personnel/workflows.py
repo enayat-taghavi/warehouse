@@ -8,7 +8,7 @@ on_state_change را صدا می‌زند تا وضعیت خود سند (Expense
 from decimal import Decimal
 
 from workflow.registry import (APPROVE, CANCELLED, COMPLETED, EXECUTE, REJECTED, RETURN, ACT, RETURNED, REVIEW,
-                               StepSpec, WorkflowSpec)
+                               TERMINAL_STATES, StepSpec, WorkflowSpec)
 
 INVOICE_WORKFLOW = 'expense_invoice'
 INVOICE_ENTITY = 'expense_invoice'
@@ -529,3 +529,321 @@ def is_petty_statement_locked(entity_id):
         return False
     status, statement_date, company_id = row
     return status in PETTY_STATEMENT_LOCKED_STATUSES or closed_period_for(company_id, statement_date) is not None
+
+
+# ─── پروندهٔ پرسنل و درخواست تغییر روی موتور (د۱ تا د۵ طرح ۴.۳) ─────────────────────────────────────
+PERSONNEL_WORKFLOW = 'personnel_profile'
+PERSONNEL_ENTITY = 'personnel_profile'
+PERSONNEL_CHANGE_WORKFLOW = 'personnel_change'
+PERSONNEL_CHANGE_ENTITY = 'personnel_change'
+PERSONNEL_VIEW_PERM = 'view_sys_personnel'
+# مرحلهٔ قدیمی (اکشن approve-X) ← کلید مرحلهٔ موتور
+PERSONNEL_STAGE_STEP = {'supervisor': 'supervisor_ok', 'finance': 'accountant_review', 'manager': 'manager_ok'}
+PERSONNEL_STEP_STATUS = {
+    'supervisor_ok': 'pending_supervisor',
+    'accountant_review': 'pending_accountant',
+    'manager_ok': 'pending_manager',
+    COMPLETED: 'approved',
+    RETURNED: 'revision_required',
+    REJECTED: 'rejected',
+    CANCELLED: 'draft',
+}
+PERSONNEL_CHANGE_STEP_STATUS = dict(PERSONNEL_STEP_STATUS, **{CANCELLED: 'cancelled'})
+# د۵: وضعیت قدیمیِ در جریان ← مرحله‌ای که کار آن باز می‌شود (manager_approved قدیمی معادل مصوب است)
+PERSONNEL_LEGACY_STATUS_STEP = {
+    'pending_supervisor': 'supervisor_ok',
+    'supervisor_approved': 'accountant_review',
+    'pending_accountant': 'accountant_review',
+    'accountant_approved': 'manager_ok',
+    'pending_manager': 'manager_ok',
+}
+# فیلدهای قدیمی «تأییدکننده و زمان» هر مرحله (برای گزارش‌های قدیمی)
+PROFILE_APPROVER_FIELDS = {
+    'supervisor_ok': ('supervisor_approved_by', 'supervisor_approved_at'),
+    'accountant_review': ('accountant_approved_by', 'accountant_approved_at'),
+    'manager_ok': ('manager_approved_by', 'manager_approved_at'),
+}
+CHANGE_APPROVER_FIELDS = {
+    'supervisor_ok': ('supervisor_reviewed_by', 'supervisor_reviewed_at'),
+    'accountant_review': ('accountant_reviewed_by', 'accountant_reviewed_at'),
+    'manager_ok': ('manager_reviewed_by', 'manager_reviewed_at'),
+}
+
+
+def _personnel_steps():
+    return (
+        StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_approve_personnel_supervisor', APPROVE),
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)؛ گیت فیلدهای مالی با قلاب can_act
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_personnel_finance', REVIEW),
+        StepSpec('manager_ok', 'تصویب مدیر', 'manager', 'perm_approve_personnel_manager', APPROVE),
+    )
+
+
+def _acted_tasks(instance):
+    """کارهای مرحلهٔ اقدام‌شدهٔ همین دور گردش (از آخرین ارسال)، به ترتیب بسته شدن."""
+    from workflow.models import WorkflowTask
+    qs = WorkflowTask.objects.filter(instance=instance, track=WorkflowTask.TRACK_STEP, is_open=False,
+                                     outcome=WorkflowTask.ACTED)
+    if instance.submitted_at:
+        qs = qs.filter(closed_at__gte=instance.submitted_at)
+    return list(qs.order_by('closed_at', 'pk'))
+
+
+def _last_closer(instance):
+    from workflow.models import WorkflowTask
+    task = (WorkflowTask.objects.filter(instance=instance, track=WorkflowTask.TRACK_STEP, is_open=False)
+            .exclude(closed_by=None).order_by('-closed_at', '-pk').first())
+    return task.closed_by if task is not None else None
+
+
+def _fill_approvers(obj, instance, fields_map, changed):
+    """پر کردن «تأییدکننده و زمان» مرحله‌های اقدام‌شده؛ هرگز پاک نمی‌کند (سابقهٔ قدیمی می‌ماند)."""
+    for task in _acted_tasks(instance):
+        pair = fields_map.get(task.step_key)
+        if not pair or task.closed_by_id is None:
+            continue
+        by_field, at_field = pair
+        if getattr(obj, f'{by_field}_id') != task.closed_by_id or getattr(obj, at_field) != task.closed_at:
+            setattr(obj, f'{by_field}_id', task.closed_by_id)
+            setattr(obj, at_field, task.closed_at)
+            changed.update((by_field, at_field))
+
+
+PROFILE_ACT_ACTIONS = {'supervisor_ok': 'approve_supervisor', 'accountant_review': 'approve_finance',
+                       'manager_ok': 'approve_manager'}
+PROFILE_CLOSE_ACTIONS = {RETURNED: 'request_revision', REJECTED: 'reject', CANCELLED: 'cancel'}
+CHANGE_ACT_ACTIONS = {'supervisor_ok': 'change_request_approve_supervisor',
+                      'accountant_review': 'change_request_approve_finance', 'manager_ok': 'change_request_applied'}
+CHANGE_CLOSE_ACTIONS = {RETURNED: 'change_request_revision', REJECTED: 'change_request_rejected',
+                        CANCELLED: 'change_request_cancelled'}
+
+
+def _legacy_action(instance, state, act_actions, close_actions):
+    """نام اکشن قدیمی تایملاین: اقدام مرحله از آخرین کار اقدام‌شده؛ ورود اول پس از ارسال = None (ارسال جدا ثبت می‌شود)."""
+    if state in close_actions:
+        return close_actions[state]
+    acted = _acted_tasks(instance)
+    return act_actions.get(acted[-1].step_key) if acted else None
+
+
+def _personnel_audit(profile, actor, from_status, to_status, action, state, reason=''):
+    """ردیف تایملاین قدیمی (WorkflowAuditLog) با همان نام اکشن‌های قدیمی؛ سابقهٔ اصلی در موتور است."""
+    from .models import WorkflowAuditLog
+    metadata = {'engine': True, 'state': state, 'company_id': profile.company_id, 'batch': False}
+    metadata.update(getattr(profile, '_wf_audit_meta', None) or {})
+    WorkflowAuditLog.objects.create(
+        content_type='personnel', object_id=profile.id, actor=actor, from_status=from_status, to_status=to_status,
+        action=action, reason=reason or '', metadata=metadata,
+    )
+
+
+def _personnel_state_change(profile, state, instance):
+    from django.utils import timezone
+    old_status = profile.approval_status
+    status = PERSONNEL_STEP_STATUS.get(state)
+    changed = set()
+    reason = getattr(profile, '_wf_reason', '') or ''
+    actor = _last_closer(instance)
+    if status and profile.approval_status != status:
+        profile.approval_status = status
+        changed.add('approval_status')
+    _fill_approvers(profile, instance, PROFILE_APPROVER_FIELDS, changed)
+    if state == COMPLETED:
+        if not profile.is_active:
+            profile.is_active = True
+            changed.add('is_active')
+        profile.rejection_reason = None
+        changed.add('rejection_reason')
+    elif state in (RETURNED, REJECTED):
+        profile.rejection_reason = reason or profile.rejection_reason
+        changed.add('rejection_reason')
+        if state == RETURNED:
+            profile.revision_requested_by = actor
+            profile.revision_requested_at = timezone.now()
+            changed.update(('revision_requested_by', 'revision_requested_at'))
+    elif state != CANCELLED:
+        profile.rejection_reason = None
+        changed.add('rejection_reason')
+    if changed:
+        profile.save(update_fields=sorted(changed | {'updated_at'}))
+    action = _legacy_action(instance, state, PROFILE_ACT_ACTIONS, PROFILE_CLOSE_ACTIONS)
+    if action and old_status != profile.approval_status:
+        _personnel_audit(profile, actor, old_status, profile.approval_status, action, state, reason)
+
+
+def _personnel_summary(profile):
+    # بی کد ملی و دستمزد (ق۱۶): خلاصهٔ کار برای همهٔ دریافت‌کنندگان دیده می‌شود
+    return {'title': f'پروندهٔ پرسنل — {profile.full_name}', 'category': profile.job_title or ''}
+
+
+def resolve_personnel(entity_id):
+    from .models import PersonnelProfile
+    return PersonnelProfile.objects.select_related('section', 'section__project', 'company').filter(
+        pk=entity_id).first()
+
+
+PERSONNEL_PROFILE_WORKFLOW_SPEC = WorkflowSpec(
+    key=PERSONNEL_WORKFLOW,
+    version=1,
+    entity_kind=PERSONNEL_ENTITY,
+    title_fa='پروندهٔ پرسنل',
+    steps=_personnel_steps(),
+    on_state_change=_personnel_state_change,
+    summary=_personnel_summary,
+    route='/app/finance/employee-new-personnel?personnel={id}',
+    section_field='section',
+    company_field='company',
+    view_permission=PERSONNEL_VIEW_PERM,
+)
+
+
+def _change_state_change(cr, state, instance):
+    from django.utils import timezone
+    from workflow.errors import WorkflowError
+    from .lifecycle_services import (PersonnelWorkflowError, apply_personnel_change_request,
+                                     log_change_request_event, refresh_has_pending_changes)
+    status = PERSONNEL_CHANGE_STEP_STATUS.get(state)
+    if state == REJECTED and getattr(cr, '_wf_cancel', False):
+        # لغو به دست مدیر کل (نه ثبت‌کننده) از مسیر رد موتور می‌گذرد ولی وضعیت درخواست «لغو» است
+        status = 'cancelled'
+    reason = getattr(cr, '_wf_reason', '') or ''
+    actor = _last_closer(instance)
+    changed = set()
+    _fill_approvers(cr, instance, CHANGE_APPROVER_FIELDS, changed)
+    if state == COMPLETED:
+        # د۳: اعمال در همان تراکنش موتور؛ نامعتبر = برگشت کل اقدام و درخواست معلق می‌ماند
+        try:
+            apply_personnel_change_request(cr, request=getattr(cr, '_wf_request', None))
+        except PersonnelWorkflowError as exc:
+            err = WorkflowError(exc.code or 'invalid_change_request', exc.message, exc.status_code)
+            err.errors = exc.errors
+            raise err
+    if state in (RETURNED, REJECTED, CANCELLED) and reason:
+        cr.rejection_reason = reason
+        changed.add('rejection_reason')
+    if state == RETURNED:
+        cr.revision_requested_by = actor
+        cr.revision_requested_at = timezone.now()
+        changed.update(('revision_requested_by', 'revision_requested_at'))
+    previous = cr.status
+    if status and cr.status != status:
+        cr.status = status
+        changed.add('status')
+    if changed:
+        cr.save(update_fields=sorted(changed | {'updated_at'}))
+    if state in TERMINAL_STATES:
+        refresh_has_pending_changes(cr.personnel)
+    action = _legacy_action(instance, state, CHANGE_ACT_ACTIONS, CHANGE_CLOSE_ACTIONS)
+    if state == REJECTED and status == 'cancelled':
+        action = 'change_request_cancelled'
+    if action and previous != cr.status:
+        extra = {'from_change_request_status': previous, 'engine': True}
+        if state == COMPLETED:
+            extra.update({'diff': cr.proposed_changes, 'old_diff': cr.previous_values})
+        log_change_request_event(cr, actor, action, reason=reason, extra=extra)
+
+
+def _change_summary(cr):
+    keys = ', '.join(sorted((cr.proposed_changes or {}).keys()))
+    return {'title': f'درخواست تغییر پرونده — {cr.personnel.full_name}', 'category': keys[:100]}
+
+
+def resolve_personnel_change(entity_id):
+    from .models import PersonnelChangeRequest
+    return (PersonnelChangeRequest.objects.select_related('personnel', 'personnel__section',
+                                                          'personnel__section__project', 'requested_by')
+            .filter(pk=entity_id).first())
+
+
+PERSONNEL_CHANGE_WORKFLOW_SPEC = WorkflowSpec(
+    key=PERSONNEL_CHANGE_WORKFLOW,
+    version=1,
+    entity_kind=PERSONNEL_CHANGE_ENTITY,
+    title_fa='درخواست تغییر پروندهٔ پرسنل',
+    steps=_personnel_steps(),
+    on_state_change=_change_state_change,
+    summary=_change_summary,
+    route='/app/finance/employee-new-personnel?change_request={id}',
+    # بخش و شرکت از پروندهٔ هدف (property های فقط‌خواندنی مدل، بی migration)
+    section_field='wf_section',
+    company_field='wf_company',
+    view_permission=PERSONNEL_VIEW_PERM,
+)
+
+
+# ─── قلاب‌های دیدن، پیوست، قفل و پیش از اقدام پرونده ────────────────────────────────────────────────
+def _personnel_in_scope(user, profile_id) -> bool:
+    """همان دامنهٔ PersonnelProfileViewSet (scope_personnel_for_user در همهٔ شرکت‌های مجاز کاربر)."""
+    from .models import PersonnelProfile
+    from .views_domains.scope_helpers import scope_personnel_for_user
+    if not profile_id or not getattr(user, 'is_authenticated', False):
+        return False
+    return scope_personnel_for_user(user, PersonnelProfile.objects.filter(pk=profile_id)).exists()
+
+
+def personnel_company_id(entity_id):
+    from .models import PersonnelProfile
+    return PersonnelProfile.objects.filter(pk=entity_id).values_list('company_id', flat=True).first()
+
+
+def personnel_change_company_id(entity_id):
+    from .models import PersonnelChangeRequest
+    return (PersonnelChangeRequest.objects.filter(pk=entity_id)
+            .values_list('personnel__company_id', flat=True).first())
+
+
+def can_view_personnel(user, entity_id):
+    return True if _personnel_in_scope(user, entity_id) else None
+
+
+def can_attach_personnel(user, entity_id):
+    return can_view_personnel(user, entity_id)
+
+
+def is_personnel_locked(entity_id):
+    """پرونده قفل گردش ندارد؛ پروندهٔ مصوب فقط از مسیر درخواست تغییر عوض می‌شود."""
+    return False
+
+
+def _change_personnel_id(entity_id):
+    from .models import PersonnelChangeRequest
+    return PersonnelChangeRequest.objects.filter(pk=entity_id).values_list('personnel_id', flat=True).first()
+
+
+def can_view_personnel_change(user, entity_id):
+    return True if _personnel_in_scope(user, _change_personnel_id(entity_id)) else None
+
+
+def can_attach_personnel_change(user, entity_id):
+    return can_view_personnel_change(user, entity_id)
+
+
+def is_personnel_change_locked(entity_id):
+    from .models import PersonnelChangeRequest
+    status = PersonnelChangeRequest.objects.filter(pk=entity_id).values_list('status', flat=True).first()
+    return status in ('approved', 'cancelled')
+
+
+def personnel_missing_message(missing):
+    labels = '، '.join(m['label'] for m in missing)
+    return f'فیلدهای الزامی مرحلهٔ حسابداری تکمیل نشده است: {labels}'
+
+
+def can_act_personnel(user, profile, task, action):
+    """د۲: تأیید «بررسی حسابدار» فقط با فیلدهای کامل مرحلهٔ مالی؛ عودت و رد آزادند."""
+    if action != ACT or task.step_key != 'accountant_review':
+        return None
+    from .lifecycle_services import get_missing_fields
+    missing = get_missing_fields(profile, stage='accountant')
+    return personnel_missing_message(missing) if missing else None
+
+
+def open_legacy_personnel_workflow(workflow_key, obj, reason='legacy: opened for an in-flight record'):
+    """د۵: نمونهٔ موتور برای پرونده/درخواست در جریان قدیمی بی نمونه؛ تکرارپذیر. خروجی کار باز یا None."""
+    from workflow import engine
+    status = obj.approval_status if workflow_key == PERSONNEL_WORKFLOW else obj.status
+    step_key = PERSONNEL_LEGACY_STATUS_STEP.get(status)
+    if step_key is None:
+        return None
+    creator = obj.created_by if workflow_key == PERSONNEL_WORKFLOW else obj.requested_by
+    return engine.open_at_step(workflow_key, obj, creator, step_key, reason=reason)
