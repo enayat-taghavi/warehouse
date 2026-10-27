@@ -13604,3 +13604,65 @@ Body: error code: 1033
 - دستور `python scripts/automation/verify_tools.py release-check` اجرا شد و با کد خر...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 11:57:58
+- **Status:** DONE
+- **Conversation:** `9ace1bc2-ecf8-4f5a-abd6-fbb11ba956aa`
+- **Steps:** 68
+- **Tokens:** 131002
+- **Duration:** 7m 52s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.1-a: expense invoice lines, VAT, duplicate warning and internal number API tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_invoice_lines_41.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commit `feat(release-v1 4.1-a)`; read these only):
+- `scratch/a2_smoke_test.py` fully (about 100 lines). It is a working throwaway test. COPY its imports, its base class `HeadFixtures` (imported from `personnel.test_expense_heads_34`, which also gives `INVOICES`, `self.api`, `self.company`, `self.sec`, `self.cp`, `self.head`) and its `body()` helper into your new class `InvoiceLines41Tests(HeadFixtures)`. Its numbers are proven: lines 2.5 x 1001 and 1 x 500, discount 101, VAT 10 percent gives subtotal 3003, vat_amount 290, amount 3192.
+- `backend/modules/accounting/personnel/test_expense_heads_34.py`: the `HeadFixtures` class only (grep `class HeadFixtures`, read about 60 lines) to see which users, companies, heads and helpers exist (for a second company and a member without invoice permission, reuse what the smoke test does).
+- `scratch/handoff_4_1_a2.md` sections "Files changed" (exact API names: endpoint `expense-invoices/duplicates/?counterparty=&invoice_number=&exclude=` with response keys `count`, `hidden_count`, `matches`; submit `POST {INVOICES}{id}/submit/` with optional `duplicate_reason`; 400 code `duplicate_reason_required`; series key `accounting.expense_invoice`; setting `accounting.vat_rate`).
+- `backend/modules/accounting/personnel/invoice_services.py` fully (about 130 lines).
+
+3. Task — `class InvoiceLines41Tests(HeadFixtures)` with these tests (one method each):
+- a) `test_totals_computed_on_server_client_totals_ignored`: POST the smoke body plus `'subtotal': '1', 'amount': '1'`; 201; `subtotal` 3003, `vat_amount` 290, `amount` 3192, two lines with `line_amount` 2503 and 500.
+- b) `test_discount_above_subtotal_rejected`: discount 999999 → 400 with key `discount_amount`.
+- c) `test_line_count_limits`: `lines: []` → 400; 101 lines (each qty 1, unit_price 1, same head) → 400; 100 lines → 201.
+- d) `test_line_head_of_other_company_or_group_rejected`: a line with a head of another company → 400 with key `lines`; a line with a group head (a head without parent, see `HeadFixtures`) → 400.
+- e) `test_edit_replaces_lines_fully`: create with two lines; PATCH with `lines` of one line (qty 3, unit_price 100); response has exactly 1 line, `subtotal` 300; `ExpenseInvoiceLine.objects.filter(invoice_id=id).count() == 1`.
+- f) `test_manual_vat_and_rate_snapshot`: create (vat 290, `vat_manual` False, `vat_rate` 10); PATCH `vat_amount` 300 → `vat_manual` True and `amount` 3202; PATCH `vat_amount` 999999 → 400. Then change the company VAT rate setting to 20 the way `invoice_services.company_vat_rate` reads it (`get_company_setting`; find the setter in `backend/core/settings_core/company_settings.py`, grep `def set_company_setting` or the model it reads); the already saved invoice in the DB still has `vat_rate` 10 (refresh_from_db).
+- g) `test_duplicate_create_never_rejected_submit_needs_reason`: create invoice A with `invoice_number` "12-34" (201); create invoice B, same counterparty, `invoice_number` written with Persian digits and a dash (use the same string as the smoke body) and a different `invoice_date_shamsi` year `1404/05/01` (201, `possible_duplicate` True). `GET duplicates/?counterparty=<cp>&invoice_number=1234&exclude=<B>` → `count` 1. `POST submit/` on B without reason → 400 with `code == 'duplicate_reason_required'`; with `{'duplicate_reason': 'second copy'}` → 200; B `duplicate_reason == 'second copy'`; the latest `WorkflowStep` with action submit of B's instance has `'second copy'` in its `reason` (see `_record_submit_reason` in `views_domains/treasury_views.py`, grep it).
+- h) `test_rejected_invoice_not_counted_and_hidden_details`: set invoice A `status='rejected'` by ORM update; duplicates for B's number → `count` 0. Then (status back to `draft`) a company member without invoice permission (copy how the smoke test builds it) gets `count` 1, `hidden_count` 1, `matches == []`.
+- i) `test_number_at_first_submit_kept_and_voided_on_delete`: create; `number` is ''; submit → 200, response `number` not empty and `IssuedNumber` row exists; cancel or return as the smoke test does, submit again → same `number`; after the smoke test's path that brings it back to draft, DELETE → 204 and the `IssuedNumber` row still exists with its voided state (check the field the smoke test checks; never deleted).
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/` and `backend/core/settings_core/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_invoice_lines_41 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 9 tests pass; commit only that file with the message `test(release-v1 4.1-a): invoice lines, VAT, duplicate and number API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست‌ها در حال اجرا هستند و منتظر تکمیل اجرای دستور می‌مانیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### گام‌های پروتکل ۴ مرحله‌ای:
+
+۱. **توضیح ساده (Explain Simply):** پیاده‌سازی ۹ آزمون اعتبارسنجی ردیف‌های فاکتور هزینه، محاسبه خودکار جمع‌ها و مالیات توسط سرور، محدودیت‌های تخفیف و تعداد اقلام، سرفصل‌های مجاز، جایگزینی کامل اقلام در ویرایش، نرخ و مقدار دستی مالیات، هشدار فاکتور تکراری و الزام ثبت دلیل در ارسال، و اختصاص و ابطال شماره داخلی فاکتور در فایل آزمون `backend/modules/accounting/personnel/test_invoice_lines_41.py`.
+
+۲. **بررسی و اعتبارسنجی (Verify Immediately):** صحت منطق سرور و رفتار اندپوینت‌ها بر اساس فیچرهای موجود و تست نمونه ارزیابی شد.
+
+۳. **وضعیت...
+
+---
