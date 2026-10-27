@@ -69,14 +69,14 @@
           (ngModelChange)="onSearchChange()"
           aria-label="جستجوی فاکتور"
           placeholder="جستجوی شماره فاکتور، طرف‌حساب، شرح..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
+          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
         <button
           *ngIf="invoiceSearch"
           type="button"
           (click)="clearSearch()"
           title="پاک کردن جستجو"
           aria-label="پاک کردن جستجو"
-          class="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-fg-muted hover:text-fg cursor-pointer">
+          class="absolute start-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-fg-muted hover:text-fg cursor-pointer">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
@@ -92,7 +92,7 @@
 
     <!-- بدنه جدول -->
     <div class="overflow-x-auto">
-      <table class="w-full text-right border-collapse text-xs">
+      <table class="w-full text-start border-collapse text-xs">
         <thead>
           <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
             <th class="py-3 px-3 text-center w-12">#</th>
@@ -158,7 +158,7 @@
               <div class="font-black text-slate-900 text-xs" title="مبلغ قابل پرداخت">
                 {{ formatNumber(inv.amount) }}
               </div>
-              <div class="text-[10px] text-slate-400">
+              <div class="text-[10px] text-fg-muted">
                 {{ formatNumber(Math.floor((inv.amount || 0) / 10)) }} تومان
               </div>
               <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="text-[10px] text-emerald-700 mt-0.5">
@@ -259,7 +259,7 @@
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
-                <span *ngIf="inv.status !== 'draft'" class="text-[10px] text-slate-400 font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100">
+                <span *ngIf="inv.status !== 'draft'" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100">
                   🔒 قفل
                 </span>
               </div>
@@ -330,11 +330,11 @@
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-sm">
-            🧾
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg>
           </div>
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInvoiceId ? 'ویرایش فاکتور پیش‌نویس' : 'ثبت فاکتور هزینه جدید' }}</h3>
-            <p class="text-[10px] text-slate-400 font-medium">ذخیره خودکار در وضعیت پیش‌نویس کارمند (Guardian G2)</p>
+            <p class="text-[10px] text-fg-muted font-medium">ذخیره خودکار در وضعیت پیش‌نویس کارمند</p>
           </div>
         </div>
         <button
@@ -370,7 +370,7 @@
             [(ngModel)]="newInvoice.counterparty"
             (ngModelChange)="onDuplicateKeyChange()"
             aria-label="طرف‌حساب"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none">
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
             <option [ngValue]="undefined" disabled>انتخاب طرف‌حساب از لیست...</option>
             <option *ngFor="let cp of counterparties" [value]="cp.id">
               {{ cp.name }} ({{ cp.counterparty_type_display || cp.counterparty_type }})
@@ -388,7 +388,7 @@
               (ngModelChange)="onDuplicateKeyChange()"
               aria-label="شماره فاکتور یا رسید"
               placeholder="مثال: INV-1042 یا شماره رسید"
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ فاکتور (شمسی) *</label>
@@ -401,7 +401,7 @@
               [attr.aria-invalid]="!!invoiceDateError"
               [attr.aria-describedby]="invoiceDateError ? 'invoice_date_error' : null"
               [class.border-rose-400]="!!invoiceDateError"
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
             @if (invoiceDateError) {
               <p id="invoice_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ invoiceDateError }}</p>
             }
@@ -465,19 +465,19 @@
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_desc_' + i">شرح</label>
                     <input type="text" [id]="'line_desc_' + i" [(ngModel)]="line.description" [name]="'line_desc_' + i"
                       placeholder="شرح کالا یا خدمت" aria-label="شرح ردیف"
-                      class="w-full min-h-[40px] px-3 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none" />
+                      class="w-full min-h-[40px] px-3 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
                   </div>
                   <div class="md:col-span-1">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_qty_' + i">تعداد</label>
                     <input type="number" min="0" step="any" inputmode="decimal" [id]="'line_qty_' + i" [(ngModel)]="line.quantity" [name]="'line_qty_' + i"
                       aria-label="تعداد" dir="ltr"
-                      class="w-full min-h-[40px] px-2 text-xs text-end tabular-nums bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none" />
+                      class="w-full min-h-[40px] px-2 text-xs text-end tabular-nums bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
                   </div>
                   <div class="md:col-span-1">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_unit_' + i">واحد</label>
                     <input type="text" [id]="'line_unit_' + i" [(ngModel)]="line.unit" [name]="'line_unit_' + i" maxlength="30"
                       placeholder="عدد، متر..." aria-label="واحد"
-                      class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none" />
+                      class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
                   </div>
                   <div class="col-span-2 md:col-span-2">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_price_' + i">فی (ریال)</label>
@@ -488,7 +488,7 @@
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_head_' + i">سرفصل هزینه</label>
                     <select [id]="'line_head_' + i" [(ngModel)]="line.expense_head" [name]="'line_head_' + i"
                       (ngModelChange)="expenseHeadError = ''" aria-label="سرفصل هزینهٔ ردیف"
-                      class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none">
+                      class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                       <option [ngValue]="null" disabled>{{ isLoadingExpenseHeads ? 'در حال بارگذاری...' : 'انتخاب سرفصل' }}</option>
                       @for (group of expenseHeadGroups; track group.id) {
                         <optgroup [label]="group.label">
@@ -532,7 +532,7 @@
           </div>
           <div>
             <label class="flex items-center gap-2 min-h-[40px] text-[11px] font-bold text-slate-700 cursor-pointer">
-              <input type="checkbox" [(ngModel)]="vatApplicable" [ngModelOptions]="{standalone: true}" class="w-4 h-4" />
+              <input type="checkbox" [(ngModel)]="vatApplicable" [ngModelOptions]="{standalone: true}" class="w-4 h-4 accent-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
               <span>مشمول مالیات بر ارزش افزوده</span>
             </label>
             @if (vatApplicable) {
@@ -583,7 +583,7 @@
                 ✕
               </button>
             </span>
-            <span *ngIf="!attachmentFileName" class="text-[11px] text-slate-400">
+            <span *ngIf="!attachmentFileName" class="text-[11px] text-fg-muted">
               فرمت‌های مجاز: JPG, PNG, PDF (حداکثر ۱۰ مگابایت)
             </span>
           </div>
@@ -596,12 +596,12 @@
             rows="2"
             [(ngModel)]="newInvoice.description"
             placeholder="مثال: خرید روغن هیدرولیک و فیلتر گازوئیل لودر..."
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none"></textarea>
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
         </div>
 
         <!-- هشدار نگهبان G2 -->
         <div class="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 leading-relaxed">
-          <span class="font-bold">🛡️ قانون طلایی پیش‌نویس (Guardian G2):</span>
+          <span class="font-bold">قانون پیش‌نویس:</span>
           این فاکتور با وضعیت «پیش‌نویس کارمند» ذخیره می‌گردد و پس از تایید توسط شما، به کارتابل سرپرست ارسال خواهد شد.
         </div>
 
@@ -643,7 +643,7 @@
           </div>
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">تعریف سریع طرف‌حساب جدید</h3>
-            <p class="text-[10px] text-slate-400">افزودن فروشگاه، تعمیرگاه، راننده یا پیمانکار</p>
+            <p class="text-[10px] text-fg-muted">افزودن فروشگاه، تعمیرگاه، راننده یا پیمانکار</p>
           </div>
         </div>
         <button
@@ -665,7 +665,7 @@
             type="text"
             [(ngModel)]="newCounterparty.name"
             placeholder="مثال: فروشگاه قطعات البرز یا آقای رضایی"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
         </div>
 
         <!-- نوع طرف‌حساب -->
@@ -673,7 +673,7 @@
           <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع طرف‌حساب</label>
           <select
             [(ngModel)]="newCounterparty.counterparty_type"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none">
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
             <option value="repair_shop">تعمیرگاه و قطعات یدکی</option>
             <option value="fuel_station">جایگاه سوخت و روانکارها</option>
             <option value="driver">راننده / مالک خودرو</option>
@@ -690,7 +690,7 @@
               type="text"
               [(ngModel)]="newCounterparty.phone"
               placeholder="۰۹۱۲..."
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی / شناسه</label>
@@ -698,7 +698,7 @@
               type="text"
               [(ngModel)]="newCounterparty.national_id"
               placeholder="۱۰ یا ۱۱ رقم..."
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
         </div>
 
@@ -710,7 +710,7 @@
             [(ngModel)]="newCounterparty.sheba_number"
             (input)="onShebaInput()"
             placeholder="IR..."
-            class="w-full px-3 py-2 text-xs font-mono uppercase bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+            class="w-full px-3 py-2 text-xs font-mono uppercase bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           
           <!-- فیدبک شبا -->
           <div *ngIf="shebaValidationResult" class="text-[10px] mt-1 font-bold"
@@ -732,7 +732,7 @@
               type="text"
               [(ngModel)]="newCounterparty.bank_name"
               placeholder="بانک ملت، ملی..."
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب</label>
@@ -740,7 +740,7 @@
               type="text"
               [(ngModel)]="newCounterparty.account_number"
               placeholder="شماره حساب..."
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none" />
+              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
         </div>
 
@@ -819,11 +819,11 @@
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-sm">
-            📜
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" aria-hidden="true"></svg>
           </div>
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار فاکتور</h3>
-            <p class="text-[10px] text-slate-400 font-medium font-mono" *ngIf="selectedInvoiceDetail">
+            <p class="text-[10px] text-fg-muted font-medium font-mono" *ngIf="selectedInvoiceDetail">
               شماره: {{ selectedInvoiceDetail.invoice_number }}
             </p>
           </div>
@@ -880,7 +880,7 @@
             <div class="col-span-2 sm:col-span-3" *ngIf="selectedInvoiceDetail.lines?.length">
               <span class="text-slate-400 text-[11px] block mb-1">ردیف‌ها:</span>
               <div class="overflow-x-auto">
-                <table class="w-full text-[11px] text-right">
+                <table class="w-full text-[11px] text-start">
                   <thead><tr class="text-fg-muted"><th class="py-1 pe-2">شرح</th><th class="pe-2">تعداد</th><th class="pe-2">فی</th><th class="pe-2">سرفصل</th><th class="text-end">مبلغ</th></tr></thead>
                   <tbody>
                     <tr *ngFor="let l of selectedInvoiceDetail.lines" class="border-t border-line">

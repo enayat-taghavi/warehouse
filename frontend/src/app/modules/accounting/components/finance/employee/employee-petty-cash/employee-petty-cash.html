@@ -182,7 +182,7 @@
       <div class="px-3.5 py-2.5 border-b border-slate-100 flex flex-wrap items-end gap-3 text-xs" id="expenseDateFilters">
         <div>
           <label for="expenseDateFrom" class="block text-[11px] font-bold text-slate-700 mb-1">از تاریخ</label>
-          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 relative min-h-[40px]">
+          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500 relative min-h-[40px]">
             <ng-persian-datepicker [(uiIsVisible)]="isDateFromOpen" [dateInitValue]="false" (dateOnSelect)="onDateSelect('from', $event)" class="block relative cursor-pointer">
               <input id="expenseDateFrom" type="text" readonly [value]="dateFrom" (click)="isDateFromOpen = !isDateFromOpen" placeholder="۱۴۰۵/۰۱/۰۱"
                 class="w-28 text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"/>
@@ -195,7 +195,7 @@
         </div>
         <div>
           <label for="expenseDateTo" class="block text-[11px] font-bold text-slate-700 mb-1">تا تاریخ</label>
-          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 relative min-h-[40px]">
+          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500 relative min-h-[40px]">
             <ng-persian-datepicker [(uiIsVisible)]="isDateToOpen" [dateInitValue]="false" (dateOnSelect)="onDateSelect('to', $event)" class="block relative cursor-pointer">
               <input id="expenseDateTo" type="text" readonly [value]="dateTo" (click)="isDateToOpen = !isDateToOpen" placeholder="۱۴۰۵/۱۲/۲۹"
                 class="w-28 text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"/>

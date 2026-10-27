@@ -632,6 +632,9 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         _ensure_invoice_open(instance)
+        if instance.status not in INVOICE_EDITABLE_STATUSES and not self.request.user.is_superuser:
+            # مثل ویرایش: فاکتور در جریان گردش کار یا بسته‌شده حذف نمی‌شود (ردیف‌هایش CASCADE است)
+            raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل حذف نیست.")
         if instance.payments.exists():
             # قسط حذف نمی‌شود (د۵)؛ پس فاکتور قسط‌دار هم حذف نمی‌شود (FK آن PROTECT است)
             raise PermissionDenied("برای این فاکتور قسط پرداخت ثبت شده است و حذف نمی‌شود.")

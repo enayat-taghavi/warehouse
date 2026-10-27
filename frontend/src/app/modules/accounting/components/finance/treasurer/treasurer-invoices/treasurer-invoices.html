@@ -54,7 +54,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
+      <table class="w-full text-start text-xs">
         <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
           <tr>
             <th class="py-3 px-3">ردیف</th>
@@ -127,7 +127,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
+      <table class="w-full text-start text-xs">
         <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
           <tr>
             <th class="py-3 px-3">ردیف</th>
@@ -202,7 +202,7 @@
         <div *ngIf="paymentsLoading" class="text-fg-muted">در حال بارگذاری...</div>
         <div *ngIf="!paymentsLoading && payments.length === 0" class="text-fg-muted">هنوز قسطی ثبت نشده است.</div>
         <div *ngIf="payments.length > 0" class="overflow-x-auto rounded-xl border border-line">
-          <table class="w-full text-right text-[11px]">
+          <table class="w-full text-start text-[11px]">
             <thead class="bg-surface text-fg-muted font-black">
               <tr>
                 <th class="p-2">تاریخ</th>
@@ -262,7 +262,7 @@
                 class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg font-mono cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [class.border-rose-400]="payFieldErrors['payment_date_shamsi']"
                 placeholder="YYYY/MM/DD" aria-describedby="pay-date-err" />
-              <div *ngIf="isPayDatePickerOpen" class="absolute top-full mt-2 right-0 z-50 bg-surface border border-line rounded-2xl shadow-xl p-3">
+              <div *ngIf="isPayDatePickerOpen" class="absolute top-full mt-2 end-0 z-50 bg-surface border border-line rounded-2xl shadow-xl p-3">
                 <ng-persian-datepicker [formControl]="payDateControl" (dateOnSelect)="onPayDateSelect($event)"></ng-persian-datepicker>
               </div>
             </div>
@@ -344,7 +344,7 @@
         <label for="refill_tracking_code" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری واریز <span class="text-rose-600" aria-hidden="true">*</span></label>
         <input id="refill_tracking_code" type="text" [(ngModel)]="refillTrackingCode" name="refillTrackingCode" aria-required="true"
           [attr.aria-invalid]="refillError ? 'true' : 'false'"
-          class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
       <div *ngIf="refillError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ refillError }}</div>
       <div class="flex items-center justify-end gap-2">

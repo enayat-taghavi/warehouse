@@ -184,7 +184,7 @@
         </div>
         <div>
           <label for="pam_opening_date" class="block text-[11px] font-bold text-fg mb-1">تاریخ موجودی اولیه</label>
-          <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500/20">
+          <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500">
             <ng-persian-datepicker [(uiIsVisible)]="isFormDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onFormDateSelect($event)" class="w-full block relative cursor-pointer">
               <input id="pam_opening_date" type="text" [(ngModel)]="form.openingDate" name="openingDate" (click)="isFormDatePickerOpen = !isFormDatePickerOpen"
                 placeholder="۱۴۰۵/۰۱/۰۱" class="w-full text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
@@ -201,19 +201,19 @@
       <div *ngIf="current && openingChanged">
         <label for="pam_reason" class="block text-[11px] font-bold text-fg mb-1">دلیل تغییر موجودی اولیه</label>
         <textarea id="pam_reason" rows="2" [(ngModel)]="form.reason" name="reason" placeholder="اگر حساب گردش داشته باشد نوشتن دلیل لازم است"
-          class="w-full text-xs p-2.5 rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"></textarea>
+          class="w-full text-xs p-2.5 rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label for="pam_card" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ کارت یا حساب</label>
           <input id="pam_card" type="text" inputmode="numeric" dir="ltr" [(ngModel)]="form.card" name="card" [disabled]="!canManageAccounts"
-            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60" />
+            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60" />
         </div>
         <div>
           <label for="pam_sheba" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ شبا</label>
           <input id="pam_sheba" type="text" dir="ltr" placeholder="IR..." [(ngModel)]="form.sheba" name="sheba" [disabled]="!canManageAccounts"
-            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60" />
+            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60" />
         </div>
       </div>
       <p class="text-[11px] text-fg-muted">کارت و شبا برای بیشتر کاربران پوشیده نمایش داده می‌شود؛ اگر دست نزنید، تغییری نمی‌کند.</p>
@@ -221,7 +221,7 @@
       <div>
         <label for="pam_desc" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
         <input id="pam_desc" type="text" [(ngModel)]="form.description" name="description"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
 
       <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
@@ -262,7 +262,7 @@
       <div *ngIf="settleForm.method === 'cash'">
         <label for="pam_settle_ref" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری یا مرجع <span class="text-rose-600" aria-hidden="true">*</span></label>
         <input id="pam_settle_ref" type="text" [(ngModel)]="settleForm.reference" name="reference"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
 
       <div *ngIf="settleForm.method === 'charge_offset'">
@@ -270,7 +270,7 @@
         <p *ngIf="isLoadingCharges" class="text-[11px] text-fg-muted">در حال دریافت شارژها...</p>
         <p *ngIf="!isLoadingCharges && openCharges.length === 0" class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">شارژ بازی برای این حساب نیست.</p>
         <select *ngIf="openCharges.length > 0" id="pam_settle_charge" [(ngModel)]="settleForm.charge" name="charge"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <option [ngValue]="null">انتخاب کنید</option>
           <option *ngFor="let c of openCharges" [ngValue]="c.id">{{ c.title || ('شارژ ' + c.id) }} — باقی‌مانده {{ faAmount(chargeRemaining(c)) }} ریال</option>
         </select>
@@ -279,7 +279,7 @@
       <div>
         <label for="pam_settle_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
         <input id="pam_settle_note" type="text" [(ngModel)]="settleForm.note" name="note"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
 
       <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
@@ -296,7 +296,7 @@
       <p *ngIf="balance" class="text-[11px] text-fg-muted bg-surface-muted rounded-xl p-3">موجودی دفتری فعلی: <b class="font-mono text-fg">{{ faAmount(balance.current_balance) }}</b> ریال. اگر نقد شمارش‌شده کمتر باشد، کسری به بدهی تنخواه‌گردان اضافه می‌شود.</p>
       <div>
         <label for="pam_rec_date" class="block text-[11px] font-bold text-fg mb-1">پایان دوره <span class="text-rose-600" aria-hidden="true">*</span></label>
-        <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500/20">
+        <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500">
           <ng-persian-datepicker [(uiIsVisible)]="isRecDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onRecDateSelect($event)" class="w-full block relative cursor-pointer">
             <input id="pam_rec_date" type="text" [(ngModel)]="recForm.date" name="recDate" (click)="isRecDatePickerOpen = !isRecDatePickerOpen"
               placeholder="۱۴۰۵/۰۱/۳۱" class="w-full text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
@@ -314,7 +314,7 @@
       <div>
         <label for="pam_rec_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
         <input id="pam_rec_note" type="text" [(ngModel)]="recForm.note" name="recNote"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
       <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
       <div class="flex items-center justify-end gap-2">
@@ -332,12 +332,12 @@
       <div>
         <label for="pam_close_ref" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری برگشت وجه <span *ngIf="fundLevel > 0" class="text-rose-600" aria-hidden="true">*</span></label>
         <input id="pam_close_ref" type="text" [(ngModel)]="closeForm.reference" name="closeRef"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
       <div>
         <label for="pam_close_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
         <input id="pam_close_note" type="text" [(ngModel)]="closeForm.note" name="closeNote"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
       <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
       <div class="flex items-center justify-end gap-2">
@@ -358,12 +358,12 @@
       <div>
         <label for="pam_ho_ref" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری یا مرجع</label>
         <input id="pam_ho_ref" type="text" [(ngModel)]="handoverForm.reference" name="hoRef"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
       <div>
         <label for="pam_ho_note" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
         <input id="pam_ho_note" type="text" [(ngModel)]="handoverForm.note" name="hoNote"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
       </div>
       <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
       <div class="flex items-center justify-end gap-2">
