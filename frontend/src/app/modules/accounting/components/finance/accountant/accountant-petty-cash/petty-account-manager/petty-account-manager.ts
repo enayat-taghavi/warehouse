@@ -14,6 +14,7 @@ import { AmountInputComponent } from '../../../../../../../shared/components/amo
 import { WorkflowReasonDialogComponent } from '../../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { PersonRolePickerComponent, PersonRoleValue } from '../../../../../../../shared/components/person-role-picker/person-role-picker.component';
 import { SvgIconDirective } from '../../../../../../../shared/icons/svg-icon.directive';
+import { LoadingSkeletonComponent } from '../../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { TreasuryOrgApiService } from '../../../../../api/treasury-org-api.service';
 import {
   PettyCashAccount,
@@ -62,7 +63,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     AmountInputComponent,
     WorkflowReasonDialogComponent,
     PersonRolePickerComponent,
-    SvgIconDirective
+    SvgIconDirective,
+    LoadingSkeletonComponent
   ],
   templateUrl: './petty-account-manager.html'
 })

@@ -16,8 +16,8 @@
     </div>
   </div>
 
-  <div *ngIf="isLoading && accounts.length === 0" class="p-10 text-center space-y-3 bg-surface border border-line rounded-2xl">
-    <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+  <div *ngIf="isLoading && accounts.length === 0" role="status" class="p-10 text-center space-y-3 bg-surface border border-line rounded-2xl">
+    <app-loading-skeleton type="table" [rows]="3"></app-loading-skeleton>
     <p class="text-xs text-fg-muted font-bold">در حال بارگذاری حساب‌های تنخواه...</p>
   </div>
 
@@ -64,25 +64,25 @@
             <button type="button" appAction="edit" label="ویرایش" display="label" size="sm"
               [disabled]="!canManageAccounts || !isOnline"
               [attr.title]="!isOnline ? offlineTitle : 'ویرایش حساب'" (click)="openEdit(acc)"></button>
-            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            <button type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ثبت تسویهٔ بدهی'" aria-label="تسویهٔ بدهی" (click)="openSettle(acc)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
-              <span class="hidden md:inline">تسویه</span>
+              <span class="hidden sm:inline">تسویه</span>
             </button>
-            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            <button type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'تطبیق دوره‌ای نقد'" aria-label="تطبیق نقد" (click)="openReconcile(acc)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calculator" aria-hidden="true"></svg>
-              <span class="hidden md:inline">تطبیق</span>
+              <span class="hidden sm:inline">تطبیق</span>
             </button>
-            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            <button type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'تحویل به تنخواه‌گردان جدید'" aria-label="تحویل حساب" (click)="openHandover(acc)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-plus" aria-hidden="true"></svg>
-              <span class="hidden md:inline">تحویل</span>
+              <span class="hidden sm:inline">تحویل</span>
             </button>
-            <button type="button" class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-xs font-bold text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+            <button type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-xs font-bold text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
               [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'بستن حساب'" aria-label="بستن حساب" (click)="openClose(acc)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock" aria-hidden="true"></svg>
-              <span class="hidden md:inline">بستن</span>
+              <span class="hidden sm:inline">بستن</span>
             </button>
           </ng-container>
           <button type="button" class="w-10 h-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface text-fg-muted hover:bg-surface-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
@@ -100,15 +100,15 @@
           <h3 class="text-xs font-black text-fg mb-2">تسویه‌های بدهی</h3>
           <p *ngIf="settlements.length === 0" class="text-[11px] text-fg-muted">تسویه‌ای ثبت نشده.</p>
           <div *ngIf="settlements.length > 0" class="overflow-x-auto">
-            <table class="w-full text-right text-xs">
+            <table class="w-full text-start text-xs">
               <thead class="text-fg-muted">
                 <tr>
-                  <th class="p-2">مبلغ (ریال)</th>
-                  <th class="p-2">روش</th>
-                  <th class="p-2">وضعیت</th>
-                  <th class="p-2">مرجع</th>
-                  <th class="p-2">ثبت‌کننده</th>
-                  <th class="p-2 text-center">عملیات</th>
+                  <th scope="col" class="p-2">مبلغ (ریال)</th>
+                  <th scope="col" class="p-2">روش</th>
+                  <th scope="col" class="p-2">وضعیت</th>
+                  <th scope="col" class="p-2">مرجع</th>
+                  <th scope="col" class="p-2">ثبت‌کننده</th>
+                  <th scope="col" class="p-2 text-center">عملیات</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-line">
@@ -120,10 +120,10 @@
                   <td class="p-2 text-fg-muted">{{ s.created_by_name || '—' }}</td>
                   <td class="p-2 text-center">
                     <button *ngIf="canVoid(s) && !acc.is_closed" type="button"
-                      class="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-xs font-bold text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                      class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-xs font-bold text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                       [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ابطال این تسویه'" aria-label="ابطال تسویه" (click)="openVoid(s)">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" aria-hidden="true"></svg>
-                      <span class="hidden md:inline">ابطال</span>
+                      <span class="hidden sm:inline">ابطال</span>
                     </button>
                     <span *ngIf="s.status === 'void' || s.void_reason" class="text-[11px] text-fg-muted">{{ s.void_reason }}</span>
                   </td>
@@ -137,14 +137,14 @@
           <h3 class="text-xs font-black text-fg mb-2">تطبیق‌های دوره‌ای</h3>
           <p *ngIf="reconciliations.length === 0" class="text-[11px] text-fg-muted">تطبیقی ثبت نشده.</p>
           <div *ngIf="reconciliations.length > 0" class="overflow-x-auto">
-            <table class="w-full text-right text-xs">
+            <table class="w-full text-start text-xs">
               <thead class="text-fg-muted">
                 <tr>
-                  <th class="p-2">پایان دوره</th>
-                  <th class="p-2">مبلغ مورد انتظار</th>
-                  <th class="p-2">شمارش‌شده</th>
-                  <th class="p-2">اختلاف</th>
-                  <th class="p-2">نتیجه</th>
+                  <th scope="col" class="p-2">پایان دوره</th>
+                  <th scope="col" class="p-2">مبلغ مورد انتظار</th>
+                  <th scope="col" class="p-2">شمارش‌شده</th>
+                  <th scope="col" class="p-2">اختلاف</th>
+                  <th scope="col" class="p-2">نتیجه</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-line">
@@ -152,7 +152,7 @@
                   <td class="p-2 font-mono text-fg">{{ r.period_end_date }}</td>
                   <td class="p-2 font-mono text-fg">{{ faAmount(r.expected_cash) }}</td>
                   <td class="p-2 font-mono text-fg">{{ faAmount(r.counted_cash) }}</td>
-                  <td class="p-2 font-mono font-bold" [ngClass]="r.difference < 0 ? 'text-rose-700' : 'text-fg'" dir="ltr">{{ faAmount(r.difference) }}</td>
+                  <td class="p-2 font-mono font-bold" [ngClass]="r.difference < 0 ? 'text-rose-700' : 'text-fg'"><bdi dir="ltr">{{ faAmount(r.difference) }}</bdi></td>
                   <td class="p-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" [ngClass]="resultClass(r.result)">{{ resultLabel(r.result) }}</span></td>
                 </tr>
               </tbody>
