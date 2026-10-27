@@ -2540,7 +2540,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.2-c: petty cash account manager DOM specs, glossary
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.2-c: petty cash account manager DOM specs, glossary
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

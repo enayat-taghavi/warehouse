@@ -13874,3 +13874,70 @@ I am waiting for the test suite to finish.
 خطای رانر مربوط به شکست آزمون `test_charge_offset_net_on_pay` در فایل `backend/modules/accounting/personnel/test_petty_cash_42.py` بود. در کد پروداکشن، بررسی بدهی باز (`amount > settleable_debt`) پیش از بررسی سقف شارژ (`offset_exceeds_charge`) انجام می‌شود. برای اینکه خطای `offset_exceeds_charge` هنگام ارسال مبلغ ۴۰۰,۰۰۰ روی ش...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 20:13:31
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `0da5d8e5-4f0d-4f75-b902-e0fe9e54cce4`
+- **Steps:** 100
+- **Tokens:** 183059
+- **Duration:** 14m 8s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 7/7 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.2-c: petty cash account manager DOM specs, glossary
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new spec file and edit one doc file (paths below). Change no other file (never touch `scripts/automation/*`). Never change production code (`*.ts` that is not `*.spec.ts`, `*.html`). If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `it.skip`, `describe.skip`, `it.todo`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commits `7c82a9d1` and `27fd3612`; read these only):
+- TestBed pattern to COPY (imports, `initTestEnvironment`, `resetTestingModule`, `configureTestingModule` with `providers` of mocks, `createComponent`, `detectChanges`): `frontend/src/app/modules/accounting/components/personnel/manager-approvals/manager-approvals.dom.spec.ts` lines 1-150.
+- Component under test: `frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.ts` (about 520 lines: injected services lines 70-76, state lines 78-125, permission getters `isManager` / `canManageAccounts` lines 125-131, `openCreate`, `openEdit`, `openSettle`, `openReconcile`, `openClose`, `saveAccount` ~324, `saveSettlement` ~367, `canVoid`, `openVoid`, `onVoidConfirmed`, `saveReconciliation` ~436, `saveClose` ~469, `saveHandover` ~492, `errorMessage`, the `ERROR_MESSAGES` map at the top of the file) and its template `petty-account-manager.html` (input ids start with `pam_`, e.g. `pam_opening_date`, `pam_reason`, `pam_card`, `pam_sheba`, `pam_settle_ref`, `pam_settle_charge`, `pam_rec_date`, `pam_close_ref`).
+- Services to mock by class token in `providers`: `TreasuryOrgApiService` (`frontend/src/app/modules/accounting/api/treasury-org-api.service.ts`), `AuthService` (`user()` returns `{ id: 1, is_superuser: false }`, `userPermissions()` returns a permission array you choose per test), `ToastService`, `ActiveCompanyService` (`activeCompanyId: 3`). `NetworkStatusService.getInstance()` is a singleton: spy on it or make sure `isOnline` is true (set `component.isOnline = true` after create if needed).
+- API mock returns: `getPettyCashAccounts` → `of([{ id: 11, company: 3, custodian: 5, custodian_name: 'Ali', ceiling_amount: 50000000, opening_balance: 0, debt: 2000000, is_closed: false }, { id: 12, company: 3, custodian: 6, custodian_name: 'Sara', ceiling_amount: 10000000, debt: 0, is_closed: true }])`; `getPettyCashBalance` → `of({ current_balance: 3000000, debt: 2000000, payroll_deduction_available: false, ceiling_amount: 50000000 })`; `getPettyCashSettlements` / `getPettyCashReconciliations` → `of([])`; `getPettyCashTransactions` → `of([])`. Error responses use `throwError(() => ({ status: 400, error: { code: 'X', error: 'msg' } }))`.
+
+3. Task A — new file `frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.dom.spec.ts` (`// @vitest-environment jsdom` first line). One `it` each:
+- a) the list renders both accounts; the closed account shows the text «بسته‌شده» and has no settle/close buttons; the ceiling column text «سقف» is shown only when the user has `perm_manager_payment_authorize` (test both permission sets).
+- b) account form: after `openEdit(account 11)`, setting an opening balance > 0 with an empty date and calling `saveAccount()` shows the date error in `modalError` and does not call `updatePettyCashAccount`; with a date it calls `updatePettyCashAccount(11, body)` where `body.opening_balance` is the number.
+- c) account form: `updatePettyCashAccount` failing with 400 `{ code: 'reason_required' }` sets `modalError` to `ERROR_MESSAGES['reason_required']` (import nothing from the component file except the class; compare with a non-empty string and with the text the template renders).
+- d) settlement: `openSettle(account 11)`; method `cash` with empty reference → `modalError` set and `createPettyCashSettlement` not called; with reference `R-1` and amount 1000000 → called with `{ account: 11, amount: 1000000, method: 'cash', reference: 'R-1', ... }`.
+- e) settlement: when the balance has `payroll_deduction_available: false` the payroll method option is not rendered; when `true` it is rendered.
+- f) reconciliation: `openReconcile(account 11)`; with date `1405/08/01` and counted 500000 `saveReconciliation()` calls `createPettyCashReconciliation({ account: 11, period_end_date: '1405/08/01', counted_cash: 500000, ... })`; a 400 `{ code: 'work_in_flight' }` shows the mapped Persian message in `modalError`.
+- g) close: `openClose(account 11)` with fund level 3000000 and empty reference → `modalError` set, `closePettyCashAccount` not called; with reference → called with `(11, { reference: 'T-9', ... })`; a 400 `{ code: 'debt_open' }` shows the mapped message.
+- h) void: `canVoid` is true for `{ status: 'pending', method: 'charge_offset' }` and for `{ status: 'done', method: 'cash' }`, false for `{ status: 'done', method: 'charge_offset' }` and `{ status: 'void' }`; `openVoid` then `onVoidConfirmed('wrong')` calls `voidPettyCashSettlement(id, 'wrong')`.
+- Put `vi.spyOn(window, 'prompt')` in `beforeEach` and assert it is never called in `afterEach`.
+
+4. Task B — `Documents/Release_v1/glossary.md`: add six rows at the end of the existing table (before the closing `</div>`), same 4 columns as the rows above (term, simple definition, words to avoid, code name):
+- «تسویهٔ بدهی تنخواه» — paying back the custodian's debt to the company: cash deposit, deduction from the next charge, or deduction from salary — `PettyCashDebtSettlement`.
+- «تطبیق دورهٔ تنخواه» — counting the custodian's real cash at a date and comparing it with the expected cash; a shortage becomes debt and older expense rows lock — `PettyCashReconciliation`.
+- «موجودی اولیه تنخواه» — the amount already with the custodian when the account is defined; changing it after the first activity needs a manager and a reason — `opening_balance` / `opening_balance_date`.
+- «تحویل تنخواه» — moving the remaining fund from the old custodian to a new one; the old account closes — `handover` / `handover_from` / `handover_to`.
+- «خالص واریز شارژ» — charge amount minus the debt deducted from it; this is what the treasurer pays — `net_amount` / `offset_total`.
+- «حساب بستهٔ تنخواه» — a petty cash account that was closed; it is read-only and never reopens — `is_closed` / `closed_at`.
+Write the definitions in simple Persian like the rows above.
+
+5. Tool policy: only reading the listed files, Grep in `frontend/src/app/modules/accounting/` and `frontend/src/app/shared/` and `frontend/src/app/core/`, writing the two files, the test command below, `git add` of those files, `git commit`, `git status --short`. Test command, in the repository root (it builds a temporary test config, so plain `ng test` is not used): `python scripts/automation/verify_tools.py ng-test-compare --base 27fd3612 --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/**/*.spec.ts"`; the per-test log is `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+6. Before finishing: all tests in that folder pass; commit only the two files with the message `test(release-v1 4.2-c): petty cash account manager DOM specs, glossary`; `git status --short` prints nothing.
+
+7. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+فرمان راستی‌آزمایی تست‌های DOM در حال اجرا است و به محض پایان فرآیند، نتیجه بررسی و گزارش نهایی ثبت خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+### توضیح ساده و بررسی نیازمندی‌ها
+۱. **توضیح درخواست کاربر:** کاربر خواستار اجرای گام ۴.۲-ج (Release v1 step 4.2-c) شامل پیاده‌سازی تست‌های DOM برای کامپوننت مدیریت حساب‌های تنخواه (`PettyAccountManagerComponent`) با ۸ تست مشخص (a تا h)، مانیتورینگ عدم فراخوانی `window.prompt`، و افزودن ۶ اصطلاح مربوط به تنخواه به واژه‌نامهٔ مشترک پروژه (`Documents/Release_v1/glossary.md`) بدون هیچ‌گونه دستکاری در کدهای پروداکشن بود.
+۲. **بررسی صحت فنی و تطابق با کالبد کد:** بررسی شد که کامپوننت و قالب در مسیر مربوطه وجود دارند، م...
+
+---
