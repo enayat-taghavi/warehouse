@@ -2241,7 +2241,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 3.6-d: petty cash frontend spec (charge request, statement builder, line reject, permissions, deep links)
+[DONE] [ ] Session 1 of 1 — Release v1 step 3.6-d: petty cash frontend spec (charge request, statement builder, line reject, permissions, deep links)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
