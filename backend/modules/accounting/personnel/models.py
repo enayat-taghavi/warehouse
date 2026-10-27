@@ -56,6 +56,7 @@ from .models_domains.treasury_audit import (
     primary_party_bank_account,
     ExpenseInvoice,
     ExpenseInvoiceLine,
+    InvoicePayment,
     normalize_invoice_number,
     compute_line_amount,
     PettyCashAccount,

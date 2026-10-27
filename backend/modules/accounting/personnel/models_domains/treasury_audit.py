@@ -185,6 +185,7 @@ class ExpenseInvoice(models.Model):
         ('pending_accountant', 'در انتظار بررسی حسابدار'),
         ('pending_manager', 'در انتظار تایید مدیر'),
         ('ready_to_pay', 'تایید مدیر / آماده پرداخت'),
+        ('partially_paid', 'پرداخت ناقص'),
         ('paid', 'پرداخت‌شده توسط خزانه‌دار'),
         ('revision_required', 'نیازمند بازنگری و اصلاح'),
         ('rejected', 'رد شده'),
@@ -231,6 +232,9 @@ class ExpenseInvoice(models.Model):
     attachment = models.FileField(upload_to='invoices/', blank=True, null=True, verbose_name="تصویر یا فایل فاکتور")
     status = models.CharField(max_length=30, choices=INVOICE_STATUS_CHOICES, default='draft', verbose_name="وضعیت فاکتور")
     rejection_reason = models.TextField(blank=True, null=True, verbose_name="علت رد یا بازنگری فاکتور")
+    # جمع قسط‌های باطل‌نشده (د۵ طرح ۴.۱)؛ فقط invoice_payments زیر select_for_update فاکتور آن را می‌نویسد
+    paid_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="پرداخت‌شده (ریال)")
+    # بازتاب قسط آخر (فقط‌خواندنی)
     payment_ref = models.CharField(max_length=100, blank=True, null=True, verbose_name="شماره پیگیری / سند پرداخت")
     paid_at = models.DateTimeField(blank=True, null=True, verbose_name="تاریخ و زمان پرداخت")
     paid_by = models.ForeignKey(
@@ -408,6 +412,81 @@ class ExpenseInvoiceLine(models.Model):
                 'quantity' in update_fields or 'unit_price' in update_fields):
             kwargs['update_fields'] = [*update_fields, 'line_amount']
         super().save(*args, **kwargs)
+
+
+class InvoicePayment(models.Model):
+    """
+    قسط پرداخت فاکتور هزینه (د۵ طرح ۴.۱). حذف نمی‌شود؛ اصلاح فقط با ابطال با دلیل (voided_*).
+    فقط invoice_payments.add_payment / void_payment آن را می‌سازند و باطل می‌کنند.
+    """
+    METHOD_TRANSFER = 'transfer'
+    METHOD_CHEQUE = 'cheque'
+    METHOD_CASH = 'cash'
+    METHOD_CHOICES = (
+        (METHOD_TRANSFER, 'حواله'),
+        (METHOD_CHEQUE, 'چک'),
+        (METHOD_CASH, 'نقد'),
+    )
+    invoice = models.ForeignKey(
+        ExpenseInvoice,
+        on_delete=models.PROTECT,
+        related_name='payments',
+        verbose_name="فاکتور"
+    )
+    amount = models.DecimalField(max_digits=15, decimal_places=0, validators=[MinValueValidator(1)],
+                                 verbose_name="مبلغ قسط (ریال)")
+    payment_date_shamsi = models.CharField(max_length=10, verbose_name="تاریخ پرداخت (شمسی)")
+    tracking_code = models.CharField(max_length=100, verbose_name="شماره پیگیری / شماره چک")
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, default=METHOD_TRANSFER, verbose_name="روش پرداخت")
+    company_bank_account = models.ForeignKey(
+        'personnel.CompanyBankAccount',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoice_payments',
+        verbose_name="حساب بانکی شرکت"
+    )
+    party_bank_account = models.ForeignKey(
+        PartyBankAccount,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoice_payments',
+        verbose_name="حساب بانکی طرف حساب"
+    )
+    notes = models.TextField(blank=True, default='', verbose_name="توضیح")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoice_payments_created',
+        verbose_name="ثبت‌کنندهٔ قسط"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    voided_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان ابطال")
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoice_payments_voided',
+        verbose_name="باطل‌کننده"
+    )
+    void_reason = models.TextField(blank=True, default='', verbose_name="دلیل ابطال")
+
+    class Meta:
+        verbose_name = "قسط پرداخت فاکتور"
+        verbose_name_plural = "قسط‌های پرداخت فاکتور"
+        ordering = ['invoice', 'created_at', 'id']
+        indexes = [models.Index(fields=['invoice', 'voided_at'])]
+
+    def __str__(self):
+        return f"{self.invoice_id}: {self.amount:,.0f} ({self.tracking_code})"
+
+    @property
+    def is_voided(self):
+        return self.voided_at is not None
 
 
 class PettyCashAccount(models.Model):

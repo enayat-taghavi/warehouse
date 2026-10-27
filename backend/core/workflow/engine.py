@@ -689,6 +689,29 @@ def open_task(workflow_key, entity_id):
     ).select_related('instance').first()
 
 
+def can_act(user, task, action=None) -> bool:
+    """
+    فقط‌خواندنی و بی قفل: آیا کاربر همین الان می‌تواند روی این کار مرحله اقدام کند (همان قاعدهٔ `_authorize`:
+    دریافت‌کنندهٔ اصلی یا جانشین در بازهٔ امروز، مدیر کل، و هرگز ثبت‌کنندهٔ سند). با `action`، اقدام هم باید در
+    مرحله مجاز باشد. ماژول برای کنش‌های میانیِ مرحله (که خودشان اقدام موتور نیستند) از این استفاده می‌کند.
+    """
+    if not isinstance(task, WorkflowTask):
+        task = WorkflowTask.objects.select_related('instance').filter(pk=task).first()
+    if task is None or not task.is_open or task.track != WorkflowTask.TRACK_STEP:
+        return False
+    instance = task.instance
+    if instance.status != WorkflowInstance.IN_PROGRESS:
+        return False
+    ctx = _ctx_for(instance)
+    if action is not None and action not in ctx.spec.step(task.step_key).actions:
+        return False
+    try:
+        _authorize(user, instance, task, ctx, timezone.localdate())
+    except WorkflowPermissionDenied:
+        return False
+    return True
+
+
 def task_grants_view(user, kind, entity_id) -> bool:
     """
     ت۱۱: کاربر روی این سند کار باز دارد (دریافت‌کنندهٔ اصلی، یا جانشین در بازهٔ امروز). یک پرس‌وجو.

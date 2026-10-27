@@ -114,7 +114,21 @@ def update_bank_account(account, data, user=None):
 
 
 def delete_bank_account(account, user=None):
+    """حساب به‌کاررفته در قسط فاکتور (د۵ طرح ۴.۱) حذف نمی‌شود، فقط غیرفعال می‌شود (FK آن PROTECT است)."""
     before = bank_snapshot(account)
+    if account.invoice_payments.exists():
+        was_primary = account.is_primary
+        account.is_active = False
+        account.is_primary = False
+        account.save(update_fields=['is_active', 'is_primary', 'updated_at'])
+        audit_bank_account('UPDATE', account, user, before=before, after=bank_snapshot(account))
+        if was_primary:
+            replacement = (PartyBankAccount.objects.filter(party_id=account.party_id, is_active=True)
+                           .exclude(pk=account.pk).order_by('-created_at').first())
+            if replacement is not None:
+                replacement.is_primary = True
+                replacement.save()
+        return
     audit_bank_account('DELETE', account, user, before=before)
     account.delete()
 

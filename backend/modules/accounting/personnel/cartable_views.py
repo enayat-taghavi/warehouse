@@ -121,7 +121,8 @@ def _invoice_task_rows(user, step_key):
     ids = tasks_for_user(user).filter(instance__workflow_key=INVOICE_WORKFLOW, step_key=step_key).values(
         'instance__entity_id')
     return (ExpenseInvoice.objects.filter(pk__in=ids).select_related('section', 'counterparty__party')
-            .prefetch_related('lines__expense_head__parent'))
+            .prefetch_related('lines__expense_head__parent', 'payments__company_bank_account',
+                              'payments__party_bank_account__party', 'payments__created_by', 'payments__voided_by'))
 
 def _get_effective_company_ids(request, user):
     """
@@ -1033,17 +1034,16 @@ class TreasuryCartableAPIView(APIView):
             if invoice is None or task is None or task.step_key != 'treasury_pay':
                 raise ValidationError("فاکتور در مرحلهٔ پرداخت نیست یا یافت نشد.")
             _validate_instance_company_access(invoice, 'invoice', user)
+            # د۵ طرح ۴.۱: همان مسیر pay/ قدیمی = یک قسط به اندازهٔ کل مانده (خزانه‌دار، نه ثبت‌کننده)
+            from .invoice_payments import add_payment
             try:
-                with transaction.atomic():
-                    invoice.payment_ref = tracking_code
-                    invoice.paid_at = timezone.now()
-                    invoice.paid_by = user
-                    invoice.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_at'])
-                    wf_engine.act(user, task, reason=(request.data.get('notes') or '').strip(), obj=invoice)
+                _payment, updated_invoice = add_payment(
+                    user, invoice.pk, {'tracking_code': tracking_code, 'notes': request.data.get('notes') or ''},
+                    legacy=True)
             except WorkflowError as exc:
                 return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
                                 status=exc.status)
-            updated_invoice = invoice
+            updated_invoice.refresh_from_db()
             return Response({
                 'message': f'فاکتور شماره «{invoice.invoice_number}» با موفقیت تسویه و پرداخت شد.',
                 'invoice': ExpenseInvoiceSerializer(updated_invoice).data

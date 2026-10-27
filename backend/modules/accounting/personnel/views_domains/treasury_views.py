@@ -78,6 +78,16 @@ from ..workflow_engine import notify_document_changed
 from ..fiscal import ensure_period_open
 from ..invoice_services import (duplicate_queryset, ensure_invoice_number, invoice_duplicates,
                                 void_invoice_number)
+from ..invoice_payments import (PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, add_payment, invoice_remaining,
+                                void_payment)
+from ..models import InvoicePayment
+from ..serializers import InvoicePaymentSerializer
+from django.db.models import Prefetch
+
+INVOICE_PAYMENTS_PREFETCH = Prefetch(
+    'payments',
+    queryset=InvoicePayment.objects.select_related('company_bank_account', 'party_bank_account__party',
+                                                   'created_by', 'voided_by'))
 from ..models import normalize_invoice_number
 
 INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
@@ -446,7 +456,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     """
     queryset = (ExpenseInvoice.objects.all()
                 .select_related('section', 'section__project', 'counterparty__party', 'created_by', 'paid_by')
-                .prefetch_related('lines__expense_head__parent'))
+                .prefetch_related('lines__expense_head__parent', INVOICE_PAYMENTS_PREFETCH))
     serializer_class = ExpenseInvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
@@ -513,6 +523,10 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("وضعیت فاکتور فقط از راه گردش کار تغییر می‌کند.")
         if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser:
             raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
+        if (instance.status in ('ready_to_pay', 'partially_paid', 'paid') or instance.paid_amount
+                or instance.payments.exists()):
+            # در مرحلهٔ پرداخت حتی مدیر کل ویرایش نمی‌کند؛ ذخیرهٔ کامل ردیف قسط همزمان را بازنویسی می‌کرد
+            raise PermissionDenied("برای این فاکتور قسط پرداخت ثبت شده است و قابل ویرایش نیست.")
         # سند نه از دورهٔ بسته بیرون می‌رود و نه به آن وارد می‌شود
         _ensure_invoice_open(instance)
         _ensure_doc_period_open(new_section or instance.section,
@@ -522,6 +536,9 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         _ensure_invoice_open(instance)
+        if instance.payments.exists():
+            # قسط حذف نمی‌شود (د۵)؛ پس فاکتور قسط‌دار هم حذف نمی‌شود (FK آن PROTECT است)
+            raise PermissionDenied("برای این فاکتور قسط پرداخت ثبت شده است و حذف نمی‌شود.")
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
@@ -679,6 +696,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         reason = request.data.get('reason', '').strip()
         if not reason:
             return Response({'error': 'درج دلیل بازنگری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        if instance.paid_amount > 0:
+            return self._payments_exist_response()
         err = self._act_on_open_task(request, instance, lambda task, rev: wf_engine.return_for_fix(
             request.user, task, reason, obj=instance, revision=rev))
         if err is not None:
@@ -687,41 +706,89 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         instance.save(update_fields=['rejection_reason', 'updated_at'])
         return Response({'message': 'فاکتور با ثبت اشکال جهت بازنگری ارجاع شد.', 'status': instance.status})
 
+    @staticmethod
+    def _payments_exist_response():
+        return Response({'code': PAYMENTS_EXIST_CODE, 'error': PAYMENTS_EXIST_MESSAGE, 'detail': PAYMENTS_EXIST_MESSAGE},
+                        status=status.HTTP_409_CONFLICT)
+
+    @staticmethod
+    def _revision(request):
+        revision = request.data.get('revision')
+        return int(revision) if str(revision or '').isdigit() else None
+
+    def _payment_result(self, request, payment, invoice, message, code=status.HTTP_200_OK):
+        invoice.refresh_from_db()
+        return Response({
+            'message': message,
+            'status': invoice.status,
+            'status_display': invoice.get_status_display(),
+            'amount': str(invoice.amount),
+            'paid_amount': str(invoice.paid_amount),
+            'remaining': str(invoice_remaining(invoice)),
+            'payment': (InvoicePaymentSerializer(payment, context=self.get_serializer_context()).data
+                        if payment is not None else None),
+        }, status=code)
+
+    def _payment_call(self, fn):
+        """خطای موتور/قسط = {code, error, detail} با وضعیت همان خطا؛ خطای فیلد = 400 معمول DRF."""
+        try:
+            return fn(), None
+        except WorkflowError as exc:
+            return None, Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
+                                  status=exc.status)
+
     @action(detail=True, methods=['post'], url_path='pay')
     def pay_invoice(self, request, pk=None):
+        """سازگاری تا ۴.۱-ج: پرداخت کل مانده در یک قسط با همان فیلدهای قسط (tracking_code یا payment_ref، notes)."""
         instance = self._workflow_invoice()
         _ensure_invoice_open(instance)
-        tracking_code = (request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
-        if not tracking_code:
-            return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        def _pay(task, rev):
-            if task.step_key != 'treasury_pay':
-                from workflow.errors import WorkflowError
-                raise WorkflowError('not_payable', 'فاکتور هنوز به مرحلهٔ پرداخت نرسیده است', 409)
-            # شمارهٔ پیگیری پیش از اقدام روی همان شیء نوشته می‌شود تا on_state_change پایان گردش آن را ببیند؛
-            # خطای موتور کل تراکنش (و همین نوشتن) را برمی‌گرداند
-            instance.payment_ref = tracking_code
-            instance.paid_at = timezone.now()
-            instance.paid_by = request.user
-            instance.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_at'])
-            return wf_engine.act(request.user, task, reason=(request.data.get('notes') or '').strip(),
-                                 revision=rev, obj=instance)
-
-        with transaction.atomic():
-            err = self._act_on_open_task(request, instance, _pay)
-            if err is not None:
-                transaction.set_rollback(True)
+        result, err = self._payment_call(lambda: add_payment(
+            request.user, instance.pk, request.data, revision=self._revision(request), legacy=True))
         if err is not None:
-            instance.refresh_from_db()
             return err
-        return Response({'message': 'تسویه فاکتور با موفقیت در خزانه‌داری ثبت گردید.', 'status': instance.status})
+        payment, invoice = result
+        return self._payment_result(request, payment, invoice, 'تسویه فاکتور با موفقیت در خزانه‌داری ثبت گردید.')
+
+    @action(detail=True, methods=['get', 'post'], url_path='payments')
+    def payments(self, request, pk=None):
+        """GET فهرست قسط‌ها (باطل‌شده‌ها هم)؛ POST ثبت یک قسط (د۵ طرح ۴.۱)."""
+        instance = self._workflow_invoice()
+        if request.method == 'GET':
+            rows = (instance.payments.select_related('company_bank_account', 'party_bank_account__party',
+                                                     'created_by', 'voided_by').order_by('created_at', 'pk'))
+            return Response({
+                'amount': str(instance.amount), 'paid_amount': str(instance.paid_amount),
+                'remaining': str(invoice_remaining(instance)), 'status': instance.status,
+                'results': InvoicePaymentSerializer(rows, many=True, context=self.get_serializer_context()).data,
+            })
+        _ensure_invoice_open(instance)
+        result, err = self._payment_call(lambda: add_payment(
+            request.user, instance.pk, request.data, revision=self._revision(request)))
+        if err is not None:
+            return err
+        payment, invoice = result
+        message = ('قسط ثبت شد و فاکتور کامل پرداخت شد.' if invoice.status == 'paid'
+                   else 'قسط پرداخت ثبت شد.')
+        return self._payment_result(request, payment, invoice, message, code=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path=r'payments/(?P<pid>\d+)/void')
+    def void_payment(self, request, pk=None, pid=None):
+        instance = self._workflow_invoice()
+        _ensure_invoice_open(instance)
+        result, err = self._payment_call(lambda: void_payment(
+            request.user, instance.pk, int(pid), request.data.get('reason')))
+        if err is not None:
+            return err
+        payment, invoice = result
+        return self._payment_result(request, payment, invoice, 'قسط باطل شد و مانده برگشت.')
 
     @action(detail=True, methods=['post'], url_path='cancel')
     def cancel_invoice(self, request, pk=None):
         """لغو گردش به دست ثبت‌کننده، پیش از اقدام نفر دیگر (ت۸)؛ فاکتور به پیش‌نویس برمی‌گردد."""
         instance = self.get_object()
         _ensure_invoice_open(instance)
+        if instance.paid_amount > 0:
+            return self._payments_exist_response()
         wf_instance = wf_engine.instance_of(INVOICE_WORKFLOW, instance.pk)
         if wf_instance is None:
             return Response({'code': 'cancel_not_allowed', 'error': 'این فاکتور در گردش کار نیست.'},
@@ -736,92 +803,93 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         """
-        خروجی اکسل استاندارد ۲ ردیفه فاکتورهای هزینه بر اساس معماری سیستم
+        خروجی اکسل استاندارد دو ردیفهٔ سربرگ (ق۱۰، د۸ طرح ۴.۱): برگهٔ فاکتورها و برگهٔ «ردیف‌ها». دادهٔ بانکی نمی‌آید.
+        همان queryset دامنه‌دار فهرست؛ ردیف‌ها از prefetch (بی N+1).
         """
         import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         qs = self.get_queryset()
 
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "فاکتورهای هزینه"
-        ws.views.sheetView[0].rightToLeft = True
+        lines_ws = wb.create_sheet("ردیف‌ها")
 
-        headers_fa = [
-            'ردیف', 'شماره فاکتور', 'تاریخ فاکتور (شمسی)', 'پروژه', 'بخش', 
-            'طرف‌حساب', 'سرفصل‌های هزینه', 'مبلغ (ریال)', 'وضعیت', 'ثبت‌کننده', 'شرح هزینه'
+        invoice_cols = [
+            ('ردیف', 'row_num', 'num'),
+            ('شمارهٔ داخلی', 'number', 'num'),
+            ('شمارهٔ فاکتور فروشنده', 'invoice_number', 'num'),
+            ('تاریخ فاکتور (شمسی)', 'invoice_date_shamsi', 'num'),
+            ('پروژه', 'project_name', 'text'),
+            ('بخش', 'section_name', 'text'),
+            ('طرف‌حساب', 'counterparty_name', 'right'),
+            ('سرفصل‌های هزینه', 'expense_heads', 'text'),
+            ('جمع ردیف‌ها (ریال)', 'subtotal', 'money'),
+            ('تخفیف (ریال)', 'discount_amount', 'money'),
+            ('مالیات بر ارزش افزوده (ریال)', 'vat_amount', 'money'),
+            ('مبلغ قابل پرداخت (ریال)', 'amount', 'money'),
+            ('پرداخت‌شده (ریال)', 'paid_amount', 'money'),
+            ('مانده (ریال)', 'remaining', 'money'),
+            ('وضعیت', 'status_display', 'text'),
+            ('احتمال تکراری', 'possible_duplicate', 'text'),
+            ('ثبت‌کننده', 'created_by_name', 'text'),
+            ('شرح هزینه', 'description', 'right'),
         ]
-        headers_en = [
-            'row_num', 'invoice_number', 'invoice_date_shamsi', 'project_name', 'section_name',
-            'counterparty_name', 'expense_heads', 'amount', 'status_display', 'created_by_name', 'description'
+        line_cols = [
+            ('ردیف', 'row_num', 'num'),
+            ('شمارهٔ داخلی', 'number', 'num'),
+            ('شمارهٔ فاکتور فروشنده', 'invoice_number', 'num'),
+            ('شمارهٔ ردیف', 'position', 'num'),
+            ('شرح ردیف', 'description', 'right'),
+            ('سرفصل هزینه', 'expense_head', 'text'),
+            ('تعداد / مقدار', 'quantity', 'num'),
+            ('واحد', 'unit', 'text'),
+            ('فی (ریال)', 'unit_price', 'money'),
+            ('مبلغ ردیف (ریال)', 'line_amount', 'money'),
         ]
 
-        title_font = Font(name='B Nazanin', size=11, bold=True, color='FFFFFF')
-        key_font = Font(name='Segoe UI', size=8, italic=True, color='94A3B8')
-        title_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
-        key_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
-
-        thin_border = Border(
-            left=Side(style='thin', color='E2E8F0'),
-            right=Side(style='thin', color='E2E8F0'),
-            top=Side(style='thin', color='E2E8F0'),
-            bottom=Side(style='thin', color='E2E8F0')
-        )
-
-        ws.append(headers_fa)
-        ws.append(headers_en)
-
-        for col_idx in range(1, len(headers_fa) + 1):
-            cell_fa = ws.cell(row=1, column=col_idx)
-            cell_fa.font = title_font
-            cell_fa.fill = title_fill
-            cell_fa.alignment = Alignment(horizontal='center', vertical='center')
-
-            cell_en = ws.cell(row=2, column=col_idx)
-            cell_en.font = key_font
-            cell_en.fill = key_fill
-            cell_en.alignment = Alignment(horizontal='center', vertical='center')
-
-        ws.row_dimensions[1].height = 26
-        ws.row_dimensions[2].height = 16
-        ws.freeze_panes = 'A3'
-
-        data_font = Font(name='B Nazanin', size=10)
-        data_font_num = Font(name='Segoe UI', size=10)
-
+        invoice_rows = []
+        line_rows = []
         for idx, inv in enumerate(qs, start=1):
-            created_name = f"{inv.created_by.first_name} {inv.created_by.last_name}".strip() or inv.created_by.username if inv.created_by else 'سیستم'
-            ws.append([
+            created_name = (f"{inv.created_by.first_name} {inv.created_by.last_name}".strip() or inv.created_by.username
+                            if inv.created_by else 'سیستم')
+            lines = list(inv.lines.all())
+            invoice_rows.append([
                 idx,
+                inv.number or '',
                 inv.invoice_number,
                 inv.invoice_date_shamsi,
                 inv.section.project.name if inv.section and inv.section.project else '',
                 inv.section.name if inv.section else '',
                 inv.counterparty.name if inv.counterparty else '',
-                '، '.join(dict.fromkeys(line.expense_head.title for line in inv.lines.all() if line.expense_head)),
+                '، '.join(dict.fromkeys(line.expense_head.title for line in lines if line.expense_head)),
+                inv.subtotal,
+                inv.discount_amount,
+                inv.vat_amount,
                 inv.amount,
+                inv.paid_amount,
+                invoice_remaining(inv),
                 inv.get_status_display(),
+                'تکراری' if inv.possible_duplicate else '',
                 created_name,
-                inv.description or ''
+                inv.description or '',
             ])
-            curr_row = idx + 2
-            ws.row_dimensions[curr_row].height = 20
-            for col_idx in range(1, len(headers_fa) + 1):
-                c = ws.cell(row=curr_row, column=col_idx)
-                c.border = thin_border
-                c.alignment = Alignment(horizontal='center' if col_idx not in [6, 11] else 'right', vertical='center')
-                if col_idx in [1, 2, 3, 8]:
-                    c.font = data_font_num
-                else:
-                    c.font = data_font
-                if col_idx == 8:
-                    c.number_format = '#,##0'
+            for line in lines:
+                line_rows.append([
+                    len(line_rows) + 1,
+                    inv.number or '',
+                    inv.invoice_number,
+                    line.position,
+                    line.description or '',
+                    line.expense_head.title if line.expense_head else '',
+                    line.quantity.normalize() if line.quantity is not None else '',
+                    line.unit or '',
+                    line.unit_price,
+                    line.line_amount,
+                ])
 
-        for col in ws.columns:
-            max_len = max(len(str(cell.value or '')) for cell in col)
-            col_letter = openpyxl.utils.get_column_letter(col[0].column)
-            ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+        _write_standard_sheet(ws, invoice_cols, invoice_rows)
+        _write_standard_sheet(lines_ws, line_cols, line_rows)
 
         buf = io.BytesIO()
         wb.save(buf)
@@ -833,6 +901,54 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+
+
+def _write_standard_sheet(ws, columns, rows):
+    """سربرگ دو ردیفه (فارسی و کلید لاتین)، راست‌به‌چپ، ردیف‌های ثابت و قالب عددی پول (ق۱۰)."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    ws.views.sheetView[0].rightToLeft = True
+    title_font = Font(name='B Nazanin', size=11, bold=True, color='FFFFFF')
+    key_font = Font(name='Segoe UI', size=8, italic=True, color='94A3B8')
+    title_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
+    key_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
+    thin = Side(style='thin', color='E2E8F0')
+    thin_border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    data_font = Font(name='B Nazanin', size=10)
+    data_font_num = Font(name='Segoe UI', size=10)
+
+    ws.append([c[0] for c in columns])
+    ws.append([c[1] for c in columns])
+    for col_idx in range(1, len(columns) + 1):
+        cell_fa = ws.cell(row=1, column=col_idx)
+        cell_fa.font = title_font
+        cell_fa.fill = title_fill
+        cell_fa.alignment = Alignment(horizontal='center', vertical='center')
+        cell_en = ws.cell(row=2, column=col_idx)
+        cell_en.font = key_font
+        cell_en.fill = key_fill
+        cell_en.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 26
+    ws.row_dimensions[2].height = 16
+    ws.freeze_panes = 'A3'
+
+    for r_idx, row in enumerate(rows, start=3):
+        # متن کاربر که با = + - @ شروع شود فرمول اکسل نشود
+        ws.append([f"'{v}" if isinstance(v, str) and v[:1] in ('=', '+', '-', '@') else v for v in row])
+        ws.row_dimensions[r_idx].height = 20
+        for col_idx, (_fa, _key, kind) in enumerate(columns, start=1):
+            c = ws.cell(row=r_idx, column=col_idx)
+            c.border = thin_border
+            c.alignment = Alignment(horizontal='right' if kind == 'right' else 'center', vertical='center')
+            c.font = data_font_num if kind in ('num', 'money') else data_font
+            if kind == 'money':
+                c.number_format = '#,##0'
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 60)
 
 # ==============================================================================
 # 0.2 ویوست‌های مدیریت تنخواه‌گردان (Petty Cash Management ViewSets)

@@ -23,6 +23,7 @@ from ..models import (
     ExpenseHead,
     ExpenseInvoice,
     ExpenseInvoiceLine,
+    InvoicePayment,
     compute_line_amount,
     PettyCashAccount,
     PettyCashStatement,
@@ -328,6 +329,64 @@ def _invoice_lines_input(data, instance=None):
     return out
 
 
+def _user_full_name(user):
+    if user is None:
+        return None
+    return f"{user.first_name} {user.last_name}".strip() or user.username
+
+
+class InvoicePaymentSerializer(serializers.ModelSerializer):
+    """
+    قسط پرداخت فاکتور (د۵ طرح ۴.۱)؛ فقط خواندنی (ثبت و ابطال از invoice_payments). شبا و شماره‌حساب طرف برای
+    کسی که دید کامل ندارد جز چهار رقم آخر پوشیده است (ق۱۶). از حساب بانکی شرکت فقط نام و عنوان می‌آید.
+    """
+    method_display = serializers.CharField(source='get_method_display', read_only=True)
+    company_bank_name = serializers.SerializerMethodField()
+    party_bank_name = serializers.SerializerMethodField()
+    party_sheba_number = serializers.SerializerMethodField()
+    party_account_number = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    voided_by_name = serializers.SerializerMethodField()
+    is_voided = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = InvoicePayment
+        fields = ['id', 'invoice', 'amount', 'payment_date_shamsi', 'tracking_code', 'method', 'method_display',
+                  'company_bank_account', 'company_bank_name', 'party_bank_account', 'party_bank_name',
+                  'party_sheba_number', 'party_account_number', 'notes', 'created_by', 'created_by_name',
+                  'created_at', 'is_voided', 'voided_at', 'voided_by', 'voided_by_name', 'void_reason']
+        read_only_fields = fields
+
+    def get_company_bank_name(self, obj):
+        bank = obj.company_bank_account
+        if bank is None:
+            return None
+        return f"{bank.bank_name} - {bank.account_title}" if bank.account_title else bank.bank_name
+
+    def get_party_bank_name(self, obj):
+        bank = obj.party_bank_account
+        return bank.bank_name if bank is not None else None
+
+    def _party_field(self, obj, key):
+        bank = obj.party_bank_account
+        if bank is None:
+            return None
+        value = getattr(bank, key)
+        return value if _can_view_full(self, bank.party) else mask_tail(value)
+
+    def get_party_sheba_number(self, obj):
+        return self._party_field(obj, 'sheba_number')
+
+    def get_party_account_number(self, obj):
+        return self._party_field(obj, 'account_number')
+
+    def get_created_by_name(self, obj):
+        return _user_full_name(obj.created_by)
+
+    def get_voided_by_name(self, obj):
+        return _user_full_name(obj.voided_by)
+
+
 class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     section_name = serializers.CharField(source='section.name', read_only=True)
     project_id = serializers.IntegerField(source='section.project.id', read_only=True)
@@ -337,6 +396,9 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     paid_by_name = serializers.SerializerMethodField()
     lines = ExpenseInvoiceLineSerializer(many=True, required=False)
+    # د۵ طرح ۴.۱: مانده و قسط‌ها (فقط خواندنی؛ ثبت از اکشن payments)
+    remaining = serializers.SerializerMethodField()
+    payments = serializers.SerializerMethodField()
     # مبلغ دستی مالیات (اختیاری)؛ بی آن مبلغ پیشنهادی سرور
     vat_amount = serializers.DecimalField(max_digits=15, decimal_places=0, required=False, allow_null=True)
     discount_amount = serializers.DecimalField(max_digits=15, decimal_places=0, required=False, default=Decimal('0'))
@@ -349,7 +411,7 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'payment_ref', 'paid_at', 'paid_by',
                             'rejection_reason', 'amount', 'subtotal', 'vat_rate', 'vat_manual',
                             'invoice_number_norm', 'possible_duplicate', 'duplicate_reason', 'number',
-                            'issued_number']
+                            'issued_number', 'paid_amount']
 
     def to_internal_value(self, data):
         return super().to_internal_value(_invoice_lines_input(data, self.instance))
@@ -459,6 +521,15 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         if obj.paid_by:
             return f"{obj.paid_by.first_name} {obj.paid_by.last_name}".strip() or obj.paid_by.username
         return None
+
+    def get_remaining(self, obj):
+        from ..invoice_payments import invoice_remaining
+        return str(invoice_remaining(obj))
+
+    def get_payments(self, obj):
+        # از prefetch ویوست (بی پرس‌وجوی تازه در فهرست)؛ باطل‌شده‌ها هم با is_voided می‌آیند
+        rows = sorted(obj.payments.all(), key=lambda p: (p.created_at, p.pk))
+        return InvoicePaymentSerializer(rows, many=True, context=self.context).data
 
 def _section_value(obj, path):
     """مقدار از بخش (یا پروژهٔ بخش)؛ بخش در حساب و ردیف تنخواه اختیاری است (ص۹ طرح ۳.۶)."""

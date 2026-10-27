@@ -5,6 +5,8 @@
 on_state_change را صدا می‌زند تا وضعیت خود سند (ExpenseInvoice.status) به‌روز بماند. پس فهرست‌ها، فیلترها،
 خروجی اکسل و برچسب‌های فرانت عوض نمی‌شوند.
 """
+from decimal import Decimal
+
 from workflow.registry import (APPROVE, CANCELLED, COMPLETED, EXECUTE, REJECTED, RETURN, ACT, RETURNED, REVIEW,
                                StepSpec, WorkflowSpec)
 
@@ -24,12 +26,31 @@ INVOICE_STEP_STATUS = {
 }
 
 
+def _locked_paid_amount(invoice):
+    """paid_amount تازه از پایگاه داده زیر قفل ردیف فاکتور (موتور پیش از این نمونهٔ گردش را قفل کرده است)."""
+    from .models import ExpenseInvoice
+    value = (ExpenseInvoice.objects.select_for_update().filter(pk=invoice.pk)
+             .values_list('paid_amount', flat=True).first())
+    return Decimal(str(value or 0))
+
+
 def _invoice_state_change(invoice, state, instance):
-    if state == COMPLETED and not (invoice.payment_ref or '').strip():
-        # پرداخت فقط با شمارهٔ پیگیری (اکشن pay فاکتور)؛ اقدام عمومی «کارهای من» روی این مرحله برگشت می‌خورد
-        from workflow.errors import WorkflowError
-        raise WorkflowError('payment_ref_required', 'پرداخت فاکتور فقط با ثبت شمارهٔ پیگیری از صفحهٔ فاکتور انجام می‌شود', 400)
+    from workflow.errors import WorkflowError
+    if state == COMPLETED:
+        # د۵ طرح ۴.۱: پایان گردش فقط وقتی جمع قسط‌ها برابر مبلغ است (اکشن قسط یا pay/)؛ اقدام عمومی «کارهای من»
+        # بی قسط برگشت می‌خورد. فاکتور با مبلغ صفر همان قاعدهٔ قدیم (شمارهٔ پیگیری) را دارد.
+        amount = Decimal(str(invoice.amount or 0))
+        paid = _locked_paid_amount(invoice)
+        if (amount > 0 and paid != amount) or (amount <= 0 and not (invoice.payment_ref or '').strip()):
+            raise WorkflowError('payment_required',
+                                'پرداخت فاکتور فقط با ثبت قسط‌ها از صفحهٔ فاکتور و تا صفر شدن مانده انجام می‌شود', 400)
+    elif state in (RETURNED, CANCELLED, REJECTED) and _locked_paid_amount(invoice) > 0:
+        # بعد از اولین قسط باطل‌نشده، عودت، لغو و رد بسته است (اصلاح فقط با ابطال قسط)
+        from .invoice_payments import PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE
+        raise WorkflowError(PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, 409)
     status = INVOICE_STEP_STATUS.get(state)
+    if status == 'ready_to_pay' and Decimal(str(invoice.paid_amount or 0)) > 0:
+        status = 'partially_paid'
     if status and invoice.status != status:
         invoice.status = status
         invoice.save(update_fields=['status', 'updated_at'])

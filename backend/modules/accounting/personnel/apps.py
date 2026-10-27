@@ -96,6 +96,9 @@ class PersonnelConfig(AppConfig):
         contribute(f'can_attach:{INVOICE_ENTITY}', can_attach_invoice)
         contribute(f'is_locked:{INVOICE_ENTITY}', is_invoice_locked)
         contribute(f'company_of:{INVOICE_ENTITY}', invoice_company_id)
+        # چاپ / PDF فاکتور (د۷ طرح ۴.۱)؛ API هسته پیش از آن can_view را می‌سنجد
+        from personnel.invoice_print import printable_invoice
+        contribute(f'printable:{INVOICE_ENTITY}', printable_invoice)
         # نرخ مالیات شرکت و سری شمارهٔ داخلی فاکتور (د۲ و د۴ طرح ۴.۱)
         from personnel.invoice_services import INVOICE_NUMBER_SERIES, VAT_RATE_SETTING
         contribute('company_settings', VAT_RATE_SETTING)
