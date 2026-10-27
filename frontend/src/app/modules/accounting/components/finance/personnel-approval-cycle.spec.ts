@@ -186,7 +186,8 @@ describe('Complete Personnel 3-Tier Lifecycle DOM & State Integration (Employee 
       { show: vi.fn() } as any,
       mockCdr,
       mockRoute,
-      mockRouter
+      mockRouter,
+      { downloadPdf: vi.fn() } as any
     );
     managerComp.loadChangeRequests();
 

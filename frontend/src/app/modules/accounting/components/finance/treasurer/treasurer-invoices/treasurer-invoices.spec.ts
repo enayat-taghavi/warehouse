@@ -22,6 +22,7 @@ describe('TreasurerInvoicesComponent — ارگونومی واکنش‌گرا و
 
     component = new TreasurerInvoicesComponent(
       {} as any, {} as any, mockToast, mockPersonnelApi,
+      {} as any, {} as any, {} as any,
       { navigate: vi.fn() } as any,
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any

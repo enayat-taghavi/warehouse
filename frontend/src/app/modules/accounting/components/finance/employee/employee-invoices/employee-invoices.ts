@@ -6,7 +6,7 @@ import { ActiveCompanyService } from '../../../../../../core/services/active-com
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ProjectSection, Counterparty, ExpenseInvoice } from '../../../../models/personnel.model';
+import { ProjectSection, Counterparty, ExpenseInvoice, ExpenseInvoiceLine, InvoiceDuplicatesResponse } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -22,39 +22,43 @@ import { saveBlob, saveUrl } from '../../../../../../core/platform/file-output';
 import { WorkflowHistoryComponent } from '../../../../../../shared/components/workflow-history/workflow-history.component';
 import { TreasuryOrgApiService } from '../../../../api/treasury-org-api.service';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { AmountInputComponent } from '../../../../../../shared/components/amount-input/amount-input.component';
+import { PrintService, PRINT_OFFLINE_TITLE } from '../../../../../../core/services/print.service';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ExpenseHeadOptionGroup, buildExpenseHeadOptions, expenseHeadErrorMessage, expenseHeadLabel } from '../../expense-head-options';
+
+/** یک ردیف فرم (مبلغ ردیف فقط نمایشی است) */
+export interface InvoiceLineForm {
+  description: string;
+  quantity: string | number;
+  unit: string;
+  unit_price: string | number | null;
+  expense_head: number | null;
+}
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
 export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   readonly Math = Math;
 
-  // Memoized tabs for app-tab-bar
-  private invoiceStatusTabsKey = '';
-  private invoiceStatusTabsCache: TabDef[] = [];
-  get invoiceStatusTabs(): TabDef[] {
-    const sc = this.statusCounters;
-    const key = `${sc.all}:${sc.draft}:${sc.pending_supervisor}:${sc.pending_accountant}:${sc.ready_to_pay}:${sc.paid}`;
-    if (key !== this.invoiceStatusTabsKey) {
-      this.invoiceStatusTabsKey = key;
-      this.invoiceStatusTabsCache = [
-        { id: 'all', label: 'همه', icon: 'status-all', count: sc.all },
-        { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: sc.draft },
-        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: sc.pending_supervisor },
-        { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', icon: 'role-accountant', count: sc.pending_accountant },
-        { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', icon: 'status-approved', count: sc.ready_to_pay },
-        { id: 'paid', label: 'پرداخت‌شده', icon: ACCOUNTING_ENTITY_ICONS.payroll, count: sc.paid },
-      ];
-    }
-    return this.invoiceStatusTabsCache;
-  }
+  // شمارندهٔ تب‌ها حذف شد: فهرست صفحه‌بندی سمت سرور است و شمار هر وضعیت از یک صفحه درست نمی‌شود
+  readonly invoiceStatusTabs: TabDef[] = [
+    { id: 'all', label: 'همه', icon: 'status-all' },
+    { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft' },
+    { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending' },
+    { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', icon: 'role-accountant' },
+    { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', icon: 'status-approved' },
+    { id: 'paid', label: 'پرداخت‌شده', icon: ACCOUNTING_ENTITY_ICONS.payroll },
+  ];
   // ─── مدیریت بخش و ایزولاسیون داده‌ها (Guardian G1: Section Isolation) ───
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -65,6 +69,13 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   invoices: ExpenseInvoice[] = [];
   isLoading: boolean = false;
   isSaving: boolean = false;
+  /** خطای بارگذاری فهرست (برای حالت «خطا» و دکمهٔ تلاش دوباره) */
+  loadError: string = '';
+  // ─── صفحه‌بندی سمت سرور (ق۱۸) ───
+  readonly pageSize = 25;
+  page = 1;
+  totalCount = 0;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ─── جستجو و فیلتر کارتابل ───
   invoiceSearch: string = '';
@@ -86,12 +97,35 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   newInvoice: Partial<ExpenseInvoice> = {
     invoice_number: '',
     invoice_date_shamsi: '',
-    amount: 0,
-    expense_head: null,
     counterparty: undefined,
     description: '',
     status: 'draft'
   };
+  /** شناسهٔ فاکتوری که در حال ویرایش است (null = فاکتور تازه) */
+  editingInvoiceId: number | null = null;
+  // ─── ردیف‌ها، تخفیف و مالیات (۴.۱-ج؛ جمع‌های نهایی را سرور حساب می‌کند) ───
+  readonly maxLines = 100;
+  formLines: InvoiceLineForm[] = [];
+  discountInput: string | number | null = null;
+  vatApplicable = false;
+  /** مبلغ مالیاتی که کاربر دستی نوشته (null = همان پیشنهاد) */
+  vatManualInput: string | number | null = null;
+  /** نرخ نمایشی؛ هنگام ویرایش از فاکتور می‌آید و سرور حرف آخر را می‌زند */
+  vatRate = 10;
+  /** خطای سرور روی هر ردیف (اندیس ردیف) و خطای کلی ردیف‌ها */
+  lineErrors: Record<number, string> = {};
+  linesError = '';
+  discountError = '';
+  vatError = '';
+  // ─── هشدار فاکتور تکراری ───
+  duplicateInfo: InvoiceDuplicatesResponse | null = null;
+  private duplicateTimer: ReturnType<typeof setTimeout> | null = null;
+  private duplicateSeq = 0;
+  // ─── دلیل ارسال فاکتور تکراری ───
+  isDuplicateReasonOpen = false;
+  duplicateReasonServerError = '';
+  private duplicateReasonInvoice: ExpenseInvoice | null = null;
+  readonly printOfflineTitle = PRINT_OFFLINE_TITLE;
   selectedInvoiceAttachment: File | null = null;
   attachmentFileName: string = '';
 
@@ -131,11 +165,21 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     @Optional() private activeCompanyService?: ActiveCompanyService,
     @Optional() private treasuryOrgApi?: TreasuryOrgApiService,
     @Optional() private confirmDialog?: ConfirmDialogService,
-    @Optional() private ws?: WebSocketService
+    @Optional() private ws?: WebSocketService,
+    @Optional() private printService?: PrintService
   ) {}
+
+  private readonly network = NetworkStatusService.getInstance();
+
+  /** آیا دستگاه آفلاین است؟ (ارسال، چاپ و هشدار تکراری فقط آنلاین‌اند) */
+  get isOffline(): boolean {
+    return !this.network.isBrowserOnline || this.network.state === 'offline';
+  }
 
   ngOnDestroy(): void {
     this.docSub?.unsubscribe();
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    if (this.duplicateTimer) clearTimeout(this.duplicateTimer);
   }
 
   ngOnInit(): void {
@@ -313,6 +357,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       queryParams: { section_id: this.selectedSectionId },
       queryParamsHandling: 'merge'
     });
+    this.page = 1;
     this.loadInvoices();
     this.loadCounterparties();
   }
@@ -320,21 +365,67 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   // ─── بارگذاری فاکتورهای بخش فعال (Guardian G1: Section Isolation) ───
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   loadInvoices(silent = false): void {
-    if (!this.selectedSectionId) return;
-    if (!silent) this.isLoading = true;
-    this.personnelApi.getExpenseInvoices({ section_id: this.selectedSectionId }).subscribe({
-      next: (res: ExpenseInvoice[]) => {
-        this.invoices = res || [];
+    if (!this.selectedSectionId || !this.treasuryOrgApi) return;
+    if (!silent) {
+      this.isLoading = true;
+      this.loadError = '';
+    }
+    const params: { page: number; page_size: number; section_id: number; status?: string; search?: string } = {
+      page: this.page,
+      page_size: this.pageSize,
+      section_id: this.selectedSectionId
+    };
+    if (this.statusFilter !== 'all') params.status = this.statusFilter;
+    const q = this.invoiceSearch.trim();
+    if (q) params.search = q;
+    this.treasuryOrgApi.getExpenseInvoicesPage(params).subscribe({
+      next: (res) => {
+        this.invoices = res?.results || [];
+        this.totalCount = res?.count ?? this.invoices.length;
         this.isLoading = false;
+        this.loadError = '';
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isLoading = false;
+        // صفحه‌ای که دیگر وجود ندارد (مثلاً پس از حذف): برگشت به صفحهٔ اول
+        if (err?.status === 404 && this.page > 1) {
+          this.page = 1;
+          this.loadInvoices(silent);
+          return;
+        }
         if (silent) return;
-        this.toast.show('error', 'خطا در بارگذاری فاکتورها: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.loadError = (typeof err?.status === 'number' && isServerUnreachable(err.status)) || this.isOffline
+          ? 'اتصال به سرور برقرار نیست.'
+          : 'خطا در بارگذاری فاکتورها: ' + (err.error?.error || err.message || 'نامشخص');
         this.cdr.detectChanges();
       }
     });
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalCount / this.pageSize));
+  }
+
+  goToPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.totalPages);
+    if (next === this.page) return;
+    this.page = next;
+    this.loadInvoices();
+  }
+
+  /** جستجوی سمت سرور با تأخیر کوتاه */
+  onSearchChange(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.page = 1;
+      this.loadInvoices();
+    }, 350);
+  }
+
+  clearSearch(): void {
+    this.invoiceSearch = '';
+    this.onSearchChange();
   }
 
   // ─── بارگذاری طرف‌های حساب ───
@@ -354,63 +445,6 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── فیلتر هوشمند فاکتورها ───
-  get filteredInvoices(): ExpenseInvoice[] {
-    let list = this.invoices;
-
-    // فیلتر تب وضعیت
-    if (this.statusFilter !== 'all') {
-      list = list.filter(inv => inv.status === this.statusFilter);
-    }
-
-    // جستجوی متنی
-    const q = this.invoiceSearch.trim().toLowerCase();
-    if (q) {
-      list = list.filter(inv =>
-        (inv.invoice_number && inv.invoice_number.toLowerCase().includes(q)) ||
-        (inv.counterparty_name && inv.counterparty_name.toLowerCase().includes(q)) ||
-        (inv.category && inv.category.toLowerCase().includes(q)) ||
-        (inv.description && inv.description.toLowerCase().includes(q))
-      );
-    }
-
-    return list;
-  }
-
-  // ─── شمارنده‌های تب‌های وضعیت ───
-  get statusCounters(): Record<InvoiceStatusTab, number> {
-    return {
-      all: this.invoices.length,
-      draft: this.invoices.filter(i => i.status === 'draft').length,
-      pending_supervisor: this.invoices.filter(i => i.status === 'pending_supervisor').length,
-      pending_accountant: this.invoices.filter(i => i.status === 'pending_accountant').length,
-      ready_to_pay: this.invoices.filter(i => i.status === 'ready_to_pay').length,
-      paid: this.invoices.filter(i => i.status === 'paid').length,
-      rejected: this.invoices.filter(i => i.status === 'rejected').length
-    };
-  }
-
-  // ─── شاخص‌های کلیدی آماری (KPI Metrics) ───
-  get summaryMetrics() {
-    const totalCount = this.invoices.length;
-    const totalAmount = this.invoices.reduce((acc, inv) => acc + (Number(inv.amount) || 0), 0);
-    const draftCount = this.statusCounters.draft;
-    const pendingCount = this.statusCounters.pending_supervisor + this.statusCounters.pending_accountant;
-    const paidAmount = this.invoices
-      .filter(i => i.status === 'paid')
-      .reduce((acc, inv) => acc + (Number(inv.amount) || 0), 0);
-
-    return {
-      totalCount,
-      totalAmount,
-      totalAmountTomans: Math.floor(totalAmount / 10),
-      draftCount,
-      pendingCount,
-      paidAmount,
-      paidAmountTomans: Math.floor(paidAmount / 10)
-    };
-  }
-
   // ─── سوییچ تب وضعیت ───
   setStatusFilter(tab: string): void {
     if (
@@ -423,42 +457,207 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       tab === 'rejected'
     ) {
       this.statusFilter = tab;
+      this.page = 1;
+      this.loadInvoices();
     }
   }
 
-  // ─── تبدیل ریال به تومان برای فرم ثبت ───
-  get amountInTomans(): number {
-    return Math.floor((Number(this.newInvoice.amount) || 0) / 10);
+  // ─── مودال ثبت فاکتور جدید (Guardian G2: Force status = 'draft') ───
+  private blankLine(expenseHead: number | null = null): InvoiceLineForm {
+    return { description: '', quantity: 1, unit: '', unit_price: null, expense_head: expenseHead };
   }
 
-  // ─── مودال ثبت فاکتور جدید (Guardian G2: Force status = 'draft') ───
+  private resetFormExtras(): void {
+    this.invoiceDateError = '';
+    this.expenseHeadError = '';
+    this.lineErrors = {};
+    this.linesError = '';
+    this.discountError = '';
+    this.vatError = '';
+    this.duplicateInfo = null;
+    this.duplicateSeq++;
+    this.selectedInvoiceAttachment = null;
+    this.attachmentFileName = '';
+  }
+
   openNewInvoiceModal(): void {
     if (!this.selectedSectionId) {
       this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
       return;
     }
-    this.invoiceDateError = '';
-    this.expenseHeadError = '';
+    this.resetFormExtras();
     this.loadExpenseHeads();
+    this.editingInvoiceId = null;
     this.newInvoice = {
       section: this.selectedSectionId,
       invoice_number: '',
       invoice_date_shamsi: this.todayShamsi,
-      amount: 0,
-      expense_head: null,
       counterparty: undefined,
       description: '',
       status: 'draft' // Guardian G2: تحمیل وضعیت پیش‌نویس
     };
-    this.selectedInvoiceAttachment = null;
-    this.attachmentFileName = '';
+    this.formLines = [this.blankLine()];
+    this.discountInput = null;
+    this.vatApplicable = false;
+    this.vatManualInput = null;
+    this.vatRate = 10;
     this.isNewInvoiceModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  /** ویرایش پیش‌نویس (ردیف‌ها با یک درخواست جایگزین می‌شوند) */
+  openEditInvoiceModal(inv: ExpenseInvoice): void {
+    if (!inv.id || inv.status !== 'draft') {
+      this.toast.show('warning', 'فقط فاکتورهای پیش‌نویس قابل ویرایش‌اند.');
+      return;
+    }
+    this.resetFormExtras();
+    this.loadExpenseHeads();
+    this.editingInvoiceId = inv.id;
+    this.newInvoice = {
+      section: inv.section,
+      counterparty: inv.counterparty,
+      invoice_number: inv.invoice_number,
+      invoice_date_shamsi: inv.invoice_date_shamsi,
+      description: inv.description || '',
+      status: 'draft'
+    };
+    const lines = (inv.lines || []).map(l => ({
+      description: l.description,
+      quantity: l.quantity,
+      unit: l.unit || '',
+      unit_price: l.unit_price,
+      expense_head: l.expense_head
+    }));
+    this.formLines = lines.length ? lines : [this.blankLine()];
+    const disc = Number(inv.discount_amount) || 0;
+    this.discountInput = disc > 0 ? String(disc) : null;
+    this.vatApplicable = !!inv.vat_applicable;
+    this.vatRate = Number(inv.vat_rate) || 10;
+    this.vatManualInput = inv.vat_applicable && inv.vat_manual ? String(Number(inv.vat_amount) || 0) : null;
+    this.isNewInvoiceModalOpen = true;
+    this.onDuplicateKeyChange();
     this.cdr.detectChanges();
   }
 
   closeNewInvoiceModal(): void {
     this.isNewInvoiceModalOpen = false;
+    this.editingInvoiceId = null;
+    if (this.duplicateTimer) clearTimeout(this.duplicateTimer);
     this.cdr.detectChanges();
+  }
+
+  // ─── ردیف‌ها و جمع‌ها ───
+  addLine(): void {
+    if (this.formLines.length >= this.maxLines) {
+      this.toast.show('warning', `حداکثر ${this.formatNumber(this.maxLines)} ردیف مجاز است.`);
+      return;
+    }
+    const last = this.formLines[this.formLines.length - 1];
+    this.formLines = [...this.formLines, this.blankLine(last?.expense_head ?? null)];
+  }
+
+  removeLine(i: number): void {
+    if (this.formLines.length <= 1) return;
+    this.formLines = this.formLines.filter((_, idx) => idx !== i);
+    this.lineErrors = {};
+    this.linesError = '';
+  }
+
+  lineAmount(l: InvoiceLineForm): number {
+    const q = Number(l.quantity);
+    const p = Number(l.unit_price);
+    if (!isFinite(q) || !isFinite(p) || q <= 0 || p < 0) return 0;
+    return Math.round(q * p);
+  }
+
+  get subtotal(): number {
+    return this.formLines.reduce((acc, l) => acc + this.lineAmount(l), 0);
+  }
+
+  get discountAmount(): number {
+    const d = Number(this.discountInput);
+    return isFinite(d) && d > 0 ? d : 0;
+  }
+
+  /** پایهٔ مالیات = جمع ردیف‌ها منهای تخفیف */
+  get vatBase(): number {
+    return Math.max(0, this.subtotal - this.discountAmount);
+  }
+
+  get suggestedVat(): number {
+    return Math.round((this.vatBase * this.vatRate) / 100);
+  }
+
+  get vatAmount(): number {
+    if (!this.vatApplicable) return 0;
+    if (this.vatManualInput !== null) {
+      const v = Number(this.vatManualInput);
+      return isFinite(v) && v >= 0 ? v : 0;
+    }
+    return this.suggestedVat;
+  }
+
+  get vatDisplay(): string {
+    return String(this.vatAmount);
+  }
+
+  get payableAmount(): number {
+    return Math.max(0, this.subtotal - this.discountAmount) + this.vatAmount;
+  }
+
+  onVatInput(v: string | null): void {
+    this.vatManualInput = v;
+    this.vatError = '';
+  }
+
+  resetVatToSuggested(): void {
+    this.vatManualInput = null;
+  }
+
+  get isVatManual(): boolean {
+    return this.vatApplicable && this.vatManualInput !== null && this.vatAmount !== this.suggestedVat;
+  }
+
+  /** سرفصل‌های ردیف‌های یک فاکتور: «عنوان اول و n سرفصل دیگر» */
+  headsSummary(inv: ExpenseInvoice): string {
+    const titles: string[] = [];
+    for (const l of inv.lines || []) {
+      const t = l.expense_head_title;
+      if (t && !titles.includes(t)) titles.push(t);
+    }
+    if (!titles.length) return inv.category || 'عمومی';
+    return titles.length > 1 ? `${titles[0]} و ${this.formatNumber(titles.length - 1)} سرفصل دیگر` : titles[0];
+  }
+
+  // ─── هشدار فاکتور تکراری (فقط آنلاین؛ خطا بی‌صدا نادیده گرفته می‌شود) ───
+  onDuplicateKeyChange(): void {
+    if (this.duplicateTimer) clearTimeout(this.duplicateTimer);
+    this.duplicateTimer = setTimeout(() => this.runDuplicateCheck(), 400);
+  }
+
+  private runDuplicateCheck(): void {
+    const counterparty = Number(this.newInvoice.counterparty);
+    const invoiceNumber = (this.newInvoice.invoice_number || '').trim();
+    const seq = ++this.duplicateSeq;
+    if (!counterparty || !invoiceNumber || !this.treasuryOrgApi || this.isOffline || !this.isNewInvoiceModalOpen) {
+      this.duplicateInfo = null;
+      return;
+    }
+    const params: { counterparty: number; invoice_number: string; exclude?: number } = { counterparty, invoice_number: invoiceNumber };
+    if (this.editingInvoiceId) params.exclude = this.editingInvoiceId;
+    this.treasuryOrgApi.getExpenseInvoiceDuplicates(params).subscribe({
+      next: (res) => {
+        if (seq !== this.duplicateSeq) return;
+        this.duplicateInfo = res && res.count > 0 ? res : null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        if (seq !== this.duplicateSeq) return;
+        this.duplicateInfo = null;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onInvoiceFileSelected(event: any): void {
@@ -517,86 +716,169 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** اعتبارسنجی سمت کاربر؛ سرور حرف آخر را می‌زند */
+  private validateForm(): boolean {
+    if (!this.newInvoice.counterparty) {
+      this.toast.show('warning', 'لطفاً طرف‌حساب فاکتور را انتخاب کنید.');
+      return false;
+    }
+    if (!this.newInvoice.invoice_number?.trim()) {
+      this.toast.show('warning', 'شماره فاکتور / رسید الزامی است.');
+      return false;
+    }
+    if (!this.newInvoice.invoice_date_shamsi?.trim()) {
+      this.toast.show('warning', 'تاریخ فاکتور الزامی است.');
+      return false;
+    }
+    this.lineErrors = {};
+    this.linesError = '';
+    this.formLines.forEach((l, i) => {
+      if (!l.description.trim()) this.lineErrors[i] = 'شرح ردیف الزامی است.';
+      else if (!(Number(l.quantity) > 0)) this.lineErrors[i] = 'تعداد باید بزرگ‌تر از صفر باشد.';
+      else if (l.unit_price === null || l.unit_price === '' || !(Number(l.unit_price) >= 0)) this.lineErrors[i] = 'فی ردیف را وارد کنید.';
+      else if (!l.expense_head) this.lineErrors[i] = 'سرفصل هزینهٔ این ردیف را انتخاب کنید.';
+    });
+    if (Object.keys(this.lineErrors).length) {
+      this.toast.show('warning', 'ردیف‌های فاکتور را کامل کنید.');
+      return false;
+    }
+    if (this.subtotal <= 0) {
+      this.toast.show('warning', 'مبلغ فاکتور باید بزرگتر از صفر ریال باشد.');
+      return false;
+    }
+    if (this.discountAmount > this.subtotal) {
+      this.discountError = 'تخفیف نمی‌تواند از جمع ردیف‌ها بیشتر باشد.';
+      this.toast.show('warning', this.discountError);
+      return false;
+    }
+    if (this.vatApplicable && this.vatAmount > this.vatBase) {
+      this.vatError = 'مالیات نمی‌تواند از مبلغ پس از تخفیف بیشتر باشد.';
+      this.toast.show('warning', this.vatError);
+      return false;
+    }
+    return true;
+  }
+
+  private linesPayload(): ExpenseInvoiceLine[] {
+    return this.formLines.map(l => ({
+      description: l.description.trim(),
+      quantity: Number(l.quantity),
+      unit: l.unit.trim(),
+      unit_price: Number(l.unit_price) || 0,
+      expense_head: l.expense_head
+    }));
+  }
+
+  /** جمع‌ها را سرور حساب می‌کند؛ مبلغ مالیات فقط وقتی کاربر دستی نوشته فرستاده می‌شود */
+  private totalsPayload(): { discount_amount: number; vat_applicable: boolean; vat_amount?: number } {
+    const out: { discount_amount: number; vat_applicable: boolean; vat_amount?: number } = {
+      discount_amount: this.discountAmount,
+      vat_applicable: this.vatApplicable
+    };
+    if (this.vatApplicable && this.vatManualInput !== null) out.vat_amount = this.vatAmount;
+    return out;
+  }
+
+  /** نگاشت خطای 400 ردیف‌ها (`lines`) از سرور به ردیف‌های فرم */
+  private applyLineErrors(err: any): boolean {
+    const lines = err?.error?.lines;
+    if (!lines) return false;
+    const first = (v: any): string => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
+    this.lineErrors = {};
+    this.linesError = '';
+    if (Array.isArray(lines)) {
+      this.linesError = first(lines);
+    } else if (typeof lines === 'object') {
+      for (const [idx, val] of Object.entries(lines)) {
+        const msg = typeof val === 'object' && val !== null && !Array.isArray(val)
+          ? Object.values(val as Record<string, unknown>).map(first).filter(Boolean)[0] || ''
+          : first(val);
+        if (msg) this.lineErrors[Number(idx)] = msg;
+      }
+    }
+    const shown = this.linesError || Object.values(this.lineErrors)[0];
+    if (shown) this.toast.show('error', shown);
+    return !!shown;
+  }
+
   saveInvoice(): void {
     if (!this.selectedSectionId) {
       this.toast.show('warning', 'بخش فعال مشخص نیست.');
       return;
     }
-    if (!this.newInvoice.counterparty) {
-      this.toast.show('warning', 'لطفاً طرف‌حساب فاکتور را انتخاب کنید.');
-      return;
-    }
-    if (!this.newInvoice.invoice_number?.trim()) {
-      this.toast.show('warning', 'شماره فاکتور / رسید الزامی است.');
-      return;
-    }
-    if (!this.newInvoice.invoice_date_shamsi?.trim()) {
-      this.toast.show('warning', 'تاریخ فاکتور الزامی است.');
-      return;
-    }
-    if (!this.newInvoice.amount || this.newInvoice.amount <= 0) {
-      this.toast.show('warning', 'مبلغ فاکتور باید بزرگتر از صفر ریال باشد.');
-      return;
-    }
-    if (!this.newInvoice.expense_head) {
-      this.expenseHeadError = 'سرفصل هزینه الزامی است.';
-      this.toast.show('warning', 'لطفاً سرفصل هزینه را انتخاب کنید.');
-      return;
-    }
+    if (!this.validateForm()) return;
 
     this.isSaving = true;
     this.invoiceDateError = '';
     this.expenseHeadError = '';
+    this.discountError = '';
+    this.vatError = '';
 
-    // در صورت وجود پیوست از FormData استفاده می‌کنیم
+    const lines = this.linesPayload();
+    const totals = this.totalsPayload();
+    const editingId = this.editingInvoiceId;
+
+    // در صورت وجود پیوست از FormData استفاده می‌کنیم (`lines` به‌صورت رشتهٔ JSON؛ سرور می‌پذیرد)
     let payload: Partial<ExpenseInvoice> | FormData;
-
-    if (this.selectedInvoiceAttachment) {
+    if (!editingId && this.selectedInvoiceAttachment) {
       const formData = new FormData();
       formData.append('section', String(this.selectedSectionId));
       formData.append('counterparty', String(this.newInvoice.counterparty));
-      formData.append('invoice_number', this.newInvoice.invoice_number.trim());
-      formData.append('invoice_date_shamsi', this.newInvoice.invoice_date_shamsi.trim());
-      formData.append('amount', String(this.newInvoice.amount));
-      formData.append('expense_head', String(this.newInvoice.expense_head));
+      formData.append('invoice_number', this.newInvoice.invoice_number!.trim());
+      formData.append('invoice_date_shamsi', this.newInvoice.invoice_date_shamsi!.trim());
+      formData.append('lines', JSON.stringify(lines));
+      formData.append('discount_amount', String(totals.discount_amount));
+      formData.append('vat_applicable', String(totals.vat_applicable));
+      if (totals.vat_amount !== undefined) formData.append('vat_amount', String(totals.vat_amount));
       formData.append('description', this.newInvoice.description || '');
       formData.append('status', 'draft'); // Guardian G2
       formData.append('attachment', this.selectedInvoiceAttachment);
       payload = formData;
     } else {
-      payload = {
+      const body: Partial<ExpenseInvoice> = {
         section: this.selectedSectionId,
         counterparty: this.newInvoice.counterparty,
-        invoice_number: this.newInvoice.invoice_number.trim(),
-        invoice_date_shamsi: this.newInvoice.invoice_date_shamsi.trim(),
-        amount: this.newInvoice.amount,
-        expense_head: this.newInvoice.expense_head,
-        description: this.newInvoice.description || '',
-        status: 'draft' // Guardian G2
+        invoice_number: this.newInvoice.invoice_number!.trim(),
+        invoice_date_shamsi: this.newInvoice.invoice_date_shamsi!.trim(),
+        lines,
+        ...totals,
+        description: this.newInvoice.description || ''
       };
+      if (!editingId) body.status = 'draft'; // Guardian G2
+      payload = body;
     }
 
-    this.personnelApi.createExpenseInvoice(payload).subscribe({
-      next: (created: ExpenseInvoice) => {
+    const request$ = editingId
+      ? this.personnelApi.updateExpenseInvoice(editingId, payload as Partial<ExpenseInvoice>)
+      : this.personnelApi.createExpenseInvoice(payload);
+    request$.subscribe({
+      next: (saved: ExpenseInvoice) => {
         this.isSaving = false;
-        this.toast.show('success', `فاکتور «${created.invoice_number}» با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
+        this.toast.show('success', editingId
+          ? `فاکتور «${saved?.invoice_number ?? this.newInvoice.invoice_number}» ویرایش شد.`
+          : `فاکتور «${saved?.invoice_number}» با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
         this.closeNewInvoiceModal();
         this.loadInvoices();
       },
       error: (err: any) => {
         this.isSaving = false;
         const closedMsg = fiscalPeriodClosedMessage(err, 'invoice_date_shamsi');
-        const headMsg = expenseHeadErrorMessage(err);
+        const e = err?.error;
+        const firstOf = (v: any): string => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
         if (closedMsg) {
           // دورهٔ مالی بسته: پیام کنار فیلد تاریخ (۳.۲ ص۵)
           this.invoiceDateError = closedMsg;
           this.toast.show('error', closedMsg);
-        } else if (headMsg) {
-          // سرفصل نادرست یا غیرفعال: پیام کنار انتخابگر (۳.۴ ص۷)
-          this.expenseHeadError = headMsg;
-          this.toast.show('error', headMsg);
+        } else if (this.applyLineErrors(err)) {
+          // خطای ردیف‌ها (سرفصل نادرست و ...) کنار همان ردیف نمایش داده شد
+        } else if (firstOf(e?.discount_amount)) {
+          this.discountError = firstOf(e.discount_amount);
+          this.toast.show('error', this.discountError);
+        } else if (firstOf(e?.vat_amount)) {
+          this.vatError = firstOf(e.vat_amount);
+          this.toast.show('error', this.vatError);
         } else {
-          this.toast.show('error', 'خطا در ثبت فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+          this.toast.show('error', 'خطا در ثبت فاکتور: ' + (e?.error || err.message || 'نامشخص'));
         }
         this.cdr.detectChanges();
       }
@@ -671,6 +953,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         // انتساب خودکار طرف‌حساب تازه تعریف‌شده در فرم ثبت فاکتور
         if (this.isNewInvoiceModalOpen && created.id) {
           this.newInvoice.counterparty = created.id;
+          this.onDuplicateKeyChange();
         }
         this.cdr.detectChanges();
       },
@@ -694,18 +977,64 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isOffline) {
+      this.toast.show('warning', 'ارسال فاکتور به گردش فقط در حالت آنلاین ممکن است.');
+      return;
+    }
+    this.submitInvoice(invoice);
+  }
+
+  /** ارسال به گردش (همیشه آنلاین)؛ فاکتور تکراری دلیل می‌خواهد */
+  private submitInvoice(invoice: ExpenseInvoice, reason?: string): void {
+    if (!invoice.id || !this.treasuryOrgApi) return;
     this.isSaving = true;
-    this.personnelApi.updateExpenseInvoice(invoice.id, { status: 'pending_supervisor' }).subscribe({
+    this.treasuryOrgApi.submitExpenseInvoice(invoice.id, reason).subscribe({
       next: () => {
         this.isSaving = false;
+        this.closeDuplicateReason();
         this.toast.show('success', `فاکتور شماره «${invoice.invoice_number}» با موفقیت جهت تایید به کارتابل سرپرست ارسال شد.`);
         this.loadInvoices();
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
+        if (err?.status === 400 && err.error?.code === 'duplicate_reason_required' && !reason) {
+          this.duplicateReasonInvoice = invoice;
+          this.duplicateReasonServerError = '';
+          this.isDuplicateReasonOpen = true;
+          this.cdr.detectChanges();
+          return;
+        }
+        const msg = (typeof err?.status === 'number' && isServerUnreachable(err.status))
+          ? 'اتصال به سرور برقرار نیست؛ ارسال فقط آنلاین ممکن است.'
+          : (fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.error?.detail || err.message || 'نامشخص')));
+        if (this.isDuplicateReasonOpen) {
+          this.duplicateReasonServerError = msg;
+        } else {
+          this.toast.show('error', msg);
+        }
+        this.cdr.detectChanges();
       }
     });
+  }
+
+  onDuplicateReasonConfirmed(reason: string): void {
+    if (this.duplicateReasonInvoice) this.submitInvoice(this.duplicateReasonInvoice, reason);
+  }
+
+  closeDuplicateReason(): void {
+    this.isDuplicateReasonOpen = false;
+    this.duplicateReasonInvoice = null;
+    this.duplicateReasonServerError = '';
+  }
+
+  // ─── چاپ / PDF ───
+  get canPrint(): boolean {
+    return this.printService ? this.printService.isOnline() : !this.isOffline;
+  }
+
+  printInvoice(inv: ExpenseInvoice | null | undefined): void {
+    if (!inv?.id || !this.printService) return;
+    void this.printService.downloadPdf('expense_invoice', inv.id);
   }
 
   // ─── حذف فاکتور پیش‌نویس ───
@@ -790,6 +1119,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         return 'bg-sky-50 text-sky-700 border-sky-200';
       case 'ready_to_pay':
         return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'partially_paid':
+        return 'bg-teal-50 text-teal-700 border-teal-200';
       case 'paid':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'rejected':
@@ -809,6 +1140,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         return 'در انتظار بررسی حسابدار';
       case 'ready_to_pay':
         return 'تایید مدیر / آماده پرداخت';
+      case 'partially_paid':
+        return 'پرداخت ناقص';
       case 'paid':
         return 'تسویه و پرداخت‌شده';
       case 'rejected':

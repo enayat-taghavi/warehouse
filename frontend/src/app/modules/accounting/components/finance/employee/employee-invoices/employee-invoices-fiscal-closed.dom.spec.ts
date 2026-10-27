@@ -15,6 +15,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
   let mockRoute: any;
   let mockRouter: any;
   let mockConfirm: any;
+  let mockTreasuryOrgApi: any;
 
   const sampleSections: ProjectSection[] = [
     { id: 10, name: 'بخش ابنیه', code: 'BLD', project: 1, project_name: 'پروژه پردیس', is_active: true }
@@ -59,6 +60,12 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       open: vi.fn().mockResolvedValue(true)
     };
 
+    mockTreasuryOrgApi = {
+      getExpenseInvoicesPage: vi.fn().mockReturnValue(of({ count: 0, next: null, previous: null, results: [] })),
+      getExpenseInvoiceDuplicates: vi.fn().mockReturnValue(of({ count: 0, results: [] })),
+      submitExpenseInvoice: vi.fn().mockReturnValue(of({ id: 77, status: 'pending_supervisor' }))
+    };
+
     component = new EmployeeInvoicesHubComponent(
       mockAuth,
       mockPersonnelApi,
@@ -67,7 +74,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       mockRoute,
       mockRouter,
       undefined,
-      undefined,
+      mockTreasuryOrgApi,
       mockConfirm
     );
 
@@ -85,11 +92,10 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       counterparty: 101,
       invoice_number: 'INV-1042',
       invoice_date_shamsi: '1403/08/15',
-      amount: 4500000,
-      expense_head: 11,
       description: 'تعمیرات دوره بسته',
       status: 'draft'
     };
+    component.formLines = [{ description: 'ردیف', quantity: 1, unit: '', unit_price: 4500000, expense_head: 11 }];
 
     const closedError = {
       status: 400,
@@ -122,11 +128,10 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       counterparty: 101,
       invoice_number: 'INV-1043',
       invoice_date_shamsi: '1404/02/10',
-      amount: 2500000,
-      expense_head: 11,
       description: 'سوخت لودر',
       status: 'draft'
     };
+    component.formLines = [{ description: 'ردیف', quantity: 1, unit: '', unit_price: 2500000, expense_head: 11 }];
 
     const server500Error = {
       status: 500,
@@ -175,7 +180,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       }
     };
 
-    mockPersonnelApi.updateExpenseInvoice.mockReturnValueOnce(throwError(() => closedError));
+    mockTreasuryOrgApi.submitExpenseInvoice.mockReturnValueOnce(throwError(() => closedError));
     await component.sendToSupervisor(draftInvoice);
     expect(mockToast.show).toHaveBeenCalledWith(
       'error',

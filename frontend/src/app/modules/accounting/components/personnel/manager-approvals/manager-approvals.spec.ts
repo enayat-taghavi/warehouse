@@ -90,7 +90,8 @@ describe('ManagerApprovals Unit Tests', () => {
       mockConfirmDialog,
       mockCdr,
       mockRoute,
-      mockRouter
+      mockRouter,
+      { downloadPdf: vi.fn() } as any
     );
   });
 

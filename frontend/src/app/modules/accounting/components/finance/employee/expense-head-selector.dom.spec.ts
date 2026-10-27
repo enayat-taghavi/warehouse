@@ -91,56 +91,51 @@ describe('Expense Head Selector & Form Integration Specs (Release v1 step 3.4-c)
       component.openNewInvoiceModal();
     });
 
-    it('f) invoice: missing head blocks the call and sets expenseHeadError; with a head the payload has expense_head and no category', () => {
-      // ۱. بدون سرفصل: ارسال انجام نمی‌شود و پیام خطا ثبت می‌شود
+    const header = (num: string, desc: string) => {
       component.newInvoice = {
         section: 10,
         counterparty: 101,
-        invoice_number: 'INV-101',
+        invoice_number: num,
         invoice_date_shamsi: '1403/08/15',
-        amount: 5000000,
-        expense_head: null,
-        description: 'تست بدون سرفصل',
+        description: desc,
         status: 'draft'
       };
+    };
+
+    it('f) invoice: a line without head blocks the call and marks that line; with a head the line payload has expense_head and no category', () => {
+      // ۱. ردیف بدون سرفصل: ارسال انجام نمی‌شود و خطا کنار همان ردیف ثبت می‌شود
+      header('INV-101', 'تست بدون سرفصل');
+      component.formLines = [{ description: 'ردیف', quantity: 1, unit: '', unit_price: 5000000, expense_head: null }];
 
       component.saveInvoice();
 
       expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
-      expect(component.expenseHeadError).toBe('سرفصل هزینه الزامی است.');
-      expect(mockToast.show).toHaveBeenCalledWith('warning', 'لطفاً سرفصل هزینه را انتخاب کنید.');
+      expect(component.lineErrors[0]).toBe('سرفصل هزینهٔ این ردیف را انتخاب کنید.');
+      expect(mockToast.show).toHaveBeenCalledWith('warning', 'ردیف‌های فاکتور را کامل کنید.');
 
-      // ۲. با سرفصل ۱۱: فراخوانی با payload شامل expense_head و بدون فیلد category انجام می‌شود
-      component.newInvoice.expense_head = 11;
+      // ۲. با سرفصل ۱۱: فراخوانی با ردیف شامل expense_head و بدون فیلد category
+      component.formLines[0].expense_head = 11;
       component.saveInvoice();
 
       expect(mockPersonnelApi.createExpenseInvoice).toHaveBeenCalledTimes(1);
       const payload = mockPersonnelApi.createExpenseInvoice.mock.calls[0][0];
-      expect(payload.expense_head).toBe(11);
+      expect(payload.lines[0].expense_head).toBe(11);
       expect('category' in payload).toBe(false);
     });
 
-    it('invoice: a rejected create with 400 expense_head error sets component.expenseHeadError', () => {
-      component.newInvoice = {
-        section: 10,
-        counterparty: 101,
-        invoice_number: 'INV-102',
-        invoice_date_shamsi: '1403/08/15',
-        amount: 5000000,
-        expense_head: 11,
-        description: 'تست رد سرفصل',
-        status: 'draft'
-      };
+    it('invoice: a rejected create with 400 line expense_head error marks that line', () => {
+      header('INV-102', 'تست رد سرفصل');
+      component.formLines = [{ description: 'ردیف', quantity: 1, unit: '', unit_price: 5000000, expense_head: 11 }];
 
       const err400 = {
         status: 400,
-        error: { expense_head: ['سرفصل انتخابشده فعال نیست.'] }
+        error: { lines: { 0: { expense_head: ['سرفصل انتخابشده فعال نیست.'] } } }
       };
       mockPersonnelApi.createExpenseInvoice.mockReturnValueOnce(throwError(() => err400));
 
       component.saveInvoice();
 
-      expect(component.expenseHeadError).toBe('سرفصل انتخابشده فعال نیست.');
+      expect(component.lineErrors[0]).toBe('سرفصل انتخابشده فعال نیست.');
       expect(mockToast.show).toHaveBeenCalledWith('error', 'سرفصل انتخابشده فعال نیست.');
     });
   });

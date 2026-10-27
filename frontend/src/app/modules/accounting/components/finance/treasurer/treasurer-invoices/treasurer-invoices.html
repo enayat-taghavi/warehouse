@@ -71,29 +71,46 @@
         <tbody class="divide-y divide-slate-100">
           <tr *ngFor="let item of invoices; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-slate-900">{{ item.invoice_number }}</td>
+            <td class="py-3 px-3 font-mono font-bold text-slate-900">
+              <div *ngIf="item.number">{{ item.number }}</div>
+              <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number">{{ item.invoice_number }}</div>
+            </td>
             <td class="py-3 px-3 font-bold text-slate-800">{{ item.vendor_name }}</td>
             <td class="py-3 px-3">
               <div class="text-slate-800">{{ item.category }}</div>
               <div class="text-[10px] text-slate-500">{{ item.section_name }}</div>
             </td>
-            <td class="py-3 px-3 font-mono font-black text-teal-700 text-sm">{{ item.amount | number }}</td>
+            <td class="py-3 px-3 font-mono font-black text-teal-700 text-sm">
+              <div>{{ item.amount | number }}</div>
+              <div *ngIf="item.paid_amount > 0" class="text-[10px] font-bold text-slate-500">
+                پرداخت‌شده {{ item.paid_amount | number }} · مانده {{ item.remaining | number }}
+              </div>
+            </td>
             <td class="py-3 px-3 font-mono text-slate-600 text-[11px]">{{ item.sheba_number }}</td>
             <td class="py-3 px-3 text-center font-mono text-slate-600">{{ item.due_date }}</td>
             <td class="py-3 px-3 text-center">
               <span *ngIf="item.status === 'pending_payment'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">در انتظار پرداخت</span>
+              <span *ngIf="item.status === 'partially_paid'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">پرداخت ناقص</span>
               <span *ngIf="item.status === 'paid'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">تسویه شد</span>
             </td>
             <td class="py-3 px-3 text-center">
-              <button
-                *ngIf="item.status === 'pending_payment'"
-                type="button"
-                appAction="confirm"
-                label="پرداخت و ثبت فیش"
-                display="label"
-                size="sm"
-                (click)="payInvoice(item)"
-              ></button>
+              <div class="flex items-center justify-center gap-1.5">
+                <button
+                  *ngIf="item.status === 'pending_payment' || item.status === 'partially_paid'"
+                  type="button"
+                  appAction="confirm"
+                  label="ثبت قسط"
+                  size="sm"
+                  (click)="payInvoice(item)"
+                ></button>
+                <button
+                  type="button"
+                  appAction="print"
+                  label="چاپ / PDF"
+                  size="sm"
+                  (click)="printInvoice(item)"
+                ></button>
+              </div>
               <span *ngIf="item.status === 'paid'" class="text-[11px] font-mono text-emerald-600 font-bold">{{ item.tracking_code }}</span>
             </td>
           </tr>
@@ -154,5 +171,165 @@
       </table>
     </div>
   </div>
+
+  <!-- ── ۴. پنجرهٔ ثبت قسط و فهرست قسط‌ها ── -->
+  <app-modal [isOpen]="payModalOpen" size="lg" [title]="'ثبت قسط فاکتور ' + (payItem?.number || payItem?.invoice_number || '')" (closed)="closePayModal()">
+    <div *ngIf="payItem as it" class="space-y-4 text-xs text-fg" dir="rtl">
+      <!-- خلاصه -->
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-xl border border-line bg-surface p-2">
+          <div class="text-[10px] text-fg-muted">مبلغ قابل پرداخت</div>
+          <div class="font-black tabular-nums">{{ faAmount(it.amount) }}</div>
+        </div>
+        <div class="rounded-xl border border-line bg-surface p-2">
+          <div class="text-[10px] text-fg-muted">پرداخت‌شده</div>
+          <div class="font-black tabular-nums">{{ faAmount(it.paid_amount) }}</div>
+        </div>
+        <div class="rounded-xl border border-line bg-surface p-2">
+          <div class="text-[10px] text-fg-muted">مانده</div>
+          <div class="font-black tabular-nums">{{ faAmount(it.remaining) }}</div>
+        </div>
+      </div>
+
+      <div *ngIf="payGeneralError" role="alert" class="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle" class="shrink-0"></svg>
+        <span>{{ payGeneralError }}</span>
+      </div>
+
+      <!-- فهرست قسط‌ها -->
+      <div>
+        <h3 class="text-xs font-black mb-1.5">قسط‌های ثبت‌شده</h3>
+        <div *ngIf="paymentsLoading" class="text-fg-muted">در حال بارگذاری...</div>
+        <div *ngIf="!paymentsLoading && payments.length === 0" class="text-fg-muted">هنوز قسطی ثبت نشده است.</div>
+        <div *ngIf="payments.length > 0" class="overflow-x-auto rounded-xl border border-line">
+          <table class="w-full text-right text-[11px]">
+            <thead class="bg-surface text-fg-muted font-black">
+              <tr>
+                <th class="p-2">تاریخ</th>
+                <th class="p-2">مبلغ</th>
+                <th class="p-2">روش</th>
+                <th class="p-2">حساب</th>
+                <th class="p-2">کد پیگیری</th>
+                <th class="p-2">ثبت‌کننده</th>
+                <th class="p-2 text-center">وضعیت</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              <tr *ngFor="let p of payments" [class.opacity-60]="p.is_voided">
+                <td class="p-2 font-mono tabular-nums">{{ p.payment_date_shamsi }}</td>
+                <td class="p-2 font-mono tabular-nums" [class.line-through]="p.is_voided">{{ faAmount(p.amount) }}</td>
+                <td class="p-2">{{ p.method_display || p.method }}</td>
+                <td class="p-2">
+                  <div>{{ p.company_bank_name || '—' }}</div>
+                  <div *ngIf="p.party_bank_name" class="text-[10px] text-fg-muted">به: {{ p.party_bank_name }} <span dir="ltr" class="font-mono">{{ p.party_account_number || p.party_sheba_number }}</span></div>
+                </td>
+                <td class="p-2 font-mono">{{ p.tracking_code }}</td>
+                <td class="p-2">{{ p.created_by_name || '—' }}</td>
+                <td class="p-2 text-center">
+                  <div *ngIf="p.is_voided" class="text-rose-600 font-bold">
+                    باطل شد
+                    <div class="text-[10px] font-normal text-fg-muted">{{ p.void_reason }}</div>
+                  </div>
+                  <button
+                    *ngIf="!p.is_voided"
+                    type="button"
+                    appAction="reject"
+                    label="ابطال قسط"
+                    size="sm"
+                    (click)="askVoid(p)"
+                  ></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- فرم قسط تازه -->
+      <form *ngIf="it.remaining > 0" (ngSubmit)="submitPayment()" class="space-y-3 border-t border-line pt-3" novalidate>
+        <h3 class="text-xs font-black">قسط تازه</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="pay-amount" class="block font-bold mb-1">مبلغ قسط (ریال) <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <app-amount-input name="payAmount" [(ngModel)]="payAmount" inputId="pay-amount" describedBy="pay-amount-err" [invalid]="!!payFieldErrors['amount']"></app-amount-input>
+            <p *ngIf="payFieldErrors['amount']" id="pay-amount-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['amount'] }}</p>
+          </div>
+
+          <div>
+            <label for="pay-date" class="block font-bold mb-1">تاریخ پرداخت <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <div class="relative">
+              <input id="pay-date" type="text" readonly dir="ltr" [formControl]="payDateControl" (click)="togglePayDatePicker($event)"
+                class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg font-mono cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                [class.border-rose-400]="payFieldErrors['payment_date_shamsi']"
+                placeholder="YYYY/MM/DD" aria-describedby="pay-date-err" />
+              <div *ngIf="isPayDatePickerOpen" class="absolute top-full mt-2 right-0 z-50 bg-surface border border-line rounded-2xl shadow-xl p-3">
+                <ng-persian-datepicker [formControl]="payDateControl" (dateOnSelect)="onPayDateSelect($event)"></ng-persian-datepicker>
+              </div>
+            </div>
+            <p *ngIf="payFieldErrors['payment_date_shamsi']" id="pay-date-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['payment_date_shamsi'] }}</p>
+          </div>
+
+          <div>
+            <label for="pay-method" class="block font-bold mb-1">روش پرداخت</label>
+            <select id="pay-method" name="payMethod" [(ngModel)]="payMethod"
+              class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <option *ngFor="let m of methodOptions" [value]="m.value">{{ m.label }}</option>
+            </select>
+            <p *ngIf="payFieldErrors['method']" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['method'] }}</p>
+          </div>
+
+          <div *ngIf="needsCompanyAccount">
+            <label for="pay-company-account" class="block font-bold mb-1">حساب بانکی شرکت <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <select id="pay-company-account" name="payCompanyAccount" [(ngModel)]="payCompanyAccount" aria-describedby="pay-company-err"
+              class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [class.border-rose-400]="payFieldErrors['company_bank_account']">
+              <option [ngValue]="null">انتخاب حساب...</option>
+              <option *ngFor="let a of companyAccounts" [ngValue]="a.id">{{ a.bank_name }}{{ a.account_title ? ' - ' + a.account_title : '' }}</option>
+            </select>
+            <p *ngIf="payFieldErrors['company_bank_account']" id="pay-company-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['company_bank_account'] }}</p>
+          </div>
+
+          <div>
+            <label for="pay-party-account" class="block font-bold mb-1">حساب طرف‌حساب (اختیاری)</label>
+            <select id="pay-party-account" name="payPartyAccount" [(ngModel)]="payPartyAccount"
+              class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <option [ngValue]="null">بدون حساب</option>
+              <option *ngFor="let a of partyAccounts" [ngValue]="a.id">{{ a.bank_name }} {{ a.owner_name ? '- ' + a.owner_name : '' }} {{ a.account_number || a.sheba_number }}</option>
+            </select>
+            <p *ngIf="payFieldErrors['party_bank_account']" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['party_bank_account'] }}</p>
+          </div>
+
+          <div>
+            <label for="pay-tracking" class="block font-bold mb-1">کد پیگیری <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <input id="pay-tracking" name="payTracking" type="text" dir="ltr" [(ngModel)]="payTracking" aria-describedby="pay-tracking-err"
+              class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [class.border-rose-400]="payFieldErrors['tracking_code']" />
+            <p *ngIf="payFieldErrors['tracking_code']" id="pay-tracking-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['tracking_code'] }}</p>
+          </div>
+        </div>
+
+        <div>
+          <label for="pay-notes" class="block font-bold mb-1">توضیحات</label>
+          <textarea id="pay-notes" name="payNotes" rows="2" [(ngModel)]="payNotes"
+            class="w-full bg-surface border border-line rounded-xl px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" appAction="close" label="انصراف" size="sm" (click)="closePayModal()"></button>
+          <button type="submit" appAction="confirm" label="ثبت قسط" size="sm" [busy]="isPaying"></button>
+        </div>
+      </form>
+    </div>
+  </app-modal>
+
+  <!-- دلیل ابطال قسط -->
+  <app-workflow-reason-dialog
+    [open]="voidDialogOpen"
+    title="دلیل ابطال قسط"
+    confirmLabel="ابطال قسط"
+    [serverError]="voidDialogServerError"
+    (confirmed)="onVoidConfirmed($event)"
+    (cancelled)="onVoidCancelled()"
+  ></app-workflow-reason-dialog>
 
 </div>

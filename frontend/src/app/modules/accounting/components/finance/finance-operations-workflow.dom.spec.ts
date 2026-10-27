@@ -447,39 +447,41 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
   // ════════════════════════════════════════════════════════════════════════
   describe('۵. فاکتورها - باز کردن فرم، طرف حساب، محاسبات مالیات و ذخیره‌سازی', () => {
     it('فرم فاکتور را باز کرده، مبالغ را ثبت، فیلترها را اجرا و ذخیره‌سازی را انجام می‌دهد', () => {
+      const sectionInvoices = [{ id: 91, invoice_number: 'INV-1405-091', status: 'draft' }];
+      const mockTreasuryApi = {
+        getExpenseInvoicesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: sectionInvoices }))
+      };
       const invoicesHub = new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
         mockCdr,
         mockRoute,
-        mockRouter
+        mockRouter,
+        undefined,
+        mockTreasuryApi as any
       );
 
       invoicesHub.ngOnInit();
 
-      // ۱. بارگذاری لیست فاکتورها و اعمال فیلتر
-      expect(mockPersonnelApi.getExpenseInvoices).toHaveBeenCalled();
+      // ۱. بارگذاری صفحهٔ اول فاکتورها از سرور و فیلتر وضعیت سمت سرور
+      expect(mockTreasuryApi.getExpenseInvoicesPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
       expect(invoicesHub.invoices.length).toBe(1);
       expect(invoicesHub.invoices[0].invoice_number).toBe('INV-1405-091');
 
-      invoicesHub.statusFilter = 'draft';
-      expect(invoicesHub.filteredInvoices.length).toBe(1);
-
-      invoicesHub.statusFilter = 'paid';
-      expect(invoicesHub.filteredInvoices.length).toBe(0);
+      invoicesHub.setStatusFilter('paid');
+      expect(mockTreasuryApi.getExpenseInvoicesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, status: 'paid' }));
 
       // ۲. باز کردن فرم ثبت فاکتور جدید
       invoicesHub.openNewInvoiceModal();
       expect(invoicesHub.isNewInvoiceModalOpen).toBe(true);
 
-      // ۳. تکمیل اطلاعات مالی فاکتور
-      invoicesHub.selectedSectionId = 10;
+      // ۳. تکمیل اطلاعات فاکتور با یک ردیف
       invoicesHub.newInvoice.counterparty = 801;
       invoicesHub.newInvoice.invoice_number = 'INV-1405-102';
-      invoicesHub.newInvoice.amount = 200000000;
-      invoicesHub.newInvoice.expense_head = 11;
       invoicesHub.newInvoice.invoice_date_shamsi = '1405/04/11';
+      invoicesHub.formLines = [{ description: 'خرید قطعه', quantity: 2, unit: 'عدد', unit_price: 100000000, expense_head: 11 }];
+      expect(invoicesHub.payableAmount).toBe(200000000);
 
       // ۴. ذخیره‌سازی فاکتور
       invoicesHub.saveInvoice();

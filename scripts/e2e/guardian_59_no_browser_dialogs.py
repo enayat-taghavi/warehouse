@@ -44,8 +44,8 @@ PROMPT_ALLOWLIST = {
     'frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/accountant-petty-cash.ts': 1,
     'frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts': 2,
     'frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/supervisor-petty-cash.ts': 1,
-    'frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.ts': 2,
-    'frontend/src/app/modules/accounting/components/personnel/manager-approvals/manager-approvals.ts': 2,
+    'frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.ts': 1,
+    'frontend/src/app/modules/accounting/components/personnel/manager-approvals/manager-approvals.ts': 1,
 }
 PROMPT_ONLY = re.compile(r'(?:\b(?:window|globalThis|self)\s*\.\s*|(?<![.\w$]))prompt\s*\(')
 CONFIRM_OR_ALERT = re.compile(r'(?<![.\w$])(?:confirm|alert)\s*\(')

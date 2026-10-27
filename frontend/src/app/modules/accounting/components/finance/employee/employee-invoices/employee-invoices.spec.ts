@@ -13,6 +13,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
   let mockCdr: any;
   let mockRoute: any;
   let mockRouter: any;
+  let mockTreasuryOrgApi: any;
 
   const sampleSections: ProjectSection[] = [
     { id: 10, name: 'بخش ابنیه', code: 'BLD', project: 1, project_name: 'پروژه پردیس', is_active: true },
@@ -127,13 +128,21 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       navigate: vi.fn()
     };
 
+    mockTreasuryOrgApi = {
+      getExpenseInvoicesPage: vi.fn().mockImplementation(() => of({ count: sampleInvoices.length, next: null, previous: null, results: sampleInvoices })),
+      getExpenseInvoiceDuplicates: vi.fn().mockReturnValue(of({ count: 0, results: [] })),
+      submitExpenseInvoice: vi.fn().mockReturnValue(of({ ...sampleInvoices[0], status: 'pending_supervisor' }))
+    };
+
     component = new EmployeeInvoicesHubComponent(
       mockAuth,
       mockPersonnelApi,
       mockToast,
       mockCdr,
       mockRoute,
-      mockRouter
+      mockRouter,
+      undefined,
+      mockTreasuryOrgApi
     );
   });
 
@@ -146,10 +155,11 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(component.selectedSection?.name).toBe('بخش ابنیه');
     });
 
-    it('باید فاکتورها را اجباراً با پارامتر section_id واکشی کند (تضمین نگهبان G1)', () => {
+    it('باید صفحهٔ اول فاکتورها را اجباراً با پارامتر section_id از سرور بگیرد (تضمین نگهبان G1)', () => {
       component.ngOnInit();
-      expect(mockPersonnelApi.getExpenseInvoices).toHaveBeenCalledWith({ section_id: 10 });
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledWith({ page: 1, page_size: 25, section_id: 10 });
       expect(component.invoices.length).toBe(3);
+      expect(component.totalCount).toBe(3);
     });
 
     it('در صورت تغییر بخش فعال، باید شناسه بخش جدید در URL ثبت و فاکتورها مجدداً واکشی شوند', () => {
@@ -162,167 +172,216 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         queryParams: { section_id: 20 },
         queryParamsHandling: 'merge'
       });
-      expect(mockPersonnelApi.getExpenseInvoices).toHaveBeenCalledWith({ section_id: 20 });
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, section_id: 20 }));
     });
   });
 
-  describe('۲. شاخص‌های کلیدی آماری و شمارنده‌های وضعیت (KPI Metrics & Counters)', () => {
+  describe('۲. صفحه‌بندی سمت سرور و حالت خطا', () => {
+    it('رفتن به صفحهٔ بعد باید شمارهٔ صفحه را به سرور بفرستد و از آخرین صفحه جلوتر نرود', () => {
+      mockTreasuryOrgApi.getExpenseInvoicesPage.mockImplementation(() => of({ count: 60, next: null, previous: null, results: sampleInvoices }));
+      component.ngOnInit();
+      expect(component.totalPages).toBe(3);
+
+      component.goToPage(2);
+      expect(component.page).toBe(2);
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, section_id: 10 }));
+
+      component.goToPage(9);
+      expect(component.page).toBe(3);
+    });
+
+    it('خطای سرور باید پیام خطا را نشان دهد و فهرست را خالی نکند', async () => {
+      const { throwError } = await import('rxjs');
+      component.ngOnInit();
+      mockTreasuryOrgApi.getExpenseInvoicesPage.mockReturnValue(throwError(() => ({ status: 500, error: { error: 'خطای داخلی' } })));
+      component.loadInvoices();
+      expect(component.isLoading).toBe(false);
+      expect(component.loadError).toContain('خطای داخلی');
+      expect(component.invoices.length).toBe(3);
+    });
+  });
+
+  describe('۳. فیلتر وضعیت و جستجوی سمت سرور', () => {
     beforeEach(() => {
       component.ngOnInit();
     });
 
-    it('باید جمع مبالغ و تعداد فاکتورها را به درستی محاسبه کند', () => {
-      const metrics = component.summaryMetrics;
-      expect(metrics.totalCount).toBe(3);
-      // 15,000,000 + 8,500,000 + 25,000,000 = 48,500,000 Rials
-      expect(metrics.totalAmount).toBe(48500000);
-      expect(metrics.totalAmountTomans).toBe(4850000);
-      expect(metrics.draftCount).toBe(1);
-      expect(metrics.pendingCount).toBe(1);
-      expect(metrics.paidAmount).toBe(25000000);
-      expect(metrics.paidAmountTomans).toBe(2500000);
-    });
-
-    it('باید شمارنده‌های تب‌های وضعیت را به تفکیک محاسبه کند', () => {
-      const counters = component.statusCounters;
-      expect(counters.all).toBe(3);
-      expect(counters.draft).toBe(1);
-      expect(counters.pending_supervisor).toBe(1);
-      expect(counters.ready_to_pay).toBe(0);
-      expect(counters.paid).toBe(1);
-      expect(counters.rejected).toBe(0);
-    });
-  });
-
-  describe('۳. فیلتر کارتابل فاکتورها و جستجوی متنی', () => {
-    beforeEach(() => {
-      component.ngOnInit();
-    });
-
-    it('باید فاکتورها را بر اساس تب وضعیت فیلتر کند', () => {
+    it('تغییر تب وضعیت باید وضعیت را به سرور بفرستد و به صفحهٔ اول برگردد', () => {
+      component.page = 2;
       component.setStatusFilter('draft');
-      expect(component.filteredInvoices.length).toBe(1);
-      expect(component.filteredInvoices[0].invoice_number).toBe('INV-1001');
-
-      component.setStatusFilter('pending_accountant');
-      expect(component.filteredInvoices.length).toBe(0);
-
-      component.setStatusFilter('paid');
-      expect(component.filteredInvoices.length).toBe(1);
-      expect(component.filteredInvoices[0].invoice_number).toBe('INV-1003');
+      expect(component.page).toBe(1);
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, status: 'draft' }));
 
       component.setStatusFilter('all');
-      expect(component.filteredInvoices.length).toBe(3);
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage.mock.lastCall[0]).not.toHaveProperty('status');
     });
 
-    it('باید فاکتورها را بر اساس جستجوی شماره فاکتور فیلتر کند', () => {
-      component.invoiceSearch = '1002';
-      expect(component.filteredInvoices.length).toBe(1);
-      expect(component.filteredInvoices[0].invoice_number).toBe('INV-1002');
-    });
-
-    it('باید فاکتورها را بر اساس نام طرف‌حساب و شرح فیلتر کند', () => {
-      component.invoiceSearch = 'سوخت';
-      expect(component.filteredInvoices.length).toBe(1);
-      expect(component.filteredInvoices[0].counterparty_name).toBe('جایگاه سوخت البرز');
-
-      component.invoiceSearch = 'هیدرولیک';
-      expect(component.filteredInvoices.length).toBe(1);
-      expect(component.filteredInvoices[0].invoice_number).toBe('INV-1001');
+    it('جستجو باید با تأخیر کوتاه به سرور فرستاده شود', () => {
+      vi.useFakeTimers();
+      try {
+        component.invoiceSearch = ' 1002 ';
+        component.onSearchChange();
+        const callsBefore = mockTreasuryOrgApi.getExpenseInvoicesPage.mock.calls.length;
+        vi.advanceTimersByTime(400);
+        expect(mockTreasuryOrgApi.getExpenseInvoicesPage.mock.calls.length).toBe(callsBefore + 1);
+        expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, search: '1002' }));
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
-  describe('۴. تحمیل وضعیت پیش‌نویس در ثبت فاکتور (Guardian G2: Draft Invariant)', () => {
+  describe('۴. فرم ردیفی، تخفیف، مالیات و وضعیت پیش‌نویس (Guardian G2: Draft Invariant)', () => {
+    const fillHeader = () => {
+      component.newInvoice.counterparty = 101;
+      component.newInvoice.invoice_number = 'INV-NEW-99';
+      component.newInvoice.invoice_date_shamsi = '1405/04/10';
+      component.newInvoice.description = 'سرویس دوره‌ای بیل مکانیکی';
+    };
+
     beforeEach(() => {
       component.ngOnInit();
     });
 
-    it('باز کردن مودال فاکتور جدید باید وضعیت را حتماً روی draft قرار دهد', () => {
+    it('باز کردن مودال فاکتور جدید باید وضعیت را draft و یک ردیف خالی بسازد', () => {
       component.openNewInvoiceModal();
       expect(component.isNewInvoiceModalOpen).toBe(true);
       expect(component.newInvoice.status).toBe('draft');
       expect(component.newInvoice.section).toBe(10);
       expect(component.newInvoice.invoice_date_shamsi).toBe(component.todayShamsi);
+      expect(component.formLines.length).toBe(1);
+      expect(component.vatApplicable).toBe(false);
     });
 
-    it('در صورت ناقص بودن فیلدهای اجباری، پیام هشدار نمایش داده شده و درخواستی ارسال نشود', () => {
+    it('افزودن و حذف ردیف؛ ردیف تازه سرفصل ردیف قبلی را می‌گیرد و آخرین ردیف حذف نمی‌شود', () => {
       component.openNewInvoiceModal();
-      component.newInvoice.counterparty = undefined;
+      component.formLines[0].expense_head = 11;
+      component.addLine();
+      expect(component.formLines.length).toBe(2);
+      expect(component.formLines[1].expense_head).toBe(11);
+      component.removeLine(1);
+      component.removeLine(0);
+      expect(component.formLines.length).toBe(1);
+    });
+
+    it('جمع‌های زنده: جمع ردیف‌ها، تخفیف، مالیات پیشنهادی و مالیات دستی', () => {
+      component.openNewInvoiceModal();
+      component.formLines = [
+        { description: 'الف', quantity: 2, unit: 'عدد', unit_price: 1000000, expense_head: 11 },
+        { description: 'ب', quantity: 1, unit: '', unit_price: 500000, expense_head: 11 }
+      ];
+      expect(component.subtotal).toBe(2500000);
+      component.discountInput = '500000';
+      expect(component.vatBase).toBe(2000000);
+      component.vatApplicable = true;
+      expect(component.suggestedVat).toBe(200000);
+      expect(component.payableAmount).toBe(2200000);
+      component.onVatInput('150000');
+      expect(component.vatAmount).toBe(150000);
+      expect(component.isVatManual).toBe(true);
+      component.resetVatToSuggested();
+      expect(component.isVatManual).toBe(false);
+    });
+
+    it('در صورت ناقص بودن فیلدها یا ردیف‌ها، پیام هشدار نمایش داده شده و درخواستی ارسال نشود', () => {
+      component.openNewInvoiceModal();
       component.saveInvoice();
-
       expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('طرف‌حساب'));
-      expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
 
-      component.newInvoice.counterparty = 101;
+      fillHeader();
       component.newInvoice.invoice_number = '';
       component.saveInvoice();
       expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('شماره فاکتور'));
 
-      component.newInvoice.invoice_number = 'INV-999';
-      component.newInvoice.amount = 0;
+      fillHeader();
       component.saveInvoice();
-      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('بزرگتر از صفر'));
+      expect(component.lineErrors[0]).toBeTruthy();
+      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('ردیف'));
+
+      component.formLines = [{ description: 'الف', quantity: 1, unit: '', unit_price: 1000, expense_head: 11 }];
+      component.discountInput = '5000';
+      component.saveInvoice();
+      expect(component.discountError).toBeTruthy();
+      expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
     });
 
-    it('ذخیره موفق فاکتور باید اجباراً وضعیت status="draft" را به بک‌اند ارسال کند', () => {
+    it('ذخیرهٔ موفق باید ردیف‌ها و status="draft" را بفرستد و مالیات پیشنهادی را نفرستد', () => {
       component.openNewInvoiceModal();
-      component.newInvoice = {
-        section: 10,
-        counterparty: 101,
-        invoice_number: 'INV-NEW-99',
-        invoice_date_shamsi: '1405/04/10',
-        amount: 12000000,
-        expense_head: 11,
-        description: 'سرویس دوره‌ای بیل مکانیکی',
-        status: 'draft'
-      };
+      fillHeader();
+      component.formLines = [{ description: 'سرویس', quantity: 3, unit: 'بار', unit_price: 4000000, expense_head: 11 }];
+      component.vatApplicable = true;
 
       component.saveInvoice();
 
-      expect(mockPersonnelApi.createExpenseInvoice).toHaveBeenCalledWith(expect.objectContaining({
+      const body = mockPersonnelApi.createExpenseInvoice.mock.calls[0][0];
+      expect(body).toEqual(expect.objectContaining({
         section: 10,
         counterparty: 101,
         invoice_number: 'INV-NEW-99',
-        amount: 12000000,
-        expense_head: 11,
-        status: 'draft' // Guardian G2
+        status: 'draft', // Guardian G2
+        discount_amount: 0,
+        vat_applicable: true,
+        lines: [{ description: 'سرویس', quantity: 3, unit: 'بار', unit_price: 4000000, expense_head: 11 }]
       }));
-      expect(mockPersonnelApi.createExpenseInvoice.mock.calls[0][0]).not.toHaveProperty('category');
+      expect(body).not.toHaveProperty('vat_amount');
+      expect(body).not.toHaveProperty('category');
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('پیش‌نویس'));
       expect(component.isNewInvoiceModalOpen).toBe(false);
     });
 
-    it('در صورت پیوست فایل، باید درخواست به صورت FormData و با وضعیت draft ارسال شود', () => {
+    it('مالیات دستی باید همراه vat_amount فرستاده شود', () => {
       component.openNewInvoiceModal();
-      component.newInvoice = {
-        section: 10,
-        counterparty: 101,
-        invoice_number: 'INV-WITH-FILE',
-        invoice_date_shamsi: '1405/04/10',
-        amount: 5000000,
-        expense_head: 11,
-        description: 'خرید ابزار',
-        status: 'draft'
-      };
+      fillHeader();
+      component.formLines = [{ description: 'سرویس', quantity: 1, unit: '', unit_price: 1000000, expense_head: 11 }];
+      component.vatApplicable = true;
+      component.onVatInput('90000');
+      component.saveInvoice();
+      expect(mockPersonnelApi.createExpenseInvoice.mock.calls[0][0]).toEqual(expect.objectContaining({ vat_amount: 90000 }));
+    });
 
+    it('در صورت پیوست فایل، باید FormData با ردیف‌های JSON و وضعیت draft ارسال شود', () => {
+      component.openNewInvoiceModal();
+      fillHeader();
+      component.newInvoice.invoice_number = 'INV-WITH-FILE';
+      component.formLines = [{ description: 'خرید ابزار', quantity: 1, unit: '', unit_price: 5000000, expense_head: 11 }];
       const dummyFile = new File(['image-content'], 'receipt.jpg', { type: 'image/jpeg' });
       component.selectedInvoiceAttachment = dummyFile;
 
       component.saveInvoice();
 
-      expect(mockPersonnelApi.createExpenseInvoice).toHaveBeenCalled();
-      const callArg = mockPersonnelApi.createExpenseInvoice.mock.calls[0][0];
+      const callArg = mockPersonnelApi.createExpenseInvoice.mock.calls[0][0] as FormData;
       expect(callArg instanceof FormData).toBe(true);
-      expect((callArg as FormData).get('status')).toBe('draft');
-      expect((callArg as FormData).get('invoice_number')).toBe('INV-WITH-FILE');
-      expect((callArg as FormData).get('expense_head')).toBe('11');
-      expect((callArg as FormData).has('category')).toBe(false);
-      expect((callArg as FormData).get('attachment')).toBe(dummyFile);
+      expect(callArg.get('status')).toBe('draft');
+      expect(callArg.get('invoice_number')).toBe('INV-WITH-FILE');
+      expect(JSON.parse(String(callArg.get('lines')))[0]).toEqual(expect.objectContaining({ expense_head: 11, unit_price: 5000000 }));
+      expect(callArg.has('category')).toBe(false);
+      expect(callArg.get('attachment')).toBe(dummyFile);
     });
 
-    it('محاسبه زنده معادل تومان باید به درستی از مبلغ ریالی به دست آید', () => {
-      component.newInvoice.amount = 45000000;
-      expect(component.amountInTomans).toBe(4500000);
+    it('خطای سرور روی یک ردیف باید کنار همان ردیف نمایش داده شود', async () => {
+      const { throwError } = await import('rxjs');
+      mockPersonnelApi.createExpenseInvoice.mockReturnValue(throwError(() => ({ status: 400, error: { lines: { 0: { expense_head: ['سرفصل نامعتبر است.'] } } } })));
+      component.openNewInvoiceModal();
+      fillHeader();
+      component.formLines = [{ description: 'سرویس', quantity: 1, unit: '', unit_price: 1000, expense_head: 99 }];
+      component.saveInvoice();
+      expect(component.lineErrors[0]).toBe('سرفصل نامعتبر است.');
+      expect(component.isNewInvoiceModalOpen).toBe(true);
+    });
+
+    it('هشدار تکراری: پاسخ سرور با count>0 هشدار را نشان می‌دهد', () => {
+      vi.useFakeTimers();
+      try {
+        mockTreasuryOrgApi.getExpenseInvoiceDuplicates.mockReturnValue(of({ count: 1, results: [{ id: 3, invoice_number: 'INV-NEW-99' }] }));
+        component.openNewInvoiceModal();
+        fillHeader();
+        component.onDuplicateKeyChange();
+        vi.advanceTimersByTime(500);
+        expect(mockTreasuryOrgApi.getExpenseInvoiceDuplicates).toHaveBeenCalledWith({ counterparty: 101, invoice_number: 'INV-NEW-99' });
+        expect(component.duplicateInfo?.count).toBe(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -383,12 +442,24 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       (component as any).confirmDialog = { open: vi.fn().mockResolvedValue(true) };
     });
 
-    it('ارسال به سرپرست فقط روی فاکتورهای پیش‌نویس مجاز باشد و وضعیت را به pending_supervisor تغییر دهد', async () => {
+    it('ارسال به سرپرست فقط روی فاکتورهای پیش‌نویس مجاز باشد و از مسیر submit برود', async () => {
       const draftInv = sampleInvoices[0];
       await component.sendToSupervisor(draftInv);
 
-      expect(mockPersonnelApi.updateExpenseInvoice).toHaveBeenCalledWith(draftInv.id, { status: 'pending_supervisor' });
+      expect(mockTreasuryOrgApi.submitExpenseInvoice).toHaveBeenCalledWith(draftInv.id, undefined);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('کارتابل سرپرست'));
+    });
+
+    it('فاکتور تکراری: خطای duplicate_reason_required دیالوگ دلیل را باز می‌کند و دلیل دوباره فرستاده می‌شود', async () => {
+      const { throwError } = await import('rxjs');
+      const draftInv = sampleInvoices[0];
+      mockTreasuryOrgApi.submitExpenseInvoice.mockReturnValueOnce(throwError(() => ({ status: 400, error: { code: 'duplicate_reason_required', error: 'دلیل لازم است' } })));
+      await component.sendToSupervisor(draftInv);
+      expect(component.isDuplicateReasonOpen).toBe(true);
+
+      component.onDuplicateReasonConfirmed('فاکتور اصلاحی فروشنده');
+      expect(mockTreasuryOrgApi.submitExpenseInvoice).toHaveBeenLastCalledWith(draftInv.id, 'فاکتور اصلاحی فروشنده');
+      expect(component.isDuplicateReasonOpen).toBe(false);
     });
 
     it('ارسال به سرپرست برای فاکتورهای غیر پیش‌نویس باید رد شود', () => {
@@ -396,7 +467,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       component.sendToSupervisor(paidInv);
 
       expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('فقط فاکتورهای پیش‌نویس'));
-      expect(mockPersonnelApi.updateExpenseInvoice).not.toHaveBeenCalled();
+      expect(mockTreasuryOrgApi.submitExpenseInvoice).not.toHaveBeenCalled();
     });
 
     it('حذف فاکتور پیش‌نویس با تایید کاربر باید اجرا شود', async () => {
@@ -469,6 +540,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
 
     beforeEach(() => {
       mockTreasuryApi = {
+        getExpenseInvoicesPage: vi.fn().mockReturnValue(of({ count: 0, next: null, previous: null, results: [] })),
         getExpenseInvoice: vi.fn().mockReturnValue(of(sampleInvoices[0])),
         cancelExpenseInvoice: vi.fn().mockReturnValue(of({ ...sampleInvoices[0], status: 'draft' }))
       };

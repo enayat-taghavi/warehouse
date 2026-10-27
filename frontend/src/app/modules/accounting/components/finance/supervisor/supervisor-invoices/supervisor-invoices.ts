@@ -15,6 +15,7 @@ import { WorkflowReasonDialogComponent } from '../../../../../../shared/componen
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
+import { PrintService } from '../../../../../../core/services/print.service';
 
 @Component({
   selector: 'app-supervisor-invoices-hub',
@@ -97,8 +98,19 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private printService: PrintService,
     @Optional() private ws?: WebSocketService
   ) {}
+
+  faAmount(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = Number(value);
+    return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
+  }
+
+  printInvoice(item: ExpenseInvoice): void {
+    if (item.id) void this.printService.downloadPdf('expense_invoice', item.id);
+  }
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
@@ -222,14 +234,14 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     const list = this.allInvoices;
     this.statusCounters = {
       pending: list.filter(x => x.status === 'pending_supervisor').length,
-      approved: list.filter(x => ['pending_accountant', 'pending_manager', 'ready_to_pay', 'paid'].includes(x.status)).length,
+      approved: list.filter(x => ['pending_accountant', 'pending_manager', 'ready_to_pay', 'partially_paid', 'paid'].includes(x.status)).length,
       all: list.length
     };
 
     if (this.activeSubTab === 'pending') {
       this.items = list.filter(x => x.status === 'pending_supervisor');
     } else if (this.activeSubTab === 'approved') {
-      this.items = list.filter(x => ['pending_accountant', 'pending_manager', 'ready_to_pay', 'paid'].includes(x.status));
+      this.items = list.filter(x => ['pending_accountant', 'pending_manager', 'ready_to_pay', 'partially_paid', 'paid'].includes(x.status));
     } else {
       this.items = list;
     }

@@ -111,10 +111,25 @@
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let item of items; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="p-3 font-mono font-bold text-slate-800">{{ item.invoice_number }}</td>
+            <td class="p-3 font-mono font-bold text-slate-800">
+              <div *ngIf="item.number">{{ item.number }}</div>
+              <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number">{{ item.invoice_number }}</div>
+              <div class="flex flex-wrap gap-1 mt-1 font-sans">
+                <span *ngIf="item.possible_duplicate" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="item.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span>
+                <span *ngIf="item.vat_manual" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات به‌صورت دستی تغییر کرده است">مالیات دستی</span>
+              </div>
+            </td>
             <td class="p-3 font-bold text-slate-700">{{ item.counterparty_name }}</td>
             <td class="p-3">{{ item.description }}</td>
-            <td class="p-3 font-mono font-bold text-emerald-600">{{ item.amount | number }}</td>
+            <td class="p-3 font-mono font-bold text-emerald-600">
+              <div>{{ item.amount | number }}</div>
+              <div class="font-sans font-normal text-[10px] text-slate-500 space-y-0.5">
+                <div *ngIf="item.lines?.length">{{ faAmount(item.lines?.length) }} ردیف · جمع ردیف‌ها {{ faAmount(item.subtotal) }}</div>
+                <div *ngIf="item.discount_amount && +item.discount_amount > 0">تخفیف {{ faAmount(item.discount_amount) }}</div>
+                <div *ngIf="item.vat_amount && +item.vat_amount > 0">مالیات {{ faAmount(item.vat_amount) }}</div>
+                <div *ngIf="item.paid_amount && +item.paid_amount > 0">پرداخت‌شده {{ faAmount(item.paid_amount) }} · مانده {{ faAmount(item.remaining) }}</div>
+              </div>
+            </td>
             <td class="p-3 font-bold text-slate-600">{{ item.supervisor_approver_name || 'سرپرست کارگاه' }}</td>
             <td class="p-3 text-center">
               <div *ngIf="item.status === 'pending_accountant'" class="flex items-center justify-center gap-1.5">
@@ -137,7 +152,10 @@
               </div>
               <div *ngIf="item.status !== 'pending_accountant'" class="text-[11px] font-bold"
                 [ngClass]="item.status === 'paid' ? 'text-emerald-600' : 'text-slate-400'">
-                {{ item.status === 'paid' ? '✅ تسویه شده' : (item.status === 'ready_to_pay' ? '🏦 آماده پرداخت' : 'تایید و ارسال شده') }}
+                {{ item.status === 'paid' ? '✅ تسویه شده' : (item.status === 'partially_paid' ? 'پرداخت ناقص' : (item.status === 'ready_to_pay' ? '🏦 آماده پرداخت' : 'تایید و ارسال شده')) }}
+              </div>
+              <div class="flex items-center justify-center mt-1.5">
+                <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(item)"></button>
               </div>
             </td>
           </tr>

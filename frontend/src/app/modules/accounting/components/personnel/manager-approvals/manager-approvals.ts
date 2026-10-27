@@ -20,11 +20,13 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
+import { WorkflowReasonDialogComponent } from '../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { PrintService } from '../../../../../core/services/print.service';
 
 @Component({
   selector: 'app-manager-approvals',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent, WorkflowReasonDialogComponent],
   templateUrl: './manager-approvals.html',
   styleUrl: './manager-approvals.css'
 })
@@ -112,7 +114,8 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     private confirmDialog: ConfirmDialogService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private printService: PrintService
   ) {}
 
   get canApprovePersonnelManager(): boolean {
@@ -913,18 +916,49 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     });
   }
 
+  isInvoiceReasonOpen = false;
+  invoiceReasonTitle = '';
+  invoiceReasonServerError = '';
+  pendingInvoiceRevision: any = null;
+
   rejectInvoiceManager(inv: any): void {
-    const reason = window.prompt(`علت بازنگری یا رد فاکتور «${inv.invoice_number || inv.id}» را وارد کنید:`);
-    if (!reason) return;
+    this.pendingInvoiceRevision = inv;
+    this.invoiceReasonTitle = `علت بازنگری یا رد فاکتور «${inv.number || inv.invoice_number || inv.id}»`;
+    this.invoiceReasonServerError = '';
+    this.isInvoiceReasonOpen = true;
+  }
+
+  onInvoiceReasonConfirmed(reason: string): void {
+    const inv = this.pendingInvoiceRevision;
+    if (!inv) return;
     this.api.postCartableAction('manager', { action: 'revision', model: 'invoice', id: inv.id, reason }).subscribe({
       next: () => {
+        this.isInvoiceReasonOpen = false;
+        this.pendingInvoiceRevision = null;
         this.toast.show('warning', 'فاکتور هزینه جهت بازنگری عودت گردید.');
         this.loadInvoices();
       },
       error: (err: any) => {
-        this.toast.show('error', err?.error?.error || 'خطا در ارجاع بازنگری فاکتور');
+        this.invoiceReasonServerError = err?.error?.error || err?.error?.detail || 'خطا در ارجاع بازنگری فاکتور';
+        this.cdr.detectChanges();
       }
     });
+  }
+
+  onInvoiceReasonCancelled(): void {
+    this.isInvoiceReasonOpen = false;
+    this.pendingInvoiceRevision = null;
+    this.invoiceReasonServerError = '';
+  }
+
+  faAmount(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = Number(value);
+    return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
+  }
+
+  printInvoice(inv: any): void {
+    void this.printService.downloadPdf('expense_invoice', inv.id);
   }
 
   approvePettyCashManager(pc: any): void {
