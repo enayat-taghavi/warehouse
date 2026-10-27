@@ -2675,7 +2675,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 2 — Release v1 step 4.3-c: personnel DOM specs (masking, paging, reason dialog)
+[DONE] [ ] Session 1 of 2 — Release v1 step 4.3-c: personnel DOM specs (masking, paging, reason dialog)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -2722,7 +2722,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 2 — Release v1 step 4.3-c: UI review fixes on personnel cartables
+[DONE] [ ] Session 2 of 2 — Release v1 step 4.3-c: UI review fixes on personnel cartables
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
