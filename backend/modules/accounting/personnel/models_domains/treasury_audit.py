@@ -536,6 +536,23 @@ class PettyCashAccount(models.Model):
     )
     is_active = models.BooleanField(default=True, verbose_name="فعال")
     description = models.TextField(blank=True, null=True, verbose_name="توضیحات / یادداشت")
+    # د۲ طرح ۴.۲: موجودی اولیه با قاعدهٔ حساب بانکی ۳.۳
+    opening_balance = models.DecimalField(
+        max_digits=15, decimal_places=0, default=0, validators=[MinValueValidator(0)],
+        verbose_name="موجودی اولیه (ریال)")
+    opening_balance_date = models.CharField(max_length=10, null=True, blank=True,
+                                            verbose_name="تاریخ موجودی اولیه (شمسی)")
+    # د۶ و د۷: بستن و تحویل
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="تاریخ بستن")
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='closed_petty_cash_accounts', verbose_name="بستهٔ‌شده به دست")
+    handover_from = models.ForeignKey(
+        'self', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='handover_successors', verbose_name="تحویل‌گرفته از حساب")
+    handover_to = models.ForeignKey(
+        'self', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='handover_predecessors', verbose_name="تحویل‌شده به حساب")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -569,28 +586,49 @@ class PettyCashAccount(models.Model):
 
     @staticmethod
     def debt_expression():
-        """عبارت جمع ردیف‌های ردشده (بدهی تنخواه‌گردان، ص۵) برای annotate روی queryset حساب‌ها."""
-        return Coalesce(
-            Sum('transactions__amount', filter=Q(transactions__line_status='rejected')),
-            Value(Decimal('0')),
-            output_field=models.DecimalField(max_digits=15, decimal_places=0),
-        )
+        """
+        بدهی تنخواه‌گردان (د۱ طرح ۴.۲) برای annotate: ردیف‌های ردشده + کسری تطبیق − تسویه‌های قطعی.
+        هر جمع در زیرکوئری جدا تا join ها ضرب نشوند.
+        """
+        from django.db.models import OuterRef, Subquery
+        from django.db.models.functions import Greatest
+        money = models.DecimalField(max_digits=15, decimal_places=0)
+        zero = Value(Decimal('0'), output_field=money)
+
+        def _sum(qs, field):
+            agg = qs.filter(account=OuterRef('pk')).order_by().values('account') \
+                .annotate(s=Sum(field)).values('s')
+            return Coalesce(Subquery(agg, output_field=money), zero, output_field=money)
+
+        rejected = _sum(PettyCashTransaction.objects.filter(line_status='rejected'), 'amount')
+        shortage = _sum(PettyCashReconciliation.objects.filter(difference__lt=0), 'difference')
+        settled = _sum(PettyCashDebtSettlement.objects.filter(status='done'), 'amount')
+        return Greatest(rejected - shortage - settled, zero, output_field=money)
 
     @classmethod
     def annotate_debt(cls, queryset):
-        """queryset را با `debt_amount` (جمع ردیف‌های ردشده) برمی‌گرداند؛ سریالایزر اول آن را می‌خواند."""
+        """queryset را با `debt_amount` (بدهی د۱) برمی‌گرداند؛ سریالایزر اول آن را می‌خواند."""
         return queryset.annotate(debt_amount=cls.debt_expression())
+
+    def debt_breakdown(self):
+        """اجزای بدهی (د۱): ردیف‌های ردشده، کسری تطبیق، تسویه‌های قطعی و بدهی باز (هرگز منفی نیست)."""
+        zero = Decimal('0')
+        if not self.pk:
+            return {'rejected_total': zero, 'shortage_total': zero, 'settled_total': zero, 'debt': zero}
+        rejected = self.transactions.filter(line_status='rejected').aggregate(s=Sum('amount'))['s'] or zero
+        # difference = counted − expected؛ منفی یعنی کسری
+        shortage = -(self.reconciliations.filter(difference__lt=0).aggregate(s=Sum('difference'))['s'] or zero)
+        settled = self.debt_settlements.filter(status='done').aggregate(s=Sum('amount'))['s'] or zero
+        return {'rejected_total': rejected, 'shortage_total': shortage, 'settled_total': settled,
+                'debt': max(rejected + shortage - settled, zero)}
 
     @property
     def debt(self):
-        """بدهی تنخواه‌گردان: جمع مبلغ ردیف‌های ردشدهٔ همین حساب (ص۵ طرح ۳.۶)."""
+        """بدهی باز تنخواه‌گردان (د۱ طرح ۴.۲)."""
         annotated = getattr(self, 'debt_amount', None)
         if annotated is not None:
             return annotated
-        if not self.pk:
-            return Decimal('0')
-        total = self.transactions.filter(line_status='rejected').aggregate(s=Sum('amount'))['s']
-        return total or Decimal('0')
+        return self.debt_breakdown()['debt']
 
 
 class PettyCashStatement(models.Model):
@@ -651,6 +689,15 @@ class PettyCashStatement(models.Model):
         blank=True,
         default='',
         verbose_name="شماره سند"
+    )
+    # د۹ طرح ۴.۲: شمارهٔ ۲.۸ در اولین ارسال (مثل فاکتور)
+    issued_number = models.ForeignKey(
+        'numbering.IssuedNumber',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="شمارهٔ صادرشده"
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -772,6 +819,27 @@ class PettyCashTransaction(models.Model):
         default='متفرقه',
         verbose_name="سرفصل هزینه / منبع شارژ"
     )
+    # د۳ طرح ۴.۲: منبع ساختاریافتهٔ شارژ (فقط allocation)؛ category از برچسب آن پر می‌شود
+    SOURCE_CHOICES = (
+        ('charge', 'شارژ تنخواه'),
+        ('statement_refill', 'شارژ دوبارهٔ صورت‌حساب'),
+        ('handover_in', 'تحویل از تنخواه‌گردان قبلی'),
+    )
+    source = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+        blank=True,
+        default='',
+        verbose_name="منبع شارژ"
+    )
+    source_statement = models.ForeignKey(
+        'personnel.PettyCashStatement',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='refills',
+        verbose_name="صورت‌حساب شارژ دوباره"
+    )
     # فقط برای نوع expense (ص۲ طرح ۳.۴)
     expense_head = models.ForeignKey(
         'personnel.ExpenseHead',
@@ -848,6 +916,80 @@ class PettyCashTransaction(models.Model):
         if self.section_id:
             return self.section.project.company_id
         return None
+
+
+class PettyCashDebtSettlement(models.Model):
+    """تسویهٔ بدهی تنخواه‌گردان (د۴ طرح ۴.۲): نقدی، کسر از شارژ بعدی یا کسر از حقوق. حذف نمی‌شود؛ ابطال می‌شود."""
+    METHOD_CHOICES = (
+        ('cash', 'واریز نقدی'),
+        ('charge_offset', 'کسر از شارژ'),
+        ('payroll', 'کسر از حقوق'),
+    )
+    STATUS_CHOICES = (
+        ('pending', 'در انتظار'),
+        ('done', 'قطعی'),
+        ('void', 'باطل'),
+    )
+    account = models.ForeignKey(PettyCashAccount, on_delete=models.PROTECT, related_name='debt_settlements',
+                                verbose_name="حساب تنخواه")
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='petty_cash_debt_settlements',
+                                verbose_name="شرکت")
+    amount = models.DecimalField(max_digits=15, decimal_places=0, validators=[MinValueValidator(1)],
+                                 verbose_name="مبلغ (ریال)")
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, verbose_name="روش تسویه")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="وضعیت")
+    reference = models.CharField(max_length=100, blank=True, default='', verbose_name="شمارهٔ پیگیری")
+    charge = models.ForeignKey(PettyCashTransaction, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='debt_offsets', verbose_name="شارژ (کسر از شارژ)")
+    payroll_ref = models.CharField(max_length=100, blank=True, default='', verbose_name="مرجع حقوق")
+    note = models.TextField(blank=True, default='', verbose_name="یادداشت")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='created_petty_debt_settlements', verbose_name="ثبت‌کننده")
+    done_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان قطعی شدن")
+    voided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='voided_petty_debt_settlements', verbose_name="باطل‌کننده")
+    void_reason = models.TextField(blank=True, default='', verbose_name="دلیل ابطال")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "تسویهٔ بدهی تنخواه"
+        verbose_name_plural = "تسویه‌های بدهی تنخواه"
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['account', 'status']), models.Index(fields=['company', 'method', 'status'])]
+
+    def __str__(self):
+        return f"تسویهٔ {self.get_method_display()} {self.amount:,.0f} ریال ({self.get_status_display()})"
+
+
+class PettyCashReconciliation(models.Model):
+    """
+    تطبیق دورهٔ تنخواه (د۵ طرح ۴.۲). difference = counted_cash − expected_cash؛ منفی یعنی کسری (بدهی).
+    حذف یا ویرایش نمی‌شود؛ اشتباه با تطبیق تازه درست می‌شود.
+    """
+    account = models.ForeignKey(PettyCashAccount, on_delete=models.PROTECT, related_name='reconciliations',
+                                verbose_name="حساب تنخواه")
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='petty_cash_reconciliations',
+                                verbose_name="شرکت")
+    period_end_date = models.CharField(max_length=10, verbose_name="پایان دوره (شمسی)")
+    expected_cash = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="نقد مورد انتظار (ریال)")
+    counted_cash = models.DecimalField(max_digits=15, decimal_places=0, validators=[MinValueValidator(0)],
+                                       verbose_name="نقد شمرده‌شده (ریال)")
+    difference = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="اختلاف (شمرده − انتظار)")
+    note = models.TextField(blank=True, default='', verbose_name="یادداشت")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='created_petty_reconciliations', verbose_name="ثبت‌کننده")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "تطبیق دورهٔ تنخواه"
+        verbose_name_plural = "تطبیق‌های دورهٔ تنخواه"
+        ordering = ['-period_end_date', '-created_at']
+        indexes = [models.Index(fields=['account', 'period_end_date'])]
+
+    def __str__(self):
+        return f"تطبیق تنخواه {self.account_id} تا {self.period_end_date}"
+
 
 class AccountingEvent(models.Model):
     """

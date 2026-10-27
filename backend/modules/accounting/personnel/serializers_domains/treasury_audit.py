@@ -27,6 +27,7 @@ from ..models import (
     compute_line_amount,
     PettyCashAccount,
     PettyCashStatement,
+    PettyCashDebtSettlement,
     PettyCashTransaction,
     WorkflowAuditLog,
 )
@@ -559,18 +560,39 @@ class PettyCashAccountSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True, default=None)
     # بدهی = جمع ردیف‌های ردشده (ص۵)؛ queryset با PettyCashAccount.annotate_debt یک کوئری کمتر می‌زند
     debt = serializers.DecimalField(max_digits=15, decimal_places=0, read_only=True)
+    # د۲: تغییر موجودی اولیه پس از اولین گردش دلیل می‌خواهد (فقط ورودی؛ در ممیزی می‌ماند)
+    reason = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = PettyCashAccount
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'company']
+        read_only_fields = ['created_at', 'updated_at', 'company', 'closed_at', 'closed_by',
+                            'handover_from', 'handover_to']
+        extra_kwargs = {'opening_balance': {'required': False, 'min_value': Decimal('0')}}
 
     get_section_name = staticmethod(lambda obj: _section_value(obj, ('section', 'name')))
     get_project_id = staticmethod(lambda obj: _section_value(obj, ('section', 'project', 'id')))
     get_project_name = staticmethod(lambda obj: _section_value(obj, ('section', 'project', 'name')))
 
+    def validate_opening_balance_date(self, value):
+        if value in (None, ''):
+            return None
+        from ..fiscal import to_shamsi_str
+        day = to_shamsi_str(value)
+        if not day:
+            raise serializers.ValidationError("تاریخ نامعتبر است.")
+        return day
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        attrs.pop('reason', None)
+        # د۲: تاریخ موجودی اولیه وقتی مبلغ > ۰ است الزامی است
+        instance = getattr(self, 'instance', None)
+        opening = attrs['opening_balance'] if 'opening_balance' in attrs else getattr(instance, 'opening_balance', 0)
+        opening_date = attrs['opening_balance_date'] if 'opening_balance_date' in attrs \
+            else getattr(instance, 'opening_balance_date', None)
+        if opening and not opening_date:
+            raise serializers.ValidationError({'opening_balance_date': "تاریخ موجودی اولیه الزامی است."})
         # یک حساب فعال برای هر (شرکت، تنخواه‌گردان) — همان قید پایگاه داده با پیام فارسی
         instance = getattr(self, 'instance', None)
         section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
@@ -606,14 +628,36 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
     expense_head_title = serializers.SerializerMethodField()
     expense_head_group_title = serializers.SerializerMethodField()
     is_locked = serializers.SerializerMethodField()
+    source_display = serializers.CharField(source='get_source_display', read_only=True)
+    # د۴ و د۱۰: کسر بدهی از شارژ و مبلغ خالص واریز (فقط شارژ)
+    offset_total = serializers.SerializerMethodField()
+    net_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = PettyCashTransaction
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'category',
-                            'statement', 'line_status', 'line_reject_reason']
+                            'statement', 'line_status', 'line_reject_reason', 'source', 'source_statement']
 
     get_section_name = staticmethod(lambda obj: _section_value(obj, ('section', 'name')))
+
+    @staticmethod
+    def _offset_total(obj):
+        if obj.transaction_type != 'allocation':
+            return None
+        annotated = getattr(obj, 'offset_total_amount', None)
+        if annotated is not None:
+            return annotated
+        from ..workflows import petty_charge_offset_total
+        return petty_charge_offset_total(obj)
+
+    def get_offset_total(self, obj):
+        total = self._offset_total(obj)
+        return None if total is None else int(total)
+
+    def get_net_amount(self, obj):
+        total = self._offset_total(obj)
+        return None if total is None else int(obj.amount - total)
 
     def get_is_locked(self, obj):
         return _petty_locked(self, obj.wf_company_id, obj.transaction_date_shamsi)
@@ -671,6 +715,24 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
         if obj.custodian:
             return f"{obj.custodian.first_name} {obj.custodian.last_name}".strip() or obj.custodian.username
         return None
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.username
+        return None
+
+
+class PettyCashDebtSettlementSerializer(serializers.ModelSerializer):
+    """تسویهٔ بدهی تنخواه (د۴ طرح ۴.۲). فقط خواندنی؛ ثبت و ابطال از راه petty_settlements."""
+    method_display = serializers.CharField(source='get_method_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    custodian_id = serializers.IntegerField(source='account.custodian_id', read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PettyCashDebtSettlement
+        fields = '__all__'
+        read_only_fields = [f.name for f in PettyCashDebtSettlement._meta.fields]
 
     def get_created_by_name(self, obj):
         if obj.created_by:

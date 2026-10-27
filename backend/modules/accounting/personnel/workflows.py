@@ -182,26 +182,66 @@ PETTY_STATEMENT_LOCKED_STATUSES = ('paid',)
 PETTY_STATEMENT_LINE_REJECT_STEPS = ('accountant_review', 'manager_ok')
 
 
-def petty_fund_level(account):
-    """سطح تنخواه حساب: شارژهای دریافتی منهای هزینه‌های تأییدشده (شارژ دوبارهٔ صورت‌حساب آن را ثابت نگه می‌دارد)."""
+def petty_fund_level_breakdown(account):
+    """
+    اجزای سطح تنخواه (د۱ طرح ۴.۲): موجودی اولیه + شارژهای دریافتی (خالص از کسر بدهی) − هزینه‌های تأییدشده
+    − ردیف‌های ردشده − عودت‌های تأییدشده.
+    """
     from decimal import Decimal
     from django.db.models import Sum
-    from .models import PettyCashTransaction
+    from .models import PettyCashDebtSettlement, PettyCashTransaction
+    zero = Decimal('0')
+    keys = ('opening_balance', 'received_total', 'offset_total', 'spent_total', 'rejected_total', 'refund_total',
+            'fund_level')
     if account is None or not account.pk:
-        return Decimal('0')
+        return dict.fromkeys(keys, zero)
     rows = PettyCashTransaction.objects.filter(account=account)
-    received = rows.filter(transaction_type='allocation', status__in=['approved', 'paid']) \
-        .aggregate(s=Sum('amount'))['s'] or Decimal('0')
-    spent = rows.filter(transaction_type='expense', status='approved').aggregate(s=Sum('amount'))['s'] or Decimal('0')
-    return received - spent
+
+    def _total(qs, field='amount'):
+        return qs.aggregate(s=Sum(field))['s'] or zero
+
+    received = _total(rows.filter(transaction_type='allocation', status__in=['approved', 'paid']))
+    # کسر بدهی فقط وقتی قطعی است که شارژ واریز شده باشد (د۴)
+    offsets = _total(PettyCashDebtSettlement.objects.filter(
+        account=account, method='charge_offset', status='done', charge__status__in=['approved', 'paid']))
+    spent = _total(rows.filter(transaction_type='expense', status='approved').exclude(line_status='rejected'))
+    rejected = _total(rows.filter(line_status='rejected'))
+    refunds = _total(rows.filter(transaction_type='refund', status='approved'))
+    opening = account.opening_balance or zero
+    return {'opening_balance': opening, 'received_total': received, 'offset_total': offsets, 'spent_total': spent,
+            'rejected_total': rejected, 'refund_total': refunds,
+            'fund_level': opening + received - offsets - spent - rejected - refunds}
+
+
+def petty_fund_level(account):
+    """سطح تنخواه حساب (د۱ طرح ۴.۲) = نقد در دست تنخواه‌گردان + هزینه‌های در جریان."""
+    return petty_fund_level_breakdown(account)['fund_level']
+
+
+def petty_charge_offset_total(tx):
+    """جمع کسر بدهی ثبت‌شده روی یک شارژ (در انتظار یا قطعی؛ باطل نه)."""
+    from decimal import Decimal
+    from django.db.models import Sum
+    from .models import PettyCashDebtSettlement
+    if tx is None or not tx.pk:
+        return Decimal('0')
+    return PettyCashDebtSettlement.objects.filter(
+        charge=tx, method='charge_offset', status__in=['pending', 'done']).aggregate(s=Sum('amount'))['s'] \
+        or Decimal('0')
+
+
+def petty_charge_exceeds_ceiling(tx):
+    """سطح تنخواه + شارژهای در جریان دیگر + خالص این شارژ از سقف بیشتر است؟ سقف تعیین‌نشده (۰) = بله."""
+    account = getattr(tx, 'account', None)
+    if account is None or not account.ceiling_amount:
+        return True
+    net = tx.amount - petty_charge_offset_total(tx)
+    return petty_fund_level(account) + _charges_in_flight(account, tx) + net > account.ceiling_amount
 
 
 def _charge_needs_manager(tx):
     """ص۳: مدیر فقط وقتی لازم است که سطح تنخواه پس از شارژ از سقف حساب بیشتر شود. سقف تعیین‌نشده (۰) = مدیر لازم."""
-    account = getattr(tx, 'account', None)
-    if account is None or not account.ceiling_amount:
-        return True
-    return petty_fund_level(account) + _charges_in_flight(account, tx) + tx.amount > account.ceiling_amount
+    return petty_charge_exceeds_ceiling(tx)
 
 
 def _charges_in_flight(account, tx):
@@ -300,7 +340,6 @@ def _release_statement_lines(statement):
 def _execute_statement(statement):
     """ص۴: ردیف‌های باز تأیید می‌شوند و شارژ دوباره به مبلغ ردیف‌های تأییدشده ساخته می‌شود."""
     from django.utils import timezone
-    from .expense_heads import PETTY_CASH_FIXED_CATEGORY
     from .fiscal import to_shamsi_str
     from .models import PettyCashTransaction
     tracking = (getattr(statement, '_payment_ref', '') or '').strip()
@@ -317,10 +356,18 @@ def _execute_statement(statement):
             transaction_type='allocation', amount=statement.approved_amount,
             transaction_date_shamsi=to_shamsi_str(timezone.now()),
             title=f'شارژ دوبارهٔ صورت‌حساب تنخواه {statement.pk}',
-            category=PETTY_CASH_FIXED_CATEGORY['allocation'],
+            category=petty_allocation_category('statement_refill'),
+            source='statement_refill', source_statement=statement,
             receipt_number=tracking, status='approved',
         )
     statement.status = 'paid'
+
+
+def petty_allocation_category(source):
+    """د۳: متن category شارژ از برچسب منبع (برای اکسل و خلاصهٔ کار)؛ منبع خالی = متن ثابت قدیمی."""
+    from .expense_heads import PETTY_CASH_FIXED_CATEGORY
+    from .models import PettyCashTransaction
+    return dict(PettyCashTransaction.SOURCE_CHOICES).get(source) or PETTY_CASH_FIXED_CATEGORY['allocation']
 
 
 STATEMENT_STEP_STATUS = {COMPLETED: 'paid', RETURNED: 'returned', REJECTED: 'returned', CANCELLED: 'draft'}

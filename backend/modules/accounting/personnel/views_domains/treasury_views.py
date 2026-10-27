@@ -181,6 +181,66 @@ from ..workflows import (
     is_petty_statement_locked, petty_company_allowed, petty_fund_level, recompute_statement,
 )
 from .scope_helpers import resolve_write_company
+from rest_framework.exceptions import APIException
+from ..models import PettyCashDebtSettlement
+from ..serializers import PettyCashDebtSettlementSerializer
+from ..petty_settlements import (
+    SettlementError, create_settlement, complete_charge_offsets, payroll_deduction_available, void_settlement,
+)
+from ..workflows import (
+    petty_allocation_category, petty_charge_exceeds_ceiling, petty_fund_level_breakdown,
+)
+
+
+class _PettyApiError(APIException):
+    """خطای تنخواه با همان شکل {code, error, detail} پاسخ‌های اکشن‌ها، از داخل perform_*."""
+
+    def __init__(self, code, message, status_code=status.HTTP_400_BAD_REQUEST):
+        self.status_code = status_code
+        super().__init__({'code': code, 'error': message, 'detail': message})
+
+
+def _petty_offset_subquery():
+    """جمع کسر بدهی (در انتظار یا قطعی) هر شارژ برای annotate روی فهرست ردیف‌ها (یک کوئری، بی N+1)."""
+    from django.db.models import DecimalField, OuterRef, Subquery
+    from django.db.models.functions import Coalesce as _Coalesce
+    money = DecimalField(max_digits=15, decimal_places=0)
+    agg = (PettyCashDebtSettlement.objects
+           .filter(charge=OuterRef('pk'), method='charge_offset', status__in=['pending', 'done'])
+           .order_by().values('charge').annotate(s=Sum('amount')).values('s'))
+    return _Coalesce(Subquery(agg, output_field=money), Decimal('0'), output_field=money)
+
+
+def _manager_approved_current_round(tx):
+    """آیا مدیر در دور فعلی گردش این شارژ (پس از آخرین بررسی حسابدار) تأیید کرده است؟"""
+    from workflow.models import WorkflowTask
+    inst = wf_engine.instance_of(PETTY_CHARGE_WORKFLOW, tx.pk)
+    if inst is None:
+        return False
+    tasks = WorkflowTask.objects.filter(instance=inst, track=WorkflowTask.TRACK_STEP)
+    last_review = tasks.filter(step_key='accountant_review').order_by('-opened_at') \
+        .values_list('opened_at', flat=True).first()
+    approved = tasks.filter(step_key='manager_ok', outcome=WorkflowTask.ACTED)
+    if last_review is not None:
+        approved = approved.filter(opened_at__gte=last_review)
+    return approved.exists()
+
+
+def _petty_account_has_activity(account):
+    """د۲: اولین گردش حساب = هر ردیف یا صورت‌حساب."""
+    return account.transactions.exists() or account.statements.exists()
+
+
+def _log_opening_balance(user, account, old_amount, old_date, reason='', had_activity=False):
+    first = not old_amount and not old_date
+    _log_petty_audit(user, 'pettycashaccount', account.pk,
+                     'petty_opening_balance_set' if first else 'petty_opening_balance_changed',
+                     str(int(old_amount or 0)), str(int(account.opening_balance or 0)), reason=reason,
+                     company_id=account.company_id, custodian_id=account.custodian_id,
+                     before={'opening_balance': str(int(old_amount or 0)), 'opening_balance_date': old_date},
+                     after={'opening_balance': str(int(account.opening_balance or 0)),
+                            'opening_balance_date': account.opening_balance_date},
+                     had_activity=had_activity)
 
 # ص۱۰: اسناد قدیمی در این وضعیت‌ها فقط با اکشن قدیمی حسابدار بسته می‌شوند؛ سند تازه هرگز به آن‌ها نمی‌رود
 LEGACY_PETTY_PENDING = ('pending_supervisor', 'pending_accountant')
@@ -1011,10 +1071,15 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         ceiling = vd.get('ceiling_amount') or Decimal('0')
         if ceiling and not can_at_company_level(user, PETTY_MANAGER_PERM, company_id):
             raise PermissionDenied("سقف حساب تنخواه را فقط مدیر تعیین می‌کند.")
-        account = serializer.save(company_id=company_id, section=None)
-        if ceiling:
-            _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change', '0', str(int(ceiling)),
-                             company_id=company_id, custodian_id=account.custodian_id)
+        with transaction.atomic():
+            account = serializer.save(company_id=company_id, section=None)
+            if ceiling:
+                _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change', '0', str(int(ceiling)),
+                                 company_id=company_id, custodian_id=account.custodian_id)
+            # د۲: پیش از اولین گردش، سازندهٔ حساب موجودی اولیه را آزادانه تعیین می‌کند
+            if account.opening_balance or account.opening_balance_date:
+                _log_opening_balance(user, account, None, None,
+                                     reason=str(self.request.data.get('reason') or '').strip())
 
     def perform_update(self, serializer):
         user = self.request.user
@@ -1033,12 +1098,31 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         if vd.get('is_active') and not instance.is_active and PettyCashAccount.objects.filter(
                 company_id=instance.company_id, custodian_id=instance.custodian_id, is_active=True).exists():
             raise ValidationError({'custodian': "این شخص در این شرکت از قبل یک حساب تنخواه فعال دارد."})
+        old_opening, old_opening_date = instance.opening_balance, instance.opening_balance_date
+        opening_changed = (vd.get('opening_balance', old_opening) != old_opening
+                           or vd.get('opening_balance_date', old_opening_date) != old_opening_date)
+        reason = str(self.request.data.get('reason') or '').strip()
         with transaction.atomic():
+            had_activity = False
+            if opening_changed:
+                # د۲: پس از اولین گردش فقط مدیر (مجوز تأیید پرداخت در سطح شرکت) و با دلیل
+                PettyCashAccount.objects.select_for_update().filter(pk=instance.pk).order_by().first()
+                had_activity = _petty_account_has_activity(instance)
+                if had_activity:
+                    if not can_at_company_level(user, PETTY_MANAGER_PERM, instance.company_id):
+                        raise _PettyApiError('opening_balance_locked',
+                                             "پس از اولین گردش حساب، موجودی اولیه را فقط مدیر عوض می‌کند.",
+                                             status.HTTP_403_FORBIDDEN)
+                    if not reason:
+                        raise _PettyApiError('reason_required', "دلیل تغییر موجودی اولیه الزامی است.")
             account = serializer.save()
             if new_ceiling != old_ceiling:
                 _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change',
                                  str(int(old_ceiling)), str(int(new_ceiling)),
                                  company_id=account.company_id, custodian_id=account.custodian_id)
+            if opening_changed:
+                _log_opening_balance(user, account, old_opening, old_opening_date, reason=reason,
+                                     had_activity=had_activity)
 
     def perform_destroy(self, instance):
         if not self._can_manage(self.request.user, instance, instance.section_id):
@@ -1047,6 +1131,78 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             # هیچ سند تنخواهی بی‌حساب نمی‌ماند؛ حساب دارای سند فقط غیرفعال می‌شود
             raise ValidationError({'error': "این حساب سند تنخواه دارد و حذف نمی‌شود؛ آن را غیرفعال کنید."})
         instance.delete()
+
+
+class PettyCashDebtSettlementViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    تسویهٔ بدهی تنخواه‌گردان (د۴ طرح ۴.۲). فهرست: تنخواه‌گردان تسویه‌های حساب خودش، حسابدار و بیننده‌های سطح شرکت
+    تسویه‌های شرکت. ثبت و ابطال فقط با `perm_invoice_review` در سطح همان شرکت؛ تنخواه‌گردان روی حساب خودش نه.
+    حذف وجود ندارد (ابطال به‌جای حذف).
+    """
+    queryset = PettyCashDebtSettlement.objects.all().select_related('account', 'created_by', 'charge')
+    serializer_class = PettyCashDebtSettlementSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        cid = validate_user_company_access(user, get_request_company_id(self.request))
+        if cid:
+            qs = qs.filter(company_id=cid)
+        params = self.request.query_params
+        for param, field in (('account_id', 'account_id'), ('status', 'status'), ('method', 'method'),
+                             ('charge_id', 'charge_id')):
+            value = params.get(param)
+            if value:
+                qs = qs.filter(**{field: value})
+        if not user.is_superuser:
+            qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
+                Q(account__custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user)))
+        return qs.order_by('-created_at', '-id')
+
+    @staticmethod
+    def _error(exc):
+        return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+
+    @staticmethod
+    def _ensure_reviewer(user, account):
+        """حسابدار همان شرکت (سطح شرکت)؛ کسی بدهی خودش را تسویه نمی‌کند."""
+        if user.is_superuser:
+            return
+        if account.custodian_id == user.pk or not can_at_company_level(user, PETTY_REVIEW_PERM, account.company_id):
+            raise PermissionDenied("ثبت و ابطال تسویهٔ بدهی تنخواه فقط با مجوز حسابدار در سطح همین شرکت ممکن است.")
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        raw = request.data.get('account') or request.data.get('account_id')
+        account_id = _section_id(raw)
+        account = PettyCashAccount.objects.filter(pk=account_id).first() if account_id else None
+        # حساب بیرون از شرکت‌های مجاز کاربر یا شرکت فعال دیگر: 404 (وجودش لو نمی‌رود)
+        active = get_request_company_id(request)
+        if account is None or not petty_company_allowed(user, account.company_id) \
+                or (active and str(active) != str(account.company_id)):
+            raise Http404
+        self._ensure_reviewer(user, account)
+        charge = request.data.get('charge') or request.data.get('charge_id')
+        try:
+            settlement = create_settlement(
+                user, account, request.data.get('amount'), str(request.data.get('method') or '').strip(),
+                reference=request.data.get('reference'), charge=_section_id(charge) if charge else None,
+                note=request.data.get('note'))
+        except SettlementError as exc:
+            return self._error(exc)
+        return Response(self.get_serializer(settlement).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='void')
+    def void(self, request, pk=None):
+        settlement = self.get_object()
+        self._ensure_reviewer(request.user, settlement.account)
+        try:
+            settlement = void_settlement(request.user, settlement, request.data.get('reason'))
+        except SettlementError as exc:
+            return self._error(exc)
+        return Response(self.get_serializer(settlement).data)
 
 class PettyCashTransactionViewSet(viewsets.ModelViewSet):
     """
@@ -1106,7 +1262,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
             )
 
-        return qs.order_by('-transaction_date_shamsi', '-created_at')
+        return qs.annotate(offset_total_amount=_petty_offset_subquery()).order_by('-transaction_date_shamsi', '-created_at')
 
     def _petty_tx_object(self):
         """سند برای اقدام گردش: از فهرست قلمرو کاربر، یا از راه کار باز همین سند در شرکت فعال (مثل فاکتور)."""
@@ -1261,19 +1417,22 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 user.is_superuser or company_id in _petty_viewer_company_ids(user)):
             custodian = get_user_model().objects.filter(id=target_user_id).first() or user
 
-        account = PettyCashAccount.annotate_debt(PettyCashAccount.objects.filter(
-            company_id=company_id, custodian=custodian, is_active=True)).first()
+        account = PettyCashAccount.objects.filter(company_id=company_id, custodian=custodian, is_active=True).first()
         ceiling = account.ceiling_amount if account else Decimal('0')
         rows = PettyCashTransaction.objects.filter(account=account) if account else PettyCashTransaction.objects.none()
-        allocations_sum = rows.filter(transaction_type='allocation', status__in=['approved', 'paid']) \
-            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        spent_sum = rows.filter(transaction_type='expense', status='approved') \
-            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
         pending_settlement = rows.filter(
             transaction_type='expense', status__in=['draft', 'pending_supervisor', 'pending_accountant'],
         ).exclude(line_status='rejected').aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        debt = account.debt if account else Decimal('0')
-        current_balance = petty_fund_level(account) if account else Decimal('0')
+        # د۱ طرح ۴.۲: سطح تنخواه و بدهی با اجزایشان
+        level = petty_fund_level_breakdown(account)
+        allocations_sum = level['received_total'] - level['offset_total']
+        spent_sum = level['spent_total']
+        current_balance = level['fund_level']
+        debt_parts = account.debt_breakdown() if account else dict.fromkeys(
+            ('rejected_total', 'shortage_total', 'settled_total', 'debt'), Decimal('0'))
+        debt = debt_parts['debt']
+        pending_debt_settlements = PettyCashDebtSettlement.objects.filter(account=account, status='pending') \
+            .aggregate(total=Sum('amount'))['total'] or Decimal('0') if account else Decimal('0')
 
         utilization_rate = 0.0
         if ceiling > Decimal('0'):
@@ -1295,6 +1454,14 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             'pending_settlement_tomans': int(pending_settlement // 10),
             'debt': int(debt),
             'debt_tomans': int(debt // 10),
+            'opening_balance': int(level['opening_balance']),
+            'opening_balance_date': account.opening_balance_date if account else None,
+            'refund_total': int(level['refund_total']),
+            'rejected_total': int(debt_parts['rejected_total']),
+            'shortage_total': int(debt_parts['shortage_total']),
+            'settled_total': int(debt_parts['settled_total']),
+            'pending_debt_settlements': int(pending_debt_settlements),
+            'payroll_deduction_available': payroll_deduction_available(),
             'utilization_rate': round(utilization_rate, 1),
             'card_or_account_number': account.card_or_account_number if account else '',
             'sheba_number': account.sheba_number if account else '',
@@ -1338,7 +1505,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 account=account, custodian=user, created_by=user, transaction_type='allocation', amount=amount,
                 transaction_date_shamsi=today,
                 title=(str(request.data.get('title') or '').strip() or 'درخواست شارژ تنخواه')[:200],
-                category=PETTY_CASH_FIXED_CATEGORY['allocation'],
+                category=petty_allocation_category('charge'), source='charge',
                 description=str(request.data.get('description') or ''), status='draft',
             )
             err = self._submit_charge(tx, user)
@@ -1379,17 +1546,29 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         revision = int(revision) if str(revision or '').isdigit() else None
         err = None
         with transaction.atomic():
+            # قفل حساب: دو واریز هم‌زمان سقف را با هم نمی‌شکنند
+            if tx.account_id:
+                PettyCashAccount.objects.select_for_update().filter(pk=tx.account_id).order_by().first()
+            # د۱۰: مرحلهٔ مدیر در این دور رد شده بود ولی حالا (سطح تازه + شارژهای در جریان + خالص این شارژ) از سقف
+            # بیشتر است: واریز رد می‌شود تا شارژ عودت و دوباره (این بار با مدیر) فرستاده شود
+            if not _manager_approved_current_round(tx) and petty_charge_exceeds_ceiling(tx):
+                msg = 'با وضع فعلی تنخواه این شارژ از سقف حساب بیشتر است؛ آن را عودت دهید تا به تأیید مدیر برسد.'
+                return Response({'code': 'ceiling_exceeded_at_pay', 'error': msg, 'detail': msg},
+                                status=status.HTTP_409_CONFLICT)
             tx.receipt_number = tracking[:100]
             tx.save(update_fields=['receipt_number', 'updated_at'])
             try:
                 wf_engine.act(request.user, task, reason=str(request.data.get('notes') or '').strip(),
                               revision=revision, obj=tx)
+                # د۴: با واریز، کسرهای در انتظار این شارژ قطعی می‌شوند (خزانه‌دار مبلغ خالص را واریز کرده است)
+                complete_charge_offsets(tx, request.user)
             except WorkflowError as exc:
                 err = exc
                 transaction.set_rollback(True)
         if err is not None:
             tx.refresh_from_db()
             return _petty_wf_error(err)
+        tx = self.get_queryset().filter(pk=tx.pk).first() or tx
         return Response(self.get_serializer(tx).data)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
@@ -1788,6 +1967,7 @@ __all__ = [
     'CounterpartyViewSet',
     'ExpenseInvoiceViewSet',
     'PettyCashAccountViewSet',
+    'PettyCashDebtSettlementViewSet',
     'PettyCashTransactionViewSet',
     'PettyCashStatementViewSet',
     'WorkflowAuditLogViewSet',

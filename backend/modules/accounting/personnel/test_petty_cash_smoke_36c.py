@@ -117,3 +117,89 @@ class PettyCashSmokeTests(TestCase):
         self.assertIn(PETTY_CHARGE_WORKFLOW, specs)
         self.assertIn(PETTY_STATEMENT_WORKFLOW, specs)
         self.assertEqual(specs[PETTY_STATEMENT_WORKFLOW].company_field, 'company')
+
+
+SET = '/api/personnel/petty-cash-settlements/'
+
+
+class PettyCashSettlementSmoke42Tests(PettyCashSmokeTests):
+    """دود ۴.۲-ب۱: سطح و بدهی د۱، موجودی اولیه د۲، تسویه د۴ و سنجش دوبارهٔ سقف در واریز د۱۰."""
+    # فقط setUp و کمک‌ها از کلاس پایه؛ تست‌های پایه دوباره اجرا نمی‌شوند
+    test_charge_under_ceiling_skips_manager = None
+    test_statement_recharge_equals_approved_after_line_reject = None
+    test_other_company_isolated_and_ceiling_only_manager = None
+    test_validate_specs = None
+
+    def rejected_line(self, amount='100000'):
+        return PettyCashTransaction.objects.create(
+            account=self.account, custodian=self.emp, created_by=self.emp, transaction_type='expense',
+            amount=Decimal(amount), transaction_date_shamsi='1405/08/01', title='t', category='c',
+            status='rejected', line_status='rejected')
+
+    def charge_at_pay(self, amount):
+        tx_id = self.call(self.emp, 'post', f'{TX}request-charge/', {'amount': amount}).json()['id']
+        self.act(PETTY_CHARGE_WORKFLOW, tx_id, self.acc)
+        self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx_id), 'treasury_pay')
+        return tx_id
+
+    def test_cash_settlement_and_void(self):
+        self.rejected_line()
+        bal = self.call(self.emp, 'get', f'{TX}my-balance/').json()
+        self.assertEqual((bal['current_balance'], bal['debt'], bal['rejected_total']), (-100000, 100000, 100000))
+        self.assertFalse(bal['payroll_deduction_available'])
+        data = {'account': self.account.pk, 'amount': '100000', 'method': 'cash', 'reference': 'R1'}
+        self.assertEqual(self.call(self.emp, 'post', SET, data).status_code, 403)
+        self.assertEqual(self.call(self.outsider, 'post', SET, data, company=self.co2).status_code, 404)
+        self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'reference': ''}).json()['code'], 'reference_required')
+        self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'amount': '100001'}).json()['code'],
+                         'amount_exceeds_debt')
+        self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'method': 'payroll'}).json()['code'],
+                         'payroll_not_available')
+        res = self.call(self.acc, 'post', SET, data)
+        self.assertEqual((res.status_code, res.json()['status']), (201, 'done'), res.content)
+        bal = self.call(self.emp, 'get', f'{TX}my-balance/').json()
+        self.assertEqual((bal['current_balance'], bal['debt'], bal['settled_total']), (-100000, 0, 100000))
+        self.assertEqual(len(self.call(self.emp, 'get', SET).json()), 1)
+        self.assertEqual(self.call(self.outsider, 'get', SET, company=self.co2).json(), [])
+        sid = res.json()['id']
+        self.assertEqual(self.call(self.acc, 'post', f'{SET}{sid}/void/').json()['code'], 'reason_required')
+        self.assertEqual(self.call(self.acc, 'post', f'{SET}{sid}/void/', {'reason': 'x'}).json()['status'], 'void')
+        self.assertEqual(self.call(self.emp, 'get', f'{TX}my-balance/').json()['debt'], 100000)
+
+    def test_charge_offset_done_on_pay(self):
+        self.rejected_line()
+        tx_id = self.charge_at_pay('500000')
+        data = {'account': self.account.pk, 'amount': '100000', 'method': 'charge_offset', 'charge': tx_id}
+        res = self.call(self.acc, 'post', SET, data)
+        self.assertEqual((res.status_code, res.json()['status']), (201, 'pending'), res.content)
+        self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'amount': '1'}).json()['code'], 'amount_exceeds_debt')
+        res = self.call(self.trs, 'post', f'{TX}{tx_id}/pay-charge/', {'tracking_code': 'TRK-42'})
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual((res.json()['offset_total'], res.json()['net_amount'], res.json()['source']),
+                         (100000, 400000, 'charge'))
+        bal = self.call(self.emp, 'get', f'{TX}my-balance/').json()
+        self.assertEqual((bal['current_balance'], bal['debt']), (300000, 0))
+
+    def test_ceiling_rechecked_at_pay(self):
+        tx_id = self.charge_at_pay('500000')
+        res = self.call(self.mgr, 'patch', f'{ACC}{self.account.pk}/', {'ceiling_amount': '400000'})
+        self.assertEqual(res.status_code, 200, res.content)
+        res = self.call(self.trs, 'post', f'{TX}{tx_id}/pay-charge/', {'tracking_code': 'TRK-C'})
+        self.assertEqual((res.status_code, res.json()['code']), (409, 'ceiling_exceeded_at_pay'))
+        self.assertIsNone(PettyCashTransaction.objects.get(pk=tx_id).receipt_number)
+
+    def test_opening_balance_rules(self):
+        url = f'{ACC}{self.account.pk}/'
+        self.assertEqual(self.call(self.mgr, 'patch', url, {'opening_balance': '50000'}).status_code, 400)
+        res = self.call(self.mgr, 'patch', url, {'opening_balance': '50000', 'opening_balance_date': '1405/08/01'})
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertTrue(WorkflowAuditLog.objects.filter(object_id=self.account.pk,
+                                                        action='petty_opening_balance_set').exists())
+        self.assertEqual(self.call(self.emp, 'get', f'{TX}my-balance/').json()['current_balance'], 50000)
+        self.rejected_line()
+        res = self.call(self.mgr, 'patch', url, {'opening_balance': '60000'})
+        self.assertEqual((res.status_code, res.json()['code']), (400, 'reason_required'))
+        res = self.call(self.mgr, 'patch', url, {'opening_balance': '60000', 'reason': 'اصلاح'})
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertTrue(WorkflowAuditLog.objects.filter(object_id=self.account.pk, reason='اصلاح',
+                                                        action='petty_opening_balance_changed').exists())
