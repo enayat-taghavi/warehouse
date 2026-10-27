@@ -2590,3 +2590,43 @@ Write the definitions in simple Persian like the rows above.
 6. Before finishing: all tests in that folder pass; commit only the two files with the message `test(release-v1 4.2-c): petty cash account manager DOM specs, glossary`; `git status --short` prints nothing.
 
 7. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 stage 4 mid-stage close-out on the local app environment: backup, apply the stage-4 migrations, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: backend\venv\Scripts\python.exe -X utf8 backend\manage.py migrate --check
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+- Never roll back a migration (`migrate personnel 0014` or similar is forbidden).
+
+2. Context: Release v1 stage 4 steps 4.1 (expense invoices) and 4.2 (petty cash) changed backend and frontend code. These three migrations are unapplied on the app database: `personnel 0015_invoice_lines_vat_number`, `personnel 0016_invoice_payments`, `personnel 0017_petty_cash_settlement`. They were reviewed for data loss and checked for name collisions. The app database holds test data only. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app stage 4 mid'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration list. `.\venv\Scripts\python.exe manage.py showmigrations --plan` and note every `[ ]` line.
+- c) Migrate. `.\venv\Scripts\python.exe manage.py migrate --noinput`. If it fails, stop and report the last 40 lines of the error; do not try to fix it, and never fake or skip migrations.
+- d) Check. `.\venv\Scripts\python.exe manage.py migrate --check` exits 0, and `.\venv\Scripts\python.exe manage.py check` prints no errors.
+- e) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `[ ]` migrations found in step b, the migrate result (including the line `personnel 0015: N invoice line(s) created`), the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
