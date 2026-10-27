@@ -46,7 +46,7 @@
               [attr.aria-invalid]="!!fieldErrors.parent"
               [attr.aria-describedby]="fieldErrors.parent ? 'eh_parent_error' : null"
               [class.border-rose-400]="!!fieldErrors.parent"
-              class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white">
+              class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white">
               @for (g of groupOptions; track g.id) {
                 <option [ngValue]="g.id">{{ g.code }} — {{ g.title }}</option>
               }
@@ -71,7 +71,7 @@
             [attr.aria-invalid]="!!fieldErrors.code"
             [attr.aria-describedby]="fieldErrors.code ? 'eh_code_error' : null"
             [class.border-rose-400]="!!fieldErrors.code"
-            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white tabular-nums text-end" />
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white tabular-nums text-end" />
           @if (fieldErrors.code) {
             <p id="eh_code_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.code }}</p>
           }
@@ -89,7 +89,7 @@
             [attr.aria-invalid]="!!fieldErrors.title"
             [attr.aria-describedby]="fieldErrors.title ? 'eh_title_error' : null"
             [class.border-rose-400]="!!fieldErrors.title"
-            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white" />
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white" />
           @if (fieldErrors.title) {
             <p id="eh_title_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.title }}</p>
           }
@@ -105,7 +105,7 @@
             [(ngModel)]="form.order"
             [attr.aria-invalid]="!!fieldErrors.order"
             [attr.aria-describedby]="fieldErrors.order ? 'eh_order_error' : null"
-            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white tabular-nums" />
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white tabular-nums" />
           @if (fieldErrors.order) {
             <p id="eh_order_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ fieldErrors.order }}</p>
           }

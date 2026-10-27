@@ -43,10 +43,12 @@ const PERM_REVIEW = 'perm_invoice_review';
 const PERM_TREASURY = 'perm_treasury_disburse_action';
 const OFFLINE_MSG = 'برای این کار اتصال به سرور لازم است. اتصال را بررسی کنید و دوباره تلاش کنید.';
 
+import { AmountInputComponent } from '../../../../../../shared/components/amount-input/amount-input.component';
+
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent],
+  imports: [CommonModule, FormsModule, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })

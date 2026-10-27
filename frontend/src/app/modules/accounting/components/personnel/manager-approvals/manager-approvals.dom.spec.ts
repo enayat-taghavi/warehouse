@@ -89,7 +89,7 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
         { id: 201, invoice_number: 'INV-1405-09', counterparty_name: 'فروشگاه آذرخش', total_amount: 15000000, status: 'pending_manager', section_name: 'بخش مرکزی' }
       ])),
       getPettyCashTransactions: vi.fn().mockReturnValue(of([
-        { id: 301, title: 'خرید لوازم اداری و ملزومات', custodian_name: 'سعید احمدی', amount: 3500000, status: 'approved', section_name: 'بخش اداری' }
+        { id: 301, title: 'خرید لوازم اداری و ملزومات', custodian_name: 'سعید احمدی', amount: 3500000, status: 'pending_manager', section_name: 'بخش اداری' }
       ])),
       getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({ year_month: '1405/04', period_status: 'OPEN' })),
       getWorkflowAuditLogs: vi.fn().mockReturnValue(of([

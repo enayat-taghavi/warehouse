@@ -2,7 +2,8 @@
 # PartyBankAccount when it had a sheba. Counterparty ids never change, so offline-queue records that
 # carry a counterparty id stay valid. A global (company-less) counterparty keeps its row for the first
 # company that used it; each other company gets its own copy with that company's invoices and petty-cash
-# rows repointed; an unused global counterparty is deleted (rule q2: current data has no value).
+# rows repointed; a global counterparty no row references is deleted (rule q2: current data has no value),
+# while one referenced only by company-less rows goes to the lowest company id so no link is wiped.
 # Reverse is a noop (q2).
 from django.db import migrations
 
@@ -31,6 +32,15 @@ def _usage_companies(cp_id, ExpenseInvoice, PettyCashTransaction):
             if company_id not in first_use or created_at < first_use[company_id]:
                 first_use[company_id] = created_at
     return sorted(first_use, key=lambda cid: (first_use[cid], cid))
+
+
+def _is_referenced(cp):
+    for rel in cp._meta.related_objects:
+        if rel.many_to_many or not rel.field.concrete:
+            continue
+        if rel.related_model._default_manager.filter(**{rel.field.name: cp.id}).exists():
+            return True
+    return False
 
 
 def _attach_party(cp, company_id, ExternalParty, PartyBankAccount, used_ids):
@@ -66,6 +76,7 @@ def forwards(apps, schema_editor):
     PettyCashTransaction = apps.get_model('personnel', 'PettyCashTransaction')
     ExternalParty = apps.get_model('contacts', 'ExternalParty')
     PartyBankAccount = apps.get_model('personnel', 'PartyBankAccount')
+    Company = apps.get_model('companies', 'Company')
     used_ids = set()
 
     for cp in list(Counterparty.objects.filter(party__isnull=True).order_by('id')):
@@ -74,8 +85,13 @@ def forwards(apps, schema_editor):
             continue
         companies = _usage_companies(cp.id, ExpenseInvoice, PettyCashTransaction)
         if not companies:
-            cp.delete()
-            continue
+            if not _is_referenced(cp):
+                cp.delete()
+                continue
+            fallback = Company.objects.order_by('id').values_list('id', flat=True).first()
+            if fallback is None:
+                continue
+            companies = [fallback]
         first, *others = companies
         for company_id in others:
             copy = Counterparty.objects.create(

@@ -125,6 +125,13 @@ class CounterpartyDataMigrationTests(TransactionTestCase):
     migrate_from = [('personnel', '0007_counterparty_party_expand')]
     migrate_to = [('personnel', '0009_counterparty_party_contract')]
 
+    def tearDown(self):
+        # back to the latest schema, so later tests in the run find every table (e.g. personnel_expensehead)
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+        super().tearDown()
+
     def test_copy_split_and_drop(self):
         executor = MigrationExecutor(connection)
         executor.migrate(self.migrate_from)

@@ -518,7 +518,8 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(mockCompanyApi.getDocuments).toHaveBeenCalledWith({ company_id: 1 });
     expect(component.modalTabs.find(t => t.id === 'documents')?.count).toBe(1);
     // گوگل‌درایو تا باز شدن تب هیچ درخواستی نمی‌زند؛ تنها درخواست مستقیم، پروندهٔ بیمه و مالیات تب حسابداری است
-    expect(mockHttp.get.mock.calls.every((c: unknown[]) => String(c[0]).includes('payroll-profile'))).toBe(true);
+    // expense heads tab (3.4-c) loads its heads up front for the tab count
+    expect(mockHttp.get.mock.calls.every((c: unknown[]) => /payroll-profile|expense-heads/.test(String(c[0])))).toBe(true);
 
     // جابه‌جایی تب دوباره دریافت نمی‌کند (A7)
     component.setModalTab('treasury');
