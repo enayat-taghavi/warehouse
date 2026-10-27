@@ -880,6 +880,47 @@ class WorkflowAuditLogSerializer(serializers.ModelSerializer):
         'approval_status', 'company_id', 'section_id', 'reason', 'purged_by', 'deleted_by_username'
     )
 
+    PERSONNEL_LOG_TYPES = ('personnel', 'personnelprofile', 'personnelchangerequest')
+
+    def _log_profile(self, instance):
+        """پروندهٔ لاگ (با cache در context سریالایزر)؛ پروندهٔ حذف‌شده None."""
+        from ..models import PersonnelChangeRequest, PersonnelProfile
+        cache = self.context.setdefault('_log_profiles', {})
+        key = (instance.content_type, instance.object_id)
+        if key not in cache:
+            pid = instance.object_id
+            if instance.content_type == 'personnelchangerequest':
+                pid = PersonnelChangeRequest.objects.filter(pk=pid).values_list('personnel_id', flat=True).first()
+            cache[key] = PersonnelProfile.objects.filter(pk=pid).first() if pid else None
+        return cache[key]
+
+    def _mask_personnel_sensitive(self, instance, ret, user):
+        """د۶ طرح ۴.۳ (ق۱۶): کد ملی، شناسنامه، حساب، کارت و شبا در metadata لاگ پرونده برای بی‌دید کامل ستاره‌دار."""
+        if instance.content_type not in self.PERSONNEL_LOG_TYPES or not ret.get('metadata'):
+            return ret
+        from ..lifecycle_services import PERSONNEL_SENSITIVE_FIELDS, can_view_personnel_sensitive, mask_sensitive_value
+        if getattr(user, 'is_superuser', False):
+            return ret
+        perm_cache = self.context.setdefault('_sensitive_cache', {})
+        profile = self._log_profile(instance)
+        if profile is not None and can_view_personnel_sensitive(user, profile, perm_cache):
+            return ret
+        if profile is None:
+            from ..permissions import has_structure_write_permission
+            if has_structure_write_permission(user):
+                return ret
+
+        def walk(value, sensitive=False):
+            # زیر کلید حساس، هر برگ (حتی در {old,new} یا [قبلی، جدید]) ستاره‌دار می‌شود
+            if isinstance(value, dict):
+                return {k: walk(v, sensitive or k in PERSONNEL_SENSITIVE_FIELDS) for k, v in value.items()}
+            if isinstance(value, list):
+                return [walk(v, sensitive) for v in value]
+            return mask_sensitive_value(value) if sensitive and value not in (None, '') else value
+
+        ret['metadata'] = walk(ret['metadata'])
+        return ret
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
@@ -888,6 +929,7 @@ class WorkflowAuditLogSerializer(serializers.ModelSerializer):
         from ..lifecycle_services import WAGE_FIELDS, user_can_view_wages
         from ..fleet_lifecycle_services import FLEET_RATE_FIELDS, FLEET_FINANCE_STAGE_PERMS, FLEET_MANAGER_STAGE_PERMS, user_has_any_perm
         user = getattr(request, 'user', None)
+        ret = self._mask_personnel_sensitive(instance, ret, user)
         can_view_financials = user_can_view_wages(user) or user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS + FLEET_MANAGER_STAGE_PERMS)
         if can_view_financials:
             return ret

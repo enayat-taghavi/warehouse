@@ -688,6 +688,87 @@ def user_can_view_wages(user) -> bool:
     return user_has_any_perm(user, WAGE_VIEW_PERMS)
 
 
+# ── د۶ طرح ۴.۳: پوشش دادهٔ حساس پرونده (ق۱۶) ──
+PERSONNEL_SENSITIVE_FIELDS = (
+    'national_code', 'id_number', 'id_series', 'id_serial', 'account_number', 'card_number', 'sheba_number',
+)
+BANK_SENSITIVE_FIELDS = ('account_number', 'card_number', 'sheba_number')
+SENSITIVE_VIEW_PERMS = FINANCE_STAGE_PERMS + MANAGER_STAGE_PERMS
+
+
+def is_masked_value(value) -> bool:
+    from .counterparty_services import is_masked
+    return is_masked(value)
+
+
+def mask_sensitive_value(value):
+    from .counterparty_services import mask_tail
+    return mask_tail(value)
+
+
+def can_view_personnel_sensitive(user, profile, cache=None) -> bool:
+    """
+    دید کامل کد ملی، شناسنامه، حساب، کارت و شبای پرونده (د۶ طرح ۴.۳، الگوی can_view_sensitive طرف‌حساب):
+    مدیر کل، نویسندهٔ ساختار سازمانی، صاحب پرونده، ثبت‌کننده تا وقتی پرونده پیش‌نویس یا عودت‌شده است، و دارندهٔ
+    مجوز حسابدار یا مدیر پرسنل در بخش همان پرونده (پروندهٔ بی‌بخش: در یکی از بخش‌های شرکتش). بقیه چهار رقم آخر.
+    cache (dict) پرس‌وجوی مجوز را در فهرست برای هر بخش یا شرکت یک‌بار می‌کند.
+    """
+    if not user or not getattr(user, 'is_authenticated', False) or profile is None:
+        return False
+    if user.is_superuser:
+        return True
+    if profile.user_id and profile.user_id == user.id:
+        return True
+    if (profile.created_by_id and profile.created_by_id == user.id
+            and profile.approval_status in ('draft', 'revision_required')):
+        return True
+    cache = {} if cache is None else cache
+    if 'manager' not in cache:
+        from .permissions import has_structure_write_permission
+        cache['manager'] = bool(has_structure_write_permission(user))
+    if cache['manager']:
+        return True
+    key = ('section', profile.section_id) if profile.section_id else ('company', profile.company_id)
+    if key not in cache:
+        cache[key] = user_has_any_perm(user, SENSITIVE_VIEW_PERMS, profile)
+    return cache[key]
+
+
+def mask_personnel_mapping(data, fields=PERSONNEL_SENSITIVE_FIELDS, hide_wages=False):
+    """نسخهٔ پوشیدهٔ یک dict (پرونده، حساب یا diff درخواست تغییر): حساس‌ها ستاره، دستمزد حذف."""
+    if not isinstance(data, dict):
+        return data
+    out = dict(data)
+    for f in fields:
+        if f in out and out[f] not in (None, ''):
+            out[f] = mask_sensitive_value(out[f])
+    if hide_wages:
+        for f in WAGE_FIELDS:
+            out.pop(f, None)
+    return out
+
+
+def strip_masked_values(data, fields=PERSONNEL_SENSITIVE_FIELDS):
+    """
+    مقدار ستاره‌دار برگشتی از فرم یا صف آفلاین بی‌صدا کنار گذاشته می‌شود (مقدار قبلی می‌ماند؛ بی 400 تا رکورد
+    صف آفلاین رد و پاک نشود). داده‌ای که چیزی برای کنار گذاشتن ندارد همان شیء برمی‌گردد.
+    """
+    if not hasattr(data, 'get'):
+        return data
+    masked = [f for f in fields if f in data and is_masked_value(data.get(f))]
+    if not masked:
+        return data
+    from django.http import QueryDict
+    if isinstance(data, QueryDict):
+        # بی deepcopy (فایل بارگذاری‌شده deepcopy نمی‌شود)
+        clean = QueryDict(mutable=True)
+        for key in data.keys():
+            if key not in masked:
+                clean.setlist(key, data.getlist(key))
+        return clean
+    return {k: v for k, v in dict(data).items() if k not in masked}
+
+
 # ── درخواست تغییرات پروندهٔ مصوب (تسک ۳.۴، DEF-16 و DEF-06) ──
 # فیلدهایی که هرگز از مسیر درخواست تغییرات عوض نمی‌شوند (هویت کلیدی، قلمرو و فیلدهای گردش کار)
 CHANGE_REQUEST_EXCLUDED_FIELDS = {
@@ -724,6 +805,8 @@ def compute_profile_diff(instance, validated_data, excluded=CHANGE_REQUEST_EXCLU
     for key, new_value in validated_data.items():
         if key in excluded:
             continue
+        if key in PERSONNEL_SENSITIVE_FIELDS and is_masked_value(new_value):
+            continue  # مقدار ستاره‌دار تغییر نیست (د۶ طرح ۴.۳)
         old_rep = _diff_repr(getattr(instance, key, None))
         new_rep = _diff_repr(new_value)
         if old_rep != new_rep:
@@ -1160,7 +1243,7 @@ def dispatch_workflow_notification(personnel, stage: str, actor=None, reason=Non
     transaction.on_commit(_execute)
 
 
-def get_personnel_missing_primary_sheba(queryset=None) -> list[dict]:
+def get_personnel_missing_primary_sheba(queryset=None, user=None, stats=None) -> list[dict]:
     """
     DEF-23: واکشی فقط‌خواندنی پرونده‌های پرسنل که حساب اصلی آن‌ها شبای معتبر (Mod 97) ندارد.
     ستون‌ها: شرکت، بخش، نام، کد ملی، وضعیت، شماره حساب، شبای فعلی و راهنمای تکمیل.
@@ -1177,6 +1260,7 @@ def get_personnel_missing_primary_sheba(queryset=None) -> list[dict]:
     qs = qs.select_related('company', 'section', 'section__project', 'section__project__company').prefetch_related('bank_accounts')
 
     results = []
+    sensitive_cache = {}
     for p in qs:
         # حساب اصلی فعال در صورت وجود چند حسابی
         primary = next((a for a in p.bank_accounts.all() if a.is_primary and a.is_active), None)
@@ -1203,25 +1287,31 @@ def get_personnel_missing_primary_sheba(queryset=None) -> list[dict]:
             sec_name = p.section.name if p.section else '-'
             status_display = p.get_approval_status_display() if hasattr(p, 'get_approval_status_display') else p.approval_status
 
+            # د۶ طرح ۴.۳: با user، کد ملی و حساب ردیف بی‌دید ستاره‌دار (بی user: فرمان مدیریتی سرور، کامل)
+            full = user is None or can_view_personnel_sensitive(user, p, sensitive_cache)
+            if stats is not None:
+                stats['rows'] = stats.get('rows', 0) + 1
+                stats['full'] = stats.get('full', 0) + (1 if full else 0)
+            guard = (lambda v: v) if full else mask_sensitive_value
             results.append({
                 'personnel_id': p.id,
                 'company_name': comp_name,
                 'section_name': sec_name,
                 'full_name': p.full_name or '',
-                'national_code': p.national_code or '',
+                'national_code': guard(p.national_code or ''),
                 'approval_status': p.approval_status or '',
                 'approval_status_display': status_display or '',
                 'is_active': p.is_active,
                 'is_active_display': 'فعال' if p.is_active else 'غیرفعال',
-                'account_number': account_no,
-                'sheba_number': sheba_no,
+                'account_number': guard(account_no),
+                'sheba_number': guard(sheba_no),
                 'completion_guide': 'درخواست تغییرات (سرپرست/حسابدار/مدیر)',
             })
 
     return results
 
 
-def generate_missing_primary_sheba_excel(queryset=None) -> bytes:
+def generate_missing_primary_sheba_excel(queryset=None, user=None, stats=None) -> bytes:
     """
     DEF-23: تولید فایل اکسل گزارش پرونده‌های دارای حساب اصلی بدون شبای معتبر.
     رعایت معماری ۲ سطری هدر: سطر ۱ عناوین فارسی، سطر ۲ کلیدهای دیتابیس در قلم خاکستری، freeze_panes = 'A3'.
@@ -1230,7 +1320,7 @@ def generate_missing_primary_sheba_excel(queryset=None) -> bytes:
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-    data = get_personnel_missing_primary_sheba(queryset=queryset)
+    data = get_personnel_missing_primary_sheba(queryset=queryset, user=user, stats=stats)
 
     wb = openpyxl.Workbook()
     ws = wb.active

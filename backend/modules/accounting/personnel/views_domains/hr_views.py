@@ -51,6 +51,7 @@ from .scope_helpers import (
     resolve_import_company,
     scope_personnel_queryset,
 )
+from .treasury_views import InvoicePagePagination
 from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
 from workflow.registry import get_spec as wf_get_spec
@@ -137,12 +138,29 @@ def personnel_auto_submit(instance, user):
     return True
 
 
+def _audit_personnel_export(request, stats, source):
+    """د۶ طرح ۴.۳: هر خروجی اکسل که دست‌کم یک ردیف بی‌ستاره دارد یک رویداد ممیزی personnel_export_full دارد."""
+    if not stats or not stats.get('full'):
+        return
+    from accounts.audit_utils import log_audit_event
+    log_audit_event(
+        module='payroll', action='EXPORT', severity='warning', target_model='PersonnelProfile',
+        target_repr='personnel_export_full', user=request.user, company_id=get_request_company_id(request),
+        details={'event': 'personnel_export_full', 'source': source,
+                 'rows': stats.get('rows', 0), 'full_rows': stats.get('full', 0)},
+    )
+
+
 class PersonnelProfileViewSet(viewsets.ModelViewSet):
-    queryset = PersonnelProfile.objects.all().select_related('user').prefetch_related('bank_accounts', 'documents')
+    # د۷ طرح ۴.۳: فهرست بی پرس‌وجوی جدا برای هر ردیف (نام تأییدکنندگان، انتساب‌ها، حساب‌ها و مدارک)
+    queryset = PersonnelProfile.objects.all().select_related(
+        'user', 'created_by', 'supervisor_approved_by', 'accountant_approved_by', 'manager_approved_by',
+        'treasury_paid_by', 'revision_requested_by', 'auto_passed_by',
+    ).prefetch_related('bank_accounts', 'documents', 'documents__uploaded_by', 'section_assignments')
     serializer_class = PersonnelProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-    pagination_class = None
+    pagination_class = InvoicePagePagination  # فقط با ?page= صفحه‌ای؛ بی آن فهرست کامل مثل قبل (صف آفلاین)
 
     def _scoped_base_queryset(self):
         """قلمرو امنیتی کاربر (بخش‌ها و شرکت‌های مجاز) بدون فیلترهای نمایشی مثل جستجو یا بخش انتخابی."""
@@ -186,10 +204,19 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
 
         search = self.request.query_params.get('search')
         if search:
+            search = search.strip()
+            # د۶ طرح ۴.۳: جستجوی بخشی کد ملی برای کاربر عادی امکان بازسازی رقم‌به‌رقم کد پوشیده را می‌داد؛
+            # جز مدیر کل و نویسندهٔ ساختار سازمانی فقط تطابق کامل کد ملی
+            from ..permissions import has_structure_write_permission
+            user = self.request.user
+            if user.is_superuser or has_structure_write_permission(user):
+                national_q = Q(national_code__icontains=search)
+            else:
+                national_q = Q(national_code=search)
             qs = qs.filter(
                 Q(first_name__icontains=search) |
                 Q(last_name__icontains=search) |
-                Q(national_code__icontains=search) |
+                national_q |
                 Q(job_title__icontains=search)
             )
         return qs
@@ -580,10 +607,13 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         DEF-10: صاحب حساب همیشه همین پرونده است (personnel فقط‌خواندنی)، و تغییر حساب با گارد وضعیت و نقش انجام می‌شود.
         """
         instance = self.get_object()
+        from ..lifecycle_services import can_view_personnel_sensitive
+        # د۶ طرح ۴.۳: شماره‌حساب، کارت و شبا برای بی‌دید ستاره‌دار
+        bank_ctx = {'request': request, 'mask_sensitive': not can_view_personnel_sensitive(request.user, instance)}
 
         if request.method == 'GET':
             accounts = instance.bank_accounts.all()
-            serializer = PersonnelBankAccountSerializer(accounts, many=True)
+            serializer = PersonnelBankAccountSerializer(accounts, many=True, context=bank_ctx)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         from ..lifecycle_services import check_bank_account_edit_allowed
@@ -614,7 +644,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             with transaction.atomic():
                 acc = serializer.save(personnel=instance)
                 _log_bank_change('create', acc.id, {k: str(v) for k, v in serializer.validated_data.items()})
-            return Response(PersonnelBankAccountSerializer(acc).data, status=status.HTTP_201_CREATED)
+            return Response(PersonnelBankAccountSerializer(acc, context=bank_ctx).data, status=status.HTTP_201_CREATED)
 
         account_id = request.data.get('id') or request.query_params.get('account_id') or request.query_params.get('id')
         if not account_id:
@@ -635,7 +665,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                 updated_acc = serializer.save()
                 if diff:
                     _log_bank_change('update', updated_acc.id, diff)
-            return Response(PersonnelBankAccountSerializer(updated_acc).data, status=status.HTTP_200_OK)
+            return Response(PersonnelBankAccountSerializer(updated_acc, context=bank_ctx).data, status=status.HTTP_200_OK)
 
         if request.method == 'DELETE':
             with transaction.atomic():
@@ -656,8 +686,16 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         personnel = self.get_object()
 
         if request.method == 'GET':
-            docs = personnel.documents.all().order_by('-created_at')
-            return Response(PersonnelDocumentSerializer(docs, many=True).data, status=status.HTTP_200_OK)
+            docs = personnel.documents.all().select_related('uploaded_by').order_by('-created_at')
+            total = docs.count()
+            from ..lifecycle_services import can_view_personnel_sensitive
+            if not can_view_personnel_sensitive(request.user, personnel):
+                # د۶ طرح ۴.۳: بی‌دید فقط مدرک‌هایی را که خودش بارگذاشته می‌بیند؛ شمار کل در سربرگ
+                docs = docs.filter(uploaded_by_id=request.user.id)
+            response = Response(PersonnelDocumentSerializer(docs, many=True, context={'request': request}).data,
+                                status=status.HTTP_200_OK)
+            response['X-Documents-Count'] = str(total)
+            return response
 
         elif request.method == 'POST':
             file_obj = request.FILES.get('file') or request.FILES.get('attachment')
@@ -826,6 +864,15 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             # وجود کد ملی در شرکت‌های بیرون از قلمرو کاربر افشا نمی‌شود (یکتایی کد ملی درون هر شرکت است)
             return Response({'found': False}, status=status.HTTP_200_OK)
         
+        from ..lifecycle_services import can_view_personnel_sensitive
+        if not can_view_personnel_sensitive(user, personnel):
+            # د۶ طرح ۴.۳: بی دید کامل فقط «هست» و نام؛ هیچ فیلد دیگری
+            return Response({
+                'found': True,
+                'masked': True,
+                'personnel': {'first_name': personnel.first_name, 'last_name': personnel.last_name},
+            }, status=status.HTTP_200_OK)
+
         from common.media_urls import signed_file_url
         attachment_url = signed_file_url(personnel.attachment, request)
         
@@ -945,7 +992,10 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("مشاهده و دانلود گزارش اطلاعات بانکی و شبا منحصر به نقش مالی و حسابداری است.")
 
         scoped_qs = self._scoped_base_queryset()
-        excel_bytes = generate_missing_primary_sheba_excel(queryset=scoped_qs)
+        stats = {}
+        # د۶ طرح ۴.۳: ستون‌های حساس هر ردیف با قاعدهٔ دید همان پرونده
+        excel_bytes = generate_missing_primary_sheba_excel(queryset=scoped_qs, user=request.user, stats=stats)
+        _audit_personnel_export(request, stats, 'missing_primary_sheba_report')
 
         filename = "Missing_Primary_Sheba_Report.xlsx"
         response = HttpResponse(
@@ -1732,9 +1782,11 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             from ..lifecycle_services import (
                 FINANCE_STAGE_PERMS,
                 MANAGER_STAGE_PERMS,
+                PERSONNEL_SENSITIVE_FIELDS,
                 WAGE_FIELDS,
                 _snapshot_value,
                 get_missing_fields,
+                is_masked_value,
                 user_can_view_wages,
                 user_has_any_perm,
             )
@@ -1766,6 +1818,10 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                         # DEF-21: ستون‌های دستمزد را فقط نقش مالی درون‌ریزی می‌کند
                         for wage_field in WAGE_FIELDS:
                             p_defaults.pop(wage_field, None)
+                    # د۶ طرح ۴.۳: مقدار ستاره‌دار (اکسل خروجی پوشیده) نادیده گرفته می‌شود و مقدار قبلی می‌ماند
+                    for sensitive_field in PERSONNEL_SENSITIVE_FIELDS:
+                        if is_masked_value(p_defaults.get(sensitive_field)):
+                            p_defaults.pop(sensitive_field, None)
 
                     if existing_prof is None:
                         # DEF-14: ردیف تازه همیشه پیش‌نویس ساخته می‌شود؛ درون‌ریزی مدیر سپس با گیت عبور هوشمند می‌کند
@@ -1986,6 +2042,17 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         data_font = Font(name='B Nazanin', size=10)
         data_font_num = Font(name='Segoe UI', size=10)
 
+        from ..lifecycle_services import can_view_personnel_sensitive, mask_sensitive_value, user_can_view_wages
+        # د۶ طرح ۴.۳: ستون‌های حساس (کد ملی، شناسنامه، مسلسل، سریال، شماره‌حساب) برای بی‌دید ستاره‌دار؛
+        # ستون‌های دستمزد (حقوق قرارداد، مزد روزانه، پایه سنواتی، مزد مبنا) برای نقش غیرمالی خالی
+        sensitive_cols = [i for i, c in enumerate(columns_spec)
+                          if c[0] in ('national_code', 'id_number', 'id_series', 'id_serial', 'account_number')]
+        wage_cols = [i for i, c in enumerate(columns_spec)
+                     if c[0] in ('contract_base_salary', 'daily_base_wage', 'daily_seniority_bonus', 'base_daily_rate')]
+        hide_wages = not user_can_view_wages(request.user)
+        sensitive_cache = {}
+        export_stats = {'rows': 0, 'full': 0}
+
         for idx, p in enumerate(qs, start=1):
             curr_row = idx + 2
             row_data = [
@@ -2036,6 +2103,15 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                 1 if p.include_in_insurance else 0,
                 1 if p.include_in_bank else 0,
             ]
+            export_stats['rows'] += 1
+            if can_view_personnel_sensitive(request.user, p, sensitive_cache):
+                export_stats['full'] += 1
+            else:
+                for col in sensitive_cols:
+                    row_data[col] = mask_sensitive_value(row_data[col])
+            if hide_wages:
+                for col in wage_cols:
+                    row_data[col] = ''
             ws.append(row_data)
 
             for col_idx in range(1, len(row_data) + 1):
@@ -2057,6 +2133,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
+        _audit_personnel_export(request, export_stats, 'export_excel')
         filename = f"personnel_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         response = HttpResponse(
             buf.getvalue(),
@@ -2066,10 +2143,13 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         return response
 
 class PersonnelChangeRequestViewSet(viewsets.ModelViewSet):
-    queryset = PersonnelChangeRequest.objects.all().select_related('personnel', 'requested_by', 'manager_reviewed_by', 'accountant_reviewed_by')
+    queryset = PersonnelChangeRequest.objects.all().select_related(
+        'personnel', 'requested_by', 'supervisor_reviewed_by', 'manager_reviewed_by', 'accountant_reviewed_by',
+        'revision_requested_by', 'auto_passed_by',
+    )
     serializer_class = PersonnelChangeRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
+    pagination_class = InvoicePagePagination  # د۷ طرح ۴.۳
 
     def get_queryset(self):
         # درخواست تغییرات فقط برای پرونده‌هایی دیده و بررسی می‌شود که کاربر خودِ پرونده را می‌بیند

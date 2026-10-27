@@ -36,7 +36,7 @@ class AttendanceAuditLogSerializer(serializers.ModelSerializer):
 
 class DailyAttendanceSerializer(serializers.ModelSerializer):
     personnel_name = serializers.CharField(source='personnel.full_name', read_only=True)
-    personnel_national_code = serializers.CharField(source='personnel.national_code', read_only=True)
+    personnel_national_code = serializers.SerializerMethodField()
     personnel_job_title = serializers.CharField(source='personnel.job_title', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
@@ -51,6 +51,17 @@ class DailyAttendanceSerializer(serializers.ModelSerializer):
         model = DailyAttendance
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'modified_by']
+
+    def get_personnel_national_code(self, obj):
+        # D6 of plan 4.3 (Q16): masked for users without full view of that profile; no request = internal, full
+        profile = obj.personnel
+        value = getattr(profile, 'national_code', None)
+        request = self.context.get('request')
+        if not value or request is None:
+            return value
+        from ..lifecycle_services import can_view_personnel_sensitive, mask_sensitive_value
+        cache = self.context.setdefault('_sensitive_cache', {})
+        return value if can_view_personnel_sensitive(request.user, profile, cache) else mask_sensitive_value(value)
 
     def get_supervisor_approved_by_name(self, obj):
         if obj.supervisor_approved_by:

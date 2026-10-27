@@ -31,6 +31,18 @@ class PersonnelBankAccountSerializer(serializers.ModelSerializer):
         # DEF-10: پرسنل صاحب حساب همیشه از URL یا پروندهٔ والد گرفته می‌شود و از بدنهٔ درخواست پذیرفته نمی‌شود
         read_only_fields = ['id', 'personnel', 'created_at', 'updated_at']
 
+    def to_internal_value(self, data):
+        # د۶ طرح ۴.۳: مقدار ستاره‌دار بی‌صدا کنار گذاشته می‌شود و مقدار قبلی می‌ماند
+        from ..lifecycle_services import BANK_SENSITIVE_FIELDS, strip_masked_values
+        return super().to_internal_value(strip_masked_values(data, BANK_SENSITIVE_FIELDS))
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if self.context.get('mask_sensitive'):
+            from ..lifecycle_services import BANK_SENSITIVE_FIELDS, mask_personnel_mapping
+            ret = mask_personnel_mapping(ret, BANK_SENSITIVE_FIELDS)
+        return ret
+
     def validate_sheba_number(self, value):
         if not value or not str(value).strip():
             raise serializers.ValidationError("شماره شبا الزامی است.")
@@ -92,6 +104,7 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
     missing_fields = serializers.SerializerMethodField()
     bank_accounts = PersonnelBankAccountSerializer(many=True, required=False)
     documents = PersonnelDocumentSerializer(many=True, read_only=True)
+    documents_count = serializers.SerializerMethodField()
 
     class Meta:
         model = PersonnelProfile
@@ -120,6 +133,28 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
         if self.instance is not None and 'bank_accounts' in fields:
             fields['bank_accounts'].read_only = True
         return fields
+
+    def get_documents_count(self, obj):
+        return len(obj.documents.all())  # از prefetch فهرست
+
+    def _sensitive_cache(self) -> dict:
+        root = getattr(self.root, '_context', None)
+        if root is None:
+            return {}
+        return root.setdefault('_personnel_sensitive_cache', {})
+
+    def full_sensitive_view(self, instance) -> bool:
+        """د۶ طرح ۴.۳: بی request (مصرف درونی سرور) دید کامل است؛ با request قاعدهٔ can_view_personnel_sensitive."""
+        request = self.context.get('request')
+        if request is None or self.context.get('apply_change_request'):
+            return True
+        from ..lifecycle_services import can_view_personnel_sensitive
+        return can_view_personnel_sensitive(getattr(request, 'user', None), instance, self._sensitive_cache())
+
+    def to_internal_value(self, data):
+        # د۶ طرح ۴.۳: مقدار ستاره‌دار (فرم یا صف آفلاینِ کاربر بی‌دید) بی‌صدا نادیده گرفته می‌شود؛ بی 400
+        from ..lifecycle_services import strip_masked_values
+        return super().to_internal_value(strip_masked_values(data))
 
     def get_missing_fields(self, obj):
         from ..lifecycle_services import get_missing_fields
@@ -243,8 +278,11 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request is None or self.context.get('apply_change_request'):
             return False
-        from ..lifecycle_services import user_can_view_wages
-        return not user_can_view_wages(getattr(request, 'user', None))
+        cache = self._sensitive_cache()
+        if 'hide_wages' not in cache:
+            from ..lifecycle_services import user_can_view_wages
+            cache['hide_wages'] = not user_can_view_wages(getattr(request, 'user', None))
+        return cache['hide_wages']
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -300,7 +338,9 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
             sec_id = request.query_params.get('section_id')
             if sec_id and str(sec_id).isdigit():
                 sec_id = int(sec_id)
-                assignment = instance.section_assignments.filter(section_id=sec_id, is_active=True).first()
+                # از prefetch فهرست (د۷ طرح ۴.۳)؛ بی prefetch همان یک پرس‌وجو
+                assignment = next((a for a in instance.section_assignments.all()
+                                   if a.section_id == sec_id and a.is_active), None)
                 if assignment:
                     if assignment.job_title:
                         ret['job_title'] = assignment.job_title
@@ -308,12 +348,33 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
                         ret['daily_base_wage'] = float(assignment.daily_base_wage)
                     ret['is_assigned_to_section'] = True
                     ret['assignment_id'] = assignment.id
+        full_view = self.full_sensitive_view(instance)
+        hide_wages = self._request_user_hides_wages()
         if 'attachment' in ret:
-            ret['attachment'] = signed_file_url(instance.attachment, request)
-        if self._request_user_hides_wages():
+            # پیوست قدیمی فقط برای دید کامل (د۶ طرح ۴.۳)
+            ret['attachment'] = signed_file_url(instance.attachment, request) if full_view else None
+        if hide_wages:
             from ..lifecycle_services import WAGE_FIELDS
             for wage_field in WAGE_FIELDS:
                 ret.pop(wage_field, None)
+        if not full_view:
+            from ..lifecycle_services import BANK_SENSITIVE_FIELDS, mask_personnel_mapping
+            ret = mask_personnel_mapping(ret)
+            if isinstance(ret.get('bank_accounts'), list):
+                ret['bank_accounts'] = [mask_personnel_mapping(acc, BANK_SENSITIVE_FIELDS)
+                                        for acc in ret['bank_accounts']]
+            if isinstance(ret.get('documents'), list):
+                # فهرست و پیوند مدرک فقط برای دید کامل و بارگذارندهٔ همان مدرک؛ بقیه فقط documents_count
+                uid = getattr(getattr(request, 'user', None), 'id', None)
+                ret['documents'] = [d for d in ret['documents'] if uid and d.get('uploaded_by') == uid]
+        pending = ret.get('pending_change_request')
+        if isinstance(pending, dict) and (not full_view or hide_wages):
+            from ..lifecycle_services import PERSONNEL_SENSITIVE_FIELDS, mask_personnel_mapping
+            fields = () if full_view else PERSONNEL_SENSITIVE_FIELDS
+            pending = dict(pending)
+            for key in ('proposed_changes', 'previous_values'):
+                pending[key] = mask_personnel_mapping(pending.get(key), fields, hide_wages)
+            ret['pending_change_request'] = pending
         return ret
 
 class PersonnelChangeRequestSerializer(serializers.ModelSerializer):
@@ -338,6 +399,31 @@ class PersonnelChangeRequestSerializer(serializers.ModelSerializer):
             'is_auto_passed', 'auto_passed_by', 'auto_passed_at',
             'revision_requested_by', 'revision_requested_at'
         ]
+
+    def to_representation(self, instance):
+        """د۶ طرح ۴.۳: کد ملی و مقادیر حساس diff با قاعدهٔ همان پرونده پوشیده؛ دستمزد diff برای نقش غیرمالی حذف."""
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        if request is None:
+            return ret
+        from ..lifecycle_services import (
+            PERSONNEL_SENSITIVE_FIELDS, can_view_personnel_sensitive, mask_personnel_mapping, user_can_view_wages,
+        )
+        root = getattr(self.root, '_context', None)
+        cache = root.setdefault('_personnel_sensitive_cache', {}) if root is not None else {}
+        user = getattr(request, 'user', None)
+        if 'hide_wages' not in cache:
+            cache['hide_wages'] = not user_can_view_wages(user)
+        full_view = can_view_personnel_sensitive(user, instance.personnel, cache)
+        if full_view and not cache['hide_wages']:
+            return ret
+        fields = () if full_view else PERSONNEL_SENSITIVE_FIELDS
+        for key in ('proposed_changes', 'previous_values'):
+            ret[key] = mask_personnel_mapping(ret.get(key), fields, cache['hide_wages'])
+        if not full_view and ret.get('personnel_national_code'):
+            from ..lifecycle_services import mask_sensitive_value
+            ret['personnel_national_code'] = mask_sensitive_value(ret['personnel_national_code'])
+        return ret
 
     def get_requested_by_name(self, obj):
         if obj.requested_by:

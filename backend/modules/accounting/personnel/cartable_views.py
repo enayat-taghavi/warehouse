@@ -518,7 +518,7 @@ class SupervisorCartableAPIView(APIView):
             # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
             'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
             'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
-            'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True).data,
+            'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True, context={'request': request}).data,
             'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
             'periods': MonthlyWorkPeriodSerializer(periods, many=True).data,
             'invoices': ExpenseInvoiceSerializer(invoices_qs[:50], many=True).data,
@@ -740,7 +740,7 @@ class AccountantCartableAPIView(APIView):
             # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
             'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
             'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
-            'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True).data,
+            'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True, context={'request': request}).data,
             'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
             'periods': MonthlyWorkPeriodSerializer(periods, many=True).data,
             'invoices': ExpenseInvoiceSerializer(invoices_qs[:50], many=True).data,
@@ -859,7 +859,7 @@ class ManagerCartableAPIView(APIView):
             # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
             'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
             'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
-            'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True).data,
+            'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True, context={'request': request}).data,
             'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
             'periods': MonthlyWorkPeriodSerializer(periods, many=True).data,
             'invoices': ExpenseInvoiceSerializer(invoices_qs[:50], many=True).data,

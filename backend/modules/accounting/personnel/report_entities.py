@@ -55,6 +55,11 @@ def resolve_fleet_trips_scope(qs, user):
     return scope_trips_for_user(user, qs)
 
 
+def _personnel_sensitive_report_keys(_scope_id):
+    """D6 of plan 4.3 (Q16): national code in report-builder rows only for superuser / bypass perms."""
+    return {'national_code'}
+
+
 def build_accounting_entities():
     """ساخت تعاریف موجودیت‌های ماژول حسابداری و پرسنلی در موتور گزارش‌ساز."""
     from personnel.models import PersonnelProfile, MonthlyPayrollRecord, VehicleTripLog
@@ -66,6 +71,7 @@ def build_accounting_entities():
             permissions=('view_sys_personnel',),
             scope_path=None,
             scope_resolver=resolve_personnel_profiles_scope,
+            sensitive_keys_resolver=_personnel_sensitive_report_keys,
             include=('id', 'personnel_code', 'national_code', 'first_name', 'last_name',
                      'contract_type', 'employment_status', 'created_at'),
             module_code='accounting',
@@ -77,6 +83,7 @@ def build_accounting_entities():
             permissions=('view_sys_payroll',),
             scope_path=None,
             scope_resolver=resolve_monthly_payrolls_scope,
+            sensitive_keys_resolver=_personnel_sensitive_report_keys,
             include=('id', 'national_code', 'full_name', 'gross_salary', 'net_salary',
                      'payable_amount', 'income_tax', 'worker_insurance', 'payment_status'),
             module_code='accounting',

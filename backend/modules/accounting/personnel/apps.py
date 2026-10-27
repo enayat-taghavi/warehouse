@@ -133,6 +133,9 @@ class PersonnelConfig(AppConfig):
             contribute(f'is_locked:{_kind}', _locked)
             contribute(f'company_of:{_kind}', _company)
         contribute(f'can_act:{_wf.PERSONNEL_ENTITY}', _wf.can_act_personnel)
+        # چاپ پروندهٔ پرسنلی با پوشش د۶ (د۸ طرح ۴.۳)
+        from personnel.personnel_print import printable_personnel_profile
+        contribute(f'printable:{_wf.PERSONNEL_ENTITY}', printable_personnel_profile)
         # شمارهٔ ۲.۸ و چاپ صورت‌حساب تنخواه (د۹ و د۱۳ طرح ۴.۲)
         from personnel.petty_lifecycle import PETTY_STATEMENT_NUMBER_SERIES
         from personnel.petty_print import printable_petty_statement
