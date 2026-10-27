@@ -2320,7 +2320,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 stage 3: bring the public app URL back (Express on port 4200 and the Cloudflare tunnel are not running)
+[DONE] [ ] Session 1 of 1 — Release v1 stage 3: bring the public app URL back (Express on port 4200 and the Cloudflare tunnel are not running)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
