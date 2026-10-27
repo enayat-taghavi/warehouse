@@ -3,13 +3,11 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef } from '@angular/core';
+import { ɵɵdirectiveInject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import * as fs from 'fs';
-import * as path from 'path';
 
 import { TreasurerInvoicesComponent } from './treasurer-invoices';
 import { AuthService } from '../../../../../../core/auth/auth.service';
@@ -60,15 +58,6 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
       },
       configurable: true,
       writable: true
-    });
-
-    await ɵresolveComponentResources(async (url) => {
-      const filename = path.basename(url);
-      const localPath = path.resolve(__dirname, filename);
-      if (fs.existsSync(localPath)) {
-        return fs.readFileSync(localPath, 'utf-8');
-      }
-      return '';
     });
   });
 
