@@ -2633,7 +2633,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.3-b: personnel file scenario API tests
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.3-b: personnel file scenario API tests
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

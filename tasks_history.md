@@ -13996,3 +13996,65 @@ Write the definitions in simple Persian like the rows above.
 2. **بررسی صحت فنی:** تمامی پیش‌نیازها و مایگریشن...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 23:10:17
+- **Status:** DONE
+- **Conversation:** `d07a1f47-ad55-4f9f-914d-e2aa56fb5762`
+- **Steps:** 113
+- **Tokens:** 225740
+- **Duration:** 15m 41s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.3-b: personnel file scenario API tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_personnel_file_43.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in the `feat(release-v1 4.3-b...)` commits; read only these):
+- `backend/modules/accounting/personnel/tests_personnel_cycle.py` lines 1-160. It is a working test. COPY its imports, its `setUp` (company, project, section, four users with permissions, `SectionAssignment` roles and `UserCompanyAccess`) and the complete `payload` dict of `test_complete_personnel_lifecycle_in_dalan` (including the accountant PATCH with `job_code` and `start_date` before approve-finance) into your new class `PersonnelFile43Tests(TestCase)`. Do not import or subclass from that file; copy. Use different usernames and a different company code (for example prefix `pf43_` and `PF43-CO`) so nothing collides.
+- `backend/modules/accounting/personnel/test_personnel_sensitive_43.py` lines 26-62: a second, simpler fixture pattern (`grant_section_perms`, `call` with header `HTTP_X_COMPANY_ID`). Use its `call` style for requests.
+- `scratch/handoff_4_3_b1.md` (endpoints, error codes, engine behaviour) and `scratch/handoff_4_3_b2.md` (masking, pagination).
+- `backend/core/workflow/tests/test_api.py` lines 20-50: how the generic my-tasks API is called: `GET /api/workflow/tasks/` and `POST /api/workflow/tasks/<task_id>/action/` with `{"action": "act"}`.
+- Engine models: `from workflow.models import WorkflowInstance, WorkflowTask` (open task of a profile: `WorkflowTask.objects.filter(instance__entity_kind='personnel_profile', instance__entity_id=<id>, is_open=True)`).
+
+3. Task — `class PersonnelFile43Tests(TestCase)` with these tests (one method each):
+- a) `test_full_flow_on_engine`: submit with a payload missing `father_name` and `address` → 400 and the response contains `missing_fields`; complete the profile; submit → 200 `pending_supervisor`; supervisor approve-supervisor → `pending_accountant`; accountant PATCH (job_code, start_date) then approve-finance → `pending_manager`; manager approve-manager → `approved` and `is_active` True; a `WorkflowInstance` with `entity_kind='personnel_profile'` and that entity id exists with status completed (`WorkflowInstance.COMPLETED`).
+- b) `test_manager_cannot_skip_accountant`: profile at `pending_supervisor`: manager POSTs approve-manager → 400 with code `wrong_step`; after the supervisor approves, manager approve-manager → 400 `wrong_step`; the status stays `pending_accountant`.
+- c) `test_accountant_gate_on_both_paths`: profile at `pending_accountant` with an empty `job_code` (do not PATCH it): accountant approve-finance → 400 `action_blocked`; the accountant's open task via `POST /api/workflow/tasks/<task_id>/action/` with `{"action": "act"}` → 400 and `code == 'action_blocked'`; then the accountant POSTs `request-revision` with a reason → 200 and the profile is `revision_required`; the operator submits again (after completing nothing else) → 200 `pending_supervisor` (starts again from the first step).
+- d) `test_reject_and_self_approval`: supervisor POSTs `reject` without reason → 400 `reason_required`; with a reason → 200, profile `rejected` and the profile still exists (no purge). Separately: a profile created and submitted by the supervisor user cannot be approved by that same user (approve-supervisor returns 400 or 403, never 200).
+- e) `test_change_request_applies_on_completion`: take a profile through to `approved` (reuse helper code from test a); the operator or accountant PATCHes `phone_number` on the approved profile (read `PersonnelChangeRequestViewSet` behaviour in `scratch/handoff_4_3_b1.md`: it creates a change request); profile `has_pending_changes` is True; approve the change request through its `approve-supervisor` / `approve-finance` / `approve-manager` actions under `/api/personnel/personnel-change-requests/<id>/` by the right users (a user who requested it cannot approve it; if the requester is the accountant use the supervisor and manager accordingly, as `tests_personnel_cycle.py` `test_approved_personnel_change_request_lifecycle` lines 293-362 does — read that test) → change request `approved`, profile `phone_number` changed, `has_pending_changes` False. A second change request rejected with a reason changes nothing on the profile.
+- f) `test_batch_approve_per_row`: two profiles at `pending_supervisor` and one at `draft`; supervisor POSTs `/api/personnel/profiles/batch-approve/` with the three ids (read the request body field name in `hr_views.py`, search `batch-approve`) → 200; the response has one result per id; the two pending rows succeed, the draft row reports failure; the two profiles are now `pending_accountant`.
+- g) `test_open_workflows_command_idempotent`: create a profile directly with `PersonnelProfile.objects.create(..., approval_status='pending_accountant')` (no engine instance); `call_command('personnel_open_workflows')` (from `django.core.management`, capture stdout with `io.StringIO`) → one open `WorkflowTask` at step `accountant_review` for that profile and its status is still `pending_accountant`; run the command a second time → still exactly one `WorkflowInstance` for that profile.
+- h) `test_other_company_and_paging`: a user of another company (own company, project, section, `UserCompanyAccess`, role accountant with `perm_approve_personnel_finance`) GETs the profile detail → 404, POSTs approve-finance → 404, GETs `/api/print/personnel_profile/<id>/pdf/` → 404, and `GET /api/workflow/tasks/` does not contain that profile's task. List paging: `GET /api/personnel/profiles/` without `page` → a JSON list; with `page=1&page_size=1` → a dict with `count` and `results` of length 1.
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/` and `backend/core/workflow/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_personnel_file_43 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.3-b): personnel file scenario API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست‌ها در پس‌زمینه در حال اجرا هستند و منتظر تکمیل آن‌ها می‌مانیم.
+
+</div>
+<div dir="rtl" align="right">
+
+در حال بررسی وضعیت فرایند...
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Explain Simply)
+کاربر درخواست پیاده‌سازی و اجرای تست‌های سناریویی وب‌سرویس (`API scenario tests`) برای پرونده‌های پرسنلی و گردش کار نسخه ۲.۳ در فایل مستقل `backend/modules/accounting/personnel/test_personnel_file_43.py` (گام ۴.۳-ب انتشار نسخه اول) را داشت. این تست‌ها سناریوهای چرخه کامل پرونده پرسنلی، سد عدم پرش مدیر از مرحله حسابدار، مسدودسازی تایید بدون فیلدهای الزامی مالی در هر دو مسیر اکشن مستقیم و تسک جنریک، رد با/بدون دلیل و جلوگیری از خودتاییدی، درخواس...
+
+---
