@@ -2197,3 +2197,44 @@ Write these tests (one method each):
 5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 3.6-b): company-level workflow tests`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 3.6-c: petty cash company-level workflow API tests
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/modules/accounting/personnel/test_petty_cash_workflow_36.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/modules/accounting/personnel/test_petty_cash_workflow_36.py --contains "WorkflowThreshold" --contains "return_for_fix" --contains "CompanyFiscalPeriod" --contains "request-charge" --contains "reject-line" --absent "skip(" --absent "expectedFailure"
+verify: set DB_TEST_NAME=test_agy_pc36c&& python scripts/automation/verify_tools.py django-tests --labels personnel.test_petty_cash_workflow_36 --min-tests 7
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 3.6-c): petty cash workflow API tests"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_petty_cash_workflow_36.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commit `feat(release-v1 3.6-c)`; read these ranges only):
+- `backend/modules/accounting/personnel/test_petty_cash_smoke_36c.py` fully (about 125 lines). COPY its imports, its `setUp`, and its helpers `user`, `call`, `act`, `step` into your new class (same companies `self.co`/`self.co2`, users `self.emp` custodian, `self.acc` accountant, `self.mgr` manager, `self.trs` treasurer, `self.outsider` in the other company, account `self.account` with `ceiling_amount=Decimal('1000000')`). Use different usernames prefix `pc36w_` and company codes `PW36`/`PW36X` to avoid clashes.
+- `backend/modules/accounting/personnel/workflows.py:140-340` (petty cash specs: workflow keys `PETTY_CHARGE_WORKFLOW` and `PETTY_STATEMENT_WORKFLOW`; step keys `accountant_review`, `manager_ok`, `treasury_pay`; `_charge_needs_manager`, `_charges_in_flight`, `_release_statement_lines`).
+- `backend/modules/accounting/personnel/views_domains/treasury_views.py:900-990` (expense create/update rules) and `:1340-1400` (statement create from `line_ids`).
+- `backend/modules/accounting/personnel/test_fiscal_period_32.py:50-53` (how a `CompanyFiscalPeriod` row is created) and `backend/modules/accounting/personnel/test_fiscal_lock_api_32.py:56-74` (expense payload shape; helper `expense_head_id` from `personnel.scoped_test_support`).
+- `backend/core/workflow/engine.py`: `def return_for_fix(user, task, reason, obj=None, *, revision=None)` and `def act(user, task, *, reason='', revision=None, obj=None)`. Model `WorkflowThreshold` in `backend/core/workflow/models.py` (grep `class WorkflowThreshold`; fields `workflow_key`, `step_key`, `company`, `amount`).
+
+3. Task — `class PettyCashWorkflowTests(TestCase)` with these tests (one method each):
+- a) `test_charges_in_flight_count_toward_ceiling`: custodian requests charge 600000 via `POST {TX}request-charge/` (201); accountant acts → step is `treasury_pay` (under ceiling). A second request of 600000 while the first is unpaid: after accountant acts, step is `manager_ok` (600000 in flight + 600000 > 1000000).
+- b) `test_statement_under_company_threshold_skips_manager`: create `WorkflowThreshold(workflow_key=PETTY_STATEMENT_WORKFLOW, step_key='manager_ok', company=self.co, amount=Decimal('500000'))`; build two draft expense lines by ORM (copy the `PettyCashTransaction.objects.create(...)` call of the smoke test) of 100000 each; `POST ST {'line_ids': [...]}` (201); accountant acts → step `treasury_pay`. Then a second statement with one line of 900000 → after accountant acts, step `manager_ok`.
+- c) `test_whole_statement_return_frees_open_lines_keeps_rejected`: statement with two lines; accountant rejects line 1 with a reason via `reject-line`; then `wf_engine.return_for_fix(self.acc, wf_engine.open_task(PETTY_STATEMENT_WORKFLOW, st_id), 'fix')`; refresh lines: line 2 has `statement_id is None` and `line_status == 'open'`; line 1 still has `line_status == 'rejected'` and `self.account.debt == line1.amount`. No `PettyCashTransaction` row was deleted (count unchanged).
+- d) `test_custodian_records_expense_only_on_own_account`: a second employee `other = self.user('other', 'employee', ['perm_petty_cash_manage'])` posts an expense to `TX` with `account: self.account.pk` (payload shape like the fiscal test, without `section`, with `transaction_type: 'expense'`) → status 400 or 403 and no row created for `self.account` by `other`. The custodian `self.emp` posting the same payload on own account → 201 (if `expense_head` is required, read the 400 error and supply a valid head following `scoped_test_support`).
+- e) `test_expense_in_closed_period_rejected`: create `CompanyFiscalPeriod(company=self.co, fiscal_year='1405', title='x', start_date='1405/01/01', end_date='1405/12/29', status='closed', is_active=False)`; custodian posts an expense dated `1405/08/01` → 400 and the error JSON mentions `transaction_date_shamsi`.
+- f) `test_other_company_user_cannot_see_or_act_on_statement`: statement created by the custodian; `self.outsider` with header company `self.co2`: `GET {ST}` list does not contain it, `GET {ST}{id}/` is 404 or 403, `POST {ST}{id}/reject-line/` is 404 or 403 and the line stays `open`.
+- g) `test_expense_optional_section_and_other_company_section_rejected`: expense without section and project → 201 (company-level). With a `section` of a `ProjectSection` belonging to `self.co2` (create `Project`/`ProjectSection` the way `personnel.scoped_test_support` or other personnel tests do — grep `ProjectSection.objects.create` in `backend/modules/accounting/personnel/test_*.py` and copy one) → 400.
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_petty_cash_workflow_36 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 7 tests pass; commit only that file with the message `test(release-v1 3.6-c): petty cash workflow API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
