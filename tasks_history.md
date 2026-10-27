@@ -13666,3 +13666,75 @@ Body: error code: 1033
 ۳. **وضعیت...
 
 ---
+
+### Task 1 of 1 — 2026-10-27 12:57:14
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `318a2186-39d0-47f1-9fa9-2fdf34a8ce4e`
+- **Steps:** 140
+- **Tokens:** 242969
+- **Duration:** 17m 11s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.1-b: expense invoice instalment payment API tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_invoice_payments_41.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commit `feat(release-v1 4.1-b)`; read these only):
+- `backend/modules/accounting/personnel/test_invoice_payments_smoke_41b.py` fully (about 145 lines). It is a working test. COPY its imports, its `setUp` and its helpers (`user`, `post`, `payable_invoice`, `pay`) into your new class `InvoicePayments41Tests(TestCase)`. Do not import from the smoke file; copy.
+- `scratch/handoff_4_1_b.md` section "API" (exact endpoints, request fields, error codes and messages).
+- `backend/modules/accounting/personnel/invoice_payments.py` fully (about 240 lines).
+- For the delegate test: grep `def ` in `backend/core/workflow/engine.py` for the substitute/delegate model or helper, and grep `Substitut` in `backend/core/workflow/models.py` (read only the model class).
+- For the closed fiscal period test: grep `def ensure_period_open` in `backend/modules/accounting/personnel/fiscal.py` and read it plus the model it reads (grep `class FiscalPeriod` in `backend/modules/accounting/personnel/`).
+
+3. Task — `class InvoicePayments41Tests(TestCase)` with these tests (one method each):
+- a) `test_two_instalments_partial_then_paid`: invoice 1000; pay 400 → 201, status `partially_paid`, `remaining` "600"; pay 600 → 201, status `paid`, `remaining` "0"; workflow instance of the invoice is no longer in progress (`wf_engine.instance_of(INVOICE_WORKFLOW, id)`).
+- b) `test_amount_over_remaining_rejected`: pay 400, then pay 700 → 400 with `code == 'amount_exceeds_remaining'`; `InvoicePayment` count stays 1.
+- c) `test_creator_cannot_pay_even_with_treasurer_perm`: give the invoice creator the treasurer permissions exactly as the smoke test gives them to the treasurer; POST payments → 403 with `code == 'creator_cannot_pay'`.
+- d) `test_delegate_of_treasurer_can_pay`: create a valid-today substitute of the treasurer (model found in step 2); the substitute posts a payment → 201.
+- e) `test_return_and_cancel_blocked_after_instalment`: pay 400; `POST request-revision/` (with a reason as the smoke test does) → 409 `code == 'payments_exist'`; `POST cancel/` → 409 same code.
+- f) `test_void_with_reason_restores_remaining_and_void_after_full_blocked`: pay 400; void without reason → 400; void with reason → 200, `remaining` "1000", status `ready_to_pay`; pay 1000 → `paid`; void that last payment → 409 `code == 'void_after_full_payment'`.
+- g) `test_closed_period_and_foreign_bank_accounts_rejected`: payment with `payment_date_shamsi` inside a closed fiscal period → 400 with key `payment_date_shamsi`; `company_bank_account` of another company → 400 with key `company_bank_account`; `party_bank_account` of another counterparty's party → 400 with key `party_bank_account`.
+- h) `test_company_bank_account_has_movements_after_payment`: after one payment, `bank_account_has_movements(account)` (grep it in `backend/modules/accounting/personnel/company_bank.py`) is True.
+- i) `test_generic_act_without_payment_does_not_close`: on a payable invoice with no payment, call `wf_engine.act(treasurer, wf_engine.open_task(INVOICE_WORKFLOW, id))` inside `assertRaises(WorkflowError)` (from `workflow.errors`) and check the error code is `payment_required`; invoice status stays `ready_to_pay`.
+- j) `test_legacy_pay_pays_whole_remaining`: pay 300 via payments/, then `POST pay/` with `tracking_code` → 200, status `paid`, the second `InvoicePayment` has amount 700.
+- k) `test_party_sheba_masked_without_sensitive_perm`: create a `PartyBankAccount` for the counterparty's party with a Sheba (copy fields from any existing test: grep `PartyBankAccount.objects.create` in `backend/modules/accounting/personnel/`), pay with `party_bank_account`; GET payments/ as a user without the sensitive-bank permission → `party_sheba_number` does not contain the full Sheba (starts with `*`).
+- l) `test_outsider_gets_404`: a user of another company (copy how the smoke test builds users; give them a different company) → GET payments/ → 404, POST payments/ → 404, GET `/api/print/expense_invoice/{id}/pdf/` → 404.
+- m) `test_list_query_count_constant`: create 30 invoices with 3 lines each (bulk via ORM like the smoke `payable_invoice` helper does, no workflow needed), GET the list with `?page=1` and record `len(connection.queries)` using `CaptureQueriesContext`; then create 30 more and assert with `assertNumQueries(<recorded number>)` that the same request uses the same number of queries.
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/` and `backend/core/workflow/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_invoice_payments_41 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 13 tests pass; commit only that file with the message `test(release-v1 4.1-b): invoice instalment payment API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اجرای آزمون‌های پرداخت چندمرحله‌ای فاکتور (`test_invoice_payments_41`) در پس‌زمینه اجرا شد و منتظر اتمام آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+دستور اجرای مجدد آزمون‌ها برای تایید برطرف شدن مورد کش در حال اجراست.
+
+</div>
+<div dir="rtl" align="right">
+
+اجرای آزمون‌های دود (`test_invoice_payments_smoke_41b`) برای اطمینان مضاعف در حال انجام است.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست
+درخواست مربوط به اجرای گام ۴.۱-ب (زیرمرحلهٔ پرداخت چندمرحله‌ای اقساط فاکتور هزینه) بود؛ ایجاد یک فایل تست جامع جدید با نام [`backend/modules/accounting/personnel/test_invoice_payments_41.py`](file:///E:/comanager/backend/modules/accounting/p...
+
+---

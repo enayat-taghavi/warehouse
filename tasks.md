@@ -2392,7 +2392,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.1-b: expense invoice instalment payment API tests
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.1-b: expense invoice instalment payment API tests
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
