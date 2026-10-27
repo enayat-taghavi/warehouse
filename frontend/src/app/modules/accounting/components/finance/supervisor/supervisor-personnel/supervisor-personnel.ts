@@ -1,18 +1,20 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PagedResult, isMaskedValue } from '../../../../models/personnel.model';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
+import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 
 export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all';
@@ -28,6 +30,8 @@ export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all'
     TabBarComponent,
     ActionButtonComponent,
     ExternalLinkDirective,
+    RouterLink,
+    SvgIconDirective,
   ],
   templateUrl: './supervisor-personnel.html',
   styleUrl: './supervisor-personnel.css'
@@ -59,17 +63,18 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     allCount: 0
   };
 
-  // پنجره ثبت یادداشت تایید (Approval Modal)
+  // صفحه‌بندی سمت سرور (۲۰ ردیف)
+  readonly pageSize = 20;
+  pages = { new: 1, changes: 1, all: 1 };
+  totals = { new: 0, changes: 0, all: 0 };
+  loadError = '';
+  readonly isMasked = isMaskedValue;
+
+  // پنجره ثبت یادداشت تایید کارکرد (Approval Modal)
   isApprovalModalOpen = false;
-  approvalTarget: { type: 'new' | 'attendance' | 'changes'; item: any; title: string } | null = null;
+  approvalTarget: { type: 'attendance'; item: any; title: string } | null = null;
   approvalNote = '';
   isApproving = false;
-
-  // پنجره ثبت علت عودت یا رد (Reject / Revision Modal)
-  isRejectModalOpen = false;
-  rejectTarget: { type: 'new' | 'attendance' | 'changes'; item: any; action: 'reject' | 'revision'; title: string } | null = null;
-  rejectReason = '';
-  isRejecting = false;
 
   // پنجره مقایسه تغییرات (Diff Viewer Modal)
   isDiffModalOpen = false;
@@ -87,17 +92,6 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
   // پنجره مشاهده کامل پرونده (Profile Viewer Modal)
   isViewProfileModalOpen = false;
   selectedViewProfile: PersonnelProfile | null = null;
-
-  // وضعیت و پیام حذف دائم (Purge) در مودال رد
-  isLoadingImpact = false;
-  isPurgeCandidate = false;
-  deleteImpactResult: any = null;
-
-  // تایید گروهی پرونده‌ها (Batch Approval)
-  selectedPersonnelIds = new Set<number>();
-  isBatchApproveModalOpen = false;
-  batchApprovalNote = '';
-  isBatchApproving = false;
 
   copiedId: number | null = null;
   copiedKey: string | null = null;
@@ -186,6 +180,7 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   onSectionChanged(): void {
+    this.pages = { new: 1, changes: 1, all: 1 };
     this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
     this.syncUrlParams();
     this.fetchData();
@@ -259,8 +254,31 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** رفتن به صفحهٔ دیگر یکی از لیست‌های سمت سرور */
+  goToPage(tab: 'new' | 'changes' | 'all', p: number): void {
+    const total = this.totalPages(tab);
+    const next = Math.min(Math.max(1, p), total);
+    if (next === this.pages[tab]) return;
+    this.pages[tab] = next;
+    this.fetchData();
+  }
+
+  totalPages(tab: 'new' | 'changes' | 'all'): number {
+    return Math.max(1, Math.ceil(this.totals[tab] / this.pageSize));
+  }
+
+  onSearchChanged(): void {
+    this.pages = { new: 1, changes: 1, all: 1 };
+    this.fetchData();
+  }
+
+  formatNumber(n: number): string {
+    return new Intl.NumberFormat('fa-IR').format(n);
+  }
+
   fetchData(): void {
     this.isLoading = true;
+    this.loadError = '';
     const baseParams: any = {};
     if (this.selectedSectionId) {
       baseParams.section_id = this.selectedSectionId;
@@ -268,22 +286,24 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     if (this.searchQuery.trim()) {
       baseParams.search = this.searchQuery.trim();
     }
+    const failed = (err: any) => {
+      this.loadError = isServerUnreachable(err?.status ?? 0)
+        ? 'ارتباط با سرور برقرار نیست؛ پس از اتصال دوباره تلاش کنید.'
+        : 'بارگذاری فهرست انجام نشد.';
+    };
 
-    // ۱. پرونده‌های جدید پرسنل در انتظار تایید سرپرست
-    this.personnelApi.getPersonnelProfiles({ ...baseParams, approval_status: 'pending_supervisor' }).subscribe({
-      next: (pList: any[]) => {
-        this.newPersonnelList = pList || [];
-        this.statusCounters.newCount = this.newPersonnelList.length;
-        const currentIds = new Set(this.newPersonnelList.map(p => p.id));
-        for (const id of Array.from(this.selectedPersonnelIds)) {
-          if (!currentIds.has(id)) {
-            this.selectedPersonnelIds.delete(id);
-          }
-        }
+    // ۱. پرونده‌های جدید پرسنل در انتظار تایید سرپرست (فقط‌خواندنی؛ تایید در «کارهای من»)
+    this.personnelApi.getPersonnelProfilesPage({ ...baseParams, approval_status: 'pending_supervisor', page: this.pages.new, page_size: this.pageSize }).subscribe({
+      next: (res: PagedResult<PersonnelProfile>) => {
+        this.newPersonnelList = res?.results || [];
+        this.totals.new = res?.count ?? this.newPersonnelList.length;
+        this.statusCounters.newCount = this.totals.new;
+        this.cdr.markForCheck();
       },
-      error: () => {
-        this.newPersonnelList = [];
-        this.selectedPersonnelIds.clear();
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.new > 1) { this.pages.new = 1; this.fetchData(); return; }
+        failed(err);
+        this.cdr.markForCheck();
       }
     });
 
@@ -297,45 +317,47 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
         this.attendanceList = attList || [];
         this.statusCounters.attendanceCount = this.attendanceList.filter(a => a.supervisor_approved === false || a.status === 'pending').length;
       },
-      error: () => {
-        this.attendanceList = [];
+      error: (err: any) => {
+        failed(err);
       }
     });
 
-    // ۳. درخواست‌های تغییرات پرسنل
-    this.personnelApi.getPersonnelChangeRequests(baseParams).subscribe({
-      next: (crList: any[]) => {
-        this.changeRequestsList = crList || [];
-        this.statusCounters.changesCount = this.changeRequestsList.filter(c => c.status === 'pending_supervisor').length;
+    // ۳. درخواست‌های تغییرات پرسنل (فقط‌خواندنی)
+    this.personnelApi.getPersonnelChangeRequestsPage({ ...baseParams, page: this.pages.changes, page_size: this.pageSize }).subscribe({
+      next: (res: PagedResult<PersonnelChangeRequest>) => {
+        this.changeRequestsList = res?.results || [];
+        this.totals.changes = res?.count ?? this.changeRequestsList.length;
+        this.statusCounters.changesCount = this.totals.changes;
+        this.cdr.markForCheck();
       },
-      error: () => {
-        this.changeRequestsList = [];
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.changes > 1) { this.pages.changes = 1; this.fetchData(); return; }
+        failed(err);
+        this.cdr.markForCheck();
       }
     });
 
     // ۴. تمام پرسنل بخش
-    this.personnelApi.getPersonnelProfiles(baseParams).subscribe({
-      next: (allList: any[]) => {
-        this.allPersonnelList = allList || [];
-        this.statusCounters.allCount = this.allPersonnelList.length;
+    this.personnelApi.getPersonnelProfilesPage({ ...baseParams, page: this.pages.all, page_size: this.pageSize }).subscribe({
+      next: (res: PagedResult<PersonnelProfile>) => {
+        this.allPersonnelList = res?.results || [];
+        this.totals.all = res?.count ?? this.allPersonnelList.length;
+        this.statusCounters.allCount = this.totals.all;
         this.isLoading = false;
         this.cdr.markForCheck();
       },
-      error: () => {
-        this.allPersonnelList = [];
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.all > 1) { this.pages.all = 1; this.fetchData(); return; }
+        failed(err);
         this.isLoading = false;
         this.cdr.markForCheck();
       }
     });
   }
 
-  // ─── اکشن‌های تایید ───
-  openApproveModal(type: 'new' | 'attendance' | 'changes', item: any): void {
-    const title = type === 'new' 
-      ? `تایید اولیه پرسنل: ${item.first_name || ''} ${item.last_name || ''}`
-      : type === 'attendance'
-      ? `تایید کارکرد روزانه: ${item.personnel_name || ''} (${item.date_shamsi || ''})`
-      : `تایید درخواست تغییرات: ${item.personnel_name || ''}`;
+  // ─── تایید کارکرد روزانه (پرونده و درخواست تغییر پرسنل در «کارهای من» انجام می‌شود) ───
+  openApproveModal(type: 'attendance', item: any): void {
+    const title = `تایید کارکرد روزانه: ${item.personnel_name || ''} (${item.date_shamsi || ''})`;
     this.approvalTarget = { type, item, title };
     this.approvalNote = '';
     this.isApprovalModalOpen = true;
@@ -350,130 +372,19 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
   submitApproval(): void {
     if (!this.approvalTarget) return;
     this.isApproving = true;
-    const { type, item } = this.approvalTarget;
-
-    if (type === 'new') {
-      this.personnelApi.approvePersonnelSupervisor(item.id, this.approvalNote).subscribe({
-        next: () => {
-          this.toast.showSuccess(`پرونده ${item.first_name || ''} ${item.last_name || ''} تایید و به حسابداری ارسال شد.`);
-          this.isApproving = false;
-          this.closeApproveModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در ثبت تایید سرپرست');
-        }
-      });
-    } else if (type === 'attendance') {
-      this.personnelApi.patchDailyAttendance(item.id, { notes: this.approvalNote ? `${item.notes || ''} | تایید سرپرست: ${this.approvalNote}` : 'تایید سرپرست' }).subscribe({
-        next: () => {
-          this.toast.showSuccess('کارکرد روزانه با موفقیت تایید شد.');
-          this.isApproving = false;
-          this.closeApproveModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در تایید کارکرد');
-        }
-      });
-    } else if (type === 'changes') {
-      this.personnelApi.approvePersonnelChangeRequestSupervisor(item.id, this.approvalNote).subscribe({
-        next: () => {
-          this.toast.showSuccess('درخواست تغییرات با موفقیت تایید شد.');
-          this.isApproving = false;
-          this.closeApproveModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در تایید تغییرات');
-        }
-      });
-    }
-  }
-
-  // ─── اکشن‌های عودت و رد ───
-  openRejectModal(type: 'new' | 'attendance' | 'changes', item: any, action: 'reject' | 'revision'): void {
-    const actionTitle = action === 'revision' ? 'عودت به بازنگری' : 'رد قطعی پرونده';
-    const title = `${actionTitle}: ${item.first_name || item.personnel_name || ''} ${item.last_name || ''}`;
-    this.rejectTarget = { type, item, action, title };
-    this.rejectReason = '';
-    this.isPurgeCandidate = false;
-    this.deleteImpactResult = null;
-    this.isLoadingImpact = false;
-    this.isRejectModalOpen = true;
-
-    // استعلام اثرات حذف و بررسی شرط Purge دائم برای پرونده‌های پرسنل
-    if (action === 'reject' && type === 'new' && item.id && typeof this.personnelApi.getPersonnelDeleteImpact === 'function') {
-      this.isLoadingImpact = true;
-      this.personnelApi.getPersonnelDeleteImpact(item.id).subscribe({
-        next: (res) => {
-          this.isLoadingImpact = false;
-          this.deleteImpactResult = res;
-          // اگر طبق استعلام سرور سابقه کارکرد/مالی نداشته باشد و بتواند حذف شود، هشدار Purge نمایش می‌یابد
-          if (res?.can_delete || !res?.has_history) {
-            this.isPurgeCandidate = true;
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.isLoadingImpact = false;
-          this.cdr.markForCheck();
-        }
-      });
-    }
-  }
-
-  closeRejectModal(): void {
-    this.isRejectModalOpen = false;
-    this.rejectTarget = null;
-    this.rejectReason = '';
-    this.isPurgeCandidate = false;
-    this.deleteImpactResult = null;
-    this.isLoadingImpact = false;
-  }
-
-  submitReject(): void {
-    if (!this.rejectTarget || !this.rejectReason.trim()) {
-      this.toast.showWarning('لطفاً دلیل مستند عودت یا رد را وارد فرمایید.');
-      return;
-    }
-    this.isRejecting = true;
-    const { type, item, action } = this.rejectTarget;
-
-    if (action === 'revision') {
-      this.personnelApi.requestPersonnelRevision(item.id, this.rejectReason.trim()).subscribe({
-        next: () => {
-          this.toast.showSuccess('پرونده جهت بازنگری و اصلاح مدارک عودت داده شد.');
-          this.isRejecting = false;
-          this.closeRejectModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در عودت پرونده');
-        }
-      });
-    } else {
-      this.personnelApi.rejectPersonnel(item.id, this.rejectReason.trim()).subscribe({
-        next: () => {
-          if (this.isPurgeCandidate) {
-            this.toast.showSuccess('پرونده با توجه به عدم سابقه، به صورت دائم از سیستم پاک‌سازی (Purge) شد.');
-          } else {
-            this.toast.showSuccess('پرونده با موفقیت رد و در سوابق بایگانی شد.');
-          }
-          this.isRejecting = false;
-          this.closeRejectModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در رد پرونده');
-        }
-      });
-    }
+    const { item } = this.approvalTarget;
+    this.personnelApi.patchDailyAttendance(item.id, { notes: this.approvalNote ? `${item.notes || ''} | تایید سرپرست: ${this.approvalNote}` : 'تایید سرپرست' }).subscribe({
+      next: () => {
+        this.toast.showSuccess('کارکرد روزانه با موفقیت تایید شد.');
+        this.isApproving = false;
+        this.closeApproveModal();
+        this.fetchData();
+      },
+      error: (err: any) => {
+        this.isApproving = false;
+        this.toast.showError(err?.error?.detail || 'خطا در تایید کارکرد');
+      }
+    });
   }
 
   // ─── پنجره مقایسه تغییرات (Diff Viewer) ───
@@ -534,84 +445,6 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
   closeViewProfileModal(): void {
     this.isViewProfileModalOpen = false;
     this.selectedViewProfile = null;
-  }
-
-  // ─── تایید گروهی (Batch Approval) ───
-  toggleSelectAllPersonnel(event: any): void {
-    const isChecked = event?.target?.checked;
-    if (isChecked) {
-      this.newPersonnelList.forEach(p => {
-        if (p.id) this.selectedPersonnelIds.add(p.id);
-      });
-    } else {
-      this.selectedPersonnelIds.clear();
-    }
-  }
-
-  togglePersonnelSelection(id: number | undefined): void {
-    if (id === undefined) return;
-    if (this.selectedPersonnelIds.has(id)) {
-      this.selectedPersonnelIds.delete(id);
-    } else {
-      this.selectedPersonnelIds.add(id);
-    }
-  }
-
-  isPersonnelSelected(id: number | undefined): boolean {
-    return id !== undefined && this.selectedPersonnelIds.has(id);
-  }
-
-  isAllPersonnelSelected(): boolean {
-    return this.newPersonnelList.length > 0 && this.newPersonnelList.every(p => p.id && this.selectedPersonnelIds.has(p.id));
-  }
-
-  getSelectedCount(): number {
-    return this.selectedPersonnelIds.size;
-  }
-
-  openBatchApproveModal(): void {
-    if (this.selectedPersonnelIds.size === 0) {
-      this.toast.showWarning('هیچ پرونده‌ای برای تایید گروهی انتخاب نشده است.');
-      return;
-    }
-    this.batchApprovalNote = '';
-    this.isBatchApproveModalOpen = true;
-  }
-
-  closeBatchApproveModal(): void {
-    this.isBatchApproveModalOpen = false;
-    this.batchApprovalNote = '';
-  }
-
-  submitBatchApproval(): void {
-    const ids = Array.from(this.selectedPersonnelIds);
-    if (ids.length === 0) return;
-
-    this.isBatchApproving = true;
-    this.personnelApi.batchApprovePersonnel(ids, 'supervisor', this.batchApprovalNote).subscribe({
-      next: (res) => {
-        this.isBatchApproving = false;
-        this.closeBatchApproveModal();
-        const results = res?.results || [];
-        const successCount = results.filter(r => r.success).length;
-        const failedCount = results.filter(r => !r.success).length;
-
-        if (failedCount === 0) {
-          this.toast.showSuccess(`تمام ${successCount} پرونده با موفقیت تایید و به مرحله حسابداری ارسال شدند.`);
-        } else if (successCount > 0) {
-          this.toast.showWarning(`${successCount} پرونده تایید شد، اما ${failedCount} مورد با خطا مواجه شد.`);
-        } else {
-          this.toast.showError('عملیات تایید گروهی با خطا مواجه شد.');
-        }
-
-        this.selectedPersonnelIds.clear();
-        this.fetchData();
-      },
-      error: (err) => {
-        this.isBatchApproving = false;
-        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در اجرای تایید گروهی پرسنل');
-      }
-    });
   }
 
   // ─── ابزارهای کپی سریع ───

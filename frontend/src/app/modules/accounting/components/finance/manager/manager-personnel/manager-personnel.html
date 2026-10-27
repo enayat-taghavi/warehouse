@@ -34,13 +34,19 @@
           <input
             type="text"
             [(ngModel)]="searchQuery"
-            (input)="fetchData()"
+            (input)="onSearchChanged()"
             placeholder="جستجوی نام، کد ملی، سمت..."
             class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
           <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer flex items-center justify-center tap-target">✕</button>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; onSearchChanged()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer flex items-center justify-center tap-target">✕</button>
         </div>
 
+        <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_profile' }"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-xs font-bold"
+          title="کارهای من" aria-label="کارهای من">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" aria-hidden="true"></svg>
+          <span class="hidden sm:inline">کارهای من</span>
+        </a>
         <button
           type="button"
           appAction="refresh"
@@ -55,67 +61,87 @@
 
   <!-- تب ۱: پرونده‌های در انتظار تصویب نهایی مدیر -->
   <div *ngIf="activeSubTab === 'new'" class="space-y-3">
-    <div *ngIf="pendingManagerList.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <span class="text-3xl block mb-2">👑</span>
+    <!-- پیوند به کارهای من: تصویب، عودت و رد در موتور گردش‌کار انجام می‌شود -->
+    <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <span class="font-bold text-indigo-900">این فهرست فقط‌خواندنی است؛ تصویب، عودت و رد پرونده‌ها را از «کارهای من» انجام دهید.</span>
+      <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_profile' }"
+        class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+        title="رفتن به کارهای من" aria-label="رفتن به کارهای من">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" aria-hidden="true"></svg>
+        <span>کارهای من</span>
+      </a>
+    </div>
+
+    <div *ngIf="loadError" class="bg-rose-50 border border-rose-200 rounded-2xl p-3 text-xs font-bold text-rose-800" role="alert">{{ loadError }}</div>
+
+    <div *ngIf="pendingManagerList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-fg-muted">
       <p class="font-bold text-sm">هیچ پرونده پرسنلی معلق برای تصویب نهایی مدیر در این بخش وجود ندارد.</p>
     </div>
 
-    <div *ngIf="pendingManagerList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div *ngIf="pendingManagerList.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
+          <thead class="bg-surface-muted text-fg-muted border-b border-line">
             <tr>
               <th class="p-3">نام پرسنل</th>
               <th class="p-3">کد ملی</th>
               <th class="p-3">سمت و گروه</th>
               <th class="p-3">مزد مبنای مصوب حسابدار</th>
               <th class="p-3">شماره شبا و بانک</th>
-              <th class="p-3 text-center">تصمیم مدیر ارشد</th>
+              <th class="p-3 text-center">تحلیل مالی</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr *ngFor="let item of pendingManagerList" class="hover:bg-amber-50/20 transition-all">
-              <td class="p-3 font-bold text-slate-800">
+          <tbody class="divide-y divide-line-subtle">
+            <tr *ngFor="let item of pendingManagerList" class="hover:bg-surface-muted">
+              <td class="p-3 font-bold text-fg">
                 {{ item.first_name }} {{ item.last_name }}
               </td>
-              <td class="p-3 font-mono font-bold text-slate-600">
-                {{ item.national_code }}
-                <button *ngIf="item.id" (click)="copyToClipboard(item.national_code, item.id)" title="کپی" class="text-slate-400 hover:text-amber-600 mr-1 cursor-pointer">📋</button>
+              <td class="p-3 font-mono font-bold text-fg-muted">
+                <span dir="ltr">{{ item.national_code }}</span><span *ngIf="isMasked(item.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
               </td>
               <td class="p-3">
-                <div class="font-bold text-slate-700">{{ item.job_title || 'کارگر' }}</div>
-                <div class="text-[11px] text-slate-500">گروه {{ item.job_grade || '۱۹' }}</div>
+                <div class="font-bold text-fg">{{ item.job_title || 'کارگر' }}</div>
+                <div class="text-[11px] text-fg-muted">گروه {{ item.job_grade || '۱۹' }}</div>
               </td>
-              <td class="p-3 font-mono font-black text-slate-800">
+              <td class="p-3 font-mono font-black text-fg">
                 {{ item.daily_base_wage ? (item.daily_base_wage | number) + ' ریال' : 'تعیین نشده' }}
               </td>
               <td class="p-3">
-                <div *ngIf="item.sheba_number" class="font-mono text-[11px] font-bold text-slate-700">IR{{ item.sheba_number }}</div>
-                <div class="text-[10px] text-slate-500">{{ item.bank_name || 'بانک نامشخص' }}</div>
+                <div *ngIf="item.sheba_number" class="font-mono text-[11px] font-bold text-fg" dir="ltr">IR{{ item.sheba_number }}</div>
+                <span *ngIf="isMasked(item.sheba_number)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+                <div class="text-[10px] text-fg-muted">{{ item.bank_name || 'بانک نامشخص' }}</div>
               </td>
               <td class="p-3 text-center">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    appAction="approve"
-                    size="sm"
-                    display="label"
-                    label="تصویب استخدام"
-                    (click)="openApproveModal('new', item)"></button>
-                  <button
-                    *ngIf="item.id"
-                    type="button"
-                    appAction="reject"
-                    size="sm"
-                    display="label"
-                    label="عدم تصویب / رد"
-                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel')"></button>
-                </div>
+                <button
+                  *ngIf="item.id"
+                  type="button"
+                  appAction="view"
+                  size="sm"
+                  display="label"
+                  label="تحلیل بار مالی"
+                  (click)="openCostModal(item)"></button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- صفحه‌بندی -->
+    <div *ngIf="totals.new > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
+      <button type="button" (click)="goToPage('new', pages.new - 1)" [disabled]="pages.new <= 1 || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <span class="hidden sm:inline">قبلی</span>
+      </button>
+      <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.new) }} از {{ formatNumber(totalPages('new')) }}</span>
+      <button type="button" (click)="goToPage('new', pages.new + 1)" [disabled]="pages.new >= totalPages('new') || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+        <span class="hidden sm:inline">بعدی</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+      </button>
     </div>
   </div>
 
@@ -154,31 +180,59 @@
         </table>
       </div>
     </div>
+
+    <!-- صفحه‌بندی -->
+    <div *ngIf="totals.contracts > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
+      <button type="button" (click)="goToPage('contracts', pages.contracts - 1)" [disabled]="pages.contracts <= 1 || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <span class="hidden sm:inline">قبلی</span>
+      </button>
+      <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.contracts) }} از {{ formatNumber(totalPages('contracts')) }}</span>
+      <button type="button" (click)="goToPage('contracts', pages.contracts + 1)" [disabled]="pages.contracts >= totalPages('contracts') || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+        <span class="hidden sm:inline">بعدی</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+      </button>
+    </div>
   </div>
 
   <!-- تب ۳: تصویب تغییرات پرسنل -->
   <div *ngIf="activeSubTab === 'changes'" class="space-y-3">
-    <div *ngIf="changeRequests.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <span class="text-3xl block mb-2">🔄</span>
+    <!-- پیوند به کارهای من: تصویب، عودت و رد در موتور گردش‌کار انجام می‌شود -->
+    <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <span class="font-bold text-indigo-900">درخواست‌های تغییر فقط‌خواندنی است؛ تصویب و رد را از «کارهای من» انجام دهید.</span>
+      <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_change' }"
+        class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+        title="رفتن به کارهای من" aria-label="رفتن به کارهای من">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" aria-hidden="true"></svg>
+        <span>کارهای من</span>
+      </a>
+    </div>
+
+    <div *ngIf="loadError" class="bg-rose-50 border border-rose-200 rounded-2xl p-3 text-xs font-bold text-rose-800" role="alert">{{ loadError }}</div>
+
+    <div *ngIf="changeRequests.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-fg-muted">
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای تصویب مدیر وجود ندارد.</p>
     </div>
 
-    <div *ngIf="changeRequests.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div *ngIf="changeRequests.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
+          <thead class="bg-surface-muted text-fg-muted border-b border-line">
             <tr>
               <th class="p-3">نام پرسنل</th>
               <th class="p-3">کد ملی</th>
               <th class="p-3">مغایرت‌ها</th>
               <th class="p-3">تاریخ درخواست</th>
-              <th class="p-3 text-center">عملیات تصویب</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr *ngFor="let cr of changeRequests" class="hover:bg-slate-50/50">
-              <td class="p-3 font-bold text-slate-800">{{ cr.personnel_name }}</td>
-              <td class="p-3 font-mono">{{ cr.national_code }}</td>
+          <tbody class="divide-y divide-line-subtle">
+            <tr *ngFor="let cr of changeRequests" class="hover:bg-surface-muted">
+              <td class="p-3 font-bold text-fg">{{ cr.personnel_name }}</td>
+              <td class="p-3 font-mono"><span dir="ltr">{{ cr.national_code }}</span><span *ngIf="isMasked(cr.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-3">
                 <button
                   type="button"
@@ -188,28 +242,28 @@
                   display="label"
                   (click)="openDiffModal(cr)"></button>
               </td>
-              <td class="p-3 font-mono text-slate-500">{{ cr.created_at | slice:0:10 }}</td>
-              <td class="p-3 text-center">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    appAction="approve"
-                    label="تصویب تغییرات"
-                    size="sm"
-                    display="label"
-                    (click)="openApproveModal('changes', cr)"></button>
-                  <button
-                    type="button"
-                    appAction="reject"
-                    size="sm"
-                    display="label"
-                    (click)="openRejectModal(cr.id, cr.personnel_name || '', 'changes')"></button>
-                </div>
-              </td>
+              <td class="p-3 font-mono text-fg-muted">{{ cr.created_at | slice:0:10 }}</td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- صفحه‌بندی -->
+    <div *ngIf="totals.changes > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
+      <button type="button" (click)="goToPage('changes', pages.changes - 1)" [disabled]="pages.changes <= 1 || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <span class="hidden sm:inline">قبلی</span>
+      </button>
+      <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.changes) }} از {{ formatNumber(totalPages('changes')) }}</span>
+      <button type="button" (click)="goToPage('changes', pages.changes + 1)" [disabled]="pages.changes >= totalPages('changes') || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+        <span class="hidden sm:inline">بعدی</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+      </button>
     </div>
   </div>
 
@@ -232,10 +286,10 @@
           <tbody class="divide-y divide-slate-100">
             <tr *ngFor="let p of allPersonnelList" class="hover:bg-slate-50/50">
               <td class="p-3 font-bold text-slate-800">{{ p.first_name }} {{ p.last_name }}</td>
-              <td class="p-3 font-mono font-bold">{{ p.national_code }}</td>
+              <td class="p-3 font-mono font-bold"><span dir="ltr">{{ p.national_code }}</span><span *ngIf="isMasked(p.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-3">{{ p.job_title || '—' }}</td>
               <td class="p-3 font-mono">{{ p.daily_base_wage ? (p.daily_base_wage | number) + ' ریال' : '—' }}</td>
-              <td class="p-3 font-mono text-[11px] text-slate-500" dir="ltr">{{ p.sheba_number || '—' }}</td>
+              <td class="p-3 font-mono text-[11px] text-slate-500"><span dir="ltr">{{ p.sheba_number || '—' }}</span><span *ngIf="isMasked(p.sheba_number)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-3">
                 <span *ngIf="p.is_active !== false; else inactiveBadge" class="px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-100 text-emerald-800">
                   {{ p.approval_status === 'approved' ? 'فعال و مصوب' : p.approval_status }}
@@ -270,36 +324,53 @@
         </table>
       </div>
     </div>
+
+    <!-- صفحه‌بندی -->
+    <div *ngIf="totals.all > pageSize" class="p-3 bg-surface rounded-2xl border border-line flex items-center justify-between gap-2 text-xs">
+      <button type="button" (click)="goToPage('all', pages.all - 1)" [disabled]="pages.all <= 1 || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <span class="hidden sm:inline">قبلی</span>
+      </button>
+      <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.all) }} از {{ formatNumber(totalPages('all')) }}</span>
+      <button type="button" (click)="goToPage('all', pages.all + 1)" [disabled]="pages.all >= totalPages('all') || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+        <span class="hidden sm:inline">بعدی</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+      </button>
+    </div>
   </div>
 
-  <!-- ── مودال تصویب و یادداشت مدیر (تسک ۱۰.۱ و ۱۰.۲) ── -->
-  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+  <!-- ── مودال تحلیل بار مالی (فقط‌خواندنی) ── -->
+  <div *ngIf="isCostModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
     <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
-          <span>👑</span> {{ approvalTarget?.title }}
+          <span>👑</span> {{ costTarget?.title }}
         </h3>
-        <button type="button" appAction="close" display="icon" (click)="closeApproveModal()"></button>
+        <button type="button" appAction="close" display="icon" (click)="closeCostModal()"></button>
       </div>
 
       <div class="p-4 space-y-3.5 max-h-[80vh] overflow-y-auto">
         <!-- ویجت تحلیل بار مالی پرسنل (تسک ۱۰.۱) -->
-        <div *ngIf="approvalTarget?.type === 'new' && approvalTarget?.item" class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5" aria-live="polite" [attr.aria-busy]="isLoadingCostAnalysis">
+        <div *ngIf="costTarget?.item" class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5" aria-live="polite" [attr.aria-busy]="isLoadingCostAnalysis">
           <div class="flex flex-wrap items-center justify-between gap-1.5">
             <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
               <span>📊</span> تحلیل بار مالی و تعهدات کارفرما
             </span>
             <span
-              *ngIf="getCostDeviationPercentage(approvalTarget?.item) !== null"
+              *ngIf="getCostDeviationPercentage(costTarget?.item) !== null"
               class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm"
-              [ngClass]="getCostDeviationPercentage(approvalTarget?.item)! <= 0
+              [ngClass]="getCostDeviationPercentage(costTarget?.item)! <= 0
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : (getCostDeviationPercentage(approvalTarget?.item)! <= 15
+                : (getCostDeviationPercentage(costTarget?.item)! <= 15
                     ? 'bg-amber-50 text-amber-700 border-amber-200'
                     : 'bg-rose-50 text-rose-700 border-rose-200')">
-              {{ getCostDeviationPercentage(approvalTarget?.item)! <= 0
+              {{ getCostDeviationPercentage(costTarget?.item)! <= 0
                 ? 'مقرون‌به‌صرفه (کمتر از میانگین سازمان)'
-                : (getCostDeviationPercentage(approvalTarget?.item) + '٪ بالاتر از میانگین سازمان') }}
+                : (getCostDeviationPercentage(costTarget?.item) + '٪ بالاتر از میانگین سازمان') }}
             </span>
           </div>
 
@@ -308,21 +379,21 @@
             <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm">
               <div class="text-slate-500 text-[10px]">ناخالص برآوردی پرسنل</div>
               <div class="font-mono font-black text-slate-800 mt-0.5">
-                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getPersonnelGrossMonthly(approvalTarget?.item) !== null ? (getPersonnelGrossMonthly(approvalTarget?.item) | number) : '—') }}
+                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getPersonnelGrossMonthly(costTarget?.item) !== null ? (getPersonnelGrossMonthly(costTarget?.item) | number) : '—') }}
                 <span class="text-[9px] text-slate-400 font-normal">ریال</span>
               </div>
             </div>
             <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm">
               <div class="text-slate-500 text-[10px]">سهم بیمه کارفرما و بیکاری</div>
               <div class="font-mono font-black text-amber-700 mt-0.5">
-                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getEmployerInsuranceShare(approvalTarget?.item).cost !== null ? (getEmployerInsuranceShare(approvalTarget?.item).cost | number) : '—') }}
+                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getEmployerInsuranceShare(costTarget?.item).cost !== null ? (getEmployerInsuranceShare(costTarget?.item).cost | number) : '—') }}
                 <span class="text-[9px] text-slate-400 font-normal">ریال</span>
               </div>
             </div>
             <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm">
               <div class="text-slate-500 text-[10px]">کل هزینه ماهانه کارفرما</div>
               <div class="font-mono font-black text-indigo-700 mt-0.5">
-                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getTotalEmployerMonthlyCost(approvalTarget?.item) !== null ? (getTotalEmployerMonthlyCost(approvalTarget?.item) | number) : '—') }}
+                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getTotalEmployerMonthlyCost(costTarget?.item) !== null ? (getTotalEmployerMonthlyCost(costTarget?.item) | number) : '—') }}
                 <span class="text-[9px] text-slate-400 font-normal">ریال</span>
               </div>
             </div>
@@ -332,92 +403,25 @@
           <div class="flex items-center justify-between text-[11px] bg-white px-3 py-2 rounded-xl border border-slate-200/80 shadow-sm">
             <span class="text-slate-600 font-bold">برآورد بار مالی سالانه (۱۲ ماه):</span>
             <span class="font-mono font-black text-slate-900">
-              {{ getTotalEmployerYearlyCost(approvalTarget?.item) !== null ? (getTotalEmployerYearlyCost(approvalTarget?.item) | number) + ' ریال' : '—' }}
+              {{ getTotalEmployerYearlyCost(costTarget?.item) !== null ? (getTotalEmployerYearlyCost(costTarget?.item) | number) + ' ریال' : '—' }}
             </span>
           </div>
         </div>
 
-        <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-600 block">یادداشت یا شروط تصویب مدیر (اختیاری):</label>
-          <textarea
-            [(ngModel)]="approvalNote"
-            rows="3"
-            placeholder="شروط ابلاغ، دستورات خاص یا یادداشت مدیریتی..."
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
-        </div>
       </div>
 
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
           type="button"
           appAction="close"
-          label="انصراف"
+          label="بستن"
           display="label"
-          (click)="closeApproveModal()"></button>
-        <button
-          type="button"
-          appAction="approve"
-          label="تصویب نهایی"
-          [busy]="isApproving"
-          display="label"
-          (click)="submitApproval()"></button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── مودال عودت یا رد پرونده توسط مدیر (تسک ۱۰.۲) ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in zoom-in duration-150">
-      <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
-        <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
-          <span>⚠️</span> تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
-        </h3>
-        <button type="button" appAction="close" display="icon" (click)="closeRejectModal()"></button>
-      </div>
-
-      <div class="p-4 space-y-3">
-        <!-- رادیوباتن انتخاب مقصد عودت به حسابدار در برابر رد قطعی -->
-        <div *ngIf="rejectTarget?.type === 'personnel'" class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-600 block">اقدام مورد نظر مدیر ارشد:</label>
-          <div class="grid grid-cols-2 gap-2">
-            <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
-              [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
-              <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
-            </label>
-            <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
-              [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
-              <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-reject" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-600 block">دلیل مستند (الزامی):</label>
-          <textarea
-            [(ngModel)]="rejectReason"
-            rows="3"
-            placeholder="علت عودت جهت اصلاح احکام و مدارک مالی، یا دلیل رد قطعی..."
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
-        </div>
-      </div>
-
-      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
-        <button
-          type="button"
-          appAction="close"
-          label="انصراف"
-          display="label"
-          (click)="closeRejectModal()"></button>
-        <button
-          type="button"
-          [appAction]="rejectActionType === 'reject_final' ? 'reject' : 'return'"
-          [label]="rejectActionType === 'reject_final' ? 'رد قطعی' : 'عودت به حسابدار'"
-          [busy]="isRejecting"
-          [disabled]="isRejecting || !rejectReason.trim()"
-          display="label"
-          (click)="submitReject()"></button>
+          (click)="closeCostModal()"></button>
+        <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_profile' }" (click)="closeCostModal()"
+          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+          title="رفتن به کارهای من" aria-label="رفتن به کارهای من">
+          <span>کارهای من</span>
+        </a>
       </div>
     </div>
   </div>

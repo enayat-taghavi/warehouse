@@ -28,28 +28,24 @@ describe('ManagerApprovals Unit Tests', () => {
     };
 
     mockPersonnelApi = {
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([
-        { id: 1, full_name: 'محمد رضایی', national_code: '1234567890', approval_status: 'draft' },
-        { id: 2, full_name: 'علی حسینی', national_code: '0987654321', approval_status: 'revision_required' }
-      ])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 2, next: null, previous: null, results: [
+        { id: 1, full_name: 'محمد رضایی', national_code: '12******90', approval_status: 'pending_manager' },
+        { id: 2, full_name: 'علی حسینی', national_code: '0987654321', approval_status: 'pending_manager' }
+      ] })),
       getVehicleProfiles: vi.fn().mockReturnValue(of([
         { id: 10, driver_name: 'حسین احمدی', plate_number: '12-345-67', approval_status: 'draft' }
       ])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [
         { id: 201, status: 'pending_manager', changes_payload: { first_name: { old: 'علی', new: 'علیرضا' } } }
-      ])),
+      ] })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([])),
       getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({
         year_month: '1405/04',
         period_status: 'OPEN'
       })),
       getYearlySettings: vi.fn().mockReturnValue(of({ fiscal_year: '1405', job_grades: [] })),
-      approvePersonnelManager: vi.fn().mockReturnValue(of({ message: 'تایید شد' })),
       approveVehicleManager: vi.fn().mockReturnValue(of({ message: 'تایید شد' })),
-      approvePersonnelChangeRequestManager: vi.fn().mockReturnValue(of({ message: 'تایید شد' })),
       periodWorkflowAction: vi.fn().mockReturnValue(of({ message: 'ارسال شد' })),
-      rejectPersonnel: vi.fn().mockReturnValue(of({ message: 'رد شد' })),
-      requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'ارجاع شد' })),
       getExpenseInvoices: vi.fn().mockReturnValue(of([])),
       getPettyCashTransactions: vi.fn().mockReturnValue(of([])),
       getWorkflowAuditLogs: vi.fn().mockReturnValue(of([])),
@@ -98,8 +94,9 @@ describe('ManagerApprovals Unit Tests', () => {
   it('should initialize and load draft personnel', () => {
     component.ngOnInit();
     expect(component.activeTab).toBe('new_personnel');
-    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
+    expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 20 }));
     expect(component.personnelList.length).toBe(2);
+    expect(component.personnelCount).toBe(2);
     expect(component.pendingPersonnelCount).toBe(2);
   });
 
@@ -123,10 +120,18 @@ describe('ManagerApprovals Unit Tests', () => {
     expect(component.diffFieldRows[0].is_changed).toBe(true);
   });
 
-  it('should approve personnel by manager and reload data', () => {
-    component.approvePersonnelManager({ id: 1 } as any);
-    expect(mockPersonnelApi.approvePersonnelManager).toHaveBeenCalledWith(1);
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
+  it('personnel approve / reject / edit actions are gone (engine my-tasks does them)', () => {
+    const c: any = component;
+    expect(c.approvePersonnelManager).toBeUndefined();
+    expect(c.openEditPersonnelModal).toBeUndefined();
+    expect(c.savePersonnelProfile).toBeUndefined();
+    expect(mockPersonnelApi.approvePersonnelManager).toBeUndefined();
+  });
+
+  it('shows masked national code as-is and detects it with isMasked', () => {
+    component.ngOnInit();
+    expect(component.isMasked(component.personnelList[0].national_code)).toBe(true);
+    expect(component.isMasked(component.personnelList[1].national_code)).toBe(false);
   });
 
   it('should submit work period for finance review', () => {
@@ -140,30 +145,16 @@ describe('ManagerApprovals Unit Tests', () => {
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
   });
 
-  it('should filter personnel change requests by status and search query', () => {
-    component.personnelChangeRequests = [
-      { id: 111, personnel_name: 'احمد حسینی', status: 'pending_manager', personnel_national_code: '0012345678' } as any,
-      { id: 110, personnel_name: 'احمد حسینی', status: 'rejected', personnel_national_code: '0012345678' } as any,
-      { id: 105, personnel_name: 'رضا کمالی', status: 'pending_manager', personnel_national_code: '9876543210' } as any
-    ];
-
-    // Default crStatusFilter is 'pending_manager'
-    expect(component.filteredPersonnelChangeRequests.length).toBe(2);
-
-    // Filter by search query
+  it('personnel change requests are filtered on the server (status + search + page)', () => {
+    component.changeRequestSubTab = 'personnel';
     component.crSearchQuery = 'احمد';
-    expect(component.filteredPersonnelChangeRequests.length).toBe(1);
-    expect(component.filteredPersonnelChangeRequests[0].id).toBe(111);
-
-    // Switch to ALL
-    component.crSearchQuery = '';
-    component.setCRStatusFilter('ALL');
-    expect(component.filteredPersonnelChangeRequests.length).toBe(3);
-
-    // Switch to rejected
     component.setCRStatusFilter('rejected');
-    expect(component.filteredPersonnelChangeRequests.length).toBe(1);
-    expect(component.filteredPersonnelChangeRequests[0].id).toBe(110);
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, page_size: 20, status: 'rejected', search: 'احمد' })
+    );
+    component.setCRStatusFilter('ALL');
+    const last = mockPersonnelApi.getPersonnelChangeRequestsPage.mock.calls.slice(-1)[0][0];
+    expect(last.status).toBeUndefined();
   });
 
   it('should ignore internal system fields (like approval_status) in Diff Viewer modal and translate phone_number', () => {

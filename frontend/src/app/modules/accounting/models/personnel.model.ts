@@ -85,9 +85,13 @@ export interface PersonnelProfile {
   notes?: string;
   valid_until_date?: string;
   recommender?: string;
+  /** برای بینندهٔ بی دید کامل null است */
   attachment?: string | null;
   bank_accounts?: PersonnelBankAccount[];
+  /** برای بینندهٔ بی دید کامل فقط مدرک‌های بارگذاری‌شده به دست خودش */
   documents?: PersonnelDocument[];
+  /** تعداد همهٔ مدرک‌ها (برای همه) */
+  documents_count?: number;
   missing_fields?: Array<{ field: string; label: string } | string>;
 
   assigned_warehouse?: number | null;
@@ -976,6 +980,40 @@ export interface PagedResult<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+}
+
+/** مقدار پوشیدهٔ سرور (۴.۳، ق۱۶) ستاره دارد؛ نمایش فقط‌خواندنی، هرگز دوباره فرستاده نمی‌شود */
+export function isMaskedValue(value: unknown): boolean {
+  return typeof value === 'string' && value.includes('*');
+}
+
+/** پاسخ جستجوی کد ملی؛ برای کاربر بی دید کامل فقط «هست/نیست» و نام (masked) */
+export interface PersonnelLookupResult {
+  found: boolean;
+  masked?: boolean;
+  /** پاسخ کامل همان پرونده؛ در حالت masked فقط first_name و last_name */
+  personnel?: any;
+}
+
+/** کدهای خطای اکشن‌های پرونده و درخواست تغییر روی موتور گردش (۴.۳-ب) */
+export type PersonnelWorkflowErrorCode =
+  | 'wrong_step' | 'action_blocked' | 'reason_required' | 'not_recipient' | 'self_approval'
+  | 'task_already_done' | 'invalid_state' | 'invalid_change_request';
+
+export interface PersonnelWorkflowError {
+  code?: PersonnelWorkflowErrorCode | string;
+  error?: string;
+  detail?: string;
+  missing_fields?: Array<{ field: string; label: string } | string>;
+}
+
+export interface PersonnelBatchApproveRow {
+  id: number;
+  full_name?: string;
+  success: boolean;
+  error?: string;
+  code?: PersonnelWorkflowErrorCode | string;
+  missing_fields?: Array<{ field: string; label: string } | string>;
 }
 
 export interface ExpenseInvoice {

@@ -2,9 +2,10 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, Optional
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
 import { Observable, Subject, Subscription, concat, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, toArray } from 'rxjs/operators';
-import { ProjectSection, PersonnelProfile, PersonnelBankAccount, PersonnelDocument, WorkflowAuditLog } from '../../../../models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelBankAccount, PersonnelDocument, WorkflowAuditLog, isMaskedValue } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
@@ -45,10 +46,18 @@ import { ConfirmDialogService } from '../../../../../../shared/components/confir
 export type PersonnelStatusFilter = 'all' | 'draft' | 'pending' | 'pending_supervisor' | 'manager_approved' | 'approved' | 'revision_required' | 'rejected';
 export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'documents';
 
+function stripMaskedValues<T extends Record<string, any>>(obj: T): T {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (!isMaskedValue(v)) out[k] = v;
+  }
+  return out as T;
+}
+
 @Component({
   selector: 'app-employee-new-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, PersianDatePipe, ActionButtonComponent, TabBarComponent, ServerUrlPipe, ExternalLinkDirective],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, PersianDatePipe, ActionButtonComponent, TabBarComponent, ServerUrlPipe, ExternalLinkDirective, ModalComponent],
   templateUrl: './employee-new-personnel.html',
   styleUrl: './employee-new-personnel.css'
 })
@@ -113,6 +122,30 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   postalCodeError: string | null = null;
   serverMissingFields: Array<{ field: string; label: string }> = [];
   isFoundPersonnelRejected: boolean = false;
+  /** نام پروندهٔ یافت‌شده برای کاربر بدون دید کامل (پاسخ masked)؛ فقط نمایش */
+  maskedLookupName: string | null = null;
+  readonly maskedHint = 'برای دیدن کامل مجوز لازم است';
+
+  isMasked(v: unknown): boolean {
+    return isMaskedValue(v);
+  }
+
+  /** چاپ پروندهٔ ذخیره‌شده در سرور (تب جدید) */
+  openPersonnelPrint(p: { id?: number } | null | undefined): void {
+    if (!p?.id || p.id < 0) return;
+    window.open(this.personnelApi.personnelProfilePrintUrl(p.id), '_blank', 'noopener');
+  }
+
+  formatFa(n: number | null | undefined): string {
+    return new Intl.NumberFormat('fa-IR').format(n ?? 0);
+  }
+
+  /** تعداد مدارکی که کاربر نمی‌بیند (documents_count بزرگ‌تر از لیست دریافتی) */
+  hiddenDocumentsCount(p: PersonnelProfile | null | undefined): number {
+    const total = (p as any)?.documents_count;
+    const got = Array.isArray(p?.documents) ? p!.documents!.length : 0;
+    return typeof total === 'number' && total > got ? total : 0;
+  }
   jobItems: Array<{ title: string; job_codes: string[] }> = [];
   availableJobCodes: string[] = [];
   bankAccounts: PersonnelBankAccount[] = [];
@@ -1560,6 +1593,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     if (isValid && !this.editingPersonnel) {
       this.lookupExistingPersonnel(code);
     } else {
+      this.maskedLookupName = null;
       this.foundExistingPersonnel = null;
       this.existingPersonnelId = null;
       this.existingPersonnelSectionId = null;
@@ -1570,10 +1604,20 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   lookupExistingPersonnel(code: string): void {
     if (!this.personnelApi?.lookupPersonnelByNationalCode) return;
     this.isLookingUpNationalCode = true;
+    this.maskedLookupName = null;
     this.personnelApi.lookupPersonnelByNationalCode(code).subscribe({
       next: (res) => {
         this.isLookingUpNationalCode = false;
-        if (res?.found && res.personnel) {
+        if (res?.found && res.masked) {
+          // کاربر بدون دید کامل: فقط «پرونده دارد» و نام؛ بدون پرکردن فرم و بدون بازگشایی
+          this.maskedLookupName = `${res.personnel?.first_name || ''} ${res.personnel?.last_name || ''}`.trim();
+          this.foundExistingPersonnel = null;
+          this.existingPersonnelId = null;
+          this.existingPersonnelSectionId = null;
+          this.isFoundPersonnelRejected = false;
+          this.cdr.detectChanges();
+        } else if (res?.found && res.personnel) {
+          this.maskedLookupName = null;
           this.foundExistingPersonnel = res.personnel;
           this.existingPersonnelId = res.personnel.id;
           this.existingPersonnelSectionId = res.personnel.current_section_id;
@@ -2026,7 +2070,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   private buildFormValues(): Record<string, any> {
     const np: any = this.newPersonnel;
     const text = (v: any): string => (typeof v === 'string' ? v.trim() : (v === null || v === undefined ? '' : String(v)));
-    return {
+    return stripMaskedValues({
       first_name: text(np.first_name),
       last_name: text(np.last_name),
       national_code: text(np.national_code),
@@ -2055,7 +2099,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       account_number: text(np.account_number),
       sheba_number: np.sheba_number ? cleanShebaInput(np.sheba_number) : '',
       card_number: text(np.card_number),
-    };
+    });
   }
 
   private normalizeForDiff(v: any): string {
@@ -2083,8 +2127,14 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     const e = err?.error;
     if (!e) return err?.message || 'نامشخص';
     if (typeof e === 'string') return e;
-    if (e.error) return e.error;
-    if (e.detail) return e.detail;
+    if (e.error || e.detail) {
+      let msg: string = e.error || e.detail;
+      if (Array.isArray(e.missing_fields) && e.missing_fields.length) {
+        const labels = e.missing_fields.map((m: any) => (typeof m === 'string' ? m : (m?.label || m?.field))).filter(Boolean);
+        if (labels.length) msg += ': ' + labels.join('، ');
+      }
+      return msg;
+    }
     for (const [field, value] of Object.entries(e)) {
       const msg = Array.isArray(value) ? value[0] : (typeof value === 'string' ? value : null);
       if (msg) return `${field}: ${msg}`;
@@ -2117,7 +2167,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       const orig = f === 'sheba_number' ? cleanShebaInput(String(original?.sheba_number || '')) : original?.[f];
       if (this.normalizeForDiff(cur) !== this.normalizeForDiff(orig)) changes[f as string] = cur ?? '';
     }
-    return changes;
+    return stripMaskedValues(changes);
   }
 
   /**
@@ -2131,7 +2181,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     const snapshot = (list: PersonnelBankAccount[]) => JSON.stringify(list.map(a => [a.id ?? null, a.bank_name, a.account_number || '', cleanShebaInput(String(a.sheba_number || '')), a.card_number || '', !!a.is_primary]));
     if (snapshot(desired) === snapshot(original)) return of([]);
 
-    const body = (a: PersonnelBankAccount) => ({
+    const body = (a: PersonnelBankAccount) => stripMaskedValues({
       bank_name: a.bank_name,
       account_number: a.account_number || '',
       sheba_number: cleanShebaInput(String(a.sheba_number || '')),
@@ -2301,7 +2351,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       if (targetStatus === 'draft') body['approval_status'] = 'draft';
       if (this.bankAccounts.length > 0) {
         // نویسندهٔ واحد: با حساب‌های تودرتو، سرور فیلدهای تخت بانکی را نادیده می‌گیرد (DEF-01)
-        body['bank_accounts'] = this.bankAccounts.map(a => ({
+        body['bank_accounts'] = this.bankAccounts.map(a => stripMaskedValues({
           bank_name: a.bank_name,
           account_number: a.account_number || '',
           sheba_number: cleanShebaInput(String(a.sheba_number || '')),
@@ -2775,7 +2825,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
 
   // ─── مدیریت کپی سریع با تیک سبز ۲ ثانیه‌ای (فاز ۷ - تسک ۷.۱) ───
   copyValue(val?: string, key?: string, label: string = 'مقدار'): void {
-    if (!val) return;
+    if (!val || isMaskedValue(val)) return;
     this.copyToClipboard(val, label);
     if (key) {
       if (this.copiedTimeout) {

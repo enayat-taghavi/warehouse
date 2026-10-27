@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, Subscription, of } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -15,7 +15,9 @@ import {
   PersonnelProfile,
   PersonnelChangeRequest,
   PayrollYearlySettings,
-  PersonnelCostEstimate
+  PersonnelCostEstimate,
+  PersonnelWorkflowError,
+  isMaskedValue
 } from '../../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -30,7 +32,6 @@ import {
   validateAccountNumber
 } from '../../../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
-import { ModalFocus } from '../../../../../../core/utils/modal-focus';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
@@ -48,11 +49,11 @@ export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pe
     ReactiveFormsModule,
     SvgIconDirective,
     TabBarComponent,
-    ActionButtonComponent
+    ActionButtonComponent,
+    RouterLink
   ],
   templateUrl: './accountant-personnel.html',
-  styleUrl: './accountant-personnel.css',
-  host: { '(document:keydown.escape)': 'onApprovalEscape()', '(document:keydown)': 'onDocumentKeydown($event)' }
+  styleUrl: './accountant-personnel.css'
 })
 export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   activeSubTab: AccountantPersonnelSubTab = 'new';
@@ -69,7 +70,14 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   personnelItems: PersonnelProfile[] = [];
   payrollRecords: any[] = [];
   changeRequests: PersonnelChangeRequest[] = [];
-  allPersonnelList: PersonnelProfile[] = [];
+  // صفحه‌بندی سمت سرور (۴.۳-ج): فهرست‌ها فقط‌خواندنی‌اند؛ تایید/عودت/رد در «کارهای من» انجام می‌شود
+  readonly pageSize = 20;
+  personnelPage = 1;
+  personnelCount = 0;
+  changesPage = 1;
+  changesCount = 0;
+  loadError = false;
+  readonly isMasked = isMaskedValue;
   yearlySettings: PayrollYearlySettings | null = null;
 
   statusCounters = {
@@ -154,12 +162,6 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     }
   ];
 
-  // انتخاب و تایید گروهی حسابدار (تسک ۹.۷)
-  selectedPersonnelIds: Set<number> = new Set();
-  isBatchApprovalModalOpen = false;
-  batchApprovalNote = '';
-  isBatchApproving = false;
-
   // عناوین و کدهای شغلی استاندارد تامین اجتماعی (تسک ۹.۴)
   jobTitles: string[] = [];
   jobItems: Array<{ title: string; job_codes: string[] }> = [];
@@ -176,24 +178,6 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   bankSearchQuery = '';
   shebaValidationResult: ShebaValidationResult | null = null;
   shebaDigitsDisplay = '';
-
-  // مودال تایید مالی با یادداشت اختیاری
-  isApprovalModalOpen = false;
-  approvalTarget: { id: number; title: string; type: 'personnel' | 'personnel_cr' } | null = null;
-  approvalNote = '';
-  isApproving = false;
-
-  // مودال علت عودت یا رد (تسک ۹.۶: انتخاب مقصد عودت)
-  isRejectModalOpen = false;
-  rejectTarget: {
-    id: number;
-    title: string;
-    type: 'personnel' | 'personnel_cr';
-    action: 'reject' | 'revision';
-  } | null = null;
-  rejectReason = '';
-  revisionDestination: 'revision_required' | 'pending_supervisor' = 'pending_supervisor';
-  isSubmittingReject = false;
 
   // مودال مقایسه تفاوت‌ها (Diff Viewer)
   isDiffModalOpen = false;
@@ -315,6 +299,8 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   onSectionChanged(): void {
+    this.personnelPage = 1;
+    this.changesPage = 1;
     this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
     this.syncUrlParams();
     this.fetchData();
@@ -325,6 +311,8 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       return;
     }
     this.activeSubTab = tab as AccountantPersonnelSubTab;
+    this.personnelPage = 1;
+    this.changesPage = 1;
     this.syncUrlParams();
     this.fetchData();
   }
@@ -365,6 +353,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
 
   fetchData(): void {
     this.isLoading = true;
+    this.loadError = false;
     const baseParams: any = {};
     if (this.selectedSectionId) {
       baseParams.section_id = this.selectedSectionId;
@@ -372,31 +361,48 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     if (this.searchQuery.trim()) {
       baseParams.search = this.searchQuery.trim();
     }
+    const pendingStatuses = 'pending_accountant,supervisor_approved';
 
-    // ۱. دریافت پرونده‌های جدید پرسنل در انتظار تایید حسابدار
-    this.personnelApi.getPersonnelProfiles(baseParams).subscribe({
-      next: (res: PersonnelProfile[]) => {
-        const allList = res || [];
-        this.allPersonnelList = allList;
-        this.statusCounters.allTotal = allList.length;
-        this.statusCounters.newPending = allList.filter(p => p.approval_status === 'pending_accountant' || p.approval_status === 'supervisor_approved').length;
-
-        if (this.activeSubTab === 'new') {
-          this.personnelItems = allList.filter(p => p.approval_status === 'pending_accountant' || p.approval_status === 'supervisor_approved');
-        } else if (this.statusFilter !== 'ALL') {
-          this.personnelItems = allList.filter(p => p.approval_status === this.statusFilter);
-        } else {
-          this.personnelItems = allList;
-        }
-
+    // ۱. پرونده‌های پرسنل (صفحه‌ای): زبانهٔ «احکام» فقط در انتظار حسابدار، «همه» بدون فیلتر
+    const pParams: any = { ...baseParams, page: this.personnelPage, page_size: this.pageSize };
+    if (this.activeSubTab === 'new') {
+      pParams.approval_status = pendingStatuses;
+    } else if (this.statusFilter !== 'ALL') {
+      pParams.approval_status = this.statusFilter;
+    }
+    this.personnelApi.getPersonnelProfilesPage(pParams).subscribe({
+      next: (res) => {
+        this.personnelItems = res?.results || [];
+        this.personnelCount = res?.count ?? this.personnelItems.length;
+        if (this.activeSubTab === 'new') this.statusCounters.newPending = this.personnelCount;
+        if (this.activeSubTab === 'all' && this.statusFilter === 'ALL') this.statusCounters.allTotal = this.personnelCount;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        if (err?.status === 404 && this.personnelPage > 1) {
+          this.personnelPage = 1;
+          this.fetchData();
+          return;
+        }
+        this.loadError = true;
         this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
+    // شمارنده‌های زبانه‌ها (فقط تعداد)
+    if (this.activeSubTab !== 'new') {
+      this.personnelApi.getPersonnelProfilesPage({ ...baseParams, page: 1, page_size: 1, approval_status: pendingStatuses }).subscribe({
+        next: (res) => { this.statusCounters.newPending = res?.count ?? 0; this.cdr.detectChanges(); },
+        error: () => {}
+      });
+    }
+    if (this.activeSubTab !== 'all' || this.statusFilter !== 'ALL') {
+      this.personnelApi.getPersonnelProfilesPage({ ...baseParams, page: 1, page_size: 1 }).subscribe({
+        next: (res) => { this.statusCounters.allTotal = res?.count ?? 0; this.cdr.detectChanges(); },
+        error: () => {}
+      });
+    }
 
     // ۲. دریافت اطلاعات حقوق و دستمزد
     this.personnelApi.getMonthlyPayrollRecords({ ...baseParams, year_month: `${this.fiscalYear}/04` }).subscribe({
@@ -410,151 +416,59 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       }
     });
 
-    // ۳. دریافت درخواست‌های تغییرات پرسنل
-    this.personnelApi.getPersonnelChangeRequests(baseParams).subscribe({
-      next: (crList: PersonnelChangeRequest[]) => {
-        this.changeRequests = (crList || []).filter(cr => cr.status === 'pending_accountant' || cr.status === 'pending_finance' || cr.status === 'supervisor_approved');
-        this.statusCounters.changesPending = this.changeRequests.length;
+    // ۳. درخواست‌های تغییر پرسنل (صفحه‌ای، فقط‌خواندنی)
+    const crParams: any = { ...baseParams, page: this.changesPage, page_size: this.pageSize, status: 'pending_accountant' };
+    this.personnelApi.getPersonnelChangeRequestsPage(crParams).subscribe({
+      next: (res) => {
+        this.changeRequests = res?.results || [];
+        this.changesCount = res?.count ?? this.changeRequests.length;
+        this.statusCounters.changesPending = this.changesCount;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        if (err?.status === 404 && this.changesPage > 1) {
+          this.changesPage = 1;
+          this.fetchData();
+          return;
+        }
         this.changeRequests = [];
       }
     });
   }
 
-  // ─── اکشن‌های تایید مالی ۳ مرحله‌ای ───
-  approvePersonnelFinance(p: PersonnelProfile, note?: string): void {
-    if (!p.id) return;
-    const req$ = note ? this.personnelApi.approvePersonnelFinance(p.id, note) : this.personnelApi.approvePersonnelFinance(p.id);
-    req$.subscribe({
-      next: (res) => {
-        this.toast.showSuccess(res.message || `تایید مالی پرسنل «${p.first_name || ''} ${p.last_name || ''}» صادر و پرونده جهت تصویب نهایی به مدیر ارسال شد.`);
-        this.fetchData();
-      },
-      error: (err) => {
-        this.toast.showError(err?.error?.error || 'خطا در تایید مالی پرسنل');
-      }
-    });
+  get personnelTotalPages(): number { return Math.max(1, Math.ceil(this.personnelCount / this.pageSize)); }
+  get changesTotalPages(): number { return Math.max(1, Math.ceil(this.changesCount / this.pageSize)); }
+
+  goToPersonnelPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.personnelTotalPages);
+    if (next === this.personnelPage) return;
+    this.personnelPage = next;
+    this.fetchData();
   }
 
-  /** تایید مالی درخواست تغییرات پرسنل و ارسال به مدیر (منتقل‌شده از کارتابل مالی قدیمی) */
-  approveChangeRequestFinance(cr: PersonnelChangeRequest, note?: string): void {
-    if (!cr.id) return;
-    const req$ = note
-      ? this.personnelApi.approvePersonnelChangeRequestFinance(cr.id, note)
-      : this.personnelApi.approvePersonnelChangeRequestFinance(cr.id);
-    req$.subscribe({
-      next: (res) => {
-        this.toast.showSuccess(res?.message || 'تایید مالی ثبت و درخواست تغییرات جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
-        this.closeDiffModal();
-        this.fetchData();
-      },
-      error: (err) => {
-        this.toast.showError(err?.error?.error || 'خطا در تایید مالی درخواست تغییرات');
-      }
-    });
+  goToChangesPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.changesTotalPages);
+    if (next === this.changesPage) return;
+    this.changesPage = next;
+    this.fetchData();
   }
 
-  // ─── مودال تایید مالی با یادداشت اختیاری ───
-  private readonly approvalFocus = new ModalFocus();
-
-  openApprovalModal(id: number | undefined, title: string, type: 'personnel' | 'personnel_cr'): void {
-    if (!id) return;
-    this.approvalTarget = { id, title, type };
-    this.approvalNote = '';
-    this.isApprovalModalOpen = true;
-    this.cdr.detectChanges();
-    this.approvalFocus.open('acc-personnel-approve-dialog');
+  onSearchChanged(): void {
+    this.personnelPage = 1;
+    this.changesPage = 1;
+    this.fetchData();
   }
 
-  closeApprovalModal(): void {
-    const wasOpen = this.isApprovalModalOpen;
-    this.isApprovalModalOpen = false;
-    this.approvalTarget = null;
-    this.approvalNote = '';
-    this.cdr.detectChanges();
-    if (wasOpen) this.approvalFocus.close();
-  }
-
-  onApprovalEscape(): void {
-    if (this.isApprovalModalOpen && !this.isApproving) this.closeApprovalModal();
-  }
-
-  onDocumentKeydown(event: KeyboardEvent): void {
-    if (this.isApprovalModalOpen) this.approvalFocus.trapTab(event, 'acc-personnel-approve-dialog');
-  }
-
-  confirmApproval(): void {
-    if (!this.approvalTarget || this.isApproving) return;
-    const { id, type } = this.approvalTarget;
-    const note = this.approvalNote.trim() || undefined;
-    this.isApproving = true;
-    const req$ = type === 'personnel'
-      ? (note ? this.personnelApi.approvePersonnelFinance(id, note) : this.personnelApi.approvePersonnelFinance(id))
-      : (note ? this.personnelApi.approvePersonnelChangeRequestFinance(id, note) : this.personnelApi.approvePersonnelChangeRequestFinance(id));
-    req$.subscribe({
-      next: (res: any) => {
-        this.isApproving = false;
-        this.toast.showSuccess(res?.message || 'تایید مالی ثبت و پرونده جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
-        this.closeApprovalModal();
-        this.closeDiffModal();
-        this.fetchData();
-      },
-      error: (err: any) => {
-        this.isApproving = false;
-        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید مالی');
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
-  // ─── ارجاع به بازنگری یا رد پرونده (تسک ۹.۶) ───
-  openRejectModal(id: number, title: string, type: 'personnel' | 'personnel_cr', action: 'reject' | 'revision'): void {
-    this.rejectTarget = { id, title, type, action };
-    this.rejectReason = '';
-    this.revisionDestination = 'pending_supervisor';
-    this.isRejectModalOpen = true;
-  }
-
-  closeRejectModal(): void {
-    this.isRejectModalOpen = false;
-    this.rejectTarget = null;
-    this.rejectReason = '';
-    this.revisionDestination = 'pending_supervisor';
-  }
-
-  submitRejectModal(): void {
-    if (!this.rejectTarget || !this.rejectReason.trim()) {
-      this.toast.showWarning('لطفاً علت رد یا عودت پرونده را به صورت کامل و مستند وارد نمایید.');
-      return;
+  /** خطای فارسی از بدنهٔ پاسخ سرور (کدهای گردش کار) */
+  workflowErrorText(err: any, fallback: string): string {
+    const body: PersonnelWorkflowError = err?.error || {};
+    if (body.code === 'wrong_step') return 'این کار در مرحلهٔ دیگری است؛ از کارهای من پیگیری کنید';
+    let msg = body.error || body.detail || fallback;
+    if (body.code === 'action_blocked' && body.missing_fields?.length) {
+      const labels = body.missing_fields.map(m => typeof m === 'string' ? m : (m.label || m.field));
+      msg += ': ' + labels.join('، ');
     }
-
-    this.isSubmittingReject = true;
-    const { id, type, action } = this.rejectTarget;
-    const reason = this.rejectReason.trim();
-
-    let obs: Observable<any>;
-    if (type === 'personnel') {
-      obs = action === 'reject'
-        ? this.personnelApi.rejectPersonnel(id, reason)
-        : this.personnelApi.requestPersonnelRevision(id, reason, this.revisionDestination);
-    } else {
-      obs = this.personnelApi.rejectPersonnelChangeRequest(id, reason);
-    }
-
-    obs.subscribe({
-      next: (res) => {
-        this.isSubmittingReject = false;
-        this.toast.showSuccess(res.message || 'عملیات با موفقیت انجام شد.');
-        this.closeRejectModal();
-        this.fetchData();
-      },
-      error: (err) => {
-        this.isSubmittingReject = false;
-        this.toast.showError(err?.error?.error || 'خطا در انجام عملیات');
-      }
-    });
+    return msg;
   }
 
   // ─── استعلام عناوین شغلی و کدهای ۶ رقمی بیمه (تسک ۹.۴) ───
@@ -644,90 +558,6 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     const msalary = Number(p.contract_base_salary || 0);
     if (dwage <= 0 && msalary <= 0) missing.push('مزد روزانه یا حقوق ماهانه');
     return missing;
-  }
-
-  // ─── تایید گروهی حسابدار (تسک ۹.۷) ───
-  toggleSelectAll(): void {
-    const eligibleItems = this.personnelItems.filter(p => this.canSendToManager(p) && p.id);
-    if (this.selectedPersonnelIds.size === eligibleItems.length && eligibleItems.length > 0) {
-      this.selectedPersonnelIds.clear();
-    } else {
-      this.selectedPersonnelIds.clear();
-      eligibleItems.forEach(p => {
-        if (p.id) this.selectedPersonnelIds.add(p.id);
-      });
-    }
-    this.cdr.detectChanges();
-  }
-
-  toggleSelection(id: number | undefined): void {
-    if (!id) return;
-    if (this.selectedPersonnelIds.has(id)) {
-      this.selectedPersonnelIds.delete(id);
-    } else {
-      this.selectedPersonnelIds.add(id);
-    }
-    this.cdr.detectChanges();
-  }
-
-  isSelected(id: number | undefined): boolean {
-    return id ? this.selectedPersonnelIds.has(id) : false;
-  }
-
-  isAllSelected(): boolean {
-    const eligibleItems = this.personnelItems.filter(p => this.canSendToManager(p) && p.id);
-    return eligibleItems.length > 0 && this.selectedPersonnelIds.size === eligibleItems.length;
-  }
-
-  selectedCount(): number {
-    return this.selectedPersonnelIds.size;
-  }
-
-  openBatchApprovalModal(): void {
-    if (this.selectedPersonnelIds.size === 0) {
-      this.toast.showWarning('هیچ رکوردی برای تایید گروهی انتخاب نشده است.');
-      return;
-    }
-    this.batchApprovalNote = '';
-    this.isBatchApprovalModalOpen = true;
-    this.cdr.detectChanges();
-  }
-
-  closeBatchApprovalModal(): void {
-    this.isBatchApprovalModalOpen = false;
-    this.batchApprovalNote = '';
-    this.cdr.detectChanges();
-  }
-
-  confirmBatchApproval(): void {
-    const ids = Array.from(this.selectedPersonnelIds);
-    if (ids.length === 0 || this.isBatchApproving) return;
-
-    this.isBatchApproving = true;
-    const note = this.batchApprovalNote.trim() || undefined;
-
-    this.personnelApi.batchApprovePersonnel(ids, 'finance', note).subscribe({
-      next: (res) => {
-        this.isBatchApproving = false;
-        const successes = res?.results?.filter(r => r.success)?.length || 0;
-        const failures = res?.results?.filter(r => !r.success)?.length || 0;
-
-        if (failures === 0) {
-          this.toast.showSuccess(`تایید مالی هر ${successes} پرونده انتخاب‌شده با موفقیت ثبت و به مدیر ارسال شد.`);
-        } else {
-          this.toast.showWarning(`تایید مالی ${successes} پرونده ثبت شد؛ ${failures} پرونده با خطا مواجه شد.`);
-        }
-
-        this.selectedPersonnelIds.clear();
-        this.closeBatchApprovalModal();
-        this.fetchData();
-      },
-      error: (err) => {
-        this.isBatchApproving = false;
-        this.toast.showError(err?.error?.error || 'خطا در پردازش تایید گروهی حسابداری');
-        this.cdr.detectChanges();
-      }
-    });
   }
 
   // ─── مودال جامع ویرایش و تکمیل مدارک مالی پرسنل (تسک‌های ۹.۲، ۹.۳، ۹.۴) ───
@@ -943,6 +773,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     const changes: Record<string, any> = {};
     for (const field of AccountantPersonnelHubComponent.ACCOUNTANT_EDITABLE_FIELDS) {
       if (!(field in edited)) continue;
+      if (isMaskedValue(edited[field])) continue; // مقدار پوشیدهٔ سرور هرگز پس فرستاده نمی‌شود (ق۱۶)
       if (this.normalizeAccountantValue(field, edited[field]) !== this.normalizeAccountantValue(field, original[field])) {
         changes[field] = field === 'sheba_number' && edited[field] ? cleanShebaInput(String(edited[field])) : edited[field];
       }
@@ -981,7 +812,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
         const fieldMsg = e && typeof e === 'object' && !e.error && !e.detail
           ? Object.entries(e).map(([k, v]) => `${this.getFieldLabel(k)}: ${Array.isArray(v) ? v[0] : v}`)[0]
           : null;
-        this.toast.showError(e?.error || e?.detail || fieldMsg || 'خطا در ذخیره احکام مالی پرسنل');
+        this.toast.showError(this.workflowErrorText(err, fieldMsg || 'خطا در ذخیره احکام مالی پرسنل'));
       }
     });
   }

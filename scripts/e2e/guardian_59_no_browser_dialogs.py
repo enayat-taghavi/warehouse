@@ -40,9 +40,7 @@ BARE_CALL = re.compile(r'(?<![.\w$])' + NAMES + r'\s*\(')
 
 # prompt() بدهی شناخته‌شده است (دیالوگ «علت» هنوز جایگزین مشترک ندارد): فقط همین شمار در همین فایل‌ها.
 # افزایش یا فایل تازه شکست است؛ کاهش هم شکست است تا فهرست کهنه نماند (عدد را پایین بیاورید یا ردیف را بردارید).
-PROMPT_ALLOWLIST = {
-    'frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts': 2,
-}
+PROMPT_ALLOWLIST = {}
 PROMPT_ONLY = re.compile(r'(?:\b(?:window|globalThis|self)\s*\.\s*|(?<![.\w$]))prompt\s*\(')
 CONFIRM_OR_ALERT = re.compile(r'(?<![.\w$])(?:confirm|alert)\s*\(')
 

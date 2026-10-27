@@ -118,7 +118,7 @@ def personnel_workflow_act(user, workflow_key, obj, kind, *, stage=None, reason=
 
 def personnel_auto_submit(instance, user):
     """
-    جای عبور هوشمند قدیمی (auto_pass_personnel): ثبت‌کننده‌ای که مجوز یکی از مرحله‌ها را در بخش پرونده دارد و
+    جای عبور هوشمند قدیمی (حذف‌شده در ۴.۳-ج): ثبت‌کننده‌ای که مجوز یکی از مرحله‌ها را در بخش پرونده دارد و
     پروندهٔ کامل ثبت می‌کند، پرونده همان‌جا به موتور می‌رود و موتور مرحله‌های سطح او را رد می‌کند. هر خطا یعنی
     پرونده پیش‌نویس می‌ماند (ساخت هرگز به‌خاطر گردش شکست نمی‌خورد؛ رکورد صف آفلاین سالم). خروجی True اگر ارسال شد.
     """
@@ -1022,9 +1022,11 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             if company_id is None or company_id not in allowed_ids:
                 raise PermissionDenied("بازگشایی فقط برای پرونده‌های شرکت‌های مجاز شما ممکن است.")
             is_in_section = bool(instance.section_id) and can_access_personnel_section(user, instance.section_id)
-            from ..lifecycle_services import APPROVAL_STAGES, user_has_any_perm
+            from ..lifecycle_services import (FINANCE_STAGE_PERMS, MANAGER_STAGE_PERMS, SUPERVISOR_STAGE_PERMS,
+                                              user_has_any_perm)
             # تأییدکننده در بخش همین پرونده (ت۸ طرح ۲.۲)
-            is_approver = any(user_has_any_perm(user, rule['perms'], instance) for rule in APPROVAL_STAGES.values())
+            is_approver = any(user_has_any_perm(user, perms, instance)
+                              for perms in (SUPERVISOR_STAGE_PERMS, FINANCE_STAGE_PERMS, MANAGER_STAGE_PERMS))
             if not (instance.created_by_id == user.id or is_in_section or is_approver):
                 raise PermissionDenied("شما مجاز به بازگشایی این پرونده نیستید.")
 
@@ -1155,7 +1157,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             'personnel': self.get_serializer(personnel).data
         }, status=status.HTTP_200_OK)
 
-    # پیام‌های موفقیت و رویداد وب‌سوکت هر مرحلهٔ تأیید (منطق گذار در lifecycle_services.approve_personnel_stage است)
+    # پیام‌های موفقیت و رویداد وب‌سوکت هر مرحلهٔ تأیید (گذار با موتور گردش، workflows.py)
     APPROVAL_STAGE_MESSAGES = {
         'supervisor': (
             'pending_accountant',

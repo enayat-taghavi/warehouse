@@ -1,19 +1,21 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, PersonnelChangeRequest, VehicleChangeRequest } from '../../../../models/personnel.model';
+import { ProjectSection, PersonnelChangeRequest, VehicleChangeRequest, PagedResult, isMaskedValue } from '../../../../models/personnel.model';
 
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
@@ -28,6 +30,9 @@ export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_req
     CommandCenterComponent,
     TabBarComponent,
     ActionButtonComponent,
+    RouterLink,
+    SvgIconDirective,
+    WorkflowReasonDialogComponent,
   ],
   templateUrl: './supervisor-new-profiles.html',
   styleUrl: './supervisor-new-profiles.css'
@@ -70,9 +75,20 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
 
   // ─── مودال ثبت توضیحات و تایید (Approval Note Modal) ───
   isApprovalModalOpen = false;
-  approvalTarget: { type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr'; item: any; title: string } | null = null;
+  approvalTarget: { type: 'vehicle' | 'vehicle_cr'; item: any; title: string } | null = null;
   approvalNote = '';
   isApproving = false;
+
+  // ─── صفحه‌بندی سمت سرور برای فهرست‌های فقط‌خواندنی پرسنل ───
+  readonly pageSize = 20;
+  pages = { personnel: 1, personnel_cr: 1 };
+  totals = { personnel: 0, personnel_cr: 0 };
+  readonly isMasked = isMaskedValue;
+
+  // ─── دیالوگ علت رد (تغییرات ناوگان) ───
+  isReasonDialogOpen = false;
+  reasonTarget: VehicleChangeRequest | null = null;
+  reasonServerError = '';
 
   private routeSub?: Subscription;
   private wsSub?: Subscription;
@@ -158,6 +174,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   onSectionChanged(): void {
+    this.pages = { personnel: 1, personnel_cr: 1 };
     this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
     this.syncUrlParams();
     this.fetchProfiles();
@@ -210,6 +227,21 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  totalPages(kind: 'personnel' | 'personnel_cr'): number {
+    return Math.max(1, Math.ceil(this.totals[kind] / this.pageSize));
+  }
+
+  goToPage(kind: 'personnel' | 'personnel_cr', p: number): void {
+    const next = Math.min(Math.max(1, p), this.totalPages(kind));
+    if (next === this.pages[kind]) return;
+    this.pages[kind] = next;
+    this.fetchProfiles();
+  }
+
+  formatNumber(n: number): string {
+    return new Intl.NumberFormat('fa-IR').format(n);
+  }
+
   fetchProfiles(): void {
     this.isLoading = true;
     const params: any = { approval_status: 'pending_supervisor,draft' };
@@ -220,14 +252,17 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       params.search = this.searchQuery.trim();
     }
 
-    this.personnelApi.getPersonnelProfiles(params).subscribe({
-      next: (pList: any[]) => {
-        this.personnelItems = pList || [];
+    // پرونده‌های پرسنل: فهرست فقط‌خواندنی با صفحه‌بندی سمت سرور (تایید در «کارهای من»)
+    this.personnelApi.getPersonnelProfilesPage({ ...params, page: this.pages.personnel, page_size: this.pageSize }).subscribe({
+      next: (res: PagedResult<any>) => {
+        this.personnelItems = res?.results || [];
+        this.totals.personnel = res?.count ?? this.personnelItems.length;
         this.updateCounters();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err: any) => {
+        if (err?.status === 404 && this.pages.personnel > 1) { this.pages.personnel = 1; this.fetchProfiles(); return; }
         this.isLoading = false;
         this.toast.error('خطا در دریافت لیست پرسنل: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
@@ -245,15 +280,16 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       }
     });
 
-    // دریافت درخواست‌های تغییرات پرسنل جهت تایید مرحله اول سرپرست
-    this.personnelApi.getPersonnelChangeRequests({ status: 'pending_supervisor' }).subscribe({
-      next: (crList: any) => {
-        const all: PersonnelChangeRequest[] = Array.isArray(crList) ? crList : ((crList as any)?.results || []);
-        this.personnelChangeRequests = all.filter((cr: any) => cr.status === 'pending_supervisor' || cr.status === 'draft');
+    // درخواست‌های تغییر پرسنل: فقط‌خواندنی با صفحه‌بندی سمت سرور
+    this.personnelApi.getPersonnelChangeRequestsPage({ status: 'pending_supervisor', page: this.pages.personnel_cr, page_size: this.pageSize }).subscribe({
+      next: (res: PagedResult<PersonnelChangeRequest>) => {
+        this.personnelChangeRequests = res?.results || [];
+        this.totals.personnel_cr = res?.count ?? this.personnelChangeRequests.length;
         this.updateCounters();
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.personnel_cr > 1) { this.pages.personnel_cr = 1; this.fetchProfiles(); return; }
         this.cdr.detectChanges();
       }
     });
@@ -273,10 +309,10 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   private updateCounters(): void {
-    this.statusCounters.personnel = this.personnelItems.length;
+    this.statusCounters.personnel = this.totals.personnel;
     this.statusCounters.vehicles = this.vehicleItems.length;
-    this.statusCounters.change_requests = this.personnelChangeRequests.length + this.vehicleChangeRequests.length;
-    this.statusCounters.all = this.personnelItems.length + this.vehicleItems.length + this.statusCounters.change_requests;
+    this.statusCounters.change_requests = this.totals.personnel_cr + this.vehicleChangeRequests.length;
+    this.statusCounters.all = this.totals.personnel + this.vehicleItems.length + this.statusCounters.change_requests;
 
     // رفع نقطه کور بصری (Blindspot): اگر پرسنل جدید صفر باشد ولی درخواست تغییرات وجود داشته باشد و کاربر تب خاصی انتخاب نکرده باشد
     if (!this.route?.snapshot?.queryParams?.['tab'] && this.activeSubTab === 'personnel' && this.personnelItems.length === 0 && this.statusCounters.change_requests > 0) {
@@ -284,13 +320,11 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     }
   }
 
-  openApprovalModal(type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr', item: any): void {
-    const title = type === 'personnel'
-      ? `تایید پرونده پرسنل: ${item.first_name || ''} ${item.last_name || ''}`
-      : type === 'vehicle'
+
+  /** تایید مرحلهٔ سرپرست فقط برای ناوگان؛ پرونده و تغییر پرسنل در «کارهای من» (موتور گردش‌کار) انجام می‌شود */
+  openApprovalModal(type: 'vehicle' | 'vehicle_cr', item: any): void {
+    const title = type === 'vehicle'
       ? `تایید پرونده خودرو: ${item.plate_number || ''}`
-      : type === 'personnel_cr'
-      ? `تایید تغییرات پرسنل: ${item.personnel_name || ''}`
       : `تایید تغییرات خودرو: ${item.plate_number || ''}`;
     this.approvalTarget = { type, item, title };
     this.approvalNote = '';
@@ -311,45 +345,11 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     const note = this.approvalNote.trim() || undefined;
     this.isApproving = true;
 
-    if (type === 'personnel') {
-      this.approvePersonnel(item, note);
-    } else if (type === 'vehicle') {
+    if (type === 'vehicle') {
       this.approveVehicle(item, note);
-    } else if (type === 'personnel_cr') {
-      this.approvePersonnelChange(item, note);
     } else if (type === 'vehicle_cr') {
       this.approveVehicleChange(item, note);
     }
-  }
-
-  approvePersonnel(item: any, note?: string): void {
-    const req$ = note
-      ? this.personnelApi.approvePersonnelSupervisor(item.id, note)
-      : this.personnelApi.approvePersonnelSupervisor(item.id);
-    req$.subscribe({
-      next: () => {
-        this.isApproving = false;
-        this.closeApprovalModal();
-        this.toast.success(`پرونده پرسنل ${item.first_name} ${item.last_name} تایید و جهت بررسی به حسابداری ارجاع شد.`);
-        this.fetchProfiles();
-      },
-      error: (err: any) => {
-        this.isApproving = false;
-        this.toast.error('خطا در تایید پرونده پرسنل: ' + (err.error?.error || err.message || 'نامشخص'));
-      }
-    });
-  }
-
-  rejectPersonnel(item: any): void {
-    this.personnelApi.requestPersonnelRevision(item.id, 'نیازمند بازنگری مدارک توسط اپراتور').subscribe({
-      next: () => {
-        this.toast.warning(`پرونده پرسنل ${item.first_name} ${item.last_name} جهت اصلاح مدارک عودت شد.`);
-        this.fetchProfiles();
-      },
-      error: (err: any) => {
-        this.toast.error('خطا در عودت پرونده پرسنل: ' + (err.error?.error || err.message || 'نامشخص'));
-      }
-    });
   }
 
   approveVehicle(item: any, note?: string): void {
@@ -382,40 +382,6 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  approvePersonnelChange(cr: PersonnelChangeRequest, note?: string): void {
-    const req$ = note
-      ? this.personnelApi.approvePersonnelChangeRequestSupervisor(cr.id, note)
-      : this.personnelApi.approvePersonnelChangeRequestSupervisor(cr.id);
-    req$.subscribe({
-      next: (res: any) => {
-        this.isApproving = false;
-        this.closeApprovalModal();
-        this.toast.success(res?.message || `تغییرات پرسنل «${cr.personnel_name || ''}» تایید و به کارتابل حسابداری ارسال شد.`);
-        this.isDiffModalOpen = false;
-        this.fetchProfiles();
-      },
-      error: (err: any) => {
-        this.isApproving = false;
-        this.toast.error('خطا در تایید تغییرات پرسنل: ' + (err.error?.error || err.message || 'نامشخص'));
-      }
-    });
-  }
-
-  rejectPersonnelChange(cr: PersonnelChangeRequest): void {
-    const reason = prompt('لطفاً دلیل عودت/رد درخواست تغییرات را وارد نمایید:', 'عدم تایید تغییرات توسط سرپرست');
-    if (reason === null) return;
-    this.personnelApi.rejectPersonnelChangeRequest(cr.id, reason.trim() || 'عدم تایید تغییرات توسط سرپرست').subscribe({
-      next: () => {
-        this.toast.warning(`درخواست تغییرات «${cr.personnel_name || ''}» عودت داده شد.`);
-        this.isDiffModalOpen = false;
-        this.fetchProfiles();
-      },
-      error: (err: any) => {
-        this.toast.error('خطا در رد درخواست تغییرات: ' + (err.error?.error || err.message || 'نامشخص'));
-      }
-    });
-  }
-
   approveVehicleChange(cr: VehicleChangeRequest, note?: string): void {
     const req$ = note
       ? this.personnelApi.approveVehicleChangeRequestSupervisor(cr.id, note)
@@ -435,19 +401,34 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** رد تغییرات ناوگان: علت با دیالوگ مشترک گرفته می‌شود (به‌جای prompt مرورگر) */
   rejectVehicleChange(cr: VehicleChangeRequest): void {
-    const reason = prompt('لطفاً دلیل عودت/رد تغییرات خودرو را وارد نمایید:', 'عدم تایید تغییرات توسط سرپرست');
-    if (reason === null) return;
-    this.personnelApi.rejectVehicleChangeRequest(cr.id, reason.trim() || 'عدم تایید تغییرات توسط سرپرست').subscribe({
+    this.reasonTarget = cr;
+    this.reasonServerError = '';
+    this.isReasonDialogOpen = true;
+  }
+
+  onReasonConfirmed(reason: string): void {
+    const cr = this.reasonTarget;
+    if (!cr) return;
+    this.personnelApi.rejectVehicleChangeRequest(cr.id, reason.trim()).subscribe({
       next: () => {
+        this.isReasonDialogOpen = false;
+        this.reasonTarget = null;
         this.toast.warning(`درخواست تغییرات خودرو «${cr.plate_number || ''}» عودت داده شد.`);
         this.isDiffModalOpen = false;
         this.fetchProfiles();
       },
       error: (err: any) => {
-        this.toast.error('خطا در رد تغییرات ناوگان: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.reasonServerError = err?.error?.error || err?.error?.detail || 'خطا در رد تغییرات ناوگان';
       }
     });
+  }
+
+  onReasonCancelled(): void {
+    this.isReasonDialogOpen = false;
+    this.reasonTarget = null;
+    this.reasonServerError = '';
   }
 
   openDiffModal(cr: any, type: 'personnel' | 'vehicle'): void {

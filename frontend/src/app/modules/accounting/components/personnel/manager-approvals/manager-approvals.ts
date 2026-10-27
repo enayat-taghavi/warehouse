@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
@@ -14,7 +14,9 @@ import {
   VehicleDriverProfile,
   PersonnelChangeRequest,
   VehicleChangeRequest,
-  PayrollYearlySettings
+  PayrollYearlySettings,
+  PersonnelWorkflowError,
+  isMaskedValue
 } from '../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
@@ -26,7 +28,7 @@ import { PrintService } from '../../../../../core/services/print.service';
 @Component({
   selector: 'app-manager-approvals',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent, WorkflowReasonDialogComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SvgIconDirective, TabBarComponent, ActionButtonComponent, WorkflowReasonDialogComponent],
   templateUrl: './manager-approvals.html',
   styleUrl: './manager-approvals.css'
 })
@@ -45,6 +47,18 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   warehouses: any[] = [];
   fiscalYear = '1405';
   selectedYearMonth = '';
+
+  // صفحه‌بندی سمت سرور (۴.۳-ج): پرونده و درخواست تغییر پرسنل فقط‌خواندنی؛ تصویب/بازنگری/رد در «کارهای من»
+  readonly pageSize = 20;
+  personnelPage = 1;
+  personnelCount = 0;
+  personnelPendingCount = 0;
+  personnelCrPage = 1;
+  personnelCrCount = 0;
+  personnelCrPendingCount = 0;
+  loadError = false;
+  readonly isMasked = isMaskedValue;
+  private searchTimer: any = null;
 
   // Data Collections
   personnelList: PersonnelProfile[] = [];
@@ -81,23 +95,18 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   // Reject / Revision Reason Modal
   isRejectModalOpen = false;
   rejectActionType: 'reject' | 'revision' = 'reject';
-  rejectTargetType: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr' = 'personnel';
+  rejectTargetType: 'vehicle' | 'vehicle_cr' = 'vehicle';
   rejectTargetId: number | null = null;
   rejectTargetName: string = '';
   rejectReasonText: string = '';
 
   // Approval Note Modal State
   isApprovalModalOpen = false;
-  approvalTargetType: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr' = 'personnel';
+  approvalTargetType: 'vehicle' | 'vehicle_cr' = 'vehicle';
   approvalTargetId: number | null = null;
   approvalTargetName = '';
   approvalNoteText = '';
   isApproving = false;
-
-  // Edit Personnel Modal State
-  isPersonnelModalOpen = false;
-  personnelModalTab: 'identity' | 'contract' | 'insurance' | 'allowances' | 'contact' = 'identity';
-  editingPersonnel: Partial<PersonnelProfile> = {};
 
   // Edit Vehicle Modal State
   isVehicleModalOpen = false;
@@ -129,7 +138,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   }
 
   get pendingPersonnelCount(): number {
-    return this.personnelList.filter(p => p.approval_status === 'pending_manager' || p.approval_status === 'accountant_approved' || p.approval_status === 'draft' || p.approval_status === 'revision_required').length;
+    return this.personnelPendingCount;
   }
 
   get pendingFleetCount(): number {
@@ -137,7 +146,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   }
 
   get pendingCRCount(): number {
-    const p = this.personnelChangeRequests.filter(cr => cr.status === 'pending_manager' || cr.status === 'accountant_approved').length;
+    const p = this.personnelCrPendingCount;
     const v = this.vehicleChangeRequests.filter(cr => cr.status === 'pending_manager' || cr.status === 'accountant_approved').length;
     return p + v;
   }
@@ -189,9 +198,16 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   }
 
   loadInitialCounts(): void {
-    this.api.getPersonnelChangeRequests().subscribe({
-      next: (res: any) => {
-        this.personnelChangeRequests = Array.isArray(res) ? res : (res?.results || []);
+    this.api.getPersonnelChangeRequestsPage({ page: 1, page_size: 1, status: 'pending_manager' }).subscribe({
+      next: (res) => {
+        this.personnelCrPendingCount = res?.count ?? 0;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+    this.api.getPersonnelProfilesPage({ page: 1, page_size: 1, approval_status: 'pending_manager,accountant_approved' }).subscribe({
+      next: (res) => {
+        this.personnelPendingCount = res?.count ?? 0;
         this.cdr.detectChanges();
       },
       error: () => {}
@@ -314,7 +330,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   private crSubTabsKey = '';
   private crSubTabsCache: TabDef[] = [];
   get crSubTabs(): TabDef[] {
-    const key = `${this.personnelChangeRequests.length}:${this.vehicleChangeRequests.length}`;
+    const key = `${this.personnelCrPendingCount}:${this.vehicleChangeRequests.length}`;
     if (key !== this.crSubTabsKey) {
       this.crSubTabsKey = key;
       this.crSubTabsCache = [
@@ -323,7 +339,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
           label: 'پرسنل',
           shortLabel: 'پرسنل',
           icon: ACCOUNTING_ENTITY_ICONS.personnel,
-          count: this.personnelChangeRequests.length
+          count: this.personnelCrPendingCount
         },
         {
           id: 'vehicles',
@@ -353,6 +369,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
 
   setStatusFilter(status: string): void {
     this.approvalStatusFilter = status;
+    this.personnelPage = 1;
     this.updateQueryParams();
   }
 
@@ -365,6 +382,8 @@ export class ManagerApprovals implements OnInit, OnDestroy {
 
   setCRStatusFilter(status: string): void {
     this.crStatusFilter = status;
+    this.personnelCrPage = 1;
+    if (this.changeRequestSubTab === 'personnel') this.loadChangeRequests();
   }
 
   onWarehouseChange(): void {
@@ -400,19 +419,28 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     }
   }
 
-  // ─── 1. Personnel Operations ──────────────────────────────
+  // ─── 1. Personnel Operations (فقط‌خواندنی؛ اقدام در کارهای من) ──────────────────────────────
   loadPersonnel(): void {
     this.isLoading = true;
+    this.loadError = false;
     let filterStatus = this.approvalStatusFilter === 'ALL' ? undefined : this.approvalStatusFilter;
     if (filterStatus === 'pending_manager') {
       filterStatus = 'pending_manager,accountant_approved';
     }
-    this.api.getPersonnelProfiles({
+    const params: any = {
+      page: this.personnelPage,
+      page_size: this.pageSize,
       warehouse_id: this.selectedWarehouseId || undefined,
       approval_status: filterStatus
-    }).subscribe({
-      next: (res: any) => {
-        this.personnelList = Array.isArray(res) ? res : (res?.results || []);
+    };
+    if (this.personnelSearch.trim()) params.search = this.personnelSearch.trim();
+    this.api.getPersonnelProfilesPage(params).subscribe({
+      next: (res) => {
+        this.personnelList = res?.results || [];
+        this.personnelCount = res?.count ?? this.personnelList.length;
+        if (filterStatus === 'pending_manager,accountant_approved' && !this.personnelSearch.trim() && !this.selectedWarehouseId) {
+          this.personnelPendingCount = this.personnelCount;
+        }
         this.isLoading = false;
 
         // رفع نقطه کور: هدایت خودکار به تب درخواست‌های تغییرات در صورت نبود پرونده جدید
@@ -424,35 +452,72 @@ export class ManagerApprovals implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (err: any) => {
+        if (err?.status === 404 && this.personnelPage > 1) {
+          this.personnelPage = 1;
+          this.loadPersonnel();
+          return;
+        }
         this.isLoading = false;
-        this.toast.show('error', err?.error?.error || 'خطا در دریافت لیست پرسنل');
+        this.loadError = true;
+        this.toast.show('error', this.workflowErrorText(err, 'خطا در دریافت لیست پرسنل'));
         this.cdr.detectChanges();
       }
     });
   }
 
+  /** فیلتر سمت سرور است؛ همان فهرست صفحهٔ جاری */
   get filteredPersonnel(): PersonnelProfile[] {
-    let list = this.personnelList;
-    if (this.approvalStatusFilter !== 'ALL') {
-      if (this.approvalStatusFilter === 'pending_manager') {
-        list = list.filter(p => p.approval_status === 'pending_manager' || p.approval_status === 'accountant_approved');
-      } else {
-        list = list.filter(p => p.approval_status === this.approvalStatusFilter);
-      }
-    }
-    if (this.personnelSearch.trim()) {
-      const q = this.personnelSearch.trim().toLowerCase();
-      list = list.filter(p =>
-        (p.first_name && p.first_name.toLowerCase().includes(q)) ||
-        (p.last_name && p.last_name.toLowerCase().includes(q)) ||
-        (p.full_name && p.full_name.toLowerCase().includes(q)) ||
-        (p.national_code && p.national_code.includes(q))
-      );
-    }
-    return list;
+    return this.personnelList;
   }
 
-  openApprovalModal(id: number, name: string, type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr'): void {
+  get personnelTotalPages(): number { return Math.max(1, Math.ceil(this.personnelCount / this.pageSize)); }
+  get personnelCrTotalPages(): number { return Math.max(1, Math.ceil(this.personnelCrCount / this.pageSize)); }
+
+  goToPersonnelPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.personnelTotalPages);
+    if (next === this.personnelPage) return;
+    this.personnelPage = next;
+    this.loadPersonnel();
+  }
+
+  goToPersonnelCrPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.personnelCrTotalPages);
+    if (next === this.personnelCrPage) return;
+    this.personnelCrPage = next;
+    this.loadChangeRequests();
+  }
+
+  /** جستجوی سمت سرور با تأخیر کوتاه */
+  onPersonnelSearchChange(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.personnelPage = 1;
+      this.loadPersonnel();
+    }, 350);
+  }
+
+  onCrSearchChange(): void {
+    if (this.changeRequestSubTab !== 'personnel') return;
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.personnelCrPage = 1;
+      this.loadChangeRequests();
+    }, 350);
+  }
+
+  /** خطای فارسی از بدنهٔ پاسخ سرور (کدهای گردش کار) */
+  workflowErrorText(err: any, fallback: string): string {
+    const body: PersonnelWorkflowError = err?.error || {};
+    if (body.code === 'wrong_step') return 'این کار در مرحلهٔ دیگری است؛ از کارهای من پیگیری کنید';
+    let msg = body.error || body.detail || fallback;
+    if (body.code === 'action_blocked' && body.missing_fields?.length) {
+      const labels = body.missing_fields.map(m => typeof m === 'string' ? m : (m.label || m.field));
+      msg += ': ' + labels.join('، ');
+    }
+    return msg;
+  }
+
+  openApprovalModal(id: number, name: string, type: 'vehicle' | 'vehicle_cr'): void {
     this.approvalTargetId = id;
     this.approvalTargetName = name;
     this.approvalTargetType = type;
@@ -477,12 +542,8 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     this.isApproving = true;
 
     let req$: any;
-    if (type === 'personnel') {
-      req$ = note ? this.api.approvePersonnelManager(id, note) : this.api.approvePersonnelManager(id);
-    } else if (type === 'vehicle') {
+    if (type === 'vehicle') {
       req$ = note ? this.api.approveVehicleManager(id, note) : this.api.approveVehicleManager(id);
-    } else if (type === 'personnel_cr') {
-      req$ = note ? this.api.approvePersonnelChangeRequestManager(id, note) : this.api.approvePersonnelChangeRequestManager(id);
     } else if (type === 'vehicle_cr') {
       req$ = note ? this.api.approveVehicleChangeRequestManager(id, note) : this.api.approveVehicleChangeRequestManager(id);
     }
@@ -503,20 +564,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
         }
       });
     }
-  }
-
-  approvePersonnelManager(p: PersonnelProfile, note?: string): void {
-    if (!p.id) return;
-    const req$ = note ? this.api.approvePersonnelManager(p.id, note) : this.api.approvePersonnelManager(p.id);
-    req$.subscribe({
-      next: (res: any) => {
-        this.toast.show('success', res.message || 'تصویب نهایی مدیر با موفقیت ثبت شد و پرسنل فعال گردید.');
-        this.loadPersonnel();
-      },
-      error: (err: any) => {
-        this.toast.show('error', err?.error?.error || 'خطا در تصویب نهایی مدیر');
-      }
-    });
   }
 
   // ─── 2. Fleet Operations ──────────────────────────────────
@@ -581,13 +628,28 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   loadChangeRequests(): void {
     this.isLoading = true;
     if (this.changeRequestSubTab === 'personnel') {
-      this.api.getPersonnelChangeRequests().subscribe({
-        next: (res: any) => {
-          this.personnelChangeRequests = Array.isArray(res) ? res : (res?.results || []);
+      const params: any = { page: this.personnelCrPage, page_size: this.pageSize };
+      if (this.crStatusFilter !== 'ALL') params.status = this.crStatusFilter;
+      if (this.crSearchQuery.trim()) params.search = this.crSearchQuery.trim();
+      this.api.getPersonnelChangeRequestsPage(params).subscribe({
+        next: (res) => {
+          this.personnelChangeRequests = res?.results || [];
+          this.personnelCrCount = res?.count ?? this.personnelChangeRequests.length;
+          if (this.crStatusFilter === 'pending_manager' && !this.crSearchQuery.trim()) {
+            this.personnelCrPendingCount = this.personnelCrCount;
+          }
           this.isLoading = false;
           this.cdr.detectChanges();
         },
-        error: () => { this.isLoading = false; }
+        error: (err: any) => {
+          if (err?.status === 404 && this.personnelCrPage > 1) {
+            this.personnelCrPage = 1;
+            this.loadChangeRequests();
+            return;
+          }
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
       });
     } else {
       this.api.getVehicleChangeRequests().subscribe({
@@ -601,24 +663,9 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     }
   }
 
+  /** فیلتر وضعیت و جستجو سمت سرور است؛ همان فهرست صفحهٔ جاری */
   get filteredPersonnelChangeRequests(): PersonnelChangeRequest[] {
-    let list = this.personnelChangeRequests;
-    if (this.crStatusFilter !== 'ALL') {
-      if (this.crStatusFilter === 'pending_manager') {
-        list = list.filter(cr => cr.status === 'pending_manager' || cr.status === 'accountant_approved');
-      } else {
-        list = list.filter(cr => cr.status === this.crStatusFilter);
-      }
-    }
-    if (this.crSearchQuery.trim()) {
-      const q = this.crSearchQuery.trim().toLowerCase();
-      list = list.filter(cr =>
-        (cr.personnel_name && cr.personnel_name.toLowerCase().includes(q)) ||
-        (cr.personnel_national_code && cr.personnel_national_code.includes(q)) ||
-        (cr.requested_by_name && cr.requested_by_name.toLowerCase().includes(q))
-      );
-    }
-    return list;
+    return this.personnelChangeRequests;
   }
 
   get filteredVehicleChangeRequests(): VehicleChangeRequest[] {
@@ -724,10 +771,8 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     });
   }
 
-  approveChangeRequestManager(cr: any, type: 'personnel' | 'vehicle', note?: string): void {
-    const req$ = type === 'personnel'
-      ? (note ? this.api.approvePersonnelChangeRequestManager(cr.id, note) : this.api.approvePersonnelChangeRequestManager(cr.id))
-      : (note ? this.api.approveVehicleChangeRequestManager(cr.id, note) : this.api.approveVehicleChangeRequestManager(cr.id));
+  approveChangeRequestManager(cr: any, note?: string): void {
+    const req$ = note ? this.api.approveVehicleChangeRequestManager(cr.id, note) : this.api.approveVehicleChangeRequestManager(cr.id);
 
     req$.subscribe({
       next: (res: any) => {
@@ -794,7 +839,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   }
 
   // ─── Reject / Revision Modal ──────────────────────────────
-  openProfileRejectModal(id: number, name: string, type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr', action: 'reject' | 'revision'): void {
+  openProfileRejectModal(id: number, name: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {
     this.rejectTargetId = id;
     this.rejectTargetName = name;
     this.rejectTargetType = type;
@@ -816,12 +861,8 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     const type = this.rejectTargetType;
 
     let req$: any;
-    if (type === 'personnel') {
-      req$ = action === 'reject' ? this.api.rejectPersonnel(id, reason) : this.api.requestPersonnelRevision(id, reason);
-    } else if (type === 'vehicle') {
+    if (type === 'vehicle') {
       req$ = action === 'reject' ? this.api.rejectVehicle(id, reason) : this.api.requestVehicleRevision(id, reason);
-    } else if (type === 'personnel_cr') {
-      req$ = this.api.rejectPersonnelChangeRequest(id, reason);
     } else if (type === 'vehicle_cr') {
       req$ = this.api.rejectVehicleChangeRequest(id, reason);
     }
@@ -840,36 +881,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
       });
     }
   }
-
-  // ─── Edit Personnel Modal ─────────────────────────────────
-  openEditPersonnelModal(p: PersonnelProfile): void {
-    this.editingPersonnel = JSON.parse(JSON.stringify(p));
-    this.personnelModalTab = 'identity';
-    this.isPersonnelModalOpen = true;
-  }
-
-  setPersonnelTab(tab: 'identity' | 'contract' | 'insurance' | 'allowances' | 'contact'): void {
-    this.personnelModalTab = tab;
-  }
-
-  savePersonnelProfile(): void {
-    if (!this.editingPersonnel.id) return;
-    this.isSaving = true;
-    this.api.updatePersonnelProfile(this.editingPersonnel.id, this.editingPersonnel).subscribe({
-      next: (res: any) => {
-        this.isSaving = false;
-        this.isPersonnelModalOpen = false;
-        this.toast.show('success', res.message || 'اطلاعات پرسنل با موفقیت ثبت شد.');
-        this.loadPersonnel();
-      },
-      error: (err: any) => {
-        this.isSaving = false;
-        this.toast.show('error', err?.error?.error || 'خطا در ویرایش پرسنل');
-      }
-    });
-  }
-
-
 
   // ─── 5. Invoices & Petty Cash (Manager Approval Hub) ──────────
   loadInvoices(): void {

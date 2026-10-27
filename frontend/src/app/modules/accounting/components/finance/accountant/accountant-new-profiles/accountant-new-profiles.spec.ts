@@ -126,17 +126,13 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
       })),
       getMySections: vi.fn().mockReturnValue(of(mockSections)),
       getProjectSections: vi.fn().mockReturnValue(of(mockSections)),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([mockPersonnel])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockPersonnel] })),
       getVehicleProfiles: vi.fn().mockReturnValue(of([mockVehicle])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([mockCrPersonnel])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([mockCrVehicle])),
-      approvePersonnelFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی پرسنل با موفقیت ثبت شد.' })),
       approveVehicleFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی خودرو با موفقیت ثبت شد.' })),
-      rejectPersonnel: vi.fn().mockReturnValue(of({ message: 'پرونده پرسنل رد شد.' })),
-      requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'پرونده پرسنل عودت گردید.' })),
       rejectVehicle: vi.fn().mockReturnValue(of({ message: 'پرونده خودرو رد شد.' })),
       requestVehicleRevision: vi.fn().mockReturnValue(of({ message: 'پرونده خودرو عودت گردید.' })),
-      rejectPersonnelChangeRequest: vi.fn().mockReturnValue(of({ message: 'درخواست تغییرات پرسنل رد شد.' })),
       rejectVehicleChangeRequest: vi.fn().mockReturnValue(of({ message: 'درخواست تغییرات خودرو رد شد.' })),
       getJobGradeRate: vi.fn().mockReturnValue(of({
         grade: '20',
@@ -145,7 +141,6 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
         hourly_rate: 746000
       })),
       updatePersonnelProfile: vi.fn().mockReturnValue(of({ message: 'پروفایل بروزرسانی شد.' })),
-      approvePersonnelChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات پرسنل انجام شد.' })),
       approveVehicleChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات ناوگان انجام شد.' }))
     };
 
@@ -191,9 +186,9 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
     expect(component.selectedSectionId).toBe(3);
     expect(mockPersonnelApi.getYearlySettings).toHaveBeenCalledWith('1405');
     expect(mockPersonnelApi.getMySections).toHaveBeenCalled();
-    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
+    expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 20, section_id: 3 }));
     expect(mockPersonnelApi.getVehicleProfiles).toHaveBeenCalled();
-    expect(mockPersonnelApi.getPersonnelChangeRequests).toHaveBeenCalled();
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenCalled();
     expect(mockPersonnelApi.getVehicleChangeRequests).toHaveBeenCalled();
 
     expect(component.personnelItems.length).toBe(1);
@@ -214,13 +209,10 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
     }));
   });
 
-  it('3. should approve personnel finance and display success toast', () => {
-    component.ngOnInit();
-    component.approvePersonnelFinance(mockPersonnel);
-
-    expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('تایید مالی پرسنل'));
-    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalledTimes(2);
+  it('3. personnel approve / reject actions are gone (engine my-tasks does them)', () => {
+    const c: any = component;
+    expect(c.approvePersonnelFinance).toBeUndefined();
+    expect(mockPersonnelApi.approvePersonnelFinance).toBeUndefined();
   });
 
   it('4. should approve vehicle finance and display success toast', () => {
@@ -288,23 +280,20 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
     expect(component.editingPersonnel?.account_number).toBe('101111111001');
   });
 
-  it('9. should handle rejection and revision modal with mandatory reason', () => {
+  it('9. should handle vehicle rejection and revision modal with mandatory reason', () => {
     component.ngOnInit();
 
-    // 1. Open modal
-    component.openRejectModal(938, 'مرتضی منصوریان', 'personnel', 'revision');
+    component.openRejectModal(45, '21-789-10', 'vehicle', 'revision');
     expect(component.isRejectModalOpen).toBe(true);
 
-    // 2. Reject empty reason
     component.rejectReason = '';
     component.submitRejectModal();
     expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('علت'));
-    expect(mockPersonnelApi.requestPersonnelRevision).not.toHaveBeenCalled();
+    expect(mockPersonnelApi.requestVehicleRevision).not.toHaveBeenCalled();
 
-    // 3. Submit valid reason
-    component.rejectReason = 'عدم تطابق شماره شبا با نام دارنده حساب';
+    component.rejectReason = 'مدارک خودرو ناخوانا است';
     component.submitRejectModal();
-    expect(mockPersonnelApi.requestPersonnelRevision).toHaveBeenCalledWith(938, 'عدم تطابق شماره شبا با نام دارنده حساب');
+    expect(mockPersonnelApi.requestVehicleRevision).toHaveBeenCalledWith(45, 'مدارک خودرو ناخوانا است');
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
     expect(component.isRejectModalOpen).toBe(false);
   });
@@ -324,17 +313,33 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
     expect(wageRow?.newValue).toBe(7000000);
   });
 
-  it('11. should approve personnel change request finance', () => {
+  it('11. personnel change requests are a paged read-only list (no approve action)', () => {
     component.ngOnInit();
-    component.approveChangeRequestFinance(mockCrPersonnel, 'personnel');
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 20 }));
+    expect(component.personnelChangeRequests.length).toBe(1);
+    expect((component as any).approvePersonnelChangeRequestFinance).toBeUndefined();
+  });
 
-    expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(301);
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('تایید مالی'));
+  it('11b. masked values are dropped from the payload when saving the financial modal', () => {
+    component.ngOnInit();
+    component.openEditPersonnelModal({ ...mockPersonnel, national_code: '00****1989', account_number: '1011****001' } as any);
+    component.editingPersonnel!.job_grade = '20';
+    component.savePersonnel();
+    const payload = mockPersonnelApi.updatePersonnelProfile.mock.calls[0][1];
+    expect(payload.job_grade).toBe('20');
+    expect(payload.national_code).toBeUndefined();
+    expect(payload.account_number).toBeUndefined();
+  });
+
+  it('11c. workflow error text: wrong_step and action_blocked with missing fields', () => {
+    expect(component.workflowErrorText({ error: { code: 'wrong_step' } }, 'f')).toContain('کارهای من');
+    const msg = component.workflowErrorText({ error: { code: 'action_blocked', error: 'ناقص', missing_fields: [{ field: 'a', label: 'کد شغل' }] } }, 'f');
+    expect(msg).toContain('کد شغل');
   });
 
   it('12. should approve vehicle change request finance', () => {
     component.ngOnInit();
-    component.approveChangeRequestFinance(mockCrVehicle, 'vehicle');
+    component.approveChangeRequestFinance(mockCrVehicle);
 
     expect(mockPersonnelApi.approveVehicleChangeRequestFinance).toHaveBeenCalledWith(401);
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('تایید مالی'));
@@ -342,10 +347,10 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
 
   it('13. should react to real-time websocket message for matching section', () => {
     component.ngOnInit();
-    const initialCallCount = mockPersonnelApi.getPersonnelProfiles.mock.calls.length;
+    const initialCallCount = mockPersonnelApi.getPersonnelProfilesPage.mock.calls.length;
 
     wsSubject.next({ type_str: 'personnel_updated', section_id: 3 });
 
-    expect(mockPersonnelApi.getPersonnelProfiles.mock.calls.length).toBeGreaterThan(initialCallCount);
+    expect(mockPersonnelApi.getPersonnelProfilesPage.mock.calls.length).toBeGreaterThan(initialCallCount);
   });
 });

@@ -3,10 +3,10 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef } from '@angular/core';
+import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef, Directive, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { of } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,6 +22,12 @@ import { ScopeDirectoryService } from '../../../../../core/http/scope-directory.
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
+
+@Directive({ selector: 'a[routerLink]', standalone: true })
+class RouterLinkStub {
+  @Input() routerLink: any;
+  @Input() queryParams: any;
+}
 
 describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Verification)', () => {
   let fixture: ComponentFixture<ManagerApprovals>;
@@ -79,12 +85,12 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
 
     mockApi = {
       getYearlySettings: vi.fn().mockReturnValue(of({ year: '1405' })),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [
         { id: 101, status: 'pending_manager', proposed_changes: { job_title: 'مدیر ارشد انبار' }, previous_values: { job_title: 'انباردار' }, personnel_name: 'احمد حسینی' }
-      ])),
+      ] })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([])),
       getVehicleProfiles: vi.fn().mockReturnValue(of([])),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 0, next: null, previous: null, results: [] })),
       getExpenseInvoices: vi.fn().mockReturnValue(of([
         { id: 201, invoice_number: 'INV-1405-09', counterparty_name: 'فروشگاه آذرخش', total_amount: 15000000, status: 'pending_manager', section_name: 'بخش مرکزی' }
       ])),
@@ -139,7 +145,9 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
           }
         }
       ]
-    }).compileComponents();
+    })
+      .overrideComponent(ManagerApprovals, { remove: { imports: [RouterLink] }, add: { imports: [RouterLinkStub] } })
+      .compileComponents();
 
     fixture = TestBed.createComponent(ManagerApprovals);
     component = fixture.componentInstance;

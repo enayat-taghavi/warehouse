@@ -1,8 +1,9 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subscription } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
+import { Subscription } from 'rxjs';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
@@ -15,7 +16,8 @@ import {
   VehicleDriverProfile,
   PersonnelChangeRequest,
   VehicleChangeRequest,
-  PayrollYearlySettings
+  PayrollYearlySettings,
+  isMaskedValue
 } from '../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -47,6 +49,8 @@ import { getPermissionAliases } from '../../../../../core/modules/permission-ali
     SvgIconDirective,
     TabBarComponent,
     ActionButtonComponent,
+    ModalComponent,
+    RouterLink,
   ],
   templateUrl: './personnel-profiles.html',
   styleUrl: './personnel-profiles.css'
@@ -66,7 +70,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   private mainTabsKey = '';
   private cachedMainTabs: TabDef[] = [];
   get mainTabs(): TabDef[] {
-    const key = `${this.personnelList.length}_${this.vehiclesList.length}`;
+    const key = `${this.personnelTotal}_${this.vehiclesList.length}`;
     if (key !== this.mainTabsKey) {
       this.mainTabsKey = key;
       this.cachedMainTabs = [
@@ -75,7 +79,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
           label: 'پرونده‌های پرسنل',
           shortLabel: 'پرسنل',
           icon: ACCOUNTING_ENTITY_ICONS.personnel,
-          count: this.personnelList.length,
+          count: this.personnelTotal,
         },
         {
           id: 'vehicles',
@@ -161,6 +165,9 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
 
   // Data lists
   personnelList: PersonnelProfile[] = [];
+  personnelPage = 1;
+  readonly personnelPageSize = 20;
+  personnelTotal = 0;
   vehiclesList: VehicleDriverProfile[] = [];
   personnelChangeRequests: PersonnelChangeRequest[] = [];
   vehicleChangeRequests: VehicleChangeRequest[] = [];
@@ -196,12 +203,6 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   selectedDiffCR: any = null;
   selectedDiffType: 'personnel' | 'vehicle' = 'personnel';
   diffRows: Array<{ label: string; key: string; oldValue: any; newValue: any; isDiff: boolean }> = [];
-
-  // 4. Rejection / Revision Modal
-  isProfileRejectModalOpen = false;
-  profileRejectTarget: { id: number; title: string; type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr'; action: 'reject' | 'revision' } | null = null;
-  profileRejectReason = '';
-  isSubmittingProfileReject = false;
 
   constructor(
     public state: StateService,
@@ -419,19 +420,28 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     const approvalParam = this.profileApprovalFilter === 'ALL' ? undefined : this.profileApprovalFilter;
 
     if (this.activeTab === 'personnel') {
-      this.api.getPersonnelProfiles({
+      const pageParams: any = {
+        page: this.personnelPage,
+        page_size: this.personnelPageSize,
         warehouse_id: this.selectedWarehouseId || undefined,
         approval_status: approvalParam,
         search: this.profileSearch || undefined,
         company_id: this.activeCompanyService?.activeCompanyId || undefined
-      }).subscribe({
+      };
+      this.api.getPersonnelProfilesPage(pageParams).subscribe({
         next: (res) => {
-          this.personnelList = res || [];
+          this.personnelList = res?.results || [];
+          this.personnelTotal = res?.count || 0;
           this.isProfilesLoading = false;
           this.cdr.detectChanges();
         },
-        error: () => {
+        error: (err) => {
           this.isProfilesLoading = false;
+          if (err?.status === 404 && this.personnelPage > 1) {
+            this.personnelPage = 1;
+            this.loadProfiles();
+            return;
+          }
           this.toast.show('error', 'خطا در بارگذاری پرونده پرسنل');
         }
       });
@@ -494,43 +504,56 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     }
   }
 
+  get personnelTotalPages(): number {
+    return Math.max(1, Math.ceil(this.personnelTotal / this.personnelPageSize));
+  }
+
+  goToPersonnelPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.personnelTotalPages);
+    if (next === this.personnelPage) return;
+    this.personnelPage = next;
+    this.loadProfiles();
+  }
+
+  readonly maskedHint = 'برای دیدن کامل مجوز لازم است';
+
+  formatFa(n: number | null | undefined): string {
+    return new Intl.NumberFormat('fa-IR').format(n ?? 0);
+  }
+
+  isMasked(v: unknown): boolean {
+    return isMaskedValue(v);
+  }
+
+  workflowErrorMessage(err: any, fallback: string): string {
+    const body = err?.error || {};
+    let msg: string = body.error || body.detail || fallback;
+    const mf = body.missing_fields;
+    if (Array.isArray(mf) && mf.length) {
+      const labels = mf.map((m: any) => (typeof m === 'string' ? m : (m?.label || m?.field))).filter(Boolean);
+      if (labels.length) msg += ': ' + labels.join('، ');
+    }
+    return msg;
+  }
+
+  openPersonnelPrint(p: PersonnelProfile): void {
+    if (!p?.id) return;
+    window.open(this.api.personnelProfilePrintUrl(p.id), '_blank', 'noopener');
+  }
+
   onSearchChange(): void {
+    this.personnelPage = 1;
     this.updateUrlParams();
     this.loadProfiles();
   }
 
   onFilterChange(): void {
+    this.personnelPage = 1;
     this.updateUrlParams();
     this.loadProfiles();
   }
 
   // ── عملیات تایید و رد پرونده‌ها ─────────────────────────────
-  approvePersonnelManager(p: PersonnelProfile): void {
-    if (!p.id) return;
-    this.api.approvePersonnelManager(p.id).subscribe({
-      next: (res) => {
-        this.toast.show('success', res.message || 'تصویب نهایی مدیر با موفقیت ثبت شد و پرونده فعال گردید.');
-        this.loadProfiles();
-      },
-      error: (err) => {
-        this.toast.show('error', err?.error?.error || 'خطا در تصویب نهایی مدیر');
-      }
-    });
-  }
-
-  approvePersonnelFinance(p: PersonnelProfile): void {
-    if (!p.id) return;
-    this.api.approvePersonnelFinance(p.id).subscribe({
-      next: (res) => {
-        this.toast.show('success', res.message || 'تایید مالی با موفقیت ثبت شد و پرونده جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
-        this.loadProfiles();
-      },
-      error: (err) => {
-        this.toast.show('error', err?.error?.error || 'خطا در تایید مالی');
-      }
-    });
-  }
-
   approveVehicleManager(v: VehicleDriverProfile): void {
     if (!v.id) return;
     this.api.approveVehicleManager(v.id).subscribe({
@@ -588,57 +611,6 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.toast.show('error', err?.error?.error || 'خطا در تایید مالی');
-      }
-    });
-  }
-
-  openProfileRejectModal(id: number, title: string, type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr', action: 'reject' | 'revision'): void {
-    this.profileRejectTarget = { id, title, type, action };
-    this.profileRejectReason = '';
-    this.isProfileRejectModalOpen = true;
-  }
-
-  closeProfileRejectModal(): void {
-    this.isProfileRejectModalOpen = false;
-    this.profileRejectTarget = null;
-    this.profileRejectReason = '';
-  }
-
-  submitProfileRejectModal(): void {
-    if (!this.profileRejectTarget || !this.profileRejectReason.trim()) {
-      this.toast.show('warning', 'لطفاً علت رد یا بازنگری را به صورت کامل و مستند وارد نمایید.');
-      return;
-    }
-
-    this.isSubmittingProfileReject = true;
-    const { id, type, action } = this.profileRejectTarget;
-    const reason = this.profileRejectReason.trim();
-
-    let obs: Observable<any>;
-    if (type === 'personnel') {
-      obs = action === 'reject' ? this.api.rejectPersonnel(id, reason) : this.api.requestPersonnelRevision(id, reason);
-    } else if (type === 'vehicle') {
-      obs = action === 'reject' ? this.api.rejectVehicle(id, reason) : this.api.requestVehicleRevision(id, reason);
-    } else if (type === 'personnel_cr') {
-      obs = this.api.rejectPersonnelChangeRequest(id, reason);
-    } else {
-      obs = this.api.rejectVehicleChangeRequest(id, reason);
-    }
-
-    obs.subscribe({
-      next: (res) => {
-        this.isSubmittingProfileReject = false;
-        this.toast.show('success', res.message || 'عملیات با موفقیت ثبت شد.');
-        this.closeProfileRejectModal();
-        if (type.includes('_cr')) {
-          this.loadChangeRequests();
-        } else {
-          this.loadProfiles();
-        }
-      },
-      error: (err) => {
-        this.isSubmittingProfileReject = false;
-        this.toast.show('error', err?.error?.error || 'خطا در انجام عملیات');
       }
     });
   }
@@ -909,9 +881,17 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
 
     this.isSavingPersonnel = true;
     // فایل پیوست (رشتهٔ نشانی)، مدارک و حساب‌های تودرتو از این فرم نوشتنی نیستند؛ حساب‌ها از اکشن bank-accounts تغییر می‌کنند
-    const { attachment, documents, bank_accounts, ...payload } = this.editingPersonnel as any;
+    const { attachment, documents, bank_accounts, documents_count, ...rawPayload } = this.editingPersonnel as any;
+    // مقدار ماسک‌شده (کاربر بدون دید کامل) هرگز در payload نوشتن نمی‌رود
+    const payload: Record<string, any> = {};
+    for (const [k, v] of Object.entries(rawPayload)) {
+      if (!isMaskedValue(v)) payload[k] = v;
+    }
     if (this.editingPersonnel.id) {
       const changes = this.changedPersonnelFields(payload);
+      for (const k of Object.keys(changes)) {
+        if (isMaskedValue(changes[k])) delete changes[k];
+      }
       delete changes['is_active'];
       if (!Object.keys(changes).length) {
         this.isSavingPersonnel = false;
@@ -933,7 +913,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSavingPersonnel = false;
-          this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در ویرایش پرسنل');
+          this.toast.show('error', this.workflowErrorMessage(err, 'خطا در ویرایش پرسنل'));
         }
       });
     } else {
@@ -955,7 +935,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSavingPersonnel = false;
-          this.toast.show('error', err?.error?.error || 'خطا در ثبت پرسنل');
+          this.toast.show('error', this.workflowErrorMessage(err, 'خطا در ثبت پرسنل'));
         }
       });
     }

@@ -1,18 +1,19 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PayrollYearlySettings, PersonnelCostEstimate } from '../../../../models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PayrollYearlySettings, PersonnelCostEstimate, PagedResult, isMaskedValue } from '../../../../models/personnel.model';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { SmartDeleteModalComponent } from '../../../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
+import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { getPermissionAliases } from '../../../../../../core/modules/permission-aliases';
 
@@ -28,7 +29,8 @@ export type ManagerPersonnelSubTab = 'new' | 'contracts' | 'changes' | 'all';
     SmartDeleteModalComponent,
     SvgIconDirective,
     ActionButtonComponent,
-    TabBarComponent
+    TabBarComponent,
+    RouterLink
   ],
   templateUrl: './manager-personnel.html',
   styleUrl: './manager-personnel.css'
@@ -106,18 +108,16 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     allTotal: 0
   };
 
-  // مودال یادداشت و شروط تصویب مدیر
-  isApprovalModalOpen = false;
-  approvalTarget: { type: 'new' | 'contracts' | 'changes'; item: any; title: string } | null = null;
-  approvalNote = '';
-  isApproving = false;
+  // مودال تحلیل بار مالی (فقط‌خواندنی)
+  isCostModalOpen = false;
+  costTarget: { item: any; title: string } | null = null;
 
-  // مودال عودت / رد پرونده توسط مدیر (تسک ۱۰.۲)
-  isRejectModalOpen = false;
-  rejectTarget: { id: number; title: string; type: 'personnel' | 'changes' } | null = null;
-  rejectActionType: 'return_to_accountant' | 'reject_final' = 'return_to_accountant';
-  rejectReason = '';
-  isRejecting = false;
+  // صفحه‌بندی سمت سرور (۲۰ ردیف)
+  readonly pageSize = 20;
+  pages: Record<ManagerPersonnelSubTab, number> = { new: 1, contracts: 1, changes: 1, all: 1 };
+  totals: Record<ManagerPersonnelSubTab, number> = { new: 0, contracts: 0, changes: 0, all: 0 };
+  loadError = '';
+  readonly isMasked = isMaskedValue;
 
   // مودال حذف پرسنل بدون سابقه (تسک ۱۰.۳)
   isDeleteModalOpen = false;
@@ -137,8 +137,6 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     new_value: any;
     is_changed: boolean;
   }> = [];
-
-  copiedId: number | null = null;
 
   private routeSub?: Subscription;
   private wsSub?: Subscription;
@@ -229,6 +227,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   onSectionChanged(): void {
+    this.pages = { new: 1, contracts: 1, changes: 1, all: 1 };
     this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
     this.syncUrlParams();
     this.fetchData();
@@ -254,78 +253,114 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** رفتن به صفحهٔ دیگر یکی از لیست‌های سمت سرور */
+  goToPage(tab: ManagerPersonnelSubTab, p: number): void {
+    const next = Math.min(Math.max(1, p), this.totalPages(tab));
+    if (next === this.pages[tab]) return;
+    this.pages[tab] = next;
+    this.fetchData();
+  }
+
+  totalPages(tab: ManagerPersonnelSubTab): number {
+    return Math.max(1, Math.ceil(this.totals[tab] / this.pageSize));
+  }
+
+  onSearchChanged(): void {
+    this.pages = { new: 1, contracts: 1, changes: 1, all: 1 };
+    this.fetchData();
+  }
+
+  formatNumber(n: number): string {
+    return new Intl.NumberFormat('fa-IR').format(n);
+  }
+
   fetchData(): void {
     this.isLoading = true;
+    this.loadError = '';
     const baseParams: any = {};
     if (this.selectedSectionId) baseParams.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) baseParams.search = this.searchQuery.trim();
+    const failed = (err: any) => {
+      this.loadError = isServerUnreachable(err?.status ?? 0)
+        ? 'ارتباط با سرور برقرار نیست؛ پس از اتصال دوباره تلاش کنید.'
+        : 'بارگذاری فهرست انجام نشد.';
+    };
+    const paged = (tab: ManagerPersonnelSubTab) => ({ page: this.pages[tab], page_size: this.pageSize });
 
-    // ۱. پرونده‌های در انتظار تصویب نهایی مدیر
-    this.personnelApi.getPersonnelProfiles({ ...baseParams, approval_status: 'pending_manager' }).subscribe({
-      next: (pList: PersonnelProfile[]) => {
-        this.pendingManagerList = pList || [];
-        this.statusCounters.newPending = this.pendingManagerList.length;
+    // ۱. پرونده‌های در انتظار تصویب نهایی مدیر (فقط‌خواندنی؛ تصویب در «کارهای من»)
+    this.personnelApi.getPersonnelProfilesPage({ ...baseParams, approval_status: 'pending_manager', ...paged('new') }).subscribe({
+      next: (res: PagedResult<PersonnelProfile>) => {
+        this.pendingManagerList = res?.results || [];
+        this.totals.new = res?.count ?? this.pendingManagerList.length;
+        this.statusCounters.newPending = this.totals.new;
+        this.cdr.detectChanges();
       },
-      error: () => {
-        this.pendingManagerList = [];
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.new > 1) { this.pages.new = 1; this.fetchData(); return; }
+        failed(err);
+        this.cdr.detectChanges();
       }
     });
 
     // ۲. قراردادها و احکام
-    this.personnelApi.getPersonnelProfiles({ ...baseParams, is_active: true }).subscribe({
-      next: (cList: PersonnelProfile[]) => {
-        this.contractsList = (cList || []).map(p => ({
+    this.personnelApi.getPersonnelProfilesPage({ ...baseParams, is_active: true, ...paged('contracts') }).subscribe({
+      next: (res: PagedResult<PersonnelProfile>) => {
+        this.contractsList = (res?.results || []).map(p => ({
           personnel_name: `${p.first_name || ''} ${p.last_name || ''}`,
           contract_type: p.contract_type || 'قرارداد کاری',
           start_date_shamsi: p.start_date || '-',
           end_date_shamsi: p.end_date || '-',
           status: p.approval_status
         }));
-        this.statusCounters.contractsPending = this.contractsList.length;
+        this.totals.contracts = res?.count ?? this.contractsList.length;
+        this.statusCounters.contractsPending = this.totals.contracts;
+        this.cdr.detectChanges();
       },
-      error: () => {
-        this.contractsList = [];
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.contracts > 1) { this.pages.contracts = 1; this.fetchData(); return; }
+        failed(err);
+        this.cdr.detectChanges();
       }
     });
 
-    // ۳. تغییرات پرسنل در انتظار مدیر
-    this.personnelApi.getPersonnelChangeRequests(baseParams).subscribe({
-      next: (crList: PersonnelChangeRequest[]) => {
-        this.changeRequests = (crList || []).filter(cr => cr.status === 'pending_manager');
-        this.statusCounters.changesPending = this.changeRequests.length;
+    // ۳. تغییرات پرسنل در انتظار مدیر (فقط‌خواندنی)
+    this.personnelApi.getPersonnelChangeRequestsPage({ ...baseParams, status: 'pending_manager', ...paged('changes') }).subscribe({
+      next: (res: PagedResult<PersonnelChangeRequest>) => {
+        this.changeRequests = res?.results || [];
+        this.totals.changes = res?.count ?? this.changeRequests.length;
+        this.statusCounters.changesPending = this.totals.changes;
+        this.cdr.detectChanges();
       },
-      error: () => {
-        this.changeRequests = [];
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.changes > 1) { this.pages.changes = 1; this.fetchData(); return; }
+        failed(err);
+        this.cdr.detectChanges();
       }
     });
 
     // ۴. تمام پرسنل فعال و مصوب
-    this.personnelApi.getPersonnelProfiles(baseParams).subscribe({
-      next: (allList: PersonnelProfile[]) => {
-        this.allPersonnelList = allList || [];
-        this.statusCounters.allTotal = this.allPersonnelList.length;
+    this.personnelApi.getPersonnelProfilesPage({ ...baseParams, ...paged('all') }).subscribe({
+      next: (res: PagedResult<PersonnelProfile>) => {
+        this.allPersonnelList = res?.results || [];
+        this.totals.all = res?.count ?? this.allPersonnelList.length;
+        this.statusCounters.allTotal = this.totals.all;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.allPersonnelList = [];
+      error: (err: any) => {
+        if (err?.status === 404 && this.pages.all > 1) { this.pages.all = 1; this.fetchData(); return; }
+        failed(err);
         this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
   }
 
-  // ─── تصویب نهایی توسط مدیر ───
-  openApproveModal(type: 'new' | 'contracts' | 'changes', item: any): void {
-    const title = type === 'new'
-      ? `تصویب نهایی استخدام: ${item.first_name || ''} ${item.last_name || ''}`
-      : type === 'contracts'
-      ? `تصویب حکم و قرارداد: ${item.personnel_name || ''}`
-      : `تصویب تغییرات پرونده: ${item.personnel_name || ''}`;
-    this.approvalTarget = { type, item, title };
-    this.approvalNote = '';
-    this.isApprovalModalOpen = true;
-    if (type === 'new' && item?.id) {
+  // ─── تحلیل بار مالی (فقط‌خواندنی)؛ تصویب نهایی در «کارهای من» انجام می‌شود ───
+  openCostModal(item: any): void {
+    this.costTarget = { item, title: `تحلیل بار مالی: ${item.first_name || ''} ${item.last_name || ''}` };
+    this.isCostModalOpen = true;
+    if (item?.id) {
       this.loadCostAnalysis(item.id);
     }
   }
@@ -402,112 +437,9 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  closeApproveModal(): void {
-    this.isApprovalModalOpen = false;
-    this.approvalTarget = null;
-    this.approvalNote = '';
-  }
-
-  submitApproval(): void {
-    if (!this.approvalTarget) return;
-    this.isApproving = true;
-    const { type, item } = this.approvalTarget;
-
-    if (type === 'new') {
-      this.personnelApi.approvePersonnelManager(item.id, this.approvalNote).subscribe({
-        next: () => {
-          this.toast.showSuccess(`پرونده پرسنل «${item.first_name} ${item.last_name}» با موفقیت به تصویب نهایی رسید.`);
-          this.isApproving = false;
-          this.closeApproveModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isApproving = false;
-          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در تصویب نهایی مدیر');
-        }
-      });
-    } else if (type === 'changes') {
-      this.personnelApi.approvePersonnelChangeRequestManager(item.id, this.approvalNote).subscribe({
-        next: () => {
-          this.toast.showSuccess('تغییرات با موفقیت تصویب و در پرونده اعمال شد.');
-          this.isApproving = false;
-          this.closeApproveModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در تصویب تغییرات');
-        }
-      });
-    } else {
-      this.isApproving = false;
-      this.closeApproveModal();
-    }
-  }
-
-  // ─── رد پرونده توسط مدیر ───
-  openRejectModal(id: number, title: string, type: 'personnel' | 'changes'): void {
-    this.rejectTarget = { id, title, type };
-    this.rejectReason = '';
-    this.isRejectModalOpen = true;
-  }
-
-  closeRejectModal(): void {
-    this.isRejectModalOpen = false;
-    this.rejectTarget = null;
-    this.rejectReason = '';
-  }
-
-  submitReject(): void {
-    if (!this.rejectTarget || !this.rejectReason.trim()) {
-      this.toast.showWarning('لطفاً دلیل مستند عدم تصویب یا رد را وارد فرمایید.');
-      return;
-    }
-    this.isRejecting = true;
-    const { id, type } = this.rejectTarget;
-
-    if (type === 'personnel') {
-      if (this.rejectActionType === 'return_to_accountant') {
-        this.personnelApi.requestPersonnelRevision(id, this.rejectReason.trim(), 'pending_accountant').subscribe({
-          next: () => {
-            this.toast.showSuccess('پرونده جهت بازنگری احکام و مدارک مالی به کارتابل حسابدار عودت داده شد.');
-            this.isRejecting = false;
-            this.closeRejectModal();
-            this.fetchData();
-          },
-          error: (err: any) => {
-            this.isRejecting = false;
-            this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در عودت پرونده به حسابدار');
-          }
-        });
-      } else {
-        this.personnelApi.rejectPersonnel(id, this.rejectReason.trim()).subscribe({
-          next: () => {
-            this.toast.showSuccess('پرونده پرسنل رد قطعی شد.');
-            this.isRejecting = false;
-            this.closeRejectModal();
-            this.fetchData();
-          },
-          error: (err: any) => {
-            this.isRejecting = false;
-            this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در رد پرونده');
-          }
-        });
-      }
-    } else {
-      this.personnelApi.rejectPersonnelChangeRequest(id, this.rejectReason.trim()).subscribe({
-        next: () => {
-          this.toast.showSuccess('درخواست تغییرات رد شد.');
-          this.isRejecting = false;
-          this.closeRejectModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || 'خطا در رد درخواست');
-        }
-      });
-    }
+  closeCostModal(): void {
+    this.isCostModalOpen = false;
+    this.costTarget = null;
   }
 
   // ─── مقایسه تفاوت‌ها (Diff Viewer) ───
@@ -558,23 +490,11 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     return dict[field] || field;
   }
 
-  copyToClipboard(text: string, id: number): void {
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(() => {
-      this.copiedId = id;
-      this.toast.showSuccess('در حافظه کپی شد: ' + text);
-      setTimeout(() => {
-        if (this.copiedId === id) this.copiedId = null;
-        this.cdr.detectChanges();
-      }, 2000);
-    });
-  }
-
   // ─── ویجت تحلیل بار مالی پرسنل (تسک ۱۰.۱) ───
   // همهٔ اعداد از برآورد سروری PayrollCalculationEngine می‌آیند تا با کارتابل حسابدار و حقوق یکی باشند (DEF-05)
   private estimateFor(p: any): PersonnelCostEstimate | null {
     const est = this.approvalCostEstimate;
-    return est && p?.id && this.approvalTarget?.item?.id === p.id ? est : null;
+    return est && p?.id && this.costTarget?.item?.id === p.id ? est : null;
   }
 
   getPersonnelGrossMonthly(p: any): number | null {

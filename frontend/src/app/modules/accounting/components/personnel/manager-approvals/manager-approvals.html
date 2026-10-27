@@ -61,13 +61,19 @@
 
       <div class="flex items-center gap-3">
         <!-- Warehouse Selector -->
-        <select [(ngModel)]="selectedWarehouseId" (change)="onWarehouseChange()" class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+        <select [(ngModel)]="selectedWarehouseId" (change)="personnelPage = 1; onWarehouseChange()" class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
           <option [ngValue]="null">همه پروژه‌ها / کارگاه‌ها</option>
           <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{wh.name}}</option>
         </select>
 
         <!-- Search -->
-        <input type="text" [(ngModel)]="personnelSearch" placeholder="🔍 جستجوی نام یا کد ملی..." class="w-48 sm:w-60 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <input type="text" [(ngModel)]="personnelSearch" (input)="onPersonnelSearchChange()" placeholder="🔍 جستجوی نام یا کد ملی..." class="w-48 sm:w-60 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_profile'}"
+           class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+           title="تصویب، بازنگری و رد از کارهای من انجام می‌شود" aria-label="رفتن به کارهای من">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+          <span>کارهای من</span>
+        </a>
       </div>
     </div>
 
@@ -109,7 +115,8 @@
           <div class="mt-4 grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
             <div>
               <span class="text-slate-400">کد ملی:</span>
-              <span class="font-mono font-bold text-slate-700 mr-1">{{ p.national_code }}</span>
+              <span class="font-mono font-bold text-slate-700 mr-1" dir="ltr">{{ p.national_code }}</span>
+              <span *ngIf="isMasked(p.national_code)" class="block text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
             </div>
             <div>
               <span class="text-slate-400">گروه شغلی:</span>
@@ -121,7 +128,9 @@
             </div>
             <div>
               <span class="text-slate-400">شماره شبا:</span>
-              <span class="font-mono text-[10px] text-slate-700 mr-1 truncate block" [title]="p.sheba_number">{{ p.sheba_number || '—' }}</span>
+              <span class="font-mono text-[10px] text-slate-700 mr-1 truncate block" dir="ltr" [title]="p.sheba_number">{{ p.sheba_number || '—' }}</span>
+              <span *ngIf="isMasked(p.sheba_number)" class="block text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              <span *ngIf="p.documents_count && (!p.documents || p.documents.length < p.documents_count)" class="block text-[10px] text-fg-muted">تعداد مدرک: {{ p.documents_count | number }}</span>
             </div>
           </div>
 
@@ -138,26 +147,42 @@
           </div>
         </div>
 
-        <!-- Card Footer Actions (Manager Focused) -->
-        <div class="mt-4 border-t border-slate-100 pt-3 space-y-2">
-          <!-- Step 1: Manager Approval Actions -->
-          <div *ngIf="(p.approval_status === 'pending_manager' || p.approval_status === 'accountant_approved' || p.approval_status === 'draft') && canApprovePersonnelManager" class="flex items-center gap-1.5">
-            <button type="button" appAction="approve" label="تصویب نهایی" size="lg" display="label" class="flex-1" (click)="openApprovalModal(p.id!, p.full_name || p.first_name, 'personnel')"></button>
-            <button type="button" appAction="return" label="بازنگری" display="label" (click)="openProfileRejectModal(p.id!, p.full_name || p.first_name, 'personnel', 'revision')"></button>
-            <button type="button" appAction="reject" label="رد" display="label" (click)="openProfileRejectModal(p.id!, p.full_name || p.first_name, 'personnel', 'reject')"></button>
-          </div>
-
-          <!-- Edit & View -->
-          <div class="flex items-center justify-between gap-2 pt-1">
-            <button type="button" appAction="edit" label="ویرایش پرونده" display="label" class="w-full" (click)="openEditPersonnelModal(p)"></button>
-          </div>
+        <!-- پیگیری و اقدام در «کارهای من» (فقط‌خواندنی) -->
+        <div class="mt-4 border-t border-slate-100 pt-3">
+          <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_profile'}"
+             class="w-full min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+             title="تصویب، بازنگری و رد از کارهای من انجام می‌شود" [attr.aria-label]="'پیگیری ' + (p.full_name || p.first_name) + ' در کارهای من'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+            <span>پیگیری در کارهای من</span>
+          </a>
         </div>
       </div>
 
-      <div *ngIf="filteredPersonnel.length === 0 && !isLoading" class="col-span-full bg-white rounded-3xl p-12 text-center text-slate-400 border border-slate-200">
+      <div *ngIf="loadError && !isLoading" class="col-span-full bg-surface rounded-3xl p-8 text-center text-xs text-fg-muted border border-line" role="alert">
+        <p>خطا در بارگذاری فهرست پرسنل.</p>
+        <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" class="mt-3" (click)="loadPersonnel()"></button>
+      </div>
+      <div *ngIf="filteredPersonnel.length === 0 && !isLoading && !loadError" class="col-span-full bg-white rounded-3xl p-12 text-center text-slate-400 border border-slate-200">
         موردی با شرایط انتخابی یافت نشد.
       </div>
     </div>
+    <!-- صفحه‌بندی -->
+    <div *ngIf="personnelCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
+      <button type="button" (click)="goToPersonnelPage(personnelPage - 1)" [disabled]="personnelPage <= 1 || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <span class="hidden sm:inline">قبلی</span>
+      </button>
+      <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ personnelPage | number }} از {{ personnelTotalPages | number }}</span>
+      <button type="button" (click)="goToPersonnelPage(personnelPage + 1)" [disabled]="personnelPage >= personnelTotalPages || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+        <span class="hidden sm:inline">بعدی</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+      </button>
+    </div>
+
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -294,7 +319,13 @@
 
       <!-- Search Input -->
       <div class="flex items-center gap-2">
-        <input type="text" [(ngModel)]="crSearchQuery" placeholder="🔍 جستجوی نام، کد ملی، ثبت‌کننده..." class="w-52 sm:w-64 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <input type="text" [(ngModel)]="crSearchQuery" (input)="onCrSearchChange()" placeholder="🔍 جستجوی نام، کد ملی، ثبت‌کننده..." class="w-52 sm:w-64 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_change'}"
+           class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+           title="تصویب، بازنگری و رد از کارهای من انجام می‌شود" aria-label="رفتن به کارهای من">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+          <span>کارهای من</span>
+        </a>
       </div>
     </div>
 
@@ -317,7 +348,7 @@
             <tr *ngFor="let cr of filteredPersonnelChangeRequests; let idx = index" class="hover:bg-slate-50/50">
               <td class="p-3.5 text-center text-slate-400 font-bold">{{ idx + 1 }}</td>
               <td class="p-3.5 font-bold text-slate-800">{{ cr.personnel_name }}</td>
-              <td class="p-3.5 font-mono text-slate-700">{{ cr.personnel_national_code || cr.national_code || '-' }}</td>
+              <td class="p-3.5 font-mono text-slate-700" dir="ltr">{{ cr.personnel_national_code || cr.national_code || '-' }}<span *ngIf="isMasked(cr.personnel_national_code) || isMasked(cr.national_code)" class="block text-[10px] text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-3.5 text-slate-600">{{ cr.requested_by_name || cr.created_by_name || 'اپراتور' }}</td>
               <td class="p-3.5">
                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black border" [ngClass]="getApprovalBadgeClass(cr.status)">
@@ -328,8 +359,11 @@
               <td class="p-3.5 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                   <button type="button" appAction="view" display="label" label="مقایسه" size="sm" (click)="openDiffModal(cr, 'personnel')"></button>
-                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApprovePersonnelManager" type="button" appAction="approve" display="label" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr, 'personnel')"></button>
-                  <button *ngIf="cr.status !== 'approved' && cr.status !== 'rejected'" type="button" appAction="reject" label="رد" size="sm" (click)="openProfileRejectModal(cr.id, cr.personnel_name || '', 'personnel_cr', 'reject')"></button>
+                  <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_change'}"
+                     class="min-h-[40px] min-w-[40px] px-2 inline-flex items-center justify-center rounded-xl border border-line bg-surface text-fg hover:bg-surface-muted"
+                     title="پیگیری در کارهای من" aria-label="پیگیری در کارهای من">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+                  </a>
                 </div>
               </td>
             </tr>
@@ -339,6 +373,22 @@
           </tbody>
         </table>
       </div>
+    <!-- صفحه‌بندی -->
+    <div *ngIf="personnelCrCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
+      <button type="button" (click)="goToPersonnelCrPage(personnelCrPage - 1)" [disabled]="personnelCrPage <= 1 || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <span class="hidden sm:inline">قبلی</span>
+      </button>
+      <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ personnelCrPage | number }} از {{ personnelCrTotalPages | number }}</span>
+      <button type="button" (click)="goToPersonnelCrPage(personnelCrPage + 1)" [disabled]="personnelCrPage >= personnelCrTotalPages || isLoading"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+        title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+        <span class="hidden sm:inline">بعدی</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+      </button>
+    </div>
     </div>
 
     <!-- Vehicles CR Table -->
@@ -371,7 +421,7 @@
               <td class="p-3.5 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                   <button type="button" appAction="view" display="label" label="مقایسه" size="sm" (click)="openDiffModal(cr, 'vehicle')"></button>
-                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApproveFleetManager" type="button" appAction="approve" display="label" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr, 'vehicle')"></button>
+                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApproveFleetManager" type="button" appAction="approve" display="label" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr)"></button>
                   <button *ngIf="cr.status !== 'approved' && cr.status !== 'rejected'" type="button" appAction="reject" label="رد" size="sm" (click)="openProfileRejectModal(cr.id, cr.driver_name || '', 'vehicle_cr', 'reject')"></button>
                 </div>
               </td>
@@ -584,7 +634,7 @@
             <tr *ngFor="let row of diffFieldRows" [class.bg-amber-50/30]="row.is_changed">
               <td class="p-2.5 font-bold text-slate-700">{{ row.field_label }}</td>
               <td class="p-2.5 font-mono text-rose-600 line-through">{{ row.old_value }}</td>
-              <td class="p-2.5 font-mono font-bold text-emerald-700">{{ row.new_value }}</td>
+              <td class="p-2.5 font-mono font-bold text-emerald-700" dir="ltr">{{ row.new_value }}<span *ngIf="isMasked(row.new_value) || isMasked(row.old_value)" class="block text-[10px] font-normal text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
             </tr>
           </tbody>
         </table>
@@ -617,7 +667,7 @@
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
         <button type="button" appAction="close" label="بستن" display="label" (click)="isDiffModalOpen = false"></button>
-        <button *ngIf="(selectedDiffCR.status === 'pending_manager' || selectedDiffCR.status === 'accountant_approved') && (diffTargetType === 'personnel' ? canApprovePersonnelManager : canApproveFleetManager)" type="button" appAction="approve" label="تصویب نهایی" display="label" (click)="approveChangeRequestManager(selectedDiffCR, diffTargetType)"></button>
+        <button *ngIf="diffTargetType === 'vehicle' && (selectedDiffCR.status === 'pending_manager' || selectedDiffCR.status === 'accountant_approved') && canApproveFleetManager" type="button" appAction="approve" label="تصویب نهایی" display="label" (click)="approveChangeRequestManager(selectedDiffCR)"></button>
       </div>
     </div>
   </div>

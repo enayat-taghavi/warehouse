@@ -30,7 +30,10 @@ import {
   PersonnelDocument,
   PersonnelCostEstimate,
   VehicleBankAccount,
-  VehicleDocument
+  VehicleDocument,
+  PagedResult,
+  PersonnelLookupResult,
+  PersonnelBatchApproveRow
 } from './personnel-api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +44,16 @@ export class HrApiService {
 
   getPersonnelProfiles(params?: { warehouse_id?: number; section_id?: number; project_id?: number; is_active?: boolean; approval_status?: string; search?: string; company_id?: number }): Observable<PersonnelProfile[]> {
     return this.api.get<PersonnelProfile[]>(`${this.baseUrl}/profiles`, params as Record<string, unknown>);
+  }
+
+  /** فهرست صفحه‌ای سمت سرور (۴.۳-ب، د۷)؛ بی page فهرست کامل برای کلاینت قدیمی و صف آفلاین */
+  getPersonnelProfilesPage(params: { page: number; page_size?: number; section_id?: number; project_id?: number; is_active?: boolean; approval_status?: string; search?: string; company_id?: number }): Observable<PagedResult<PersonnelProfile>> {
+    return this.api.get<PagedResult<PersonnelProfile>>(`${this.baseUrl}/profiles`, params as Record<string, unknown>);
+  }
+
+  /** نشانی چاپ PDF پرونده (هستهٔ چاپ، همان قاعدهٔ پوشش) */
+  personnelProfilePrintUrl(id: number): string {
+    return `/api/print/personnel_profile/${id}/pdf/`;
   }
 
   getPersonnelProfile(id: number): Observable<PersonnelProfile> {
@@ -94,8 +107,8 @@ export class HrApiService {
     return this.api.get<{ job_titles: string[]; items?: { title: string; job_codes: string[] }[] }>(`${this.baseUrl}/profiles/job-titles/`, params as Record<string, unknown>);
   }
 
-  lookupPersonnelByNationalCode(nationalCode: string): Observable<{ found: boolean; personnel?: any }> {
-    return this.api.get<{ found: boolean; personnel?: any }>(`${this.baseUrl}/profiles/lookup-by-national-code/`, { national_code: nationalCode });
+  lookupPersonnelByNationalCode(nationalCode: string): Observable<PersonnelLookupResult> {
+    return this.api.get<PersonnelLookupResult>(`${this.baseUrl}/profiles/lookup-by-national-code/`, { national_code: nationalCode });
   }
 
   assignPersonnelToSection(id: number, data: { section_id: number; project_id?: number; job_title?: string; daily_base_wage?: number; notes?: string }): Observable<any> {
@@ -161,7 +174,7 @@ export class HrApiService {
   }
 
   batchApprovePersonnel(ids: number[], stage: 'supervisor' | 'finance' | 'manager', note?: string): Observable<{
-    results: Array<{ id: number; full_name?: string; success: boolean; error?: string }>;
+    results: PersonnelBatchApproveRow[];
   }> {
     return this.api.post<any>(`${this.baseUrl}/profiles/batch-approve/`, { ids, stage, note: note || '' }, { context: new HttpContext().set(SKIP_OFFLINE, true) });
   }
@@ -196,6 +209,10 @@ export class HrApiService {
     return this.api.get<PersonnelChangeRequest[]>(`${this.baseUrl}/personnel-change-requests`, params as Record<string, unknown>);
   }
 
+  getPersonnelChangeRequestsPage(params: { page: number; page_size?: number; status?: string; search?: string; company_id?: number }): Observable<PagedResult<PersonnelChangeRequest>> {
+    return this.api.get<PagedResult<PersonnelChangeRequest>>(`${this.baseUrl}/personnel-change-requests`, params as Record<string, unknown>);
+  }
+
   approvePersonnelChangeRequestSupervisor(id: number, note?: string): Observable<any> {
     return this.api.post<any>(`${this.baseUrl}/personnel-change-requests/${id}/approve-supervisor/`, note ? { note } : {});
   }
@@ -210,6 +227,10 @@ export class HrApiService {
 
   rejectPersonnelChangeRequest(id: number, reason: string): Observable<any> {
     return this.api.post<any>(`${this.baseUrl}/personnel-change-requests/${id}/reject/`, { reason });
+  }
+
+  requestPersonnelChangeRequestRevision(id: number, reason: string): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/personnel-change-requests/${id}/request-revision/`, { reason });
   }
 
   cancelPersonnelChangeRequest(changeRequestId: number, reason?: string): Observable<any> {

@@ -2,11 +2,12 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
+import { Directive, Input } from '@angular/core';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -33,6 +34,12 @@ import { generateShebaFromAccount } from '../../../../../../core/utils/sheba-uti
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
+
+@Directive({ selector: 'a[routerLink]', standalone: true })
+class RouterLinkStub {
+  @Input() routerLink: any;
+  @Input() queryParams: any;
+}
 
 describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehensive Items Verification)', () => {
   let fixture: ComponentFixture<AccountantNewProfilesHubComponent>;
@@ -185,17 +192,13 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
       })),
       getMySections: vi.fn().mockReturnValue(of(mockSections)),
       getProjectSections: vi.fn().mockReturnValue(of(mockSections)),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([mockPersonnel])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockPersonnel] })),
       getVehicleProfiles: vi.fn().mockReturnValue(of([mockVehicle])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([mockCrPersonnel])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([mockCrVehicle])),
-      approvePersonnelFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی پرسنل با موفقیت ثبت شد.' })),
       approveVehicleFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی خودرو با موفقیت ثبت شد.' })),
-      rejectPersonnel: vi.fn().mockReturnValue(of({ message: 'پرونده پرسنل رد شد.' })),
-      requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'پرونده پرسنل عودت گردید.' })),
       rejectVehicle: vi.fn().mockReturnValue(of({ message: 'پرونده خودرو رد شد.' })),
       requestVehicleRevision: vi.fn().mockReturnValue(of({ message: 'پرونده خودرو عودت گردید.' })),
-      rejectPersonnelChangeRequest: vi.fn().mockReturnValue(of({ message: 'درخواست تغییرات پرسنل رد شد.' })),
       rejectVehicleChangeRequest: vi.fn().mockReturnValue(of({ message: 'درخواست تغییرات خودرو رد شد.' })),
       getJobGradeRate: vi.fn().mockReturnValue(of({
         grade: '20',
@@ -204,7 +207,6 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
         hourly_rate: 746000
       })),
       updatePersonnelProfile: vi.fn().mockReturnValue(of({ message: 'مشخصات و ارقام مالی پرسنل با موفقیت ذخیره شد.' })),
-      approvePersonnelChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات پرسنل انجام شد.' })),
       approveVehicleChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات ناوگان انجام شد.' }))
     };
 
@@ -237,7 +239,9 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
         { provide: ActivatedRoute, useValue: mockRoute },
         { provide: ActiveCompanyService, useValue: mockActiveCompanyService }
       ]
-    }).compileComponents();
+    })
+      .overrideComponent(AccountantNewProfilesHubComponent, { remove: { imports: [RouterLink] }, add: { imports: [RouterLinkStub] } })
+      .compileComponents();
 
     fixture = TestBed.createComponent(AccountantNewProfilesHubComponent);
     component = fixture.componentInstance;
@@ -320,10 +324,10 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     // Status badge: "در انتظار تایید حسابدار"
     expect(hostElem.textContent).toContain('در انتظار تایید حسابدار');
 
-    // Action buttons inside card
-    const approveBtn = hostElem.querySelector('button[appAction="approve"]');
-    expect(approveBtn).toBeTruthy();
-    expect(approveBtn?.textContent).toContain('تایید مالی');
+    // 4.3-c: no approve / return / reject buttons on the personnel card; link to my-tasks instead
+    expect(hostElem.querySelector('button[appAction="approve"]')).toBeNull();
+    expect(hostElem.querySelector('button[appAction="reject"]')).toBeNull();
+    expect(hostElem.querySelector('a[routerLink]')).toBeTruthy();
 
     const editBtn = hostElem.querySelector('button[appAction="edit"]');
     expect(editBtn).toBeTruthy();
@@ -416,51 +420,15 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
   });
 
   // ─────────────────────────────────────────────────────────────────
-  // آیتم ۸: تایید مالی پرسنل و ارسال پرونده به مدیر در DOM
+  // آیتم ۸ و ۹ (۴.۳-ج): تایید/عودت/رد پرسنل از این صفحه برداشته شد
   // ─────────────────────────────────────────────────────────────────
-  it('Item 8: Clicking "تایید مالی (ارسال به مدیر)" invokes approvePersonnelFinance in DOM', () => {
+  it('Item 8/9: personnel approve, return and reject buttons and modals are gone from the DOM', () => {
     const hostElem: HTMLElement = fixture.nativeElement;
-
-    const approveBtn: HTMLButtonElement | null = hostElem.querySelector('button[appAction="approve"]');
-    expect(approveBtn).toBeTruthy();
-    approveBtn?.click();
-    fixture.detectChanges();
-
-    expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('تایید مالی پرسنل'));
-  });
-
-  // ─────────────────────────────────────────────────────────────────
-  // آیتم ۹: ارجاع به بازنگری یا رد پرونده با مودال علت مستند در DOM
-  // ─────────────────────────────────────────────────────────────────
-  it('Item 9: Revision modal opens, rejects empty reason, and submits valid reason via DOM', () => {
-    const hostElem: HTMLElement = fixture.nativeElement;
-
-    // Click "🔄 عودت" button in DOM
-    const returnBtn: HTMLButtonElement | null = Array.from(hostElem.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('عودت')) as HTMLButtonElement || null;
-    expect(returnBtn).toBeTruthy();
-    returnBtn.click();
-    fixture.detectChanges();
-
-    // Verify modal is open in DOM
-    expect(component.isRejectModalOpen).toBe(true);
-    expect(hostElem.textContent).toContain('ارجاع به بازنگری و عودت');
-
-    // Try submitting with empty reason
-    component.rejectReason = '';
-    component.submitRejectModal();
-    expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('علت'));
-    expect(mockPersonnelApi.requestPersonnelRevision).not.toHaveBeenCalled();
-
-    // Type valid documented reason
-    component.rejectReason = 'شماره بیمه تامین اجتماعی ناخوانا است';
-    component.submitRejectModal();
-    fixture.detectChanges();
-
-    expect(mockPersonnelApi.requestPersonnelRevision).toHaveBeenCalledWith(938, 'شماره بیمه تامین اجتماعی ناخوانا است');
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
-    expect(component.isRejectModalOpen).toBe(false);
+    const labels = Array.from(hostElem.querySelectorAll('button')).map(b => b.textContent || '');
+    expect(labels.some(t => t.includes('عودت'))).toBe(false);
+    expect(component.personnelItems.length).toBe(1);
+    expect((component as any).approvePersonnelFinance).toBeUndefined();
+    expect((component as any).isRejectModalOpen).toBe(false);
   });
 
   // ─────────────────────────────────────────────────────────────────
@@ -511,28 +479,28 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     expect(hostElem.textContent).toContain('مشاهده تفاوت‌ها و تغییرات پیشنهادی');
     expect(component.diffRows.length).toBe(2);
 
-    // Close diff modal
-    component.closeDiffModal();
+    // Close diff modal through its close button (a real click marks the zoneless view dirty)
+    const closeBtn = hostElem.querySelector('[role="dialog"] button[appAction="close"]') as HTMLButtonElement | null;
+    expect(closeBtn).toBeTruthy();
+    closeBtn!.click();
     fixture.detectChanges();
     expect(component.isDiffModalOpen).toBe(false);
 
-    // Approve CR
-    component.approveChangeRequestFinance(mockCrPersonnel, 'personnel');
-    expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(301);
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('تایید مالی'));
+    // no approve button for personnel change requests (my-tasks does it)
+    expect(hostElem.querySelector('button[appAction="approve"]')).toBeNull();
   });
 
   // ─────────────────────────────────────────────────────────────────
   // آیتم ۱۲: به‌روزرسانی زنده وب‌سوکت در DOM بدون نیاز به رفرش صفحه
   // ─────────────────────────────────────────────────────────────────
   it('Item 12: Real-time WebSocket event updates component data in-place without page reload', () => {
-    const initialCallCount = mockPersonnelApi.getPersonnelProfiles.mock.calls.length;
+    const initialCallCount = mockPersonnelApi.getPersonnelProfilesPage.mock.calls.length;
 
     // Send WebSocket notification for active section 3
     wsSubject.next({ type_str: 'personnel_updated', section_id: 3 });
     fixture.detectChanges();
 
     // Verify component refreshed data in-place
-    expect(mockPersonnelApi.getPersonnelProfiles.mock.calls.length).toBeGreaterThan(initialCallCount);
+    expect(mockPersonnelApi.getPersonnelProfilesPage.mock.calls.length).toBeGreaterThan(initialCallCount);
   });
 });

@@ -54,13 +54,13 @@ describe('SupervisorPersonnelHubComponent Unit Tests', () => {
         { id: 10, name: 'کارگاه مرکزی', project_name: 'پروژه الف' }
       ])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [
         { id: 101, first_name: 'علی', last_name: 'اکبری', national_code: '1234567890', approval_status: 'pending_supervisor' }
-      ])),
+      ] })),
       getDailyAttendance: vi.fn().mockReturnValue(of([
         { id: 201, personnel_name: 'علی اکبری', status: 'PRESENT', supervisor_approved: false, date_shamsi: '1405/01/01' }
       ])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([mockCrPersonnel])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       approvePersonnelSupervisor: vi.fn().mockReturnValue(of({ success: true })),
       patchDailyAttendance: vi.fn().mockReturnValue(of({ success: true })),
       approvePersonnelChangeRequestSupervisor: vi.fn().mockReturnValue(of({ success: true })),
@@ -106,7 +106,7 @@ describe('SupervisorPersonnelHubComponent Unit Tests', () => {
 
   it('2. should fetch new personnel profiles and count them correctly', () => {
     component.fetchData();
-    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
+    expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalled();
     expect(component.newPersonnelList.length).toBe(1);
     expect(component.statusCounters.newCount).toBe(1);
   });
@@ -119,14 +119,15 @@ describe('SupervisorPersonnelHubComponent Unit Tests', () => {
     }));
   });
 
-  it('4. should approve new personnel with note modal and show success toast', () => {
-    const item = { id: 101, first_name: 'علی', last_name: 'اکبری' };
-    component.openApproveModal('new', item);
+  it('4. should approve attendance with note modal and show success toast', () => {
+    const item = { id: 201, personnel_name: 'علی اکبری', date_shamsi: '1405/01/01' };
+    component.openApproveModal('attendance', item);
     expect(component.isApprovalModalOpen).toBe(true);
-    component.approvalNote = 'مدارک تکمیل است.';
+    component.approvalNote = 'کارکرد صحیح است.';
 
     component.submitApproval();
-    expect(mockPersonnelApi.approvePersonnelSupervisor).toHaveBeenCalledWith(101, 'مدارک تکمیل است.');
+    expect(mockPersonnelApi.patchDailyAttendance).toHaveBeenCalled();
+    expect(mockPersonnelApi.approvePersonnelSupervisor).not.toHaveBeenCalled();
     expect(mockToast.showSuccess).toHaveBeenCalled();
     expect(component.isApprovalModalOpen).toBe(false);
   });
@@ -137,18 +138,12 @@ describe('SupervisorPersonnelHubComponent Unit Tests', () => {
     expect(component.diffFieldRows.length).toBeGreaterThan(0);
   });
 
-  it('6. should reject personnel with mandatory reason', () => {
-    const item = { id: 101, first_name: 'علی', last_name: 'اکبری' };
-    component.openRejectModal('new', item, 'reject');
-    expect(component.isRejectModalOpen).toBe(true);
-
-    component.submitReject(); // empty reason
-    expect(mockToast.showWarning).toHaveBeenCalled();
-
-    component.rejectReason = 'عدم تطابق مدارک هویتی';
-    component.submitReject();
-    expect(mockPersonnelApi.rejectPersonnel).toHaveBeenCalledWith(101, 'عدم تطابق مدارک هویتی');
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.isRejectModalOpen).toBe(false);
+  it('6. should page change requests from the server and not call legacy approve actions', () => {
+    component.fetchData();
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 20 }));
+    expect(component.changeRequestsList.length).toBe(1);
+    expect(component.totals.changes).toBe(1);
+    expect(mockPersonnelApi.approvePersonnelChangeRequestSupervisor).not.toHaveBeenCalled();
+    expect(mockPersonnelApi.rejectPersonnel).not.toHaveBeenCalled();
   });
 });

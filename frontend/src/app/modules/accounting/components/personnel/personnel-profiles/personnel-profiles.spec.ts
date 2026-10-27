@@ -30,9 +30,9 @@ describe('PersonnelProfilesHub Unit Tests', () => {
     };
 
     mockApi = {
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [
         { id: 1, first_name: 'حسین', last_name: 'اکبری', national_code: '2452304301', job_grade: '19', daily_base_wage: 6572696, daily_seniority_bonus: 171867, base_daily_rate: 6572696, hourly_rate: 657270, approval_status: 'draft', is_active: true }
-      ])),
+      ] })),
       getVehicleProfiles: vi.fn().mockReturnValue(of([
         { id: 1, driver_name: 'علی رضایی', plate_number: '12B345IR68', vehicle_type: 'pickup', ownership_type: 'contract', default_service_rate: 2000000, approval_status: 'approved', is_active: true }
       ])),
@@ -104,7 +104,7 @@ describe('PersonnelProfilesHub Unit Tests', () => {
   it('1. should initialize and load personnel profiles on ngOnInit', () => {
     component.ngOnInit();
     expect(mockWhService.getAll).toHaveBeenCalled();
-    expect(mockApi.getPersonnelProfiles).toHaveBeenCalled();
+    expect(mockApi.getPersonnelProfilesPage).toHaveBeenCalled();
     expect(component.personnelList.length).toBe(1);
     expect(component.personnelList[0].first_name).toBe('حسین');
   });
@@ -173,8 +173,33 @@ describe('PersonnelProfilesHub Unit Tests', () => {
     expect(component.diffRows[0].isDiff).toBe(true);
   });
 
+  it('5a. personnel list uses server paging (page 20) and the pager reloads', () => {
+    component.ngOnInit();
+    expect(mockApi.getPersonnelProfilesPage).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 20 }));
+    component.personnelTotal = 45;
+    component.goToPersonnelPage(2);
+    expect(mockApi.getPersonnelProfilesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, page_size: 20 }));
+  });
+
+  it('5c. masked sensitive values are never sent when creating a profile', () => {
+    mockApi.createPersonnelProfile = vi.fn().mockReturnValue(of({ id: 9, approval_status: 'draft' }));
+    component.editingPersonnel = { first_name: 'a', last_name: 'b', national_code: '12*****890', id_number: '55', sheba_number: 'IR**********' } as any;
+    component.savePersonnel();
+    const payload = mockApi.createPersonnelProfile.mock.calls[0][0];
+    expect(payload.national_code).toBeUndefined();
+    expect(payload.sheba_number).toBeUndefined();
+    expect(payload.id_number).toBe('55');
+  });
+
+  it('5d. workflow error message lists missing field labels', () => {
+    const msg = component.workflowErrorMessage({ error: { error: 'x', missing_fields: [{ field: 'a', label: 'L1' }, 'L2'] } }, 'f');
+    expect(msg).toContain('L1');
+    expect(msg).toContain('L2');
+  });
+
   it('5b. should configure responsive toolkit TabDefs for main, change request, and modal tabs', () => {
     component.personnelList = [{ id: 1 } as any];
+    component.personnelTotal = 1;
     component.vehiclesList = [{ id: 1 } as any, { id: 2 } as any];
     component.personnelChangeRequests = [{ id: 10 } as any];
     component.vehicleChangeRequests = [];
@@ -241,7 +266,7 @@ describe('PersonnelProfilesHub Unit Tests', () => {
         client_tab_id: 'tab_remote_other',
         personnel_id: 1
       });
-      expect(mockApi.getPersonnelProfiles).toHaveBeenCalledTimes(1);
+      expect(mockApi.getPersonnelProfilesPage).toHaveBeenCalledTimes(1);
     });
 
     it('should ignore echoed WebSocket events from current tab to prevent redundant requests', () => {
@@ -250,7 +275,7 @@ describe('PersonnelProfilesHub Unit Tests', () => {
         client_tab_id: 'tab_test_spec',
         personnel_id: 1
       });
-      expect(mockApi.getPersonnelProfiles).not.toHaveBeenCalled();
+      expect(mockApi.getPersonnelProfilesPage).not.toHaveBeenCalled();
     });
 
     it('should safely unsubscribe all subscriptions on ngOnDestroy without memory leaks', () => {
@@ -260,7 +285,7 @@ describe('PersonnelProfilesHub Unit Tests', () => {
         type: 'personnel_updated',
         client_tab_id: 'tab_remote_other'
       });
-      expect(mockApi.getPersonnelProfiles).not.toHaveBeenCalled();
+      expect(mockApi.getPersonnelProfilesPage).not.toHaveBeenCalled();
     });
 
     it('should return stable trackBy keys for personnel, vehicles, and change requests', () => {
@@ -299,7 +324,7 @@ describe('PersonnelProfilesHub Unit Tests', () => {
       mockActiveCompanyService.activeCompanyId = 2;
       activeCompany$.next({ id: 2, name: 'شرکت دوم' });
 
-      expect(mockApi.getPersonnelProfiles).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockApi.getPersonnelProfilesPage).toHaveBeenCalledWith(expect.objectContaining({
         company_id: 2
       }));
     });

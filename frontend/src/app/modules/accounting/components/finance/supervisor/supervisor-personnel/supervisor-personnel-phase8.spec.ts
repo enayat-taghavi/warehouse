@@ -92,9 +92,9 @@ describe('SupervisorPersonnelHubComponent - Phase 8 Comprehensive Tests', () => 
         { id: 10, name: 'کارگاه مرکزی', project_name: 'پروژه الف' }
       ])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([sampleProfile1, sampleProfile2])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 2, next: null, previous: null, results: [sampleProfile1, sampleProfile2] })),
       getDailyAttendance: vi.fn().mockReturnValue(of([])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([mockCrPersonnel])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       approvePersonnelSupervisor: vi.fn().mockReturnValue(of({ success: true })),
       patchDailyAttendance: vi.fn().mockReturnValue(of({ success: true })),
       approvePersonnelChangeRequestSupervisor: vi.fn().mockReturnValue(of({ success: true })),
@@ -149,13 +149,13 @@ describe('SupervisorPersonnelHubComponent - Phase 8 Comprehensive Tests', () => 
   });
 
   describe('Task 8.2: Filter isolation (No draft leakage)', () => {
-    it('should query getPersonnelProfiles with approval_status: pending_supervisor exclusively', () => {
+    it('should query getPersonnelProfilesPage with approval_status: pending_supervisor exclusively', () => {
       component.fetchData();
-      expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalledWith(
+      expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalledWith(
         expect.objectContaining({ approval_status: 'pending_supervisor' })
       );
       // Ensure draft is NOT present in any call for new personnel
-      const calls = mockPersonnelApi.getPersonnelProfiles.mock.calls;
+      const calls = mockPersonnelApi.getPersonnelProfilesPage.mock.calls;
       const newPersonnelCall = calls.find((c: any[]) => c[0]?.approval_status !== undefined);
       expect(newPersonnelCall[0].approval_status).toBe('pending_supervisor');
       expect(newPersonnelCall[0].approval_status).not.toContain('draft');
@@ -195,142 +195,21 @@ describe('SupervisorPersonnelHubComponent - Phase 8 Comprehensive Tests', () => 
     });
   });
 
-  describe('Task 8.4: Operational Modals (Approval Note, Revision, and Smart Purge Reject)', () => {
-    it('should approve personnel with optional supervisor note and update list', () => {
-      component.openApproveModal('new', sampleProfile1);
-      expect(component.isApprovalModalOpen).toBe(true);
-      component.approvalNote = 'مدارک و گواهی عدم سوءپیشینه بررسی و تایید شد.';
-
-      component.submitApproval();
-      expect(mockPersonnelApi.approvePersonnelSupervisor).toHaveBeenCalledWith(
-        101,
-        'مدارک و گواهی عدم سوءپیشینه بررسی و تایید شد.'
-      );
-      expect(mockToast.showSuccess).toHaveBeenCalled();
-      expect(component.isApprovalModalOpen).toBe(false);
+  describe('Task 8.4: Read-only personnel lists (approvals live in my-tasks)', () => {
+    it('should page profiles from the server and expose paging state', () => {
+      component.fetchData();
+      expect(component.totals.new).toBe(2);
+      expect(component.pageSize).toBe(20);
+      component.goToPage('new', 1);
+      expect(component.pages.new).toBe(1);
     });
 
-    it('should return revision to employee with mandatory reason', () => {
-      component.openRejectModal('new', sampleProfile1, 'revision');
-      expect(component.isRejectModalOpen).toBe(true);
-
-      component.submitReject(); // No reason
-      expect(mockToast.showWarning).toHaveBeenCalledWith('لطفاً دلیل مستند عودت یا رد را وارد فرمایید.');
-
-      component.rejectReason = 'تصویر کارت ملی ناخوانا است. لطفاً اسکن باکیفیت بارگذاری کنید.';
-      component.submitReject();
-      expect(mockPersonnelApi.requestPersonnelRevision).toHaveBeenCalledWith(
-        101,
-        'تصویر کارت ملی ناخوانا است. لطفاً اسکن باکیفیت بارگذاری کنید.'
-      );
-      expect(mockToast.showSuccess).toHaveBeenCalled();
-      expect(component.isRejectModalOpen).toBe(false);
-    });
-
-    it('should query delete_impact on reject modal and set isPurgeCandidate to true when no history exists', () => {
-      mockPersonnelApi.getPersonnelDeleteImpact.mockReturnValue(of({
-        can_delete: true,
-        has_history: false,
-        reasons: []
-      }));
-
-      component.openRejectModal('new', sampleProfile1, 'reject');
-      expect(mockPersonnelApi.getPersonnelDeleteImpact).toHaveBeenCalledWith(101);
-      expect(component.isPurgeCandidate).toBe(true);
-
-      component.rejectReason = 'عدم تطابق سمت با نیازمندی پروژه';
-      component.submitReject();
-      expect(mockPersonnelApi.rejectPersonnel).toHaveBeenCalledWith(101, 'عدم تطابق سمت با نیازمندی پروژه');
-      expect(mockToast.showSuccess).toHaveBeenCalledWith(expect.stringContaining('Purge'));
-    });
-
-    it('should query delete_impact on reject modal and set isPurgeCandidate to false when history exists', () => {
-      mockPersonnelApi.getPersonnelDeleteImpact.mockReturnValue(of({
-        can_delete: false,
-        has_history: true,
-        reasons: ['دارای ۲ رکورد حضور و غیاب']
-      }));
-
-      component.openRejectModal('new', sampleProfile1, 'reject');
-      expect(mockPersonnelApi.getPersonnelDeleteImpact).toHaveBeenCalledWith(101);
-      expect(component.isPurgeCandidate).toBe(false);
-
-      component.rejectReason = 'انصراف پرسنل از همکاری';
-      component.submitReject();
-      expect(mockPersonnelApi.rejectPersonnel).toHaveBeenCalledWith(101, 'انصراف پرسنل از همکاری');
-      expect(mockToast.showSuccess).toHaveBeenCalledWith(expect.stringContaining('بایگانی'));
-    });
-  });
-
-  describe('Task 8.5: Batch Approval for Supervisor', () => {
-    beforeEach(() => {
-      component.newPersonnelList = [sampleProfile1, sampleProfile2];
-    });
-
-    it('should manage selection of personnel profiles individually and collectively', () => {
-      expect(component.getSelectedCount()).toBe(0);
-      expect(component.isAllPersonnelSelected()).toBe(false);
-
-      // Select single
-      component.togglePersonnelSelection(101);
-      expect(component.isPersonnelSelected(101)).toBe(true);
-      expect(component.isPersonnelSelected(102)).toBe(false);
-      expect(component.getSelectedCount()).toBe(1);
-      expect(component.isAllPersonnelSelected()).toBe(false);
-
-      // Select all via header checkbox
-      component.toggleSelectAllPersonnel({ target: { checked: true } });
-      expect(component.isPersonnelSelected(101)).toBe(true);
-      expect(component.isPersonnelSelected(102)).toBe(true);
-      expect(component.getSelectedCount()).toBe(2);
-      expect(component.isAllPersonnelSelected()).toBe(true);
-
-      // Deselect all
-      component.toggleSelectAllPersonnel({ target: { checked: false } });
-      expect(component.getSelectedCount()).toBe(0);
-      expect(component.isAllPersonnelSelected()).toBe(false);
-    });
-
-    it('should warn when opening batch approval modal with 0 selected items', () => {
-      component.selectedPersonnelIds.clear();
-      component.openBatchApproveModal();
-      expect(mockToast.showWarning).toHaveBeenCalledWith('هیچ پرونده‌ای برای تایید گروهی انتخاب نشده است.');
-      expect(component.isBatchApproveModalOpen).toBe(false);
-    });
-
-    it('should submit batch approval successfully and clear selections', () => {
-      component.togglePersonnelSelection(101);
-      component.togglePersonnelSelection(102);
-      component.openBatchApproveModal();
-      expect(component.isBatchApproveModalOpen).toBe(true);
-
-      component.batchApprovalNote = 'تایید صلاحیت اولیه تمامی پرسنل';
-      component.submitBatchApproval();
-
-      expect(mockPersonnelApi.batchApprovePersonnel).toHaveBeenCalledWith(
-        [101, 102],
-        'supervisor',
-        'تایید صلاحیت اولیه تمامی پرسنل'
-      );
-      expect(mockToast.showSuccess).toHaveBeenCalledWith(expect.stringMatching(/تمام (۲|2) پرونده با موفقیت تایید و به مرحله حسابداری ارسال شدند\./));
-      expect(component.selectedPersonnelIds.size).toBe(0);
-      expect(component.isBatchApproveModalOpen).toBe(false);
-    });
-
-    it('should handle partial errors in batch approval gracefully', () => {
-      mockPersonnelApi.batchApprovePersonnel.mockReturnValue(of({
-        results: [
-          { id: 101, full_name: 'احمد قاسمی', success: true },
-          { id: 102, full_name: 'مریم محمدی', success: false, error: 'نقص فیلد ضروری' }
-        ]
-      }));
-
-      component.togglePersonnelSelection(101);
-      component.togglePersonnelSelection(102);
-      component.submitBatchApproval();
-
-      expect(mockToast.showWarning).toHaveBeenCalledWith(expect.stringMatching(/(۱|1) پرونده تایید شد، اما (۱|1) مورد با خطا مواجه شد\./));
-      expect(component.selectedPersonnelIds.size).toBe(0);
+    it('should not expose legacy approve / reject / batch actions for personnel', () => {
+      const c: any = component;
+      expect(c.submitReject).toBeUndefined();
+      expect(c.openRejectModal).toBeUndefined();
+      expect(c.submitBatchApproval).toBeUndefined();
+      expect(c.toggleSelectAllPersonnel).toBeUndefined();
     });
   });
 

@@ -100,6 +100,16 @@
         </p>
       </div>
 
+      <div class="m-3 bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span class="font-bold text-indigo-900">این فهرست فقط‌خواندنی است؛ تایید، عودت و رد پرونده‌ها را از «کارهای من» انجام دهید.</span>
+        <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_profile' }"
+          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+          title="رفتن به کارهای من" aria-label="رفتن به کارهای من">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" aria-hidden="true"></svg>
+          <span>کارهای من</span>
+        </a>
+      </div>
+
       <div *ngIf="personnelItems.length > 0" class="overflow-x-auto">
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-black">
@@ -110,40 +120,42 @@
               <th class="p-3">عنوان شغل</th>
               <th class="p-3">شماره تماس</th>
               <th class="p-3">شماره شبا</th>
-              <th class="p-3 text-center">عملیات تایید</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
             <tr *ngFor="let item of personnelItems; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-              <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
+              <td class="p-3 font-mono text-slate-400">{{ (pages.personnel - 1) * pageSize + idx + 1 }}</td>
               <td class="p-3 font-bold text-slate-800">{{ item.first_name }} {{ item.last_name }}</td>
-              <td class="p-3 font-mono text-slate-600">{{ item.national_code }}</td>
+              <td class="p-3 font-mono text-slate-600">
+                <span dir="ltr">{{ item.national_code }}</span>
+                <span *ngIf="isMasked(item.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              </td>
               <td class="p-3">{{ item.job_title }}</td>
-              <td class="p-3 font-mono">{{ item.phone_number || item.mobile }}</td>
-              <td class="p-3 font-mono text-[11px]">{{ item.sheba_number }}</td>
-              <td class="p-3 text-center">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    appAction="approve"
-                    size="sm"
-                    display="label"
-                    label="تایید پرونده"
-                    (click)="openApprovalModal('personnel', item)">
-                  </button>
-                  <button
-                    type="button"
-                    appAction="return"
-                    size="sm"
-                    display="label"
-                    label="عودت"
-                    (click)="rejectPersonnel(item)">
-                  </button>
-                </div>
+              <td class="p-3 font-mono"><span dir="ltr">{{ item.phone_number || item.mobile }}</span></td>
+              <td class="p-3 font-mono text-[11px]">
+                <span dir="ltr">{{ item.sheba_number }}</span>
+                <span *ngIf="isMasked(item.sheba_number)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- صفحه‌بندی -->
+      <div *ngIf="totals.personnel > pageSize" class="p-3 border-t border-line flex items-center justify-between gap-2 text-xs">
+        <button type="button" (click)="goToPage('personnel', pages.personnel - 1)" [disabled]="pages.personnel <= 1 || isLoading"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+          title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+          <span class="hidden sm:inline">قبلی</span>
+        </button>
+        <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.personnel) }} از {{ formatNumber(totalPages('personnel')) }}</span>
+        <button type="button" (click)="goToPage('personnel', pages.personnel + 1)" [disabled]="pages.personnel >= totalPages('personnel') || isLoading"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+          title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+          <span class="hidden sm:inline">بعدی</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+        </button>
       </div>
     </div>
 
@@ -223,7 +235,7 @@
             <span>👥 درخواست‌های تغییرات پرسنل مصوب</span>
             <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-mono">{{ personnelChangeRequests.length }}</span>
           </div>
-          <span class="text-[11px] text-slate-400 font-normal">مرحله اول: بررسی و تایید اولیه توسط سرپرست کارگاه</span>
+          <span class="text-[11px] text-slate-400 font-normal">فقط‌خواندنی؛ تایید و رد از «کارهای من»</span>
         </div>
         <table class="w-full text-right text-xs">
           <thead class="bg-slate-50/70 border-b border-slate-100 text-slate-500 font-black">
@@ -233,7 +245,7 @@
               <th class="p-3">کد ملی</th>
               <th class="p-3">تغییرات پیشنهادی</th>
               <th class="p-3">درخواست‌دهنده</th>
-              <th class="p-3 text-center w-44">عملیات سرپرست</th>
+              <th class="p-3 text-center w-44">مشاهده</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -261,38 +273,45 @@
                 <div class="text-[10px] text-slate-400 font-mono mt-0.5">{{ cr.created_at ? (cr.created_at | date:'yyyy/MM/dd HH:mm') : '' }}</div>
               </td>
               <td class="p-3 text-center">
-                <div class="flex items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    appAction="view"
-                    size="sm"
-                    display="label"
-                    label="مقایسه Diff"
-                    hint="مشاهده مقایسه تفصیلی تغییرات"
-                    (click)="openDiffModal(cr, 'personnel')">
-                  </button>
-                  <button
-                    type="button"
-                    appAction="approve"
-                    size="sm"
-                    display="label"
-                    label="تایید سرپرست"
-                    hint="تایید مرحله اول سرپرست و ارسال به حسابداری"
-                    (click)="openApprovalModal('personnel_cr', cr)">
-                  </button>
-                  <button
-                    type="button"
-                    appAction="reject"
-                    size="sm"
-                    label="عودت"
-                    hint="رد درخواست تغییرات"
-                    (click)="rejectPersonnelChange(cr)">
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  appAction="view"
+                  size="sm"
+                  display="label"
+                  label="مقایسه Diff"
+                  hint="مشاهده مقایسه تفصیلی تغییرات"
+                  (click)="openDiffModal(cr, 'personnel')">
+                </button>
               </td>
             </tr>
           </tbody>
         </table>
+      <div class="m-3 bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span class="font-bold text-indigo-900">تایید، عودت و رد درخواست‌های تغییر پرسنل را از «کارهای من» انجام دهید.</span>
+        <a routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_change' }"
+          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+          title="رفتن به کارهای من" aria-label="رفتن به کارهای من">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" aria-hidden="true"></svg>
+          <span>کارهای من</span>
+        </a>
+      </div>
+
+      <!-- صفحه‌بندی -->
+      <div *ngIf="totals.personnel_cr > pageSize" class="p-3 border-t border-line flex items-center justify-between gap-2 text-xs">
+        <button type="button" (click)="goToPage('personnel_cr', pages.personnel_cr - 1)" [disabled]="pages.personnel_cr <= 1 || isLoading"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+          title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+          <span class="hidden sm:inline">قبلی</span>
+        </button>
+        <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(pages.personnel_cr) }} از {{ formatNumber(totalPages('personnel_cr')) }}</span>
+        <button type="button" (click)="goToPage('personnel_cr', pages.personnel_cr + 1)" [disabled]="pages.personnel_cr >= totalPages('personnel_cr') || isLoading"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer"
+          title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+          <span class="hidden sm:inline">بعدی</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+        </button>
+      </div>
       </div>
 
       <!-- جدول تغییرات ناوگان -->
@@ -457,18 +476,25 @@
           label="بستن"
           (click)="isDiffModalOpen = false">
         </button>
+        <a *ngIf="diffTargetType === 'personnel'" routerLink="/app/my-tasks" [queryParams]="{ workflow: 'personnel_change' }" (click)="isDiffModalOpen = false"
+          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+          title="رفتن به کارهای من" aria-label="رفتن به کارهای من">
+          <span>کارهای من</span>
+        </a>
         <button
+          *ngIf="diffTargetType === 'vehicle'"
           type="button"
           appAction="reject"
           label="عودت تغییرات"
-          (click)="diffTargetType === 'personnel' ? rejectPersonnelChange(selectedDiffCR) : rejectVehicleChange(selectedDiffCR)">
+          (click)="rejectVehicleChange(selectedDiffCR)">
         </button>
         <button
+          *ngIf="diffTargetType === 'vehicle'"
           type="button"
           appAction="approve"
           display="label"
           label="تایید"
-          (click)="openApprovalModal(diffTargetType === 'personnel' ? 'personnel_cr' : 'vehicle_cr', selectedDiffCR)">
+          (click)="openApprovalModal('vehicle_cr', selectedDiffCR)">
         </button>
       </div>
     </div>
@@ -525,5 +551,15 @@
       </div>
     </div>
   </div>
+
+  <!-- دیالوگ علت رد تغییرات ناوگان -->
+  <app-workflow-reason-dialog
+    [open]="isReasonDialogOpen"
+    title="علت رد تغییرات خودرو"
+    confirmLabel="ثبت رد"
+    [serverError]="reasonServerError"
+    (confirmed)="onReasonConfirmed($event)"
+    (cancelled)="onReasonCancelled()"
+  ></app-workflow-reason-dialog>
 
 </div>

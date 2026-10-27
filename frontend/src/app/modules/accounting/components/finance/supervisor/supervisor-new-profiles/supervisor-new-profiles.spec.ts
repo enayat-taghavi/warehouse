@@ -69,13 +69,13 @@ describe('SupervisorNewProfilesHubComponent Unit & DOM Tests', () => {
         { id: 10, name: 'بخش دریافت', project: 1, is_active: true }
       ])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [
         { id: 1, first_name: 'علی', last_name: 'کریمی', approval_status: 'pending_supervisor' }
-      ])),
+      ] })),
       getVehicleProfiles: vi.fn().mockReturnValue(of([
         { id: 2, plate_number: '33-444-55', approval_status: 'pending_supervisor' }
       ])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([mockCrPersonnel])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([mockCrVehicle])),
       approvePersonnelSupervisor: vi.fn().mockReturnValue(of({ message: 'تایید شد' })),
       requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'عودت شد' })),
@@ -123,7 +123,7 @@ describe('SupervisorNewProfilesHubComponent Unit & DOM Tests', () => {
     expect(component.activeSubTab).toBe('change_requests');
     expect(component.selectedSectionId).toBe(10);
     expect(mockPersonnelApi.getMySections).toHaveBeenCalled();
-    expect(mockPersonnelApi.getPersonnelChangeRequests).toHaveBeenCalledWith({ status: 'pending_supervisor' });
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenCalledWith({ status: 'pending_supervisor', page: 1, page_size: 20 });
     expect(mockPersonnelApi.getVehicleChangeRequests).toHaveBeenCalledWith({ status: 'pending_supervisor' });
     expect(component.personnelChangeRequests.length).toBe(1);
     expect(component.vehicleChangeRequests.length).toBe(1);
@@ -139,22 +139,12 @@ describe('SupervisorNewProfilesHubComponent Unit & DOM Tests', () => {
     }));
   });
 
-  it('3. should approve personnel change request and show toast & refresh', () => {
-    component.ngOnInit();
-    component.approvePersonnelChange(mockCrPersonnel);
-
-    expect(mockPersonnelApi.approvePersonnelChangeRequestSupervisor).toHaveBeenCalledWith(111);
-    expect(mockToast.success).toHaveBeenCalledWith('درخواست تغییرات به تایید سرپرست رسید و به کارتابل حسابداری ارسال شد.');
-    expect(mockPersonnelApi.getPersonnelChangeRequests).toHaveBeenCalledTimes(2);
-  });
-
-  it('4. should reject personnel change request with reason prompt', () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('دلیل عدم تطابق مزد روزانه');
-    component.ngOnInit();
-    component.rejectPersonnelChange(mockCrPersonnel);
-
-    expect(mockPersonnelApi.rejectPersonnelChangeRequest).toHaveBeenCalledWith(111, 'دلیل عدم تطابق مزد روزانه');
-    expect(mockToast.warning).toHaveBeenCalled();
+  it('3. should not expose legacy personnel approve / reject actions (done in my-tasks)', () => {
+    const c: any = component;
+    expect(c.approvePersonnelChange).toBeUndefined();
+    expect(c.rejectPersonnelChange).toBeUndefined();
+    expect(c.approvePersonnel).toBeUndefined();
+    expect(c.rejectPersonnel).toBeUndefined();
   });
 
   it('5. should approve vehicle change request and refresh', () => {
@@ -165,13 +155,15 @@ describe('SupervisorNewProfilesHubComponent Unit & DOM Tests', () => {
     expect(mockToast.success).toHaveBeenCalledWith('درخواست تغییرات خودرو به تایید سرپرست رسید و به کارتابل حسابداری ارسال شد.');
   });
 
-  it('6. should reject vehicle change request with prompt', () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('نرخ پیشنهادی نامتعارف است');
+  it('6. should reject vehicle change request with reason from the shared dialog', () => {
     component.ngOnInit();
     component.rejectVehicleChange(mockCrVehicle);
+    expect(component.isReasonDialogOpen).toBe(true);
 
+    component.onReasonConfirmed('نرخ پیشنهادی نامتعارف است');
     expect(mockPersonnelApi.rejectVehicleChangeRequest).toHaveBeenCalledWith(222, 'نرخ پیشنهادی نامتعارف است');
     expect(mockToast.warning).toHaveBeenCalled();
+    expect(component.isReasonDialogOpen).toBe(false);
   });
 
   it('7. should format change value and field label correctly in Persian', () => {
@@ -182,11 +174,11 @@ describe('SupervisorNewProfilesHubComponent Unit & DOM Tests', () => {
 
   it('8. should refresh profiles when websocket notification is received', () => {
     component.ngOnInit();
-    const initialCallCount = mockPersonnelApi.getPersonnelProfiles.mock.calls.length;
+    const initialCallCount = mockPersonnelApi.getPersonnelProfilesPage.mock.calls.length;
 
     wsSubject.next({ type_str: 'personnel_updated', section_id: 10 });
 
-    expect(mockPersonnelApi.getPersonnelProfiles.mock.calls.length).toBeGreaterThan(initialCallCount);
+    expect(mockPersonnelApi.getPersonnelProfilesPage.mock.calls.length).toBeGreaterThan(initialCallCount);
   });
 
   it('9. should open Diff Modal and structure comparison rows correctly', () => {

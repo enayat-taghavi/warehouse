@@ -61,9 +61,10 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
         monthly_food_allowance: 22000000,
         monthly_spouse_allowance: 5000000
       })),
-      getPersonnelProfiles: vi.fn().mockImplementation((params) => {
+      getPersonnelProfilesPage: vi.fn().mockImplementation((params) => {
+        const page = (results: any[]) => of({ count: results.length, next: null, previous: null, results });
         if (params?.approval_status === 'pending_manager') {
-          return of([
+          return page([
             {
               id: 201,
               first_name: 'سهراب',
@@ -77,7 +78,7 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
             }
           ]);
         }
-        return of([
+        return page([
           { id: 201, first_name: 'سهراب', last_name: 'سپهری', national_code: '1234567890', approval_status: 'approved', base_daily_rate: 6572696 },
           { id: 202, first_name: 'نیما', last_name: 'یوشیج', national_code: '9876543210', approval_status: 'approved', base_daily_rate: 6572696 }
         ]);
@@ -85,7 +86,7 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
       getPersonnelContracts: vi.fn().mockReturnValue(of([
         { id: 501, personnel_name: 'سهراب سپهری', status: 'pending_manager', contract_no: 'CT-1405-01' }
       ])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([mockCrPersonnel])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       approvePersonnelManager: vi.fn().mockReturnValue(of({ success: true })),
       approvePersonnelChangeRequestManager: vi.fn().mockReturnValue(of({ success: true })),
       rejectPersonnel: vi.fn().mockReturnValue(of({ success: true })),
@@ -168,43 +169,26 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
     expect(tabs[3].icon).toBeDefined();
   });
 
-  it('3. should open and submit approval for pending personnel', () => {
+  it('3. should open the read-only cost analysis for pending personnel (approval lives in my-tasks)', () => {
     component.ngOnInit();
     const candidate = component.pendingManagerList[0];
-    component.openApproveModal('new', candidate);
-    expect(component.isApprovalModalOpen).toBe(true);
-    expect(component.approvalTarget?.type).toBe('new');
+    component.openCostModal(candidate);
+    expect(component.isCostModalOpen).toBe(true);
+    expect(component.costTarget?.item).toBe(candidate);
+    expect(mockPersonnelApi.approvePersonnelManager).not.toHaveBeenCalled();
 
-    component.approvalNote = 'مورد تایید مدیریت است';
-    component.submitApproval();
-    expect(mockPersonnelApi.approvePersonnelManager).toHaveBeenCalledWith(candidate.id, 'مورد تایید مدیریت است');
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.isApprovalModalOpen).toBe(false);
+    component.closeCostModal();
+    expect(component.isCostModalOpen).toBe(false);
   });
 
-  it('4. should open and submit rejection or return to accountant for pending personnel (Task 10.2)', () => {
+  it('4. should page lists from the server and not expose legacy approve / reject actions', () => {
     component.ngOnInit();
-    const candidate = component.pendingManagerList[0];
-
-    // حالت ۱: عودت به حسابدار (پیش‌فرض)
-    component.openRejectModal(candidate.id!, 'سهراب سپهری', 'personnel');
-    expect(component.isRejectModalOpen).toBe(true);
-    expect(component.rejectActionType).toBe('return_to_accountant');
-
-    component.rejectReason = 'مدارک مالی و شبا مخدوش است';
-    component.submitReject();
-    expect(mockPersonnelApi.requestPersonnelRevision).toHaveBeenCalledWith(candidate.id, 'مدارک مالی و شبا مخدوش است', 'pending_accountant');
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.isRejectModalOpen).toBe(false);
-
-    // حالت ۲: رد قطعی
-    component.openRejectModal(candidate.id!, 'سهراب سپهری', 'personnel');
-    component.rejectActionType = 'reject_final';
-    component.rejectReason = 'عدم تطابق با شرایط احراز شغل';
-    component.submitReject();
-    expect(mockPersonnelApi.rejectPersonnel).toHaveBeenCalledWith(candidate.id, 'عدم تطابق با شرایط احراز شغل');
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.isRejectModalOpen).toBe(false);
+    expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalledWith(expect.objectContaining({ approval_status: 'pending_manager', page: 1, page_size: 20 }));
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenCalledWith(expect.objectContaining({ status: 'pending_manager', page: 1, page_size: 20 }));
+    const c: any = component;
+    expect(c.submitApproval).toBeUndefined();
+    expect(c.submitReject).toBeUndefined();
+    expect(c.openRejectModal).toBeUndefined();
   });
 
   it('5. should open and inspect change request diff details', () => {
@@ -229,7 +213,7 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
   it('Task 10.1 / DEF-05: financial impact widget uses the server payroll-engine estimate and company average', () => {
     component.ngOnInit();
     const candidate = component.pendingManagerList[0];
-    component.openApproveModal('new', candidate);
+    component.openCostModal(candidate);
     expect(mockPersonnelApi.getPersonnelCostEstimate).toHaveBeenCalledWith(candidate.id);
     expect(mockPersonnelApi.getCompanyPersonnelCostSummary).toHaveBeenCalled();
 

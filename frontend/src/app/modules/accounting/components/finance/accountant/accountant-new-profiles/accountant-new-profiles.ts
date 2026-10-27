@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, Subscription, of } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -15,7 +15,9 @@ import {
   VehicleDriverProfile,
   PersonnelChangeRequest,
   VehicleChangeRequest,
-  PayrollYearlySettings
+  PayrollYearlySettings,
+  PersonnelWorkflowError,
+  isMaskedValue
 } from '../../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -34,6 +36,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 
 export type AccountantSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
 export type AccountantStatusFilter = 'ALL' | 'pending_accountant' | 'pending_manager' | 'approved' | 'revision_required' | 'rejected' | 'draft';
@@ -48,6 +51,8 @@ export type AccountantStatusFilter = 'ALL' | 'pending_accountant' | 'pending_man
     CommandCenterComponent,
     TabBarComponent,
     ActionButtonComponent,
+    RouterLink,
+    SvgIconDirective,
   ],
   templateUrl: './accountant-new-profiles.html',
   styleUrl: './accountant-new-profiles.css'
@@ -73,6 +78,16 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   personnelChangeRequests: PersonnelChangeRequest[] = [];
   vehicleChangeRequests: VehicleChangeRequest[] = [];
   yearlySettings: PayrollYearlySettings | null = null;
+
+  // ─── صفحه‌بندی سمت سرور (۴.۳-ج): پرونده و درخواست تغییر پرسنل فقط‌خواندنی؛ اقدام‌ها در «کارهای من» ───
+  readonly pageSize = 20;
+  personnelPage = 1;
+  personnelCount = 0;
+  personnelCrPage = 1;
+  personnelCrCount = 0;
+  personnelCrPending = 0;
+  loadError = false;
+  readonly isMasked = isMaskedValue;
 
   // ─── شمارنده‌های زنده در انتظار تایید حسابدار ───
   statusCounters = {
@@ -102,7 +117,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   rejectTarget: {
     id: number;
     title: string;
-    type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr';
+    type: 'vehicle' | 'vehicle_cr';
     action: 'reject' | 'revision';
   } | null = null;
   rejectReason = '';
@@ -222,6 +237,8 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   onSectionChanged(): void {
+    this.personnelPage = 1;
+    this.personnelCrPage = 1;
     this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
     this.syncUrlParams();
     this.fetchData();
@@ -279,7 +296,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   private crTabsKey = '';
   private crTabsCache: TabDef[] = [];
   get changeRequestTabs(): TabDef[] {
-    const pCount = this.personnelChangeRequests.length;
+    const pCount = this.personnelCrCount;
     const vCount = this.vehicleChangeRequests.length;
     const key = `${pCount}:${vCount}`;
     if (key !== this.crTabsKey) {
@@ -320,12 +337,23 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   setStatusFilter(filter: AccountantStatusFilter): void {
+    this.personnelPage = 1;
+    this.personnelCrPage = 1;
     this.statusFilter = (this.statusFilter === filter && filter !== 'ALL') ? 'ALL' : filter;
     this.syncUrlParams();
     this.fetchData();
   }
 
+  onFiltersChanged(): void {
+    this.personnelPage = 1;
+    this.personnelCrPage = 1;
+    this.syncUrlParams();
+    this.fetchData();
+  }
+
   clearSearch(): void {
+    this.personnelPage = 1;
+    this.personnelCrPage = 1;
     this.searchQuery = '';
     this.syncUrlParams();
     this.fetchData();
@@ -355,29 +383,41 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
       baseParams.search = this.searchQuery.trim();
     }
 
-    // دریافت پرونده‌های پرسنل
-    this.personnelApi.getPersonnelProfiles(baseParams).subscribe({
-      next: (res: PersonnelProfile[]) => {
-        const allList = res || [];
-        this.statusCounters.personnelTotal = allList.length;
-        this.statusCounters.personnelPending = allList.filter(p => p.approval_status === 'pending_accountant' || p.approval_status === 'supervisor_approved').length;
-
-        if (this.statusFilter === 'pending_accountant') {
-          this.personnelItems = allList.filter(p => p.approval_status === 'pending_accountant' || p.approval_status === 'supervisor_approved');
-        } else if (this.statusFilter !== 'ALL') {
-          this.personnelItems = allList.filter(p => p.approval_status === this.statusFilter);
-        } else {
-          this.personnelItems = allList;
-        }
-
+    // دریافت پرونده‌های پرسنل (صفحه‌ای)
+    this.loadError = false;
+    const pParams: any = { ...baseParams, page: this.personnelPage, page_size: this.pageSize };
+    if (this.statusFilter === 'pending_accountant') {
+      pParams.approval_status = 'pending_accountant,supervisor_approved';
+    } else if (this.statusFilter !== 'ALL') {
+      pParams.approval_status = this.statusFilter;
+    }
+    this.personnelApi.getPersonnelProfilesPage(pParams).subscribe({
+      next: (res) => {
+        this.personnelItems = res?.results || [];
+        this.personnelCount = res?.count ?? this.personnelItems.length;
+        this.statusCounters.personnelTotal = this.personnelCount;
         this.updateCombinedCounters();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        if (err?.status === 404 && this.personnelPage > 1) {
+          this.personnelPage = 1;
+          this.fetchData();
+          return;
+        }
+        this.loadError = true;
         this.isLoading = false;
         this.cdr.detectChanges();
       }
+    });
+    this.personnelApi.getPersonnelProfilesPage({ ...baseParams, page: 1, page_size: 1, approval_status: 'pending_accountant,supervisor_approved' }).subscribe({
+      next: (res) => {
+        this.statusCounters.personnelPending = res?.count ?? 0;
+        this.updateCombinedCounters();
+        this.cdr.detectChanges();
+      },
+      error: () => {}
     });
 
     // دریافت پرونده‌های ناوگان
@@ -401,10 +441,27 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
       error: () => {}
     });
 
-    // دریافت درخواست‌های تغییرات معلق
-    this.personnelApi.getPersonnelChangeRequests(this.selectedSectionId ? { section_id: this.selectedSectionId } as any : {}).subscribe({
-      next: (crList: PersonnelChangeRequest[]) => {
-        this.personnelChangeRequests = (crList || []).filter(cr => cr.status === 'pending_accountant' || cr.status === 'pending_finance' || cr.status === 'supervisor_approved');
+    // درخواست‌های تغییر پرسنل (صفحه‌ای، فقط‌خواندنی)
+    const crParams: any = { page: this.personnelCrPage, page_size: this.pageSize };
+    if (this.selectedSectionId) crParams.section_id = this.selectedSectionId;
+    if (this.searchQuery.trim()) crParams.search = this.searchQuery.trim();
+    if (this.statusFilter !== 'ALL') crParams.status = this.statusFilter;
+    this.personnelApi.getPersonnelChangeRequestsPage(crParams).subscribe({
+      next: (res) => {
+        this.personnelChangeRequests = res?.results || [];
+        this.personnelCrCount = res?.count ?? this.personnelChangeRequests.length;
+        this.updateCRCounts();
+      },
+      error: (err) => {
+        if (err?.status === 404 && this.personnelCrPage > 1) {
+          this.personnelCrPage = 1;
+          this.fetchData();
+        }
+      }
+    });
+    this.personnelApi.getPersonnelChangeRequestsPage({ page: 1, page_size: 1, status: 'pending_accountant' }).subscribe({
+      next: (res) => {
+        this.personnelCrPending = res?.count ?? 0;
         this.updateCRCounts();
       },
       error: () => {}
@@ -420,9 +477,8 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   private updateCRCounts(): void {
-    const totalCR = this.personnelChangeRequests.length + this.vehicleChangeRequests.length;
-    this.statusCounters.changeRequestsPending = totalCR;
-    this.statusCounters.changeRequestsTotal = totalCR;
+    this.statusCounters.changeRequestsPending = this.personnelCrPending + this.vehicleChangeRequests.length;
+    this.statusCounters.changeRequestsTotal = this.personnelCrCount + this.vehicleChangeRequests.length;
     this.updateCombinedCounters();
     this.cdr.detectChanges();
   }
@@ -433,19 +489,6 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── اکشن‌های تایید مالی ۳ مرحله‌ای (Financial Approvals) ───
-  approvePersonnelFinance(p: PersonnelProfile): void {
-    if (!p.id) return;
-    this.personnelApi.approvePersonnelFinance(p.id).subscribe({
-      next: (res) => {
-        this.toast.show('success', res.message || `تایید مالی پرسنل «${p.first_name} ${p.last_name}» صادر و پرونده جهت تصویب نهایی به مدیر ارسال شد.`);
-        this.fetchData();
-      },
-      error: (err) => {
-        this.toast.show('error', err?.error?.error || 'خطا در تایید مالی پرسنل');
-      }
-    });
-  }
-
   approveVehicleFinance(v: VehicleDriverProfile): void {
     if (!v.id) return;
     this.personnelApi.approveVehicleFinance(v.id).subscribe({
@@ -460,7 +503,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── ارجاع به بازنگری یا رد پرونده ───
-  openRejectModal(id: number, title: string, type: 'personnel' | 'vehicle' | 'personnel_cr' | 'vehicle_cr', action: 'reject' | 'revision'): void {
+  openRejectModal(id: number, title: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {
     this.rejectTarget = { id, title, type, action };
     this.rejectReason = '';
     this.isRejectModalOpen = true;
@@ -483,12 +526,8 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     const reason = this.rejectReason.trim();
 
     let obs: Observable<any>;
-    if (type === 'personnel') {
-      obs = action === 'reject' ? this.personnelApi.rejectPersonnel(id, reason) : this.personnelApi.requestPersonnelRevision(id, reason);
-    } else if (type === 'vehicle') {
+    if (type === 'vehicle') {
       obs = action === 'reject' ? this.personnelApi.rejectVehicle(id, reason) : this.personnelApi.requestVehicleRevision(id, reason);
-    } else if (type === 'personnel_cr') {
-      obs = this.personnelApi.rejectPersonnelChangeRequest(id, reason);
     } else {
       obs = this.personnelApi.rejectVehicleChangeRequest(id, reason);
     }
@@ -640,7 +679,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     }
 
     this.isSavingPersonnel = true;
-    this.personnelApi.updatePersonnelProfile(this.editingPersonnel.id, this.editingPersonnel).subscribe({
+    this.personnelApi.updatePersonnelProfile(this.editingPersonnel.id, this.withoutMaskedValues(this.editingPersonnel)).subscribe({
       next: (res) => {
         this.isSavingPersonnel = false;
         this.toast.show('success', 'مشخصات و ارقام مالی پرسنل با موفقیت ذخیره شد.');
@@ -649,9 +688,48 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSavingPersonnel = false;
-        this.toast.show('error', err?.error?.error || err?.message || 'خطا در ذخیره مشخصات مالی پرسنل');
+        this.toast.show('error', this.workflowErrorText(err, err?.message || 'خطا در ذخیره مشخصات مالی پرسنل'));
       }
     });
+  }
+
+  /** مقدار پوشیدهٔ سرور (ستاره‌دار) هرگز پس فرستاده نمی‌شود (ق۱۶) */
+  private withoutMaskedValues<T extends object>(obj: T): Partial<T> {
+    const out: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (isMaskedValue(v)) continue;
+      out[k] = v;
+    }
+    return out;
+  }
+
+  /** خطای فارسی از بدنهٔ پاسخ سرور (کدهای گردش کار) */
+  workflowErrorText(err: any, fallback: string): string {
+    const body: PersonnelWorkflowError = err?.error || {};
+    if (body.code === 'wrong_step') return 'این کار در مرحلهٔ دیگری است؛ از کارهای من پیگیری کنید';
+    let msg = body.error || body.detail || fallback;
+    if (body.code === 'action_blocked' && body.missing_fields?.length) {
+      const labels = body.missing_fields.map(m => typeof m === 'string' ? m : (m.label || m.field));
+      msg += ': ' + labels.join('، ');
+    }
+    return msg;
+  }
+
+  get personnelTotalPages(): number { return Math.max(1, Math.ceil(this.personnelCount / this.pageSize)); }
+  get personnelCrTotalPages(): number { return Math.max(1, Math.ceil(this.personnelCrCount / this.pageSize)); }
+
+  goToPersonnelPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.personnelTotalPages);
+    if (next === this.personnelPage) return;
+    this.personnelPage = next;
+    this.fetchData();
+  }
+
+  goToPersonnelCrPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.personnelCrTotalPages);
+    if (next === this.personnelCrPage) return;
+    this.personnelCrPage = next;
+    this.fetchData();
   }
 
   // ─── مدیریت مودال تفاوت‌ها (Diff Viewer) ───
@@ -683,10 +761,8 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     this.diffRows = [];
   }
 
-  approveChangeRequestFinance(cr: any, type: 'personnel' | 'vehicle'): void {
-    const call = type === 'personnel'
-      ? this.personnelApi.approvePersonnelChangeRequestFinance(cr.id)
-      : this.personnelApi.approveVehicleChangeRequestFinance(cr.id);
+  approveChangeRequestFinance(cr: any): void {
+    const call = this.personnelApi.approveVehicleChangeRequestFinance(cr.id);
 
     call.subscribe({
       next: (res) => {

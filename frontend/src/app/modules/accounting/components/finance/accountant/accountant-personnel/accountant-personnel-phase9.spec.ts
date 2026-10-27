@@ -84,9 +84,9 @@ describe('AccountantPersonnelHubComponent Phase 9 Tests', () => {
       getMySections: vi.fn().mockReturnValue(of([{ id: 3, name: 'دالان کارگاه' }])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
       getYearlySettings: vi.fn().mockReturnValue(of({ monthly_housing_allowance: 30000000, monthly_food_allowance: 22000000, monthly_spouse_allowance: 5000000 })),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([completePersonnel, incompletePersonnel])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 2, next: null, previous: null, results: [completePersonnel, incompletePersonnel] })),
       getMonthlyPayrollRecords: vi.fn().mockReturnValue(of([])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([])),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 0, next: null, previous: null, results: [] })),
       getJobTitles: vi.fn().mockReturnValue(of({
         job_titles: ['کارشناس حسابداری', 'کارگر انبار', 'راننده پایه یک'],
         items: [
@@ -94,13 +94,7 @@ describe('AccountantPersonnelHubComponent Phase 9 Tests', () => {
           { title: 'کارگر انبار', job_codes: ['654321'] }
         ]
       })),
-      approvePersonnelFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی صادر شد.' })),
       updatePersonnelProfile: vi.fn().mockReturnValue(of({ ...completePersonnel })),
-      rejectPersonnel: vi.fn().mockReturnValue(of({ message: 'رد شد' })),
-      requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'عودت داده شد' })),
-      batchApprovePersonnel: vi.fn().mockReturnValue(of({
-        results: [{ id: 101, success: true }]
-      })),
       getJobGradeRate: vi.fn().mockReturnValue(of({
         daily_base_wage: 7000000,
         daily_seniority_bonus: 180000,
@@ -233,49 +227,15 @@ describe('AccountantPersonnelHubComponent Phase 9 Tests', () => {
     expect(missingSummary).toContain('کد ۶ رقمی شغل تامین اجتماعی');
   });
 
-  it('Task 9.6: should allow choosing return destination in revision modal and send targetStatus', () => {
-    component.openRejectModal(101, 'علیرضا حیدری', 'personnel', 'revision');
-    expect(component.isRejectModalOpen).toBe(true);
-    expect(component.revisionDestination).toBe('pending_supervisor');
-
-    // تغییر مقصد به کارمند
-    component.revisionDestination = 'revision_required';
-    component.rejectReason = 'عدم تطابق شماره شبا با نام دارنده حساب';
-
-    component.submitRejectModal();
-    expect(mockPersonnelApi.requestPersonnelRevision).toHaveBeenCalledWith(
-      101,
-      'عدم تطابق شماره شبا با نام دارنده حساب',
-      'revision_required'
-    );
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.isRejectModalOpen).toBe(false);
-  });
-
-  it('Task 9.7: should manage batch selection and execute batch approval workflow', () => {
+  it('Task 9.6/9.7 (4.3-c): return / reject / batch approval moved to my-tasks; list stays read-only', () => {
     component.fetchData();
     expect(component.personnelItems.length).toBe(2);
-
-    // انتخاب همه رکوردهای واجد شرایط (فقط ۱۰۱ واجد شرایط است، ۱۰۲ نقص دارد)
-    component.toggleSelectAll();
-    expect(component.selectedCount()).toBe(1);
-    expect(component.isSelected(101)).toBe(true);
-    expect(component.isSelected(102)).toBe(false);
-
-    component.openBatchApprovalModal();
-    expect(component.isBatchApprovalModalOpen).toBe(true);
-
-    component.batchApprovalNote = 'تایید احکام کلیه نفرات این دوره کارگاهی';
-    component.confirmBatchApproval();
-
-    expect(mockPersonnelApi.batchApprovePersonnel).toHaveBeenCalledWith(
-      [101],
-      'finance',
-      'تایید احکام کلیه نفرات این دوره کارگاهی'
-    );
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.selectedCount()).toBe(0);
-    expect(component.isBatchApprovalModalOpen).toBe(false);
+    const c: any = component;
+    expect(c.openRejectModal).toBeUndefined();
+    expect(c.submitRejectModal).toBeUndefined();
+    expect(c.confirmBatchApproval).toBeUndefined();
+    expect(c.selectedCount).toBeUndefined();
+    expect(mockPersonnelApi.batchApprovePersonnel).toBeUndefined();
   });
 
   it('Task 9.8: should provide 1-click copy helper with transient visual feedback', async () => {

@@ -7,6 +7,9 @@ import { PayrollApiService } from './payroll-api.service';
 import { TreasuryOrgApiService } from './treasury-org-api.service';
 export * from './personnel-api.models';
 import {
+  PagedResult,
+  PersonnelLookupResult,
+  PersonnelBatchApproveRow,
   PersonnelProfile,
   VehicleDriverProfile,
   PersonnelChangeRequest,
@@ -72,6 +75,8 @@ export class PersonnelApiService {
   }
 
   getPersonnelProfiles(params?: { warehouse_id?: number; section_id?: number; project_id?: number; is_active?: boolean; approval_status?: string; search?: string; company_id?: number }): Observable<PersonnelProfile[]> { return this.hr.getPersonnelProfiles(params); }
+  getPersonnelProfilesPage(params: { page: number; page_size?: number; section_id?: number; project_id?: number; is_active?: boolean; approval_status?: string; search?: string; company_id?: number }): Observable<PagedResult<PersonnelProfile>> { return this.hr.getPersonnelProfilesPage(params); }
+  personnelProfilePrintUrl(id: number): string { return this.hr.personnelProfilePrintUrl(id); }
   getPersonnelProfile(id: number): Observable<PersonnelProfile> { return this.hr.getPersonnelProfile(id); }
   createPersonnelProfile(data: Partial<PersonnelProfile> | FormData): Observable<PersonnelProfile> { return this.hr.createPersonnelProfile(data); }
   updatePersonnelProfile(id: number, data: Partial<PersonnelProfile> | FormData): Observable<any> { return this.hr.updatePersonnelProfile(id, data); }
@@ -84,7 +89,7 @@ export class PersonnelApiService {
   uploadPersonnelDocument(id: number, file: File, docType: string = 'other'): Observable<PersonnelDocument> { return this.hr.uploadPersonnelDocument(id, file, docType); }
   deletePersonnelDocument(id: number, docId: number): Observable<any> { return this.hr.deletePersonnelDocument(id, docId); }
   getJobTitles(params?: { search?: string; q?: string }): Observable<{ job_titles: string[]; items?: { title: string; job_codes: string[] }[] }> { return this.hr.getJobTitles(params); }
-  lookupPersonnelByNationalCode(nationalCode: string): Observable<{ found: boolean; personnel?: any }> { return this.hr.lookupPersonnelByNationalCode(nationalCode); }
+  lookupPersonnelByNationalCode(nationalCode: string): Observable<PersonnelLookupResult> { return this.hr.lookupPersonnelByNationalCode(nationalCode); }
   assignPersonnelToSection(id: number, data: { section_id: number; project_id?: number; job_title?: string; daily_base_wage?: number; notes?: string }): Observable<any> { return this.hr.assignPersonnelToSection(id, data); }
   deletePersonnelProfile(id: number): Observable<void> { return this.hr.deletePersonnelProfile(id); }
   importPersonnelExcel(formData: FormData): Observable<any> { return this.hr.importPersonnelExcel(formData); }
@@ -97,7 +102,7 @@ export class PersonnelApiService {
   rejectPersonnel(id: number, reason: string): Observable<any> { return this.hr.rejectPersonnel(id, reason); }
   requestPersonnelRevision(id: number, reason: string, targetStatus?: 'revision_required' | 'pending_supervisor' | 'pending_accountant'): Observable<any> { return this.hr.requestPersonnelRevision(id, reason, targetStatus); }
   getPersonnelDeleteImpact(id: number): Observable<{ impact: Array<{ model_name: string; count: number }>; total_affected: number; history: { has_history: boolean; can_delete: boolean; reasons: string[] }; can_delete: boolean; has_history: boolean; reasons: string[]; }> { return this.hr.getPersonnelDeleteImpact(id); }
-  batchApprovePersonnel(ids: number[], stage: 'supervisor' | 'finance' | 'manager', note?: string): Observable<{ results: Array<{ id: number; full_name?: string; success: boolean; error?: string }>; }> { return this.hr.batchApprovePersonnel(ids, stage, note); }
+  batchApprovePersonnel(ids: number[], stage: 'supervisor' | 'finance' | 'manager', note?: string): Observable<{ results: PersonnelBatchApproveRow[]; }> { return this.hr.batchApprovePersonnel(ids, stage, note); }
   reopenPersonnelProfile(id: number, note?: string): Observable<{ message: string; data: PersonnelProfile }> { return this.hr.reopenPersonnelProfile(id, note); }
   endPersonnelCollaboration(id: number, endDate: string, reason: string): Observable<{ message: string; data: PersonnelProfile }> { return this.hr.endPersonnelCollaboration(id, endDate, reason); }
   getPersonnelCostEstimate(personnelId: number, overrides?: Record<string, unknown>, yearMonth?: string): Observable<PersonnelCostEstimate> { return this.hr.getPersonnelCostEstimate(personnelId, overrides, yearMonth); }
@@ -139,6 +144,8 @@ export class PersonnelApiService {
   approvePersonnelChangeRequestFinance(id: number, note?: string): Observable<any> { return this.hr.approvePersonnelChangeRequestFinance(id, note); }
   approvePersonnelChangeRequestManager(id: number, note?: string): Observable<any> { return this.hr.approvePersonnelChangeRequestManager(id, note); }
   rejectPersonnelChangeRequest(id: number, reason: string): Observable<any> { return this.hr.rejectPersonnelChangeRequest(id, reason); }
+  getPersonnelChangeRequestsPage(params: { page: number; page_size?: number; status?: string; search?: string; company_id?: number }): Observable<PagedResult<PersonnelChangeRequest>> { return this.hr.getPersonnelChangeRequestsPage(params); }
+  requestPersonnelChangeRequestRevision(id: number, reason: string): Observable<any> { return this.hr.requestPersonnelChangeRequestRevision(id, reason); }
   getVehicleChangeRequests(params?: { status?: string; search?: string; company_id?: number }): Observable<VehicleChangeRequest[]> { return this.fleet.getVehicleChangeRequests(params); }
   approveVehicleChangeRequestSupervisor(id: number, note?: string): Observable<any> { return this.fleet.approveVehicleChangeRequestSupervisor(id, note); }
   approveVehicleChangeRequestFinance(id: number, note?: string): Observable<any> { return this.fleet.approveVehicleChangeRequestFinance(id, note); }

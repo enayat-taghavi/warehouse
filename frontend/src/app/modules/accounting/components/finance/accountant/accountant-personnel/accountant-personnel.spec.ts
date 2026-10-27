@@ -62,16 +62,12 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
       getMySections: vi.fn().mockReturnValue(of([{ id: 3, name: 'دالان کارگاه' }])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
       getYearlySettings: vi.fn().mockReturnValue(of({ monthly_housing_allowance: 30000000, monthly_food_allowance: 22000000 })),
-      getPersonnelProfiles: vi.fn().mockReturnValue(of([mockPersonnel])),
+      getPersonnelProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockPersonnel] })),
       getMonthlyPayrollRecords: vi.fn().mockReturnValue(of([
         { id: 50, personnel_name: 'مرتضی منصوریان', gross_salary: 150000000, net_salary: 130000000, finance_approved: false }
       ])),
-      getPersonnelChangeRequests: vi.fn().mockReturnValue(of([])),
-      approvePersonnelFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی صادر شد.' })),
-      approvePersonnelChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات ثبت شد.' })),
+      getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 0, next: null, previous: null, results: [] })),
       updatePersonnelProfile: vi.fn().mockReturnValue(of({ ...mockPersonnel })),
-      rejectPersonnel: vi.fn().mockReturnValue(of({ message: 'رد شد' })),
-      requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'عودت داده شد' })),
       getJobGradeRate: vi.fn().mockReturnValue(of({ daily_base_wage: 7000000, daily_seniority_bonus: 180000, hourly_rate: 700000 }))
     };
 
@@ -111,10 +107,13 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
     expect(mockPersonnelApi.getMySections).toHaveBeenCalled();
   });
 
-  it('2. should fetch personnel and count pending accountant items', () => {
+  it('2. should fetch the first server page of pending personnel (read-only list)', () => {
     component.fetchData();
-    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
+    expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, page_size: 20, approval_status: 'pending_accountant,supervisor_approved' })
+    );
     expect(component.personnelItems.length).toBe(1);
+    expect(component.personnelCount).toBe(1);
     expect(component.statusCounters.newPending).toBe(1);
   });
 
@@ -148,32 +147,46 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
     expect(mockToast.showSuccess).toHaveBeenCalled();
   });
 
-  it('6. should approve personnel finance and send to manager', () => {
-    component.approvePersonnelFinance(mockPersonnel);
-    expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
-    expect(mockToast.showSuccess).toHaveBeenCalled();
+  it('6. has no approve / reject / batch actions any more (engine my-tasks does them)', () => {
+    const c: any = component;
+    for (const name of ['approvePersonnelFinance', 'approveChangeRequestFinance', 'openApprovalModal', 'confirmApproval',
+      'openRejectModal', 'submitRejectModal', 'openBatchApprovalModal', 'confirmBatchApproval', 'toggleSelectAll']) {
+      expect(c[name]).toBeUndefined();
+    }
   });
 
-  // ─── قابلیت‌های منتقل‌شده از کارتابل مالی قدیمی ───
-  it('7. should approve personnel change request (finance stage) with optional note via modal', () => {
-    component.openApprovalModal(412, 'مرتضی منصوریان', 'personnel_cr');
-    expect(component.isApprovalModalOpen).toBe(true);
-    component.approvalNote = 'شبا و مزد بررسی شد';
-    component.confirmApproval();
-    expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(412, 'شبا و مزد بررسی شد');
-    expect(mockToast.showSuccess).toHaveBeenCalled();
-    expect(component.isApprovalModalOpen).toBe(false);
+  it('7. paginates on the server: next page asks page 2 and a 404 on page > 1 falls back to page 1', () => {
+    mockPersonnelApi.getPersonnelProfilesPage.mockReturnValue(of({ count: 45, next: 'x', previous: null, results: [mockPersonnel] }));
+    component.fetchData();
+    expect(component.personnelTotalPages).toBe(3);
+    component.goToPersonnelPage(2);
+    expect(mockPersonnelApi.getPersonnelProfilesPage).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
   });
 
-  it('8. should approve new personnel through the modal without a note', () => {
-    component.openApprovalModal(938, 'مرتضی منصوریان', 'personnel');
-    component.confirmApproval();
-    expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
+  it('8. change requests are loaded paged with status pending_accountant', () => {
+    component.fetchData();
+    expect(mockPersonnelApi.getPersonnelChangeRequestsPage).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, page_size: 20, status: 'pending_accountant' })
+    );
   });
 
-  it('9. should approve a change request directly and refresh the lists', () => {
-    component.approveChangeRequestFinance({ id: 413 } as any);
-    expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(413);
-    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
+  it('9. masked values are never sent back when saving accountant edits', () => {
+    const masked = { ...mockPersonnel, national_code: '00****1989', sheba_number: 'IR**********************12', account_number: '1011*****001' } as unknown as PersonnelProfile;
+    component.openEditPersonnelModal(masked);
+    component.editingPersonnel!.job_title = 'انباردار';
+    component.savePersonnelFinancialChanges();
+    const payload = mockPersonnelApi.updatePersonnelProfile.mock.calls[0][1];
+    expect(payload.job_title).toBe('انباردار');
+    expect(payload.national_code).toBeUndefined();
+    expect(payload.sheba_number).toBeUndefined();
+    expect(payload.account_number).toBeUndefined();
+  });
+
+  it('10. workflow error texts come from the body (wrong_step, action_blocked with missing fields)', () => {
+    expect(component.workflowErrorText({ error: { code: 'wrong_step', error: 'x' } }, 'f')).toContain('کارهای من');
+    const msg = component.workflowErrorText({ error: { code: 'action_blocked', error: 'ناقص است', missing_fields: [{ field: 'job_code', label: 'کد شغل' }, 'شبا'] } }, 'f');
+    expect(msg).toContain('ناقص است');
+    expect(msg).toContain('کد شغل');
+    expect(msg).toContain('شبا');
   });
 });
