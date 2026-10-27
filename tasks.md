@@ -2498,3 +2498,42 @@ Write the definitions in simple Persian like the rows above.
 7. Before finishing: all tests in both folders pass; commit only the three files with the message `test(release-v1 4.1-c): invoice payment modal and lines form DOM specs, glossary`; `git status --short` prints nothing.
 
 8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+===
+
+[ ] Session 1 of 1 — Release v1 step 4.2-b: petty cash scenario API tests
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/modules/accounting/personnel/test_petty_cash_42.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/modules/accounting/personnel/test_petty_cash_42.py --contains "opening_balance_locked" --contains "amount_exceeds_debt" --contains "payroll_not_available" --contains "offset_exceeds_charge" --contains "ceiling_exceeded_at_pay" --contains "period_locked" --contains "debt_open" --contains "reference_required" --contains "account_closed" --contains "petty_cash_statement" --absent "skip(" --absent "expectedFailure"
+verify: set DB_TEST_NAME=test_agy_petty42b&& python scripts/automation/verify_tools.py django-tests --labels personnel.test_petty_cash_42 --min-tests 8
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 4.2-b): petty cash scenario API tests"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_petty_cash_42.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commits `feat(release-v1 4.2-b): petty cash B1` and `B2`; read these only):
+- `backend/modules/accounting/personnel/test_petty_cash_smoke_36c.py` fully (about 340 lines). It is a working test. COPY its imports, the `setUp` and helpers of `PettyCashSmokeTests` (`user`, `call`, `act`, `step`), of `PettyCashSettlementSmoke42Tests` (`rejected_line`, `charge_at_pay` and its extra setUp lines) and of `PettyCashLifecycleSmoke42Tests` (`set_opening`, `draft_expense`, `expense_payload`) into your new class `PettyCash42Tests(TestCase)`. Do not import or subclass from the smoke file; copy.
+- `scratch/handoff_4_2_b1.md` and `scratch/handoff_4_2_b2.md` (exact endpoints, request fields, error codes).
+- Change after the handoffs: an old custodian whose account was closed and who has no active account gets 400 `account_closed` from `POST petty-cash-transactions/` without an `account` and from `request-charge` (no new account is auto-created). Deleting a charge that has a debt offset settlement returns 400 `has_settlements`.
+
+3. Task — `class PettyCash42Tests(TestCase)` with these tests (one method each):
+- a) `test_rejected_line_lowers_level_and_raises_debt`: set an opening balance of 500000 on the account; check `my-balance` `current_balance` includes it; make a rejected line of 100000 (helper `rejected_line`); `my-balance`: `current_balance` decreased by 100000 compared with before the rejection and `debt` == 100000, `rejected_total` == 100000.
+- b) `test_opening_balance_locked_after_activity`: before any row the custodian-manager sets opening balance freely (200); after one row exists: a user without the manager permission PATCHes it → 403 `code == 'opening_balance_locked'`; the manager without `reason` → 400 `reason_required`; with `reason` → 200 and a `WorkflowAuditLog` row with action `petty_opening_balance_changed` exists.
+- c) `test_cash_settlement_rules`: with debt 100000: the custodian POSTs a settlement → 403; the accountant POSTs cash 150000 → 400 `amount_exceeds_debt`; cash without `reference` → 400 `reference_required`; method `payroll` → 400 `payroll_not_available`; cash 100000 with reference → 201 status `done`; `my-balance` `debt` == 0 and `current_balance` unchanged by the settlement; void with reason → 200 and debt is 100000 again.
+- d) `test_charge_offset_net_on_pay`: debt 100000; a charge of 300000 in flight (helper `charge_at_pay`); offset 400000 on it → 400 `offset_exceeds_charge`; offset 100000 → 201 `pending`; pay the charge (as the smoke test does) → settlement becomes `done`, `my-balance` `current_balance` rose by exactly 200000 and `debt` == 0.
+- e) `test_ceiling_rechecked_at_pay`: copy the flow of the smoke test `test_ceiling_rechecked_at_pay` and also assert that after the 409 `ceiling_exceeded_at_pay` the charge status and `receipt_number` are unchanged.
+- f) `test_reconciliation_period_lock`: reconciliation with counted cash lower than expected → 201, `difference` negative, `my-balance` `debt` equals the shortage; a second reconciliation with counted higher than expected → 201 and debt unchanged; POST an expense dated on/before the reconciled date → 400 `period_locked`; with a statement in flight a new reconciliation → 400 `work_in_flight`.
+- g) `test_close_and_handover`: with debt > 0 close → 400 `debt_open`; after settling, close with fund level > 0 and no reference → 400 `reference_required`; on a second account handover to a new custodian → 201 and the sum of `petty_fund_level` (from `personnel.workflows`) of old and new accounts equals the old level before handover; PATCH the closed account → 400 `account_closed`; the old custodian POSTs an expense without account → 400 `account_closed`.
+- h) `test_scope_print_and_masking`: a user of another company: GET `/api/personnel/petty-cash-settlements/` and `/api/personnel/petty-cash-reconciliations/` do not contain this company's rows; POST a settlement on this account → 404; GET `/api/print/petty_cash_statement/{statement_id}/pdf/` → 404. A plain company member without petty manage, treasurer or custodian role sees `sheba_number` masked (does not equal the stored value) in the account list, while the custodian sees the full value. Use a valid Sheba (grep `IR` in `backend/modules/accounting/personnel/test_company_bank_33.py` for one).
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/` and `backend/core/workflow/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_petty_cash_42 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.2-b): petty cash scenario API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
