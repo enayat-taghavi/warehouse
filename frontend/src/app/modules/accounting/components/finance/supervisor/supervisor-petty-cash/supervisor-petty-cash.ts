@@ -196,17 +196,18 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   updateViewAndCounters(): void {
-    const list = this.allTransactions;
+    // legacy rows only; documents of the new workflows (statements, charges) go through the shared cartable
+    const list = this.allTransactions.filter(x => ['pending_supervisor', 'pending_accountant', 'pending_manager'].includes(x.status));
     this.statusCounters = {
       pending: list.filter(x => x.status === 'pending_supervisor').length,
-      approved: list.filter(x => ['pending_accountant', 'pending_manager', 'approved'].includes(x.status)).length,
+      approved: list.filter(x => ['pending_accountant', 'pending_manager'].includes(x.status)).length,
       all: list.length
     };
 
     if (this.activeSubTab === 'pending') {
       this.items = list.filter(x => x.status === 'pending_supervisor');
     } else if (this.activeSubTab === 'approved') {
-      this.items = list.filter(x => ['pending_accountant', 'pending_manager', 'approved'].includes(x.status));
+      this.items = list.filter(x => ['pending_accountant', 'pending_manager'].includes(x.status));
     } else {
       this.items = list;
     }

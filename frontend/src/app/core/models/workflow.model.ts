@@ -73,7 +73,7 @@ export interface WorkflowTaskPage {
 export interface WorkflowSkippedStep {
   step: string;
   step_title_fa: string;
-  /** threshold | creator_level | no_recipient | no_second_approval | version_removed */
+  /** threshold | creator_level | no_recipient | no_second_approval | version_removed | not_required */
   reason: string;
   reason_fa: string;
 }

@@ -8,6 +8,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   ProjectSection,
   Counterparty,
+  FinancialProject,
+  PettyCashAccount,
+  PettyCashStatement,
   PettyCashTransaction,
   PettyCashBalanceSummary
 } from '../../../../models/personnel.model';
@@ -16,23 +19,34 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { validateSheba, ShebaValidationResult } from '../../../../../../core/utils/sheba-utils';
-import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { WorkflowHistoryComponent } from '../../../../../../shared/components/workflow-history/workflow-history.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
+import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ExpenseHeadOptionGroup, buildExpenseHeadOptions, expenseHeadErrorMessage, expenseHeadLabel } from '../../expense-head-options';
 
-export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'approved' | 'allocation' | 'rejected';
+/** تب‌های وضعیت ردیف‌های هزینه (۳.۶-د): وضعیت ردیف در گردش صورت‌حساب */
+export type PettyCashStatusTab = 'all' | 'draft' | 'approved' | 'rejected';
+/** زیرتب‌های صفحه: هزینه‌ها، درخواست شارژ، صورت‌حساب‌ها */
+export type PettyCashView = 'expenses' | 'charges' | 'statements';
+/** نوع موجودیت گردش کار برای سابقه و پیوند عمیق کارتابل */
+export type PettyCashDetailKind = 'petty_cash_charge' | 'petty_cash_statement';
+
+const PERM_CEILING = 'perm_manager_payment_authorize';
+const PERM_REVIEW = 'perm_invoice_review';
+const PERM_TREASURY = 'perm_treasury_disburse_action';
+const OFFLINE_MSG = 'برای این کار اتصال به سرور لازم است. اتصال را بررسی کنید و دوباره تلاش کنید.';
 
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe],
+  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
@@ -40,42 +54,54 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   readonly Math = Math;
 
+  // ─── زیرتب‌های صفحه ───
+  activeView: PettyCashView = 'expenses';
+  readonly viewTabs: TabDef[] = [
+    { id: 'expenses', label: 'هزینه‌ها', icon: ACCOUNTING_ENTITY_ICONS.pettyCash },
+    { id: 'charges', label: 'درخواست شارژ', shortLabel: 'شارژ', icon: 'dollar-sign' },
+    { id: 'statements', label: 'صورت‌حساب‌ها', shortLabel: 'صورت‌حساب', icon: 'file-check' },
+  ];
+
   // Memoized tabs for app-tab-bar
   private pettyCashStatusTabsKey = '';
   private pettyCashStatusTabsCache: TabDef[] = [];
   get pettyCashStatusTabs(): TabDef[] {
     const sc = this.statusCounters;
-    const key = `${sc.all}:${sc.draft}:${sc.pending_supervisor}:${sc.approved}:${sc.allocation}:${sc.rejected}`;
+    const key = `${sc.all}:${sc.draft}:${sc.approved}:${sc.rejected}`;
     if (key !== this.pettyCashStatusTabsKey) {
       this.pettyCashStatusTabsKey = key;
       this.pettyCashStatusTabsCache = [
-        { id: 'all', label: 'همه اسناد', shortLabel: 'همه', icon: 'status-all', count: sc.all },
-        { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: sc.draft },
-        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: sc.pending_supervisor },
-        { id: 'approved', label: 'تایید و تسویه‌شده', shortLabel: 'تسویه', icon: 'status-approved', count: sc.approved },
-        { id: 'allocation', label: 'شارژهای دریافتی', shortLabel: 'شارژ', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, count: sc.allocation },
-        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', icon: 'status-rejected', count: sc.rejected },
+        { id: 'all', label: 'همه هزینه‌ها', shortLabel: 'همه', icon: 'status-all', count: sc.all },
+        { id: 'draft', label: 'باز (پیش‌نویس)', shortLabel: 'باز', icon: 'status-draft', count: sc.draft },
+        { id: 'approved', label: 'تأییدشده', shortLabel: 'تأیید', icon: 'status-approved', count: sc.approved },
+        { id: 'rejected', label: 'ردشده', shortLabel: 'رد', icon: 'status-rejected', count: sc.rejected },
       ];
     }
     return this.pettyCashStatusTabsCache;
   }
 
-  // ─── مدیریت بخش و ایزولاسیون داده‌ها (Guardian G1: Section Isolation) ───
+  // ─── بخش (اختیاری): فقط فیلتر فهرست و انتخاب اختیاری روی ردیف هزینه ───
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
   selectedSection: ProjectSection | null = null;
   isLoadingSections: boolean = false;
 
-  // ─── شاخص‌های کلیدی مانده و گردش تنخواه ───
+  // ─── پروژه‌های شرکت (انتخاب اختیاری روی ردیف هزینه) ───
+  projects: FinancialProject[] = [];
+
+  // ─── حساب تنخواه سطح شرکت، مانده و بدهی ───
   balanceSummary: PettyCashBalanceSummary | null = null;
   isLoadingBalance: boolean = false;
+  account: PettyCashAccount | null = null;
+  ceilingDraft: number | null = null;
+  isSavingCeiling = false;
 
   // ─── لیست تراکنش‌ها و وضعیت بارگذاری ───
   transactions: PettyCashTransaction[] = [];
   isLoading: boolean = false;
   isSaving: boolean = false;
 
-  // ─── جستجو و فیلتر کارتابل ───
+  // ─── جستجو و فیلتر ───
   transactionSearch: string = '';
   statusFilter: PettyCashStatusTab = 'all';
 
@@ -83,7 +109,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   counterparties: Counterparty[] = [];
   isLoadingCounterparties: boolean = false;
 
-  // ─── سرفصل‌های هزینهٔ فعال شرکت بخش (۳.۴ ص۷)؛ فقط برای نوع «هزینه» ───
+  // ─── سرفصل‌های هزینهٔ فعال شرکت ───
   expenseHeadGroups: ExpenseHeadOptionGroup[] = [];
   isLoadingExpenseHeads: boolean = false;
   /** شرکتی که فهرست سرفصلش بار شده (پاسخ دیررس شرکت پیشین نادیده گرفته می‌شود) */
@@ -92,7 +118,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   // ساخت دستی در آزمون‌ها بیرون از زمینهٔ تزریق است (مثل confirmDialog)
   private readonly activeCompanyService = (() => { try { return inject(ActiveCompanyService, { optional: true }); } catch { return null; } })();
 
-  // ─── مودال ثبت هزینه از محل تنخواه (Guardian G2: Draft Invariant) ───
+  // ─── مودال ثبت هزینه از محل تنخواه (آفلاین مثل قبل ساخته می‌شود) ───
   isNewExpenseModalOpen: boolean = false;
   newExpense: Partial<PettyCashTransaction> = {
     title: '',
@@ -108,14 +134,33 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   selectedExpenseAttachment: File | null = null;
   attachmentFileName: string = '';
 
-  // ─── مودال درخواست شارژ مجدد تنخواه (Replenishment Request) ───
-  isReplenishModalOpen: boolean = false;
-  replenishData = {
+  // ─── درخواست شارژ (فقط آنلاین) ───
+  isChargeModalOpen: boolean = false;
+  chargeData = {
     amount: 0,
-    title: 'درخواست شارژ مجدد تنخواه گردان',
-    description: '',
-    receipt_number: ''
+    title: 'درخواست شارژ تنخواه',
+    description: ''
   };
+
+  // ─── صورت‌حساب‌ها ───
+  statements: PettyCashStatement[] = [];
+  isLoadingStatements = false;
+  selectedLineIds = new Set<number>();
+  isCreatingStatement = false;
+
+  // ─── پنل جزئیات (پیوند عمیق از کارتابل: ?charge= و ?statement=) ───
+  detailKind: PettyCashDetailKind | null = null;
+  detailId: number | null = null;
+  detailTx: PettyCashTransaction | null = null;
+  detailStatement: PettyCashStatement | null = null;
+  detailLines: PettyCashTransaction[] = [];
+  isLoadingDetail = false;
+  rejectLineId: number | null = null;
+  rejectReason = '';
+  rejectReasonError = '';
+  trackingCode = '';
+  trackingError = '';
+  isActing = false;
 
   // ─── مودال تعریف سریع طرف‌حساب ───
   isQuickCounterpartyModalOpen: boolean = false;
@@ -157,25 +202,37 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initTodayShamsi();
-    // ص۶ طرح ۲.۵: سند تنخواهی از این بخش که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    // سند تنخواهی که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
     this.docSub = this.ws?.documentChanges$?.(['petty_cash']).subscribe(ev => {
       if (patchDocumentRow(this.transactions, ev)) {
         this.cdr.detectChanges();
-      } else if (this.selectedSectionId && (!ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId))) {
+      } else {
         this.loadTransactions(true);
+        this.loadStatements(true);
+        this.loadBalanceSummary();
       }
+      if (this.detailKind && this.detailId) this.loadDetail(true);
     });
     this.loadMySections();
+    this.refreshData();
     this.route.queryParams.subscribe(params => {
       if (params['section_id']) {
         const sId = Number(params['section_id']);
         if (!isNaN(sId) && sId !== this.selectedSectionId) {
           this.selectedSectionId = sId;
           this.selectedSection = this.mySections.find(s => s.id === sId) || null;
-          if (this.selectedSectionId) {
-            this.refreshData();
-          }
+          this.refreshData();
         }
+      }
+      // پیوند عمیق از «کارهای من»
+      const chargeId = Number(params['charge']);
+      const statementId = Number(params['statement']);
+      if (chargeId > 0) {
+        this.activeView = 'charges';
+        this.openDetail('petty_cash_charge', chargeId, false);
+      } else if (statementId > 0) {
+        this.activeView = 'statements';
+        this.openDetail('petty_cash_statement', statementId, false);
       }
     });
   }
@@ -186,29 +243,38 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.todayShamsi = `${j.jy}/${String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')}`;
   }
 
-  // ─── بارگذاری بخش‌های مجاز کاربر ───
+  // ─── دسترسی‌ها ───
+  private hasPerm(code: string): boolean {
+    const user = this.auth.user();
+    const perms = this.auth.userPermissions() || [];
+    return !!user?.is_superuser || perms.includes('admin_all') || perms.includes(code);
+  }
+  get canEditCeiling(): boolean { return this.hasPerm(PERM_CEILING); }
+  get canTreasuryPay(): boolean { return this.hasPerm(PERM_TREASURY); }
+  get canReviewLines(): boolean { return this.hasPerm(PERM_REVIEW) || this.hasPerm(PERM_CEILING); }
+  private get currentUserId(): number | null { return (this.auth.user() as { id?: number } | null)?.id ?? null; }
+
+  /** پیام فارسی خطا؛ قطع اتصال با isServerUnreachable تشخیص داده می‌شود (نه status >= 500) */
+  private errorText(err: any, fallback: string): string {
+    if (isServerUnreachable(Number(err?.status ?? 0))) return OFFLINE_MSG;
+    return err?.error?.error || err?.error?.detail || fallback;
+  }
+
+  private get companyId(): number | null {
+    return this.activeCompanyService?.activeCompanyId ?? null;
+  }
+
+  // ─── بارگذاری بخش‌های مجاز کاربر (فقط برای فیلتر و ردیف اختیاری) ───
   loadMySections(): void {
     this.isLoadingSections = true;
     this.personnelApi.getMySections().subscribe({
       next: (sections: ProjectSection[]) => {
         this.mySections = sections || [];
-        if (this.mySections.length === 0) {
-          const isSuper = this.auth.user()?.is_superuser || (this.auth.userPermissions() || []).includes('admin_all');
-          if (isSuper) {
-            this.personnelApi.getProjectSections({ is_active: true }).subscribe({
-              next: (allSecs: ProjectSection[]) => {
-                this.mySections = allSecs || [];
-                this.pickDefaultSection();
-              },
-              error: () => {
-                this.isLoadingSections = false;
-                this.cdr.detectChanges();
-              }
-            });
-            return;
-          }
+        if (this.selectedSectionId) {
+          this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
         }
-        this.pickDefaultSection();
+        this.isLoadingSections = false;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.isLoadingSections = false;
@@ -217,41 +283,29 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  private pickDefaultSection(): void {
-    if (this.mySections.length > 0) {
-      if (!this.selectedSectionId || !this.mySections.some(s => s.id === this.selectedSectionId)) {
-        this.selectedSectionId = this.mySections[0]?.id ?? null;
-      }
-      this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
-      if (this.selectedSectionId) {
-        this.refreshData();
-      }
-    }
-    this.isLoadingSections = false;
-    this.cdr.detectChanges();
-  }
-
   onSectionChanged(): void {
-    this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
+    this.selectedSectionId = this.selectedSectionId ? Number(this.selectedSectionId) : null;
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { section_id: this.selectedSectionId },
       queryParamsHandling: 'merge'
     });
-    this.refreshData();
+    this.loadTransactions();
   }
 
   refreshData(): void {
     this.loadBalanceSummary();
+    this.loadAccount();
     this.loadTransactions();
+    this.loadStatements();
     this.loadCounterparties();
   }
 
-  // ─── بارگذاری مانده و شاخص‌های لحظه‌ای تنخواه (Guardian G1) ───
+  // ─── مانده و بدهی حساب شرکت ───
   loadBalanceSummary(): void {
-    if (!this.selectedSectionId) return;
     this.isLoadingBalance = true;
-    this.personnelApi.getPettyCashBalance(this.selectedSectionId).subscribe({
+    this.personnelApi.getPettyCashBalance(null, undefined, this.companyId).subscribe({
       next: (res: PettyCashBalanceSummary) => {
         this.balanceSummary = res;
         this.isLoadingBalance = false;
@@ -264,14 +318,54 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── بارگذاری تراکنش‌ها و اسناد تنخواه ───
+  /** حساب فعال خود کاربر در شرکت فعال (برای نمایش شرکت، تنخواه‌گردان، سقف و بدهی) */
+  loadAccount(): void {
+    const uid = this.currentUserId;
+    if (!uid || !this.personnelApi.getPettyCashAccounts) return;
+    this.personnelApi.getPettyCashAccounts({ custodian_id: uid }).subscribe({
+      next: (list: PettyCashAccount[]) => {
+        const rows = (list || []).filter(a => a.is_active !== false);
+        const cid = this.companyId;
+        this.account = rows.find(a => !cid || a.company === cid) || rows[0] || null;
+        this.ceilingDraft = this.account ? Number(this.account.ceiling_amount) : null;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.account = null; }
+    });
+  }
+
+  saveCeiling(): void {
+    if (!this.account?.id || !this.canEditCeiling) return;
+    const value = Number(this.ceilingDraft);
+    if (!Number.isFinite(value) || value < 0) {
+      this.toast.show('warning', 'سقف تنخواه باید عددی صفر یا بیشتر (ریال) باشد.');
+      return;
+    }
+    this.isSavingCeiling = true;
+    this.personnelApi.updatePettyCashAccount(this.account.id, { ceiling_amount: value }).subscribe({
+      next: (acc: PettyCashAccount) => {
+        this.isSavingCeiling = false;
+        this.account = { ...this.account, ...acc };
+        this.toast.show('success', 'سقف تنخواه ذخیره شد.');
+        this.loadBalanceSummary();
+      },
+      error: (err: any) => {
+        this.isSavingCeiling = false;
+        this.toast.show('error', this.errorText(err, 'خطا در ذخیرهٔ سقف تنخواه.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ─── بارگذاری تراکنش‌ها ───
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   loadTransactions(silent = false): void {
-    if (!this.selectedSectionId) return;
     if (!silent) this.isLoading = true;
-    this.personnelApi.getPettyCashTransactions({ section_id: this.selectedSectionId }).subscribe({
+    const params = this.selectedSectionId ? { section_id: this.selectedSectionId } : {};
+    this.personnelApi.getPettyCashTransactions(params).subscribe({
       next: (res: PettyCashTransaction[]) => {
         this.transactions = res || [];
+        this.pruneSelection();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -281,6 +375,37 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         this.toast.show('error', 'خطا در بارگذاری تراکنش‌های تنخواه: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  loadStatements(silent = false): void {
+    const uid = this.currentUserId;
+    if (!this.personnelApi.getPettyCashStatements) return;
+    if (!silent) this.isLoadingStatements = true;
+    this.personnelApi.getPettyCashStatements(uid ? { custodian_id: uid } : {}).subscribe({
+      next: (res: PettyCashStatement[]) => {
+        this.statements = res || [];
+        this.isLoadingStatements = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.isLoadingStatements = false;
+        if (!silent) this.toast.show('error', this.errorText(err, 'خطا در بارگذاری صورت‌حساب‌ها.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadProjects(): void {
+    if (this.projects.length || !this.personnelApi.getFinancialProjects) return;
+    this.personnelApi.getFinancialProjects({ is_active: true }).subscribe({
+      next: (list: any) => {
+        const all: FinancialProject[] = Array.isArray(list) ? list : (list?.results || []);
+        const cid = this.companyId;
+        this.projects = all.filter(p => !cid || !p.company || p.company === cid);
+        this.cdr.detectChanges();
+      },
+      error: () => { this.projects = []; }
     });
   }
 
@@ -300,20 +425,38 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── فیلتر هوشمند تراکنش‌ها بر اساس تب و متن جستجو ───
+  // ─── ردیف‌های هزینه و شارژها ───
+  get expenseRows(): PettyCashTransaction[] {
+    return this.transactions.filter(t => t.transaction_type !== 'allocation');
+  }
+
+  get chargeRows(): PettyCashTransaction[] {
+    return this.transactions.filter(t => t.transaction_type === 'allocation');
+  }
+
+  /** ردیف هزینه‌ای که هنوز در صورت‌حساب نیست و می‌شود آن را در صورت‌حساب گذاشت */
+  isOpenExpense(t: PettyCashTransaction): boolean {
+    return t.transaction_type === 'expense' && !t.statement && (t.line_status ?? 'open') === 'open' && t.status === 'draft' && !t.is_locked;
+  }
+
+  get openExpenses(): PettyCashTransaction[] {
+    return this.transactions.filter(t => this.isOpenExpense(t));
+  }
+
+  /** ویرایش و حذف فقط برای پیش‌نویس باز، بیرون صورت‌حساب و قفل‌نشده */
+  canModifyExpense(t: PettyCashTransaction): boolean {
+    return this.isOpenExpense(t);
+  }
+
   get filteredTransactions(): PettyCashTransaction[] {
-    let list = this.transactions;
+    let list = this.expenseRows;
 
     if (this.statusFilter === 'draft') {
-      list = list.filter(t => t.status === 'draft');
-    } else if (this.statusFilter === 'pending_supervisor') {
-      list = list.filter(t => t.status === 'pending_supervisor');
+      list = list.filter(t => t.status === 'draft' && (t.line_status ?? 'open') === 'open');
     } else if (this.statusFilter === 'approved') {
-      list = list.filter(t => t.status === 'approved');
-    } else if (this.statusFilter === 'allocation') {
-      list = list.filter(t => t.transaction_type === 'allocation');
+      list = list.filter(t => t.line_status === 'approved' || t.status === 'approved');
     } else if (this.statusFilter === 'rejected') {
-      list = list.filter(t => t.status === 'rejected');
+      list = list.filter(t => t.line_status === 'rejected' || t.status === 'rejected');
     }
 
     const q = this.transactionSearch.trim().toLowerCase();
@@ -332,40 +475,59 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   // ─── شمارنده‌های تب‌های وضعیت ───
   get statusCounters(): Record<PettyCashStatusTab, number> {
+    const rows = this.expenseRows;
     return {
-      all: this.transactions.length,
-      draft: this.transactions.filter(t => t.status === 'draft').length,
-      pending_supervisor: this.transactions.filter(t => t.status === 'pending_supervisor').length,
-      approved: this.transactions.filter(t => t.status === 'approved').length,
-      allocation: this.transactions.filter(t => t.transaction_type === 'allocation').length,
-      rejected: this.transactions.filter(t => t.status === 'rejected').length
+      all: rows.length,
+      draft: rows.filter(t => t.status === 'draft' && (t.line_status ?? 'open') === 'open').length,
+      approved: rows.filter(t => t.line_status === 'approved' || t.status === 'approved').length,
+      rejected: rows.filter(t => t.line_status === 'rejected' || t.status === 'rejected').length
     };
   }
 
   setStatusFilter(tab: string): void {
-    if (
-      tab === 'all' ||
-      tab === 'draft' ||
-      tab === 'pending_supervisor' ||
-      tab === 'approved' ||
-      tab === 'allocation' ||
-      tab === 'rejected'
-    ) {
+    if (tab === 'all' || tab === 'draft' || tab === 'approved' || tab === 'rejected') {
       this.statusFilter = tab;
     }
   }
 
-  // ─── مودال ثبت هزینه از محل تنخواه (Guardian G2: Force draft) ───
-  openNewExpenseModal(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
-      return;
+  setView(view: string): void {
+    if (view === 'expenses' || view === 'charges' || view === 'statements') {
+      this.activeView = view;
     }
+  }
+
+  lineStatusLabel(t: PettyCashTransaction): string {
+    if (t.line_status === 'rejected') return 'ردشده';
+    if (t.line_status === 'approved') return 'تأییدشده';
+    if (t.statement) return 'در صورت‌حساب';
+    return t.status_display || 'باز';
+  }
+
+  statementStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      draft: 'پیش‌نویس', submitted: 'در بررسی', approved: 'تأییدشده', paid: 'پرداخت‌شده', returned: 'عودت‌شده'
+    };
+    return map[status] || status;
+  }
+
+  chargeStatusLabel(t: PettyCashTransaction): string {
+    const map: Record<string, string> = {
+      draft: 'پیش‌نویس', approved: 'تأییدشده', rejected: 'ردشده', paid: 'پرداخت‌شده',
+      pending_supervisor: 'در انتظار سرپرست', pending_accountant: 'در بررسی حسابدار',
+      pending_manager: 'در انتظار مدیر', revision_required: 'نیازمند بازنگری'
+    };
+    return map[t.status] || t.status_display || t.status;
+  }
+
+  // ─── مودال ثبت هزینه (آفلاین مثل قبل) ───
+  openNewExpenseModal(): void {
     this.expenseDateError = '';
     this.expenseHeadError = '';
     this.loadExpenseHeads();
+    this.loadProjects();
     this.newExpense = {
-      section: this.selectedSectionId,
+      section: this.selectedSectionId ?? null,
+      project: null,
       title: '',
       transaction_date_shamsi: this.todayShamsi,
       amount: 0,
@@ -413,12 +575,12 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   /** پیام کنار انتخابگر سرفصل هزینه */
   expenseHeadError = '';
 
-  /** شرکت بخش انتخاب‌شده (برای فهرست سرفصل)؛ وگرنه شرکت فعال */
+  /** شرکت فعال؛ وگرنه شرکت بخش انتخاب‌شده (برای فهرست سرفصل) */
   private get sectionCompanyId(): number | null {
-    return this.selectedSection?.company_id ?? this.activeCompanyService?.activeCompanyId ?? null;
+    return this.activeCompanyService?.activeCompanyId ?? this.selectedSection?.company_id ?? null;
   }
 
-  /** سرفصل‌های فعال شرکت بخش؛ از کش خواندن آفلاین هم پر می‌شود */
+  /** سرفصل‌های فعال شرکت؛ از کش خواندن آفلاین هم پر می‌شود */
   loadExpenseHeads(): void {
     const companyId = this.sectionCompanyId;
     if (!companyId) {
@@ -447,10 +609,6 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   saveExpense(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'بخش فعال مشخص نیست.');
-      return;
-    }
     if (!this.newExpense.title?.trim()) {
       this.toast.show('warning', 'عنوان یا شرح مختصر هزینه الزامی است.');
       return;
@@ -472,11 +630,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.isSaving = true;
     this.expenseDateError = '';
     this.expenseHeadError = '';
+    const sectionId = this.newExpense.section ? Number(this.newExpense.section) : null;
+    const projectId = this.newExpense.project ? Number(this.newExpense.project) : null;
     let payload: Partial<PettyCashTransaction> | FormData;
 
     if (this.selectedExpenseAttachment) {
       const formData = new FormData();
-      formData.append('section', String(this.selectedSectionId));
+      if (sectionId) formData.append('section', String(sectionId));
+      if (projectId) formData.append('project', String(projectId));
       formData.append('title', this.newExpense.title.trim());
       formData.append('transaction_date_shamsi', this.newExpense.transaction_date_shamsi.trim());
       formData.append('amount', String(this.newExpense.amount));
@@ -496,7 +657,8 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       payload = formData;
     } else {
       payload = {
-        section: this.selectedSectionId,
+        section: sectionId,
+        project: projectId,
         title: this.newExpense.title.trim(),
         transaction_date_shamsi: this.newExpense.transaction_date_shamsi.trim(),
         amount: this.newExpense.amount,
@@ -521,11 +683,11 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         const closedMsg = fiscalPeriodClosedMessage(err, 'transaction_date_shamsi');
         const headMsg = expenseHeadErrorMessage(err);
         if (closedMsg) {
-          // دورهٔ مالی بسته: پیام کنار فیلد تاریخ (۳.۲ ص۵)
+          // دورهٔ مالی بسته: پیام کنار فیلد تاریخ
           this.expenseDateError = closedMsg;
           this.toast.show('error', closedMsg);
         } else if (headMsg) {
-          // سرفصل نادرست یا غیرفعال: پیام کنار انتخابگر (۳.۴ ص۷)
+          // سرفصل نادرست یا غیرفعال: پیام کنار انتخابگر
           this.expenseHeadError = headMsg;
           this.toast.show('error', headMsg);
         } else {
@@ -536,37 +698,11 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── ارسال سند تنخواه به سرپرست کارگاه ───
-  async sendToSupervisor(tx: PettyCashTransaction): Promise<void> {
-    if (!tx.id) return;
-    if (tx.status !== 'draft') {
-      this.toast.show('warning', 'فقط اسناد در وضعیت پیش‌نویس قابلیت ارسال به سرپرست را دارند.');
-      return;
-    }
-
-    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال سند تنخواه «${tx.title}» به مبلغ ${Number(tx.amount).toLocaleString()} ریال به سرپرست اطمینان دارید؟`, type: 'info' })) !== true) {
-      return;
-    }
-
-    this.isSaving = true;
-    this.personnelApi.updatePettyCashTransaction(tx.id, { status: 'pending_supervisor' }).subscribe({
-      next: () => {
-        this.isSaving = false;
-        this.toast.show('success', `سند تنخواه «${tx.title}» با موفقیت به کارتابل سرپرست ارسال شد.`);
-        this.refreshData();
-      },
-      error: (err: any) => {
-        this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'transaction_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.message || 'نامشخص')));
-      }
-    });
-  }
-
   // ─── حذف سند پیش‌نویس ───
   async deleteDraftTransaction(tx: PettyCashTransaction): Promise<void> {
     if (!tx.id) return;
-    if (tx.status !== 'draft') {
-      this.toast.show('warning', 'تنها اسناد در وضعیت پیش‌نویس توسط کارمند قابل حذف هستند.');
+    if (!this.canModifyExpense(tx)) {
+      this.toast.show('warning', 'فقط هزینهٔ پیش‌نویسِ بیرون از صورت‌حساب و قفل‌نشده قابل حذف است.');
       return;
     }
 
@@ -588,63 +724,285 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── مودال درخواست شارژ مجدد تنخواه ───
-  openReplenishModal(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
-      return;
-    }
-    // پیشنهاد پیش‌فرض مبلغ شارژ: سقف منهای مانده فعلی (یا مبلغ پیش‌فرض مناسب)
+  // ─── درخواست شارژ (فقط آنلاین) ───
+  openChargeModal(): void {
     const defAmount = Math.max(
       0,
-      (this.balanceSummary?.ceiling_amount || 50000000) - (this.balanceSummary?.current_balance || 0)
+      (this.balanceSummary?.ceiling_amount || 0) - (this.balanceSummary?.current_balance || 0)
     );
-    this.replenishData = {
-      amount: defAmount > 0 ? defAmount : 20000000,
-      title: 'درخواست واریز و شارژ تنخواه گردان',
-      description: '',
-      receipt_number: ''
+    this.chargeData = {
+      amount: defAmount > 0 ? defAmount : 0,
+      title: 'درخواست شارژ تنخواه',
+      description: ''
     };
-    this.isReplenishModalOpen = true;
+    this.isChargeModalOpen = true;
     this.cdr.detectChanges();
   }
 
-  closeReplenishModal(): void {
-    this.isReplenishModalOpen = false;
+  closeChargeModal(): void {
+    this.isChargeModalOpen = false;
     this.cdr.detectChanges();
   }
 
-  get replenishAmountTomans(): number {
-    return Math.floor((Number(this.replenishData.amount) || 0) / 10);
+  get chargeAmountTomans(): number {
+    return Math.floor((Number(this.chargeData.amount) || 0) / 10);
   }
 
-  submitReplenishment(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'بخش فعال مشخص نیست.');
-      return;
-    }
-    if (!this.replenishData.amount || this.replenishData.amount <= 0) {
+  submitCharge(): void {
+    if (!this.chargeData.amount || this.chargeData.amount <= 0) {
       this.toast.show('warning', 'مبلغ درخواستی باید بزرگتر از صفر ریال باشد.');
       return;
     }
-
     this.isSaving = true;
-    this.personnelApi.requestPettyCashReplenishment({
-      section_id: this.selectedSectionId,
-      amount: this.replenishData.amount,
-      title: this.replenishData.title.trim() || 'درخواست شارژ مجدد تنخواه',
-      description: this.replenishData.description.trim(),
-      receipt_number: this.replenishData.receipt_number.trim()
+    this.personnelApi.requestPettyCashCharge({
+      amount: this.chargeData.amount,
+      title: this.chargeData.title.trim() || 'درخواست شارژ تنخواه',
+      description: this.chargeData.description.trim()
     }).subscribe({
       next: (tx: PettyCashTransaction) => {
         this.isSaving = false;
-        this.toast.show('success', `درخواست شارژ به مبلغ ${Number(tx.amount).toLocaleString()} ریال با موفقیت ثبت و ارسال شد.`);
-        this.closeReplenishModal();
+        this.toast.show('success', `درخواست شارژ به مبلغ ${Number(tx.amount).toLocaleString()} ریال ثبت و ارسال شد.`);
+        this.closeChargeModal();
         this.refreshData();
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ثبت درخواست شارژ: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', this.errorText(err, 'خطا در ثبت درخواست شارژ.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  resendCharge(tx: PettyCashTransaction): void {
+    if (!tx.id || tx.status !== 'draft') return;
+    this.isActing = true;
+    this.personnelApi.sendPettyCashCharge(tx.id).subscribe({
+      next: () => {
+        this.isActing = false;
+        this.toast.show('success', 'درخواست شارژ دوباره ارسال شد.');
+        this.refreshData();
+        if (this.detailKind === 'petty_cash_charge') this.loadDetail(true);
+      },
+      error: (err: any) => {
+        this.isActing = false;
+        this.toast.show('error', this.errorText(err, 'خطا در ارسال درخواست شارژ.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ─── ساخت و ارسال صورت‌حساب (فقط آنلاین) ───
+  private pruneSelection(): void {
+    const ids = new Set(this.openExpenses.map(t => t.id as number));
+    for (const id of Array.from(this.selectedLineIds)) {
+      if (!ids.has(id)) this.selectedLineIds.delete(id);
+    }
+  }
+
+  toggleLine(tx: PettyCashTransaction): void {
+    if (!tx.id || !this.isOpenExpense(tx)) return;
+    if (this.selectedLineIds.has(tx.id)) this.selectedLineIds.delete(tx.id);
+    else this.selectedLineIds.add(tx.id);
+  }
+
+  toggleAllLines(checked: boolean): void {
+    this.selectedLineIds.clear();
+    if (checked) this.openExpenses.forEach(t => t.id && this.selectedLineIds.add(t.id));
+  }
+
+  get selectedTotal(): number {
+    return this.openExpenses.filter(t => t.id && this.selectedLineIds.has(t.id)).reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  }
+
+  createStatement(): void {
+    const ids = Array.from(this.selectedLineIds);
+    if (!ids.length) {
+      this.toast.show('warning', 'دست‌کم یک ردیف هزینه برای صورت‌حساب انتخاب کنید.');
+      return;
+    }
+    this.isCreatingStatement = true;
+    this.personnelApi.createPettyCashStatement({ line_ids: ids, statement_date_shamsi: this.todayShamsi }).subscribe({
+      next: (st: PettyCashStatement) => {
+        this.isCreatingStatement = false;
+        this.selectedLineIds.clear();
+        this.toast.show('success', `صورت‌حساب ${st.document_number || st.id} ساخته و ارسال شد.`);
+        this.refreshData();
+      },
+      error: (err: any) => {
+        this.isCreatingStatement = false;
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'statement_date_shamsi') || this.errorText(err, 'خطا در ساخت صورت‌حساب.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  resendStatement(st: PettyCashStatement): void {
+    if (st.status !== 'draft') return;
+    this.isActing = true;
+    this.personnelApi.sendPettyCashStatement(st.id).subscribe({
+      next: () => {
+        this.isActing = false;
+        this.toast.show('success', 'صورت‌حساب دوباره ارسال شد.');
+        this.refreshData();
+        if (this.detailKind === 'petty_cash_statement') this.loadDetail(true);
+      },
+      error: (err: any) => {
+        this.isActing = false;
+        this.toast.show('error', this.errorText(err, 'خطا در ارسال صورت‌حساب.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ─── پنل جزئیات و سابقهٔ گردش کار ───
+  openDetail(kind: PettyCashDetailKind, id: number | undefined, updateUrl = true): void {
+    if (!id) return;
+    this.detailKind = kind;
+    this.detailId = id;
+    this.rejectLineId = null;
+    this.rejectReason = '';
+    this.rejectReasonError = '';
+    this.trackingCode = '';
+    this.trackingError = '';
+    if (updateUrl) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { charge: kind === 'petty_cash_charge' ? id : null, statement: kind === 'petty_cash_statement' ? id : null },
+        queryParamsHandling: 'merge'
+      });
+    }
+    this.loadDetail();
+  }
+
+  closeDetail(): void {
+    this.detailKind = null;
+    this.detailId = null;
+    this.detailTx = null;
+    this.detailStatement = null;
+    this.detailLines = [];
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { charge: null, statement: null },
+      queryParamsHandling: 'merge'
+    });
+    this.cdr.detectChanges();
+  }
+
+  loadDetail(silent = false): void {
+    const kind = this.detailKind;
+    const id = this.detailId;
+    if (!kind || !id) return;
+    if (!silent) this.isLoadingDetail = true;
+    if (kind === 'petty_cash_charge') {
+      const found = this.transactions.find(t => t.id === id) || null;
+      this.detailTx = found;
+      this.isLoadingDetail = false;
+      this.cdr.detectChanges();
+      return;
+    }
+    this.personnelApi.getPettyCashStatement(id).subscribe({
+      next: (st: PettyCashStatement) => {
+        if (this.detailId !== id) return;
+        this.detailStatement = st;
+        this.personnelApi.getPettyCashTransactions({ statement_id: id }).subscribe({
+          next: (lines: PettyCashTransaction[]) => {
+            if (this.detailId !== id) return;
+            this.detailLines = lines || [];
+            this.isLoadingDetail = false;
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.isLoadingDetail = false;
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: (err: any) => {
+        this.isLoadingDetail = false;
+        if (!silent) this.toast.show('error', this.errorText(err, 'خطا در بارگذاری صورت‌حساب.'));
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** رد ردیف: بازبین (حسابدار یا مدیر) و نه صاحب صورت‌حساب، تا وقتی در بررسی است */
+  get canRejectLines(): boolean {
+    const st = this.detailStatement;
+    if (!st || st.status !== 'submitted' || !this.canReviewLines) return false;
+    return st.custodian !== this.currentUserId || !!this.auth.user()?.is_superuser;
+  }
+
+  startRejectLine(line: PettyCashTransaction): void {
+    this.rejectLineId = line.id ?? null;
+    this.rejectReason = '';
+    this.rejectReasonError = '';
+  }
+
+  cancelRejectLine(): void {
+    this.rejectLineId = null;
+    this.rejectReason = '';
+    this.rejectReasonError = '';
+  }
+
+  confirmRejectLine(): void {
+    const st = this.detailStatement;
+    if (!st || !this.rejectLineId) return;
+    if (!this.rejectReason.trim()) {
+      this.rejectReasonError = 'درج دلیل رد ردیف الزامی است.';
+      return;
+    }
+    this.isActing = true;
+    this.personnelApi.rejectPettyCashStatementLine(st.id, this.rejectLineId, this.rejectReason.trim()).subscribe({
+      next: () => {
+        this.isActing = false;
+        this.toast.show('warning', 'ردیف رد شد و به بدهی تنخواه‌گردان افزوده می‌شود.');
+        this.cancelRejectLine();
+        this.loadDetail(true);
+        this.loadStatements(true);
+      },
+      error: (err: any) => {
+        this.isActing = false;
+        this.rejectReasonError = this.errorText(err, 'خطا در رد ردیف.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  get canPayStatement(): boolean {
+    const st = this.detailStatement;
+    return !!st && this.canTreasuryPay && (st.status === 'submitted' || st.status === 'approved');
+  }
+
+  get canPayCharge(): boolean {
+    const tx = this.detailTx;
+    return !!tx && this.canTreasuryPay && tx.status !== 'draft' && tx.status !== 'approved' && tx.status !== 'rejected';
+  }
+
+  payDetail(): void {
+    const code = this.trackingCode.trim();
+    if (!code) {
+      this.trackingError = 'درج شماره پیگیری یا شماره سند بانکی الزامی است.';
+      return;
+    }
+    const kind = this.detailKind;
+    const id = this.detailId;
+    if (!kind || !id) return;
+    this.trackingError = '';
+    this.isActing = true;
+    const call$ = kind === 'petty_cash_statement'
+      ? this.personnelApi.payPettyCashStatement(id, code)
+      : this.personnelApi.payPettyCashCharge(id, code);
+    (call$ as any).subscribe({
+      next: () => {
+        this.isActing = false;
+        this.trackingCode = '';
+        this.toast.show('success', 'پرداخت ثبت شد.');
+        this.refreshData();
+        this.loadDetail(true);
+      },
+      error: (err: any) => {
+        this.isActing = false;
+        this.trackingError = this.errorText(err, 'خطا در ثبت پرداخت.');
         this.cdr.detectChanges();
       }
     });
@@ -744,23 +1102,18 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   // ─── خروجی اکسل رسمی تراکنش‌های تنخواه ───
   exportExcel(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
-      return;
+    const params: Record<string, any> = {};
+    if (this.selectedSectionId) {
+      params['section_id'] = this.selectedSectionId;
     }
-    const params: Record<string, any> = {
-      section_id: this.selectedSectionId
-    };
-    if (this.statusFilter === 'draft' || this.statusFilter === 'pending_supervisor' || this.statusFilter === 'approved' || this.statusFilter === 'rejected') {
+    if (this.statusFilter === 'draft' || this.statusFilter === 'approved' || this.statusFilter === 'rejected') {
       params['status'] = this.statusFilter;
-    } else if (this.statusFilter === 'allocation') {
-      params['transaction_type'] = 'allocation';
     }
 
     this.toast.show('info', 'در حال صدور فایل اکسل گردش تنخواه‌گردان...');
     this.personnelApi.exportPettyCashTransactionsExcel(params).subscribe({
       next: (blob: Blob) => {
-        void saveBlob(blob, `petty_cash_${this.selectedSection?.code || 'section'}.xlsx`);
+        void saveBlob(blob, `petty_cash_${this.selectedSection?.code || 'company'}.xlsx`);
         this.toast.show('success', 'فایل اکسل گردش تنخواه با موفقیت دریافت شد.');
       },
       error: () => {

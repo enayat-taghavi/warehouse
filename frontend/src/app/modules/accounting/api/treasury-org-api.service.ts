@@ -26,6 +26,7 @@ import {
   PettyCashAccount,
   PettyCashTransaction,
   PettyCashBalanceSummary,
+  PettyCashStatement,
   WorkflowAuditLog,
   PersonnelBankAccount,
   PersonnelDocument,
@@ -269,12 +270,17 @@ export class TreasuryOrgApiService {
     transaction_type?: string;
     status?: string;
     search?: string;
+    statement_id?: number;
+    line_status?: string;
   }): Observable<PettyCashTransaction[]> {
     return this.api.get<PettyCashTransaction[]>(`${this.baseUrl}/petty-cash-transactions`, params as Record<string, unknown>);
   }
 
-  getPettyCashBalance(sectionId: number, custodianId?: number): Observable<PettyCashBalanceSummary> {
-    const params: Record<string, unknown> = { section_id: sectionId };
+  /** شرکت: company_id، وگرنه section_id (قدیمی)، وگرنه شرکت فعال سرور */
+  getPettyCashBalance(sectionId?: number | null, custodianId?: number, companyId?: number | null): Observable<PettyCashBalanceSummary> {
+    const params: Record<string, unknown> = {};
+    if (companyId) params['company_id'] = companyId;
+    if (sectionId) params['section_id'] = sectionId;
     if (custodianId) params['custodian_id'] = custodianId;
     return this.api.get<PettyCashBalanceSummary>(`${this.baseUrl}/petty-cash-transactions/my-balance`, params);
   }
@@ -291,10 +297,6 @@ export class TreasuryOrgApiService {
     return this.api.delete<void>(`${this.baseUrl}/petty-cash-transactions/${id}`);
   }
 
-  submitPettyCashTransaction(id: number): Observable<PettyCashTransaction> {
-    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/submit/`, {});
-  }
-
   approvePettyCashTransaction(id: number): Observable<PettyCashTransaction> {
     return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/approve/`, {});
   }
@@ -303,14 +305,45 @@ export class TreasuryOrgApiService {
     return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/reject/`, { reason });
   }
 
-  requestPettyCashReplenishment(data: {
-    section_id: number;
-    amount: number;
-    title?: string;
-    description?: string;
-    receipt_number?: string;
-  }): Observable<PettyCashTransaction> {
-    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/request-replenishment/`, data);
+  /** درخواست شارژ سطح شرکت؛ فقط آنلاین (گردش کار petty_cash_charge) */
+  requestPettyCashCharge(data: { amount: number; title?: string; description?: string }): Observable<PettyCashTransaction> {
+    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/request-charge/`, data);
+  }
+
+  sendPettyCashCharge(id: number): Observable<PettyCashTransaction> {
+    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/send-charge/`, {});
+  }
+
+  payPettyCashCharge(id: number, trackingCode: string): Observable<PettyCashTransaction> {
+    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/pay-charge/`, { tracking_code: trackingCode });
+  }
+
+  updatePettyCashAccount(id: number, data: Partial<PettyCashAccount>): Observable<PettyCashAccount> {
+    return this.api.patch<PettyCashAccount>(`${this.baseUrl}/petty-cash-accounts/${id}`, data);
+  }
+
+  getPettyCashStatements(params?: { status?: string; custodian_id?: number }): Observable<PettyCashStatement[]> {
+    return this.api.get<PettyCashStatement[]>(`${this.baseUrl}/petty-cash-statements`, params as Record<string, unknown>);
+  }
+
+  getPettyCashStatement(id: number): Observable<PettyCashStatement> {
+    return this.api.get<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}`);
+  }
+
+  createPettyCashStatement(data: { line_ids: number[]; statement_date_shamsi?: string }): Observable<PettyCashStatement> {
+    return this.api.post<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/`, data);
+  }
+
+  sendPettyCashStatement(id: number): Observable<PettyCashStatement> {
+    return this.api.post<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}/send/`, {});
+  }
+
+  rejectPettyCashStatementLine(id: number, lineId: number, reason: string): Observable<PettyCashStatement> {
+    return this.api.post<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}/reject-line/`, { line_id: lineId, reason });
+  }
+
+  payPettyCashStatement(id: number, trackingCode: string): Observable<PettyCashStatement> {
+    return this.api.post<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}/pay/`, { tracking_code: trackingCode });
   }
 
   exportPettyCashTransactionsExcel(params?: {

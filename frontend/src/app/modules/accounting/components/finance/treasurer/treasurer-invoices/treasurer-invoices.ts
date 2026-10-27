@@ -204,7 +204,9 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
         }).subscribe({
           next: (txs: any[]) => {
             this.isLoading = false;
-            this.refills = (txs || []).map((t: any) => ({
+            // فقط ردیف‌های قدیمی در انتظار؛ شارژهای تازه از «کارهای من» و واریز pay-charge می‌گذرند
+            const legacyPending = ['pending_supervisor', 'pending_accountant'];
+            this.refills = (txs || []).filter((t: any) => legacyPending.includes(t.status)).map((t: any) => ({
               id: t.id,
               custodian_name: t.custodian_name || 'مسئول تنخواه',
               section_name: t.section_name || '',

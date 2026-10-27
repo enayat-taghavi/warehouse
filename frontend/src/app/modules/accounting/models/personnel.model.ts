@@ -939,7 +939,12 @@ export interface ExpenseHead {
 
 export interface PettyCashAccount {
   id?: number;
-  section: number;
+  /** حساب سطح شرکت است؛ بخش دیگر لازم نیست (ص۱ طرح ۳.۶) */
+  company?: number | null;
+  company_name?: string | null;
+  /** بدهی = جمع ردیف‌های ردشده (ص۵) */
+  debt?: number;
+  section?: number | null;
   section_name?: string;
   project_id?: number;
   project_name?: string;
@@ -957,8 +962,18 @@ export interface PettyCashAccount {
 export interface PettyCashTransaction {
   id?: number;
   account?: number | null;
-  section: number;
+  company?: number | null;
+  company_name?: string | null;
+  /** بخش و پروژهٔ ردیف اختیاری‌اند (هر دو از همان شرکت) */
+  section?: number | null;
   section_name?: string;
+  /** پروژهٔ اختیاری خود ردیف */
+  project?: number | null;
+  statement?: number | null;
+  line_status?: 'open' | 'approved' | 'rejected';
+  line_status_display?: string;
+  line_reject_reason?: string;
+  is_locked?: boolean;
   project_id?: number;
   project_name?: string;
   custodian: number;
@@ -989,8 +1004,34 @@ export interface PettyCashTransaction {
   updated_at?: string;
 }
 
+export type PettyCashStatementStatus = 'draft' | 'submitted' | 'approved' | 'paid' | 'returned';
+
+/** صورت‌حساب تنخواه (ص۴ طرح ۳.۶) */
+export interface PettyCashStatement {
+  id: number;
+  company: number;
+  company_name?: string | null;
+  account: number;
+  custodian: number;
+  custodian_name?: string | null;
+  statement_date_shamsi: string;
+  total_amount: number;
+  approved_amount: number;
+  status: PettyCashStatementStatus;
+  status_display?: string;
+  document_number?: string | null;
+  lines_count?: number;
+  is_locked?: boolean;
+  created_by_name?: string | null;
+  created_at?: string;
+}
+
 export interface PettyCashBalanceSummary {
   account_id?: number | null;
+  company_id?: number | null;
+  /** بدهی تنخواه‌گردان از ردیف‌های ردشده */
+  debt?: number;
+  debt_tomans?: number;
   ceiling_amount: number;
   ceiling_amount_tomans: number;
   total_allocated: number;

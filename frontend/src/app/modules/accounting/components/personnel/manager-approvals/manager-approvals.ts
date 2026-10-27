@@ -148,7 +148,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   }
 
   get pendingPettyCashCount(): number {
-    return this.pettyCashList.filter(pc => pc.status === 'approved' || pc.status === 'pending_manager').length;
+    return this.pettyCashList.filter(pc => pc.status === 'pending_manager').length;
   }
 
   ngOnInit(): void {
@@ -214,7 +214,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
       },
       error: () => {}
     });
-    this.api.getPettyCashTransactions({ status: 'approved' }).subscribe({
+    this.api.getPettyCashTransactions({ status: 'pending_manager' }).subscribe({
       next: (res: any) => {
         this.pettyCashList = Array.isArray(res) ? res : (res?.results || []);
         this.cdr.detectChanges();
@@ -887,7 +887,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
 
   loadPettyCash(): void {
     this.isLoading = true;
-    this.api.getPettyCashTransactions({ status: 'approved' }).subscribe({
+    this.api.getPettyCashTransactions({ status: 'pending_manager' }).subscribe({
       next: (res: any) => {
         this.pettyCashList = Array.isArray(res) ? res : (res?.results || []);
         this.isLoading = false;
