@@ -438,7 +438,7 @@ class ExpenseHeadViewSet(viewsets.ModelViewSet):
             cid = ensure_company_section(user, company_id, self.SECTION, 'read', members_read=True)
             qs = qs.filter(company_id=cid)
             if self.action == 'list' and company_section_allows(user, cid, self.SECTION, 'write'):
-                qs = qs.annotate(usage_count=Count('invoices', distinct=True)
+                qs = qs.annotate(usage_count=Count('invoice_lines__invoice', distinct=True)
                                  + Count('petty_cash_transactions', distinct=True))
         elif not user.is_superuser:
             qs = qs.filter(company_id__in=section_or_member_company_ids(user, self.SECTION, members_read=True))
@@ -494,7 +494,7 @@ class ExpenseHeadViewSet(viewsets.ModelViewSet):
             locked = ExpenseHead.objects.select_for_update().get(pk=head_id)
             if locked.children.exists():
                 raise serializers.ValidationError({'detail': "این گروه زیرمجموعه دارد."})
-            if locked.invoices.exists() or locked.petty_cash_transactions.exists():
+            if locked.invoice_lines.exists() or locked.petty_cash_transactions.exists():
                 raise serializers.ValidationError({'detail': "این سرفصل در اسناد به کار رفته؛ آن را غیرفعال کنید."})
             locked.delete()
         self._audit('expense_head_deleted', head_id, instance, before)

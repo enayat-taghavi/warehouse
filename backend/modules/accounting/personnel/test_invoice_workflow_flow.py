@@ -46,7 +46,6 @@ class InvoiceFlowScenarioTests(TestCase):
             invoice_number=f'IWF-{ExpenseInvoice.objects.count() + 1}',
             invoice_date_shamsi='1405/08/01',
             amount=Decimal(amount),
-            category='c',
             description='d',
             created_by=creator,
         )

@@ -96,6 +96,10 @@ class PersonnelConfig(AppConfig):
         contribute(f'can_attach:{INVOICE_ENTITY}', can_attach_invoice)
         contribute(f'is_locked:{INVOICE_ENTITY}', is_invoice_locked)
         contribute(f'company_of:{INVOICE_ENTITY}', invoice_company_id)
+        # نرخ مالیات شرکت و سری شمارهٔ داخلی فاکتور (د۲ و د۴ طرح ۴.۱)
+        from personnel.invoice_services import INVOICE_NUMBER_SERIES, VAT_RATE_SETTING
+        contribute('company_settings', VAT_RATE_SETTING)
+        contribute('numbering_series', INVOICE_NUMBER_SERIES)
         # تنخواه سطح شرکت: شارژ و صورت‌حساب روی موتور، با دیدن، پیوست و قفل (ص۲ تا ص۴ و ص۱۱ طرح ۳.۶)
         from personnel import workflows as _wf
         for _spec, _kind, _resolver, _view, _attach, _locked, _company in (

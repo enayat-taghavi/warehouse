@@ -153,7 +153,7 @@ class DocumentTests(HeadFixtures):
     def test_invoice_without_head_400(self):
         r = self.api.post(INVOICES, self.invoice_body(category='c'), format='json')
         self.assertEqual(r.status_code, 400)
-        self.assertIn('expense_head', r.json())
+        self.assertIn('lines', r.json())  # 4.1: head lives on the lines; no line = 400 on lines
 
     def test_invoice_with_group_inactive_or_foreign_head_400(self):
         inactive = ExpenseHead.objects.get(company=self.company, code='1002')
@@ -167,9 +167,11 @@ class DocumentTests(HeadFixtures):
         r = self.api.post(INVOICES, self.invoice_body(expense_head=self.head.id, category='ignored'), format='json')
         self.assertEqual(r.status_code, 201, r.content)
         inv = ExpenseInvoice.objects.get(pk=r.json()['id'])
-        self.assertEqual(inv.category, self.head.title)
-        self.assertEqual(r.json()['expense_head_code'], '1001')
-        self.assertEqual(r.json()['expense_head_group_title'], self.group.title)
+        self.assertEqual(inv.lines.get().expense_head_id, self.head.id)
+        line = r.json()['lines'][0]
+        self.assertEqual(line['expense_head_title'], self.head.title)
+        self.assertEqual(line['expense_head_code'], '1001')
+        self.assertEqual(line['expense_head_group_title'], self.group.title)
 
     def test_old_invoice_keeps_inactive_head_on_edit(self):
         r = self.api.post(INVOICES, self.invoice_body(expense_head=self.head.id), format='json')

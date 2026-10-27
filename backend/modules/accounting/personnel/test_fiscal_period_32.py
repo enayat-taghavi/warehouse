@@ -54,9 +54,9 @@ class FiscalFixtures(TestCase):
 
     def invoice(self, date='1405/08/01', section=None, status='draft'):
         return ExpenseInvoice.objects.create(
-            section=section or self.sec, counterparty=self.cp, expense_head_id=expense_head_id(section or self.sec),
+            section=section or self.sec, counterparty=self.cp,
             invoice_number=f'FP32-{ExpenseInvoice.objects.count() + 1}', invoice_date_shamsi=date,
-            amount=Decimal('1000'), category='c', description='d', created_by=self.admin, status=status)
+            amount=Decimal('1000'), description='d', created_by=self.admin, status=status)
 
     def petty(self, date='1405/08/01', status='draft'):
         account, _ = PettyCashAccount.objects.get_or_create(

@@ -76,8 +76,33 @@ from workflow.errors import WorkflowError
 from ..workflows import INVOICE_ENTITY, INVOICE_WORKFLOW
 from ..workflow_engine import notify_document_changed
 from ..fiscal import ensure_period_open
+from ..invoice_services import (duplicate_queryset, ensure_invoice_number, invoice_duplicates,
+                                void_invoice_number)
+from ..models import normalize_invoice_number
 
 INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
+
+
+class InvoicePagePagination(OptionalPageNumberPagination):
+    """د۶ طرح ۴.۱: فقط با پارامتر page صفحه‌بندی می‌شود (page_size تنها فهرست کامل را عوض نمی‌کند)."""
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if 'page' not in request.query_params:
+            return None
+        return super().paginate_queryset(queryset, request, view)
+
+
+def _record_submit_reason(invoice, reason):
+    """دلیل ارسال فاکتور تکراری در ردیف «ارسال» سابقهٔ گردش (موتور هسته دلیل ارسال نمی‌گیرد)."""
+    from workflow.models import WorkflowStep
+    wf_instance = wf_engine.instance_of(INVOICE_WORKFLOW, invoice.pk)
+    if wf_instance is None:
+        return
+    step = (WorkflowStep.objects.filter(instance=wf_instance, action=WorkflowStep.SUBMIT)
+            .order_by('-at', '-pk').first())
+    if step is not None and not step.reason:
+        step.reason = f'دلیل ارسال فاکتور تکراری: {reason}'[:2000]
+        step.save(update_fields=['reason'])
 
 
 def _invoice_wf_call(fn, raise_drf=False):
@@ -419,12 +444,14 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     """
     مدیریت فاکتورهای هزینه‌ای بخش‌ها
     """
-    queryset = ExpenseInvoice.objects.all().select_related('section', 'section__project', 'counterparty__party', 'created_by',
-                                                       'expense_head__parent')
+    queryset = (ExpenseInvoice.objects.all()
+                .select_related('section', 'section__project', 'counterparty__party', 'created_by', 'paid_by')
+                .prefetch_related('lines__expense_head__parent'))
     serializer_class = ExpenseInvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-    pagination_class = None
+    # د۶ طرح ۴.۱: صفحه‌بندی فقط با ?page=؛ بی آن همان فهرست کامل قبلی
+    pagination_class = InvoicePagePagination
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -445,7 +472,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             qs = qs.filter(status=inv_status)
         search = self.request.query_params.get('search')
         if search:
-            qs = qs.filter(Q(invoice_number__icontains=search) | Q(counterparty__party__name__icontains=search) | Q(description__icontains=search))
+            qs = qs.filter(Q(invoice_number__icontains=search) | Q(number__icontains=search)
+                           | Q(counterparty__party__name__icontains=search) | Q(description__icontains=search))
         return qs.order_by('-invoice_date_shamsi', '-created_at')
 
     def perform_create(self, serializer):
@@ -469,6 +497,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             instance.status = 'draft'
             instance.save(update_fields=['status', 'updated_at'])
             _invoice_wf_call(lambda: wf_engine.submit(INVOICE_WORKFLOW, instance, user), raise_drf=True)
+            ensure_invoice_number(instance, user)
         notify_document_changed(instance, 'created')
 
     def perform_update(self, serializer):
@@ -496,7 +525,51 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
+            # پیش‌نویس شماره‌دار (پس از لغو): شماره باطل می‌شود، نه آزاد (د۴ طرح ۴.۱)
+            void_invoice_number(instance, self.request.user)
             instance.delete()
+
+    def _duplicate_payload(self, matches_qs):
+        """{count, hidden_count, matches}: جزئیات فقط برای فاکتورهای دامنهٔ دیدن خود کاربر؛ بقیه فقط شمرده می‌شوند."""
+        user = self.request.user
+        visible_qs = matches_qs if user.is_superuser else matches_qs.filter(section_q(user, INVOICE_PERM))
+        total = matches_qs.count()
+        visible_count = visible_qs.count()
+        visible = list(visible_qs.select_related('section').order_by('-invoice_date_shamsi', '-created_at')[:20])
+        return {
+            'count': total,
+            'hidden_count': max(0, total - visible_count),
+            'matches': [{
+                'id': inv.pk, 'number': inv.number, 'invoice_number': inv.invoice_number,
+                'invoice_date_shamsi': inv.invoice_date_shamsi, 'amount': inv.amount, 'status': inv.status,
+                'status_display': inv.get_status_display(), 'section_name': inv.section.name if inv.section else '',
+            } for inv in visible],
+        }
+
+    @action(detail=False, methods=['get'], url_path='duplicates')
+    def duplicates(self, request):
+        """هشدار فاکتور تکراری در فرم (د۳ طرح ۴.۱): ?counterparty=&invoice_number=&exclude="""
+        user = request.user
+        cid = validate_user_company_access(user, get_request_company_id(request))
+        cp_id = str(request.query_params.get('counterparty') or '').strip()
+        norm = normalize_invoice_number(request.query_params.get('invoice_number') or '')
+        exclude = str(request.query_params.get('exclude') or '').strip()
+        if not cp_id.isdigit() or (exclude and not exclude.isdigit()):
+            return Response({'code': 'invalid_params', 'error': 'طرف‌حساب یا شناسهٔ فاکتور نامعتبر است.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        cp_qs = Counterparty.objects.select_related('party').filter(pk=int(cp_id))
+        if cid:
+            cp_qs = cp_qs.filter(party__company_id=cid)
+        elif not user.is_superuser:
+            cp_qs = cp_qs.filter(party__company_id__in=get_user_allowed_companies(user).values_list('id', flat=True))
+        counterparty = cp_qs.first()
+        if counterparty is None:
+            return Response({'code': 'counterparty_not_found', 'error': 'طرف‌حساب در شرکت شما یافت نشد.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not norm:
+            return Response({'count': 0, 'hidden_count': 0, 'matches': []})
+        matches = duplicate_queryset(counterparty.company_id, counterparty.pk, norm, int(exclude) if exclude else None)
+        return Response(self._duplicate_payload(matches))
 
     def _workflow_invoice(self):
         """
@@ -546,10 +619,32 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         # ثبت‌کننده باید در بخش فاکتور «ثبت و دیدن فاکتور» داشته باشد (get_object همین را سنجیده است)
         if not request.user.is_superuser and not can(request.user, INVOICE_PERM, instance.section):
             raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
-        err = _invoice_wf_call(lambda: wf_engine.submit(INVOICE_WORKFLOW, instance, request.user))
+        # د۳: فاکتور تکراری فقط با دلیل ارسال می‌شود؛ ثبت و ویرایش هرگز به‌خاطر تکراری رد نمی‌شود
+        matches = invoice_duplicates(instance)
+        reason = str(request.data.get('duplicate_reason') or '').strip()
+        is_duplicate = matches.exists()
+        if is_duplicate and not reason:
+            return Response({'code': 'duplicate_reason_required',
+                             'error': 'این شمارهٔ فاکتور برای همین طرف‌حساب قبلاً ثبت شده است؛ دلیل ارسال را بنویسید.',
+                             **self._duplicate_payload(matches)}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            if is_duplicate:
+                instance.possible_duplicate = True
+                instance.duplicate_reason = reason[:2000]
+                instance.save(update_fields=['possible_duplicate', 'duplicate_reason', 'updated_at'])
+            err = _invoice_wf_call(lambda: wf_engine.submit(INVOICE_WORKFLOW, instance, request.user))
+            if err is not None:
+                transaction.set_rollback(True)
+            else:
+                if is_duplicate:
+                    _record_submit_reason(instance, instance.duplicate_reason)
+                # د۴: شمارهٔ داخلی در اولین ارسال و در همین تراکنش؛ ارسال دوباره همان شماره را نگه می‌دارد
+                ensure_invoice_number(instance, request.user)
         if err is not None:
+            instance.refresh_from_db()
             return err
-        return Response({'message': 'فاکتور با موفقیت به گردش کار ارسال شد.', 'status': instance.status})
+        return Response({'message': 'فاکتور با موفقیت به گردش کار ارسال شد.', 'status': instance.status,
+                         'number': instance.number})
 
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_invoice(self, request, pk=None):
@@ -655,11 +750,11 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
 
         headers_fa = [
             'ردیف', 'شماره فاکتور', 'تاریخ فاکتور (شمسی)', 'پروژه', 'بخش', 
-            'طرف‌حساب', 'سرفصل هزینه', 'مبلغ (ریال)', 'وضعیت', 'ثبت‌کننده', 'شرح هزینه'
+            'طرف‌حساب', 'سرفصل‌های هزینه', 'مبلغ (ریال)', 'وضعیت', 'ثبت‌کننده', 'شرح هزینه'
         ]
         headers_en = [
             'row_num', 'invoice_number', 'invoice_date_shamsi', 'project_name', 'section_name',
-            'counterparty_name', 'category', 'amount', 'status_display', 'created_by_name', 'description'
+            'counterparty_name', 'expense_heads', 'amount', 'status_display', 'created_by_name', 'description'
         ]
 
         title_font = Font(name='B Nazanin', size=11, bold=True, color='FFFFFF')
@@ -704,7 +799,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
                 inv.section.project.name if inv.section and inv.section.project else '',
                 inv.section.name if inv.section else '',
                 inv.counterparty.name if inv.counterparty else '',
-                inv.category,
+                '، '.join(dict.fromkeys(line.expense_head.title for line in inv.lines.all() if line.expense_head)),
                 inv.amount,
                 inv.get_status_display(),
                 created_name,

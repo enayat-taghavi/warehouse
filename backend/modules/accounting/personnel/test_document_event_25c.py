@@ -62,11 +62,9 @@ class DocumentChangedEventTests(TestCase):
         return ExpenseInvoice.objects.create(
             section=section or self.sec,
             counterparty=self.cp,
-            expense_head_id=expense_head_id(section or self.sec),
             invoice_number=f'DOC25C-INV-{ExpenseInvoice.objects.count() + 1}',
             invoice_date_shamsi='1405/08/01',
             amount=Decimal(amount),
-            category='c',
             description='d',
             created_by=creator or self.admin,
         )

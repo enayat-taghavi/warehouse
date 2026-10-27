@@ -13,12 +13,17 @@ from contacts.models import ExternalParty
 from contacts.services import infer_kind, national_id_error, normalize_national_id
 from ..sheba_utils import normalize_sheba, validate_sheba
 from .helpers import normalize_iranian_phone
-from ..expense_heads import PETTY_CASH_FIXED_CATEGORY, apply_expense_head
+from django.db import transaction
+from ..expense_heads import PETTY_CASH_FIXED_CATEGORY, apply_expense_head, validate_expense_head_for_section
+from ..invoice_services import MAX_LINES, MIN_LINES, company_vat_rate, refresh_duplicate_flag, suggested_vat
 from ..counterparty_services import ROLE_FIELDS, can_view_sensitive, is_masked, mask_tail
 from ..models import (
     Counterparty,
     PartyBankAccount,
+    ExpenseHead,
     ExpenseInvoice,
+    ExpenseInvoiceLine,
+    compute_line_amount,
     PettyCashAccount,
     PettyCashStatement,
     PettyCashTransaction,
@@ -245,6 +250,84 @@ class CounterpartySerializer(serializers.ModelSerializer):
         }
 
 
+class ExpenseInvoiceLineSerializer(serializers.ModelSerializer):
+    """ردیف فاکتور (د۱ طرح ۴.۱): سرفصل لازم؛ مبلغ ردیف را سرور حساب می‌کند. شناسه فقط‌خواندنی است
+    (ویرایش = جایگزینی کامل ردیف‌ها)، پس ردیف هیچ فاکتور دیگری با شناسه پیوند نمی‌خورد."""
+    expense_head = serializers.PrimaryKeyRelatedField(queryset=ExpenseHead.objects.select_related('parent'),
+                                                      required=True, allow_null=False)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, required=False, default=Decimal('1'))
+    unit_price = serializers.DecimalField(max_digits=15, decimal_places=0)
+    expense_head_code = serializers.SerializerMethodField()
+    expense_head_title = serializers.SerializerMethodField()
+    expense_head_group_title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExpenseInvoiceLine
+        fields = ['id', 'position', 'description', 'quantity', 'unit', 'unit_price', 'line_amount', 'expense_head',
+                  'expense_head_code', 'expense_head_title', 'expense_head_group_title']
+        read_only_fields = ['id', 'position', 'line_amount']
+
+    def validate_quantity(self, value):
+        if value is None or value <= 0:
+            raise serializers.ValidationError("تعداد باید بزرگ‌تر از صفر باشد.")
+        return value
+
+    def validate_unit_price(self, value):
+        if value is None or value < 0:
+            raise serializers.ValidationError("فی نمی‌تواند منفی باشد.")
+        return value
+
+    get_expense_head_code = staticmethod(lambda obj: _head_value(obj, 'code'))
+    get_expense_head_title = staticmethod(lambda obj: _head_value(obj, 'title'))
+    get_expense_head_group_title = staticmethod(lambda obj: _head_value(obj, 'group_title'))
+
+
+def _invoice_lines_input(data, instance=None):
+    """
+    ردیف‌ها در JSON به‌صورت فهرست، در multipart (پیوست فاکتور) به‌صورت رشتهٔ JSON می‌آیند. درخواست کهنهٔ صف آفلاین
+    (پیش از ۴.۱: expense_head + amount بی ردیف) به یک ردیف تبدیل می‌شود تا رد (4xx) و از صف حذف نشود.
+    """
+    import json
+    if not hasattr(data, 'keys'):
+        return data
+    raw = data.get('lines') if 'lines' in data else None
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            raise serializers.ValidationError({'lines': "فهرست ردیف‌ها نامعتبر است."})
+    else:
+        has_head = data.get('expense_head') not in (None, '')
+        has_amount = data.get('amount') not in (None, '')
+        if raw is not None or not (has_head or (has_amount and instance is not None)):
+            return data
+        line0 = None
+        if instance is not None:
+            existing = list(instance.lines.all()[:2])
+            if len(existing) > 1:
+                # ویرایش کهنه روی فاکتور چندردیفی نباید ردیف‌ها را به یکی فرو بریزد؛ خطا به کاربر نشان داده می‌شود
+                raise serializers.ValidationError(
+                    {'lines': "این فاکتور چند ردیف دارد؛ برای ویرایش، ردیف‌ها را بفرستید."})
+            line0 = existing[0] if existing else None
+        if has_amount:
+            quantity, unit_price = '1', data.get('amount')
+        elif line0 is not None:
+            quantity, unit_price = line0.quantity, line0.unit_price
+        else:
+            quantity, unit_price = '1', getattr(instance, 'subtotal', None) or '0'
+        raw = [{
+            'description': (data.get('description') or getattr(line0, 'description', None)
+                            or getattr(instance, 'description', None) or '-'),
+            'quantity': quantity,
+            'unit': getattr(line0, 'unit', '') or '',
+            'unit_price': unit_price,
+            'expense_head': data.get('expense_head') if has_head else getattr(line0, 'expense_head_id', None),
+        }]
+    out = {key: data.get(key) for key in data.keys() if key not in ('lines', 'expense_head', 'category')}
+    out['lines'] = raw
+    return out
+
+
 class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     section_name = serializers.CharField(source='section.name', read_only=True)
     project_id = serializers.IntegerField(source='section.project.id', read_only=True)
@@ -253,27 +336,119 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.SerializerMethodField()
     paid_by_name = serializers.SerializerMethodField()
-    expense_head_code = serializers.SerializerMethodField()
-    expense_head_title = serializers.SerializerMethodField()
-    expense_head_group_title = serializers.SerializerMethodField()
+    lines = ExpenseInvoiceLineSerializer(many=True, required=False)
+    # مبلغ دستی مالیات (اختیاری)؛ بی آن مبلغ پیشنهادی سرور
+    vat_amount = serializers.DecimalField(max_digits=15, decimal_places=0, required=False, allow_null=True)
+    discount_amount = serializers.DecimalField(max_digits=15, decimal_places=0, required=False, default=Decimal('0'))
 
     class Meta:
         model = ExpenseInvoice
         fields = '__all__'
         # فیلدهای پرداخت و رد فقط از اکشن‌های گردش کار نوشته می‌شوند (ت۲ طرح ۲.۳)؛
-        # category را سرور از عنوان سرفصل پر می‌کند (ص۲ طرح ۳.۴)
+        # جمع‌ها، شمارهٔ داخلی و پرچم تکراری را سرور می‌نویسد (د۱ تا د۴ طرح ۴.۱)
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'payment_ref', 'paid_at', 'paid_by',
-                            'rejection_reason', 'category']
+                            'rejection_reason', 'amount', 'subtotal', 'vat_rate', 'vat_manual',
+                            'invoice_number_norm', 'possible_duplicate', 'duplicate_reason', 'number',
+                            'issued_number']
+
+    def to_internal_value(self, data):
+        return super().to_internal_value(_invoice_lines_input(data, self.instance))
+
+    def validate_discount_amount(self, value):
+        if value is None:
+            return Decimal('0')
+        if value < 0:
+            raise serializers.ValidationError("تخفیف نمی‌تواند منفی باشد.")
+        return value
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
         validate_counterparty_company(self, attrs)
-        apply_expense_head(self, attrs, needs_head=True)
+        instance = self.instance
+        section = attrs['section'] if 'section' in attrs else getattr(instance, 'section', None)
+        if (instance is not None and instance.issued_number_id and 'section' in attrs
+                and _section_company_id(section) != _section_company_id(instance.section)):
+            # شمارهٔ داخلی از سری شرکت فعلی صادر شده است (د۴)؛ فاکتور شماره‌دار به شرکت دیگر نمی‌رود
+            raise serializers.ValidationError({'section': "فاکتور شماره‌دار را نمی‌توان به بخشی از شرکت دیگر برد."})
+        lines = attrs.get('lines')
+        if lines is None:
+            if instance is None:
+                raise serializers.ValidationError({'lines': "فاکتور دست‌کم یک ردیف لازم دارد."})
+            amounts = [Decimal(str(line.line_amount or 0)) for line in instance.lines.all()]
+            if 'section' in attrs and attrs['section'] != instance.section:
+                # جابه‌جایی بخش: سرفصل ردیف‌های موجود هم باید از شرکت بخش تازه باشد
+                for line in instance.lines.select_related('expense_head__parent'):
+                    if line.expense_head is not None:
+                        error = validate_expense_head_for_section(line.expense_head, section, line.expense_head_id)
+                        if error:
+                            raise serializers.ValidationError({'lines': error})
+        else:
+            if not (MIN_LINES <= len(lines) <= MAX_LINES):
+                raise serializers.ValidationError(
+                    {'lines': f"فاکتور باید بین {MIN_LINES} تا {MAX_LINES} ردیف داشته باشد."})
+            previous_heads = set(instance.lines.values_list('expense_head_id', flat=True)) if instance else set()
+            for idx, line in enumerate(lines):
+                head = line['expense_head']
+                error = validate_expense_head_for_section(head, section,
+                                                          head.pk if head.pk in previous_heads else None)
+                if error:
+                    raise serializers.ValidationError({'lines': {idx: {'expense_head': [error]}}})
+            amounts = [compute_line_amount(line.get('quantity', Decimal('1')), line['unit_price']) for line in lines]
+        subtotal = sum(amounts, Decimal('0'))
+        discount = attrs.get('discount_amount', getattr(instance, 'discount_amount', Decimal('0')))
+        discount = Decimal(str(discount or 0))
+        if discount > subtotal:
+            raise serializers.ValidationError({'discount_amount': "تخفیف نمی‌تواند از جمع ردیف‌ها بیشتر باشد."})
+        base = subtotal - discount
+        vat_applicable = attrs.get('vat_applicable', getattr(instance, 'vat_applicable', False))
+        sent_vat = attrs.pop('vat_amount', None)
+        if vat_applicable:
+            rate = company_vat_rate(_section_company_id(section))
+            suggested = suggested_vat(rate, base)
+            if sent_vat is None and instance is not None and instance.vat_manual and instance.vat_applicable:
+                sent_vat = instance.vat_amount  # ویرایش بی مبلغ مالیات: اصلاح دستی قبلی می‌ماند
+            if sent_vat is not None and not (0 <= sent_vat <= base):
+                raise serializers.ValidationError({'vat_amount': "مبلغ مالیات باید بین صفر و مبلغ پس از تخفیف باشد."})
+            vat = Decimal(str(sent_vat)) if sent_vat is not None else suggested
+            attrs.update(vat_rate=rate, vat_amount=vat, vat_manual=(vat != suggested))
+        else:
+            vat = Decimal('0')
+            attrs.update(vat_rate=None, vat_amount=vat, vat_manual=False)
+        attrs.update(subtotal=subtotal, discount_amount=discount, amount=base + vat)
         return attrs
 
-    get_expense_head_code = staticmethod(lambda obj: _head_value(obj, 'code'))
-    get_expense_head_title = staticmethod(lambda obj: _head_value(obj, 'title'))
-    get_expense_head_group_title = staticmethod(lambda obj: _head_value(obj, 'group_title'))
+    @staticmethod
+    def _write_lines(invoice, lines):
+        """جایگزینی کامل ردیف‌ها؛ line_amount صریح، چون bulk_create آن را حساب نمی‌کند."""
+        invoice.lines.all().delete()
+        ExpenseInvoiceLine.objects.bulk_create([
+            ExpenseInvoiceLine(
+                invoice=invoice, position=idx, description=line.get('description') or '',
+                quantity=line.get('quantity', Decimal('1')), unit=line.get('unit') or '',
+                unit_price=line['unit_price'], expense_head=line['expense_head'],
+                line_amount=compute_line_amount(line.get('quantity', Decimal('1')), line['unit_price']),
+            )
+            for idx, line in enumerate(lines, start=1)
+        ])
+
+    def create(self, validated_data):
+        lines = validated_data.pop('lines')
+        with transaction.atomic():
+            invoice = super().create(validated_data)
+            self._write_lines(invoice, lines)
+            refresh_duplicate_flag(invoice)
+        return invoice
+
+    def update(self, instance, validated_data):
+        lines = validated_data.pop('lines', None)
+        with transaction.atomic():
+            invoice = super().update(instance, validated_data)
+            if lines is not None:
+                self._write_lines(invoice, lines)
+                if hasattr(invoice, '_prefetched_objects_cache'):
+                    invoice._prefetched_objects_cache.pop('lines', None)
+            refresh_duplicate_flag(invoice)
+        return invoice
 
     def get_created_by_name(self, obj):
         if obj.created_by:

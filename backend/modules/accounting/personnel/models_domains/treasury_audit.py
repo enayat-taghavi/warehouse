@@ -153,6 +153,28 @@ def primary_party_bank_account(party):
     return PartyBankAccount.objects.filter(party_id=party.pk, is_primary=True).first()
 
 
+# ارقام فارسی (U+06F0..) و عربی (U+0660..) به لاتین؛ فاصله‌ها، نیم‌فاصله، کشیده و انواع خط تیره حذف (د۳ طرح ۴.۱).
+# نسخهٔ ثابت همین در migration personnel/0015 کپی شده است؛ تغییر این تابع به migration دست نمی‌زند.
+_INVOICE_NUMBER_DIGITS = str.maketrans(
+    '\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9'
+    '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669',
+    '01234567890123456789',
+)
+# خط تیره‌ها (- و U+2010..U+2015، منفی، فرم‌های کوچک و تمام‌عرض)، کشیده، نیم‌فاصله و نویسه‌های نامرئی جهت.
+_INVOICE_NUMBER_DROP = frozenset(
+    '-\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d'
+    '\u0640\u200c\u200d\u200e\u200f\ufeff'
+)
+
+
+def normalize_invoice_number(value):
+    """شمارهٔ فاکتور فروشنده برای یافتن تکراری: ارقام لاتین، بی فاصله و بی خط تیره."""
+    if not value:
+        return ''
+    text = str(value).translate(_INVOICE_NUMBER_DIGITS)
+    return ''.join(ch for ch in text if not ch.isspace() and ch not in _INVOICE_NUMBER_DROP)[:100]
+
+
 class ExpenseInvoice(models.Model):
     """
     فاکتور هزینه‌ای / عملیاتی بخش پروژه
@@ -181,16 +203,29 @@ class ExpenseInvoice(models.Model):
     )
     invoice_number = models.CharField(max_length=100, verbose_name="شماره فاکتور / رسید")
     invoice_date_shamsi = models.CharField(max_length=10, verbose_name="تاریخ فاکتور (شمسی)")
+    # مبلغ قابل پرداخت = subtotal − discount_amount + vat_amount (د۱ طرح ۴.۱)؛ سقف گردش و سند از همین می‌خوانند.
     amount = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="مبلغ فاکتور (ریال)")
-    category = models.CharField(max_length=100, verbose_name="سرفصل هزینه")
-    # سرفصل هزینهٔ شرکت (ص۲ طرح ۳.۴)؛ متن category از عنوان آن پر می‌شود. ردیف‌های پیش از ۳.۴ خالی‌اند.
-    expense_head = models.ForeignKey(
-        'personnel.ExpenseHead',
-        on_delete=models.PROTECT,
+    # جمع‌ها را سرور حساب می‌کند؛ سرفصل هزینه روی ردیف‌هاست (ExpenseInvoiceLine)، نه روی فاکتور.
+    subtotal = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="جمع ردیف‌ها (ریال)")
+    discount_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="تخفیف (ریال)")
+    vat_applicable = models.BooleanField(default=False, verbose_name="مشمول مالیات بر ارزش افزوده")
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                   verbose_name="نرخ مالیات در لحظهٔ ثبت (درصد)")
+    vat_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="مالیات بر ارزش افزوده (ریال)")
+    vat_manual = models.BooleanField(default=False, verbose_name="مالیات دستی اصلاح شده")
+    # شمارهٔ فروشنده پس از یکسان‌سازی (د۳)؛ save() پرش می‌کند. شاخص (counterparty, invoice_number_norm) در Meta.
+    invoice_number_norm = models.CharField(max_length=100, blank=True, default='', verbose_name="شمارهٔ فاکتور یکسان‌شده")
+    possible_duplicate = models.BooleanField(default=False, verbose_name="احتمال تکراری")
+    duplicate_reason = models.TextField(blank=True, default='', verbose_name="دلیل ارسال فاکتور تکراری")
+    # شمارهٔ داخلی (د۴): در اولین ارسال به گردش صادر می‌شود.
+    number = models.CharField(max_length=150, blank=True, default='', db_index=True, verbose_name="شمارهٔ داخلی فاکتور")
+    issued_number = models.ForeignKey(
+        'numbering.IssuedNumber',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='invoices',
-        verbose_name="سرفصل هزینه (کدینگ)"
+        related_name='+',
+        verbose_name="شمارهٔ صادرشده"
     )
     description = models.TextField(verbose_name="شرح هزینه")
     attachment = models.FileField(upload_to='invoices/', blank=True, null=True, verbose_name="تصویر یا فایل فاکتور")
@@ -222,16 +257,53 @@ class ExpenseInvoice(models.Model):
         verbose_name_plural = "فاکتورهای هزینه"
         indexes = [
             models.Index(fields=['section', 'invoice_date_shamsi']),
-            models.Index(fields=['counterparty', 'invoice_number']),
+            models.Index(fields=['counterparty', 'invoice_number_norm']),
         ]
         ordering = ['-invoice_date_shamsi', '-created_at']
 
     def __str__(self):
         return f"فاکتور {self.invoice_number} - {self.counterparty.name} ({self.amount:,.0f} ریال)"
 
+    def save(self, *args, **kwargs):
+        self.invoice_number_norm = normalize_invoice_number(self.invoice_number)
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None and 'invoice_number' in update_fields and 'invoice_number_norm' not in update_fields:
+            kwargs['update_fields'] = [*update_fields, 'invoice_number_norm']
+        super().save(*args, **kwargs)
+
+    def head_amounts(self):
+        """
+        [(head, net)] برای سند: جمع ردیف‌های هر سرفصل منهای سهم تخفیف (د۱ طرح ۴.۱). سهم تخفیف به نسبت مبلغ است
+        و باقی‌ماندهٔ گرد کردن به آخرین سرفصل می‌رود. ترتیب سرفصل‌ها = ترتیب نخستین ردیف هر سرفصل.
+        """
+        from decimal import ROUND_HALF_UP
+        groups = {}
+        for line in self.lines.all():
+            key = line.expense_head_id
+            if key not in groups:
+                groups[key] = [line.expense_head, Decimal('0')]
+            groups[key][1] += Decimal(str(line.line_amount or 0))
+        items = list(groups.values())
+        subtotal = sum((amt for _, amt in items), Decimal('0'))
+        discount = Decimal(str(self.discount_amount or 0))
+        out = []
+        given = Decimal('0')
+        for idx, (head, amt) in enumerate(items):
+            if idx == len(items) - 1:
+                share = discount - given
+            elif subtotal > 0:
+                share = (discount * amt / subtotal).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+            else:
+                share = Decimal('0')
+            given += share
+            out.append((head, amt - share))
+        return out
+
     def to_journal_lines(self):
-        """پیاده‌سازی پروتکل AccountingDocumentSource — فاز ۸ (تسک ۷۲ و ۷۳)."""
-        from decimal import Decimal
+        """
+        پیاده‌سازی پروتکل AccountingDocumentSource — فاز ۸ (تسک ۷۲ و ۷۳)، با ردیف‌های ۴.۱:
+        بدهکار هر سرفصل (خالص از تخفیف)، بدهکار جدای مالیات بر ارزش افزوده، بستانکار طرف حساب به کل مبلغ.
+        """
         from platform_core.accounting_protocol import JournalLine
         amt = Decimal(str(self.amount or 0))
 
@@ -248,25 +320,95 @@ class ExpenseInvoice(models.Model):
         except Exception:
             pass
         detail = getattr(cp, 'account_code', None) or (f"CP-{cp.id}" if cp else None)
-        desc = f"فاکتور هزینه {self.invoice_number} - {self.description or ''}".strip()
-        return [
-            JournalLine(
-                account_code="6102",  # حساب معین هزینه عمومی/عملیاتی
+        desc = f"فاکتور هزینه {self.number or self.invoice_number} - {self.description or ''}".strip()
+        lines = []
+        for head, net in self.head_amounts():
+            if not net:
+                continue
+            head_title = head.title if head is not None else 'بدون سرفصل'
+            lines.append(JournalLine(
+                account_code="6102",  # حساب معین هزینه عمومی/عملیاتی؛ سرفصل در تفصیلی
                 side="debit",
-                amount=amt,
+                amount=net,
+                cost_center_code=cost_center,
+                detail_code=(f"EH-{head.code}" if head is not None else detail),
+                description=f"{desc} - {head_title}",
+            ))
+        vat = Decimal(str(self.vat_amount or 0))
+        if vat:
+            lines.append(JournalLine(
+                account_code="1301",  # مالیات بر ارزش افزودهٔ خرید (اعتبار مالیاتی)
+                side="debit",
+                amount=vat,
                 cost_center_code=cost_center,
                 detail_code=detail,
-                description=desc,
-            ),
-            JournalLine(
-                account_code="4101",  # حساب معین بستانکاران تجاری / طرف‌حساب‌ها
-                side="credit",
-                amount=amt,
-                cost_center_code=cost_center,
-                detail_code=detail,
-                description=desc,
-            ),
-        ]
+                description=f"{desc} - مالیات بر ارزش افزوده",
+            ))
+        lines.append(JournalLine(
+            account_code="4101",  # حساب معین بستانکاران تجاری / طرف‌حساب‌ها
+            side="credit",
+            amount=amt,
+            cost_center_code=cost_center,
+            detail_code=detail,
+            description=desc,
+        ))
+        return lines
+
+
+
+def compute_line_amount(quantity, unit_price):
+    """مبلغ ردیف = گرد شدهٔ (نیمه به بالا) تعداد × فی، به ریال."""
+    from decimal import ROUND_HALF_UP
+    q = Decimal(str(quantity or 0))
+    p = Decimal(str(unit_price or 0))
+    return (q * p).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
+
+class ExpenseInvoiceLine(models.Model):
+    """
+    ردیف فاکتور هزینه (د۱ طرح ۴.۱). جزء فاکتور است و با آن حذف می‌شود (فاکتور فقط در پیش‌نویس حذف می‌شود).
+    `expense_head` در پایگاه داده اختیاری است (ردیف‌های کهنه) ولی سریالایزر آن را لازم می‌داند.
+    `line_amount` را save() حساب می‌کند؛ bulk_create آن را حساب نمی‌کند.
+    """
+    invoice = models.ForeignKey(
+        ExpenseInvoice,
+        on_delete=models.CASCADE,
+        related_name='lines',
+        verbose_name="فاکتور"
+    )
+    position = models.PositiveIntegerField(default=1, verbose_name="ردیف")
+    description = models.TextField(verbose_name="شرح ردیف")
+    quantity = models.DecimalField(max_digits=12, decimal_places=3, default=1, verbose_name="تعداد / مقدار")
+    unit = models.CharField(max_length=30, blank=True, default='', verbose_name="واحد")
+    unit_price = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="فی (ریال)")
+    line_amount = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="مبلغ ردیف (ریال)")
+    expense_head = models.ForeignKey(
+        'personnel.ExpenseHead',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='invoice_lines',
+        verbose_name="سرفصل هزینه (کدینگ)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "ردیف فاکتور هزینه"
+        verbose_name_plural = "ردیف‌های فاکتور هزینه"
+        ordering = ['invoice', 'position', 'id']
+
+    def __str__(self):
+        return f"{self.invoice_id}/{self.position}: {self.line_amount:,.0f}"
+
+    def save(self, *args, **kwargs):
+        self.line_amount = compute_line_amount(self.quantity, self.unit_price)
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None and 'line_amount' not in update_fields and (
+                'quantity' in update_fields or 'unit_price' in update_fields):
+            kwargs['update_fields'] = [*update_fields, 'line_amount']
+        super().save(*args, **kwargs)
+
 
 class PettyCashAccount(models.Model):
     """

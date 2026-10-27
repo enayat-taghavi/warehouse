@@ -182,7 +182,7 @@ class Migration0013Tests(TestCase):
         cp = Counterparty.objects.create(company=company, name='طرف', counterparty_type='other')
         inv = ExpenseInvoice.objects.create(
             section=section, counterparty=cp, invoice_number='P35-1', invoice_date_shamsi='1404/05/01',
-            amount=Decimal('1000'), category='c', description='d', status='draft', created_by=creator,
+            amount=Decimal('1000'), description='d', status='draft', created_by=creator,
         )
         wf_engine.submit(INVOICE_WORKFLOW, inv, creator)
         task = WorkflowTask.objects.get(instance__entity_id=inv.pk, is_open=True, track='step')

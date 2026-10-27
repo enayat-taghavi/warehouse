@@ -98,7 +98,6 @@ class SectionGuardianPhase1Tests(TestCase):
             invoice_number='INV-1404-001',
             invoice_date_shamsi='1404/05/10',
             amount=Decimal('5500000'),
-            category='سوخت ناوگان',
             description='بنزین و گازوئیل خودروهای شیفت روز',
             created_by=self.user
         )
@@ -319,7 +318,6 @@ class SectionGuardianPhase2APITests(TestCase):
             invoice_number='INV-SAFE-01',
             invoice_date_shamsi='1404/06/01',
             amount=1000000,
-            category='مصرفی',
             description='خرید قطعات ضروری'
         )
 

@@ -131,7 +131,6 @@ class CartableMultiTenantTestCase(TestCase):
             invoice_number='INV-FA-001',
             invoice_date_shamsi='1404/05/01',
             amount=Decimal('10000000'),
-            category='حمل',
             description='هزینه حمل FA',
             status='pending_supervisor'
         )
@@ -183,7 +182,6 @@ class CartableMultiTenantTestCase(TestCase):
             invoice_number='INV-PTS-001',
             invoice_date_shamsi='1404/05/01',
             amount=Decimal('20000000'),
-            category='قطعات',
             description='خرید قطعات PTS',
             status='pending_supervisor'
         )

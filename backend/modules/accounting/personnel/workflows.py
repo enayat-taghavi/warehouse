@@ -37,12 +37,29 @@ def _invoice_state_change(invoice, state, instance):
         notify_document_changed(invoice)
 
 
+def invoice_heads_summary(invoice):
+    """عنوان سرفصل ردیف اول و «و n سرفصل دیگر» (د۱ طرح ۴.۱)؛ بی سرفصل، شرح ردیف اول."""
+    heads = []
+    first_description = ''
+    for line in invoice.lines.all():
+        if not first_description:
+            first_description = line.description or ''
+        if line.expense_head_id and line.expense_head_id not in [h.pk for h in heads]:
+            heads.append(line.expense_head)
+    if not heads:
+        return first_description[:100]
+    text = heads[0].title
+    if len(heads) > 1:
+        text += f' و {len(heads) - 1} سرفصل دیگر'
+    return text
+
+
 def _invoice_summary(invoice):
     counterparty = getattr(invoice, 'counterparty', None)
     return {
         'title': f'فاکتور {invoice.invoice_number}' + (f' — {counterparty.name}' if counterparty else ''),
         'amount': invoice.amount,
-        'category': invoice.category,
+        'category': invoice_heads_summary(invoice),
         'date_shamsi': invoice.invoice_date_shamsi,
     }
 

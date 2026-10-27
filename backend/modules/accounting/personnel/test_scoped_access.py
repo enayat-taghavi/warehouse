@@ -60,7 +60,7 @@ class ScopedAccessFixture(TestCase):
             company = sec.project.company
             self.invoices[key] = ExpenseInvoice.objects.create(
                 section=sec, counterparty=cp_y if key == 'D' else cp_x, invoice_number=f'SCP-INV-{key}',
-                invoice_date_shamsi='1405/05/01', amount=Decimal('1000000'), category='other',
+                invoice_date_shamsi='1405/05/01', amount=Decimal('1000000'),
                 description=f'فاکتور {key}', status='pending_supervisor',
             )
             self.petty[key] = PettyCashTransaction.objects.create(

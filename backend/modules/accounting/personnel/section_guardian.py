@@ -632,7 +632,7 @@ class SectionGuardian:
                     invoice_number="INV-GUARD-001",
                     invoice_date_shamsi="1405/01/15",
                     amount=15000000,
-                    category="تعمیرات و نگهداری",
+                    subtotal=15000000,
                     description="تست نگهبان فاکتور پیش‌نویس"
                 )
                 g2_invoice_draft = (inv_test.status == 'draft')

@@ -54,7 +54,7 @@ class AccountantCartableSectionScopeTests(TestCase):
         for i, sec in enumerate((self.s1, self.s2), start=1):
             self.inv[i] = ExpenseInvoice.objects.create(
                 section=sec, counterparty=self.cp, invoice_number=f'CSS-{i}', invoice_date_shamsi='1404/05/01',
-                amount=Decimal('1000'), category='c', description='d', status='draft', created_by=self.creator,
+                amount=Decimal('1000'), description='d', status='draft', created_by=self.creator,
             )
             # ت۱۷ طرح ۲.۳: کارتابل فاکتور از کارهای موتور گردش کار خوانده می‌شود
             wf_engine.submit(INVOICE_WORKFLOW, self.inv[i], self.creator)

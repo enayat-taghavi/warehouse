@@ -43,7 +43,7 @@ class InvoiceReturnScenarioTests(TestCase):
     def invoice(self, creator, amount='1000'):
         return ExpenseInvoice.objects.create(
             section=self.sec, counterparty=self.cp, invoice_number=f'IWF-{ExpenseInvoice.objects.count() + 1}',
-            invoice_date_shamsi='1405/08/01', amount=Decimal(amount), category='c', description='d',
+            invoice_date_shamsi='1405/08/01', amount=Decimal(amount), description='d',
             created_by=creator,
         )
 

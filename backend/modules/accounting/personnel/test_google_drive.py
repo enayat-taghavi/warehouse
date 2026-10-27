@@ -213,7 +213,6 @@ class GoogleDriveCoreTestCase(TestCase):
             invoice_number='INV-8899',
             invoice_date_shamsi='1405/01/15',
             amount=50000000,
-            category='مصالح',
             description='خرید شن و ماسه'
         )
 

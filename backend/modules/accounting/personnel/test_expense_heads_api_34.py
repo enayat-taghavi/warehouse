@@ -37,7 +37,7 @@ class ExpenseHeadApiScenarioTests(HeadFixtures):
         inv_body = self.invoice_body(expense_head=head_id)
         res_inv = self.api.post(INVOICES, inv_body, format='json')
         self.assertEqual(res_inv.status_code, 201)
-        self.assertEqual(res_inv.data.get('category'), head_title)
+        self.assertEqual(res_inv.data['lines'][0]['expense_head_title'], head_title)
         inv_id = res_inv.data['id']
 
         # 4. As writer PATCH the head {'is_active': False} -> 200
@@ -150,7 +150,7 @@ class ExpenseHeadApiScenarioTests(HeadFixtures):
             format='json',
         )
         self.assertEqual(res_other.status_code, 400)
-        self.assertIn('expense_head', res_other.data)
+        self.assertIn('expense_head', res_other.data['lines'][0])
 
         # 2. Also a group id (self.group.id) gives 400
         res_grp = self.api.post(
@@ -159,7 +159,7 @@ class ExpenseHeadApiScenarioTests(HeadFixtures):
             format='json',
         )
         self.assertEqual(res_grp.status_code, 400)
-        self.assertIn('expense_head', res_grp.data)
+        self.assertIn('expense_head', res_grp.data['lines'][0])
 
     def test_seed_defaults_idempotent(self):
         initial_count = ExpenseHead.objects.filter(company=self.company).count()
