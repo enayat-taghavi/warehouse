@@ -881,8 +881,107 @@ export interface Counterparty {
   existing?: boolean;
 }
 
+/** ردیف فاکتور هزینه (۴.۱)؛ مبلغ ردیف را سرور حساب می‌کند */
+export interface ExpenseInvoiceLine {
+  id?: number;
+  position?: number;
+  description: string;
+  quantity: number | string;
+  unit?: string;
+  unit_price: number | string;
+  line_amount?: number | string;
+  expense_head: number | null;
+  expense_head_code?: string | null;
+  expense_head_title?: string | null;
+  expense_head_group_title?: string | null;
+}
+
+export type InvoicePaymentMethod = 'transfer' | 'cheque' | 'cash';
+
+/** قسط پرداخت فاکتور (۴.۱-ب)؛ شبای حساب شرکت هرگز برنمی‌گردد */
+export interface InvoicePayment {
+  id: number;
+  invoice: number;
+  amount: number | string;
+  payment_date_shamsi: string;
+  tracking_code: string;
+  method: InvoicePaymentMethod;
+  method_display?: string;
+  company_bank_account?: number | null;
+  company_bank_name?: string | null;
+  party_bank_account?: number | null;
+  party_bank_name?: string | null;
+  party_sheba_number?: string | null;
+  party_account_number?: string | null;
+  notes?: string;
+  created_by?: number | null;
+  created_by_name?: string;
+  created_at?: string;
+  is_voided: boolean;
+  voided_at?: string | null;
+  voided_by?: number | null;
+  voided_by_name?: string | null;
+  void_reason?: string;
+}
+
+export interface InvoicePaymentCreate {
+  amount: number | string;
+  payment_date_shamsi: string;
+  tracking_code: string;
+  method: InvoicePaymentMethod;
+  company_bank_account?: number | null;
+  party_bank_account?: number | null;
+  notes?: string;
+  revision?: number;
+}
+
+/** پاسخ ثبت/ابطال قسط و تسویه */
+export interface InvoicePaymentResult {
+  message: string;
+  status: ExpenseInvoice['status'];
+  status_display?: string;
+  amount: number | string;
+  paid_amount: number | string;
+  remaining: number | string;
+  payment?: InvoicePayment;
+}
+
+export interface InvoicePaymentsResponse {
+  amount: number | string;
+  paid_amount: number | string;
+  remaining: number | string;
+  status: ExpenseInvoice['status'];
+  results: InvoicePayment[];
+}
+
+export interface InvoiceDuplicateMatch {
+  id: number;
+  number?: string | null;
+  invoice_number: string;
+  invoice_date_shamsi: string;
+  amount: number | string;
+  status: ExpenseInvoice['status'];
+  status_display?: string;
+  section_name?: string;
+}
+
+export interface InvoiceDuplicatesResponse {
+  count: number;
+  hidden_count: number;
+  matches: InvoiceDuplicateMatch[];
+}
+
+export interface PagedResult<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export interface ExpenseInvoice {
   id?: number;
+  /** شمارهٔ داخلی (۱۴۰۵/ف/۱۲۳)؛ پس از ارسال */
+  number?: string | null;
   section: number;
   section_name?: string;
   project_id?: number;
@@ -891,18 +990,32 @@ export interface ExpenseInvoice {
   counterparty_name?: string;
   invoice_number: string;
   invoice_date_shamsi: string;
+  /** مبلغ قابل پرداخت = جمع ردیف‌ها − تخفیف + مالیات (سرور) */
   amount: number;
   total_amount?: number;
+  lines?: ExpenseInvoiceLine[];
+  subtotal?: number | string;
+  discount_amount?: number | string;
+  vat_applicable?: boolean;
+  vat_rate?: number | string;
+  vat_amount?: number | string;
+  /** مالیات دستی (با مقدار پیشنهادی فرق دارد) */
+  vat_manual?: boolean;
+  possible_duplicate?: boolean;
+  duplicate_reason?: string;
+  paid_amount?: number | string;
+  remaining?: number | string;
+  payments?: InvoicePayment[];
   /** عنوان سرفصل؛ فقط‌خواندنی و پرشده در سرور (۳.۴ ص۲) */
   category?: string;
-  /** سرفصل هزینه (ردیف دارای والد) */
+  /** قدیمی (پیش از ردیف‌ها)؛ سرور آن را به یک ردیف تبدیل می‌کند */
   expense_head?: number | null;
   expense_head_code?: string | null;
   expense_head_title?: string | null;
   expense_head_group_title?: string | null;
   description: string;
   attachment?: string | null;
-  status: 'draft' | 'pending_supervisor' | 'pending_accountant' | 'pending_manager' | 'ready_to_pay' | 'paid' | 'rejected' | 'revision_required';
+  status: 'draft' | 'pending_supervisor' | 'pending_accountant' | 'pending_manager' | 'ready_to_pay' | 'partially_paid' | 'paid' | 'rejected' | 'revision_required';
   status_display?: string;
   rejection_reason?: string;
   supervisor_approver_name?: string;

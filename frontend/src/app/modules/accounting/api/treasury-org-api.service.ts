@@ -23,6 +23,11 @@ import {
   PartyBankAccount,
   ExpenseHead,
   ExpenseInvoice,
+  InvoiceDuplicatesResponse,
+  InvoicePaymentCreate,
+  InvoicePaymentResult,
+  InvoicePaymentsResponse,
+  PagedResult,
   PettyCashAccount,
   PettyCashTransaction,
   PettyCashBalanceSummary,
@@ -216,6 +221,33 @@ export class TreasuryOrgApiService {
     return this.api.get<ExpenseInvoice[]>(`${this.baseUrl}/expense-invoices`, params as Record<string, unknown>);
   }
 
+  /** صفحه‌بندی فقط وقتی `page` فرستاده شود (۴.۱) */
+  getExpenseInvoicesPage(params: { page: number; page_size?: number; section_id?: number; status?: string; search?: string }): Observable<PagedResult<ExpenseInvoice>> {
+    return this.api.get<PagedResult<ExpenseInvoice>>(`${this.baseUrl}/expense-invoices`, params as Record<string, unknown>);
+  }
+
+  /** فاکتورهای هم‌شمارهٔ همین طرف حساب (هشدار تکراری) */
+  getExpenseInvoiceDuplicates(params: { counterparty: number; invoice_number: string; exclude?: number }): Observable<InvoiceDuplicatesResponse> {
+    return this.api.get<InvoiceDuplicatesResponse>(`${this.baseUrl}/expense-invoices/duplicates/`, params as Record<string, unknown>);
+  }
+
+  getInvoicePayments(id: number): Observable<InvoicePaymentsResponse> {
+    return this.api.get<InvoicePaymentsResponse>(`${this.baseUrl}/expense-invoices/${id}/payments/`);
+  }
+
+  addInvoicePayment(id: number, data: InvoicePaymentCreate): Observable<InvoicePaymentResult> {
+    return this.api.post<InvoicePaymentResult>(`${this.baseUrl}/expense-invoices/${id}/payments/`, data);
+  }
+
+  voidInvoicePayment(id: number, paymentId: number, reason: string): Observable<InvoicePaymentResult> {
+    return this.api.post<InvoicePaymentResult>(`${this.baseUrl}/expense-invoices/${id}/payments/${paymentId}/void/`, { reason });
+  }
+
+  /** نشانی چاپ PDF فاکتور (هستهٔ چاپ) */
+  expenseInvoicePrintUrl(id: number, size?: 'A4' | 'A5'): string {
+    return `/api/print/expense_invoice/${id}/pdf/${size ? `?size=${size}` : ''}`;
+  }
+
   createExpenseInvoice(data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> {
     return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices`, data);
   }
@@ -236,8 +268,10 @@ export class TreasuryOrgApiService {
     return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/cancel/`, { reason });
   }
 
-  submitExpenseInvoice(id: number): Observable<ExpenseInvoice> {
-    return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/submit/`, {});
+  /** فاکتور تکراری: بی دلیل → ۴۰۰ `duplicate_reason_required` */
+  submitExpenseInvoice(id: number, duplicateReason?: string): Observable<ExpenseInvoice> {
+    const body = duplicateReason ? { duplicate_reason: duplicateReason } : {};
+    return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/submit/`, body);
   }
 
   approveExpenseInvoice(id: number): Observable<ExpenseInvoice> {
