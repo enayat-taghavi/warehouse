@@ -360,6 +360,65 @@ PERIOD_MESSAGES_MGR = {
 }
 
 
+def _attendance_row_action(user, action_type, target_ids, reason):
+    """
+    د۳ طرح ۴.۴: تأیید/عودت ردیفی کارکرد در کارتابل سرپرست. «ابطال» (reject) همان عودت برای اصلاح است
+    (نقطهٔ پایانی برای سازگاری می‌ماند). هر سه: کارکرد شرکت دیگر = 404، مجوز
+    perm_approve_attendance_supervisor در بخش همان کارکرد (403)، قفل ردیف، و رد در دورهٔ قفل (400).
+    """
+    from django.db import transaction
+    from .attendance_periods import APPROVE_SUPERVISOR_PERM, attendance_row_locked, locked_error
+    if action_type not in ('approve', 'revision', 'reject'):
+        raise ValidationError(f"اقدام «{action_type}» برای کارکرد نامعتبر است.")
+    reason = str(reason or '').strip()
+    if action_type != 'approve' and not reason:
+        raise ValidationError("ثبت علت عودت و بازنگری الزامی است.")
+    now = timezone.now()
+    with transaction.atomic():
+        records = list(DailyAttendance.objects.select_for_update(of=('self',))
+                       .select_related('personnel', 'period')
+                       .filter(id__in=target_ids, is_deleted=False).order_by('id'))
+        if not records:
+            raise ValidationError("هیچ رکورد کارکرد معتبری یافت نشد.")
+        for rec in records:
+            try:
+                _validate_instance_company_access(rec, 'attendance', user)
+            except PermissionDenied:
+                raise NotFound("کارکرد یافت نشد.")
+            if not user.is_superuser:
+                sec = rec.section_id or rec.personnel.section_id
+                if not sec or not can(user, APPROVE_SUPERVISOR_PERM, sec):
+                    raise PermissionDenied("شما مجوز تأیید کارکرد این بخش را ندارید.")
+            if attendance_row_locked(rec):
+                raise locked_error()
+        for rec in records:
+            old_st = rec.approval_status
+            if action_type == 'approve':
+                rec.approval_status = 'APPROVED'
+                rec.supervisor_approved_by = user
+                rec.supervisor_approved_at = now
+                rec.save(update_fields=['approval_status', 'supervisor_approved_by', 'supervisor_approved_at',
+                                        'updated_at'])
+                log_reason = 'تایید نهایی کارکرد توسط سرپرست'
+            else:
+                rec.approval_status = 'REVISION_REQUIRED'
+                rec.revision_reason = reason
+                rec.revision_requested_by = user
+                rec.revision_requested_at = now
+                rec.save(update_fields=['approval_status', 'revision_reason', 'revision_requested_by',
+                                        'revision_requested_at', 'updated_at'])
+                log_reason = f'عودت به کارشناس: {reason}'
+            AttendanceAuditLog.objects.create(
+                attendance=rec, personnel_name=rec.personnel.full_name, date_shamsi=rec.date_shamsi,
+                changed_by=user, field_name='approval_status', old_value=old_st,
+                new_value=rec.approval_status, reason=log_reason,
+            )
+    count = len(records)
+    if action_type == 'approve':
+        return Response({'message': f'تعداد {count} رکورد کارکرد با موفقیت توسط سرپرست تایید شد.'})
+    return Response({'message': f'تعداد {count} رکورد کارکرد جهت بازنگری عودت داده شد.'})
+
+
 def _period_cartable_action(user, period, action_type, reason, stage, messages):
     """
     د۵ طرح ۴.۴: اقدام دوره در کارتابل‌های سرپرست، حسابدار و مدیر = پوستهٔ نازک موتور ۲.۳.
@@ -415,10 +474,15 @@ def _get_target_instance(model_name: str, instance_id: int, request_data: dict =
 
     if model_name.lower() in ['period', 'work_period']:
         if instance_id and int(instance_id) > 0:
-            try:
-                return MonthlyWorkPeriod.objects.get(pk=instance_id)
-            except MonthlyWorkPeriod.DoesNotExist:
-                pass
+            period = MonthlyWorkPeriod.objects.filter(pk=instance_id).first()
+            if period is not None:
+                # ق۶: دورهٔ شرکت دیگر = 404 (نه 403 که وجود شناسه را لو دهد)
+                if user is not None and not user.is_superuser and period.company_id:
+                    try:
+                        validate_user_company_access(user, period.company_id)
+                    except PermissionDenied:
+                        raise NotFound("دوره یافت نشد.")
+                return period
         # در صورت نبود شناسه اما ارسال year_month، دوره به صورت خودکار ایجاد/بازیابی می‌شود
         if request_data and request_data.get('year_month'):
             ym = request_data.get('year_month')
@@ -442,35 +506,19 @@ def _get_target_instance(model_name: str, instance_id: int, request_data: dict =
                     return get_or_create_period(None, sec_id, ym)[0]
                 except ValueError as exc:
                     raise ValidationError(str(exc))
-            defaults = {'status': 'OPEN'}
-            if cid:
+            # دورهٔ بی‌بخش (سطح شرکت یا انبار): فقط با شرکت اعتبارسنجی‌شدهٔ کاربر (ق۶)؛ project بدنه دیگر کلید جست‌وجو نیست
+            from .attendance_periods import get_or_create_period
+            if user is not None and not user.is_superuser:
                 try:
-                    defaults['company_id'] = int(cid)
-                except (ValueError, TypeError):
-                    pass
-            if sec_id:
-                try:
-                    defaults['section_id'] = int(sec_id)
-                except (ValueError, TypeError):
-                    pass
-            if proj_id:
-                try:
-                    defaults['project_id'] = int(proj_id)
-                except (ValueError, TypeError):
-                    pass
-
-            lookup = {'year_month': ym}
-            if sec_id:
-                lookup['section_id'] = int(sec_id)
-            elif proj_id:
-                lookup['project_id'] = int(proj_id)
-            elif wh_id:
-                lookup['warehouse_id'] = int(wh_id)
-
-            period, _ = MonthlyWorkPeriod.objects.get_or_create(
-                **lookup,
-                defaults=defaults
-            )
+                    cid = validate_user_company_access(user, cid)
+                except PermissionDenied:
+                    raise NotFound("دوره یافت نشد.")
+            if not cid:
+                raise ValidationError("شرکت یا بخش دوره الزامی است.")
+            try:
+                period, _ = get_or_create_period(cid, None, ym, warehouse_id=wh_id or None)
+            except (ValueError, TypeError) as exc:
+                raise ValidationError(str(exc))
             return period
         raise ValidationError("شناسه دوره کارکرد یا سال و ماه (year_month) الزامی است.")
 
@@ -602,81 +650,7 @@ class SupervisorCartableAPIView(APIView):
             if not target_ids:
                 raise ValidationError("شناسه کارکرد جهت ثبت اقدام الزامی است.")
 
-            records = DailyAttendance.objects.filter(id__in=target_ids, is_deleted=False)
-            if not records.exists():
-                raise ValidationError("هیچ رکورد کارکرد معتبری یافت نشد.")
-
-            for rec in records:
-                _validate_instance_company_access(rec, 'attendance', user)
-
-            now = timezone.now()
-            if action_type == 'approve':
-                for rec in records:
-                    old_st = rec.approval_status
-                    rec.approval_status = 'APPROVED'
-                    rec.supervisor_approved_by = user
-                    rec.supervisor_approved_at = now
-                    rec.save(update_fields=['approval_status', 'supervisor_approved_by', 'supervisor_approved_at', 'updated_at'])
-
-                    AttendanceAuditLog.objects.create(
-                        attendance=rec,
-                        personnel_name=rec.personnel.full_name,
-                        date_shamsi=rec.date_shamsi,
-                        changed_by=user,
-                        field_name='approval_status',
-                        old_value=old_st,
-                        new_value='APPROVED',
-                        reason='تایید نهایی کارکرد توسط سرپرست'
-                    )
-                return Response({'message': f'تعداد {records.count()} رکورد کارکرد با موفقیت توسط سرپرست تایید شد.'})
-
-            elif action_type == 'revision':
-                if not reason:
-                    raise ValidationError("ثبت علت عودت و بازنگری الزامی است.")
-                for rec in records:
-                    old_st = rec.approval_status
-                    rec.approval_status = 'REVISION_REQUIRED'
-                    rec.revision_reason = reason
-                    rec.revision_requested_by = user
-                    rec.revision_requested_at = now
-                    rec.save(update_fields=['approval_status', 'revision_reason', 'revision_requested_by', 'revision_requested_at', 'updated_at'])
-
-                    AttendanceAuditLog.objects.create(
-                        attendance=rec,
-                        personnel_name=rec.personnel.full_name,
-                        date_shamsi=rec.date_shamsi,
-                        changed_by=user,
-                        field_name='approval_status',
-                        old_value=old_st,
-                        new_value='REVISION_REQUIRED',
-                        reason=f'عودت به کارشناس: {reason}'
-                    )
-                return Response({'message': f'تعداد {records.count()} رکورد کارکرد جهت بازنگری عودت داده شد.'})
-
-            elif action_type == 'reject':
-                if not reason:
-                    raise ValidationError("ثبت دلیل ابطال الزامی است.")
-                for rec in records:
-                    old_st = rec.approval_status
-                    rec.approval_status = 'REVISION_REQUIRED'
-                    rec.revision_reason = f'ابطال: {reason}'
-                    rec.revision_requested_by = user
-                    rec.revision_requested_at = now
-                    rec.save(update_fields=['approval_status', 'revision_reason', 'revision_requested_by', 'revision_requested_at', 'updated_at'])
-
-                    AttendanceAuditLog.objects.create(
-                        attendance=rec,
-                        personnel_name=rec.personnel.full_name,
-                        date_shamsi=rec.date_shamsi,
-                        changed_by=user,
-                        field_name='approval_status',
-                        old_value=old_st,
-                        new_value='REVISION_REQUIRED',
-                        reason=f'ابطال توسط سرپرست: {reason}'
-                    )
-                return Response({'message': f'تعداد {records.count()} رکورد کارکرد ابطال و جهت اصلاح ارجاع شد.'})
-            else:
-                raise ValidationError(f"اقدام «{action_type}» برای کارکرد نامعتبر است.")
+            return _attendance_row_action(user, action_type, target_ids, reason)
 
         # --- ۲. سایر مدل‌ها و دوره کارکرد ماهانه ---
         instance = _get_target_instance(model_name, item_id, request.data, user=user)

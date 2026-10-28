@@ -49,6 +49,75 @@ def section_company_id(section_id):
     return ProjectSection.objects.filter(pk=section_id).values_list('project__company_id', flat=True).first()
 
 
+OVERRIDE_LOCK_PERM = 'personnel.can_override_attendance_lock'
+OVERRIDE_REASON_CODE = 'override_reason_required'
+OVERRIDE_REASON_MESSAGE = 'برای ثبت کارکرد در دورهٔ قفل‌شده، نوشتن دلیل دور زدن قفل الزامی است.'
+
+
+def locked_error(message=None):
+    """خطای یکسان 400 قفل دوره (د۴)؛ ValidationError تا تراکنش برگردد و صف آفلاین رد صریح بگیرد."""
+    from rest_framework.exceptions import ValidationError
+    msg = message or PERIOD_LOCKED_MESSAGE
+    return ValidationError({'code': PERIOD_LOCKED_CODE, 'error': msg, 'detail': msg})
+
+
+def visible_attendance_sections(user):
+    """ق۶: بخش‌هایی که کاربر در آن‌ها یکی از مجوزهای کارکرد/تأیید/قفل دوره را دارد (مدیر کل: همه)."""
+    from accounts.scoped_permissions import sections_where
+    from companies.models import ProjectSection
+    if user.is_superuser:
+        return ProjectSection.objects.all()
+    q = Q(pk__in=[])
+    for code in PERIOD_PERMS:
+        q |= Q(id__in=sections_where(user, code).values('id'))
+    return ProjectSection.objects.filter(q)
+
+
+def attendance_company_id(att):
+    """شرکت کارکرد: شرکت پرسنل، وگرنه شرکت بخش."""
+    company_id = getattr(att.personnel, 'company_id', None) if att.personnel_id else None
+    if company_id:
+        return company_id
+    section_id = att.section_id or (att.personnel.section_id if att.personnel_id else None)
+    return section_company_id(section_id) if section_id else None
+
+
+def find_period(company_id, section_id, year_month, *, warehouse_id=None):
+    """دورهٔ موجود (بی ساختن) برای خواندن پرچم قفل؛ None = دوره‌ای نیست = باز."""
+    from .models import MonthlyWorkPeriod
+    ym = normalize_year_month(year_month).replace('-', '/')[:7]
+    if section_id:
+        return MonthlyWorkPeriod.objects.filter(section_id=section_id, year_month=ym).first()
+    qs = MonthlyWorkPeriod.objects.filter(section__isnull=True, year_month=ym)
+    if warehouse_id:
+        return qs.filter(warehouse_id=warehouse_id).order_by('-id').first()
+    if company_id:
+        return qs.filter(company_id=company_id, warehouse_id__isnull=True).first()
+    return None
+
+
+def legacy_warehouse_locked(warehouse_id, year_month) -> bool:
+    """دورهٔ قدیمی انبار (بی‌بخش) همان ماه قفل است؟ (سازگاری با ماژول انبار)."""
+    from .models import MonthlyWorkPeriod
+    if not warehouse_id:
+        return False
+    ym = normalize_year_month(year_month).replace('-', '/')[:7]
+    return MonthlyWorkPeriod.objects.filter(
+        warehouse_id=warehouse_id, year_month=ym, section__isnull=True, status__in=PERIOD_LOCKED_STATUSES,
+    ).exists()
+
+
+def attendance_row_locked(att) -> bool:
+    """قفل ردیف کارکرد: دورهٔ بخش/شرکت همان ماه یا دورهٔ ثبت‌شده روی ردیف (هر کدام قفل باشد)."""
+    section_id = att.section_id or (att.personnel.section_id if att.personnel_id else None)
+    period = find_period(attendance_company_id(att), section_id, att.date_shamsi, warehouse_id=att.warehouse_id)
+    if is_period_locked(period):
+        return True
+    if att.period_id and is_period_locked(att.period):
+        return True
+    return legacy_warehouse_locked(att.warehouse_id, att.date_shamsi) if not section_id else False
+
+
 def get_or_create_period(company_id, section_id, year_month, *, warehouse_id=None):
     """
     دورهٔ «بخش + ماه» (یا برای کارکرد بی‌بخش: شرکت/انبار + ماه). شرکت دورهٔ بخش‌دار همیشه شرکت بخش است؛
@@ -102,7 +171,8 @@ def period_attendance_qs(period):
                        | (Q(project_id__isnull=True) & Q(personnel__project_id=period.project_id)))
     elif period.warehouse_id:
         att_filter &= Q(warehouse_id=period.warehouse_id)
-    elif period.company_id:
+    if period.company_id:
+        # ق۶: هر دوره فقط کارکرد پرسنل شرکت خودش (project یا انبار شرکت دیگر وارد نشود)
         att_filter &= Q(personnel__company_id=period.company_id)
     return DailyAttendance.objects.filter(att_filter)
 

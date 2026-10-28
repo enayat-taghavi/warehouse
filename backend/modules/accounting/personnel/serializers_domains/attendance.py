@@ -50,7 +50,16 @@ class DailyAttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailyAttendance
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'modified_by']
+        # ق۶ + د۳ طرح ۴.۴: دوره، تأیید و عودت فقط از سرور و کارتابل (نه از بدنهٔ ثبت؛ دورهٔ شرکت دیگر یا تأیید جعلی)
+        read_only_fields = [
+            'created_at', 'updated_at', 'created_by', 'modified_by', 'period', 'approval_status',
+            'supervisor_approved_by', 'supervisor_approved_at', 'revision_reason', 'revision_requested_by',
+            'revision_requested_at', 'is_deleted',
+        ]
+        # د۱۰ طرح ۴.۴: قید یکتای «پرسنل + روز + بخش» را نما با به‌روزرسانی همان ردیف حل می‌کند؛
+        # اعتبارسنج خودکار DRF آن را 400 می‌کرد و رکورد صف آفلاین قدیمی (بی بخش یا تکراری) دور ریخته می‌شد
+        validators = []
+        extra_kwargs = {'section': {'required': False}}
 
     def get_personnel_national_code(self, obj):
         # D6 of plan 4.3 (Q16): masked for users without full view of that profile; no request = internal, full

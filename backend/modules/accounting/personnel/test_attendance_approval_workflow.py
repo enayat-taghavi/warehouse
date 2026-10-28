@@ -334,11 +334,15 @@ class AttendanceApprovalWorkflowTests(TestCase):
                 }
             ]
         }
-        # کاربر سرپرست بدون حق دور زدن قفل دوره
+        # ۴.۴-ب۲: کاربر بی دامنهٔ شرکت/بخش اصلاً به پرسنل نمی‌رسد (ق۶، 404)؛ کاربر دارای دامنه بی دور زدن
+        # قفل همان 400 یکسان attendance_period_locked را می‌گیرد (دورهٔ قدیمی انبار هم قفل حساب می‌شود).
         self.client.force_authenticate(user=self.supervisor)
         res = self.client.post('/api/personnel/attendance/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        self.client.force_authenticate(user=self.superuser)
+        res = self.client.post('/api/personnel/attendance/bulk-save/', payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('دوره کارکرد', str(res.data))
+        self.assertEqual(res.data.get('code'), 'attendance_period_locked')
 
     def test_09_monthly_summary_returns_accurate_pending_approvals_count(self):
         """
