@@ -15,6 +15,8 @@ import { WorkflowTasksService } from './core/services/workflow-tasks.service';
 import { AppUpdateService } from './core/platform/app-update.service';
 import { initNativeShell } from './core/platform/native-shell';
 import { setFileOutputErrorNotifier } from './core/platform/file-output';
+import { initResumeSync, requestPersistentStorage } from './core/platform/device-lifecycle';
+import { OfflineSyncService } from './core/services/offline-sync.service';
 
 @Component({
   selector: 'app-root',
@@ -63,6 +65,8 @@ export class App {
     this.appUpdate.init();
     this.domainMigration.init();
     initNativeShell(this.appRef);
+    void requestPersistentStorage();
+    initResumeSync(() => OfflineSyncService.getInstance().processQueue());
   }
 }
 
