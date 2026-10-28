@@ -3054,3 +3054,53 @@ verify: python scripts/automation/verify_tools.py clean-tree
 6. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.6-b): fleet scope and sensitive-data API tests`; `git status --short` shows no change of yours.
 
 7. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+===
+
+[ ] Session 1 of 1 — Release v1 step 4.6-c: fleet monthly workflow scenario tests and vehicle form DOM spec
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/modules/accounting/personnel/test_fleet_46_workflow.py" --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-46c.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py text-check --file backend/modules/accounting/personnel/test_fleet_46_workflow.py --contains "fleet-period-status" --contains "monthly-grid" --contains "action_blocked" --contains "treasury" --absent "skip(" --absent "expectedFailure"
+verify: set DB_TEST_NAME=test_agy_fleet46wf&& python scripts/automation/verify_tools.py django-tests --labels personnel.test_fleet_46_workflow --min-tests 6
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-46c.dom.spec.ts --contains "action_blocked" --contains "******" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-46c.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 4.6-c): fleet monthly workflow scenario tests and vehicle form DOM spec"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Create exactly two new files: `backend/modules/accounting/personnel/test_fleet_46_workflow.py` and `frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-46c.dom.spec.ts`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. If `git status` shows files you did not create, leave them alone and do not commit them.
+- No `skip`, no `expectedFailure`, no `it.skip`, no `xit(`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude; read only these):
+- `backend/modules/accounting/personnel/test_fleet_46_period.py` (whole file): working fixtures for companies, sections, users with section-scoped fleet permissions, vehicles, trips, section periods, the submit, status, settlement and treasury URLs, and how it advances the `fleet_period` workflow step by step. COPY its helper methods and imports into your new backend file; do not import from it. Use usernames with prefix `f46w_` and org codes `F46W...`.
+- `backend/modules/accounting/personnel/workflows.py` lines 1505-1700 (the `fleet_period` workflow: steps `supervisor_ok`, `accountant_review` (sheba gate → `action_blocked`), `manager_ok`, `treasury_pay`; `is_fleet_locked`, `submit_fleet_period`).
+- `backend/modules/accounting/personnel/views_domains/trip_views.py`: Grep `submit-fleet-period`, `fleet-period-status`, `monthly-grid`, `fleet_locked` and read those actions.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.dom.spec.ts` (whole file): the working TestBed setup (providers, mocks, fixture). COPY its setup into the new spec; do not import from it.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts`: Grep `isMaskedValue`, `fleetWorkflowErrorText`, `submitDraftVehicle`, `submitDraftToSupervisor`, `onShebaChange`, `onNationalCodeChange`, `onOwnerNationalCodeChange`, `delete (payload as any)` and read those ranges.
+- `frontend/src/app/modules/accounting/components/finance/fleet-workflow-ui.ts` (whole file) and `frontend/src/app/modules/accounting/models/personnel.model.ts` (Grep `isMaskedValue`).
+
+3. Definitions: a masked value is `******` plus the last 4 characters (for example `******1234`). `action_blocked` is a 400 response `{code: 'action_blocked', error: '...', missing_fields: [...]}`.
+
+4. Task A — backend `class Fleet46WorkflowTests(TestCase)`, one method each:
+- a) `test_status_endpoint_and_grid_follow_workflow`: with fleet trips in section A for a month, GET `fleet-period-status` (section_id, year_month) before submit → `fleet_locked` false and `fleet_approved` false; after submit → `fleet_locked` true, `fleet_workflow_step` is `supervisor_ok`; GET `monthly-grid` with the section → the same `fleet_locked`, `is_locked` true and every `days_meta[].is_editable` false.
+- b) `test_accountant_blocked_without_sheba`: a rented vehicle without sheba has trips in the period; after the supervisor approves, the accountant's act returns 400 `action_blocked` and the step stays `accountant_review`.
+- c) `test_full_chain_to_paid`: submit → supervisor → accountant → manager → treasury pays with a tracking code via the treasury cartable `disburse_fleet` with `period_id` → every rented trip of the period has `is_settled` true and company-owned vehicle trips are not paid.
+- d) `test_treasury_list_only_after_manager`: before the manager approves, the treasury GET has no entry with that period id in `fleet_periods`; after the manager approves it does, with the right `trips_count` and `total_payable`.
+- e) `test_second_pay_is_rejected`: paying the same period twice → the second call is a 4xx and no trip is settled twice (settled count unchanged).
+- f) `test_manager_return_unlocks`: the manager returns the period with a reason → `fleet_locked` false and a trip write in the period succeeds again; resubmitting starts at `supervisor_ok`.
+
+5. Task B — frontend `employee-new-vehicle-46c.dom.spec.ts`, describe `EmployeeNewVehicleHubComponent (Release v1 step 4.6-c)`, 3 cases:
+- a) a masked `sheba_number` (`IR******1234` or `******1234`) loaded into the edit form gives no sheba validation error and the national-code validator gives no error for a masked national code.
+- b) saving an edited existing vehicle whose `driver_national_code` and `sheba_number` are still masked calls the update API with a payload that does NOT contain those two keys.
+- c) when submit returns 400 `{code:'action_blocked', missing_fields:['sheba_number','driver_name']}`, the toast message contains the Persian labels from `VEHICLE_FIELD_LABELS_FA` for both fields.
+
+6. Tool policy: only reading the listed files, Grep in `backend/modules/accounting/personnel/`, `backend/core/workflow/` and `frontend/src/app/modules/accounting/`, writing the two files, the test commands below, `git add` of those two files, `git commit`, `git status --short`. Backend test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_fleet_46_workflow --keepdb` (always with the label; never run `manage.py test` without a label). Frontend test command, in the repository root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-46c.dom.spec.ts"`; per-test log `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), rerun at most 5 times each.
+
+7. Before finishing: all 6 backend tests and 3 frontend cases pass; commit only the two files with the message `test(release-v1 4.6-c): fleet monthly workflow scenario tests and vehicle form DOM spec`; `git status --short` shows no change of yours.
+
+8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
