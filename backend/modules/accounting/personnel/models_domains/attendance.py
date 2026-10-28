@@ -148,15 +148,21 @@ class MonthlyWorkPeriod(_WarehouseCompatMixin, models.Model):
         verbose_name = "دوره کارکرد ماهانه"
         verbose_name_plural = "دوره‌های کارکرد ماهانه"
         constraints = [
+            # د۱ طرح ۴.۴: یکتایی‌های قدیمی فقط برای دورهٔ بی‌بخش (سطح شرکت یا انبار)؛ دورهٔ بخش‌دار = شرکت + بخش + ماه
             models.UniqueConstraint(
                 fields=['company', 'warehouse_id', 'year_month'],
-                condition=models.Q(company__isnull=False, warehouse_id__isnull=False),
+                condition=models.Q(company__isnull=False, warehouse_id__isnull=False, section__isnull=True),
                 name='unique_company_warehouse_year_month_period'
             ),
             models.UniqueConstraint(
                 fields=['company', 'year_month'],
-                condition=models.Q(company__isnull=False, warehouse_id__isnull=True),
+                condition=models.Q(company__isnull=False, warehouse_id__isnull=True, section__isnull=True),
                 name='unique_company_year_month_period'
+            ),
+            models.UniqueConstraint(
+                fields=['company', 'section', 'year_month'],
+                condition=models.Q(section__isnull=False),
+                name='unique_company_section_year_month_period'
             ),
             models.UniqueConstraint(
                 fields=['warehouse_id', 'year_month'],
@@ -341,6 +347,14 @@ class DailyAttendance(_WarehouseCompatMixin, models.Model):
             models.Index(fields=['warehouse_id', 'date_shamsi']),
             models.Index(fields=['personnel', 'date_shamsi']),
             models.Index(fields=['section', 'date_shamsi']),
+        ]
+        constraints = [
+            # د۱۰ طرح ۴.۴: یک پرسنل، یک روز، یک بخش (ردیف‌های حذف منطقی‌شده بیرون از قید)
+            models.UniqueConstraint(
+                fields=['personnel', 'date_shamsi', 'section'],
+                condition=models.Q(is_deleted=False),
+                name='unique_active_attendance_personnel_day_section'
+            ),
         ]
         ordering = ['-date_shamsi', 'personnel__last_name']
 

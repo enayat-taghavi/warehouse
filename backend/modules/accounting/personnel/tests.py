@@ -171,7 +171,9 @@ class PersonnelAppTests(TestCase):
         res_lock = self.client.post(f'/api/personnel/periods/{period.id}/lock/')
         self.assertEqual(res_lock.status_code, 200)
         period.refresh_from_db()
-        self.assertEqual(period.status, 'LOCKED')
+        # طرح ۴.۴ د۴: بستن = ارسال دوره (قفل از ارسال به بعد)
+        from personnel.attendance_periods import is_period_locked
+        self.assertTrue(is_period_locked(period))
 
         # تلاش برای ثبت در دوره قفل شده
         payload = {

@@ -47,6 +47,10 @@ EXPECTED = {
     'perm_approve_personnel_manager': ('approvals', {M}),
     'perm_approve_fleet_manager': ('approvals', {M}),
     'perm_lock_work_period': ('approvals', {S, M}),
+    # د۲ طرح ۴.۴: گردش کارکرد ماهانه
+    'perm_approve_attendance_supervisor': ('approvals', {S}),
+    'perm_approve_attendance_finance': ('approvals', {A}),
+    'perm_approve_attendance_manager': ('approvals', {M}),
     'view_sys_payroll': ('payroll', {A, M}),
     'view_sys_fleet_settlement': ('payroll', {A, M}),
     'perm_manager_payment_authorize': ('treasury', {M}),

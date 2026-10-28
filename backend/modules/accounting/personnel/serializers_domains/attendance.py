@@ -184,7 +184,14 @@ class MonthlyWorkPeriodSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonthlyWorkPeriod
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'locked_at', 'locked_by', 'submitted_at', 'submitted_by']
+        # د۲ و د۵ طرح ۴.۴: وضعیت و فیلدهای گردش فقط از موتور (اکشن‌های دوره) عوض می‌شوند، نه با PATCH
+        read_only_fields = [
+            'created_at', 'updated_at', 'locked_at', 'locked_by', 'submitted_at', 'submitted_by', 'status',
+            'rejection_reason', 'supervisor_approved_by', 'supervisor_approved_at', 'accountant_approved_by',
+            'accountant_approved_at', 'manager_approved_by', 'manager_approved_at', 'treasury_paid_by',
+            'treasury_paid_at', 'payment_tracking_code', 'payment_batch_id', 'revision_requested_by',
+            'revision_requested_at',
+        ]
 
     def get_locked_by_name(self, obj):
         if obj.locked_by:

@@ -60,6 +60,7 @@ ACCOUNTING_PERMISSION_CODENAMES = (
     'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement',
     'perm_invoice_record', 'perm_invoice_approve', 'perm_invoice_review',
     'perm_petty_cash_manage', 'perm_counterparty_manage',
+    'perm_approve_attendance_supervisor', 'perm_approve_attendance_finance', 'perm_approve_attendance_manager',
 )
 
 PERMISSION_CODENAMES = ACCOUNTING_PERMISSION_CODENAMES
@@ -106,6 +107,10 @@ ACCOUNTING_PERMISSIONS = (
     _p('perm_approve_personnel_manager', 'تأیید مدیر برای پرسنل', 'approvals', (_MGR,)),
     _p('perm_approve_fleet_manager', 'تأیید مدیر برای ناوگان', 'approvals', (_MGR,)),
     _p('perm_lock_work_period', 'بستن دورهٔ کارکرد ماهانه', 'approvals', (_SUP, _MGR)),
+    # گردش کارکرد ماهانه روی موتور ۲.۳ (د۲ طرح ۴.۴)
+    _p('perm_approve_attendance_supervisor', 'تأیید سرپرست برای کارکرد ماهانه', 'approvals', (_SUP,)),
+    _p('perm_approve_attendance_finance', 'بررسی حسابدار برای کارکرد ماهانه', 'approvals', (_ACC,)),
+    _p('perm_approve_attendance_manager', 'تأیید مدیر برای کارکرد ماهانه', 'approvals', (_MGR,)),
     _p('view_sys_payroll', 'محاسبهٔ حقوق، دیسکت بیمه و مالیات و تنظیمات پایهٔ حقوق', 'payroll', (_ACC, _MGR)),
     _p('view_sys_fleet_settlement', 'تسویهٔ مالی ناوگان', 'payroll', (_ACC, _MGR)),
     _p('perm_manager_payment_authorize', 'صدور مجوز پرداخت (مدیر)', 'treasury', (_MGR,)),

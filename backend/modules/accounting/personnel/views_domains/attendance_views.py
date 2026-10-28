@@ -1779,171 +1779,154 @@ class MonthlyWorkPeriodViewSet(viewsets.ModelViewSet):
             qs = qs.filter(year_month=year_month)
         return qs
 
+    # ─── اکشن‌های قدیمی دوره: پوستهٔ نازک روی موتور ۲.۳ (د۵ طرح ۴.۴) ───────────────────────────────────
+    @staticmethod
+    def _wf_error(exc):
+        return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+
+    @staticmethod
+    def _period_status(period, message):
+        return Response({'message': message, 'status': period.status, 'status_display': period.get_status_display()})
+
+    def _resolve_period(self, request, year_month):
+        """
+        دورهٔ «بخش + ماه» با شرکتِ خودِ بخش (company_id بدنه نادیده)؛ دورهٔ بی‌بخش قدیمی با شرکت درخواست یا
+        سربرگ، پس از validate_user_company_access. شرکت بی‌دسترسی = 404 (ق۶).
+        """
+        from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+        from django.http import Http404
+        from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+        from common.tenant_scope import get_current_tenant_company_id
+        from ..attendance_periods import get_or_create_period, section_company_id
+        section_id = safe_int(request.data.get('section_id') or request.data.get('section'))
+        warehouse_id = safe_int(request.data.get('warehouse_id'))
+        if section_id:
+            company_id = section_company_id(section_id)
+            if company_id is None:
+                raise Http404
+        else:
+            company_id = safe_int(request.data.get('company_id')) or safe_int(
+                get_current_tenant_company_id(request=request, user=request.user))
+            if not warehouse_id and not company_id:
+                return None
+        if company_id:
+            try:
+                validate_user_company_access(request.user, company_id)
+            except (DjangoPermissionDenied, DRFPermissionDenied):
+                raise Http404
+        try:
+            period, _ = get_or_create_period(company_id, section_id, year_month, warehouse_id=warehouse_id)
+        except ValueError as exc:
+            raise Http404 from exc
+        return period
+
     @action(detail=True, methods=['post'], url_path='lock')
     def lock_period(self, request, pk=None):
+        """بستن دستی = ارسال دوره به گردش (د۴)؛ فقط مدیر کل یا دارندهٔ perm_lock_work_period در بخش دوره."""
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import LOCK_PERM, is_period_locked, submit_period, user_has_period_perm
         period = self.get_object()
-        period.status = 'LOCKED'
-        period.locked_at = timezone.now()
-        period.locked_by = request.user
-        period.save()
-        return Response({'message': f'دوره {period.year_month} با موفقیت قفل شد.'})
+        if not user_has_period_perm(request.user, period, LOCK_PERM):
+            return Response({'code': 'not_allowed', 'error': 'شما مجوز بستن دورهٔ کارکرد این بخش را ندارید.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        if not is_period_locked(period):
+            try:
+                submit_period(request.user, period, request.data.get('notes', '') or '')
+            except WorkflowError as exc:
+                return self._wf_error(exc)
+        return Response({'message': f'دوره {period.year_month} با موفقیت قفل شد.', 'status': period.status,
+                         'status_display': period.get_status_display()})
 
     @action(detail=True, methods=['post'], url_path='unlock')
     def unlock_period(self, request, pk=None):
-        if not request.user.is_superuser:
-            return Response({'error': 'فقط مدیر ارشد سیستم اجازه بازگشایی دوره را دارد.'}, status=status.HTTP_403_FORBIDDEN)
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import unlock_period
         period = self.get_object()
-        period.status = 'OPEN'
-        period.locked_at = None
-        period.locked_by = None
-        period.save()
-        return Response({'message': f'دوره {period.year_month} با موفقیت بازگشایی شد.'})
+        reason = (request.data.get('reason') or request.data.get('notes') or '').strip()
+        try:
+            unlock_period(request.user, period, reason)
+        except WorkflowError as exc:
+            return self._wf_error(exc)
+        return Response({'message': f'دوره {period.year_month} با موفقیت بازگشایی شد.', 'status': period.status,
+                         'status_display': period.get_status_display()})
 
     @action(detail=True, methods=['post'], url_path='submit')
     def submit_period(self, request, pk=None):
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import submit_period
         period = self.get_object()
-        if period.status == 'LOCKED':
-            return Response({'error': 'دوره از قبل قفل شده است.'}, status=status.HTTP_400_BAD_REQUEST)
-        period.status = 'SUBMITTED'
-        period.submitted_at = timezone.now()
-        period.submitted_by = request.user
-        period.submission_notes = request.data.get('notes', '')
-        period.rejection_reason = None
-        period.save()
-        return Response({
-            'message': f'دوره {period.year_month} جهت بررسی مالی ارسال گردید.',
-            'status': period.status,
-            'status_display': period.get_status_display()
-        })
+        try:
+            submit_period(request.user, period, request.data.get('notes', '') or '')
+        except WorkflowError as exc:
+            return self._wf_error(exc)
+        return self._period_status(period, f'دوره {period.year_month} جهت بررسی مالی ارسال گردید.')
 
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_period(self, request, pk=None):
-        is_financial = request.user.is_superuser or request.user.groups.filter(name__in=['Accountant', 'Finance', 'مدیر مالی']).exists() or request.user.has_perm('personnel.can_override_attendance_lock')
-        if not is_financial:
-            return Response({'error': 'فقط حسابدار یا مدیر مالی مجاز به تایید نهایی دوره است.'}, status=status.HTTP_403_FORBIDDEN)
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import period_workflow_act
         period = self.get_object()
-        period.status = 'LOCKED'
-        period.locked_at = timezone.now()
-        period.locked_by = request.user
-        period.save()
-        return Response({
-            'message': f'دوره {period.year_month} تایید نهایی و قفل شد.',
-            'status': period.status,
-            'status_display': period.get_status_display()
-        })
+        try:
+            period_workflow_act(request.user, period, 'act', reason=request.data.get('notes', '') or '')
+        except WorkflowError as exc:
+            return self._wf_error(exc)
+        return self._period_status(period, f'دوره {period.year_month} تایید و به مرحلهٔ بعد ارسال شد.')
 
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_period(self, request, pk=None):
-        is_financial = request.user.is_superuser or request.user.groups.filter(name__in=['Accountant', 'Finance', 'مدیر مالی']).exists() or request.user.has_perm('personnel.can_override_attendance_lock')
-        if not is_financial:
-            return Response({'error': 'فقط حسابدار یا مدیر مالی مجاز به رد کارکرد است.'}, status=status.HTTP_403_FORBIDDEN)
-        reason = request.data.get('reason', '').strip()
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import period_workflow_act
+        reason = (request.data.get('reason') or '').strip()
         if not reason:
             return Response({'error': 'درج علت رد دوره برای اطلاع سرپرست الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
         period = self.get_object()
-        period.status = 'REJECTED'
-        period.rejection_reason = reason
-        period.locked_at = None
-        period.locked_by = None
-        period.save()
-        return Response({
-            'message': f'دوره {period.year_month} رد شد و جهت بازبینی به سرپرست بازگشت.',
-            'status': period.status,
-            'status_display': period.get_status_display()
-        })
+        try:
+            period_workflow_act(request.user, period, 'reject', reason=reason)
+        except WorkflowError as exc:
+            return self._wf_error(exc)
+        return self._period_status(period, f'دوره {period.year_month} رد شد.')
 
     @action(detail=False, methods=['post'], url_path='workflow-action')
     def workflow_action(self, request):
         """
-        اقدام گردش کار کارکرد بر مبنای warehouse_id و year_month (پشتیبانی از فراخوانی سریع بدون دانستن pk)
+        اقدام گردش کارکرد بر مبنای بخش (یا انبار/شرکت برای دورهٔ بی‌بخش قدیمی) و year_month، روی موتور ۲.۳.
+        action: submit | approve | reject | return | unlock
         """
-        warehouse_id = request.data.get('warehouse_id')
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import period_workflow_act, submit_period, unlock_period
         year_month = request.data.get('year_month')
         action_type = request.data.get('action')
-        notes = request.data.get('notes', '')
-        from common.tenant_scope import get_current_tenant_company_id
-        company_id = request.data.get('company_id') or get_current_tenant_company_id(request=request, user=request.user)
+        notes = (request.data.get('notes') or request.data.get('reason') or '').strip()
 
         if not year_month or not action_type:
             return Response({'error': 'پارامترهای year_month و action الزامی هستند.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not warehouse_id and not company_id:
+        if action_type not in ('submit', 'approve', 'reject', 'return', 'unlock'):
+            return Response({'error': 'نوع اقدام ناشناخته است.'}, status=status.HTTP_400_BAD_REQUEST)
+        if action_type in ('reject', 'return') and not notes:
+            return Response({'error': 'درج علت رد دوره الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        period = self._resolve_period(request, year_month)
+        if period is None:
             return Response({'error': 'شناسه انبار یا شرکت فعال الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        wh_val = int(warehouse_id) if (warehouse_id and str(warehouse_id).isdigit()) else None
-        comp_val = int(company_id) if (company_id and str(company_id).isdigit()) else None
-
-        lookup = {'year_month': str(year_month).strip()}
-        if wh_val:
-            lookup['warehouse_id'] = wh_val
-        if comp_val:
-            lookup['company_id'] = comp_val
-
-        period, _ = MonthlyWorkPeriod.objects.get_or_create(
-            **lookup,
-            defaults={'status': 'OPEN', 'company_id': comp_val, 'warehouse_id': wh_val}
-        )
-
-        is_financial = request.user.is_superuser or request.user.groups.filter(name__in=['Accountant', 'Finance', 'مدیر مالی']).exists() or request.user.has_perm('personnel.can_override_attendance_lock')
-
-        if action_type == 'submit':
-            if period.status == 'LOCKED':
-                return Response({'error': 'دوره از قبل قفل شده است.'}, status=status.HTTP_400_BAD_REQUEST)
-            period.status = 'SUBMITTED'
-            period.submitted_at = timezone.now()
-            period.submitted_by = request.user
-            period.submission_notes = notes
-            period.rejection_reason = None
-            period.save()
-            return Response({
-                'message': f'کارکرد دوره {year_month} جهت بررسی مالی ارسال گردید.',
-                'period': MonthlyWorkPeriodSerializer(period).data
-            })
-
-        elif action_type == 'approve':
-            if not is_financial:
-                return Response({'error': 'فقط حسابدار یا مدیر مالی مجاز به تایید نهایی و قفل دوره است.'}, status=status.HTTP_403_FORBIDDEN)
-            period.status = 'LOCKED'
-            period.locked_at = timezone.now()
-            period.locked_by = request.user
-            period.save()
-            return Response({
-                'message': f'کارکرد دوره {year_month} با موفقیت تایید نهایی و قفل شد.',
-                'period': MonthlyWorkPeriodSerializer(period).data
-            })
-
-        elif action_type == 'reject':
-            if not is_financial:
-                return Response({'error': 'فقط حسابدار یا مدیر مالی مجاز به رد کارکرد است.'}, status=status.HTTP_403_FORBIDDEN)
-            if not notes.strip():
-                return Response({'error': 'درج علت رد دوره الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-            period.status = 'REJECTED'
-            period.rejection_reason = notes.strip()
-            period.locked_at = None
-            period.locked_by = None
-            period.save()
-            return Response({
-                'message': f'دوره {year_month} رد شد و جهت بازبینی به سرپرست بازگردانده شد.',
-                'period': MonthlyWorkPeriodSerializer(period).data
-            })
-
-        elif action_type == 'unlock':
-            is_unlock_authorized = (
-                request.user.is_superuser or
-                request.user.groups.filter(name__in=['Accountant', 'Finance', 'مدیر مالی']).exists() or
-                request.user.has_perm('personnel.can_override_attendance_lock')
-            )
-            if not is_unlock_authorized:
-                return Response({'error': 'فقط مدیر ارشد سیستم یا مدیر مالی مجاز به بازگشایی دوره است.'}, status=status.HTTP_403_FORBIDDEN)
-            period.status = 'OPEN'
-            period.locked_at = None
-            period.locked_by = None
-            period.save()
-            return Response({
-                'message': f'دوره {year_month} با موفقیت بازگشایی شد.',
-                'period': MonthlyWorkPeriodSerializer(period).data
-            })
-
-        return Response({'error': 'نوع اقدام ناشناخته است.'}, status=status.HTTP_400_BAD_REQUEST)
+        messages = {
+            'submit': f'کارکرد دوره {period.year_month} جهت بررسی ارسال گردید.',
+            'approve': f'کارکرد دوره {period.year_month} تایید و به مرحلهٔ بعد ارسال شد.',
+            'reject': f'دوره {period.year_month} رد شد.',
+            'return': f'دوره {period.year_month} جهت اصلاح عودت داده شد.',
+            'unlock': f'دوره {period.year_month} با موفقیت بازگشایی شد.',
+        }
+        try:
+            if action_type == 'submit':
+                submit_period(request.user, period, notes)
+            elif action_type == 'approve':
+                period_workflow_act(request.user, period, 'act', reason=notes)
+            elif action_type in ('reject', 'return'):
+                period_workflow_act(request.user, period, action_type, reason=notes)
+            else:
+                unlock_period(request.user, period, notes)
+        except WorkflowError as exc:
+            return self._wf_error(exc)
+        return Response({'message': messages[action_type], 'period': MonthlyWorkPeriodSerializer(period).data})
 
 __all__ = [
     'DailyAttendanceViewSet',

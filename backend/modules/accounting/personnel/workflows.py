@@ -847,3 +847,192 @@ def open_legacy_personnel_workflow(workflow_key, obj, reason='legacy: opened for
         return None
     creator = obj.created_by if workflow_key == PERSONNEL_WORKFLOW else obj.requested_by
     return engine.open_at_step(workflow_key, obj, creator, step_key, reason=reason)
+
+
+# ─── attendance_period: monthly work period on engine 2.3 (plan 4.4, D2) ────────────────────────────────
+ATTENDANCE_PERIOD_WORKFLOW = 'attendance_period'
+ATTENDANCE_PERIOD_ENTITY = 'attendance_period'
+ATTENDANCE_VIEW_PERM = 'view_sys_personnel_attendance'
+PERIOD_APPROVER_FIELDS = {
+    'supervisor_ok': ('supervisor_approved_by', 'supervisor_approved_at'),
+    'accountant_review': ('accountant_approved_by', 'accountant_approved_at'),
+    'manager_ok': ('manager_approved_by', 'manager_approved_at'),
+}
+PERIOD_ACT_ACTIONS = {'supervisor_ok': 'approve_supervisor', 'accountant_review': 'approve_finance',
+                      'manager_ok': 'approve_manager'}
+PERIOD_CLOSE_ACTIONS = {RETURNED: 'request_revision', REJECTED: 'reject', CANCELLED: 'cancel'}
+# steps past supervisor_ok: entering one of them means the month is supervisor-approved
+PERIOD_AFTER_SUPERVISOR = ('accountant_review', 'manager_ok', COMPLETED)
+# وضعیت دوره ← نگاشت حالت موتور (د۲)؛ LOCKED و FINALIZED برای دورهٔ تازه به کار نمی‌روند
+PERIOD_STEP_STATUS = {
+    'supervisor_ok': 'SUBMITTED',
+    'accountant_review': 'SUBMITTED_SUPERVISOR',
+    'manager_ok': 'SUBMITTED_ACCOUNTANT',
+    COMPLETED: 'READY_TO_PAY',
+    RETURNED: 'REVISION_REQUIRED',
+    REJECTED: 'REJECTED',
+    CANCELLED: 'OPEN',
+}
+# قلاب is_locked موتور: فقط دورهٔ بسته (پایان گردش یا مسیر قدیمی)؛ دورهٔ در جریان باید اقدام‌پذیر بماند.
+# قفل کارکرد (د۴) جداست: attendance_periods.is_period_locked از ارسال به بعد.
+PERIOD_ENGINE_LOCKED_STATUSES = ('READY_TO_PAY', 'PAID', 'LOCKED', 'FINALIZED')
+
+
+def _period_steps():
+    return (
+        StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_approve_attendance_supervisor', APPROVE),
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_attendance_finance', REVIEW),
+        StepSpec('manager_ok', 'تأیید مدیر', 'manager', 'perm_approve_attendance_manager', APPROVE),
+    )
+
+
+def period_audit(period, actor, from_status, to_status, action, state, reason='', extra=None):
+    """ردیف تایملاین قدیمی (WorkflowAuditLog) دوره با نام اکشن‌های قدیمی؛ سابقهٔ اصلی در موتور است."""
+    from .models import WorkflowAuditLog
+    metadata = {'engine': True, 'state': state, 'company_id': period.company_id, 'section_id': period.section_id,
+                'year_month': period.year_month}
+    metadata.update(extra or {})
+    WorkflowAuditLog.objects.create(
+        content_type='monthlyworkperiod', object_id=period.id, actor=actor, from_status=from_status,
+        to_status=to_status, action=action, reason=reason or '', metadata=metadata,
+    )
+
+
+def _approve_pending_attendance(period, actor):
+    """د۲: تأیید سرپرست یعنی تأیید کل ماه؛ همهٔ کارکردهای PENDING_SUPERVISOR دوره در همان تراکنش APPROVED."""
+    from django.utils import timezone
+    from .attendance_periods import period_attendance_qs
+    from .models import AttendanceAuditLog
+    now = timezone.now()
+    rows = list(period_attendance_qs(period).filter(approval_status='PENDING_SUPERVISOR')
+                .select_for_update(of=('self',)).select_related('personnel'))
+    for rec in rows:
+        rec.approval_status = 'APPROVED'
+        rec.supervisor_approved_by = actor
+        rec.supervisor_approved_at = now
+        rec.save(update_fields=['approval_status', 'supervisor_approved_by', 'supervisor_approved_at', 'updated_at'])
+        AttendanceAuditLog.objects.create(
+            attendance=rec, personnel_name=rec.personnel.full_name, date_shamsi=rec.date_shamsi, changed_by=actor,
+            field_name='approval_status', old_value='PENDING_SUPERVISOR', new_value='APPROVED',
+            reason=f'تأیید ماه {period.year_month} در گردش کارکرد ماهانه',
+        )
+    return len(rows)
+
+
+def _period_state_change(period, state, instance):
+    from django.utils import timezone
+    old_status = period.status
+    status = PERIOD_STEP_STATUS.get(state)
+    reason = getattr(period, '_wf_reason', '') or ''
+    actor = _last_closer(instance)
+    acted = _acted_tasks(instance)
+    changed = set()
+    if status and period.status != status:
+        period.status = status
+        changed.add('status')
+    if (state not in (RETURNED, REJECTED, CANCELLED, COMPLETED) and not acted
+            and old_status not in ('SUBMITTED', 'SUBMITTED_SUPERVISOR', 'SUBMITTED_ACCOUNTANT')):
+        # ورود اول پس از ارسال (یا ارسال دوباره)؛ دورهٔ در جریان قدیمی (open_at_step) فیلدهای خودش را نگه می‌دارد
+        period.submitted_by_id = instance.created_by_id
+        period.submitted_at = instance.submitted_at
+        period.rejection_reason = None
+        changed.update(('submitted_by', 'submitted_at', 'rejection_reason'))
+    _fill_approvers(period, instance, PERIOD_APPROVER_FIELDS, changed)
+    if state in PERIOD_AFTER_SUPERVISOR:
+        # سرپرست تأیید کرد، یا مرحلهٔ او (سطح ثبت‌کننده یا بخش بی سرپرست) رد شد
+        sup_task = next((t for t in acted if t.step_key == 'supervisor_ok'), None)
+        approver = sup_task.closed_by if sup_task is not None else instance.created_by
+        _approve_pending_attendance(period, approver)
+    if state == COMPLETED:
+        period.locked_at = timezone.now()
+        period.locked_by = actor
+        changed.update(('locked_at', 'locked_by'))
+    elif state in (RETURNED, REJECTED):
+        period.rejection_reason = reason or period.rejection_reason
+        changed.add('rejection_reason')
+        if state == RETURNED:
+            period.revision_requested_by = actor
+            period.revision_requested_at = timezone.now()
+            changed.update(('revision_requested_by', 'revision_requested_at'))
+    elif state == CANCELLED:
+        period.locked_at = None
+        period.locked_by = None
+        changed.update(('locked_at', 'locked_by'))
+    if changed:
+        period.save(update_fields=sorted(changed | {'updated_at'}))
+    action = _legacy_action(instance, state, PERIOD_ACT_ACTIONS, PERIOD_CLOSE_ACTIONS)
+    if action is None and not acted and state not in (RETURNED, REJECTED, CANCELLED):
+        action = 'submit'
+        actor = instance.created_by
+    if action and old_status != period.status:
+        period_audit(period, actor, old_status, period.status, action, state, reason)
+
+
+def _period_summary(period):
+    section = period.section.name if period.section_id and period.section else ''
+    return {'title': f'کارکرد ماهانه {period.year_month}' + (f' — {section}' if section else ''),
+            'category': section}
+
+
+def resolve_attendance_period(entity_id):
+    from .models import MonthlyWorkPeriod
+    return MonthlyWorkPeriod.objects.select_related('section', 'section__project', 'company').filter(
+        pk=entity_id).first()
+
+
+ATTENDANCE_PERIOD_WORKFLOW_SPEC = WorkflowSpec(
+    key=ATTENDANCE_PERIOD_WORKFLOW,
+    version=1,
+    entity_kind=ATTENDANCE_PERIOD_ENTITY,
+    title_fa='کارکرد ماهانه',
+    steps=_period_steps(),
+    on_state_change=_period_state_change,
+    summary=_period_summary,
+    route='/app/finance/employee-attendance?period={id}',
+    section_field='section',
+    company_field='company',
+    view_permission=ATTENDANCE_VIEW_PERM,
+)
+
+
+def attendance_period_company_id(entity_id):
+    from .models import MonthlyWorkPeriod
+    return MonthlyWorkPeriod.objects.filter(pk=entity_id).values_list('company_id', flat=True).first()
+
+
+def can_view_attendance_period(user, entity_id):
+    from .attendance_periods import user_can_see_period
+    from .models import MonthlyWorkPeriod
+    period = MonthlyWorkPeriod.objects.filter(pk=entity_id).first()
+    return True if user_can_see_period(user, period) else None
+
+
+def can_attach_attendance_period(user, entity_id):
+    return can_view_attendance_period(user, entity_id)
+
+
+def is_attendance_period_locked(entity_id):
+    from .models import MonthlyWorkPeriod
+    status = MonthlyWorkPeriod.objects.filter(pk=entity_id).values_list('status', flat=True).first()
+    return status in PERIOD_ENGINE_LOCKED_STATUSES
+
+
+def can_act_attendance_period(user, period, task, action):
+    """د۲: تأیید سرپرست با کارکرد عودت‌شده (REVISION_REQUIRED) در دوره بسته است؛ عودت و رد آزادند."""
+    if action != ACT or task.step_key != 'supervisor_ok':
+        return None
+    from .attendance_periods import revision_blocked_message, revision_required_count
+    count = revision_required_count(period)
+    return revision_blocked_message(count) if count else None
+
+
+def open_legacy_period_workflow(period, reason='legacy: opened for an in-flight attendance period'):
+    """د۶: نمونهٔ موتور برای دورهٔ در جریان قدیمی بی نمونه؛ تکرارپذیر. خروجی کار باز یا None."""
+    from workflow import engine
+    from .attendance_periods import PERIOD_LEGACY_STATUS_STEP
+    step_key = PERIOD_LEGACY_STATUS_STEP.get(period.status)
+    if step_key is None or period.company_id is None:
+        return None
+    creator = period.submitted_by or period.locked_by
+    return engine.open_at_step(ATTENDANCE_PERIOD_WORKFLOW, period, creator, step_key, reason=reason)

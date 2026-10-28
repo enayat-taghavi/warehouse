@@ -191,7 +191,8 @@ class AttendanceApprovalWorkflowTests(TestCase):
 
     def test_05_period_lock_barrier_blocks_when_unapproved_exist(self):
         """
-        تست سد سروری قفل دوره: در صورت وجود حتی ۱ کارکرد معلق، قفل دوره مسدود می‌شود
+        د۲ طرح ۴.۴: کارکرد معلق دیگر سد نیست (تأیید ماه آن را تأیید می‌کند)؛ کارکرد عودت‌شده
+        (REVISION_REQUIRED) ارسال/تأیید دوره را با 400 action_blocked و تعداد آن‌ها می‌بندد.
         """
         period = MonthlyWorkPeriod.objects.create(
             warehouse_id=self.warehouse.id,
@@ -210,7 +211,7 @@ class AttendanceApprovalWorkflowTests(TestCase):
             date_shamsi='1405/06/10',
             status='PRESENT_10H',
             effective_hours=Decimal('10.00'),
-            approval_status='PENDING_SUPERVISOR'
+            approval_status='REVISION_REQUIRED'
         )
 
         res = self.client.post('/api/personnel/cartable/supervisor/', {
@@ -219,7 +220,8 @@ class AttendanceApprovalWorkflowTests(TestCase):
             'id': period.id
         })
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('امکان قفل و ارسال دوره به حسابداری وجود ندارد', str(res.data))
+        self.assertEqual(res.data['code'], 'action_blocked')
+        self.assertIn('1', res.data['error'])
 
         period.refresh_from_db()
         self.assertEqual(period.status, 'OPEN')
@@ -256,7 +258,9 @@ class AttendanceApprovalWorkflowTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         period.refresh_from_db()
+        # بخش بی سرپرست: مرحلهٔ سرپرست رد می‌شود و دوره نزد حسابدار است (موتور ۲.۳)
         self.assertEqual(period.status, 'SUBMITTED_SUPERVISOR')
+        self.assertEqual(period.company_id, self.company.id)
 
     def test_07_bulk_save_revokes_approved_status_on_modification(self):
         """

@@ -10,7 +10,7 @@ Provides role-specific aggregated cartable endpoints for:
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from django.http import HttpResponse
 from django.db.models import Q
 from django.utils import timezone
@@ -343,7 +343,50 @@ def _ensure_cartable_section_permission(instance, user):
             raise PermissionDenied("شما به پروندهٔ پرسنلی این بخش دسترسی ندارید.")
 
 
-def _get_target_instance(model_name: str, instance_id: int, request_data: dict = None):
+PERIOD_MESSAGES_SUP = {
+    'approve': 'تایید سرپرست با موفقیت ثبت گردید و پرونده به مرحله بعد ارسال شد.',
+    'revision': 'پرونده جهت بازنگری و اصلاح به مرحله قبل ارجاع گردید.',
+    'reject': 'پرونده با موفقیت ابطال و بایگانی شد.',
+}
+PERIOD_MESSAGES_ACC = {
+    'approve': 'تایید مالی و محاسباتی با موفقیت ثبت شد و به مدیر ارجاع گردید.',
+    'revision': 'پرونده با ثبت اشکال به سرپرست/ثبت‌کننده برگردانده شد.',
+    'reject': 'پرونده ابطال و رد قطعی گردید.',
+}
+PERIOD_MESSAGES_MGR = {
+    'approve': 'مجوز پرداخت اسناد مالی با موفقیت صادر و به خزانه‌داری ارسال شد.',
+    'revision': 'پرونده با دستور مدیریت جهت بازنگری ارجاع گردید.',
+    'reject': 'پرونده توسط مدیریت ابطال گردید.',
+}
+
+
+def _period_cartable_action(user, period, action_type, reason, stage, messages):
+    """
+    د۵ طرح ۴.۴: اقدام دوره در کارتابل‌های سرپرست، حسابدار و مدیر = پوستهٔ نازک موتور ۲.۳.
+    approve روی دورهٔ بیرون از گردش (باز، عودت‌شده، ردشده) = ارسال؛ موتور از سطح ارسال‌کننده شروع می‌کند.
+    """
+    from workflow.errors import WorkflowError
+    from .attendance_periods import PERIOD_IN_FLIGHT_STATUSES, period_workflow_act, submit_period
+    if action_type in ('revision', 'reject') and not str(reason or '').strip():
+        raise ValidationError("ثبت علت بازنگری یا رد الزامی است.")
+    try:
+        if action_type == 'approve':
+            if period.status in PERIOD_IN_FLIGHT_STATUSES:
+                period_workflow_act(user, period, 'act', stage=stage)
+            else:
+                submit_period(user, period)
+        elif action_type == 'revision':
+            period_workflow_act(user, period, 'return', stage=stage, reason=reason)
+        elif action_type == 'reject':
+            period_workflow_act(user, period, 'reject', stage=stage, reason=reason)
+        else:
+            raise ValidationError(f"اقدام «{action_type}» نامعتبر است.")
+    except WorkflowError as exc:
+        return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+    return Response({'message': messages[action_type], 'status': period.status})
+
+
+def _get_target_instance(model_name: str, instance_id: int, request_data: dict = None, user=None):
     """یافتن نمونه مدل بر اساس نام و شناسه (با پشتیبانی هوشمند از بازیابی/ایجاد خودکار دوره ماهانه بر مبنای year_month)"""
     models_map = {
         'personnel': PersonnelProfile,
@@ -383,6 +426,22 @@ def _get_target_instance(model_name: str, instance_id: int, request_data: dict =
             sec_id = request_data.get('section_id') or request_data.get('section')
             proj_id = request_data.get('project_id') or request_data.get('project')
             cid = request_data.get('company_id') or request_data.get('company')
+            if sec_id:
+                # د۱ و د۵ طرح ۴.۴: دورهٔ «بخش + ماه» با شرکتِ خودِ بخش؛ company_id بدنه نادیده. دسترسی شرکت
+                # پیش از ساخت سنجیده می‌شود تا دوره‌ای در شرکت دیگر ساخته نشود (ق۶، 404).
+                from .attendance_periods import get_or_create_period, section_company_id
+                sec_company = section_company_id(sec_id)
+                if sec_company is None:
+                    raise NotFound("بخش دوره یافت نشد.")
+                if user is not None:
+                    try:
+                        validate_user_company_access(user, sec_company)
+                    except PermissionDenied:
+                        raise NotFound("دوره یافت نشد.")
+                try:
+                    return get_or_create_period(None, sec_id, ym)[0]
+                except ValueError as exc:
+                    raise ValidationError(str(exc))
             defaults = {'status': 'OPEN'}
             if cid:
                 try:
@@ -620,8 +679,10 @@ class SupervisorCartableAPIView(APIView):
                 raise ValidationError(f"اقدام «{action_type}» برای کارکرد نامعتبر است.")
 
         # --- ۲. سایر مدل‌ها و دوره کارکرد ماهانه ---
-        instance = _get_target_instance(model_name, item_id, request.data)
+        instance = _get_target_instance(model_name, item_id, request.data, user=user)
         _validate_instance_company_access(instance, model_name, user)
+        if isinstance(instance, MonthlyWorkPeriod):
+            return _period_cartable_action(user, instance, action_type, reason, 'supervisor', PERIOD_MESSAGES_SUP)
         if isinstance(instance, ExpenseInvoice):
             return _invoice_engine_action(user, instance, action_type, reason)
         _ensure_cartable_section_permission(instance, user)
@@ -629,24 +690,6 @@ class SupervisorCartableAPIView(APIView):
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
         if action_type == 'approve':
-            # سد سروری قفل دوره: اعتبارسنجی تایید ۱۰۰٪ کارکردهای روزانه پیش از ارسال به حسابداری
-            if model_name.lower() in ['period', 'work_period']:
-                ym = instance.year_month
-                norm_ym = ym.replace('-', '/')
-                att_filter = Q(is_deleted=False) & (Q(period=instance) | Q(date_shamsi__startswith=norm_ym))
-                if instance.section_id:
-                    att_filter &= (Q(section_id=instance.section_id) | (Q(section_id__isnull=True) & Q(personnel__section_id=instance.section_id)))
-                elif instance.project_id:
-                    att_filter &= (Q(project_id=instance.project_id) | (Q(project_id__isnull=True) & Q(personnel__project_id=instance.project_id)))
-                elif instance.warehouse_id:
-                    att_filter &= Q(warehouse_id=instance.warehouse_id)
-
-                unapproved_count = DailyAttendance.objects.filter(att_filter).exclude(approval_status='APPROVED').count()
-                if unapproved_count > 0:
-                    raise ValidationError(
-                        f"امکان قفل و ارسال دوره به حسابداری وجود ندارد. هنوز تعداد {unapproved_count} رکورد کارکرد در وضعیت در انتظار یا نیازمند بازنگری وجود دارد."
-                    )
-
             updated = advance_workflow_step(instance, user, is_financial=is_financial)
             return Response({'message': 'تایید سرپرست با موفقیت ثبت گردید و پرونده به مرحله بعد ارسال شد.'})
         elif action_type == 'revision':
@@ -757,8 +800,10 @@ class AccountantCartableAPIView(APIView):
         if not action_type or not model_name or (not item_id and not (model_name in ['period', 'work_period'] and request.data.get('year_month'))):
             raise ValidationError("پارامترهای action، model و id (یا year_month برای دوره) الزامی هستند.")
 
-        instance = _get_target_instance(model_name, item_id, request.data)
+        instance = _get_target_instance(model_name, item_id, request.data, user=user)
         _validate_instance_company_access(instance, model_name, user)
+        if isinstance(instance, MonthlyWorkPeriod):
+            return _period_cartable_action(user, instance, action_type, reason, 'finance', PERIOD_MESSAGES_ACC)
         if isinstance(instance, ExpenseInvoice):
             return _invoice_engine_action(user, instance, action_type, reason)
         _ensure_cartable_section_permission(instance, user)
@@ -876,8 +921,10 @@ class ManagerCartableAPIView(APIView):
         if not action_type or not model_name or (not item_id and not (model_name in ['period', 'work_period'] and request.data.get('year_month'))):
             raise ValidationError("پارامترهای action، model و id (یا year_month برای دوره) الزامی هستند.")
 
-        instance = _get_target_instance(model_name, item_id, request.data)
+        instance = _get_target_instance(model_name, item_id, request.data, user=user)
         _validate_instance_company_access(instance, model_name, user)
+        if isinstance(instance, MonthlyWorkPeriod):
+            return _period_cartable_action(user, instance, action_type, reason, 'manager', PERIOD_MESSAGES_MGR)
         if isinstance(instance, ExpenseInvoice):
             return _invoice_engine_action(user, instance, action_type, reason)
         _ensure_cartable_section_permission(instance, user)
