@@ -149,6 +149,10 @@ class PersonnelConfig(AppConfig):
         from personnel.petty_print import printable_petty_statement
         contribute('numbering_series', PETTY_STATEMENT_NUMBER_SERIES)
         contribute(f'printable:{_wf.PETTY_STATEMENT_ENTITY}', printable_petty_statement)
+        # گیرندهٔ کسر بدهی تنخواه از حقوق (د۳ طرح ۴.۵): روش «کسر از حقوق» در تنخواه باز می‌شود
+        from personnel.petty_settlements import PAYROLL_DEDUCTION_POINT
+        from personnel.payroll_engine import confirm_record_petty_deductions
+        contribute(PAYROLL_DEDUCTION_POINT, confirm_record_petty_deductions)
         # لاگ ممیزی فاکتور از قلاب دیدن همان سند پیروی می‌کند (ص۱۰ طرح ۲.۶)
         contribute('audit_entity_kinds', ('ExpenseInvoice', INVOICE_ENTITY))
         # بخش‌های قابل خاموش شدن (ص۱۲ طرح ۲.۶)؛ همین کدها در sectionKey منو و مسیر فرانت می‌آیند

@@ -507,6 +507,57 @@ class PayrollCalculationEngine:
             result[key] = _xl_round(result[key] or 0)
         return result
 
+    @staticmethod
+    def _load_petty_deductions(period, personnel_list):
+        """
+        د۳: کسرهای حقوقی در انتظار تنخواه برای همهٔ کاربران دوره با پرس‌وجوی ثابت.
+        برمی‌گرداند (pending_by_user, claimed_elsewhere): شناسه‌هایی که ردیف حقوق دیگری (دورهٔ دیگر، نه ردشده)
+        پیش‌تر برداشته است دوباره کسر نمی‌شوند (بی دو بار کسر میان دو دوره).
+        """
+        from .petty_settlements import pending_payroll_deductions_bulk
+        user_ids = {p.user_id for p in personnel_list if p.user_id}
+        if not user_ids or not period.company_id:
+            return {}, set()
+        pending = pending_payroll_deductions_bulk(period.company_id, user_ids, lock=True)
+        if not pending:
+            return {}, set()
+        claimed = set()
+        for ids in (MonthlyPayrollRecord.objects
+                    .filter(personnel__user_id__in=user_ids)
+                    .exclude(period=period).exclude(payment_status='REJECTED')
+                    .exclude(petty_settlement_ids=[])
+                    .values_list('petty_settlement_ids', flat=True)):
+            claimed.update(int(i) for i in (ids or []))
+        return pending, claimed
+
+    @staticmethod
+    def _apply_petty_deduction(calc_data, pending_rows, claimed, keep=None):
+        """
+        د۳: کسر بدهی تنخواه در کسورات (ستون ۵۴) و قابل پرداخت (ستون ۵۷)، با سقف قابل پرداخت (هرگز منفی نمی‌شود).
+        تسویهٔ حقوقی فقط یک‌جا قطعی می‌شود، پس فقط تسویه‌هایی که کامل جا می‌شوند (به ترتیب ثبت) کسر می‌شوند و
+        بقیه در انتظار می‌مانند. هر بار از نو ساخته می‌شود (محاسبهٔ دوباره دو بار کسر نمی‌کند).
+        """
+        amount = Decimal('0')
+        ids = []
+        room = max(Decimal(str(calc_data.get('payable_amount') or 0)), Decimal('0'))
+        if keep is not None:
+            pending_rows = ()
+            amount = Decimal(str(keep[0] or 0))
+            ids = [int(i) for i in (keep[1] or [])]
+        for row in pending_rows or ():
+            if row['id'] in claimed:
+                continue
+            value = Decimal(str(row['amount'] or 0))
+            if value <= 0 or amount + value > room:
+                continue
+            amount += value
+            ids.append(row['id'])
+        calc_data['petty_cash_deduction'] = amount
+        calc_data['petty_settlement_ids'] = ids
+        if amount:
+            calc_data['total_deductions'] = Decimal(str(calc_data.get('total_deductions') or 0)) + amount
+            calc_data['payable_amount'] = Decimal(str(calc_data.get('payable_amount') or 0)) - amount
+
     def calculate_period(self, period: MonthlyWorkPeriod, user=None) -> list:
         """
         محاسبهٔ ردیف‌های حقوق یک دوره (طرح ۴.۵، د۱ و د۱۱).
@@ -585,13 +636,14 @@ class PayrollCalculationEngine:
         existing_by_person = {
             rec.personnel_id: rec for rec in MonthlyPayrollRecord.objects.filter(period=period)
         }
-
         created_records = []
         to_create = []
         to_update = []
         update_fields = set()
 
         with transaction.atomic():
+            # تسویه‌های در انتظار قفل می‌شوند (select_for_update) تا دو محاسبهٔ همزمان یک کسر را دو بار برندارند
+            petty_pending, petty_claimed = self._load_petty_deductions(period, personnel_list)
             row_idx = 1
             for p in personnel_list:
                 existing = existing_by_person.get(p.id)
@@ -627,6 +679,13 @@ class PayrollCalculationEngine:
 
                 calc_data['row_number'] = row_idx
                 calc_data['is_manually_overridden'] = False
+                if existing and existing.payment_status == 'PAID':
+                    # کسر ردیف پرداخت‌شده قطعی است (تسویه done): همان مبلغ و شناسه‌ها می‌ماند
+                    self._apply_petty_deduction(calc_data, None, petty_claimed,
+                                                keep=(existing.petty_cash_deduction, existing.petty_settlement_ids))
+                else:
+                    self._apply_petty_deduction(calc_data, petty_pending.get(p.user_id) if p.user_id else None,
+                                                petty_claimed)
 
                 # متادیتای تعلیق از ردیف موجود شروع می‌شود (همان رفتار update_or_create قبلی که فیلدهای نام‌برده‌نشده را دست نمی‌زد)
                 hold = {
@@ -690,3 +749,43 @@ def calculate_monthly_payroll_for_period(period: MonthlyWorkPeriod, user=None) -
     """
     engine = PayrollCalculationEngine(period=period)
     return engine.calculate_period(period, user=user)
+
+
+def release_petty_if_over_payable(record) -> None:
+    """
+    Plan 4.5 d3 (data-loss review): after payable changes outside the engine (tax Excel import), a petty
+    deduction that no longer fits is released whole (back to pending for the next payroll), never left to
+    drive payable negative and later be confirmed without the money being taken.
+    """
+    petty = Decimal(str(record.petty_cash_deduction or 0))
+    if petty <= 0 or Decimal(str(record.payable_amount or 0)) >= 0:
+        return
+    record.payable_amount = Decimal(str(record.payable_amount or 0)) + petty
+    record.total_deductions = Decimal(str(record.total_deductions or 0)) - petty
+    record.petty_cash_deduction = Decimal('0')
+    record.petty_settlement_ids = []
+
+
+def confirm_record_petty_deductions(record, user=None) -> list:
+    """
+    Plan 4.5 d3: confirm the petty-cash payroll deductions of one paid payroll row
+    (confirm_payroll_deduction(id, 'payroll:<record_id>') per id). Idempotent: a settlement that is
+    already done (by this or an earlier call) or no longer pending is skipped, never re-confirmed.
+    Not wired yet; 4.5-c calls it when the row becomes PAID (a FAILED_SHEBA row must not call it).
+    Returns the ids confirmed by this call.
+    """
+    from .petty_settlements import SettlementError, confirm_payroll_deduction
+    ref = f'payroll:{record.id}'
+    confirmed = []
+    from .models import PettyCashDebtSettlement
+    for settlement_id in record.petty_settlement_ids or []:
+        try:
+            confirm_payroll_deduction(int(settlement_id), ref, user=user)
+        except SettlementError as exc:
+            if exc.code == 'not_pending' and PettyCashDebtSettlement.objects.filter(
+                    pk=int(settlement_id), status='done', payroll_ref=ref).exists():
+                continue  # تکرار همان ردیف (idempotent)
+            # تسویهٔ باطل یا تغییرکرده پس از محاسبه: پرداخت باید بایستد تا پول گم نشود (۴.۵-ج خطا را نشان می‌دهد)
+            raise
+        confirmed.append(int(settlement_id))
+    return confirmed

@@ -160,7 +160,10 @@ class PettyCash42Tests(TestCase):
         self.assertEqual(res_no_ref.status_code, 400)
         self.assertEqual(res_no_ref.json()['code'], 'reference_required')
 
-        res_payroll = self.call(self.acc, 'post', SET, {'account': self.account.pk, 'amount': '100000', 'method': 'payroll'})
+        # ۴.۵ گیرندهٔ رجیستری را ثبت می‌کند؛ رفتار «بی گیرنده» ۴.۲ با رجیستری خالی سنجیده می‌شود
+        from unittest import mock
+        with mock.patch('personnel.petty_settlements.payroll_deduction_available', return_value=False):
+            res_payroll = self.call(self.acc, 'post', SET, {'account': self.account.pk, 'amount': '100000', 'method': 'payroll'})
         self.assertEqual(res_payroll.status_code, 400)
         self.assertEqual(res_payroll.json()['code'], 'payroll_not_available')
 

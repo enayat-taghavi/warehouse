@@ -10,7 +10,7 @@ from decimal import Decimal
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied
 from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import Q
@@ -38,6 +38,7 @@ from ..permissions import (
 from ..payroll_engine import (
     calculate_monthly_payroll_for_period,
     get_effective_payroll_settings,
+    release_petty_if_over_payable,
 )
 from ..dbf_generator import generate_dskkar_bytes, generate_dskwor_bytes
 from ..tax_bank_exporter import (
@@ -605,17 +606,104 @@ class PayrollYearlySettingsViewSet(viewsets.ModelViewSet):
 # ── ۸. ویوست محاسبه ماهانه حقوق و صدور دیسکت‌ها و گزارشات ۵۸ ستونی ────────────
 # ══════════════════════════════════════════════════════════════════════════════
 
+PAYROLL_PERM = 'view_sys_payroll'
+
+
+def period_manager_approved(period, records=None) -> bool:
+    """
+    د۸ طرح ۴.۵: آیا حقوق دوره تأیید مدیر گرفته است؟ (manager_approved_* دوره، دورهٔ PAID، یا ردیف READY_TO_PAY/PAID)
+    TODO(4.5-c): با آمدن گردش حقوق (PAYROLL_PERIOD_WORKFLOW_SPEC) به وضعیت گام manager_ok همان گردش تغییر کند.
+    records: ردیف‌های بارشدهٔ همان دوره (بی پرس‌وجوی اضافه)؛ None یعنی از پایگاه داده خوانده شود.
+    """
+    if period.manager_approved_at or period.manager_approved_by_id or period.status == 'PAID':
+        return True
+    approved = ('READY_TO_PAY', 'PAID')
+    if records is not None:
+        return any(r.period_id == period.id and r.payment_status in approved for r in records)
+    return MonthlyPayrollRecord.objects.filter(period=period, payment_status__in=approved).exists()
+
+
+def _user_has_payroll_perm(user, period=None, company_id=None) -> bool:
+    """د۷: view_sys_payroll در بخش دوره (دورهٔ بی‌بخش: در شرکت آن؛ بی شرکت: دست‌کم در یک بخش)."""
+    from types import SimpleNamespace
+    from ..lifecycle_services import user_has_any_perm
+    if user.is_superuser:
+        return True
+    if period is not None:
+        company_id = period.company_id
+        if period.section_id:
+            return user_has_any_perm(user, (PAYROLL_PERM,), period)
+    if company_id:
+        return user_has_any_perm(user, (PAYROLL_PERM,), SimpleNamespace(section_id=None, company_id=company_id))
+    return user_has_any_perm(user, (PAYROLL_PERM,))
+
+
+def _payroll_forbidden():
+    msg = 'محاسبه، ورود و خروجی حقوق فقط با دسترسی حقوق و دستمزد در همین بخش مجاز است.'
+    return Response({'code': 'permission_denied', 'error': msg, 'detail': msg}, status=status.HTTP_403_FORBIDDEN)
+
+
+def _not_found(msg='دوره یافت نشد.'):
+    return Response({'code': 'not_found', 'error': msg, 'detail': msg}, status=status.HTTP_404_NOT_FOUND)
+
+
 class MonthlyPayrollViewSet(viewsets.ModelViewSet):
     queryset = MonthlyPayrollRecord.objects.all().select_related('period', 'personnel')
     serializer_class = MonthlyPayrollRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 
+    # ── د۷ طرح ۴.۵: دامنه (ق۶) ──────────────────────────────────────────────────
+    def _scoped_periods(self):
+        """دوره‌ها فقط در شرکت‌های مجاز کاربر (شرکت فعال درخواست اعتبارسنجی می‌شود)؛ بیرون از دامنه = 404."""
+        from common.tenant_scope import scope_tenant_queryset
+        return scope_tenant_queryset(MonthlyWorkPeriod.objects.select_related('section', 'section__project'),
+                                     self.request.user, company_field='company_id', request=self.request)
+
+    def _scoped_projects(self):
+        from common.tenant_scope import scope_tenant_queryset
+        return scope_tenant_queryset(Project.objects.all(), self.request.user, company_field='company_id',
+                                     request=self.request)
+
+    @staticmethod
+    def _parse_id(value):
+        value = str(value or '').strip()
+        return int(value) if value.isdigit() else None
+
+    def _wage_row_q(self, user):
+        """ردیف‌هایی که کاربر به‌عنوان نقش مالی/مدیر/حقوق می‌بیند: بخش‌هایی که یکی از WAGE_VIEW_PERMS را دارد."""
+        from accounts.scoped_permissions import sections_where
+        from ..lifecycle_services import WAGE_VIEW_PERMS
+        from platform_core.registry import expand_permission_aliases
+        q = Q(pk__in=[])
+        for code in expand_permission_aliases(WAGE_VIEW_PERMS):
+            sections = sections_where(user, code)
+            q |= Q(period__section_id__in=sections.values('id'))
+            # دورهٔ قدیمی بی‌بخش: فقط در شرکتی که کاربر همین مجوز را دست‌کم در یک بخش آن دارد
+            q |= Q(period__section__isnull=True, period__company_id__in=sections.values('project__company_id'))
+        return q
+
+    def _can_edit_record_wages(self, record=None):
+        """
+        بی هیچ مجوز مالی ← False پیش از خواندن ردیف (403 مثل قبل)؛ وگرنه ردیف با دامنه خوانده می‌شود (بیرون از
+        دامنه 404) و مجوز مالی در بخش همان دوره سنجیده می‌شود.
+        """
+        from ..lifecycle_services import WAGE_VIEW_PERMS, user_can_view_wages, user_has_any_perm
+        if not user_can_view_wages(self.request.user):
+            return False
+        period = (record or self.get_object()).period
+        if period.section_id or period.company_id:
+            return user_has_any_perm(self.request.user, WAGE_VIEW_PERMS, period)
+        return user_has_any_perm(self.request.user, WAGE_VIEW_PERMS)
+
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
         from common.tenant_scope import scope_tenant_queryset
         qs = scope_tenant_queryset(qs, user, company_field='personnel__company_id', request=self.request)
+        if not user.is_superuser:
+            # د۷: نقش مالی/مدیر/حقوق در بخش دوره، وگرنه فقط ردیف خود کاربر (ردیف دیگران 404)
+            qs = qs.filter(self._wage_row_q(user) | Q(personnel__user=user))
 
         period_id = self.request.query_params.get('period_id')
         if period_id:
@@ -631,9 +719,17 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('row_number')
 
+    def create(self, request, *args, **kwargs):
+        # ردیف حقوق فقط با calculate-period ساخته می‌شود (بازبینی دامنهٔ ۴.۵-ب)
+        raise MethodNotAllowed(request.method)
+
+    def destroy(self, request, *args, **kwargs):
+        # ردیف حقوق هرگز با API حذف نمی‌شود (قانون بی‌حذف داده)
+        raise MethodNotAllowed(request.method)
+
     def update(self, request, *args, **kwargs):
-        from ..lifecycle_services import user_can_view_wages
-        if not user_can_view_wages(request.user):
+        # د۷: مجوز مالی در بخش همان دورهٔ ردیف (get_object بیرون از دامنه را 404 می‌کند)
+        if not self._can_edit_record_wages():
             raise PermissionDenied("ویرایش فیش حقوقی تنها با دسترسی مالی و حسابداری مجاز است.")
         if 'payment_hold' in request.data or 'payment_hold_reason' in request.data:
             return Response(
@@ -643,8 +739,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        from ..lifecycle_services import user_can_view_wages
-        if not user_can_view_wages(request.user):
+        if not self._can_edit_record_wages():
             raise PermissionDenied("ویرایش فیش حقوقی تنها با دسترسی مالی و حسابداری مجاز است.")
         if 'payment_hold' in request.data or 'payment_hold_reason' in request.data:
             return Response(
@@ -683,7 +778,18 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         wh_val = int(warehouse_id) if (warehouse_id and str(warehouse_id).isdigit()) else None
         comp_val = int(company_id) if (company_id and str(company_id).isdigit()) else None
 
-        lookup = {'year_month': str(year_month).strip()}
+        # د۷ (ق۶): company_id بدنه فقط پس از اعتبارسنجی دسترسی شرکت؛ محاسبه view_sys_payroll می‌خواهد
+        if not request.user.is_superuser:
+            from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+            try:
+                comp_val = validate_user_company_access(request.user, comp_val) if comp_val else None
+            except (PermissionDenied, DjangoPermissionDenied):
+                return _not_found()
+            if not comp_val or not _user_has_payroll_perm(request.user, company_id=comp_val):
+                return _payroll_forbidden()
+
+        # فقط دورهٔ قدیمی بی‌بخش؛ دورهٔ بخش‌دار ۴.۴ فقط از مسیر بخش (مجوز بخش و دروازهٔ READY_TO_PAY)
+        lookup = {'year_month': str(year_month).strip(), 'section__isnull': True}
         if wh_val:
             lookup['warehouse_id'] = wh_val
         if comp_val:
@@ -727,6 +833,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
             from companies.access import get_user_allowed_companies
             if period.company_id is None or not get_user_allowed_companies(request.user).filter(id=period.company_id).exists():
                 return not_found
+        if not _user_has_payroll_perm(request.user, period):
+            return _payroll_forbidden()
         if period.status != 'READY_TO_PAY':
             msg = 'گردش تأیید کارکرد این دوره هنوز تمام نشده است؛ حقوق پس از تأیید نهایی کارکرد محاسبه می‌شود.'
             return Response({'code': 'attendance_not_approved', 'error': msg, 'detail': msg},
@@ -739,7 +847,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
     def _calculation_response(self, period, records, skipped_no_attendance):
         from ..workflow_engine import notify_document_changed
         notify_document_changed(period, 'recalculated')
-        serialized = MonthlyPayrollRecordSerializer(records, many=True).data
+        serialized = MonthlyPayrollRecordSerializer(records, many=True, context={'request': self.request}).data
 
         # Summary Metrics
         total_gross = sum(float(r.gross_salary) for r in records)
@@ -776,6 +884,85 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         resp['X-Expired-Personnel-Excluded'] = str(len(excluded_expired))
         resp['X-Expired-Personnel-Names'] = quote(json.dumps(names, ensure_ascii=False))
         resp['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Expired-Personnel-Excluded, X-Expired-Personnel-Names'
+
+    @staticmethod
+    def _attach_unapproved_headers(resp, unapproved_periods):
+        """
+        د۸ طرح ۴.۵: دیسکت و مالیات پروژه + ماه با دورهٔ بخشِ هنوز تأییدنشدهٔ مدیر ساخته می‌شوند ولی هشدار می‌دهند:
+        X-Payroll-Unapproved-Periods = تعداد، X-Payroll-Unapproved-Sections = نام بخش‌ها (JSON با کدگذاری URL،
+        همان شیوهٔ سربرگ منقضی‌ها، چون سربرگ HTTP فقط ASCII می‌پذیرد).
+        """
+        if not unapproved_periods:
+            return
+        import json
+        from urllib.parse import quote
+        names = [(p.section.name if p.section_id else p.year_month) for p in unapproved_periods][:50]
+        resp['X-Payroll-Unapproved-Periods'] = str(len(unapproved_periods))
+        resp['X-Payroll-Unapproved-Sections'] = quote(json.dumps(names, ensure_ascii=False))
+        exposed = [h.strip() for h in (resp.get('Access-Control-Expose-Headers') or 'Content-Disposition').split(',')]
+        for h in ('X-Payroll-Unapproved-Periods', 'X-Payroll-Unapproved-Sections'):
+            if h not in exposed:
+                exposed.append(h)
+        resp['Access-Control-Expose-Headers'] = ', '.join(exposed)
+
+    def _resolve_export(self, request, project_label):
+        """
+        د۷ و د۸ طرح ۴.۵: منبع ردیف‌های خروجی دیسکت بیمه، مالیات و بانک، همه با دامنه (بیرون از دامنه 404) و
+        view_sys_payroll در بخش/شرکت هر دوره (بی آن 403).
+        - project_id + year_month: ردیف‌های همهٔ دوره‌های بخشِ آن پروژه در آن ماه (یک کارگاه بیمه، چند بخش).
+        - period_id دورهٔ بخش‌دار: پروژه و ماه از دوره خوانده می‌شود و مثل حالت بالا جمع می‌شود.
+        - period_id دورهٔ قدیمی بی‌بخش: رفتار قبلی (project_id اجباری، ردیف‌های پرسنل همان پروژه).
+        برمی‌گرداند (ctx, None) یا (None, Response). ctx: project, year_month, records, periods, section_mode.
+        """
+        from ..attendance_periods import normalize_year_month
+        period_id = request.query_params.get('period_id')
+        project_id = request.query_params.get('project_id')
+        year_month = request.query_params.get('year_month')
+        if not period_id and not (project_id and year_month):
+            return None, Response({'error': 'شناسه دوره (period_id) یا پروژه و ماه (project_id + year_month) الزامی است.'},
+                                  status=status.HTTP_400_BAD_REQUEST)
+        periods_qs = self._scoped_periods()
+        project = None
+        if period_id:
+            pid = self._parse_id(period_id)
+            period = periods_qs.filter(id=pid).first() if pid else None
+            if period is None:
+                return None, _not_found()
+            if period.section_id:
+                project = period.section.project
+                year_month = period.year_month
+                if project_id and self._parse_id(project_id) != project.id:
+                    return None, _not_found('پروژه انتخاب‌شده یافت نشد.')
+            else:
+                if not project_id:
+                    return None, Response({'error': f'انتخاب پروژه جهت صدور {project_label} الزامی است.'},
+                                          status=status.HTTP_400_BAD_REQUEST)
+                ppid = self._parse_id(project_id)
+                project = self._scoped_projects().filter(id=ppid).first() if ppid else None
+                if project is None:
+                    return None, _not_found('پروژه انتخاب‌شده یافت نشد.')
+                if not _user_has_payroll_perm(request.user, period):
+                    return None, _payroll_forbidden()
+                all_records = list(MonthlyPayrollRecord.objects.filter(period=period)
+                                   .select_related('personnel', 'personnel__project', 'period'))
+                return {'project': project, 'year_month': period.year_month, 'periods': [period],
+                        'records': [r for r in all_records if r.personnel.project_id == project.id],
+                        'section_mode': False}, None
+        else:
+            ppid = self._parse_id(project_id)
+            project = self._scoped_projects().filter(id=ppid).first() if ppid else None
+            if project is None:
+                return None, _not_found('پروژه انتخاب‌شده یافت نشد.')
+            year_month = normalize_year_month(year_month)
+        periods = list(periods_qs.filter(section__project_id=project.id, year_month=year_month))
+        if not periods:
+            return None, _not_found(f'دوره‌ای برای پروژه «{project.name}» در ماه {year_month} یافت نشد.')
+        if not all(_user_has_payroll_perm(request.user, p) for p in periods):
+            return None, _payroll_forbidden()
+        records = list(MonthlyPayrollRecord.objects.filter(period__in=periods)
+                       .select_related('personnel', 'personnel__project', 'period').order_by('period_id', 'row_number'))
+        return {'project': project, 'year_month': year_month, 'periods': periods, 'records': records,
+                'section_mode': True}, None
 
     @action(detail=False, methods=['get'], url_path='expired-personnel')
     def expired_personnel(self, request):
@@ -815,35 +1002,22 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         """
         صدور پکیج فشرده ZIP شامل دو دیسکت استاندارد DSKWOR00.DBF و DSKKAR00.DBF
         """
-        period_id = request.query_params.get('period_id')
-        project_id = request.query_params.get('project_id')
-
-        if not period_id:
-            return Response({'error': 'شناسه دوره (period_id) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not project_id:
-            return Response({'error': 'انتخاب پروژه جهت صدور دیسکت‌های بیمه تامین اجتماعی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        period = MonthlyWorkPeriod.objects.filter(id=period_id).first()
-        if not period:
-            return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        project = Project.objects.filter(id=project_id).first()
-        if not project:
-            return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        all_records = list(MonthlyPayrollRecord.objects.filter(period=period).select_related('personnel', 'personnel__project'))
-        # فیلتر تک‌پروژه‌ای الزامی بر اساس انتساب پرسنل به پروژه
-        records = [r for r in all_records if r.personnel.project_id == project.id]
+        # د۷/د۸ طرح ۴.۵: دوره یا پروژه + ماه با دامنه و مجوز؛ ساختار DBF دست نمی‌خورد (AGENTS §6)
+        ctx, error = self._resolve_export(request, 'دیسکت‌های بیمه تامین اجتماعی')
+        if error is not None:
+            return error
+        project, records, year_month = ctx['project'], ctx['records'], ctx['year_month']
         if not records:
             return Response({'error': f'هیچ رکوردی برای پروژه «{project.name}» در این دوره محاسبه نشده است.'}, status=status.HTTP_404_NOT_FOUND)
+        unapproved = [p for p in ctx['periods'] if not period_manager_approved(p, records)] if ctx['section_mode'] else []
 
-        year_str = period.year_month.split('/')[0] if '/' in period.year_month else '1405'
-        month_str = period.year_month.split('/')[1] if '/' in period.year_month else '04'
+        year_str = year_month.split('/')[0] if '/' in year_month else '1405'
+        month_str = year_month.split('/')[1] if '/' in year_month else '04'
         fiscal_year_short = int(year_str[-2:]) # 05
         month_num = int(month_str)
 
         # استخراج تنظیمات کارگاه به ترتیب: تنظیم اختصاصی پروژه -> تنظیم سراسری سال در بازه موثر
-        settings_obj = get_effective_payroll_settings(period.year_month, project.id)
+        settings_obj = get_effective_payroll_settings(year_month, project.id)
         ws_settings = getattr(settings_obj, 'workshop_insurance', None) if settings_obj else None
         if not ws_settings:
             ws_settings = WorkshopInsuranceSettings.objects.first()
@@ -857,7 +1031,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
 
         # فیلتر پرسنل معتبر و کنار گذاشتن پرسنل منقضی در دیسکت با گزارش هشدار (تسک ۲.۱ و تصمیم مصوب ۶.۶)
         from ..lifecycle_services import split_expired_payroll_records
-        records, excluded_expired = split_expired_payroll_records(records, period.year_month)
+        records, excluded_expired = split_expired_payroll_records(records, year_month)
 
         insured_recs = [r for r in records if r.include_in_insurance]
         if not insured_recs:
@@ -918,6 +1092,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         resp = HttpResponse(zip_val, content_type='application/zip')
         resp['Content-Disposition'] = f'attachment; filename="Bimeh_{project.code}_{year_str}_{month_str}.zip"'
         self._attach_expired_headers(resp, excluded_expired)
+        self._attach_unapproved_headers(resp, unapproved)
         return resp
 
     @action(detail=False, methods=['get'], url_path='export-tax-wh')
@@ -925,41 +1100,33 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         """
         صدور فایل متنی WH مالیات حقوق به تفکیک اجباری پروژه
         """
-        period_id = request.query_params.get('period_id')
-        project_id = request.query_params.get('project_id')
+        return self._export_tax_text(request, 'فایل متنی WH مالیاتی', generate_wh_tax_content, 'WH')
 
-        if not period_id:
-            return Response({'error': 'شناسه دوره (period_id) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not project_id:
-            return Response({'error': 'انتخاب پروژه جهت صدور فایل متنی WH مالیاتی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        period = MonthlyWorkPeriod.objects.filter(id=period_id).first()
-        if not period:
-            return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        project = Project.objects.filter(id=project_id).first()
-        if not project:
-            return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        all_records = list(MonthlyPayrollRecord.objects.filter(period=period).select_related('personnel', 'personnel__project'))
-        records = [r for r in all_records if r.personnel.project_id == project.id]
+    def _export_tax_text(self, request, project_label, generator, prefix):
+        """د۷/د۸ طرح ۴.۵: WH/WP برای دوره یا پروژه + ماه با دامنه، مجوز و هشدار دورهٔ تأییدنشده؛ قالب فایل بی تغییر."""
+        ctx, error = self._resolve_export(request, project_label)
+        if error is not None:
+            return error
+        project, records, year_month = ctx['project'], ctx['records'], ctx['year_month']
         if not records:
             return Response({'error': f'هیچ رکوردی برای پروژه «{project.name}» در این دوره محاسبه نشده است.'}, status=status.HTTP_404_NOT_FOUND)
+        unapproved = [p for p in ctx['periods'] if not period_manager_approved(p, records)] if ctx['section_mode'] else []
 
         # فیلتر پرسنل معتبر و کنار گذاشتن پرسنل منقضی در دیسکت مالیات
         from ..lifecycle_services import split_expired_payroll_records
-        records, excluded_expired = split_expired_payroll_records(records, period.year_month)
+        records, excluded_expired = split_expired_payroll_records(records, year_month)
 
-        settings_obj = get_effective_payroll_settings(period.year_month, project.id)
+        settings_obj = get_effective_payroll_settings(year_month, project.id)
         tax_settings = getattr(settings_obj, 'tax_settings', None)
 
-        content = generate_wh_tax_content(records, tax_settings)
-        month_code = period.year_month.replace('/', '')[2:] if period else '140504'
-        filename = f"WH_{project.code}_{month_code}.txt"
+        content = generator(records, tax_settings)
+        month_code = year_month.replace('/', '')[2:] if year_month else '140504'
+        filename = f"{prefix}_{project.code}_{month_code}.txt"
 
         resp = HttpResponse(content.encode('utf-8'), content_type='text/plain; charset=utf-8')
         resp['Content-Disposition'] = f'attachment; filename="{filename}"'
         self._attach_expired_headers(resp, excluded_expired)
+        self._attach_unapproved_headers(resp, unapproved)
         return resp
 
     @action(detail=False, methods=['get'], url_path='export-tax-wp')
@@ -967,42 +1134,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         """
         صدور فایل متنی WP پرسنل مالیاتی به تفکیک اجباری پروژه
         """
-        period_id = request.query_params.get('period_id')
-        project_id = request.query_params.get('project_id')
-
-        if not period_id:
-            return Response({'error': 'شناسه دوره (period_id) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not project_id:
-            return Response({'error': 'انتخاب پروژه جهت صدور فایل متنی WP مالیاتی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        period = MonthlyWorkPeriod.objects.filter(id=period_id).first()
-        if not period:
-            return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        project = Project.objects.filter(id=project_id).first()
-        if not project:
-            return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        all_records = list(MonthlyPayrollRecord.objects.filter(period=period).select_related('personnel', 'personnel__project'))
-        records = [r for r in all_records if r.personnel.project_id == project.id]
-        if not records:
-            return Response({'error': f'هیچ رکوردی برای پروژه «{project.name}» در این دوره محاسبه نشده است.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # فیلتر پرسنل معتبر و کنار گذاشتن پرسنل منقضی در دیسکت مالیات WP
-        from ..lifecycle_services import split_expired_payroll_records
-        records, excluded_expired = split_expired_payroll_records(records, period.year_month)
-
-        settings_obj = get_effective_payroll_settings(period.year_month, project.id)
-        tax_settings = getattr(settings_obj, 'tax_settings', None)
-
-        content = generate_wp_tax_content(records, tax_settings)
-        month_code = period.year_month.replace('/', '')[2:] if period else '140504'
-        filename = f"WP_{project.code}_{month_code}.txt"
-
-        resp = HttpResponse(content.encode('utf-8'), content_type='text/plain; charset=utf-8')
-        resp['Content-Disposition'] = f'attachment; filename="{filename}"'
-        self._attach_expired_headers(resp, excluded_expired)
-        return resp
+        return self._export_tax_text(request, 'فایل متنی WP مالیاتی', generate_wp_tax_content, 'WP')
 
     @action(detail=False, methods=['get'], url_path='export-bank-excel')
     def export_bank_excel(self, request):
@@ -1011,25 +1143,16 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         DEF-20 (گام ۲ اصلاحیه): بر مبنای علامت payment_hold روی فیش؛
         در صورت ارسال only_released=true، خروجی مجزا فقط شامل پرداخت‌های آزادشده صادر می‌شود.
         """
-        period_id = request.query_params.get('period_id')
-        project_id = request.query_params.get('project_id')
         only_released = request.query_params.get('only_released') in ['true', '1']
 
-        if not period_id:
-            return Response({'error': 'شناسه دوره (period_id) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not project_id:
-            return Response({'error': 'انتخاب پروژه جهت صدور فایل پرداخت بانک ملی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        period = MonthlyWorkPeriod.objects.filter(id=period_id).first()
-        if not period:
-            return Response({'error': 'دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        project = Project.objects.filter(id=project_id).first()
-        if not project:
-            return Response({'error': 'پروژه انتخاب‌شده یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        all_records = list(MonthlyPayrollRecord.objects.filter(period=period).select_related('personnel', 'personnel__project'))
-        records = [r for r in all_records if r.personnel.project_id == project.id]
+        # د۷/د۸ طرح ۴.۵: دوره یا پروژه + ماه با دامنه و مجوز
+        ctx, error = self._resolve_export(request, 'فایل پرداخت بانک ملی')
+        if error is not None:
+            return error
+        project, records, year_month = ctx['project'], ctx['records'], ctx['year_month']
+        if ctx['section_mode']:
+            # د۸: دورهٔ بخش‌دار ← اکسل بانک فقط ردیف‌های تأییدشدهٔ مدیر (READY_TO_PAY)؛ دورهٔ قدیمی رفتار قبلی
+            records = [r for r in records if r.payment_status == 'READY_TO_PAY']
         if not records:
             return Response({'error': f'رکوردی برای پروژه «{project.name}» در این دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1038,7 +1161,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
             if not records:
                 return Response({'error': f'هیچ فیش آزادشده‌ای برای پروژه «{project.name}» در این دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
             excluded_expired = []
-            filename = f"Bank_Payment_Released_{project.code}_{period.year_month.replace('/', '_')}.xlsx"
+            filename = f"Bank_Payment_Released_{project.code}_{year_month.replace('/', '_')}.xlsx"
         else:
             excluded_expired = [
                 {
@@ -1052,12 +1175,12 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
             records = [r for r in records if not r.payment_hold and r.payment_hold_released_at is None]
             if not records:
                 return Response({'error': f'هیچ فیش حقوقی عادی برای صدور دیسکت بانک پروژه «{project.name}» در این دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-            filename = f"Bank_Payment_{project.code}_{period.year_month.replace('/', '_')}.xlsx"
+            filename = f"Bank_Payment_{project.code}_{year_month.replace('/', '_')}.xlsx"
 
-        settings_obj = get_effective_payroll_settings(period.year_month, project.id)
+        settings_obj = get_effective_payroll_settings(year_month, project.id)
         bank_settings = getattr(settings_obj, 'bank_export_settings', None)
 
-        excel_bytes = generate_bank_meli_excel(records, bank_settings, year_month_title=f"{project.name} {period.year_month}")
+        excel_bytes = generate_bank_meli_excel(records, bank_settings, year_month_title=f"{project.name} {year_month}")
 
         resp = HttpResponse(excel_bytes, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         resp['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -1070,13 +1193,12 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         DEF-20 (گام ۲ اصلاحیه): آزادسازی پرداخت معلق پرسنل منقضی پس از تمدید اعتبار پرونده.
         اعتبار را می‌سنجد، لاگ ممیزی ثبت می‌کند و تعلیق پرداخت را آزاد می‌سازد.
         """
-        from ..lifecycle_services import user_can_view_wages, validate_personnel_validity
+        from ..lifecycle_services import validate_personnel_validity
         from accounts.audit_utils import log_audit_event
         from django.utils import timezone
 
-        if not user_can_view_wages(request.user):
+        if not self._can_edit_record_wages():
             raise PermissionDenied("آزادسازی پرداخت معلق حقوق تنها با دسترسی مالی و حسابداری مجاز است.")
-
         record = self.get_object()
         if not record.payment_hold:
             return Response({'message': 'این فیش حقوقی در وضعیت تعلیق پرداخت قرار ندارد.'}, status=status.HTTP_200_OK)
@@ -1123,12 +1245,17 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         """
         صدور فایل اکسل ۲ سطری استاندارد ۵۸ ستون شیت ماهانه
         """
-        period_id = request.query_params.get('period_id')
-        records = list(MonthlyPayrollRecord.objects.filter(period_id=period_id).select_related('personnel'))
+        # د۷ طرح ۴.۵: دوره با دامنه (بیرون از دامنه 404) و view_sys_payroll در بخش/شرکت دوره (بی آن 403)
+        pid = self._parse_id(request.query_params.get('period_id'))
+        period = self._scoped_periods().filter(id=pid).first() if pid else None
+        if period is None:
+            return _not_found()
+        if not _user_has_payroll_perm(request.user, period):
+            return _payroll_forbidden()
+        records = list(MonthlyPayrollRecord.objects.filter(period=period).select_related('personnel', 'period'))
         if not records:
             return Response({'error': 'رکوردی یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
-        period = records[0].period
         excel_bytes = generate_monthly_payroll_excel(records, period_title=period.year_month)
         filename = f"Payroll_Report_{period.year_month.replace('/', '_')}.xlsx"
 
@@ -1145,25 +1272,20 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         excel_file = request.FILES.get('file')
         items = request.data.get('items')
         period_id = request.data.get('period_id') or request.query_params.get('period_id')
-        year_month = request.data.get('year_month') or request.query_params.get('year_month')
 
         if not excel_file and not items:
             return Response({'error': 'لطفاً فایل اکسل مالیات دارایی یا داده‌های متنی را انتخاب کنید.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Locate target period
-        if period_id:
-            try:
-                p_id = int(str(period_id).strip())
-                period = MonthlyWorkPeriod.objects.filter(id=p_id).first()
-            except Exception:
-                period = MonthlyWorkPeriod.objects.filter(id=period_id).first()
-        elif year_month:
-            period = MonthlyWorkPeriod.objects.filter(year_month=year_month).first()
-        else:
-            period = MonthlyWorkPeriod.objects.order_by('-created_at').first()
-
+        # د۷ طرح ۴.۵: شناسهٔ دوره اجباری (بی برگشت به «دورهٔ همان ماه» یا «تازه‌ترین دوره»)، دوره با دامنه، مجوز حقوق
+        pid = self._parse_id(period_id)
+        if pid is None:
+            msg = 'شناسهٔ دوره (period_id) برای ورود مالیات الزامی است.'
+            return Response({'code': 'period_required', 'error': msg, 'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+        period = self._scoped_periods().filter(id=pid).first()
         if not period:
             return Response({'error': 'دوره ماهانه مورد نظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+        if not _user_has_payroll_perm(request.user, period):
+            return _payroll_forbidden()
 
         try:
             matched_count = 0
@@ -1202,7 +1324,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
                             rec.is_tax_imported = True
 
                             rec.net_salary = rec.gross_salary - rec.worker_insurance - rec.income_tax
-                            rec.payable_amount = rec.net_salary - rec.advance_payment_deduction
+                            rec.payable_amount = rec.net_salary - rec.advance_payment_deduction - (rec.petty_cash_deduction or 0)  # 4.5 d3
+                            release_petty_if_over_payable(rec)
                             rec.save()
 
                             matched_count += 1
@@ -1273,7 +1396,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
                             rec.is_tax_imported = True
 
                             rec.net_salary = rec.gross_salary - rec.worker_insurance - rec.income_tax
-                            rec.payable_amount = rec.net_salary - rec.advance_payment_deduction
+                            rec.payable_amount = rec.net_salary - rec.advance_payment_deduction - (rec.petty_cash_deduction or 0)  # 4.5 d3
+                            release_petty_if_over_payable(rec)
                             rec.save()
 
                             matched_count += 1

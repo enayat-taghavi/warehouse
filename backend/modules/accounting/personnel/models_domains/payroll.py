@@ -377,6 +377,14 @@ class MonthlyPayrollRecord(models.Model):
 
     is_manually_overridden = models.BooleanField(default=False, verbose_name="ویرایش دستی شده توسط حسابدار")
     override_notes = models.TextField(blank=True, null=True, verbose_name="توضیحات بازنویسی دستی")
+
+    # ── ۸. کسر بدهی تنخواه از حقوق (طرح ۴.۵، د۳؛ بیرون از ۵۸ ستون اکسل) ─────────
+    petty_cash_deduction = models.DecimalField(
+        max_digits=14, decimal_places=0, default=0,
+        verbose_name="کسر بدهی تنخواه (در کسورات و قابل پرداخت)")
+    petty_settlement_ids = models.JSONField(
+        default=list, blank=True, verbose_name="شناسه‌های تسویهٔ تنخواه کسرشده در این ردیف")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

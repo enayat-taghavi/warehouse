@@ -156,6 +156,23 @@ def pending_payroll_deductions(company_id, user_id):
     ).order_by('created_at', 'id').values('id', 'account_id', 'amount', 'note', 'created_at'))
 
 
+def pending_payroll_deductions_bulk(company_id, user_ids, lock=False):
+    """همان pending_payroll_deductions برای چند کاربر با یک پرس‌وجو: {user_id: [ردیف‌ها به ترتیب ثبت]}."""
+    from .models import PettyCashDebtSettlement
+    user_ids = [u for u in set(user_ids or ()) if u]
+    if not company_id or not user_ids:
+        return {}
+    out = {}
+    qs = PettyCashDebtSettlement.objects.filter(
+        company_id=company_id, account__custodian_id__in=user_ids, method='payroll', status='pending',
+    ).order_by('created_at', 'id')
+    if lock:  # inside the caller's transaction.atomic(); of=('self',) keeps the join rows unlocked
+        qs = qs.select_for_update(of=('self',))
+    for row in qs.values('id', 'account__custodian_id', 'amount'):
+        out.setdefault(row['account__custodian_id'], []).append({'id': row['id'], 'amount': row['amount']})
+    return out
+
+
 def confirm_payroll_deduction(settlement_id, payroll_ref, user=None):
     """حقوق آن ماه کسر را با payroll_ref قطعی می‌کند. خطا: SettlementError."""
     from .models import PettyCashDebtSettlement

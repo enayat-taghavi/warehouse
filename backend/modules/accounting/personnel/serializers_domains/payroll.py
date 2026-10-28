@@ -154,8 +154,36 @@ class MonthlyPayrollRecordSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'created_at', 'updated_at', 'paid_by', 'paid_at',
             'payment_hold', 'payment_hold_reason',
-            'payment_hold_released_at', 'payment_hold_released_by'
+            'payment_hold_released_at', 'payment_hold_released_by',
+            # ردیف به دوره یا پرسنل دیگری (شاید شرکت دیگر) منتقل نمی‌شود (بازبینی دامنهٔ ۴.۵-ب)
+            'period', 'personnel',
+            # د۳ طرح ۴.۵: کسر تنخواه را فقط موتور محاسبه می‌سازد (شناسه‌ها هنگام پرداخت قطعی می‌شوند)
+            'petty_cash_deduction', 'petty_settlement_ids',
         ]
+
+    # د۷ طرح ۴.۵ (ق۱۶): کد ملی و شمارهٔ حساب ردیف حقوق با قاعدهٔ پوشش ۴.۳ (can_view_personnel_sensitive)
+    SENSITIVE_RECORD_FIELDS = ('national_code', 'bank_account_number')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request is None:
+            return data  # مصرف درونی سرور (پاسخ محاسبه، خروجی‌ها): دید کامل
+        from ..lifecycle_services import can_view_personnel_sensitive, mask_sensitive_value
+        cache = self.context.setdefault('_sensitive_cache', {})
+        if not can_view_personnel_sensitive(request.user, instance.personnel, cache):
+            for field in self.SENSITIVE_RECORD_FIELDS:
+                if data.get(field) not in (None, ''):
+                    data[field] = mask_sensitive_value(data[field])
+        return data
+
+    def validate(self, attrs):
+        # مقدار پوشیده‌ای که کلاینت برمی‌گرداند هرگز روی مقدار واقعی نوشته نمی‌شود
+        from ..lifecycle_services import is_masked_value
+        for field in self.SENSITIVE_RECORD_FIELDS:
+            if field in attrs and is_masked_value(attrs[field]):
+                attrs.pop(field)
+        return super().validate(attrs)
 
     def get_paid_by_name(self, obj):
         if obj.paid_by:
