@@ -459,15 +459,23 @@ class PersonnelFullCycleTests(TestCase):
         self.assertTrue(v_obj.has_pending_changes)
         self.assertEqual(float(v_obj.default_service_rate), 1800000.0)
 
-        # ۶. تایید تغییرات خودرو توسط سرپرست
+        # ۶. 4.6: the engine skips the supervisor step below the requester's (accountant) level
         self.client.force_authenticate(user=self.supervisor)
         resp_v_sup = self.client.post(f"/api/personnel/vehicle-change-requests/{v_cr_id}/approve-supervisor/", {}, format="json")
-        self.assertEqual(resp_v_sup.status_code, 200)
+        self.assertEqual(resp_v_sup.status_code, 400, resp_v_sup.data)
 
-        # ۷. تایید مالی تغییرات خودرو توسط حسابدار
+        # ۷. the requester never reviews their own request; a second accountant does
+        from personnel.models import UserCompanyAccess
+        from personnel.scoped_test_support import grant_section_perms
+        v_acc2, _ = CustomUser.objects.get_or_create(username="test_fleet_accountant_2")
+        grant_section_perms(v_acc2, ("perm_approve_fleet_finance",), section=self.section, exact=False, role="accountant")
+        UserCompanyAccess.objects.get_or_create(user=v_acc2, company=self.company, defaults={"is_default": True})
         self.client.force_authenticate(user=self.accountant)
+        resp_v_self = self.client.post(f"/api/personnel/vehicle-change-requests/{v_cr_id}/approve-finance/", {}, format="json")
+        self.assertEqual(resp_v_self.status_code, 403)
+        self.client.force_authenticate(user=v_acc2)
         resp_v_fin = self.client.post(f"/api/personnel/vehicle-change-requests/{v_cr_id}/approve-finance/", {}, format="json")
-        self.assertEqual(resp_v_fin.status_code, 200)
+        self.assertEqual(resp_v_fin.status_code, 200, resp_v_fin.data)
 
         # ۸. تصویب نهایی تغییرات خودرو توسط مدیر شرکت
         self.client.force_authenticate(user=self.manager)

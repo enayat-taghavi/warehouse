@@ -146,15 +146,17 @@ class PettyCashSettlementSmoke42Tests(PettyCashSmokeTests):
         self.rejected_line()
         bal = self.call(self.emp, 'get', f'{TX}my-balance/').json()
         self.assertEqual((bal['current_balance'], bal['debt'], bal['rejected_total']), (-100000, 100000, 100000))
-        self.assertFalse(bal['payroll_deduction_available'])
+        self.assertTrue(bal['payroll_deduction_available'])  # 4.5-b: payroll deduction registered
         data = {'account': self.account.pk, 'amount': '100000', 'method': 'cash', 'reference': 'R1'}
         self.assertEqual(self.call(self.emp, 'post', SET, data).status_code, 403)
         self.assertEqual(self.call(self.outsider, 'post', SET, data, company=self.co2).status_code, 404)
         self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'reference': ''}).json()['code'], 'reference_required')
         self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'amount': '100001'}).json()['code'],
                          'amount_exceeds_debt')
-        self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'method': 'payroll'}).json()['code'],
-                         'payroll_not_available')
+        from unittest import mock
+        with mock.patch('personnel.petty_settlements.payroll_deduction_available', return_value=False):
+            self.assertEqual(self.call(self.acc, 'post', SET, {**data, 'method': 'payroll'}).json()['code'],
+                             'payroll_not_available')
         res = self.call(self.acc, 'post', SET, data)
         self.assertEqual((res.status_code, res.json()['status']), (201, 'done'), res.content)
         bal = self.call(self.emp, 'get', f'{TX}my-balance/').json()
