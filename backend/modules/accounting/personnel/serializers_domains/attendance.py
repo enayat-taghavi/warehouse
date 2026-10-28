@@ -133,7 +133,9 @@ class VehicleTripLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleTripLog
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'created_by']
+        # د۵ طرح ۴.۶: دوره و تسویه را فقط سرور (پیوند دورهٔ بخش و پرداخت خزانه) می‌نویسد
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'period', 'is_settled', 'settled_at',
+                            'settled_by', 'payment_tracking_code']
 
 class VehicleTripItemInputSerializer(serializers.Serializer):
     vehicle_id = serializers.IntegerField()

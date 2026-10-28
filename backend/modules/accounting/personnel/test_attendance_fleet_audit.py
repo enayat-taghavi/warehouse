@@ -532,9 +532,10 @@ class AttendanceAndFleetAuditTests(TestCase):
         self.assertIn('records', res_calc.data)
 
         # دانلود اکسل بانک ملی
+        # د۷ طرح ۴.۶: فایل بانک فقط برای کارکرد ماهانهٔ ناوگانی که تأیید مدیر گرفته؛ مسیر قدیمی انبار تأیید ندارد
         res_excel = self.client.get(f'/api/personnel/fleet-settlement/export-bank-excel/?year_month=1405/06&warehouse_id={self.warehouse1.id}')
-        self.assertEqual(res_excel.status_code, status.HTTP_200_OK)
-        self.assertEqual(res_excel['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        self.assertEqual(res_excel.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res_excel.data['code'], 'fleet_not_approved')
 
 
 

@@ -93,24 +93,16 @@ class TreasuryDisbursementService:
             payment_status__in=[WorkflowStatuses.PAYROLL_READY_TO_PAY, 'READY_TO_PAY']
         ).select_related('personnel', 'period')
 
-        # تسویه‌های ناوگان آماده پرداخت
-        ready_trips = VehicleTripLog.objects.filter(
-            is_settled=False,
-            vehicle__approval_status__in=[WorkflowStatuses.APPROVED, 'approved']
-        ).select_related('vehicle')
-
-        if company_ids is not None:
-            if len(company_ids) == 0:
-                ready_trips = ready_trips.none()
-            else:
-                ready_trips = ready_trips.filter(
-                    Q(vehicle__company_id__in=company_ids) |
-                    Q(project__company_id__in=company_ids) |
-                    Q(section__project__company_id__in=company_ids)
-                )
+        # د۶ طرح ۴.۶: ناوگان آمادهٔ پرداخت فقط از کارهای باز treasury_pay گردش ناوگان (در دامنهٔ user)
+        fleet_period_ids = cls.fleet_pay_period_ids(user=user, company_ids=company_ids)
+        ready_trips = cls.fleet_pay_trips(fleet_period_ids)
+        from .workflows import fleet_payable_total
+        fleet_periods = list(MonthlyWorkPeriod.objects.filter(id__in=fleet_period_ids)
+                             .select_related('section').order_by('-year_month'))
 
         total_payroll_payable = sum(r.payable_amount or 0 for r in ready_payrolls)
-        total_fleet_payable = sum(t.total_amount or 0 for t in ready_trips)
+        fleet_totals = {p.id: fleet_payable_total(p) for p in fleet_periods}
+        total_fleet_payable = sum(fleet_totals.values())
 
         return {
             'ready_periods_count': ready_periods.count(),
@@ -120,6 +112,14 @@ class TreasuryDisbursementService:
             'total_fleet_amount': total_fleet_payable,
             'total_disbursement_queue': total_payroll_payable + total_fleet_payable,
             'periods': list(ready_periods.values('id', 'year_month', 'status', 'manager_approved_at')),
+            'fleet_periods': [
+                {'id': p.id, 'year_month': p.year_month, 'section_id': p.section_id,
+                 'section_name': p.section.name if p.section_id and p.section else '',
+                 'company_id': p.company_id, 'total_payable': int(fleet_totals.get(p.id) or 0),
+                 'trips_count': sum(1 for t in ready_trips if t.period_id == p.id or (
+                     t.section_id == p.section_id and (t.date_shamsi or '').startswith(p.year_month)))}
+                for p in fleet_periods
+            ],
         }
 
     @classmethod
@@ -222,6 +222,64 @@ class TreasuryDisbursementService:
         return locked_rec
 
     @classmethod
+    def fleet_pay_period_ids(cls, user=None, company_ids: Optional[List[int]] = None) -> List[int]:
+        """
+        د۶ طرح ۴.۶: دوره‌های ناوگان آمادهٔ پرداخت = کارهای باز treasury_pay گردش ناوگان (تأیید مدیر گرفته). با
+        user: فقط کارهایی که کاربر دریافت‌کننده (یا جانشین) آن است؛ مدیر کل همهٔ کارهای باز. company_ids فیلتر شرکت.
+        """
+        from workflow.models import WorkflowTask
+        from workflow.queries import tasks_for_user
+        from .workflows import FLEET_PERIOD_ENTITY, FLEET_PERIOD_WORKFLOW
+        if user is not None and not user.is_superuser:
+            tasks = tasks_for_user(user)
+        else:
+            tasks = WorkflowTask.objects.filter(is_open=True, track=WorkflowTask.TRACK_STEP)
+        tasks = tasks.filter(instance__workflow_key=FLEET_PERIOD_WORKFLOW,
+                             instance__entity_kind=FLEET_PERIOD_ENTITY, step_key='treasury_pay')
+        if company_ids is not None:
+            tasks = tasks.filter(instance__company_id__in=list(company_ids))
+        return sorted({int(e) for e in tasks.values_list('instance__entity_id', flat=True) if str(e).isdigit()})
+
+    @classmethod
+    def fleet_pay_trips(cls, period_ids: List[int]):
+        """ترددهای تسویه‌نشدهٔ مشمول پرداخت (خودروی کرایه‌ای) همان دوره‌های ناوگان."""
+        from django.db.models import Q
+        from .workflows import FLEET_PAYABLE_OWNERSHIP
+        q = Q(pk__in=[])
+        for period in MonthlyWorkPeriod.objects.filter(id__in=period_ids):
+            ym = (period.year_month or '').replace('-', '/')[:7]
+            q |= Q(period_id=period.pk) | Q(section_id=period.section_id, date_shamsi__startswith=ym)
+        return VehicleTripLog.objects.filter(
+            q, is_deleted=False, is_settled=False, trip_count__gt=0,
+            vehicle__ownership_type__in=FLEET_PAYABLE_OWNERSHIP,
+        ).select_related('vehicle', 'period')
+
+    @classmethod
+    def disburse_fleet_period(cls, period: MonthlyWorkPeriod, treasury_user, tracking_code: str,
+                              batch_id: str = '', notes: str = '') -> Dict[str, Any]:
+        """
+        د۶ طرح ۴.۶: پوستهٔ نازک روی اقدام «پرداخت» موتور در مرحلهٔ treasury_pay گردش ناوگان. مجوز را موتور
+        می‌سنجد؛ تسویهٔ ترددها در قلاب پایان گردش (settle_fleet_trips) و در همان تراکنش. دو پرداخت هم‌زمان: دومی
+        409 (کار بسته) و هیچ تردد دوباره تسویه نمی‌شود. خطا: WorkflowError.
+        """
+        from workflow import engine as wf_engine
+        from workflow.errors import WorkflowError
+        from .workflows import fleet_open_task
+
+        if not tracking_code or not str(tracking_code).strip():
+            raise WorkflowError('tracking_code_required', 'ثبت کد رهگیری بانکی برای تایید پرداخت الزامی است.', 400)
+        task = fleet_open_task(period.pk)
+        if task is None or task.step_key != 'treasury_pay':
+            raise WorkflowError('not_ready_to_pay',
+                                'کارکرد ناوگان این دوره در مرحلهٔ پرداخت خزانه نیست (هنوز تأیید مدیر نگرفته یا '
+                                'پرداخت شده است).', 400)
+        period._wf_payment = {'tracking_code': str(tracking_code).strip(), 'batch_id': batch_id or '',
+                              'user': treasury_user}
+        period._wf_reason = notes or ''
+        wf_engine.act(treasury_user, task, reason=notes or '', obj=period)
+        return getattr(period, '_wf_payment_result', None) or {}
+
+    @classmethod
     @transaction.atomic
     def disburse_fleet_trips(
         cls,
@@ -231,14 +289,24 @@ class TreasuryDisbursementService:
         batch_id: str = ''
     ) -> Dict[str, Any]:
         """
-        تسویه گروهی سفرهای ناوگان
+        تسویه گروهی سفرهای ناوگان (مسیر قدیمی؛ نگهبان فاز). کارتابل خزانه از ۴.۶ فقط disburse_fleet_period را
+        صدا می‌زند؛ این تابع با کنترل سطح خزانه به settle_fleet_trips (قلاب درونی گام treasury_pay) می‌رسد.
         """
         cls._verify_treasury_access(treasury_user)
+        return cls.settle_fleet_trips(trip_ids, treasury_user, tracking_code, batch_id)
 
+    @classmethod
+    @transaction.atomic
+    def settle_fleet_trips(cls, trip_ids, treasury_user, tracking_code: str, batch_id: str = '') -> Dict[str, Any]:
+        """
+        قلاب درونی پایان treasury_pay گردش ناوگان: ترددهای تسویه‌نشده زیر select_for_update تسویه می‌شوند (تکرار
+        بی اثر: تردد تسویه‌شده دوباره شمرده نمی‌شود) و رویداد FLEET_TRIP_SETTLED ثبت می‌شود.
+        """
         if not tracking_code or not str(tracking_code).strip():
             raise ValidationError("کد رهگیری بانکی الزامی است.")
 
-        locked_trips = VehicleTripLog.objects.select_for_update().filter(id__in=trip_ids)
+        locked_trips = VehicleTripLog.objects.select_for_update().filter(
+            id__in=list(trip_ids), is_settled=False).order_by('pk')
         now = timezone.now()
         total_amount = 0
         updated_count = 0

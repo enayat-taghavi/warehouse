@@ -174,7 +174,8 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             qs = qs.filter(
                 Q(driver_name__icontains=search) |
                 Q(plate_number__icontains=search) |
-                Q(driver_national_code__icontains=search) |
+                # د۸ طرح ۴.۶: کد ملی فقط با تطابق کامل (جست‌وجوی بخشی برای حدس رقم‌به‌رقم کد پوشیده کار نمی‌کند)
+                Q(driver_national_code=search) |
                 Q(driver_phone__icontains=search)
             )
         return qs
@@ -256,8 +257,10 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         # ب-۱ (Task 0.1): عبور از قلمرو و واکشی شیء پیش از قفل ردیف درون تراکنش
         target = self.get_object()
         user = request.user
-        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or has_permission_alias(user, 'manager_approver')
-        is_fin = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_finance')
+        # د۸ طرح ۴.۶: مجوز مالی و مدیر در بخش همین خودرو، نه سراسری
+        from ..fleet_lifecycle_services import FLEET_FINANCE_STAGE_PERMS, FLEET_MANAGER_STAGE_PERMS, user_has_any_perm
+        is_mgr = user.is_superuser or user_has_any_perm(user, FLEET_MANAGER_STAGE_PERMS, target)
+        is_fin = user.is_superuser or user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS, target)
 
         from ..fleet_lifecycle_services import (
             VEHICLE_CHANGE_REQUEST_EXCLUDED_FIELDS,
@@ -586,7 +589,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
 
         if request.method == 'GET':
             accounts = instance.bank_accounts.all()
-            serializer = VehicleBankAccountSerializer(accounts, many=True)
+            serializer = VehicleBankAccountSerializer(accounts, many=True, context=self.get_serializer_context())
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         allowed, deny_msg = check_vehicle_bank_account_edit_allowed(request.user, instance)
@@ -609,13 +612,13 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             )
 
         if request.method == 'POST':
-            serializer = VehicleBankAccountSerializer(data=request.data)
+            serializer = VehicleBankAccountSerializer(data=request.data, context=self.get_serializer_context())
             serializer.is_valid(raise_exception=True)
             with transaction.atomic():
                 acc = serializer.save(vehicle=instance)
                 _log_bank_change('create', acc.id, {k: str(v) for k, v in serializer.validated_data.items()})
             broadcast_vehicle_update(instance, action_type='updated', message=f'حساب بانکی جدید برای خودرو «{instance.plate_number}» افزوده شد.', sender_id=request.user.id)
-            return Response(VehicleBankAccountSerializer(acc).data, status=status.HTTP_201_CREATED)
+            return Response(VehicleBankAccountSerializer(acc, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
 
         account_id = request.data.get('id') or request.query_params.get('account_id') or request.query_params.get('id')
         if not account_id:
@@ -626,7 +629,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             return Response({'error': 'حساب بانکی موردنظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
         if request.method in ['PUT', 'PATCH']:
-            serializer = VehicleBankAccountSerializer(acc, data=request.data, partial=True)
+            serializer = VehicleBankAccountSerializer(acc, data=request.data, partial=True, context=self.get_serializer_context())
             serializer.is_valid(raise_exception=True)
             diff = {
                 k: {'old': str(getattr(acc, k)) if getattr(acc, k) is not None else None, 'new': str(v) if v is not None else None}
@@ -637,7 +640,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                 if diff:
                     _log_bank_change('update', updated_acc.id, diff)
             broadcast_vehicle_update(instance, action_type='updated', message=f'حساب بانکی خودرو «{instance.plate_number}» ویرایش شد.', sender_id=request.user.id)
-            return Response(VehicleBankAccountSerializer(updated_acc).data, status=status.HTTP_200_OK)
+            return Response(VehicleBankAccountSerializer(updated_acc, context=self.get_serializer_context()).data, status=status.HTTP_200_OK)
 
         if request.method == 'DELETE':
             with transaction.atomic():

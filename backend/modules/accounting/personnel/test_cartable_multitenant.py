@@ -319,6 +319,13 @@ class CartableMultiTenantTestCase(TestCase):
 
         # د۶ طرح ۴.۵: صف حقوق خزانه از کارهای باز treasury_pay گردش حقوق؛ دوره‌های هر دو شرکت در مرحلهٔ پرداخت
         self._open_payroll_pay_step()
+        # د۶ طرح ۴.۶: صف ناوگان خزانه از کارهای باز treasury_pay گردش ناوگان (همان دوره‌های بخش)
+        from personnel.workflows import FLEET_PERIOD_WORKFLOW
+        from workflow import engine as wf_engine
+        VehicleTripLog.objects.filter(pk=self.trip_fa.pk).update(unit_rate=Decimal('25000000'), trip_count=1)
+        for period in (self.period_fa, self.period_pts):
+            period.fleet_payable_total = Decimal('0')
+            self.assertIsNotNone(wf_engine.open_at_step(FLEET_PERIOD_WORKFLOW, period, None, 'treasury_pay'))
 
         self.client.force_authenticate(user=self.user_fa_treasurer)
         res = self.client.get('/api/personnel/cartable/treasury/', HTTP_X_COMPANY_ID=str(self.company_fa.id))
@@ -419,12 +426,22 @@ class CartableMultiTenantTestCase(TestCase):
         self.assertEqual(res_payroll.status_code, 404)
 
         # ۳. تسویه سرویس ناوگان PTS توسط خزانه‌دار FA
+        # د۶ طرح ۴.۶: فقط trip_ids بی دوره 400 fleet_period_required؛ دورهٔ شرکت دیگر 404
         res_fleet = self.client.post('/api/personnel/cartable/treasury/', {
             'action': 'disburse_fleet',
             'trip_ids': [self.trip_pts.id],
             'tracking_code': 'TRK-HACK-003'
         }, format='json', HTTP_X_COMPANY_ID=str(self.company_fa.id))
-        self.assertEqual(res_fleet.status_code, 403)
+        self.assertEqual(res_fleet.status_code, 400)
+        self.assertEqual(res_fleet.json()['code'], 'fleet_period_required')
+        res_fleet = self.client.post('/api/personnel/cartable/treasury/', {
+            'action': 'disburse_fleet',
+            'period_id': self.period_pts.id,
+            'tracking_code': 'TRK-HACK-003'
+        }, format='json', HTTP_X_COMPANY_ID=str(self.company_fa.id))
+        self.assertEqual(res_fleet.status_code, 404)
+        self.trip_pts.refresh_from_db()
+        self.assertFalse(self.trip_pts.is_settled)
 
     def test_08_treasury_diskette_export_cross_company_blocked(self):
         """دانلود دیسکت بانکی پایا/ساتنا برای دوره شرکت دیگر با خطای ۴۰۳ متوقف می‌شود"""

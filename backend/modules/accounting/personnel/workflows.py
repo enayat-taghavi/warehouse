@@ -1501,3 +1501,283 @@ def open_legacy_payroll_workflow(period, reason='legacy: opened for a calculated
     period.payroll_payable_total = payroll_payable_total(period)
     creator = period.locked_by or period.submitted_by
     return engine.open_at_step(PAYROLL_PERIOD_WORKFLOW, period, creator, 'manager_ok', reason=reason)
+
+
+# ─── کارکرد ماهانهٔ ناوگان روی موتور ۲.۳ (د۵ طرح ۴.۶) ──────────────────────────────────────────────
+# نمونهٔ جدا (کلید و نوع fleet_period) روی همان MonthlyWorkPeriod بخش + ماه. ترددهای بخش‌دار به دورهٔ بخش وصل
+# می‌شوند؛ از ارسال تا پرداخت تردد آن ماه قفل است (is_fleet_locked). پایان treasury_pay ترددهای تسویه‌نشدهٔ
+# خودروهای کرایه‌ای همان دوره را در همان تراکنش موتور تسویه می‌کند؛ عودت قفل را باز می‌کند (هیچ ردیفی حذف نمی‌شود).
+FLEET_PERIOD_WORKFLOW = 'fleet_period'
+FLEET_PERIOD_ENTITY = 'fleet_period'
+FLEET_SUPERVISOR_PERM = 'perm_approve_fleet_supervisor'
+FLEET_FINANCE_PERM = 'perm_approve_fleet_finance'
+FLEET_MANAGER_PERM = 'perm_approve_fleet_manager'
+FLEET_TREASURY_PERM = 'perm_treasury_disburse_action'
+FLEET_SETTLEMENT_PERM = 'view_sys_fleet_settlement'
+FLEET_PAYABLE_OWNERSHIP = ('contract', 'personal')
+FLEET_PERIOD_VIEW_PERMS = (FLEET_VIEW_PERM, FLEET_SUPERVISOR_PERM, FLEET_FINANCE_PERM, FLEET_MANAGER_PERM,
+                           FLEET_TREASURY_PERM, FLEET_SETTLEMENT_PERM)
+FLEET_SUBMIT_PERMS = (FLEET_VIEW_PERM, FLEET_SUPERVISOR_PERM)
+FLEET_LOCKED_CODE = 'fleet_locked'
+FLEET_LOCKED_MESSAGE = ('کارکرد ماهانهٔ ناوگان این بخش و ماه ارسال یا پرداخت شده و تردد آن قفل است؛ '
+                        'برای اصلاح، باید در گردش عودت داده شود.')
+
+
+def fleet_period_trips(period):
+    """ترددهای فعال دوره: وصل به همین دوره، یا ترددهای بخش همان ماه (ترددهای پیش از ۴.۶ بی پیوند دوره)."""
+    from django.db.models import Q
+    from .models import VehicleTripLog
+    q = Q(period_id=period.pk)
+    if period.section_id:
+        ym = (period.year_month or '').replace('-', '/')[:7]
+        q |= Q(section_id=period.section_id, date_shamsi__startswith=ym)
+    return VehicleTripLog.objects.filter(q, is_deleted=False)
+
+
+def fleet_payable_trips(period):
+    """ترددهای مشمول پرداخت: خودروی کرایه‌ای/ملکی راننده با تعداد مثبت (خودروی شرکتی تسویهٔ صفر نمی‌گیرد)."""
+    return fleet_period_trips(period).filter(vehicle__ownership_type__in=FLEET_PAYABLE_OWNERSHIP, trip_count__gt=0)
+
+
+def fleet_payable_total(period):
+    """مبلغ گردش = جمع تعداد × نرخ ترددهای مشمول پرداخت (همان فرمول تسویه)."""
+    from django.db.models import DecimalField, ExpressionWrapper, F, Sum
+    expr = ExpressionWrapper(F('trip_count') * F('unit_rate'), output_field=DecimalField(max_digits=20, decimal_places=2))
+    total = fleet_payable_trips(period).aggregate(s=Sum(expr))['s']
+    return Decimal(str(total or 0))
+
+
+def resolve_fleet_period(entity_id):
+    from .models import MonthlyWorkPeriod
+    period = MonthlyWorkPeriod.objects.select_related('section', 'section__project', 'company').filter(
+        pk=entity_id).first()
+    if period is not None:
+        period.fleet_payable_total = fleet_payable_total(period)
+    return period
+
+
+def _fleet_summary(period):
+    section = period.section.name if period.section_id and period.section else ''
+    return {'title': f'کارکرد ماهانهٔ ناوگان {period.year_month}' + (f' — {section}' if section else ''),
+            'category': section}
+
+
+def _fleet_state_change(period, state, instance):
+    from workflow.errors import WorkflowError
+    from .models import MonthlyWorkPeriod
+    from .workflow_engine import notify_document_changed
+    # قفل ردیف دوره: نوشتن تردد (که همین قفل را می‌گیرد) با ارسال، عودت یا پرداخت هم‌زمان نمی‌شود
+    MonthlyWorkPeriod.objects.select_for_update().filter(pk=period.pk).values_list('pk', flat=True).first()
+    if state == COMPLETED:
+        payment = getattr(period, '_wf_payment', None) or {}
+        tracking_code = str(payment.get('tracking_code') or '').strip()
+        if not tracking_code:
+            raise WorkflowError('tracking_code_required',
+                                'پرداخت ناوگان فقط از کارتابل خزانه با ثبت کد رهگیری بانکی انجام می‌شود.', 400)
+        from .treasury_engine import TreasuryDisbursementService
+        user = payment.get('user') or _last_closer(instance)
+        period._wf_payment_result = TreasuryDisbursementService.settle_fleet_trips(
+            fleet_payable_trips(period).filter(is_settled=False).values_list('id', flat=True), user, tracking_code,
+            payment.get('batch_id') or f'FLEET-P{period.pk}')
+    notify_document_changed(period)
+
+
+def _fleet_steps():
+    return (
+        StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', FLEET_SUPERVISOR_PERM, APPROVE, actions=(ACT, RETURN)),
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)؛ گیت شبا با قلاب can_act:fleet_period
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', FLEET_FINANCE_PERM, REVIEW,
+                 actions=(ACT, RETURN)),
+        # مدیر کارکرد ناوگان را رد نمی‌کند، فقط برای اصلاح عودت می‌دهد
+        StepSpec('manager_ok', 'تأیید مدیر', 'manager', FLEET_MANAGER_PERM, APPROVE, actions=(ACT, RETURN)),
+        # پرداخت فقط با کد رهگیری (کارتابل خزانه)؛ اقدام عمومی «کارهای من» بی کد 400 tracking_code_required
+        StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', FLEET_TREASURY_PERM, EXECUTE, actions=(ACT, RETURN)),
+    )
+
+
+FLEET_PERIOD_WORKFLOW_SPEC = WorkflowSpec(
+    key=FLEET_PERIOD_WORKFLOW,
+    version=1,
+    entity_kind=FLEET_PERIOD_ENTITY,
+    title_fa='کارکرد ماهانهٔ ناوگان',
+    steps=_fleet_steps(),
+    on_state_change=_fleet_state_change,
+    summary=_fleet_summary,
+    route='/app/finance/employee-fleet?period={id}',
+    section_field='section',
+    company_field='company',
+    amount_field='fleet_payable_total',
+    view_permission=FLEET_VIEW_PERM,
+)
+
+
+def fleet_open_task(period_id):
+    from workflow import engine
+    return engine.open_task(FLEET_PERIOD_WORKFLOW, period_id)
+
+
+def fleet_instance(period_id):
+    from workflow import engine
+    return engine.instance_of(FLEET_PERIOD_WORKFLOW, period_id)
+
+
+def is_fleet_locked(period) -> bool:
+    """د۵: کار باز ناوگان (از supervisor_ok به بعد)، گردش پرداخت‌شده، یا تردد تسویه‌شده در دوره."""
+    from workflow.models import WorkflowInstance
+    if period is None or not getattr(period, 'pk', None):
+        return False
+    instance = fleet_instance(period.pk)
+    if instance is not None and (
+            instance.status == WorkflowInstance.COMPLETED
+            or (instance.status == WorkflowInstance.IN_PROGRESS and instance.current_step)):
+        return True
+    return fleet_period_trips(period).filter(is_settled=True).exists()
+
+
+def fleet_manager_approved(period) -> bool:
+    """تأیید مدیر گرفته؟ کار باز در treasury_pay یا گردش پایان‌یافته."""
+    from workflow.models import WorkflowInstance
+    instance = fleet_instance(period.pk) if period is not None else None
+    if instance is None:
+        return False
+    return instance.status == WorkflowInstance.COMPLETED or (
+        instance.status == WorkflowInstance.IN_PROGRESS and instance.current_step == 'treasury_pay')
+
+
+def fleet_workflow_state(period) -> dict:
+    """وضعیت گردش ناوگان برای پاسخ‌ها (فرانت ۴.۶-ج)."""
+    instance = fleet_instance(period.pk) if period is not None and period.pk else None
+    return {
+        'fleet_period_id': period.pk if period is not None else None,
+        'fleet_workflow_status': instance.status if instance is not None else None,
+        'fleet_workflow_step': (instance.current_step or None) if instance is not None else None,
+        'fleet_approved': fleet_manager_approved(period) if instance is not None else False,
+        'fleet_locked': is_fleet_locked(period),
+    }
+
+
+def fleet_locked_error(message=None):
+    from rest_framework.exceptions import ValidationError
+    msg = message or FLEET_LOCKED_MESSAGE
+    return ValidationError({'code': FLEET_LOCKED_CODE, 'error': msg, 'detail': msg})
+
+
+def fleet_period_for_trip(section_id, date_shamsi, *, lock=False):
+    """
+    د۵: دورهٔ «بخش + ماه» تردد بخش‌دار (ساخته می‌شود اگر نباشد)؛ تردد بی بخش None (رفتار قدیمی انبار).
+    lock=True (درون تراکنش): ردیف دوره قفل می‌شود تا نوشتن با ارسال یا پرداخت هم‌زمان نشود.
+    """
+    if not section_id:
+        return None
+    from common.date_utils import normalize_digits
+    from .attendance_periods import get_or_create_period
+    from .models import MonthlyWorkPeriod
+    ym = normalize_digits(str(date_shamsi or '')).strip().replace('-', '/')[:7]
+    period = get_or_create_period(None, section_id, ym)[0]
+    if lock:
+        period = MonthlyWorkPeriod.objects.select_for_update().get(pk=period.pk)
+    return period
+
+
+def assert_fleet_trip_writable(section_id, date_shamsi, *, lock=True):
+    """دورهٔ تردد بخش‌دار را برمی‌گرداند؛ دورهٔ قفل = ValidationError 400 fleet_locked (صف آفلاین: رد صریح)."""
+    period = fleet_period_for_trip(section_id, date_shamsi, lock=lock)
+    if period is not None and is_fleet_locked(period):
+        raise fleet_locked_error()
+    return period
+
+
+def assert_existing_trip_writable(trip):
+    """ترددی که هست: دورهٔ وصل‌شده یا دورهٔ بخش + ماهش نباید قفل باشد؛ تردد تسویه‌شده هرگز تغییر نمی‌کند."""
+    if trip is None:
+        return
+    if trip.is_settled:
+        raise fleet_locked_error()
+    if trip.period_id and trip.period is not None and trip.period.section_id and is_fleet_locked(trip.period):
+        raise fleet_locked_error()
+    if trip.section_id:
+        assert_fleet_trip_writable(trip.section_id, trip.date_shamsi, lock=True)
+
+
+def fleet_period_company_id(entity_id):
+    return attendance_period_company_id(entity_id)
+
+
+def can_view_fleet_period(user, entity_id):
+    """دیدن سند گردش ناوگان: شرکت مجاز و یکی از مجوزهای ناوگان در بخش دوره؛ بیرون از آن بی‌نظر."""
+    from companies.access import get_user_allowed_companies
+    from .lifecycle_services import user_has_any_perm
+    from .models import MonthlyWorkPeriod
+    period = MonthlyWorkPeriod.objects.filter(pk=entity_id).first()
+    if period is None or not getattr(user, 'is_authenticated', False):
+        return None
+    if user.is_superuser:
+        return True
+    if period.company_id is None or not get_user_allowed_companies(user).filter(id=period.company_id).exists():
+        return None
+    return True if user_has_any_perm(user, FLEET_PERIOD_VIEW_PERMS, period) else None
+
+
+def can_attach_fleet_period(user, entity_id):
+    return can_view_fleet_period(user, entity_id)
+
+
+def is_fleet_period_closed(entity_id):
+    """گردش ناوگان پرداخت‌شده جابه‌جا نمی‌شود (قفل موتور)؛ قفل تردد (is_fleet_locked) جداست."""
+    from workflow.models import WorkflowInstance
+    instance = fleet_instance(entity_id)
+    return instance is not None and instance.status == WorkflowInstance.COMPLETED
+
+
+def fleet_missing_sheba_plates(period):
+    """پلاک خودروهای کرایه‌ای دارای تردد در دوره که شبای معتبر (حساب اصلی فعال یا شبای خودرو) ندارند."""
+    from django.db.models import Prefetch
+    from .models import VehicleBankAccount, VehicleDriverProfile
+    from .sheba_utils import validate_sheba
+    vehicle_ids = fleet_payable_trips(period).values_list('vehicle_id', flat=True).distinct()
+    vehicles = VehicleDriverProfile.objects.filter(id__in=vehicle_ids).prefetch_related(Prefetch(
+        'bank_accounts', queryset=VehicleBankAccount.objects.filter(is_primary=True, is_active=True),
+        to_attr='primary_accounts')).order_by('plate_number')
+    plates = []
+    for v in vehicles:
+        primary = v.primary_accounts[0] if v.primary_accounts else None
+        sheba = (primary.sheba_number if primary is not None and primary.sheba_number else v.sheba_number) or ''
+        if not sheba or not validate_sheba(sheba)[0]:
+            plates.append(v.plate_number)
+    return plates
+
+
+def can_act_fleet_period(user, period, task, action):
+    """گیت بررسی حسابدار: هر خودروی کرایه‌ای دارای تردد شبای معتبر دارد؛ وگرنه action_blocked با پلاک‌ها."""
+    if action != ACT or task.step_key != 'accountant_review':
+        return None
+    plates = fleet_missing_sheba_plates(period)
+    if plates:
+        return 'برای این خودروهای کرایه‌ای شبای معتبر ثبت نشده است: ' + '، '.join(plates)
+    return None
+
+
+def submit_fleet_period(user, period):
+    """
+    ارسال کارکرد ماهانهٔ ناوگان دوره به گردش (ثبت‌کنندهٔ تردد یا سرپرست؛ مجوز در بخش دوره). فقط دورهٔ بخش‌دار با
+    دست‌کم یک تردد و بی کار باز ناوگان. خطا: WorkflowError.
+    """
+    from django.db import transaction
+    from workflow import engine
+    from workflow.errors import WorkflowError
+    from .lifecycle_services import user_has_any_perm
+    from .models import MonthlyWorkPeriod
+    if period.company_id is None or not period.section_id:
+        raise WorkflowError('invalid_state', 'کارکرد ناوگان فقط برای دورهٔ بخش‌دار به گردش می‌رود.', 400)
+    if not user_has_any_perm(user, FLEET_SUBMIT_PERMS, period):
+        raise WorkflowError('not_allowed', 'شما مجوز ارسال کارکرد ناوگان این بخش را ندارید.', 403)
+    with transaction.atomic():
+        locked = MonthlyWorkPeriod.objects.select_for_update().get(pk=period.pk)
+        if not fleet_period_trips(locked).filter(trip_count__gt=0).exists():
+            raise WorkflowError('no_fleet_trips', 'برای این بخش و ماه هیچ ترددی ثبت نشده است.', 400)
+        if fleet_open_task(locked.pk) is not None:
+            raise WorkflowError('already_in_progress', 'کارکرد ناوگان این دوره از قبل در گردش تأیید است.', 409)
+        locked.fleet_payable_total = fleet_payable_total(locked)
+        engine.submit(FLEET_PERIOD_WORKFLOW, locked, user)
+    period.refresh_from_db()
+    return period

@@ -28,11 +28,11 @@ from ..models import (
 
 
 def _vehicle_full_view(serializer, vehicle) -> bool:
-    """د۸ طرح ۴.۶: بی request (مصرف درونی سرور) دید کامل؛ با request قاعدهٔ can_view_vehicle_sensitive با cache درخواست."""
+    """د۸ طرح ۴.۶: قاعدهٔ can_view_vehicle_sensitive با cache درخواست؛ بی request پوشیده (فراموشی context نشت نمی‌دهد)."""
     request = serializer.context.get('request')
     user = getattr(request, 'user', None) if request is not None else None
     if user is None:
-        return True
+        return False
     from ..fleet_lifecycle_services import can_view_vehicle_sensitive
     cache = serializer.context.setdefault('_vehicle_sensitive_cache', {})
     return can_view_vehicle_sensitive(user, vehicle, cache)

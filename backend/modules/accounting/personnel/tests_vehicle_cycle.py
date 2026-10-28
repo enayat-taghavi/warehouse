@@ -144,16 +144,26 @@ class VehicleLifecycleTests(TestCase):
         cr_id = res_edit.data["change_request_id"]
 
         cr = VehicleChangeRequest.objects.get(id=cr_id)
-        self.assertEqual(cr.status, "pending_supervisor")
+        # موتور ۲.۳ از سطح سازنده شروع می‌کند: درخواست حسابدار از pending_accountant آغاز می‌شود
+        self.assertEqual(cr.status, "pending_accountant")
 
-        # تایید مرحله‌ای درخواست تغییرات طبق SoD (سرپرست -> مالی -> مدیر)
+        # سرپرست در این مرحله دیگر مرحلهٔ جاری نیست (wrong_step -> ۴۰۰)
         self.client.force_authenticate(user=self.supervisor)
         res_sup = self.client.post(f"/api/personnel/vehicle-change-requests/{cr_id}/approve-supervisor/")
-        self.assertEqual(res_sup.status_code, 200)
+        self.assertEqual(res_sup.status_code, 400)
 
+        # ثبت‌کننده نمی‌تواند روی درخواست خودش اقدام کند (self_approval)؛ حسابدار دیگرِ همان بخش تأیید مالی می‌کند
         self.client.force_authenticate(user=self.accountant)
+        res_self = self.client.post(f"/api/personnel/vehicle-change-requests/{cr_id}/approve-finance/")
+        self.assertEqual(res_self.status_code, 403)
+        self.assertEqual(res_self.data.get("code"), "self_approval")
+
+        accountant2 = CustomUser.objects.create(username="veh_accountant2", first_name="نگار", last_name="رضوی")
+        accountant2.user_permissions.add(Permission.objects.get(codename="perm_approve_fleet_finance"))
+        SectionAssignment.objects.create(user=accountant2, section=self.section_a, role="accountant", is_active=True)
+        self.client.force_authenticate(user=accountant2)
         res_fin = self.client.post(f"/api/personnel/vehicle-change-requests/{cr_id}/approve-finance/")
-        self.assertEqual(res_fin.status_code, 200)
+        self.assertEqual(res_fin.status_code, 200, res_fin.data)
 
         self.client.force_authenticate(user=self.manager)
         res_approve_cr = self.client.post(f"/api/personnel/vehicle-change-requests/{cr_id}/approve-manager/")
@@ -487,8 +497,20 @@ class VehicleLifecycleTests(TestCase):
         self.assertIn("55 ع 333 ایران 63", data_row)
         self.assertIn("خیر", data_row)
         self.assertIn("جواد احمدی", data_row)
-        self.assertIn("0078901235", data_row)
+        # اپراتور مقدار حساس را فقط ماسک‌شده (۴ رقم آخر) می‌بیند
+        self.assertNotIn("0078901235", data_row)
+        self.assertIn("******1235", data_row)
         self.assertIn("09124445566", data_row)
+
+        # کاربر با دسترسی کامل (سوپریوزر) مقدار کامل را می‌بیند
+        su = CustomUser.objects.create(username="vc_excel_su", is_superuser=True, is_staff=True)
+        self.client.force_authenticate(user=su)
+        res_full = self.client.get(f"/api/personnel/vehicles/export-excel/?section_id={self.section_a.id}")
+        self.assertEqual(res_full.status_code, 200)
+        ws_full = openpyxl.load_workbook(io.BytesIO(res_full.content)).active
+        full_row = [cell.value for cell in ws_full[3]]
+        self.assertIn("0078901235", full_row)
+        self.assertIn("0010376488", full_row)
 
     def test_submit_action_and_patch_compatibility_bridge(self):
         """
@@ -632,8 +654,10 @@ class VehicleLifecycleTests(TestCase):
         purge_id = v_purge.id
         res_purge = self.client.post(f"/api/personnel/vehicles/{purge_id}/reject/", {"reason": "خودرو شرایط ندارد"}, format="json")
         self.assertEqual(res_purge.status_code, 200)
-        self.assertTrue(res_purge.data.get("purged", False))
-        self.assertFalse(VehicleDriverProfile.objects.filter(id=purge_id).exists())
+        # رد هرگز حذف نمی‌کند: purge همیشه False و رکورد با وضعیت rejected می‌ماند
+        self.assertFalse(res_purge.data.get("purged", False))
+        v_purge.refresh_from_db()
+        self.assertEqual(v_purge.approval_status, "rejected")
 
         # ۳. رد پرونده دارای سابقه -> rejected بدون حذف فیزیکی
         v_with_hist = VehicleDriverProfile.objects.create(
@@ -1250,9 +1274,9 @@ class VehicleLifecycleTests(TestCase):
         res_forbidden_sup = self.client.get(f"/api/personnel/vehicles/{target.id}/rate-benchmark/")
         self.assertEqual(res_forbidden_sup.status_code, 403)
 
-    def test_dual_destination_revision_for_accountant(self):
+    def test_revision_for_accountant_always_returns_to_creator(self):
         """
-        تسک ۹.۵: تست عودت دومقصده حسابدار (به سرپرست یا کارمند)
+        تسک ۹.۵: تست عودت حسابدار همیشه به سازنده است (بدون مقصد دوگانه)
         """
         v = VehicleDriverProfile.objects.create(
             plate_number="77ط777ایران63",
@@ -1267,7 +1291,7 @@ class VehicleLifecycleTests(TestCase):
 
         self.client.force_authenticate(user=self.accountant)
 
-        # ۱. عودت به سرپرست
+        # ۱. عودت با target_stage=supervisor: مقصد دوگانه حذف شده؛ target_stage نادیده گرفته می‌شود
         res_to_sup = self.client.post(
             f"/api/personnel/vehicles/{v.id}/request-revision/",
             {"reason": "بررسی فنی بیشتر توسط سرپرست", "target_stage": "supervisor"},
@@ -1275,16 +1299,20 @@ class VehicleLifecycleTests(TestCase):
         )
         self.assertEqual(res_to_sup.status_code, 200)
         v.refresh_from_db()
-        self.assertEqual(v.approval_status, "pending_supervisor")
+        self.assertEqual(v.approval_status, "revision_required")
 
-        # بازگرداندن به pending_accountant توسط سرپرست
-        self.client.force_authenticate(user=self.supervisor)
-        self.client.post(f"/api/personnel/vehicles/{v.id}/approve-supervisor/")
-        v.refresh_from_db()
-        self.assertEqual(v.approval_status, "pending_accountant")
-
-        # ۲. عودت به کارمند
-        self.client.force_authenticate(user=self.accountant)
+        # ۲. عودت با target_stage=employee روی پروندهٔ دیگرِ همین مرحله: باز هم فقط به سازنده
+        v2 = VehicleDriverProfile.objects.create(
+            plate_number="78ط777ایران63",
+            vehicle_type="nissan",
+            ownership_type="contract",
+            driver_name="راننده نیسان دوم",
+            section=self.section_a,
+            company=self.company,
+            approval_status="pending_accountant",
+            is_active=True
+        )
+        v = v2
         res_to_emp = self.client.post(
             f"/api/personnel/vehicles/{v.id}/request-revision/",
             {"reason": "اصلاح مدارک هویتی توسط کارمند", "target_stage": "employee"},
@@ -1421,7 +1449,7 @@ class VehicleLifecycleTests(TestCase):
         res_denied = self.client.get(f"/api/personnel/vehicles/{v_contract.id}/cost-estimate/")
         self.assertEqual(res_denied.status_code, 403)
 
-    def test_manager_return_to_accountant_and_final_approval(self):
+    def test_manager_return_goes_to_creator_then_final_approval(self):
         """
         تسک ۱۰.۲ و ۱۰.۴: تست چرخه عودت پرونده به حسابدار توسط مدیر و تصویب نهایی
         """
@@ -1453,12 +1481,23 @@ class VehicleLifecycleTests(TestCase):
         )
         self.assertEqual(res_rev.status_code, 200)
         v.refresh_from_db()
-        self.assertEqual(v.approval_status, "pending_accountant")
+        # عودت از هر مرحله همیشه به سازنده برمی‌گردد (نه حسابدار)
+        self.assertEqual(v.approval_status, "revision_required")
 
         # بررسی ثبت لاگ ممیزی گردش کار
         log_rev = WorkflowAuditLog.objects.filter(object_id=v.id, action="request_revision").first()
         self.assertIsNotNone(log_rev)
-        self.assertEqual(log_rev.to_status, "pending_accountant")
+        self.assertEqual(log_rev.to_status, "revision_required")
+
+        # ارسال مجدد توسط ثبت‌کننده: گردش از اول (مرحلهٔ سرپرست) شروع می‌شود
+        self.client.force_authenticate(user=self.operator)
+        res_resub = self.client.post(f"/api/personnel/vehicles/{v.id}/submit/")
+        self.assertEqual(res_resub.status_code, 200, res_resub.data)
+        v.refresh_from_db()
+        self.assertEqual(v.approval_status, "pending_supervisor")
+        self.client.force_authenticate(user=self.supervisor)
+        res_sup = self.client.post(f"/api/personnel/vehicles/{v.id}/approve-supervisor/")
+        self.assertEqual(res_sup.status_code, 200, res_sup.data)
 
         # ۲. حسابدار پس از بررسی مجدد، پرونده را به مدیر تایید مالی می‌کند
         self.client.force_authenticate(user=self.accountant)
@@ -2071,9 +2110,9 @@ class VehicleLifecycleTests(TestCase):
         self.assertEqual(res_valid.status_code, 201)
         self.assertEqual(res_valid.data["plate_number"], "78 ج 901 ایران 23")
 
-    def test_n5_change_request_concurrent_conflict_409_and_supervisor_whitelist(self):
+    def test_n5_change_request_concurrent_wrong_step_400_and_supervisor_whitelist(self):
         """
-        تست ن-۵ و تسک ۱۱.۵: خطای ۴۰۹ در صورت تغییر هم‌زمان وضعیت درخواست تغییرات و کنترل تایید سرپرست
+        تست ن-۵ و تسک ۱۱.۵: خطای ۴۰۰ (wrong_step) در صورت تغییر هم‌زمان وضعیت درخواست تغییرات و کنترل تایید سرپرست
         """
         v_app = VehicleDriverProfile.objects.create(
             plate_number="55ج666ایران77",
@@ -2100,22 +2139,25 @@ class VehicleLifecycleTests(TestCase):
         cr_concurrent.save(update_fields=["status"])
 
         res_conflict = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
-        self.assertEqual(res_conflict.status_code, 409)
-        self.assertEqual(res_conflict.data.get("code"), "conflict")
+        self.assertEqual(res_conflict.status_code, 400)
+        cr.refresh_from_db()
+        self.assertEqual(cr.status, "cancelled")
 
         # ۲. تلاش برای تایید درخواست در وضعیت draft باید با ۴۰۹ مسدود شود
         cr_concurrent.status = "draft"
         cr_concurrent.save(update_fields=["status"])
         res_draft = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
-        self.assertEqual(res_draft.status_code, 409)
-        self.assertEqual(res_draft.data.get("code"), "conflict")
+        self.assertEqual(res_draft.status_code, 400)
+        cr.refresh_from_db()
+        self.assertEqual(cr.status, "draft")
 
         # ۳. تلاش برای تایید درخواست در وضعیت revision_required باید با ۴۰۹ مسدود شود
         cr_concurrent.status = "revision_required"
         cr_concurrent.save(update_fields=["status"])
         res_rev = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
-        self.assertEqual(res_rev.status_code, 409)
-        self.assertEqual(res_rev.data.get("code"), "conflict")
+        self.assertEqual(res_rev.status_code, 400)
+        cr.refresh_from_db()
+        self.assertEqual(cr.status, "revision_required")
 
         # ۴. اکنون با بازگرداندن وضعیت به pending_supervisor، تایید سرپرست با موفقیت انجام می‌شود
         cr_concurrent.status = "pending_supervisor"
@@ -2125,6 +2167,12 @@ class VehicleLifecycleTests(TestCase):
         cr.refresh_from_db()
         self.assertEqual(cr.status, "pending_accountant")
         self.assertEqual(cr.supervisor_reviewed_by, self.supervisor)
+
+        # ۵. تایید تکراری (مرحله دیگر جاری نیست) -> ۴۰۰ و بدون اعمال دوباره
+        res_again = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
+        self.assertEqual(res_again.status_code, 400)
+        cr.refresh_from_db()
+        self.assertEqual(cr.status, "pending_accountant")
 
     def test_n6_end_collaboration_invariants(self):
         """
@@ -2198,8 +2246,10 @@ class VehicleLifecycleTests(TestCase):
         clean_id = v_clean.id
         res_purge = self.client.post(f"/api/personnel/vehicles/{clean_id}/reject/", {"reason": "عدم نیاز کارگاه"}, format="json")
         self.assertEqual(res_purge.status_code, 200)
-        self.assertTrue(res_purge.data.get("purged"))
-        self.assertFalse(VehicleDriverProfile.objects.filter(id=clean_id).exists())
+        # رد هرگز حذف نمی‌کند: purge همیشه False و رکورد با وضعیت rejected می‌ماند
+        self.assertFalse(res_purge.data.get("purged"))
+        v_clean.refresh_from_db()
+        self.assertEqual(v_clean.approval_status, "rejected")
 
         # ۲. پرونده دارای سابقه (تردد) -> حفظ رکورد و تبدیل وضعیت به rejected
         v_history = VehicleDriverProfile.objects.create(
@@ -2236,7 +2286,8 @@ class VehicleLifecycleTests(TestCase):
             approval_status="supervisor_approved",
             is_active=True
         )
-        self.client.force_authenticate(user=self.manager)
+        # مدیر مرحلهٔ حسابدار را دور نمی‌زند؛ رد در همین مرحله با حسابدار بخش است
+        self.client.force_authenticate(user=self.accountant)
         res_reject_sup = self.client.post(f"/api/personnel/vehicles/{v_outside_purge.id}/reject/", {"reason": "رد پس از بررسی سرپرست"}, format="json")
         self.assertEqual(res_reject_sup.status_code, 200)
         self.assertFalse(res_reject_sup.data.get("purged"))
@@ -2287,9 +2338,9 @@ class VehicleLifecycleTests(TestCase):
         self.assertEqual(audit.metadata["document"]["doc_type"], "insurance")
         self.assertEqual(audit.metadata["document"]["expiry_date"], "1405/01/01")
 
-    def test_create_vehicle_auto_pass_response_status(self):
+    def test_create_vehicle_no_auto_pass_stays_draft(self):
         """
-        تست ن-۱۲: ایجاد خودرو توسط کاربر با نقش بالا (مدیر)، بازگشت وضعیت تصویب‌شده خودکار (approved) در پاسخ HTTP 201
+        تست ن-۱۲: ایجاد خودرو توسط کاربر با نقش بالا (مدیر) هیچ تصویب خودکاری ندارد؛ وضعیت draft در پاسخ HTTP 201
         """
         valid_sheba = generate_sheba_from_account("بانک ملی ایران", "0105678901004")
         self.client.force_authenticate(user=self.manager)
@@ -2308,8 +2359,9 @@ class VehicleLifecycleTests(TestCase):
         }
         res = self.client.post("/api/personnel/vehicles/", payload, format="json")
         self.assertEqual(res.status_code, 201)
-        self.assertEqual(res.data["approval_status"], "approved")
-        self.assertTrue(res.data["is_active"])
+        self.assertEqual(res.data["approval_status"], "draft")
+        v = VehicleDriverProfile.objects.get(plate_number__startswith="99")
+        self.assertEqual(v.approval_status, "draft")
 
 
     def test_rejected_record_requires_reopen_and_bridge_limited_to_draft_states(self):
@@ -2474,10 +2526,10 @@ class VehicleLifecycleTests(TestCase):
         self.assertIn("نوع خودرو", error_fields)
         self.assertFalse(VehicleDriverProfile.objects.filter(driver_name__endswith="اکسل").exists())
 
-    def test_change_request_supervisor_approval_whitelist_and_conflict(self):
+    def test_change_request_supervisor_approval_whitelist_and_wrong_step(self):
         """
         تسک ۱۱.۵ (ن-۵): تأیید سرپرست درخواست تغییرات فقط در pending_supervisor؛
-        وضعیت درون قفل دوباره سنجیده می‌شود و تغییر هم‌زمان ۴۰۹ می‌گیرد
+        وضعیت درون قفل دوباره سنجیده می‌شود و تغییر هم‌زمان درون قفل ۴۰۹ می‌گیرد؛ مرحلهٔ غیرجاری ۴۰۰ (wrong_step)
         """
         from unittest import mock
         from personnel.views import VehicleChangeRequestViewSet
@@ -2502,8 +2554,7 @@ class VehicleLifecycleTests(TestCase):
                 proposed_changes={"driver_phone": "09129998877"}
             )
             res = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
-            self.assertEqual(res.status_code, 409, st)
-            self.assertEqual(res.data.get("code"), "conflict")
+            self.assertEqual(res.status_code, 400, st)
             cr.refresh_from_db()
             self.assertEqual(cr.status, st)
             self.assertIsNone(cr.supervisor_reviewed_by_id)
@@ -2520,7 +2571,6 @@ class VehicleLifecycleTests(TestCase):
         with mock.patch.object(VehicleChangeRequestViewSet, "get_object", return_value=stale):
             res_conflict = self.client.post(f"/api/personnel/vehicle-change-requests/{cr_live.id}/approve-supervisor/")
         self.assertEqual(res_conflict.status_code, 409)
-        self.assertEqual(res_conflict.data.get("code"), "conflict")
         cr_live.refresh_from_db()
         self.assertEqual(cr_live.status, "cancelled")
         self.assertIsNone(cr_live.supervisor_reviewed_by_id)

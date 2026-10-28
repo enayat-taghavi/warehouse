@@ -464,7 +464,7 @@ def check_vehicle_bank_account_edit_allowed(user, vehicle) -> tuple[bool, str]:
         return True, ''
     if st in ('draft', 'revision_required'):
         return True, ''
-    if st == 'pending_accountant' and user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS):
+    if st == 'pending_accountant' and user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS, vehicle):
         return True, ''
     return False, f'در وضعیت «{vehicle.get_approval_status_display()}» مجاز به تغییر حساب‌های بانکی این خودرو نیستید.'
 

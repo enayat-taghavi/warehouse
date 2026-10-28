@@ -348,7 +348,6 @@ def process_creation_with_auto_pass(instance, creator_user, is_financial: bool =
     return instance
 
 
-@transaction.atomic
 def _reject_vehicle_entity(instance):
     """
     د۲ و د۳ طرح ۴.۶: پروندهٔ خودرو و درخواست تغییر خودرو فقط روی موتور ۲.۳ (workflows.VEHICLE_*) گردش می‌کنند؛
@@ -363,6 +362,7 @@ def _reject_vehicle_entity(instance):
         )
 
 
+@transaction.atomic
 def advance_workflow_step(instance, user, target_status: str = None, notes: str = None, is_financial: bool = False):
     """
     پیش‌روی امن، اتمیک و مرحله‌به‌مرحله ماشین حالت ۵ سطحی با استفاده از select_for_update()

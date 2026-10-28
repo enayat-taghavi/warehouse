@@ -316,6 +316,17 @@ def import_fleet_monthly_excel(file_obj, warehouse_id=None, year_month=None, use
                     is_deleted=False
                 ).first()
 
+                # د۵ طرح ۴.۶: تردد خودروی بخش‌دار به دورهٔ بخش + ماه؛ دورهٔ قفل ناوگان 400 fleet_locked (کل
+                # درون‌ریزی برمی‌گردد). فقط وقتی سلول چیزی می‌نویسد (تردد تازه یا حذف ترددی که هست).
+                section_period = None
+                if trip_count > 0 or trip_obj:
+                    from .workflows import assert_existing_trip_writable, assert_fleet_trip_writable
+                    if trip_obj:
+                        assert_existing_trip_writable(trip_obj)
+                    section_period = assert_fleet_trip_writable(
+                        (trip_obj.section_id if trip_obj and trip_obj.section_id else None) or v_obj.section_id,
+                        date_shamsi)
+
                 if trip_count > 0:
                     from .fleet_lifecycle_services import assert_vehicle_trip_allowed, VehicleWorkflowError
                     try:
@@ -329,11 +340,17 @@ def import_fleet_monthly_excel(file_obj, warehouse_id=None, year_month=None, use
                         trip_obj.trip_count = trip_count
                         trip_obj.unit_rate = unit_rate
                         trip_obj.total_amount = total_amount
+                        if section_period is not None:
+                            trip_obj.period = section_period
+                            trip_obj.section_id = trip_obj.section_id or v_obj.section_id
                         trip_obj.save()
                     else:
                         VehicleTripLog.objects.create(
                             vehicle_id=v_obj.id,
                             warehouse_id=target_wh,
+                            section_id=v_obj.section_id,
+                            project_id=v_obj.section.project_id if v_obj.section_id and v_obj.section else None,
+                            period=section_period,
                             date_shamsi=date_shamsi,
                             trip_count=trip_count,
                             unit_rate=unit_rate,

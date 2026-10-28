@@ -1477,33 +1477,99 @@ class FleetSettlementViewSet(viewsets.ViewSet):
     ویوست تسویه و محاسبات مالی ناوگان خودرویی
     - محاسبه مبالغ تسویه ماهانه
     - تولید فایل پرداخت گروهی بانک ملی
+    د۷ طرح ۴.۶ (ق۶، ق۱۶): view_sys_fleet_settlement در بخش دوره (یا در شرکت)؛ دامنه از روی دوره یا بخش خوانده و
+    سنجیده می‌شود (بیرون از دامنه 404)؛ بی شناسه فقط شرکت‌های مجاز کاربر؛ اکسل بانک فقط برای دورهٔ تأیید مدیر گرفته.
     """
     permission_classes = [permissions.IsAuthenticated]
+    SETTLEMENT_PERM = 'view_sys_fleet_settlement'
+
+    @staticmethod
+    def _int_param(raw):
+        from common.date_utils import normalize_digits
+        s = normalize_digits(str(raw if raw is not None else '')).strip()
+        if not s:
+            return None
+        if not (s.isascii() and s.isdigit()):
+            raise ValueError('bad id')
+        return int(s)
+
+    def _forbidden(self):
+        return Response({'code': 'not_allowed', 'error': 'شما مجوز دیدن تسویهٔ ناوگان این دامنه را ندارید.'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    def _resolve_scope(self, request):
+        """خروجی dict آرگومان‌های calculate_monthly_fleet_settlement، یا Response خطا (400/403/404)."""
+        from types import SimpleNamespace
+        from rest_framework.exceptions import NotFound
+        from companies.access import get_user_allowed_companies
+        from ..lifecycle_services import user_has_any_perm
+        from ..models import ProjectSection
+        user = request.user
+        q = request.query_params
+        try:
+            period_id = self._int_param(q.get('period_id'))
+            section_id = self._int_param(q.get('section_id'))
+            wh_id = self._int_param(q.get('warehouse_id'))
+        except ValueError:
+            return Response({'code': 'invalid_input', 'error': 'شناسهٔ ارسالی نامعتبر است.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        year_month = (q.get('year_month') or '').strip() or None
+        if not period_id and not year_month:
+            return Response({'error': 'پارامتر year_month الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        allowed = None if user.is_superuser else set(get_user_allowed_companies(user).values_list('id', flat=True))
+        if period_id:
+            period = MonthlyWorkPeriod.objects.filter(pk=period_id).first()
+            if period is None or (allowed is not None and period.company_id not in allowed):
+                raise NotFound('دورهٔ تسویه یافت نشد.')
+            if not user_has_any_perm(user, (self.SETTLEMENT_PERM,), period):
+                return self._forbidden()
+            return {'period_id': period.pk}
+        if section_id:
+            section = ProjectSection.objects.select_related('project').filter(pk=section_id).first()
+            company_id = section.project.company_id if section is not None and section.project_id else None
+            if section is None or company_id is None or (allowed is not None and company_id not in allowed):
+                raise NotFound('بخش یافت نشد.')
+            if not user_has_any_perm(user, (self.SETTLEMENT_PERM,),
+                                     SimpleNamespace(section_id=section.pk, company_id=company_id)):
+                return self._forbidden()
+            return {'section_id': section.pk, 'year_month': year_month}
+        # بی بخش و دوره: فقط شرکت‌های مجازی که کاربر در آن‌ها مجوز تسویه دارد (مدیر کل همه)
+        company_ids = None
+        if not user.is_superuser:
+            company_ids = sorted(c for c in allowed
+                                 if user_has_any_perm(user, (self.SETTLEMENT_PERM,),
+                                                      SimpleNamespace(section_id=None, company_id=c)))
+            if not company_ids:
+                return self._forbidden()
+        return {'warehouse_id': wh_id, 'year_month': year_month, 'company_ids': company_ids}
 
     @action(detail=False, methods=['get'], url_path='calculate')
     def calculate(self, request):
-        year_month = request.query_params.get('year_month')
-        warehouse_id = request.query_params.get('warehouse_id')
-        if not year_month:
-            return Response({'error': 'پارامتر year_month الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        wh_id = int(warehouse_id) if (warehouse_id and warehouse_id.isdigit()) else None
+        scope = self._resolve_scope(request)
+        if isinstance(scope, Response):
+            return scope
         try:
-            data = calculate_monthly_fleet_settlement(warehouse_id=wh_id, year_month=year_month)
+            data = calculate_monthly_fleet_settlement(viewer=request.user, **scope)
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': f'خطا در محاسبه تسویه ناوگان: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'], url_path='export-bank-excel')
     def export_bank_excel(self, request):
-        year_month = request.query_params.get('year_month')
-        warehouse_id = request.query_params.get('warehouse_id')
-        if not year_month:
-            return Response({'error': 'پارامتر year_month الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        wh_id = int(warehouse_id) if (warehouse_id and warehouse_id.isdigit()) else None
+        scope = self._resolve_scope(request)
+        if isinstance(scope, Response):
+            return scope
         try:
-            data = calculate_monthly_fleet_settlement(warehouse_id=wh_id, year_month=year_month)
+            data = calculate_monthly_fleet_settlement(**scope)
+        except Exception as e:
+            return Response({'error': f'خطا در تولید فایل اکسل پرداخت بانک ملی: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        # د۷: فایل بانک فقط برای کارکرد ماهانهٔ ناوگانی که تأیید مدیر گرفته (دورهٔ بخش)
+        if not data['summary'].get('fleet_approved'):
+            return Response({'code': 'fleet_not_approved',
+                             'error': 'فایل بانک فقط برای کارکرد ماهانهٔ ناوگانی که تأیید مدیر گرفته صادر می‌شود.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            year_month = data['summary']['year_month']
             excel_file = generate_fleet_bank_meli_excel(data, year_month)
 
             clean_ym = year_month.replace('/', '_')

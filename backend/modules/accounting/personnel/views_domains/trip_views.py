@@ -170,23 +170,76 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             qs = qs.filter(vehicle_id=vehicle_id)
         return self._scoped_trips(qs)
 
+    @staticmethod
+    def _trip_section_id(section, vehicle):
+        """بخش مؤثر تردد: بخش ثبت‌شده، وگرنه بخش خودرو."""
+        if section is not None:
+            return getattr(section, 'pk', section)
+        return getattr(vehicle, 'section_id', None) if vehicle is not None else None
+
+    def _assert_section_in_scope(self, section_id):
+        """بخش تردد پیش از ساختن دورهٔ آن در دامنهٔ کاربر سنجیده می‌شود (بخش شرکت دیگر = 403، بی ساختن دوره)."""
+        if not section_id:
+            return
+        err = self._validate_write_target(self.request, section_id, None)
+        if err is not None:
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+            msg = err.data.get('error')
+            raise DRFValidationError({'error': msg}) if err.status_code == 400 else PermissionDenied(msg)
+
+    def _assert_vehicle_in_scope(self, vehicle):
+        """خودروی تردد باید در دامنهٔ کاربر باشد (خودروی شرکت دیگر وارد دوره و تسویهٔ این شرکت نشود؛ بی سرنخ = 404)."""
+        from django.http import Http404
+        if vehicle is not None and not self._scoped_vehicles().filter(pk=vehicle.pk).exists():
+            raise Http404
+
     def perform_create(self, serializer):
         from ..fleet_lifecycle_services import assert_vehicle_trip_allowed
+        from ..workflows import assert_fleet_trip_writable
         vehicle = serializer.validated_data.get('vehicle')
         date_shamsi = serializer.validated_data.get('date_shamsi')
         trip_count = serializer.validated_data.get('trip_count', 1)
         if (trip_count is None or trip_count > 0) and vehicle and date_shamsi:
             assert_vehicle_trip_allowed(vehicle, date_shamsi)
-        serializer.save(created_by=self.request.user if (self.request.user and self.request.user.is_authenticated) else None)
+        extra = {}
+        self._assert_vehicle_in_scope(vehicle)
+        section_id = self._trip_section_id(serializer.validated_data.get('section'), vehicle)
+        self._assert_section_in_scope(section_id)
+        with transaction.atomic():
+            # د۵ طرح ۴.۶: تردد بخش‌دار به دورهٔ بخش + ماه وصل می‌شود؛ دورهٔ قفل ناوگان 400 fleet_locked
+            period = assert_fleet_trip_writable(section_id, date_shamsi) if date_shamsi else None
+            if period is not None:
+                extra = {'period': period, 'section_id': section_id}
+            serializer.save(created_by=self.request.user if (self.request.user and self.request.user.is_authenticated) else None,
+                            **extra)
 
     def perform_update(self, serializer):
         from ..fleet_lifecycle_services import assert_vehicle_trip_allowed
+        from ..workflows import assert_existing_trip_writable, assert_fleet_trip_writable
         vehicle = serializer.validated_data.get('vehicle') or serializer.instance.vehicle
         date_shamsi = serializer.validated_data.get('date_shamsi') or serializer.instance.date_shamsi
         trip_count = serializer.validated_data.get('trip_count', serializer.instance.trip_count)
         if (trip_count is None or trip_count > 0) and vehicle and date_shamsi:
             assert_vehicle_trip_allowed(vehicle, date_shamsi)
-        serializer.save()
+        if 'vehicle' in serializer.validated_data:
+            self._assert_vehicle_in_scope(vehicle)
+        section = serializer.validated_data.get('section', serializer.instance.section)
+        section_id = self._trip_section_id(section, vehicle)
+        if section_id != serializer.instance.section_id:
+            self._assert_section_in_scope(section_id)
+        with transaction.atomic():
+            assert_existing_trip_writable(serializer.instance)
+            period = assert_fleet_trip_writable(section_id, date_shamsi) if date_shamsi else None
+            extra = {'period': period, 'section_id': section_id} if period is not None else {}
+            serializer.save(**extra)
+
+    def perform_destroy(self, instance):
+        from ..workflows import assert_existing_trip_writable
+        with transaction.atomic():
+            assert_existing_trip_writable(instance)
+            # حذف منطقی مثل بقیهٔ مسیرهای حذف تردد (هیچ ردیفی پاک نمی‌شود)
+            instance.is_deleted = True
+            instance.save(update_fields=['is_deleted', 'updated_at'])
 
     @action(detail=False, methods=['get'], url_path='matrix')
     def get_matrix(self, request):
@@ -347,6 +400,14 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                     date_shamsi=date_shamsi,
                     is_deleted=False
                 ).first()
+
+                # د۵ طرح ۴.۶: تردد بخش‌دار به دورهٔ بخش + ماه؛ دورهٔ قفل ناوگان 400 fleet_locked (کل ذخیره برمی‌گردد)
+                from ..workflows import assert_existing_trip_writable, assert_fleet_trip_writable
+                if trip_obj:
+                    assert_existing_trip_writable(trip_obj)
+                section_period = assert_fleet_trip_writable(section_id or v_obj.section_id, date_shamsi)
+                if section_period is not None:
+                    target_period = section_period
 
                 unit_rate = item.get('unit_rate', v_obj.default_service_rate)
                 total_amount = unit_rate * trip_count
@@ -565,6 +626,20 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         if section_id:
             vehicles = vehicles.filter(section_id=section_id)
 
+        # د۵ طرح ۴.۶: وضعیت گردش ناوگان دورهٔ بخش + ماه (بی ساختن دوره در خواندن)؛ قفل ناوگان ویرایش را می‌بندد
+        fleet_state = {'fleet_period_id': None, 'fleet_workflow_status': None, 'fleet_workflow_step': None,
+                       'fleet_approved': False, 'fleet_locked': False}
+        if section_id:
+            from ..attendance_periods import find_period
+            from ..workflows import fleet_workflow_state
+            sec_period = find_period(None, section_id, year_month)
+            if sec_period is not None:
+                fleet_state = fleet_workflow_state(sec_period)
+                if fleet_state['fleet_locked']:
+                    is_locked = True
+                    for dm in days_meta:
+                        dm['is_editable'] = False
+
         raw_proj = request.query_params.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '', 'UNDEFINED', 'NULL']) else None
         if project_id:
@@ -662,8 +737,81 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             'days_meta': days_meta,
             'is_locked': is_locked,
             'period_status': period_status,
+            **fleet_state,
             'rows': grid_rows
         })
+
+    @action(detail=False, methods=['post'], url_path='submit-fleet-period')
+    def submit_fleet_period(self, request):
+        """
+        د۵ طرح ۴.۶: ارسال کارکرد ماهانهٔ ناوگان یک بخش و ماه به گردش (ثبت‌کنندهٔ تردد یا سرپرست، فقط آنلاین).
+        ورودی: period_id، یا section_id + year_month. دامنه: دوره از شناسه خوانده و سپس سنجیده می‌شود (بیرون از
+        شرکت‌های مجاز یا بخش‌های کاربر = 404)؛ هرگز به company_id درخواست اعتماد نمی‌شود.
+        """
+        from rest_framework.exceptions import NotFound, ValidationError as DRFValidationError
+        from workflow.errors import WorkflowError
+        from ..attendance_periods import find_period
+        from ..workflows import can_view_fleet_period, fleet_workflow_state, submit_fleet_period
+
+        def _int(raw):
+            s = normalize_digits(str(raw if raw is not None else '')).strip()
+            return int(s) if s.isascii() and s.isdigit() else None
+
+        raw_pid = request.data.get('period_id')
+        if raw_pid not in (None, ''):
+            pid = _int(raw_pid)
+            if pid is None:
+                raise DRFValidationError({'code': 'invalid_input', 'error': 'شناسهٔ دوره نامعتبر است.'})
+            period = MonthlyWorkPeriod.objects.filter(pk=pid).first()
+        else:
+            sid = _int(request.data.get('section_id'))
+            ym = normalize_digits(str(request.data.get('year_month') or '')).strip().replace('-', '/')[:7]
+            if sid is None or len(ym) != 7:
+                raise DRFValidationError({'code': 'invalid_input',
+                                          'error': 'period_id یا section_id و year_month (مثال 1405/06) الزامی است.'})
+            period = find_period(None, sid, ym)
+            if period is None:
+                # ترددهای بخش‌دار پیش از ۴.۶ دوره نساخته‌اند: فقط بخش شرکت مجاز کاربر دوره می‌گیرد
+                sec = ProjectSection.objects.select_related('project').filter(pk=sid).first()
+                if sec is not None and sec.project_id and (request.user.is_superuser or get_user_allowed_companies(
+                        request.user).filter(id=sec.project.company_id).exists()):
+                    from ..attendance_periods import get_or_create_period
+                    period = get_or_create_period(None, sid, ym)[0]
+        if period is None or not period.section_id or not can_view_fleet_period(request.user, period.pk):
+            raise NotFound('دورهٔ ناوگان یافت نشد.')
+        try:
+            period = submit_fleet_period(request.user, period)
+        except WorkflowError as exc:
+            return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+        return Response({'message': 'کارکرد ماهانهٔ ناوگان به گردش تأیید رفت.', 'period_id': period.pk,
+                         'year_month': period.year_month, 'section_id': period.section_id,
+                         **fleet_workflow_state(period)})
+
+    @action(detail=False, methods=['get'], url_path='fleet-period-status')
+    def fleet_period_status(self, request):
+        """وضعیت گردش ناوگان یک بخش و ماه (section_id + year_month)؛ دورهٔ بیرون از دامنه 404."""
+        from rest_framework.exceptions import NotFound
+        from ..attendance_periods import find_period
+        from ..workflows import can_view_fleet_period, fleet_payable_total, fleet_workflow_state
+        raw_sid = normalize_digits(str(request.query_params.get('section_id') or '')).strip()
+        ym = normalize_digits(str(request.query_params.get('year_month') or '')).strip().replace('-', '/')[:7]
+        if not (raw_sid.isascii() and raw_sid.isdigit()) or len(ym) != 7:
+            return Response({'code': 'invalid_input', 'error': 'section_id و year_month الزامی است.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        period = find_period(None, int(raw_sid), ym)
+        if period is None:
+            sec = ProjectSection.objects.select_related('project').filter(pk=int(raw_sid)).first()
+            allowed = request.user.is_superuser or (sec is not None and sec.project_id and get_user_allowed_companies(
+                request.user).filter(id=sec.project.company_id).exists())
+            if not allowed:
+                raise NotFound('بخش یافت نشد.')
+            return Response({'period_id': None, 'year_month': ym, 'section_id': int(raw_sid), 'total_payable': 0,
+                             'fleet_period_id': None, 'fleet_workflow_status': None, 'fleet_workflow_step': None,
+                             'fleet_approved': False, 'fleet_locked': False})
+        if not can_view_fleet_period(request.user, period.pk):
+            raise NotFound('دورهٔ ناوگان یافت نشد.')
+        return Response({'period_id': period.pk, 'year_month': period.year_month, 'section_id': period.section_id,
+                         'total_payable': int(fleet_payable_total(period)), **fleet_workflow_state(period)})
 
     @action(detail=False, methods=['post'], url_path='update-day-trip')
     def update_day_trip(self, request):
@@ -730,6 +878,12 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             effective_section_id = section_id or v_obj.section_id
             effective_project_id = project_id or (v_obj.section.project_id if v_obj.section else None)
 
+            # د۵ طرح ۴.۶: قفل ناوگان دورهٔ بخش (بازگشایی مدیر انبار روی آن اثری ندارد؛ فقط عودت گردش)
+            from ..workflows import assert_existing_trip_writable, assert_fleet_trip_writable
+            if trip_obj:
+                assert_existing_trip_writable(trip_obj)
+            section_period = assert_fleet_trip_writable(effective_section_id, date_shamsi)
+
             if trip_count > 0:
                 total_amount = unit_rate * trip_count
                 if trip_obj:
@@ -770,6 +924,8 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                         trip_obj.section_id = effective_section_id
                     if effective_project_id:
                         trip_obj.project_id = effective_project_id
+                    if section_period is not None:
+                        trip_obj.period = section_period
                     trip_obj.save()
                 else:
                     trip_obj = VehicleTripLog.objects.create(
@@ -784,6 +940,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                         dispatch_reference=dispatch_ref,
                         origin_destination=orig_dest,
                         notes=notes,
+                        period=section_period,
                         created_by=request.user if request.user.is_authenticated else None
                     )
                     VehicleTripAuditLog.objects.create(
@@ -927,6 +1084,12 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 effective_section_id = section_id or v_obj.section_id
                 effective_project_id = project_id or (v_obj.section.project_id if v_obj.section else None)
 
+                # د۵ طرح ۴.۶: دورهٔ بخش + ماه؛ دورهٔ قفل ناوگان 400 fleet_locked (کل ذخیره برمی‌گردد)
+                from ..workflows import assert_existing_trip_writable, assert_fleet_trip_writable
+                if trip_obj:
+                    assert_existing_trip_writable(trip_obj)
+                section_period = assert_fleet_trip_writable(effective_section_id, date_shamsi)
+
                 if trip_count > 0:
                     if trip_obj:
                         trip_obj.trip_count = trip_count
@@ -940,6 +1103,8 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                             trip_obj.section_id = effective_section_id
                         if effective_project_id:
                             trip_obj.project_id = effective_project_id
+                        if section_period is not None:
+                            trip_obj.period = section_period
                         trip_obj.save()
                     else:
                         VehicleTripLog.objects.create(
@@ -954,6 +1119,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                             dispatch_reference=item.get('dispatch_reference', '') or '',
                             origin_destination=item.get('origin_destination', '') or '',
                             notes=item.get('notes', '') or '',
+                            period=section_period,
                             created_by=request.user
                         )
                     saved_count += 1
@@ -1047,6 +1213,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
 
         year_month = request.data.get('year_month')
 
+        from rest_framework.exceptions import ValidationError as DRFValidationError
         try:
             result = import_fleet_monthly_excel(
                 file_obj=file_obj,
@@ -1056,6 +1223,9 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 vehicles_qs=self._scoped_vehicles()
             )
             return Response(result, status=status.HTTP_200_OK)
+        except DRFValidationError:
+            # د۵ طرح ۴.۶: 400 fleet_locked با همان کد (کل درون‌ریزی برمی‌گردد)
+            raise
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

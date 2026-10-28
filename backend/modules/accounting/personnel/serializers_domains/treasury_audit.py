@@ -921,6 +921,32 @@ class WorkflowAuditLogSerializer(serializers.ModelSerializer):
         ret['metadata'] = walk(ret['metadata'])
         return ret
 
+    def _mask_vehicle_sensitive(self, instance, ret, user):
+        """د۸ طرح ۴.۶ (ق۱۶): کد ملی، حساب، کارت و شبا در metadata لاگ خودرو (diff ویرایش، حساب بانکی، درخواست تغییر)
+        برای بی‌دید کامل (can_view_vehicle_sensitive) ستاره‌دار."""
+        if instance.content_type != 'vehicle' or not ret.get('metadata') or getattr(user, 'is_superuser', False):
+            return ret
+        from ..lifecycle_services import mask_sensitive_value
+        from ..fleet_lifecycle_services import VEHICLE_ALL_SENSITIVE_FIELDS, can_view_vehicle_sensitive
+        from ..models import VehicleDriverProfile
+        vehicles = self.context.setdefault('_log_vehicles', {})
+        if instance.object_id not in vehicles:
+            vehicles[instance.object_id] = VehicleDriverProfile.objects.filter(pk=instance.object_id).first()
+        vehicle = vehicles[instance.object_id]
+        if vehicle is not None and can_view_vehicle_sensitive(
+                user, vehicle, self.context.setdefault('_vehicle_sensitive_cache', {})):
+            return ret
+
+        def walk(value, sensitive=False):
+            if isinstance(value, dict):
+                return {k: walk(v, sensitive or k in VEHICLE_ALL_SENSITIVE_FIELDS) for k, v in value.items()}
+            if isinstance(value, list):
+                return [walk(v, sensitive) for v in value]
+            return mask_sensitive_value(value) if sensitive and value not in (None, '') else value
+
+        ret['metadata'] = walk(ret['metadata'])
+        return ret
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
@@ -930,6 +956,7 @@ class WorkflowAuditLogSerializer(serializers.ModelSerializer):
         from ..fleet_lifecycle_services import FLEET_RATE_FIELDS, FLEET_FINANCE_STAGE_PERMS, FLEET_MANAGER_STAGE_PERMS, user_has_any_perm
         user = getattr(request, 'user', None)
         ret = self._mask_personnel_sensitive(instance, ret, user)
+        ret = self._mask_vehicle_sensitive(instance, ret, user)
         can_view_financials = user_can_view_wages(user) or user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS + FLEET_MANAGER_STAGE_PERMS)
         if can_view_financials:
             return ret

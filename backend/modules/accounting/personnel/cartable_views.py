@@ -624,9 +624,9 @@ class SupervisorCartableAPIView(APIView):
             },
             # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
             'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
-            'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
+            'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True, context={'request': request}).data,
             'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True, context={'request': request}).data,
-            'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
+            'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True, context={'request': request}).data,
             'periods': MonthlyWorkPeriodSerializer(periods, many=True).data,
             'invoices': ExpenseInvoiceSerializer(invoices_qs[:50], many=True).data,
             'petty_cash': PettyCashTransactionSerializer(petty_cash_qs[:50], many=True).data
@@ -756,9 +756,9 @@ class AccountantCartableAPIView(APIView):
             },
             # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
             'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
-            'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
+            'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True, context={'request': request}).data,
             'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True, context={'request': request}).data,
-            'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
+            'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True, context={'request': request}).data,
             'periods': MonthlyWorkPeriodSerializer(periods, many=True).data,
             'invoices': ExpenseInvoiceSerializer(invoices_qs[:50], many=True).data,
             'petty_cash': PettyCashTransactionSerializer(petty_cash_qs[:50], many=True).data
@@ -877,9 +877,9 @@ class ManagerCartableAPIView(APIView):
             },
             # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
             'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
-            'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
+            'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True, context={'request': request}).data,
             'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True, context={'request': request}).data,
-            'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
+            'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True, context={'request': request}).data,
             'periods': MonthlyWorkPeriodSerializer(periods, many=True).data,
             'invoices': ExpenseInvoiceSerializer(invoices_qs[:50], many=True).data,
             'petty_cash': PettyCashTransactionSerializer(petty_cash_qs[:50], many=True).data
@@ -978,12 +978,12 @@ class TreasuryCartableAPIView(APIView):
                         or user_has_any_perm(user, (PAYROLL_TREASURY_PERM,), r.period)]
         payrolls = list(payrolls)[:100]
 
-        # دریافت سرویس‌های ناوگان تسویه‌نشده
-        trips_qs = VehicleTripLog.objects.filter(
-            is_settled=False,
-            vehicle__approval_status__in=[WorkflowStatuses.APPROVED, 'approved']
-        ).select_related('vehicle')
-        trips = _filter_by_company(trips_qs, 'trip', company_ids)[:100]
+        # د۶ طرح ۴.۶: ترددهای ناوگان فقط از دوره‌های کار باز treasury_pay گردش ناوگان در دامنهٔ همین کاربر
+        trips_qs = TreasuryDisbursementService.fleet_pay_trips([p['id'] for p in data['fleet_periods']])
+        trips = list(trips_qs[:100])
+        from .fleet_lifecycle_services import can_view_vehicle_sensitive
+        from .lifecycle_services import mask_sensitive_value
+        sens_cache = {}
 
         # فاکتورهای تایید شده آماده پرداخت خزانه‌داری
         invoices_payable = _filter_by_company(_invoice_task_rows(user, 'treasury_pay'), 'invoice', company_ids)[:100]
@@ -996,9 +996,11 @@ class TreasuryCartableAPIView(APIView):
                 'vehicle_id': t.vehicle_id,
                 'driver_name': t.vehicle.driver_name,
                 'plate_number': t.vehicle.plate_number,
-                'sheba_number': t.vehicle.sheba_number,
+                'sheba_number': (t.vehicle.sheba_number if can_view_vehicle_sensitive(user, t.vehicle, sens_cache)
+                                 else mask_sensitive_value(t.vehicle.sheba_number)),
                 'bank_name': t.vehicle.bank_name,
                 'date_shamsi': t.date_shamsi,
+                'period_id': t.period_id,
                 'total_amount': int(t.total_amount or 0),
                 'is_settled': t.is_settled
             }
@@ -1056,33 +1058,27 @@ class TreasuryCartableAPIView(APIView):
             })
 
         elif action == 'disburse_fleet':
-            trip_ids = request.data.get('trip_ids', [])
-            if not trip_ids and hasattr(request.data, 'getlist'):
-                trip_ids = request.data.getlist('trip_ids')
-            if isinstance(trip_ids, (int, str)):
-                if isinstance(trip_ids, str) and ',' in trip_ids:
-                    trip_ids = [int(x.strip()) for x in trip_ids.split(',') if x.strip()]
-                else:
-                    trip_ids = [int(trip_ids)]
-            elif isinstance(trip_ids, list):
-                trip_ids = [int(x) for x in trip_ids]
-
-            if not trip_ids:
-                raise ValidationError("شناسه سفرهای ناوگان ارسال نشده است.")
-
-            trips = VehicleTripLog.objects.filter(id__in=trip_ids)
-            if not trips.exists():
-                raise ValidationError("هیچ رکوردی برای شناسه‌های ارسالی یافت نشد.")
-
-            for t in trips:
-                _validate_instance_company_access(t, 'trip', user)
-
-            res = TreasuryDisbursementService.disburse_fleet_trips(
-                trip_ids=trip_ids,
-                treasury_user=user,
-                tracking_code=tracking_code,
-                batch_id=batch_id
-            )
+            # د۶ طرح ۴.۶: پوستهٔ نازک روی اقدام «پرداخت» موتور (مرحلهٔ treasury_pay گردش ناوگان) با period_id؛
+            # فهرست trip_ids بی دوره دیگر پرداخت نمی‌شود. شناسهٔ نامعتبر، ناموجود یا شرکت دیگر = 404.
+            from workflow.errors import WorkflowError
+            raw_period = request.data.get('period_id')
+            if raw_period in (None, ''):
+                if request.data.get('trip_ids'):
+                    return Response({'code': 'fleet_period_required',
+                                     'error': 'پرداخت ناوگان فقط برای کارکرد ماهانهٔ تأییدشدهٔ یک دوره (period_id) ممکن است.',
+                                     'detail': 'period_id الزامی است.'}, status=400)
+                raise ValidationError("شناسهٔ دورهٔ ناوگان (period_id) الزامی است.")
+            if isinstance(raw_period, (list, dict, bool)) or not (
+                    str(raw_period).strip().isascii() and str(raw_period).strip().isdigit()):
+                raise ValidationError("شناسهٔ دورهٔ ناوگان نامعتبر است.")
+            period = _scoped_payroll_get(MonthlyWorkPeriod.objects.all(), raw_period, user, 'company_id')
+            try:
+                res = TreasuryDisbursementService.disburse_fleet_period(
+                    period=period, treasury_user=user, tracking_code=tracking_code, batch_id=batch_id,
+                    notes=request.data.get('notes') or '')
+            except WorkflowError as exc:
+                return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
+                                status=exc.status)
             return Response(res)
 
         elif action == 'disburse_invoice':

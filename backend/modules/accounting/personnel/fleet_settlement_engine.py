@@ -12,45 +12,92 @@ from django.db.models import Sum, F
 from .models import VehicleDriverProfile, VehicleTripLog, MonthlyWorkPeriod
 
 
-def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None):
+SETTLEMENT_SENSITIVE_KEYS = ('driver_national_code', 'account_owner_national_code', 'account_number', 'sheba_number')
+
+
+def _settlement_scope(warehouse_id, year_month, period_id, section_id, company_ids):
+    """
+    د۷ طرح ۴.۶: دامنهٔ تسویه. خروجی (period, year_month, section_id, vehicle_qs, trip_qs).
+    period_id یا section_id + year_month (دورهٔ بخش)؛ warehouse_id (قدیمی)؛ بی شناسه: company_ids (None = همه، فقط
+    برای نگهبان و فراخوانی درونی؛ نما همیشه شرکت‌های مجاز کاربر را می‌دهد).
+    """
+    from django.db.models import Q
+    from .workflows import fleet_period_trips
+    period = None
+    vehicle_qs = VehicleDriverProfile.objects.all()
+    trip_qs = VehicleTripLog.objects.filter(is_deleted=False)
+    if period_id:
+        period = MonthlyWorkPeriod.objects.filter(pk=period_id).first()
+        if period is None:
+            raise ValueError("دورهٔ تسویه یافت نشد.")
+        year_month = period.year_month
+        section_id = period.section_id
+    elif section_id:
+        from .attendance_periods import find_period
+        period = find_period(None, section_id, year_month)
+    if not year_month:
+        raise ValueError("پارامتر سال و ماه (year_month) الزامی است.")
+    if section_id:
+        if period is not None:
+            trip_qs = fleet_period_trips(period)
+        else:
+            trip_qs = trip_qs.filter(section_id=section_id, date_shamsi__startswith=year_month)
+        base_vehicle_q = Q(section_id=section_id)
+    else:
+        trip_qs = trip_qs.filter(date_shamsi__startswith=year_month)
+        base_vehicle_q = Q()
+        if warehouse_id:
+            period = MonthlyWorkPeriod.objects.filter(year_month=year_month, warehouse_id=warehouse_id).first()
+            trip_qs = trip_qs.filter(warehouse_id=warehouse_id)
+            base_vehicle_q = Q(assigned_warehouse_id=warehouse_id)
+        else:
+            period = MonthlyWorkPeriod.objects.filter(year_month=year_month).first() if company_ids is None else None
+        if company_ids is not None:
+            ids = list(company_ids)
+            trip_qs = trip_qs.filter(Q(vehicle__company_id__in=ids) | Q(section__project__company_id__in=ids)
+                                     | Q(project__company_id__in=ids))
+            vehicle_qs = vehicle_qs.filter(Q(company_id__in=ids) | Q(section__project__company_id__in=ids))
+    # فقط خودروی مصوب (در همان دامنه) یا خودرویی که در این دوره تردد دارد
+    vehicle_qs = vehicle_qs.filter((base_vehicle_q & Q(approval_status='approved'))
+                                   | Q(id__in=trip_qs.values('vehicle_id')))
+    return period, year_month, section_id, vehicle_qs, trip_qs
+
+
+def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None, *, period_id=None, section_id=None,
+                                       company_ids=None, viewer=None):
     """
     محاسبه کارکرد و مبالغ تسویه ماهانه ناوگان خودرویی
     - خودروهای استیجاری و ملکی راننده: مشمول محاسبه کرایه و تسویه بانکی
     - خودروهای شرکتی: صرفاً ثبت تردد، بدون مبلغ تسویه (۰ تومان)
+    د۷ طرح ۴.۶: دامنه با period_id یا section_id + year_month؛ حساب اصلی با prefetch (بی N+1)؛ viewer داده شود،
+    کد ملی و شماره حساب و شبای خودروهایی که viewer دید کامل ندارد پوشیده می‌شود.
     """
-    if not year_month:
-        raise ValueError("پارامتر سال و ماه (year_month) الزامی است.")
-
-    # بررسی وضعیت قفل دوره
-    period_qs = MonthlyWorkPeriod.objects.filter(year_month=year_month)
-    if warehouse_id:
-        period_qs = period_qs.filter(warehouse_id=warehouse_id)
-    period = period_qs.first()
+    from django.db.models import Prefetch
+    from .models import VehicleBankAccount
+    period, year_month, section_id, vehicle_qs, trip_qs = _settlement_scope(
+        warehouse_id, year_month, period_id, section_id, company_ids)
     is_locked = bool(period and period.status in ('LOCKED', 'FINALIZED'))
+    fleet_state = {}
+    if period is not None and period.section_id:
+        from .workflows import fleet_workflow_state
+        fleet_state = fleet_workflow_state(period)
+        is_locked = is_locked or fleet_state.get('fleet_locked', False)
 
-    # لیست خودروها
-    vehicle_qs = VehicleDriverProfile.objects.all().prefetch_related('bank_accounts')
-    if warehouse_id:
-        vehicle_qs = vehicle_qs.filter(assigned_warehouse_id=warehouse_id)
-
-    # لاگ‌های تردد در بازه سال/ماه
-    trip_qs = VehicleTripLog.objects.filter(date_shamsi__startswith=year_month)
-    if warehouse_id:
-        trip_qs = trip_qs.filter(warehouse_id=warehouse_id)
+    vehicle_qs = vehicle_qs.prefetch_related(Prefetch(
+        'bank_accounts', queryset=VehicleBankAccount.objects.filter(is_primary=True, is_active=True).order_by('id'),
+        to_attr='primary_accounts'))
 
     # مپ ترددها بر اساس شناسه خودرو
     trips_by_vehicle = {}
-    for t in trip_qs:
-        v_id = t.vehicle_id
-        if v_id not in trips_by_vehicle:
-            trips_by_vehicle[v_id] = []
-        trips_by_vehicle[v_id].append(t)
+    for t in trip_qs.only('id', 'vehicle_id', 'trip_count', 'unit_rate'):
+        trips_by_vehicle.setdefault(t.vehicle_id, []).append(t)
 
     records = []
     total_trips_sum = 0
     total_payable_sum = Decimal(0)
     contractor_count = 0
 
+    sens_cache = {}
     for v in vehicle_qs:
         v_trips = trips_by_vehicle.get(v.id, [])
         trip_count = sum(t.trip_count for t in v_trips)
@@ -66,7 +113,7 @@ def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None):
             if trip_count > 0:
                 contractor_count += 1
 
-        primary_acc = v.bank_accounts.filter(is_primary=True, is_active=True).first()
+        primary_acc = v.primary_accounts[0] if v.primary_accounts else None
         acc_owner_name = (primary_acc.account_owner_name if primary_acc and primary_acc.account_owner_name else v.driver_name) or ''
         acc_owner_nat_code = (primary_acc.account_owner_national_code if primary_acc and primary_acc.account_owner_national_code else (v.driver_national_code or '')) or ''
         bank_name = (primary_acc.bank_name if primary_acc and primary_acc.bank_name else (v.bank_name or 'بانک ملی')) or ''
@@ -95,6 +142,12 @@ def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None):
             'is_payable': is_payable,
             'is_active': v.is_active
         })
+        if viewer is not None:
+            from .fleet_lifecycle_services import can_view_vehicle_sensitive
+            from .lifecycle_services import mask_sensitive_value
+            if not can_view_vehicle_sensitive(viewer, v, sens_cache):
+                for key in SETTLEMENT_SENSITIVE_KEYS:
+                    records[-1][key] = mask_sensitive_value(records[-1][key]) if records[-1][key] else ''
 
     # مرتب‌سازی بر اساس نام راننده
     records.sort(key=lambda r: r['driver_name'])
@@ -104,6 +157,12 @@ def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None):
         'warehouse_id': warehouse_id,
         'is_locked': is_locked,
         'period_status': period.status if period else 'OPEN',
+        'period_id': period.pk if period else None,
+        'section_id': section_id,
+        'fleet_workflow_status': fleet_state.get('fleet_workflow_status'),
+        'fleet_workflow_step': fleet_state.get('fleet_workflow_step'),
+        'fleet_approved': bool(fleet_state.get('fleet_approved', False)),
+        'fleet_locked': bool(fleet_state.get('fleet_locked', False)),
         'total_vehicles_count': len(records),
         'active_contractor_count': contractor_count,
         'total_fleet_trips': total_trips_sum,
