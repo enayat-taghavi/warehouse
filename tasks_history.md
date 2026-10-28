@@ -14299,3 +14299,57 @@ Write the definitions in simple Persian like the rows above.
 ۲. فایل `supervisor-attendance-44c.dom.spec.ts` شامل ۳ تست برای بررسی باز شدن دیالوگ عودت (`app-workflow-reason-dialog`)، عدم ارسال درخواست بدون ذکر دلیل، فراخوانی `postCartableAction` با اکشن `revision`، و نگاشت خطای قفل دوره سرور...
 
 ---
+
+### Task 1 of 1 — 2026-10-28 08:54:35
+- **Status:** DONE
+- **Conversation:** `4be71ffc-f2f3-4c3d-a47c-9349822b83b1`
+- **Steps:** 82
+- **Tokens:** 165221
+- **Duration:** 7m 3s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.5-b: payroll scope and sensitive-data API tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_payroll_45_scope.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commits `557a133a` and `01515e7a`; read only these):
+- `scratch/handoff_4_5_b1.md` and `scratch/handoff_4_5_b2.md` (rules: section-period calculation, `attendance_not_approved`, `skipped_no_attendance`, `period_not_found`, wage-row visibility, `view_sys_payroll` on calculate/import/exports, 403/404 rules, masking, project + month exports, `X-Payroll-Unapproved-Periods`, bank excel only `READY_TO_PAY`, no create/destroy).
+- `backend/modules/accounting/personnel/test_payroll_45_petty_exports.py` (whole file): working fixtures. COPY its `_Base` helper methods (`person`, `attend`, `calc`, `make_user`, `client_for`) and imports into your new file; you MAY subclass `_PayrollFixtureMixin` from `personnel.test_payroll_45_excel` (as that file does), but do not import from `test_payroll_45_petty_exports`. Use usernames with prefix `p45s_` and org codes `P45S...`.
+- `backend/modules/accounting/personnel/test_payroll_45_excel.py` lines 84-140 (`make_org`, `make_settings`, `ready_period`, `day_rows`).
+- API base: `/api/personnel/monthly-payroll/`; actions `calculate-period/` (POST), `import-tax-excel/` (POST), `export-dsk-zip/`, `export-tax-wh/`, `export-tax-wp/`, `export-bank-excel/`, `export-monthly-excel/` (GET).
+
+3. Task — `class Payroll45ScopeTests(TestCase)` with these tests (one method each):
+- a) `test_section_period_counts_only_own_section_attendance`: personnel P has APPROVED attendance in section A (period A, READY_TO_PAY) and also APPROVED rows in section B of the same company and month; calculating period A by a `view_sys_payroll` user (`{"period_id": A}`) gives P a row whose worked hours equal only section A rows (compare with a calculation where B rows do not exist, or assert the hours field equals the A total).
+- b) `test_not_ready_period_400_and_skipped_list`: a section period with status `OPEN` → POST calculate-period 400 with `code == "attendance_not_approved"`; on a READY_TO_PAY period a personnel of that section with no APPROVED attendance has no `MonthlyPayrollRecord` and appears in the response `skipped_no_attendance` by `personnel_id`.
+- c) `test_body_company_id_ignored`: POST calculate-period with `{"period_id": A, "company_id": <another company id>}` by an authorised user → 200 and records belong to period A's company only; the other company has no new `MonthlyWorkPeriod`.
+- d) `test_employee_sees_only_own_row`: a plain employee (no permission codes) linked to personnel P via `PersonnelProfile.user` lists `?period_id=A` → only P's row; GET detail of another personnel's row → 404; DELETE of own row → 405.
+- e) `test_other_company_404_everywhere`: a `view_sys_payroll` user of another company: list returns `[]`; detail of a row → 404; calculate-period with period A → 404; `export-tax-wh`, `export-tax-wp`, `export-dsk-zip`, `export-bank-excel` and `export-monthly-excel` with `period_id=A` → 404; `export-dsk-zip` with `project_id` + `year_month` of A's project → 404.
+- f) `test_no_payroll_perm_403`: a user of the same company without `view_sys_payroll`: calculate-period, `import-tax-excel` (with `period_id`), and each of the five exports → 403.
+- g) `test_import_tax_requires_period_id`: an authorised user posts `import-tax-excel/` without `period_id` → 400.
+- h) `test_sensitive_fields_masked`: a plain employee sees their own `national_code` and `bank_account_number` unmasked; a user with `view_sys_payroll` but without the 4.3 sensitive bypass sees another personnel's `national_code` masked (not equal to the real value, ends with its last 4 digits), exactly as `test_own_rows_only_and_sensitive_masked_for_payroll_role` in the petty file does; the POST calculate-period response rows follow the same rule for that user.
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_payroll_45_scope --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.5-b): payroll scope and sensitive-data API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Explain Simply)
+کاربر درخواست پیاده‌سازی آزمون‌های خودکار قلمرو (Scope)، مجوزها (Permissions) و پوشش داده‌های حساس (Sensitive Data Masking) ماژول حقوق و دستمزد را در قالب فایل جدید `backend/modules/accounting/personnel/test_payroll_45_scope.py` برای طرح ۴.۵-ب (Release v1 step 4.5-b) دارد؛ شامل ۸ متد آزمون مجزا بدون تغییر در کدهای پروداکشن، بدون آزمون نادیده‌گرفته‌شده (skip)، و با اجرای کامل تست‌ها.
+
+### ۲. اعتبارسنجی فنی (Verify Immediately)
+نیازمندی‌های اعلام‌شده با تغییرات کامیت‌های اخیر (`557a133a` و `01515e7a`)، قواعد مستندات `scratch/handoff_4_5_b1.md` و `scratch/handoff_4_5_b2.md` و رفتارهای `views_domains/payroll_views.py`...
+
+---
