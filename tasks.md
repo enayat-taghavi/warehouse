@@ -3288,7 +3288,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 5-b: version sync tool test, what's new dialog and Live Update ready bar specs
+[DONE] [ ] Session 1 of 1 — Release v1 step 5-b: version sync tool test, what's new dialog and Live Update ready bar specs
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
