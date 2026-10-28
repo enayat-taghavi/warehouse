@@ -58,7 +58,6 @@ android {
         staging {
             dimension "env"
             applicationIdSuffix ".test"
-            versionNameSuffix "-test"
             manifestPlaceholders = [appLabel: "CoManage تست"]
         }
         direct {
