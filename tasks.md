@@ -2927,3 +2927,49 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.5-c): payroll workflow, lock and treasury API tests`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 4.5-d: payroll and treasury DOM specs (submit, lock, offline, tracking code, diskette warning)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-payroll/accountant-payroll-45d.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements-45d.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-payroll/accountant-payroll-45d.dom.spec.ts --contains "PAYROLL_LOCKED_FA" --contains "submitPayrollWorkflow" --contains "attendance_not_approved" --contains "payroll_workflow_step" --contains "skipped_no_attendance" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements-45d.dom.spec.ts --contains "TRACKING_CODE_REQUIRED_FA" --contains "petty_settlement_changed" --contains "disburseTreasury" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-payroll/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 4.5-d): payroll and treasury DOM specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new files: `frontend/src/app/modules/accounting/components/finance/accountant/accountant-payroll/accountant-payroll-45d.dom.spec.ts` and `frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements-45d.dom.spec.ts`. Change no other file (never touch `scripts/automation/*`, never change production code). If a test fails because of production code, keep the assertion, stop, and describe the failure in the report.
+- No `it.skip`, no `xit(`, no `fit(`.
+- Run every command in the foreground and wait until it finishes.
+
+2. Context (committed by Claude in the `feat(release-v1 4.5-d...)` commit; read only these):
+- `frontend/src/app/modules/accounting/components/finance/accountant/payroll-period.ts` (first 30 lines): `PAYROLL_LOCKED_FA`, `PAYROLL_OFFLINE_FA`, `payrollActionErrorMessage`. Import the constants; never retype the Persian text.
+- `frontend/src/app/modules/accounting/components/finance/accountant/accountant-payroll/accountant-payroll.spec.ts`: COPY its TestBed setup, providers and mocks. In `accountant-payroll.ts` Grep: `sectionMode`, `fetchSectionPayroll`, `workflowStep`, `workflowLocked`, `isPayrollFrozen`, `canSubmitWorkflow`, `calculateBatch`, `attendanceBlockedMessage`, `skippedNoAttendance`, `submitForManager`, `confirmDialog`, `NetworkStatusService`. In `accountant-payroll.html` Grep `my-tasks`, `workflowLink`, `skippedNoAttendance`.
+- `frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements.spec.ts`: COPY its TestBed setup and mocks. In `treasurer-disbursements.ts` Grep: `TRACKING_CODE_REQUIRED_FA`, `TREASURY_OFFLINE_HINT_FA`, `treasuryErrorMessage`, `openPeriodBatchModal`, `submitBatchDisbursement`, `batchTrackingCodeError`, `batchServerError`, `openPayModal`, `confirmDisbursement`, `can_pay_single`.
+- `frontend/src/app/core/services/network-status.service.ts`: how `isOnline` is computed (to simulate offline; restore the online state in `afterEach`).
+
+3. Definitions: section mode means `component.mySections` has one section `{id: 10, name: 'S'}` and `component.selectedSectionId = 10`. A server error is an `HttpErrorResponse` with status 400 and body `{code: '<code>', error: 'MSG', detail: 'MSG'}`.
+
+4. Task:
+- File A `accountant-payroll-45d.dom.spec.ts`, one `it` each:
+  a) section mode, `getWorkPeriods` mock returns `[{id: 5, section: 10, status: 'READY_TO_PAY', payroll_workflow_step: 'manager_ok'}]` and `getMonthlyPayrollRecords` returns one PENDING row: after the fetch, `component.currentPeriodId` is 5, `component.isPayrollFrozen` is true, `component.canSubmitWorkflow` is false, and the rendered page has an anchor whose `href` contains `my-tasks` and `payroll_period`;
+  b) section mode, `calculatePeriodPayroll` returns `throwError` with code `attendance_not_approved`: the call payload contains `section_id: 10` and no `warehouse_id`; `component.attendanceBlockedMessage` is not empty;
+  c) `calculatePeriodPayroll` returns `throwError` with code `payroll_locked`: `component.workflowLocked` is true and the error toast receives `PAYROLL_LOCKED_FA`;
+  d) `calculatePeriodPayroll` success with `skipped_no_attendance: [{personnel_id: 7, full_name: 'نام آزمایشی'}]`: `component.skippedNoAttendance` has length 1 and after `fixture.detectChanges()` the page text contains `نام آزمایشی`;
+  e) section mode with period 5 loaded, no workflow step and one PENDING row, confirm dialog mock resolving `true`: `await component.submitForManager()` calls `submitPayrollWorkflow(5)` once and afterwards `component.workflowLocked` is true; offline (restore in `afterEach`): `submitPayrollWorkflow` is not called and the error toast receives `PAYROLL_OFFLINE_FA`.
+- File B `treasurer-disbursements-45d.dom.spec.ts`:
+  f) `openPeriodBatchModal(period)` with an empty `batchTrackingCode`, then `submitBatchDisbursement()`: `disburseTreasury` is not called and `component.batchTrackingCodeError` equals `TRACKING_CODE_REQUIRED_FA`; after `fixture.detectChanges()` that text is rendered;
+  g) with `batchTrackingCode = 'TRK-1'`, `disburseTreasury` returns `throwError` with code `petty_settlement_changed`: `component.batchServerError` contains `MSG` and the modal stays open; with success the payload has `action: 'disburse_period'` and `tracking_code: 'TRK-1'`;
+  h) offline: `submitBatchDisbursement()` does not call `disburseTreasury` and `component.batchServerError` equals `TREASURY_OFFLINE_HINT_FA`.
+
+5. Tool policy: only reading the listed files, Grep in `frontend/src/app/modules/accounting/`, `frontend/src/app/core/services/` and `frontend/src/app/shared/`, writing the two files, the test command below, `git add` of those two files, `git commit`, `git status --short`. Test command, in the repository root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-payroll/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/*.spec.ts"`; per-test log `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), rerun at most 5 times.
+
+6. Verification: the test command passes with 0 failed.
+
+7. Output: commit with message `test(release-v1 4.5-d): payroll and treasury DOM specs (submit, lock, offline, tracking code)`. Report in English: files, number of tests, result. Then stop.
