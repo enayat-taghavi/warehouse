@@ -2796,3 +2796,48 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.4-b): attendance period scenario API tests`; `git status --short` prints nothing.
 
 6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+===
+
+[ ] Session 1 of 1 — Release v1 step 4.4-c: attendance DOM specs (lock message, dirty cells, reason dialog)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance-44c.dom.spec.ts" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance-44c.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance-44c.dom.spec.ts --contains "ATTENDANCE_PERIOD_LOCKED_FA" --contains "attendance_period_locked" --contains "fiscal_period_closed" --contains "bulkSaveMonthlyGrid" --contains "periodWorkflowAction" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance-44c.dom.spec.ts --contains "app-workflow-reason-dialog" --contains "postCartableAction" --contains "ATTENDANCE_PERIOD_LOCKED_FA" --absent "it.skip" --absent "xit("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-attendance/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 4.4-c): attendance DOM specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new files: `frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance-44c.dom.spec.ts` and `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance-44c.dom.spec.ts`. Change no other file (never touch `scripts/automation/*`, never change production code). If a test fails because of production code, keep the assertion, stop, and describe the failure in the report.
+- No `it.skip`, no `xit(`, no `fit(`.
+- Run every command in the foreground and wait until it finishes.
+
+2. Context (committed by Claude in the `feat(release-v1 4.4-c...)` commit; read only these):
+- `frontend/src/app/modules/accounting/attendance-period-error.ts` (whole file, 45 lines): `ATTENDANCE_PERIOD_LOCKED_FA`, `attendanceWriteErrorMessage`, `attendanceActionErrorMessage`. Import the constant from it in both specs; never retype the Persian text.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance.spec.ts`: COPY its TestBed setup, providers and mocks (`mockPersonnelApi`, `mockToast`). In `employee-attendance.ts` Grep: `LOCKED_STATUSES`, `isPeriodLocked`, `periodLockedMessage`, `dirtyMonthlyCells`, `onMonthlyCellHoursChange`, `saveMonthlyGrid`, `submitPeriodForReview`, `NetworkStatusService`. In `employee-attendance.html` Grep `my-tasks`.
+- `frontend/src/app/core/services/network-status.service.ts`: how `isOnline` is computed (to simulate offline in item e; restore the online state in `afterEach`).
+- `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`: COPY its TestBed setup and mocks. In `supervisor-attendance.ts` Grep: `openRevisionModal`, `confirmRevision`, `revisionServerError`, `postCartableAction`. In `supervisor-attendance.html` Grep `app-workflow-reason-dialog`.
+
+3. Definitions: a locked period is any `period_status` in `SUBMITTED`, `SUBMITTED_SUPERVISOR`, `SUBMITTED_ACCOUNTANT`, `READY_TO_PAY`, `PAID`, `LOCKED`, `FINALIZED`. A server lock error is an `HttpErrorResponse` with status 400 and body `{code: 'attendance_period_locked', error: 'x', detail: 'x'}`. A fiscal error has status 400 and body `{date_shamsi: ['MSG-FISCAL'], code: 'fiscal_period_closed'}`.
+
+4. Task:
+- File A `employee-attendance-44c.dom.spec.ts`, one `it` each:
+  a) when the monthly grid response has `period_status: 'SUBMITTED_SUPERVISOR'` and `is_locked: false`, `component.isPeriodLocked` is true, the rendered monthly tab contains `ATTENDANCE_PERIOD_LOCKED_FA`, and an anchor whose `href` contains `my-tasks` and `attendance_period` is present;
+  b) `saveMonthlyGrid` whose `bulkSaveMonthlyGrid` mock returns `throwError` with the server lock error calls `mockToast.show('error', ATTENDANCE_PERIOD_LOCKED_FA)`;
+  c) the same with the fiscal error calls `mockToast.show('error', 'MSG-FISCAL')`;
+  d) with two grid rows of 3 days each, after calling `onMonthlyCellHoursChange` on exactly one cell (personnel of row 1, day 2, set `effective_hours` to 8 first) `saveMonthlyGrid` sends `items` with length 1 for that personnel and day 2;
+  e) offline: `submitPeriodForReview` does not call `periodWorkflowAction` and shows a warning toast; online with `selectedSectionId = 10` it calls `periodWorkflowAction` with an object containing `section_id: 10` and `action: 'submit'`.
+- File B `supervisor-attendance-44c.dom.spec.ts`:
+  f) `openRevisionModal(item)` then `fixture.detectChanges()`: an `app-workflow-reason-dialog` element is present and `component.showRevisionModal` is true; `confirmRevision('')` calls no `postCartableAction`;
+  g) `confirmRevision('علت آزمایشی')` calls `postCartableAction` once with `'supervisor'` and an object containing `action: 'revision'`;
+  h) when `postCartableAction` returns `throwError` with the server lock error, `component.revisionServerError` equals `ATTENDANCE_PERIOD_LOCKED_FA` and the dialog stays open.
+
+5. Tool policy: only reading the listed files, Grep in `frontend/src/app/modules/accounting/`, `frontend/src/app/core/services/` and `frontend/src/app/shared/`, writing the two files, the test command below, `git add` of those two files, `git commit`, `git status --short`. Test command, in the repository root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-attendance/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*.spec.ts"`; per-test log `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), rerun at most 5 times.
+
+6. Verification: the test command passes with 0 failed.
+
+7. Output: commit with message `test(release-v1 4.4-c): attendance DOM specs (lock message, dirty cells, reason dialog)`. Report in English: files, number of tests, result. Then stop.
