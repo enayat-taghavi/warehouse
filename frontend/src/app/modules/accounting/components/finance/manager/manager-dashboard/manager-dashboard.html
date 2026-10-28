@@ -1,220 +1,109 @@
-<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+<div class="min-h-screen bg-surface-canvas p-3 md:p-6 space-y-4" dir="rtl">
 
-  <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون بخش، سال و ماه مالی و تب‌های فرعی -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-purple-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- انتخابگر ماه -->
-        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">دوره مالی:</span>
-          <span class="text-xs font-black text-slate-800 font-mono">{{ selectedMonth }} {{ fiscalYear }}</span>
-        </div>
-
-        <!-- تب‌های فرعی با کامپوننت مشترک (Subtabs Navigation) -->
-        <app-tab-bar
-          [tabs]="dashboardTabs"
-          [active]="activeSubTab"
-          mobile="short"
-          fullLabelFrom="lg"
-          (activeChange)="switchSubTab($event)"
-        />
-      </div>
-
-      <!-- سمت چپ: دکمه‌های اکشن استاندارد و ارجاع به کارتابل تاییدات -->
-      <div class="flex items-center gap-2 justify-end">
-        <button
-          type="button"
-          appAction="forward"
-          display="label"
-          [label]="'کارتابل تاییدات (' + kpiSummary.pendingApprovalsCount + ')'"
-          (click)="navigateToApprovals()">
-        </button>
-
-        <!-- خروجی اکسل -->
-        <button
-          type="button"
-          appAction="export-excel"
-          (click)="exportExecutiveSummary()">
-        </button>
-
-        <!-- بروزرسانی زنده -->
-        <button
-          type="button"
-          appAction="refresh"
-          [busy]="isLoading"
-          (click)="refreshData()">
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── ۲. کارت‌های شاخص‌های کلیدی مدیریت (Executive KPI Cards) ── -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-    <!-- کل بودجه مصوب -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
-      <div class="text-[11px] font-bold text-slate-500 mb-1">کل بودجه مصوب ماه</div>
-      <div class="text-base md:text-lg font-black font-mono text-slate-900">{{ (kpiSummary.totalBudget / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
-      <div class="text-[10px] text-slate-400 mt-1">سقف تخصیص سازمانی</div>
-    </div>
-
-    <!-- مجموع هزینه‌کرد واقعی -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
-      <div class="text-[11px] font-bold text-slate-500 mb-1">مجموع هزینه‌کرد واقعی</div>
-      <div class="text-base md:text-lg font-black font-mono text-purple-700">{{ (kpiSummary.totalExpenses / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
-      <div class="text-[10px] font-bold text-purple-600 mt-1">{{ kpiSummary.consumptionPercent }}% جذب بودجه</div>
-    </div>
-
-    <!-- هزینه حقوق و دستمزد -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
-      <div class="text-[11px] font-bold text-slate-500 mb-1">حقوق و دستمزد پرسنل</div>
-      <div class="text-base md:text-lg font-black font-mono text-blue-700">{{ (kpiSummary.totalPayrollCost / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
-      <div class="text-[10px] text-slate-500 mt-1">{{ kpiSummary.activePersonnelCount }} نفر پرسنل فعال</div>
-    </div>
-
-    <!-- هزینه ناوگان و ترابری -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
-      <div class="text-[11px] font-bold text-slate-500 mb-1">کارکرد ناوگان و ماشین‌آلات</div>
-      <div class="text-base md:text-lg font-black font-mono text-amber-700">{{ (kpiSummary.totalFleetCost / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
-      <div class="text-[10px] text-slate-500 mt-1">{{ kpiSummary.activeFleetCount }} دستگاه ناوگان</div>
-    </div>
-
-    <!-- فاکتورهای جاری -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
-      <div class="text-[11px] font-bold text-slate-500 mb-1">فاکتورها و تن‌خواه</div>
-      <div class="text-base md:text-lg font-black font-mono text-emerald-700">{{ (kpiSummary.totalInvoicesCost / 1000000) | number:'1.0-0' }} <span class="text-[10px] font-normal text-slate-500">م.ت</span></div>
-      <div class="text-[10px] text-slate-500 mt-1">تدارکات و تعمیرات</div>
-    </div>
-
-    <!-- ساعات اضافه‌کاری -->
-    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
-      <div class="text-[11px] font-bold text-slate-500 mb-1">مجموع اضافه‌کاری</div>
-      <div class="text-base md:text-lg font-black font-mono text-rose-700">{{ kpiSummary.overtimeHoursTotal | number }} <span class="text-[10px] font-normal text-slate-500">ساعت</span></div>
-      <div class="text-[10px] text-slate-500 mt-1">ضریب ۱.۴ پایه ۱۰ ساعته</div>
-    </div>
-  </div>
-
-  <!-- ── ۳. محتوای تب‌های فرعی (Tab Views) ── -->
-
-  <!-- تب اول: ماتریس و جدول عملکرد بخش‌ها -->
-  <div *ngIf="activeSubTab === 'kpi_overview' || activeSubTab === 'section_variance'" class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/60">
-      <div class="flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-        <h2 class="text-sm font-black text-slate-900">ماتریس پایش بودجه و عملکرد بخش‌های سازمانی (ماه {{ selectedMonth }})</h2>
-      </div>
-
-      <!-- جستجوی درون‌خطی جدول -->
-      <div class="relative w-full md:w-64">
-        <input
-          type="text"
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="syncUrlParams()"
-          placeholder="جستجوی بخش یا پروژه..."
-          class="w-full bg-white border border-slate-200 text-xs rounded-xl px-3 py-1.5 pr-8 pl-8 focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-400">
-        <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-        <button *ngIf="searchQuery" type="button" (click)="clearSearch()" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs tap-target" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
-      </div>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
-        <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
-          <tr>
-            <th class="py-3 px-3">ردیف</th>
-            <th class="py-3 px-3">عنوان بخش سازمانی</th>
-            <th class="py-3 px-3">پروژه وابسته</th>
-            <th class="py-3 px-3 text-center">پرسنل فعال</th>
-            <th class="py-3 px-3 text-center">ناوگان</th>
-            <th class="py-3 px-3 font-mono">بودجه مصوب (تومان)</th>
-            <th class="py-3 px-3 font-mono">هزینه واقعی (تومان)</th>
-            <th class="py-3 px-3 text-center">درصد انحراف / جذب</th>
-            <th class="py-3 px-3 text-center">وضعیت ریسک</th>
-            <th class="py-3 px-3 text-center">عملیات مدیریتی</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr *ngFor="let item of sectionStats; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-            <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-bold text-slate-900">{{ item.name }}</td>
-            <td class="py-3 px-3 text-slate-600">{{ item.project }}</td>
-            <td class="py-3 px-3 text-center font-mono font-bold text-blue-700">{{ item.personnel }} نفر</td>
-            <td class="py-3 px-3 text-center font-mono font-bold text-amber-700">{{ item.fleet }} دستگاه</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.budget | number }}</td>
-            <td class="py-3 px-3 font-mono font-black" [ngClass]="item.variancePercent > 100 ? 'text-rose-600' : 'text-slate-900'">{{ item.spent | number }}</td>
-            <td class="py-3 px-3 text-center">
-              <div class="flex items-center justify-center gap-1.5">
-                <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div class="h-full rounded-full transition-all"
-                       [style.width.%]="item.variancePercent > 100 ? 100 : item.variancePercent"
-                       [ngClass]="item.variancePercent > 100 ? 'bg-rose-500' : (item.variancePercent > 90 ? 'bg-amber-500' : 'bg-emerald-500')">
-                  </div>
-                </div>
-                <span class="font-mono font-bold text-[11px]" [ngClass]="item.variancePercent > 100 ? 'text-rose-700' : 'text-slate-700'">{{ item.variancePercent }}%</span>
-              </div>
-            </td>
-            <td class="py-3 px-3 text-center">
-              <span *ngIf="item.status === 'normal'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">نرمال</span>
-              <span *ngIf="item.status === 'warning'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">نزدیک به سقف</span>
-              <span *ngIf="item.status === 'danger'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">اضافه هزینه</span>
-            </td>
-            <td class="py-3 px-3 text-center">
-              <button
-                type="button"
-                appAction="forward"
-                display="label"
-                size="sm"
-                label="تنظیم سقف بودجه"
-                (click)="navigateToBudget()">
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- تب دوم: هشدارهای نیازمند اقدام فوری -->
-  <div *ngIf="activeSubTab === 'urgent_alerts'" class="space-y-3">
-    <div *ngFor="let alert of urgentAlerts" class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-      <div class="flex items-start gap-3">
-        <span class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              [ngClass]="alert.type === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : (alert.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-blue-50 text-blue-600 border border-blue-200')">
-          <span *ngIf="alert.type === 'danger'">⚠️</span>
-          <span *ngIf="alert.type === 'warning'">⏳</span>
-          <span *ngIf="alert.type === 'info'">ℹ️</span>
-        </span>
-        <div>
-          <div class="text-xs font-black text-slate-900">{{ alert.title }}</div>
-          <div class="text-[11px] text-slate-600 mt-0.5">{{ alert.description }}</div>
-          <div class="text-[10px] text-slate-400 font-mono mt-1">{{ alert.time }}</div>
-        </div>
-      </div>
+  <!-- نوار بالا -->
+  <div class="sticky top-0 z-30 bg-surface-canvas/95 backdrop-blur-md pt-1 pb-2">
+    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-sm flex flex-wrap items-center justify-between gap-3">
       <div>
-        <button
-          type="button"
-          appAction="forward"
-          display="label"
-          label="بررسی و اقدام"
-          (click)="alert.linkTab === 'manager-approvals' ? navigateToApprovals() : navigateToBudget()">
-        </button>
+        <h1 class="text-sm font-black text-fg">داشبورد مدیریتی</h1>
+        @if (summary(); as s) {
+          <p class="text-[11px] text-fg-muted tabular-nums">هزینهٔ ماه جاری ({{ s.date_from }} تا {{ s.date_to }}) — آخرین به‌روزرسانی: {{ updatedAt() }}</p>
+        }
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" appAction="forward" display="label" label="گزارش‌های مدیریتی" (click)="goToReports()"></button>
+        <button type="button" appAction="refresh" [busy]="loading()" [disabled]="!online() || loading()" (click)="refreshData()"></button>
       </div>
     </div>
   </div>
 
+  @if (!online()) {
+    <p class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2" role="status">{{ offlineMessage }}</p>
+  }
+
+  @if (error()) {
+    <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold px-3 py-2 flex flex-wrap items-center justify-between gap-2" role="alert">
+      <span>{{ error() }}</span>
+      @if (online()) {
+        <button type="button" (click)="refreshData()"
+                class="min-h-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-rose-700 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          تلاش دوباره
+        </button>
+      }
+    </div>
+  }
+
+  <!-- کارت‌های شاخص -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="bg-surface p-3.5 rounded-2xl border border-line shadow-sm">
+      <div class="text-[11px] font-bold text-fg-muted mb-1">هزینهٔ ماه جاری (ریال)</div>
+      <div class="text-base md:text-lg font-black text-purple-700 tabular-nums">{{ summary() ? fmt(summary()!.totals.month_expense) : '—' }}</div>
+    </div>
+    <div class="bg-surface p-3.5 rounded-2xl border border-line shadow-sm">
+      <div class="text-[11px] font-bold text-fg-muted mb-1">پرسنل فعال</div>
+      <div class="text-base md:text-lg font-black text-blue-700 tabular-nums">{{ summary() ? fmt(summary()!.totals.personnel_count) : '—' }}</div>
+    </div>
+    <div class="bg-surface p-3.5 rounded-2xl border border-line shadow-sm">
+      <div class="text-[11px] font-bold text-fg-muted mb-1">خودروی فعال</div>
+      <div class="text-base md:text-lg font-black text-amber-700 tabular-nums">{{ summary() ? fmt(summary()!.totals.vehicle_count) : '—' }}</div>
+    </div>
+    <div class="bg-surface p-3.5 rounded-2xl border border-line shadow-sm flex flex-col justify-between gap-2">
+      <div>
+        <div class="text-[11px] font-bold text-fg-muted mb-1">کارهای من</div>
+        <div class="text-base md:text-lg font-black text-rose-700 tabular-nums">{{ tasks.loaded() ? fmt(tasks.count()) : '—' }}</div>
+        @if (tasks.isStale()) { <div class="text-[10px] text-fg-muted">آخرین داده‌ی ذخیره‌شده</div> }
+      </div>
+      <button type="button" appAction="forward" display="label" size="sm" label="دیدن کارها" (click)="goToMyTasks()"></button>
+    </div>
+  </div>
+
+  <!-- جدول بخش‌ها -->
+  <section class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden" [attr.aria-busy]="loading()">
+    <div class="p-3 border-b border-line-subtle bg-surface-muted">
+      <h2 class="text-sm font-black text-fg">وضع بخش‌ها</h2>
+    </div>
+
+    @if (loading() && !summary()) {
+      <div class="p-3"><app-loading-skeleton /></div>
+    } @else if (!summary()) {
+      @if (!error()) { <p class="text-xs text-fg-muted py-8 text-center">{{ offlineMessage }}</p> }
+    } @else if (rows().length === 0) {
+      <p class="text-xs text-fg-muted py-8 text-center">برای ماه جاری بخشی با داده پیدا نشد.</p>
+    } @else {
+      <div class="hidden md:block overflow-x-auto" [class.opacity-60]="loading()">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
+            <tr>
+              <th scope="col" class="py-2.5 px-3">بخش</th>
+              <th scope="col" class="py-2.5 px-3 text-end">هزینهٔ ماه جاری (ریال)</th>
+              <th scope="col" class="py-2.5 px-3 text-end">پرسنل</th>
+              <th scope="col" class="py-2.5 px-3 text-end">خودرو</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line-subtle">
+            @for (r of rows(); track $index) {
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-fg">{{ r.section_name }}</td>
+                <td class="py-2.5 px-3 text-end tabular-nums text-fg">{{ fmt(r.month_expense) }}</td>
+                <td class="py-2.5 px-3 text-end tabular-nums text-fg">{{ fmt(r.personnel_count) }}</td>
+                <td class="py-2.5 px-3 text-end tabular-nums text-fg">{{ fmt(r.vehicle_count) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="md:hidden p-3 space-y-2">
+        @for (r of rows(); track $index) {
+          <div class="rounded-xl border border-line p-3">
+            <div class="text-xs font-black text-fg mb-2">{{ r.section_name }}</div>
+            <dl class="grid grid-cols-3 gap-2">
+              <div class="min-w-0"><dt class="text-[11px] text-fg-muted">هزینه (ریال)</dt><dd class="text-xs font-bold text-fg tabular-nums break-words">{{ fmt(r.month_expense) }}</dd></div>
+              <div class="min-w-0"><dt class="text-[11px] text-fg-muted">پرسنل</dt><dd class="text-xs font-bold text-fg tabular-nums">{{ fmt(r.personnel_count) }}</dd></div>
+              <div class="min-w-0"><dt class="text-[11px] text-fg-muted">خودرو</dt><dd class="text-xs font-bold text-fg tabular-nums">{{ fmt(r.vehicle_count) }}</dd></div>
+            </dl>
+          </div>
+        }
+      </div>
+    }
+  </section>
 </div>

@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { SKIP_OFFLINE } from '../../../core/interceptors/offline.interceptor';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../../core/error/error.interceptor';
+import type { AccountingReportParams } from '../models/accounting-reports.model';
 import { ApiService } from '../../../core/api/api.service';
 import { OrgAssignmentFilters, OrgAssignmentTarget, OrgStructureApiService } from '../../../core/api/org-structure-api.service';
 import {
@@ -65,8 +69,14 @@ export class TreasuryOrgApiService {
     return this.api.get<any>(`${this.baseUrl}/cartable/accountant/`);
   }
 
-  getManagerCartable(): Observable<any> {
-    return this.api.get<any>(`${this.baseUrl}/cartable/manager/`);
+  /** گزارش‌های حسابداری (۴.۷): فقط آنلاین، بدون کش آفلاین و بدون توست سراسری خطا */
+  getAccountingReport<T>(key: string, params?: AccountingReportParams): Observable<T> {
+    const context = new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true);
+    return this.api.get<T>(`${this.baseUrl}/reports/${key}/`, params as Record<string, unknown>, { context });
+  }
+
+  exportAccountingReport(key: string, params?: AccountingReportParams): Observable<Blob> {
+    return this.api.download(`${this.baseUrl}/reports/${key}/export-excel/`, params as Record<string, unknown>);
   }
 
   getTreasuryCartable(): Observable<any> {

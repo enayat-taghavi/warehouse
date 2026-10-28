@@ -55,7 +55,8 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     'perm_invoice_record',
     'perm_invoice_review',
     'perm_petty_cash_manage',
-    'perm_counterparty_manage'
+    'perm_counterparty_manage',
+    'perm_accounting_reports'
   ];
 
   const managerPerms = [
@@ -69,7 +70,8 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     'view_sys_fleet_settlement',
     'perm_manager_payment_authorize',
     'perm_invoice_record',
-    'perm_petty_cash_manage'
+    'perm_petty_cash_manage',
+    'perm_accounting_reports'
   ];
 
   const treasurerPerms = [
@@ -168,7 +170,8 @@ describe('accounting role menus spec (step 3.5-c)', () => {
   // treasurer has perm_counterparty_manage, so only that item passes; the accountant menu is never shown to the treasury persona
   it('g) cross-role: menus of another role stay empty', () => {
     expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual([]);
-    expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual([]);
+    // the accountant bundle holds perm_accounting_reports, so only the reports page of the manager menu opens (plan 4.7 d8)
+    expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual(['manager-reports']);
     expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual([]);
     expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['accountant-counterparties']);
   });

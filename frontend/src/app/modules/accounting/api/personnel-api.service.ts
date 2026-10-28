@@ -6,6 +6,7 @@ import type { Paginated } from '../../../core/models/api-response.model';
 import { AttendanceApiService } from './attendance-api.service';
 import { PayrollApiService } from './payroll-api.service';
 import { TreasuryOrgApiService } from './treasury-org-api.service';
+import type { AccountingReportParams } from '../models/accounting-reports.model';
 export * from './personnel-api.models';
 import {
   PagedResult,
@@ -206,7 +207,8 @@ export class PersonnelApiService {
   exportFleetBankExcel(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): Observable<Blob> { return this.fleet.exportFleetBankExcel(warehouseId, yearMonth, scope); }
   getSupervisorCartable(): Observable<any> { return this.treasuryOrg.getSupervisorCartable(); }
   getAccountantCartable(): Observable<any> { return this.treasuryOrg.getAccountantCartable(); }
-  getManagerCartable(): Observable<any> { return this.treasuryOrg.getManagerCartable(); }
+  getAccountingReport<T>(key: string, params?: AccountingReportParams): Observable<T> { return this.treasuryOrg.getAccountingReport<T>(key, params); }
+  exportAccountingReport(key: string, params?: AccountingReportParams): Observable<Blob> { return this.treasuryOrg.exportAccountingReport(key, params); }
   getTreasuryCartable(): Observable<any> { return this.treasuryOrg.getTreasuryCartable(); }
   postCartableAction( cartableType: 'supervisor' | 'accountant' | 'manager', data: { action: 'approve' | 'revision' | 'reject'; model: string; id?: number; ids?: number[]; reason?: string; year_month?: string; warehouse_id?: number | null; section_id?: number | null; project_id?: number | null; } ): Observable<any> { return this.treasuryOrg.postCartableAction(cartableType, data); }
   patchDailyAttendance(id: number, data: any): Observable<any> { return this.attendance.patchDailyAttendance(id, data); }

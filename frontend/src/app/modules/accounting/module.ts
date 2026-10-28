@@ -44,7 +44,7 @@ export const MODULE: WhFrontendModule = {
     'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
     'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
     'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-    'perm_invoice_approve', 'perm_invoice_review', 'perm_counterparty_manage', 'view_sys_projects'
+    'perm_invoice_approve', 'perm_invoice_review', 'perm_counterparty_manage', 'view_sys_projects', 'perm_accounting_reports'
   ],
   roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin'],
   personas: ACCOUNTING_PERSONAS,

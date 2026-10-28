@@ -9,7 +9,8 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
     'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
     'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-    'perm_invoice_record', 'perm_invoice_approve', 'perm_invoice_review', 'perm_petty_cash_manage', 'perm_counterparty_manage'
+    'perm_invoice_record', 'perm_invoice_approve', 'perm_invoice_review', 'perm_petty_cash_manage', 'perm_counterparty_manage',
+    'perm_accounting_reports'
   ],
   pagePermissions: {
     'finance-audit': ['view_sys_payroll', 'perm_sys_logs', 'admin_all'],
@@ -53,7 +54,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'manager-dashboard': ['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'admin_all'],
     'manager-budget': ['perm_manager_payment_authorize', 'admin_all'],
     'manager-contracts': ['perm_manager_payment_authorize', 'admin_all'],
-    'manager-reports': ['perm_manager_payment_authorize', 'admin_all'],
+    'manager-reports': ['perm_accounting_reports', 'admin_all'],
     'treasurer-disbursements': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-invoices': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-bank-accounts': ['perm_treasury_disburse_action', 'admin_all'],

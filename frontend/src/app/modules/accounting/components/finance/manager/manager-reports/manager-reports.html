@@ -1,143 +1,293 @@
-<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+<div class="min-h-screen bg-surface-canvas p-3 md:p-6 space-y-3 print:bg-white print:p-0" dir="rtl">
 
-  <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون بخش، دوره و تب‌های فرعی -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-purple-700 focus:outline-none cursor-pointer">
-            <option [ngValue]="null">تلفیق کل بخش‌ها</option>
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
+  <!-- سربرگ چاپ (فقط در چاپ دیده می‌شود) -->
+  <div class="hidden print:block border-b border-line pb-2 mb-2">
+    <h1 class="text-base font-black text-fg">{{ title() }}</h1>
+    <div class="text-xs text-fg-muted mt-1 flex flex-wrap gap-x-4">
+      <span>شرکت: {{ current()?.company }}</span>
+      @if (current()?.range) { <span>{{ current()?.range }}</span> }
+      <span>زمان چاپ: {{ printedAt() }}</span>
+    </div>
+  </div>
+
+  <!-- نوار چسبان: زیرتب‌ها و فیلترها -->
+  <div class="no-print sticky top-0 z-30 bg-surface-canvas/95 backdrop-blur-md pt-1 pb-2">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-2.5 md:p-3 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <app-tab-bar
+          [tabs]="tabs"
+          [active]="activeTab()"
+          mobile="icon"
+          fullLabelFrom="lg"
+          (activeChange)="onTabChange($event)" />
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="inline-flex items-center justify-center gap-1.5 min-w-[40px] min-h-[40px] px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            title="خروجی اکسل"
+            aria-label="خروجی اکسل"
+            [disabled]="!online() || exporting() || loading()"
+            (click)="exportExcel()">
+            <svg appIcon="download" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span class="hidden sm:inline">اکسل</span>
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center gap-1.5 min-w-[40px] min-h-[40px] px-3 rounded-xl border border-line bg-surface text-fg-muted text-xs font-bold hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            title="چاپ گزارش"
+            aria-label="چاپ گزارش"
+            [disabled]="!current()"
+            (click)="print()">
+            <svg appIcon="printer" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span class="hidden sm:inline">چاپ</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div>
+          <label for="rep_company" class="block text-[11px] font-bold text-fg-muted mb-1">شرکت</label>
+          <select id="rep_company" [(ngModel)]="companyId" (ngModelChange)="onCompanyChange()"
+                  class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <option [ngValue]="null">همهٔ شرکت‌ها</option>
+            @for (c of companies(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
           </select>
         </div>
+        <div>
+          <label for="rep_project" class="block text-[11px] font-bold text-fg-muted mb-1">پروژه</label>
+          <select id="rep_project" [(ngModel)]="projectId" (ngModelChange)="onProjectChange()"
+                  class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <option [ngValue]="null">همهٔ پروژه‌ها</option>
+            @for (p of visibleProjects(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+          </select>
+        </div>
+        <div>
+          <label for="rep_section" class="block text-[11px] font-bold text-fg-muted mb-1">بخش</label>
+          <select id="rep_section" [(ngModel)]="sectionId"
+                  class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <option [ngValue]="null">همهٔ بخش‌ها</option>
+            @for (s of visibleSections(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+          </select>
+        </div>
+        @if (activeTab() === 'expense') {
+          <div>
+            <label for="rep_group" class="block text-[11px] font-bold text-fg-muted mb-1">گروه‌بندی بر پایه</label>
+            <select id="rep_group" [(ngModel)]="groupBy"
+                    class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              @for (g of groupByOptions; track g.id) { <option [ngValue]="g.id">{{ g.label }}</option> }
+            </select>
+          </div>
+        }
+        @if (!activeDef().noDates) {
+          <div>
+            <label for="rep_from" class="block text-[11px] font-bold text-fg-muted mb-1">از تاریخ</label>
+            <ng-persian-datepicker
+              [(uiIsVisible)]="fromPickerOpen"
+              [dateInitValue]="false"
+              (dateOnSelect)="onDateSelect('from', $event)"
+              class="block relative">
+              <input id="rep_from" type="text" [formControl]="dateFromCtrl" (click)="fromPickerOpen = !fromPickerOpen"
+                     placeholder="۱۴۰۵/۰۱/۰۱" dir="ltr" autocomplete="off"
+                     class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+            </ng-persian-datepicker>
+          </div>
+          <div>
+            <label for="rep_to" class="block text-[11px] font-bold text-fg-muted mb-1">تا تاریخ</label>
+            <ng-persian-datepicker
+              [(uiIsVisible)]="toPickerOpen"
+              [dateInitValue]="false"
+              (dateOnSelect)="onDateSelect('to', $event)"
+              class="block relative">
+              <input id="rep_to" type="text" [formControl]="dateToCtrl" (click)="toPickerOpen = !toPickerOpen"
+                     placeholder="۱۴۰۵/۰۱/۳۱" dir="ltr" autocomplete="off"
+                     class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+            </ng-persian-datepicker>
+          </div>
+        }
+        <div class="col-span-2 lg:col-span-1 flex items-end">
+          <button
+            type="button"
+            class="w-full inline-flex items-center justify-center gap-1.5 min-h-[40px] px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            title="نمایش گزارش"
+            aria-label="نمایش گزارش"
+            [disabled]="!online() || loading()"
+            (click)="load()">
+            <svg appIcon="search" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>نمایش</span>
+          </button>
+        </div>
+      </div>
 
-        <!-- دوره مالی -->
-        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">دوره آماری:</span>
-          <span class="text-xs font-black text-slate-800 font-mono">{{ selectedMonth }} {{ fiscalYear }}</span>
+      @if (!online()) {
+        <p class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2" role="status">
+          {{ offlineMessage }}
+        </p>
+      }
+    </div>
+  </div>
+
+  <!-- محتوای گزارش -->
+  <section class="bg-surface rounded-2xl border border-line shadow-sm p-3 md:p-4 space-y-3 print:border-0 print:shadow-none print:p-0" [attr.aria-busy]="loading()">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-sm font-black text-fg">{{ title() }}</h2>
+      @if (current(); as cur) {
+        <span class="no-print text-[11px] text-fg-muted tabular-nums">
+          آخرین به‌روزرسانی: {{ cur.at }}
+          @if (asOf()) { <span> — وضع تا {{ asOf() }}</span> }
+        </span>
+      }
+    </div>
+
+    @if (error()) {
+      <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold px-3 py-2 flex flex-wrap items-center justify-between gap-2" role="alert">
+        <span>{{ error() }}</span>
+        @if (online()) {
+          <button type="button" (click)="load()"
+                  class="min-h-[40px] px-3 rounded-xl border border-rose-200 bg-surface text-rose-700 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            تلاش دوباره
+          </button>
+        }
+      </div>
+    }
+
+    @if (loading() && !current()) {
+      <app-loading-skeleton />
+    } @else if (!current()) {
+      @if (!error()) {
+        <p class="text-xs text-fg-muted py-8 text-center">
+          {{ online() ? 'برای دیدن گزارش، فیلترها را تنظیم و «نمایش» را بزنید.' : offlineMessage }}
+        </p>
+      }
+    } @else if (rows().length === 0) {
+      <p class="text-xs text-fg-muted py-8 text-center">برای این فیلترها داده‌ای پیدا نشد.</p>
+    } @else {
+      <div [class.opacity-60]="loading()">
+        <!-- جدول دسکتاپ -->
+        <div class="hidden md:block overflow-x-auto print:block print:overflow-visible print:text-[10px]">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
+              <tr>
+                @for (col of columns(); track col.key) {
+                  <th scope="col" class="py-2.5 px-3" [class.text-end]="col.kind !== 'text'">{{ col.label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line-subtle">
+              @for (row of rows(); track $index) {
+                <tr>
+                  @for (col of columns(); track col.key) {
+                    <td class="py-2.5 px-3 text-fg" [class.text-end]="col.kind !== 'text'" [class.tabular-nums]="col.kind !== 'text'">@if (col.ltr) { <bdi dir="ltr">{{ fmt(row[col.key], col.kind) }}</bdi> } @else { {{ fmt(row[col.key], col.kind) }} }</td>
+                  }
+                </tr>
+              }
+            </tbody>
+            @if (totals(); as tot) {
+              <tfoot class="bg-surface-muted border-t border-line font-black">
+                <tr>
+                  @for (col of columns(); track col.key) {
+                    <td class="py-2.5 px-3 text-fg" [class.text-end]="col.kind !== 'text'" [class.tabular-nums]="col.kind !== 'text'">
+                      @if (col.key === totalLabelKey()) { جمع کل }
+                      @else if (col.kind !== 'text' && tot[col.key] !== undefined) { {{ fmt(tot[col.key], col.kind) }} }
+                    </td>
+                  }
+                </tr>
+              </tfoot>
+            }
+          </table>
         </div>
 
-        <!-- تب‌های فرعی با کامپوننت مشترک (Subtabs Navigation) -->
-        <app-tab-bar
-          [tabs]="reportTabs"
-          [active]="activeSubTab"
-          mobile="short"
-          (activeChange)="switchSubTab($event)"
-        />
+        <!-- کارت‌های موبایل -->
+        <div class="md:hidden print:hidden space-y-2">
+          @for (row of rows(); track $index) {
+            <div class="rounded-xl border border-line p-3">
+              <div class="text-xs font-black text-fg mb-2">{{ fmt(row[columns()[0].key], 'text') }}</div>
+              <dl class="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                @for (col of columns().slice(1); track col.key) {
+                  <div class="min-w-0">
+                    <dt class="text-[11px] text-fg-muted">{{ col.label }}</dt>
+                    <dd class="text-xs font-bold text-fg break-words" [class.tabular-nums]="col.kind !== 'text'">@if (col.ltr) { <bdi dir="ltr">{{ fmt(row[col.key], col.kind) }}</bdi> } @else { {{ fmt(row[col.key], col.kind) }} }</dd>
+                  </div>
+                }
+              </dl>
+            </div>
+          }
+          @if (totals(); as tot) {
+            <div class="rounded-xl border border-line bg-surface-muted p-3">
+              <div class="text-xs font-black text-fg mb-2">جمع کل</div>
+              <dl class="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                @for (col of columns(); track col.key) {
+                  @if (col.kind !== 'text' && tot[col.key] !== undefined) {
+                    <div class="min-w-0">
+                      <dt class="text-[11px] text-fg-muted">{{ col.label }}</dt>
+                      <dd class="text-xs font-bold text-fg tabular-nums">{{ fmt(tot[col.key], col.kind) }}</dd>
+                    </div>
+                  }
+                }
+              </dl>
+            </div>
+          }
+        </div>
       </div>
 
-      <!-- سمت چپ: دکمه‌های اکشن استاندارد و چاپ -->
-      <div class="flex items-center gap-2 justify-end">
-        <button
-          type="button"
-          appAction="print"
-          display="label"
-          label="چاپ گزارش هیئت مدیره"
-          (click)="printReport()">
-        </button>
-
-        <!-- خروجی اکسل -->
-        <button
-          type="button"
-          appAction="export-excel"
-          (click)="exportExcel()">
-        </button>
-
-        <!-- بروزرسانی زنده -->
-        <button
-          type="button"
-          appAction="refresh"
-          [busy]="isLoading"
-          (click)="refreshData()">
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── ۲. جدول بهای تمام‌شده نیروی انسانی ── -->
-  <div *ngIf="activeSubTab === 'labor_costs'" class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-      <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-      <h2 class="text-sm font-black text-slate-900">گزارش تحلیلی بهای تمام‌شده نیروی انسانی و سهم بیمه کارفرما (ماه {{ selectedMonth }})</h2>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
-        <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
-          <tr>
-            <th class="py-3 px-3">ردیف</th>
-            <th class="py-3 px-3">بخش سازمانی</th>
-            <th class="py-3 px-3 text-center">تعداد نفرات</th>
-            <th class="py-3 px-3 font-mono">مزد پایه (تومان)</th>
-            <th class="py-3 px-3 font-mono">اضافه‌کاری قانونی (تومان)</th>
-            <th class="py-3 px-3 font-mono">مزایای رفاهی (تومان)</th>
-            <th class="py-3 px-3 font-mono">بیمه سهم کارفرما ۲۳٪ (تومان)</th>
-            <th class="py-3 px-3 font-mono">بهای تمام‌شده کل (تومان)</th>
-            <th class="py-3 px-3 font-mono">میانگین هزینه هر نفر (تومان)</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr *ngFor="let item of laborReports; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-            <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-bold text-slate-900">{{ item.section_name }}</td>
-            <td class="py-3 px-3 text-center font-mono font-bold text-blue-700">{{ item.headcount }} نفر</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.total_base_wage | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.total_overtime_pay | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.total_allowances | number }}</td>
-            <td class="py-3 px-3 font-mono text-purple-700 font-bold">{{ item.employer_insurance_23pct | number }}</td>
-            <td class="py-3 px-3 font-mono font-black text-slate-900">{{ item.total_cost_to_company | number }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-emerald-700">{{ item.avg_cost_per_person | number }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ── ۳. جدول بهره‌وری و مصارف ناوگان ── -->
-  <div *ngIf="activeSubTab === 'fleet_efficiency'" class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-      <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-      <h2 class="text-sm font-black text-slate-900">گزارش تحلیلی هزینه‌کرد و راندمان ناوگان ترابری</h2>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
-        <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
-          <tr>
-            <th class="py-3 px-3">ردیف</th>
-            <th class="py-3 px-3">بخش سازمانی</th>
-            <th class="py-3 px-3 text-center">تعداد خودرو</th>
-            <th class="py-3 px-3 font-mono">اجاره ثابت (تومان)</th>
-            <th class="py-3 px-3 font-mono">اضافه‌کاری ناوگان (تومان)</th>
-            <th class="py-3 px-3 font-mono">مصرف سوخت (لیتر)</th>
-            <th class="py-3 px-3 font-mono">کل مخارج ناوگان (تومان)</th>
-            <th class="py-3 px-3 font-mono">میانگین هزینه هر دستگاه (تومان)</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr *ngFor="let item of fleetReports; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-            <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-bold text-slate-900">{{ item.section_name }}</td>
-            <td class="py-3 px-3 text-center font-mono font-bold text-amber-700">{{ item.active_vehicles }} دستگاه</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.total_fixed_rent | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.total_overtime_pay | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.total_fuel_liters | number }}</td>
-            <td class="py-3 px-3 font-mono font-black text-slate-900">{{ item.total_fleet_expenditure | number }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-emerald-700">{{ item.avg_cost_per_vehicle | number }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
+      <!-- فهرست ریز صفحه‌بندی‌شده (ماندهٔ فاکتورها و پرداخت‌های بانکی) -->
+      @if (detailPage(); as det) {
+        <div class="pt-2 space-y-2">
+          <h3 class="text-xs font-black text-fg">{{ activeTab() === 'bank-payments' ? 'فهرست پرداخت‌ها' : 'فهرست فاکتورها' }}</h3>
+          @if (det.results.length === 0) {
+            <p class="text-xs text-fg-muted py-4 text-center">مورد ریزی پیدا نشد.</p>
+          } @else {
+            <div class="hidden md:block overflow-x-auto print:block print:overflow-visible print:text-[10px]">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
+                  <tr>
+                    @for (col of detailColumns(); track col.key) {
+                      <th scope="col" class="py-2.5 px-3" [class.text-end]="col.kind !== 'text'">{{ col.label }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-line-subtle">
+                  @for (row of det.results; track $index) {
+                    <tr>
+                      @for (col of detailColumns(); track col.key) {
+                        <td class="py-2.5 px-3 text-fg" [class.text-end]="col.kind !== 'text'" [class.tabular-nums]="col.kind !== 'text'">@if (col.ltr) { <bdi dir="ltr">{{ fmt(row[col.key], col.kind) }}</bdi> } @else { {{ fmt(row[col.key], col.kind) }} }</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="md:hidden print:hidden space-y-2">
+              @for (row of det.results; track $index) {
+                <div class="rounded-xl border border-line p-3">
+                  <div class="text-xs font-black text-fg mb-2">{{ fmt(row[detailColumns()[0].key], 'text') }}</div>
+                  <dl class="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    @for (col of detailColumns().slice(1); track col.key) {
+                      <div class="min-w-0">
+                        <dt class="text-[11px] text-fg-muted">{{ col.label }}</dt>
+                        <dd class="text-xs font-bold text-fg break-words" [class.tabular-nums]="col.kind !== 'text'">@if (col.ltr) { <bdi dir="ltr">{{ fmt(row[col.key], col.kind) }}</bdi> } @else { {{ fmt(row[col.key], col.kind) }} }</dd>
+                      </div>
+                    }
+                  </dl>
+                </div>
+              }
+            </div>
+            @if (pageCount() > 1) {
+              <nav class="no-print flex items-center justify-center gap-3" aria-label="صفحه‌بندی فهرست">
+                <button type="button" class="min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl border border-line bg-surface text-fg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        title="صفحهٔ قبل" aria-label="صفحهٔ قبل" [disabled]="page() <= 1 || loading() || !online()" (click)="goToPage(page() - 1)">
+                  <svg [appIcon]="pageIcons.prev" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                </button>
+                <span class="text-xs font-bold text-fg tabular-nums">صفحهٔ {{ fmt(page(), 'num') }} از {{ fmt(pageCount(), 'num') }}</span>
+                <button type="button" class="min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl border border-line bg-surface text-fg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        title="صفحهٔ بعد" aria-label="صفحهٔ بعد" [disabled]="page() >= pageCount() || loading() || !online()" (click)="goToPage(page() + 1)">
+                  <svg [appIcon]="pageIcons.next" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                </button>
+              </nav>
+            }
+          }
+        </div>
+      }
+    }
+  </section>
 </div>

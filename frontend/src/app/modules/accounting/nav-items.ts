@@ -55,7 +55,7 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
   { id: 'manager-fleet', label: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'perm_approve_fleet_manager', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'manager-approvals', label: 'کارتابل تاییدات', icon: ACCOUNTING_ENTITY_ICONS.approvals, permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-budget', label: 'کنترل بودجه', icon: ACCOUNTING_ENTITY_ICONS.budget, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
-  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
+  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
   { id: 'base-settings', label: 'تنظیمات پایه حقوق', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
 ];
 
