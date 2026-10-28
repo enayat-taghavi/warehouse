@@ -119,7 +119,7 @@
               </td>
               <td class="p-3 font-mono font-bold text-slate-700">
                 <span dir="ltr">{{ item.national_code }}</span>
-                <span *ngIf="isMasked(item.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+                <span *ngIf="isMasked(item.national_code)" class="block text-[11px] font-normal text-fg-muted">برای دیدن کامل مجوز لازم است</span>
                 <button type="button" *ngIf="item.id && !isMasked(item.national_code)" (click)="copyField(item.national_code, 'nc-' + item.id, 'کد ملی')" [title]="isFieldCopied('nc-' + item.id) ? 'کپی شد' : 'کپی کد ملی'" [attr.aria-label]="isFieldCopied('nc-' + item.id) ? 'کپی شد' : 'کپی کد ملی'" class="text-slate-400 hover:text-blue-600 ms-1 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                   <svg *ngIf="isFieldCopied('nc-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                   <svg *ngIf="!isFieldCopied('nc-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
@@ -154,7 +154,7 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
                   <span>فاقد شبا</span>
                 </div>
-                <div *ngIf="isMasked(item.sheba_number) || isMasked(item.account_number)" class="text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</div>
+                <div *ngIf="isMasked(item.sheba_number) || isMasked(item.account_number)" class="text-[11px] text-fg-muted">برای دیدن کامل مجوز لازم است</div>
                 <div *ngIf="item.documents_count && (!item.documents || item.documents.length < item.documents_count)" class="text-[10px] text-fg-muted">تعداد مدرک: {{ item.documents_count | number }}</div>
                 <div class="text-[10px] text-slate-500 flex items-center gap-1">
                   <span>{{ item.bank_name || 'بانک نامشخص' }}</span>
@@ -214,7 +214,7 @@
             <span class="text-slate-500 block">کد ملی:</span>
             <div class="font-mono font-bold text-slate-700 flex items-center gap-1">
               <span dir="ltr">{{ item.national_code }}</span>
-              <span *ngIf="isMasked(item.national_code)" class="text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              <span *ngIf="isMasked(item.national_code)" class="text-[11px] font-normal text-fg-muted">برای دیدن کامل مجوز لازم است</span>
               <button type="button" *ngIf="item.id && !isMasked(item.national_code)" (click)="copyField(item.national_code, 'nc-m-' + item.id, 'کد ملی')" title="کپی کد ملی" aria-label="کپی کد ملی" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center">
                 <svg *ngIf="isFieldCopied('nc-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                 <svg *ngIf="!isFieldCopied('nc-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
@@ -418,7 +418,7 @@
           <tbody class="divide-y divide-slate-100">
             <tr *ngFor="let p of personnelItems" class="hover:bg-slate-50/50">
               <td class="p-3 font-bold text-slate-800">{{ p.first_name }} {{ p.last_name }}</td>
-              <td class="p-3 font-mono font-bold" dir="ltr">{{ p.national_code }}<span *ngIf="isMasked(p.national_code)" class="block text-[10px] font-normal text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
+              <td class="p-3 font-mono font-bold" dir="ltr">{{ p.national_code }}<span *ngIf="isMasked(p.national_code)" class="block text-[11px] font-normal text-fg-muted" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-3 font-mono">{{ p.daily_base_wage ? (p.daily_base_wage | number) + ' ریال' : '—' }}</td>
               <td class="p-3 font-mono">{{ p.insurance_number || 'فاقد بیمه' }}</td>
               <td class="p-3 font-mono text-[11px] text-slate-500" dir="ltr">{{ p.sheba_number ? ('IR' + p.sheba_number) : '—' }}</td>
@@ -859,7 +859,7 @@
             <tr *ngFor="let row of diffFieldRows" [ngClass]="row.is_changed ? 'bg-amber-50/50 font-bold' : ''">
               <td class="p-2.5 text-slate-700">{{ row.field_label }}</td>
               <td class="p-2.5 text-slate-500 line-through">{{ row.old_value }}</td>
-              <td class="p-2.5 text-emerald-700 font-bold" dir="ltr">{{ row.new_value }}<span *ngIf="isMasked(row.new_value) || isMasked(row.old_value)" class="block text-[10px] font-normal text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
+              <td class="p-2.5 text-emerald-700 font-bold" dir="ltr">{{ row.new_value }}<span *ngIf="isMasked(row.new_value) || isMasked(row.old_value)" class="block text-[11px] font-normal text-fg-muted" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-2.5 text-center">
                 <span *ngIf="row.is_changed" class="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800">تغییر یافته</span>
                 <span *ngIf="!row.is_changed" class="text-slate-400 text-[10px]">بدون تغییر</span>

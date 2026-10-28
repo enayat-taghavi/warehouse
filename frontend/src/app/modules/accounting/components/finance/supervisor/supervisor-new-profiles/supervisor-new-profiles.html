@@ -128,13 +128,13 @@
               <td class="p-3 font-bold text-slate-800">{{ item.first_name }} {{ item.last_name }}</td>
               <td class="p-3 font-mono text-slate-600">
                 <span dir="ltr">{{ item.national_code }}</span>
-                <span *ngIf="isMasked(item.national_code)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+                <span *ngIf="isMasked(item.national_code)" class="block text-[11px] font-normal text-fg-muted">برای دیدن کامل مجوز لازم است</span>
               </td>
               <td class="p-3">{{ item.job_title }}</td>
               <td class="p-3 font-mono"><span dir="ltr">{{ item.phone_number || item.mobile }}</span></td>
               <td class="p-3 font-mono text-[11px]">
                 <span dir="ltr">{{ item.sheba_number }}</span>
-                <span *ngIf="isMasked(item.sheba_number)" class="block text-[10px] font-normal text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+                <span *ngIf="isMasked(item.sheba_number)" class="block text-[11px] font-normal text-fg-muted">برای دیدن کامل مجوز لازم است</span>
               </td>
             </tr>
           </tbody>

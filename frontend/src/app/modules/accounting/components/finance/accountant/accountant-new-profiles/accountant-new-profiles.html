@@ -124,7 +124,7 @@
             <div>
               <span class="block text-[10px] text-slate-400 font-bold">کد ملی:</span>
               <span class="font-mono font-black text-slate-800" dir="ltr">{{ p.national_code }}</span>
-              <span *ngIf="isMasked(p.national_code)" class="block text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              <span *ngIf="isMasked(p.national_code)" class="block text-[11px] text-fg-muted">برای دیدن کامل مجوز لازم است</span>
             </div>
             <div>
               <span class="block text-[10px] text-slate-400 font-bold">شماره تماس:</span>
@@ -147,7 +147,7 @@
             <span class="text-slate-600 font-bold">🏦 {{ p.bank_name || 'بانک' }}</span>
             <span class="font-mono font-bold text-slate-800" dir="ltr">{{ p.sheba_number ? (isMasked(p.sheba_number) ? p.sheba_number : formatSheba(p.sheba_number)) : (p.account_number || '—') }}</span>
           </div>
-          <p *ngIf="isMasked(p.sheba_number) || isMasked(p.account_number)" class="text-[10px] text-fg-subtle mt-1">برای دیدن کامل مجوز لازم است</p>
+          <p *ngIf="isMasked(p.sheba_number) || isMasked(p.account_number)" class="text-[11px] text-fg-muted mt-1">برای دیدن کامل مجوز لازم است</p>
           <p *ngIf="p.documents_count && (!p.documents || p.documents.length < p.documents_count)" class="text-[10px] text-fg-muted mt-1">تعداد مدرک: {{ formatNumber(p.documents_count) }}</p>
         </div>
 
@@ -754,7 +754,7 @@
             <tr *ngFor="let row of diffRows" class="hover:bg-slate-50/50">
               <td class="p-2.5 font-bold text-slate-800">{{ row.label }}</td>
               <td class="p-2.5 text-rose-600 font-mono line-through">{{ row.oldValue ?? '—' }}</td>
-              <td class="p-2.5 text-emerald-700 font-mono font-black" dir="ltr">{{ row.newValue ?? '—' }}<span *ngIf="isMasked(row.newValue) || isMasked(row.oldValue)" class="block text-[10px] font-normal text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
+              <td class="p-2.5 text-emerald-700 font-mono font-black" dir="ltr">{{ row.newValue ?? '—' }}<span *ngIf="isMasked(row.newValue) || isMasked(row.oldValue)" class="block text-[11px] font-normal text-fg-muted" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
             </tr>
           </tbody>
         </table>

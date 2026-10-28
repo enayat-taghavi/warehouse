@@ -226,6 +226,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
         ]
       })),
       disburseTreasury: vi.fn().mockReturnValue(of({ success: true, message: 'پرداخت با موفقیت انجام شد' })),
+      getWorkPeriods: vi.fn().mockReturnValue(of([])),
 
       // پروژه‌ها و بخش‌ها
       createFinancialProject: vi.fn().mockImplementation((data: any) => of({ id: 2, ...data, is_active: true })),
@@ -384,6 +385,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
       expect(disbursementsComp.isPayModalOpen).toBe(true);
 
       // ۴. ثبت و ذخیره‌سازی تسویه حواله بانکی
+      disbursementsComp.trackingCodeInput = 'TRK-1001';
       disbursementsComp.confirmDisbursement();
       expect(mockPersonnelApi.disburseTreasury).toHaveBeenCalled();
       expect(mockToast.success).toHaveBeenCalled();

@@ -294,7 +294,7 @@
               <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
                 ⚠️ {{ nationalCodeError }}
               </p>
-              <p *ngIf="isMasked(newPersonnel.national_code)" class="text-[10px] text-fg-subtle font-bold mt-1">{{ maskedHint }}</p>
+              <p *ngIf="isMasked(newPersonnel.national_code)" class="text-[11px] text-fg-muted font-bold mt-1">{{ maskedHint }}</p>
               <p *ngIf="isApprovedRecord" class="text-[10px] text-slate-500 font-bold mt-1">
                 🔒 کد ملی در پرونده‌های مصوب غیرقابل تغییر است.
               </p>
@@ -1293,7 +1293,7 @@
             <!-- کد ملی -->
             <td class="py-2.5 px-3 font-mono font-black text-slate-900 whitespace-nowrap">
               <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px]">
-                <bdi dir="ltr">{{ p.national_code }}</bdi><span *ngIf="isMasked(p.national_code)" class="block text-[10px] text-fg-subtle font-normal">{{ maskedHint }}</span>
+                <bdi dir="ltr">{{ p.national_code }}</bdi><span *ngIf="isMasked(p.national_code)" class="block text-[11px] text-fg-muted font-normal">{{ maskedHint }}</span>
               </span>
             </td>
 
@@ -1550,7 +1550,7 @@
         <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 font-medium">
           <div>
             <span class="text-slate-400">کد ملی: </span>
-            <span class="font-mono font-bold text-slate-800"><bdi dir="ltr">{{ p.national_code }}</bdi><span *ngIf="isMasked(p.national_code)" class="block text-[10px] text-fg-subtle font-normal">{{ maskedHint }}</span></span>
+            <span class="font-mono font-bold text-slate-800"><bdi dir="ltr">{{ p.national_code }}</bdi><span *ngIf="isMasked(p.national_code)" class="block text-[11px] text-fg-muted font-normal">{{ maskedHint }}</span></span>
           </div>
           <div>
             <span class="text-slate-400">سمت: </span>

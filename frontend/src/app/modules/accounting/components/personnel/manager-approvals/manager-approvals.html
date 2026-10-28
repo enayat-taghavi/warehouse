@@ -61,13 +61,13 @@
 
       <div class="flex items-center gap-3">
         <!-- Warehouse Selector -->
-        <select [(ngModel)]="selectedWarehouseId" (change)="personnelPage = 1; onWarehouseChange()" class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+        <select aria-label="پروژه یا کارگاه" [(ngModel)]="selectedWarehouseId" (change)="personnelPage = 1; onWarehouseChange()" class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
           <option [ngValue]="null">همه پروژه‌ها / کارگاه‌ها</option>
           <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{wh.name}}</option>
         </select>
 
         <!-- Search -->
-        <input type="text" [(ngModel)]="personnelSearch" (input)="onPersonnelSearchChange()" placeholder="🔍 جستجوی نام یا کد ملی..." class="w-48 sm:w-60 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <input type="text" [(ngModel)]="personnelSearch" (input)="onPersonnelSearchChange()" placeholder="جستجوی نام یا کد ملی..." aria-label="جستجوی پرسنل" class="w-48 sm:w-60 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
         <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_profile'}"
            class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
            title="تصویب، بازنگری و رد از کارهای من انجام می‌شود" aria-label="رفتن به کارهای من">
@@ -116,7 +116,7 @@
             <div>
               <span class="text-slate-400">کد ملی:</span>
               <span class="font-mono font-bold text-slate-700 mr-1" dir="ltr">{{ p.national_code }}</span>
-              <span *ngIf="isMasked(p.national_code)" class="block text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              <span *ngIf="isMasked(p.national_code)" class="block text-[11px] text-fg-muted">برای دیدن کامل مجوز لازم است</span>
             </div>
             <div>
               <span class="text-slate-400">گروه شغلی:</span>
@@ -128,8 +128,8 @@
             </div>
             <div>
               <span class="text-slate-400">شماره شبا:</span>
-              <span class="font-mono text-[10px] text-slate-700 mr-1 truncate block" dir="ltr" [title]="p.sheba_number">{{ p.sheba_number || '—' }}</span>
-              <span *ngIf="isMasked(p.sheba_number)" class="block text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              <span class="font-mono text-[10px] text-slate-700 truncate block" dir="ltr" [title]="p.sheba_number">{{ p.sheba_number || '—' }}</span>
+              <span *ngIf="isMasked(p.sheba_number)" class="block text-[11px] text-fg-muted">برای دیدن کامل مجوز لازم است</span>
               <span *ngIf="p.documents_count && (!p.documents || p.documents.length < p.documents_count)" class="block text-[10px] text-fg-muted">تعداد مدرک: {{ p.documents_count | number }}</span>
             </div>
           </div>
@@ -162,7 +162,7 @@
         <p>خطا در بارگذاری فهرست پرسنل.</p>
         <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" class="mt-3" (click)="loadPersonnel()"></button>
       </div>
-      <div *ngIf="filteredPersonnel.length === 0 && !isLoading && !loadError" class="col-span-full bg-white rounded-3xl p-12 text-center text-slate-400 border border-slate-200">
+      <div *ngIf="filteredPersonnel.length === 0 && !isLoading && !loadError" class="col-span-full bg-surface rounded-3xl p-8 text-center text-xs text-fg-muted border border-line">
         موردی با شرایط انتخابی یافت نشد.
       </div>
     </div>
@@ -202,13 +202,13 @@
 
       <div class="flex items-center gap-3">
         <!-- Warehouse Selector -->
-        <select [(ngModel)]="selectedWarehouseId" (change)="onWarehouseChange()" class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+        <select aria-label="پروژه یا کارگاه" [(ngModel)]="selectedWarehouseId" (change)="onWarehouseChange()" class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
           <option [ngValue]="null">همه پروژه‌ها / کارگاه‌ها</option>
           <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{wh.name}}</option>
         </select>
 
         <!-- Search -->
-        <input type="text" [(ngModel)]="vehicleSearch" placeholder="🔍 جستجوی راننده یا پلاک..." class="w-48 sm:w-60 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <input type="text" [(ngModel)]="vehicleSearch" placeholder="جستجوی راننده یا پلاک..." aria-label="جستجوی خودرو" class="w-48 sm:w-60 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
       </div>
     </div>
 
@@ -261,7 +261,7 @@
             </div>
             <div>
               <span class="text-slate-400">شماره شبا:</span>
-              <span class="font-mono text-[10px] text-slate-700 mr-1 truncate block" [title]="v.sheba_number">{{ v.sheba_number || '—' }}</span>
+              <span class="font-mono text-[10px] text-slate-700 truncate block" dir="ltr" [title]="v.sheba_number">{{ v.sheba_number || '—' }}</span>
             </div>
           </div>
 
@@ -289,7 +289,7 @@
         </div>
       </div>
 
-      <div *ngIf="filteredVehicles.length === 0 && !isLoading" class="col-span-full bg-white rounded-3xl p-12 text-center text-slate-400 border border-slate-200">
+      <div *ngIf="filteredVehicles.length === 0 && !isLoading" class="col-span-full bg-surface rounded-3xl p-8 text-center text-xs text-fg-muted border border-line">
         موردی با شرایط انتخابی یافت نشد.
       </div>
     </div>
@@ -319,7 +319,7 @@
 
       <!-- Search Input -->
       <div class="flex items-center gap-2">
-        <input type="text" [(ngModel)]="crSearchQuery" (input)="onCrSearchChange()" placeholder="🔍 جستجوی نام، کد ملی، ثبت‌کننده..." class="w-52 sm:w-64 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <input type="text" [(ngModel)]="crSearchQuery" (input)="onCrSearchChange()" placeholder="جستجوی نام، کد ملی، ثبت‌کننده..." aria-label="جستجوی درخواست‌های تغییر" class="w-52 sm:w-64 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
         <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_change'}"
            class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
            title="تصویب، بازنگری و رد از کارهای من انجام می‌شود" aria-label="رفتن به کارهای من">
@@ -348,7 +348,7 @@
             <tr *ngFor="let cr of filteredPersonnelChangeRequests; let idx = index" class="hover:bg-slate-50/50">
               <td class="p-3.5 text-center text-slate-400 font-bold">{{ idx + 1 }}</td>
               <td class="p-3.5 font-bold text-slate-800">{{ cr.personnel_name }}</td>
-              <td class="p-3.5 font-mono text-slate-700" dir="ltr">{{ cr.personnel_national_code || cr.national_code || '-' }}<span *ngIf="isMasked(cr.personnel_national_code) || isMasked(cr.national_code)" class="block text-[10px] text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
+              <td class="p-3.5 font-mono text-slate-700" dir="ltr">{{ cr.personnel_national_code || cr.national_code || '-' }}<span *ngIf="isMasked(cr.personnel_national_code) || isMasked(cr.national_code)" class="block text-[11px] text-fg-muted" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
               <td class="p-3.5 text-slate-600">{{ cr.requested_by_name || cr.created_by_name || 'اپراتور' }}</td>
               <td class="p-3.5">
                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black border" [ngClass]="getApprovalBadgeClass(cr.status)">
@@ -636,7 +636,7 @@
             <tr *ngFor="let row of diffFieldRows" [class.bg-amber-50/30]="row.is_changed">
               <td class="p-2.5 font-bold text-slate-700">{{ row.field_label }}</td>
               <td class="p-2.5 font-mono text-rose-600 line-through">{{ row.old_value }}</td>
-              <td class="p-2.5 font-mono font-bold text-emerald-700" dir="ltr">{{ row.new_value }}<span *ngIf="isMasked(row.new_value) || isMasked(row.old_value)" class="block text-[10px] font-normal text-fg-subtle" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
+              <td class="p-2.5 font-mono font-bold text-emerald-700" dir="ltr">{{ row.new_value }}<span *ngIf="isMasked(row.new_value) || isMasked(row.old_value)" class="block text-[11px] font-normal text-fg-muted" dir="rtl">برای دیدن کامل مجوز لازم است</span></td>
             </tr>
           </tbody>
         </table>

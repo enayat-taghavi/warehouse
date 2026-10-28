@@ -113,7 +113,7 @@
             <div>
               <span class="text-slate-400">کد ملی:</span>
               <span class="font-mono font-bold text-slate-700 mr-1" dir="ltr">{{ p.national_code }}</span>
-              <span *ngIf="isMasked(p.national_code)" class="block text-[10px] text-fg-subtle">برای دیدن کامل مجوز لازم است</span>
+              <span *ngIf="isMasked(p.national_code)" class="block text-[11px] text-fg-muted">برای دیدن کامل مجوز لازم است</span>
             </div>
             <div>
               <span class="text-slate-400">گروه شغلی:</span>
@@ -376,7 +376,7 @@
             <div>
               <label class="block font-bold text-slate-700 mb-1">کد ملی ۱۰ رقمی <span class="text-rose-500">*</span>:</label>
               <input type="text" [(ngModel)]="editingPersonnel.national_code" [disabled]="isMasked(editingPersonnel.national_code)" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-indigo-800 focus:ring-2 focus:ring-indigo-500" placeholder="مثال: 2452304301" />
-              <p *ngIf="isMasked(editingPersonnel.national_code)" class="text-[10px] text-fg-subtle mt-1">{{ maskedHint }}</p>
+              <p *ngIf="isMasked(editingPersonnel.national_code)" class="text-[11px] text-fg-muted mt-1">{{ maskedHint }}</p>
             </div>
 
             <div>
@@ -387,7 +387,7 @@
             <div>
               <label class="block font-bold text-slate-700 mb-1">شماره شناسنامه:</label>
               <input type="text" [(ngModel)]="editingPersonnel.id_number" [disabled]="isMasked(editingPersonnel.id_number)" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono" placeholder="مثال: 1192" />
-              <p *ngIf="isMasked(editingPersonnel.id_number)" class="text-[10px] text-fg-subtle mt-1">{{ maskedHint }}</p>
+              <p *ngIf="isMasked(editingPersonnel.id_number)" class="text-[11px] text-fg-muted mt-1">{{ maskedHint }}</p>
             </div>
 
             <div>
@@ -601,13 +601,13 @@
             <div>
               <label class="block font-bold text-slate-700 mb-1">شماره حساب بانکی:</label>
               <input type="text" [(ngModel)]="editingPersonnel.account_number" [disabled]="isMasked(editingPersonnel.account_number)" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" placeholder="شماره حساب بانک ملی" />
-              <p *ngIf="isMasked(editingPersonnel.account_number)" class="text-[10px] text-fg-subtle mt-1">{{ maskedHint }}</p>
+              <p *ngIf="isMasked(editingPersonnel.account_number)" class="text-[11px] text-fg-muted mt-1">{{ maskedHint }}</p>
             </div>
 
             <div>
               <label class="block font-bold text-slate-700 mb-1">شماره شبا (IBAN):</label>
-              <input type="text" [(ngModel)]="editingPersonnel.sheba_number" [disabled]="isMasked(editingPersonnel.sheba_number)" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-left" dir="ltr" placeholder="IR000000000000000000000000" />
-              <p *ngIf="isMasked(editingPersonnel.sheba_number)" class="text-[10px] text-fg-subtle mt-1">{{ maskedHint }}</p>
+              <input type="text" [(ngModel)]="editingPersonnel.sheba_number" [disabled]="isMasked(editingPersonnel.sheba_number)" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-start disabled:text-fg-muted focus-visible:ring-2 focus-visible:ring-indigo-500 focus:outline-none" placeholder="IR000000000000000000000000" />
+              <p *ngIf="isMasked(editingPersonnel.sheba_number)" class="text-[11px] text-fg-muted mt-1">{{ maskedHint }}</p>
             </div>
 
             <div>
@@ -690,11 +690,11 @@
               </td>
               <td class="p-3 font-mono text-slate-600 bg-slate-50/30" [attr.dir]="isMasked(row.oldValue) ? 'ltr' : null">
                 {{ row.oldValue !== null && row.oldValue !== undefined ? row.oldValue : '—' }}
-                <span *ngIf="isMasked(row.oldValue)" class="block text-[10px] text-fg-subtle font-sans">برای دیدن کامل مجوز لازم است</span>
+                <span *ngIf="isMasked(row.oldValue)" class="block text-[11px] text-fg-muted font-sans">برای دیدن کامل مجوز لازم است</span>
               </td>
               <td class="p-3 font-mono" [ngClass]="row.isDiff ? 'text-indigo-700 bg-indigo-50/60 font-bold' : 'text-slate-700'" [attr.dir]="isMasked(row.newValue) ? 'ltr' : null">
                 {{ row.newValue !== null && row.newValue !== undefined ? row.newValue : '—' }}
-                <span *ngIf="isMasked(row.newValue)" class="block text-[10px] text-fg-subtle font-sans">برای دیدن کامل مجوز لازم است</span>
+                <span *ngIf="isMasked(row.newValue)" class="block text-[11px] text-fg-muted font-sans">برای دیدن کامل مجوز لازم است</span>
               </td>
             </tr>
             <tr *ngIf="diffRows.length === 0">
