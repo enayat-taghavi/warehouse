@@ -14,7 +14,7 @@ import {
   NavItem
 } from './nav-items';
 import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
-import { resolveAccountingRoleCodes } from './personas';
+import { resolveAccountingRoleCodes, isAccountingRouteDeniedForRole } from './personas';
 
 describe('accounting role menus spec (step 3.5-c)', () => {
   const routeAllowed = (perms: string[]) => (id: string) => {
@@ -123,8 +123,12 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'accountant-petty-cash',
       'accountant-diskettes',
       'accountant-counterparties',
-      'base-settings'
+      'base-settings',
+      'manager-reports'
     ]);
+    // the accountant persona opens the reports page (plan 4.7 d8) but no other manager page
+    expect(isAccountingRouteDeniedForRole('accountant', '/app/finance/manager-reports')).toBe(false);
+    expect(isAccountingRouteDeniedForRole('accountant', '/app/finance/manager-dashboard')).toBe(true);
   });
 
   it('d) manager bundle: resolves manager persona and manager menu items', () => {

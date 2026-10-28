@@ -3205,7 +3205,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 2 — Release v1 stage 4 final close-out on the local app environment: backup, migration 0019, the four open-workflow commands, a temporary QA scenario company, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] [ ] Session 1 of 2 — Release v1 stage 4 final close-out on the local app environment: backup, migration 0019, the four open-workflow commands, a temporary QA scenario company, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

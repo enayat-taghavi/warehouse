@@ -22,7 +22,8 @@ import { DashboardSummary } from '../../../../models/accounting-reports.model';
 })
 export class ManagerDashboardComponent implements OnInit {
   private readonly api = inject(PersonnelApiService);
-  private readonly network = inject(NetworkStatusService);
+  // NetworkStatusService is a singleton (getInstance), not a DI provider; tests may still provide a mock
+  private readonly network = inject(NetworkStatusService, { optional: true }) ?? NetworkStatusService.getInstance();
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly tasks = inject(WorkflowTasksService);

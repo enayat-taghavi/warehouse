@@ -47,6 +47,7 @@ export const ACCOUNTANT_NAV_ITEMS: NavItem[] = [
   { id: 'accountant-counterparties', label: 'طرف‌حساب‌های مالی', icon: ACCOUNTING_ENTITY_ICONS.counterparties, permission: 'perm_counterparty_manage', module: 'accounting', isAccounting: true },
   { id: 'profiles', label: 'بانک پرونده‌ها', icon: ACCOUNTING_ENTITY_ICONS.profilesArchive, permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
   { id: 'base-settings', label: 'تنظیمات پایه حقوق', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
 ];
 
 export const MANAGER_NAV_ITEMS: NavItem[] = [

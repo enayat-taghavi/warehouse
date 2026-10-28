@@ -176,7 +176,8 @@ export class ManagerReportsComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly api = inject(PersonnelApiService);
   private readonly companyApi = inject(CompanyApiService);
-  private readonly network = inject(NetworkStatusService);
+  // NetworkStatusService is a singleton (getInstance), not a DI provider; tests may still provide a mock
+  private readonly network = inject(NetworkStatusService, { optional: true }) ?? NetworkStatusService.getInstance();
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
