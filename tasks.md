@@ -2753,3 +2753,46 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Verification: the test command passes with 0 failed and guardian 56 ends with its success line.
 
 6. Output: commit with message `fix(release-v1 4.3-c): personnel cartable accessibility and tokens`. Report in English: items done per file, test and guardian 56 result. Then stop.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 4.4-b: attendance period scenario API tests
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/modules/accounting/personnel/test_attendance_44.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/modules/accounting/personnel/test_attendance_44.py --contains "attendance_period_locked" --contains "action_blocked" --contains "wrong_step" --contains "attendance_open_workflows" --contains "READY_TO_PAY" --contains "REVISION_REQUIRED" --contains "override_reason" --absent "skip(" --absent "expectedFailure"
+verify: set DB_TEST_NAME=test_agy_attendance44b&& python scripts/automation/verify_tools.py django-tests --labels personnel.test_attendance_44 --min-tests 8
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(release-v1 4.4-b): attendance period scenario API tests"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_attendance_44.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commits `adbb5eaa` and `f9e0a2bb`; read only these):
+- `scratch/handoff_4_4_b1.md` (period workflow on the engine: endpoints `periods/workflow-action/`, `periods/<id>/submit|approve|reject|lock|unlock/`, statuses, error codes, `attendance_open_workflows`).
+- `scratch/handoff_4_4_b2.md` (write guard, lock code `attendance_period_locked`, override fields `is_override` + `override_reason`, scope rules, pagination).
+- `backend/modules/accounting/personnel/test_attendance_44_engine.py` (whole file): working fixtures for a company, project, section, users with section permissions, a period and engine actions. COPY its imports and setUp pattern into your new class `Attendance44ScenarioTests(TestCase)`; do not import or subclass from it. Use different usernames and company codes (prefix `a44s_`, codes `A44S-...`).
+- `backend/modules/accounting/personnel/test_attendance_44_scope_lock.py` lines 1-120: fixtures with `grant_section_perms`, `lock_period`, and calls to bulk-save, monthly grid and clear-day. Copy the request shapes you need.
+- `backend/core/workflow/tests/test_api.py` lines 20-50: the my-tasks API (`GET /api/workflow/tasks/`, `POST /api/workflow/tasks/<task_id>/action/` with `{"action": "act"}`).
+- Engine models: `from workflow.models import WorkflowInstance, WorkflowTask` (open task of a period: `WorkflowTask.objects.filter(instance__entity_kind='attendance_period', instance__entity_id=<id>, is_open=True)`).
+
+3. Task — `class Attendance44ScenarioTests(TestCase)` with these tests (one method each):
+- a) `test_full_flow_to_ready_to_pay`: two `PENDING_SUPERVISOR` attendance rows in the section period; the registrar submits the period → status `SUBMITTED`; the manager acts before the accountant → 400 with code `wrong_step`; supervisor approves → `SUBMITTED_SUPERVISOR` and both attendance rows are `APPROVED` with `AttendanceAuditLog` rows; accountant acts → `SUBMITTED_ACCOUNTANT`; manager acts → `READY_TO_PAY` with `locked_at` set; a `WorkflowInstance` with `entity_kind='attendance_period'` for that period is completed.
+- b) `test_revision_row_blocks_supervisor`: one attendance row set to `REVISION_REQUIRED`; after submit (or, if submit itself is refused, assert that refusal) the supervisor approval returns 400 with code `action_blocked`; the period status does not advance.
+- c) `test_return_for_fix_reopens_editing`: submitted period; the supervisor returns it with a reason → period `REVISION_REQUIRED`; a daily bulk-save on that month now succeeds (200); returning without a reason → 400.
+- d) `test_no_self_approval`: a user holding both the attendance and the supervisor permission submits the period, then tries to approve it as supervisor → 400 or 403, never 200.
+- e) `test_unlock_ready_to_pay`: take a period to `READY_TO_PAY` (reuse helper code from test a); unlock without a reason → 400; unlock by a user without `perm_lock_work_period` → 403 or 404; unlock with a reason by a holder of `perm_lock_work_period` in the section → period `OPEN`; a monthly grid save on that month then succeeds.
+- f) `test_lock_on_write_paths_and_override`: submitted period; monthly grid save of a changed cell → 400 `attendance_period_locked`; the same grid save sending only an unchanged existing cell → 200; clear-day → 400 `attendance_period_locked`; single `PATCH /api/personnel/attendance/<id>/` → 400 `attendance_period_locked`; a superuser bulk-save with `is_override` true and no `override_reason` → 400; with `override_reason` → 200 and an `AttendanceAuditLog` row containing the reason.
+- g) `test_open_workflows_command_idempotent`: create a sectioned period directly with status `SUBMITTED_SUPERVISOR` (no engine instance); `call_command('attendance_open_workflows')` (capture stdout with `io.StringIO`) → one open `WorkflowTask` at step `accountant_review` and the period status unchanged; run it again → still exactly one `WorkflowInstance`; also `call_command('attendance_open_workflows', '--dry-run')` on a fresh period creates nothing.
+- h) `test_scope_and_offline_compat`: a user of another company gets 404 on the period detail and on `GET /api/personnel/attendance/<id>/`; `POST /api/personnel/periods/` with the other company's `section_id` → 404 and no period is created; an old-style single `POST /api/personnel/attendance/` without `section` (offline queue shape: personnel, date_shamsi, status, effective_hours) → 201; posting the same personnel, day and section twice leaves exactly one active (`is_deleted=False`) row; AGENTS §6: a row saved with status `LEAVE` has `effective_hours == 0` and `overtime_hours == 0` after a bulk-save.
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/` and `backend/core/workflow/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_attendance_44 --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.4-b): attendance period scenario API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
