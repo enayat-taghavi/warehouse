@@ -30,8 +30,20 @@ import {
   PersonnelDocument,
   PersonnelCostEstimate,
   VehicleBankAccount,
-  VehicleDocument
+  VehicleDocument,
+  FleetPeriodStatus
 } from './personnel-api.models';
+import type { Paginated } from '../../../core/models/api-response.model';
+
+/** دامنهٔ تسویهٔ ناوگان: دورهٔ بخش یا بخش (۴.۶-ب) */
+export interface FleetSettlementScope { period_id?: number | null; section_id?: number | null }
+
+function fleetScopeParams(scope?: FleetSettlementScope): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (scope?.period_id) out['period_id'] = scope.period_id;
+  else if (scope?.section_id) out['section_id'] = scope.section_id;
+  return out;
+}
 
 @Injectable({ providedIn: 'root' })
 export class FleetApiService {
@@ -108,10 +120,9 @@ export class FleetApiService {
     return this.api.post<any>(`${this.baseUrl}/vehicles/${id}/reject/`, { reason });
   }
 
-  requestVehicleRevision(id: number, reason: string, targetStage?: 'employee' | 'supervisor'): Observable<any> {
-    const payload: any = { reason };
-    if (targetStage) payload.target_stage = targetStage;
-    return this.api.post<any>(`${this.baseUrl}/vehicles/${id}/request-revision/`, payload);
+  // عودت همیشه به ثبت‌کننده برمی‌گردد (۴.۶-ب)؛ مقصد عودت دیگر فرستاده نمی‌شود
+  requestVehicleRevision(id: number, reason: string): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/vehicles/${id}/request-revision/`, { reason });
   }
 
   getVehicleRateBenchmark(vehicleId: number): Observable<{
@@ -237,21 +248,45 @@ export class FleetApiService {
     return this.api.post<any>(`${this.baseUrl}/vehicle-change-requests/${id}/reject/`, { reason });
   }
 
-  calculateFleetSettlement(warehouseId: number | null | undefined, yearMonth: string): Observable<any> {
-    const params: any = { year_month: yearMonth };
+  requestVehicleChangeRequestRevision(id: number, reason: string): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/vehicle-change-requests/${id}/request-revision/`, { reason });
+  }
+
+  /** فهرست صفحه‌بندی‌شدهٔ خودروها (فقط وقتی page فرستاده شود سرور صفحه‌بندی می‌کند) */
+  getVehicleProfilesPage(params: { page: number; page_size?: number; section_id?: number; company_id?: number; approval_status?: string; search?: string; is_active?: boolean }): Observable<Paginated<VehicleDriverProfile>> {
+    return this.api.get<Paginated<VehicleDriverProfile>>(`${this.baseUrl}/vehicles/`, params);
+  }
+
+  getVehicleChangeRequestsPage(params: { page: number; page_size?: number; status?: string; search?: string; company_id?: number; section_id?: number }): Observable<Paginated<VehicleChangeRequest>> {
+    return this.api.get<Paginated<VehicleChangeRequest>>(`${this.baseUrl}/vehicle-change-requests/`, params);
+  }
+
+  /** ارسال کارکرد ماهانهٔ ناوگان یک بخش به گردش تأیید (۴.۶) */
+  submitFleetPeriod(data: { period_id: number } | { section_id: number; year_month: string }): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/trips/submit-fleet-period/`, data, { context: new HttpContext().set(SKIP_OFFLINE, true) });
+  }
+
+  getFleetPeriodStatus(sectionId: number, yearMonth: string): Observable<FleetPeriodStatus> {
+    return this.api.get<FleetPeriodStatus>(`${this.baseUrl}/trips/fleet-period-status/`, { section_id: sectionId, year_month: yearMonth });
+  }
+
+  calculateFleetSettlement(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): Observable<any> {
+    const params: any = { year_month: yearMonth, ...fleetScopeParams(scope) };
     if (warehouseId) {
       params.warehouse_id = warehouseId;
     }
     return this.api.get<any>(`${this.baseUrl}/fleet-settlement/calculate/`, params);
   }
 
-  getFleetBankExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string): string {
+  getFleetBankExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): string {
     const whParam = warehouseId ? `&warehouse_id=${warehouseId}` : '';
-    return `/api/personnel/fleet-settlement/export-bank-excel/?year_month=${yearMonth}${whParam}`;
+    const scopeParams = Object.entries(fleetScopeParams(scope)).map(([k, v]) => `&${k}=${v}`).join('');
+    return `/api/personnel/fleet-settlement/export-bank-excel/?year_month=${yearMonth}${whParam}${scopeParams}`;
   }
 
-  exportFleetBankExcel(warehouseId: number | null | undefined, yearMonth: string): Observable<Blob> {
-    const params: Record<string, unknown> = { year_month: yearMonth };
+  /** اکسل بانک فقط برای دورهٔ تأییدشده؛ وگرنه سرور 400 با کد fleet_not_approved می‌دهد */
+  exportFleetBankExcel(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): Observable<Blob> {
+    const params: Record<string, unknown> = { year_month: yearMonth, ...fleetScopeParams(scope) };
     if (warehouseId) params['warehouse_id'] = warehouseId;
     return this.api.download(`${this.baseUrl}/fleet-settlement/export-bank-excel/`, params);
   }

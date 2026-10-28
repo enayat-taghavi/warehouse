@@ -9,7 +9,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection } from '../../../../models/personnel.model';
+import { ProjectSection, TreasuryFleetPeriod } from '../../../../models/personnel.model';
 import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ModalFocus } from '../../../../../../core/utils/modal-focus';
@@ -36,12 +36,23 @@ export function treasuryErrorMessage(err: any, fallback: string): string {
       return msg || 'این فیش قابل پرداخت جداگانه نیست.';
     case 'tracking_code_required':
       return TRACKING_CODE_REQUIRED_FA;
+    case 'fleet_period_required':
+      return 'برای پرداخت ناوگان باید یک دورهٔ ماهانه انتخاب شود.';
     default:
       break;
   }
   if (err?.status === 404) return 'مورد پیدا نشد یا به آن دسترسی ندارید.';
   if (err?.status === 403) return msg || 'شما مجوز این اقدام را ندارید.';
   return msg || fallback;
+}
+
+const FLEET_MONTH_NAMES_FA = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+
+/** «۱۴۰۵/۰۴» نمایشی: نام ماه شمسی و سال، بدون دست‌زدن به مقدار ارسالی به سرور */
+export function fleetYearMonthLabel(yearMonth: string): string {
+  const [y, m] = (yearMonth || '').split('/');
+  const name = FLEET_MONTH_NAMES_FA[Number(m) - 1];
+  return name ? `${name} ${new Intl.NumberFormat('fa-IR', { useGrouping: false }).format(Number(y))}` : (yearMonth || '—');
 }
 
 export interface DisbursementQueueItem {
@@ -136,10 +147,13 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     total_disbursement_queue: 0
   };
   readyPeriods: ReadyPayrollPeriod[] = [];
+  /** دوره‌های ماهانهٔ ناوگانِ تأییدشدهٔ مدیر و آمادهٔ پرداخت (۴.۶) */
+  fleetPeriods: TreasuryFleetPeriod[] = [];
+  readonly fleetYearMonthLabel = fleetYearMonthLabel;
 
   // مودال پرداخت یکجا: کل حقوق یک دوره یا همهٔ سفرهای ناوگان در صف.
   // amount تهی یعنی رکوردهای دوره در صف این صفحه نیستند و مبلغ را سرور هنگام ثبت حساب می‌کند.
-  batchModal: { kind: 'period' | 'fleet'; title: string; amount: number | null; periodId?: number; tripIds?: number[] } | null = null;
+  batchModal: { kind: 'period' | 'fleet'; title: string; amount: number | null; periodId?: number } | null = null;
   batchTrackingCode = '';
   batchIdValue = '';
   batchPaymentMethod = 'PAYA';
@@ -275,11 +289,6 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       .reduce((sum, item) => sum + item.amount, 0);
   }
 
-  /** سفرهای ناوگانِ در صف پرداخت (برای تسویهٔ گروهی) */
-  get pendingFleetItems(): DisbursementQueueItem[] {
-    return this.items.filter(x => x.type === 'fleet' && x.status === 'pending_payment');
-  }
-
   private readonly network = NetworkStatusService.getInstance();
   readonly offlineHintFa = TREASURY_OFFLINE_HINT_FA;
   trackingCodeError = '';
@@ -353,22 +362,21 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     this.batchFocus.open('treasury-batch-dialog');
   }
 
-  openFleetBatchModal(): void {
-    const fleet = this.pendingFleetItems;
-    if (fleet.length === 0) {
-      this.toast.info('سرویس ناوگان معلقی جهت تسویه وجود ندارد.');
+  openFleetPeriodModal(period: TreasuryFleetPeriod): void {
+    if (!this.isOnline) {
+      this.toast.error(TREASURY_OFFLINE_HINT_FA);
       return;
     }
     this.batchModal = {
       kind: 'fleet',
-      title: `تسویه گروهی سفرهای ناوگان (${fleet.length} سفر)`,
-      amount: fleet.reduce((sum, x) => sum + x.amount, 0),
-      tripIds: fleet.map(x => x.id)
+      title: `تسویه ناوگان ${period.section_name || ''} ${fleetYearMonthLabel(period.year_month)} (${period.trips_count} سفر)`,
+      amount: Number(period.total_payable || 0),
+      periodId: period.id
     };
     this.batchTrackingCode = '';
     this.batchTrackingCodeError = '';
     this.batchServerError = '';
-    this.batchIdValue = `BATCH-FLEET-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+    this.batchIdValue = '';
     this.batchPaymentMethod = 'PAYA';
     this.cdr.detectChanges();
     this.batchFocus.open('treasury-batch-dialog');
@@ -395,16 +403,9 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     this.batchTrackingCodeError = '';
     this.batchServerError = '';
 
-    const payload: any = {
-      action: this.batchModal.kind === 'period' ? 'disburse_period' : 'disburse_fleet',
-      tracking_code: trackingCode,
-      batch_id: this.batchIdValue.trim()
-    };
-    if (this.batchModal.kind === 'period') {
-      payload.period_id = this.batchModal.periodId;
-    } else {
-      payload.trip_ids = this.batchModal.tripIds || [];
-    }
+    const payload: any = this.batchModal.kind === 'period'
+      ? { action: 'disburse_period', period_id: this.batchModal.periodId, tracking_code: trackingCode, batch_id: this.batchIdValue.trim() }
+      : { action: 'disburse_fleet', period_id: this.batchModal.periodId, tracking_code: trackingCode };
 
     this.isSubmittingBatch = true;
     this.personnelApi.disburseTreasury(payload).subscribe({
@@ -463,13 +464,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       payload.batch_id = this.batchIdInput.trim();
     }
 
-    if (this.payingItem.type === 'payroll') {
-      payload.action = 'disburse_single_payroll';
-      payload.payroll_id = this.payingItem.id;
-    } else {
-      payload.action = 'disburse_fleet';
-      payload.trip_ids = [this.payingItem.id];
-    }
+    payload.action = 'disburse_single_payroll';
+    payload.payroll_id = this.payingItem.id;
 
     this.isSubmittingSingle = true;
     this.personnelApi.disburseTreasury(payload).subscribe({
@@ -538,6 +534,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
           total_disbursement_queue: Number(data?.total_disbursement_queue || 0)
         };
         this.readyPeriods = Array.isArray(data?.periods) ? data.periods : [];
+        this.fleetPeriods = Array.isArray(data?.fleet_periods) ? data.fleet_periods : [];
 
         // Map Payrolls
         if (data?.payrolls && Array.isArray(data.payrolls)) {

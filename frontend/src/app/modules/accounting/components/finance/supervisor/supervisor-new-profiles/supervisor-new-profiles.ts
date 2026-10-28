@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { FLEET_OFFLINE_HINT_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText } from '../../fleet-workflow-ui';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -38,6 +40,13 @@ export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_req
   styleUrl: './supervisor-new-profiles.css'
 })
 export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
+  readonly offlineHint = FLEET_OFFLINE_HINT_FA;
+  private readonly fleetNetwork = NetworkStatusService.getInstance();
+  get isOnline(): boolean { return this.fleetNetwork.isOnline; }
+  vehicleErrorText(err: any, fallback: string): string {
+    return fleetWorkflowErrorText(err, fallback, VEHICLE_FIELD_LABELS_FA);
+  }
+
   activeSubTab: SupervisorNewProfilesSubTab = 'personnel';
 
   mySections: ProjectSection[] = [];
@@ -365,7 +374,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.error('خطا در تایید خودرو: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error('خطا در تایید خودرو: ' + this.vehicleErrorText(err, err.message || 'نامشخص'));
       }
     });
   }
@@ -377,7 +386,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
         this.fetchProfiles();
       },
       error: (err: any) => {
-        this.toast.error('خطا در عودت خودرو: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error('خطا در عودت خودرو: ' + this.vehicleErrorText(err, err.message || 'نامشخص'));
       }
     });
   }
@@ -396,7 +405,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.error('خطا در تایید تغییرات ناوگان: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error('خطا در تایید تغییرات ناوگان: ' + this.vehicleErrorText(err, err.message || 'نامشخص'));
       }
     });
   }
@@ -420,7 +429,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
         this.fetchProfiles();
       },
       error: (err: any) => {
-        this.reasonServerError = err?.error?.error || err?.error?.detail || 'خطا در رد تغییرات ناوگان';
+        this.reasonServerError = this.vehicleErrorText(err, 'خطا در رد تغییرات ناوگان');
       }
     });
   }

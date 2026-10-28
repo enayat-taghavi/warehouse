@@ -1,7 +1,9 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { FLEET_OFFLINE_HINT_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText } from '../../fleet-workflow-ui';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -32,6 +34,7 @@ export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
     TabBarComponent,
     CommandCenterComponent,
     ExternalLinkDirective,
+    RouterLink,
   ],
   templateUrl: './supervisor-fleet.html',
   styleUrl: './supervisor-fleet.css',
@@ -116,6 +119,13 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   selectedVehicleIds = new Set<number>();
   isBatchApproveModalOpen = false;
   batchApprovalNote = '';
+  batchResults: Array<{ id: number; plate_number?: string; success: boolean; error?: string }> = [];
+  readonly offlineHint = FLEET_OFFLINE_HINT_FA;
+  private readonly network = NetworkStatusService.getInstance();
+  get isOnline(): boolean { return this.network.isOnline; }
+  workflowErrorText(err: any, fallback: string): string {
+    return fleetWorkflowErrorText(err, fallback, VEHICLE_FIELD_LABELS_FA);
+  }
   isBatchApproving = false;
 
   // پنجره تایید با یادداشت
@@ -381,15 +391,18 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     this.personnelApi.batchApproveVehicles(ids, 'supervisor', this.batchApprovalNote).subscribe({
       next: (res: any) => {
         this.isBatchApproving = false;
-        const succCount = (res?.results || []).filter((r: any) => r.success).length;
-        this.toast.showSuccess(`تایید گروهی سرپرست برای ${succCount} خودرو با موفقیت ثبت شد.`);
+        const results: Array<{ id: number; plate_number?: string; success: boolean; error?: string }> = res?.results || [];
+        this.batchResults = results;
+        const succCount = results.filter(r => r.success).length;
+        if (succCount > 0) this.toast.showSuccess(`تایید گروهی سرپرست برای ${succCount} خودرو با موفقیت ثبت شد.`);
+        if (results.some(r => !r.success)) this.toast.showWarning('برای برخی خودروها تایید انجام نشد؛ نتیجهٔ هر ردیف را ببینید.');
         this.selectedVehicleIds.clear();
         this.closeBatchApproveModal();
         this.fetchFleetData();
       },
       error: (err: any) => {
         this.isBatchApproving = false;
-        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید گروهی سرپرست');
+        this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت تایید گروهی سرپرست'));
       }
     });
   }
@@ -464,7 +477,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isApproving = false;
-          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در ثبت تایید سرپرست');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت تایید سرپرست'));
         }
       });
     } else if (type === 'work_logs') {
@@ -478,7 +491,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در تایید کارکرد');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در تایید کارکرد'));
         }
       });
     } else if (type === 'changes') {
@@ -491,7 +504,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err: any) => {
           this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در تایید تغییرات');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در تایید تغییرات'));
         }
       });
     }
@@ -556,7 +569,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           },
           error: (err: any) => {
             this.isRejecting = false;
-            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در عودت پرونده خودرو');
+            this.toast.showError(this.workflowErrorText(err, 'خطا در عودت پرونده خودرو'));
           }
         });
       } else {
@@ -573,7 +586,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           },
           error: (err: any) => {
             this.isRejecting = false;
-            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در رد پرونده خودرو');
+            this.toast.showError(this.workflowErrorText(err, 'خطا در رد پرونده خودرو'));
           }
         });
       }
@@ -588,7 +601,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || 'خطا در ثبت عودت کارکرد');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت عودت کارکرد'));
         }
       });
     } else if (type === 'changes') {
@@ -601,7 +614,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err: any) => {
           this.isRejecting = false;
-          this.toast.showError(err?.error?.error || 'خطا در رد درخواست تغییرات');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در رد درخواست تغییرات'));
         }
       });
     }

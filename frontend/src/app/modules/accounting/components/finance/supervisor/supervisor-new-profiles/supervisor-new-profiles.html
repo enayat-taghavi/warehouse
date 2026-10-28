@@ -161,7 +161,15 @@
 
     <!-- تب خودروهای جدید -->
     <div *ngIf="!isLoading && activeSubTab === 'vehicles'">
-      <div *ngIf="vehicleItems.length === 0" class="p-12 text-center space-y-3">
+      <div class="flex justify-end">
+      <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'vehicle_profile'}"
+         class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+         title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+        <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>سابقه و پیگیری در کارهای من</span>
+      </a>
+    </div>
+    <div *ngIf="vehicleItems.length === 0" class="p-12 text-center space-y-3">
         <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
           🚗
         </div>
@@ -198,6 +206,8 @@
                     size="sm"
                     display="label"
                     label="تایید ناوگان"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openApprovalModal('vehicle', item)">
                   </button>
                   <button
@@ -206,6 +216,8 @@
                     size="sm"
                     display="label"
                     label="عودت"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="rejectVehicle(item)">
                   </button>
                 </div>
@@ -315,7 +327,15 @@
       </div>
 
       <!-- جدول تغییرات ناوگان -->
-      <div *ngIf="vehicleChangeRequests.length > 0" class="overflow-x-auto border-t border-slate-200 first:border-t-0">
+      <div class="flex justify-end">
+      <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'vehicle_change'}"
+         class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+         title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+        <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>سابقه و پیگیری در کارهای من</span>
+      </a>
+    </div>
+    <div *ngIf="vehicleChangeRequests.length > 0" class="overflow-x-auto border-t border-slate-200 first:border-t-0">
         <div class="px-4 py-2.5 bg-slate-50 font-black text-xs text-indigo-900 flex items-center justify-between border-b border-slate-100">
           <div class="flex items-center gap-2">
             <span>🚗 درخواست‌های تغییرات ناوگان مصوب</span>
@@ -375,7 +395,8 @@
                     size="sm"
                     display="label"
                     label="تایید سرپرست"
-                    hint="تایید مرحله اول سرپرست و ارسال به حسابداری"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? 'تایید مرحله اول سرپرست و ارسال به حسابداری' : offlineHint"
                     (click)="openApprovalModal('vehicle_cr', cr)">
                   </button>
                   <button
@@ -383,7 +404,8 @@
                     appAction="reject"
                     size="sm"
                     label="عودت"
-                    hint="رد تغییرات ناوگان"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? 'رد تغییرات ناوگان' : offlineHint"
                     (click)="rejectVehicleChange(cr)">
                   </button>
                 </div>
@@ -486,6 +508,8 @@
           type="button"
           appAction="reject"
           label="عودت تغییرات"
+          [disabled]="!isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           (click)="rejectVehicleChange(selectedDiffCR)">
         </button>
         <button
@@ -494,6 +518,8 @@
           appAction="approve"
           display="label"
           label="تایید"
+          [disabled]="!isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           (click)="openApprovalModal('vehicle_cr', selectedDiffCR)">
         </button>
       </div>
@@ -543,9 +569,10 @@
           type="button"
           appAction="approve"
           [busy]="isApproving"
-          [disabled]="isApproving"
+          [disabled]="isApproving || !isOnline"
           display="label"
           label="تایید و ارسال به حسابداری"
+          [hint]="isOnline ? '' : offlineHint"
           (click)="confirmApproval()">
         </button>
       </div>

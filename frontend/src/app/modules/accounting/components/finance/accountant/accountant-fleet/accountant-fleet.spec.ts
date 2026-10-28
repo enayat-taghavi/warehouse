@@ -55,9 +55,10 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
       getMySections: vi.fn().mockReturnValue(of([{ id: 3, name: 'دالان کارگاه' }])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
       getVehicleProfiles: vi.fn().mockReturnValue(of([mockVehicle])),
+      getVehicleProfilesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockVehicle] })),
       getAvailableFiscalYears: vi.fn().mockReturnValue(of({ years: ['1405', '1404'] })),
       calculateFleetSettlement: vi.fn().mockReturnValue(of({
-        summary: { total_vehicles_count: 2, active_contractor_count: 1, total_fleet_trips: 20, total_payable_settlement: 280000000 },
+        summary: { total_vehicles_count: 2, active_contractor_count: 1, total_fleet_trips: 20, total_payable_settlement: 280000000, fleet_approved: true, fleet_workflow_status: 'approved' },
         records: [
           { plate_number: '12-345-67', driver_name: 'اکبر کریمی', trip_count: 20, gross_amount: 280000000, payable_amount: 280000000, is_payable: true },
           { plate_number: '98-765-43', driver_name: 'خودرو شرکتی', trip_count: 5, gross_amount: 0, payable_amount: 0, is_payable: false }
@@ -153,7 +154,7 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
     component.fiscalYear = '1405';
     component.selectedMonth = 'شهریور';
     component.loadSettlement();
-    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(null, '1405/06');
+    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(null, '1405/06', undefined);
     expect(component.settlementItems.length).toBe(2);
     expect(component.settlementSummary?.total_payable_settlement).toBe(280000000);
     expect(component.statusCounters.settlementPending).toBe(1);
@@ -164,7 +165,33 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
     component.selectedMonth = 'تیر';
     component.selectedWarehouseId = 26;
     component.loadSettlement();
-    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(26, '1405/04');
+    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(26, '1405/04', undefined);
+  });
+
+  it('7b. should pass the section scope to settlement and block bank excel until the fleet is approved', () => {
+    component.fiscalYear = '1405';
+    component.selectedMonth = 'تیر';
+    component.selectedSectionId = 3;
+    mockPersonnelApi.calculateFleetSettlement.mockReturnValue(of({
+      summary: { fleet_approved: false, fleet_workflow_status: 'in_progress' },
+      records: [{ plate_number: '12-345-67', is_payable: true, payable_amount: 5 }]
+    }));
+    component.loadSettlement();
+    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(null, '1405/04', { section_id: 3 });
+    expect(component.fleetApproved).toBe(false);
+    expect(component.bankExcelDisabled).toBe(true);
+    component.exportFleetBankExcel();
+    expect(mockPersonnelApi.exportFleetBankExcel).not.toHaveBeenCalled();
+  });
+
+  it('7c. should show per-row batch results and map action_blocked to Persian field labels', () => {
+    mockPersonnelApi.batchApproveVehicles.mockReturnValue(of({ results: [{ id: 1, plate_number: 'A', success: true }, { id: 2, plate_number: 'B', success: false, error: 'ناقص' }] }));
+    component.selectedVehicleIds.add(1);
+    component.selectedVehicleIds.add(2);
+    component.confirmBatchApproval();
+    expect(component.batchResults.length).toBe(2);
+    const msg = component.workflowErrorText({ error: { code: 'action_blocked', error: 'ناقص', missing_fields: ['sheba_number'] } }, 'x');
+    expect(msg).toContain('شماره شبا');
   });
 
   it('8. should approve vehicle change request (finance stage) with optional note', () => {
@@ -189,8 +216,13 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
     (window.URL as any).revokeObjectURL = revokeUrl;
     component.fiscalYear = '1405';
     component.selectedMonth = 'مرداد';
+    // اکسل بانک فقط برای دورهٔ تأییدشدهٔ مدیر (۴.۶-ب)
+    component.settlementSummary = { fleet_approved: true } as any;
+    component.settlementItems = [{ id: 1 }] as any;
+    component.isSettlementLoading = false;
+    (component as any).settlementError = '';
     component.exportFleetBankExcel();
-    expect(mockPersonnelApi.exportFleetBankExcel).toHaveBeenCalledWith(null, '1405/05');
+    expect(mockPersonnelApi.exportFleetBankExcel).toHaveBeenCalledWith(null, '1405/05', undefined);
     expect(mockToast.showSuccess).toHaveBeenCalled();
   });
 
@@ -218,20 +250,11 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
     expect(component.rateBenchmark?.count).toBe(5);
   });
 
-  it('13. should support dual-destination revision (supervisor vs employee)', () => {
+  it('13. return always goes to the creator (no destination choice)', () => {
     component.openRejectModal(55, '12-345-67', 'vehicle', 'revision');
-    expect(component.revisionDestination).toBe('supervisor');
     component.rejectReason = 'نیاز به بررسی میدانی کارکرد دارد';
-
     component.submitRejectModal();
-    expect(mockPersonnelApi.requestVehicleRevision).toHaveBeenCalledWith(55, 'نیاز به بررسی میدانی کارکرد دارد', 'supervisor');
-
-    // تغییر مقصد به کارمند
-    component.openRejectModal(55, '12-345-67', 'vehicle', 'revision');
-    component.revisionDestination = 'employee';
-    component.rejectReason = 'اصلاح شماره شبا راننده';
-    component.submitRejectModal();
-    expect(mockPersonnelApi.requestVehicleRevision).toHaveBeenCalledWith(55, 'اصلاح شماره شبا راننده', 'employee');
+    expect(mockPersonnelApi.requestVehicleRevision).toHaveBeenCalledWith(55, 'نیاز به بررسی میدانی کارکرد دارد');
   });
 
   it('14. should support batch approval for accountant stage on eligible vehicles', () => {

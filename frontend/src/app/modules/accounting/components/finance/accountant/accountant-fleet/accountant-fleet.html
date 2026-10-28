@@ -106,6 +106,28 @@
     </div>
   </div>
 
+  <div class="flex justify-end">
+    <a routerLink="/app/my-tasks"
+       [queryParams]="{workflow: activeSubTab === 'changes' ? 'vehicle_change' : (activeSubTab === 'settlement' ? 'fleet_period' : 'vehicle_profile')}"
+       class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+       title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+      <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>سابقه و پیگیری در کارهای من</span>
+    </a>
+  </div>
+
+  <!-- نتیجهٔ هر ردیف تایید گروهی -->
+  <div *ngIf="batchResults.length > 0" class="bg-surface rounded-2xl border border-line p-3 space-y-1.5" role="status">
+    <p class="text-xs font-black text-fg">نتیجهٔ تایید گروهی</p>
+    <ul class="space-y-1 text-[11px]">
+      <li *ngFor="let r of batchResults" [ngClass]="r.success ? 'text-emerald-700' : 'text-rose-700'">
+        <bdi class="font-mono font-bold">{{ r.plate_number || ('#' + r.id) }}</bdi>:
+        {{ r.success ? 'تایید شد' : (r.error || 'تایید نشد') }}
+      </li>
+    </ul>
+    <button type="button" class="tap-target text-[11px] font-bold text-indigo-700 underline" (click)="batchResults = []" aria-label="بستن نتیجه" title="بستن نتیجه">بستن</button>
+  </div>
+
   <!-- نوار عملیات گروهی تایید مالی (Batch Approval Floating Bar) -->
   <div *ngIf="activeSubTab === 'new' && selectedVehicleIds.size > 0"
        class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 fade-in duration-150">
@@ -119,6 +141,8 @@
         appAction="approve"
         display="label"
         label="تایید گروهی"
+        [disabled]="!isOnline"
+        [hint]="isOnline ? '' : offlineHint"
         (click)="openBatchApprovalModal()">
       </button>
       <button
@@ -227,8 +251,8 @@
                     type="button"
                     appAction="approve"
                     label="تایید مالی"
-                    [disabled]="!canSendToManager(item)"
-                    [hint]="!canSendToManager(item) ? getMissingFieldsSummary(item).join('، ') : 'تایید مالی و ارسال به مدیر'"
+                    [disabled]="!canSendToManager(item) || !isOnline"
+                    [hint]="!isOnline ? offlineHint : (!canSendToManager(item) ? getMissingFieldsSummary(item).join('، ') : 'تایید مالی و ارسال به مدیر')"
                     (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')">
                   </button>
                   <button
@@ -236,6 +260,8 @@
                     type="button"
                     appAction="return"
                     label="عودت"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'revision')">
                   </button>
                   <button
@@ -243,6 +269,8 @@
                     type="button"
                     appAction="reject"
                     label="رد"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'reject')">
                   </button>
                 </div>
@@ -315,7 +343,8 @@
             appAction="approve"
             display="label"
             label="تایید مالی"
-            [disabled]="!canSendToManager(item)"
+            [disabled]="!canSendToManager(item) || !isOnline"
+            [hint]="isOnline ? '' : offlineHint"
             (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')">
           </button>
           <button
@@ -324,6 +353,8 @@
             appAction="return"
             display="label"
             label="عودت"
+            [disabled]="!isOnline"
+            [hint]="isOnline ? '' : offlineHint"
             (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'revision')">
           </button>
         </div>
@@ -352,15 +383,21 @@
         <span class="text-base font-black text-emerald-700 tabular-nums">{{ settlementSummary ? ((settlementSummary.total_payable_settlement || 0) | number) : '—' }}</span>
       </div>
     </div>
-    <div class="flex justify-end">
+    <div class="flex items-center justify-between gap-2 flex-wrap">
+      <span *ngIf="settlementSummary" class="text-[11px] font-bold px-2.5 py-1 rounded-lg border"
+            [ngClass]="fleetApproved ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'">
+        وضعیت دورهٔ ناوگان: {{ fleetStatusFa(settlementSummary.fleet_workflow_status, settlementSummary.fleet_approved) }}
+        <span *ngIf="!fleetApproved">؛ فایل بانکی بعد از تایید مدیر فعال می‌شود</span>
+      </span>
+      <span *ngIf="!settlementSummary"></span>
       <button
         type="button"
         appAction="download"
         display="label"
         label="اکسل بانکی"
         [busy]="isExportingFleetBank"
-        [disabled]="isExportingFleetBank || isSettlementLoading || settlementError || settlementItems.length === 0"
-        [hint]="settlementItems.length === 0 ? 'برای این دوره ردیف تسویه‌ای وجود ندارد' : 'فایل پرداخت بانکی کرایهٔ رانندگان این دوره و دامنه'"
+        [disabled]="bankExcelDisabled"
+        [hint]="bankExcelHint"
         (click)="exportFleetBankExcel()">
       </button>
     </div>
@@ -473,12 +510,16 @@
                     appAction="approve"
                     display="label"
                     label="تایید مالی"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openApprovalModal(cr.id, cr.plate_number || ('درخواست #' + cr.id), 'vehicle_cr')">
                   </button>
                   <button
                     type="button"
                     appAction="reject"
                     label="رد"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openRejectModal(cr.id, cr.plate_number || '', 'vehicle_cr', 'reject')">
                   </button>
                 </div>
@@ -521,6 +562,21 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <div *ngIf="allCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs border-t border-line">
+        <button type="button" (click)="goToAllPage(allPage - 1)" [disabled]="allPage <= 1"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+          title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+          <span class="hidden sm:inline">قبلی</span>
+        </button>
+        <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ allPage | number }} از {{ allTotalPages | number }}</span>
+        <button type="button" (click)="goToAllPage(allPage + 1)" [disabled]="allPage >= allTotalPages"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+          title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
+          <span class="hidden sm:inline">بعدی</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -755,33 +811,6 @@
       <div class="p-4 space-y-3 text-xs">
         <p class="font-bold text-fg">{{ rejectTarget?.title }}</p>
 
-        <!-- تسک ۹.۵: انتخاب مقصد عودت -->
-        <div *ngIf="rejectTarget?.action === 'revision' && rejectTarget?.type === 'vehicle'" class="space-y-2 p-3 bg-surface-alt rounded-xl border border-line">
-          <label class="block font-bold text-fg">مقصد عودت پرونده:</label>
-          <div class="space-y-1.5">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="dest"
-                value="supervisor"
-                [(ngModel)]="revisionDestination"
-                class="text-indigo-600 focus:ring-indigo-500" />
-              <span class="font-bold text-fg">عودت به سرپرست کارگاه</span>
-              <span class="text-muted text-[10px]">(بررسی مجدد کارکرد و شرایط فنی)</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="dest"
-                value="employee"
-                [(ngModel)]="revisionDestination"
-                class="text-indigo-600 focus:ring-indigo-500" />
-              <span class="font-bold text-fg">عودت به کارمند ثبت‌کننده</span>
-              <span class="text-muted text-[10px]">(اصلاح اطلاعات هویتی و مدارک)</span>
-            </label>
-          </div>
-        </div>
-
         <label class="block font-bold text-fg">علت نقص مدارک یا دلیل عودت (الزامی):</label>
         <textarea
           [(ngModel)]="rejectReason"
@@ -801,7 +830,8 @@
           [appAction]="rejectTarget?.action === 'revision' ? 'return' : 'reject'"
           display="label"
           [busy]="isSubmittingReject"
-          [disabled]="isSubmittingReject"
+          [disabled]="isSubmittingReject || !isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           [label]="rejectTarget?.action === 'revision' ? 'عودت برای اصلاح' : 'رد قطعی'"
           (click)="submitRejectModal()">
         </button>
@@ -844,7 +874,8 @@
           appAction="approve"
           display="label"
           [busy]="isBatchApproving"
-          [disabled]="isBatchApproving"
+          [disabled]="isBatchApproving || !isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           label="تایید و ارسال"
           (click)="confirmBatchApproval()">
         </button>

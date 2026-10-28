@@ -1,13 +1,15 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest } from '../../../../models/personnel.model';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { FLEET_OFFLINE_HINT_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText, fleetWorkflowStatusFa } from '../../fleet-workflow-ui';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { SmartDeleteModalComponent } from '../../../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
@@ -28,7 +30,8 @@ export type ManagerFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
     SmartDeleteModalComponent,
     SvgIconDirective,
     ActionButtonComponent,
-    TabBarComponent
+    TabBarComponent,
+    RouterLink
   ],
   templateUrl: './manager-fleet.html',
   styleUrl: './manager-fleet.css'
@@ -107,6 +110,14 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
   // لیست‌های داده
   newVehiclesList: VehicleDriverProfile[] = [];
   settlementItems: any[] = [];
+  settlementSummary: { fleet_approved?: boolean; fleet_workflow_status?: string | null; period_id?: number | null } | null = null;
+  readonly offlineHint = FLEET_OFFLINE_HINT_FA;
+  private readonly network = NetworkStatusService.getInstance();
+  get isOnline(): boolean { return this.network.isOnline; }
+  readonly fleetStatusFa = fleetWorkflowStatusFa;
+  workflowErrorText(err: any, fallback: string): string {
+    return fleetWorkflowErrorText(err, fallback, VEHICLE_FIELD_LABELS_FA);
+  }
   changeRequests: VehicleChangeRequest[] = [];
   allVehiclesList: VehicleDriverProfile[] = [];
 
@@ -295,16 +306,18 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     // ۲. تسویه‌حساب و کارکرد ماهانه ناوگان
     const m = this.monthMap[this.selectedMonth] || '04';
     const yearMonth = `${this.fiscalYear}/${m}`;
-    this.personnelApi.calculateFleetSettlement(null, yearMonth).subscribe({
+    this.personnelApi.calculateFleetSettlement(null, yearMonth, this.selectedSectionId ? { section_id: this.selectedSectionId } : undefined).subscribe({
       next: (res: any) => {
         // پاسخ بک‌اند `{ summary, records }` است؛ خودروی شرکتی مبلغ تسویه ندارد (is_payable=false)
         const rows = Array.isArray(res?.records) ? res.records : [];
         this.settlementItems = rows;
+        this.settlementSummary = res?.summary || null;
         this.statusCounters.settlementPending = rows.filter((x: any) => x.is_payable && Number(x.payable_amount || 0) > 0).length;
         this.cdr.detectChanges();
       },
       error: () => {
         this.settlementItems = [];
+        this.settlementSummary = null;
       }
     });
 
@@ -373,7 +386,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isApproving = false;
-          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در تصویب نهایی خودرو');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در تصویب نهایی خودرو'));
         }
       });
     } else {
@@ -386,7 +399,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در تصویب تغییرات');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در تصویب تغییرات'));
         }
       });
     }
@@ -419,14 +432,14 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
       if (this.rejectActionType === 'return_to_accountant') {
         this.personnelApi.requestVehicleRevision(id, this.rejectReason.trim()).subscribe({
           next: () => {
-            this.toast.showSuccess('پرونده جهت بازنگری نرخ و مدارک به کارتابل حسابدار عودت داده شد.');
+            this.toast.showSuccess('پرونده برای اصلاح به ثبت‌کننده عودت داده شد.');
             this.isSubmittingReject = false;
             this.closeRejectModal();
             this.fetchFleetData();
           },
           error: (err) => {
             this.isSubmittingReject = false;
-            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در عودت پرونده به حسابدار');
+            this.toast.showError(this.workflowErrorText(err, 'خطا در عودت پرونده'));
           }
         });
       } else {
@@ -439,7 +452,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             this.isSubmittingReject = false;
-            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در رد پرونده خودرو');
+            this.toast.showError(this.workflowErrorText(err, 'خطا در رد پرونده خودرو'));
           }
         });
       }
@@ -453,7 +466,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSubmittingReject = false;
-          this.toast.showError(err?.error?.detail || 'خطا در رد درخواست');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در رد درخواست'));
         }
       });
     }

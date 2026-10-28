@@ -467,6 +467,34 @@ export interface VehicleMonthlyGridResponse {
   is_locked: boolean;
   period_status: string;
   rows: VehicleMonthlyGridRow[];
+  period_id?: number | null;
+  fleet_period_id?: number | null;
+  fleet_workflow_status?: string | null;
+  fleet_workflow_step?: string | null;
+  fleet_approved?: boolean;
+  fleet_locked?: boolean;
+}
+
+/** وضعیت گردش کارکرد ماهانهٔ ناوگان یک بخش (۴.۶) */
+export interface FleetPeriodStatus {
+  period_id: number | null;
+  total_payable: number;
+  fleet_period_id: number | null;
+  fleet_workflow_status: string | null;
+  fleet_workflow_step: string | null;
+  fleet_approved: boolean;
+  fleet_locked: boolean;
+}
+
+/** دورهٔ ناوگان آمادهٔ پرداخت در کارتابل خزانه (۴.۶) */
+export interface TreasuryFleetPeriod {
+  id: number;
+  year_month: string;
+  section_id: number | null;
+  section_name: string;
+  company_id: number | null;
+  total_payable: number;
+  trips_count: number;
 }
 
 export interface VehicleTripAuditLog {

@@ -21,6 +21,7 @@ describe('TreasurerDisbursementsComponent — قابلیت‌های منتقل�
       { id: 1, period: 40, period_year_month: '1405/06', personnel_name: 'علی', payable_amount: 100, payment_status: 'READY_TO_PAY' },
       { id: 2, period: 41, period_year_month: '1405/05', personnel_name: 'سارا', payable_amount: 200, payment_status: 'FAILED_SHEBA', payment_failure_reason: 'شبا نامعتبر' }
     ],
+    fleet_periods: [{ id: 90, year_month: '1405/06', section_id: 10, section_name: 'S', company_id: 1, total_payable: 50, trips_count: 2 }],
     trips: [
       { id: 7, driver_name: 'رضا', plate_number: '11-111-11', total_amount: 20, is_settled: false },
       { id: 8, driver_name: 'حسن', plate_number: '22-222-22', total_amount: 30, is_settled: false }
@@ -75,15 +76,15 @@ describe('TreasurerDisbursementsComponent — قابلیت‌های منتقل�
     expect(component.batchModal).toBeNull();
   });
 
-  it('3. settles all queued fleet trips in one batch', () => {
-    component.openFleetBatchModal();
-    expect(component.batchModal?.tripIds).toEqual([7, 8]);
+  it('3. pays one fleet period by period_id with a tracking code', () => {
+    component.openFleetPeriodModal(component.fleetPeriods[0]);
+    expect(component.batchModal?.periodId).toBe(90);
     expect(component.batchModal?.amount).toBe(50);
     component.batchTrackingCode = 'FLEET-1';
     component.submitBatchDisbursement();
-    expect(mockPersonnelApi.disburseTreasury).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'disburse_fleet', tracking_code: 'FLEET-1', trip_ids: [7, 8]
-    }));
+    expect(mockPersonnelApi.disburseTreasury).toHaveBeenCalledWith({
+      action: 'disburse_fleet', period_id: 90, tracking_code: 'FLEET-1'
+    });
   });
 
   it('4. downloads PAYA and SATNA diskettes per period', () => {

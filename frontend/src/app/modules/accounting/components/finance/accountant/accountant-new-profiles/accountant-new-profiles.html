@@ -256,6 +256,8 @@
             label="تایید مالی"
             display="label"
             class="flex-1 justify-center"
+            [disabled]="!isOnline"
+            [hint]="isOnline ? '' : offlineHint"
             (click)="approveVehicleFinance(v)">
           </button>
           <button
@@ -263,6 +265,8 @@
             appAction="return"
             label="عودت"
             display="label"
+            [disabled]="!isOnline"
+            [hint]="isOnline ? '' : offlineHint"
             (click)="openRejectModal(v.id!, v.plate_number, 'vehicle', 'revision')">
           </button>
           <button
@@ -270,6 +274,8 @@
             appAction="reject"
             label="رد"
             display="label"
+            [disabled]="!isOnline"
+            [hint]="isOnline ? '' : offlineHint"
             (click)="openRejectModal(v.id!, v.plate_number, 'vehicle', 'reject')">
           </button>
         </div>
@@ -277,6 +283,14 @@
       </div>
     </div>
 
+    <div class="flex justify-end">
+      <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'vehicle_profile'}"
+         class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+         title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+        <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>سابقه و پیگیری در کارهای من</span>
+      </a>
+    </div>
     <div *ngIf="vehicleItems.length === 0 && !isLoading" class="bg-surface rounded-3xl p-8 text-center border border-line text-xs text-fg-muted">
       هیچ خودرویی با فیلترهای جاری در این بخش یافت نشد.
     </div>
@@ -356,11 +370,21 @@
             appAction="approve"
             label="تایید مالی"
             display="label"
+            [disabled]="!isOnline"
+            [hint]="isOnline ? '' : offlineHint"
             (click)="approveChangeRequestFinance(vcr)">
           </button>
         </div>
       </div>
-      <div *ngIf="vehicleChangeRequests.length === 0" class="p-6 bg-surface rounded-2xl text-center text-xs text-fg-muted">
+      <div class="flex justify-end">
+      <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'vehicle_change'}"
+         class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+         title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+        <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>سابقه و پیگیری در کارهای من</span>
+      </a>
+    </div>
+    <div *ngIf="vehicleChangeRequests.length === 0" class="p-6 bg-surface rounded-2xl text-center text-xs text-fg-muted">
         درخواست تغییرات معلقی برای خودروها وجود ندارد.
       </div>
     </div>
@@ -691,7 +715,8 @@
           [label]="rejectTarget.action === 'reject' ? 'ثبت رد پرونده' : 'ارسال به بازنگری'"
           display="label"
           [busy]="isSubmittingReject"
-          [disabled]="isSubmittingReject"
+          [disabled]="isSubmittingReject || !isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           (click)="submitRejectModal()">
         </button>
       </div>

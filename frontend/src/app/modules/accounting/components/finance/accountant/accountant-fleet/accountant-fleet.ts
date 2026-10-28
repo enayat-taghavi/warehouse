@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -33,13 +33,15 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { FLEET_OFFLINE_HINT_FA, FLEET_NOT_APPROVED_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText, fleetWorkflowStatusFa } from '../../fleet-workflow-ui';
 
 export type AccountantFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 
 @Component({
   selector: 'app-accountant-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, LoadingSkeletonComponent, TabBarComponent, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, LoadingSkeletonComponent, TabBarComponent, ActionButtonComponent, RouterLink],
   templateUrl: './accountant-fleet.html',
   styleUrl: './accountant-fleet.css',
   host: { '(document:keydown.escape)': 'onApprovalEscape()', '(document:keydown)': 'onDocumentKeydown($event)' }
@@ -122,9 +124,65 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     total_fleet_trips?: number;
     total_payable_settlement?: number;
     period_status?: string;
+    fleet_approved?: boolean;
+    fleet_workflow_status?: string | null;
+    period_id?: number | null;
+    section_id?: number | null;
   } | null = null;
   settlementError = false;
   isSettlementLoading = false;
+  readonly offlineHint = FLEET_OFFLINE_HINT_FA;
+  private readonly network = NetworkStatusService.getInstance();
+  get isOnline(): boolean { return this.network.isOnline; }
+  readonly fleetStatusFa = fleetWorkflowStatusFa;
+
+  // صفحه‌بندی تب «همه»
+  readonly pageSize = 20;
+  allPage = 1;
+  allCount = 0;
+  get allTotalPages(): number { return Math.max(1, Math.ceil(this.allCount / this.pageSize)); }
+  goToAllPage(p: number): void {
+    const next = Math.min(Math.max(1, p), this.allTotalPages);
+    if (next === this.allPage) return;
+    this.allPage = next;
+    this.loadAllVehiclesPage();
+  }
+  loadAllVehiclesPage(): void {
+    const params: any = { page: this.allPage, page_size: this.pageSize };
+    if (this.selectedSectionId) params.section_id = this.selectedSectionId;
+    if (this.searchQuery.trim()) params.search = this.searchQuery.trim();
+    this.personnelApi.getVehicleProfilesPage(params).subscribe({
+      next: (res) => {
+        this.allVehiclesList = res?.results || [];
+        this.allCount = res?.count ?? this.allVehiclesList.length;
+        this.statusCounters.allTotal = this.allCount;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        if (err?.status === 404 && this.allPage > 1) { this.allPage = 1; this.loadAllVehiclesPage(); }
+      }
+    });
+  }
+
+  /** دامنهٔ تسویه: فقط وقتی بخش انتخاب شده است */
+  private get settlementScope(): { section_id?: number } | undefined {
+    return this.selectedSectionId ? { section_id: this.selectedSectionId } : undefined;
+  }
+
+  get fleetApproved(): boolean { return !!this.settlementSummary?.fleet_approved; }
+  get bankExcelHint(): string {
+    if (!this.isOnline) return this.offlineHint;
+    if (this.settlementItems.length === 0) return 'برای این دوره ردیف تسویه‌ای وجود ندارد';
+    if (!this.fleetApproved) return FLEET_NOT_APPROVED_FA;
+    return 'فایل پرداخت بانکی کرایهٔ رانندگان این دوره و دامنه';
+  }
+  get bankExcelDisabled(): boolean {
+    return this.isExportingFleetBank || this.isSettlementLoading || this.settlementError || this.settlementItems.length === 0 || !this.fleetApproved || !this.isOnline;
+  }
+  /** پیام فارسی خطای گردش‌کار */
+  workflowErrorText(err: any, fallback: string): string {
+    return fleetWorkflowErrorText(err, fallback, VEHICLE_FIELD_LABELS_FA);
+  }
   changeRequests: VehicleChangeRequest[] = [];
   allVehiclesList: VehicleDriverProfile[] = [];
 
@@ -171,12 +229,12 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   approvalTarget: { id: number; title: string; type: 'vehicle' | 'vehicle_cr' } | null = null;
   approvalNote = '';
   isApproving = false;
+  batchResults: Array<{ id: number; plate_number?: string; success: boolean; error?: string }> = [];
 
   // تسک ۹.۵: مودال ثبت علت عودت یا رد همراه با عودت دومقصده
   isRejectModalOpen = false;
   rejectTarget: { id: number; title: string; type: 'vehicle' | 'vehicle_cr'; action: 'reject' | 'revision' } | null = null;
   rejectReason = '';
-  revisionDestination: 'supervisor' | 'employee' = 'supervisor';
   isSubmittingReject = false;
 
   // مودال مقایسه تفاوت‌ها (Diff Viewer)
@@ -343,12 +401,11 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     if (this.selectedSectionId) baseParams.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) baseParams.search = this.searchQuery.trim();
 
+    this.loadAllVehiclesPage();
     // ۱. دریافت خودروهای جدید در انتظار تایید مالی حسابدار
     this.personnelApi.getVehicleProfiles(baseParams).subscribe({
       next: (res: VehicleDriverProfile[]) => {
         const allList = res || [];
-        this.allVehiclesList = allList;
-        this.statusCounters.allTotal = allList.length;
         this.newVehiclesList = allList.filter(v => v.approval_status === 'pending_accountant' || v.approval_status === 'supervisor_approved');
         this.statusCounters.newPending = this.newVehiclesList.length;
 
@@ -393,7 +450,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.isSettlementLoading = true;
     this.settlementItems = [];
     this.settlementSummary = null;
-    this.personnelApi.calculateFleetSettlement(this.selectedWarehouseId, this.yearMonth).subscribe({
+    this.personnelApi.calculateFleetSettlement(this.selectedWarehouseId, this.yearMonth, this.settlementScope).subscribe({
       next: (res: any) => {
         const rows = Array.isArray(res?.records) ? res.records : [];
         this.isSettlementLoading = false;
@@ -414,17 +471,18 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
 
   /** فایل پرداخت بانکی تسویه ناوگان */
   exportFleetBankExcel(): void {
+    if (this.bankExcelDisabled) return;
     this.isExportingFleetBank = true;
-    this.personnelApi.exportFleetBankExcel(this.selectedWarehouseId, this.yearMonth).subscribe({
+    this.personnelApi.exportFleetBankExcel(this.selectedWarehouseId, this.yearMonth, this.settlementScope).subscribe({
       next: (blob: Blob) => {
         this.isExportingFleetBank = false;
         void saveBlob(blob, `Fleet_Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.showSuccess('فایل پرداخت بانکی تسویه ناوگان با موفقیت صادر گردید.');
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err: any) => {
         this.isExportingFleetBank = false;
-        this.toast.showError('خطا در صدور فایل پرداخت بانکی ناوگان.');
+        this.toast.showError(this.workflowErrorText(err, 'خطا در صدور فایل پرداخت بانکی ناوگان.'));
         this.cdr.detectChanges();
       }
     });
@@ -541,15 +599,18 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.personnelApi.batchApproveVehicles(ids, 'finance', this.batchApprovalNote).subscribe({
       next: (res: any) => {
         this.isBatchApproving = false;
-        const count = (res?.results || []).filter((r: any) => r.success).length;
-        this.toast.showSuccess(`تایید مالی گروهی برای ${count} خودرو صادر و پرونده‌ها به کارتابل مدیر ارسال گردید.`);
+        const results: Array<{ id: number; plate_number?: string; success: boolean; error?: string }> = res?.results || [];
+        const count = results.filter(r => r.success).length;
+        this.batchResults = results;
+        if (count > 0) this.toast.showSuccess(`تایید مالی گروهی برای ${count} خودرو صادر و پرونده‌ها به کارتابل مدیر ارسال گردید.`);
+        if (results.some(r => !r.success)) this.toast.showWarning('برای برخی خودروها تایید انجام نشد؛ نتیجهٔ هر ردیف را ببینید.');
         this.selectedVehicleIds.clear();
         this.closeBatchApprovalModal();
         this.fetchFleetData();
       },
       error: (err: any) => {
         this.isBatchApproving = false;
-        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید مالی گروهی');
+        this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت تایید مالی گروهی'));
         this.cdr.detectChanges();
       }
     });
@@ -570,7 +631,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         this.fetchFleetData();
       },
       error: (err) => {
-        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در تایید مالی خودرو');
+        this.toast.showError(this.workflowErrorText(err, 'خطا در تایید مالی خودرو'));
       }
     });
   }
@@ -588,7 +649,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         this.fetchFleetData();
       },
       error: (err: any) => {
-        this.toast.showError(err?.error?.error || 'خطا در تایید مالی درخواست تغییرات ناوگان');
+        this.toast.showError(this.workflowErrorText(err, 'خطا در تایید مالی درخواست تغییرات ناوگان'));
       }
     });
   }
@@ -644,7 +705,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در ثبت تایید مالی');
+        this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت تایید مالی'));
         this.cdr.detectChanges();
       }
     });
@@ -824,7 +885,6 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   openRejectModal(id: number, title: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {
     this.rejectTarget = { id, title, type, action };
     this.rejectReason = '';
-    this.revisionDestination = 'supervisor';
     this.isRejectModalOpen = true;
   }
 
@@ -832,7 +892,6 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.isRejectModalOpen = false;
     this.rejectTarget = null;
     this.rejectReason = '';
-    this.revisionDestination = 'supervisor';
   }
 
   submitRejectModal(): void {
@@ -847,7 +906,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     if (type === 'vehicle') {
       const obs = action === 'reject'
         ? this.personnelApi.rejectVehicle(id, reason)
-        : this.personnelApi.requestVehicleRevision(id, reason, this.revisionDestination);
+        : this.personnelApi.requestVehicleRevision(id, reason);
       obs.subscribe({
         next: (res) => {
           this.isSubmittingReject = false;
@@ -857,7 +916,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSubmittingReject = false;
-          this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در انجام عملیات');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در انجام عملیات'));
         }
       });
     } else {
@@ -870,7 +929,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSubmittingReject = false;
-          this.toast.showError(err?.error?.error || 'خطا در رد درخواست');
+          this.toast.showError(this.workflowErrorText(err, 'خطا در رد درخواست'));
         }
       });
     }

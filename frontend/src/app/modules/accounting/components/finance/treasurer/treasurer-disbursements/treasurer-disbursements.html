@@ -205,6 +205,59 @@
     </div>
   }
 
+  <!-- ── دوره‌های ناوگان تأییدشدهٔ مدیر: پرداخت یکجا با کد رهگیری ── -->
+  @if (activeSubTab === 'pending_queue') {
+    <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden" data-testid="fleet-periods-card">
+      <div class="p-4 border-b border-line-subtle bg-surface-muted flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+        <h2 class="text-sm font-black text-fg">دوره‌های ناوگان آماده پرداخت</h2>
+      </div>
+      @if (isLoading && fleetPeriods.length === 0) {
+        <div class="p-4"><app-loading-skeleton type="table" [rows]="2" /></div>
+      } @else if (loadError && fleetPeriods.length === 0) {
+        <p class="p-6 text-center text-xs text-rose-700 font-bold">فهرست دوره‌های ناوگان دریافت نشد؛ از «تلاش دوباره» در بالای صفحه استفاده کنید.</p>
+      } @else if (fleetPeriods.length === 0) {
+        <p class="p-6 text-center text-xs text-fg-muted" data-testid="fleet-periods-empty">هیچ دورهٔ ناوگانِ تأییدشدهٔ مدیر در انتظار واریز خزانه‌داری نیست.</p>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-start text-xs">
+            <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
+              <tr>
+                <th class="py-3 px-3">بخش</th>
+                <th class="py-3 px-3">دوره ماهانه</th>
+                <th class="py-3 px-3">تعداد سفر</th>
+                <th class="py-3 px-3">مبلغ قابل پرداخت (ریال)</th>
+                <th class="py-3 px-3 text-center">عملیات خزانه‌دار</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (fp of fleetPeriods; track fp.id) {
+                <tr class="hover:bg-slate-50/70" data-testid="fleet-period-row">
+                  <td class="py-3 px-3 font-bold text-fg">{{ fp.section_name || '—' }}</td>
+                  <td class="py-3 px-3 font-black text-fg">{{ fleetYearMonthLabel(fp.year_month) }}</td>
+                  <td class="py-3 px-3 tabular-nums text-fg-muted">{{ fp.trips_count | number }}</td>
+                  <td class="py-3 px-3 tabular-nums font-black text-emerald-700">{{ fp.total_payable | number }}</td>
+                  <td class="py-3 px-3 text-center">
+                    <button
+                      type="button"
+                      appAction="confirm"
+                      label="پرداخت دوره"
+                      display="label"
+                      size="sm"
+                      [disabled]="!isOnline"
+                      [hint]="offlineHint"
+                      (click)="openFleetPeriodModal(fp)"
+                    ></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
   <!-- ── ۲. جدول کارتابل پرداخت حقوق و کارکرد ناوگان ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/60">
@@ -214,22 +267,6 @@
           {{ activeSubTab === 'pending_queue' ? 'دستور پرداخت‌های مصوب مدیر (آماده واریز)' : 'سوابق اسناد واریز شده و کدهای پیگیری بانک' }}
         </h2>
       </div>
-
-      @if (activeSubTab === 'pending_queue' && pendingFleetItems.length > 0) {
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            appAction="confirm"
-            label="تسویه ناوگان"
-            display="label"
-            size="sm"
-            [disabled]="!isOnline"
-            [hint]="offlineHint"
-            (click)="openFleetBatchModal()"
-          ></button>
-          <span class="text-xs font-bold text-fg-muted">({{ pendingFleetItems.length }} سفر)</span>
-        </div>
-      }
 
       <!-- جستجوی درون‌خطی جدول -->
       <div class="relative w-full md:w-64">
@@ -284,7 +321,7 @@
             </td>
             <td class="py-3 px-3 text-center">
               @if (item.status === 'pending_payment') {
-                @if (item.type === 'payroll' && !item.can_pay_single) {
+                @if (!item.can_pay_single) {
                   <span class="text-[11px] font-bold text-fg-muted">با «پرداخت دوره» پرداخت می‌شود</span>
                 } @else {
                   <button
@@ -460,11 +497,13 @@
           <p class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-2 text-[11px] font-bold" role="alert">{{ batchServerError }}</p>
         }
 
+        @if (batchModal.kind === 'period') {
         <div class="space-y-1">
           <label for="treasury-batch-id" class="block font-bold text-fg">شناسه دسته واریز (Batch ID):</label>
           <input id="treasury-batch-id" type="text" [(ngModel)]="batchIdValue" dir="ltr"
             class="w-full bg-surface border border-line font-mono text-xs font-bold text-fg rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500">
         </div>
+        }
 
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-line-subtle">
           <button

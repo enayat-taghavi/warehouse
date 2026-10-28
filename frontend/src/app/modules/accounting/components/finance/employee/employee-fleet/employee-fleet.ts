@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpContext } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -37,6 +37,23 @@ import { openExternal } from '../../../../../../core/platform/external-link';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { OverflowMenuComponent } from '../../../../../../shared/components/overflow-menu/overflow-menu.component';
 import { printWindow } from '../../../../../../core/platform/file-output';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+
+export const FLEET_LOCKED_FA = 'کارکرد ماهانهٔ این بخش برای تأیید ارسال شده و قفل است؛ تا عودت یا پایان گردش تغییر نمی‌پذیرد.';
+export const FLEET_OFFLINE_FA = 'برای این کار باید آنلاین باشید.';
+export const FLEET_WORKFLOW_LINK_FA = 'سابقه و پیگیری در کارهای من';
+
+/** پیام خطاهای شناخته‌شدهٔ ارسال کارکرد ماهانهٔ ناوگان (۴.۶-ج) */
+export function fleetSubmitErrorMessage(err: any): string {
+  const code = err?.error?.code;
+  if (code === 'no_fleet_trips') return 'برای این ماه هنوز سرویسی ثبت نشده است؛ ابتدا کارکرد را ثبت کنید.';
+  if (code === 'already_in_progress' || err?.status === 409) return 'کارکرد این ماه پیش‌تر برای تأیید ارسال شده و در گردش است.';
+  if (code === 'invalid_input') return 'بخش یا ماه نامعتبر است؛ انتخاب‌ها را بررسی کنید.';
+  if (err?.status === 403) return 'شما مجوز ارسال کارکرد این بخش را ندارید.';
+  if (err?.status === 404) return 'دورهٔ این بخش و ماه یافت نشد؛ بخش و ماه را دوباره انتخاب کنید.';
+  return err?.error?.error || err?.error?.detail || 'خطا در ارسال کارکرد ماهانه.';
+}
 
 export interface FleetMatrixRow extends VehicleMatrixRow {
   _isDirty?: boolean;
@@ -55,6 +72,7 @@ export interface FleetMatrixRow extends VehicleMatrixRow {
     TabBarComponent,
     CommandCenterComponent,
     OverflowMenuComponent,
+    RouterLink,
   ],
   templateUrl: './employee-fleet.html',
   styleUrl: './employee-fleet.css'
@@ -134,6 +152,17 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   daysInMonth = 31;
   isPeriodLocked = false;
   periodStatus = 'OPEN';
+  fleetPeriodId: number | null = null;
+  periodId: number | null = null;
+  fleetWorkflowStatus: string | null = null;
+  fleetWorkflowStep: string | null = null;
+  fleetApproved = false;
+  fleetLocked = false;
+  isSubmittingFleetPeriod = false;
+  readonly fleetWorkflowLink = { workflow: 'fleet_period' };
+  readonly FLEET_LOCKED_FA = FLEET_LOCKED_FA;
+  readonly FLEET_WORKFLOW_LINK_FA = FLEET_WORKFLOW_LINK_FA;
+  private readonly network = NetworkStatusService.getInstance();
   isFleetMonthlyGridLoading = false;
   isSavingFleetMonthlyGrid = false;
   hasUnsavedFleetMonthlyGrid = false;
@@ -199,8 +228,84 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    @Optional() private confirmDialog?: ConfirmDialogService
   ) {}
+
+  get isOnline(): boolean {
+    return this.network.isOnline;
+  }
+
+  get offlineHint(): string {
+    return this.isOnline ? '' : FLEET_OFFLINE_FA;
+  }
+
+  get fleetWorkflowStatusLabel(): string {
+    if (this.fleetApproved) return 'تأیید نهایی شده';
+    if (this.fleetWorkflowStep === 'treasury_pay') return 'در انتظار پرداخت خزانه';
+    if (this.fleetWorkflowStep === 'manager_ok') return 'در انتظار تأیید مدیر';
+    if (this.fleetWorkflowStatus || this.fleetWorkflowStep || this.fleetLocked) return 'در گردش تأیید';
+    return '';
+  }
+
+  get canSubmitFleetPeriod(): boolean {
+    return !!this.selectedSectionId && !!this.selectedYearMonth && !this.isPeriodLocked && !this.fleetLocked && !this.isSubmittingFleetPeriod;
+  }
+
+  private applyFleetGridState(res: any): void {
+    this.fleetMonthlyGridRows = res.rows || [];
+    this.fleetLocked = !!res.fleet_locked;
+    this.isPeriodLocked = !!res.is_locked || this.fleetLocked;
+    this.periodStatus = res.period_status || 'OPEN';
+    this.periodId = res.period_id ?? null;
+    this.fleetPeriodId = res.fleet_period_id ?? null;
+    this.fleetWorkflowStatus = res.fleet_workflow_status ?? null;
+    this.fleetWorkflowStep = res.fleet_workflow_step ?? null;
+    this.fleetApproved = !!res.fleet_approved;
+  }
+
+  /** خطای ذخیرهٔ سرویس در دورهٔ قفل: پیام فارسی و بارگذاری دوبارهٔ شیت */
+  private handleFleetLockedError(err: any): boolean {
+    if (err?.error?.code !== 'fleet_locked') return false;
+    this.toast.show('error', FLEET_LOCKED_FA);
+    this.refreshFleetMonthlyGridSilently();
+    return true;
+  }
+
+  async submitFleetMonthly(): Promise<void> {
+    if (!this.canSubmitFleetPeriod) return;
+    if (!this.isOnline) {
+      this.toast.show('warning', FLEET_OFFLINE_FA);
+      return;
+    }
+    if (this.confirmDialog) {
+      const confirmed = await this.confirmDialog.open({
+        title: 'ارسال کارکرد ماهانه',
+        message: `کارکرد ماه ${this.monthName || this.selectedYearMonth} برای تأیید ارسال و قفل می‌شود. تا عودت یا پایان گردش قابل ویرایش نیست.`,
+        confirmText: 'بله، ارسال شود',
+        cancelText: 'انصراف',
+        type: 'warning'
+      });
+      if (confirmed !== true) return;
+    }
+    this.isSubmittingFleetPeriod = true;
+    const body = this.periodId
+      ? { period_id: this.periodId }
+      : { section_id: this.selectedSectionId as number, year_month: this.selectedYearMonth };
+    this.personnelApi.submitFleetPeriod(body).subscribe({
+      next: () => {
+        this.isSubmittingFleetPeriod = false;
+        this.toast.show('success', 'کارکرد ماهانه برای تأیید ارسال شد.');
+        this.refreshFleetMonthlyGridSilently();
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.isSubmittingFleetPeriod = false;
+        this.toast.show('error', fleetSubmitErrorMessage(err));
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.initDefaultDate();
@@ -547,6 +652,11 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSavingVehicles = false;
+        if (err?.error?.code === 'fleet_locked') {
+          this.toast.show('error', FLEET_LOCKED_FA);
+          this.cdr.detectChanges();
+          return;
+        }
         this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در ذخیره تردد ناوگان');
         this.cdr.detectChanges();
       }
@@ -563,12 +673,10 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
       project_id: this.selectedSection?.project
     }).subscribe({
       next: res => {
-        this.fleetMonthlyGridRows = res.rows || [];
+        this.applyFleetGridState(res);
         this.monthName = res.month_name || '';
         this.daysInMonth = res.days_in_month || 31;
         this.monthlyGridDays = (res.days_meta || []) as any;
-        this.isPeriodLocked = !!res.is_locked;
-        this.periodStatus = res.period_status || 'OPEN';
         this.isFleetMonthlyGridLoading = false;
         this.hasUnsavedFleetMonthlyGrid = false;
         this.cdr.detectChanges();
@@ -590,9 +698,8 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
       project_id: this.selectedSection?.project
     }).subscribe({
       next: res => {
-        this.fleetMonthlyGridRows = res.rows || [];
-        this.isPeriodLocked = !!res.is_locked;
-        this.periodStatus = res.period_status || 'OPEN';
+        this.applyFleetGridState(res);
+        this.monthlyGridDays = (res.days_meta || this.monthlyGridDays) as any;
         this.cdr.detectChanges();
       },
       error: () => {}
@@ -641,6 +748,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSavingFleetMonthlyGrid = false;
+        if (this.handleFleetLockedError(err)) { this.cdr.detectChanges(); return; }
         this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در ذخیره تقویم ماهانه ناوگان');
         this.cdr.detectChanges();
       }
@@ -655,6 +763,11 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     }
     if (this.isPeriodLocked) {
       this.toast.show('info', 'این دوره قفل است و شیت فقط‌خواندنی می‌باشد.');
+      return;
+    }
+    const dayMeta = this.monthlyGridDays.find(d => d.day === dayItem.day);
+    if (dayMeta && dayMeta.is_editable === false) {
+      this.toast.show('info', 'این روز قابل ویرایش نیست.');
       return;
     }
     this.selectedFleetDayDetailRow = row;
@@ -722,6 +835,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (err: any) => {
+        if (this.handleFleetLockedError(err)) return;
         this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در ثبت تردد روزانه');
       }
     });

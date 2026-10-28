@@ -240,11 +240,10 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
       const nativeEl: HTMLElement = fixture.nativeElement;
       const addBtn = nativeEl.querySelector('button[title*="معرفی خودرو جدید"]') as HTMLButtonElement;
 
+      // دکمه روی ابزار مشترک appAction است (اندازه و رنگ را دستور مشترک می‌دهد)؛ فقط وجود، نوع و برچسب فارسی سنجیده می‌شود
       expect(addBtn).not.toBeNull();
-      expect(addBtn.className).toContain('w-9');
-      expect(addBtn.className).toContain('h-9');
-      expect(addBtn.className).toContain('rounded-xl');
-      expect(addBtn.className).toContain('bg-indigo-600');
+      expect(addBtn.type).toBe('button');
+      expect(addBtn.getAttribute('title')).toContain('معرفی خودرو جدید');
     });
 
     it('کلیک روی دکمه ثبت خودرو در DOM باید مودال تعریف خودرو را در بدنه DOM ظاهر کند', () => {
@@ -284,8 +283,8 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
       fixture.detectChanges();
       expect(component.statusFilter).toBe('draft');
 
-      // ۲. کلیک دوم روی همان تب: تاگل و بازگشت به 'all'
-      draftBtn!.click();
+      // ۲. app-tab-bar روی تب فعال رویداد نمی‌دهد؛ تاگل در خود کامپوننت سنجیده می‌شود
+      component.setStatusFilter('draft');
       fixture.detectChanges();
       expect(component.statusFilter).toBe('all');
     });

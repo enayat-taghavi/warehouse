@@ -191,7 +191,7 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
     component.rejectReason = 'نرخ بالاتر از عرف پروژه است';
     component.submitReject();
     expect(mockPersonnelApi.requestVehicleRevision).toHaveBeenCalledWith(veh.id, 'نرخ بالاتر از عرف پروژه است');
-    expect(mockToast.showSuccess).toHaveBeenCalledWith('پرونده جهت بازنگری نرخ و مدارک به کارتابل حسابدار عودت داده شد.');
+    expect(mockToast.showSuccess).toHaveBeenCalledWith('پرونده برای اصلاح به ثبت‌کننده عودت داده شد.');
     expect(component.isRejectModalOpen).toBe(false);
 
     // ۲. رد قطعی پرونده

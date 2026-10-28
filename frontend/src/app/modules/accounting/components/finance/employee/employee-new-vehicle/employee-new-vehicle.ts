@@ -1,5 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, Optional, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FLEET_OFFLINE_HINT_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText } from '../../fleet-workflow-ui';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, Subscription } from 'rxjs';
@@ -9,7 +11,8 @@ import {
   VehicleDriverProfile,
   VehicleBankAccount,
   VehicleDocument,
-  WorkflowAuditLog
+  WorkflowAuditLog,
+  isMaskedValue
 } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
@@ -52,6 +55,7 @@ export function isRoadVehicleType(type?: string): boolean {
   selector: 'app-employee-new-vehicle-hub',
   standalone: true,
   imports: [
+    RouterLink,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -763,14 +767,14 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
         if (!this.newVehicle.driver_name?.trim()) return false;
         if (this.newVehicle.driver_phone && !this.isValidPhone(this.newVehicle.driver_phone)) return false;
         if (this.newVehicle.ownership_type !== 'company') {
-          if (!this.newVehicle.driver_national_code || !this.isValidNationalCode(this.newVehicle.driver_national_code)) return false;
+          if (!this.newVehicle.driver_national_code || !(isMaskedValue(this.newVehicle.driver_national_code) || this.isValidNationalCode(this.newVehicle.driver_national_code))) return false;
         }
         return true;
 
       case 'owner':
         if (this.newVehicle.is_driver_owner) return true;
         if (!this.newVehicle.owner_name?.trim()) return false;
-        if (!this.newVehicle.owner_national_code || !this.isValidNationalCode(this.newVehicle.owner_national_code)) return false;
+        if (!this.newVehicle.owner_national_code || !(isMaskedValue(this.newVehicle.owner_national_code) || this.isValidNationalCode(this.newVehicle.owner_national_code))) return false;
         return true;
 
       case 'banking':
@@ -1039,7 +1043,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       this.vehicleDocuments = [];
     }
 
-    if (v.sheba_number) {
+    if (v.sheba_number && isMaskedValue(v.sheba_number)) {
+      this.shebaValidationResult = null;
+      this.shebaDigitsDisplay = v.sheba_number;
+    } else if (v.sheba_number) {
       const digits = extractShebaDigits(v.sheba_number);
       this.shebaValidationResult = validateSheba(digits);
       this.shebaDigitsDisplay = this.shebaValidationResult.formattedDigits || digits;
@@ -1281,6 +1288,12 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
 
   onShebaChange(): void {
     const raw = this.newVehicle.sheba_number || '';
+    if (isMaskedValue(raw)) {
+      // مقدار پوشیدهٔ سرور «بدون تغییر» است؛ اعتبارسنجی نمی‌شود و ارسال هم نمی‌شود
+      this.shebaValidationResult = null;
+      this.shebaDigitsDisplay = raw;
+      return;
+    }
     const digits = extractShebaDigits(raw);
     const res = validateSheba(digits);
     this.shebaValidationResult = res;
@@ -1616,6 +1629,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   get isOnline(): boolean {
     return typeof navigator !== 'undefined' ? navigator.onLine : true;
   }
+  readonly offlineHint = FLEET_OFFLINE_HINT_FA;
 
   getDocTypeLabel(type?: string): string {
     const found = this.docTypeOptions.find(o => o.value === type);
@@ -1742,6 +1756,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   // ─── اعتبارسنجی کد ملی راننده ───
   onNationalCodeChange(): void {
     const raw = (this.newVehicle.driver_national_code || '').trim();
+    if (isMaskedValue(raw)) {
+      this.nationalCodeError = null;
+      return;
+    }
     if (!raw) {
       this.nationalCodeError = null;
       this.matchedPersonnelNotice = null;
@@ -1829,6 +1847,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   // ─── اعتبارسنجی کد ملی مالک خودرو ───
   onOwnerNationalCodeChange(): void {
     const raw = (this.newVehicle.owner_national_code || '').trim();
+    if (isMaskedValue(raw)) {
+      this.ownerNationalCodeError = null;
+      return;
+    }
     if (!raw) {
       this.ownerNationalCodeError = null;
       this.saveDraftToStorage();
@@ -1930,6 +1952,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       is_active: true
     };
     delete (payload as any).approval_status;
+    // مقدارهای حساسِ پوشیده (ستاره‌دار) هرگز پس فرستاده نمی‌شوند
+    for (const k of ['driver_national_code', 'owner_national_code', 'sheba_number', 'account_number', 'card_number', 'national_code']) {
+      if (isMaskedValue((payload as any)[k])) delete (payload as any)[k];
+    }
 
     if (this.editingId) {
       this.personnelApi.updateVehicleProfile(this.editingId, payload).subscribe({
@@ -1965,7 +1991,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
                       this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما به دلیل نواقص پرونده ارسال نشد: ' + labels);
                       this.mapMissingFieldsToTab(this.serverMissingFields);
                     } else {
-                      const msg = submitErr.error?.error || submitErr.message || 'نامشخص';
+                      const msg = fleetWorkflowErrorText(submitErr, submitErr.message || 'نامشخص');
                       this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما خطا در ارسال به سرپرست: ' + msg);
                     }
                     this.loadRecentVehicles();
@@ -2003,7 +2029,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
             this.toast.show('error', 'نواقص پرونده: ' + this.formatMissingFields(missing));
             this.mapMissingFieldsToTab(this.serverMissingFields);
           } else {
-            const msg = err.error?.plate_number?.[0] || err.error?.error || err.message || 'نامشخص';
+            const msg = err.error?.plate_number?.[0] || fleetWorkflowErrorText(err, err.message || 'نامشخص');
             this.toast.show('error', 'خطا در ویرایش خودرو: ' + msg);
           }
           this.cdr.detectChanges();
@@ -2038,7 +2064,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
                       this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما به دلیل نواقص پرونده ارسال نشد: ' + labels);
                       this.mapMissingFieldsToTab(this.serverMissingFields);
                     } else {
-                      const msg = submitErr.error?.error || submitErr.message || 'نامشخص';
+                      const msg = fleetWorkflowErrorText(submitErr, submitErr.message || 'نامشخص');
                       this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما خطا در ارسال به سرپرست: ' + msg);
                     }
                     this.loadRecentVehicles();
@@ -2080,7 +2106,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
             this.toast.show('error', 'نواقص پرونده: ' + this.formatMissingFields(missing));
             this.mapMissingFieldsToTab(this.serverMissingFields);
           } else {
-            const msg = err.error?.plate_number?.[0] || err.error?.error || err.message || 'نامشخص';
+            const msg = err.error?.plate_number?.[0] || fleetWorkflowErrorText(err, err.message || 'نامشخص');
             this.toast.show('error', 'خطا در ثبت خودرو: ' + msg);
           }
           this.cdr.detectChanges();
@@ -2094,9 +2120,9 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
     if (!Array.isArray(missing) || missing.length === 0) return '';
     return missing.map((m: any) => {
       if (typeof m === 'object' && m !== null) {
-        return m.label || m.field || JSON.stringify(m);
+        return m.label || VEHICLE_FIELD_LABELS_FA[m.field] || m.field || JSON.stringify(m);
       }
-      return String(m);
+      return VEHICLE_FIELD_LABELS_FA[String(m)] || String(m);
     }).filter(Boolean).join('، ');
   }
 
@@ -2115,6 +2141,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
 
     const id = target?.id || this.editingId;
     if (!id) return;
+    if (!this.isOnline) {
+      this.toast.show('warning', this.offlineHint);
+      return;
+    }
 
     if (typeof this.personnelApi?.submitVehicleProfile !== 'function') {
       this.saveVehicle('pending_supervisor');
@@ -2145,7 +2175,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
             this.mapMissingFieldsToTab(this.serverMissingFields);
           }
         } else {
-          const msg = err.error?.error || err.message || 'نامشخص';
+          const msg = fleetWorkflowErrorText(err, err.message || 'نامشخص');
           this.toast.show('error', 'خطا در ارسال پرونده به سرپرست: ' + msg);
         }
         this.cdr.detectChanges();
@@ -2160,6 +2190,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   // ─── فاز ۷: بازگشایی پرونده ردشده (تسک ۷.۳ - reopen) ───
   reopenRejectedVehicle(v: VehicleDriverProfile): void {
     if (!v.id || this.isReopening) return;
+    if (!this.isOnline) {
+      this.toast.show('warning', this.offlineHint);
+      return;
+    }
     this.isReopening = true;
     this.personnelApi.reopenVehicleProfile(v.id).subscribe({
       next: (res: any) => {
@@ -2179,6 +2213,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
 
   // ─── فاز ۷: لغو درخواست تغییرات معلق (تسک ۷.۲ - cancel) ───
   async cancelPendingChangeRequest(v: VehicleDriverProfile): Promise<void> {
+    if (!this.isOnline) {
+      this.toast.show('warning', this.offlineHint);
+      return;
+    }
     const crId = v.pending_change_request?.id;
     if (!crId) {
       this.toast.show('warning', 'شناسه درخواست تغییرات یافت نشد.');

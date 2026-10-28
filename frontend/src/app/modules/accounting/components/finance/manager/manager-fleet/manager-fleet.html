@@ -63,6 +63,16 @@
 
   <!-- ── ۲. بدنه محتوا متناسب با زیرتب فعال ── -->
 
+  <div class="flex justify-end">
+    <a routerLink="/app/my-tasks"
+       [queryParams]="{workflow: activeSubTab === 'changes' ? 'vehicle_change' : (activeSubTab === 'settlement' ? 'fleet_period' : 'vehicle_profile')}"
+       class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+       title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+      <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>سابقه و پیگیری در کارهای من</span>
+    </a>
+  </div>
+
   <!-- تب ۱: پرونده‌های جدید خودرو در انتظار تصویب نهایی مدیر -->
   <div *ngIf="activeSubTab === 'new'" class="space-y-4">
     <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden">
@@ -122,6 +132,8 @@
                     size="sm"
                     display="label"
                     label="تصویب نهایی"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openApproveModal('vehicle', v)"></button>
                   <button
                     *ngIf="v.id"
@@ -130,6 +142,8 @@
                     size="sm"
                     display="label"
                     label="اصلاح"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openRejectModal(v.id, v.plate_number, 'vehicle', 'revision')"></button>
                   <button
                     *ngIf="v.id"
@@ -138,6 +152,8 @@
                     size="sm"
                     display="label"
                     label="رد"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openRejectModal(v.id, v.plate_number, 'vehicle', 'reject')"></button>
                 </div>
               </td>
@@ -156,9 +172,15 @@
           <h2 class="text-sm font-black text-fg">گزارش کارکرد و تسویه‌حساب ماهانه ناوگان (ماه {{ selectedMonth }} {{ fiscalYear }})</h2>
           <p class="text-xs text-fg-muted mt-0.5">بررسی صورت‌وضعیت مالی ناوگان: تعداد سرویس، نرخ پایه، مبلغ ناخالص و خالص پرداختی جهت تایید مدیریتی</p>
         </div>
-        <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-xl border border-indigo-200">
-          {{ settlementItems.length }} ردیف صورت‌حساب
-        </span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span *ngIf="settlementSummary" class="text-[11px] font-bold px-2.5 py-1 rounded-xl border"
+                [ngClass]="settlementSummary.fleet_approved ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'">
+            وضعیت دورهٔ ناوگان: {{ fleetStatusFa(settlementSummary.fleet_workflow_status, settlementSummary.fleet_approved) }}
+          </span>
+          <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-xl border border-indigo-200">
+            {{ settlementItems.length }} ردیف صورت‌حساب
+          </span>
+        </div>
       </div>
 
       <div *ngIf="settlementItems.length === 0" class="p-12 text-center text-fg-subtle">
@@ -251,6 +273,8 @@
                     size="sm"
                     display="label"
                     label="تصویب تغییرات"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openApproveModal('changes', cr)"></button>
                   <button
                     type="button"
@@ -258,6 +282,8 @@
                     size="sm"
                     display="label"
                     label="رد"
+                    [disabled]="!isOnline"
+                    [hint]="isOnline ? '' : offlineHint"
                     (click)="openRejectModal(cr.id, cr.plate_number || 'درخواست', 'vehicle_cr', 'reject')"></button>
                 </div>
               </td>
@@ -441,7 +467,8 @@
           appAction="approve"
           label="تایید و تصویب نهایی"
           [busy]="isApproving"
-          [disabled]="isApproving"
+          [disabled]="isApproving || !isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           display="label"
           (click)="submitApproval()"></button>
       </div>
@@ -470,7 +497,7 @@
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
                    [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-surface-muted border-line text-fg-muted'">
               <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5"></svg><span>عودت برای اصلاح</span>
             </label>
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
                    [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-surface-muted border-line text-fg-muted'">
@@ -500,9 +527,10 @@
         <button
           type="button"
           [appAction]="rejectActionType === 'reject_final' ? 'reject' : 'return'"
-          [label]="rejectActionType === 'reject_final' ? 'رد قطعی' : 'عودت به حسابدار'"
+          [label]="rejectActionType === 'reject_final' ? 'رد قطعی' : 'عودت برای اصلاح'"
           [busy]="isSubmittingReject"
-          [disabled]="isSubmittingReject || !rejectReason.trim()"
+          [disabled]="isSubmittingReject || !rejectReason.trim() || !isOnline"
+          [hint]="isOnline ? '' : offlineHint"
           display="label"
           (click)="submitReject()"></button>
       </div>

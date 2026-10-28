@@ -1,5 +1,15 @@
 <div class="min-h-screen bg-surface-canvas/50 p-3 md:p-6 space-y-4" dir="rtl">
 
+  <div class="flex items-center justify-end gap-2 flex-wrap">
+    <p *ngIf="!isOnline" role="status" class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1">{{ offlineHint }}</p>
+    <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'vehicle_profile'}"
+       class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+       title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+      <svg appIcon="clipboard-check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>سابقه و پیگیری در کارهای من</span>
+    </a>
+  </div>
+
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-surface-canvas/95 backdrop-blur-md pt-1 pb-2">
     <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -296,7 +306,7 @@
                   *ngIf="v.approval_status === 'rejected'"
                   type="button"
                   (click)="reopenRejectedVehicle(v)"
-                  [disabled]="isReopening"
+                  [disabled]="isReopening || !isOnline"
                   class="px-2 py-1 text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="بازگشایی پرونده و تبدیل به پیش‌نویس جهت اصلاح">
                   <span>بازگشایی</span>
@@ -347,6 +357,7 @@
                 <button
                   *ngIf="v.approval_status === 'draft'"
                   type="button"
+                  [disabled]="!isOnline"
                   (click)="submitDraftToSupervisor(v)"
                   class="px-2 py-1 text-sky-600 hover:bg-sky-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="ارسال پرونده به کارتابل سرپرست کارگاه">
@@ -479,6 +490,7 @@
           <button
             *ngIf="v.approval_status === 'rejected'"
             type="button"
+            [disabled]="!isOnline"
             (click)="reopenRejectedVehicle(v)"
             class="min-h-[44px] px-3 py-1.5 text-xs font-bold bg-purple-50 text-purple-700 rounded-xl border border-purple-200">
             بازگشایی
@@ -514,6 +526,7 @@
           <button
             *ngIf="v.approval_status === 'draft'"
             type="button"
+            [disabled]="!isOnline"
             (click)="submitDraftToSupervisor(v)"
             class="min-h-[44px] px-3 py-1.5 text-xs font-bold bg-sky-50 text-sky-700 rounded-xl">
             ارسال
@@ -1322,9 +1335,9 @@
             size="lg"
             [tone]="isRevisionMode ? 'amber' : 'primary'"
             [busy]="isSaving"
-            [disabled]="isSaving || isSubmitDisabled"
+            [disabled]="isSaving || isSubmitDisabled || !isOnline"
             (click)="submitDraftVehicle()"
-            [hint]="isSubmitDisabled ? ('تکمیل نواقص الزامی است: ' + missingFieldsList.join('، ')) : 'ارسال پرونده به کارتابل سرپرست کارگاه'">
+            [hint]="!isOnline ? offlineHint : isSubmitDisabled ? ('تکمیل نواقص الزامی است: ' + missingFieldsList.join('، ')) : 'ارسال پرونده به کارتابل سرپرست کارگاه'">
           </button>
 
         </div>
@@ -1394,7 +1407,7 @@
         <button
           type="button"
           (click)="cancelPendingChangeRequest(pendingDiffVehicle)"
-          [disabled]="isCancellingChangeRequest"
+          [disabled]="isCancellingChangeRequest || !isOnline"
           class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5">
           <span *ngIf="isCancellingChangeRequest" class="w-3.5 h-3.5 border-2 border-rose-700 border-t-transparent rounded-full animate-spin"></span>
           <span>ابطال درخواست تغییرات</span>

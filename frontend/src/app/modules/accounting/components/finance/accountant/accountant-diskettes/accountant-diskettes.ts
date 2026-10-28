@@ -432,9 +432,15 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
         this.toast.success('فایل پرداخت بانکی تسویه ناوگان با موفقیت صادر گردید.');
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: async (err: any) => {
         this.isGeneratingFleet = false;
-        this.toast.error('خطا در صدور فایل پرداخت بانکی ناوگان.');
+        let body = err?.error;
+        if (typeof Blob !== 'undefined' && body instanceof Blob) {
+          try { body = JSON.parse(await body.text()); } catch { body = null; }
+        }
+        this.toast.error(body?.code === 'fleet_not_approved'
+          ? 'اکسل بانک فقط برای دورهٔ تأییدشدهٔ مدیر ساخته می‌شود'
+          : 'خطا در صدور فایل پرداخت بانکی ناوگان.');
         this.cdr.detectChanges();
       }
     });

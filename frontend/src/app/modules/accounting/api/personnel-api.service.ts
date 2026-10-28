@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HrApiService } from './hr-api.service';
-import { FleetApiService } from './fleet-api.service';
+import { FleetApiService, FleetSettlementScope } from './fleet-api.service';
+import type { Paginated } from '../../../core/models/api-response.model';
 import { AttendanceApiService } from './attendance-api.service';
 import { PayrollApiService } from './payroll-api.service';
 import { TreasuryOrgApiService } from './treasury-org-api.service';
@@ -39,6 +40,7 @@ import {
   PersonnelCostEstimate,
   VehicleBankAccount,
   VehicleDocument,
+  FleetPeriodStatus,
   ImportResult
 } from './personnel-api.models';
 
@@ -123,7 +125,7 @@ export class PersonnelApiService {
   approveVehicleManager(id: number, note?: string): Observable<any> { return this.fleet.approveVehicleManager(id, note); }
   approveVehicleFinance(id: number, note?: string): Observable<any> { return this.fleet.approveVehicleFinance(id, note); }
   rejectVehicle(id: number, reason: string): Observable<any> { return this.fleet.rejectVehicle(id, reason); }
-  requestVehicleRevision(id: number, reason: string, targetStage?: 'employee' | 'supervisor'): Observable<any> { return this.fleet.requestVehicleRevision(id, reason, targetStage); }
+  requestVehicleRevision(id: number, reason: string): Observable<any> { return this.fleet.requestVehicleRevision(id, reason); }
   getVehicleRateBenchmark(vehicleId: number): Observable<{ vehicle_id: number; vehicle_type: string; vehicle_type_display?: string; project_name?: string; count: number; avg_rate: number; min_rate: number; max_rate: number; current_rate: number; }> { return this.fleet.getVehicleRateBenchmark(vehicleId); }
   getVehicleCostEstimate(vehicleId: number): Observable<{ vehicle_id: number; plate_number: string; driver_name: string; vehicle_type: string; vehicle_type_display?: string; ownership_type: string; ownership_type_display?: string; is_payable: boolean; daily_rate: number; standard_days: number; full_month_days: number; monthly_cost_standard: number; monthly_cost_full: number; yearly_cost_standard: number; avg_daily_rate: number; avg_monthly_cost: number; deviation_percentage: number; benchmark_count: number; }> { return this.fleet.getVehicleCostEstimate(vehicleId); }
   submitVehicleProfile(id: number, note?: string): Observable<any> { return this.fleet.submitVehicleProfile(id, note); }
@@ -151,6 +153,11 @@ export class PersonnelApiService {
   approveVehicleChangeRequestFinance(id: number, note?: string): Observable<any> { return this.fleet.approveVehicleChangeRequestFinance(id, note); }
   approveVehicleChangeRequestManager(id: number, note?: string): Observable<any> { return this.fleet.approveVehicleChangeRequestManager(id, note); }
   rejectVehicleChangeRequest(id: number, reason: string): Observable<any> { return this.fleet.rejectVehicleChangeRequest(id, reason); }
+  requestVehicleChangeRequestRevision(id: number, reason: string): Observable<any> { return this.fleet.requestVehicleChangeRequestRevision(id, reason); }
+  getVehicleProfilesPage(params: { page: number; page_size?: number; section_id?: number; company_id?: number; approval_status?: string; search?: string; is_active?: boolean }): Observable<Paginated<VehicleDriverProfile>> { return this.fleet.getVehicleProfilesPage(params); }
+  getVehicleChangeRequestsPage(params: { page: number; page_size?: number; status?: string; search?: string; company_id?: number; section_id?: number }): Observable<Paginated<VehicleChangeRequest>> { return this.fleet.getVehicleChangeRequestsPage(params); }
+  submitFleetPeriod(data: { period_id: number } | { section_id: number; year_month: string }): Observable<any> { return this.fleet.submitFleetPeriod(data); }
+  getFleetPeriodStatus(sectionId: number, yearMonth: string): Observable<FleetPeriodStatus> { return this.fleet.getFleetPeriodStatus(sectionId, yearMonth); }
   getDailyAttendance(params?: { warehouse_id?: number; section_id?: number; project_id?: number; date_shamsi?: string; personnel_id?: number; }): Observable<any[]> { return this.attendance.getDailyAttendance(params); }
   getAttendanceMatrix( warehouseId: number | null | undefined, dateShamsi: string, options?: { context?: import('@angular/common/http').HttpContext; section_id?: number; project_id?: number } ): Observable<AttendanceMatrixResponse> { return this.attendance.getAttendanceMatrix(warehouseId, dateShamsi, options); }
   saveAttendanceBulk(payload: { warehouse_id?: number | null; section_id?: number | null; project_id?: number | null; date_shamsi: string; client_tab_id?: string; is_override?: boolean; override_reason?: string; items: Array<{ personnel_id: number; status: string; effective_hours: number; overtime_hours: number; is_friday_work: boolean; is_mission: boolean; advance_payment: number; notes?: string; }>; }): Observable<{ message: string; saved_count: number; updated_count: number }> { return this.attendance.saveAttendanceBulk(payload); }
@@ -194,9 +201,9 @@ export class PersonnelApiService {
   getFleetMonthlyExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string, sectionId?: number | null): string { return this.attendance.getFleetMonthlyExcelDownloadUrl(warehouseId, yearMonth, sectionId); }
   importFleetMonthlyExcel(formData: FormData): Observable<any> { return this.attendance.importFleetMonthlyExcel(formData); }
   getVehicleTripAuditLogs(params?: { vehicle_id?: number; year_month?: string; section_id?: number }): Observable<VehicleTripAuditLog[]> { return this.attendance.getVehicleTripAuditLogs(params); }
-  calculateFleetSettlement(warehouseId: number | null | undefined, yearMonth: string): Observable<any> { return this.fleet.calculateFleetSettlement(warehouseId, yearMonth); }
-  getFleetBankExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string): string { return this.fleet.getFleetBankExcelDownloadUrl(warehouseId, yearMonth); }
-  exportFleetBankExcel(warehouseId: number | null | undefined, yearMonth: string): Observable<Blob> { return this.fleet.exportFleetBankExcel(warehouseId, yearMonth); }
+  calculateFleetSettlement(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): Observable<any> { return this.fleet.calculateFleetSettlement(warehouseId, yearMonth, scope); }
+  getFleetBankExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): string { return this.fleet.getFleetBankExcelDownloadUrl(warehouseId, yearMonth, scope); }
+  exportFleetBankExcel(warehouseId: number | null | undefined, yearMonth: string, scope?: FleetSettlementScope): Observable<Blob> { return this.fleet.exportFleetBankExcel(warehouseId, yearMonth, scope); }
   getSupervisorCartable(): Observable<any> { return this.treasuryOrg.getSupervisorCartable(); }
   getAccountantCartable(): Observable<any> { return this.treasuryOrg.getAccountantCartable(); }
   getManagerCartable(): Observable<any> { return this.treasuryOrg.getManagerCartable(); }

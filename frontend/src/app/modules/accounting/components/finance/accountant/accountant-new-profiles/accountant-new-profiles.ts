@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { FLEET_OFFLINE_HINT_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText } from '../../fleet-workflow-ui';
 import { Observable, Subscription, of } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -59,6 +61,13 @@ export type AccountantStatusFilter = 'ALL' | 'pending_accountant' | 'pending_man
   styleUrl: './accountant-new-profiles.css'
 })
 export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
+  readonly offlineHint = FLEET_OFFLINE_HINT_FA;
+  private readonly fleetNetwork = NetworkStatusService.getInstance();
+  get isOnline(): boolean { return this.fleetNetwork.isOnline; }
+  vehicleErrorText(err: any, fallback: string): string {
+    return fleetWorkflowErrorText(err, fallback, VEHICLE_FIELD_LABELS_FA);
+  }
+
   // ─── مدیریت تب‌ها و فیلترهای بالا ───
   activeSubTab: AccountantSubTab = 'personnel';
   statusFilter: AccountantStatusFilter = 'ALL';
@@ -498,7 +507,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
         this.fetchData();
       },
       error: (err) => {
-        this.toast.show('error', err?.error?.error || 'خطا در تایید مالی خودرو');
+        this.toast.show('error', this.vehicleErrorText(err, 'خطا در تایید مالی خودرو'));
       }
     });
   }
@@ -542,7 +551,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSubmittingReject = false;
-        this.toast.show('error', err?.error?.error || 'خطا در انجام عملیات');
+        this.toast.show('error', this.vehicleErrorText(err, 'خطا در انجام عملیات'));
       }
     });
   }
@@ -772,7 +781,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
         this.fetchData();
       },
       error: (err) => {
-        this.toast.show('error', err?.error?.error || 'خطا در تایید مالی درخواست تغییرات');
+        this.toast.show('error', this.vehicleErrorText(err, 'خطا در تایید مالی درخواست تغییرات'));
       }
     });
   }
