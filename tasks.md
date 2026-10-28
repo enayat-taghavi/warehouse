@@ -3348,3 +3348,84 @@ verify: python scripts/automation/verify_tools.py clean-tree
 8. Before finishing: all cases pass; commit only the three files with the message `test(release-v1 5-b): version sync, what's new and Live Update ready specs`; `git status --short` shows no change of yours.
 
 9. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 2 — Release v1 step 5-c on the local app environment: backup, web build, staging APK 1.0.0 build and badging check, publish it on the app download path, FCM key yes/no; the runner restarts Daphne and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5c.py s1
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`), never a prod APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Never print the content of any file in `E:\warehouse-secrets\`, and never print the value of `FIREBASE_CREDENTIALS_FILE` or any key path.
+
+2. Context: Release v1 step 5-c (commit `11506789`) added the management command `send_test_push`, a persistent-storage request at app start and a queue send when the Android app returns to the foreground. Step 5-b set the app version to `1.0.0` (`versionCode 10000`, one source: `frontend/package.json`). The previous staging APK on the emulator has `versionCode 2`. The APK download path on `app` is `/api/public/mobile-files/apk/<file>`; the command `publish_mobile_apk --apk <path> --version 1.0.0 --channel direct --env staging` copies the APK there as `CoManage-1.0.0-direct-test.apk` and prints the public path. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app step 5-c'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Web build in `frontend`: `npx ng build --delete-output-path=false`, wait for it to finish, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear). Then in `frontend`: `npm run build:mobile-test`, then in `frontend\android`: `.\gradlew.bat assembleStagingDirectRelease`.
+- d) Badging: `E:\Android\Sdk\build-tools\36.0.0\aapt.exe dump badging frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk > scratch\logs\apk5c_badging.txt` (from the repo root; if `aapt.exe` is missing there, use `35.0.0`). Read the first line of that file: it must show package `ir.comanage.soft.test`, `versionCode='10000'` and `versionName='1.0.0'`.
+- e) Publish, in `backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk ..\frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk --version 1.0.0 --channel direct --env staging` and note the printed path.
+- f) Download setting and FCM key, in `backend`: `.\venv\Scripts\python.exe manage.py shell -c "import os; from django.conf import settings; from settings_core.services import get_setting; f = getattr(settings, 'FIREBASE_CREDENTIALS_FILE', ''); print('FCM key set:', bool(f)); print('FCM key file exists:', bool(f) and os.path.isfile(f)); print('direct download url:', get_setting('app_download_url_direct'))"`. If `get_setting` does not exist, replace that part with `from settings_core.models import SystemSetting; print('direct download url:', SystemSetting.objects.filter(key='app_download_url_direct').values_list('value', flat=True).first())`. Do not change any setting.
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. The web build at most twice, Gradle at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `scratch/logs/apk5c_badging.txt` exists; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the web build result and the patch line, the APK path and size, the badging first line, the publish path, the two FCM yes/no lines and the direct download URL value. No commit. End the turn after the report.
+
+===
+
+[ ] Session 2 of 2 — Release v1 step 5-c on the Android emulator: install the 1.0.0 staging APK over the old one, temporary QA company, version line in the user menu, test push and tap to my tasks, airplane-mode queue scenario, back button with a dialog open, then delete the QA company
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5c.py s2
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- This is an operational task on the local test environment `app` (this Windows machine, test data only, no real users). Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Do not build anything in this session.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running. The only exception is the emulator, which runs in its own Windows Terminal tab.
+- Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`; do not kill any `node` process.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- The test passwords are written by `seed_scenario` to `scratch/qa_scenario_credentials.txt` (one user per line, tab-separated: username, password, role, scope). Never print a password in your reply, in a log you write, or in a file name. Pass it only to `adb shell input text`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context:
+- Session 1 built and published the staging APK `1.0.0` (`versionCode 10000`) at `frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk`. The emulator may still have the old staging APK with `versionCode 2`; install with `-r` over it, never uninstall it first.
+- The staging app (id `ir.comanage.soft.test`, activity `ir.comanage.soft.MainActivity`) talks to `https://app.farsalish.ir`. Emulator AVD `AndroidTest15`, screen 1080x2400. On the login page the username field centre is about (540, 1130), the password field about (540, 1338), the login button «ورود به سامانه» about (540, 1655).
+- New in this step: the backend command `send_test_push --username <u>` creates an in-app notification titled «اعلان آزمایشی» through the normal path and sends an FCM push when the key is configured; tapping it opens «کارهای من» (`/app/my-tasks`). When the Android app returns to the foreground it sends the offline queue. The user menu shows a line «نسخهٔ ۱٫۰٫۰».
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order (`manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) QA company: `$env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario`. Note only the usernames (first column of `scratch/qa_scenario_credentials.txt`). Use `qa_scn_manager` for steps c to e. For step f use the user whose role column names the employee (ثبت‌کننده / کارمند); if there is none, use `qa_scn_manager`.
+- b) `adb devices`. If `emulator-5554` is not listed as `device`, start it with `wt.exe -w 0 new-tab --title "Android Emulator" cmd /k "E:\Android\Sdk\emulator\emulator.exe -avd AndroidTest15"` and repeat `adb shell getprop sys.boot_completed` (pause at most 15 seconds between tries, at most 12 tries) until it prints 1. Then from the repo root: `adb install -r "frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk" > scratch\logs\apk5c_install.txt` and read that file; it must contain `Success`. Then `adb shell dumpsys package ir.comanage.soft.test` and note the `versionCode` and `versionName` lines.
+- c) Login and version line: `adb shell pm clear ir.comanage.soft.test`, `adb shell pm grant ir.comanage.soft.test android.permission.POST_NOTIFICATIONS`, then `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`, wait about 10 seconds. Tap the username field, `adb shell input text qa_scn_manager`; tap the password field, `adb shell input text <password>`; tap «ورود به سامانه»; wait about 10 seconds. If the app asks to choose a system, choose the accounting one. If the app asks for notification permission, allow it. Open the user menu (the avatar/user button in the header) and save `adb exec-out screencap -p > scratch/logs/android5c_menu.png`; note whether the version line is visible. Close the menu (back button).
+- d) Push: wait about 10 seconds so the app registers its device token, then in `backend`: `.\venv\Scripts\python.exe manage.py send_test_push --username qa_scn_manager > ..\scratch\logs\push5c_cmd.txt 2>&1` and read that file. Wait about 10 seconds, then from the repo root `adb shell dumpsys notification --noredact > scratch\logs\push5c_dumpsys.txt`. Open the notification shade with `adb shell cmd statusbar expand-notifications`, save `scratch/logs/android5c_push.png`, tap the notification of the app (find it with `uiautomator dump`), wait about 6 seconds, save `scratch/logs/android5c_mytasks.png`. If no push arrived (for example the command printed that the FCM key is not configured or the user has 0 devices), still save both screenshots (open «کارهای من» from the bell in the app instead) and report the reason.
+- e) Back button with a dialog open: in the app open any dialog (for example the bell panel or a «جدید» form), press `adb shell input keyevent KEYCODE_BACK` once, wait 2 seconds and save `scratch/logs/android5c_backbutton.png`. Report whether the dialog closed and the app stayed open.
+- f) Offline queue (log out and log in as the step-a employee user if it differs from the manager): `adb shell cmd connectivity airplane-mode enable`, wait 5 seconds. In the app register one petty cash expense («تنخواه» → new expense; fill only the required fields with small test values) and, if the user can, one invoice draft («فاکتور» → new; save as draft). While filling a field low on the form, save `scratch/logs/android5c_keyboard.png` once with the keyboard open and report whether the focused field stayed visible above the keyboard. Then close the app fully with `adb shell am force-stop ir.comanage.soft.test`, start it again with `am start`, wait about 10 seconds and save `scratch/logs/android5c_offline_queue.png` showing the queue badge or the pending items. Then `adb shell cmd connectivity airplane-mode disable`, wait about 20 seconds with the app in the foreground, and save `scratch/logs/android5c_after_sync.png`. Report how many items were pending before and after.
+- g) Delete the QA company, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\purge5c.txt 2>&1`, then read that file. Do this even if an earlier step failed. Make sure airplane mode is disabled at the end.
+
+4. Tool policy: only the commands above, `git status --short`, `Get-Content`/`Select-String` for reading, and `adb` (devices, install, shell dumpsys, shell input, shell am, shell pm clear, shell pm grant, shell getprop, shell cmd connectivity, shell cmd statusbar, shell uiautomator dump, pull, exec-out screencap). At most 80 adb calls. To find elements use `adb shell uiautomator dump /sdcard/ui.xml`, `adb pull /sdcard/ui.xml scratch/logs/ui.xml`, read the XML and tap the centre of the node `bounds`; if the XML has no web nodes, use screenshots and the coordinates above. If a step fails, read its output, change approach, and if it still fails report the exact error and continue with the next step; always do step g.
+
+5. Before finishing: the screenshots `android5c_menu.png`, `android5c_push.png`, `android5c_mytasks.png`, `android5c_backbutton.png`, `android5c_offline_queue.png`, `android5c_after_sync.png` exist; airplane mode is off; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the install result and the installed versionCode/versionName, whether the version line was visible, the content of `push5c_cmd.txt` (it holds no secrets), whether `push5c_dumpsys.txt` has a notification of `ir.comanage.soft.test`, whether tapping it opened my tasks, the back-button result, the keyboard result, the pending counts before and after reconnecting (and any error message), and the last line of `scratch/logs/purge5c.txt`. No commit. End the turn after the report.
