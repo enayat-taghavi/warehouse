@@ -3202,3 +3202,46 @@ verify: python scripts/automation/verify_tools.py clean-tree
 7. Before finishing: all 9 cases pass; commit only the two files with the message `test(release-v1 4.7-c): accounting reports page and manager dashboard DOM specs`; `git status --short` shows no change of yours.
 
 8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+
+===
+
+[ ] Session 1 of 2 — Release v1 stage 4 final close-out on the local app environment: backup, migration 0019, the four open-workflow commands, a temporary QA scenario company, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: backend\venv\Scripts\python.exe -X utf8 backend\manage.py migrate --check
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any tracked file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+- Never roll back a migration (`migrate personnel 0018` or similar is forbidden).
+- Never print the content of `scratch/qa_scenario_credentials.txt` in your report; it holds test passwords.
+
+2. Context: Release v1 stage 4 (steps 4.3 to 4.7: personnel file, attendance, payroll, fleet, accounting reports) changed backend and frontend code. One migration is unapplied on the app database: `personnel 0019_payroll_petty_cash_deduction` (two added columns with defaults; reviewed for data loss and name collisions). Four management commands open engine workflow instances for documents that were already in flight before the new workflow engine; each is idempotent, deletes nothing, and supports `--dry-run`. A temporary QA scenario company (`QA-SCN`, users `qa_scn_*`) is created for a login check that runs after this session; a later session deletes it. The app database holds test data only. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app stage 4 final'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration list: `.\venv\Scripts\python.exe manage.py showmigrations --plan` and note every `[ ]` line.
+- c) Migrate: `.\venv\Scripts\python.exe manage.py migrate --noinput`. If it fails, stop and report the last 40 lines of the error; do not try to fix it, and never fake or skip migrations.
+- d) Check: `.\venv\Scripts\python.exe manage.py migrate --check` exits 0, and `.\venv\Scripts\python.exe manage.py check` prints no errors.
+- e) Open-workflow commands. For each of `personnel_open_workflows`, `attendance_open_workflows`, `fleet_open_workflows`, `payroll_open_workflows`, in this order: first run it with `--dry-run`, then without it, then once more without it. Note the summary line of each run. The third run of each command must open nothing new (idempotent). If a command fails, report its last 30 lines and continue with the next command.
+- f) QA scenario company: with `WH_ALLOW_SCENARIO_SEED=1`, run `.\venv\Scripts\python.exe manage.py seed_scenario`. It writes the test users and passwords to `scratch/qa_scenario_credentials.txt` (outside git). Report only the number of lines in that file and the usernames (first column), never the passwords.
+- g) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above, `git status --short`, and reading the credentials file to count its lines. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `[ ]` migrations found in step b, the migrate result, the three summary lines of each open-workflow command, the QA usernames, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
