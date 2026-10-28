@@ -2798,7 +2798,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.4-c: attendance DOM specs (lock message, dirty cells, reason dialog)
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.4-c: attendance DOM specs (lock message, dirty cells, reason dialog)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

@@ -14242,3 +14242,60 @@ Write the definitions in simple Persian like the rows above.
 کاربر درخواست پیاده‌سازی آزمون‌های یکپارچه سناریویی API دورهٔ کارکرد و موتور گردش کار ۲.۳ (گام ۴.۴-ب از نسخه اول) را در قالب دقیقاً یک فایل آزمون جدید به نام [`backend/modules/accounting/personnel/test_attendance_44.py`](file:///E:/comanager/backend/modules/accoun...
 
 ---
+
+### Task 1 of 1 — 2026-10-28 06:00:39
+- **Status:** DONE
+- **Conversation:** `4eb22f7d-ceb3-4c34-a5d8-8c5c91b43e63`
+- **Steps:** 166
+- **Tokens:** 329097
+- **Duration:** 10m 38s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.4-c: attendance DOM specs (lock message, dirty cells, reason dialog)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Create exactly two new files: `frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance-44c.dom.spec.ts` and `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance-44c.dom.spec.ts`. Change no other file (never touch `scripts/automation/*`, never change production code). If a test fails because of production code, keep the assertion, stop, and describe the failure in the report.
+- No `it.skip`, no `xit(`, no `fit(`.
+- Run every command in the foreground and wait until it finishes.
+
+2. Context (committed by Claude in the `feat(release-v1 4.4-c...)` commit; read only these):
+- `frontend/src/app/modules/accounting/attendance-period-error.ts` (whole file, 45 lines): `ATTENDANCE_PERIOD_LOCKED_FA`, `attendanceWriteErrorMessage`, `attendanceActionErrorMessage`. Import the constant from it in both specs; never retype the Persian text.
+- `frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance.spec.ts`: COPY its TestBed setup, providers and mocks (`mockPersonnelApi`, `mockToast`). In `employee-attendance.ts` Grep: `LOCKED_STATUSES`, `isPeriodLocked`, `periodLockedMessage`, `dirtyMonthlyCells`, `onMonthlyCellHoursChange`, `saveMonthlyGrid`, `submitPeriodForReview`, `NetworkStatusService`. In `employee-attendance.html` Grep `my-tasks`.
+- `frontend/src/app/core/services/network-status.service.ts`: how `isOnline` is computed (to simulate offline in item e; restore the online state in `afterEach`).
+- `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`: COPY its TestBed setup and mocks. In `supervisor-attendance.ts` Grep: `openRevisionModal`, `confirmRevision`, `revisionServerError`, `postCartableAction`. In `supervisor-attendance.html` Grep `app-workflow-reason-dialog`.
+
+3. Definitions: a locked period is any `period_status` in `SUBMITTED`, `SUBMITTED_SUPERVISOR`, `SUBMITTED_ACCOUNTANT`, `READY_TO_PAY`, `PAID`, `LOCKED`, `FINALIZED`. A server lock error is an `HttpErrorResponse` with status 400 and body `{code: 'attendance_period_locked', error: 'x', detail: 'x'}`. A fiscal error has status 400 and body `{date_shamsi: ['MSG-FISCAL'], code: 'fiscal_period_closed'}`.
+
+4. Task:
+- File A `employee-attendance-44c.dom.spec.ts`, one `it` each:
+  a) when the monthly grid response has `period_status: 'SUBMITTED_SUPERVISOR'` and `is_locked: false`, `component.isPeriodLocked` is true, the rendered monthly tab contains `ATTENDANCE_PERIOD_LOCKED_FA`, and an anchor whose `href` contains `my-tasks` and `attendance_period` is present;
+  b) `saveMonthlyGrid` whose `bulkSaveMonthlyGrid` mock returns `throwError` with the server lock error calls `mockToast.show('error', ATTENDANCE_PERIOD_LOCKED_FA)`;
+  c) the same with the fiscal error calls `mockToast.show('error', 'MSG-FISCAL')`;
+  d) with two grid rows of 3 days each, after calling `onMonthlyCellHoursChange` on exactly one cell (personnel of row 1, day 2, set `effective_hours` to 8 first) `saveMonthlyGrid` sends `items` with length 1 for that personnel and day 2;
+  e) offline: `submitPeriodForReview` does not call `periodWorkflowAction` and shows a warning toast; online with `selectedSectionId = 10` it calls `periodWorkflowAction` with an object containing `section_id: 10` and `action: 'submit'`.
+- File B `supervisor-attendance-44c.dom.spec.ts`:
+  f) `openRevisionModal(item)` then `fixture.detectChanges()`: an `app-workflow-reason-dialog` element is present and `component.showRevisionModal` is true; `confirmRevision('')` calls no `postCartableAction`;
+  g) `confirmRevision('علت آزمایشی')` calls `postCartableAction` once with `'supervisor'` and an object containing `action: 'revision'`;
+  h) when `postCartableAction` returns `throwError` with the server lock error, `component.revisionServerError` equals `ATTENDANCE_PERIOD_LOCKED_FA` and the dialog stays open.
+
+5. Tool policy: only reading the listed files, Grep in `frontend/src/app/modules/accounting/`, `frontend/src/app/core/services/` and `frontend/src/app/shared/`, writing the two files, the test command below, `git add` of those two files, `git commit`, `git status --short`. Test command, in the repository root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-attendance/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*.spec.ts"`; per-test log `scratch/logs/runner/ngtest-head.log`. If a test fails, read the error, fix the test (not production code), rerun at most 5 times.
+
+6. Verification: the test command passes with 0 failed.
+
+7. Output: commit with message `test(release-v1 4.4-c): attendance DOM specs (lock message, dirty cells, reason dialog)`. Report in English: files, number of tests, result. Then stop.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### توضیح اولیه (ساده و شفاف به فارسی)
+کاربر درخواست پیاده‌سازی گام ۴.۴-ج (Release v1 step 4.4-c) مربوط به تست‌های DOM ثبت کارکرد پرسنل و کارتابل سرپرست کارکرد را در دو فایل مشخص داشت:
+۱. فایل `employee-attendance-44c.dom.spec.ts` شامل ۵ تست برای اعتبارسنجی پیام قفل دوره، لینک «کارهای من»، خطاهای سرور و دوره مالی در ذخیره ماتریس، ارسال فقط سلول‌های تغییر‌یافته (`dirtyMonthlyCells`)، و رفتار آفلاین/آنلاین در ارسال دوره جهت بررسی مالی.
+۲. فایل `supervisor-attendance-44c.dom.spec.ts` شامل ۳ تست برای بررسی باز شدن دیالوگ عودت (`app-workflow-reason-dialog`)، عدم ارسال درخواست بدون ذکر دلیل، فراخوانی `postCartableAction` با اکشن `revision`، و نگاشت خطای قفل دوره سرور...
+
+---
