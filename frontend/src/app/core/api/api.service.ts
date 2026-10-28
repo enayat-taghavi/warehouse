@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpRequest, HttpEvent, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpRequest, HttpEvent, HttpContext, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -76,6 +76,15 @@ export class ApiService {
     return this.http.get(this.url(endpoint), {
       params: this.buildParams(params),
       responseType: 'blob',
+    });
+  }
+
+  /** دانلود فایل همراه سربرگ‌های پاسخ (مثلاً هشدارهای خروجی دیسکت) */
+  downloadWithHeaders(endpoint: string, params?: Record<string, unknown>): Observable<HttpResponse<Blob>> {
+    return this.http.get(this.url(endpoint), {
+      params: this.buildParams(params),
+      responseType: 'blob',
+      observe: 'response',
     });
   }
 

@@ -54,6 +54,8 @@
         appAction="download"
         display="label"
         label="فایل پایا"
+        [disabled]="!isOnline"
+        [hint]="offlineHint"
         (click)="generateBatchPayaFile()"
       ></button>
 
@@ -61,6 +63,8 @@
       <button
         type="button"
         appAction="export-excel"
+        [disabled]="!isOnline"
+        [hint]="offlineHint"
         (click)="exportExcel()"
       ></button>
 
@@ -68,10 +72,18 @@
       <button
         type="button"
         appAction="refresh"
+        [disabled]="!isOnline"
+        [hint]="offlineHint"
         (click)="refreshData()"
       ></button>
     </div>
   </app-command-center>
+
+  @if (!isOnline) {
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-3 text-xs font-bold" role="status">
+      {{ offlineHintFa }} دکمه‌های پرداخت و دریافت فایل تا برگشت اتصال غیرفعال‌اند.
+    </div>
+  }
 
   <!-- ── شاخص‌های صف خزانه‌داری (منتقل‌شده از کارتابل خزانه‌داری قدیمی) ── -->
   @if (loadError) {
@@ -155,7 +167,8 @@
                         display="label"
                         size="sm"
                         [busy]="downloadingDisketteKey === p.id + '-paya'"
-                        [disabled]="downloadingDisketteKey !== null"
+                        [disabled]="downloadingDisketteKey !== null || !isOnline"
+                        [hint]="offlineHint"
                         (click)="downloadPeriodDiskette(p, 'paya')"
                       ></button>
                       <button
@@ -165,7 +178,8 @@
                         display="label"
                         size="sm"
                         [busy]="downloadingDisketteKey === p.id + '-satna'"
-                        [disabled]="downloadingDisketteKey !== null"
+                        [disabled]="downloadingDisketteKey !== null || !isOnline"
+                        [hint]="offlineHint"
                         (click)="downloadPeriodDiskette(p, 'satna')"
                       ></button>
                     </div>
@@ -177,6 +191,8 @@
                       label="پرداخت دوره"
                       display="label"
                       size="sm"
+                      [disabled]="!isOnline"
+                      [hint]="offlineHint"
                       (click)="openPeriodBatchModal(p)"
                     ></button>
                   </td>
@@ -207,6 +223,8 @@
             label="تسویه ناوگان"
             display="label"
             size="sm"
+            [disabled]="!isOnline"
+            [hint]="offlineHint"
             (click)="openFleetBatchModal()"
           ></button>
           <span class="text-xs font-bold text-fg-muted">({{ pendingFleetItems.length }} سفر)</span>
@@ -265,15 +283,22 @@
               <div class="text-[9px] text-slate-400">{{ item.payment_date }}</div>
             </td>
             <td class="py-3 px-3 text-center">
-              <button
-                *ngIf="item.status === 'pending_payment'"
-                type="button"
-                appAction="confirm"
-                label="ثبت واریز"
-                display="label"
-                size="sm"
-                (click)="openPayModal(item)"
-              ></button>
+              @if (item.status === 'pending_payment') {
+                @if (item.type === 'payroll' && !item.can_pay_single) {
+                  <span class="text-[11px] font-bold text-fg-muted">با «پرداخت دوره» پرداخت می‌شود</span>
+                } @else {
+                  <button
+                    type="button"
+                    appAction="confirm"
+                    [label]="item.sheba_failed ? 'پرداخت دوباره' : 'ثبت واریز'"
+                    display="label"
+                    size="sm"
+                    [disabled]="!isOnline"
+                    [hint]="offlineHint"
+                    (click)="openPayModal(item)"
+                  ></button>
+                }
+              }
               <span *ngIf="item.status === 'paid'" class="text-[11px] font-bold text-emerald-600">✓ واریز شده</span>
             </td>
           </tr>
@@ -327,13 +352,26 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">شناسه یا کد رهگیری بانک:</label>
+          <label for="treasury-single-tracking" class="block font-bold text-fg mb-1">شناسه یا کد رهگیری بانک (الزامی):</label>
           <input
+            id="treasury-single-tracking"
             type="text"
             [(ngModel)]="trackingCodeInput"
+            (ngModelChange)="trackingCodeError = ''"
+            dir="ltr"
+            required
+            [attr.aria-invalid]="trackingCodeError ? 'true' : null"
+            [attr.aria-describedby]="trackingCodeError ? 'treasury-single-tracking-err' : null"
             placeholder="مثال: TRK-1234567"
-            class="w-full bg-white border border-slate-200 font-mono text-xs font-bold text-slate-900 rounded-xl p-2 focus:outline-none focus:border-teal-500">
+            class="w-full bg-surface border font-mono text-xs font-bold text-fg rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            [class.border-line]="!trackingCodeError" [class.border-rose-400]="!!trackingCodeError">
+          @if (trackingCodeError) {
+            <p id="treasury-single-tracking-err" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ trackingCodeError }}</p>
+          }
         </div>
+        @if (singleServerError) {
+          <p class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-2 text-[11px] font-bold" role="alert">{{ singleServerError }}</p>
+        }
 
         <div>
           <label for="treasury-single-batch-id" class="block font-bold text-slate-700 mb-1">شناسه دسته واریز (اختیاری):</label>
@@ -361,7 +399,8 @@
           label="ثبت واریز"
           display="label"
           [busy]="isSubmittingSingle"
-          [disabled]="isSubmittingSingle"
+          [disabled]="isSubmittingSingle || !isOnline"
+          [hint]="offlineHint"
           (click)="confirmDisbursement()"
         ></button>
       </div>
@@ -407,10 +446,19 @@
 
         <div class="space-y-1">
           <label for="treasury-batch-tracking" class="block font-bold text-fg">کد رهگیری / شماره پیگیری بانکی (الزامی):</label>
-          <input id="treasury-batch-tracking" type="text" [(ngModel)]="batchTrackingCode" dir="ltr" required
-            class="w-full bg-surface border border-line font-mono text-xs font-bold text-fg rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+          <input id="treasury-batch-tracking" type="text" [(ngModel)]="batchTrackingCode" (ngModelChange)="batchTrackingCodeError = ''" dir="ltr" required
+            [attr.aria-invalid]="batchTrackingCodeError ? 'true' : null"
+            [attr.aria-describedby]="batchTrackingCodeError ? 'treasury-batch-tracking-err' : null"
+            class="w-full bg-surface border font-mono text-xs font-bold text-fg rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            [class.border-line]="!batchTrackingCodeError" [class.border-rose-400]="!!batchTrackingCodeError"
             placeholder="PAYA-140506-987654">
+          @if (batchTrackingCodeError) {
+            <p id="treasury-batch-tracking-err" class="text-[11px] font-bold text-rose-700" role="alert">{{ batchTrackingCodeError }}</p>
+          }
         </div>
+        @if (batchServerError) {
+          <p class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-2 text-[11px] font-bold" role="alert">{{ batchServerError }}</p>
+        }
 
         <div class="space-y-1">
           <label for="treasury-batch-id" class="block font-bold text-fg">شناسه دسته واریز (Batch ID):</label>
@@ -433,7 +481,8 @@
             label="ثبت واریز"
             display="label"
             [busy]="isSubmittingBatch"
-            [disabled]="isSubmittingBatch || !batchTrackingCode.trim()"
+            [disabled]="isSubmittingBatch || !isOnline"
+            [hint]="offlineHint"
             (click)="submitBatchDisbursement()"
           ></button>
         </div>

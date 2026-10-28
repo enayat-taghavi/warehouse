@@ -189,6 +189,7 @@ class MonthlyWorkPeriodSerializer(serializers.ModelSerializer):
     locked_by_name = serializers.SerializerMethodField()
     submitted_by_name = serializers.SerializerMethodField()
     pending_approvals_count = serializers.SerializerMethodField()
+    payroll_workflow_step = serializers.SerializerMethodField()
 
     class Meta:
         model = MonthlyWorkPeriod
@@ -211,6 +212,12 @@ class MonthlyWorkPeriodSerializer(serializers.ModelSerializer):
         if obj.submitted_by:
             return f"{obj.submitted_by.first_name} {obj.submitted_by.last_name}".strip() or obj.submitted_by.username
         return None
+
+    def get_payroll_workflow_step(self, obj):
+        # 4.5-d: open payroll workflow step (manager_ok / treasury_pay) so the payroll page knows the lock after reload
+        from ..workflows import payroll_open_task
+        task = payroll_open_task(obj.pk)
+        return task.step_key if task is not None else None
 
     def get_pending_approvals_count(self, obj):
         # شمارش کارکردهای تاییدنشده دوره

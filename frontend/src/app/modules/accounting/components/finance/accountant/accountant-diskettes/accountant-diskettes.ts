@@ -16,13 +16,22 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
 import {
   PAYROLL_MONTHS,
   defaultPayrollPeriod,
   isPayrollMonthName,
   mergeFiscalYears,
-  payrollMonthCode
+  payrollMonthCode,
+  PAYROLL_OFFLINE_FA
 } from '../payroll-period';
+
+/** پیام خطای خروجی (بدنهٔ خطا Blob است، پس فقط از کد وضعیت پیام ساخته می‌شود) */
+function exportErrorMessage(err: any, fallback: string): string {
+  if (err?.status === 403) return 'مجوز خروجی حقوق این پروژه را ندارید.';
+  if (err?.status === 404) return 'پروژه یا دوره پیدا نشد یا به آن دسترسی ندارید.';
+  return fallback;
+}
 
 @Component({
   selector: 'app-accountant-diskettes-hub',
@@ -82,6 +91,19 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   isGeneratingFleet = false;
   /** پرچم خروجی دیسکت پرداخت‌های آزادشده (DEF-20) */
   isGeneratingReleased = false;
+
+  /** هشدار دوره‌های بخشِ هنوز تأییدنشدهٔ مدیر در آخرین خروجی (سربرگ X-Payroll-Unapproved-Periods) */
+  unapprovedWarning = '';
+  readonly offlineMessage = PAYROLL_OFFLINE_FA;
+  private readonly network = NetworkStatusService.getInstance();
+
+  get isOnline(): boolean {
+    return this.network.isOnline;
+  }
+
+  get offlineHint(): string {
+    return this.isOnline ? '' : PAYROLL_OFFLINE_FA;
+  }
 
   private routeSub?: Subscription;
 
@@ -225,12 +247,25 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     void saveBlob(blob, filename);
   }
 
+  /** سربرگ‌های خروجی پروژه+ماه: دوره‌های تأییدنشدهٔ مدیر در فایل هستند و باید دیده شوند */
+  private noteUnapproved(res: { unapprovedPeriods: number; unapprovedSections: string[] }): void {
+    if (res.unapprovedPeriods > 0) {
+      const names = res.unapprovedSections.length ? ` (${res.unapprovedSections.join('، ')})` : '';
+      this.unapprovedWarning = `${res.unapprovedPeriods} دوره${names} هنوز تأیید مدیر نشده است؛ فایل صادرشده شامل حقوق تأییدنشده است و پیش از ارسال به بانک یا سازمان، تأیید مدیر را پیگیری کنید.`;
+    }
+  }
+
   /**
    * هشدار مسدودکننده پیش از دانلود دیسکت: پرسنلی که تاریخ اعتبارشان گذشته از دیسکت بیمه، مالیات و بانک
    * کنار گذاشته می‌شوند (تصمیم مصوب ۶.۶). این کنار گذاشتن دیگر بی‌صدا نیست (DEF-20).
    */
   private confirmExpiredExclusion(onConfirmed: () => void): void {
     if (!this.currentPeriodId || !this.selectedProjectId) return;
+    if (!this.isOnline) {
+      this.toast.error(PAYROLL_OFFLINE_FA);
+      return;
+    }
+    this.unapprovedWarning = '';
     this.isGenerating = true;
     this.personnelApi.getDisketteExpiredPersonnel(this.currentPeriodId, this.selectedProjectId).subscribe({
       next: async (res) => {
@@ -279,17 +314,17 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
 
   private doGenerateSocialSecurityDiskette(): void {
     this.isGenerating = true;
-    this.personnelApi.exportBimehDisketteZip(this.currentPeriodId!, this.selectedProjectId!).subscribe({
-      next: (blob: Blob) => {
+    this.personnelApi.exportProjectMonth('dsk-zip', this.selectedProjectId!, this.yearMonth).subscribe({
+      next: (res) => {
         this.isGenerating = false;
-        this.saveBlob(blob, `Bimeh_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.zip`);
+        this.noteUnapproved(res);
+        this.saveBlob(res.blob, `Bimeh_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.zip`);
         this.toast.success(`دیسکت‌های DSKWOR00.DBF و DSKKAR00.DBF با موفقیت تولید و دانلود شد.`);
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isGenerating = false;
-        const msg = err?.error?.error || 'خطا در تولید دیسکت‌های تامین اجتماعی.';
-        this.toast.error(msg);
+        this.toast.error(exportErrorMessage(err, 'خطا در تولید دیسکت‌های تامین اجتماعی.'));
         this.cdr.detectChanges();
       }
     });
@@ -306,15 +341,16 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   private doGenerateTaxDiskette(): void {
     this.isGenerating = true;
     const m = payrollMonthCode(this.selectedMonth);
-    this.personnelApi.exportTaxWh(this.currentPeriodId!, this.selectedProjectId!).subscribe({
-      next: (blobWh: Blob) => {
-        this.saveBlob(blobWh, `WH_${this.fiscalYear}${m}.txt`);
+    this.personnelApi.exportProjectMonth('tax-wh', this.selectedProjectId!, this.yearMonth).subscribe({
+      next: (resWh) => {
+        this.noteUnapproved(resWh);
+        this.saveBlob(resWh.blob, `WH_${this.fiscalYear}${m}.txt`);
 
         // Then download WP
-        this.personnelApi.exportTaxWp(this.currentPeriodId!, this.selectedProjectId!).subscribe({
-          next: (blobWp: Blob) => {
+        this.personnelApi.exportProjectMonth('tax-wp', this.selectedProjectId!, this.yearMonth).subscribe({
+          next: (resWp) => {
             this.isGenerating = false;
-            this.saveBlob(blobWp, `WP_${this.fiscalYear}${m}.txt`);
+            this.saveBlob(resWp.blob, `WP_${this.fiscalYear}${m}.txt`);
             this.toast.success(`فایل‌های الکترونیکی مالیات بر درآمد حقوق (WH/WP) با موفقیت استخراج و دانلود گردید.`);
             this.cdr.detectChanges();
           },
@@ -327,8 +363,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isGenerating = false;
-        const msg = err?.error?.error || 'خطا در تولید فایل WH مالیاتی.';
-        this.toast.error(msg);
+        this.toast.error(exportErrorMessage(err, 'خطا در تولید فایل WH مالیاتی.'));
         this.cdr.detectChanges();
       }
     });
@@ -344,17 +379,17 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
 
   private doGenerateBankDiskette(): void {
     this.isGenerating = true;
-    this.personnelApi.exportBankPaymentExcel(this.currentPeriodId!, this.selectedProjectId!).subscribe({
-      next: (blob: Blob) => {
+    this.personnelApi.exportProjectMonth('bank-excel', this.selectedProjectId!, this.yearMonth).subscribe({
+      next: (res) => {
         this.isGenerating = false;
-        this.saveBlob(blob, `Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
+        this.noteUnapproved(res);
+        this.saveBlob(res.blob, `Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.success(`فایل پرداخت گروهی بانک ملی با موفقیت صادر گردید.`);
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isGenerating = false;
-        const msg = err?.error?.error || 'خطا در صدور فایل پرداخت بانک.';
-        this.toast.error(msg);
+        this.toast.error(exportErrorMessage(err, 'خطا در صدور فایل پرداخت بانک.'));
         this.cdr.detectChanges();
       }
     });
@@ -366,18 +401,22 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       this.toast.warning('دوره محاسباتی یا پروژه فعال یافت نشد.');
       return;
     }
+    if (!this.isOnline) {
+      this.toast.error(PAYROLL_OFFLINE_FA);
+      return;
+    }
     this.isGeneratingReleased = true;
-    this.personnelApi.exportBankPaymentExcel(this.currentPeriodId, this.selectedProjectId, true).subscribe({
-      next: (blob: Blob) => {
+    this.personnelApi.exportProjectMonth('bank-excel', this.selectedProjectId, this.yearMonth, true).subscribe({
+      next: (res) => {
         this.isGeneratingReleased = false;
-        this.saveBlob(blob, `Bank_Payment_Released_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
+        this.noteUnapproved(res);
+        this.saveBlob(res.blob, `Bank_Payment_Released_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.success('فایل پرداخت گروهی رکوردهای آزادشده با موفقیت صادر گردید.');
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isGeneratingReleased = false;
-        const msg = err?.error?.error || 'خطا در صدور فایل پرداخت رکوردهای آزادشده.';
-        this.toast.error(msg);
+        this.toast.error(exportErrorMessage(err, 'خطا در صدور فایل پرداخت رکوردهای آزادشده.'));
         this.cdr.detectChanges();
       }
     });

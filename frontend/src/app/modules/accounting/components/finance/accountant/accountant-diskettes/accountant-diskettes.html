@@ -72,6 +72,8 @@
       <button
         type="button"
         appAction="export-excel"
+        [disabled]="!isOnline"
+        [hint]="offlineHint"
         (click)="exportExcel()"
       ></button>
 
@@ -106,6 +108,18 @@
     </div>
   }
 
+  @if (!isOnline) {
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-3 text-xs font-bold" role="status">
+      {{ offlineMessage }} دریافت فایل‌ها تا برگشت اتصال غیرفعال است.
+    </div>
+  }
+  @if (unapprovedWarning) {
+    <div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl p-3 flex items-start gap-2 text-xs font-bold" role="status">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0 mt-0.5"></svg>
+      <span>{{ unapprovedWarning }}</span>
+    </div>
+  }
+
   <!-- ── ۲. محتوای تخصصی تب‌ها ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-6">
     <!-- تب ۱: دیسکت تامین اجتماعی -->
@@ -121,6 +135,8 @@
           label="دانلود فایل‌های DBF"
           display="label"
           [busy]="isGenerating"
+          [disabled]="!isOnline"
+          [hint]="offlineHint"
           (click)="generateSocialSecurityDiskette()"
         ></button>
       </div>
@@ -154,6 +170,8 @@
           label="فایل‌های مالیاتی WH و WP"
           display="label"
           [busy]="isGenerating"
+          [disabled]="!isOnline"
+          [hint]="offlineHint"
           (click)="generateTaxDiskette()"
         ></button>
       </div>
@@ -188,6 +206,8 @@
           label="دیسکت بانکی حقوق"
           display="label"
           [busy]="isGenerating"
+          [disabled]="!isOnline"
+          [hint]="offlineHint"
           (click)="generateBankDiskette()"
         ></button>
       </div>
@@ -204,6 +224,8 @@
           label="دیسکت پرداخت‌های آزادشده"
           display="label"
           [busy]="isGeneratingReleased"
+          [disabled]="!isOnline"
+          [hint]="offlineHint"
           (click)="generateReleasedBankDiskette()"
         ></button>
       </div>
@@ -220,6 +242,8 @@
           label="اکسل تسویه ناوگان"
           display="label"
           [busy]="isGeneratingFleet"
+          [disabled]="!isOnline"
+          [hint]="offlineHint"
           (click)="generateFleetBankExcel()"
         ></button>
       </div>

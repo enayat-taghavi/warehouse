@@ -18,6 +18,31 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+
+export const TREASURY_OFFLINE_HINT_FA = 'پرداخت فقط آنلاین ممکن است؛ اتصال را بررسی کنید.';
+export const TRACKING_CODE_REQUIRED_FA = 'وارد کردن کد رهگیری بانکی الزامی است.';
+
+/** پیام خطای پرداخت خزانه از بدنهٔ `{code, error, detail}` سرور (۴.۵-د). */
+export function treasuryErrorMessage(err: any, fallback: string): string {
+  const body = err?.error;
+  const msg = (body && typeof body === 'object' ? (body.detail || body.error || body.message) : null) as string | null;
+  switch (body?.code) {
+    case 'petty_settlement_changed':
+      return `${msg || 'تسویه تنخواه این دوره تغییر کرده است.'} دوره را در «کارهای من» برای محاسبهٔ دوباره عودت دهید.`;
+    case 'not_ready_to_pay':
+      return msg || 'این دوره هنوز آمادهٔ پرداخت نیست یا پیش‌تر پرداخت شده است.';
+    case 'not_failed_sheba':
+      return msg || 'این فیش قابل پرداخت جداگانه نیست.';
+    case 'tracking_code_required':
+      return TRACKING_CODE_REQUIRED_FA;
+    default:
+      break;
+  }
+  if (err?.status === 404) return 'مورد پیدا نشد یا به آن دسترسی ندارید.';
+  if (err?.status === 403) return msg || 'شما مجوز این اقدام را ندارید.';
+  return msg || fallback;
+}
 
 export interface DisbursementQueueItem {
   id: number;
@@ -37,6 +62,9 @@ export interface DisbursementQueueItem {
   /** پرداخت قبلی به‌علت شبای نامعتبر برگشت خورده است (FAILED_SHEBA) */
   sheba_failed?: boolean;
   failure_reason?: string;
+  /** وضعیت ردیف حقوق سرور؛ پرداخت جداگانه فقط برای FAILED_SHEBA یا ردیف آزادشده (PENDING) */
+  payment_status?: string;
+  can_pay_single?: boolean;
 }
 
 /** دورهٔ حقوق مصوب مدیر که آمادهٔ پرداخت یکجاست */
@@ -252,10 +280,31 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     return this.items.filter(x => x.type === 'fleet' && x.status === 'pending_payment');
   }
 
+  private readonly network = NetworkStatusService.getInstance();
+  readonly offlineHintFa = TREASURY_OFFLINE_HINT_FA;
+  trackingCodeError = '';
+  batchTrackingCodeError = '';
+  singleServerError = '';
+  batchServerError = '';
+
+  get isOnline(): boolean {
+    return this.network.isOnline;
+  }
+
+  /** راهنمای دکمه‌ها: آفلاین دلیل غیرفعال بودن را می‌گوید، آنلاین تهی است (عنوان پیش‌فرض می‌ماند) */
+  get offlineHint(): string {
+    return this.isOnline ? '' : TREASURY_OFFLINE_HINT_FA;
+  }
+
   openPayModal(item: DisbursementQueueItem): void {
+    if (!this.isOnline) {
+      this.toast.error(TREASURY_OFFLINE_HINT_FA);
+      return;
+    }
     this.payingItem = item;
-    const now = new Date();
-    this.trackingCodeInput = `PAY-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getTime().toString().slice(-6)}`;
+    this.trackingCodeInput = '';
+    this.trackingCodeError = '';
+    this.singleServerError = '';
     this.batchIdInput = '';
     this.isPayModalOpen = true;
   }
@@ -296,6 +345,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       periodId: period.id
     };
     this.batchTrackingCode = '';
+    this.batchTrackingCodeError = '';
+    this.batchServerError = '';
     this.batchIdValue = `BATCH-${ym}-01`;
     this.batchPaymentMethod = 'PAYA';
     this.cdr.detectChanges();
@@ -315,6 +366,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       tripIds: fleet.map(x => x.id)
     };
     this.batchTrackingCode = '';
+    this.batchTrackingCodeError = '';
+    this.batchServerError = '';
     this.batchIdValue = `BATCH-FLEET-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
     this.batchPaymentMethod = 'PAYA';
     this.cdr.detectChanges();
@@ -330,11 +383,17 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
 
   submitBatchDisbursement(): void {
     if (!this.batchModal || this.isSubmittingBatch) return;
-    const trackingCode = this.batchTrackingCode.trim();
-    if (!trackingCode) {
-      this.toast.warning('وارد کردن شماره پیگیری / کد رهگیری بانکی الزامی است.');
+    if (!this.isOnline) {
+      this.batchServerError = TREASURY_OFFLINE_HINT_FA;
       return;
     }
+    const trackingCode = this.batchTrackingCode.trim();
+    if (!trackingCode) {
+      this.batchTrackingCodeError = TRACKING_CODE_REQUIRED_FA;
+      return;
+    }
+    this.batchTrackingCodeError = '';
+    this.batchServerError = '';
 
     const payload: any = {
       action: this.batchModal.kind === 'period' ? 'disburse_period' : 'disburse_fleet',
@@ -358,7 +417,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSubmittingBatch = false;
-        this.toast.error(err?.error?.detail || err?.error?.error || 'خطا در ثبت پرداخت خزانه‌داری.');
+        this.batchServerError = treasuryErrorMessage(err, 'خطا در ثبت پرداخت خزانه‌داری.');
         this.cdr.detectChanges();
       }
     });
@@ -385,11 +444,17 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
   }
 
   confirmDisbursement(): void {
-    if (!this.payingItem) return;
-    if (!this.trackingCodeInput.trim()) {
-      this.toast.warning('لطفاً شناسه پیگیری پرداخت بانکی را وارد نمایید.');
+    if (!this.payingItem || this.isSubmittingSingle) return;
+    if (!this.isOnline) {
+      this.singleServerError = TREASURY_OFFLINE_HINT_FA;
       return;
     }
+    if (!this.trackingCodeInput.trim()) {
+      this.trackingCodeError = TRACKING_CODE_REQUIRED_FA;
+      return;
+    }
+    this.trackingCodeError = '';
+    this.singleServerError = '';
 
     const payload: any = {
       tracking_code: this.trackingCodeInput.trim()
@@ -416,8 +481,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSubmittingSingle = false;
-        const msg = err?.error?.error || 'خطا در ثبت تسویه و پرداخت خزانه‌داری.';
-        this.toast.error(msg);
+        this.singleServerError = treasuryErrorMessage(err, 'خطا در ثبت تسویه و پرداخت خزانه‌داری.');
         this.cdr.detectChanges();
       }
     });
@@ -498,7 +562,10 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
               tracking_code: p.payment_tracking_code || '',
               payment_date: p.paid_at || '',
               sheba_failed: p.payment_status === 'FAILED_SHEBA',
-              failure_reason: p.payment_failure_reason || ''
+              failure_reason: p.payment_failure_reason || '',
+              payment_status: p.payment_status,
+              // ردیف READY_TO_PAY فقط با «پرداخت دوره» پرداخت می‌شود؛ جداگانه فقط ردیف شبای ناموفق یا آزادشده
+              can_pay_single: p.payment_status === 'FAILED_SHEBA' || p.payment_status === 'PENDING'
             });
           }
         }

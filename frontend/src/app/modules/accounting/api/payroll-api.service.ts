@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService } from '../../../core/api/api.service';
 import {
   SKIP_OFFLINE,
@@ -180,9 +181,16 @@ export class PayrollApiService {
   calculatePeriodPayroll(payload: {
     warehouse_id?: number | null;
     company_id?: number | null;
-    year_month: string;
+    year_month?: string;
+    section_id?: number | null;
+    period_id?: number | null;
   }): Observable<any> {
     return this.api.post<any>(`${this.baseUrl}/monthly-payroll/calculate-period/`, payload);
+  }
+
+  /** ۴.۵-د: ارسال حقوق دورهٔ بخش به گردش (مدیر ← خزانه)؛ فقط آنلاین */
+  submitPayrollWorkflow(periodId: number): Observable<{ message: string; period_id: number; workflow_step: string | null }> {
+    return this.api.post<any>(`${this.baseUrl}/monthly-payroll/submit-workflow/`, { period_id: periodId });
   }
 
   exportMonthlyPayrollExcel(periodId: number): Observable<Blob> {
@@ -211,6 +219,34 @@ export class PayrollApiService {
       params.only_released = 'true';
     }
     return this.api.download(`${this.baseUrl}/monthly-payroll/export-bank-excel/`, params);
+  }
+
+  /**
+   * ۴.۵-د: خروجی دیسکت/مالیات/بانک همهٔ دوره‌های بخشِ یک پروژه و ماه (`project_id + year_month`).
+   * سربرگ X-Payroll-Unapproved-Periods شمار دوره‌های هنوز تأییدنشدهٔ مدیر و X-Payroll-Unapproved-Sections نام بخش‌ها (JSON با کدگذاری URL) است.
+   */
+  exportProjectMonth(
+    kind: 'dsk-zip' | 'tax-wh' | 'tax-wp' | 'bank-excel',
+    projectId: number,
+    yearMonth: string,
+    onlyReleased = false
+  ): Observable<{ blob: Blob; unapprovedPeriods: number; unapprovedSections: string[] }> {
+    const params: Record<string, unknown> = { project_id: projectId, year_month: yearMonth };
+    if (onlyReleased) params['only_released'] = 'true';
+    return this.api.downloadWithHeaders(`${this.baseUrl}/monthly-payroll/export-${kind}/`, params).pipe(
+      map(resp => {
+        const count = Number(resp.headers.get('X-Payroll-Unapproved-Periods') || 0);
+        let sections: string[] = [];
+        try {
+          const raw = resp.headers.get('X-Payroll-Unapproved-Sections');
+          const parsed = raw ? JSON.parse(decodeURIComponent(raw)) : [];
+          sections = Array.isArray(parsed) ? parsed.map(String) : [];
+        } catch {
+          sections = [];
+        }
+        return { blob: resp.body as Blob, unapprovedPeriods: Number.isFinite(count) ? count : 0, unapprovedSections: sections };
+      })
+    );
   }
 
   releasePayrollPaymentHold(recordId: number): Observable<any> {

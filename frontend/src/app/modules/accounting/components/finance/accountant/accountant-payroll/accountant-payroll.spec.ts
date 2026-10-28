@@ -32,6 +32,7 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
       getMySections: vi.fn().mockReturnValue(of([{ id: 3, name: 'دالان کارگاه' }])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
       getAvailableFiscalYears: vi.fn().mockReturnValue(of({ years: ['1404', '1405'] })),
+      getWorkPeriods: vi.fn().mockReturnValue(of([{ id: 90, section: 3, status: 'READY_TO_PAY' }])),
       getMonthlyPayrollRecords: vi.fn().mockReturnValue(of(records)),
       calculatePeriodPayroll: vi.fn().mockReturnValue(of({ message: 'ok', period_id: 91, period_status: 'OPEN' })),
       lockPeriod: vi.fn().mockReturnValue(of({ message: 'قفل شد' })),
@@ -68,7 +69,9 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
     expect(component.availableYears).toEqual(['1405', '1404']);
     expect(component.warehouses.length).toBe(2);
     expect(component.showWarehouseScope).toBe(true);
-    expect(mockPersonnelApi.getMonthlyPayrollRecords).toHaveBeenCalledWith({ year_month: '1405/06', warehouse_id: 19 });
+    // بخش انتخاب‌شده: دورهٔ «بخش + ماه» از دوره‌های کارکرد خوانده و ردیف‌ها با period_id بارگذاری می‌شوند (۴.۵-د)
+    expect(mockPersonnelApi.getWorkPeriods).toHaveBeenCalledWith({ year_month: '1405/06', section_id: 3 });
+    expect(mockPersonnelApi.getMonthlyPayrollRecords).toHaveBeenCalledWith({ period_id: 90 });
     expect(component.currentPeriodId).toBe(90);
   });
 

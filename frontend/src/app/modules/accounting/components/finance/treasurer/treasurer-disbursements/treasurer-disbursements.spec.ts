@@ -65,7 +65,7 @@ describe('TreasurerDisbursementsComponent — قابلیت‌های منتقل�
 
     component.submitBatchDisbursement();
     expect(mockPersonnelApi.disburseTreasury).not.toHaveBeenCalled();
-    expect(mockToast.warning).toHaveBeenCalled();
+    expect(component.batchTrackingCodeError).toBeTruthy();
 
     component.batchTrackingCode = 'PAYA-777';
     component.submitBatchDisbursement();

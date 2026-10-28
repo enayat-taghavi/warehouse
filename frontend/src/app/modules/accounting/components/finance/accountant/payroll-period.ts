@@ -1,4 +1,28 @@
 import { gregorianToJalali } from '../../../../../core/utils/date-utils';
+import { attendanceActionErrorMessage } from '../../../attendance-period-error';
+
+export const PAYROLL_LOCKED_FA = 'حقوق این دوره برای تأیید ارسال شده و قفل است؛ تا عودت یا پایان گردش تغییر نمی‌پذیرد.';
+export const PAYROLL_OFFLINE_FA = 'این اقدام فقط آنلاین ممکن است؛ اتصال را بررسی کنید.';
+export const PAYROLL_WORKFLOW_LINK_FA = 'سابقه و پیگیری در کارهای من';
+
+/** پیام خطاهای شناخته‌شدهٔ حقوق ماهانه (۴.۵-ج): قفل گردش، کارکرد تأییدنشده، ردیف خالی، گردش باز. */
+export function payrollActionErrorMessage(err: any, fallback: string): string {
+  const body = err?.error;
+  switch (body?.code) {
+    case 'payroll_locked':
+      return PAYROLL_LOCKED_FA;
+    case 'attendance_not_approved':
+      return 'کارکرد این دوره هنوز تأیید نهایی نشده است؛ پس از پایان گردش تأیید کارکرد، حقوق را محاسبه کنید.';
+    case 'no_payroll_records':
+      return 'برای این دوره هنوز حقوقی محاسبه نشده است؛ ابتدا حقوق را محاسبه کنید.';
+    case 'already_in_progress':
+      return 'حقوق این دوره پیش‌تر برای تأیید ارسال شده و در گردش است.';
+    case 'period_not_found':
+      return 'دورهٔ کارکرد این بخش و ماه یافت نشد؛ ابتدا کارکرد دوره را ثبت و تأیید کنید.';
+    default:
+      return attendanceActionErrorMessage(err, fallback);
+  }
+}
 
 /** ماه‌های شمسی دورهٔ حقوق؛ نام ماه همان مقدار query param «month» در هاب‌های حسابدار است. */
 export const PAYROLL_MONTHS: ReadonlyArray<{ name: string; code: string }> = [

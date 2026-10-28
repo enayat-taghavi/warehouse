@@ -73,14 +73,28 @@
 
       <!-- سمت چپ: قفل دوره، محاسبه دسته‌ای و دکمه‌های اکشن -->
       <div class="flex flex-wrap items-center gap-2 justify-end">
-        @if (periodStatus) {
+        @if (sectionMode) {
+          @if (workflowStatusLabel) {
+            <span class="px-2 py-1 rounded-lg text-[11px] font-bold border bg-blue-50 text-blue-800 border-blue-200">{{ workflowStatusLabel }}</span>
+          }
+          @if (workflowStatusLabel || isPayrollFrozen) {
+            <a
+              routerLink="/app/my-tasks"
+              [queryParams]="workflowLink"
+              class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-indigo-500"
+              title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+              <span class="hidden sm:inline">سابقه و پیگیری</span>
+            </a>
+          }
+        } @else if (periodStatus) {
           <span
             class="px-2 py-1 rounded-lg text-[11px] font-bold border"
             [class]="isPeriodLocked ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'">
             {{ isPeriodLocked ? 'دوره قفل شده' : 'دوره باز' }}
           </span>
         }
-        @if (currentPeriodId && periodStatus && (isPeriodLocked ? canUnlockPeriod : canLockPeriod)) {
+        @if (!sectionMode && currentPeriodId && periodStatus && (isPeriodLocked ? canUnlockPeriod : canLockPeriod)) {
           <button
             type="button"
             [appAction]="isPeriodLocked ? 'unlock' : 'lock'"
@@ -93,8 +107,8 @@
         <button
           type="button"
           (click)="calculateBatch()"
-          [disabled]="isCalculating || isPayrollFrozen"
-          [title]="isPayrollFrozen ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده'"
+          [disabled]="isCalculating || isPayrollFrozen || !isOnline"
+          [title]="!isOnline ? offlineMessage : (isPayrollFrozen ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده')"
           [attr.aria-label]="isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق'"
           class="tap-target px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
           <svg *ngIf="!isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
@@ -102,12 +116,26 @@
           <span>{{ isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق' }}</span>
         </button>
 
+        <!-- ارسال حقوق دورهٔ بخش برای تأیید مدیر -->
+        @if (sectionMode) {
+          <button
+            type="button"
+            appAction="send"
+            label="ارسال برای تأیید مدیر"
+            [busy]="isSubmittingWorkflow"
+            [disabled]="!canSubmitWorkflow || !isOnline"
+            [hint]="offlineHint"
+            (click)="submitForManager()"
+          ></button>
+        }
+
         <!-- ورود مالیات دارایی (فایل اکسل یا چسباندن متن) -->
         <button
           type="button"
           appAction="import-excel"
           label="درون‌ریزی مالیات"
-          [disabled]="isPayrollFrozen"
+          [disabled]="isPayrollFrozen || !isOnline"
+          [hint]="offlineHint"
           (click)="openTaxModal()"
         ></button>
 
@@ -115,6 +143,8 @@
         <button
           type="button"
           appAction="export-excel"
+          [disabled]="!isOnline"
+          [hint]="offlineHint"
           (click)="exportExcel()"
         ></button>
 
@@ -129,6 +159,46 @@
 
     </div>
   </div>
+
+  <!-- ── پیام‌های وضعیت: آفلاین، دورهٔ ناموجود، کارکرد تأییدنشده، گردش، پرسنل بی کارکرد ── -->
+  @if (!isOnline) {
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-3 text-xs font-bold" role="status">
+      {{ offlineMessage }} محاسبه، ارسال و درون‌ریزی تا برگشت اتصال غیرفعال‌اند.
+    </div>
+  }
+  @if (sectionMode && noSectionPeriod) {
+    <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 text-xs font-bold" role="status">
+      برای این بخش و ماه هنوز دورهٔ کارکرد ساخته نشده است؛ ابتدا کارکرد دوره را ثبت و تأیید کنید.
+    </div>
+  }
+  @if (attendanceBlockedMessage) {
+    <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3 text-xs flex flex-wrap items-center justify-between gap-2" role="alert">
+      <span class="font-bold">{{ attendanceBlockedMessage }}</span>
+      <a
+        routerLink="/app/my-tasks"
+        [queryParams]="{ workflow: 'attendance_period' }"
+        class="min-h-[40px] px-3 inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-surface text-rose-800 font-bold hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-indigo-500"
+        aria-label="پیگیری تأیید کارکرد در کارهای من">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+        <span>پیگیری تأیید کارکرد</span>
+      </a>
+    </div>
+  }
+  @if (sectionMode && isPayrollFrozen && !noSectionPeriod && !attendanceBlockedMessage) {
+    <div class="bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-3 text-xs font-bold" role="status">
+      حقوق این دوره در گردش تأیید است و تا عودت یا پایان گردش، محاسبه و ویرایش بسته می‌ماند.
+    </div>
+  }
+  @if (skippedNoAttendance.length > 0) {
+    <div class="bg-surface border border-amber-200 rounded-2xl p-3 text-xs space-y-2" role="status">
+      <h3 class="font-black text-amber-800">بی کارکرد تأییدشده ({{ skippedNoAttendance.length | number }} نفر)؛ برای این افراد حقوق محاسبه نشد</h3>
+      <ul class="flex flex-wrap gap-1.5">
+        @for (sk of skippedNoAttendance; track $index) {
+          <li class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">@if (sk.full_name || sk.personnel_name || sk.name) { {{ sk.full_name || sk.personnel_name || sk.name }} } @else { شناسه <bdi>{{ sk.personnel_id }}</bdi> }</li>
+        }
+      </ul>
+    </div>
+  }
 
   <!-- ── ۲. شاخص‌های خلاصه حقوق دوره ── -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -306,6 +376,7 @@
             <th class="p-3">حقوق ناخالص (ریال)</th>
             <th class="p-3">بیمه سهم کارگر (۷٪)</th>
             <th class="p-3">مالیات بر حقوق</th>
+            <th class="p-3">کسر تنخواه (ریال)</th>
             <th class="p-3">خالص پرداختی (ریال)</th>
             <th class="p-3 text-center">عملیات مالی</th>
           </tr>
@@ -341,6 +412,7 @@
             <td class="p-3 font-mono font-bold">{{ item.gross_salary | number }}</td>
             <td class="p-3 font-mono text-rose-600">{{ (item.insurance_employee || item.worker_insurance || 0) | number }}</td>
             <td class="p-3 font-mono text-rose-600">{{ (item.tax_amount || item.income_tax || 0) | number }}</td>
+            <td class="p-3 font-mono text-amber-700">{{ (item.petty_cash_deduction || 0) | number }}</td>
             <td class="p-3 font-mono font-bold text-emerald-700">{{ (item.payable_amount || item.net_salary || 0) | number }}</td>
             <td class="p-3 text-center">
               <div class="flex items-center justify-center gap-1">
@@ -360,17 +432,9 @@
                   size="sm"
                   display="label"
                   [busy]="isReleasingHold === item.id"
-                  [disabled]="isReleasingHold === item.id"
+                  [disabled]="isReleasingHold === item.id || !isOnline"
+                  [hint]="offlineHint"
                   (click)="releasePaymentHold(item)"
-                ></button>
-                <button
-                  *ngIf="!item.payment_hold"
-                  type="button"
-                  appAction="approve"
-                  label="تایید نهایی"
-                  size="sm"
-                  display="label"
-                  (click)="approveSingle(item)"
                 ></button>
               </div>
             </td>

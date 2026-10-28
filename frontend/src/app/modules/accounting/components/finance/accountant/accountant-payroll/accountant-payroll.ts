@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angu
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
@@ -20,7 +20,10 @@ import {
   defaultPayrollPeriod,
   isPayrollMonthName,
   mergeFiscalYears,
-  payrollMonthCode
+  payrollMonthCode,
+  payrollActionErrorMessage,
+  PAYROLL_OFFLINE_FA,
+  PAYROLL_LOCKED_FA
 } from '../payroll-period';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
@@ -28,6 +31,7 @@ import { STATUS_ICONS, PLATFORM_ENTITY_ICONS } from '../../../../../../shared/ic
 import { saveBlob, printWindow } from '../../../../../../core/platform/file-output';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
 
 /** وضعیت‌های قفل دوره کارکرد (از ارسال به بعد، ۴.۴ د۴) */
 const ATTENDANCE_LOCKED_STATUSES = [
@@ -42,6 +46,7 @@ export type AccountantPayrollSubTab = 'ready_to_calculate' | 'calculated' | 'app
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterLink,
     SvgIconDirective,
     LoadingSkeletonComponent,
     TabBarComponent,
@@ -135,6 +140,17 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   allRecords: any[] = [];
   items: any[] = [];
 
+  // گردش حقوق دورهٔ بخش (۴.۵-د): مرحله از payroll_workflow_step دوره، پاسخ ارسال، خطای payroll_locked یا ردیف‌های READY_TO_PAY معلوم می‌شود
+  workflowStep: string | null = null;
+  workflowLocked = false;
+  isSubmittingWorkflow = false;
+  noSectionPeriod = false;
+  attendanceBlockedMessage = '';
+  skippedNoAttendance: Array<{ full_name?: string; personnel_name?: string; national_code?: string; personnel_id?: number; name?: string }> = [];
+  readonly workflowLink = { workflow: 'payroll_period' };
+  readonly offlineMessage = PAYROLL_OFFLINE_FA;
+  private readonly network = NetworkStatusService.getInstance();
+
   // Period lock state (از رکوردهای دوره، پس از محاسبه یا پس از تغییر قفل معلوم می‌شود)
   currentPeriodId: number | null = null;
   periodStatus: string | null = null;
@@ -218,7 +234,36 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
 
   /** محاسبه و ورود مالیات فقط پس از پرداخت یا بستن نهایی بسته است؛ دورهٔ در گردش یا READY_TO_PAY محاسبه می‌پذیرد. */
   get isPayrollFrozen(): boolean {
-    return !!this.periodStatus && ['PAID', 'LOCKED', 'FINALIZED'].includes(this.periodStatus);
+    return (!!this.periodStatus && ['PAID', 'LOCKED', 'FINALIZED'].includes(this.periodStatus))
+      || this.workflowLocked
+      || !!this.workflowStep
+      || this.allRecords.some(r => r.payment_status === 'READY_TO_PAY' || r.payment_status === 'PAID');
+  }
+
+  get isOnline(): boolean {
+    return this.network.isOnline;
+  }
+
+  /** راهنمای دکمه‌ها: آفلاین دلیل غیرفعال‌بودن را می‌گوید، آنلاین تهی است */
+  get offlineHint(): string {
+    return this.isOnline ? '' : PAYROLL_OFFLINE_FA;
+  }
+
+  /** حالت دورهٔ بخش (طرح ۴.۵): کارکرد، محاسبه و گردش روی دورهٔ «بخش + ماه» */
+  get sectionMode(): boolean {
+    return this.mySections.length > 0 && !!this.selectedSectionId;
+  }
+
+  get workflowStatusLabel(): string {
+    if (this.periodStatus === 'PAID') return 'پرداخت شده';
+    if (this.allRecords.some(r => r.payment_status === 'READY_TO_PAY') || this.workflowStep === 'treasury_pay') return 'در انتظار پرداخت خزانه';
+    if (this.workflowStep === 'manager_ok') return 'در انتظار تأیید مدیر';
+    if (this.workflowLocked || this.workflowStep) return 'در گردش تأیید';
+    return '';
+  }
+
+  get canSubmitWorkflow(): boolean {
+    return this.sectionMode && !!this.currentPeriodId && this.allRecords.length > 0 && !this.isPayrollFrozen;
   }
 
   get canLockPeriod(): boolean {
@@ -343,16 +388,27 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     this.refreshCurrentTab();
   }
 
+  private resetWorkflowState(): void {
+    this.periodStatus = null;
+    this.currentPeriodId = null;
+    this.workflowStep = null;
+    this.workflowLocked = false;
+    this.noSectionPeriod = false;
+    this.attendanceBlockedMessage = '';
+    this.skippedNoAttendance = [];
+  }
+
   onSectionChanged(): void {
+    this.selectedSectionId = this.selectedSectionId == null ? null : Number(this.selectedSectionId);
     this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
+    this.resetWorkflowState();
     this.syncUrlParams();
     this.refreshCurrentTab();
   }
 
   /** تغییر سال، ماه یا دامنه: وضعیت قفل دورهٔ قبلی دیگر معتبر نیست */
   onPeriodChanged(): void {
-    this.periodStatus = null;
-    this.currentPeriodId = null;
+    this.resetWorkflowState();
     this.syncUrlParams();
     this.refreshCurrentTab();
   }
@@ -404,28 +460,66 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
       params.warehouse_id = this.selectedWarehouseId;
     }
 
+    if (this.sectionMode) {
+      this.fetchSectionPayroll(silent);
+      return;
+    }
+    this.loadRecords(params, silent);
+  }
+
+  /** دورهٔ «بخش + ماه» از فهرست دوره‌های کارکرد خوانده می‌شود و ردیف‌های همان دوره بارگذاری می‌شود */
+  private fetchSectionPayroll(silent: boolean): void {
+    this.personnelApi.getWorkPeriods({ year_month: this.yearMonth, section_id: Number(this.selectedSectionId) }).subscribe({
+      next: (periods: any[]) => {
+        const period = (Array.isArray(periods) ? periods : []).find(p => Number(p?.section) === Number(this.selectedSectionId)) || null;
+        if (!period) {
+          this.isLoading = false;
+          this.noSectionPeriod = true;
+          this.currentPeriodId = null;
+          this.periodStatus = null;
+          this.allRecords = [];
+          this.applyFilters();
+          this.cdr.detectChanges();
+          return;
+        }
+        this.noSectionPeriod = false;
+        this.currentPeriodId = period.id;
+        this.periodStatus = period.status || null;
+        this.workflowStep = period.payroll_workflow_step || null;
+        this.workflowLocked = !!this.workflowStep;
+        this.loadRecords({ period_id: period.id }, silent);
+      },
+      error: () => this.onRecordsError(silent)
+    });
+  }
+
+  private onRecordsError(silent: boolean): void {
+    if (silent) return;
+    this.isLoading = false;
+    this.loadError = true;
+    this.allRecords = [];
+    this.applyFilters();
+    this.toast.error('خطا در دریافت رکوردهای حقوق دوره.');
+    this.cdr.detectChanges();
+  }
+
+  private loadRecords(params: any, silent: boolean): void {
     this.personnelApi.getMonthlyPayrollRecords(params).subscribe({
       next: (records: any[]) => {
         this.isLoading = false;
         this.allRecords = Array.isArray(records) ? records : [];
         const first = this.allRecords[0];
-        this.currentPeriodId = first?.period ? (typeof first.period === 'object' ? first.period.id : first.period) : null;
-        // وضعیت قفل همان هنگام بارگذاری معلوم شود، نه فقط پس از محاسبه
-        if (first?.period_status) {
-          this.periodStatus = first.period_status;
+        if (!this.sectionMode) {
+          this.currentPeriodId = first?.period ? (typeof first.period === 'object' ? first.period.id : first.period) : null;
+          // وضعیت قفل همان هنگام بارگذاری معلوم شود، نه فقط پس از محاسبه
+          if (first?.period_status) {
+            this.periodStatus = first.period_status;
+          }
         }
         this.applyFilters();
         this.cdr.detectChanges();
       },
-      error: () => {
-        if (silent) return;
-        this.isLoading = false;
-        this.loadError = true;
-        this.allRecords = [];
-        this.applyFilters();
-        this.toast.error('خطا در دریافت رکوردهای حقوق دوره.');
-        this.cdr.detectChanges();
-      }
+      error: () => this.onRecordsError(silent)
     });
   }
 
@@ -478,24 +572,36 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
 
   calculateBatch(): void {
     if (this.isPayrollFrozen) {
-      this.toast.warning('دوره قفل شده است و امکان محاسبه مجدد ندارد.');
+      this.toast.warning(this.sectionMode ? PAYROLL_LOCKED_FA : 'دوره قفل شده است و امکان محاسبه مجدد ندارد.');
+      return;
+    }
+    if (!this.isOnline) {
+      this.toast.error(PAYROLL_OFFLINE_FA);
       return;
     }
     this.isCalculating = true;
-    this.personnelApi.calculatePeriodPayroll({
-      warehouse_id: this.selectedWarehouseId,
-      year_month: this.yearMonth
-    }).subscribe({
+    this.attendanceBlockedMessage = '';
+    const payload = this.sectionMode
+      ? { section_id: Number(this.selectedSectionId), year_month: this.yearMonth }
+      : { warehouse_id: this.selectedWarehouseId, year_month: this.yearMonth };
+    this.personnelApi.calculatePeriodPayroll(payload).subscribe({
       next: (res: any) => {
         this.isCalculating = false;
         this.currentPeriodId = res?.period_id || null;
         this.periodStatus = res?.period_status || null;
+        this.skippedNoAttendance = Array.isArray(res?.skipped_no_attendance) ? res.skipped_no_attendance : [];
         this.toast.success(res?.message || 'محاسبه مکانیزه حقوق با موفقیت انجام شد.');
         this.fetchPayrollData();
       },
       error: (err: any) => {
         this.isCalculating = false;
-        const msg = err?.error?.error || 'خطا در محاسبه حقوق دوره.';
+        const code = err?.error?.code;
+        const msg = payrollActionErrorMessage(err, 'خطا در محاسبه حقوق دوره.');
+        if (code === 'attendance_not_approved') {
+          this.attendanceBlockedMessage = msg;
+        } else if (code === 'payroll_locked') {
+          this.workflowLocked = true;
+        }
         this.toast.error(msg);
         this.cdr.detectChanges();
       }
@@ -506,7 +612,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     if (!this.currentPeriodId || this.isTogglingLock) return;
     const unlocking = this.isPeriodLocked;
     if (unlocking ? !this.canUnlockPeriod : !this.canLockPeriod) return;
-    if (!this.isOnline()) {
+    if (!this.isOnline) {
       this.toast.error('این اقدام فقط آنلاین ممکن است.');
       return;
     }
@@ -551,7 +657,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
       return;
     }
     if (!this.currentPeriodId || this.isTogglingLock) return;
-    if (!this.isOnline()) {
+    if (!this.isOnline) {
       this.toast.error('این اقدام فقط آنلاین ممکن است.');
       return;
     }
@@ -578,23 +684,37 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     this.unlockDialogServerError = '';
   }
 
-  private isOnline(): boolean {
-    return typeof navigator === 'undefined' || navigator.onLine !== false;
-  }
-
-  approveSingle(item: any): void {
-    this.personnelApi.postCartableAction('accountant', {
-      action: 'approve',
-      model: 'payroll',
-      id: item.id
-    }).subscribe({
-      next: () => {
-        this.toast.success(`فیش حقوقی ${item.personnel_name || item.full_name || ''} تایید مالی شد.`);
-        this.fetchPayrollData();
+  /** ارسال حقوق دوره برای تأیید مدیر؛ تأیید و عودت از «کارهای من» و پرداخت از کارتابل خزانه انجام می‌شود */
+  async submitForManager(): Promise<void> {
+    if (!this.canSubmitWorkflow || this.isSubmittingWorkflow) return;
+    if (!this.isOnline) {
+      this.toast.error(PAYROLL_OFFLINE_FA);
+      return;
+    }
+    if (this.confirmDialog) {
+      const confirmed = await this.confirmDialog.open({
+        title: 'ارسال برای تأیید مدیر',
+        message: `حقوق دوره ${this.selectedMonth} ${this.fiscalYear} برای تأیید مدیر ارسال می‌شود و تا عودت یا پایان گردش، محاسبه و ویرایش بسته می‌ماند.`,
+        confirmText: 'بله، ارسال شود',
+        cancelText: 'انصراف',
+        type: 'warning'
+      });
+      if (confirmed !== true) return;
+    }
+    this.isSubmittingWorkflow = true;
+    this.personnelApi.submitPayrollWorkflow(this.currentPeriodId as number).subscribe({
+      next: (res) => {
+        this.isSubmittingWorkflow = false;
+        this.workflowStep = res?.workflow_step || 'manager_ok';
+        this.workflowLocked = true;
+        this.toast.success(res?.message || 'حقوق دوره برای تأیید مدیر ارسال شد.');
+        this.cdr.detectChanges();
       },
       error: (err: any) => {
-        const msg = err?.error?.error || 'خطا در تایید مالی فیش حقوقی.';
-        this.toast.error(msg);
+        this.isSubmittingWorkflow = false;
+        if (err?.error?.code === 'already_in_progress') this.workflowLocked = true;
+        this.toast.error(payrollActionErrorMessage(err, 'خطا در ارسال حقوق برای تأیید.'));
+        this.cdr.detectChanges();
       }
     });
   }
@@ -615,8 +735,8 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isReleasingHold = null;
-        const msg = err?.error?.error || 'خطا در آزادسازی پرداخت معلق.';
-        this.toast.error(msg);
+        if (err?.error?.code === 'payroll_locked') this.workflowLocked = true;
+        this.toast.error(payrollActionErrorMessage(err, 'خطا در آزادسازی پرداخت معلق.'));
       }
     });
   }
@@ -817,7 +937,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
         next: onSuccess,
         error: (err: any) => {
           this.isImportingTax = false;
-          this.toast.error(err?.error?.error || 'خطا در درون‌ریزی فایل اکسل مالیات');
+          this.toast.error(payrollActionErrorMessage(err, 'خطا در درون‌ریزی فایل اکسل مالیات'));
           this.cdr.detectChanges();
         }
       });
@@ -838,7 +958,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
       next: onSuccess,
       error: (err: any) => {
         this.isImportingTax = false;
-        this.toast.error(err?.error?.error || 'خطا در اعمال اطلاعات متنی مالیات');
+        this.toast.error(payrollActionErrorMessage(err, 'خطا در اعمال اطلاعات متنی مالیات'));
         this.cdr.detectChanges();
       }
     });

@@ -262,10 +262,12 @@ export class PersonnelApiService {
   exportCounterpartiesExcel(): Observable<Blob> { return this.treasuryOrg.exportCounterpartiesExcel(); }
   downloadCounterpartiesTemplate(): Observable<Blob> { return this.treasuryOrg.downloadCounterpartiesTemplate(); }
   importCounterpartiesExcel(file: File, dryRun: boolean = false): Observable<any> { return this.treasuryOrg.importCounterpartiesExcel(file, dryRun); }
-  calculatePeriodPayroll(payload: { warehouse_id?: number | null; company_id?: number | null; year_month: string; }): Observable<any> { return this.payroll.calculatePeriodPayroll(payload); }
+  calculatePeriodPayroll(payload: { warehouse_id?: number | null; company_id?: number | null; year_month?: string; section_id?: number | null; period_id?: number | null; }): Observable<any> { return this.payroll.calculatePeriodPayroll(payload); }
+  submitPayrollWorkflow(periodId: number): Observable<{ message: string; period_id: number; workflow_step: string | null }> { return this.payroll.submitPayrollWorkflow(periodId); }
   exportMonthlyPayrollExcel(periodId: number): Observable<Blob> { return this.payroll.exportMonthlyPayrollExcel(periodId); }
   exportTreasuryDiskette(periodId: number, type: 'paya' | 'satna' = 'paya'): Observable<Blob> { return this.payroll.exportTreasuryDiskette(periodId, type); }
   exportBimehDisketteZip(periodId: number, projectId: number): Observable<Blob> { return this.payroll.exportBimehDisketteZip(periodId, projectId); }
+  exportProjectMonth(kind: 'dsk-zip' | 'tax-wh' | 'tax-wp' | 'bank-excel', projectId: number, yearMonth: string, onlyReleased = false): Observable<{ blob: Blob; unapprovedPeriods: number; unapprovedSections: string[] }> { return this.payroll.exportProjectMonth(kind, projectId, yearMonth, onlyReleased); }
   exportTaxWh(periodId: number, projectId: number): Observable<Blob> { return this.payroll.exportTaxWh(periodId, projectId); }
   exportTaxWp(periodId: number, projectId: number): Observable<Blob> { return this.payroll.exportTaxWp(periodId, projectId); }
   exportBankPaymentExcel(periodId: number, projectId: number, onlyReleased: boolean = false): Observable<Blob> { return this.payroll.exportBankPaymentExcel(periodId, projectId, onlyReleased); }
