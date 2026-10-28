@@ -3248,7 +3248,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 2 — Release v1 stage 4 final close-out: web build with the two browser-check fixes, staging APK build and install on the emulator, Android smoke check of the manager dashboard and the accounting reports page with the QA scenario manager, then delete the QA scenario company
+[DONE] [ ] Session 2 of 2 — Release v1 stage 4 final close-out: web build with the two browser-check fixes, staging APK build and install on the emulator, Android smoke check of the manager dashboard and the accounting reports page with the QA scenario manager, then delete the QA scenario company
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

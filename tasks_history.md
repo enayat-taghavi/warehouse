@@ -14861,3 +14861,53 @@ Write the definitions in simple Persian like the rows above.
 تمام پیش‌نیازها و دستورات به طور دقیق با محیط و قوانین مخزن مطابقت دارند. هیچ فایلی تغییر، stage یا c...
 
 ---
+
+### Task 1 of 1 — 2026-10-28 22:13:43
+- **Status:** DONE (accepted after STALLED)
+- **Conversation:** `74e4b857-cc76-4573-8fdf-3f0cdf486d43`
+- **Steps:** 59
+- **Tokens:** 0
+- **Duration:** 55m 1s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 3/4 passed
+    - FAILED (exit 1): `backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_4final.py`
+  - verify gate 2: 4/4 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Release v1 stage 4 final close-out: web build with the two browser-check fixes, staging APK build and install on the emulator, Android smoke check of the manager dashboard and the accounting reports page with the QA scenario manager, then delete the QA scenario company
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- This is an operational task on the local test environment `app` (this Windows machine, test data only, no real users). Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`); do not publish it.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running. The only exception is the emulator, which runs in its own Windows Terminal tab.
+- Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`; do not kill any `node` process.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- The test passwords are in `scratch/qa_scenario_credentials.txt` (one user per line, tab-separated: username, password, role, scope). Never print a password in your reply, in a log you write, or in a file name. Pass it only to `adb shell input text`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context:
+- Session 1 released stage 4 on `app` (backup, migration 0019, open-workflow commands, web build) and created the QA scenario company `QA-SCN` with users `qa_scn_*`. After it, commit `0429a8d6` fixed two frontend defects found in a browser check (the accounting reports page and the manager dashboard crashed on open; the accountant could not open the reports page). The web build on `app` must be rebuilt to include that fix.
+- The staging APK (app id `ir.comanage.soft.test`, activity `ir.comanage.soft.MainActivity`) talks to `https://app.farsalish.ir`. Emulator AVD `AndroidTest15`, screen 1080x2400. On the login page the username field centre is about (540, 1130), the password field about (540, 1338), the login button «ورود به سامانه» about (540, 1655).
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order:
+- a) Web build in `frontend`: `npx ng build --delete-output-path=false`, wait for it to finish, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- b) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear). Then in `frontend`: `npm run build:mobile-test`, then in `frontend\android`: `.\gradlew.bat assembleStagingDirectRelease`.
+- c) `adb devices`. If `emulator-5554` is not listed as `device`, start it with `wt.exe -w 0 new-tab --title "Android Emulator" cmd /k "E:\Android\Sdk\emulator\emulator.exe -avd AndroidTest15"` and repeat `adb shell getprop sys.boot_completed` (pause at most 15 seconds between tries, at most 12 tries) until it prints 1. Then from the repo root: `adb install -r "frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk" > scratch\logs\apk4f_install.txt` and read that file; it must contain `Success`.
+- d) Android smoke check with the user `qa_scn_manager` (its password is the second column of its line in `scratch/qa_scenario_credentials.txt`): `adb shell pm clear ir.comanage.soft.test`, then `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`, wait about 10 seconds, save `adb exec-out screencap -p > scratch/logs/android4f_login.png`. Tap the username field, `adb shell input text qa_scn_manager`; tap the password field, `adb shell input text <password>`; tap «ورود به سامانه»; wait about 10 seconds. If the app shows the launcher or asks to choose a system, choose the accounting one («مالی» / «حسابداری»). Open «داشبورد مدیریتی» (side menu; the menu button opens it), wait about 6 seconds, save `scratch/logs/android4f_dashboard.png`. Then open «گزارش‌های مدیریتی», wait about 6 seconds, save `scratch/logs/android4f_reports.png`. To find elements use `adb shell uiautomator dump /sdcard/ui.xml`, `adb pull /sdcard/ui.xml scratch/logs/ui.xml`, read the XML and tap the centre of the node `bounds`; if the XML has no web nodes, use screenshots and the coordinates above.
+- e) Delete the QA scenario company, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\purge4f.txt 2>&1`, then read that file. Do this even if step d failed.
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, `Get-Content`/`Select-String` for reading, and `adb` (devices, install, shell input, shell am, shell pm clear, shell getprop, shell uiautomator dump, pull, exec-out screencap). Each build at most twice, Gradle at most twice, at most 45 adb calls. If a step fails, read its output, change approach, and if it still fails report the exact error and continue with step e.
+
+5. Before finishing: the three screenshots exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the web build result and the patch line, the APK path and size, the install result, what the dashboard and the reports page showed on Android (any error message, any horizontal scroll, which subtabs were visible), and the last line of `scratch/logs/purge4f.txt`. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+
+
+---
