@@ -656,13 +656,25 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='calculate-period')
     def calculate_period(self, request):
         """
-        تجمیع کارکرد و محاسبه خودکار ۵۸ ستون حقوق برای دوره انتخابی (با پشتیبانی از سطح شرکت یا انبار)
+        تجمیع کارکرد و محاسبه خودکار ۵۸ ستون حقوق برای دوره انتخابی.
+        - طرح ۴.۵، د۱: دورهٔ بخش با period_id یا section_id + year_month (دوره ساخته نمی‌شود؛ نبودش 404
+          period_not_found). شرکت از دوره خوانده می‌شود و company_id بدنه نادیده گرفته می‌شود. محاسبه فقط پس از پایان
+          گردش کارکرد (READY_TO_PAY)، وگرنه 400 attendance_not_approved.
+        - مسیر قدیمی انبار/شرکت (warehouse_id/company_id بی section_id) همان رفتار قبلی را دارد.
+        - پرسنل بی کارکرد تأییدشده ردیف نمی‌گیرند و در skipped_no_attendance برمی‌گردند.
         """
+        from ..payroll_engine import PayrollCalculationEngine
         warehouse_id = request.data.get('warehouse_id')
         year_month = request.data.get('year_month')
+        period_id = request.data.get('period_id')
+        section_id = request.data.get('section_id')
+
+        if period_id not in (None, '') or section_id not in (None, ''):
+            return self._calculate_section_period(request, period_id, section_id, year_month)
+
         from common.tenant_scope import get_current_tenant_company_id
         company_id = request.data.get('company_id') or get_current_tenant_company_id(request=request, user=request.user)
-        
+
         if not year_month:
             return Response({'error': 'سال/ماه الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
         if not warehouse_id and not company_id:
@@ -686,7 +698,45 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if period.status == 'LOCKED':
             return Response({'error': f'دوره {period.year_month} قفل شده است و امکان محاسبه مجدد ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        records = calculate_monthly_payroll_for_period(period, user=request.user)
+        engine = PayrollCalculationEngine(period=period)
+        records = engine.calculate_period(period, user=request.user)
+        return self._calculation_response(period, records, engine.skipped_no_attendance)
+
+    def _calculate_section_period(self, request, period_id, section_id, year_month):
+        """د۱: محاسبهٔ دورهٔ «بخش + ماه» ۴.۴ (بی ساختن دوره)."""
+        from ..attendance_periods import find_period
+        from ..payroll_engine import PayrollCalculationEngine
+        not_found_msg = 'دورهٔ کارکرد این بخش و ماه یافت نشد؛ ابتدا کارکرد دوره را ثبت و تأیید کنید.'
+        not_found = Response({'code': 'period_not_found', 'error': not_found_msg, 'detail': not_found_msg},
+                             status=status.HTTP_404_NOT_FOUND)
+        period = None
+        if period_id not in (None, ''):
+            if not str(period_id).strip().isdigit():
+                return Response({'error': 'شناسهٔ دوره نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+            period = MonthlyWorkPeriod.objects.filter(pk=int(str(period_id).strip()), section__isnull=False).first()
+        else:
+            if not year_month:
+                return Response({'error': 'سال/ماه الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not str(section_id).strip().isdigit():
+                return Response({'error': 'شناسهٔ بخش نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+            period = find_period(None, int(str(section_id).strip()), year_month)
+        if period is None:
+            return not_found
+        # ق۶: شرکت فقط از دوره؛ دورهٔ شرکتی که کاربر به آن دسترسی ندارد مثل نبودن است (404)
+        if not request.user.is_superuser:
+            from companies.access import get_user_allowed_companies
+            if period.company_id is None or not get_user_allowed_companies(request.user).filter(id=period.company_id).exists():
+                return not_found
+        if period.status != 'READY_TO_PAY':
+            msg = 'گردش تأیید کارکرد این دوره هنوز تمام نشده است؛ حقوق پس از تأیید نهایی کارکرد محاسبه می‌شود.'
+            return Response({'code': 'attendance_not_approved', 'error': msg, 'detail': msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        engine = PayrollCalculationEngine(period=period)
+        records = engine.calculate_period(period, user=request.user)
+        return self._calculation_response(period, records, engine.skipped_no_attendance)
+
+    def _calculation_response(self, period, records, skipped_no_attendance):
         from ..workflow_engine import notify_document_changed
         notify_document_changed(period, 'recalculated')
         serialized = MonthlyPayrollRecordSerializer(records, many=True).data
@@ -708,6 +758,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
                 'total_insurance': total_insurance,
                 'total_tax': total_tax,
             },
+            'skipped_no_attendance': skipped_no_attendance,
             'records': serialized
         })
 

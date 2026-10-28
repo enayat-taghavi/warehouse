@@ -241,8 +241,22 @@ class PersonnelAppTests(TestCase):
         self.assertEqual(res_grade.data['daily_seniority_bonus'], 171867.0)
         self.assertEqual(res_grade.data['hourly_rate'], 657269.6)
 
+    def _approve_full_month(self, *people, year_month='1405/04', hours=230, days=31):
+        """طرح ۴.۵، د۱: بی کارکرد تأییدشده ردیف حقوق ساخته نمی‌شود؛ یک ماه کامل کارکرد APPROVED (۳۱ روز، جمع ۲۳۰ ساعت)."""
+        from decimal import Decimal
+        rows = []
+        base = (Decimal(hours) / days).quantize(Decimal('0.01'), rounding='ROUND_DOWN')
+        for p in people:
+            for d in range(1, days + 1):
+                rows.append(DailyAttendance(
+                    personnel=p, warehouse=self.warehouse, date_shamsi=f'{year_month}/{d:02d}', status='PRESENT_10H',
+                    effective_hours=base if d < days else Decimal(hours) - base * (days - 1),
+                    approval_status='APPROVED'))
+        DailyAttendance.objects.bulk_create(rows)
+
     def test_monthly_payroll_calculation_and_exports_flow(self):
         """تست جامع محاسبه حقوق ماهانه، تولید دیسکت‌های بیمه، فایل‌های مالیات و بانک"""
+        self._approve_full_month(self.personnel1, self.personnel2)
         # 1. محاسبه حقوق دوره تیر ماه ۱۴۰۵
         calc_payload = {
             'warehouse_id': self.warehouse.id,
@@ -313,14 +327,8 @@ class PersonnelAppTests(TestCase):
         self.personnel1.job_grade = '19'
         self.personnel1.save()
 
-        # ثبت کارکرد کامل ۲۳۰ ساعت
-        DailyAttendance.objects.create(
-            personnel=self.personnel1,
-            warehouse=self.warehouse,
-            date_shamsi='1405/04/01',
-            effective_hours=230,
-            status='PRESENT_10H'
-        )
+        # ثبت کارکرد کامل ۲۳۰ ساعت (تأییدشده؛ طرح ۴.۵، د۱: بی کارکرد تأییدشده ردیفی ساخته نمی‌شود)
+        self._approve_full_month(self.personnel1, self.personnel2)
 
         from personnel.payroll_engine import PayrollCalculationEngine
         engine = PayrollCalculationEngine(period=period)
@@ -352,6 +360,7 @@ class PersonnelAppTests(TestCase):
             warehouse=self.warehouse,
             status='OPEN'
         )
+        self._approve_full_month(self.personnel1, self.personnel2)
         from personnel.payroll_engine import PayrollCalculationEngine
         PayrollCalculationEngine(period=period).calculate_period(period)
 
