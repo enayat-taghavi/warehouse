@@ -3391,7 +3391,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 2 — Release v1 step 5-c on the Android emulator: install the 1.0.0 staging APK over the old one, temporary QA company, version line in the user menu, test push and tap to my tasks, airplane-mode queue scenario, back button with a dialog open, then delete the QA company
+[DONE] [ ] Session 2 of 2 (stopped on emulator start; rest moved to Session 3) — Release v1 step 5-c on the Android emulator: install the 1.0.0 staging APK over the old one, temporary QA company, version line in the user menu, test push and tap to my tasks, airplane-mode queue scenario, back button with a dialog open, then delete the QA company
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -3429,3 +3429,44 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: the screenshots `android5c_menu.png`, `android5c_push.png`, `android5c_mytasks.png`, `android5c_backbutton.png`, `android5c_offline_queue.png`, `android5c_after_sync.png` exist; airplane mode is off; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report with the install result and the installed versionCode/versionName, whether the version line was visible, the content of `push5c_cmd.txt` (it holds no secrets), whether `push5c_dumpsys.txt` has a notification of `ir.comanage.soft.test`, whether tapping it opened my tasks, the back-button result, the keyboard result, the pending counts before and after reconnecting (and any error message), and the last line of `scratch/logs/purge5c.txt`. No commit. End the turn after the report.
+
+===
+
+[ ] Session 3 — Release v1 step 5-c on the Android emulator (rest of session 2): my tasks from the bell, back button with a dialog open, airplane-mode queue scenario, keyboard check, then delete the QA company
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5c.py s3
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Operational task on the local test environment `app` (test data only). Never connect to `soft.farsalish.ir`. Do not build anything.
+- The emulator is ALREADY RUNNING (started by Claude in its own Windows Terminal tab). Never start, stop or restart the emulator yourself; never run `emulator.exe`, `wt.exe`, `start`, `Start-Process` or `taskkill`. If `adb devices` does not list `emulator-5554` as `device`, run `adb wait-for-device` once, then `adb shell getprop sys.boot_completed`; if it still does not print 1, do step f only and report "emulator not available".
+- Run every command in the foreground and wait until it finishes. Never use `Start-Sleep` or `sleep` longer than 15 seconds; to wait, use `adb shell sleep 10`.
+- Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`.
+- Do not run `migrate`, `makemigrations`, `flush`, any `manage.py test`, or delete files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Test passwords are in `scratch/qa_scenario_credentials.txt` (tab-separated: username, password, role, scope). Never print a password; pass it only to `adb shell input text`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context:
+- Session 2 installed the staging APK 1.0.0 (`ir.comanage.soft.test`, activity `ir.comanage.soft.MainActivity`), logged in as `qa_scn_manager`, saved `android5c_menu.png`, ran `send_test_push` and saved `android5c_push.png`. The push did not reach the emulator because this machine cannot reach Google's FCM servers (network); this is known and accepted, do not retry it. The QA company `QA-SCN` (users `qa_scn_*`) still exists.
+- Screen 1080x2400. Login page: username field about (540, 1130), password about (540, 1338), button «ورود به سامانه» about (540, 1655).
+- To find elements: `adb shell uiautomator dump /sdcard/ui.xml`, `adb pull /sdcard/ui.xml scratch/logs/ui.xml`, read the XML and tap the centre of the node `bounds`; if it has no web nodes, use screenshots (`adb exec-out screencap -p > scratch/logs/<name>.png`, then view it) and the coordinates above.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order:
+- a) `adb devices`; `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`; `adb shell sleep 10`. If the login page shows, log in as `qa_scn_manager` (choose the accounting system if asked).
+- b) My tasks: open the bell (notifications) in the app header, tap the notification titled «اعلان آزمایشی», `adb shell sleep 6`, save `scratch/logs/android5c_mytasks.png`. Report whether «کارهای من» opened.
+- c) Back button: open any dialog (for example the bell panel or the user menu), `adb shell input keyevent KEYCODE_BACK` once, `adb shell sleep 2`, save `scratch/logs/android5c_backbutton.png`. Report whether the dialog closed and the app stayed open.
+- d) Offline queue: log out and log in as the user whose role column names the employee (ثبت‌کننده / کارمند); if none, stay with `qa_scn_manager`. `adb shell cmd connectivity airplane-mode enable`, `adb shell sleep 5`. Register one petty cash expense («تنخواه» → new expense; only the required fields with small test values) and, if the user can, one invoice draft («فاکتور» → new; save as draft). While typing in a field low on the form, save `scratch/logs/android5c_keyboard.png` once and report whether the focused field stayed visible above the keyboard. Then `adb shell am force-stop ir.comanage.soft.test`, `am start` again, `adb shell sleep 10`, save `scratch/logs/android5c_offline_queue.png` (queue badge or pending items). Then `adb shell cmd connectivity airplane-mode disable`, keep the app in the foreground, `adb shell sleep 10` twice, save `scratch/logs/android5c_after_sync.png`. Report the pending counts before and after and any error message.
+- e) Make sure airplane mode is disabled: `adb shell cmd connectivity airplane-mode disable`.
+- f) Delete the QA company, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\purge5c.txt 2>&1`, then read that file. ALWAYS do this step, even if earlier steps failed.
+
+4. Tool policy: only the commands above, `git status --short`, `Get-Content`/`Select-String` for reading, and `adb` (devices, wait-for-device, shell input, shell am, shell sleep, shell getprop, shell cmd connectivity, shell uiautomator dump, pull, exec-out screencap). At most 70 adb calls. If a step fails twice, report the exact error and continue with the next step.
+
+5. Before finishing: airplane mode is off; step f done; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: my-tasks result, back-button result, keyboard result, pending counts before/after reconnecting (and any error), the last line of `scratch/logs/purge5c.txt`. No commit. End the turn after the report.
