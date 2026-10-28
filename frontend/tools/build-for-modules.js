@@ -60,6 +60,11 @@ try {
   // ۱. ساخت installed-modules.ts متناسب با ماژول‌های انتخاب‌شده
   generateInstalledModules(rawModules);
 
+  // ۱-ب. همگام‌سازی شمارهٔ نسخه از package.json (یک منبع نسخه)
+  const { syncAppVersion } = require('./sync-app-version');
+  const versionSync = syncAppVersion(path.resolve(__dirname, '..'));
+  console.log(`[build-for-modules] App version ${versionSync.version} (versionCode ${versionSync.versionCode})`);
+
   // ۲. اجرای بیلد استاندارد انگولار (بدون نیاز به پروفایل‌های angular.json)
   const ngArgs = ['build'];
   if (outputPath) {

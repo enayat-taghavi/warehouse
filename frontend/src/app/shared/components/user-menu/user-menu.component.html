@@ -61,6 +61,7 @@
         <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-badge" class="text-[10px] bg-emerald-700 text-white px-1.5 py-0.5 rounded-full font-bold">نسخهٔ تازه</span>
         <span *ngIf="!hasPendingUpdate" class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold font-mono">PWA</span>
       </button>
+      <p data-testid="user-menu-app-version" class="px-3 pb-1 text-[10px] text-fg-muted" dir="rtl">{{ versionLabel }}</p>
 
       <!-- بروزرسانی عمیق داده‌ها -->
       <button (click)="onDeepUpdate(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-orange-600 hover:bg-orange-50 cursor-pointer" [disabled]="isOffline || pendingCount > 0" [title]="isOffline ? 'در حالت آفلاین در دسترس نیست' : (pendingCount > 0 ? 'لطفا ابتدا تغییرات را Sync کنید' : 'بروزرسانی عمیق داده‌ها از سرور')" [class.opacity-50]="isOffline || pendingCount > 0" [class.cursor-not-allowed]="isOffline || pendingCount > 0">

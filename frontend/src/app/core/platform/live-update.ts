@@ -1,4 +1,4 @@
-import { ApplicationRef } from '@angular/core';
+import { ApplicationRef, signal } from '@angular/core';
 import { firstValueFrom, isObservable } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { App } from '@capacitor/app';
@@ -23,6 +23,7 @@ export interface LiveUpdateBridge {
   current(): Promise<any>;
   download(options: { url: string; version: string; checksum?: string }): Promise<{ id: string; version?: string }>;
   next(options: { id: string }): Promise<any>;
+  set(options: { id: string }): Promise<any>;
   getAppInfo(): Promise<{ version: string; build?: string }>;
   addAppStateListener(listener: (state: { isActive: boolean }) => void): Promise<{ remove: () => Promise<void> }>;
   fetch(url: string, init?: RequestInit): Promise<Response>;
@@ -57,6 +58,13 @@ export const liveUpdateBridge: LiveUpdateBridge = {
     }
     return Promise.resolve();
   },
+  set: (opts) => {
+    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater;
+    if (plugin && typeof plugin.set === 'function') {
+      return plugin.set(opts);
+    }
+    return Promise.reject(new Error('CapacitorUpdater plugin not available'));
+  },
   getAppInfo: () => {
     const plugin = (globalThis as any).Capacitor?.Plugins?.App ?? App;
     return plugin.getInfo();
@@ -67,6 +75,47 @@ export const liveUpdateBridge: LiveUpdateBridge = {
   },
   fetch: (url, init) => fetch(url, init),
 };
+
+/** A downloaded bundle staged with next({ id }); drives the "new version ready" bar. */
+export interface LiveUpdateReadyBundle {
+  id: string;
+  version: string;
+}
+
+export const liveUpdateReady = signal<LiveUpdateReadyBundle | null>(null);
+
+/** Version of the active Live Update bundle (null while the builtin bundle runs). */
+export const activeLiveBundleVersion = signal<string | null>(null);
+
+export type ApplyLiveUpdateResult = 'applied' | 'syncing' | 'none' | 'failed';
+
+/**
+ * Applies the staged bundle right now with set({ id }), which reloads the WebView.
+ * Refused while the offline queue is being sent. Storage and IndexedDB are never touched:
+ * unsent queue records stay and are sent after the reload.
+ */
+export async function applyLiveUpdateNow(): Promise<ApplyLiveUpdateResult> {
+  const ready = liveUpdateReady();
+  if (!ready) {
+    return 'none';
+  }
+  let isSyncing = false;
+  try {
+    isSyncing = OfflineSyncService.getInstance().isSyncing;
+  } catch {
+    // ignore lookup error
+  }
+  if (isSyncing) {
+    return 'syncing';
+  }
+  try {
+    await liveUpdateBridge.set({ id: ready.id });
+    return 'applied';
+  } catch (err) {
+    console.warn('[LiveUpdate] Error applying live update:', err);
+    return 'failed';
+  }
+}
 
 export const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 let lastCheckTimestamp = 0;
@@ -105,7 +154,8 @@ export function stopLiveUpdate(): void {
  * 2. Throttled: at most once every 30 minutes unless force=true.
  * 3. Offline safety: skips when OfflineSyncService.isSyncing is true to prevent network contention.
  *    Schedules a single bounded retry when syncing is in progress.
- * 4. Safe activation: only marks bundle for the NEXT restart via next({ id }); never set() or reload().
+ * 4. Safe activation: marks bundle for the NEXT restart via next({ id }) and raises liveUpdateReady;
+ *    set() runs only from applyLiveUpdateNow() when the user taps the bar's button.
  * 5. Error resilience: errors are logged and swallowed without interrupting user operations.
  */
 export async function checkForLiveUpdate(options?: { force?: boolean }): Promise<void> {
@@ -166,6 +216,7 @@ export async function checkForLiveUpdate(options?: { force?: boolean }): Promise
       const bundle = cur?.bundle;
       if (bundle && bundle.id !== 'builtin' && bundle.version && bundle.version !== 'builtin') {
         currentBundleVersion = bundle.version;
+        activeLiveBundleVersion.set(bundle.version);
       }
     } catch {
       // fallback to APP_VERSION
@@ -203,6 +254,7 @@ export async function checkForLiveUpdate(options?: { force?: boolean }): Promise
     const downloaded = await liveUpdateBridge.download(downloadOpts);
     if (downloaded?.id) {
       await liveUpdateBridge.next({ id: downloaded.id });
+      liveUpdateReady.set({ id: downloaded.id, version: downloaded.version || manifest.version });
     }
   } catch (err) {
     console.warn('[LiveUpdate] Error checking or downloading live update:', err);
@@ -287,4 +339,5 @@ export const liveUpdateController = {
   check: checkForLiveUpdate,
   stop: stopLiveUpdate,
   resetCheckTime: resetLiveUpdateCheckTime,
+  applyNow: applyLiveUpdateNow,
 };

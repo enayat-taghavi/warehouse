@@ -31,6 +31,9 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ActionButtonComponent } from '../action-button/action-button.component';
 import { WorkflowSubstitutesComponent } from '../workflow-substitutes/workflow-substitutes.component';
 import { BRANDING } from '../../../core/branding';
+import { APP_VERSION } from '../../../core/platform/app-version';
+import { activeLiveBundleVersion } from '../../../core/platform/live-update';
+import { formatVersionFa } from '../../../core/platform/release-notes';
 
 export interface ShortcutCategory {
   id: string;
@@ -92,6 +95,12 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
   public workflowTasks = inject(WorkflowTasksService, { optional: true });
   public readonly BRANDING = BRANDING;
+  /** «نسخهٔ ۱٫۰٫۰» و روی اپ با بستهٔ Live Update فعال «(بستهٔ x.y.z)» (طرح ۵ د۲) */
+  public get versionLabel(): string {
+    const bundle = activeLiveBundleVersion();
+    const base = `نسخهٔ ${formatVersionFa(APP_VERSION)}`;
+    return bundle && bundle !== APP_VERSION ? `${base} (بستهٔ ${formatVersionFa(bundle)})` : base;
+  }
 
   public get taskCount(): number {
     return this.workflowTasks?.count() ?? 0;

@@ -4,15 +4,16 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
-    "build": "ng build && node tools/patch-ngsw-530.js",
+    "build": "node tools/sync-app-version.js && ng build && node tools/patch-ngsw-530.js",
     "build:accounting": "node tools/build-for-modules.js --modules=accounting",
     "build:warehouse": "node tools/build-for-modules.js --modules=warehouse",
     "build:modules": "node tools/build-for-modules.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "build:mobile": "ng build --configuration mobile && npx cap sync",
-    "build:mobile-test": "ng build --configuration mobile-test && npx cap sync",
-    "check:deps": "node tools/check-circular-deps.js"
+    "build:mobile": "node tools/sync-app-version.js && ng build --configuration mobile && npx cap sync",
+    "build:mobile-test": "node tools/sync-app-version.js && ng build --configuration mobile-test && npx cap sync",
+    "check:deps": "node tools/check-circular-deps.js",
+    "version:sync": "node tools/sync-app-version.js"
   },
   "private": true,
   "packageManager": "npm@11.16.0",
