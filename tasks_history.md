@@ -14665,3 +14665,66 @@ Write the definitions in simple Persian like the rows above.
 تست‌های بک‌اند از طریق فرمان راستی‌آزمایی `django-tests` در حال اجرا هس...
 
 ---
+
+### Task 1 of 1 — 2026-10-28 18:17:11
+- **Status:** DONE
+- **Conversation:** `fbbae0cb-65d3-4403-a80e-5c36c878a321`
+- **Steps:** 254
+- **Tokens:** 584269
+- **Duration:** 33m 11s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.7-b: accounting report scope tests and export header tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Create exactly two new files: `backend/modules/accounting/personnel/test_reports_47.py` and `backend/modules/accounting/personnel/test_exports_47_headers.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. If `git status` shows files you did not create, leave them alone and do not commit them.
+- No `skip`, no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude; read only these):
+- `backend/modules/accounting/personnel/test_reports_47_core.py` (whole file): working fixtures (`FiscalFixtures`, `make_invoice`, `member` with `grant_section_perms`), the reports URL prefix `/api/personnel/reports/` and how an xlsx response is opened with `openpyxl`. COPY its helpers into your files; do not import from it. Use usernames with prefix `r47_` and invoice numbers with prefix `R47T-`.
+- `backend/modules/accounting/personnel/views_domains/report_views.py` (whole file): report keys, query parameters (`company_id`, `section_id`, `project_id`, `date_from`, `date_to`, `group_by`, `page`, `page_size`), 403/404/400 rules, masking of bank numbers (`FULL_BANK_PERMS`).
+- `backend/modules/accounting/personnel/accounting_reports.py` (whole file): the output keys of each report.
+- `backend/modules/accounting/personnel/models_domains/treasury_audit.py`: Grep `def debt_breakdown`, `def annotate_debt`, `class InvoicePayment`, `class PettyCashTransaction` and read those ranges.
+- `backend/modules/accounting/personnel/test_petty_cash_42.py`, `test_invoice_payments_41.py`, `test_payroll_45_excel.py`, `test_fleet_46_period.py`, `test_phase5_excel_and_endpoints.py`: Grep their setUp and helper methods only, to copy how petty accounts/transactions, invoice payments, monthly payroll records, trips and existing Excel exports are created and called.
+- Existing export endpoints (under `/api/personnel/`): `counterparties/export-excel/`, `expense-invoices/export-excel/`, `petty-cash-transactions/export-excel/`, `profiles/export-excel/`, `vehicles/export-excel/`, `attendance/export-monthly-excel/`, `trips/export-monthly-excel/`, `monthly-payroll/export-monthly-excel/`. Read the `@action` method of each (Grep `url_path='export-` in `backend/modules/accounting/personnel/views_domains/`) for its required query parameters.
+
+3. Definitions: a masked value is `******` plus the last 4 characters (for example `******1234`). Header rule: row 1 holds Persian titles, row 2 holds latin keys (ASCII, snake_case), `ws.freeze_panes == 'A3'` (monthly attendance export: `'F3'`). Shamsi date: text matching `^1[34]\d\d/\d\d/\d\d` (no Gregorian `20xx-` date in a date column).
+
+4. Task A — `test_reports_47.py`, `class Reports47Tests`, one method each:
+- a) `test_expense_excludes_draft_and_rejected_and_rejected_petty_line`: draft and rejected invoices and a rejected petty expense line add nothing to `expense`; the total equals (amount − vat) of approved invoices plus approved petty expenses.
+- b) `test_unpaid_remainder_and_age_after_partial_payment`: an approved invoice partly paid with an `InvoicePayment` shows remainder = amount − paid and the right age bucket in `unpaid-invoices`.
+- c) `test_petty_debt_equals_debt_breakdown`: `petty-cash` debt of an account equals `debt_breakdown()` of that account.
+- d) `test_no_report_perm_is_403`: a section member with invoice perms but without `perm_accounting_reports` gets 403 on every report key.
+- e) `test_other_company_and_section_is_404`: `company_id` or `section_id` of another company → 404.
+- f) `test_single_section_member_sees_only_own_section`: two sections with invoices; a member of section A sees only A's numbers.
+- g) `test_labor_cost_needs_payroll_perm` and `test_fleet_cost_needs_fleet_perm`: 403 without `view_sys_payroll` / `view_sys_fleet_settlement`, 200 with it; the labor-cost response contains no person name or national code.
+- h) `test_bank_numbers_masked_for_accountant`: in `bank-payments` an accountant (report perm only) sees masked sheba and account number; a user with `perm_treasury_disburse_action` at company level sees them in full.
+
+5. Task B — `test_exports_47_headers.py`, `class Exports47HeaderTests`:
+- a) one method per existing export endpoint listed in section 2 (8 methods): status 200, row 1 Persian, row 2 latin keys, freeze `A3` (attendance `F3`), every date cell Shamsi.
+- b) `test_sensitive_columns_masked_without_perm`: personnel and vehicle exports for a user without the sensitive-field permission show sheba and national code masked.
+- c) `test_report_exports_two_header_rows`: each of the six report `export-excel/` endpoints: row 1 Persian, row 2 latin, freeze `A3`; the bank-payments export masks sheba for an accountant exactly as the API does.
+
+6. Tool policy: only reading the listed files, Grep in `backend/modules/accounting/personnel/` and `backend/core/`, writing the two files, the test command below, `git add` of those two files, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_reports_47 personnel.test_exports_47_headers --keepdb` (always with labels; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), rerun at most 5 times.
+
+7. Before finishing: all tests pass; commit only the two files with the message `test(release-v1 4.7-b): accounting report scope tests and export header tests`; `git status --short` shows no change of yours.
+
+8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست (Explanation)
+کاربر درخواست پیاده‌سازی آزمون‌های خودکار مربوط به نگارش ۱ گام ۴.۷-ب (Release v1 step 4.7-b) را دارد:
+- ایجاد فایل [`test_reports_47.py`](file:///E:/comanager/backend/modules/accounting/personnel/test_reports_47.py) برای بررسی قلمرو و دسترسی‌های گزارش‌های حسابداری (عدم ورود فاکتورهای پیش‌نویس و ردشده، محاسبه سن بدهی و اقساط پرداخت، انطباق بدهی تنخواه با `debt_breakdown`، خطاهای ۴۰۳ عدم دسترسی و ۴۰۴ خروج از قلمرو شرکت/بخش، تفکیک اطلاعات بخش‌ها، و ماسک شدن داده‌های بانکی برای حسابدار).
+- ایجاد فایل [`test_exports_47_headers.py`](file:///E:/comanager/backend/modules/accounting/personnel/test_exports_47_headers.py) برای بررسی...
+
+---

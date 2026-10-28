@@ -3106,7 +3106,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.7-b: accounting report scope tests and export header tests
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.7-b: accounting report scope tests and export header tests
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
