@@ -3351,7 +3351,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 2 — Release v1 step 5-c on the local app environment: backup, web build, staging APK 1.0.0 build and badging check, publish it on the app download path, FCM key yes/no; the runner restarts Daphne and runs the health checks
+[DONE] [ ] Session 1 of 2 — Release v1 step 5-c on the local app environment: backup, web build, staging APK 1.0.0 build and badging check, publish it on the app download path, FCM key yes/no; the runner restarts Daphne and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

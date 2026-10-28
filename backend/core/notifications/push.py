@@ -44,8 +44,8 @@ class PushProvider:
     def is_enabled(self) -> bool:
         return False
 
-    def send(self, tokens: list[str], title: str, body: str, data: dict[str, Any] | None = None) -> None:
-        """Send push notification to the given device tokens."""
+    def send(self, tokens: list[str], title: str, body: str, data: dict[str, Any] | None = None) -> int | None:
+        """Send push notification to the given device tokens; returns how many were accepted (None if unknown)."""
         raise NotImplementedError
 
     def send_notification(self, notification: Any, tokens: list[str] | None = None) -> None:
@@ -78,9 +78,9 @@ class DisabledPushProvider(PushProvider):
     def is_enabled(self) -> bool:
         return False
 
-    def send(self, tokens: list[str], title: str, body: str, data: dict[str, Any] | None = None) -> None:
+    def send(self, tokens: list[str], title: str, body: str, data: dict[str, Any] | None = None) -> int:
         logger.debug("Push notifications disabled; skipping dispatch to %d tokens.", len(tokens) if tokens else 0)
-        return None
+        return 0
 
 
 class FcmPushProvider(PushProvider):
@@ -132,9 +132,9 @@ class FcmPushProvider(PushProvider):
             logger.error("Failed to load Firebase credentials from %s: %s", self.credentials_file, exc)
             return None, None
 
-    def send(self, tokens: list[str], title: str, body: str, data: dict[str, Any] | None = None) -> None:
+    def send(self, tokens: list[str], title: str, body: str, data: dict[str, Any] | None = None) -> int:
         if not tokens or not self.is_enabled:
-            return
+            return 0
 
         try:
             proxy_url = getattr(settings, 'OUTBOUND_HTTP_PROXY', '') or os.environ.get('OUTBOUND_HTTP_PROXY', '')
@@ -150,7 +150,7 @@ class FcmPushProvider(PushProvider):
                 credentials, project_id = self._load_credentials()
                 if not credentials or not project_id:
                     logger.warning("FCM credentials or project_id missing; cannot send push.")
-                    return
+                    return 0
 
                 # Refresh only when expired or not yet valid
                 if not getattr(credentials, 'valid', False) or getattr(credentials, 'expired', False):
@@ -169,11 +169,15 @@ class FcmPushProvider(PushProvider):
                     clean_data[str(k)] = str(v) if v is not None else ""
 
             proxies = {'http': proxy_url, 'https': proxy_url} if proxy_url else None
+            delivered = 0
             for token in tokens:
-                self._send_single_message(url, headers, token, title, body, clean_data, proxies=proxies)
+                if self._send_single_message(url, headers, token, title, body, clean_data, proxies=proxies):
+                    delivered += 1
+            return delivered
 
         except Exception as exc:
             logger.exception("Unexpected error in FcmPushProvider.send: %s", exc)
+            return 0
 
     def _send_single_message(
         self,
@@ -184,7 +188,7 @@ class FcmPushProvider(PushProvider):
         body: str,
         data: dict[str, str],
         proxies: dict[str, str] | None = None,
-    ) -> None:
+    ) -> bool:
         payload = {
             "message": {
                 "token": token,
@@ -204,10 +208,11 @@ class FcmPushProvider(PushProvider):
             response = requests.post(url, json=payload, headers=headers, timeout=10, proxies=proxies)
             if response.status_code == 200:
                 logger.info("FCM push successfully delivered to token %s...", token[:12])
-            else:
-                self._handle_fcm_error(token, response)
+                return True
+            self._handle_fcm_error(token, response)
         except Exception as exc:
             logger.exception("Error executing FCM HTTP request for token %s: %s", token[:12], exc)
+        return False
 
     def _handle_fcm_error(self, token: str, response: requests.Response) -> None:
         """Handle error responses from FCM, deleting unregistered tokens."""
@@ -271,8 +276,8 @@ def _send_push_worker(
     target_model: str | None = None,
     target_id: str | None = None,
     url: str | None = None,
-) -> None:
-    """Worker task executed in background thread pool to dispatch push for a notification."""
+) -> int | None:
+    """Worker task executed in background thread pool to dispatch push for a notification (returns accepted count)."""
     close_old_connections()
     try:
         from .models import Notification, DeviceToken
@@ -301,7 +306,7 @@ def _send_push_worker(
             'target_id': str(target_id or ''),
             'url': str(url or ''),
         }
-        provider.send(
+        return provider.send(
             tokens=tokens,
             title=title or '',
             body=message or '',

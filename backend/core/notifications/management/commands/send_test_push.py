@@ -62,10 +62,13 @@ class Command(BaseCommand):
             self.stdout.write("FCM push was not scheduled (see backend log).")
             return
         try:
-            future.result(timeout=PUSH_WAIT_SECONDS)
+            accepted = future.result(timeout=PUSH_WAIT_SECONDS)
         except Exception:
             self.stdout.write("FCM push did not finish in time (see backend log).")
             return
-        self.stdout.write(
-            f"FCM push dispatched to {token_count} device(s); delivery errors, if any, are in the backend log."
-        )
+        if accepted is None:
+            self.stdout.write(f"FCM push dispatched to {token_count} device(s); result unknown (see backend log).")
+        else:
+            self.stdout.write(f"FCM accepted {accepted} of {token_count} device(s); errors, if any, are in the backend log.")
+            if not accepted:
+                self.stdout.write("No device accepted: check the network path to Google (OUTBOUND_HTTP_PROXY) and the log.")

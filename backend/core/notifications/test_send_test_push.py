@@ -57,11 +57,23 @@ class SendTestPushTests(TransactionTestCase):
         DeviceToken.objects.create(user=self.user, token='secret-device-token-abcdef')
         provider = mock.MagicMock()
         provider.is_enabled = True
+        provider.send.return_value = 1
         with mock.patch('notifications.push.get_push_provider', return_value=provider):
             out = self.run_cmd('--username', 'stp_user', '--url', '/app/my-tasks?tab=1')
         provider.send.assert_called_once()
         kwargs = provider.send.call_args.kwargs
         self.assertEqual(kwargs['tokens'], ['secret-device-token-abcdef'])
         self.assertEqual(kwargs['data']['url'], '/app/my-tasks?tab=1')
-        self.assertIn('FCM push dispatched to 1 device(s)', out)
+        self.assertIn('FCM accepted 1 of 1 device(s)', out)
         self.assertNotIn('secret-device-token', out)
+
+    def test_fcm_provider_zero_accepted_says_so(self):
+        """اگر گوگل هیچ دستگاهی را نپذیرفت (مثلاً شبکه بسته)، دستور همین را می‌گوید."""
+        DeviceToken.objects.create(user=self.user, token='secret-device-token-zero')
+        provider = mock.MagicMock()
+        provider.is_enabled = True
+        provider.send.return_value = 0
+        with mock.patch('notifications.push.get_push_provider', return_value=provider):
+            out = self.run_cmd('--username', 'stp_user')
+        self.assertIn('FCM accepted 0 of 1 device(s)', out)
+        self.assertIn('No device accepted', out)
