@@ -14520,3 +14520,58 @@ Write the definitions in simple Persian like the rows above.
 بررسی وضعیت گیت نشان داد که تغییرات تسک جاری (`supervisor-attendance-and-lock.dom.spec.ts`) قبلاً با موفقیت کامیت شده و تمام تست‌ها (۱۴ مورد) پاس شده‌اند. فایل‌های کامیت‌نشدهٔ بک‌اند خارج از دامنهٔ تسک ۴.۶-b بودند و کامیت آن‌ها باعث شکست شرط `scope` می‌شد. بنابراین جهت بازگرداندن درخت کاری به حالت پاک بدون از دست رفتن تغییرات سرپرست، این تغییرا...
 
 ---
+
+### Task 1 of 1 — 2026-10-28 14:27:44
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `d0bf4c20-03a7-4dee-a0e6-753d996d50fc`
+- **Steps:** 194
+- **Tokens:** 526650
+- **Duration:** 26m 32s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.6-b: fleet scope and sensitive-data API tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_fleet_46_scope.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. If `git status` shows files you did not create, leave them alone and do not commit them.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude; read only these):
+- `backend/modules/accounting/personnel/test_fleet_46_vehicle_workflow.py` (whole file): working fixtures for companies, sections, users with section-scoped fleet permissions and vehicles. COPY its helper methods and imports into your new file; do not import from it. Use usernames with prefix `f46s_` and org codes `F46S...`.
+- `backend/modules/accounting/personnel/test_fleet_46_period.py` (whole file): fixtures for trips, section periods, the settlement and treasury URLs.
+- `backend/modules/accounting/personnel/fleet_lifecycle_services.py`: Grep `can_view_vehicle_sensitive` and read that function and `mask_vehicle_mapping`.
+- `backend/modules/accounting/personnel/views_domains/fleet_views.py`: Grep `url_path=` to find the exact action URLs (`bank-accounts`, `export-excel`, `approve-supervisor`).
+- `backend/modules/accounting/personnel/urls.py`: Grep `vehicle`, `workflow-audit-logs`, `fleet-settlement`, `cartable` for the exact routes.
+
+3. Definitions: section A and section B belong to company 1; company 2 has its own section C. A masked value is `******` plus the last 4 characters. Full view = superuser, the vehicle's driver user, or a holder of `perm_approve_fleet_finance` / `perm_approve_fleet_manager` / `view_sys_fleet_settlement` / `perm_treasury_disburse_action` in the vehicle's section.
+
+4. Task — `class Fleet46ScopeTests(TestCase)`, one method each:
+- a) `test_supervisor_sees_masked_vehicle`: a supervisor (perm_approve_fleet_supervisor + view_sys_fleet_attendance in section A) GETs an approved vehicle of section A (with driver and owner national codes and a valid sheba): `driver_national_code`, `owner_national_code` and `sheba_number` are masked; the vehicle list returns the same masked values.
+- b) `test_finance_in_section_sees_full`: a finance user (perm_approve_fleet_finance in section A) sees the full values for the section A vehicle; a finance user whose permission is only in section B sees them masked for the section A vehicle (or gets 404 if the vehicle is outside their list).
+- c) `test_bank_accounts_masked_for_supervisor`: GET the vehicle's `bank-accounts` action as the supervisor → `sheba_number`, `account_number` masked; as the section A finance user → full.
+- d) `test_audit_log_metadata_masked`: as the section A finance user PATCH the vehicle sheba while it is `pending_accountant` (or create the vehicle in `draft`, edit it as the creator, so an audit log with a diff exists); then GET `workflow-audit-logs` filtered by `content_type=vehicle` and `object_id` as the supervisor → no full national code or sheba appears anywhere in the JSON text; as superuser the full value appears.
+- e) `test_masked_write_keeps_value`: the creator of a `draft` vehicle PATCHes `sheba_number` with the masked string → 200 (or 2xx) and the stored value is unchanged.
+- f) `test_other_section_supervisor_gets_403`: a supervisor of section B calls the vehicle's `approve-supervisor` action on a section A vehicle at step `supervisor_ok` → 403 (or 404 if the vehicle is outside their list); the vehicle status is unchanged.
+- g) `test_other_company_gets_404`: a user of company 2 GETs a company 1 vehicle → 404; GETs its `bank-accounts` → 404; the fleet settlement with the `period_id` of a company 1 section period → 404.
+- h) `test_settlement_requires_permission_and_masks`: a user without `view_sys_fleet_settlement` → 403 on the fleet settlement endpoint; a user with `view_sys_fleet_settlement` but no full view of a vehicle sees its sheba masked in the settlement rows, while a full-view user sees it in full.
+
+5. Tool policy: only reading the listed files, Grep in `backend/modules/accounting/personnel/` and `backend/core/workflow/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_fleet_46_scope --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+6. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.6-b): fleet scope and sensitive-data API tests`; `git status --short` shows no change of yours.
+
+7. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست (Explain Simply)
+در این مرحله (Release v1 step 4.6-b)، آزمون‌های API مربوط به تفکیک قلمرو دسترسی (fleet scope) و امنیت داده‌های حساس (sensitive-data masking) در قالب کلاس [`Fleet46ScopeTests`](file:///E:/comanager/backend/modules/accounting/personnel/test_fleet_46_scope.py#L46-L373) در فایلی مجزا به نام [test_fleet_46_scope.py](file:///E:/comanager/backend/modules/accounting/personnel/test_fleet_46_scope.py) تعریف شدند. این آزمون‌ها بررسی می‌کنند که اطلاعات حساس خودروها (کد ملی، شبا و شماره حساب) برای سرپرست و کاربران غیرمالی در جزئیات، لیست، اکشن حساب‌های بانکی، لاگ‌های ممیزی و تسویه ناوگان پوشانده شده (ماسک با `*`) و فقط برای کاربران...
+
+---
