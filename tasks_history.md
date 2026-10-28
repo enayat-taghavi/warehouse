@@ -14353,3 +14353,63 @@ Write the definitions in simple Persian like the rows above.
 نیازمندی‌های اعلام‌شده با تغییرات کامیت‌های اخیر (`557a133a` و `01515e7a`)، قواعد مستندات `scratch/handoff_4_5_b1.md` و `scratch/handoff_4_5_b2.md` و رفتارهای `views_domains/payroll_views.py`...
 
 ---
+
+### Task 1 of 1 — 2026-10-28 09:59:37
+- **Status:** DONE
+- **Conversation:** `94033e74-7f28-4108-bb32-a8184bfad9dc`
+- **Steps:** 188
+- **Tokens:** 336311
+- **Duration:** 17m 50s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 4.5-c: payroll workflow, lock and treasury API tests
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Create exactly one new file: `backend/modules/accounting/personnel/test_payroll_45_workflow.py`. Change no other file (never touch `scripts/automation/*`). Never change production code. If a test fails because of production code, keep the assertion as written, stop, and describe the failure in the report.
+- No `skip` and no `expectedFailure`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+
+2. Context (committed by Claude in commit `a33d03c5`; read only these):
+- `scratch/handoff_4_5_c1.md` (whole file): payroll workflow `payroll_period` (steps `manager_ok` then `treasury_pay`; the accountant's submit replaces a review step), lock rules, treasury rules, command `payroll_open_workflows`.
+- `backend/modules/accounting/personnel/workflows.py`: grep `PAYROLL_PERIOD_WORKFLOW` and read from that line to the end of the file.
+- `backend/modules/accounting/personnel/treasury_engine.py` lines 55-215 and from `def execute_period_payment` to the end.
+- `backend/modules/accounting/personnel/test_payroll_45_scope.py` (whole file): working fixtures. COPY its helper methods and imports into your new file; you MAY subclass `_PayrollFixtureMixin` from `personnel.test_payroll_45_excel` as that file does, but do not import from `test_payroll_45_scope`. Use usernames with prefix `p45w_` and org codes `P45W...`.
+- `backend/modules/accounting/personnel/test_cartable_multitenant.py`: grep `cartable/treasury` to copy the exact treasury URLs (GET list, POST with `action`, `period_id`/`payroll_id`, `tracking_code`, and the `export-diskette/` GET) and how a treasury user gets `perm_treasury_disburse_action`.
+- `backend/modules/accounting/personnel/test_attendance_44_scope_lock.py`: grep `payroll_exists` for the attendance unlock call.
+- Engine API (`backend/core/workflow/engine.py`): `from workflow import engine`; `engine.open_task(key, period_id)`, `engine.instance_of(key, period_id)`, `engine.act(user, task, reason='')` (approve or pay), `engine.return_for_fix(user, task, 'reason')`. Errors are `workflow.errors.WorkflowError` with `.code`.
+- API: `POST /api/personnel/monthly-payroll/submit-workflow/` with `{"period_id": id}`; `calculate-period/`, `import-tax-excel/`, `<id>/release-payment-hold/` (grep `release-payment-hold` in `views_domains/payroll_views.py` for the exact url), PATCH `/api/personnel/monthly-payroll/<id>/`.
+- Users: an accountant with `view_sys_payroll`, a manager with `perm_manager_payment_authorize`, a treasurer with `perm_treasury_disburse_action`, all three assigned in the period's section (copy how the scope file gives permission codes). The manager and treasurer must be different users from the accountant.
+
+3. Task — `class Payroll45WorkflowTests(TestCase)` with these tests (one method each):
+- a) `test_full_flow_to_paid`: calculate a READY_TO_PAY section period (two personnel with valid sheba) → accountant POST `submit-workflow/` 200 and the open task step is `manager_ok` → `engine.act(manager, task)` → every row `payment_status == "READY_TO_PAY"` and open task step `treasury_pay` → treasurer POST treasury `disburse_period` with a tracking code → 200, period `status == "PAID"`, every row `PAID` with that tracking code, and `engine.instance_of(...)` status is completed.
+- b) `test_manager_return_frees_recalculation`: after submit and manager approval is NOT done, `engine.return_for_fix(manager, task, "fix")` → rows `PENDING`, no open task, and calculate-period again → 200; a second `submit-workflow/` → 200.
+- c) `test_treasury_cannot_pay_before_manager`: after submit only (task at `manager_ok`) treasurer POST `disburse_period` → 400 with `code == "not_ready_to_pay"`; the treasury GET list has no period with this id; period status unchanged.
+- d) `test_pay_needs_tracking_code_and_pays_once`: at `treasury_pay`, `engine.act(treasurer, task)` without the treasury endpoint raises `WorkflowError` with code `tracking_code_required` and the period stays not PAID; then pay through the endpoint → 200; a second identical POST → status 400 (any code) and no row's `paid_at` changes.
+- e) `test_failed_sheba_split_and_single_repay`: one of two personnel has an empty or invalid `sheba_number` → after payment that row is `FAILED_SHEBA` and the other is `PAID`, period `PAID`; POST `disburse_single_payroll` on the PAID row → 400 with `code == "not_failed_sheba"`; set a valid sheba (copy one used by a passing fixture) and POST `disburse_single_payroll` on the failed row → 200 and that row is `PAID`.
+- f) `test_lock_after_manager_approval`: after manager approval: calculate-period, PATCH a row, `import-tax-excel` (with `period_id`) and `release-payment-hold` on a row → each 400 with `code == "payroll_locked"`; the attendance unlock of that period → 400 with code `payroll_exists`.
+- g) `test_treasury_404s`: treasurer POST `disburse_period` with `period_id` 987654 → 404; a period of another company (a second org built with the helpers) → 404 for `disburse_period` and for `export-diskette/` GET; `disburse_single_payroll` with `payroll_id` 987654 → 404.
+- h) `test_open_workflows_command_idempotent`: a READY_TO_PAY section period with calculated rows and no payroll instance; `call_command("payroll_open_workflows", "--dry-run")` creates no instance; `call_command("payroll_open_workflows")` twice → exactly one instance for that period and its open task step is `manager_ok`.
+
+4. Tool policy: only reading the listed files, grep in `backend/modules/accounting/personnel/` and `backend/core/workflow/`, writing the test file, the test command below, `git add` of that file, `git commit`, `git status --short`. Test command, in `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_payroll_45_workflow --keepdb` (always with the label; never run `manage.py test` without a label). If a test fails, read the error, fix the test (not production code), and rerun at most 5 times.
+
+5. Before finishing: all 8 tests pass; commit only that file with the message `test(release-v1 4.5-c): payroll workflow, lock and treasury API tests`; `git status --short` prints nothing.
+
+6. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست کاربر
+در این گام (Release v1 step 4.5-c)، تست‌های جامع مربوط به گردش کار حقوق ماهانه (`payroll_period`)، قفل‌های امنیتی دوره و ردیف‌های حقوق پس از تأیید مدیر، عملیات پرداخت و رد خزانه‌داری در کارتابل خزانه، و دستور مدیریتی `payroll_open_workflows` در یک فایل مستقل و جدید با نام [`test_payroll_45_workflow.py`](file:///E:/comanager/backend/modules/accounting/personnel/test_payroll_45_workflow.py) پیاده‌سازی و اعتبارسنجی شد بدون آن‌که هیچ فایل دیگری یا کدهای پروداکشن تغییر یابند.
+
+### ۲. تأیید فنی و صحت‌سنجی
+تمامی سناریوهای ۸ گانه آزمون شامل:
+1. جریان کامل از محاسبه و ارسال حسابدار تا تأیید مدیر و پرداخت نهایی با کد رهگیری در خزانه (`test...
+
+---
