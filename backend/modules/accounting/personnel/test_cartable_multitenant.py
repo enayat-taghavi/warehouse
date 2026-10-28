@@ -317,10 +317,14 @@ class CartableMultiTenantTestCase(TestCase):
         self.v_pts.approval_status = WorkflowStatuses.APPROVED
         self.v_pts.save()
 
+        # د۶ طرح ۴.۵: صف حقوق خزانه از کارهای باز treasury_pay گردش حقوق؛ دوره‌های هر دو شرکت در مرحلهٔ پرداخت
+        self._open_payroll_pay_step()
+
         self.client.force_authenticate(user=self.user_fa_treasurer)
         res = self.client.get('/api/personnel/cartable/treasury/', HTTP_X_COMPANY_ID=str(self.company_fa.id))
         self.assertEqual(res.status_code, 200)
         data = res.json()
+        self.assertEqual([p['id'] for p in data['periods']], [self.period_fa.id])
 
         # سرجمع مبالغ خزانه‌داری باید فقط متعلق به FA باشد
         self.assertEqual(data['total_payroll_amount'], 150000000)
@@ -333,6 +337,16 @@ class CartableMultiTenantTestCase(TestCase):
 
         self.assertNotIn('IR220120000000000000000022', payroll_shebas)
         self.assertNotIn('IR220120000000000000000023', trip_shebas)
+
+    def _open_payroll_pay_step(self):
+        """دوره‌های حقوق بخش‌دار با کار باز در مرحلهٔ پرداخت خزانه (گردش حقوق ۴.۵)."""
+        from personnel.workflows import PAYROLL_PERIOD_WORKFLOW
+        from workflow import engine as wf_engine
+        for period, section in ((self.period_fa, self.sec_fa), (self.period_pts, self.sec_pts)):
+            period.section = section
+            period.save(update_fields=['section'])
+            period.payroll_payable_total = Decimal('0')
+            self.assertIsNotNone(wf_engine.open_at_step(PAYROLL_PERIOD_WORKFLOW, period, None, 'treasury_pay'))
 
     def test_05_bola_protection_cross_company_supervisor_blocked(self):
         """تلاش سرپرست FA برای تایید پرسنل یا فاکتور شرکت PTS با خطای ۴۰۳ مسدود می‌شود"""
@@ -375,8 +389,16 @@ class CartableMultiTenantTestCase(TestCase):
         self.assertEqual(self.inv_fa.status, 'pending_manager')
 
     def test_07_treasury_cross_company_disbursement_blocked(self):
-        """تلاش خزانه‌دار FA برای تسویه حقوق دوره یا فاکتور PTS با خطای ۴۰۳ مسدود می‌شود"""
+        """
+        تلاش خزانه‌دار FA برای تسویه حقوق دوره یا فاکتور PTS مسدود می‌شود. د۶ طرح ۴.۵: دوره و ردیف حقوق شرکت
+        دیگر یا شناسهٔ ناموجود 404 (نه 403 و نه 500)؛ ناوگان همان 403.
+        """
+        self._open_payroll_pay_step()
         self.client.force_authenticate(user=self.user_fa_treasurer)
+        res_missing = self.client.post('/api/personnel/cartable/treasury/', {
+            'action': 'disburse_period', 'period_id': 999999, 'tracking_code': 'TRK-NONE'
+        }, HTTP_X_COMPANY_ID=str(self.company_fa.id))
+        self.assertEqual(res_missing.status_code, 404)
 
         # ۱. تسویه دوره کارکرد PTS توسط خزانه‌دار FA
         res_period = self.client.post('/api/personnel/cartable/treasury/', {
@@ -384,7 +406,9 @@ class CartableMultiTenantTestCase(TestCase):
             'period_id': self.period_pts.id,
             'tracking_code': 'TRK-HACK-001'
         }, HTTP_X_COMPANY_ID=str(self.company_fa.id))
-        self.assertEqual(res_period.status_code, 403)
+        self.assertEqual(res_period.status_code, 404)
+        self.period_pts.refresh_from_db()
+        self.assertEqual(self.period_pts.status, WorkflowStatuses.PERIOD_READY_TO_PAY)
 
         # ۲. تسویه رکورد منفرد حقوق PTS توسط خزانه‌دار FA
         res_payroll = self.client.post('/api/personnel/cartable/treasury/', {
@@ -392,7 +416,7 @@ class CartableMultiTenantTestCase(TestCase):
             'payroll_id': self.payroll_pts.id,
             'tracking_code': 'TRK-HACK-002'
         }, HTTP_X_COMPANY_ID=str(self.company_fa.id))
-        self.assertEqual(res_payroll.status_code, 403)
+        self.assertEqual(res_payroll.status_code, 404)
 
         # ۳. تسویه سرویس ناوگان PTS توسط خزانه‌دار FA
         res_fleet = self.client.post('/api/personnel/cartable/treasury/', {
@@ -411,7 +435,13 @@ class CartableMultiTenantTestCase(TestCase):
             f'/api/personnel/cartable/treasury/export-diskette/?period_id={self.period_pts.id}&type=paya',
             HTTP_X_COMPANY_ID=str(self.company_fa.id)
         )
-        self.assertEqual(res.status_code, 403)
+        # د۶ طرح ۴.۵: دورهٔ شرکت دیگر و شناسهٔ ناموجود 404 (وجود شناسه لو نمی‌رود، هرگز 500)
+        self.assertEqual(res.status_code, 404)
+        res_missing = self.client.get(
+            '/api/personnel/cartable/treasury/export-diskette/?period_id=987654&type=paya',
+            HTTP_X_COMPANY_ID=str(self.company_fa.id)
+        )
+        self.assertEqual(res_missing.status_code, 404)
 
         # خزانه‌دار FA دیسکت دوره FA را با موفقیت دانلود می‌کند
         res_ok = self.client.get(

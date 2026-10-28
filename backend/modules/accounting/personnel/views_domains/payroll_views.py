@@ -611,16 +611,24 @@ PAYROLL_PERM = 'view_sys_payroll'
 
 def period_manager_approved(period, records=None) -> bool:
     """
-    د۸ طرح ۴.۵: آیا حقوق دوره تأیید مدیر گرفته است؟ (manager_approved_* دوره، دورهٔ PAID، یا ردیف READY_TO_PAY/PAID)
-    TODO(4.5-c): با آمدن گردش حقوق (PAYROLL_PERIOD_WORKFLOW_SPEC) به وضعیت گام manager_ok همان گردش تغییر کند.
-    records: ردیف‌های بارشدهٔ همان دوره (بی پرس‌وجوی اضافه)؛ None یعنی از پایگاه داده خوانده شود.
+    د۸ طرح ۴.۵: آیا حقوق دوره تأیید مدیر گرفته است؟ (۴.۵-ج) از وضعیت گردش حقوق: کار باز در treasury_pay یا
+    گردش پایان‌یافته؛ دورهٔ بی نمونهٔ گردش: دورهٔ PAID یا ردیف READY_TO_PAY/PAID (مهر manager_approved_* گردش
+    کارکرد دیگر ملاک نیست). records: ردیف‌های بارشدهٔ همان دوره (بی پرس‌وجوی اضافه).
     """
-    if period.manager_approved_at or period.manager_approved_by_id or period.status == 'PAID':
-        return True
-    approved = ('READY_TO_PAY', 'PAID')
-    if records is not None:
-        return any(r.period_id == period.id and r.payment_status in approved for r in records)
-    return MonthlyPayrollRecord.objects.filter(period=period, payment_status__in=approved).exists()
+    from ..workflows import payroll_manager_approved
+    return payroll_manager_approved(period, records)
+
+
+def _payroll_locked_response():
+    """د۵: پاسخ 400 payroll_locked (همان شکل خطاهای این نما)."""
+    from ..workflows import PAYROLL_LOCKED_CODE, PAYROLL_LOCKED_MESSAGE
+    return Response({'code': PAYROLL_LOCKED_CODE, 'error': PAYROLL_LOCKED_MESSAGE, 'detail': PAYROLL_LOCKED_MESSAGE},
+                    status=status.HTTP_400_BAD_REQUEST)
+
+
+def _period_payroll_locked(period) -> bool:
+    from ..workflows import is_payroll_locked
+    return is_payroll_locked(period)
 
 
 def _user_has_payroll_perm(user, period=None, company_id=None) -> bool:
@@ -731,6 +739,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         # د۷: مجوز مالی در بخش همان دورهٔ ردیف (get_object بیرون از دامنه را 404 می‌کند)
         if not self._can_edit_record_wages():
             raise PermissionDenied("ویرایش فیش حقوقی تنها با دسترسی مالی و حسابداری مجاز است.")
+        if _period_payroll_locked(self.get_object().period):
+            return _payroll_locked_response()
         if 'payment_hold' in request.data or 'payment_hold_reason' in request.data:
             return Response(
                 {'error': 'تغییر مستقیم وضعیت تعلیق پرداخت مجاز نیست. آزادسازی پرداخت منحصراً از طریق اکشن آزادسازی پس از تمدید اعتبار امکان‌پذیر است.'},
@@ -741,12 +751,36 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         if not self._can_edit_record_wages():
             raise PermissionDenied("ویرایش فیش حقوقی تنها با دسترسی مالی و حسابداری مجاز است.")
+        if _period_payroll_locked(self.get_object().period):
+            return _payroll_locked_response()
         if 'payment_hold' in request.data or 'payment_hold_reason' in request.data:
             return Response(
                 {'error': 'تغییر مستقیم وضعیت تعلیق پرداخت مجاز نیست. آزادسازی پرداخت منحصراً از طریق اکشن آزادسازی پس از تمدید اعتبار امکان‌پذیر است.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         return super().partial_update(request, *args, **kwargs)
+
+    @action(detail=False, methods=['post'], url_path='submit-workflow')
+    def submit_workflow(self, request):
+        """
+        د۴ طرح ۴.۵: ارسال حقوق دورهٔ بخش به گردش (حسابدار ← مدیر ← خزانه) روی موتور ۲.۳. دوره با دامنه خوانده
+        می‌شود (بیرون از دامنه 404)؛ مجوز view_sys_payroll در بخش دوره؛ تأیید و عودت از «کارهای من»، پرداخت از
+        کارتابل خزانه با کد رهگیری.
+        """
+        from workflow.errors import WorkflowError
+        from ..workflows import submit_payroll_period
+        pid = self._parse_id(request.data.get('period_id'))
+        period = self._scoped_periods().filter(id=pid).first() if pid is not None else None
+        if period is None:
+            return _not_found()
+        try:
+            submit_payroll_period(request.user, period)
+        except WorkflowError as exc:
+            return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+        from ..workflows import payroll_open_task
+        task = payroll_open_task(period.pk)
+        return Response({'message': f'حقوق دوره {period.year_month} برای تأیید ارسال شد.', 'period_id': period.pk,
+                         'workflow_step': task.step_key if task is not None else None})
 
     @action(detail=False, methods=['post'], url_path='calculate-period')
     def calculate_period(self, request):
@@ -804,8 +838,24 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if period.status == 'LOCKED':
             return Response({'error': f'دوره {period.year_month} قفل شده است و امکان محاسبه مجدد ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        engine = PayrollCalculationEngine(period=period)
-        records = engine.calculate_period(period, user=request.user)
+        return self._locked_calculation(period)
+
+    def _locked_calculation(self, period, require_ready=False):
+        """
+        د۵: محاسبه زیر قفل ردیف دوره (همان قفلی که قلاب‌های گردش حقوق می‌گیرند)، پس تأیید مدیر یا پرداخت
+        هم‌زمان با محاسبهٔ دوباره نمی‌شود؛ دورهٔ قفل حقوق 400 payroll_locked.
+        """
+        from ..payroll_engine import PayrollCalculationEngine
+        with transaction.atomic():
+            period = MonthlyWorkPeriod.objects.select_for_update().get(pk=period.pk)
+            if _period_payroll_locked(period):
+                return _payroll_locked_response()
+            if require_ready and period.status != 'READY_TO_PAY':
+                msg = 'گردش تأیید کارکرد این دوره هنوز تمام نشده است؛ حقوق پس از تأیید نهایی کارکرد محاسبه می‌شود.'
+                return Response({'code': 'attendance_not_approved', 'error': msg, 'detail': msg},
+                                status=status.HTTP_400_BAD_REQUEST)
+            engine = PayrollCalculationEngine(period=period)
+            records = engine.calculate_period(period, user=self.request.user)
         return self._calculation_response(period, records, engine.skipped_no_attendance)
 
     def _calculate_section_period(self, request, period_id, section_id, year_month):
@@ -835,14 +885,7 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
                 return not_found
         if not _user_has_payroll_perm(request.user, period):
             return _payroll_forbidden()
-        if period.status != 'READY_TO_PAY':
-            msg = 'گردش تأیید کارکرد این دوره هنوز تمام نشده است؛ حقوق پس از تأیید نهایی کارکرد محاسبه می‌شود.'
-            return Response({'code': 'attendance_not_approved', 'error': msg, 'detail': msg},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        engine = PayrollCalculationEngine(period=period)
-        records = engine.calculate_period(period, user=request.user)
-        return self._calculation_response(period, records, engine.skipped_no_attendance)
+        return self._locked_calculation(period, require_ready=True)
 
     def _calculation_response(self, period, records, skipped_no_attendance):
         from ..workflow_engine import notify_document_changed
@@ -1200,6 +1243,10 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if not self._can_edit_record_wages():
             raise PermissionDenied("آزادسازی پرداخت معلق حقوق تنها با دسترسی مالی و حسابداری مجاز است.")
         record = self.get_object()
+        # ردیف معلقِ PENDING در دورهٔ PAID پرداخت نشده است: آزادسازی‌اش مجاز است تا خزانه تکی پرداختش کند
+        paid_period_held = record.period.status == 'PAID' and record.payment_status == 'PENDING'
+        if not paid_period_held and _period_payroll_locked(record.period):
+            return _payroll_locked_response()
         if not record.payment_hold:
             return Response({'message': 'این فیش حقوقی در وضعیت تعلیق پرداخت قرار ندارد.'}, status=status.HTTP_200_OK)
 
@@ -1286,6 +1333,8 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
             return Response({'error': 'دوره ماهانه مورد نظر یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
         if not _user_has_payroll_perm(request.user, period):
             return _payroll_forbidden()
+        if _period_payroll_locked(period):
+            return _payroll_locked_response()
 
         try:
             matched_count = 0

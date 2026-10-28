@@ -141,6 +141,13 @@ class PersonnelConfig(AppConfig):
         contribute(f'is_locked:{_wf.ATTENDANCE_PERIOD_ENTITY}', _wf.is_attendance_period_locked)
         contribute(f'company_of:{_wf.ATTENDANCE_PERIOD_ENTITY}', _wf.attendance_period_company_id)
         contribute(f'can_act:{_wf.ATTENDANCE_PERIOD_ENTITY}', _wf.can_act_attendance_period)
+        # حقوق ماهانه: نمونهٔ جدا روی همان دوره (د۴ طرح ۴.۵)
+        contribute('workflows', _wf.PAYROLL_PERIOD_WORKFLOW_SPEC)
+        contribute(f'entity_resolver:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.resolve_payroll_period)
+        contribute(f'can_view:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.can_view_payroll_period)
+        contribute(f'can_attach:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.can_attach_payroll_period)
+        contribute(f'is_locked:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.is_payroll_period_closed)
+        contribute(f'company_of:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.payroll_period_company_id)
         # چاپ پروندهٔ پرسنلی با پوشش د۶ (د۸ طرح ۴.۳)
         from personnel.personnel_print import printable_personnel_profile
         contribute(f'printable:{_wf.PERSONNEL_ENTITY}', printable_personnel_profile)

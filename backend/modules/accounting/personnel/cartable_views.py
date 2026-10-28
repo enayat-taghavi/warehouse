@@ -923,6 +923,30 @@ class ManagerCartableAPIView(APIView):
             raise ValidationError(f"اقدام «{action_type}» نامعتبر است.")
 
 
+def _scoped_payroll_get(queryset, raw_id, user, company_field):
+    """
+    د۶ طرح ۴.۵: خواندن دوره یا ردیف حقوق خزانه با دامنهٔ شرکت کاربر؛ شناسهٔ نامعتبر، ناموجود یا شرکت دیگر = 404
+    (هرگز 500 و هرگز 403 که وجود شناسه را لو دهد).
+    """
+    pid = str(raw_id or '').strip()
+    obj = queryset.filter(pk=int(pid)).first() if pid.isascii() and pid.isdigit() else None
+    if obj is not None and not user.is_superuser:
+        allowed = set(get_user_allowed_companies(user).values_list('id', flat=True))
+        company_id = None
+        for path in company_field.split('|'):
+            value = obj
+            for part in path.split('__'):
+                value = getattr(value, part, None) if value is not None else None
+            if value is not None:
+                company_id = value
+                break
+        if company_id not in allowed:
+            obj = None
+    if obj is None:
+        raise NotFound("سند حقوق یافت نشد.")
+    return obj
+
+
 class TreasuryCartableAPIView(APIView):
     """
     کارتابل اختصاصی خزانه‌داری و صدور دیسکت‌های بانکی (سطح ۵)
@@ -936,13 +960,23 @@ class TreasuryCartableAPIView(APIView):
             raise PermissionDenied("دسترسی به کارتابل خزانه‌داری مجاز نمی‌باشد.")
 
         company_ids = _get_effective_company_ids(request, user)
-        data = TreasuryDisbursementService.get_pending_treasury_batches(company_ids=company_ids)
+        # د۶ طرح ۴.۵: دوره‌های حقوق از کارهای باز treasury_pay گردش حقوق در دامنهٔ همین کاربر
+        data = TreasuryDisbursementService.get_pending_treasury_batches(company_ids=company_ids, user=user)
 
-        # دریافت سوابق تفکیکی حقوق آماده پرداخت
+        # ردیف‌های حقوق: آمادهٔ پرداخت همان دوره‌ها + خطای شبای دوره‌های پرداخت‌شده (پرداخت دوباره) در دامنه
+        pay_period_ids = [p['id'] for p in data['periods']]
         payrolls_qs = MonthlyPayrollRecord.objects.filter(
-            payment_status__in=[WorkflowStatuses.PAYROLL_READY_TO_PAY, 'READY_TO_PAY', WorkflowStatuses.PAYROLL_FAILED_SHEBA]
+            Q(period_id__in=pay_period_ids, payment_status=WorkflowStatuses.PAYROLL_READY_TO_PAY)
+            | Q(period__status='PAID', payment_status=WorkflowStatuses.PAYROLL_FAILED_SHEBA)
+            | Q(period__status='PAID', payment_status='PENDING', payment_hold=False)
         ).select_related('personnel', 'period')
-        payrolls = _filter_by_company(payrolls_qs, 'payroll', company_ids)[:100]
+        payrolls = _filter_by_company(payrolls_qs, 'payroll', company_ids)[:300]
+        if not user.is_superuser:
+            from .lifecycle_services import user_has_any_perm
+            from .workflows import PAYROLL_TREASURY_PERM
+            payrolls = [r for r in payrolls if r.period_id in pay_period_ids
+                        or user_has_any_perm(user, (PAYROLL_TREASURY_PERM,), r.period)]
+        payrolls = list(payrolls)[:100]
 
         # دریافت سرویس‌های ناوگان تسویه‌نشده
         trips_qs = VehicleTripLog.objects.filter(
@@ -984,27 +1018,38 @@ class TreasuryCartableAPIView(APIView):
             raise ValidationError("پارامترهای action و tracking_code الزامی هستند.")
 
         if action == 'disburse_period':
-            period_id = request.data.get('period_id')
-            period = MonthlyWorkPeriod.objects.get(pk=period_id)
-            _validate_instance_company_access(period, 'period', user)
-            res = TreasuryDisbursementService.disburse_payroll_period(
-                period=period,
-                treasury_user=user,
-                tracking_code=tracking_code,
-                batch_id=batch_id
-            )
+            # د۶ طرح ۴.۵: پوستهٔ نازک روی اقدام «پرداخت» موتور (مرحلهٔ treasury_pay گردش حقوق)؛ خواندن با دامنه
+            from workflow.errors import WorkflowError
+            period = _scoped_payroll_get(MonthlyWorkPeriod.objects.all(), request.data.get('period_id'),
+                                         user, 'company_id')
+            try:
+                res = TreasuryDisbursementService.disburse_payroll_period(
+                    period=period,
+                    treasury_user=user,
+                    tracking_code=tracking_code,
+                    batch_id=batch_id,
+                    notes=request.data.get('notes') or ''
+                )
+            except WorkflowError as exc:
+                return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
+                                status=exc.status)
             return Response(res)
 
         elif action == 'disburse_single_payroll':
-            payroll_id = request.data.get('payroll_id')
-            rec = MonthlyPayrollRecord.objects.get(pk=payroll_id)
-            _validate_instance_company_access(rec, 'payroll', user)
-            updated_rec = TreasuryDisbursementService.disburse_single_payroll_record(
-                record=rec,
-                treasury_user=user,
-                tracking_code=tracking_code,
-                batch_id=batch_id
-            )
+            rec = _scoped_payroll_get(MonthlyPayrollRecord.objects.select_related('period', 'personnel'),
+                                      request.data.get('payroll_id'), user,
+                                      'period__company_id|personnel__company_id')
+            from workflow.errors import WorkflowError
+            try:
+                updated_rec = TreasuryDisbursementService.disburse_single_payroll_record(
+                    record=rec,
+                    treasury_user=user,
+                    tracking_code=tracking_code,
+                    batch_id=batch_id
+                )
+            except WorkflowError as exc:
+                return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
+                                status=exc.status)
             return Response({
                 'message': 'تسویه رکورد منفرد حقوق با موفقیت انجام شد.',
                 'record': MonthlyPayrollRecordSerializer(updated_rec).data
@@ -1092,8 +1137,13 @@ class TreasuryDisketteExportAPIView(APIView):
         if not period_id:
             raise ValidationError("پارامتر period_id الزامی است.")
 
-        period = MonthlyWorkPeriod.objects.get(pk=period_id)
-        _validate_instance_company_access(period, 'period', user)
+        # د۶ طرح ۴.۵: خواندن با دامنه؛ شناسهٔ ناموجود یا شرکت دیگر 404 (نه 500)
+        period = _scoped_payroll_get(MonthlyWorkPeriod.objects.all(), period_id, user, 'company_id')
+        # فایل بانک (شبا و مبلغ) فقط با مجوز پرداخت خزانه در بخش همان دوره؛ بیرون از آن 404
+        from .lifecycle_services import user_has_any_perm
+        from .workflows import PAYROLL_TREASURY_PERM
+        if not user.is_superuser and not user_has_any_perm(user, (PAYROLL_TREASURY_PERM,), period):
+            raise NotFound("سند حقوق یافت نشد.")
         records = MonthlyPayrollRecord.objects.filter(
             period=period,
             include_in_bank=True

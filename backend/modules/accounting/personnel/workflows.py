@@ -1036,3 +1036,214 @@ def open_legacy_period_workflow(period, reason='legacy: opened for an in-flight 
         return None
     creator = period.submitted_by or period.locked_by
     return engine.open_at_step(ATTENDANCE_PERIOD_WORKFLOW, period, creator, step_key, reason=reason)
+
+
+# ─── گردش حقوق ماهانه روی موتور ۲.۳ (د۴ طرح ۴.۵) ───────────────────────────────────────────────────
+# نمونهٔ جدا از گردش کارکرد روی همان MonthlyWorkPeriod (کلید و نوع payroll_period). پایان manager_ok (رسیدن به
+# treasury_pay) ردیف‌های بی تعلیق را READY_TO_PAY می‌کند؛ پایان treasury_pay (COMPLETED) پرداخت دوره را در همان
+# تراکنش موتور انجام می‌دهد؛ عودت ردیف‌ها را به PENDING برمی‌گرداند تا محاسبهٔ دوباره آزاد شود.
+PAYROLL_PERIOD_WORKFLOW = 'payroll_period'
+PAYROLL_PERIOD_ENTITY = 'payroll_period'
+PAYROLL_VIEW_PERM = 'view_sys_payroll'
+PAYROLL_MANAGER_PERM = 'perm_manager_payment_authorize'
+PAYROLL_TREASURY_PERM = 'perm_treasury_disburse_action'
+PAYROLL_LOCK_STEPS = ('manager_ok', 'treasury_pay')
+PAYROLL_LOCKED_CODE = 'payroll_locked'
+PAYROLL_LOCKED_MESSAGE = ('حقوق این دوره تأیید مدیر گرفته یا پرداخت شده است و تغییر نمی‌کند؛ '
+                          'برای اصلاح، مدیر یا خزانه‌دار باید آن را عودت دهد.')
+
+
+def payroll_payable_total(period):
+    """مبلغ گردش = جمع قابل پرداخت ردیف‌های دوره (ردیف REJECTED شمرده نمی‌شود)."""
+    from django.db.models import Sum
+    from .models import MonthlyPayrollRecord
+    total = (MonthlyPayrollRecord.objects.filter(period_id=period.pk).exclude(payment_status='REJECTED')
+             .aggregate(s=Sum('payable_amount'))['s'])
+    return Decimal(str(total or 0))
+
+
+def resolve_payroll_period(entity_id):
+    from .models import MonthlyWorkPeriod
+    period = MonthlyWorkPeriod.objects.select_related('section', 'section__project', 'company').filter(
+        pk=entity_id).first()
+    if period is not None:
+        period.payroll_payable_total = payroll_payable_total(period)
+    return period
+
+
+def _payroll_summary(period):
+    section = period.section.name if period.section_id and period.section else ''
+    return {'title': f'حقوق ماهانه {period.year_month}' + (f' — {section}' if section else ''),
+            'category': section}
+
+
+def _payroll_rows_to(period, from_statuses, to_status):
+    from django.utils import timezone
+    from .models import MonthlyPayrollRecord
+    qs = MonthlyPayrollRecord.objects.filter(period_id=period.pk, payment_status__in=from_statuses)
+    if to_status == 'READY_TO_PAY':
+        qs = qs.filter(payment_hold=False)
+    return qs.update(payment_status=to_status, updated_at=timezone.now())
+
+
+def _payroll_state_change(period, state, instance):
+    from django.utils import timezone
+    from workflow.errors import WorkflowError
+    from .models import MonthlyWorkPeriod
+    from .workflow_engine import notify_document_changed
+    # قفل ردیف دوره: محاسبهٔ دوباره (که همین قفل را می‌گیرد) با تأیید یا پرداخت هم‌زمان نمی‌شود
+    MonthlyWorkPeriod.objects.select_for_update().filter(pk=period.pk).values_list('pk', flat=True).first()
+    if state == 'treasury_pay':
+        # پایان manager_ok (یا رد شدنش): ردیف‌های بی تعلیق آمادهٔ پرداخت؛ مهر تأیید مدیر روی دوره
+        _payroll_rows_to(period, ('PENDING',), 'READY_TO_PAY')
+        mgr = next((t for t in _acted_tasks(instance) if t.step_key == 'manager_ok'), None)
+        period.manager_approved_by_id = mgr.closed_by_id if mgr is not None else instance.created_by_id
+        period.manager_approved_at = timezone.now()
+        period.save(update_fields=['manager_approved_by', 'manager_approved_at', 'updated_at'])
+    elif state == COMPLETED:
+        payment = getattr(period, '_wf_payment', None) or {}
+        tracking_code = str(payment.get('tracking_code') or '').strip()
+        if not tracking_code:
+            raise WorkflowError('tracking_code_required',
+                                'پرداخت حقوق فقط از کارتابل خزانه با ثبت کد رهگیری بانکی انجام می‌شود.', 400)
+        from .treasury_engine import execute_period_payment
+        user = payment.get('user') or _last_closer(instance)
+        period._wf_payment_result = execute_period_payment(
+            period, user, tracking_code, payment.get('batch_id') or '')
+    elif state in (RETURNED, CANCELLED, REJECTED):
+        # عودت: ردیف‌ها دوباره در انتظار و محاسبهٔ دوباره آزاد (هیچ ردیفی حذف نمی‌شود)
+        _payroll_rows_to(period, ('READY_TO_PAY',), 'PENDING')
+    notify_document_changed(period)
+
+
+PAYROLL_PERIOD_WORKFLOW_SPEC = WorkflowSpec(
+    key=PAYROLL_PERIOD_WORKFLOW,
+    version=1,
+    entity_kind=PAYROLL_PERIOD_ENTITY,
+    title_fa='حقوق ماهانه',
+    steps=(
+        # بررسی حسابدار همان ارسال است (submit_payroll_period با view_sys_payroll)؛ مرحلهٔ REVIEW جدا با سطح
+        # ثبت‌کننده رد نمی‌شود و حسابدار دومی را لازم می‌کرد، پس گردش از تأیید مدیر شروع می‌شود.
+        # ن۳: مدیر حقوق را رد نمی‌کند، فقط برای اصلاح عودت می‌دهد
+        StepSpec('manager_ok', 'تأیید مدیر', 'manager', PAYROLL_MANAGER_PERM, APPROVE, actions=(ACT, RETURN)),
+        # پرداخت فقط با کد رهگیری (کارتابل خزانه)؛ اقدام عمومی «کارهای من» بی کد 400 tracking_code_required
+        StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', PAYROLL_TREASURY_PERM, EXECUTE,
+                 actions=(ACT, RETURN)),
+    ),
+    on_state_change=_payroll_state_change,
+    summary=_payroll_summary,
+    route='/app/finance/accountant-payroll?period={id}',
+    section_field='section',
+    company_field='company',
+    amount_field='payroll_payable_total',
+    view_permission=PAYROLL_VIEW_PERM,
+)
+
+
+def payroll_open_task(period_id):
+    from workflow import engine
+    return engine.open_task(PAYROLL_PERIOD_WORKFLOW, period_id)
+
+
+def payroll_instance(period_id):
+    from workflow import engine
+    return engine.instance_of(PAYROLL_PERIOD_WORKFLOW, period_id)
+
+
+def is_payroll_locked(period) -> bool:
+    """د۵: کار باز حقوق از manager_ok به بعد، یا ردیف READY_TO_PAY/PAID، یا دورهٔ PAID."""
+    if period is None:
+        return False
+    if period.status == 'PAID':
+        return True
+    task = payroll_open_task(period.pk)
+    if task is not None and task.step_key in PAYROLL_LOCK_STEPS:
+        return True
+    return period.payroll_records.filter(payment_status__in=('READY_TO_PAY', 'PAID')).exists()
+
+
+def payroll_manager_approved(period, records=None) -> bool:
+    """
+    آیا حقوق دوره تأیید مدیر گرفته است؟ با گردش حقوق: کار باز در treasury_pay یا گردش پایان‌یافته.
+    دورهٔ بی نمونهٔ گردش (قدیمی): دورهٔ PAID یا ردیف READY_TO_PAY/PAID (records بارشده = بی پرس‌وجو).
+    """
+    from workflow.models import WorkflowInstance
+    instance = payroll_instance(period.pk)
+    if instance is not None:
+        return instance.status == WorkflowInstance.COMPLETED or (
+            instance.status == WorkflowInstance.IN_PROGRESS and instance.current_step == 'treasury_pay')
+    if period.status == 'PAID':
+        return True
+    approved = ('READY_TO_PAY', 'PAID')
+    if records is not None:
+        return any(r.period_id == period.id and r.payment_status in approved for r in records)
+    return period.payroll_records.filter(payment_status__in=approved).exists()
+
+
+def payroll_period_company_id(entity_id):
+    return attendance_period_company_id(entity_id)
+
+
+def can_view_payroll_period(user, entity_id):
+    """دیدن سند گردش حقوق: شرکت مجاز و یکی از مجوزهای حقوق/مدیر/خزانه در بخش دوره؛ بیرون از آن بی‌نظر."""
+    from companies.access import get_user_allowed_companies
+    from .lifecycle_services import user_has_any_perm
+    from .models import MonthlyWorkPeriod
+    period = MonthlyWorkPeriod.objects.filter(pk=entity_id).first()
+    if period is None or not getattr(user, 'is_authenticated', False):
+        return None
+    if user.is_superuser:
+        return True
+    if period.company_id is None or not get_user_allowed_companies(user).filter(id=period.company_id).exists():
+        return None
+    perms = (PAYROLL_VIEW_PERM, PAYROLL_MANAGER_PERM, PAYROLL_TREASURY_PERM)
+    return True if user_has_any_perm(user, perms, period) else None
+
+
+def can_attach_payroll_period(user, entity_id):
+    return can_view_payroll_period(user, entity_id)
+
+
+def is_payroll_period_closed(entity_id):
+    """دورهٔ پرداخت‌شده در گردش حقوق جابه‌جا نمی‌شود (قفل موتور)؛ قفل محاسبه (د۵) جداست."""
+    from .models import MonthlyWorkPeriod
+    return MonthlyWorkPeriod.objects.filter(pk=entity_id, status='PAID').exists()
+
+
+def submit_payroll_period(user, period):
+    """
+    ارسال حقوق دوره به گردش (حسابدار). فقط وقتی گردش کارکرد تمام شده (READY_TO_PAY)، دست‌کم یک ردیف حقوق هست و
+    کار باز حقوق نیست. مجوز: view_sys_payroll در بخش دوره. خطا: WorkflowError.
+    """
+    from django.db import transaction
+    from workflow import engine
+    from workflow.errors import WorkflowError
+    from .lifecycle_services import user_has_any_perm
+    from .models import MonthlyWorkPeriod
+    if period.company_id is None:
+        raise WorkflowError('invalid_state', 'این دوره شرکت ندارد و به گردش حقوق نمی‌رود.', 400)
+    if not user_has_any_perm(user, (PAYROLL_VIEW_PERM,), period):
+        raise WorkflowError('not_allowed', 'شما مجوز ارسال حقوق این بخش را ندارید.', 403)
+    with transaction.atomic():
+        locked = MonthlyWorkPeriod.objects.select_for_update().get(pk=period.pk)
+        if locked.status != 'READY_TO_PAY':
+            raise WorkflowError('attendance_not_approved',
+                                'حقوق فقط پس از پایان گردش کارکرد و پیش از پرداخت به گردش می‌رود.', 400)
+        if not locked.payroll_records.exists():
+            raise WorkflowError('no_payroll_records', 'ابتدا حقوق این دوره را محاسبه کنید.', 400)
+        if payroll_open_task(locked.pk) is not None:
+            raise WorkflowError('already_in_progress', 'حقوق این دوره از قبل در گردش تأیید است.', 409)
+        locked.payroll_payable_total = payroll_payable_total(locked)
+        engine.submit(PAYROLL_PERIOD_WORKFLOW, locked, user)
+    period.refresh_from_db()
+    return period
+
+
+def open_legacy_payroll_workflow(period, reason='legacy: opened for a calculated payroll period'):
+    """د۹: دورهٔ READY_TO_PAY با ردیف حقوق و بی نمونهٔ گردش حقوق ← کار باز در manager_ok؛ تکرارپذیر."""
+    from workflow import engine
+    if period.company_id is None:
+        return None
+    period.payroll_payable_total = payroll_payable_total(period)
+    creator = period.locked_by or period.submitted_by
+    return engine.open_at_step(PAYROLL_PERIOD_WORKFLOW, period, creator, 'manager_ok', reason=reason)
