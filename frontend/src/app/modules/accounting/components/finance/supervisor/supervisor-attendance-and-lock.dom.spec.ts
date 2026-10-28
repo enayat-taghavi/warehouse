@@ -1,15 +1,12 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { provideRouter, ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import * as fs from 'fs';
-import * as path from 'path';
 
 import { SupervisorAttendanceHubComponent } from './supervisor-attendance/supervisor-attendance';
 import { SupervisorPeriodLockHubComponent } from './supervisor-period-lock/supervisor-period-lock';
@@ -18,6 +15,21 @@ import { StateService } from '../../../../../core/services/state.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
 import { ProjectSection } from '../../../models/personnel.model';
+
+function createStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, val: string) => { store[key] = String(val); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (i: number) => Object.keys(store)[i] || null,
+  };
+}
+
+(globalThis as any).localStorage = createStorageMock();
+(globalThis as any).sessionStorage = createStorageMock();
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -33,8 +45,8 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
   let mockState: any;
   let mockToast: any;
   let mockPersonnelApi: any;
-  let mockRouter: any;
   let mockRoute: any;
+  let router: Router;
 
   const mockSections: ProjectSection[] = [
     { id: 10, name: 'کارگاه مرکزی دالان', code: 'SEC-10', project: 1, project_name: 'پروژه قطار شهری', is_active: true }
@@ -87,59 +99,33 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
     }
   ];
 
-  beforeAll(async () => {
-    Object.defineProperty(SupervisorAttendanceHubComponent, 'ɵfac', {
-      value: function(t: any) {
-        return new (t || SupervisorAttendanceHubComponent)(
-          ɵɵdirectiveInject(AuthService),
-          ɵɵdirectiveInject(StateService),
-          ɵɵdirectiveInject(ToastService),
-          ɵɵdirectiveInject(PersonnelApiService),
-          ɵɵdirectiveInject(Router),
-          ɵɵdirectiveInject(ActivatedRoute),
-          ɵɵdirectiveInject(ChangeDetectorRef)
-        );
-      },
-      configurable: true,
-      writable: true
-    });
-
-    Object.defineProperty(SupervisorPeriodLockHubComponent, 'ɵfac', {
-      value: function(t: any) {
-        return new (t || SupervisorPeriodLockHubComponent)(
-          ɵɵdirectiveInject(AuthService),
-          ɵɵdirectiveInject(StateService),
-          ɵɵdirectiveInject(ToastService),
-          ɵɵdirectiveInject(PersonnelApiService),
-          ɵɵdirectiveInject(Router),
-          ɵɵdirectiveInject(ActivatedRoute),
-          ɵɵdirectiveInject(ChangeDetectorRef)
-        );
-      },
-      configurable: true,
-      writable: true
-    });
-
-    await ɵresolveComponentResources(async (url) => {
-      const filename = path.basename(url);
-      const candidates = [
-        path.resolve(__dirname, 'supervisor-attendance', filename),
-        path.resolve(__dirname, 'supervisor-period-lock', filename)
-      ];
-      for (const p of candidates) {
-        if (fs.existsSync(p)) {
-          return fs.readFileSync(p, 'utf-8');
-        }
-      }
-      return '';
-    });
-  });
-
-  afterEach(() => {
-    TestBed.resetTestingModule();
-  });
+  const mockWorkPeriods = [
+    {
+      id: 88,
+      year_month: '1405/04',
+      section_id: 10,
+      section_name: 'کارگاه مرکزی دالان',
+      status: 'OPEN',
+      status_display: 'باز',
+      submitted_by_name: 'کارشناس کارگاه',
+      submitted_at: '2026-07-20T10:00:00Z'
+    },
+    {
+      id: 89,
+      year_month: '1405/04',
+      section_id: 10,
+      section_name: 'کارگاه مرکزی دالان',
+      status: 'LOCKED',
+      status_display: 'قفل‌شده',
+      submitted_by_name: 'سرپرست کارگاه',
+      submitted_at: '2026-07-21T12:00:00Z'
+    }
+  ];
 
   beforeEach(async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+
     mockAuth = {
       user: vi.fn().mockReturnValue({ id: 1, username: 'supervisor_main', full_name: 'سرپرست کارگاه' }),
       userPermissions: vi.fn().mockReturnValue(['perm_approve_attendance_supervisor', 'can_lock_period'])
@@ -153,28 +139,16 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
       success: vi.fn(),
       error: vi.fn(),
       warning: vi.fn(),
-      info: vi.fn()
+      info: vi.fn(),
+      show: vi.fn()
     };
 
     mockPersonnelApi = {
       getMySections: vi.fn().mockReturnValue(of(mockSections)),
       getProjectSections: vi.fn().mockReturnValue(of([])),
       getDailyAttendance: vi.fn().mockImplementation(() => of(JSON.parse(JSON.stringify(mockAttendanceList)))),
-      getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({
-        period_id: 88,
-        period_status: 'OPEN',
-        is_locked: false,
-        pending_approvals_count: 2,
-        summary: [
-          { personnel_id: 11, total_hours: 190, total_overtime_hours: 10 },
-          { personnel_id: 12, total_hours: 200, total_overtime_hours: 0 }
-        ]
-      })),
+      getWorkPeriods: vi.fn().mockImplementation(() => of(JSON.parse(JSON.stringify(mockWorkPeriods)))),
       postCartableAction: vi.fn().mockReturnValue(of({ success: true }))
-    };
-
-    mockRouter = {
-      navigate: vi.fn()
     };
 
     mockRoute = {
@@ -190,14 +164,17 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
         SupervisorPeriodLockHubComponent
       ],
       providers: [
+        provideRouter([]),
         { provide: AuthService, useValue: mockAuth },
         { provide: StateService, useValue: mockState },
         { provide: ToastService, useValue: mockToast },
         { provide: PersonnelApiService, useValue: mockPersonnelApi },
-        { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockRoute }
       ]
     }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     attendanceFixture = TestBed.createComponent(SupervisorAttendanceHubComponent);
     attendanceComp = attendanceFixture.componentInstance;
@@ -206,18 +183,24 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
     periodLockComp = periodLockFixture.componentInstance;
   });
 
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    attendanceFixture?.destroy();
+    periodLockFixture?.destroy();
+    TestBed.resetTestingModule();
+  });
+
   // ─── تسک ۱: تفکیک فیلد وضعیت تایید کارکرد ──────────────────────────────────
   it('مورد ۱: باید در DOM جدول کارکرد، وضعیت حضور فیزیکی کاملاً جدا از وضعیت تایید سرپرست رندر شود', () => {
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
 
     const rootEl: HTMLElement = attendanceFixture.nativeElement;
-    // بررسی وجود ستون «نوع حضور» و ستون «وضعیت گردش‌کار»
     const ths = Array.from(rootEl.querySelectorAll('th')).map(th => th.textContent?.trim());
-    expect(ths.some(t => t?.includes('نوع حضور') || t?.includes('حضور'))).toBe(true);
-    expect(ths.some(t => t?.includes('وضعیت گردش‌کار') || t?.includes('وضعیت تایید'))).toBe(true);
+    expect(ths.some(t => t?.includes('وضعیت حضور') || t?.includes('حضور'))).toBe(true);
+    expect(ths.some(t => t?.includes('وضعیت تایید'))).toBe(true);
 
-    // بررسی برچسب وضعیت در ردیف اول: نشان حضور 'حاضر کامل' و نشان تایید 'در انتظار بررسی سرپرست'
     const firstRowText = rootEl.querySelector('tbody tr')?.textContent || '';
     expect(firstRowText).toContain('حاضر');
     expect(firstRowText).toContain('در انتظار بررسی سرپرست');
@@ -228,7 +211,7 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
 
-    const targetItem = attendanceComp.items[0]; // رضا حسینی با notes قبلی
+    const targetItem = attendanceComp.items[0];
     expect(targetItem.notes).toBe('یادداشت قبلی کارشناس بدون تخریب');
 
     attendanceComp.approveSingle(targetItem);
@@ -241,83 +224,88 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
     expect(mockToast.success).toHaveBeenCalled();
   });
 
-  // ─── تسک ۳: وابستگی دوره کارکرد ماهانه به بخش و پروژه ─────────────────────────
-  it('مورد ۳: دوره کارکرد باید بر مبنای section_id و project_id استعلام و فیلتر شود', () => {
+  // ─── تسک ۳: استعلام دوره‌های کارکرد بر مبنای section_id و year_month ──────────
+  it('مورد ۳: دوره کارکرد باید بر مبنای section_id و year_month از طریق getWorkPeriods استعلام شود', () => {
     periodLockComp.ngOnInit();
     periodLockFixture.detectChanges();
 
     expect(periodLockComp.selectedSectionId).toBe(10);
-    expect(mockPersonnelApi.getAttendanceMonthlySummary).toHaveBeenCalledWith(
-      null,
-      '1405/04',
-      expect.objectContaining({ section_id: 10 })
-    );
+    expect(mockPersonnelApi.getWorkPeriods).toHaveBeenCalledWith({
+      year_month: '1405/04',
+      section_id: 10
+    });
   });
 
-  // ─── تسک ۴: ممانعت از محاسبه حقوق کارکردهای تاییدنشده ─────────────────────────
-  it('مورد ۴: خلاصه ماهانه باید تعداد کارکردهای تاییدنشده (pending_approvals) را منعکس نماید', () => {
-    periodLockComp.ngOnInit();
+  // ─── تسک ۴: نگهداری فهرست دوره‌های دریافت‌شده در آرایه periods ─────────────────
+  it('مورد ۴: فهرست دوره‌های دریافت شده از سرور در آرایه periods ذخیره شده و ردیف‌های متناظر نگهداری می‌شوند', () => {
+    periodLockComp.selectedSectionId = 10;
+    periodLockComp.fetchPeriods();
     periodLockFixture.detectChanges();
 
-    expect(periodLockComp.currentPeriodSummary.pending_approvals).toBe(2);
+    expect(periodLockComp.periods.length).toBe(2);
+    expect(periodLockComp.periods[0].id).toBe(88);
+    expect(periodLockComp.periods[1].id).toBe(89);
+    expect(periodLockComp.periods[0].year_month).toBe('1405/04');
   });
 
-  // ─── تسک ۵: محاسبه دقیق تعداد معلق‌ها و وضعیت قفل در اندپوینت ─────────────────
-  it('مورد ۵: DOM کامپوننت قفل دوره باید کارت معلق‌ها و وضعیت باز/قفل دوره را دقیق نمایش دهد', () => {
+  // ─── تسک ۵: کلاس‌های وضعیت و نشان‌های متمایز دوره‌های باز و قفل در DOM ───────────
+  it('مورد ۵: متد statusClass و نشان‌های DOM وضعیت‌های باز و قفل را با رنگ‌ها و برچسب‌های متمایز رندر می‌کنند', () => {
+    expect(periodLockComp.statusClass('OPEN')).toContain('text-amber-700');
+    expect(periodLockComp.statusClass('LOCKED')).toContain('text-emerald-700');
+    expect(periodLockComp.statusClass('SUBMITTED')).toContain('text-blue-700');
+    expect(periodLockComp.statusClass('REVISION_REQUIRED')).toContain('text-rose-700');
+
+    periodLockComp.selectedSectionId = 10;
+    periodLockComp.fetchPeriods();
+    periodLockFixture.detectChanges();
+
+    const rootEl: HTMLElement = periodLockFixture.nativeElement;
+    const badges = rootEl.querySelectorAll('tbody tr span.rounded-full');
+    expect(badges.length).toBeGreaterThanOrEqual(2);
+    expect(badges[0].textContent?.trim()).toContain('باز');
+    expect(badges[1].textContent?.trim()).toContain('قفل‌شده');
+    expect(badges[0].className).toContain('text-amber-700');
+    expect(badges[1].className).toContain('text-emerald-700');
+  });
+
+  // ─── تسک ۶: حذف عملیات قفل مستقیم از صفحه و نبود دکمه قفل دوره ───────────────
+  it('مورد ۶: صفحه فاقد هرگونه دکمه یا اکشن قفل دوره است و عملیات قفل مستقیم حذف شده است', () => {
     periodLockComp.ngOnInit();
     periodLockFixture.detectChanges();
 
     const rootEl: HTMLElement = periodLockFixture.nativeElement;
-    const bodyText = rootEl.textContent || '';
-    expect(bodyText).toContain('2'); // ۲ مورد تاییدنشده
-    expect(periodLockComp.currentPeriodSummary.is_locked).toBe(false);
-  });
-
-  // ─── تسک ۶: سد امنیتی سرور برای قفل دوره ──────────────────────────────────────
-  it('مورد ۶: در صورت وجود کارکرد تاییدنشده، کلیک روی دکمه قفل دوره باید متوقف شده و هشدار دهد', () => {
-    periodLockComp.ngOnInit();
-    periodLockFixture.detectChanges();
-
-    periodLockComp.lockAndSubmitPeriod();
-    expect(mockToast.error).toHaveBeenCalledWith(
-      expect.stringContaining('امکان قفل دوره وجود ندارد')
-    );
-    expect(mockPersonnelApi.postCartableAction).not.toHaveBeenCalled();
+    const buttons = Array.from(rootEl.querySelectorAll('button'));
+    const lockBtn = buttons.find(b => b.textContent?.includes('قفل'));
+    expect(lockBtn).toBeUndefined();
   });
 
   // ─── تسک ۷: ابطال خودکار تاییدیه در صورت ویرایش کارکرد ───────────────────────
   it('مورد ۷: ویرایش وضعیت یا ساعات رکورد تاییدشده باید وضعیت تایید را مجدداً به در انتظار بازگرداند', () => {
     attendanceComp.ngOnInit();
-    const approvedItem = attendanceComp.rawItems.find(x => x.id === 202); // علی اکبری (APPROVED)
+    const approvedItem = attendanceComp.rawItems.find(x => x.id === 202);
     expect(approvedItem.approval_status).toBe('APPROVED');
 
-    // شبیه‌سازی اعمال ویرایش فرانت
     approvedItem.effective_hours = 8;
     approvedItem.approval_status = 'PENDING_SUPERVISOR';
     attendanceComp.applyFilter();
 
-    expect(attendanceComp.statusCounters.pending).toBe(2); // رضا حسینی + علی اکبری
+    expect(attendanceComp.statusCounters.pending).toBe(2);
   });
 
-  // ─── تسک ۸: مسدودسازی ویرایش کارکرد در دوره قفل‌شده ──────────────────────────
-  it('مورد ۸: در صورت قفل بودن دوره (is_locked=true)، وضعیت دوره منعکس شده و امکان تغییر وجود ندارد', () => {
-    mockPersonnelApi.getAttendanceMonthlySummary.mockReturnValue(of({
-      period_id: 88,
-      period_status: 'LOCKED',
-      is_locked: true,
-      pending_approvals_count: 0,
-      summary: []
-    }));
-
+  // ─── تسک ۸: نمایش پیوند هدایت به گردش‌کار (کارهای من) در قالب ──────────────────
+  it('مورد ۸: پیوند ارجاع به کارتابل گردش‌کار (کارهای من) جهت بررسی دوره در DOM رندر می‌شود', () => {
     periodLockComp.ngOnInit();
     periodLockFixture.detectChanges();
 
-    expect(periodLockComp.currentPeriodSummary.is_locked).toBe(true);
-    const lockBtn: HTMLButtonElement | null = periodLockFixture.nativeElement.querySelector('button[disabled]');
-    expect(lockBtn).not.toBeNull();
+    const rootEl: HTMLElement = periodLockFixture.nativeElement;
+    const workflowLinks = Array.from(rootEl.querySelectorAll('a')).filter(a =>
+      a.getAttribute('href')?.includes('/app/my-tasks') || a.textContent?.includes('کارهای من')
+    );
+    expect(workflowLinks.length).toBeGreaterThan(0);
+    expect(rootEl.textContent).toContain('این فهرست فقط نمایشی است؛ تأیید دوره در «کارهای من» انجام می‌شود');
   });
 
-  // ─── تسک ۹: اکشن‌های کارتابل کارکرد در سرور (تایید تکی و دسته‌ای) ──────────────
+  // ─── تسک ۹: تایید دسته‌ای کارکردهای در انتظار ─────────────────────────────────
   it('مورد ۹: دکمه تایید دسته‌ای در DOM باید تمام رکوردهای در انتظار را یکجا به کارتابل ارسال کند', () => {
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
@@ -334,41 +322,38 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
   });
 
   // ─── تسک ۱۰: تفکیک نشان‌های حضور و تایید در جدول کارتابل سرپرست ─────────────
-  it('مورد ۱۰: نشان‌های وضعیت حضور و وضعیت گردش‌کار دارای کلاس‌ها و رنگ‌های متمایز در DOM هستند', () => {
+  it('مورد ۱۰: نشان‌های وضعیت حضور و وضعیت گردش‌کار دارای کلاس‌ها و برچسب‌های متمایز هستند', () => {
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
 
     const rootEl: HTMLElement = attendanceFixture.nativeElement;
     const badges = rootEl.querySelectorAll('.rounded-full, .rounded-lg, .rounded-xl');
     expect(badges.length).toBeGreaterThan(0);
-    // تضمین وجود نشان تایید سرپرست
     expect(attendanceComp.getApprovalStatusLabel('APPROVED')).toBe('تایید شده سرپرست');
     expect(attendanceComp.getApprovalStatusLabel('PENDING_SUPERVISOR')).toBe('در انتظار بررسی سرپرست');
   });
 
-  // ─── تسک ۱۱: اصلاح فیلتر تب‌های کارتابل کارکرد و شمارنده‌ها ──────────────────
+  // ─── تسک ۱۱: فیلتر تب‌های کارتابل کارکرد و شمارنده‌ها ────────────────────────
   it('مورد ۱۱: کلیک روی تب‌های «تایید شده» و «نیازمند بازنگری» باید لیست را منحصراً فیلتر کند', () => {
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
 
-    // تب پیش‌فرض pending
     expect(attendanceComp.activeSubTab).toBe('pending');
     expect(attendanceComp.items.length).toBe(1);
     expect(attendanceComp.items[0].id).toBe(201);
 
-    // سوییچ به approved
     attendanceComp.switchSubTab('approved');
     expect(attendanceComp.items.length).toBe(1);
     expect(attendanceComp.items[0].id).toBe(202);
 
-    // سوییچ به revision
     attendanceComp.switchSubTab('revision');
     expect(attendanceComp.items.length).toBe(1);
     expect(attendanceComp.items[0].id).toBe(203);
   });
 
-  // ─── تسک ۱۲: جایگزینی window.prompt با مودال مدرن عودت ───────────────────────
-  it('مورد ۱۲: باز شدن مودال عودت در DOM، الزام ثبت دلیل، و ارسال اکشن revision بدون window.prompt', () => {
+  // ─── تسک ۱۲: مودال مدرن عودت کارکرد و الزام ثبت دلیل بدون prompt ─────────────
+  it('مورد ۱۲: باز شدن مودال عودت، الزام ثبت دلیل، ارسال اکشن revision با id و بدون فراخوانی window.prompt', () => {
+    const promptSpy = vi.spyOn(window, 'prompt');
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
 
@@ -377,17 +362,16 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
     attendanceFixture.detectChanges();
 
     expect(attendanceComp.showRevisionModal).toBe(true);
-    const modalEl: HTMLElement | null = attendanceFixture.nativeElement.querySelector('.fixed.inset-0');
-    expect(modalEl).not.toBeNull();
+    expect(attendanceComp.revisionTargetItem).toBe(targetItem);
 
-    // تایید بدون متن علت
-    attendanceComp.revisionReasonText = '';
-    attendanceComp.confirmRevision();
+    // ارسال بدون دلیل: هیچ درخواستی نباید ارسال شود و خطا نمایش داده شود
+    mockPersonnelApi.postCartableAction.mockClear();
+    attendanceComp.confirmRevision('');
     expect(mockToast.error).toHaveBeenCalledWith('ثبت علت عودت و بازنگری کارکرد الزامی است.');
+    expect(mockPersonnelApi.postCartableAction).not.toHaveBeenCalled();
 
-    // درج علت معتبر و تایید
-    attendanceComp.revisionReasonText = 'ساعات اضافه کار مغایرت دارد';
-    attendanceComp.confirmRevision();
+    // درج دلیل معتبر و تایید عودت
+    attendanceComp.confirmRevision('ساعات اضافه کار مغایرت دارد');
     expect(mockPersonnelApi.postCartableAction).toHaveBeenCalledWith('supervisor', {
       action: 'revision',
       model: 'attendance',
@@ -395,52 +379,44 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
       reason: 'ساعات اضافه کار مغایرت دارد'
     });
     expect(attendanceComp.showRevisionModal).toBe(false);
+    expect(promptSpy).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
   });
 
-  // ─── تسک ۱۳: غیرفعال‌سازی دکمه قفل دوره تا صفر شدن معلق‌ها همراه با بنر هشدار ───
-  it('مورد ۱۳: دکمه قفل دوره دارای کلاس opacity-50 و غیرفعال است و بنر هشدار کهربایی رندر شده است', () => {
-    periodLockComp.ngOnInit();
-    periodLockFixture.detectChanges();
+  // ─── تسک ۱۳: به‌روزرسانی پارامترهای استعلام با تغییر فیلتر ماه و سال ──────────
+  it('مورد ۱۳: تغییر ماه و سال فیلتر در کامپوننت دوره‌ها متد getWorkPeriods را با پارامترهای جدید فراخوانی می‌کند', () => {
+    periodLockComp.selectedSectionId = 10;
+    periodLockComp.fiscalYear = '1405';
+    periodLockComp.selectedMonth = 'مرداد';
+    mockPersonnelApi.getWorkPeriods.mockClear();
 
-    const rootEl: HTMLElement = periodLockFixture.nativeElement;
-    // بنر هشدار کهربایی راهنما
-    const warningBanner = rootEl.querySelector('div.bg-amber-50');
-    expect(warningBanner).not.toBeNull();
-    expect(warningBanner?.textContent).toContain('قفل دوره تا تایید تمامی کارکردها مسدود است');
-
-    // دکمه قفل دوره در حالت غیرفعال
-    const lockBtn = rootEl.querySelector('button[disabled]');
-    expect(lockBtn).not.toBeNull();
-  });
-
-  // ─── تسک ۱۴: ارسال صریح section_id و project_id در قفل دوره ─────────────────
-  it('مورد ۱۴: در صورت تایید همه کارکردها (معلق=۰)، اکشن قفل دوره با section_id و project_id ارسال می‌شود', () => {
-    mockPersonnelApi.getAttendanceMonthlySummary.mockReturnValue(of({
-      period_id: 88,
-      period_status: 'OPEN',
-      is_locked: false,
-      pending_approvals_count: 0,
-      summary: [{ personnel_id: 11, total_hours: 190, total_overtime_hours: 0 }]
+    periodLockComp.onFilterChanged();
+    expect(mockPersonnelApi.getWorkPeriods).toHaveBeenCalledWith({
+      year_month: '1405/05',
+      section_id: 10
+    });
+    expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+      queryParams: expect.objectContaining({
+        section_id: 10,
+        year: '1405',
+        month: 'مرداد'
+      })
     }));
+  });
+
+  // ─── تسک ۱۴: مدیریت خطای سرور و فعال‌سازی پرچم loadFailed ────────────────────
+  it('مورد ۱۴: در صورت بروز خطای سرور در دریافت دوره‌ها، متغیر loadFailed فعال شده و پیام خطا در DOM رندر می‌شود', () => {
+    mockPersonnelApi.getWorkPeriods.mockReturnValue(throwError(() => new Error('خطای شبکه در ارتباط با سرور')));
 
     periodLockComp.selectedSectionId = 10;
-    periodLockComp.selectedSection = mockSections[0];
-    periodLockComp.fetchPeriodData();
+    periodLockComp.fetchPeriods();
     periodLockFixture.detectChanges();
 
-    expect(periodLockComp.currentPeriodSummary.pending_approvals).toBe(0);
+    expect(periodLockComp.loadFailed).toBe(true);
+    expect(periodLockComp.periods).toEqual([]);
+    expect(mockToast.error).toHaveBeenCalled();
 
-    periodLockComp.lockAndSubmitPeriod();
-    expect(mockPersonnelApi.postCartableAction).toHaveBeenCalledWith('supervisor', {
-      action: 'approve',
-      model: 'period',
-      id: 88,
-      year_month: '1405/04',
-      section_id: 10,
-      project_id: 1
-    });
-    expect(mockToast.success).toHaveBeenCalledWith(
-      expect.stringContaining('با موفقیت قفل')
-    );
+    const rootEl: HTMLElement = periodLockFixture.nativeElement;
+    expect(rootEl.textContent).toContain('دریافت دوره‌ها ناموفق بود');
   });
 });
