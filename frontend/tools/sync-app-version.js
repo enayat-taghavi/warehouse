@@ -48,7 +48,8 @@ function renderVersionProperties(version) {
 
 function writeIfChanged(file, content) {
   const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
-  if (current === content) return false;
+  // CRLF checkouts (git autocrlf on Windows) count as unchanged
+  if (current !== null && current.replace(/\r\n/g, '\n') === content) return false;
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content, 'utf8');
   return true;
