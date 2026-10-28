@@ -349,10 +349,25 @@ def process_creation_with_auto_pass(instance, creator_user, is_financial: bool =
 
 
 @transaction.atomic
+def _reject_vehicle_entity(instance):
+    """
+    د۲ و د۳ طرح ۴.۶: پروندهٔ خودرو و درخواست تغییر خودرو فقط روی موتور ۲.۳ (workflows.VEHICLE_*) گردش می‌کنند؛
+    موتور قدیمی (کارتابل عمومی) آن‌ها را جابه‌جا نمی‌کند تا گیت حسابدار و مجوز بخشی دور زده نشود.
+    """
+    from rest_framework.exceptions import ValidationError
+    from .models import VehicleChangeRequest, VehicleDriverProfile
+    if isinstance(instance, (VehicleDriverProfile, VehicleChangeRequest)):
+        raise ValidationError(
+            "اقدام روی پروندهٔ خودرو و درخواست تغییر آن از کارتابل عمومی پشتیبانی نمی‌شود؛ از «کارهای من» یا "
+            "اکشن‌های /api/personnel/vehicles/ و /api/personnel/vehicle-change-requests/ استفاده کنید."
+        )
+
+
 def advance_workflow_step(instance, user, target_status: str = None, notes: str = None, is_financial: bool = False):
     """
     پیش‌روی امن، اتمیک و مرحله‌به‌مرحله ماشین حالت ۵ سطحی با استفاده از select_for_update()
     """
+    _reject_vehicle_entity(instance)
     # قفل ردیف دیتابیس جهت جلوگیری از همزمانی (Race Condition)
     model_cls = instance.__class__
     locked_instance = model_cls.objects.select_for_update().get(pk=instance.pk)
@@ -437,8 +452,6 @@ def advance_workflow_step(instance, user, target_status: str = None, notes: str 
             # اگر درخواست تغییرات است، اعمال مقادیر جدید به پرونده اصلی به صورت اتمیک
             if hasattr(locked_instance, 'proposed_changes') and hasattr(locked_instance, 'personnel'):
                 _apply_personnel_changes(locked_instance)
-            elif hasattr(locked_instance, 'proposed_changes') and hasattr(locked_instance, 'vehicle'):
-                _apply_vehicle_changes(locked_instance)
 
     # انتقال از سطح ۴ ⬅️ سطح ۵ (خزانه‌دار / تسویه نهایی)
     elif curr_lower in ['ready_to_pay']:
@@ -468,6 +481,7 @@ def request_workflow_revision(instance, user, reason: str, target_status: str = 
     """
     بازگرداندن هوشمند پرونده جهت بازنگری و اصلاح (Revision Required) بدون ابطال کامل داده‌ها
     """
+    _reject_vehicle_entity(instance)
     if not reason or not reason.strip():
         raise ValidationError("درج توضیحات و علت درخواست بازنگری الزامی است.")
 
@@ -497,9 +511,6 @@ def request_workflow_revision(instance, user, reason: str, target_status: str = 
     if hasattr(locked_instance, 'personnel') and locked_instance.personnel:
         locked_instance.personnel.has_pending_changes = False
         locked_instance.personnel.save(update_fields=['has_pending_changes'])
-    if hasattr(locked_instance, 'vehicle') and locked_instance.vehicle:
-        locked_instance.vehicle.has_pending_changes = False
-        locked_instance.vehicle.save(update_fields=['has_pending_changes'])
     _record_audit_log(locked_instance, user, current_status, next_status, 'revision', reason=reason)
     notify_document_changed(locked_instance)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} marked REVISION_REQUIRED by {user.username}. Reason: {reason}")
@@ -511,6 +522,7 @@ def reject_workflow(instance, user, reason: str):
     """
     رد قطعی و ابطال پرونده در هر یک از مراحل
     """
+    _reject_vehicle_entity(instance)
     if not reason or not reason.strip():
         raise ValidationError("درج دلیل رد قطعی الزامی است.")
 
@@ -535,9 +547,6 @@ def reject_workflow(instance, user, reason: str):
     if hasattr(locked_instance, 'personnel') and locked_instance.personnel:
         locked_instance.personnel.has_pending_changes = False
         locked_instance.personnel.save(update_fields=['has_pending_changes'])
-    if hasattr(locked_instance, 'vehicle') and locked_instance.vehicle:
-        locked_instance.vehicle.has_pending_changes = False
-        locked_instance.vehicle.save(update_fields=['has_pending_changes'])
     target_st = getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', 'rejected'))
     _record_audit_log(locked_instance, user, current_status, target_st, 'reject', reason=reason)
     notify_document_changed(locked_instance)
@@ -638,14 +647,3 @@ def _apply_personnel_changes(change_request):
     logger.info(f"[WorkflowEngine] Applied ChangeRequest #{change_request.pk} to Personnel #{personnel.pk}")
 
 
-def _apply_vehicle_changes(change_request):
-    """
-    اعمال اتمیک فیلدهای ویرایش‌شده در درخواست تغییرات به پرونده ناوگان
-    """
-    vehicle = change_request.vehicle
-    for field_name, new_val in change_request.proposed_changes.items():
-        if hasattr(vehicle, field_name) and field_name not in ['id', 'pk', 'plate_number']:
-            setattr(vehicle, field_name, new_val)
-    vehicle.has_pending_changes = False
-    vehicle.save()
-    logger.info(f"[WorkflowEngine] Applied ChangeRequest #{change_request.pk} to Vehicle #{vehicle.pk}")

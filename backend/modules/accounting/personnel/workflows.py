@@ -849,6 +849,260 @@ def open_legacy_personnel_workflow(workflow_key, obj, reason='legacy: opened for
     return engine.open_at_step(workflow_key, obj, creator, step_key, reason=reason)
 
 
+# ─── vehicle_profile / vehicle_change: پروندهٔ خودرو و درخواست تغییر روی موتور ۲.۳ (د۱ و د۲ طرح ۴.۶) ──────────
+VEHICLE_WORKFLOW = 'vehicle_profile'
+VEHICLE_ENTITY = 'vehicle_profile'
+VEHICLE_CHANGE_WORKFLOW = 'vehicle_change'
+VEHICLE_CHANGE_ENTITY = 'vehicle_change'
+FLEET_VIEW_PERM = 'view_sys_fleet_attendance'
+# همان نگاشت‌های پرونده (اکشن approve-X ← مرحله، مرحله ← وضعیت، وضعیت قدیمی در جریان ← مرحلهٔ بازشونده)
+VEHICLE_STAGE_STEP = dict(PERSONNEL_STAGE_STEP)
+VEHICLE_STEP_STATUS = dict(PERSONNEL_STEP_STATUS)
+VEHICLE_CHANGE_STEP_STATUS = dict(PERSONNEL_CHANGE_STEP_STATUS)
+VEHICLE_LEGACY_STATUS_STEP = dict(PERSONNEL_LEGACY_STATUS_STEP)
+
+
+def _fleet_steps():
+    # مرحله فقط یک مجوز بخشی می‌گیرد؛ نام مستعار مدیر (manager_approver) در موتور سنجیده نمی‌شود (مثل پرونده)
+    return (
+        StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_approve_fleet_supervisor', APPROVE),
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)؛ گیت نرخ و شبا با قلاب can_act
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_fleet_finance', REVIEW),
+        StepSpec('manager_ok', 'تصویب مدیر', 'manager', 'perm_approve_fleet_manager', APPROVE),
+    )
+
+
+def _vehicle_audit(vehicle, actor, from_status, to_status, action, state, reason=''):
+    from .models import WorkflowAuditLog
+    metadata = {'engine': True, 'state': state, 'company_id': vehicle.company_id, 'batch': False}
+    metadata.update(getattr(vehicle, '_wf_audit_meta', None) or {})
+    WorkflowAuditLog.objects.create(
+        content_type='vehicle', object_id=vehicle.id, actor=actor, from_status=from_status, to_status=to_status,
+        action=action, reason=reason or '', metadata=metadata,
+    )
+
+
+def _vehicle_state_change(vehicle, state, instance):
+    from django.utils import timezone
+    old_status = vehicle.approval_status
+    status = VEHICLE_STEP_STATUS.get(state)
+    changed = set()
+    reason = getattr(vehicle, '_wf_reason', '') or ''
+    actor = _last_closer(instance)
+    if status and vehicle.approval_status != status:
+        vehicle.approval_status = status
+        changed.add('approval_status')
+    _fill_approvers(vehicle, instance, PROFILE_APPROVER_FIELDS, changed)
+    if state == COMPLETED:
+        if not vehicle.is_active:
+            vehicle.is_active = True
+            changed.add('is_active')
+        vehicle.rejection_reason = None
+        changed.add('rejection_reason')
+    elif state in (RETURNED, REJECTED):
+        vehicle.rejection_reason = reason or vehicle.rejection_reason
+        changed.add('rejection_reason')
+        if state == RETURNED:
+            vehicle.revision_requested_by = actor
+            vehicle.revision_requested_at = timezone.now()
+            changed.update(('revision_requested_by', 'revision_requested_at'))
+    elif state != CANCELLED:
+        vehicle.rejection_reason = None
+        changed.add('rejection_reason')
+    if changed:
+        vehicle.save(update_fields=sorted(changed | {'updated_at'}))
+    action = _legacy_action(instance, state, PROFILE_ACT_ACTIONS, PROFILE_CLOSE_ACTIONS)
+    if action and old_status != vehicle.approval_status:
+        _vehicle_audit(vehicle, actor, old_status, vehicle.approval_status, action, state, reason)
+
+
+def _vehicle_summary(vehicle):
+    # بی کد ملی و شبا (ق۱۶): خلاصهٔ کار برای همهٔ دریافت‌کنندگان دیده می‌شود
+    return {'title': f'پروندهٔ خودرو — {vehicle.plate_number} ({vehicle.driver_name})',
+            'category': vehicle.get_vehicle_type_display() if vehicle.vehicle_type else ''}
+
+
+def resolve_vehicle(entity_id):
+    from .models import VehicleDriverProfile
+    return VehicleDriverProfile.objects.select_related('section', 'section__project', 'company').filter(
+        pk=entity_id).first()
+
+
+VEHICLE_PROFILE_WORKFLOW_SPEC = WorkflowSpec(
+    key=VEHICLE_WORKFLOW,
+    version=1,
+    entity_kind=VEHICLE_ENTITY,
+    title_fa='پروندهٔ خودرو',
+    steps=_fleet_steps(),
+    on_state_change=_vehicle_state_change,
+    summary=_vehicle_summary,
+    route='/app/finance/employee-new-vehicle?vehicle={id}',
+    section_field='section',
+    company_field='company',
+    view_permission=FLEET_VIEW_PERM,
+)
+
+
+def _vehicle_change_state_change(cr, state, instance):
+    from django.utils import timezone
+    from workflow.errors import WorkflowError
+    from .fleet_lifecycle_services import (VehicleWorkflowError, apply_vehicle_change_request,
+                                           log_vehicle_change_request_event, refresh_vehicle_has_pending_changes)
+    status = VEHICLE_CHANGE_STEP_STATUS.get(state)
+    if state == REJECTED and getattr(cr, '_wf_cancel', False):
+        status = 'cancelled'
+    reason = getattr(cr, '_wf_reason', '') or ''
+    actor = _last_closer(instance)
+    changed = set()
+    _fill_approvers(cr, instance, CHANGE_APPROVER_FIELDS, changed)
+    if state == COMPLETED:
+        # د۲: اعمال در همان تراکنش موتور؛ نامعتبر = برگشت کل اقدام و درخواست معلق می‌ماند
+        try:
+            apply_vehicle_change_request(cr, request=getattr(cr, '_wf_request', None))
+        except VehicleWorkflowError as exc:
+            err = WorkflowError(exc.code or 'invalid_change_request', exc.message, exc.status_code)
+            err.errors = exc.errors
+            raise err
+    if state in (RETURNED, REJECTED, CANCELLED) and reason:
+        cr.rejection_reason = reason
+        changed.add('rejection_reason')
+    if state == RETURNED:
+        cr.revision_requested_by = actor
+        cr.revision_requested_at = timezone.now()
+        changed.update(('revision_requested_by', 'revision_requested_at'))
+    previous = cr.status
+    if status and cr.status != status:
+        cr.status = status
+        changed.add('status')
+    if changed:
+        cr.save(update_fields=sorted(changed | {'updated_at'}))
+    if state in TERMINAL_STATES:
+        refresh_vehicle_has_pending_changes(cr.vehicle)
+    action = _legacy_action(instance, state, CHANGE_ACT_ACTIONS, CHANGE_CLOSE_ACTIONS)
+    if state == REJECTED and status == 'cancelled':
+        action = 'change_request_cancelled'
+    if action and previous != cr.status:
+        extra = {'from_change_request_status': previous, 'engine': True}
+        if state == COMPLETED:
+            extra.update({'diff': cr.proposed_changes, 'old_diff': cr.previous_values})
+        log_vehicle_change_request_event(cr, actor, action, reason=reason, extra=extra)
+
+
+def _vehicle_change_summary(cr):
+    keys = ', '.join(sorted((cr.proposed_changes or {}).keys()))
+    return {'title': f'درخواست تغییر خودرو — {cr.vehicle.plate_number}', 'category': keys[:100]}
+
+
+def resolve_vehicle_change(entity_id):
+    from .models import VehicleChangeRequest
+    return (VehicleChangeRequest.objects.select_related('vehicle', 'vehicle__section', 'vehicle__section__project',
+                                                        'requested_by')
+            .filter(pk=entity_id).first())
+
+
+VEHICLE_CHANGE_WORKFLOW_SPEC = WorkflowSpec(
+    key=VEHICLE_CHANGE_WORKFLOW,
+    version=1,
+    entity_kind=VEHICLE_CHANGE_ENTITY,
+    title_fa='درخواست تغییر پروندهٔ خودرو',
+    steps=_fleet_steps(),
+    on_state_change=_vehicle_change_state_change,
+    summary=_vehicle_change_summary,
+    route='/app/finance/employee-new-vehicle?change_request={id}',
+    # بخش و شرکت از خودروی هدف (property های فقط‌خواندنی مدل، بی migration)
+    section_field='wf_section',
+    company_field='wf_company',
+    view_permission=FLEET_VIEW_PERM,
+)
+
+
+class _UserScopeRequest:
+    """درخواست ساختگی برای scope_vehicle_queryset در قلاب‌های موتور (بی سربرگ شرکت: همهٔ شرکت‌های مجاز کاربر)."""
+
+    def __init__(self, user):
+        self.user = user
+        self.headers = {}
+        self.META = {}
+        self.query_params = {}
+        self.GET = {}
+        self.data = {}
+
+
+def _vehicle_in_scope(user, vehicle_id) -> bool:
+    from .models import VehicleDriverProfile
+    from .views_domains.scope_helpers import scope_vehicle_queryset
+    if not vehicle_id or not getattr(user, 'is_authenticated', False):
+        return False
+    return scope_vehicle_queryset(_UserScopeRequest(user), VehicleDriverProfile.objects.filter(pk=vehicle_id)).exists()
+
+
+def vehicle_company_id(entity_id):
+    from .models import VehicleDriverProfile
+    return VehicleDriverProfile.objects.filter(pk=entity_id).values_list('company_id', flat=True).first()
+
+
+def vehicle_change_company_id(entity_id):
+    from .models import VehicleChangeRequest
+    return VehicleChangeRequest.objects.filter(pk=entity_id).values_list('vehicle__company_id', flat=True).first()
+
+
+def can_view_vehicle(user, entity_id):
+    return True if _vehicle_in_scope(user, entity_id) else None
+
+
+def can_attach_vehicle(user, entity_id):
+    return can_view_vehicle(user, entity_id)
+
+
+def is_vehicle_locked(entity_id):
+    """پرونده قفل گردش ندارد؛ خودروی مصوب فقط از مسیر درخواست تغییر عوض می‌شود."""
+    return False
+
+
+def _change_vehicle_id(entity_id):
+    from .models import VehicleChangeRequest
+    return VehicleChangeRequest.objects.filter(pk=entity_id).values_list('vehicle_id', flat=True).first()
+
+
+def can_view_vehicle_change(user, entity_id):
+    return True if _vehicle_in_scope(user, _change_vehicle_id(entity_id)) else None
+
+
+def can_attach_vehicle_change(user, entity_id):
+    return can_view_vehicle_change(user, entity_id)
+
+
+def is_vehicle_change_locked(entity_id):
+    from .models import VehicleChangeRequest
+    status = VehicleChangeRequest.objects.filter(pk=entity_id).values_list('status', flat=True).first()
+    return status in ('approved', 'cancelled')
+
+
+def vehicle_missing_message(missing):
+    labels = '، '.join(m['label'] for m in missing)
+    return f'فیلدهای الزامی مرحلهٔ حسابداری خودرو تکمیل نشده است: {labels}'
+
+
+def can_act_vehicle(user, vehicle, task, action):
+    """د۱: تأیید «بررسی حسابدار» فقط با نرخ و شبای کامل؛ عودت و رد آزادند."""
+    if action != ACT or task.step_key != 'accountant_review':
+        return None
+    from .fleet_lifecycle_services import get_vehicle_missing_fields
+    missing = get_vehicle_missing_fields(vehicle, stage='accountant')
+    return vehicle_missing_message(missing) if missing else None
+
+
+def open_legacy_vehicle_workflow(workflow_key, obj, reason='legacy: opened for an in-flight vehicle record'):
+    """د۴: نمونهٔ موتور برای خودرو/درخواست در جریان قدیمی بی نمونه؛ تکرارپذیر. خروجی کار باز یا None."""
+    from workflow import engine
+    status = obj.approval_status if workflow_key == VEHICLE_WORKFLOW else obj.status
+    step_key = VEHICLE_LEGACY_STATUS_STEP.get(status)
+    if step_key is None:
+        return None
+    creator = obj.created_by if workflow_key == VEHICLE_WORKFLOW else obj.requested_by
+    return engine.open_at_step(workflow_key, obj, creator, step_key, reason=reason)
+
+
 # ─── attendance_period: monthly work period on engine 2.3 (plan 4.4, D2) ────────────────────────────────
 ATTENDANCE_PERIOD_WORKFLOW = 'attendance_period'
 ATTENDANCE_PERIOD_ENTITY = 'attendance_period'

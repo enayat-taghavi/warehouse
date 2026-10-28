@@ -469,193 +469,49 @@ def check_vehicle_bank_account_edit_allowed(user, vehicle) -> tuple[bool, str]:
     return False, f'در وضعیت «{vehicle.get_approval_status_display()}» مجاز به تغییر حساب‌های بانکی این خودرو نیستید.'
 
 
-FLEET_APPROVAL_STAGES = {
-    'supervisor': {
-        'perms': FLEET_SUPERVISOR_STAGE_PERMS,
-        'perm_error': 'شما دسترسی تایید مرحله اول (سرپرست) ناوگان را ندارید.',
-        'from': ('pending_supervisor',),
-        'gated_from': (),
-        'to': 'pending_accountant',
-        'action': 'approve_supervisor',
-        'actor_role': 'supervisor',
-        'status_error': 'خودرو در وضعیت «{status}» امکان تایید سرپرست ندارد (صرفاً پرونده‌های در انتظار سرپرست قابل تایید هستند).',
-        'gate_error': '',
-    },
-    'finance': {
-        'perms': FLEET_FINANCE_STAGE_PERMS,
-        'perm_error': 'شما دسترسی تایید مرحله دوم (مالی) ناوگان را ندارید.',
-        'from': (),
-        'gated_from': ('pending_accountant', 'supervisor_approved'),
-        'to': 'pending_manager',
-        'action': 'approve_finance',
-        'actor_role': 'accountant',
-        'status_error': 'خودرو در وضعیت «{status}» امکان تایید مالی ندارد.',
-        'gate_error': 'فیلدهای الزامی مرحله حسابداری تکمیل نشده است (شامل نرخ پایه و شبای معتبر).',
-    },
-    'manager': {
-        'perms': FLEET_MANAGER_STAGE_PERMS,
-        'perm_error': 'شما دسترسی تصویب نهایی (مدیر) ناوگان را ندارید.',
-        'from': ('pending_manager', 'accountant_approved'),
-        'gated_from': ('pending_supervisor', 'pending_accountant', 'supervisor_approved'),
-        'to': 'approved',
-        'action': 'approve_manager',
-        'actor_role': 'manager',
-        'status_error': 'خودرو در وضعیت «{status}» امکان تصویب نهایی مدیر را ندارد.',
-        'gate_error': 'پرونده دارای کسری فیلدهای مرحله مالی است و امکان پرش یا تصویب نهایی بدون تکمیل آن‌ها وجود ندارد.',
-    },
-}
+# ── د۸ طرح ۴.۶: پوشش دادهٔ حساس خودرو (ق۶، ق۱۶) ──
+# گردش پرونده و درخواست تغییر روی موتور ۲.۳ است (workflows.VEHICLE_*)؛ approve_vehicle_stage و auto_pass_vehicle
+# قدیمی (با دور زدن حسابدار به دست مدیر، خلاف ق۷) حذف شدند.
+VEHICLE_SENSITIVE_FIELDS = ('driver_national_code', 'owner_national_code', 'account_number', 'sheba_number')
+VEHICLE_BANK_SENSITIVE_FIELDS = ('account_number', 'sheba_number', 'card_number', 'account_owner_national_code')
+VEHICLE_ALL_SENSITIVE_FIELDS = tuple(dict.fromkeys(VEHICLE_SENSITIVE_FIELDS + VEHICLE_BANK_SENSITIVE_FIELDS))
+FLEET_SENSITIVE_VIEW_PERMS = FLEET_FINANCE_STAGE_PERMS + FLEET_MANAGER_STAGE_PERMS + (
+    'view_sys_fleet_settlement', 'perm_treasury_disburse_action',
+)
 
 
-def approve_vehicle_stage(vehicle_id, user, stage: str, note: str = '', batch: bool = False):
+def can_view_vehicle_sensitive(user, vehicle, cache=None) -> bool:
     """
-    تسک ۳.۴ و DEF-09: سرویس مشترک تایید تکی و گروهی ناوگان:
-    - بررسی دسترسی و پرمیشن‌های اختصاصی ناوگان
-    - قفل select_for_update ردیف
-    - اعمال فهرست سفید وضعیت‌ها و گیت تجمعی فیلدها
-    - ثبت رویداد در WorkflowAuditLog با content_type='vehicle' و company_id
-    - ارسال اعلان و انتشار بلادرنگ
+    دید کامل کد ملی راننده و مالک، شماره حساب، کارت و شبای خودرو (د۸ طرح ۴.۶، الگوی can_view_personnel_sensitive):
+    مدیر کل، خود راننده، ثبت‌کننده تا وقتی پیش‌نویس یا عودت‌شده است، و دارندهٔ یکی از FLEET_SENSITIVE_VIEW_PERMS در
+    بخش همان خودرو (خودروی بی‌بخش: در یکی از بخش‌های شرکتش). بقیه چهار رقم آخر. cache: یک‌بار برای هر بخش یا شرکت.
     """
-    from django.db import transaction
-    from django.utils import timezone
-    from personnel.models import VehicleDriverProfile, WorkflowAuditLog
-
-    rule = FLEET_APPROVAL_STAGES.get(stage)
-    if not rule:
-        raise VehicleWorkflowError('مرحله ارسالی نامعتبر است.')
-    if not user_has_any_perm(user, rule['perms']):
-        raise VehicleWorkflowError(rule['perm_error'], status_code=403)
-
-    with transaction.atomic():
-        v = VehicleDriverProfile.objects.select_for_update().filter(pk=vehicle_id).first()
-        if v is None:
-            raise VehicleWorkflowError('پرونده خودرو یافت نشد.', status_code=404)
-
-        old_status = v.approval_status
-        if stage == 'manager' and old_status in ('draft', 'revision_required'):
-            raise VehicleWorkflowError(
-                'امکان تصویب پرونده در وضعیت پیش‌نویس یا عودت‌داده‌شده برای مدیر وجود ندارد. '
-                'پرونده ابتدا باید توسط کارمند ارسال و مراحل را طی کند.'
-            )
-        if old_status not in rule['from'] and old_status not in rule['gated_from']:
-            raise VehicleWorkflowError(rule['status_error'].format(status=v.get_approval_status_display()))
-        if old_status in rule['gated_from']:
-            missing = get_vehicle_missing_fields(v, stage='accountant')
-            if missing:
-                raise VehicleWorkflowError(rule['gate_error'], missing_fields=missing)
-
-        now = timezone.now()
-        v.approval_status = rule['to']
-        v.rejection_reason = None
-        if stage == 'supervisor':
-            v.supervisor_approved_by = user
-            v.supervisor_approved_at = now
-        elif stage == 'finance':
-            v.accountant_approved_by = user
-            v.accountant_approved_at = now
-        else:
-            v.manager_approved_by = user
-            v.manager_approved_at = now
-            if not v.supervisor_approved_by_id:
-                v.supervisor_approved_by = user
-                v.supervisor_approved_at = now
-            if not v.accountant_approved_by_id:
-                v.accountant_approved_by = user
-                v.accountant_approved_at = now
-            v.is_active = True
-        v.save()
-
-        WorkflowAuditLog.objects.create(
-            content_type='vehicle',
-            object_id=v.id,
-            actor=user,
-            from_status=old_status,
-            to_status=rule['to'],
-            action=rule['action'],
-            reason=note,
-            metadata={
-                'approval_note': note,
-                'actor_role': rule['actor_role'],
-                'batch': batch,
-                'company_id': v.company_id
-            }
-        )
-        dispatch_vehicle_workflow_notification(v, stage=rule['to'], actor=user, note=note)
-    return v
+    if not user or not getattr(user, 'is_authenticated', False) or vehicle is None:
+        return False
+    if user.is_superuser:
+        return True
+    if vehicle.user_id and vehicle.user_id == user.id:
+        return True
+    if (vehicle.created_by_id and vehicle.created_by_id == user.id
+            and vehicle.approval_status in ('draft', 'revision_required')):
+        return True
+    cache = {} if cache is None else cache
+    key = ('fleet_section', vehicle.section_id) if vehicle.section_id else ('fleet_company', vehicle.company_id)
+    if key not in cache:
+        cache[key] = user_has_any_perm(user, FLEET_SENSITIVE_VIEW_PERMS, vehicle)
+    return cache[key]
 
 
-def auto_pass_vehicle(vehicle, user, source: str = 'create', draft_on_incomplete: bool = False) -> dict:
-    """
-    تسک ۳.۳ و ب-۱۴ و DEF-14: عبور هوشمند ناوگان با گیت الزامی:
-    - عبور سرپرست با گیت submit؛ عبور حسابدار و مدیر با گیت accountant.
-    - در صورت نقص در بالاترین مرحله ممکن یا پیش‌نویس (در draft_on_incomplete=True) می‌ماند.
-    - ثبت رویداد auto_pass در WorkflowAuditLog.
-    """
-    from django.db import transaction
-    from django.utils import timezone
-    from personnel.models import WorkflowAuditLog
-
-    can_mgr = user_has_any_perm(user, FLEET_MANAGER_STAGE_PERMS)
-    can_fin = user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS)
-    can_sup = user_has_any_perm(user, FLEET_SUPERVISOR_STAGE_PERMS)
-    if not (can_mgr or can_fin or can_sup):
-        return {'status': vehicle.approval_status, 'passed_stages': [], 'missing_fields': []}
-
-    submit_missing = get_vehicle_missing_fields(vehicle, stage='submit')
-    target = None
-    if can_mgr or can_fin:
-        acc_missing = get_vehicle_missing_fields(vehicle, stage='accountant')
-        missing_out = acc_missing
-        if not acc_missing:
-            target = 'approved' if can_mgr else 'pending_manager'
-        elif not submit_missing and not draft_on_incomplete:
-            target = 'pending_accountant'
-    else:
-        missing_out = submit_missing
-        if not submit_missing:
-            target = 'pending_accountant'
-
-    if target is None:
-        return {'status': vehicle.approval_status, 'passed_stages': [], 'missing_fields': missing_out}
-
-    now = timezone.now()
-    old_status = vehicle.approval_status
-    passed = ['supervisor']
-    with transaction.atomic():
-        vehicle.supervisor_approved_by = user
-        vehicle.supervisor_approved_at = now
-        if target in ('pending_manager', 'approved'):
-            vehicle.accountant_approved_by = user
-            vehicle.accountant_approved_at = now
-            passed.append('accountant')
-        if target == 'approved':
-            vehicle.manager_approved_by = user
-            vehicle.manager_approved_at = now
-            vehicle.is_active = True
-            passed.append('manager')
-        vehicle.is_auto_passed = True
-        vehicle.auto_passed_by = user
-        vehicle.auto_passed_at = now
-        vehicle.approval_status = target
-        vehicle.rejection_reason = None
-        vehicle.save()
-
-        WorkflowAuditLog.objects.create(
-            content_type='vehicle',
-            object_id=vehicle.id,
-            actor=user,
-            from_status=old_status,
-            to_status=target,
-            action='auto_pass',
-            reason='عبور هوشمند مراحل پیشین هنگام ثبت توسط نقش بالاتر',
-            metadata={
-                'passed_stages': passed,
-                'source': source,
-                'company_id': vehicle.company_id,
-                'missing_fields': missing_out,
-            }
-        )
-        dispatch_vehicle_workflow_notification(vehicle, stage=target, actor=user)
-    return {'status': target, 'passed_stages': passed, 'missing_fields': missing_out}
+def mask_vehicle_mapping(data, fields=VEHICLE_ALL_SENSITIVE_FIELDS):
+    """نسخهٔ پوشیدهٔ یک dict (پرونده، حساب یا diff درخواست تغییر)؛ ورودی دست نمی‌خورد."""
+    from personnel.lifecycle_services import mask_sensitive_value
+    if not isinstance(data, dict):
+        return data
+    out = dict(data)
+    for f in fields:
+        if f in out and out[f] not in (None, ''):
+            out[f] = mask_sensitive_value(out[f])
+    return out
 
 
 FLEET_WORKFLOW_NOTIFICATION_TEXTS = {

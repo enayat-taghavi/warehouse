@@ -599,3 +599,12 @@ class VehicleChangeRequest(models.Model):
 
     def __str__(self):
         return f"درخواست تغییرات {self.vehicle.driver_name} - {self.vehicle.plate_number} ({self.get_status_display()})"
+
+    # بخش و شرکت گردش موتور از خودروی هدف (طرح ۴.۶، د۲؛ فقط‌خواندنی، بی ستون تازه)
+    @property
+    def wf_section_id(self):
+        return self.vehicle.section_id if self.vehicle_id else None
+
+    @property
+    def wf_company_id(self):
+        return self.vehicle.company_id if self.vehicle_id else None

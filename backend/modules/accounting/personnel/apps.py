@@ -133,6 +133,21 @@ class PersonnelConfig(AppConfig):
             contribute(f'is_locked:{_kind}', _locked)
             contribute(f'company_of:{_kind}', _company)
         contribute(f'can_act:{_wf.PERSONNEL_ENTITY}', _wf.can_act_personnel)
+        # پروندهٔ خودرو و درخواست تغییر روی موتور، با دیدن، پیوست، قفل و گیت نرخ و شبا (د۱ و د۲ طرح ۴.۶)
+        for _spec, _kind, _resolver, _view, _attach, _locked, _company in (
+            (_wf.VEHICLE_PROFILE_WORKFLOW_SPEC, _wf.VEHICLE_ENTITY, _wf.resolve_vehicle, _wf.can_view_vehicle,
+             _wf.can_attach_vehicle, _wf.is_vehicle_locked, _wf.vehicle_company_id),
+            (_wf.VEHICLE_CHANGE_WORKFLOW_SPEC, _wf.VEHICLE_CHANGE_ENTITY, _wf.resolve_vehicle_change,
+             _wf.can_view_vehicle_change, _wf.can_attach_vehicle_change, _wf.is_vehicle_change_locked,
+             _wf.vehicle_change_company_id),
+        ):
+            contribute('workflows', _spec)
+            contribute(f'entity_resolver:{_kind}', _resolver)
+            contribute(f'can_view:{_kind}', _view)
+            contribute(f'can_attach:{_kind}', _attach)
+            contribute(f'is_locked:{_kind}', _locked)
+            contribute(f'company_of:{_kind}', _company)
+        contribute(f'can_act:{_wf.VEHICLE_ENTITY}', _wf.can_act_vehicle)
         # کارکرد ماهانه (دورهٔ بخش + ماه) روی موتور، با دیدن، پیوست، قفل و گیت پیش از اقدام (د۲ طرح ۴.۴)
         contribute('workflows', _wf.ATTENDANCE_PERIOD_WORKFLOW_SPEC)
         contribute(f'entity_resolver:{_wf.ATTENDANCE_PERIOD_ENTITY}', _wf.resolve_attendance_period)

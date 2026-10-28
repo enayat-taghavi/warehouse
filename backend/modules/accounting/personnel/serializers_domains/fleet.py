@@ -26,6 +26,18 @@ from ..models import (
     VehicleChangeRequest,
 )
 
+
+def _vehicle_full_view(serializer, vehicle) -> bool:
+    """د۸ طرح ۴.۶: بی request (مصرف درونی سرور) دید کامل؛ با request قاعدهٔ can_view_vehicle_sensitive با cache درخواست."""
+    request = serializer.context.get('request')
+    user = getattr(request, 'user', None) if request is not None else None
+    if user is None:
+        return True
+    from ..fleet_lifecycle_services import can_view_vehicle_sensitive
+    cache = serializer.context.setdefault('_vehicle_sensitive_cache', {})
+    return can_view_vehicle_sensitive(user, vehicle, cache)
+
+
 class VehicleBankAccountSerializer(serializers.ModelSerializer):
     payee_type_display = serializers.CharField(source='get_payee_type_display', read_only=True)
 
@@ -38,6 +50,20 @@ class VehicleBankAccountSerializer(serializers.ModelSerializer):
             'description', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'vehicle', 'created_at', 'updated_at']
+
+    def to_internal_value(self, data):
+        # د۸: مقدار ستاره‌دار برگشتی بی‌صدا کنار می‌رود (مقدار قبلی می‌ماند؛ بی 400 تا صف آفلاین پاک نشود)
+        from ..lifecycle_services import strip_masked_values
+        from ..fleet_lifecycle_services import VEHICLE_BANK_SENSITIVE_FIELDS
+        return super().to_internal_value(strip_masked_values(data, VEHICLE_BANK_SENSITIVE_FIELDS))
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        vehicle = getattr(instance, 'vehicle', None)
+        if vehicle is not None and not _vehicle_full_view(self, vehicle):
+            from ..fleet_lifecycle_services import VEHICLE_BANK_SENSITIVE_FIELDS, mask_vehicle_mapping
+            ret = mask_vehicle_mapping(ret, VEHICLE_BANK_SENSITIVE_FIELDS)
+        return ret
 
     def validate_is_primary(self, value):
         if self.instance is not None and getattr(self.instance, 'is_primary', False) and value is False:
@@ -372,11 +398,31 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
                 instance.refresh_from_db(fields=list(self.BANK_MIRROR_FIELDS))
         return instance
 
+    def to_internal_value(self, data):
+        # د۸: مقدار ستاره‌دار برگشتی بی‌صدا کنار می‌رود (مقدار قبلی می‌ماند؛ بی 400 تا صف آفلاین پاک نشود)
+        from ..lifecycle_services import strip_masked_values
+        from ..fleet_lifecycle_services import VEHICLE_SENSITIVE_FIELDS
+        return super().to_internal_value(strip_masked_values(data, VEHICLE_SENSITIVE_FIELDS))
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         if self._request_user_hides_rates():
             for rate_field in FLEET_RATE_FIELDS:
                 ret.pop(rate_field, None)
+        if not _vehicle_full_view(self, instance):
+            # د۸: کد ملی و حساب پوشیده؛ diff درخواست تغییر باز هم پوشیده؛ مدرک‌ها فقط برای بارگذارنده
+            from ..fleet_lifecycle_services import VEHICLE_SENSITIVE_FIELDS, mask_vehicle_mapping
+            ret = mask_vehicle_mapping(ret, VEHICLE_SENSITIVE_FIELDS)
+            pending = ret.get('pending_change_request')
+            if isinstance(pending, dict):
+                pending = dict(pending)
+                pending['proposed_changes'] = mask_vehicle_mapping(pending.get('proposed_changes'))
+                pending['previous_values'] = mask_vehicle_mapping(pending.get('previous_values'))
+                ret['pending_change_request'] = pending
+            if 'documents' in ret:
+                request = self.context.get('request')
+                uid = getattr(getattr(request, 'user', None), 'id', None)
+                ret['documents'] = [d for d in (ret.get('documents') or []) if uid and d.get('uploaded_by') == uid]
         return ret
 
 class VehicleChangeRequestSerializer(serializers.ModelSerializer):
@@ -401,6 +447,15 @@ class VehicleChangeRequestSerializer(serializers.ModelSerializer):
             'is_auto_passed', 'auto_passed_by', 'auto_passed_at',
             'revision_requested_by', 'revision_requested_at'
         ]
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if not _vehicle_full_view(self, instance.vehicle):
+            # د۸: همان کلیدهای حساس در diff درخواست تغییر پوشیده‌اند
+            from ..fleet_lifecycle_services import mask_vehicle_mapping
+            ret['proposed_changes'] = mask_vehicle_mapping(ret.get('proposed_changes'))
+            ret['previous_values'] = mask_vehicle_mapping(ret.get('previous_values'))
+        return ret
 
     def get_requested_by_name(self, obj):
         if obj.requested_by:
