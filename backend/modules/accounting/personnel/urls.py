@@ -37,6 +37,7 @@ from .cartable_views import (
     TreasuryDisketteExportAPIView
 )
 from .sync_views import PersonnelSyncPullView
+from .views_domains.report_views import AccountingReportExportView, AccountingReportView
 
 router = DefaultRouter()
 router.register(r'companies', CompanyViewSet, basename='companies')
@@ -102,6 +103,9 @@ urlpatterns = [
     path('vehicles/download-template', VehicleDriverProfileViewSet.as_view({'get': 'download_template'})),
     path('vehicles/import-excel/', VehicleDriverProfileViewSet.as_view({'post': 'import_excel', 'get': 'import_excel'}), name='vehicles-import-excel'),
     path('vehicles/import-excel', VehicleDriverProfileViewSet.as_view({'post': 'import_excel', 'get': 'import_excel'})),
+    # گزارش‌های حسابداری (طرح ۴.۷، د۱)
+    path('reports/<slug:key>/', AccountingReportView.as_view(), name='accounting-report'),
+    path('reports/<slug:key>/export-excel/', AccountingReportExportView.as_view(), name='accounting-report-export'),
     path('', include(router.urls)),
 ]
 

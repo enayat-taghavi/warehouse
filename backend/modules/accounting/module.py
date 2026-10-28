@@ -61,6 +61,7 @@ ACCOUNTING_PERMISSION_CODENAMES = (
     'perm_invoice_record', 'perm_invoice_approve', 'perm_invoice_review',
     'perm_petty_cash_manage', 'perm_counterparty_manage',
     'perm_approve_attendance_supervisor', 'perm_approve_attendance_finance', 'perm_approve_attendance_manager',
+    'perm_accounting_reports',
 )
 
 PERMISSION_CODENAMES = ACCOUNTING_PERMISSION_CODENAMES
@@ -84,6 +85,7 @@ ACCOUNTING_PERMISSION_CATEGORIES = (
     {'key': 'invoices', 'label_fa': 'فاکتورهای هزینه', 'order': 70, 'menu': 'employee-invoices'},
     {'key': 'petty_cash', 'label_fa': 'تنخواه‌گردان', 'order': 80, 'menu': 'supervisor-petty-cash'},
     {'key': 'counterparties', 'label_fa': 'طرف‌حساب‌های مالی', 'order': 90, 'menu': 'accountant-counterparties'},
+    {'key': 'reports', 'label_fa': 'گزارش‌های حسابداری', 'order': 100, 'menu': 'manager-reports'},
 )
 
 PERMISSION_CATEGORIES = ACCOUNTING_PERMISSION_CATEGORIES
@@ -120,6 +122,8 @@ ACCOUNTING_PERMISSIONS = (
     _p('perm_invoice_review', 'بررسی حسابدار برای فاکتور و تنخواه', 'invoices', (_ACC,)),
     _p('perm_petty_cash_manage', 'مدیریت تنخواه', 'petty_cash', (_SUP, _ACC, _MGR, _TRS)),
     _p('perm_counterparty_manage', 'مدیریت و دیدن کامل طرف‌حساب‌ها', 'counterparties', (_ACC, _TRS)),
+    # د۳ طرح ۴.۷: گزارش‌های حسابداری (قلمرو همان فهرست فاکتور و تنخواه، در بخش‌هایی که این مجوز هست)
+    _p('perm_accounting_reports', 'دیدن گزارش‌های حسابداری', 'reports', (_ACC, _MGR)),
 )
 
 PERMISSIONS = ACCOUNTING_PERMISSIONS

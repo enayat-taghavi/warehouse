@@ -280,7 +280,7 @@ class ExpenseInvoice(models.Model):
         [(head, net)] برای سند: جمع ردیف‌های هر سرفصل منهای سهم تخفیف (د۱ طرح ۴.۱). سهم تخفیف به نسبت مبلغ است
         و باقی‌ماندهٔ گرد کردن به آخرین سرفصل می‌رود. ترتیب سرفصل‌ها = ترتیب نخستین ردیف هر سرفصل.
         """
-        from decimal import ROUND_HALF_UP
+        from ..accounting_reports import split_discount
         groups = {}
         for line in self.lines.all():
             key = line.expense_head_id
@@ -288,20 +288,9 @@ class ExpenseInvoice(models.Model):
                 groups[key] = [line.expense_head, Decimal('0')]
             groups[key][1] += Decimal(str(line.line_amount or 0))
         items = list(groups.values())
-        subtotal = sum((amt for _, amt in items), Decimal('0'))
-        discount = Decimal(str(self.discount_amount or 0))
-        out = []
-        given = Decimal('0')
-        for idx, (head, amt) in enumerate(items):
-            if idx == len(items) - 1:
-                share = discount - given
-            elif subtotal > 0:
-                share = (discount * amt / subtotal).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-            else:
-                share = Decimal('0')
-            given += share
-            out.append((head, amt - share))
-        return out
+        # پخش تخفیف با تابع مشترک گزارش هزینه (د۴ طرح ۴.۷) تا عدد سند و گزارش یکی بماند
+        nets = split_discount([(idx, amt) for idx, (_head, amt) in enumerate(items)], self.discount_amount)
+        return [(items[idx][0], net) for idx, net in nets]
 
     def to_journal_lines(self):
         """

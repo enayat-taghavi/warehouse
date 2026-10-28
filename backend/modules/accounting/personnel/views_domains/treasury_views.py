@@ -55,6 +55,7 @@ from .scope_helpers import (
 )
 from companies.org_roles import user_has_section_role
 from accounts.scoped_permissions import can, section_q, sections_where
+from ..excel_utils import write_standard_sheet
 from ..counterparty_services import (
     create_bank_account,
     create_counterparty,
@@ -293,6 +294,52 @@ def _petty_viewer_company_ids(user):
 
 def _petty_tx_company_q(company_ids):
     return Q(account__company_id__in=company_ids) | Q(account__isnull=True, section__project__company_id__in=company_ids)
+
+
+def scope_invoices_for_user(user, qs, company_id=None):
+    """
+    قلمرو فهرست فاکتور (و گزارش‌های ۴.۷): شرکت داده‌شده (اعتبارسنجی‌شده) و فقط بخش‌هایی که کاربر در آن‌ها
+    «ثبت و دیدن فاکتور» دارد (ت۱۳)؛ خروجی اکسل هم همین queryset است.
+    """
+    if company_id:
+        qs = qs.filter(section__project__company_id=company_id)
+    return qs.filter(section_q(user, INVOICE_PERM))
+
+
+def scope_petty_transactions_for_user(user, qs, company_id=None):
+    """
+    قلمرو اسناد تنخواه (فهرست و گزارش‌های ۴.۷): همیشه فقط شرکت‌های مجاز کاربر. در آن‌ها: اسناد خودش، همهٔ اسناد
+    شرکتی که در آن انتساب سطح شرکت با مدیریت تنخواه یا مجوز مرحله‌ها دارد (ص۷ طرح ۳.۶)، و اسناد قدیمی بخش‌هایی که
+    مدیر تنخواه آن‌هاست. پارامتر custodian_id قلمرو را باز نمی‌کند.
+    """
+    if company_id:
+        qs = qs.filter(_petty_tx_company_q([company_id]))
+    if not user.is_superuser:
+        allowed = list(get_user_allowed_companies(user).values_list('id', flat=True))
+        qs = qs.filter(_petty_tx_company_q(allowed)).filter(
+            Q(custodian=user)
+            | _petty_tx_company_q(_petty_viewer_company_ids(user))
+            | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
+            | deputy_account_q(user, prefix='account__')  # د۸: حساب صاحب کار در بازهٔ جانشینی
+        )
+    return qs
+
+
+def scope_petty_accounts_for_user(user, qs, company_id=None):
+    """
+    قلمرو حساب‌های تنخواه (ص۱ طرح ۳.۶): همیشه فقط شرکت‌های مجاز کاربر؛ در آن‌ها حساب خودش، همهٔ حساب‌های شرکتی که
+    در آن انتساب سطح شرکت با مدیریت تنخواه یا مجوز مرحله‌ها دارد، و حساب قدیمی بخش‌هایی که مدیر تنخواه آن‌هاست.
+    """
+    if company_id:
+        qs = qs.filter(company_id=company_id)
+    if not user.is_superuser:
+        qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
+            Q(custodian=user)
+            | Q(company_id__in=_petty_viewer_company_ids(user))
+            | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
+            | deputy_account_q(user)
+        )
+    return qs
 
 
 def _ensure_petty_custodian(user, company_id):
@@ -563,10 +610,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
         cid = validate_user_company_access(user, get_request_company_id(self.request))
-        if cid:
-            qs = qs.filter(section__project__company_id=cid)
-        # فقط بخش‌هایی که کاربر در آن‌ها «ثبت و دیدن فاکتور» دارد (ت۱۳)؛ خروجی اکسل هم همین queryset است
-        qs = qs.filter(section_q(user, INVOICE_PERM))
+        qs = scope_invoices_for_user(user, qs, cid)
         section_id = self.request.query_params.get('section_id')
         if section_id:
             qs = qs.filter(section_id=section_id)
@@ -1002,52 +1046,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         return response
 
 
-def _write_standard_sheet(ws, columns, rows):
-    """سربرگ دو ردیفه (فارسی و کلید لاتین)، راست‌به‌چپ، ردیف‌های ثابت و قالب عددی پول (ق۱۰)."""
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-    ws.views.sheetView[0].rightToLeft = True
-    title_font = Font(name='B Nazanin', size=11, bold=True, color='FFFFFF')
-    key_font = Font(name='Segoe UI', size=8, italic=True, color='94A3B8')
-    title_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
-    key_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
-    thin = Side(style='thin', color='E2E8F0')
-    thin_border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    data_font = Font(name='B Nazanin', size=10)
-    data_font_num = Font(name='Segoe UI', size=10)
-
-    ws.append([c[0] for c in columns])
-    ws.append([c[1] for c in columns])
-    for col_idx in range(1, len(columns) + 1):
-        cell_fa = ws.cell(row=1, column=col_idx)
-        cell_fa.font = title_font
-        cell_fa.fill = title_fill
-        cell_fa.alignment = Alignment(horizontal='center', vertical='center')
-        cell_en = ws.cell(row=2, column=col_idx)
-        cell_en.font = key_font
-        cell_en.fill = key_fill
-        cell_en.alignment = Alignment(horizontal='center', vertical='center')
-    ws.row_dimensions[1].height = 26
-    ws.row_dimensions[2].height = 16
-    ws.freeze_panes = 'A3'
-
-    for r_idx, row in enumerate(rows, start=3):
-        # متن کاربر که با = + - @ شروع شود فرمول اکسل نشود
-        ws.append([f"'{v}" if isinstance(v, str) and v[:1] in ('=', '+', '-', '@') else v for v in row])
-        ws.row_dimensions[r_idx].height = 20
-        for col_idx, (_fa, _key, kind) in enumerate(columns, start=1):
-            c = ws.cell(row=r_idx, column=col_idx)
-            c.border = thin_border
-            c.alignment = Alignment(horizontal='right' if kind == 'right' else 'center', vertical='center')
-            c.font = data_font_num if kind in ('num', 'money') else data_font
-            if kind == 'money':
-                c.number_format = '#,##0'
-
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = openpyxl.utils.get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 60)
+# سربرگ دو ردیفهٔ مشترک به personnel/excel_utils.py رفت (د۵ طرح ۴.۷)
+_write_standard_sheet = write_standard_sheet
 
 # ==============================================================================
 # 0.2 ویوست‌های مدیریت تنخواه‌گردان (Petty Cash Management ViewSets)
@@ -1066,23 +1066,13 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         qs = PettyCashAccount.annotate_debt(super().get_queryset().select_related('company'))
         user = self.request.user
         cid = validate_user_company_access(user, get_request_company_id(self.request))
-        if cid:
-            qs = qs.filter(company_id=cid)
+        qs = scope_petty_accounts_for_user(user, qs, cid)
         section_id = self.request.query_params.get('section_id')
         if section_id:
             qs = qs.filter(section_id=section_id)
         custodian_id = self.request.query_params.get('custodian_id')
         if custodian_id:
             qs = qs.filter(custodian_id=custodian_id)
-        # ص۱ طرح ۳.۶: حساب سطح شرکت است. همیشه فقط شرکت‌های مجاز کاربر؛ در آن‌ها حساب خودش، همهٔ حساب‌های شرکتی
-        # که در آن انتساب سطح شرکت با مدیریت تنخواه یا مجوز مرحله‌ها دارد، و حساب قدیمی بخش‌هایی که مدیر تنخواه آن‌هاست.
-        if not user.is_superuser:
-            qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
-                Q(custodian=user)
-                | Q(company_id__in=_petty_viewer_company_ids(user))
-                | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
-                | deputy_account_q(user)
-            )
         return qs.order_by('company', 'custodian')
 
     @staticmethod
@@ -1366,8 +1356,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
         cid = validate_user_company_access(user, get_request_company_id(self.request))
-        if cid:
-            qs = qs.filter(_petty_tx_company_q([cid]))
+        qs = scope_petty_transactions_for_user(user, qs, cid)
         section_id = self.request.query_params.get('section_id')
         if section_id:
             qs = qs.filter(section_id=section_id)
@@ -1401,18 +1390,6 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                 Q(counterparty__party__name__icontains=search) |
                 Q(description__icontains=search) |
                 Q(statement__document_number__icontains=search)
-            )
-
-        # همیشه فقط شرکت‌های مجاز کاربر. در آن‌ها: اسناد خودش، همهٔ اسناد شرکتی که در آن انتساب سطح شرکت با
-        # مدیریت تنخواه یا مجوز مرحله‌ها دارد (ص۷ طرح ۳.۶)، و اسناد قدیمی بخش‌هایی که مدیر تنخواه آن‌هاست.
-        # پارامتر custodian_id قلمرو را باز نمی‌کند.
-        if not user.is_superuser:
-            allowed = list(get_user_allowed_companies(user).values_list('id', flat=True))
-            qs = qs.filter(_petty_tx_company_q(allowed)).filter(
-                Q(custodian=user)
-                | _petty_tx_company_q(_petty_viewer_company_ids(user))
-                | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
-                | deputy_account_q(user, prefix='account__')  # د۸: حساب صاحب کار در بازهٔ جانشینی
             )
 
         return qs.annotate(offset_total_amount=_petty_offset_subquery()).order_by('-transaction_date_shamsi', '-created_at')

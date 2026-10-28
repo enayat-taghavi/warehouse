@@ -60,6 +60,8 @@ EXPECTED = {
     'perm_invoice_review': ('invoices', {A}),
     'perm_petty_cash_manage': ('petty_cash', {S, A, M, T}),
     'perm_counterparty_manage': ('counterparties', {A, T}),
+    # د۳ طرح ۴.۷
+    'perm_accounting_reports': ('reports', {A, M}),
 }
 
 
