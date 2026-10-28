@@ -3157,7 +3157,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 8. Output and stop condition: a short English report: tests run and result, any test you could not make pass with the reason, the commit hash. End the turn after the report.
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.7-c: accounting reports page and manager dashboard DOM specs
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.7-c: accounting reports page and manager dashboard DOM specs
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
