@@ -2930,7 +2930,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 4.5-d: payroll and treasury DOM specs (submit, lock, offline, tracking code, diskette warning)
+[DONE] [ ] Session 1 of 1 — Release v1 step 4.5-d: payroll and treasury DOM specs (submit, lock, offline, tracking code, diskette warning)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
