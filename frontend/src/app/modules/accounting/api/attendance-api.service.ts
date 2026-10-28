@@ -73,6 +73,8 @@ export class AttendanceApiService {
     project_id?: number | null;
     date_shamsi: string;
     client_tab_id?: string;
+    is_override?: boolean;
+    override_reason?: string;
     items: Array<{
       personnel_id: number;
       status: string;
@@ -164,6 +166,8 @@ export class AttendanceApiService {
     project_id?: number | null;
     year_month: string;
     client_tab_id?: string;
+    is_override?: boolean;
+    override_reason?: string;
     items: Array<{
       personnel_id: number;
       day: number;
@@ -182,10 +186,15 @@ export class AttendanceApiService {
     );
   }
 
+  /**
+   * اقدام گردش دورهٔ «بخش + ماه» (پوستهٔ موتور ۲.۳). `reject`/`return`/`unlock` دلیل (`notes`) لازم دارند.
+   * فقط آنلاین؛ تأیید سرپرست، حسابدار و مدیر از «کارهای من» (`/app/my-tasks?workflow=attendance_period`).
+   */
   periodWorkflowAction(payload: {
     warehouse_id?: number | null;
+    section_id?: number | null;
     year_month: string;
-    action: 'submit' | 'approve' | 'reject' | 'unlock';
+    action: 'submit' | 'approve' | 'reject' | 'return' | 'unlock';
     notes?: string;
   }): Observable<any> {
     return this.api.post<any>(`${this.baseUrl}/periods/workflow-action/`, payload);
@@ -334,19 +343,33 @@ export class AttendanceApiService {
     );
   }
 
-  getWorkPeriods(params: { year_month?: string; warehouse_id?: number | null }): Observable<any[]> {
+  getWorkPeriods(params: { year_month?: string; warehouse_id?: number | null; section_id?: number | null }): Observable<any[]> {
     const query: Record<string, unknown> = {};
     if (params.year_month) query['year_month'] = params.year_month;
     if (params.warehouse_id) query['warehouse_id'] = params.warehouse_id;
+    if (params.section_id) query['section_id'] = params.section_id;
     return this.api.get<any[]>(`${this.baseUrl}/periods/`, query);
   }
 
-  lockPeriod(periodId: number): Observable<{ message: string }> {
-    return this.api.post<{ message: string }>(`${this.baseUrl}/periods/${periodId}/lock/`, {});
+  /** دورهٔ «بخش + ماه» را برمی‌گرداند یا می‌سازد (201)؛ شرکت از خود بخش خوانده می‌شود. ویرایش و حذف دوره نیست. */
+  getOrCreatePeriod(payload: { year_month: string; section_id?: number | null; warehouse_id?: number | null }): Observable<MonthlyWorkPeriod> {
+    return this.api.post<MonthlyWorkPeriod>(`${this.baseUrl}/periods/`, payload);
   }
 
-  unlockPeriod(periodId: number): Observable<{ message: string }> {
-    return this.api.post<{ message: string }>(`${this.baseUrl}/periods/${periodId}/unlock/`, {});
+  /** بستن دستی = ارسال دوره به گردش (۴.۴ د۴). */
+  lockPeriod(periodId: number, notes?: string): Observable<{ message: string; status?: string; status_display?: string }> {
+    return this.api.post<{ message: string; status?: string; status_display?: string }>(
+      `${this.baseUrl}/periods/${periodId}/lock/`,
+      notes ? { notes } : {}
+    );
+  }
+
+  /** بازگشایی با دلیل اجباری؛ اگر حقوق دوره محاسبه یا پرداخت شده باشد 400 `payroll_exists`. */
+  unlockPeriod(periodId: number, reason: string): Observable<{ message: string; status?: string; status_display?: string }> {
+    return this.api.post<{ message: string; status?: string; status_display?: string }>(
+      `${this.baseUrl}/periods/${periodId}/unlock/`,
+      { reason }
+    );
   }
 
   getFleetMonthlyExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string, sectionId?: number | null): string {

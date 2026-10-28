@@ -116,7 +116,7 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
     expect(mockToast.warning).toHaveBeenCalled();
   });
 
-  it('6. lock needs perm_lock_work_period; unlock only for superuser (same as backend)', () => {
+  it('6. lock needs perm_lock_work_period; unlock asks a required reason', () => {
     component.currentPeriodId = 90;
     expect(component.canLockPeriod).toBe(false);
     component.toggleLockPeriod();
@@ -128,14 +128,17 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
     expect(mockPersonnelApi.lockPeriod).toHaveBeenCalledWith(90);
     expect(component.isPeriodLocked).toBe(true);
 
-    expect(component.canUnlockPeriod).toBe(false);
+    // unlock: opens the reason dialog first; nothing is sent without a non-empty reason
+    expect(component.canUnlockPeriod).toBe(true);
     component.toggleLockPeriod();
+    expect(component.unlockDialogOpen).toBe(true);
     expect(mockPersonnelApi.unlockPeriod).not.toHaveBeenCalled();
-
-    mockAuth.user.mockReturnValue({ id: 1, is_superuser: true });
-    component.toggleLockPeriod();
-    expect(mockPersonnelApi.unlockPeriod).toHaveBeenCalledWith(90);
+    component.onUnlockReasonConfirmed('   ');
+    expect(mockPersonnelApi.unlockPeriod).not.toHaveBeenCalled();
+    component.onUnlockReasonConfirmed('اصلاح کارکرد');
+    expect(mockPersonnelApi.unlockPeriod).toHaveBeenCalledWith(90, 'اصلاح کارکرد');
     expect(component.isPeriodLocked).toBe(false);
+    expect(component.unlockDialogOpen).toBe(false);
   });
 
   it('7. smart paste parses Persian digits, skips the header and matches national codes', () => {

@@ -84,7 +84,7 @@
           <button
             type="button"
             [appAction]="isPeriodLocked ? 'unlock' : 'lock'"
-            [label]="isPeriodLocked ? 'بازگشایی دوره' : 'قفل نهایی دوره'"
+            [label]="isPeriodLocked ? 'بازگشایی دوره' : 'ارسال و قفل دوره'"
             [busy]="isTogglingLock"
             (click)="toggleLockPeriod()"
           ></button>
@@ -93,8 +93,8 @@
         <button
           type="button"
           (click)="calculateBatch()"
-          [disabled]="isCalculating || isPeriodLocked"
-          [title]="isPeriodLocked ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده'"
+          [disabled]="isCalculating || isPayrollFrozen"
+          [title]="isPayrollFrozen ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده'"
           [attr.aria-label]="isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق'"
           class="tap-target px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
           <svg *ngIf="!isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
@@ -107,7 +107,7 @@
           type="button"
           appAction="import-excel"
           label="درون‌ریزی مالیات"
-          [disabled]="isPeriodLocked"
+          [disabled]="isPayrollFrozen"
           (click)="openTaxModal()"
         ></button>
 
@@ -650,3 +650,12 @@
     </div>
   </div>
 }
+
+<app-workflow-reason-dialog
+  [open]="unlockDialogOpen"
+  title="دلیل بازگشایی دوره"
+  confirmLabel="بازگشایی دوره"
+  [serverError]="unlockDialogServerError"
+  (confirmed)="onUnlockReasonConfirmed($event)"
+  (cancelled)="onUnlockCancelled()"
+></app-workflow-reason-dialog>

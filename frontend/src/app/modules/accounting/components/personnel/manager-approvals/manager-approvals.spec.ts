@@ -134,15 +134,10 @@ describe('ManagerApprovals Unit Tests', () => {
     expect(component.isMasked(component.personnelList[1].national_code)).toBe(false);
   });
 
-  it('should submit work period for finance review', () => {
-    const wp = { id: 1, year_month: '1405/04' };
-    component.submitPeriodForFinance(wp);
-    expect(mockPersonnelApi.periodWorkflowAction).toHaveBeenCalledWith({
-      warehouse_id: null,
-      year_month: '1405/04',
-      action: 'submit'
-    });
-    expect(mockToast.show).toHaveBeenCalledWith('success', expect.any(String));
+  it('work period submit / reopen actions are gone (engine my-tasks does them)', () => {
+    const c: any = component;
+    expect(c.submitPeriodForFinance).toBeUndefined();
+    expect(c.reopenPeriod).toBeUndefined();
   });
 
   it('personnel change requests are filtered on the server (status + search + page)', () => {

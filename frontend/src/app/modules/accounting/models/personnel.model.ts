@@ -519,10 +519,25 @@ export interface VehicleSummaryRow {
 
 export interface MonthlyWorkPeriod {
   id: number;
-  warehouse: number;
+  warehouse: number | null;
   warehouse_name?: string;
+  company?: number | null;
+  section?: number | null;
+  section_name?: string;
   year_month: string;
-  status: 'OPEN' | 'SUBMITTED' | 'LOCKED' | 'REJECTED' | 'FINALIZED' | string;
+  /** از ارسال به بعد (SUBMITTED… تا PAID) کارکرد دوره قفل است (۴.۴ د۴). */
+  status:
+    | 'OPEN'
+    | 'SUBMITTED'
+    | 'SUBMITTED_SUPERVISOR'
+    | 'SUBMITTED_ACCOUNTANT'
+    | 'READY_TO_PAY'
+    | 'PAID'
+    | 'REVISION_REQUIRED'
+    | 'LOCKED'
+    | 'REJECTED'
+    | 'FINALIZED'
+    | string;
   status_display?: string;
   submitted_at?: string;
   submitted_by_name?: string;

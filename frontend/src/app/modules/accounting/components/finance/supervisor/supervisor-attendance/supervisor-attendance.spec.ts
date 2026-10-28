@@ -175,13 +175,11 @@ describe('SupervisorAttendanceHubComponent Unit Tests', () => {
     expect(component.revisionTargetItem).toBe(item);
 
     // Attempt confirm without reason
-    component.revisionReasonText = '   ';
-    component.confirmRevision();
+    component.confirmRevision('   ');
     expect(mockToast.error).toHaveBeenCalledWith('ثبت علت عودت و بازنگری کارکرد الزامی است.');
 
     // Confirm with reason
-    component.revisionReasonText = 'ساعات اضافه کاری نیاز به بررسی دارد';
-    component.confirmRevision();
+    component.confirmRevision('ساعات اضافه کاری نیاز به بررسی دارد');
     expect(mockPersonnelApi.postCartableAction).toHaveBeenCalledWith('supervisor', {
       action: 'revision',
       model: 'attendance',

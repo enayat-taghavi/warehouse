@@ -412,6 +412,7 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
 
       expect(mockPersonnelApi.periodWorkflowAction).toHaveBeenCalledWith({
         warehouse_id: 1,
+        section_id: 10,
         year_month: '1405/06',
         action: 'submit',
         notes: 'تایید کارکرد شهریور'

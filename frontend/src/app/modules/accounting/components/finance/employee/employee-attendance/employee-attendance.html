@@ -165,8 +165,12 @@
           <span>{{ attendanceRegistrationState.label }}</span>
         </div>
         <span *ngIf="isPeriodLocked" class="bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1">
-          🔒 دوره قفل است
+          🔒 {{ periodLockedMessage }} ({{ periodStatusLabel }})
         </span>
+        <a *ngIf="periodStatus !== 'OPEN'" routerLink="/app/my-tasks" [queryParams]="{ workflow: 'attendance_period' }"
+          class="text-xs font-bold text-indigo-700 hover:underline cursor-pointer" title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+          سابقه و پیگیری در کارهای من
+        </a>
       </div>
 
     </div>
@@ -588,13 +592,16 @@
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>دوره باز (در حال ثبت کارکرد)</span>
         </span>
-        <span *ngIf="periodStatus === 'SUBMITTED'" class="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-          <span>ارسال‌شده جهت بررسی مالی</span>
+        <span *ngIf="periodStatus !== 'OPEN'" class="px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 border"
+          [ngClass]="isPeriodLocked ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-rose-50 text-rose-800 border-rose-200'">
+          <span class="w-2 h-2 rounded-full" [ngClass]="isPeriodLocked ? 'bg-amber-500' : 'bg-rose-500'"></span>
+          <span>{{ periodStatusLabel }}</span>
         </span>
-        <span *ngIf="periodStatus === 'LOCKED'" class="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-bold flex items-center gap-1.5">
-          🔒 تایید نهایی و قفل مالی
-        </span>
+        <span *ngIf="isPeriodLocked" class="text-xs font-bold text-amber-800" role="status">{{ periodLockedMessage }}</span>
+        <a *ngIf="periodStatus !== 'OPEN'" routerLink="/app/my-tasks" [queryParams]="{ workflow: 'attendance_period' }"
+          class="text-xs font-bold text-indigo-700 hover:underline cursor-pointer" title="سابقه و پیگیری در کارهای من" aria-label="سابقه و پیگیری در کارهای من">
+          سابقه و پیگیری در کارهای من
+        </a>
       </div>
 
       <!-- Left: Actions (Range Modal, Excel, Print, Save) -->
@@ -678,7 +685,7 @@
 
     <!-- Monthly Grid Interactive Table -->
     <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-      <div class="overflow-x-auto max-h-[620px] overflow-y-auto">
+      <div class="overflow-auto max-h-[620px]">
         <table class="w-full text-right text-[11px] border-collapse">
           <thead class="bg-slate-100 text-slate-700 sticky top-0 z-10 font-black">
             <tr>

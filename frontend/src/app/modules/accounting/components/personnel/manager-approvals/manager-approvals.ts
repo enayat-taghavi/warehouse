@@ -806,37 +806,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     });
   }
 
-  submitPeriodForFinance(wp: any): void {
-    this.api.periodWorkflowAction({
-      warehouse_id: this.selectedWarehouseId,
-      year_month: wp.year_month,
-      action: 'submit'
-    }).subscribe({
-      next: (res: any) => {
-        this.toast.show('success', res.message || 'دوره کارکرد جهت بررسی مالی با موفقیت ارسال شد.');
-        this.loadWorkPeriods();
-      },
-      error: (err: any) => {
-        this.toast.show('error', err?.error?.error || 'خطا در ارسال دوره کارکرد');
-      }
-    });
-  }
-
-  reopenPeriod(wp: any): void {
-    this.api.periodWorkflowAction({
-      warehouse_id: this.selectedWarehouseId,
-      year_month: wp.year_month,
-      action: 'unlock'
-    }).subscribe({
-      next: (res: any) => {
-        this.toast.show('info', res.message || 'دوره کارکرد جهت ویرایش بازگشایی شد.');
-        this.loadWorkPeriods();
-      },
-      error: (err: any) => {
-        this.toast.show('error', err?.error?.error || 'خطا در بازگشایی دوره');
-      }
-    });
-  }
 
   // ─── Reject / Revision Modal ──────────────────────────────
   openProfileRejectModal(id: number, name: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {

@@ -2,7 +2,9 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef,
 import { CommonModule } from '@angular/common';
 import { HttpContext } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { ATTENDANCE_PERIOD_LOCKED_FA, attendanceActionErrorMessage, attendanceWriteErrorMessage } from '../../../../attendance-period-error';
 import { Subscription } from 'rxjs';
 import { SKIP_OFFLINE } from '../../../../../../core/interceptors/offline.interceptor';
 import { AuthService } from '../../../../../../core/auth/auth.service';
@@ -39,6 +41,7 @@ import { saveBlob, printWindow } from '../../../../../../core/platform/file-outp
     ActionButtonComponent,
     TabBarComponent,
     CommandCenterComponent,
+    RouterLink,
   ],
   templateUrl: './employee-attendance.html',
   styleUrl: './employee-attendance.css'
@@ -106,6 +109,31 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   isSavingAttendance = false;
   isPeriodLocked = false;
   periodStatus = 'OPEN';
+  readonly periodLockedMessage = ATTENDANCE_PERIOD_LOCKED_FA;
+  private network = NetworkStatusService.getInstance();
+  // کلیدهای `شناسه‌پرسنل-روز` سلول‌های تغییرکردهٔ جدول ماهانه (فقط همین‌ها ذخیره می‌شوند)
+  private dirtyMonthlyCells = new Set<string>();
+
+  private static readonly PERIOD_STATUS_LABELS: Record<string, string> = {
+    OPEN: 'دوره باز',
+    SUBMITTED: 'در انتظار تأیید سرپرست',
+    SUBMITTED_SUPERVISOR: 'در انتظار بررسی حسابدار',
+    SUBMITTED_ACCOUNTANT: 'در انتظار تأیید مدیر',
+    READY_TO_PAY: 'آمادهٔ پرداخت',
+    PAID: 'پرداخت‌شده',
+    LOCKED: 'قفل‌شده',
+    FINALIZED: 'نهایی‌شده',
+    REVISION_REQUIRED: 'نیازمند اصلاح',
+    REJECTED: 'ردشده'
+  };
+
+  private static readonly LOCKED_STATUSES = new Set([
+    'SUBMITTED', 'SUBMITTED_SUPERVISOR', 'SUBMITTED_ACCOUNTANT', 'READY_TO_PAY', 'PAID', 'LOCKED', 'FINALIZED'
+  ]);
+
+  get periodStatusLabel(): string {
+    return EmployeeAttendanceHubComponent.PERIOD_STATUS_LABELS[this.periodStatus] || this.periodStatus;
+  }
   hasUnsavedChanges = false;
   hasRemoteConflict = false;
 
@@ -400,7 +428,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
           ...r,
           warehouse_id: r.warehouse_id !== undefined && r.warehouse_id !== null ? r.warehouse_id : null
         }));
-        this.isPeriodLocked = !!res.is_locked;
+        this.isPeriodLocked = !!res.is_locked || EmployeeAttendanceHubComponent.LOCKED_STATUSES.has(res.period_status);
         this.periodStatus = res.period_status || 'OPEN';
         this.isAttendanceLoading = false;
         this.hasUnsavedChanges = false;
@@ -427,7 +455,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
           ...r,
           warehouse_id: r.warehouse_id !== undefined && r.warehouse_id !== null ? r.warehouse_id : null
         }));
-        this.isPeriodLocked = !!res.is_locked;
+        this.isPeriodLocked = !!res.is_locked || EmployeeAttendanceHubComponent.LOCKED_STATUSES.has(res.period_status);
         this.periodStatus = res.period_status || 'OPEN';
 
         const rowMap = new Map<number, AttendanceMatrixRow>();
@@ -877,7 +905,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isImportingExcel = false;
-        const msg = err.error?.error || err.error?.message || 'خطا در بارگذاری فایل اکسل کارکرد';
+        const msg = attendanceWriteErrorMessage(err) || err.error?.error || err.error?.message || 'خطا در بارگذاری فایل اکسل کارکرد';
         this.toast.show('error', msg);
         if (this.excelFileInput?.nativeElement) {
           this.excelFileInput.nativeElement.value = '';
@@ -955,7 +983,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSavingAttendance = false;
-        const msg = err?.error?.detail || err?.error?.error || 'خطا در ذخیره کارکرد روزانه';
+        const msg = attendanceWriteErrorMessage(err) || err?.error?.detail || err?.error?.error || 'خطا در ذخیره کارکرد روزانه';
         this.toast.show('error', msg);
         this.cdr.detectChanges();
       }
@@ -967,6 +995,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     if (!this.selectedYearMonth || !this.selectedSectionId) return;
     this.isMonthlyGridLoading = true;
     this.hasUnsavedMonthlyGrid = false;
+    this.dirtyMonthlyCells.clear();
 
     this.personnelApi.getMonthlyAttendanceGrid(this.selectedWarehouseId, this.selectedYearMonth, {
       section_id: this.selectedSectionId
@@ -976,7 +1005,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
         this.monthlyGridRows = res.rows || [];
         this.monthName = res.month_name || '';
         this.daysInMonth = res.days_in_month || 31;
-        this.isPeriodLocked = !!res.is_locked;
+        this.isPeriodLocked = !!res.is_locked || EmployeeAttendanceHubComponent.LOCKED_STATUSES.has(res.period_status);
         this.periodStatus = res.period_status || 'OPEN';
         this.anomalies = res.anomalies || [];
         this.isMonthlyGridLoading = false;
@@ -1003,7 +1032,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
         this.monthlyGridRows = res.rows || [];
         this.monthName = res.month_name || '';
         this.daysInMonth = res.days_in_month || 31;
-        this.isPeriodLocked = !!res.is_locked;
+        this.isPeriodLocked = !!res.is_locked || EmployeeAttendanceHubComponent.LOCKED_STATUSES.has(res.period_status);
         this.periodStatus = res.period_status || 'OPEN';
         this.anomalies = res.anomalies || [];
 
@@ -1033,9 +1062,13 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     }
     this.isSavingMonthlyGrid = true;
 
+    // فقط سلول‌های تغییرکرده فرستاده می‌شوند (۴.۴ د۴)؛ اگر ردیابی خالی بود برای ایمنی همه ارسال می‌شود.
+    const sendAll = this.dirtyMonthlyCells.size === 0;
+    const sentKeys = new Set(this.dirtyMonthlyCells);
     const items: any[] = [];
     for (const row of this.monthlyGridRows) {
       for (const d of row.days) {
+        if (!sendAll && !sentKeys.has(`${row.personnel_id}-${d.day}`)) continue;
         if (d.status || d.effective_hours > 0 || d.is_existing) {
           items.push({
             personnel_id: row.personnel_id,
@@ -1062,13 +1095,14 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       next: () => {
         this.isSavingMonthlyGrid = false;
         this.hasUnsavedMonthlyGrid = false;
+        sentKeys.forEach(k => this.dirtyMonthlyCells.delete(k));
         this.toast.show('success', 'تغییرات تقویم ماهانه با موفقیت ذخیره شد');
         this.refreshMonthlyGridSilently();
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isSavingMonthlyGrid = false;
-        this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در ذخیره تقویم ماهانه');
+        this.toast.show('error', attendanceWriteErrorMessage(err) || err?.error?.detail || err?.error?.error || 'خطا در ذخیره تقویم ماهانه');
         this.cdr.detectChanges();
       }
     });
@@ -1131,6 +1165,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   onMonthlyCellHoursChange(row: MonthlyGridRow, dayItem: MonthlyGridPersonnelDay): void {
     this.hasUnsavedMonthlyGrid = true;
+    this.dirtyMonthlyCells.add(`${row.personnel_id}-${dayItem.day}`);
     let h = parseFloat(dayItem.effective_hours as any) || 0;
     if (h < 0) h = 0;
     if (h > 24) h = 24;
@@ -1227,6 +1262,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
         d.overtime_hours = this.rangeOvertimeHours;
         d.is_friday_work = isFriday && this.rangeEffectiveHours > 0;
         d.is_mission = this.rangeStatus === 'MISSION';
+        this.dirtyMonthlyCells.add(`${row.personnel_id}-${d.day}`);
         affectedCount++;
       }
       row.total_hours = row.days.reduce((acc, d) => acc + (parseFloat(d.effective_hours as any) || 0), 0);
@@ -1308,7 +1344,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isImportingMonthlyExcel = false;
-        this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در پردازش فایل اکسل');
+        this.toast.show('error', attendanceWriteErrorMessage(err) || err?.error?.error || err?.error?.detail || 'خطا در پردازش فایل اکسل');
         this.cdr.detectChanges();
       }
     });
@@ -1325,9 +1361,14 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   submitPeriodForReview(): void {
+    if (!this.network.isOnline) {
+      this.toast.show('warning', 'ارسال دوره فقط آنلاین ممکن است.');
+      return;
+    }
     this.isSubmittingWorkflow = true;
     this.personnelApi.periodWorkflowAction({
       warehouse_id: this.selectedWarehouseId,
+      section_id: this.selectedSectionId,
       year_month: this.selectedYearMonth,
       action: 'submit',
       notes: this.submitNotes
@@ -1341,7 +1382,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSubmittingWorkflow = false;
-        this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در ارسال دوره جهت بررسی');
+        this.toast.show('error', attendanceActionErrorMessage(err, 'خطا در ارسال دوره جهت بررسی'));
         this.cdr.detectChanges();
       }
     });

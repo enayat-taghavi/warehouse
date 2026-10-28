@@ -442,7 +442,7 @@
     <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="p-4 border-b border-slate-100 flex items-center justify-between">
         <h2 class="text-sm font-black text-slate-800">لیست دوره‌های ماهانه کارکرد انبارها و وضعیت ارسال به مالی</h2>
-        <span class="text-xs text-slate-500 font-medium">تایید دوره ماهانه موجب قفل شدن ثبت تردد و ارسال آن به حسابداری جهت محاسبه حقوق می‌شود.</span>
+        <span class="text-xs text-slate-500 font-medium">تأیید دوره‌های کارکرد در «کارهای من» انجام می‌شود؛ این فهرست فقط نمایشی است.</span>
       </div>
 
       <div class="overflow-x-auto">
@@ -454,7 +454,7 @@
               <th class="p-3.5 text-center">دوره ماهانه</th>
               <th class="p-3.5 text-center">وضعیت دوره</th>
               <th class="p-3.5 text-center">تاریخ تایید/ارسال</th>
-              <th class="p-3.5 text-center">عملیات مدیر</th>
+              <th class="p-3.5 text-center">بررسی</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -470,10 +470,12 @@
               </td>
               <td class="p-3.5 text-center font-mono text-slate-500">{{ (wp.submitted_at | date:'yyyy/MM/dd') || '—' }}</td>
               <td class="p-3.5 text-center">
-                <div class="flex items-center justify-center gap-2">
-                  <button *ngIf="wp.status === 'OPEN' || wp.status === 'REJECTED'" type="button" appAction="send" display="label" label="ارسال به مالی" size="sm" (click)="submitPeriodForFinance(wp)"></button>
-                  <button *ngIf="wp.status === 'SUBMITTED' || wp.status === 'LOCKED'" type="button" appAction="unlock" label="بازگشایی دوره" size="sm" (click)="reopenPeriod(wp)"></button>
-                </div>
+                <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'attendance_period'}"
+                   class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
+                   title="تأیید و بازگشت دوره از کارهای من انجام می‌شود" aria-label="بررسی در کارهای من">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+                  <span class="hidden sm:inline">بررسی در کارهای من</span>
+                </a>
               </td>
             </tr>
             <tr *ngIf="workPeriods.length === 0">

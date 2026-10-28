@@ -192,53 +192,13 @@
   </div>
 
   <!-- ── ۳. مودال ارگونومیک و مدرن عودت کارکرد (In-App Revision Modal) ── -->
-  <div *ngIf="showRevisionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 fade-in" dir="rtl">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden space-y-4 p-5 animate-scale-up">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <div class="flex items-center gap-2">
-          <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-sm font-bold">⚠️</span>
-          <div>
-            <h3 class="text-sm font-black text-slate-800">عودت کارکرد جهت بازنگری</h3>
-            <p class="text-[11px] text-slate-500 font-mono">{{ revisionTargetItem?.personnel_name }} | {{ revisionTargetItem?.date_shamsi }}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          appAction="close"
-          size="sm"
-          display="icon"
-          (click)="closeRevisionModal()"
-        ></button>
-      </div>
-
-      <div class="space-y-2">
-        <label class="block text-xs font-bold text-slate-700">شرح علت عودت و اصلاحات موردنیاز <span class="text-rose-500">*</span></label>
-        <textarea
-          [(ngModel)]="revisionReasonText"
-          rows="3"
-          placeholder="مثال: ساعت اضافه‌کاری مغایر با مجوز سرپرستی است یا وضعیت به اشتباه ثبت شده..."
-          class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all font-sans"></textarea>
-      </div>
-
-      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-        <button
-          type="button"
-          appAction="close"
-          display="label"
-          label="انصراف"
-          (click)="closeRevisionModal()"
-        ></button>
-        <button
-          type="button"
-          appAction="return"
-          display="label"
-          label="ثبت عودت و ارجاع"
-          [busy]="isSubmittingRevision"
-          [disabled]="isSubmittingRevision || !revisionReasonText.trim()"
-          (click)="confirmRevision()"
-        ></button>
-      </div>
-    </div>
-  </div>
+  <app-workflow-reason-dialog
+    [open]="showRevisionModal"
+    [title]="'عودت کارکرد ' + (revisionTargetItem?.personnel_name || '') + ' ' + (revisionTargetItem?.date_shamsi || '')"
+    confirmLabel="ثبت عودت و ارجاع"
+    [serverError]="revisionServerError"
+    (confirmed)="confirmRevision($event)"
+    (cancelled)="closeRevisionModal()"
+  ></app-workflow-reason-dialog>
 
 </div>

@@ -26,6 +26,13 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { STATUS_ICONS, PLATFORM_ENTITY_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob, printWindow } from '../../../../../../core/platform/file-output';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
+
+/** وضعیت‌های قفل دوره کارکرد (از ارسال به بعد، ۴.۴ د۴) */
+const ATTENDANCE_LOCKED_STATUSES = [
+  'SUBMITTED', 'SUBMITTED_SUPERVISOR', 'SUBMITTED_ACCOUNTANT', 'READY_TO_PAY', 'PAID', 'LOCKED', 'FINALIZED'
+];
 
 export type AccountantPayrollSubTab = 'ready_to_calculate' | 'calculated' | 'approved' | 'all' | 'work_summary';
 
@@ -38,7 +45,8 @@ export type AccountantPayrollSubTab = 'ready_to_calculate' | 'calculated' | 'app
     SvgIconDirective,
     LoadingSkeletonComponent,
     TabBarComponent,
-    ActionButtonComponent
+    ActionButtonComponent,
+    WorkflowReasonDialogComponent
   ],
   templateUrl: './accountant-payroll.html',
   styleUrl: './accountant-payroll.css',
@@ -131,6 +139,8 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   currentPeriodId: number | null = null;
   periodStatus: string | null = null;
   isTogglingLock = false;
+  unlockDialogOpen = false;
+  unlockDialogServerError = '';
 
   // Summary Metrics (Mirroring reference Excel: حقوق تیر ماه انبارداری.xlsm)
   payrollSummary = {
@@ -203,7 +213,12 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   }
 
   get isPeriodLocked(): boolean {
-    return this.periodStatus === 'LOCKED';
+    return !!this.periodStatus && ATTENDANCE_LOCKED_STATUSES.includes(this.periodStatus);
+  }
+
+  /** محاسبه و ورود مالیات فقط پس از پرداخت یا بستن نهایی بسته است؛ دورهٔ در گردش یا READY_TO_PAY محاسبه می‌پذیرد. */
+  get isPayrollFrozen(): boolean {
+    return !!this.periodStatus && ['PAID', 'LOCKED', 'FINALIZED'].includes(this.periodStatus);
   }
 
   get canLockPeriod(): boolean {
@@ -211,9 +226,9 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     return p.includes('perm_lock_work_period') || p.includes('admin_all') || !!this.auth.user()?.is_superuser;
   }
 
-  /** بازگشایی دوره در بک‌اند فقط برای سوپریوزر مجاز است */
+  /** بازگشایی دوره: مدیر کل یا دارندهٔ مجوز بستن دوره (سرور نهایی تصمیم می‌گیرد) */
   get canUnlockPeriod(): boolean {
-    return !!this.auth.user()?.is_superuser;
+    return this.canLockPeriod;
   }
 
   ngOnInit(): void {
@@ -462,7 +477,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   }
 
   calculateBatch(): void {
-    if (this.isPeriodLocked) {
+    if (this.isPayrollFrozen) {
       this.toast.warning('دوره قفل شده است و امکان محاسبه مجدد ندارد.');
       return;
     }
@@ -491,13 +506,22 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     if (!this.currentPeriodId || this.isTogglingLock) return;
     const unlocking = this.isPeriodLocked;
     if (unlocking ? !this.canUnlockPeriod : !this.canLockPeriod) return;
+    if (!this.isOnline()) {
+      this.toast.error('این اقدام فقط آنلاین ممکن است.');
+      return;
+    }
+    if (unlocking) {
+      this.unlockDialogServerError = '';
+      this.unlockDialogOpen = true;
+      return;
+    }
 
-    // قفل را فقط مدیر ارشد باز می‌کند؛ پس پیش از قفل تأیید گرفته می‌شود
-    if (!unlocking && this.confirmDialog) {
+    // ارسال و قفل دوره به گردش می‌رود؛ پس پیش از آن تأیید گرفته می‌شود
+    if (this.confirmDialog) {
       const confirmed = await this.confirmDialog.open({
-        title: 'قفل نهایی دوره',
-        message: `دوره ${this.selectedMonth} ${this.fiscalYear} قفل می‌شود و دیگر محاسبهٔ دوباره نمی‌پذیرد. بازگشایی فقط با مدیر ارشد ممکن است.`,
-        confirmText: 'بله، قفل شود',
+        title: 'ارسال و قفل دوره',
+        message: `دوره ${this.selectedMonth} ${this.fiscalYear} برای تأیید به گردش کارکرد ارسال و قفل می‌شود. بازگشایی فقط با دلیل ممکن است.`,
+        confirmText: 'بله، ارسال و قفل شود',
         cancelText: 'انصراف',
         type: 'warning'
       });
@@ -505,22 +529,57 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     }
 
     this.isTogglingLock = true;
-    const req$ = unlocking
-      ? this.personnelApi.unlockPeriod(this.currentPeriodId)
-      : this.personnelApi.lockPeriod(this.currentPeriodId);
-    req$.subscribe({
+    this.personnelApi.lockPeriod(this.currentPeriodId).subscribe({
       next: (res: any) => {
         this.isTogglingLock = false;
-        this.periodStatus = unlocking ? 'OPEN' : 'LOCKED';
-        this.toast.info(res?.message || (unlocking ? 'دوره کارکرد بازگشایی شد.' : 'دوره کارکرد قفل شد.'));
+        this.periodStatus = res?.status || 'SUBMITTED';
+        this.toast.info(res?.message || 'دوره کارکرد ارسال و قفل شد.');
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isTogglingLock = false;
-        this.toast.error(err?.error?.error || 'خطا در تغییر وضعیت قفل دوره.');
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در ارسال و قفل دوره.'));
         this.cdr.detectChanges();
       }
     });
+  }
+
+  onUnlockReasonConfirmed(reason: string): void {
+    const text = (reason || '').trim();
+    if (!text) {
+      this.unlockDialogServerError = 'نوشتن دلیل الزامی است.';
+      return;
+    }
+    if (!this.currentPeriodId || this.isTogglingLock) return;
+    if (!this.isOnline()) {
+      this.toast.error('این اقدام فقط آنلاین ممکن است.');
+      return;
+    }
+    this.unlockDialogServerError = '';
+    this.isTogglingLock = true;
+    this.personnelApi.unlockPeriod(this.currentPeriodId, text).subscribe({
+      next: (res: any) => {
+        this.isTogglingLock = false;
+        this.unlockDialogOpen = false;
+        this.periodStatus = res?.status || 'OPEN';
+        this.toast.info(res?.message || 'دوره کارکرد بازگشایی شد.');
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.isTogglingLock = false;
+        this.unlockDialogServerError = attendanceActionErrorMessage(err, 'خطا در بازگشایی دوره.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  onUnlockCancelled(): void {
+    this.unlockDialogOpen = false;
+    this.unlockDialogServerError = '';
+  }
+
+  private isOnline(): boolean {
+    return typeof navigator === 'undefined' || navigator.onLine !== false;
   }
 
   approveSingle(item: any): void {

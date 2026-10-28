@@ -11,6 +11,8 @@ import { ProjectSection } from '../../../../models/personnel.model';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../../shared/icons/semantic-icons';
 
 @Component({
@@ -23,6 +25,7 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../../../shared/icons/semantic-i
     ActionButtonComponent,
     TabBarComponent,
     CommandCenterComponent,
+    WorkflowReasonDialogComponent,
   ],
   templateUrl: './supervisor-attendance.html',
   styleUrl: './supervisor-attendance.css'
@@ -83,7 +86,7 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   // Revision Modal State
   showRevisionModal = false;
   revisionTargetItem: any = null;
-  revisionReasonText = '';
+  revisionServerError = '';
   isSubmittingRevision = false;
 
   private routeSub?: Subscription;
@@ -286,14 +289,14 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         item.approval_status = oldStatus;
         this.applyFilter();
-        this.toast.error('خطا در تایید کارکرد پرسنل: ' + (err?.error?.error || err?.error?.detail || err?.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید کارکرد پرسنل'));
       }
     });
   }
 
   openRevisionModal(item: any): void {
     this.revisionTargetItem = item;
-    this.revisionReasonText = item.revision_reason || '';
+    this.revisionServerError = '';
     this.showRevisionModal = true;
     this.cdr.detectChanges();
   }
@@ -301,18 +304,19 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   closeRevisionModal(): void {
     this.showRevisionModal = false;
     this.revisionTargetItem = null;
-    this.revisionReasonText = '';
+    this.revisionServerError = '';
   }
 
-  confirmRevision(): void {
-    if (!this.revisionTargetItem) return;
-    const reason = this.revisionReasonText.trim();
+  confirmRevision(reasonText: string): void {
+    if (!this.revisionTargetItem || this.isSubmittingRevision) return;
+    const reason = (reasonText || '').trim();
     if (!reason) {
       this.toast.error('ثبت علت عودت و بازنگری کارکرد الزامی است.');
       return;
     }
 
     this.isSubmittingRevision = true;
+    this.revisionServerError = '';
     this.personnelApi.postCartableAction('supervisor', {
       action: 'revision',
       model: 'attendance',
@@ -327,7 +331,7 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSubmittingRevision = false;
-        this.toast.error('خطا در ثبت عودت کارکرد: ' + (err?.error?.error || err?.error?.detail || err?.message || 'نامشخص'));
+        this.revisionServerError = attendanceActionErrorMessage(err, 'خطا در ثبت عودت کارکرد');
         this.cdr.detectChanges();
       }
     });
@@ -351,7 +355,7 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
         this.fetchAttendanceData();
       },
       error: (err: any) => {
-        this.toast.error('خطا در تایید دسته‌ای کارکردها: ' + (err?.error?.error || err?.error?.detail || err?.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید دسته‌ای کارکردها'));
       }
     });
   }
