@@ -2,7 +2,7 @@
 Index page of the training videos (plan §3.5): Documents/Training_Videos/videos/index.html with each video's
 title, length and a player (desktop and mobile side by side), subtitles attached as a track when present.
 
-    tests/playwright/.venv/Scripts/python tools/index.py
+    tests/playwright/.venv-tools/Scripts/python tools/index.py
 """
 import html
 import json

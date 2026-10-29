@@ -3,7 +3,7 @@ Quality check frames (plan §3.1): N evenly spaced PNG frames from each finished
 
 Output: output/frames/<video>-<profile>-NN.png
 
-    tests/playwright/.venv/Scripts/python tools/frames.py [--only 00-intro] [--count 10]
+    tests/playwright/.venv-tools/Scripts/python tools/frames.py [--only 00-intro] [--count 10]
 """
 import argparse
 from pathlib import Path

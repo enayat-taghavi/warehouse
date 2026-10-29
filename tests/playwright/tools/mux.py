@@ -6,7 +6,7 @@ Input:  output/timeline/<video>-<profile>.json (written by helpers/video.ts), ou
         audio/manifest.json (make_audio.py).
 Output: Documents/Training_Videos/videos/<video>-<profile>.mp4 and .srt
 
-    tests/playwright/.venv/Scripts/python tools/mux.py [--only 00-intro]
+    tests/playwright/.venv-tools/Scripts/python tools/mux.py [--only 00-intro]
 """
 import argparse
 import json

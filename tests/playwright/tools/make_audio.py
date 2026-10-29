@@ -5,8 +5,9 @@ Reads every scenarios/*.captions.json, makes one mp3 per caption line with Edge 
 or env TV_VOICE) and writes audio/manifest.json: {"<video>/<id>": {"file": ..., "ms": ..., "sha": ...}}.
 Unchanged lines (same text and voice) are not fetched again.
 
-    tests/playwright/.venv/Scripts/python tools/make_audio.py [--only 00-intro]
+    tests/playwright/.venv-tools/Scripts/python tools/make_audio.py [--only 00-intro]
 """
+import nowmi  # noqa: F401  (first: WMI may hang)
 import argparse
 import asyncio
 import hashlib

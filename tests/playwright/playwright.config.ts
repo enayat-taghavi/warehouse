@@ -10,10 +10,10 @@
  * Order for one video (from tests/playwright):
  *   1. demo data (backend):  WH_ALLOW_SCENARIO_SEED=1 manage.py seed_video_demo --purge, then --admin or --base
  *   2. npx playwright test --project=desktop scenarios/00-intro.spec.ts      (VIDEO_MODE=test)
- *   3. .venv/Scripts/python tools/make_audio.py                              (captions -> audio/manifest.json)
+ *   3. .venv-tools/Scripts/python tools/make_audio.py                              (captions -> audio/manifest.json)
  *   4. reseed, then VIDEO_MODE=training npx playwright test --project=desktop scenarios/00-intro.spec.ts
  *   5. reseed, then the same with --project=mobile
- *   6. .venv/Scripts/python tools/mux.py; tools/frames.py; tools/index.py
+ *   6. .venv-tools/Scripts/python tools/mux.py; tools/frames.py; tools/index.py
  * Raw recordings and timelines go to output/; finished mp4/srt to Documents/Training_Videos/videos/.
  * Passwords are read from scratch/video_demo_credentials.json (written by seed_video_demo; never printed).
  */

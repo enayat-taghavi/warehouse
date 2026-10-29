@@ -43,7 +43,8 @@ desktop.ini
 
 # Training videos (Playwright), plan Documents/Training_Videos
 tests/playwright/node_modules/
-tests/playwright/.venv/
+tests/playwright/.venv-tools/
 tests/playwright/output/
 tests/playwright/audio/
 Documents/Training_Videos/videos/
+tests/playwright/.venv/

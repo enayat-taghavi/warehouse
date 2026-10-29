@@ -3715,8 +3715,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -X utf8 scratch/check_v_a.py
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow "tests/playwright/scenarios/*"
+verify: python -X utf8 scratch/check_v_a.py --base {base}
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
@@ -3725,17 +3724,18 @@ verify: python scripts/automation/verify_tools.py clean-tree
    - You may edit ONLY files under `tests/playwright/scenarios/`, and only to fix how an element is found (locator, wait, timeout). Never change what the scenario checks, never edit app code (`frontend/`, `backend/`), helpers, tools, config, `scripts/` or `tasks.md`.
    - Never print, open or copy `scratch/video_demo_credentials.json`, `.env` or any password. Never touch `soft.farsalish.ir`.
    - Run every command in the foreground and wait for it to finish. PowerShell syntax.
+   - Windows WMI hangs on this machine: never run `Get-Process`, `Stop-Process`, `Get-CimInstance`, `Get-WmiObject`, `tasklist` or `taskkill`; they never return. Never delete or recreate `tests\playwright\.venv` or `tests\playwright\.venv-tools` (the old `.venv` is locked and unused; `.venv-tools` is ready).
    - If a step fails twice after your fixes, write the exact error in your report and continue with the next step. Step g always runs.
 
 2. Context: `tests/playwright/` holds Playwright training videos (plan `Documents/Training_Videos/plan_training_videos.md`). `VIDEO_MODE=test` is a fast check without video; `VIDEO_MODE=training` records a slow video with captions. `BASE_URL` defaults to `https://app.farsalish.ir`. Demo users come from `manage.py seed_video_demo` (passwords go to the credentials file, which the scenario reads by itself). Video 0 is `tests/playwright/scenarios/00-intro.spec.ts` and logs in as `demo_admin`. `node_modules` and `.venv` in `tests/playwright` may already exist.
 
 3. Task, in this order:
-   - a) In `tests\playwright`: if `node_modules\@playwright\test` is missing run `npm install --no-audit --no-fund`; run `.\.venv\Scripts\python.exe -c "import edge_tts, imageio_ffmpeg"`; if that fails (the folder may be a half-made venv), run `Remove-Item -Recurse -Force .venv`, then `python -m venv .venv`, then `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`, and run the import line again (it must succeed).
+   - a) In `tests\playwright`: if `node_modules\@playwright\test` is missing run `npm install --no-audit --no-fund`. The Python tools environment `.venv-tools` is already installed; do not touch it.
    - b) In `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\va_seed.txt 2>&1; .\venv\Scripts\python.exe manage.py seed_video_demo --admin >> ..\scratch\logs\va_seed.txt 2>&1`, then read the file (it must say the demo data was created).
    - c) In `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=desktop --reporter=list > ..\..\scratch\logs\va_test_desktop.txt 2>&1`, then the same with `--project=mobile` into `va_test_mobile.txt`. Both must end with `1 passed`. On failure read the log and `output\test-results\*\error-context.md`, fix only the locator in the scenario file, and run again (at most 3 attempts per profile).
-   - d) In `tests\playwright`: `.\.venv\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\va_audio.txt 2>&1`, then read the file.
+   - d) In `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\va_audio.txt 2>&1`, then read the file.
    - e) In `tests\playwright`: `$env:VIDEO_MODE='training'; npx playwright test --project=desktop --reporter=list > ..\..\scratch\logs\va_train_desktop.txt 2>&1`, then the same with `--project=mobile` into `va_train_mobile.txt`. Both must end with `1 passed`.
-   - f) In `tests\playwright`: `.\.venv\Scripts\python.exe -X utf8 tools\mux.py > ..\..\scratch\logs\va_mux.txt 2>&1`, then `.\.venv\Scripts\python.exe -X utf8 tools\frames.py > ..\..\scratch\logs\va_frames.txt 2>&1`, then `.\.venv\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\va_index.txt 2>&1`; read the three files.
+   - f) In `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\mux.py > ..\..\scratch\logs\va_mux.txt 2>&1`, then `.\.venv-tools\Scripts\python.exe -X utf8 tools\frames.py > ..\..\scratch\logs\va_frames.txt 2>&1`, then `.\.venv-tools\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\va_index.txt 2>&1`; read the three files.
    - g) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\va_purge.txt 2>&1`, then read the file.
    - h) If you changed a scenario file, commit only that file with the subject `test(training-videos v-a): selector fixes for video 0`.
 
