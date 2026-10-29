@@ -106,3 +106,16 @@ class SeedVideoDemoTests(TestCase):
         self.assertEqual(ExpenseInvoice.objects.filter(invoice_number='DEMO-INV-100').count(), 1)
         self._run(purge=True)
         self.assertFalse(Company.objects.filter(code='DEMO-VID').exists())
+
+    def test_with_petty_account_and_purge(self):
+        from personnel.models import PettyCashAccount
+
+        with self.assertRaises(CommandError):
+            self._run(admin=True, with_petty_account=True)
+        self._run(base=True, with_petty_account=True)
+        self._run(base=True, with_petty_account=True)
+        account = PettyCashAccount.objects.get(company__code='DEMO-VID', custodian__username='demo_employee')
+        self.assertEqual((account.ceiling_amount, account.opening_balance, account.is_active),
+                         (50_000_000, 30_000_000, True))
+        self._run(purge=True)
+        self.assertFalse(PettyCashAccount.objects.filter(pk=account.pk).exists())

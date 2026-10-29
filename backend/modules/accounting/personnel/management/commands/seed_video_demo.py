@@ -17,6 +17,9 @@
 
 `--with-invoice` (فقط با `--base`) یک فاکتور نمایشی کارمند می‌سازد و از راه همان موتور گردش کار جلو می‌برد:
 `submitted` = در کارتابل سرپرست (فیلم ۳-ب)، `approved` = تأیید سرپرست، حسابدار و مدیر و در کارتابل خزانه (فیلم ۳-ج).
+
+`--with-petty-account` (فقط با `--base`) حساب تنخواه `demo_employee` را با سقف و موجودی اولیه می‌سازد تا
+قسمت‌های ۴-ب و ۴-ج فیلم تنخواه جدا ضبط شوند (۴-الف حساب را خودش از راه صفحه می‌سازد).
 """
 import json
 import os
@@ -46,6 +49,8 @@ BASE_USERS = (
 DEMO_USERNAMES = (ADMIN, *(row[0] for row in BASE_USERS))
 INVOICE_STAGES = ('submitted', 'approved')
 DEMO_INVOICE_NUMBER = 'DEMO-INV-100'
+PETTY_CEILING = 50_000_000
+PETTY_OPENING = 30_000_000
 PURGE_ROUNDS = 25
 OWNER_DEPTH = 4
 
@@ -65,6 +70,8 @@ class Command(BaseCommand):
         group.add_argument('--base', action='store_true', help="مدیر، شرکت نمایشی، کاربرها و تنظیمات پایهٔ حسابداری")
         group.add_argument('--purge', action='store_true', help="شرکت DEMO-VID و کاربرهای demo_* را پاک کن")
         parser.add_argument('--with-invoice', choices=INVOICE_STAGES, help="با --base: فاکتور نمایشی تا این مرحله")
+        parser.add_argument('--with-petty-account', action='store_true',
+                            help="با --base: حساب تنخواه demo_employee با سقف و موجودی اولیه")
 
     def handle(self, *args, **opts):
         if os.environ.get('WH_ALLOW_SCENARIO_SEED') != '1':
@@ -72,8 +79,8 @@ class Command(BaseCommand):
         if opts['purge']:
             self._purge()
             return
-        if opts.get('with_invoice') and not opts['base']:
-            raise CommandError("--with-invoice فقط همراه --base می‌آید.")
+        if (opts.get('with_invoice') or opts.get('with_petty_account')) and not opts['base']:
+            raise CommandError("--with-invoice و --with-petty-account فقط همراه --base می‌آیند.")
         credentials = self._read_credentials()
         with transaction.atomic():
             credentials[ADMIN] = self._user(ADMIN, 'مدیر', 'نمایشی', superuser=True)
@@ -82,6 +89,8 @@ class Command(BaseCommand):
         self._write_credentials(credentials)
         if opts.get('with_invoice'):
             self._invoice(opts['with_invoice'])
+        if opts.get('with_petty_account'):
+            self._petty_account()
         self.stdout.write(self.style.SUCCESS(
             f"دادهٔ نمایشی ساخته شد ({len(credentials)} کاربر)؛ رمزها در {CREDENTIALS_FILE}"))
 
@@ -172,6 +181,19 @@ class Command(BaseCommand):
                 for username in ('demo_supervisor', 'demo_accountant', 'demo_manager'):
                     task = wf_engine.open_task(INVOICE_WORKFLOW, invoice.pk)
                     wf_engine.act(users[username], task, obj=invoice)
+
+    @staticmethod
+    def _petty_account():
+        """حساب تنخواه فعال کارمند نمایشی در شرکت نمایشی (اگر نباشد) با سقف و موجودی اولیهٔ اول سال."""
+        from personnel.models import PettyCashAccount
+
+        company = Company.objects.get(code=COMPANY_CODE)
+        employee = get_user_model().objects.get(username='demo_employee')
+        if PettyCashAccount.objects.filter(company=company, custodian=employee, is_active=True).exists():
+            return
+        PettyCashAccount.objects.create(
+            company=company, custodian=employee, ceiling_amount=PETTY_CEILING,
+            opening_balance=PETTY_OPENING, opening_balance_date='1405/01/01')
 
     # ─── رمزها ───
     @staticmethod
