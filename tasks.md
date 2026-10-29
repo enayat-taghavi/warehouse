@@ -3816,7 +3816,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 3 — Training videos v-b: Daphne and the GDrive worker are down after Session 2; the runner restarts them, then check that app answers
+[DONE] [ ] Session 3 — Training videos v-b: Daphne and the GDrive worker are down after Session 2; the runner restarts them, then check that app answers
 
 <!-- runner
 require: python scripts/automation/verify_tools.py release-mark
