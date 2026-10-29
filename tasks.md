@@ -3518,7 +3518,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 5-d2 on the local app environment: backup, web build with the ngsw patch (frontend only, no backend restart), check the standard PWA manifest and PNG icons on app.farsalish.ir
+[DONE] [ ] Session 1 of 1 — Release v1 step 5-d2 on the local app environment: backup, web build with the ngsw patch (frontend only, no backend restart), check the standard PWA manifest and PNG icons on app.farsalish.ir
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
