@@ -3697,7 +3697,7 @@ verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5heavy.py s4
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
-1. Critical rules: exactly the critical rules of Session 2 of 3 above (same file), unchanged. The runner already restarted Daphne before your turn; do not restart anything.
+1. Critical rules: exactly the critical rules of Session 2 of 3 above (same file), unchanged. The runner already restarted Daphne before your turn; do not restart anything. Never edit `scripts/automation/verify_tools.py` or any other tracked file. If the expense still fails to send after reconnect, open the queue indicator, save `scratch/logs/android5h4_queue_error.png`, dump the UI, report the exact error text, and continue with steps f and g; do not investigate the server.
 
 2. Context: in Session 2 the offline petty cash expense stayed in the device queue across a force-stop and was sent after reconnecting, but the server answered `POST 400: custodian: This field is required.` Commit `885753a7` fixed that on the server (the employee form does not send `custodian`; the server now uses the logged-in user). Same app, same emulator, same helper `scratch/heavy/qa5h.py`, same login coordinates and element-finding method as Session 2.
 

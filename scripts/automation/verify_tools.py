@@ -314,9 +314,11 @@ def cmd_restart_backend(args) -> int:
             return False
         return "-m daphne" in cl and "-p 8000" in cl
 
+    daphne_pids = set()
     roots = set()
     for p in psutil.process_iter():
         if is_daphne(p):
+            daphne_pids.add(p.pid)
             top = p
             for parent in p.parents():
                 if is_daphne(parent):
@@ -324,14 +326,33 @@ def cmd_restart_backend(args) -> int:
                 else:
                     break
             roots.add(top.pid)
+    for pid in sorted(daphne_pids):
+        try:
+            psutil.Process(pid).kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
     for pid in sorted(roots):
-        r = subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, text=True,
-                           encoding="utf-8", errors="replace")
-        print(f"taskkill {pid}: {(r.stdout or r.stderr).strip()[:200]}")
+        # taskkill گاهی خودش گیر می‌کند (۷ آبان ۱۴۰۵)؛ کشتن با psutil بالا و پورت پایین کار اصلی را می‌کند.
+        try:
+            r = subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=30)
+            print(f"taskkill {pid}: {(r.stdout or r.stderr).strip()[:200]}")
+        except subprocess.TimeoutExpired:
+            print(f"taskkill {pid}: timed out")
+    for c in psutil.net_connections(kind="tcp"):
+        if c.laddr and c.laddr.port == 8000 and c.pid:
+            try:
+                psutil.Process(c.pid).kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
     deadline = time.time() + 20
     while time.time() < deadline and any(c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN
                                          for c in psutil.net_connections(kind="tcp")):
         time.sleep(1)
+    if any(c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN
+           for c in psutil.net_connections(kind="tcp")):
+        print("Port 8000 still busy before starting Daphne.")
+        return 1
     subprocess.run(list(DAPHNE_TAB))
     deadline = time.time() + 90
     while time.time() < deadline:
