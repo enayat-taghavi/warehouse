@@ -15180,3 +15180,66 @@ Write the definitions in simple Persian like the rows above.
 کاربر درخواست تکمیل مراحل باقی‌مانده از تست سناریوی آزمایشی انتشار نسخه ۱ روی شبیه‌ساز اندروید (مرحله ۵-c جلسه ۳) را داشت: بررسی باز شدن «کارهای من» از اعلان‌ها، عملکرد دکمه بازگشت (Back) در هنگام باز بودن دیالوگ، سناریوی صف آفلاین با فعال‌سازی حالت هواپیما، بررسی نمایش فیلد متمرکز بالای صفحه‌کلید (Keyboard)، بررسی همگام...
 
 ---
+
+### Task 1 of 1 — 2026-10-29 04:46:29
+- **Status:** DONE
+- **Conversation:** `271ab740-3041-48c8-8538-1d649484fd09`
+- **Steps:** 44
+- **Tokens:** 61341
+- **Duration:** 3m 42s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release v1 step 5-d1 on the local app environment: backup, install pywebpush in the venv, create the VAPID key file (never overwrite, never print), add two web push lines to backend/.env if absent, apply notifications migration 0004; the runner restarts Daphne and the worker and checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a backend release only. Do not edit, create, stage or commit any tracked file. The only files you may write are `backend/.env` (append only, step d), the new key file in step c, and files under `scratch/logs/`. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the worker after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Do not build the frontend or any APK.
+- Do not run `run_auto_backup`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`. Apply migrations only in step e, only after the backup of step a.
+- Never print, display or copy the content of any file in `E:\warehouse-secrets\` or of `backend/.env`. Never run `Get-Content` or `type` on them. Test presence only with `Select-String -Quiet` or `Test-Path`.
+
+2. Context: Release v1 step 5-d1 (latest commit on `main`) added standard Web Push (VAPID) to the backend: model `WebPushSubscription` with migration `notifications 0004_webpushsubscription` (one new table, additive), API under `/api/notifications/webpush/`, the new dependency `pywebpush==2.5.0` in `backend/requirements.txt`, and the command `generate_vapid_keys --out <file>` that creates a PEM private key, refuses to overwrite an existing file and prints only the public key. Settings read `WEBPUSH_VAPID_PRIVATE_KEY_FILE` and `WEBPUSH_VAPID_SUBJECT` from the environment or `backend/.env`. Without the key, web push is off and the bell still works. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app step 5-d1'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Dependencies: `.\venv\Scripts\python.exe -m pip install -r requirements.txt > ..\scratch\logs\pip5d1.txt 2>&1`, then read the last 5 lines of that file. pywebpush 2.5.0 may already be installed; report whether anything new was installed and any error.
+- c) VAPID key: `Test-Path E:\warehouse-secrets\comanage\webpush_vapid.pem`. If it prints `False`, run `.\venv\Scripts\python.exe manage.py generate_vapid_keys --out E:\warehouse-secrets\comanage\webpush_vapid.pem` and keep only the line that starts with `Public key:` for the report. If it prints `True`, skip creation and never overwrite or delete the file.
+- d) `backend/.env` (append only, never print it):
+  - First, only if `(Get-Item .env).Length -gt 0` and `[IO.File]::ReadAllBytes('.env')[-1] -ne 10` is True, run `Add-Content -Path .env -Value '' -Encoding utf8` once so the next line does not join the last line (this reads bytes and prints nothing of the content).
+  - `Select-String -Path .env -Pattern '^WEBPUSH_VAPID_PRIVATE_KEY_FILE=' -Quiet`. If it prints `False`, run `Add-Content -Path .env -Value 'WEBPUSH_VAPID_PRIVATE_KEY_FILE=E:\warehouse-secrets\comanage\webpush_vapid.pem' -Encoding utf8`.
+  - `Select-String -Path .env -Pattern '^WEBPUSH_VAPID_SUBJECT=' -Quiet`. If it prints `False`, run `Add-Content -Path .env -Value 'WEBPUSH_VAPID_SUBJECT=mailto:admin@farsalish.ir' -Encoding utf8`.
+  - Report which lines were added.
+- e) Migrations: `.\venv\Scripts\python.exe manage.py showmigrations notifications`, then `.\venv\Scripts\python.exe manage.py migrate notifications > ..\scratch\logs\migrate5d1.txt 2>&1` and read that file. Only `notifications.0004_webpushsubscription` should be applied. If it lists any other migration to apply, or fails, stop and report the exact output.
+- f) Check: `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\check_5d1.py` (prints OK or FAIL with reasons; it prints no key and no path).
+
+4. Tool policy: only the commands above, `git status --short`, `Test-Path`, `Select-String -Quiet`, `Add-Content` on `backend/.env`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `scratch/heavy/check_5d1.py` printed OK; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the pip result, whether the key file was created or already existed (and the `Public key:` line if created), which `.env` lines were added, the migration output lines, and the check line. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست کاربر
+درخواست برای انتشار مرحله `v1 step 5-d1` مربوط به وب‌پوش (Web Push VAPID) روی محیط لوکال `app` شامل مراحل زیر بود:
+1. تهیه نسخه پشتیبان از پایگاه داده (Backup).
+2. بررسی و نصب وابستگی‌های پایتون (`pywebpush==2.5.0`) در محیط مجازی.
+3. تولید کلید‌های VAPID در مسیر امن `E:\warehouse-secrets\comanage\webpush_vapid.pem` (در صورت عدم وجود).
+4. اضافه کردن متغیرهای تنظیماتی مربوطه به انتهای فایل `backend/.env`.
+5. اعمال مایگریشن `notifications.0004_webpushsubscription`.
+6. اعتبارسنجی با اجرای اسکریپت تست سلامت (`check_5d1.py`).
+
+### ۲. اعتبارسنجی فنی و نتایج اجرا
+تمامی مراحل با موفقیت کامل و بدون خطا در پیش‌زمینه اجرا شدند و وضعیت Git کا...
+
+---

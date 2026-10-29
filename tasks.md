@@ -3473,7 +3473,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Release v1 step 5-d1 on the local app environment: backup, install pywebpush in the venv, create the VAPID key file (never overwrite, never print), add two web push lines to backend/.env if absent, apply notifications migration 0004; the runner restarts Daphne and the worker and checks
+[DONE] [ ] Session 1 of 1 — Release v1 step 5-d1 on the local app environment: backup, install pywebpush in the venv, create the VAPID key file (never overwrite, never print), add two web push lines to backend/.env if absent, apply notifications migration 0004; the runner restarts Daphne and the worker and checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
