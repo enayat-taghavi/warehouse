@@ -287,7 +287,9 @@ export class TreasuryOrgApiService {
   /** فاکتور تکراری: بی دلیل → ۴۰۰ `duplicate_reason_required` */
   submitExpenseInvoice(id: number, duplicateReason?: string): Observable<ExpenseInvoice> {
     const body = duplicateReason ? { duplicate_reason: duplicateReason } : {};
-    return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/submit/`, body);
+    // صفحه همهٔ خطاهای ارسال را خودش نشان می‌دهد (و ۴۰۰ تکراری فقط پنجرهٔ دلیل را باز می‌کند)؛ پیام قرمز عمومی نه
+    return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/submit/`, body,
+      { context: new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true) });
   }
 
   approveExpenseInvoice(id: number): Observable<ExpenseInvoice> {

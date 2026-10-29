@@ -730,6 +730,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'تاریخ فاکتور الزامی است.');
       return false;
     }
+    // سرور شرح خالی را با ۴۰۰ رد می‌کند؛ همین‌جا پیام روشن داده می‌شود
+    if (!this.newInvoice.description?.trim()) {
+      this.toast.show('warning', 'شرح و جزئیات هزینه الزامی است.');
+      return false;
+    }
     this.lineErrors = {};
     this.linesError = '';
     this.formLines.forEach((l, i) => {
