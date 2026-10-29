@@ -505,9 +505,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /** پیش‌نویس یا برگشتی برای اصلاح: ویرایش و ارسال دوباره (مثل INVOICE_EDITABLE_STATUSES سرور) */
+  isEditable(inv: ExpenseInvoice): boolean {
+    return inv.status === 'draft' || inv.status === 'revision_required';
+  }
+
   /** ویرایش پیش‌نویس (ردیف‌ها با یک درخواست جایگزین می‌شوند) */
   openEditInvoiceModal(inv: ExpenseInvoice): void {
-    if (!inv.id || inv.status !== 'draft') {
+    if (!inv.id || !this.isEditable(inv)) {
       this.toast.show('warning', 'فقط فاکتورهای پیش‌نویس قابل ویرایش‌اند.');
       return;
     }
@@ -973,8 +978,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   // ─── ارسال فاکتور پیش‌نویس به سرپرست کارگاه ───
   async sendToSupervisor(invoice: ExpenseInvoice): Promise<void> {
     if (!invoice.id) return;
-    if (invoice.status !== 'draft') {
-      this.toast.show('warning', 'فقط فاکتورهای پیش‌نویس قابلیت ارسال به سرپرست را دارند.');
+    if (!this.isEditable(invoice)) {
+      this.toast.show('warning', 'فقط فاکتورهای پیش‌نویس یا برگشتی برای اصلاح قابلیت ارسال به سرپرست را دارند.');
       return;
     }
 

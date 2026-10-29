@@ -273,7 +273,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
   rejectSingle(item: ExpenseInvoice): void {
     if (!item.id) return;
     this.pendingRejectInvoice = item;
-    this.reasonDialogTitle = `علت عودت / رد فاکتور شماره ${item.invoice_number || ''}`;
+    this.reasonDialogTitle = `علت عودت فاکتور شماره ${item.invoice_number || ''} برای اصلاح`;
     this.reasonDialogConfirmLabel = 'عودت فاکتور';
     this.reasonDialogServerError = '';
     this.isReasonDialogOpen = true;
@@ -283,12 +283,13 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     if (!this.pendingRejectInvoice?.id) return;
     const invNumber = this.pendingRejectInvoice.invoice_number || '';
     this.isLoading = true;
-    this.personnelApi.rejectExpenseInvoice(this.pendingRejectInvoice.id, reason).subscribe({
+    // «عودت» = برگشت به کارمند برای اصلاح (مثل حسابدار)، نه رد همیشگی (تصمیم کاربر، ۳۰ اکتبر ۲۰۲۶)
+    this.personnelApi.requestRevisionExpenseInvoice(this.pendingRejectInvoice.id, reason).subscribe({
       next: () => {
         this.isLoading = false;
         this.isReasonDialogOpen = false;
         this.pendingRejectInvoice = null;
-        this.toast.warning(`فاکتور شماره ${invNumber} با ثبت اشکال عودت داده شد.`);
+        this.toast.warning(`فاکتور شماره ${invNumber} برای اصلاح به کارمند برگشت.`);
         this.fetchInvoices();
       },
       error: (err: any) => {

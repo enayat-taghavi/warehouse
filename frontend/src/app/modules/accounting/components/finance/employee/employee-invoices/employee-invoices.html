@@ -201,7 +201,7 @@
                 
                 <!-- ارسال به سرپرست (فقط برای پیش‌نویس) -->
                 <button
-                  *ngIf="inv.status === 'draft'"
+                  *ngIf="isEditable(inv)"
                   type="button"
                   appAction="send"
                   display="label"
@@ -214,7 +214,7 @@
 
                 <!-- ویرایش پیش‌نویس -->
                 <button
-                  *ngIf="inv.status === 'draft'"
+                  *ngIf="isEditable(inv)"
                   type="button"
                   appAction="edit"
                   label="ویرایش"
@@ -259,7 +259,7 @@
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
-                <span *ngIf="inv.status !== 'draft'" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100">
+                <span *ngIf="!isEditable(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100">
                   🔒 قفل
                 </span>
               </div>

@@ -295,7 +295,17 @@ export class TrainingVideo {
   async loginAs(username: string, captionId?: string): Promise<void> {
     await this.page.context().clearCookies();
     await this.page.goto('/login');
-    await this.page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+    // the offline cache (IndexedDB) of the previous user would otherwise be read first by the next one
+    await this.page.evaluate(async () => {
+      localStorage.clear();
+      sessionStorage.clear();
+      const dbs = (await indexedDB.databases?.()) ?? [];
+      await Promise.all(dbs.map((db) => new Promise<void>((done) => {
+        if (!db.name) return done();
+        const req = indexedDB.deleteDatabase(db.name);
+        req.onsuccess = req.onerror = req.onblocked = () => done();
+      })));
+    });
     await this.page.goto('/login');
     await this.act.fill(this.page.getByLabel('نام کاربری', { exact: true }), username);
     await this.act.fillSecret(this.page.getByLabel('رمز عبور', { exact: true }), password(username));

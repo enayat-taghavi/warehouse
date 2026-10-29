@@ -271,15 +271,15 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
 
   isReasonDialogOpen = false;
   reasonDialogTitle = '';
-  reasonDialogConfirmLabel = 'بازگرداندن به سرپرست';
+  reasonDialogConfirmLabel = 'عودت فاکتور';
   reasonDialogServerError = '';
   pendingRejectInvoice: ExpenseInvoice | null = null;
 
   rejectDocument(item: ExpenseInvoice): void {
     if (!item.id) return;
     this.pendingRejectInvoice = item;
-    this.reasonDialogTitle = `علت بازگرداندن فاکتور شماره ${item.invoice_number || ''} به سرپرست`;
-    this.reasonDialogConfirmLabel = 'بازگرداندن به سرپرست';
+    this.reasonDialogTitle = `علت عودت فاکتور شماره ${item.invoice_number || ''} برای اصلاح`;
+    this.reasonDialogConfirmLabel = 'عودت فاکتور';
     this.reasonDialogServerError = '';
     this.isReasonDialogOpen = true;
   }
