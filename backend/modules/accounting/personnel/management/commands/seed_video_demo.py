@@ -13,6 +13,10 @@
     WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_video_demo --purge
     WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_video_demo --admin
     WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_video_demo --base
+    WH_ALLOW_SCENARIO_SEED=1 python manage.py seed_video_demo --base --with-invoice submitted
+
+`--with-invoice` (فقط با `--base`) یک فاکتور نمایشی کارمند می‌سازد و از راه همان موتور گردش کار جلو می‌برد:
+`submitted` = در کارتابل سرپرست (فیلم ۳-ب)، `approved` = تأیید سرپرست، حسابدار و مدیر و در کارتابل خزانه (فیلم ۳-ج).
 """
 import json
 import os
@@ -40,6 +44,8 @@ BASE_USERS = (
     ('demo_treasury', 'حسین', 'خزانه‌دار', 'treasury', 'company'),
 )
 DEMO_USERNAMES = (ADMIN, *(row[0] for row in BASE_USERS))
+INVOICE_STAGES = ('submitted', 'approved')
+DEMO_INVOICE_NUMBER = 'DEMO-INV-100'
 PURGE_ROUNDS = 25
 OWNER_DEPTH = 4
 
@@ -58,6 +64,7 @@ class Command(BaseCommand):
         group.add_argument('--admin', action='store_true', help="فقط مدیر نمایشی demo_admin")
         group.add_argument('--base', action='store_true', help="مدیر، شرکت نمایشی، کاربرها و تنظیمات پایهٔ حسابداری")
         group.add_argument('--purge', action='store_true', help="شرکت DEMO-VID و کاربرهای demo_* را پاک کن")
+        parser.add_argument('--with-invoice', choices=INVOICE_STAGES, help="با --base: فاکتور نمایشی تا این مرحله")
 
     def handle(self, *args, **opts):
         if os.environ.get('WH_ALLOW_SCENARIO_SEED') != '1':
@@ -65,12 +72,16 @@ class Command(BaseCommand):
         if opts['purge']:
             self._purge()
             return
+        if opts.get('with_invoice') and not opts['base']:
+            raise CommandError("--with-invoice فقط همراه --base می‌آید.")
         credentials = self._read_credentials()
         with transaction.atomic():
             credentials[ADMIN] = self._user(ADMIN, 'مدیر', 'نمایشی', superuser=True)
             if opts['base']:
                 credentials.update(self._base())
         self._write_credentials(credentials)
+        if opts.get('with_invoice'):
+            self._invoice(opts['with_invoice'])
         self.stdout.write(self.style.SUCCESS(
             f"دادهٔ نمایشی ساخته شد ({len(credentials)} کاربر)؛ رمزها در {CREDENTIALS_FILE}"))
 
@@ -123,6 +134,44 @@ class Command(BaseCommand):
             Counterparty.objects.create(company=company, name='فروشگاه لوازم اداری نمونه', counterparty_type='other',
                                         phone='02188000000')
         return credentials
+
+    @staticmethod
+    def _invoice(stage):
+        """فاکتور نمایشی کارمند (دو ردیف با مالیات) که از راه موتور گردش کار تا `stage` جلو می‌رود."""
+        from decimal import Decimal
+
+        from workflow import engine as wf_engine
+        from personnel.invoice_services import ensure_invoice_number
+        from personnel.models import Counterparty, ExpenseHead, ExpenseInvoice, ExpenseInvoiceLine
+        from personnel.workflows import INVOICE_WORKFLOW
+
+        company = Company.objects.get(code=COMPANY_CODE)
+        if ExpenseInvoice.objects.filter(section__project__company=company,
+                                         invoice_number=DEMO_INVOICE_NUMBER).exists():
+            return
+        users = {u.username: u for u in get_user_model().objects.filter(username__in=DEMO_USERNAMES)}
+        section = ProjectSection.objects.get(project__company=company, code='DEMO-S1')
+        head = ExpenseHead.objects.get(company=company, code='5001')
+        counterparty = Counterparty.objects.filter(party__company=company).order_by('pk').first()
+        with transaction.atomic():
+            invoice = ExpenseInvoice.objects.create(
+                section=section, counterparty=counterparty, invoice_number=DEMO_INVOICE_NUMBER,
+                invoice_date_shamsi='1405/08/01', amount=Decimal('0'), vat_amount=Decimal('2200000'),
+                description='خرید لوازم کلاس آموزشی', created_by=users['demo_employee'])
+            lines = (('ماژیک وایت‌برد', '10', '500000'), ('کاغذ A4', '4', '4250000'))
+            for pos, (description, quantity, price) in enumerate(lines, start=1):
+                ExpenseInvoiceLine.objects.create(invoice=invoice, position=pos, description=description,
+                                                  quantity=Decimal(quantity), unit_price=Decimal(price),
+                                                  expense_head=head)
+            invoice.subtotal = sum(line.line_amount for line in invoice.lines.all())
+            invoice.amount = invoice.subtotal + invoice.vat_amount
+            invoice.save()
+            wf_engine.submit(INVOICE_WORKFLOW, invoice, users['demo_employee'])
+            ensure_invoice_number(invoice, users['demo_employee'])
+            if stage == 'approved':
+                for username in ('demo_supervisor', 'demo_accountant', 'demo_manager'):
+                    task = wf_engine.open_task(INVOICE_WORKFLOW, invoice.pk)
+                    wf_engine.act(users[username], task, obj=invoice)
 
     # ─── رمزها ───
     @staticmethod
@@ -197,6 +246,10 @@ class Command(BaseCommand):
         ردیفی که حذف را با PROTECT/RESTRICT بسته فقط وقتی پاک می‌شود که از راه کلیدهایش تنها به شرکت نمایشی
         برسد؛ کاربر، شرکت دیگر یا ردیف بی‌صاحب کل کار را برمی‌گرداند (اتمیک بیرونی).
         """
+        # ردیف بازدارنده ممکن است ناقص (فیلدهای deferred) باشد یا در حذف بازدارندهٔ قبلی رفته باشد؛ از نو خوانده می‌شود
+        obj = type(obj)._base_manager.filter(pk=obj.pk).first()
+        if obj is None:
+            return
         if isinstance(obj, (get_user_model(), Company)) or self._owner_companies(obj) != {demo_id}:
             raise CommandError(
                 f"حذف شرکت نمایشی به دادهٔ بیرون از آن می‌رسد ({obj._meta.label}#{obj.pk})؛ چیزی پاک نشد.")

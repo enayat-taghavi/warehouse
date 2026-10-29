@@ -83,3 +83,26 @@ class SeedVideoDemoTests(TestCase):
         with self.assertRaises(CommandError):
             command._delete_blocker(other_head, demo.pk)
         self.assertTrue(ExpenseHead.objects.filter(pk=other_head.pk).exists())
+
+    def test_with_invoice_stages_and_purge(self):
+        from personnel.models import ExpenseInvoice
+        from personnel.workflows import INVOICE_WORKFLOW
+        from workflow import engine as wf_engine
+
+        with self.assertRaises(CommandError):
+            self._run(admin=True, with_invoice='submitted')
+        self._run(base=True, with_invoice='submitted')
+        invoice = ExpenseInvoice.objects.get(invoice_number='DEMO-INV-100')
+        self.assertTrue(invoice.number)
+        self.assertEqual(invoice.amount, invoice.subtotal + invoice.vat_amount)
+        self.assertEqual(wf_engine.open_task(INVOICE_WORKFLOW, invoice.pk).step_key, 'supervisor_ok')
+        self._run(purge=True)
+        self.assertFalse(ExpenseInvoice.objects.filter(pk=invoice.pk).exists())
+
+        self._run(base=True, with_invoice='approved')
+        invoice = ExpenseInvoice.objects.get(invoice_number='DEMO-INV-100')
+        self.assertEqual(wf_engine.open_task(INVOICE_WORKFLOW, invoice.pk).step_key, 'treasury_pay')
+        self._run(base=True, with_invoice='approved')
+        self.assertEqual(ExpenseInvoice.objects.filter(invoice_number='DEMO-INV-100').count(), 1)
+        self._run(purge=True)
+        self.assertFalse(Company.objects.filter(code='DEMO-VID').exists())
