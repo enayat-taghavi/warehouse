@@ -64,11 +64,12 @@
     <form (ngSubmit)="saveCounterparty()" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <!-- ۱. نام شخص یا شرکت -->
       <div>
-        <label class="block text-xs font-bold text-slate-600 mb-1.5">
+        <label for="cp-name" class="block text-xs font-bold text-slate-600 mb-1.5">
           نام شخص یا شرکت: <span class="text-rose-500">*</span>
         </label>
         <input
           type="text"
+          id="cp-name"
           [(ngModel)]="newCounterparty.name"
           name="name"
           placeholder="مثلاً شرکت حمل‌ونقل تیزرو"
@@ -79,10 +80,11 @@
 
       <!-- ۲. نوع طرف‌حساب -->
       <div>
-        <label class="block text-xs font-bold text-slate-600 mb-1.5">
+        <label for="cp-type" class="block text-xs font-bold text-slate-600 mb-1.5">
           نوع طرف‌حساب: <span class="text-rose-500">*</span>
         </label>
         <select
+          id="cp-type"
           [(ngModel)]="newCounterparty.counterparty_type"
           name="counterparty_type"
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer"
@@ -95,9 +97,10 @@
 
       <!-- ۳. تلفن تماس / همراه -->
       <div>
-        <label class="block text-xs font-bold text-slate-600 mb-1.5">تلفن تماس / همراه:</label>
+        <label for="cp-phone" class="block text-xs font-bold text-slate-600 mb-1.5">تلفن تماس / همراه:</label>
         <input
           type="text"
+          id="cp-phone"
           [(ngModel)]="newCounterparty.phone"
           name="phone"
           placeholder="مثلاً ۰۹۱۲۱۲۳۴۵۶۷"
@@ -107,9 +110,10 @@
 
       <!-- ۴. کد ملی / شناسه اقتصادی -->
       <div>
-        <label class="block text-xs font-bold text-slate-600 mb-1.5">کد ملی / شناسه اقتصادی:</label>
+        <label for="cp-national" class="block text-xs font-bold text-slate-600 mb-1.5">کد ملی / شناسه اقتصادی:</label>
         <input
           type="text"
+          id="cp-national"
           [(ngModel)]="newCounterparty.national_id"
           name="national_id"
           dir="ltr"

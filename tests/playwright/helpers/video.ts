@@ -6,6 +6,7 @@
  * Captions live in scenarios/<video>.captions.json so tools/make_audio.py can read them without a browser.
  */
 import { test as base, expect, type Download, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { randomBytes } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -45,6 +46,23 @@ function password(username: string): string {
   const all = readJson<Record<string, string>>(CREDENTIALS, {});
   const value = all[username];
   if (!value) throw new Error(`No demo password for ${username}; run seed_video_demo first.`);
+  return value;
+}
+
+/** Merges one password into scratch/video_demo_credentials.json (atomic; the value is never logged). */
+function storePassword(username: string, value: string): void {
+  const all = readJson<Record<string, string>>(CREDENTIALS, {});
+  all[username] = value;
+  fs.mkdirSync(path.dirname(CREDENTIALS), { recursive: true });
+  const temp = `${CREDENTIALS}.tmp`;
+  fs.writeFileSync(temp, JSON.stringify(all, null, 2), 'utf-8');
+  fs.renameSync(temp, CREDENTIALS);
+}
+
+/** A run-time random password for a user created through the UI; stored, never committed or printed. */
+export function newDemoPassword(username: string): string {
+  const value = `Tv-${randomBytes(9).toString('base64url')}`;
+  storePassword(username, value);
   return value;
 }
 
@@ -242,8 +260,10 @@ export class TrainingVideo {
       if (this.mobile) await target.tap();
       else await target.click();
     },
-    fill: async (target: Locator, value: string): Promise<void> => {
-      if (!TRAINING) {
+    /** `quick`: in training the cursor still points at the field, but the value appears at once (repeated forms). */
+    fill: async (target: Locator, value: string, opts: { quick?: boolean } = {}): Promise<void> => {
+      if (!TRAINING || opts.quick) {
+        if (TRAINING) await this.pointAt(target);
         await target.fill(value);
         return;
       }
@@ -259,7 +279,7 @@ export class TrainingVideo {
   };
 
   /** Clears the session and logs in with a demo user from scratch/video_demo_credentials.json. */
-  async loginAs(username: string): Promise<void> {
+  async loginAs(username: string, captionId?: string): Promise<void> {
     await this.page.context().clearCookies();
     await this.page.goto('/login');
     await this.page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
@@ -268,6 +288,59 @@ export class TrainingVideo {
     await this.act.fillSecret(this.page.getByLabel('رمز عبور', { exact: true }), password(username));
     await this.act.click(this.page.getByRole('button', { name: 'ورود به سامانه' }));
     await expect(this.page).not.toHaveURL(/\/login(\?|$)/, { timeout: 60_000 });
+    if (/\/change-password/.test(this.page.url())) await this.changeFirstPassword(username, captionId);
+    await this.dismissPushBanner();
+  }
+
+  /** First login of a user made in the UI: the app forces a new password; the new one is stored, never shown. */
+  private async changeFirstPassword(username: string, captionId?: string): Promise<void> {
+    const old = password(username);
+    const fresh = `Tv-${randomBytes(9).toString('base64url')}`;
+    await expect(this.page.getByLabel('رمز عبور فعلی', { exact: true })).toBeVisible();
+    if (captionId) await this.say(captionId);
+    await this.act.fillSecret(this.page.getByLabel('رمز عبور فعلی', { exact: true }), old);
+    await this.act.fillSecret(this.page.getByLabel('رمز عبور جدید', { exact: true }), fresh);
+    await this.act.fillSecret(this.page.getByLabel('تکرار رمز عبور جدید', { exact: true }), fresh);
+    await this.act.click(this.page.getByRole('button', { name: 'تایید و تغییر رمز' }));
+    await expect(this.page).not.toHaveURL(/\/change-password/, { timeout: 30_000 });
+    storePassword(username, fresh);
+  }
+
+  /** The «turn on notifications» bar covers the bottom of the page; «بعداً» hides it. */
+  async dismissPushBanner(): Promise<void> {
+    const later = this.page.getByRole('button', { name: 'بعداً', exact: true });
+    if (await later.isVisible({ timeout: 4_000 }).catch(() => false)) await this.act.click(later);
+  }
+
+  /** The company picker may open after entering the finance app; pick the demo company or close it. */
+  async pickCompany(name = 'شرکت نمایشی'): Promise<void> {
+    const close = this.page.getByTitle('انصراف و بستن');
+    if (!(await close.isVisible({ timeout: 5_000 }).catch(() => false))) return;
+    const option = this.page.getByRole('button', { name: new RegExp(name) }).first();
+    if (await option.isVisible().catch(() => false)) await this.act.click(option);
+    else await this.act.click(close);
+  }
+
+  /**
+   * Opens a sidebar menu entry by its Persian label (on mobile the menu is opened first).
+   * Falls back to the route when the entry is not on screen (collapsed group), so the check still runs.
+   */
+  async openMenu(label: string, fallbackPath: string): Promise<void> {
+    if (this.mobile) {
+      const show = this.page.getByRole('button', { name: 'نمایش منو' });
+      if (await show.isVisible({ timeout: 3_000 }).catch(() => false)) await this.act.click(show);
+    }
+    const entry = this.page.getByRole('button', { name: label, exact: true }).first();
+    if (await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await this.act.click(entry);
+    } else {
+      if (this.mobile) {
+        const hide = this.page.getByRole('button', { name: 'بستن منو' });
+        if (await hide.isVisible().catch(() => false)) await this.act.click(hide);
+      }
+      await this.page.goto(fallbackPath);
+    }
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /** No red error toast and no uncaught page error (console errors are attached as a warning). */
