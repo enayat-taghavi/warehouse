@@ -13,13 +13,12 @@ import { isServerUnreachable } from '../../../../core/services/server-reachabili
 import { Subscription } from 'rxjs';
 import { detectClientDeviceModel } from '../../../../core/utils/device-detector';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
-import { InstallButtonComponent } from '../../../../shared/components/install-button/install-button.component';
 import { BRANDING } from '../../../../core/branding';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
 import { resolveLoginLanding } from '../../../../core/modules/login-landing';
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule, RouterLink, SvgIconDirective, InstallButtonComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SvgIconDirective],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })

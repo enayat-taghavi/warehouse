@@ -15,6 +15,7 @@ import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { PwaUpdateService } from '../../../core/services/pwa-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
+import { WebPushService } from '../../../core/platform/web-push.service';
 import { Router } from '@angular/router';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
@@ -205,6 +206,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         { provide: ConfirmDialogService, useValue: mockConfirmDialog },
         { provide: PwaUpdateService, useValue: mockPwaUpdate },
         { provide: PwaInstallService, useValue: mockPwaInstall },
+        { provide: WebPushService, useValue: { state: signal('off'), busy: signal(false), refreshState: vi.fn(), enable: vi.fn(), disable: vi.fn() } },
         { provide: Router, useValue: mockRouter },
         { provide: ChangeDetectorRef, useValue: mockCdr },
         { provide: AppPersonaService, useValue: mockPersona },

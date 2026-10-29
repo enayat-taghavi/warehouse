@@ -3515,3 +3515,39 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: `scratch/heavy/check_5d1.py` printed OK; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report with the backup filename and size, the pip result, whether the key file was created or already existed (and the `Public key:` line if created), which `.env` lines were added, the migration output lines, and the check line. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 5-d2 on the local app environment: backup, web build with the ngsw patch (frontend only, no backend restart), check the standard PWA manifest and PNG icons on app.farsalish.ir
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py release-check --frontend-only
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5d2.py
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a frontend release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Do not build any APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, `npm ci`, `npm install`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Never print the content of any file in `E:\warehouse-secrets\` or of `backend/.env`.
+
+2. Context: Release v1 step 5-d2 (latest commits on `main`) changed only the frontend: a web push service and permission bar, a notification switch and install entry in the user menu, PNG and maskable icons, iOS touch icons and splash screens under `frontend/public/icons/`, and a new manifest (`id: "/"`). The backend is unchanged, so no restart is needed. `frontend/package.json` gained the devDependency `sharp` 0.32.6, which is already installed in `node_modules`; do not install anything. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup, in `backend`:
+  `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app step 5-d2'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Web build in `frontend`: `npx ng build --delete-output-path=false > ..\scratch\logs\build5d2.txt 2>&1`, wait for it to finish, then read the last 15 lines of that file. Stop and report if it shows an error. Then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Check, in the repository root: `backend\venv\Scripts\python.exe -X utf8 scratch\heavy\check_5d2.py` (prints OK or FAIL with reasons). If it prints FAIL only because Cloudflare still serves a cached file, wait with one `Start-Sleep -Seconds 15` and run it once more.
+
+4. Tool policy: only the commands above, `git status --short`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: the build finished without errors, the patch line was printed, `scratch/heavy/check_5d2.py` printed OK, and `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the last build line, the patch line and the check line. No commit. End the turn after the report.

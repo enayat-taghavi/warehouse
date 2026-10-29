@@ -24,6 +24,7 @@ import { AccountsHttpService } from '../../../../core/http/accounts-http.service
 import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { PwaUpdateService } from '../../../../core/services/pwa-update.service';
 import { PwaInstallService } from '../../../../core/services/pwa-install.service';
+import { WebPushService } from '../../../../core/platform/web-push.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { ApiService } from '../../../../core/api/api.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
@@ -324,6 +325,7 @@ describe('۲. بخش آفلاین و همگام‌سازی (Offline & Sync Workf
           { provide: ConfirmDialogService, useValue: mockConfirmDialog },
           { provide: PwaUpdateService, useValue: { isChecking: () => false, checkForUpdateManually: vi.fn() } },
           { provide: PwaInstallService, useValue: { isInstalled: () => false, isIos: () => false, canInstall: () => false } },
+          { provide: WebPushService, useValue: { state: () => 'off', busy: () => false, refreshState: () => Promise.resolve(), enable: () => Promise.resolve({ ok: true, messageFa: '' }), disable: () => Promise.resolve({ ok: true, messageFa: '' }) } },
           { provide: Router, useValue: { url: '/app/warehouse/items', navigate: vi.fn() } },
           { provide: ChangeDetectorRef, useValue: mockCdr },
           { provide: AppPersonaService, useValue: { activeApp: () => 'warehouse', isSuperuser: () => true } },

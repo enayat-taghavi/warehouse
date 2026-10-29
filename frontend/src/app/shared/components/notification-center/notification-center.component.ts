@@ -62,6 +62,7 @@ export function isInAppUrl(url: unknown): url is string {
       <div
         *ngIf="isOpen()"
         id="notification-center-panel"
+        data-back-closes
         class="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
@@ -170,6 +171,11 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isOpen()) this.isOpen.set(false);
   }
 
   @HostListener('document:click', ['$event'])

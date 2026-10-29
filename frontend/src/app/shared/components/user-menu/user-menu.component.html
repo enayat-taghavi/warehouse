@@ -11,7 +11,7 @@
     <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-dot" class="absolute -top-0.5 -start-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-200"><span class="sr-only">نسخهٔ تازهٔ برنامه آماده است</span></span>
   </button>
 
-  <div *ngIf="isUserMenuOpen" class="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden fade-in">
+  <div *ngIf="isUserMenuOpen" data-back-closes class="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden fade-in">
     <div class="p-3 border-b border-slate-200 bg-slate-50">
       <p class="text-xs font-bold text-slate-800 truncate mb-0.5">{{userName}}</p>
       <p class="text-[10px] font-semibold px-2 py-0.5 rounded-md inline-block truncate max-w-full"
@@ -41,26 +41,73 @@
 
       <div class="h-px bg-slate-100 my-1"></div>
 
-      <!-- نصب برنامه روی دستگاه (PWA) -->
-      <button 
-        type="button"
-        (click)="onInstallApp(); closeUserMenu()" 
-        class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer active:scale-95"
-        [ngClass]="pwaInstall.isInstalled() ? 'text-slate-600 bg-slate-50/80 hover:bg-slate-100' : 'text-blue-600 hover:bg-blue-50'"
-        [title]="pwaInstall.isInstalled() ? 'سامانه هم‌اکنون به صورت برنامه روی دستگاه شما نصب است' : 'نصب سامانه به عنوان نرم‌افزار مجزا روی دسکتاپ یا موبایل'">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="pwaInstall.isInstalled() ? 'check-circle' : 'download'"></svg>
-        <span class="flex-1">{{ pwaInstall.isInstalled() ? 'برنامه نصب شده است' : 'نصب برنامه روی دستگاه' }}</span>
-        <span *ngIf="pwaInstall.isInstalled()" class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold font-mono">نصب‌شده</span>
-        <span *ngIf="!pwaInstall.isInstalled()" class="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold font-mono">PWA</span>
-      </button>
+      <!-- اعلان روی این دستگاه (Web Push) -->
+      @if (pushState() !== 'unsupported') {
+        <button
+          type="button"
+          role="switch"
+          data-testid="user-menu-push-switch"
+          [attr.aria-checked]="pushState() === 'on'"
+          [disabled]="webPush.busy() || pushState() === 'blocked'"
+          (click)="onTogglePush()"
+          [attr.aria-describedby]="pushState() === 'blocked' || pushState() === 'ios-needs-install' ? 'user-menu-push-hint' : null"
+          class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
+          <span class="flex-1">اعلان روی این دستگاه</span>
+          <span data-testid="user-menu-push-label" class="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                [ngClass]="pushState() === 'on' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'">{{ pushLabel() }}</span>
+        </button>
+        @if (pushState() === 'blocked') {
+          <p id="user-menu-push-hint" data-testid="user-menu-push-hint" class="px-3 pb-1 text-[10px] text-fg-muted">مسدود در تنظیمات مرورگر؛ برای روشن کردن، اجازهٔ اعلان را در تنظیمات مرورگر بدهید.</p>
+        } @else if (pushState() === 'ios-needs-install') {
+          <p id="user-menu-push-hint" data-testid="user-menu-push-hint" class="px-3 pb-1 text-[10px] text-fg-muted">روی آیفون اول برنامه را نصب کنید.</p>
+        }
+      }
 
-      <!-- بروزرسانی نسخه برنامه (PWA) -->
-      <button (click)="onManualAppUpdate()" [disabled]="isCheckingAppUpdate" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-emerald-600 hover:bg-emerald-50 active:scale-95 cursor-pointer" title="استعلام و دریافت فوری آخرین نسخه فرانت‌اند">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.animate-spin]="isCheckingAppUpdate" appIcon="refresh-cw"></svg>
-        <span class="flex-1">بروزرسانی نسخه برنامه</span>
-        <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-badge" class="text-[10px] bg-emerald-700 text-white px-1.5 py-0.5 rounded-full font-bold">نسخهٔ تازه</span>
-        <span *ngIf="!hasPendingUpdate" class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold font-mono">PWA</span>
-      </button>
+      @if (!isNative) {
+        <!-- نصب برنامه روی دستگاه (PWA) -->
+        @if (pwaInstall.isInstalled()) {
+          <button type="button" disabled data-testid="user-menu-install-done"
+            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold flex items-center gap-2.5 text-fg-muted bg-surface-muted opacity-80 cursor-not-allowed"
+            title="سامانه هم‌اکنون به صورت برنامه روی دستگاه شما نصب است">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
+            <span class="flex-1">برنامه نصب شده است</span>
+          </button>
+        } @else if (pwaInstall.isIos()) {
+          <button type="button" data-testid="user-menu-install-ios"
+            (click)="iosGuideOpen = !iosGuideOpen"
+            [attr.aria-expanded]="iosGuideOpen"
+            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer text-blue-600 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            title="راهنمای نصب روی آیفون"
+            aria-label="راهنمای نصب روی آیفون">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+            <span class="flex-1">نصب برنامه روی دستگاه</span>
+          </button>
+          @if (iosGuideOpen) {
+            <div data-testid="user-menu-ios-guide" class="mx-2 mb-1 p-2.5 rounded-xl bg-blue-50 text-[11px] text-fg leading-relaxed flex items-start gap-2">
+              <svg class="shrink-0 mt-0.5 text-blue-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload" aria-hidden="true"></svg>
+              <p>در Safari دکمهٔ Share را بزنید و سپس Add to Home Screen را انتخاب کنید.</p>
+            </div>
+          }
+        } @else {
+          <button type="button" data-testid="user-menu-install"
+            (click)="onInstallApp(); closeUserMenu()"
+            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 text-blue-600 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            title="نصب سامانه به عنوان نرم‌افزار مجزا روی دسکتاپ یا موبایل">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+            <span class="flex-1">نصب برنامه روی دستگاه</span>
+            <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">PWA</span>
+          </button>
+        }
+
+        <!-- بروزرسانی نسخه برنامه (PWA) -->
+        <button data-testid="user-menu-pwa-update" (click)="onManualAppUpdate()" [disabled]="isCheckingAppUpdate" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-emerald-600 hover:bg-emerald-50 active:scale-95 cursor-pointer" title="استعلام و دریافت فوری آخرین نسخه فرانت‌اند">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.animate-spin]="isCheckingAppUpdate" appIcon="refresh-cw"></svg>
+          <span class="flex-1">بروزرسانی نسخه برنامه</span>
+          <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-badge" class="text-[10px] bg-emerald-700 text-white px-1.5 py-0.5 rounded-full font-bold">نسخهٔ تازه</span>
+          <span *ngIf="!hasPendingUpdate" class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">PWA</span>
+        </button>
+      }
       <p data-testid="user-menu-app-version" class="px-3 pb-1 text-[10px] text-fg-muted" dir="rtl">{{ versionLabel }}</p>
 
       <!-- بروزرسانی عمیق داده‌ها -->

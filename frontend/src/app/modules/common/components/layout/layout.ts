@@ -35,7 +35,6 @@ import { ModuleRegistryService } from '../../../../core/modules/module-registry.
 import { SectionToggleService } from '../../../../core/services/section-toggle.service';
 import { ModuleNavItem, WhFrontendModule } from '../../../../core/modules/module-contract';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
-import { InstallButtonComponent } from '../../../../shared/components/install-button/install-button.component';
 import { IconName } from '../../../../shared/icons/icon-registry';
 import { NotificationCenterComponent } from '../../../../shared/components/notification-center/notification-center.component';
 
@@ -53,8 +52,7 @@ import { NotificationCenterComponent } from '../../../../shared/components/notif
     CompanySwitcherComponent,
     CompanySelectionModalComponent,
     FirstBootWizardComponent,
-    SvgIconDirective,
-    InstallButtonComponent
+    SvgIconDirective
   ],
   templateUrl: './layout.html',
   styleUrl: './layout.css'

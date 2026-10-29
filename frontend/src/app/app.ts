@@ -5,6 +5,7 @@ import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confi
 import { DomainMigrationBannerComponent } from './shared/components/domain-migration-banner/domain-migration-banner.component';
 import { AppVersionLockComponent } from './shared/components/app-version-lock/app-version-lock.component';
 import { UpdateBarComponent } from './shared/components/update-bar/update-bar.component';
+import { WebPushBarComponent } from './shared/components/webpush-bar/webpush-bar.component';
 import { WhatsNewComponent } from './shared/components/whats-new/whats-new.component';
 import { DomainMigrationService } from './core/services/domain-migration.service';
 import { AuthService } from './core/auth/auth.service';
@@ -20,7 +21,7 @@ import { OfflineSyncService } from './core/services/offline-sync.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent, AppVersionLockComponent, UpdateBarComponent, WhatsNewComponent],
+  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent, AppVersionLockComponent, UpdateBarComponent, WebPushBarComponent, WhatsNewComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

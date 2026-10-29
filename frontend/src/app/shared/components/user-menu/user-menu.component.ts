@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, HostListener, Injector, inject } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, computed, HostListener, Injector, inject } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,6 +11,8 @@ import { OfflineSyncService } from '../../../core/services/offline-sync.service'
 import { PwaUpdateService } from '../../../core/services/pwa-update.service';
 import { AppUpdateService } from '../../../core/platform/app-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
+import { WebPushService } from '../../../core/platform/web-push.service';
+import { isNativePlatform } from '../../../core/platform/platform';
 import { WorkflowTasksService } from '../../../core/services/workflow-tasks.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { ScopeDirectoryService } from '../../../core/http/scope-directory.service';
@@ -87,6 +89,10 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private confirmDialog = inject(ConfirmDialogService);
   public pwaUpdate = inject(AppUpdateService, { optional: true }) ?? inject(PwaUpdateService);
   public pwaInstall = inject(PwaInstallService);
+  public webPush = inject(WebPushService);
+  public readonly pushState = this.webPush.state;
+  public readonly isNative = isNativePlatform();
+  public iosGuideOpen = false;
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private personaService = inject(AppPersonaService, { optional: true });
@@ -851,12 +857,44 @@ export class UserMenuComponent implements OnInit, OnDestroy {
 
   public toggleUserMenu(): void {
     this.isUserMenuOpen = !this.isUserMenuOpen;
+    if (this.isUserMenuOpen) {
+      void this.webPush.refreshState();
+    } else {
+      this.iosGuideOpen = false;
+    }
     this.cdr.detectChanges();
   }
 
   public closeUserMenu(): void {
     this.isUserMenuOpen = false;
+    this.iosGuideOpen = false;
     this.cdr.detectChanges();
+  }
+
+  /** برچسب وضعیت اعلان این دستگاه */
+  public readonly pushLabel = computed(() => {
+    switch (this.webPush.state()) {
+      case 'on': return 'روشن';
+      case 'blocked': return 'مسدود';
+      case 'ios-needs-install': return 'نیاز به نصب';
+      default: return 'خاموش';
+    }
+  });
+
+  /** روشن/خاموش کردن اعلان؛ enable باید هم‌زمان در همان کلیک صدا زده شود (بدون await پیش از آن) */
+  public onTogglePush(): void {
+    if (this.webPush.busy()) return;
+    const state = this.webPush.state();
+    if (state === 'blocked') return;
+    if (state === 'ios-needs-install') {
+      this.iosGuideOpen = true;
+      return;
+    }
+    const pending = state === 'on' ? this.webPush.disable() : this.webPush.enable();
+    void pending.then(result => {
+      this.toast.show(result.ok ? 'success' : 'error', result.messageFa);
+      this.cdr.detectChanges();
+    });
   }
 
   public async onInstallApp(): Promise<void> {
