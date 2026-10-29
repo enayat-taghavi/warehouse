@@ -1,8 +1,13 @@
+from django.db import transaction
 from rest_framework import viewsets, permissions, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Notification, DeviceToken
-from .serializers import NotificationSerializer, DeviceTokenSerializer, DeviceTokenRegisterSerializer
+from .models import Notification, DeviceToken, WebPushSubscription
+from .serializers import (
+    NotificationSerializer, DeviceTokenSerializer, DeviceTokenRegisterSerializer,
+    WebPushSubscriptionRegisterSerializer,
+)
+from . import webpush
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -105,4 +110,89 @@ class DeviceTokenView(views.APIView):
             )
 
         device_token.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _first_error_message(errors):
+    """نخستین پیام خطا از خطاهای تودرتوی سریالایزر."""
+    if isinstance(errors, dict):
+        for value in errors.values():
+            msg = _first_error_message(value)
+            if msg:
+                return msg
+    elif isinstance(errors, list):
+        for value in errors:
+            msg = _first_error_message(value)
+            if msg:
+                return msg
+    elif errors:
+        return str(errors)
+    return None
+
+
+class WebPushKeyView(views.APIView):
+    """کلید عمومی VAPID برای subscribe مرورگر؛ خالی یعنی وب‌پوش روی سرور خاموش است."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({'public_key': webpush.get_vapid_public_key()})
+
+
+class WebPushSubscriptionView(views.APIView):
+    """ثبت/حذف اشتراک وب‌پوش مرورگر کاربر فعلی (د۹ طرح ۵)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if not isinstance(request.data, dict):
+            return Response(
+                {'detail': 'داده‌های ارسالی باید به صورت شیء (JSON Object) باشند.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = WebPushSubscriptionRegisterSerializer(data=request.data)
+        if not serializer.is_valid():
+            msg = _first_error_message(serializer.errors) or 'اطلاعات وارد شده نامعتبر است.'
+            return Response(
+                {'detail': msg, 'error': msg, 'errors': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        endpoint = serializer.validated_data['endpoint']
+        keys = serializer.validated_data['keys']
+        user_agent = str(request.META.get('HTTP_USER_AGENT', ''))[:300]
+        with transaction.atomic():
+            # Upsert: همان endpoint (همان مرورگر) به کاربر فعلی منتقل می‌شود، مثل DeviceToken
+            subscription, created = WebPushSubscription.objects.update_or_create(
+                endpoint_hash=webpush.endpoint_hash(endpoint),
+                defaults={
+                    'user': request.user,
+                    'endpoint': endpoint,
+                    'p256dh': keys['p256dh'],
+                    'auth': keys['auth'],
+                    'user_agent': user_agent,
+                }
+            )
+            # حداکثر ۱۰ اشتراک برای هر کاربر؛ قدیمی‌ترین‌ها کنار می‌روند (ردیف سرور، نه دادهٔ کاربر)
+            stale_ids = list(
+                WebPushSubscription.objects.filter(user=request.user)
+                .exclude(pk=subscription.pk)
+                .order_by('-last_seen_at', '-pk')
+                .values_list('pk', flat=True)[webpush.MAX_SUBSCRIPTIONS_PER_USER - 1:]
+            )
+            if stale_ids:
+                WebPushSubscription.objects.filter(pk__in=stale_ids).delete()
+        return Response(
+            {'id': subscription.pk, 'created_at': subscription.created_at, 'last_seen_at': subscription.last_seen_at},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
+
+    def delete(self, request):
+        endpoint = request.data.get('endpoint') if isinstance(request.data, dict) else None
+        if not isinstance(endpoint, str) or not endpoint.strip():
+            return Response({'detail': 'اشتراک یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+        deleted, _ = WebPushSubscription.objects.filter(
+            endpoint_hash=webpush.endpoint_hash(endpoint.strip()), user=request.user
+        ).delete()
+        if not deleted:
+            # اشتراک کاربر دیگر هم «یافت نشد» است (بی نشت)
+            return Response({'detail': 'اشتراک یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)

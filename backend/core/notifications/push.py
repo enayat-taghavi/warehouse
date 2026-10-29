@@ -344,6 +344,55 @@ def _schedule_push(
     return future
 
 
+# آخرین کار وب‌پوش (برای send_test_push و تست‌ها)؛ کار FCM همچنان در _last_push_future است
+_last_webpush_future: Future | None = None
+
+
+def _send_webpush_worker(
+    notification_id: int,
+    subscriptions: list[dict[str, Any]],
+    title: str | None,
+    message: str | None,
+    url: str | None,
+) -> int | None:
+    """Worker task: web push (RFC 8030) for one notification to the recipient's browser subscriptions."""
+    close_old_connections()
+    try:
+        from .webpush import WebPushProvider, build_payload
+        return WebPushProvider().send(subscriptions, build_payload(title or '', message or '', url, notification_id))
+    except Exception as exc:
+        logger.exception("Failed to dispatch web push for notification %s: %s", notification_id, exc)
+    finally:
+        close_old_connections()
+
+
+def _schedule_webpush(
+    notification_id: int,
+    subscriptions: list[dict[str, Any]],
+    title: str | None,
+    message: str | None,
+    url: str | None,
+) -> Future:
+    global _last_webpush_future
+    future = _push_executor.submit(_send_webpush_worker, notification_id, subscriptions, title, message, url)
+    _last_webpush_future = future
+    return future
+
+
+def _webpush_subscriptions_by_user(user_ids) -> dict[int, list[dict[str, Any]]]:
+    """اشتراک‌های وب‌پوش همهٔ گیرندگان با یک کوئری (ق۱۸)؛ بی کلید VAPID هیچ کوئری‌ای نمی‌زند."""
+    from .webpush import get_vapid_public_key
+    if not user_ids or not get_vapid_public_key():
+        return {}
+    from .models import WebPushSubscription
+    subs_by_user: dict[int, list[dict[str, Any]]] = {}
+    for row in WebPushSubscription.objects.filter(user_id__in=set(user_ids)).values(
+        'id', 'user_id', 'endpoint', 'p256dh', 'auth'
+    ):
+        subs_by_user.setdefault(row['user_id'], []).append(row)
+    return subs_by_user
+
+
 @receiver(post_save, sender='notifications.Notification', dispatch_uid='notifications_push_on_notification_created')
 def on_notification_created(sender, instance, created, **kwargs):
     """Post-save signal to schedule push notifications upon creation via on_commit."""
@@ -365,18 +414,20 @@ def on_notification_created(sender, instance, created, **kwargs):
                 tokens = list(
                     DeviceToken.objects.filter(user_id=recipient_id).values_list('token', flat=True)
                 )
-                if not tokens:
-                    return
-
-                _schedule_push(
-                    notification_id=notification_id,
-                    tokens=tokens,
-                    title=title,
-                    message=message,
-                    target_model=target_model,
-                    target_id=target_id,
-                    url=url,
-                )
+                if tokens:
+                    _schedule_push(
+                        notification_id=notification_id,
+                        tokens=tokens,
+                        title=title,
+                        message=message,
+                        target_model=target_model,
+                        target_id=target_id,
+                        url=url,
+                    )
+                # وب‌پوش جدا از FCM: کاربر بی دستگاه بومی هم اعلان مرورگر می‌گیرد (د۹)
+                subscriptions = _webpush_subscriptions_by_user([recipient_id]).get(recipient_id)
+                if subscriptions:
+                    _schedule_webpush(notification_id, subscriptions, title, message, url)
             except Exception:
                 logger.exception("Failed to schedule push on commit for notification %s", notification_id)
 
@@ -388,7 +439,7 @@ def on_notification_created(sender, instance, created, **kwargs):
 def schedule_push_for_notifications(notifications):
     """
     پوشِ اعلان‌هایی که با bulk_create ساخته شده‌اند (سیگنال post_save برایشان اجرا نمی‌شود).
-    بعد از commit، توکن‌های همهٔ گیرندگان با یک کوئری خوانده می‌شوند (ق۱۸)، نه یک کوئری برای هر اعلان.
+    بعد از commit، توکن‌ها و اشتراک‌های وب‌پوش همهٔ گیرندگان هرکدام با یک کوئری خوانده می‌شوند (ق۱۸)، نه یک کوئری برای هر اعلان.
     """
     items = [
         (n.id, n.recipient_id, n.title, n.message, n.target_model, n.target_id, n.url)
@@ -405,7 +456,11 @@ def schedule_push_for_notifications(notifications):
                 user_id__in={item[1] for item in items}
             ).values_list('user_id', 'token'):
                 tokens_by_user.setdefault(user_id, []).append(token)
+            subs_by_user = _webpush_subscriptions_by_user({item[1] for item in items})
             for notification_id, recipient_id, title, message, target_model, target_id, url in items:
+                subscriptions = subs_by_user.get(recipient_id)
+                if subscriptions:
+                    _schedule_webpush(notification_id, subscriptions, title, message, url)
                 tokens = tokens_by_user.get(recipient_id)
                 if tokens:
                     _schedule_push(

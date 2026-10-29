@@ -3470,3 +3470,48 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: airplane mode is off; step f done; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report: my-tasks result, back-button result, keyboard result, pending counts before/after reconnecting (and any error), the last line of `scratch/logs/purge5c.txt`. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Release v1 step 5-d1 on the local app environment: backup, install pywebpush in the venv, create the VAPID key file (never overwrite, never print), add two web push lines to backend/.env if absent, apply notifications migration 0004; the runner restarts Daphne and the worker and checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5d1.py
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check --backend-only
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a backend release only. Do not edit, create, stage or commit any tracked file. The only files you may write are `backend/.env` (append only, step d), the new key file in step c, and files under `scratch/logs/`. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the worker after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Do not build the frontend or any APK.
+- Do not run `run_auto_backup`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`. Apply migrations only in step e, only after the backup of step a.
+- Never print, display or copy the content of any file in `E:\warehouse-secrets\` or of `backend/.env`. Never run `Get-Content` or `type` on them. Test presence only with `Select-String -Quiet` or `Test-Path`.
+
+2. Context: Release v1 step 5-d1 (latest commit on `main`) added standard Web Push (VAPID) to the backend: model `WebPushSubscription` with migration `notifications 0004_webpushsubscription` (one new table, additive), API under `/api/notifications/webpush/`, the new dependency `pywebpush==2.5.0` in `backend/requirements.txt`, and the command `generate_vapid_keys --out <file>` that creates a PEM private key, refuses to overwrite an existing file and prints only the public key. Settings read `WEBPUSH_VAPID_PRIVATE_KEY_FILE` and `WEBPUSH_VAPID_SUBJECT` from the environment or `backend/.env`. Without the key, web push is off and the bell still works. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app step 5-d1'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Dependencies: `.\venv\Scripts\python.exe -m pip install -r requirements.txt > ..\scratch\logs\pip5d1.txt 2>&1`, then read the last 5 lines of that file. pywebpush 2.5.0 may already be installed; report whether anything new was installed and any error.
+- c) VAPID key: `Test-Path E:\warehouse-secrets\comanage\webpush_vapid.pem`. If it prints `False`, run `.\venv\Scripts\python.exe manage.py generate_vapid_keys --out E:\warehouse-secrets\comanage\webpush_vapid.pem` and keep only the line that starts with `Public key:` for the report. If it prints `True`, skip creation and never overwrite or delete the file.
+- d) `backend/.env` (append only, never print it):
+  - First, only if `(Get-Item .env).Length -gt 0` and `[IO.File]::ReadAllBytes('.env')[-1] -ne 10` is True, run `Add-Content -Path .env -Value '' -Encoding utf8` once so the next line does not join the last line (this reads bytes and prints nothing of the content).
+  - `Select-String -Path .env -Pattern '^WEBPUSH_VAPID_PRIVATE_KEY_FILE=' -Quiet`. If it prints `False`, run `Add-Content -Path .env -Value 'WEBPUSH_VAPID_PRIVATE_KEY_FILE=E:\warehouse-secrets\comanage\webpush_vapid.pem' -Encoding utf8`.
+  - `Select-String -Path .env -Pattern '^WEBPUSH_VAPID_SUBJECT=' -Quiet`. If it prints `False`, run `Add-Content -Path .env -Value 'WEBPUSH_VAPID_SUBJECT=mailto:admin@farsalish.ir' -Encoding utf8`.
+  - Report which lines were added.
+- e) Migrations: `.\venv\Scripts\python.exe manage.py showmigrations notifications`, then `.\venv\Scripts\python.exe manage.py migrate notifications > ..\scratch\logs\migrate5d1.txt 2>&1` and read that file. Only `notifications.0004_webpushsubscription` should be applied. If it lists any other migration to apply, or fails, stop and report the exact output.
+- f) Check: `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\check_5d1.py` (prints OK or FAIL with reasons; it prints no key and no path).
+
+4. Tool policy: only the commands above, `git status --short`, `Test-Path`, `Select-String -Quiet`, `Add-Content` on `backend/.env`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `scratch/heavy/check_5d1.py` printed OK; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the pip result, whether the key file was created or already existed (and the `Public key:` line if created), which `.env` lines were added, the migration output lines, and the check line. No commit. End the turn after the report.

@@ -80,5 +80,31 @@ class DeviceToken(models.Model):
         return f"{self.user.username} - {self.platform} ({self.token[:16]}...)"
 
 
+class WebPushSubscription(models.Model):
+    """اشتراک وب‌پوش (RFC 8030) یک مرورگر یا PWA؛ فقط وب، اپ بومی همان DeviceToken/FCM است (د۹ طرح ۵)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='webpush_subscriptions',
+        verbose_name='کاربر'
+    )
+    endpoint = models.TextField(verbose_name='نشانی سرویس پوش')
+    endpoint_hash = models.CharField(max_length=64, unique=True, db_index=True, verbose_name='هش نشانی')
+    p256dh = models.CharField(max_length=200, verbose_name='کلید عمومی مرورگر')
+    auth = models.CharField(max_length=100, verbose_name='کلید احراز')
+    user_agent = models.CharField(max_length=300, blank=True, default='', verbose_name='مرورگر')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    last_seen_at = models.DateTimeField(auto_now=True, verbose_name='آخرین مشاهده')
+
+    class Meta:
+        ordering = ['-last_seen_at']
+        verbose_name = 'اشتراک وب‌پوش'
+        verbose_name_plural = 'اشتراک‌های وب‌پوش'
+
+    def __str__(self):
+        return f"{self.user_id} - webpush ({self.endpoint_hash[:12]}...)"
+
+
 # Import push to connect signal handlers
 from . import push  # noqa: F401, E402

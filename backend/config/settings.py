@@ -421,3 +421,7 @@ OUTBOUND_HTTP_PROXY = os.getenv('OUTBOUND_HTTP_PROXY', '')
 # Firebase Cloud Messaging (FCM) Push Notifications
 # ==============================================================================
 FIREBASE_CREDENTIALS_FILE = os.environ.get('FIREBASE_CREDENTIALS_FILE', '')
+
+# Web Push (VAPID, RFC 8292): PEM private key file outside git; empty = web push off (bell still works)
+WEBPUSH_VAPID_PRIVATE_KEY_FILE = os.environ.get('WEBPUSH_VAPID_PRIVATE_KEY_FILE', '')
+WEBPUSH_VAPID_SUBJECT = os.environ.get('WEBPUSH_VAPID_SUBJECT', 'mailto:admin@farsalish.ir')

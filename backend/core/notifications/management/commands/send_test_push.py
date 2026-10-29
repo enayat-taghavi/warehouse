@@ -6,8 +6,9 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
 from notifications import push
-from notifications.models import DeviceToken
+from notifications.models import DeviceToken, WebPushSubscription
 from notifications.services import notify_users
+from notifications.webpush import get_vapid_public_key
 
 TEST_TITLE = 'اعلان آزمایشی'
 TEST_MESSAGE = 'این یک اعلان آزمایشی است. با لمس آن «کارهای من» باز می‌شود.'
@@ -41,8 +42,11 @@ class Command(BaseCommand):
         token_count = DeviceToken.objects.filter(user_id=user.pk).count()
         self.stdout.write(f"Push provider: {type(provider).__name__}")
         self.stdout.write(f"Device tokens for user: {token_count}")
+        webpush_count = WebPushSubscription.objects.filter(user_id=user.pk).count()
+        self.stdout.write(f"Web push subscriptions for user: {webpush_count}")
 
         push._last_push_future = None
+        push._last_webpush_future = None
         created = notify_users(
             [user.pk], title=TEST_TITLE, message=TEST_MESSAGE,
             notification_type='test_push', url=url,
@@ -50,6 +54,8 @@ class Command(BaseCommand):
         if user.pk not in created:
             raise CommandError("In-app notification was not created (see backend log).")
         self.stdout.write(f"In-app notification created: id={created[user.pk].id}, url={url}")
+
+        self._report_web_push(webpush_count)
 
         if not provider.is_enabled:
             self.stdout.write("FCM key not configured; in-app notification only.")
@@ -72,3 +78,22 @@ class Command(BaseCommand):
             self.stdout.write(f"FCM accepted {accepted} of {token_count} device(s); errors, if any, are in the backend log.")
             if not accepted:
                 self.stdout.write("No device accepted: check the network path to Google (OUTBOUND_HTTP_PROXY) and the log.")
+
+    def _report_web_push(self, webpush_count):
+        """نتیجهٔ وب‌پوش (د۹)؛ هیچ endpoint یا کلیدی چاپ نمی‌شود."""
+        if not get_vapid_public_key():
+            self.stdout.write("Web push key not configured; no browser push.")
+            return
+        if not webpush_count:
+            self.stdout.write("User has no web push subscription.")
+            return
+        future = push._last_webpush_future
+        if future is None:
+            self.stdout.write("Web push was not scheduled (see backend log).")
+            return
+        try:
+            accepted = future.result(timeout=PUSH_WAIT_SECONDS)
+        except Exception:
+            self.stdout.write("Web push did not finish in time (see backend log).")
+            return
+        self.stdout.write(f"Web push accepted {accepted or 0} of {webpush_count}; errors, if any, are in the backend log.")
