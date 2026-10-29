@@ -3432,7 +3432,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 3 — Release v1 step 5-c on the Android emulator (rest of session 2): my tasks from the bell, back button with a dialog open, airplane-mode queue scenario, keyboard check, then delete the QA company
+[DONE] [ ] Session 3 — Release v1 step 5-c on the Android emulator (rest of session 2): my tasks from the bell, back button with a dialog open, airplane-mode queue scenario, keyboard check, then delete the QA company
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
