@@ -3784,7 +3784,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 — Training videos v-b fix: release the backend and frontend fix for the forced first password change (fresh tokens), then re-record video 1 only (fast test, training, mp4, frames, index) and purge the demo data
+[DONE] [ ] Session 2 — Training videos v-b fix: release the backend and frontend fix for the forced first password change (fresh tokens), then re-record video 1 only (fast test, training, mp4, frames, index) and purge the demo data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -3813,3 +3813,20 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: step f done; `Documents\Training_Videos\videos\01-users-company-desktop.mp4` and `01-users-company-mobile.mp4` are newer than this session's start; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report: the last line of each `vb_*.txt` log written in this session, any selector you changed and why, the size of both video 1 mp4 files. End the turn after the report.
+
+===
+
+[ ] Session 3 — Training videos v-b: Daphne and the GDrive worker are down after Session 2; the runner restarts them, then check that app answers
+
+<!-- runner
+require: python scripts/automation/verify_tools.py release-mark
+require: python scripts/automation/verify_tools.py restart-backend
+require: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check --backend-only
+-->
+
+1. Critical rules: exactly the critical rules of Session 1 (Training videos v-b) above, unchanged. The runner already restarted Daphne and the GDrive worker before your turn; do not restart, stop or build anything and do not edit any file.
+
+2. Task: run `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/` and `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/api/public/config/`; both must print 200. If not, wait by running `python scripts/automation/verify_tools.py release-check --backend-only` once more and report its output.
+
+3. Output and stop condition: a short English report with the two status codes. End the turn after the report.

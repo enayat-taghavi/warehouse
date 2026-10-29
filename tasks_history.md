@@ -15665,3 +15665,59 @@ The muxing process (`tools\mux.py`) has been started in the background. I am wai
 <div dir="rtl" align="r...
 
 ---
+
+### Task 1 of 1 — 2026-10-30 00:54:07
+- **Status:** DONE
+- **Conversation:** `dd6a1e63-e475-4d9e-b8e3-d87967d805a2`
+- **Steps:** 228
+- **Tokens:** 541272
+- **Duration:** 42m 54s
+- **Checks:**
+  - require: 3/3 passed
+  - verify round 0: 0/3 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check`
+    - FAILED (exit 1): `python -X utf8 scratch/check_v_b.py --base 2e448413`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify gate 1: 2/3 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check`
+  - verify round 1: 3/3 passed
+- **Task:**
+```
+[ ] Session 2 — Training videos v-b fix: release the backend and frontend fix for the forced first password change (fresh tokens), then re-record video 1 only (fast test, training, mp4, frames, index) and purge the demo data
+
+
+
+1. Critical rules: exactly the critical rules of Session 1 (Training videos v-b) above, unchanged. The runner already restarted Daphne before your turn; do not restart anything. Step f always runs.
+
+2. Context: after the first forced password change the app used to keep the old (now invalid) tokens, so the employee in video 1 saw the red toast «خطا در واکشی بخش‌های مجاز کارمند». The server now returns fresh tokens and the frontend stores them. The scenario helper now also fails the test on ANY red error toast that appears at any moment. Videos 0 and 2 stay as they are. SEED-ADMIN is defined in Session 1.
+
+3. Task, in this order:
+   - a) Frontend release, in `frontend`: `npx ng build --delete-output-path=false > ..\scratch\logs\vb_build.txt 2>&1; node tools/patch-ngsw-530.js >> ..\scratch\logs\vb_build.txt 2>&1`. Read the end of the file (no errors). Then `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/` and `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/api/public/config/` must both print 200.
+   - b) Fast test, video 1: SEED-ADMIN, then in `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=desktop scenarios/01-users-company.spec.ts --reporter=list > ..\..\scratch\logs\vb_test_01_desktop.txt 2>&1`; then SEED-ADMIN and the same with `--project=mobile` into `vb_test_01_mobile.txt`. Each must end with `1 passed`. If a test fails with «red error toasts seen during the video», do NOT change the scenario: write the toast text in the report and continue with step f.
+   - c) Narration, in `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\vb_audio.txt 2>&1`.
+   - d) Training, video 1: SEED-ADMIN, then `$env:VIDEO_MODE='training'; npx playwright test --project=desktop scenarios/01-users-company.spec.ts --reporter=list > ..\..\scratch\logs\vb_train_01_desktop.txt 2>&1`; then SEED-ADMIN and the same with `--project=mobile` into `vb_train_01_mobile.txt`. Both must end with `1 passed`.
+   - e) In `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\mux.py --only 01-users-company > ..\..\scratch\logs\vb_mux.txt 2>&1`, `.\.venv-tools\Scripts\python.exe -X utf8 tools\frames.py --only 01-users-company > ..\..\scratch\logs\vb_frames.txt 2>&1`, `.\.venv-tools\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\vb_index.txt 2>&1`; read the three files.
+   - f) ALWAYS, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\vb_purge.txt 2>&1`, then read the file.
+   - g) If you changed a scenario file, commit only the changed scenario files with the subject `test(training-videos v-b): selector fixes for video 1 re-record`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step g, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step f done; `Documents\Training_Videos\videos\01-users-company-desktop.mp4` and `01-users-company-mobile.mp4` are newer than this session's start; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last line of each `vb_*.txt` log written in this session, any selector you changed and why, the size of both video 1 mp4 files. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تولید صفحه ایندکس ویدیوهای آموزشی (`index.py`) آغاز شد؛ منتظر پایان اجرا هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به زبان فارسی (Explain Simply)
+رانر در دور اصلاح (fix round) علت‌های شکست بررسی را گزارش کرد: عدم راه‌اندازی فرآیند پشتیبان‌گیری و ورکر پس از شروع مجدد، تغییرات ثبت‌نشده در فایل‌های احراز هویت بک‌اند، و عدم تکمیل سناریوی شماره ۱ به دلیل خطای قبلی. پس از بارگذاری پچ جدید احراز هویت در بک‌اند (`3ab34dc5`)، ری‌استارت Daphne و ورکر، ایجاد پشتیبان پایگاه‌داده و اجرای مجدد تست‌ها، تمام مراحل تست سریع و ضبط حالت آموزشی سناریوی شماره ۱ با موفقیت پاس شدند (`1 passed`).
+
+### ۲. اعتبارسنجی قطعی (Technical Verification)
+- فرمان `python sc...
+
+---
