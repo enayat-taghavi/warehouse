@@ -283,6 +283,26 @@ class PettyCash42Tests(TestCase):
         self.assertEqual(tx.custodian_id, self.emp.pk)
         self.assertEqual(tx.account_id, self.account.pk)
 
+    def test_custodian_without_manage_perm_posts_only_on_own_account(self):
+        # e55e9747: کارمند بی perm_petty_cash_manage با حساب فعال خودش هزینه ثبت می‌کند، نه بیشتر
+        self.set_opening('500000')
+        plain = self.user('plain', 'employee')
+        own = PettyCashAccount.objects.create(company=self.co, custodian=plain, ceiling_amount=Decimal('1000000'),
+                                              opening_balance=Decimal('500000'), opening_balance_date='1405/01/01')
+        payload = self.expense_payload('1405/08/11')
+        payload.pop('custodian')
+        res = self.call(plain, 'post', TX, payload)
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(PettyCashTransaction.objects.get(pk=res.json()['id']).account_id, own.pk)
+
+        foreign = self.call(plain, 'post', TX, {**payload, 'account': self.account.pk})
+        self.assertIn(foreign.status_code, (400, 403))
+        other_user = self.call(plain, 'post', TX, {**payload, 'custodian': self.emp.pk})
+        self.assertEqual(other_user.status_code, 403)
+
+        no_account = self.user('plain2', 'employee')
+        self.assertEqual(self.call(no_account, 'post', TX, payload).status_code, 403)
+
     def test_close_and_handover(self):
         self.set_opening('300000')
         self.rejected_line('100000')
