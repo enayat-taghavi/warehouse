@@ -40,3 +40,10 @@ backups/
 # Windows Explorer folder metadata
 desktop.ini
 .codegraph/
+
+# Training videos (Playwright), plan Documents/Training_Videos
+tests/playwright/node_modules/
+tests/playwright/.venv/
+tests/playwright/output/
+tests/playwright/audio/
+Documents/Training_Videos/videos/

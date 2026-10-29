@@ -3708,3 +3708,39 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: airplane mode is off; step g done; the three screenshots exist; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report: pending indicator before force-stop, after restart, after reconnect (and any message), the rows lines of `count5h4_before.txt` and `count5h4_after.txt` (a new `personnel.PettyCashTransaction` row is expected after), and the last lines of `cleanup5h_s4.txt` and `purge5h_s4.txt`. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 — Training videos v-a on the local app environment: seed the demo admin, run video 0 in fast test mode (desktop and mobile), record it in training mode, add narration, build the mp4 files, frames and index page, then purge the demo data
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -X utf8 scratch/check_v_a.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "tests/playwright/scenarios/*"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+   - Work only in the repo `E:\comanager` on `main`. Never run `git stash`, `git reset`, `git restore`, `git checkout` or create branches.
+   - You may edit ONLY files under `tests/playwright/scenarios/`, and only to fix how an element is found (locator, wait, timeout). Never change what the scenario checks, never edit app code (`frontend/`, `backend/`), helpers, tools, config, `scripts/` or `tasks.md`.
+   - Never print, open or copy `scratch/video_demo_credentials.json`, `.env` or any password. Never touch `soft.farsalish.ir`.
+   - Run every command in the foreground and wait for it to finish. PowerShell syntax.
+   - If a step fails twice after your fixes, write the exact error in your report and continue with the next step. Step g always runs.
+
+2. Context: `tests/playwright/` holds Playwright training videos (plan `Documents/Training_Videos/plan_training_videos.md`). `VIDEO_MODE=test` is a fast check without video; `VIDEO_MODE=training` records a slow video with captions. `BASE_URL` defaults to `https://app.farsalish.ir`. Demo users come from `manage.py seed_video_demo` (passwords go to the credentials file, which the scenario reads by itself). Video 0 is `tests/playwright/scenarios/00-intro.spec.ts` and logs in as `demo_admin`. `node_modules` and `.venv` in `tests/playwright` may already exist.
+
+3. Task, in this order:
+   - a) In `tests\playwright`: if `node_modules\@playwright\test` is missing run `npm install --no-audit --no-fund`; if `.venv\Scripts\python.exe` is missing run `python -m venv .venv` then `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`.
+   - b) In `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\va_seed.txt 2>&1; .\venv\Scripts\python.exe manage.py seed_video_demo --admin >> ..\scratch\logs\va_seed.txt 2>&1`, then read the file (it must say the demo data was created).
+   - c) In `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=desktop --reporter=list > ..\..\scratch\logs\va_test_desktop.txt 2>&1`, then the same with `--project=mobile` into `va_test_mobile.txt`. Both must end with `1 passed`. On failure read the log and `output\test-results\*\error-context.md`, fix only the locator in the scenario file, and run again (at most 3 attempts per profile).
+   - d) In `tests\playwright`: `.\.venv\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\va_audio.txt 2>&1`, then read the file.
+   - e) In `tests\playwright`: `$env:VIDEO_MODE='training'; npx playwright test --project=desktop --reporter=list > ..\..\scratch\logs\va_train_desktop.txt 2>&1`, then the same with `--project=mobile` into `va_train_mobile.txt`. Both must end with `1 passed`.
+   - f) In `tests\playwright`: `.\.venv\Scripts\python.exe -X utf8 tools\mux.py > ..\..\scratch\logs\va_mux.txt 2>&1`, then `.\.venv\Scripts\python.exe -X utf8 tools\frames.py > ..\..\scratch\logs\va_frames.txt 2>&1`, then `.\.venv\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\va_index.txt 2>&1`; read the three files.
+   - g) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\va_purge.txt 2>&1`, then read the file.
+   - h) If you changed a scenario file, commit only that file with the subject `test(training-videos v-a): selector fixes for video 0`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step h, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step g done; `Documents\Training_Videos\videos\00-intro-desktop.mp4`, `00-intro-mobile.mp4` and `index.html` exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last line of each `va_*.txt` log, any selector you changed and why, the size of both mp4 files. End the turn after the report.
