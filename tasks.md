@@ -3688,7 +3688,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 4 — Release v1 stage-5 heavy check: Daphne restarted with the petty cash custodian fix (commit 885753a7), re-run only the airplane-mode petty cash queue scenario on the emulator, then delete the QA data
+[DONE] [ ] Session 4 — Release v1 stage-5 heavy check: Daphne restarted with the petty cash custodian fix (commit 885753a7), re-run only the airplane-mode petty cash queue scenario on the emulator, then delete the QA data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

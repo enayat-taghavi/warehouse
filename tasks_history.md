@@ -15486,3 +15486,45 @@ Write the definitions in simple Persian like the rows above.
 تمامی مراحل مطابق دستورالعمل با شبیه‌ساز فعال اجرا شد. به دلیل محدودیت شبکهٔ شناخته‌شده در برقراری ارتباط شبیه‌ساز با سرورهای پوش گوگل (Google FCM)، اشتراک وب‌پوش ایجاد نشد که مطابق سناریو خروجی ثبت و گزارش شد. داده‌های س...
 
 ---
+
+### Task 1 of 1 — 2026-10-29 13:41:02
+- **Status:** DONE
+- **Conversation:** `93e8b228-e026-4947-a9a6-ed767c5c50a8`
+- **Steps:** 339
+- **Tokens:** 582656
+- **Duration:** 52m 56s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 2/2 passed
+- **Task:**
+```
+[ ] Session 4 — Release v1 stage-5 heavy check: Daphne restarted with the petty cash custodian fix (commit 885753a7), re-run only the airplane-mode petty cash queue scenario on the emulator, then delete the QA data
+
+
+
+1. Critical rules: exactly the critical rules of Session 2 of 3 above (same file), unchanged. The runner already restarted Daphne before your turn; do not restart anything. Never edit `scripts/automation/verify_tools.py` or any other tracked file. If the expense still fails to send after reconnect, open the queue indicator, save `scratch/logs/android5h4_queue_error.png`, dump the UI, report the exact error text, and continue with steps f and g; do not investigate the server.
+
+2. Context: in Session 2 the offline petty cash expense stayed in the device queue across a force-stop and was sent after reconnecting, but the server answered `POST 400: custodian: This field is required.` Commit `885753a7` fixed that on the server (the employee form does not send `custodian`; the server now uses the logged-in user). Same app, same emulator, same helper `scratch/heavy/qa5h.py`, same login coordinates and element-finding method as Session 2.
+
+3. Task, in this order: do steps a, b, e, f and g of Session 2 of 3 exactly as written there, with these file names instead: `count5h_before.txt` -> `count5h4_before.txt`, `count5h_after.txt` -> `count5h4_after.txt`, `android5h_offline_form.png` -> `android5h4_offline_form.png`, `android5h_offline_queue.png` -> `android5h4_offline_queue.png`, `android5h_after_sync.png` -> `android5h4_after_sync.png`, `cleanup5h_s2.txt` -> `cleanup5h_s4.txt`, `purge5h_s2.txt` -> `purge5h_s4.txt`. Use the description `test5h4`. Skip steps c and d.
+
+4. Tool policy: as in Session 2 of 3; at most 60 adb calls.
+
+5. Before finishing: airplane mode is off; step g done; the three screenshots exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: pending indicator before force-stop, after restart, after reconnect (and any message), the rows lines of `count5h4_before.txt` and `count5h4_after.txt` (a new `personnel.PettyCashTransaction` row is expected after), and the last lines of `cleanup5h_s4.txt` and `purge5h_s4.txt`. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+I will wait for the login sequence to complete on the emulator.
+I will wait for `do_login.py` to complete the clean login sequence.
+I am waiting for the login script to complete execution.
+I am waiting for the login process to finish.
+I will wait for the petty cash page to open on the emulator.
+I am waiting for the reconnection and sync delay to finish.
+I am waiting for sync completion.
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explain Simply)
+در این مرحله (Session 4 — Release v1 stage-5 heavy check)، پس از اعمال اصلاحیه سرور تنخواه (commit `885753a7`) و راه‌اندازی مجدد سرویس Daphne، سناریوی ثبت هزینه تنخواه در حالت آفلاین (Airplane mode) روی شبیه‌ساز اندروید اجرا گردید. مراحل آماده‌...
+
+---
