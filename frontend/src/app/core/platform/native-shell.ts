@@ -46,7 +46,12 @@ export function initNativeShell(appRef?: ApplicationRef): void {
   // 1. Android Back Button handling
   try {
     nativeShellBridge.addListener('backButton', ({ canGoBack }) => {
-      const openModal = typeof document !== 'undefined' ? document.querySelector('[aria-modal="true"]') : null;
+      // پنجره‌های modal و پنل‌های بدون aria-modal (منوی کاربر، پنل اعلان، dropdown) که با
+      // data-back-closes علامت خورده‌اند، با Escape بسته می‌شوند پیش از برگشت یا کوچک کردن برنامه
+      const openModal =
+        typeof document !== 'undefined'
+          ? document.querySelector('[aria-modal="true"], [data-back-closes]')
+          : null;
       if (openModal) {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         return;

@@ -16,6 +16,7 @@ import { detectClientDeviceModel } from '../utils/device-detector';
 import { SessionTabService } from '../services/session-tab.service';
 import { WebSocketService } from '../http/websocket.service';
 import { PushService } from '../platform/push.service';
+import { WebPushService } from '../platform/web-push.service';
 
 const TOKEN_KEY = 'wh_access_token';
 const REFRESH_KEY = 'wh_refresh_token';
@@ -31,6 +32,7 @@ export class AuthService {
   private readonly _user = signal<AuthUserProfile | null>(this.loadUserFromStorage());
   private readonly _isLoading = signal(false);
   private pushService = inject(PushService, { optional: true });
+  private webPushService = inject(WebPushService, { optional: true });
 
   /** computed signals — قابل خواندن توسط تمام کامپوننت‌ها */
   readonly user = this._user.asReadonly();
@@ -116,6 +118,9 @@ export class AuthService {
       setTimeout(() => {
         try {
           this.pushService?.register();
+        } catch {}
+        try {
+          void this.webPushService?.syncOnStart();
         } catch {}
       }, 300);
     }
@@ -203,7 +208,13 @@ export class AuthService {
 
   /** لاگ‌اوت */
   logout(): void {
-    // ۱. مخابره بلادرنگ خروج از طریق وب‌سوکت جهت حذف آنی سشن و به‌روزرسانی ناوگان
+    // ۰. لغو اشتراک اعلان وب پیش از هر چیز؛ DELETE همگام شروع می‌شود تا هدر احراز هویت
+    // پیش از پاک شدن نشست گرفته شود. خطا یا مهلت (حداکثر ۳ ثانیه) هرگز خروج را معطل نمی‌کند.
+    try {
+      void this.webPushService?.unsubscribeOnLogout();
+    } catch {}
+
+    // ۱.مخابره بلادرنگ خروج از طریق وب‌سوکت جهت حذف آنی سشن و به‌روزرسانی ناوگان
     try {
       const ws = this.injector.get(WebSocketService);
       ws?.sendLogout(this.sessionTab.tabId);
@@ -438,6 +449,10 @@ export class AuthService {
     // ثبت پوش‌نوتیفیکیشن کلاینت نیتیو پس از ورود موفق
     try {
       this.pushService?.register();
+    } catch {}
+    // اعلان وب (فقط وب/PWA): ارسال دوباره اشتراک موجود برای انتقال مالکیت به کاربر واردشده
+    try {
+      void this.webPushService?.syncOnStart();
     } catch {}
   }
 

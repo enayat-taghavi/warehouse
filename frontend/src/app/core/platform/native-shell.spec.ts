@@ -189,4 +189,44 @@ describe('native-shell', () => {
       document.documentElement.classList.remove('dark');
     }
   });
+
+  it('8. with a [data-back-closes] panel (no aria-modal) in the document, the back button dispatches Escape and does not go back or minimize', () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+
+    let backHandler: ((e: { canGoBack: boolean }) => void) | undefined;
+    addListenerSpy.mockImplementation((event: string, handler: any) => {
+      if (event === 'backButton') {
+        backHandler = handler;
+      }
+      return Promise.resolve({ remove: vi.fn() });
+    });
+
+    initNativeShell();
+
+    const historyBackSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    Object.defineProperty(window.history, 'length', { value: 3, configurable: true });
+
+    let escapeCount = 0;
+    const keydownListener = (e: Event) => {
+      if ((e as KeyboardEvent).key === 'Escape') escapeCount++;
+    };
+    document.addEventListener('keydown', keydownListener);
+
+    const panel = document.createElement('div');
+    panel.setAttribute('data-back-closes', '');
+    document.body.appendChild(panel);
+
+    try {
+      backHandler?.({ canGoBack: true });
+      expect(escapeCount).toBe(1);
+      expect(historyBackSpy).not.toHaveBeenCalled();
+      expect(minimizeAppSpy).not.toHaveBeenCalled();
+    } finally {
+      panel.remove();
+      document.removeEventListener('keydown', keydownListener);
+    }
+  });
 });
