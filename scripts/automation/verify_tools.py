@@ -354,6 +354,13 @@ def cmd_restart_backend(args) -> int:
         print("Port 8000 still busy before starting Daphne.")
         return 1
     subprocess.run(list(DAPHNE_TAB))
+    time.sleep(2)
+    if not any(c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN
+               for c in psutil.net_connections(kind="tcp")):
+        exe = str(REPO_ROOT / 'backend' / 'venv' / 'Scripts' / 'python.exe')
+        subprocess.Popen([exe, '-m', 'daphne', '-b', '0.0.0.0', '-p', '8000', 'config.asgi:application'],
+                         cwd=str(REPO_ROOT / 'backend'),
+                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS)
     deadline = time.time() + 90
     while time.time() < deadline:
         if any(c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN

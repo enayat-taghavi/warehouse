@@ -347,7 +347,8 @@ def _ensure_petty_custodian(user, company_id):
     if not petty_company_allowed(user, company_id):
         raise PermissionDenied("شما به این شرکت دسترسی ندارید.")
     if not user.is_superuser and PETTY_CASH_MANAGE_PERM not in codes_in_company(user, company_id):
-        raise PermissionDenied("شما در این شرکت مجوز ثبت تنخواه ندارید.")
+        if not PettyCashAccount.objects.filter(company_id=company_id, custodian=user, is_active=True).exists():
+            raise PermissionDenied("شما در این شرکت مجوز ثبت تنخواه ندارید.")
 
 
 def _own_petty_account(user, company_id, create=False):
