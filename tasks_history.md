@@ -15528,3 +15528,58 @@ I am waiting for sync completion.
 در این مرحله (Session 4 — Release v1 stage-5 heavy check)، پس از اعمال اصلاحیه سرور تنخواه (commit `885753a7`) و راه‌اندازی مجدد سرویس Daphne، سناریوی ثبت هزینه تنخواه در حالت آفلاین (Airplane mode) روی شبیه‌ساز اندروید اجرا گردید. مراحل آماده‌...
 
 ---
+
+### Task 1 of 1 — 2026-10-29 20:59:01
+- **Status:** DONE
+- **Conversation:** `19d95a68-cc92-4460-9edf-66ac327ac5cc`
+- **Steps:** 88
+- **Tokens:** 121894
+- **Duration:** 13m 54s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 2/2 passed
+- **Task:**
+```
+[ ] Session 1 — Training videos v-a on the local app environment: seed the demo admin, run video 0 in fast test mode (desktop and mobile), record it in training mode, add narration, build the mp4 files, frames and index page, then purge the demo data
+
+
+
+1. Critical rules:
+   - Work only in the repo `E:\comanager` on `main`. Never run `git stash`, `git reset`, `git restore`, `git checkout` or create branches.
+   - You may edit ONLY files under `tests/playwright/scenarios/`, and only to fix how an element is found (locator, wait, timeout). Never change what the scenario checks, never edit app code (`frontend/`, `backend/`), helpers, tools, config, `scripts/` or `tasks.md`.
+   - Never print, open or copy `scratch/video_demo_credentials.json`, `.env` or any password. Never touch `soft.farsalish.ir`.
+   - Run every command in the foreground and wait for it to finish. PowerShell syntax.
+   - Windows WMI hangs on this machine: never run `Get-Process`, `Stop-Process`, `Get-CimInstance`, `Get-WmiObject`, `tasklist` or `taskkill`; they never return. Never delete or recreate `tests\playwright\.venv` or `tests\playwright\.venv-tools` (the old `.venv` is locked and unused; `.venv-tools` is ready).
+   - If a step fails twice after your fixes, write the exact error in your report and continue with the next step. Step g always runs.
+
+2. Context: `tests/playwright/` holds Playwright training videos (plan `Documents/Training_Videos/plan_training_videos.md`). `VIDEO_MODE=test` is a fast check without video; `VIDEO_MODE=training` records a slow video with captions. `BASE_URL` defaults to `https://app.farsalish.ir`. Demo users come from `manage.py seed_video_demo` (passwords go to the credentials file, which the scenario reads by itself). Video 0 is `tests/playwright/scenarios/00-intro.spec.ts` and logs in as `demo_admin`. `node_modules` and `.venv` in `tests/playwright` may already exist.
+
+3. Task, in this order:
+   - a) In `tests\playwright`: if `node_modules\@playwright\test` is missing run `npm install --no-audit --no-fund`. The Python tools environment `.venv-tools` is already installed; do not touch it.
+   - b) In `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\va_seed.txt 2>&1; .\venv\Scripts\python.exe manage.py seed_video_demo --admin >> ..\scratch\logs\va_seed.txt 2>&1`, then read the file (it must say the demo data was created).
+   - c) In `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=desktop --reporter=list > ..\..\scratch\logs\va_test_desktop.txt 2>&1`, then the same with `--project=mobile` into `va_test_mobile.txt`. Both must end with `1 passed`. On failure read the log and `output\test-results\*\error-context.md`, fix only the locator in the scenario file, and run again (at most 3 attempts per profile).
+   - d) In `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\va_audio.txt 2>&1`, then read the file.
+   - e) In `tests\playwright`: `$env:VIDEO_MODE='training'; npx playwright test --project=desktop --reporter=list > ..\..\scratch\logs\va_train_desktop.txt 2>&1`, then the same with `--project=mobile` into `va_train_mobile.txt`. Both must end with `1 passed`.
+   - f) In `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\mux.py > ..\..\scratch\logs\va_mux.txt 2>&1`, then `.\.venv-tools\Scripts\python.exe -X utf8 tools\frames.py > ..\..\scratch\logs\va_frames.txt 2>&1`, then `.\.venv-tools\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\va_index.txt 2>&1`; read the three files.
+   - g) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\va_purge.txt 2>&1`, then read the file.
+   - h) If you changed a scenario file, commit only that file with the subject `test(training-videos v-a): selector fixes for video 0`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step h, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step g done; `Documents\Training_Videos\videos\00-intro-desktop.mp4`, `00-intro-mobile.mp4` and `index.html` exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last line of each `va_*.txt` log, any selector you changed and why, the size of both mp4 files. End the turn after the report.
+```
+- **Agent's last reply:**
+The test command for desktop has been launched in the background. I am waiting for its execution to complete.
+The mobile test has been launched in the background. I am waiting for its completion.
+Recording video 0 in training mode for the desktop profile is now running in the background. I am waiting for it to finish.
+Recording video 0 in training mode for the mobile profile is now running in the background. I am waiting for it to finish.
+The muxing process (`tools\mux.py`) has been started in the background. I am waiting for it to complete.
+<div dir="rtl" align="right">
+
+### گزارش اجرای مرحله اول (Session 1 — Training Videos v-a)
+
+1. **توضیح ساده (Explain Simply):** اجرای کامل چرخهٔ ویدیوی ...
+
+---

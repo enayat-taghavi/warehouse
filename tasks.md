@@ -3711,7 +3711,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 — Training videos v-a on the local app environment: seed the demo admin, run video 0 in fast test mode (desktop and mobile), record it in training mode, add narration, build the mp4 files, frames and index page, then purge the demo data
+[DONE] [ ] Session 1 — Training videos v-a on the local app environment: seed the demo admin, run video 0 in fast test mode (desktop and mobile), record it in training mode, add narration, build the mp4 files, frames and index page, then purge the demo data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
