@@ -25,6 +25,7 @@ function invoiceDialog(page: Page): Locator {
 }
 
 async function openNewInvoice(page: Page, tv: TrainingVideo): Promise<Locator> {
+  await expect(page.getByText('بخش فعال:')).toBeVisible({ timeout: 30_000 });
   await tv.act.click(page.getByRole('button', { name: /فاکتور جدید/ }).filter({ visible: true }).first());
   const dialog = invoiceDialog(page);
   await expect(dialog.getByLabel('شماره فاکتور یا رسید')).toBeVisible({ timeout: 30_000 });

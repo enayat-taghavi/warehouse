@@ -68,7 +68,7 @@ test('video 3-b: invoice approvals', async ({ page, tv }) => {
   await expect(invoiceRow(page)).toBeVisible({ timeout: 30_000 });
   await tv.say('approve');
   await tv.act.click(invoiceRow(page).getByRole('button', { name: /تایید|تأیید/ }).first());
-  await expect(invoiceRow(page).getByText(/حسابداری/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/به کارتابل حسابداری ارسال شد/)).toBeVisible({ timeout: 30_000 });
   await tv.expectNoErrors();
 
   // ─── حسابدار: صدور سند ───
