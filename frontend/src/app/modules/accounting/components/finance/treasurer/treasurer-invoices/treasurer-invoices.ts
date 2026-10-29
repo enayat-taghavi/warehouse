@@ -22,6 +22,7 @@ import { NetworkStatusService } from '../../../../../../core/services/network-st
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { PrintService } from '../../../../../../core/services/print.service';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
@@ -631,8 +632,20 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** خروجی اکسل فاکتورهای هزینهٔ در دسترس خزانه‌دار (پیش‌تر فقط پیام موفقیت نشان می‌داد و فایلی نمی‌ساخت) */
   exportExcel(): void {
-    this.toast.success('فایل اکسل تسویه فاکتورها و تن‌خواه صادر گردید.');
+    this.personnelApi.exportExpenseInvoicesExcel().subscribe({
+      next: (blob: Blob) => {
+        void saveBlob(blob, 'treasury_expense_invoices.xlsx');
+        this.toast.success('فایل اکسل فاکتورهای هزینه دانلود شد.');
+      },
+      error: (err: any) => {
+        const msg = (typeof err?.status === 'number' && isServerUnreachable(err.status))
+          ? 'اتصال به سرور برقرار نیست؛ خروجی اکسل فقط آنلاین ممکن است.'
+          : 'خطا در ساخت فایل اکسل.';
+        this.toast.error(msg);
+      }
+    });
   }
 
   refreshData(): void {
