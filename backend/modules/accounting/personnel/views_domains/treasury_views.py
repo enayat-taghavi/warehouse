@@ -1454,6 +1454,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         ensure_period_open(company_id, vd.get('transaction_date_shamsi'), 'transaction_date_shamsi')
         if account is None:
             account = _own_petty_account(custodian, company_id, create=True)
+        if section is None and account and account.section_id:
+            section = account.section
         with transaction.atomic():
             # قفل حساب: بستن، تحویل یا تطبیق هم‌زمان میان سنجش و ذخیره جا نمی‌گیرد
             if account is not None:
@@ -1462,7 +1464,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             _ensure_period_unlocked(account.pk if account else None, vd.get('transaction_date_shamsi'),
                                     vd.get('transaction_type') or 'expense')
             # ص۱۰: سند تازه پیش‌نویس می‌ماند؛ شارژ با request-charge و هزینه با صورت‌حساب به گردش موتور می‌رود
-            instance = serializer.save(created_by=user, custodian=custodian, account=account, status='draft')
+            instance = serializer.save(created_by=user, custodian=custodian, account=account, section=section, status='draft')
         notify_document_changed(instance, 'created')
 
     def update(self, request, *args, **kwargs):
