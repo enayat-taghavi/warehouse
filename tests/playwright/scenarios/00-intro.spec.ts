@@ -70,10 +70,9 @@ test('video 0: introduction', async ({ page, tv }) => {
   await tv.say('my_tasks');
   await tv.expectNoErrors();
 
-  // بازگشت به صفحهٔ انتخاب برنامه
-  await tv.act.click(userMenu);
+  // صفحهٔ «کارهای من» نوار بالا ندارد؛ دکمهٔ «بازگشت» آن به صفحهٔ انتخاب برنامه می‌رود
   await tv.say('back_launcher');
-  await tv.act.click(page.getByRole('button', { name: 'پورتال لانچر برنامه‌ها' }));
+  await tv.act.click(page.getByRole('button', { name: 'بازگشت', exact: true }));
   await expect(page).toHaveURL(/\/app\/launcher/);
 
   // خروج
