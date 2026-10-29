@@ -117,7 +117,9 @@ describe('UserMenu: اعلان، نصب و به‌روزرسانی (DOM)', () =>
     expect(sw.getAttribute('role')).toBe('switch');
     expect(sw.getAttribute('aria-checked')).toBe(checked);
     expect(q('user-menu-push-label')!.textContent!.trim()).toBe(label);
-    expect(sw.disabled).toBe(state === 'blocked');
+    expect(sw.disabled).toBe(false);
+    expect(sw.getAttribute('aria-disabled')).toBe(state === 'blocked' ? 'true' : null);
+    expect(sw.getAttribute('aria-label')).toBe('اعلان روی این دستگاه');
     const hinted = state === 'blocked' || state === 'ios-needs-install';
     expect(sw.getAttribute('aria-describedby')).toBe(hinted ? 'user-menu-push-hint' : null);
     expect(!!q('user-menu-push-hint')).toBe(hinted);

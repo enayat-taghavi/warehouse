@@ -106,6 +106,30 @@ describe("WhatsNewComponent (Release v1 step 5-b)", () => {
     expect(localStorage.getItem(LAST_SEEN_VERSION_KEY)).toBe(APP_VERSION);
   });
 
+  it('g) focus and backdrop: confirm button gets focus, backdrop click keeps the dialog, close returns focus', async () => {
+    localStorage.setItem(LAST_SEEN_VERSION_KEY, '0.9.0');
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    const fixture = TestBed.createComponent(WhatsNewComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const confirm = fixture.nativeElement.querySelector('[data-testid="whats-new-close"]') as HTMLButtonElement;
+    expect(document.activeElement).toBe(confirm);
+
+    const dialog = fixture.nativeElement.querySelector('[data-testid="whats-new-dialog"]') as HTMLElement;
+    (dialog.parentElement as HTMLElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="whats-new-dialog"]')).not.toBeNull();
+    expect(localStorage.getItem(LAST_SEEN_VERSION_KEY)).toBe('0.9.0');
+
+    confirm.click();
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+
   it('e) same version: key = APP_VERSION -> no dialog', () => {
     localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
     const fixture = TestBed.createComponent(WhatsNewComponent);

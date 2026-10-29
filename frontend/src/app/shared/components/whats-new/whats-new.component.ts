@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, Injector, OnInit, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { APP_VERSION } from '../../../core/platform/app-version';
 import {
@@ -34,7 +34,7 @@ function storeLastSeen(version: string): void {
   imports: [SvgIconDirective],
   template: `
     @if (notes(); as items) {
-      <div class="fixed inset-0 z-[95] bg-slate-900/50 flex items-center justify-center p-4" (click)="close()">
+      <div class="fixed inset-0 z-[95] bg-slate-900/50 flex items-center justify-center p-4">
         <section
           role="dialog"
           aria-modal="true"
@@ -63,6 +63,7 @@ function storeLastSeen(version: string): void {
             }
           </ul>
           <button
+            #confirmBtn
             type="button"
             data-testid="whats-new-close"
             (click)="close()"
@@ -77,11 +78,17 @@ function storeLastSeen(version: string): void {
 export class WhatsNewComponent implements OnInit {
   public readonly notes = signal<string[] | null>(null);
   public readonly versionFa = formatVersionFa(APP_VERSION);
+  private readonly confirmBtn = viewChild<ElementRef<HTMLButtonElement>>('confirmBtn');
+  private readonly injector = inject(Injector);
+  private previousFocus: HTMLElement | null = null;
 
   ngOnInit(): void {
     const notes = releaseNotesToShow(readLastSeen(), APP_VERSION);
     if (notes) {
+      this.previousFocus = document.activeElement as HTMLElement | null;
       this.notes.set(notes);
+      // فوکوس به پنجره می‌رود تا کاربر صفحه‌کلید و صفحه‌خوان پشت پنجره نماند
+      afterNextRender(() => this.confirmBtn()?.nativeElement.focus(), { injector: this.injector });
     } else {
       storeLastSeen(APP_VERSION);
     }
@@ -97,5 +104,7 @@ export class WhatsNewComponent implements OnInit {
   public close(): void {
     storeLastSeen(APP_VERSION);
     this.notes.set(null);
+    this.previousFocus?.focus?.();
+    this.previousFocus = null;
   }
 }
