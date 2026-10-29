@@ -3685,3 +3685,26 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: step g done; `chrome5h_menu.png`, `push5h_cmd.txt` and `push5h_after_logout.txt` exist; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report: menu items seen, install result, switch state after enabling, the «Web push» lines of `push5h_cmd.txt`, whether the Chrome notification appeared and which page its tap opened, the subscription count after logout, and the last lines of `cleanup5h_s3.txt` and `purge5h_s3.txt`. No commit. End the turn after the report.
+
+===
+
+[ ] Session 4 — Release v1 stage-5 heavy check: Daphne restarted with the petty cash custodian fix (commit 885753a7), re-run only the airplane-mode petty cash queue scenario on the emulator, then delete the QA data
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py restart-backend
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5heavy.py s4
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules: exactly the critical rules of Session 2 of 3 above (same file), unchanged. The runner already restarted Daphne before your turn; do not restart anything.
+
+2. Context: in Session 2 the offline petty cash expense stayed in the device queue across a force-stop and was sent after reconnecting, but the server answered `POST 400: custodian: This field is required.` Commit `885753a7` fixed that on the server (the employee form does not send `custodian`; the server now uses the logged-in user). Same app, same emulator, same helper `scratch/heavy/qa5h.py`, same login coordinates and element-finding method as Session 2.
+
+3. Task, in this order: do steps a, b, e, f and g of Session 2 of 3 exactly as written there, with these file names instead: `count5h_before.txt` -> `count5h4_before.txt`, `count5h_after.txt` -> `count5h4_after.txt`, `android5h_offline_form.png` -> `android5h4_offline_form.png`, `android5h_offline_queue.png` -> `android5h4_offline_queue.png`, `android5h_after_sync.png` -> `android5h4_after_sync.png`, `cleanup5h_s2.txt` -> `cleanup5h_s4.txt`, `purge5h_s2.txt` -> `purge5h_s4.txt`. Use the description `test5h4`. Skip steps c and d.
+
+4. Tool policy: as in Session 2 of 3; at most 60 adb calls.
+
+5. Before finishing: airplane mode is off; step g done; the three screenshots exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: pending indicator before force-stop, after restart, after reconnect (and any message), the rows lines of `count5h4_before.txt` and `count5h4_after.txt` (a new `personnel.PettyCashTransaction` row is expected after), and the last lines of `cleanup5h_s4.txt` and `purge5h_s4.txt`. No commit. End the turn after the report.
