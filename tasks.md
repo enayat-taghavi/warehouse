@@ -3551,3 +3551,137 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: the build finished without errors, the patch line was printed, `scratch/heavy/check_5d2.py` printed OK, and `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report with the backup filename and size, the last build line, the patch line and the check line. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 3 — Release v1 stage-5 heavy check on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuilt from the current main, badging check and install on the running emulator
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py release-check --frontend-only
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5heavy.py s1
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a frontend release and an APK build only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`.
+- The Android emulator is ALREADY RUNNING (started by Claude). Never start, stop or restart it; never run `emulator.exe`, `Start-Process` or `start`.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`), never a prod APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, `npm ci`, `npm install`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Never print the content of any file in `E:\warehouse-secrets\` or of `backend/.env`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context: Release v1 stage 5 (Android) is finished in code; this is its final heavy check. The staging APK on the emulator (`ir.comanage.soft.test`, version 1.0.0) was built before steps 5-d2 and 5-heavy, so it lacks the newest web code (Android back button closes the user menu and the bell panel; install and PWA update items hidden inside the native app). The app version stays `1.0.0` (`versionCode 10000`); installing with `-r` over the same version is allowed. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup, in `backend`:
+  `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app stage-5 heavy check'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Web build in `frontend`: `npx ng build --delete-output-path=false > ..\scratch\logs\build5h.txt 2>&1`, wait for it to finish, then read the last 15 lines of that file. Stop and report if it shows an error. Then `node tools/patch-ngsw-530.js`; it must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (git-ignored; confirm with `git status --short` that it does not appear). Then in `frontend`: `npm run build:mobile-test > ..\scratch\logs\buildmobile5h.txt 2>&1`, then in `frontend\android`: `.\gradlew.bat assembleStagingDirectRelease > ..\..\scratch\logs\gradle5h.txt 2>&1`. Read the last 15 lines of each log; stop and report on an error.
+- d) Badging, from the repo root: `E:\Android\Sdk\build-tools\36.0.0\aapt.exe dump badging frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk > scratch\logs\apk5h_badging.txt` (if `aapt.exe` is missing there, use `35.0.0`). The first line must show package `ir.comanage.soft.test`, `versionCode='10000'` and `versionName='1.0.0'`.
+- e) Install, from the repo root: `E:\Android\Sdk\platform-tools\adb.exe devices` (must list `emulator-5554 device`; if not, run `adb wait-for-device` once), then `E:\Android\Sdk\platform-tools\adb.exe install -r "frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk" > scratch\logs\apk5h_install.txt 2>&1` and read that file; it must contain `Success`. Never uninstall the app.
+- f) Check: `backend\venv\Scripts\python.exe -X utf8 scratch\heavy\check_5heavy.py s1` must print `problems: none`.
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. The web build at most twice, Gradle at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: the build finished without errors, the patch line was printed, `apk5h_badging.txt` and `apk5h_install.txt` exist, the check printed `problems: none`, and `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the last web build line, the patch line, the APK size, the badging first line, the install result and the check line. No commit. End the turn after the report.
+
+===
+
+[ ] Session 2 of 3 — Release v1 stage-5 heavy check on the Android emulator (staging APK): temporary QA company, user menu items, Android back button closes the user menu and the bell panel, airplane-mode offline queue with a petty cash expense, then delete the QA data
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5heavy.py s2
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Operational task on the local test environment `app` (test data only). Never connect to `soft.farsalish.ir`. Do not build anything.
+- The emulator is ALREADY RUNNING. Never start, stop or restart it; never run `emulator.exe`, `wt.exe`, `start`, `Start-Process` or `taskkill`. If `adb devices` does not list `emulator-5554` as `device`, run `adb wait-for-device` once, then `adb shell getprop sys.boot_completed`; if it still does not print 1, do step g only and report "emulator not available".
+- Run every command in the foreground and wait until it finishes. Never use `Start-Sleep` or `sleep` longer than 15 seconds; to wait, use `adb shell sleep 10`.
+- Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`.
+- Do not run `migrate`, `makemigrations`, `flush`, any `manage.py test`, or delete files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Test passwords are in `scratch/qa_scenario_credentials.txt` (tab-separated: username, password, role, scope). Never print a password; pass it only to `adb shell input text`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path).
+
+2. Context:
+- Session 1 installed the newest staging APK 1.0.0 (`ir.comanage.soft.test`, activity `ir.comanage.soft.MainActivity`); it talks to `https://app.farsalish.ir`. Screen 1080x2400. Login page: username field about (540, 1130), password about (540, 1338), button «ورود به سامانه» about (540, 1655).
+- Expected in this APK: the user menu (avatar/user button in the header) shows the version line «نسخهٔ ۱٫۰٫۰» and must NOT show an install item («نصب برنامه روی دستگاه») or a PWA update item («به‌روزرسانی نسخه»). The Android back button first closes an open user menu or bell (notifications) panel, and only then leaves the page.
+- Offline queue: a petty cash expense registered while offline is kept in the device queue (survives a force-stop) and is sent automatically when the network returns. The helper `scratch/heavy/qa5h.py` gives the employee a petty cash account (`setup`), counts the server rows of the QA company (`count`) and deletes the QA data before the purge (`cleanup`).
+- To find elements: `adb shell uiautomator dump /sdcard/ui.xml`, `adb pull /sdcard/ui.xml scratch/logs/ui.xml`, read the XML (search the `text` and `content-desc` attributes for the Persian label) and tap the centre of that node's `bounds`. Dump again after each screen change; never guess coordinates for anything other than the login page.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order (`manage.py` and helper commands in `backend`):
+- a) QA data: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario`, then `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\qa5h.py setup` (must print `setup OK`), then `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\qa5h.py count > ..\scratch\logs\count5h_before.txt` and read it.
+- b) Login: `adb shell pm clear ir.comanage.soft.test`, `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`, `adb shell sleep 10`. Log in as `qa_scn_employee` (choose the accounting system if asked; allow notifications if asked). If the «چه چیزی تازه است» dialog or the notification permission bar appears, close it.
+- c) User menu: open the user menu, `adb shell sleep 2`, save `adb exec-out screencap -p > scratch/logs/android5h_menu.png`, dump the UI and report whether «نسخهٔ ۱٫۰٫۰» is present and whether any install or PWA update item is present. Then `adb shell input keyevent KEYCODE_BACK` once, `adb shell sleep 2`, save `scratch/logs/android5h_menu_back.png` and report whether the menu closed and the app stayed open on the same page.
+- d) Bell panel: tap the bell (notifications) button in the header, `adb shell sleep 2`, `adb shell input keyevent KEYCODE_BACK` once, `adb shell sleep 2`, save `scratch/logs/android5h_bell_back.png` and report whether the panel closed and the app stayed open.
+- e) Offline petty cash expense:
+  1. Open the petty cash page from the app menu (label «تنخواه»; it may be under the menu button in the header or on the dashboard tiles). `adb shell sleep 5`, dump the UI.
+  2. `adb shell cmd connectivity airplane-mode enable`, `adb shell sleep 5`.
+  3. Tap the new expense button (label containing «هزینه» and «جدید» or «ثبت»), fill only the required fields with small test values (amount `150000`, a short Persian or Latin description such as `test5h`, any first option in each required select; keep the date as offered), save `scratch/logs/android5h_offline_form.png`, then tap the save/register button.
+  4. `adb shell sleep 3`, dump the UI and note the queue/pending indicator (a badge or a row marked as pending/not sent) and any message.
+  5. `adb shell am force-stop ir.comanage.soft.test`, `adb shell am start -n ir.comanage.soft.test/ir.comanage.soft.MainActivity`, `adb shell sleep 10`, open the petty cash page again, save `scratch/logs/android5h_offline_queue.png`, and note whether the expense is still shown as pending.
+  6. `adb shell cmd connectivity airplane-mode disable`, keep the app in the foreground, `adb shell sleep 10` three times, save `scratch/logs/android5h_after_sync.png`.
+  7. In `backend`: `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\qa5h.py count > ..\scratch\logs\count5h_after.txt` and read it. Compare with `count5h_before.txt`: a new petty cash expense row means the queue was sent.
+  If the page says the user has no petty cash account or the form cannot be saved, save the screenshot, report the exact message and continue with step f.
+- f) Make sure airplane mode is off: `adb shell cmd connectivity airplane-mode disable`.
+- g) Delete the QA data, in `backend`, ALWAYS (even if earlier steps failed): `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\qa5h.py cleanup > ..\scratch\logs\cleanup5h_s2.txt 2>&1`, then `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\purge5h_s2.txt 2>&1`, then read both files.
+
+4. Tool policy: only the commands above, `git status --short`, `Get-Content`/`Select-String` for reading, and `adb` (devices, wait-for-device, shell input, shell am, shell pm clear, shell sleep, shell getprop, shell cmd connectivity, shell uiautomator dump, pull, exec-out screencap). At most 90 adb calls. If a step fails twice, report the exact error and continue with the next step.
+
+5. Before finishing: airplane mode is off; step g done; the six screenshots exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: version line yes/no, install item yes/no, PWA update item yes/no, back button result for the menu and for the bell panel, the offline steps (pending indicator before force-stop, after restart, after reconnect, any message), the rows lines of `count5h_before.txt` and `count5h_after.txt`, and the last lines of `cleanup5h_s2.txt` and `purge5h_s2.txt`. No commit. End the turn after the report.
+
+===
+
+[ ] Session 3 of 3 — Release v1 stage-5 heavy check in Chrome on the Android emulator: open app.farsalish.ir, install the web app from the user menu, turn on web push notifications, send a test push, log out and confirm the web subscription is removed, then delete the QA data
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: backend\venv\Scripts\python.exe -X utf8 scratch/heavy/check_5heavy.py s3
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Operational task on the local test environment `app` (test data only). Never connect to `soft.farsalish.ir`. Do not build anything.
+- The emulator is ALREADY RUNNING. Never start, stop or restart it; never run `emulator.exe`, `wt.exe`, `start`, `Start-Process` or `taskkill`. If `adb devices` does not list `emulator-5554` as `device`, run `adb wait-for-device` once; if it still is not available, do step g only and report "emulator not available".
+- Run every command in the foreground and wait until it finishes. Never use `Start-Sleep` or `sleep` longer than 15 seconds; to wait, use `adb shell sleep 10`.
+- Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`.
+- Do not run `migrate`, `makemigrations`, `flush`, any `manage.py test`, or delete files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Test passwords are in `scratch/qa_scenario_credentials.txt`. Never print a password; pass it only to `adb shell input text`.
+- adb is `E:\Android\Sdk\platform-tools\adb.exe` (call it by full path). Chrome on the emulator is `com.android.chrome` (version 124).
+
+2. Context:
+- The web app on `https://app.farsalish.ir` is a standard PWA. Inside a browser, the user menu (avatar/user button in the header) has an install item «نصب برنامه روی دستگاه» and a switch «اعلان روی این دستگاه» (states «روشن» / «خاموش» / «مسدود»). Turning the switch on asks the browser for notification permission and registers a web push subscription on the server. Logging out removes the subscription of this device.
+- The backend command `send_test_push --username <u>` creates an in-app notification and reports «Web push subscriptions: N» and «Web push accepted K of N». This machine may be unable to reach Google's push servers (known network limit); in that case report the printed line and do not retry more than once.
+- To find elements: `adb shell uiautomator dump /sdcard/ui.xml`, `adb pull /sdcard/ui.xml scratch/logs/ui.xml`, read the XML and tap the centre of the node's `bounds`. Chrome dialogs (install, notification permission) are native nodes with text such as `Install`, `Allow`, `نصب`, `اجازه دادن`.
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order (`manage.py` commands in `backend`):
+- a) QA data: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario`.
+- b) Chrome: `adb shell am start -a android.intent.action.VIEW -d https://app.farsalish.ir/login com.android.chrome`, `adb shell sleep 10`. Dismiss any Chrome first-run screens (accept nothing beyond what is needed to reach the page; choose «No thanks» / «بدون حساب» for sign-in and sync). Log in as `qa_scn_manager` (choose the accounting system if asked). If the one-time notification bar appears, leave it for now.
+- c) Install: open the user menu, save `adb exec-out screencap -p > scratch/logs/chrome5h_menu.png`, report which items are present (install item, notification switch and its state, version line). Tap «نصب برنامه روی دستگاه»; if Chrome shows an install dialog, tap Install, `adb shell sleep 5`, save `scratch/logs/chrome5h_install.png`, and report whether an app icon was added (`adb shell cmd shortcut get-shortcuts --user 0 com.android.chrome` or a launcher screenshot). If no dialog appears, report what happened.
+- d) Notifications: in Chrome (or the installed web app if it opened), open the user menu and tap «اعلان روی این دستگاه»; allow the Chrome permission dialog. `adb shell sleep 5`, open the menu again and save `scratch/logs/chrome5h_push_on.png`; report the switch state.
+- e) Test push, in `backend`: `.\venv\Scripts\python.exe manage.py send_test_push --username qa_scn_manager > ..\scratch\logs\push5h_cmd.txt 2>&1`, read it. `adb shell sleep 10`, then `adb shell dumpsys notification --noredact > scratch\logs\push5h_dumpsys.txt` and report whether a Chrome notification titled «اعلان آزمایشی» is listed. If it is, open the shade (`adb shell cmd statusbar expand-notifications`), tap it, `adb shell sleep 6`, save `scratch/logs/chrome5h_push_tap.png` and report which page opened.
+- f) Logout: in the app open the user menu and log out (label «خروج»), `adb shell sleep 5`. Then in `backend`: `.\venv\Scripts\python.exe manage.py send_test_push --username qa_scn_manager > ..\scratch\logs\push5h_after_logout.txt 2>&1`, read it, and report the web push subscription count (expected 0).
+- g) Delete the QA data, in `backend`, ALWAYS (even if earlier steps failed): `.\venv\Scripts\python.exe -X utf8 ..\scratch\heavy\qa5h.py cleanup > ..\scratch\logs\cleanup5h_s3.txt 2>&1`, then `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\purge5h_s3.txt 2>&1`, then read both files. Then `adb shell am force-stop com.android.chrome`.
+
+4. Tool policy: only the commands above, `git status --short`, `Get-Content`/`Select-String` for reading, and `adb` (devices, wait-for-device, shell input, shell am, shell sleep, shell cmd shortcut, shell cmd statusbar, shell dumpsys notification, shell uiautomator dump, pull, exec-out screencap). At most 80 adb calls. If a step fails twice, report the exact error and continue with the next step.
+
+5. Before finishing: step g done; `chrome5h_menu.png`, `push5h_cmd.txt` and `push5h_after_logout.txt` exist; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: menu items seen, install result, switch state after enabling, the «Web push» lines of `push5h_cmd.txt`, whether the Chrome notification appeared and which page its tap opened, the subscription count after logout, and the last lines of `cleanup5h_s3.txt` and `purge5h_s3.txt`. No commit. End the turn after the report.
