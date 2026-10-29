@@ -15758,3 +15758,62 @@ The muxing process (`tools\mux.py`) has been started in the background. I am wai
 1. با اجرای ماژول پشتیبان‌گیری دیتابیس (`accounts.backup_service.create_database_backup`)، فایل نسخه پشتیبان تازه `backup_20261030_010159.dump` با حجم ۱,۵۵۸,۴۰۶ بایت به همراه فایل متادیتای مربوطه ایجاد گردید...
 
 ---
+
+### Task 1 of 1 — 2026-10-30 02:59:32
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `8ab9acc2-de8d-4511-a94a-d7595501dfea`
+- **Steps:** 305
+- **Tokens:** 438733
+- **Duration:** 44m 22s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 2/2 passed
+- **Task:**
+```
+[ ] Session 1 — Training videos v-c on the local app environment: release the frontend (invoice fixes), then for videos 3-a, 3-b and 3-c seed demo data, run the fast test (desktop and mobile), add narration, record in training mode, build the mp4 files, frames and index page, then purge the demo data
+
+
+
+1. Critical rules: exactly the critical rules of Session 1 (Training videos v-b) above, unchanged. Step h always runs.
+
+2. Context: same as Session 1 (Training videos v-b). Video 3-a is `scenarios/03a-invoice-record.spec.ts` (seed `--base`), video 3-b is `scenarios/03b-invoice-approvals.spec.ts` (seed `--base --with-invoice submitted`), video 3-c is `scenarios/03c-invoice-payment.spec.ts` (seed `--base --with-invoice approved`). Every run of a video needs a fresh seed right before it. All three already passed in test mode against the local dev server. The frontend on `app` must first be rebuilt (invoice form labels, supervisor return for revision, treasurer Excel export). No backend restart is needed.
+
+3. Task, in this order. SEED(X) means, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge >> ..\scratch\logs\vc_seed.txt 2>&1; .\venv\Scripts\python.exe manage.py seed_video_demo --base X >> ..\scratch\logs\vc_seed.txt 2>&1`, where X is empty for 3-a, `--with-invoice submitted` for 3-b and `--with-invoice approved` for 3-c.
+   - a) Frontend release, in `frontend`: `npx ng build --delete-output-path=false > ..\scratch\logs\vc_build.txt 2>&1; node tools/patch-ngsw-530.js >> ..\scratch\logs\vc_build.txt 2>&1`. Read the end of the file (no errors). Then `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/` and `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/api/public/config/` must both print 200.
+   - b) Fast test: for each video V in 03a, 03b, 03c and each profile P in desktop, mobile: SEED(X of V), then in `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=P scenarios/<file of V> --reporter=list > ..\..\scratch\logs\vc_test_V_P.txt 2>&1` (for example `vc_test_03a_desktop.txt`). Each must end with `1 passed`. On failure read the log, `output\test-results\*\error-context.md` and `test-failed-1.png`, fix only the locator in the scenario file, reseed and run again (at most 3 attempts per run). If a test fails with «red error toasts seen during the video», do NOT change the scenario: write the toast text in the report and skip that video in steps d and e.
+   - c) Narration, in `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\vc_audio.txt 2>&1`, then read the file.
+   - d) Training: the same six runs as b) with `$env:VIDEO_MODE='training'` and logs `vc_train_V_P.txt`, each after its own SEED. All must end with `1 passed`.
+   - e) In `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\mux.py > ..\..\scratch\logs\vc_mux.txt 2>&1`, `.\.venv-tools\Scripts\python.exe -X utf8 tools\frames.py > ..\..\scratch\logs\vc_frames.txt 2>&1`, `.\.venv-tools\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\vc_index.txt 2>&1`; read the three files.
+   - f) (no step f)
+   - g) (no step g)
+   - h) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\vc_purge.txt 2>&1`, then read the file.
+   - i) If you changed a scenario file, commit only the changed scenario files with the subject `test(training-videos v-c): selector fixes for video 3`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step i, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step h done; `Documents\Training_Videos\videos\` has the desktop and mobile mp4 of `03a-invoice-record`, `03b-invoice-approvals` and `03c-invoice-payment`, and `index.html`; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last line of each `vc_*.txt` log, any selector you changed and why, the size of the six mp4 files. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### بررسی اولیه و گام اول
+دستور ساخت فرانت‌اند (`ng build`) و اعمال پچ سرویس ورکر آغاز شد. منتظر تکمیل بیلد و بررسی کد وضعیت پاسخ سرور هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+تزریق داده‌های دمو (`seed`) و اجرای تست سریع نسخه دسکتاپ سناریوی `03a` آغاز شد. در انتظار اتمام اجرا هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+لوکیتور برای اطمینان از بارگذاری کامل بخش فعال پیش از کلیک روی «فاکتور جدید» اصلاح شد (`03a-invoice-record.spec.ts`). تزریق مجدد داده‌ها و تلاش دوم تست سریع دسکتاپ سناریوی `03a` آغاز شد.
+
+</div>
+<div dir="rtl" align="right">
+
+تست سریع سناریوی `03a` روی دسکتاپ با موفقیت پاس شد (`1 passed`). تزریق مجدد داده‌ها و اجرای تست سریع نسخه موبایل سن...
+
+---

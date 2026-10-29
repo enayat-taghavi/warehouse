@@ -3833,7 +3833,7 @@ verify: python scripts/automation/verify_tools.py release-check --backend-only
 
 ===
 
-[ ] Session 1 — Training videos v-c on the local app environment: release the frontend (invoice fixes), then for videos 3-a, 3-b and 3-c seed demo data, run the fast test (desktop and mobile), add narration, record in training mode, build the mp4 files, frames and index page, then purge the demo data
+[DONE] [ ] Session 1 — Training videos v-c on the local app environment: release the frontend (invoice fixes), then for videos 3-a, 3-b and 3-c seed demo data, run the fast test (desktop and mobile), add narration, record in training mode, build the mp4 files, frames and index page, then purge the demo data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
