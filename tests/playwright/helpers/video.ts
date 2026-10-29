@@ -148,6 +148,18 @@ const OVERLAY_SCRIPT = `(() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
 })();`;
 
+/** Every red error toast that appears at any moment is reported (toasts vanish before a point check sees them). */
+const TOAST_WATCH = `(() => {
+  const seen = new WeakSet();
+  const check = () => document.querySelectorAll('.toast.text-rose-400').forEach(el => {
+    if (seen.has(el)) return;
+    seen.add(el);
+    if (window.__tvToastError) window.__tvToastError((el.textContent || '').trim());
+  });
+  const start = () => new MutationObserver(check).observe(document.documentElement, { childList: true, subtree: true });
+  if (document.documentElement) start(); else document.addEventListener('DOMContentLoaded', start);
+})();`;
+
 /** window.print never opens the browser dialog; calls are counted instead. */
 const PRINT_STUB = `(() => {
   window.__tvPrintCalls = 0;
@@ -164,6 +176,7 @@ export class TrainingVideo {
   private readonly manifest: AudioManifest;
   readonly pageErrors: string[] = [];
   readonly consoleErrors: string[] = [];
+  readonly toastErrors: string[] = [];
   private captionTop: boolean;
 
   constructor(page: Page, info: TestInfo, captions: Captions) {
@@ -288,8 +301,11 @@ export class TrainingVideo {
     await this.act.fillSecret(this.page.getByLabel('رمز عبور', { exact: true }), password(username));
     await this.act.click(this.page.getByRole('button', { name: 'ورود به سامانه' }));
     await expect(this.page).not.toHaveURL(/\/login(\?|$)/, { timeout: 60_000 });
-    if (/\/change-password/.test(this.page.url())) await this.changeFirstPassword(username, captionId);
     await this.dismissPushBanner();
+    if (/\/change-password/.test(this.page.url())) {
+      await this.changeFirstPassword(username, captionId);
+      await this.dismissPushBanner();
+    }
   }
 
   /** First login of a user made in the UI: the app forces a new password; the new one is stored, never shown. */
@@ -346,6 +362,7 @@ export class TrainingVideo {
   /** No red error toast and no uncaught page error (console errors are attached as a warning). */
   async expectNoErrors(): Promise<void> {
     await expect(this.page.locator('.toast.text-rose-400')).toHaveCount(0);
+    expect(this.toastErrors, 'red error toasts seen during the video').toEqual([]);
     expect(this.pageErrors, 'uncaught page errors').toEqual([]);
   }
 
@@ -409,9 +426,11 @@ export class TrainingVideo {
 export function videoTest(captions: Captions) {
   return base.extend<{ tv: TrainingVideo }>({
     tv: async ({ page }, use, info) => {
+      const tv = new TrainingVideo(page, info, captions);
+      await page.exposeFunction('__tvToastError', (text: string) => { tv.toastErrors.push(text); });
+      await page.addInitScript(TOAST_WATCH);
       await page.addInitScript(PRINT_STUB);
       if (TRAINING) await page.addInitScript(OVERLAY_SCRIPT);
-      const tv = new TrainingVideo(page, info, captions);
       await use(tv);
       await tv.finish();
       await page.close();

@@ -15583,3 +15583,85 @@ The muxing process (`tools\mux.py`) has been started in the background. I am wai
 1. **توضیح ساده (Explain Simply):** اجرای کامل چرخهٔ ویدیوی ...
 
 ---
+
+### Task 1 of 1 — 2026-10-29 22:58:10
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `06881c65-4490-41cd-9f73-7a7fd84fe09d`
+- **Steps:** 258
+- **Tokens:** 500396
+- **Duration:** 64m 29s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 2/2 passed
+- **Task:**
+```
+[ ] Session 1 — Training videos v-b on the local app environment: release the frontend (three label fixes), then for videos 1 and 2 seed demo data, run the fast test (desktop and mobile), add narration, record in training mode, build the mp4 files, frames and index page, then purge the demo data
+
+
+
+1. Critical rules:
+   - Work only in the repo `E:\comanager` on `main`. Never run `git stash`, `git reset`, `git restore`, `git checkout` or create branches.
+   - You may edit ONLY files under `tests/playwright/scenarios/`, and only to fix how an element is found (locator, wait, timeout). Never change what the scenario checks, never edit app code (`frontend/src`, `backend/`), helpers, tools, config, `scripts/` or `tasks.md`.
+   - Never print, open or copy `scratch/video_demo_credentials.json`, `.env` or any password. Never touch `soft.farsalish.ir`.
+   - Run every command in the foreground and wait for it to finish. PowerShell syntax.
+   - Windows WMI hangs on this machine: never run `Get-Process`, `Stop-Process`, `Get-CimInstance`, `Get-WmiObject`, `tasklist` or `taskkill`; they never return. Never delete or recreate `tests\playwright\.venv` or `tests\playwright\.venv-tools`.
+   - If a step fails twice after your fixes, write the exact error in your report and continue with the next step. Step h always runs.
+
+2. Context: `tests/playwright/` holds Playwright training videos (plan `Documents/Training_Videos/plan_training_videos.md`). `VIDEO_MODE=test` is a fast check without video; `VIDEO_MODE=training` records a slow video with captions. `BASE_URL` defaults to `https://app.farsalish.ir`. Demo users come from `manage.py seed_video_demo` (passwords go to the credentials file; the scenarios read and update it by themselves). Video 1 is `scenarios/01-users-company.spec.ts` (needs seed `--admin`: it creates the company and users itself). Video 2 is `scenarios/02-accounting-setup.spec.ts` (needs seed `--base`). Every run of a video needs a fresh seed right before it. Both scenarios already passed in test mode against the local dev server; the frontend on `app` must first be rebuilt because three templates got accessible labels (change password, company code/name, counterparty form).
+
+3. Task, in this order. SEED-ADMIN means, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge >> ..\scratch\logs\vb_seed.txt 2>&1; .\venv\Scripts\python.exe manage.py seed_video_demo --admin >> ..\scratch\logs\vb_seed.txt 2>&1`. SEED-BASE is the same with `--base` instead of `--admin`.
+   - a) Frontend release, in `frontend`: `npx ng build --delete-output-path=false > ..\scratch\logs\vb_build.txt 2>&1; node tools/patch-ngsw-530.js >> ..\scratch\logs\vb_build.txt 2>&1`. Read the end of the file (the build must finish without errors). Then `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/` must print 200. No backend restart is needed.
+   - b) In `tests\playwright`: if `node_modules\@playwright\test` is missing run `npm install --no-audit --no-fund`.
+   - c) Fast test, video 1: SEED-ADMIN, then in `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=desktop scenarios/01-users-company.spec.ts --reporter=list > ..\..\scratch\logs\vb_test_01_desktop.txt 2>&1`. Then SEED-ADMIN again and the same with `--project=mobile` into `vb_test_01_mobile.txt`. Each must end with `1 passed`. On failure read the log and `output\test-results\*\error-context.md` and the `test-failed-1.png`, fix only the locator in the scenario file, reseed and run again (at most 3 attempts per profile).
+   - d) Fast test, video 2: the same as c) with SEED-BASE, `scenarios/02-accounting-setup.spec.ts`, logs `vb_test_02_desktop.txt` and `vb_test_02_mobile.txt`.
+   - e) Narration, in `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\make_audio.py > ..\..\scratch\logs\vb_audio.txt 2>&1`, then read the file.
+   - f) Training, video 1: SEED-ADMIN, then `$env:VIDEO_MODE='training'; npx playwright test --project=desktop scenarios/01-users-company.spec.ts --reporter=list > ..\..\scratch\logs\vb_train_01_desktop.txt 2>&1`; then SEED-ADMIN and the same with `--project=mobile` into `vb_train_01_mobile.txt`. Both must end with `1 passed`.
+   - g) Training, video 2: the same as f) with SEED-BASE, `scenarios/02-accounting-setup.spec.ts`, logs `vb_train_02_desktop.txt` and `vb_train_02_mobile.txt`. Then, in `tests\playwright`: `.\.venv-tools\Scripts\python.exe -X utf8 tools\mux.py > ..\..\scratch\logs\vb_mux.txt 2>&1`, `.\.venv-tools\Scripts\python.exe -X utf8 tools\frames.py > ..\..\scratch\logs\vb_frames.txt 2>&1`, `.\.venv-tools\Scripts\python.exe -X utf8 tools\index.py > ..\..\scratch\logs\vb_index.txt 2>&1`; read the three files.
+   - h) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\vb_purge.txt 2>&1`, then read the file.
+   - i) If you changed a scenario file, commit only the changed scenario files with the subject `test(training-videos v-b): selector fixes for videos 1 and 2`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step i, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step h done; `Documents\Training_Videos\videos\` has `01-users-company-desktop.mp4`, `01-users-company-mobile.mp4`, `02-accounting-setup-desktop.mp4`, `02-accounting-setup-mobile.mp4` and `index.html`; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last line of each `vb_*.txt` log, any selector you changed and why, the size of the four mp4 files. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+عملیات بیلد فرانت‌اند و اعمال پچ Service Worker آغاز شد و منتظر اتمام آن هستیم...
+
+</div>
+<div dir="rtl" align="right">
+
+درخواست تایید وضعیت فرانت‌اند ارسال شد و منتظر پاسخ کد وضعیت HTTP هستیم...
+
+</div>
+<div dir="rtl" align="right">
+
+در حال بررسی چرایی خطای اتصال مرورگر کروم به دامنه سامانه هستیم...
+
+</div>
+<div dir="rtl" align="right">
+
+در حال بررسی مجدد اتصال...
+
+</div>
+<div dir="rtl" align="right">
+
+تست سریع ویدیوی ۱ برای پروفایل موبایل در حال اجرا است...
+
+</div>
+<div dir="rtl" align="right">
+
+در حال بررسی رفتار تلاش مجدد مرورگر...
+
+</div>
+<div dir="rtl" align="right">
+
+تست سریع ویدیوی ۱ برای پروفایل دسکتاپ در حال اجرا است...
+
+</div>
+<div dir="rtl" align="r...
+
+---

@@ -528,8 +528,17 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             details={'reason': 'تغییر کلمه عبور توسط خود کاربر'},
             ip_address=getattr(request, 'META', {}).get('REMOTE_ADDR')
         )
-        
-        return Response({'success': True, 'message': 'رمز عبور با موفقیت تغییر یافت.'})
+
+        # access توکن‌های پیشین با password_changed_at باطل شده‌اند (authentication.get_user)؛ همین تب جفت تازه
+        # با همان قلمرو فعال می‌گیرد تا پس از تغییر رمز ۴۰۱ نگیرد.
+        from ..serializers import CustomTokenObtainPairSerializer
+        refresh = CustomTokenObtainPairSerializer.get_token(user)
+        current_app = request.auth.get('active_app') if hasattr(request.auth, 'get') else None
+        if current_app and (user.is_superuser or current_app in (refresh.get('allowed_apps') or [])):
+            refresh['active_app'] = current_app
+        tokens = {'access': str(refresh.access_token), 'refresh': str(refresh)}
+
+        return Response({'success': True, 'message': 'رمز عبور با موفقیت تغییر یافت.', 'tokens': tokens})
 
     @action(detail=True, methods=['post'])
     def admin_reset_password(self, request, pk=None):

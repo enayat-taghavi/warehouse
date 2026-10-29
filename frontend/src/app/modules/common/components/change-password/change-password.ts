@@ -91,6 +91,8 @@ export class ChangePassword implements OnInit {
       new_password: this.newPassword
     }).subscribe({
       next: (res: any) => {
+        // توکن‌های پیش از تغییر رمز باطل شده‌اند؛ بی این جایگزینی درخواست‌های بعدی ۴۰۱ می‌گیرند
+        this.auth.applyReissuedTokens(res?.tokens);
         this.isSubmitting = false;
         this.cdr.detectChanges();
         this.toast.success('رمز عبور با موفقیت تغییر پیدا کرد.');

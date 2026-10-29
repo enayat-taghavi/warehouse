@@ -422,16 +422,13 @@ export class AuthService {
     });
   }
 
-  private handleLoginSuccess(response: LoginResponse): void {
-    // چرخش امنیتی شناسه سشن تب با هر لاگین موفق (Session Rotation on Authentication)
-    this.sessionTab.rotateTabId();
-
-    const access = response.tokens.access;
+  /** توکن تازه را برای تب و همهٔ قلمروهای مجاز کاربر می‌نشاند (ورود، و توکن نوِ پس از تغییر رمز). */
+  private storeTokens(tokens: { access: string; refresh: string }, allowedApps: string[]): void {
+    const access = tokens.access;
     this.sessionTab.setScopedAccessToken(access);
-    const allowed = response.user.allowed_apps || [];
     // برای هر قلمرو مجاز کاربر یک بار توکن تفکیک‌شده (کلید از نمایهٔ همگام‌سازی همان قلمرو)
     const allowedScopes = new Set<string>();
-    for (const app of allowed) {
+    for (const app of allowedApps) {
       const profile = getScopeSyncProfile(app);
       if (!resolveOfflineDbStrict(app) && profile.scope !== String(app).toLowerCase()) continue;
       allowedScopes.add(profile.scope);
@@ -439,9 +436,24 @@ export class AuthService {
     for (const scope of allowedScopes) {
       this.sessionTab.setScopedAccessToken(access, scope);
     }
-
     this.setItem(TOKEN_KEY, access);
-    this.setItem(REFRESH_KEY, response.tokens.refresh);
+    this.setItem(REFRESH_KEY, tokens.refresh);
+  }
+
+  /**
+   * تغییر رمز همهٔ توکن‌های پیش از آن را باطل می‌کند (iat قدیمی‌تر از password_changed_at)؛
+   * سرور جفت توکن تازه برمی‌گرداند و اینجا جای توکن‌های باطل‌شده می‌نشیند.
+   */
+  applyReissuedTokens(tokens: { access: string; refresh: string } | null | undefined): void {
+    if (!tokens?.access || !tokens?.refresh) return;
+    this.storeTokens(tokens, this._user()?.allowed_apps || []);
+  }
+
+  private handleLoginSuccess(response: LoginResponse): void {
+    // چرخش امنیتی شناسه سشن تب با هر لاگین موفق (Session Rotation on Authentication)
+    this.sessionTab.rotateTabId();
+
+    this.storeTokens(response.tokens, response.user.allowed_apps || []);
     this.setItem(USER_KEY, JSON.stringify(response.user));
     this._user.set(response.user);
     this._isLoading.set(false);
