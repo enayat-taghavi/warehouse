@@ -693,6 +693,8 @@ class PettyCashTransactionSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'category',
                             'statement', 'line_status', 'line_reject_reason', 'source', 'source_statement']
+        # فرم کارمند (و صف آفلاین) تنخواه‌دار نمی‌فرستد؛ perform_create آن را خود کاربر (یا صاحب حساب جانشین) می‌گذارد
+        extra_kwargs = {'custodian': {'required': False}}
 
     get_section_name = staticmethod(lambda obj: _section_value(obj, ('section', 'name')))
 

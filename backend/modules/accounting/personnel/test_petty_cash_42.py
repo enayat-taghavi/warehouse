@@ -272,6 +272,17 @@ class PettyCash42Tests(TestCase):
         self.assertEqual(res_in_flight.status_code, 400)
         self.assertEqual(res_in_flight.json()['code'], 'work_in_flight')
 
+    def test_expense_without_custodian_defaults_to_user(self):
+        # فرم کارمند و صف آفلاین custodian نمی‌فرستند (بررسی سنگین مرحلهٔ ۵: POST 400 custodian)
+        self.set_opening('500000')
+        payload = self.expense_payload('1405/08/11')
+        payload.pop('custodian')
+        res = self.call(self.emp, 'post', TX, payload)
+        self.assertEqual(res.status_code, 201, res.content)
+        tx = PettyCashTransaction.objects.get(pk=res.json()['id'])
+        self.assertEqual(tx.custodian_id, self.emp.pk)
+        self.assertEqual(tx.account_id, self.account.pk)
+
     def test_close_and_handover(self):
         self.set_opening('300000')
         self.rejected_line('100000')

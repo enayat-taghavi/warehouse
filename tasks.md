@@ -3554,7 +3554,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 3 — Release v1 stage-5 heavy check on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuilt from the current main, badging check and install on the running emulator
+[DONE] [ ] Session 1 of 3 — Release v1 stage-5 heavy check on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuilt from the current main, badging check and install on the running emulator
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -3595,7 +3595,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 of 3 — Release v1 stage-5 heavy check on the Android emulator (staging APK): temporary QA company, user menu items, Android back button closes the user menu and the bell panel, airplane-mode offline queue with a petty cash expense, then delete the QA data
+[DONE] [ ] Session 2 of 3 — Release v1 stage-5 heavy check on the Android emulator (staging APK): temporary QA company, user menu items, Android back button closes the user menu and the bell panel, airplane-mode offline queue with a petty cash expense, then delete the QA data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -3646,7 +3646,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 3 of 3 — Release v1 stage-5 heavy check in Chrome on the Android emulator: open app.farsalish.ir, install the web app from the user menu, turn on web push notifications, send a test push, log out and confirm the web subscription is removed, then delete the QA data
+[DONE] [ ] Session 3 of 3 — Release v1 stage-5 heavy check in Chrome on the Android emulator: open app.farsalish.ir, install the web app from the user menu, turn on web push notifications, send a test push, log out and confirm the web subscription is removed, then delete the QA data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
