@@ -1,8 +1,4 @@
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
 from rest_framework.routers import DefaultRouter
 from .views_domains.permission_views import (
     PermissionCatalogView, MyPermissionsView, RoleBundleView, RoleBundleResetView, UserPermissionsView,
@@ -13,6 +9,7 @@ from .views import (
     DatabaseBackupViewSet, SwitchAppScopeView, SystemHealthView, ConcurrencyStressTestView,
     DeviceHeartbeatView, FleetSessionsListView, RevokeDeviceSessionView
 )
+from .views_domains.auth_views import PasswordAwareTokenRefreshView
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
@@ -26,7 +23,7 @@ router.register(r'backups', DatabaseBackupViewSet, basename='backup')
 urlpatterns = [
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('refresh/', PasswordAwareTokenRefreshView.as_view(), name='token_refresh'),
     path('token/switch-app/', SwitchAppScopeView.as_view(), name='token_switch_app'),
     path('health/', SystemHealthView.as_view(), name='system_health'),
     path('health/stress-test/', ConcurrencyStressTestView.as_view(), name='concurrency_stress_test'),

@@ -47,3 +47,52 @@ class ChangePasswordTokensTests(TestCase):
                                                      format='json')
         self.assertEqual(res.status_code, 400)
         self.assertNotIn('tokens', res.json())
+
+
+REFRESH = '/api/auth/refresh/'
+
+
+class ChangePasswordRefreshTokensTests(TestCase):
+    """refresh صادرشده پیش از تغییر رمز دیگر access نمی‌سازد؛ refresh تازهٔ همان پاسخ کار می‌کند."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user('cp_ref', 'cpr@x.com', 'Old-pass-1')
+        CustomUser.objects.filter(pk=self.user.pk).update(password_changed_at=timezone.now() - timedelta(minutes=10))
+        token = CustomTokenObtainPairSerializer.get_token(self.user)
+        token['iat'] = int(time.time()) - 60
+        self.old_refresh = str(token)
+        self.old_access = str(token.access_token)
+
+    def change(self):
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.old_access}')
+        res = client.post(CHANGE, {'old_password': 'Old-pass-1', 'new_password': 'New-pass-2'}, format='json')
+        self.assertEqual(res.status_code, 200)
+        return res.json()['tokens']
+
+    def test_old_refresh_works_before_change(self):
+        self.assertEqual(APIClient().post(REFRESH, {'refresh': self.old_refresh}, format='json').status_code, 200)
+
+    def test_old_refresh_rejected_and_new_refresh_works(self):
+        tokens = self.change()
+        self.assertEqual(APIClient().post(REFRESH, {'refresh': self.old_refresh}, format='json').status_code, 401)
+        res = APIClient().post(REFRESH, {'refresh': tokens['refresh']}, format='json')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()['access'])
+
+    def test_old_refresh_rejected_even_without_blacklist(self):
+        # refreshهای چرخیده در OutstandingToken نیستند؛ بررسی iat باید جدا از بلک‌لیست کار کند.
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+        self.change()
+        BlacklistedToken.objects.filter(token__user=self.user).delete()
+        self.assertEqual(APIClient().post(REFRESH, {'refresh': self.old_refresh}, format='json').status_code, 401)
+
+    def test_change_password_blacklists_other_outstanding_refresh_tokens(self):
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+        tokens = self.change()
+        from rest_framework_simplejwt.tokens import RefreshToken
+        new_jti = RefreshToken(tokens['refresh'])['jti']
+        rows = OutstandingToken.objects.filter(user=self.user)
+        self.assertTrue(rows.exclude(jti=new_jti).exists())
+        self.assertFalse(rows.exclude(jti=new_jti).filter(blacklistedtoken__isnull=True).exists())
+        self.assertFalse(rows.filter(jti=new_jti, blacklistedtoken__isnull=False).exists())

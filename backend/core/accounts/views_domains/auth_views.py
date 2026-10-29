@@ -6,7 +6,11 @@ from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
+from rest_framework.exceptions import AuthenticationFailed
 
 from .helpers import OptionalPageNumberPagination
 from ..models import CustomUser, UserDeviceSession
@@ -30,6 +34,33 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             except Exception:
                 pass
         return response
+
+
+class PasswordAwareTokenRefreshSerializer(TokenRefreshSerializer):
+    """
+    refresh صادرشده پیش از آخرین تغییر رمز (iat < password_changed_at) دیگر access نمی‌سازد؛ همان قاعده
+    authentication.get_user برای access. refreshهای چرخیده در OutstandingToken ثبت نمی‌شوند، پس بلک‌لیست
+    به‌تنهایی کافی نیست.
+    """
+
+    def validate(self, attrs):
+        try:
+            refresh = self.token_class(attrs['refresh'])
+        except TokenError:
+            return super().validate(attrs)  # همان خطای استاندارد (۴۰۱)
+        user = CustomUser.objects.filter(
+            **{jwt_settings.USER_ID_FIELD: refresh.get(jwt_settings.USER_ID_CLAIM)}).first()
+        iat = refresh.get('iat')
+        if user is None or not user.is_active:
+            raise AuthenticationFailed('کاربر یافت نشد یا غیرفعال است.', code='user_inactive')
+        if user.password_changed_at and (not iat or int(user.password_changed_at.timestamp()) > int(iat)):
+            raise AuthenticationFailed('رمز عبور تغییر کرده است، لطفا مجددا وارد شوید.', code='password_changed')
+        return super().validate(attrs)
+
+
+class PasswordAwareTokenRefreshView(TokenRefreshView):
+    serializer_class = PasswordAwareTokenRefreshSerializer
+
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]

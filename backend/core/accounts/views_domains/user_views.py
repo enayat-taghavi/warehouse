@@ -538,6 +538,14 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             refresh['active_app'] = current_app
         tokens = {'access': str(refresh.access_token), 'refresh': str(refresh)}
 
+        # refreshهای پیشین ثبت‌شده به‌جز همین جفت تازه بلک‌لیست می‌شوند (لایهٔ دوم کنار بررسی iat در refresh/).
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+            for token in OutstandingToken.objects.filter(user=user).exclude(jti=refresh['jti']):
+                BlacklistedToken.objects.get_or_create(token=token)
+        except Exception:
+            pass
+
         return Response({'success': True, 'message': 'رمز عبور با موفقیت تغییر یافت.', 'tokens': tokens})
 
     @action(detail=True, methods=['post'])
