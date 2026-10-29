@@ -74,7 +74,12 @@ async function assign(page: Page, tv: TrainingVideo, cardTitle: string, roleShor
 }
 
 test('video 1: users and company', async ({ page, tv }) => {
-  await page.goto('/login');
+  try {
+    await page.goto('/login');
+  } catch {
+    await page.waitForTimeout(1000);
+    await page.goto('/login');
+  }
   await expect(page.getByRole('button', { name: 'ورود به سامانه' })).toBeVisible();
   await tv.titleCard();
 

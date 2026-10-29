@@ -34,7 +34,12 @@ async function openDemoStudio(page: Page, tv: TrainingVideo): Promise<void> {
 }
 
 test('video 2: accounting setup', async ({ page, tv }) => {
-  await page.goto('/login');
+  try {
+    await page.goto('/login');
+  } catch {
+    await page.waitForTimeout(1000);
+    await page.goto('/login');
+  }
   await expect(page.getByRole('button', { name: 'ورود به سامانه' })).toBeVisible();
   await tv.titleCard();
 
@@ -49,8 +54,12 @@ test('video 2: accounting setup', async ({ page, tv }) => {
   await tv.act.click(newPeriod);
   await tv.say('fiscal_dates');
   await tv.act.fill(page.getByLabel('عنوان دوره مالی'), 'سال مالی ۱۴۰۶');
-  await tv.fillShamsiDate(page.getByLabel('تاریخ شروع دوره'), '1406/01/01');
-  await tv.fillShamsiDate(page.getByLabel('تاریخ پایان دوره'), '1406/12/29');
+  await tv.act.fill(page.getByLabel('تاریخ شروع دوره'), '1406/01/01', { quick: true });
+  await page.getByLabel('تاریخ شروع دوره').press('Tab');
+  await page.keyboard.press('Escape');
+  await tv.act.fill(page.getByLabel('تاریخ پایان دوره'), '1406/12/29', { quick: true });
+  await page.getByLabel('تاریخ پایان دوره').press('Tab');
+  await page.keyboard.press('Escape');
   await tv.act.click(page.getByRole('button', { name: 'ثبت و افتتاح دوره' }));
   await expect(page.getByText('سال مالی ۱۴۰۶').first()).toBeVisible({ timeout: 30_000 });
   await tv.expectNoErrors();
@@ -69,7 +78,9 @@ test('video 2: accounting setup', async ({ page, tv }) => {
   if (await option.isVisible().catch(() => false)) await tv.act.click(option);
   await tv.act.fill(page.getByLabel('عنوان / کاربرد حساب'), ACCOUNT_TITLE);
   await tv.fillAmount(page.getByLabel('موجودی اولیه (ریال)'), 200_000_000);
-  await tv.fillShamsiDate(page.getByLabel(/^تاریخ موجودی اولیه/), '1405/01/01');
+  await tv.act.fill(page.getByLabel(/^تاریخ موجودی اولیه/), '1405/01/01', { quick: true });
+  await page.getByLabel(/^تاریخ موجودی اولیه/).press('Tab');
+  await page.keyboard.press('Escape');
   await tv.act.click(page.getByRole('button', { name: 'افزودن حساب' }));
   await expect(page.getByText(ACCOUNT_TITLE).first()).toBeVisible({ timeout: 30_000 });
   await tv.expectNoErrors();
