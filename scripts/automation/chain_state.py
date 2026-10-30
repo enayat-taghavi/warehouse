@@ -39,6 +39,7 @@ CHAINS = {  # scheduled task name -> (state file, lock file) under scratch/
     'release-v1-stage4-chain': ('chain_state_stage4.json', 'chain_stage4.lock'),
     'release-v1-stage5-chain': ('chain_state_stage5.json', 'chain_stage5.lock'),
     'training-videos-chain': ('chain_state_videos.json', 'chain_videos.lock'),
+    'chat-plan-chain': ('chain_state_chat.json', 'chain_chat.lock'),
 }
 DEFAULT_CHAIN = 'release-v1-chain'
 STATE = ROOT / 'scratch' / CHAINS[DEFAULT_CHAIN][0]
@@ -78,6 +79,18 @@ def drop_lock():
         pass
 
 
+def paused_until(state):
+    """ISO time before which the chain must not run (e.g. usage-limit reset), or None."""
+    raw = (state or {}).get('not_before') or ''
+    try:
+        until = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return until if now() < until else None
+
+
 def claim():
     state = read_state()
     if state is None:
@@ -86,6 +99,9 @@ def claim():
         return 'DONE'
     if state.get('status') == 'waiting_user':
         return f"WAITING note={state.get('note', '')}"
+    until = paused_until(state)
+    if until:
+        return f'PAUSED until={until.isoformat()}'
     stale = False
     try:
         fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
@@ -115,6 +131,8 @@ def peek():
         return 'DONE'
     if state.get('status') == 'waiting_user':
         return 'WAITING'
+    if paused_until(state):
+        return 'PAUSED'
     try:
         since = datetime.fromisoformat(LOCK.read_text(encoding='utf-8').strip())
     except FileNotFoundError:
@@ -152,6 +170,7 @@ def main(argv=None):
     p = sub.add_parser('release')
     p.add_argument('--next', required=True)
     p.add_argument('--brief', required=True)
+    p.add_argument('--not-before', default='', help='ISO time; claim/gate return PAUSED until then (usage-limit reset)')
     p = sub.add_parser('wait')
     p.add_argument('--note', required=True)
     sub.add_parser('done')
@@ -168,9 +187,9 @@ def main(argv=None):
     elif args.cmd == 'claim':
         print(claim())
     elif args.cmd == 'release':
-        write_state(status='ready', next=args.next, brief=args.brief, note='')
+        write_state(status='ready', next=args.next, brief=args.brief, note='', not_before=args.not_before)
         drop_lock()
-        print(f'RELEASED next={args.next}')
+        print(f'RELEASED next={args.next}' + (f' not_before={args.not_before}' if args.not_before else ''))
     elif args.cmd == 'wait':
         write_state(status='waiting_user', note=args.note)
         drop_lock()
