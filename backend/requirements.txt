@@ -11,6 +11,7 @@ django-axes==8.3.1
 openpyxl==3.1.5
 reportlab==4.2.0
 pillow==12.3.0
+pypdfium2==5.14.0
 packaging==26.2
 qrcode==7.4.2
 arabic-reshaper==3.0.0

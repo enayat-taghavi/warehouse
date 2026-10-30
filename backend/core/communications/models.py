@@ -135,6 +135,13 @@ class Message(SyncModelMixin):
         return f"{self.sender}: {self.text[:30] if self.text else '[پیوست]'}"
 
 
+class PreviewStatus(models.TextChoices):
+    PENDING = 'pending', 'در انتظار'
+    READY = 'ready', 'آماده'
+    NONE = 'none', 'بی‌پیش‌نمایش'
+    FAILED = 'failed', 'ناموفق'
+
+
 class MessageAttachment(SyncModelMixin):
     message = models.ForeignKey(
         Message,
@@ -147,6 +154,13 @@ class MessageAttachment(SyncModelMixin):
     file_size = models.PositiveIntegerField(default=0, verbose_name="حجم بایت")
     content_type = models.CharField(max_length=100, default='application/octet-stream', verbose_name="نوع فایل")
     thumbnail = models.ImageField(upload_to='chat_attachments/thumbs/%Y/%m/', null=True, blank=True, verbose_name="بندانگشتی")
+    width = models.PositiveIntegerField(null=True, blank=True, verbose_name="عرض (پیکسل)")
+    height = models.PositiveIntegerField(null=True, blank=True, verbose_name="ارتفاع (پیکسل)")
+    page_count = models.PositiveIntegerField(null=True, blank=True, verbose_name="تعداد صفحه")
+    duration = models.PositiveIntegerField(null=True, blank=True, verbose_name="مدت (ثانیه)")
+    preview_status = models.CharField(
+        max_length=10, choices=PreviewStatus.choices, default=PreviewStatus.PENDING, verbose_name="وضعیت پیش‌نمایش"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
 

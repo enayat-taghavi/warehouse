@@ -52,6 +52,7 @@ from .membership import (
 from rest_framework import serializers as drf_serializers
 from common.warehouse_scope import can_access_warehouse
 from settings_core.services import get_setting
+from .previews import validate_uploaded_file, schedule_attachment_preview
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -79,45 +80,6 @@ def record_audit_log(user, warehouse, module, action, severity, target_model, ta
         )
     except Exception as e:
         logger.warning(f"[AuditLog] Failed to record audit log: {e}")
-
-DISALLOWED_EXTENSIONS = {
-    '.html', '.htm', '.svg', '.exe', '.bat', '.sh', '.js', '.php',
-    '.py', '.vbs', '.msi', '.cmd', '.scr', '.pif'
-}
-
-
-def validate_uploaded_file(file_obj):
-    """
-    اعتبارسنجی نوع فایل، پسوند و هدر بایت‌ها (Magic Bytes) جهت ممانعت از حملات XSS و آپلود اسکریپت
-    """
-    ext = os.path.splitext(file_obj.name)[1].lower()
-    if not ext or ext in DISALLOWED_EXTENSIONS:
-        return False, "آپلود فایل‌های اجرایی، اسکریپت، HTML یا SVG مجاز نیست"
-
-    pos = file_obj.tell()
-    file_obj.seek(0)
-    header = file_obj.read(1024)
-    file_obj.seek(pos)
-
-    # اعتبارسنجی هدرهای مشخص
-    if ext == '.png' and not header.startswith(b'\x89PNG\r\n\x1a\n'):
-        return False, "محتوای فایل با ساختار استاندارد PNG تطابق ندارد"
-    if ext in ['.jpg', '.jpeg'] and not header.startswith(b'\xff\xd8\xff'):
-        return False, "محتوای فایل با ساختار استاندارد JPEG تطابق ندارد"
-    if ext == '.gif' and not (header.startswith(b'GIF87a') or header.startswith(b'GIF89a')):
-        return False, "محتوای فایل با ساختار استاندارد GIF تطابق ندارد"
-    if ext == '.webp' and not (header.startswith(b'RIFF') and b'WEBP' in header[:16]):
-        return False, "محتوای فایل با ساختار استاندارد WebP تطابق ندارد"
-    if ext == '.pdf' and not header.startswith(b'%PDF-'):
-        return False, "محتوای فایل با ساختار استاندارد PDF تطابق ندارد"
-
-    # بررسی عدم وجود تگ‌های مخرب اسکریپتی در محتوای هدر
-    lower_header = header.lower()
-    if b'<script' in lower_header or b'<html' in lower_header or b'<svg' in lower_header:
-        return False, "فایل ارسالی حاوی کدهای غیرمجاز است"
-
-    return True, None
-
 
 class _UserIdsSerializer(drf_serializers.Serializer):
     """بدنهٔ افزودن عضو: {"user_ids": [..]} — اعداد مثبت، حداکثر MAX_GROUP_MEMBERS_PER_REQUEST"""
@@ -739,7 +701,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response({'error': 'حجم فایل نباید بیش از ۱۰ مگابایت باشد'}, status=status.HTTP_400_BAD_REQUEST)
 
         # اعتبارسنجی ساختار و نوع فایل
-        is_valid, err_msg = validate_uploaded_file(file_obj)
+        is_valid, err_msg, detected_type = validate_uploaded_file(file_obj)
         if not is_valid:
             return Response({'error': err_msg}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -772,10 +734,12 @@ class MessageViewSet(viewsets.ModelViewSet):
             file=file_obj,
             file_name=original_name,
             file_size=file_obj.size,
-            content_type=file_obj.content_type or 'application/octet-stream'
+            content_type=detected_type
         )
 
         broadcast_message_updated_ws(msg, request)
+        # پیش‌نمایش (بندانگشتی، ابعاد، تعداد صفحه) پس از commit؛ شکست آن فایل اصلی را دست نمی‌زند
+        schedule_attachment_preview(attachment.pk)
         return Response(MessageAttachmentSerializer(attachment, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 

@@ -43,7 +43,10 @@ class MessageAttachmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MessageAttachment
-        fields = ['id', 'file_name', 'file_size', 'content_type', 'download_url', 'thumbnail_url', 'created_at']
+        fields = [
+            'id', 'file_name', 'file_size', 'content_type', 'download_url', 'thumbnail_url',
+            'width', 'height', 'page_count', 'duration', 'preview_status', 'created_at'
+        ]
 
     def get_download_url(self, obj):
         if not obj.file:

@@ -3942,3 +3942,71 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: step d done; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report: the end of `vd_build.txt`, the last 15 lines of each `vd_test_04a_*.txt` log, the first error line and the step of the scenario where it stopped, the alert text in `error-context.md` if a test failed, any selector you changed and why. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Chat plan stage 5-b: server tests for the attachment allowlist, content sniffing, previews (image and PDF), failed previews and the backfill command
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/integration_tests/communications/test_stage5b.py"
+verify: python scripts/automation/verify_tools.py text-check --file backend/integration_tests/communications/test_stage5b.py --contains build_attachment_preview --contains captureOnCommitCallbacks --contains build_chat_previews --contains preview_status --contains page_count --contains thumb=1 --contains override_settings --count "12:def test_"
+verify: set DB_TEST_NAME=test_agy_chat5b&& python scripts/automation/verify_tools.py django-tests --labels integration_tests.communications.test_stage5b --min-tests 12
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(chat 5-b): attachment allowlist"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`.
+- Create exactly one new file: `backend/integration_tests/communications/test_stage5b.py`. Change no other file. Never edit production code, any other test, anything under `scripts/` or `Documents/`, `tasks.md` or `tasks_history.md`.
+- Never run `manage.py test` without an app label (it would run root scripts against the real database).
+- If a test fails because the production code behaves differently from this task, do not change production code and do not weaken the expectation silently: keep the test as written, mark it with `@unittest.expectedFailure`, and describe the difference in your report.
+- Every test class that saves files runs under `@override_settings(MEDIA_ROOT=<a tempfile.mkdtemp() directory>)`, and that directory is removed with `shutil.rmtree(path, ignore_errors=True)` in `tearDownClass` (only that temporary directory).
+- Test docstrings and comments are Persian, like the existing files. No push. Stage only your own file.
+
+2. Context (read these; nothing else is needed):
+- `backend/core/communications/previews.py` (whole file): `ALLOWED_EXTENSIONS`, `detect_content_type`, `validate_uploaded_file(file_obj)` returning `(ok, error, detected_content_type)`, `build_attachment_preview(attachment)` returning the final `preview_status`, `schedule_attachment_preview(attachment_id)` (runs the builder in `transaction.on_commit`, then calls `broadcast_message_updated_ws`).
+- `backend/core/communications/models.py` classes `PreviewStatus` (`pending`, `ready`, `none`, `failed`) and `MessageAttachment` (fields `thumbnail`, `width`, `height`, `page_count`, `duration`, `preview_status`).
+- `backend/core/communications/views.py` method `upload_attachment` (`POST /api/communications/messages/upload/`, multipart fields `file` and `message_id`; 400 with `error` for a refused file; 201 with the serialized attachment) and class `ChatAttachmentDownloadView` (query `thumb=1` serves the thumbnail; 403 for a non-member; 404 when there is no thumbnail). Take the exact download URL from `backend/core/communications/urls.py` (name `chat_attachment_download`) or use `django.urls.reverse('chat_attachment_download', args=[pk])`.
+- `backend/core/communications/serializers.py` class `MessageAttachmentSerializer` (fields `width`, `height`, `page_count`, `duration`, `preview_status`, `thumbnail_url`).
+- `backend/core/communications/management/commands/build_chat_previews.py` (dry-run by default; `--apply`, `--retry-failed`, `--limit`).
+- Fixture: `backend/integration_tests/communications/base.py` class `BaseCommsTestCase` (users `admin`, `manager_wh1`, `staff_wh1`, `staff_wh2`, `unassigned_user`; `direct_conv` between `manager_wh1` and `staff_wh1`; `direct_message` sent by `manager_wh1`; `self.auth(user)`). Style reference: `backend/integration_tests/communications/test_attachments.py` lines 1–60.
+
+3. Definitions:
+- "Image bytes" = a PNG of 800x400 pixels built with Pillow (`Image.new('RGB', (800, 400), 'red').save(buf, 'PNG')`).
+- "PDF bytes" = a two-page PDF built with reportlab (`from reportlab.pdfgen import canvas`; draw a string, call `showPage()` twice, then `save()`).
+- "Corrupt bytes" = `b'\x89PNG\r\n\x1a\n' + b'GARBAGE' * 20`.
+- "Upload" = `self.auth(self.manager_wh1)` then `self.client.post('/api/communications/messages/upload/', {'file': SimpleUploadedFile(name, data, content_type=<any>), 'message_id': str(self.direct_message.id)}, format='multipart')`, wrapped in `with self.captureOnCommitCallbacks(execute=True):` when the test needs the preview to be built.
+- "Attachment row" = `MessageAttachment.objects.create(message=self.direct_message, file=SimpleUploadedFile(name, data), file_name=name, file_size=len(data))`.
+
+4. Task — new file, one class based on `BaseCommsTestCase`, at least 12 tests (one `def test_` each):
+- a) `test_image_upload_builds_webp_thumbnail_and_dimensions`: upload image bytes as `p.png` inside captureOnCommitCallbacks → 201; the row has `preview_status == 'ready'`, `width == 800`, `height == 400`, a thumbnail whose name ends with `.webp`; opening the thumbnail with Pillow gives a longest side of at most 320; `content_type == 'image/png'`.
+- b) `test_pdf_upload_counts_pages_and_builds_thumbnail`: upload PDF bytes as `d.pdf` the same way → `preview_status == 'ready'`, `page_count == 2`, a thumbnail exists, `content_type == 'application/pdf'`.
+- c) `test_corrupt_image_keeps_original_with_failed_status`: attachment row `bad.png` with corrupt bytes; `build_attachment_preview(row)` returns `'failed'`; after `refresh_from_db()` the row exists, `row.file.storage.exists(row.file.name)` is true, and there is no thumbnail.
+- d) `test_text_file_gets_status_none`: attachment row `t.txt` with `b'hello'` → `build_attachment_preview` returns `'none'`, no thumbnail, the file still exists.
+- e) `test_disallowed_extensions_rejected`: for each name in `x.svg`, `x.html`, `x.xhtml`, `x.hta`, `x.ps1`, `x.jar`, `x.lnk`, `x.svgz`, `x.exe`, `noext` (content `b'hello'`) the upload returns 400 with `error`, and no attachment row exists for `direct_message` afterwards.
+- f) `test_mismatched_content_rejected`: these uploads return 400: `fake.png` with PDF bytes; `fake.pdf` with image bytes; `fake.docx` with `b'PK\x03\x04' + b'0' * 100`; `fake.xls` with `b'hello'`; `notes.txt` with `b'<html><script>alert(1)</script>'`.
+- g) `test_stored_content_type_comes_from_content_not_browser`: upload image bytes as `p.png` with `content_type='text/html'` → 201 and the row's `content_type == 'image/png'`.
+- h) `test_valid_office_and_text_files_accepted`: a real `.xlsx` built with `openpyxl.Workbook().save(buf)` and a `.csv` with `b'a,b\n1,2\n'` → each 201; the xlsx row has `content_type` equal to `ALLOWED_EXTENSIONS['.xlsx']`.
+- i) `test_thumbnail_download_only_for_members`: after an image upload as in a), GET the download URL with query `thumb=1` as `staff_wh1` → 200 with `Content-Type` `image/webp`; as `staff_wh2` → 403; as `unassigned_user` → 403. The same GET for an attachment row without a thumbnail (a `t.txt` row) as `staff_wh1` → 404.
+- j) `test_serializer_exposes_preview_fields`: after a PDF upload as in b), list the messages of `direct_conv` as `staff_wh1` (read `MessageViewSet.get_queryset` in `views.py` for the exact URL and query parameter, and how the list is paginated); the attachment object of `direct_message` has `page_count == 2`, `preview_status == 'ready'`, and `thumbnail_url` ending with `thumb=1`.
+- k) `test_backfill_command_dry_run_changes_nothing`: two attachment rows (image bytes `a.png`, PDF bytes `b.pdf`) left at `pending`; `call_command('build_chat_previews', stdout=io.StringIO())` → both rows still `pending` and the output contains `2`.
+- l) `test_backfill_command_apply_and_retry_failed`: rows `a.png` (image bytes) and `bad.png` (corrupt bytes), both `pending`; `call_command('build_chat_previews', '--apply', stdout=out)` → `a.png` is `ready`, `bad.png` is `failed` and its file still exists; a second `--apply` run leaves `bad.png` untouched (its `updated_at` is unchanged); `--apply --retry-failed` processes it again (its `updated_at` changes, it stays `failed`).
+
+Out of scope: production code, other test files.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From `backend`: `set DB_TEST_NAME=test_agy_chat5b&& set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test integration_tests.communications.test_stage5b --noinput` (at most 6 times). Always set `DB_TEST_NAME` exactly like this.
+- If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+6. Before finishing:
+- The test command passes (or only your documented `expectedFailure` tests are marked).
+- `git status --short` shows only your new file before the commit and nothing after it.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(chat 5-b): attachment allowlist, content sniffing, image/PDF previews, failed previews keep the original, thumbnail access, backfill command
+- Short English report: the test names, the summary line of the test run, and any behaviour that differed from this task. End the turn after the commit and the report.
