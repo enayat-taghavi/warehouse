@@ -10,7 +10,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from .models import Conversation
 from .access import can_read_conversation, can_access_comment_target, resolve_comment_content_type
-from .presence import add_online_user, remove_online_user, get_online_users
+from .presence import connect_user, disconnect_user, touch_online_user, get_online_users
 from common.warehouse_scope import can_access_warehouse
 
 logger = logging.getLogger(__name__)
@@ -222,7 +222,10 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.presence_group, self.channel_name)
 
         # ثبت کاربر در کش آنلاین‌ها
-        await add_online_user(self.user.id)
+        # هر اتصال یک بار شمرده می‌شود (E10)؛ احراز هویت دوباره روی همان سوکت دوباره نمی‌شمارد
+        if not getattr(self, '_presence_counted', False):
+            self._presence_counted = True
+            await connect_user(self.user.id)
 
         # اطلاع‌رسانی آنلاین شدن کاربر به سایر کلاینت‌های متصل
         await self.channel_layer.group_send(
@@ -246,18 +249,23 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
         self._cancel_auth_timeout()
         if getattr(self, 'is_authenticated', False) and getattr(self, 'user', None):
             # حذف کاربر از کش آنلاین‌ها
-            await remove_online_user(self.user.id)
+            remaining = 0
+            if getattr(self, '_presence_counted', False):
+                self._presence_counted = False
+                remaining = await disconnect_user(self.user.id)
             # اطلاع‌رسانی آفلاین شدن کاربر
             if getattr(self, 'presence_group', None):
                 try:
-                    await self.channel_layer.group_send(
-                        self.presence_group,
-                        {
-                            'type': 'chat_presence_event',
-                            'user_id': self.user.id,
-                            'status': 'offline'
-                        }
-                    )
+                    # کاربر هنوز اتصال دیگری دارد (تب یا دستگاه دیگر): آفلاین اعلام نمی‌شود (E10)
+                    if remaining <= 0:
+                        await self.channel_layer.group_send(
+                            self.presence_group,
+                            {
+                                'type': 'chat_presence_event',
+                                'user_id': self.user.id,
+                                'status': 'offline'
+                            }
+                        )
                 except Exception:
                     pass
                 await self.channel_layer.group_discard(self.presence_group, self.channel_name)
@@ -290,7 +298,7 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
 
             if msg_type == 'ping':
                 if hasattr(self, 'user') and self.user:
-                    await add_online_user(self.user.id)
+                    await touch_online_user(self.user.id)
                 await self.send(text_data=json.dumps({
                     'type': 'pong',
                     'timestamp': payload.get('timestamp')

@@ -177,7 +177,8 @@ class MessagePagination(LimitOffsetPagination):
 
 # اکشن‌های جزئی که شیء را مستقیم (نه از فهرست قابل مشاهده) می‌گیرند؛ دسترسی با object permission سنجیده می‌شود
 DETAIL_CONVERSATION_ACTIONS = (
-    'retrieve', 'update', 'partial_update', 'destroy', 'members', 'member_detail', 'leave', 'mute'
+    'retrieve', 'update', 'partial_update', 'destroy', 'members', 'member_detail', 'leave', 'mute',
+    'read_status'
 )
 
 
@@ -215,7 +216,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
             ).values('joined_at')[:1],
             output_field=DateTimeField()
         )
-        epoch = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)
+        # خوانندهٔ ضمنی اطلاعیه (بدون ردیف عضویت): مبنا زمان عضویت کاربر در سامانه، نه کل تاریخچه (E4)
+        baseline = getattr(user, 'date_joined', None) or datetime(1970, 1, 1, tzinfo=dt_timezone.utc)
 
         unread_count_subquery = Subquery(
             Message.objects.filter(
@@ -224,7 +226,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 sender=user
             ).filter(
                 Q(id__gt=Coalesce(participant_last_read_subquery, Value(0))),
-                Q(created_at__gte=Coalesce(participant_joined_subquery, Value(epoch, output_field=DateTimeField())))
+                Q(created_at__gte=Coalesce(participant_joined_subquery, Value(baseline, output_field=DateTimeField())))
             ).values('conversation').annotate(cnt=Count('id')).values('cnt')[:1],
             output_field=IntegerField()
         )
@@ -265,27 +267,39 @@ class ConversationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         conv_type = serializer.validated_data.get('conv_type', ConversationType.DIRECT)
-        target_user_id = request.data.get('target_user_id')
-
-        # برای گفتگوی دو‌نفره: ابتدا بررسی وجود گفتگوی قبلی در تمام رکوردها (حتی بدون پیام) جهت جلوگیری از ایجاد رکورد تکراری
-        if conv_type == ConversationType.DIRECT and target_user_id:
-            try:
-                target_user_id_int = int(target_user_id)
-                existing = Conversation.objects.filter(
-                    conv_type=ConversationType.DIRECT,
-                    participants=request.user
-                ).filter(
-                    participants__id=target_user_id_int
-                ).first()
-                if existing:
-                    out_serializer = self.get_serializer(existing)
-                    return Response(out_serializer.data, status=status.HTTP_200_OK)
-            except (ValueError, TypeError):
-                pass
+        if conv_type == ConversationType.DIRECT:
+            return self._create_direct(serializer)
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def _create_direct(self, serializer):
+        """
+        گفتگوی دو‌نفره (E13): مخاطب فعال و غیر از خود کاربر الزامی است؛ گفتگوی قبلی (حتی بدون پیام) برگردانده می‌شود.
+        قفل ردیف دو کاربر به ترتیب شناسه، بررسی و ساخت را در برابر درخواست هم‌زمان (هر دو طرف) یکتا می‌کند.
+        """
+        user = self.request.user
+        target_id = serializer.validated_data.get('target_user_id')
+        if not target_id or target_id == user.id:
+            raise ValidationError({'target_user_id': 'مخاطب گفتگوی دو‌نفره الزامی است'})
+        with transaction.atomic():
+            locked = list(
+                User.objects.select_for_update().filter(id__in=sorted({user.id, target_id})).order_by('id')
+            )
+            target_user = next((u for u in locked if u.id == target_id and u.is_active), None)
+            if target_user is None:
+                raise ValidationError({'target_user_id': 'کاربر مخاطب یافت نشد یا غیرفعال است'})
+            existing = Conversation.objects.filter(
+                conv_type=ConversationType.DIRECT, participants=user
+            ).filter(participants=target_user).order_by('created_at', 'id').first()
+            if existing:
+                return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
+            conv = serializer.save(created_by=user, conv_type=ConversationType.DIRECT, warehouse_id=None)
+            add_member(conv, user)
+            add_member(conv, target_user)
+        out = self.get_serializer(conv)
+        return Response(out.data, status=status.HTTP_201_CREATED, headers=self.get_success_headers(out.data))
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -305,19 +319,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
             if warehouse_id and not can_access_warehouse(user, warehouse_id):
                 raise PermissionDenied('شما مجاز به ایجاد گفتگو برای این انبار نیستید')
 
+        # فقط اطلاعیه به اینجا می‌رسد؛ دو‌نفره در _create_direct و گروه در _create_group ساخته می‌شود
         conv = serializer.save(created_by=user)
-        add_member(
-            conv, user,
-            role=ParticipantRole.MEMBER if conv.conv_type == ConversationType.DIRECT else ParticipantRole.OWNER
-        )
-
-        target_user_id = self.request.data.get('target_user_id')
-        if target_user_id:
-            try:
-                target_user = User.objects.get(id=target_user_id, is_active=True)
-                add_member(conv, target_user)
-            except (User.DoesNotExist, ValueError, TypeError):
-                pass
+        add_member(conv, user, role=ParticipantRole.OWNER)
 
     @staticmethod
     def _resolve_member_users(raw_ids):
@@ -507,33 +511,83 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 ref_msg = conversation.messages.order_by('-id').first()
 
             now = timezone.now()
-            ConversationParticipant.objects.update_or_create(
-                conversation=conversation,
-                user=user,
-                defaults={
-                    'last_read_message': ref_msg,
-                    'last_read_at': now
-                }
+            rec, _created = ConversationParticipant.all_objects.select_for_update().get_or_create(
+                conversation=conversation, user=user
             )
+            current = rec.last_read_message
+            # نشانگر خواندن فقط جلو می‌رود (E11)
+            advanced = ref_msg is not None and (current is None or ref_msg.id > current.id)
+            if advanced:
+                rec.last_read_message = ref_msg
+            rec.last_read_at = now
+            rec.save(update_fields=['last_read_message', 'last_read_at', 'updated_at'])
+            effective = rec.last_read_message
+
             # Dual-write جهت سازگاری عقبروی به صورت Bulk Create در یک کوئری سریع دیتابیسی
-            unread_qs = conversation.messages.exclude(sender=user).exclude(read_by=user)
-            if ref_msg:
-                unread_qs = unread_qs.filter(
+            if advanced:
+                unread_qs = conversation.messages.exclude(sender=user).exclude(read_by=user).filter(
                     Q(created_at__lt=ref_msg.created_at) |
                     Q(created_at=ref_msg.created_at, id__lte=ref_msg.id)
                 )
-            unread_msg_ids = list(unread_qs.values_list('id', flat=True))
-            if unread_msg_ids:
-                through_model = Message.read_by.through
-                fk_to_message = [f for f in through_model._meta.fields if f.related_model == Message][0].name
-                fk_to_user = [f for f in through_model._meta.fields if f.related_model == User][0].name
-                entries = [through_model(**{fk_to_message: Message(id=mid), fk_to_user: user}) for mid in unread_msg_ids]
-                through_model.objects.bulk_create(entries, ignore_conflicts=True)
+                unread_msg_ids = list(unread_qs.values_list('id', flat=True))
+                if unread_msg_ids:
+                    through_model = Message.read_by.through
+                    fk_to_message = [f for f in through_model._meta.fields if f.related_model == Message][0].name
+                    fk_to_user = [f for f in through_model._meta.fields if f.related_model == User][0].name
+                    entries = [through_model(**{fk_to_message: Message(id=mid), fk_to_user: user}) for mid in unread_msg_ids]
+                    through_model.objects.bulk_create(entries, ignore_conflicts=True)
 
-        # ارسال رویداد وب‌سوکت دو‌تیک خوانده‌شدن به اعضا
-        broadcast_read_receipt_ws(conversation, user)
+        # ارسال رویداد وب‌سوکت دو‌تیک خوانده‌شدن به اعضا و دستگاه‌های دیگر خود خواننده (E11، E26)
+        if advanced:
+            broadcast_read_receipt_ws(conversation, user, effective)
 
-        return Response({'status': 'marked_read', 'conversation_id': str(conversation.id)})
+        return Response({
+            'status': 'marked_read',
+            'conversation_id': str(conversation.id),
+            'last_read_message_id': str(effective.id) if effective else None,
+        })
+
+    @action(detail=True, methods=['get'], url_path='read_status')
+    def read_status(self, request, pk=None):
+        """
+        وضعیت خواندن اعضا (U8): برای هر عضو فعال، آخرین پیام خوانده‌شده؛ کلاینت «خوانده‌شده توسط» را
+        با مقایسهٔ شناسهٔ پیام می‌سازد. دو‌نفره و گروه فقط برای اعضا؛ اطلاعیه فقط برای کسی که حق ارسال دارد:
+        سوپرکاربر فهرست خوانندگان را می‌بیند، بقیه فقط تعداد (نشت نام کاربران شرکت‌های دیگر نه).
+        """
+        conversation = self.get_object()
+        user = request.user
+        if not can_read_conversation(user, conversation):
+            raise PermissionDenied('دسترسی غیرمجاز به این گفتگو')
+        if conversation.conv_type == ConversationType.ANNOUNCEMENT:
+            if not can_post_to_conversation(user, conversation):
+                raise PermissionDenied('فقط مدیران کانال اطلاعیه وضعیت خواندن را می‌بینند')
+            records = ConversationParticipant.objects.filter(
+                conversation=conversation, left_at__isnull=True, last_read_message__isnull=False,
+                user__is_active=True
+            )
+            if not user.is_superuser:
+                # خوانندگان اطلاعیه ممکن است از شرکت‌های دیگر باشند: غیرسوپرکاربر فقط تعداد را می‌بیند
+                return Response({
+                    'conversation_id': str(conversation.id),
+                    'read_count': records.count(),
+                    'members': [],
+                })
+        else:
+            records = active_member_records(conversation)
+        records = list(records.select_related('user').order_by('user_id'))
+        return Response({
+            'conversation_id': str(conversation.id),
+            'read_count': sum(1 for r in records if r.last_read_message_id),
+            'members': [
+                {
+                    'user_id': r.user_id,
+                    'name': display_name(r.user),
+                    'last_read_message_id': str(r.last_read_message_id) if r.last_read_message_id else None,
+                    'last_read_at': r.last_read_at.isoformat() if r.last_read_at else None,
+                }
+                for r in records
+            ],
+        })
 
 
 class MessageViewSet(viewsets.ModelViewSet):

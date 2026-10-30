@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from common.warehouse_scope import user_warehouse_ids, can_access_warehouse
+from common.warehouse_scope import user_warehouse_ids, can_access_warehouse, users_with_warehouse_access
 from platform_core.registry import contributions, has_permission_alias
 from .models import Conversation, Message, GenericComment, ConversationType
 
@@ -80,6 +80,23 @@ def can_read_conversation(user, conversation):
         return can_access_warehouse(user, conversation.warehouse_id)
 
     return False
+
+
+def effective_reader_ids(conversation):
+    """
+    شناسهٔ همهٔ کاربران فعالی که طبق can_read_conversation این گفتگو را می‌بینند (E3):
+    دو‌نفره و گروه = اعضای فعال؛ اطلاعیه = اعضای صریح + هر کاربر فعالی که به انبار آن دسترسی دارد.
+    منبع واحد گیرندگان پخش زنده و اعلان.
+    """
+    ids = set(conversation.participants.filter(is_active=True).values_list('id', flat=True))
+    if conversation.conv_type == ConversationType.ANNOUNCEMENT:
+        active = User.objects.filter(is_active=True)
+        if conversation.warehouse_id is None:
+            readers = active
+        else:
+            readers = users_with_warehouse_access(active, conversation.warehouse_id)
+        ids |= set(readers.values_list('id', flat=True))
+    return ids
 
 
 def can_post_to_conversation(user, conversation):

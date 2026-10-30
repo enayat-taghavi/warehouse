@@ -100,13 +100,15 @@ class ConversationSerializer(serializers.ModelSerializer):
     my_role = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
     is_muted = serializers.SerializerMethodField()
+    # آیا کاربر جاری می‌تواند در این گفتگو پیام بفرستد (E14)؛ همان قاعدهٔ سرور (can_post_to_conversation)
+    can_post = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'title', 'conv_type', 'warehouse', 'participants', 'target_user_id',
             'participants_details', 'is_active', 'created_at', 'updated_at',
-            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count', 'is_muted'
+            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count', 'is_muted', 'can_post'
         ]
         read_only_fields = ['id', 'participants', 'created_at', 'updated_at', 'is_active']
 
@@ -141,6 +143,17 @@ class ConversationSerializer(serializers.ModelSerializer):
             conversation=obj, user=request.user, left_at__isnull=True, is_muted=True
         ).exists()
 
+    def get_can_post(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        if obj.conv_type in (ConversationType.DIRECT, ConversationType.GROUP):
+            # همان «عضو فعال» قاعدهٔ سرور، از فهرست پیش‌واکشی‌شدهٔ اعضا (بدون کوئری اضافه در فهرست)
+            return any(p.id == user.id for p in obj.participants.all())
+        from .access import can_post_to_conversation
+        return can_post_to_conversation(user, obj)
+
     def get_member_count(self, obj):
         if obj.conv_type != ConversationType.GROUP:
             return None
@@ -148,21 +161,8 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('member_ids', None)
-        target_user_id = validated_data.pop('target_user_id', None)
-        conv_type = validated_data.get('conv_type', ConversationType.DIRECT)
-        request = self.context.get('request')
-
-        # در گفتگوی دونفره، اگر قبلاً چنین گفتگویی وجود دارد همان را برمی‌گردانیم
-        if conv_type == ConversationType.DIRECT and target_user_id and request and request.user.is_authenticated:
-            existing = Conversation.objects.filter(
-                conv_type=ConversationType.DIRECT,
-                participants=request.user
-            ).filter(
-                participants__id=target_user_id
-            ).first()
-            if existing:
-                return existing
-
+        validated_data.pop('target_user_id', None)
+        # یافتن گفتگوی دو‌نفرهٔ قبلی فقط در ConversationViewSet._create_direct (زیر قفل، E13)
         # افزودن اعضا (سازنده، طرف گفتگو، اعضای گروه) فقط با membership.add_member در view (U1)
         return super().create(validated_data)
 

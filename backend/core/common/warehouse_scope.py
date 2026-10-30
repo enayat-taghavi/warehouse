@@ -71,3 +71,25 @@ def can_access_warehouse(user, warehouse_id):
     except (ValueError, TypeError):
         pass
     return warehouse_id in allowed or str(warehouse_id) in [str(x) for x in allowed]
+
+
+def users_with_warehouse_access(user_queryset, warehouse_id):
+    """
+    وارونهٔ can_access_warehouse: از میان کاربران داده‌شده، آن‌هایی که به این انبار دسترسی دارند
+    (همان سه سطر قاعدهٔ بالا). warehouse_id=None یعنی شیء بدون انبار.
+    """
+    from django.core.exceptions import FieldDoesNotExist
+    from django.db.models import Q
+
+    try:
+        user_queryset.model._meta.get_field('assigned_warehouses')
+    except FieldDoesNotExist:
+        # ماژول انبار نصب نیست: همه بدون محدودیت‌اند (مثل user_warehouse_ids)
+        return user_queryset if not STRICT_WAREHOUSE_SCOPE else user_queryset.filter(is_superuser=True)
+
+    q = Q(is_superuser=True)
+    if not STRICT_WAREHOUSE_SCOPE:
+        q |= Q(assigned_warehouses__isnull=True)
+    if warehouse_id is not None:
+        q |= Q(assigned_warehouses__id=warehouse_id)
+    return user_queryset.filter(q).distinct()
