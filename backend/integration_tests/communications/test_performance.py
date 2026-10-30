@@ -131,7 +131,7 @@ class ReadStateAndPerformanceTestCase(BaseCommsTestCase):
         """عملیات برودکست نباید به‌ازای هر عضو یک کوئری COUNT دیتابیس اجرا کند"""
         group_conv = Conversation.objects.create(
             title="گروه پرتعداد",
-            conv_type=ConversationType.WAREHOUSE_GROUP,
+            conv_type=ConversationType.GROUP,
             warehouse=self.wh1,
             created_by=self.admin
         )
@@ -160,7 +160,7 @@ class ReadStateAndPerformanceTestCase(BaseCommsTestCase):
         from notifications.models import DeviceToken, Notification
         group_conv = Conversation.objects.create(
             title="گروه پوش",
-            conv_type=ConversationType.WAREHOUSE_GROUP,
+            conv_type=ConversationType.GROUP,
             warehouse=self.wh1,
             created_by=self.admin
         )

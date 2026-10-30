@@ -51,7 +51,7 @@ class WebSocketSecurityTestCase(TransactionTestCase):
 
         self.wh1_group = Conversation.objects.create(
             title="گروه انبار ۱",
-            conv_type=ConversationType.WAREHOUSE_GROUP,
+            conv_type=ConversationType.GROUP,
             warehouse=self.wh1,
             created_by=self.manager_wh1
         )
@@ -211,7 +211,7 @@ class WebSocketSecurityTestCase(TransactionTestCase):
 
         await communicator.disconnect()
 
-    async def test_warehouse_group_requires_access(self):
+    async def test_group_non_member_connects_without_room(self):
         """کاربر انبار ۲ نباید بتواند به روم برودکست انبار ۱ بپیوندد"""
         token = self.get_jwt_token(self.staff_wh2)
         communicator = WebsocketCommunicator(application, f"/ws/chat/?token={token}&warehouse_id={self.wh1.id}")

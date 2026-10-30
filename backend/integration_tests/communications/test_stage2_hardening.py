@@ -82,7 +82,14 @@ class DirectPrivacyTests(BaseCommsTestCase):
         resp = self.client.delete(f'/api/communications/messages/{self.direct_message.id}/')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_superuser_non_member_cannot_delete_group_message(self):
+        self.auth(self.admin)
+        resp = self.client.delete(f'/api/communications/messages/{self.group_message.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_superuser_can_delete_group_message_with_audit(self):
+        from communications.membership import add_members
+        add_members(self.wh1_group, [self.admin])
         self.auth(self.admin)
         resp = self.client.delete(f'/api/communications/messages/{self.group_message.id}/')
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
@@ -153,7 +160,7 @@ class ChatEnabledPerConversationTests(BaseCommsTestCase):
         clear_setting_cache('chat_enabled', self.wh1.id)
         super().tearDown()
 
-    def test_message_to_disabled_warehouse_group_blocked(self):
+    def test_message_to_disabled_warehouse_conversation_blocked(self):
         self.auth(self.staff_wh1)
         resp = self.client.post('/api/communications/messages/', {
             'conversation': str(self.wh1_group.id), 'text': 'سلام'

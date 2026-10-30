@@ -90,7 +90,7 @@ class MediaUrlsAndAccelRedirectTests(TestCase):
     @override_settings(MEDIA_ACCEL_REDIRECT=True)
     def test_serve_media_content_disposition_attachment(self):
         """Non-image non-pdf or explicit download requests get Content-Disposition attachment."""
-        path = "chat_attachments/archive.zip"
+        path = "comment_attachments/archive.zip"
         expiry = _current_expiry()
         sig = _signature(path, expiry)
 

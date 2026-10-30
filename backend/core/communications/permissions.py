@@ -9,11 +9,14 @@ from .access import (
     can_delete_comment,
     is_chat_group_manager,
 )
-from .models import Conversation, Message, ConversationType
+from .models import Conversation, Message, ConversationType, ParticipantRole
 from common.warehouse_scope import can_access_warehouse
 
 
 _NO_TARGET = object()
+
+# اکشن‌هایی از ConversationViewSet که دسترسی پایه‌شان «خواندن گفتگو» است و نقش را خود view می‌سنجد
+MEMBER_SCOPED_ACTIONS = ('mark_as_read', 'members', 'member_detail', 'leave', 'mute')
 
 
 class IsChatEnabled(permissions.BasePermission):
@@ -84,11 +87,20 @@ class IsConversationParticipantOrAdmin(permissions.BasePermission):
 
         # اگر آبجکت Conversation است
         if hasattr(obj, 'participants') and hasattr(obj, 'conv_type'):
-            if request.method in permissions.SAFE_METHODS or getattr(view, 'action', None) == 'mark_as_read':
+            action = getattr(view, 'action', None)
+            # عملیات عضویت (فهرست/افزودن/حذف عضو، خروج، بی‌صدا): فقط اعضای مجاز؛ نقش در خود view سنجیده می‌شود (U1)
+            if request.method in permissions.SAFE_METHODS or action in MEMBER_SCOPED_ACTIONS:
                 return can_read_conversation(user, obj)
             # چت دو‌نفره فقط برای اعضای خودش، سوپرکاربر هم (E5)
             if obj.conv_type == ConversationType.DIRECT and not obj.participants.filter(id=user.id).exists():
                 return False
+            # گروه: ویرایش فقط مالک یا مدیر گروه، حذف فقط مالک؛ سوپرکاربرِ غیرعضو هم نه (U1)
+            if obj.conv_type == ConversationType.GROUP:
+                from .membership import member_role
+                role = member_role(obj, user)
+                if action == 'destroy':
+                    return role == ParticipantRole.OWNER
+                return role in (ParticipantRole.OWNER, ParticipantRole.ADMIN)
             if user.is_superuser:
                 return True
             # عملیات ویرایش یا حذف گفتگو

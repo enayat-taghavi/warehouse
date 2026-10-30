@@ -2,8 +2,13 @@ import os
 import re
 import uuid
 import logging
+import mimetypes
+from datetime import datetime, timezone as dt_timezone
+from urllib.parse import quote
+from django.conf import settings
+from django.http import FileResponse, Http404, HttpResponse
 from django.db import transaction
-from django.db.models import Q, Prefetch, Count, Subquery, OuterRef, Value, IntegerField
+from django.db.models import Q, Prefetch, Count, Subquery, OuterRef, Value, IntegerField, DateTimeField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -19,7 +24,7 @@ from accounts.models import AuditLog
 from notifications.models import Notification
 from .models import (
     Conversation, ConversationParticipant, Message,
-    MessageAttachment, GenericComment, ConversationType
+    MessageAttachment, GenericComment, ConversationType, ParticipantRole
 )
 from .serializers import (
     ConversationSerializer, MessageSerializer,
@@ -36,8 +41,13 @@ from .access import (
 )
 from .broadcast import (
     broadcast_message_ws, broadcast_comment_ws,
-    broadcast_message_updated_ws, broadcast_read_receipt_ws
+    broadcast_message_updated_ws, broadcast_read_receipt_ws, broadcast_membership_ws
 )
+from .membership import (
+    add_member, add_members, remove_member, leave_conversation, member_role, active_member_records,
+    ensure_member_record, post_system_message, display_name, MAX_GROUP_MEMBERS_PER_REQUEST
+)
+from rest_framework import serializers as drf_serializers
 from common.warehouse_scope import can_access_warehouse
 from settings_core.services import get_setting
 
@@ -107,9 +117,68 @@ def validate_uploaded_file(file_obj):
     return True, None
 
 
+class _UserIdsSerializer(drf_serializers.Serializer):
+    """بدنهٔ افزودن عضو: {"user_ids": [..]} — اعداد مثبت، حداکثر MAX_GROUP_MEMBERS_PER_REQUEST"""
+    user_ids = drf_serializers.ListField(
+        child=drf_serializers.IntegerField(min_value=1), allow_empty=False,
+        max_length=MAX_GROUP_MEMBERS_PER_REQUEST
+    )
+
+
+SAFE_INLINE_ATTACHMENT_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf')
+
+
+class ChatAttachmentDownloadView(APIView):
+    """
+    دانلود محافظت‌شدهٔ پیوست چت (تصمیم ۷): در هر درخواست عضویت فعلی در گفتگو سنجیده می‌شود،
+    پس عضو حذف‌شده دیگر فایل را نمی‌بیند. «نبودن» و «دسترسی نداشتن» یک پاسخ ۴۰۳ یکسان دارند.
+    ?thumb=1 بندانگشتی را می‌دهد؛ ?download=1 همیشه به صورت attachment.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsChatEnabled]
+
+    def get(self, request, pk):
+        att = MessageAttachment.objects.select_related('message__conversation').filter(
+            pk=pk, message__is_deleted=False, message__conversation__is_deleted=False
+        ).first()
+        if att is None or not can_read_conversation(request.user, att.message.conversation):
+            return Response({'detail': 'پیوست یافت نشد یا اجازهٔ دیدن آن را ندارید.'}, status=status.HTTP_403_FORBIDDEN)
+
+        want_thumb = request.query_params.get('thumb') == '1'
+        field = att.thumbnail if want_thumb else att.file
+        if not field or not field.name:
+            raise Http404
+        name = att.file_name or os.path.basename(field.name)
+        if want_thumb:
+            name = os.path.basename(field.name)
+        # نوع محتوا از پسوند فایل ذخیره‌شده (نه از هدر ارسالی کلاینت)
+        stored_ext = os.path.splitext(field.name)[1].lower()
+        content_type = mimetypes.guess_type(field.name)[0] or 'application/octet-stream'
+        if getattr(settings, 'MEDIA_ACCEL_REDIRECT', False):
+            response = HttpResponse(content_type=content_type)
+            response['X-Accel-Redirect'] = f'/internal_media/{quote(field.name)}'
+        else:
+            try:
+                response = FileResponse(field.open('rb'), content_type=content_type)
+            except FileNotFoundError:
+                raise Http404
+        inline = request.query_params.get('download') != '1' and stored_ext in SAFE_INLINE_ATTACHMENT_EXTENSIONS
+        disposition = 'inline' if inline else 'attachment'
+        response['Content-Disposition'] = (
+            f"{disposition}; filename=\"file{stored_ext}\"; filename*=UTF-8''{quote(name.encode('utf-8'))}")
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['Cache-Control'] = 'private, no-store'
+        return response
+
+
 class MessagePagination(LimitOffsetPagination):
     default_limit = 30
     max_limit = 100
+
+
+# اکشن‌های جزئی که شیء را مستقیم (نه از فهرست قابل مشاهده) می‌گیرند؛ دسترسی با object permission سنجیده می‌شود
+DETAIL_CONVERSATION_ACTIONS = (
+    'retrieve', 'update', 'partial_update', 'destroy', 'members', 'member_detail', 'leave', 'mute'
+)
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -118,7 +187,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+        if self.action in DETAIL_CONVERSATION_ACTIONS:
             return Conversation.objects.all().select_related('created_by').prefetch_related('participants')
 
         user = self.request.user
@@ -138,6 +207,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 user=user
             ).values('last_read_message_id')[:1]
         )
+        # عضوی که بعداً اضافه شده: نخوانده‌ها از زمان پیوستن شمرده می‌شوند، نه کل تاریخچه (E4)
+        participant_joined_subquery = Subquery(
+            ConversationParticipant.objects.filter(
+                conversation_id=OuterRef('conversation_id'),
+                user=user
+            ).values('joined_at')[:1],
+            output_field=DateTimeField()
+        )
+        epoch = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)
 
         unread_count_subquery = Subquery(
             Message.objects.filter(
@@ -145,9 +223,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
             ).exclude(
                 sender=user
             ).filter(
-                Q(id__gt=Coalesce(participant_last_read_subquery, Value(0)))
+                Q(id__gt=Coalesce(participant_last_read_subquery, Value(0))),
+                Q(created_at__gte=Coalesce(participant_joined_subquery, Value(epoch, output_field=DateTimeField())))
             ).values('conversation').annotate(cnt=Count('id')).values('cnt')[:1],
             output_field=IntegerField()
+        )
+        my_role_subquery = Subquery(
+            ConversationParticipant.objects.filter(
+                conversation_id=OuterRef('pk'), user=user, left_at__isnull=True
+            ).values('role')[:1]
         )
 
         qs = visible_conversations(user).select_related(
@@ -156,7 +240,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
             'participants',
             last_msg_prefetch
         ).annotate(
-            annotated_unread_count=Coalesce(unread_count_subquery, Value(0))
+            annotated_unread_count=Coalesce(unread_count_subquery, Value(0)),
+            annotated_my_role=my_role_subquery
         )
 
         if wh_id:
@@ -201,26 +286,187 @@ class ConversationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         conv_type = serializer.validated_data.get('conv_type', ConversationType.DIRECT)
 
-        # ساخت کانال اطلاعیه یا گروه کاری تنها توسط مدیران، سوپریوزرها یا کاربران دارای پرمیشن مجاز است
-        if conv_type in [ConversationType.ANNOUNCEMENT, ConversationType.WAREHOUSE_GROUP]:
+        # ساخت گروه یا کانال اطلاعیه تنها توسط مدیران گروه چت (سوپرکاربر، is_staff، قابلیت chat_group_manager)
+        if conv_type in [ConversationType.ANNOUNCEMENT, ConversationType.GROUP]:
             if not is_chat_group_manager(user):
-                raise PermissionDenied('شما مجاز به ایجاد گروه کاری یا کانال اطلاعیه نیستید')
+                raise PermissionDenied('شما مجاز به ایجاد گروه یا کانال اطلاعیه نیستید')
+
+        if conv_type == ConversationType.GROUP:
+            self._create_group(serializer)
+            return
+
+        if conv_type == ConversationType.ANNOUNCEMENT:
             warehouse_id = serializer.validated_data.get('warehouse_id')
             if warehouse_id and not can_access_warehouse(user, warehouse_id):
                 raise PermissionDenied('شما مجاز به ایجاد گفتگو برای این انبار نیستید')
 
         conv = serializer.save(created_by=user)
-        conv.participants.add(user)
-        ConversationParticipant.objects.get_or_create(conversation=conv, user=user)
+        add_member(
+            conv, user,
+            role=ParticipantRole.MEMBER if conv.conv_type == ConversationType.DIRECT else ParticipantRole.OWNER
+        )
 
         target_user_id = self.request.data.get('target_user_id')
         if target_user_id:
             try:
-                target_user = User.objects.get(id=target_user_id)
-                conv.participants.add(target_user)
-                ConversationParticipant.objects.get_or_create(conversation=conv, user=target_user)
-            except User.DoesNotExist:
+                target_user = User.objects.get(id=target_user_id, is_active=True)
+                add_member(conv, target_user)
+            except (User.DoesNotExist, ValueError, TypeError):
                 pass
+
+    @staticmethod
+    def _resolve_member_users(raw_ids):
+        """شناسه‌های اعضا: عدد، یکتا، حداکثر MAX_GROUP_MEMBERS_PER_REQUEST، کاربر موجود و فعال (تصمیم ۳)"""
+        ids = list(dict.fromkeys(int(i) for i in (raw_ids or [])))
+        if len(ids) > MAX_GROUP_MEMBERS_PER_REQUEST:
+            raise ValidationError({'user_ids': f'حداکثر {MAX_GROUP_MEMBERS_PER_REQUEST} عضو در هر درخواست مجاز است'})
+        users = list(User.objects.filter(id__in=ids, is_active=True))
+        found = {u.id for u in users}
+        missing = [i for i in ids if i not in found]
+        if missing:
+            raise ValidationError({'user_ids': 'برخی کاربران یافت نشدند یا غیرفعال هستند', 'invalid_ids': missing})
+        return users
+
+    def _create_group(self, serializer):
+        user = self.request.user
+        members = self._resolve_member_users(serializer.validated_data.get('member_ids'))
+        with transaction.atomic():
+            # گروه به انبار وابسته نیست؛ عضویت فقط با فهرست اعضا تعیین می‌شود (U1)
+            conv = serializer.save(created_by=user, warehouse_id=None)
+            add_members(conv, [user], role=ParticipantRole.OWNER)
+            add_members(conv, [m for m in members if m.id != user.id])
+            post_system_message(conv, user, f"{display_name(user)} گروه «{conv.title}» را ساخت")
+        transaction.on_commit(lambda: broadcast_membership_ws(conv))
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        old_title = instance.title
+        with transaction.atomic():
+            conv = serializer.save()
+            if conv.conv_type == ConversationType.GROUP and conv.title != old_title:
+                post_system_message(
+                    conv, self.request.user,
+                    f"{display_name(self.request.user)} نام گروه را به «{conv.title}» تغییر داد"
+                )
+        if conv.conv_type == ConversationType.GROUP:
+            transaction.on_commit(lambda: broadcast_membership_ws(conv))
+
+    # ─── عملیات عضویت گروه (U1) ───
+
+    def _get_group(self, request):
+        conv = self.get_object()
+        if conv.conv_type != ConversationType.GROUP:
+            raise ValidationError({'detail': 'این عملیات فقط برای گروه‌ها مجاز است'})
+        return conv
+
+    @staticmethod
+    def _member_payload(rec):
+        u = rec.user
+        return {
+            'id': u.id,
+            'username': u.username,
+            'first_name': u.first_name,
+            'last_name': u.last_name,
+            'full_name': display_name(u),
+            'role': rec.role,
+            'joined_at': rec.joined_at.isoformat() if rec.joined_at else None,
+        }
+
+    @action(detail=True, methods=['get', 'post'], url_path='members')
+    def members(self, request, pk=None):
+        conv = self._get_group(request)
+        if request.method == 'GET':
+            recs = active_member_records(conv).select_related('user').order_by('joined_at', 'id')
+            return Response([self._member_payload(r) for r in recs])
+
+        actor_role = member_role(conv, request.user)
+        if actor_role not in (ParticipantRole.OWNER, ParticipantRole.ADMIN):
+            raise PermissionDenied('فقط مالک یا مدیر گروه می‌تواند عضو اضافه کند')
+        ids_ser = _UserIdsSerializer(data=request.data)
+        ids_ser.is_valid(raise_exception=True)
+        users = self._resolve_member_users(ids_ser.validated_data['user_ids'])
+        with transaction.atomic():
+            Conversation.objects.select_for_update().filter(pk=conv.pk).first()
+            added = add_members(conv, users)
+            if added:
+                names = '، '.join(display_name(u) for u in added)
+                post_system_message(conv, request.user, f"{display_name(request.user)}، {names} را اضافه کرد")
+        if added:
+            transaction.on_commit(lambda: broadcast_membership_ws(conv))
+        recs = active_member_records(conv).select_related('user').filter(user__in=added)
+        return Response({'added': [self._member_payload(r) for r in recs]}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['delete', 'patch'], url_path=r'members/(?P<user_id>\d+)')
+    def member_detail(self, request, pk=None, user_id=None):
+        conv = self._get_group(request)
+        actor_role = member_role(conv, request.user)
+        target_id = int(user_id)
+        if target_id == request.user.id:
+            raise ValidationError({'detail': 'برای خروج از گروه از گزینهٔ «ترک گروه» استفاده کنید'})
+        target_rec = active_member_records(conv).select_related('user').filter(user_id=target_id).first()
+
+        if request.method == 'PATCH':
+            # تغییر نقش فقط توسط مالک: member ⇄ admin
+            if actor_role != ParticipantRole.OWNER:
+                raise PermissionDenied('فقط مالک گروه می‌تواند نقش اعضا را تغییر دهد')
+            if target_rec is None:
+                raise ValidationError({'detail': 'این کاربر عضو گروه نیست'})
+            new_role = request.data.get('role')
+            if new_role not in (ParticipantRole.ADMIN, ParticipantRole.MEMBER):
+                raise ValidationError({'role': 'نقش باید admin یا member باشد'})
+            if target_rec.role != new_role:
+                target_rec.role = new_role
+                target_rec.save(update_fields=['role', 'updated_at'])
+                transaction.on_commit(lambda: broadcast_membership_ws(conv))
+            return Response(self._member_payload(target_rec))
+
+        if actor_role not in (ParticipantRole.OWNER, ParticipantRole.ADMIN):
+            raise PermissionDenied('فقط مالک یا مدیر گروه می‌تواند عضو حذف کند')
+        if target_rec is None:
+            raise ValidationError({'detail': 'این کاربر عضو گروه نیست'})
+        # مدیر گروه نمی‌تواند مالک یا مدیر دیگری را حذف کند
+        if actor_role == ParticipantRole.ADMIN and target_rec.role in (ParticipantRole.OWNER, ParticipantRole.ADMIN):
+            raise PermissionDenied('مدیر گروه نمی‌تواند مالک یا مدیر دیگر را حذف کند')
+        target_user = target_rec.user
+        with transaction.atomic():
+            remove_member(conv, target_user)
+            post_system_message(
+                conv, request.user, f"{display_name(request.user)}، {display_name(target_user)} را حذف کرد"
+            )
+        transaction.on_commit(lambda: broadcast_membership_ws(conv, removed_user_ids=[target_user.id]))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path='leave')
+    def leave(self, request, pk=None):
+        conv = self._get_group(request)
+        user = request.user
+        with transaction.atomic():
+            Conversation.objects.select_for_update().filter(pk=conv.pk).first()
+            # پیام سیستمی پیش از خروج ثبت می‌شود تا اعضای باقی‌مانده آن را بگیرند
+            post_system_message(conv, user, f"{display_name(user)} گروه را ترک کرد")
+            new_owner = leave_conversation(conv, user)
+        transaction.on_commit(lambda: broadcast_membership_ws(conv, removed_user_ids=[user.id]))
+        return Response({
+            'status': 'left',
+            'conversation_id': str(conv.id),
+            'new_owner_id': new_owner.id if new_owner else None,
+        })
+
+    @action(detail=True, methods=['post'], url_path='mute')
+    def mute(self, request, pk=None):
+        conv = self.get_object()
+        if not conv.participants.filter(id=request.user.id).exists():
+            raise ValidationError({'detail': 'فقط اعضای گفتگو می‌توانند آن را بی‌صدا کنند'})
+        muted = request.data.get('muted')
+        if isinstance(muted, str):
+            muted = muted.strip().lower() in ('1', 'true', 'yes')
+        elif not isinstance(muted, bool):
+            raise ValidationError({'muted': 'مقدار muted باید true یا false باشد'})
+        rec, _ = ensure_member_record(conv, request.user)
+        if rec.is_muted != muted:
+            rec.is_muted = muted
+            rec.save(update_fields=['is_muted', 'updated_at'])
+        return Response({'conversation_id': str(conv.id), 'muted': muted})
 
     def perform_destroy(self, instance):
         record_audit_log(

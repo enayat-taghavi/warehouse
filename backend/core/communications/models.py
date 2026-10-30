@@ -7,7 +7,7 @@ from common.sync_models import SyncModelMixin
 
 class ConversationType(models.TextChoices):
     DIRECT = 'direct', 'گفتگوی دو‌نفره'
-    WAREHOUSE_GROUP = 'warehouse_group', 'گروه کاری انبار'
+    GROUP = 'group', 'گروه'
     ANNOUNCEMENT = 'announcement', 'اطلاعیه عمومی'
 
 
@@ -159,6 +159,12 @@ class MessageAttachment(SyncModelMixin):
         return self.file_name
 
 
+class ParticipantRole(models.TextChoices):
+    OWNER = 'owner', 'مالک'
+    ADMIN = 'admin', 'مدیر گروه'
+    MEMBER = 'member', 'عضو'
+
+
 class ConversationParticipant(SyncModelMixin):
     """مدل اعضای گفتگو و رهگیری آخرین پیام خوانده‌شده بدون تحمیل بار به دیتابیس"""
     conversation = models.ForeignKey(
@@ -183,6 +189,15 @@ class ConversationParticipant(SyncModelMixin):
     )
     last_read_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان آخرین خواندن")
     is_muted = models.BooleanField(default=False, verbose_name="بی‌صدا")
+    # نقش در گروه؛ عضو حذف‌شده یا خارج‌شده پاک نمی‌شود، فقط left_at می‌گیرد (U1)
+    role = models.CharField(
+        max_length=10,
+        choices=ParticipantRole.choices,
+        default=ParticipantRole.MEMBER,
+        verbose_name="نقش"
+    )
+    joined_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان پیوستن")
+    left_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="زمان خروج")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ عضویت")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
 

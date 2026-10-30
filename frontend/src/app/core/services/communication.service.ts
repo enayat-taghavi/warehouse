@@ -22,8 +22,9 @@ export interface MessageAttachment {
   file_name: string;
   file_size: number;
   content_type: string;
-  thumbnail?: string;
-  file_url?: string;
+  /** مسیر دانلود که در هر درخواست عضویت را می‌سنجد (E27)؛ با توکن خوانده می‌شود */
+  download_url?: string;
+  thumbnail_url?: string | null;
   created_at?: string;
 }
 
@@ -52,7 +53,7 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   title?: string;
-  conv_type: 'direct' | 'warehouse_group' | 'announcement';
+  conv_type: 'direct' | 'group' | 'announcement';
   warehouse?: number;
   participants: number[];
   participants_details?: UserShort[];

@@ -12,8 +12,9 @@ from rest_framework_simplejwt.tokens import AccessToken
 from warehouses.models import Warehouse
 from inventory.models import Item
 from communications.models import (
-    Conversation, Message, MessageAttachment, GenericComment, ConversationType
+    Conversation, Message, MessageAttachment, GenericComment, ConversationType, ParticipantRole
 )
+from communications.membership import add_members
 
 User = get_user_model()
 
@@ -133,11 +134,14 @@ class BaseCommsTestCase(TestCase):
         # گروه کاری انبار ۱
         self.wh1_group = Conversation.objects.create(
             title="گروه کاری انبار ۱",
-            conv_type=ConversationType.WAREHOUSE_GROUP,
+            conv_type=ConversationType.GROUP,
             warehouse=self.wh1,
             created_by=self.manager_wh1
         )
         self.wh1_group.participants.set([self.manager_wh1, self.staff_wh1])
+        # U1: every group member has a membership record; the creator is the owner
+        add_members(self.wh1_group, [self.manager_wh1], role=ParticipantRole.OWNER)
+        add_members(self.wh1_group, [self.staff_wh1])
 
         # کانال اطلاعیه سراسری
         self.announcement = Conversation.objects.create(

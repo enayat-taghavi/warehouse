@@ -197,7 +197,7 @@
                 [attr.aria-label]="'دانلود ' + att.file_name"
                 [attr.title]="'دانلود ' + att.file_name"
                 class="block w-full text-start rounded-lg overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
-                <img *ngIf="att.content_type.startsWith('image/')" [src]="att.file_url | serverUrl" class="max-h-48 w-full object-cover" />
+                <img *ngIf="att.content_type.startsWith('image/') && attachmentPreview(att) as src" [src]="src" [alt]="att.file_name" class="max-h-48 w-full object-cover" />
                 <span *ngIf="!att.content_type.startsWith('image/')" class="block p-2.5 flex items-center justify-between gap-2">
                   <span class="block flex items-center gap-1.5 truncate">
                     <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>

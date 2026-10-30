@@ -366,8 +366,29 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
             'data': event.get('data')
         }))
 
+    async def chat_membership_revoked(self, event):
+        """
+        عضو از گروه حذف شد یا خارج شد (U1): خروج فوری از روم conv_<id> تا هیچ رویداد زنده‌ای
+        (مثل تایپ) دیگر به او نرسد، و اطلاع به کلاینت برای برداشتن گفتگو از فهرست.
+        """
+        conv_id = str(event.get('conversation_id') or '')
+        if not conv_id:
+            return
+        room_group = f"conv_{conv_id}"
+        if hasattr(self, 'joined_conversations'):
+            self.joined_conversations.discard(room_group)
+        await self.channel_layer.group_discard(room_group, self.channel_name)
+        await self.send(text_data=json.dumps({
+            'event': 'chat.conversation.removed',
+            'data': {'conversation_id': conv_id}
+        }))
+
     async def chat_typing_event(self, event):
         """ارسال وضعیت تایپ کردن به کلاینت‌های داخل اتاق"""
+        # فقط اگر هنوز عضو روم است (پس از حذف عضویت، رویداد جامانده رله نمی‌شود)
+        room_group = f"conv_{event.get('conversation_id')}"
+        if room_group not in getattr(self, 'joined_conversations', set()):
+            return
         if event.get('user_id') != self.user.id:
             await self.send(text_data=json.dumps({
                 'event': 'chat.typing',

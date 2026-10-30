@@ -28,7 +28,7 @@ def _is_participant(user, conversation):
 def visible_conversations(user):
     """
     دریافت تمام گفتگوهای مجاز و قابل مشاهده برای کاربر جاری
-    شامل گفتگوهای دارای عضویت، گروه‌های کاری انبار مجاز و اطلاعیه‌ها
+    شامل گفتگوهای دارای عضویت فعال (دو‌نفره و گروه) و اطلاعیه‌ها
     نکته مهم: چت‌های دو‌نفره (direct) منحصراً به اعضای آن گفتگو محدود هستند حتی برای کاربران superuser.
     """
     if not user or not user.is_authenticated:
@@ -37,19 +37,17 @@ def visible_conversations(user):
     # ۱. گفتگوهایی که کاربر صراحتاً عضو آن است (شامل چت‌های دو‌نفره شخصی)
     q = Q(participants=user)
 
-    # ۲. گروه‌های انبار و کانال‌های اطلاعیه بر اساس محدوده انبار کاربر
+    # ۲. کانال‌های اطلاعیه بر اساس محدوده انبار کاربر؛ گروه‌ها فقط با عضویت فعال (بند ۱) دیده می‌شوند (U1)
     if user.is_superuser:
-        q |= Q(conv_type__in=[ConversationType.ANNOUNCEMENT, ConversationType.WAREHOUSE_GROUP])
+        q |= Q(conv_type=ConversationType.ANNOUNCEMENT)
     else:
         allowed_whs = user_warehouse_ids(user)
         if allowed_whs is None:
             # کاربری که بدون محدودیت انبار است (مثلاً مدیران ارشد)
             q |= Q(conv_type=ConversationType.ANNOUNCEMENT)
-            q |= Q(conv_type=ConversationType.WAREHOUSE_GROUP)
         elif allowed_whs:
             q |= Q(conv_type=ConversationType.ANNOUNCEMENT, warehouse_id__isnull=True)
             q |= Q(conv_type=ConversationType.ANNOUNCEMENT, warehouse_id__in=allowed_whs)
-            q |= Q(conv_type=ConversationType.WAREHOUSE_GROUP, warehouse_id__in=allowed_whs)
         else:
             # کاربری بدون دسترسی به هیچ انباری
             q |= Q(conv_type=ConversationType.ANNOUNCEMENT, warehouse_id__isnull=True)
@@ -64,8 +62,8 @@ def can_read_conversation(user, conversation):
     if not user or not user.is_authenticated:
         return False
 
-    # چت دو‌نفره فقط برای اعضای خودش، حتی سوپرکاربر (تصمیم کاربر، E5)
-    if conversation.conv_type == ConversationType.DIRECT:
+    # چت دو‌نفره و گروه فقط برای اعضای فعال خودش، حتی سوپرکاربر (تصمیم کاربر، E5 و U1)
+    if conversation.conv_type in (ConversationType.DIRECT, ConversationType.GROUP):
         return _is_participant(user, conversation)
 
     if user.is_superuser:
@@ -81,11 +79,6 @@ def can_read_conversation(user, conversation):
             return True
         return can_access_warehouse(user, conversation.warehouse_id)
 
-    # گروه کاری انبار
-    if conversation.conv_type == ConversationType.WAREHOUSE_GROUP:
-        if conversation.warehouse_id:
-            return can_access_warehouse(user, conversation.warehouse_id)
-
     return False
 
 
@@ -96,8 +89,8 @@ def can_post_to_conversation(user, conversation):
     if not user or not user.is_authenticated:
         return False
 
-    # در گفتگوی خصوصی، فرستنده حتماً باید عضو گفتگو باشد (سوپرکاربر هم، E5)
-    if conversation.conv_type == ConversationType.DIRECT:
+    # در گفتگوی خصوصی و گروه، فرستنده حتماً باید عضو فعال گفتگو باشد (سوپرکاربر هم، E5 و U1)
+    if conversation.conv_type in (ConversationType.DIRECT, ConversationType.GROUP):
         return _is_participant(user, conversation)
 
     if user.is_superuser:
@@ -112,13 +105,6 @@ def can_post_to_conversation(user, conversation):
             return can_access_warehouse(user, conversation.warehouse_id)
         return True
 
-    # در گروه کاری انبار، عضویت یا دسترسی انبار لازم است
-    if conversation.conv_type == ConversationType.WAREHOUSE_GROUP:
-        if _is_participant(user, conversation):
-            return True
-        if conversation.warehouse_id:
-            return can_access_warehouse(user, conversation.warehouse_id)
-
     return False
 
 
@@ -129,7 +115,19 @@ def can_modify_message(user, message):
     """
     if not user or not user.is_authenticated:
         return False
-    return message.sender_id == user.id
+    if message.sender_id != user.id:
+        return False
+    return not _left_group(user, message)
+
+
+def _left_group(user, message):
+    """عضو حذف‌شده یا خارج‌شده از گروه، پیام‌های قبلی خودش را هم ویرایش یا حذف نمی‌کند (U1)"""
+    conversation = getattr(message, 'conversation', None)
+    return (
+        conversation is not None
+        and conversation.conv_type == ConversationType.GROUP
+        and not _is_participant(user, conversation)
+    )
 
 
 def can_delete_message(user, message):
@@ -140,10 +138,13 @@ def can_delete_message(user, message):
     if not user or not user.is_authenticated:
         return False
     if message.sender_id == user.id:
-        return True
+        return not _left_group(user, message)
     conversation = getattr(message, 'conversation', None)
     if user.is_superuser and conversation is not None:
-        return conversation.conv_type != ConversationType.DIRECT
+        # گروه فقط برای اعضای فعال است؛ سوپرکاربرِ غیرعضو پیام گروه را هم حذف نمی‌کند (U1)
+        if conversation.conv_type == ConversationType.GROUP:
+            return _is_participant(user, conversation)
+        return conversation.conv_type == ConversationType.ANNOUNCEMENT
     return False
 
 

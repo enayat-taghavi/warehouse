@@ -1,11 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from common.media_urls import signed_media_url
 from rest_framework.exceptions import PermissionDenied
 from .access import (  # noqa: F401 (get_allowed_comment_models re-export)
     get_allowed_comment_models, resolve_comment_content_type, can_access_comment_target
 )
 from .models import Conversation, ConversationParticipant, Message, MessageAttachment, GenericComment, ConversationType
+from .membership import MAX_GROUP_MEMBERS_PER_REQUEST
 
 User = get_user_model()
 
@@ -23,20 +25,26 @@ class UserShortSerializer(serializers.ModelSerializer):
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
-    file_url = serializers.SerializerMethodField()
+    """
+    پیوست چت فقط از مسیر دانلود محافظت‌شده باز می‌شود که در هر درخواست عضویت فعلی را می‌سنجد (تصمیم ۷)؛
+    آدرس رسانهٔ خام (/media/chat_attachments/...) دیگر خروجی داده نمی‌شود.
+    """
+    download_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
         model = MessageAttachment
-        fields = ['id', 'file', 'file_name', 'file_size', 'content_type', 'thumbnail', 'file_url', 'created_at']
+        fields = ['id', 'file_name', 'file_size', 'content_type', 'download_url', 'thumbnail_url', 'created_at']
 
-    def get_file_url(self, obj):
-        if obj.file:
-            signed_url = signed_media_url(obj.file.name)
-            request = self.context.get('request')
-            if request and signed_url:
-                return request.build_absolute_uri(signed_url)
-            return signed_url
-        return None
+    def get_download_url(self, obj):
+        if not obj.file:
+            return None
+        return reverse('chat_attachment_download', args=[obj.pk])
+
+    def get_thumbnail_url(self, obj):
+        if not obj.thumbnail:
+            return None
+        return f"{reverse('chat_attachment_download', args=[obj.pk])}?thumb=1"
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -84,17 +92,51 @@ class ConversationSerializer(serializers.ModelSerializer):
     warehouse = serializers.IntegerField(source='warehouse_id', required=False, allow_null=True)
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    # ساخت گروه (U1): شناسهٔ اعضای اولیه؛ اعتبارسنجی فعال بودن کاربران در view انجام می‌شود
+    member_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), write_only=True, required=False,
+        max_length=MAX_GROUP_MEMBERS_PER_REQUEST
+    )
+    my_role = serializers.SerializerMethodField()
+    member_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'title', 'conv_type', 'warehouse', 'participants', 'target_user_id',
             'participants_details', 'is_active', 'created_at', 'updated_at',
-            'last_message', 'unread_count'
+            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count'
         ]
-        read_only_fields = ['id', 'participants', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'participants', 'created_at', 'updated_at', 'is_active']
+
+    def validate_title(self, value):
+        return value.strip() if isinstance(value, str) else value
+
+    def validate(self, attrs):
+        conv_type = attrs.get('conv_type') if self.instance is None else self.instance.conv_type
+        if conv_type == ConversationType.GROUP and (self.instance is None or 'title' in attrs):
+            if not attrs.get('title'):
+                raise serializers.ValidationError({'title': 'عنوان گروه الزامی است'})
+        return attrs
+
+    def get_my_role(self, obj):
+        if obj.conv_type != ConversationType.GROUP:
+            return None
+        if hasattr(obj, 'annotated_my_role'):
+            return obj.annotated_my_role
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        from .membership import member_role
+        return member_role(obj, request.user)
+
+    def get_member_count(self, obj):
+        if obj.conv_type != ConversationType.GROUP:
+            return None
+        return len(obj.participants.all())
 
     def create(self, validated_data):
+        validated_data.pop('member_ids', None)
         target_user_id = validated_data.pop('target_user_id', None)
         conv_type = validated_data.get('conv_type', ConversationType.DIRECT)
         request = self.context.get('request')
@@ -110,22 +152,15 @@ class ConversationSerializer(serializers.ModelSerializer):
             if existing:
                 return existing
 
-        conv = super().create(validated_data)
-        if request and request.user.is_authenticated:
-            conv.participants.add(request.user)
-        if target_user_id:
-            try:
-                target_user = User.objects.get(id=target_user_id)
-                conv.participants.add(target_user)
-            except User.DoesNotExist:
-                pass
-        return conv
+        # افزودن اعضا (سازنده، طرف گفتگو، اعضای گروه) فقط با membership.add_member در view (U1)
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         # فیلدهای حساس conv_type و participants نباید با update مستقیم کاربر تغییر کنند
         validated_data.pop('conv_type', None)
         validated_data.pop('participants', None)
         validated_data.pop('target_user_id', None)
+        validated_data.pop('member_ids', None)
         # انبار گفتگو پس از ساخت تغییر نمی‌کند (E23)
         validated_data.pop('warehouse_id', None)
         return super().update(instance, validated_data)
@@ -159,6 +194,9 @@ class ConversationSerializer(serializers.ModelSerializer):
             qs = obj.messages.exclude(sender=request.user)
             if last_read_id:
                 qs = qs.filter(id__gt=last_read_id)
+            # عضوی که بعداً اضافه شده: نخوانده‌ها از زمان پیوستن شمرده می‌شوند، نه کل تاریخچه (E4)
+            if part and part.joined_at:
+                qs = qs.filter(created_at__gte=part.joined_at)
             return qs.count()
         return 0
 

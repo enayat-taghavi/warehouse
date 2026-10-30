@@ -67,8 +67,13 @@ class AttachmentsSecurityTestCase(BaseCommsTestCase):
             format='multipart'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("file_url", response.data)
-        self.assertTrue(response.data['file_url'].startswith("http") or response.data['file_url'].startswith("/media/"))
+        self.assertNotIn("file_url", response.data)
+        self.assertNotIn("file", response.data)
+        self.assertEqual(
+            response.data['download_url'],
+            f"/api/communications/attachments/{response.data['id']}/download/"
+        )
+        self.assertIsNone(response.data['thumbnail_url'])
 
     def test_rejects_oversize_file(self):
         """فایل‌های بزرگ‌تر از سقف مجاز (۱۰ مگابایت) باید با خطای ۴۰۰ رد شوند"""
@@ -110,8 +115,13 @@ class AttachmentsSecurityTestCase(BaseCommsTestCase):
 
     # ─── ۳. آزمون‌های لینک امضاشده و محافظت سرو رسانه (Signed URLs & Serve) ───
 
-    def test_file_url_is_signed(self):
-        """آدرس برگشتی فایل در سریالایزر باید حاوی پارامترهای امضا (?e=...&s=...) باشد"""
+    def _media_path(self, response):
+        """مسیر خام رسانهٔ پیوست آپلودشده (/media/chat_attachments/...) برای آزمون مسدود بودن آن"""
+        att = MessageAttachment.objects.get(id=response.data['id'])
+        return urlparse(signed_media_url(att.file.name)).path
+
+    def test_signed_media_link_not_generated_for_chat(self):
+        """پیوست چت دیگر پیوند امضاشدهٔ رسانه ندارد؛ فقط مسیر دانلود محافظت‌شده (تصمیم ۷)"""
         self.auth(self.manager_wh1)
         valid_png = SimpleUploadedFile("invoice.png", self.valid_png_bytes, content_type="image/png")
         response = self.client.post(
@@ -120,9 +130,8 @@ class AttachmentsSecurityTestCase(BaseCommsTestCase):
             format='multipart'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        file_url = response.data.get('file_url', '')
-        self.assertIn('?e=', file_url)
-        self.assertIn('&s=', file_url)
+        self.assertNotIn('?e=', response.data['download_url'])
+        self.assertNotIn('/media/', response.data['download_url'])
 
     def test_unsigned_chat_media_is_denied(self):
         """درخواست مستقیم فایل‌های چت بدون امضای HMAC باید با کد ۴۰۳ مسدود شود"""
@@ -134,9 +143,7 @@ class AttachmentsSecurityTestCase(BaseCommsTestCase):
             {'file': valid_png, 'message_id': str(self.direct_message.id)},
             format='multipart'
         )
-        file_url = response.data['file_url']
-        parsed = urlparse(file_url)
-        path_without_signature = parsed.path
+        path_without_signature = self._media_path(response)
 
         # کلاینت ناشناس بدون هدر و بدون توکن امضا
         unauthenticated_client = Client()
@@ -152,9 +159,7 @@ class AttachmentsSecurityTestCase(BaseCommsTestCase):
             {'file': valid_png, 'message_id': str(self.direct_message.id)},
             format='multipart'
         )
-        file_url = response.data['file_url']
-        parsed = urlparse(file_url)
-        tampered_url = f"{parsed.path}?e=9999999999&s=tampered_fake_signature"
+        tampered_url = f"{self._media_path(response)}?e=9999999999&s=tampered_fake_signature"
 
         unauthenticated_client = Client()
         tampered_resp = unauthenticated_client.get(tampered_url)

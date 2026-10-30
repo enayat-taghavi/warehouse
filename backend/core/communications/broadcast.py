@@ -165,6 +165,39 @@ def broadcast_comment_ws(comment, request=None):
             logger.debug(f"[WS Broadcast] Error sending mention: {e}")
 
 
+def broadcast_membership_ws(conversation, removed_user_ids=()):
+    """
+    تغییر عضویت گروه (U1):
+    - به کاربر حذف‌شده/خارج‌شده: رویداد داخلی chat_membership_revoked که مصرف‌کنندهٔ او را فوراً از
+      روم conv_<id> بیرون می‌برد و رویداد chat.conversation.removed را به کلاینت می‌فرستد؛
+    - به همهٔ اعضای فعال باقی‌مانده: chat.conversation.updated تا فهرست و اعضا را تازه کنند.
+    """
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    conv_id = str(conversation.id)
+    for u_id in set(removed_user_ids):
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"chat_user_{u_id}",
+                {"type": "chat_membership_revoked", "conversation_id": conv_id}
+            )
+        except Exception as e:
+            logger.debug(f"[WS Broadcast] Error sending membership revoke: {e}")
+    for p_id in conversation.participants.values_list('id', flat=True):
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"chat_user_{p_id}",
+                {
+                    "type": "chat_message_broadcast",
+                    "event": "chat.conversation.updated",
+                    "data": {"conversation_id": conv_id}
+                }
+            )
+        except Exception as e:
+            logger.debug(f"[WS Broadcast] Error sending conversation update: {e}")
+
+
 def broadcast_read_receipt_ws(conversation, reader_user):
     """
     برودکست بلادرنگ وضعیت خوانده‌شدن پیام‌ها (Read Receipt / تیک دوم) به اعضای گفتگو

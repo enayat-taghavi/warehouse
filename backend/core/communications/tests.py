@@ -14,7 +14,7 @@ User = get_user_model()
 class CommunicationsUnitTestCase(TestCase):
     def test_conversation_type_choices(self):
         self.assertEqual(ConversationType.DIRECT, 'direct')
-        self.assertEqual(ConversationType.WAREHOUSE_GROUP, 'warehouse_group')
+        self.assertEqual(ConversationType.GROUP, 'group')
         self.assertEqual(ConversationType.ANNOUNCEMENT, 'announcement')
 
     def test_conversation_warehouse_property_without_warehouse(self):
@@ -27,7 +27,7 @@ class CommunicationsUnitTestCase(TestCase):
         recipient2 = User.objects.create_user(username='recip2', password='password123')
         muted_user = User.objects.create_user(username='muted_user', password='password123')
 
-        conv = Conversation.objects.create(title="گروه انبار", conv_type=ConversationType.WAREHOUSE_GROUP)
+        conv = Conversation.objects.create(title="گروه انبار", conv_type=ConversationType.GROUP)
         conv.participants.add(sender, recipient1, recipient2, muted_user)
 
         ConversationParticipant.objects.create(conversation=conv, user=muted_user, is_muted=True)

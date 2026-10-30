@@ -37,7 +37,6 @@ from django.views.static import serve
 # پیوست‌های قدیمی) رفتار قبلی خود را نگه می‌دارند تا چیزی نشکند.
 PROTECTED_PREFIXES = (
     'item_photos/',
-    'chat_attachments/',
     'comment_attachments/',
     'company_documents/',
     'company_core_docs/',
@@ -47,8 +46,11 @@ PROTECTED_PREFIXES = (
 
 # پیشوندهایی که از مسیر `/media` هرگز سرو نمی‌شوند، حتی با امضای معتبر (ص۶ طرح ۲.۶):
 # پیوست عمومی فقط از `/api/attachments/<id>/download/` باز می‌شود که در هر درخواست `can_view` را می‌سنجد.
+# پیوست چت (و بندانگشتی آن) فقط از `/api/communications/attachments/<id>/download/` باز می‌شود که در هر
+# درخواست عضویت فعلی در گفتگو را می‌سنجد؛ پیوندهای امضاشدهٔ قدیمی `/media/chat_attachments/...` هم دیگر کار نمی‌کنند.
 FORBIDDEN_PREFIXES = (
     'attachments/',
+    'chat_attachments/',
 )
 
 # طول پنجره اعتبار/پایداری امضا (۷ روز برای چت و رسانه‌ها)

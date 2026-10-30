@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { CommunicationService, Conversation, ChatMessage, UserShort } from '../../../../../core/services/communication.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
@@ -9,13 +9,13 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
-import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
-import { saveUrl } from '../../../../../core/platform/file-output';
+import { ApiService } from '../../../../../core/api/api.service';
+import { saveBlob } from '../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent, ServerUrlPipe],
+  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
@@ -34,7 +34,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private state = inject(StateService);
   private auth = inject(AuthService);
   private toast = inject(ToastService);
+  private api = inject(ApiService);
   private sub = new Subscription();
+  /** پیش‌نمایش عکس پیوست‌ها (blob با توکن، چون <img> هدر Authorization نمی‌فرستد) */
+  private attachmentPreviews = new Map<string, string | null>();
 
   @ViewChild('messagesScrollContainer') private messagesScrollContainer!: ElementRef;
 
@@ -131,6 +134,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       URL.revokeObjectURL(this.filePreviewUrl);
       this.filePreviewUrl = null;
     }
+    this.attachmentPreviews.forEach((u) => { if (u) URL.revokeObjectURL(u); });
+    this.attachmentPreviews.clear();
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
     if (this.typingIndicatorClearTimer) clearTimeout(this.typingIndicatorClearTimer);
   }
@@ -390,7 +395,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   public getConversationTitle(conv: Conversation): string {
-    if (conv.conv_type === 'warehouse_group') return conv.title || 'گروه عمومی انبار';
+    if (conv.conv_type === 'group') return conv.title || 'گروه';
     if (conv.conv_type === 'announcement') return conv.title || 'کانال اطلاعیه‌های عمومی';
 
     // در چت‌های دونفره (direct): همواره نام طرف مقابل (مخاطب غیر از کاربر جاری) را برمی‌گردانیم
@@ -446,9 +451,34 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     }
   }
 
-  public downloadAttachment(att: { file_url?: string; file_name?: string }): void {
-    if (att?.file_url) {
-      void saveUrl(att.file_url, att.file_name);
+  private apiPath(url: string): string {
+    return url.replace(/^\/?api\//, '');
+  }
+
+  /** نشانی blob پیش‌نمایش عکس؛ بار اول دریافت را شروع می‌کند و تا آماده شدن null می‌دهد */
+  public attachmentPreview(att: { id?: string; download_url?: string; thumbnail_url?: string | null }): string | null {
+    const url = att?.thumbnail_url || att?.download_url;
+    if (!att?.id || !url) return null;
+    if (this.attachmentPreviews.has(att.id)) return this.attachmentPreviews.get(att.id) ?? null;
+    this.attachmentPreviews.set(att.id, null);
+    const id = att.id;
+    firstValueFrom(this.api.download(this.apiPath(url)))
+      .then((blob) => this.attachmentPreviews.set(id, URL.createObjectURL(blob)))
+      .catch(() => { /* پیش‌نمایش اختیاری است */ });
+    return null;
+  }
+
+  public async downloadAttachment(att: { download_url?: string; file_name?: string }): Promise<void> {
+    if (!att?.download_url) {
+      // پیام کش‌شدهٔ قدیمی که هنوز نشانی دانلود تازه ندارد؛ با تازه شدن فهرست درست می‌شود
+      this.toast.error('فایل هنوز آماده نیست؛ گفتگو را دوباره باز کنید');
+      return;
+    }
+    try {
+      const blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url)));
+      await saveBlob(blob, att.file_name || 'attachment');
+    } catch {
+      this.toast.error('دانلود فایل انجام نشد');
     }
   }
 }
