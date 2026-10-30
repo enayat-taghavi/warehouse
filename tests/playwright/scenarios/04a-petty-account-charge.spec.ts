@@ -99,6 +99,7 @@ test('video 4-a: petty account and charge', async ({ page, tv }) => {
   await tv.act.fill(tracking, 'TRK-4001');
   await tv.act.click(page.getByRole('button', { name: 'ثبت واریز' }));
   await expect(tracking).toBeHidden({ timeout: 30_000 });
+  await page.waitForTimeout(1500);
   await tv.expectNoErrors();
 
   // ─── کارمند: موجودی ───

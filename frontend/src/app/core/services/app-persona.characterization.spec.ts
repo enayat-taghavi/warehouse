@@ -640,6 +640,7 @@ describe('AppPersonaService Characterization Spec', () => {
 
     it('evaluates accountant route access table', () => {
       service.activeRole.set('accountant');
+      expect(service.canAccessRoute('/app/finance/employee-petty-cash?statement=12')).toBe(true);
       const expected = [
         false, // employee-attendance (/employee-)
         false, // supervisor-fleet (/supervisor-)
@@ -700,6 +701,7 @@ describe('AppPersonaService Characterization Spec', () => {
 
     it('evaluates manager route access table', () => {
       service.activeRole.set('manager');
+      expect(service.canAccessRoute('/app/finance/employee-petty-cash?statement=12')).toBe(true);
       const expected = [
         false, // employee-attendance (/employee-)
         false, // supervisor-fleet (/supervisor-)
@@ -720,6 +722,7 @@ describe('AppPersonaService Characterization Spec', () => {
 
     it('evaluates treasury route access table', () => {
       service.activeRole.set('treasury');
+      expect(service.canAccessRoute('/app/finance/employee-petty-cash?charge=12')).toBe(true);
       const expected = [
         false, // employee-attendance (/employee-)
         false, // supervisor-fleet (/supervisor-)

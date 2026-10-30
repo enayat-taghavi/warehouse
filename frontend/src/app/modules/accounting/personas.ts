@@ -119,7 +119,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     // حسابدار نباید به صفحات کارمند، سرپرست کارگاه، مدیر، خزانه‌دار دسترسی داشته باشد
     // گزارش‌های مدیریتی با مجوز perm_accounting_reports برای حسابدار هم باز است (طرح ۴.۷ د۸)
     const isReports = cleanRoute.endsWith('/manager-reports');
-    if (cleanRoute.includes('/employee-') || cleanRoute.includes('/supervisor-') || (cleanRoute.includes('/manager-') && !isReports) || cleanRoute.includes('/treasurer-')) {
+    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/supervisor-') || (cleanRoute.includes('/manager-') && !isReports) || cleanRoute.includes('/treasurer-')) {
       return true;
     }
     if (cleanRoute.includes('treasury-cartable') || cleanRoute.includes('manager-approvals') || cleanRoute.includes('/attendance') || cleanRoute.includes('/fleet')) {
@@ -143,12 +143,12 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     }
   } else if (role === 'manager') {
     // مدیر نباید به ثبت خام کارمند یا سرپرست یا محاسبات خام حسابدار دسترسی مستقیم داشته باشد
-    if (cleanRoute.includes('/employee-') || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/treasurer-')) {
+    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/treasurer-')) {
       return true;
     }
   } else if (role === 'treasury') {
     // خزانه‌دار فقط به امور پرداخت و بانک دسترسی دارد
-    if (cleanRoute.includes('/employee-') || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-')) {
+    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-')) {
       return true;
     }
     if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('manager-approvals')) {

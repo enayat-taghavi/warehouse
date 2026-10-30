@@ -2,7 +2,7 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EmployeePettyCashHubComponent } from './employee-petty-cash';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import {
   PettyCashTransaction,
   PettyCashBalanceSummary,
@@ -377,12 +377,13 @@ describe('EmployeePettyCashHubComponent 3.6-d', () => {
       transaction_type: 'allocation',
       amount: 50000000,
       title: 'شارژ آزمایشی',
-      status: 'pending_accountant'
+      status: 'draft'
     };
+    const txSubject = new Subject<PettyCashTransaction[]>();
     const mockRouteCharge: any = { queryParams: of({ charge: '9' }) };
     const mockApiForCharge: any = {
       ...mockPersonnelApi,
-      getPettyCashTransactions: vi.fn().mockReturnValue(of([chargeTx]))
+      getPettyCashTransactions: vi.fn().mockReturnValue(txSubject.asObservable())
     };
     const chargeComponent = new EmployeePettyCashHubComponent(
       mockAuth,
@@ -396,6 +397,11 @@ describe('EmployeePettyCashHubComponent 3.6-d', () => {
     expect(chargeComponent.activeView).toBe('charges');
     expect(chargeComponent.detailKind).toBe('petty_cash_charge');
     expect(chargeComponent.detailId).toBe(9);
+    expect(chargeComponent.isLoadingDetail).toBe(true);
+    txSubject.next([chargeTx]);
     expect(chargeComponent.detailTx?.id).toBe(9);
+    expect(chargeComponent.isLoadingDetail).toBe(false);
+    mockAuth.userPermissions.mockReturnValue(['perm_treasury_pay']);
+    expect(chargeComponent.canPayCharge).toBe(true);
   });
 });

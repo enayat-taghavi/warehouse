@@ -532,6 +532,10 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
         this.transactions = res || [];
         this.loadError = '';
         this.pruneSelection();
+        if (this.detailKind === 'petty_cash_charge' && this.detailId) {
+          this.detailTx = this.transactions.find(t => t.id === this.detailId) || null;
+          this.isLoadingDetail = false;
+        }
         this.isLoading = false;
         this.loadExpensePage(silent);
         this.cdr.detectChanges();
@@ -1077,7 +1081,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     if (kind === 'petty_cash_charge') {
       const found = this.transactions.find(t => t.id === id) || null;
       this.detailTx = found;
-      this.isLoadingDetail = false;
+      this.isLoadingDetail = !found && this.isLoading;
       this.cdr.detectChanges();
       return;
     }
@@ -1162,7 +1166,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   get canPayCharge(): boolean {
     const tx = this.detailTx;
-    return !!tx && this.canTreasuryPay && tx.status !== 'draft' && tx.status !== 'approved' && tx.status !== 'rejected';
+    return !!tx && this.canTreasuryPay && tx.transaction_type === 'allocation' && tx.status !== 'approved' && tx.status !== 'rejected';
   }
 
   payDetail(): void {
