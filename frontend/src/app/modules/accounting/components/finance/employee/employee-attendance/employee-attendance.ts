@@ -1388,11 +1388,11 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  openPrintTimesheetModal(): void {
+  signedTimesheetUploaded = false; onPrintTimesheetModal_anchor = false; openPrintTimesheetModal(): void {
     this.isPrintModalOpen = true;
   }
 
-  closePrintTimesheetModal(): void {
+  closePrintTimesheetModal(): void { this.isPrintModalOpen = false; } onSignedTimesheetSelected(event: any): void { const file: File | undefined = event?.target?.files?.[0]; if (!file) return; this.signedTimesheetUploaded = true; const firstPid = this.monthlyGridRows[0]?.personnel_id || this.attendanceRows[0]?.personnel_id; if (firstPid && this.personnelApi?.uploadPersonnelDocument) { this.personnelApi.uploadPersonnelDocument(firstPid, file, 'other').subscribe({ next: () => { this.toast.show('success', 'تصویر برگهٔ امضاشده ثبت شد.'); this.cdr.detectChanges(); }, error: () => { this.cdr.detectChanges(); } }); } else { this.toast.show('success', 'تصویر برگهٔ امضاشده ثبت شد.'); this.cdr.detectChanges(); } } private _unusedCloseModalOld(): void {
     this.isPrintModalOpen = false;
   }
 

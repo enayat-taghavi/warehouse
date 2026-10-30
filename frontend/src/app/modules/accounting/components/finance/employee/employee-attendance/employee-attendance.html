@@ -634,7 +634,7 @@
 
         <!-- ارسال کارکرد به واحد مالی -->
         <button
-          *ngIf="periodStatus === 'OPEN'"
+          *ngIf="periodStatus === 'OPEN' || periodStatus === 'REVISION_REQUIRED'"
           type="button"
           appAction="send"
           label="ارسال به مالی"
@@ -980,7 +980,19 @@
             <p class="text-[11px] text-slate-500">همراه با کادرهای امضا، تاییدات سرپرست و اثر انگشت</p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <label for="signedTimesheetInput" class="text-xs font-bold text-slate-700">بارگذاری برگهٔ امضاشده:</label>
+          <input
+            id="signedTimesheetInput"
+            type="file"
+            accept="image/*,.pdf"
+            (change)="onSignedTimesheetSelected($event)"
+            class="text-xs text-slate-600 max-w-[210px] cursor-pointer"
+            aria-label="بارگذاری برگه امضاشده"
+          />
+          <span *ngIf="signedTimesheetUploaded" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
+            تصویر برگهٔ امضاشده ثبت شد
+          </span>
           <button (click)="triggerPrint()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer flex items-center gap-1.5">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-print"></svg>
             <span>ارسال به چاپگر (Print)</span>
