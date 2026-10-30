@@ -243,4 +243,56 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     expect(fixture.componentInstance.activeConv()).not.toBeNull();
     expect(toast.show).not.toHaveBeenCalled();
   });
+  it('E14: hides the composer and shows a note when can_post is false', async () => {
+    await setup({ conv: { ...groupConv('member'), conv_type: 'announcement', can_post: false } });
+    expect(q('[data-testid="cannot-post-note"]')!.textContent).toContain('فقط مدیران');
+    expect(q('input[type="text"][placeholder]')).toBeNull();
+  });
+
+  it('shows the composer when can_post is not false', async () => {
+    await setup({ conv: groupConv('member', { can_post: true }) });
+    expect(q('[data-testid="cannot-post-note"]')).toBeNull();
+    expect(q('input[type="text"][placeholder]')).not.toBeNull();
+  });
+
+  it('U8: read-by panel lists members who read up to my message (and not me or earlier readers)', async () => {
+    await setup({ conv: groupConv('member') });
+    comm.activeMessages$.next([
+      { id: '10', conversation: 'g1', sender: 1, is_me: true, text: 'سلام', created_at: '', read_by_count: 1 }
+    ]);
+    comm.getReadStatus = vi.fn().mockResolvedValue({
+      conversation_id: 'g1', read_count: 2,
+      members: [
+        { user_id: 1, name: 'من', last_read_message_id: '10', last_read_at: null },
+        { user_id: 2, name: 'علی', last_read_message_id: '12', last_read_at: null },
+        { user_id: 3, name: 'سارا', last_read_message_id: '9', last_read_at: null },
+        { user_id: 4, name: 'رضا', last_read_message_id: null, last_read_at: null }
+      ]
+    });
+    await flush(fixture);
+    q('[data-testid="read-by-btn"]')!.click();
+    await flush(fixture);
+    expect(comm.getReadStatus).toHaveBeenCalledWith('g1');
+    expect(q('[data-testid="read-by-2"]')!.textContent).toContain('علی');
+    expect(q('[data-testid="read-by-3"]')).toBeNull();
+    expect(q('[data-testid="read-by-1"]')).toBeNull();
+    expect(q('[data-testid="read-by-4"]')).toBeNull();
+  });
+
+  it('U8: read-by panel shows error with retry', async () => {
+    await setup({ conv: groupConv('member') });
+    comm.activeMessages$.next([{ id: '10', conversation: 'g1', sender: 1, is_me: true, text: 'x', created_at: '' }]);
+    comm.getReadStatus = vi.fn().mockRejectedValue(new Error('x'));
+    await flush(fixture);
+    q('[data-testid="read-by-btn"]')!.click();
+    await flush(fixture);
+    expect(q('[data-testid="read-by-error"]')!.textContent).toContain('خطا در دریافت');
+  });
+
+  it('U8: no read-by button in direct chats', async () => {
+    await setup({ conv: directConv() });
+    comm.activeMessages$.next([{ id: '10', conversation: 'd1', sender: 1, is_me: true, text: 'x', created_at: '' }]);
+    await flush(fixture);
+    expect(q('[data-testid="read-by-btn"]')).toBeNull();
+  });
 });

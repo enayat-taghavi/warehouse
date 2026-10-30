@@ -327,10 +327,58 @@ describe('CommunicationService', () => {
     expect(service.activeMessages$.value[0].read_by_count).toBe(0);
 
     // ۲. رسید خوانده شدن توسط مخاطب (کاربر ۲) باید پیام ارسالی من را ۲ تیک کند
-    (service as any).handleReadReceipt({ conversation_id: 'conv-1', reader_id: 2 });
+    (service as any).handleReadReceipt({ conversation_id: 'conv-1', reader_id: 2, last_read_message_id: '1' });
     const updated = service.activeMessages$.value;
     expect(updated[0].read_by_count).toBe(1);
     expect(updated[1].read_by_count).toBe(0);
+  });
+
+  it('read_receipt marks only my messages up to last_read_message_id; null does nothing', () => {
+    service.getCurrentUserId = () => 1;
+    service.activeConversation$.next({ id: 'conv-1', conv_type: 'group', is_active: true, participants: [1, 2], created_at: '', updated_at: '' });
+    service.activeMessages$.next([
+      { id: '5', conversation: 'conv-1', sender: 1, is_me: true, read_by_count: 0, created_at: '' },
+      { id: '9', conversation: 'conv-1', sender: 1, is_me: true, read_by_count: 0, created_at: '' },
+      { id: '12', conversation: 'conv-1', sender: 1, is_me: true, read_by_count: 0, created_at: '' }
+    ]);
+    (service as any).handleReadReceipt({ conversation_id: 'conv-1', reader_id: 2, last_read_message_id: null });
+    expect(service.activeMessages$.value.map(m => m.read_by_count)).toEqual([0, 0, 0]);
+    // مقایسهٔ عددی: ۹ < ۱۰ (نه مقایسهٔ رشته‌ای)
+    (service as any).handleReadReceipt({ conversation_id: 'conv-1', reader_id: 2, last_read_message_id: '10' });
+    expect(service.activeMessages$.value.map(m => m.read_by_count)).toEqual([1, 1, 0]);
+  });
+
+  it('read_receipt from myself (other device) zeroes that conversation unread and does not mark messages', () => {
+    service.getCurrentUserId = () => 1;
+    service.conversations$.next([
+      { id: 'conv-1', conv_type: 'direct', is_active: true, participants: [1, 2], unread_count: 3, created_at: '', updated_at: '' },
+      { id: 'conv-2', conv_type: 'direct', is_active: true, participants: [1, 3], unread_count: 2, created_at: '', updated_at: '' }
+    ]);
+    service.activeConversation$.next(service.conversations$.value[0]);
+    service.activeMessages$.next([{ id: '1', conversation: 'conv-1', sender: 1, is_me: true, read_by_count: 0, created_at: '' }]);
+    (service as any).handleReadReceipt({ conversation_id: 'conv-1', reader_id: 1, last_read_message_id: '1' });
+    expect(service.conversations$.value[0].unread_count).toBe(0);
+    expect(service.conversations$.value[1].unread_count).toBe(2);
+    expect(service.totalUnreadCount()).toBe(2);
+    expect(service.activeMessages$.value[0].read_by_count).toBe(0);
+  });
+
+  it('own message from another device is appended once, silently, without unread', () => {
+    let played = false;
+    service.playNotificationSound = () => { played = true; };
+    service.getCurrentUserId = () => 1;
+    service.isChatDrawerOpen.set(false);
+    service.conversations$.next([
+      { id: 'conv-1', conv_type: 'direct', is_active: true, participants: [1, 2], unread_count: 0, created_at: '', updated_at: '' }
+    ]);
+    service.activeConversation$.next(service.conversations$.value[0]);
+    service.activeMessages$.next([]);
+    const raw = { id: '77', conversation: 'conv-1', sender: 1, is_me: true, text: 'از موبایل', created_at: new Date().toISOString() };
+    (service as any).handleNewMessage(raw);
+    (service as any).handleNewMessage(raw);
+    expect(service.activeMessages$.value.length).toBe(1);
+    expect(played).toBe(false);
+    expect(service.conversations$.value[0].unread_count).toBe(0);
   });
 
   it('should activate hasNewIncomingPulse when incoming message arrives while drawer is closed', () => {

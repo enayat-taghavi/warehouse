@@ -71,6 +71,21 @@ export interface Conversation {
   my_role?: 'owner' | 'admin' | 'member' | null;
   member_count?: number;
   is_muted?: boolean;
+  /** false = فقط مدیران می‌توانند پیام بفرستند (کانال اعلان) */
+  can_post?: boolean;
+}
+
+export interface ReadStatusMember {
+  user_id: number;
+  name: string;
+  last_read_message_id: string | null;
+  last_read_at: string | null;
+}
+
+export interface ReadStatus {
+  conversation_id: string;
+  read_count: number;
+  members: ReadStatusMember[];
 }
 
 export interface ConversationMember {
@@ -1319,18 +1334,43 @@ export class CommunicationService implements OnDestroy {
     }
   }
 
-  private handleReadReceipt(data: { conversation_id: string; reader_id: number; reader_name?: string }): void {
+  /** وضعیت خواندن اعضای یک گفتگو (برای پنل «خوانده‌شده توسط») */
+  public getReadStatus(conversationId: string): Promise<ReadStatus> {
+    return firstValueFrom(
+      this.http.get<ReadStatus>(`/api/communications/conversations/${conversationId}/read_status/`, {
+        context: new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true)
+      })
+    );
+  }
+
+  private handleReadReceipt(data: { conversation_id: string; reader_id: number; reader_name?: string; last_read_message_id?: string | null }): void {
     const currentUserId = this.getCurrentUserId();
-    // اگر خواننده پیام خودِ کاربر جاری باشد، وضعیت تیک پیام‌های من نباید تغییر کند (تنها وقتی طرف مقابل می‌خواند ۲ تیک می‌شود)
+    // خواندنِ خودِ من (از دستگاه دیگر): فقط شمارندهٔ خوانده‌نشدهٔ آن گفتگو صفر می‌شود، پیامی علامت نمی‌خورد
     if (currentUserId !== null && Number(data.reader_id) === currentUserId) {
+      const convs = this.conversations$.value.map(c =>
+        String(c.id) === String(data.conversation_id) ? { ...c, unread_count: 0 } : c
+      );
+      this.conversations$.next(convs);
+      const totalUnread = convs.reduce((acc, curr) => acc + (curr.unread_count || 0), 0);
+      this.totalUnreadCount.set(totalUnread);
+      this.totalUnreadCount$.next(totalUnread);
+      if (totalUnread === 0) {
+        this.hasNewIncomingPulse.set(false);
+      }
       return;
     }
+
+    const lastRead = data.last_read_message_id;
+    if (lastRead === null || lastRead === undefined || lastRead === '') return;
+    const limit = Number(lastRead);
+    if (!Number.isFinite(limit)) return;
 
     const active = this.activeConversation$.value;
     if (active && String(active.id) === String(data.conversation_id)) {
       const currentMsgs = this.activeMessages$.value;
       const updated = currentMsgs.map(m => {
-        if (m.is_me) {
+        const mid = Number(m.id);
+        if (m.is_me && Number.isFinite(mid) && mid <= limit) {
           return {
             ...m,
             read_by_count: Math.max(m.read_by_count || 0, 1)

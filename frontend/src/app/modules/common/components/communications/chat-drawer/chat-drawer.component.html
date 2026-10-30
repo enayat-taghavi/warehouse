@@ -275,6 +275,13 @@
                 <span *ngIf="!msg.read_by_count || msg.read_by_count === 0" 
                       title="ارسال شده" 
                       class="font-mono text-[10px] opacity-80">✓</span>
+                <!-- خوانده‌شده توسط (فقط گروه) -->
+                <button *ngIf="canShowReadBy(msg)" type="button" (click)="openReadBy(msg)"
+                        data-testid="read-by-btn"
+                        title="خوانده‌شده توسط" aria-label="خوانده‌شده توسط"
+                        class="min-w-[40px] min-h-[40px] -my-3 rounded-xl flex items-center justify-center cursor-pointer tap-target hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="eye"></svg>
+                </button>
               </ng-container>
               
               <!-- Failed State + Retry Button -->
@@ -306,8 +313,12 @@
   </div>
 
   <!-- ─── Message Input Footer (In Chat Mode) ─── -->
-  <div *ngIf="activeTab() === 'chat'" class="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-    
+  <div *ngIf="activeTab() === 'chat' && activeConv()?.can_post === false" data-testid="cannot-post-note"
+       class="p-3 border-t border-line bg-surface text-center text-[11px] font-bold text-fg-muted">
+    فقط مدیران می‌توانند در این کانال پیام بفرستند
+  </div>
+  <div *ngIf="activeTab() === 'chat' && activeConv()?.can_post !== false" class="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+
     <!-- File Preview Strip -->
     <div *ngIf="selectedFile" class="flex items-center justify-between p-2 mb-2 bg-blue-50 dark:bg-blue-950/40 rounded-lg text-xs border border-blue-200 dark:border-blue-800">
       <div class="flex items-center gap-2 truncate">
@@ -389,6 +400,34 @@
           {{ groupBusy() ? 'در حال ساخت...' : 'ساخت گروه' }}
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ─── پنل «خوانده‌شده توسط» ─── -->
+  <div *ngIf="readByMsg()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-end sm:items-center justify-center p-3"
+       (click)="$event.target === $event.currentTarget && closeReadBy()"
+       (keydown)="onDialogKey($event, closeReadBy.bind(this))">
+    <div role="dialog" aria-modal="true" aria-labelledby="read-by-title" data-testid="read-by-panel"
+         class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4 max-h-full overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="read-by-title" tabindex="-1" class="text-sm font-bold text-fg focus:outline-none">خوانده‌شده توسط</h3>
+        <button type="button" (click)="closeReadBy()" title="بستن" aria-label="بستن"
+                class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+        </button>
+      </div>
+      <p *ngIf="readByLoading()" class="text-[11px] text-fg-muted py-2" data-testid="read-by-loading">در حال بارگذاری…</p>
+      <div *ngIf="readByError() && !readByLoading()" role="alert" data-testid="read-by-error" class="flex items-center justify-between gap-2 py-2">
+        <p class="text-[11px] font-bold text-rose-600">خطا در دریافت</p>
+        <button type="button" (click)="loadReadBy()"
+                class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">تلاش دوباره</button>
+      </div>
+      <ng-container *ngIf="readByStatus() && !readByLoading()">
+        <ul *ngIf="readByReaders().length > 0" class="divide-y divide-line-subtle border border-line rounded-xl" data-testid="read-by-list">
+          <li *ngFor="let r of readByReaders()" class="px-3 py-2 text-xs font-bold text-fg" [attr.data-testid]="'read-by-' + r.user_id"><bdi>{{ r.name }}</bdi></li>
+        </ul>
+        <p *ngIf="readByReaders().length === 0" class="text-[11px] text-fg-muted py-2" data-testid="read-by-empty">هنوز کسی این پیام را نخوانده است</p>
+      </ng-container>
     </div>
   </div>
 

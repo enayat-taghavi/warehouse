@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, ViewChild, ElementRef, Af
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember } from '../../../../../core/services/communication.service';
+import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember, ReadStatus } from '../../../../../core/services/communication.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
@@ -759,6 +759,67 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public senderColor(msg: ChatMessage): string {
     const id = Math.abs(Number(msg.sender) || 0);
     return ChatDrawerComponent.SENDER_COLORS[id % ChatDrawerComponent.SENDER_COLORS.length];
+  }
+
+  // ─── «خوانده‌شده توسط» (فقط گروه) ───
+  public readByMsg = signal<ChatMessage | null>(null);
+  public readByLoading = signal<boolean>(false);
+  public readByError = signal<boolean>(false);
+  public readByStatus = signal<ReadStatus | null>(null);
+  private readByReturnFocus: HTMLElement | null = null;
+  /** شمارهٔ آخرین درخواست؛ پاسخ دیرِ درخواست قبلی نادیده گرفته می‌شود */
+  private readBySeq = 0;
+
+  /** کاربر فقط وقتی گروه را می‌بیند و پیام ارسال‌شده و واقعی (نه موقت) باشد */
+  public canShowReadBy(msg: ChatMessage): boolean {
+    return this.isGroup() && !!msg.is_me && !msg.is_pending && msg.delivery_status !== 'failed' && Number.isFinite(Number(msg.id));
+  }
+
+  public readByReaders(): { user_id: number; name: string }[] {
+    const msg = this.readByMsg();
+    const st = this.readByStatus();
+    if (!msg || !st) return [];
+    const mid = Number(msg.id);
+    const me = this.currentUserId();
+    return st.members
+      .filter(m => m.user_id !== me && m.last_read_message_id != null && Number(m.last_read_message_id) >= mid)
+      .map(m => ({ user_id: m.user_id, name: m.name }));
+  }
+
+  public async openReadBy(msg: ChatMessage): Promise<void> {
+    if (!this.canShowReadBy(msg)) return;
+    this.readByReturnFocus = document.activeElement as HTMLElement | null;
+    this.readByMsg.set(msg);
+    this.readByStatus.set(null);
+    setTimeout(() => document.getElementById('read-by-title')?.focus(), 0);
+    await this.loadReadBy();
+  }
+
+  public async loadReadBy(): Promise<void> {
+    const conv = this.activeConv();
+    if (!conv) return;
+    const seq = ++this.readBySeq;
+    this.readByLoading.set(true);
+    this.readByError.set(false);
+    try {
+      const status = await this.commService.getReadStatus(conv.id);
+      if (seq === this.readBySeq) this.readByStatus.set(status);
+    } catch {
+      if (seq === this.readBySeq) this.readByError.set(true);
+    } finally {
+      if (seq === this.readBySeq) this.readByLoading.set(false);
+    }
+  }
+
+  public closeReadBy(): void {
+    this.readBySeq++;
+    this.readByLoading.set(false);
+    this.readByMsg.set(null);
+    this.readByStatus.set(null);
+    this.readByError.set(false);
+    const back = this.readByReturnFocus;
+    this.readByReturnFocus = null;
+    if (back?.isConnected) setTimeout(() => back.focus(), 0);
   }
 
   public onDialogKey(ev: KeyboardEvent, close: () => void): void {
