@@ -15861,3 +15861,53 @@ The muxing process (`tools\mux.py`) has been started in the background. I am wai
 ۳. **تایید و حل مستقیم:** دستور `run_auto_backup` در بک‌اند اجرا شد و نسخه پشتیبان تازه `backup_20261030_072311.dump` ایجاد گردید. سپس دستور اع...
 
 ---
+
+### Task 1 of 1 — 2026-10-30 07:48:00
+- **Status:** DONE
+- **Conversation:** `de44e1a5-99a0-4bd1-ab05-c02d351fd9f6`
+- **Steps:** 156
+- **Tokens:** 223446
+- **Duration:** 9m 26s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 2/2 passed
+- **Task:**
+```
+[ ] Session 2 — Training videos v-d: fast-test video 4-a again (desktop and mobile) on app after the seed fix (demo accountant and manager now assigned at company level), then purge the demo data
+
+
+
+1. Critical rules: exactly the critical rules of Session 1 (Training videos v-b) above, unchanged. Do not restart, build or back up anything; never run `run_auto_backup` (it deletes old backups). Step c always runs.
+
+2. Context: same as Session 1 (Training videos v-d) above, including the SEED definition. The previous run stopped at the save of the new petty account with the alert "you are not allowed"; the seed now gives the demo accountant a company-level assignment, so that save should pass. Only fix a locator when the error clearly says an element was not found or a wait timed out and the screenshot shows the element under another name; otherwise just report.
+
+3. Task, in this order:
+   - a) `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/api/public/config/` must print 200.
+   - b) For each profile P in desktop, mobile: SEED, then in `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=P scenarios/04a-petty-account-charge.spec.ts --reporter=list > ..\..\scratch\logs\vd_test_04a_P.txt 2>&1`. At most 2 attempts per profile, each after its own SEED. If a test fails with red error toasts, do NOT change the scenario: write the toast text in the report.
+   - c) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\vd_purge.txt 2>&1`, then read the file.
+   - d) If you changed a scenario file, commit only that file with the subject `test(training-videos v-d): selector fixes for video 4-a`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step d, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step c done; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last 15 lines of each `vd_test_04a_*.txt` log, the first error line and the step of the scenario where it stopped, the alert text in `error-context.md` if a test failed, any selector you changed and why. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست سریع سناریوی ویدیوی آموزشی ۴-الف (`scenarios/04a-petty-account-charge.spec.ts`) روی محیط `app` در دو پروفایل دسکتاپ و موبایل در حال اجرا است. دیتای نمایشی قبل از اجرا با موفقیت `SEED` شد و هم‌اکنون تست پروفایل `desktop` در حال اجراست؛ به محض اتمام تست، نتیجه بررسی و مرحله بعد انجام خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+تست سریع سناریوی ۴-الف روی پروفایل موبایل (`mobile`) را پس از اجرای `SEED` مجدد آغاز کردم و منتظر پایان اجرای آن هستم.
+
+</div>
+<div dir="rtl" align="right">
+
+### خلاصه و ارزیابی نتیجه (Protocol Verification)
+
+در این نشست، تست سریع ویدیوی ۴-الف (`scenarios/04a-petty-account-charge.spec.ts`) پس از اصلاح `SEED` (انتساب سطح شرکت برای ح...
+
+---

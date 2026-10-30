@@ -3893,7 +3893,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 2 — Training videos v-d: fast-test video 4-a again (desktop and mobile) on app after the seed fix (demo accountant and manager now assigned at company level), then purge the demo data
+[DONE] [ ] Session 2 — Training videos v-d: fast-test video 4-a again (desktop and mobile) on app after the seed fix (demo accountant and manager now assigned at company level), then purge the demo data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -3916,3 +3916,29 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: step c done; `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report: the last 15 lines of each `vd_test_04a_*.txt` log, the first error line and the step of the scenario where it stopped, the alert text in `error-context.md` if a test failed, any selector you changed and why. End the turn after the report.
+
+===
+
+[ ] Session 3 — Training videos v-d: release the frontend route fix (the treasurer may open the petty cash page from My Tasks to pay a charge), then fast-test video 4-a again (desktop and mobile) on app and purge the demo data
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -X utf8 scratch/check_v_d.py --base {base}
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules: exactly the critical rules of Session 1 (Training videos v-b) above, unchanged. Do not restart the backend and do not back up anything; never run `run_auto_backup` (it deletes old backups). Step d always runs.
+
+2. Context: same as Session 1 (Training videos v-d) above, including the SEED definition. Session 2 passed every step up to the treasurer: the treasurer clicked the document button of the charge card in My Tasks and was sent to the payroll page, because the petty cash page did not allow the treasurer permission. The route now allows it; the frontend must be rebuilt first. Only fix a locator when the error clearly says an element was not found or a wait timed out and the screenshot shows the element under another name; otherwise just report.
+
+3. Task, in this order:
+   - a) Frontend release, in `frontend`: `npx ng build --delete-output-path=false > ..\scratch\logs\vd_build.txt 2>&1; node tools/patch-ngsw-530.js >> ..\scratch\logs\vd_build.txt 2>&1`. Read the end of the file (no errors). Then `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/` and `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/api/public/config/` must both print 200.
+   - b) For each profile P in desktop, mobile: SEED, then in `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=P scenarios/04a-petty-account-charge.spec.ts --reporter=list > ..\..\scratch\logs\vd_test_04a_P.txt 2>&1`. At most 2 attempts per profile, each after its own SEED. If a test fails with red error toasts, do NOT change the scenario: write the toast text in the report.
+   - c) If you changed a scenario file, commit only that file with the subject `test(training-videos v-d): selector fixes for video 4-a`.
+   - d) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\vd_purge.txt 2>&1`, then read the file.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step c, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step d done; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the end of `vd_build.txt`, the last 15 lines of each `vd_test_04a_*.txt` log, the first error line and the step of the scenario where it stopped, the alert text in `error-context.md` if a test failed, any selector you changed and why. End the turn after the report.
