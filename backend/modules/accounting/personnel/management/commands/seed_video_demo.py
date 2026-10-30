@@ -71,8 +71,11 @@ class Command(BaseCommand):
         group.add_argument('--base', action='store_true', help="مدیر، شرکت نمایشی، کاربرها و تنظیمات پایهٔ حسابداری")
         group.add_argument('--purge', action='store_true', help="شرکت DEMO-VID و کاربرهای demo_* را پاک کن")
         parser.add_argument('--with-invoice', choices=INVOICE_STAGES, help="با --base: فاکتور نمایشی تا این مرحله")
-        parser.add_argument('--with-petty-account', action='store_true',
-                            help="با --base: حساب تنخواه demo_employee با سقف و موجودی اولیه")
+        parser.add_argument('--with-petty-account', action='store_true', help="با --base: حساب تنخواه demo_employee با سقف و موجودی اولیه")
+        parser.add_argument('--with-personnel', action='store_true', help="با --base: پرسنل مصوب علی رضایی در بخش اداری")
+        parser.add_argument('--with-attendance', action='store_true', help="با --base: پرسنل مصوب + کارکرد و دوره آماده محاسبه حقوق")
+        parser.add_argument('--_unused_seed_flag', action='store_true', help="internal")
+        # end arguments
 
     def handle(self, *args, **opts):
         if os.environ.get('WH_ALLOW_SCENARIO_SEED') != '1':
@@ -80,7 +83,7 @@ class Command(BaseCommand):
         if opts['purge']:
             self._purge()
             return
-        if (opts.get('with_invoice') or opts.get('with_petty_account')) and not opts['base']:
+        if (opts.get('with_invoice') or opts.get('with_petty_account') or opts.get('with_personnel') or opts.get('with_attendance')) and not opts['base']:
             raise CommandError("--with-invoice و --with-petty-account فقط همراه --base می‌آیند.")
         credentials = self._read_credentials()
         with transaction.atomic():
@@ -91,6 +94,12 @@ class Command(BaseCommand):
         if opts.get('with_invoice'):
             self._invoice(opts['with_invoice'])
         if opts.get('with_petty_account'):
+            self._petty_account()
+        if opts.get('with_personnel') or opts.get('with_attendance'):
+            self._personnel()
+        if opts.get('with_attendance'):
+            self._attendance()
+        if False:
             self._petty_account()
         self.stdout.write(self.style.SUCCESS(
             f"دادهٔ نمایشی ساخته شد ({len(credentials)} کاربر)؛ رمزها در {CREDENTIALS_FILE}"))
@@ -195,6 +204,73 @@ class Command(BaseCommand):
         PettyCashAccount.objects.create(
             company=company, custodian=employee, ceiling_amount=PETTY_CEILING,
             opening_balance=PETTY_OPENING, opening_balance_date='1405/01/01')
+
+    @staticmethod
+    def _personnel():
+        from decimal import Decimal
+        from personnel.models import (
+            InsuranceJobTitle, PersonnelBankAccount, PersonnelProfile, PersonnelSectionAssignment,
+            PayrollYearlySettings, JobGradeTier, WorkshopInsuranceSettings, TaxRuleSettings, BankExportSettings
+        )
+        company = Company.objects.get(code=COMPANY_CODE)
+        project = Project.objects.get(company=company, code='DEMO-P1')
+        section = ProjectSection.objects.get(project=project, code='DEMO-S1')
+        InsuranceJobTitle.objects.get_or_create(title='انباردار', job_code='112233', defaults={'is_active': True})
+        ys, _ = PayrollYearlySettings.objects.get_or_create(
+            company=company, fiscal_year='1405', effective_from='1405/01',
+            defaults={'title': 'تنظیمات ۱۴۰۵', 'version_title': 'احکام ۱۴۰۵', 'is_active': True})
+        JobGradeTier.objects.get_or_create(
+            yearly_settings=ys, grade_number=19,
+            defaults={'daily_base_wage': Decimal('3500000'), 'daily_seniority_bonus': Decimal('200000')})
+        WorkshopInsuranceSettings.objects.get_or_create(
+            yearly_settings=ys,
+            defaults={'workshop_code': '0012345678', 'workshop_name': 'کارگاه نمایشی', 'employer_name': 'شرکت نمایشی'})
+        TaxRuleSettings.objects.get_or_create(yearly_settings=ys)
+        BankExportSettings.objects.get_or_create(yearly_settings=ys)
+        p, _ = PersonnelProfile.objects.update_or_create(
+            company=company, national_code='0499370899',
+            defaults={
+                'first_name': 'علی', 'last_name': 'رضایی', 'father_name': 'حسین', 'id_number': '1234',
+                'birth_date': '1370/01/01', 'marital_status': 'married', 'children_count': 1,
+                'insurance_number': '12345678', 'insurance_name': 'تامین اجتماعی', 'job_title': 'انباردار',
+                'job_code': '112233', 'job_grade': '19', 'contract_type': 'daily', 'start_date': '1405/01/01',
+                'contract_hours': Decimal('220'), 'daily_base_wage': Decimal('3500000'),
+                'daily_seniority_bonus': Decimal('200000'), 'base_years_experience': 1,
+                'base_daily_rate': Decimal('3700000'), 'housing_allowance': Decimal('30000000'),
+                'food_allowance': Decimal('22000000'), 'spouse_allowance': Decimal('5000000'),
+                'bank_name': 'بانک ملی ایران', 'account_number': '010111111009',
+                'sheba_number': '060170000000010111111009', 'phone_number': '09121112233',
+                'project': project, 'section': section, 'approval_status': 'approved',
+            })
+        PersonnelBankAccount.objects.get_or_create(
+            personnel=p, sheba_number='060170000000010111111009',
+            defaults={'bank_name': 'بانک ملی ایران', 'account_number': '010111111009', 'is_primary': True, 'is_active': True})
+        PersonnelSectionAssignment.objects.get_or_create(
+            personnel=p, section=section,
+            defaults={'project': project, 'job_title': 'انباردار', 'daily_base_wage': Decimal('3500000'), 'is_active': True})
+        return p
+
+    @staticmethod
+    def _attendance():
+        from decimal import Decimal
+        from personnel.models import DailyAttendance, MonthlyWorkPeriod, PersonnelProfile
+        company = Company.objects.get(code=COMPANY_CODE)
+        project = Project.objects.get(company=company, code='DEMO-P1')
+        section = ProjectSection.objects.get(project=project, code='DEMO-S1')
+        p = PersonnelProfile.objects.get(company=company, national_code='0499370899')
+        for ym in ('1405/07', '1405/08'):
+            period, _ = MonthlyWorkPeriod.objects.update_or_create(
+                company=company, section=section, year_month=ym,
+                defaults={'project': project, 'status': 'READY_TO_PAY'})
+            for day in range(1, 27):
+                DailyAttendance.objects.update_or_create(
+                    personnel=p, date_shamsi=f'{ym}/{day:02d}',
+                    defaults={
+                        'project': project, 'section': section, 'period': period,
+                        'status': 'PRESENT_10H', 'approval_status': 'APPROVED',
+                        'effective_hours': Decimal('10.00'),
+                        'overtime_hours': Decimal('2.00') if day <= 5 else Decimal('0.00'),
+                    })
 
     # ─── رمزها ───
     @staticmethod

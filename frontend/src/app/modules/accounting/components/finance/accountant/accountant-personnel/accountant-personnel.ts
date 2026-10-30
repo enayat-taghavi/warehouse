@@ -565,7 +565,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   // فیلدهای قابل‌ویرایش حسابدار؛ ذخیره فقط تغییرات همین‌ها را نسبت به پروندهٔ سرور می‌فرستد (DEF-08)
   private static readonly ACCOUNTANT_EDITABLE_FIELDS = [
     'first_name', 'last_name', 'national_code', 'father_name', 'birth_date', 'id_number', 'phone_number',
-    'job_title', 'job_code', 'job_grade', 'contract_type', 'contract_hours', 'contract_base_salary',
+    'job_title', 'job_code', 'job_grade', 'contract_type', 'start_date', 'contract_hours', 'contract_base_salary',
     'base_years_experience', 'daily_base_wage', 'daily_seniority_bonus', 'insurance_type', 'insurance_name',
     'insurance_number', 'status_category', 'employment_type', 'housing_allowance', 'food_allowance',
     'spouse_allowance', 'children_count', 'bank_name', 'account_number', 'sheba_number', 'card_number'
@@ -611,7 +611,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     this.costEstimate = null;
     this.editingPersonnel = {
       ...p,
-      contract_type: p.contract_type || 'daily',
+      contract_type: p.contract_type || 'daily', start_date: p.start_date || `${this.fiscalYear}/01/01`,
       job_grade: p.job_grade || '19',
       job_title: p.job_title || '',
       job_code: p.job_code || '',
@@ -858,7 +858,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       sheba_number: 'شماره شبا',
       bank_name: 'نام بانک',
       account_number: 'شماره حساب',
-      contract_type: 'نوع قرارداد',
+      contract_type: 'نوع قرارداد', start_date: 'تاریخ شروع به کار',
       job_title: 'عنوان شغلی',
       job_code: 'کد ۶ رقمی شغل بیمه',
       insurance_number: 'شماره بیمه',

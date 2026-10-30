@@ -492,7 +492,7 @@
 
         <!-- تب مزد و احکام (تسک ۹.۲) -->
         <div *ngIf="personnelModalTab === 'contract' && editingPersonnel" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label class="block font-bold text-slate-600 mb-1">گروه شغلی (جدول ۲۰ گانه):</label>
               <select
@@ -514,6 +514,15 @@
                 <option value="monthly">ماهانه</option>
                 <option value="hourly">ساعتی</option>
               </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">تاریخ شروع به کار (شمسی):</label>
+              <input
+                type="text"
+                [(ngModel)]="editingPersonnel.start_date"
+                placeholder="1405/01/01"
+                dir="ltr"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">سابقه سنوات (سال):</label>

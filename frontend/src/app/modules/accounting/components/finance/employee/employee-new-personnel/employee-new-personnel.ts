@@ -1911,7 +1911,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   // ─── مدیریت حساب‌های بانکی چندگانه (تسک ۶.۴) ───
   get hasValidPrimaryBankAccount(): boolean {
     if (this.bankAccounts.length > 0) {
-      return this.bankAccounts.some(a => a.is_primary && a.sheba_number && validateSheba(extractShebaDigits(a.sheba_number)).isValid);
+      return this.bankAccounts.some(a => a.is_primary && a.sheba_number && (isMaskedValue(a.sheba_number) || validateSheba(extractShebaDigits(a.sheba_number)).isValid));
     }
     return !!(this.newPersonnel.sheba_number && this.shebaValidationResult?.isValid);
   }
@@ -1971,7 +1971,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       this.newPersonnel.account_number = prim.account_number;
       this.newPersonnel.sheba_number = prim.sheba_number;
       this.newPersonnel.card_number = prim.card_number;
-      this.shebaValidationResult = validateSheba(extractShebaDigits(prim.sheba_number));
+      this.shebaValidationResult = isMaskedValue(prim.sheba_number) ? ({ isValid: true, rawSheba: prim.sheba_number || '', formattedDigits: prim.sheba_number || '' } as any) : validateSheba(extractShebaDigits(prim.sheba_number));
       this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || extractShebaDigits(prim.sheba_number || '');
     }
   }
@@ -2148,7 +2148,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   private desiredBankAccounts(): PersonnelBankAccount[] {
     if (this.bankAccounts.length > 0) return this.bankAccounts;
     const sheba = this.newPersonnel.sheba_number ? cleanShebaInput(this.newPersonnel.sheba_number) : '';
-    if (sheba && validateSheba(extractShebaDigits(sheba)).isValid) {
+    if (sheba && (isMaskedValue(this.newPersonnel.sheba_number) || validateSheba(extractShebaDigits(sheba)).isValid)) {
       return [{
         bank_name: this.newPersonnel.bank_name || '',
         account_number: this.newPersonnel.account_number || '',

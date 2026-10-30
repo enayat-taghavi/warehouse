@@ -118,4 +118,15 @@ class SeedVideoDemoTests(TestCase):
         self.assertEqual((account.ceiling_amount, account.opening_balance, account.is_active),
                          (50_000_000, 30_000_000, True))
         self._run(purge=True)
+        self._run(purge=True)
         self.assertFalse(PettyCashAccount.objects.filter(pk=account.pk).exists())
+
+    def test_with_personnel_and_attendance_and_purge(self):
+        from personnel.models import DailyAttendance, MonthlyWorkPeriod, PersonnelProfile
+        self._run(base=True, with_personnel=True, with_attendance=True)
+        p = PersonnelProfile.objects.get(company__code='DEMO-VID', national_code='0499370899')
+        self.assertEqual(p.approval_status, 'approved')
+        self.assertTrue(MonthlyWorkPeriod.objects.filter(company__code='DEMO-VID', year_month='1405/08', status='READY_TO_PAY').exists())
+        self.assertGreaterEqual(DailyAttendance.objects.filter(personnel=p).count(), 26)
+        self._run(purge=True)
+        self.assertFalse(PersonnelProfile.objects.filter(pk=p.pk).exists())
