@@ -203,6 +203,8 @@ class PersonnelConfig(AppConfig):
 
         # دسترسی نوشتن ساختار سازمانی ماژول حسابداری (گام ۴)
         contribute('org_structure_write_perms', 'accounts.perm_approve_personnel_manager')
+        # «مدیریت تنخواه» تنخواه‌گردان را از فهرست کمینهٔ کاربران شرکت‌های خودش برمی‌گزیند (ساختن و تحویل حساب)
+        contribute('user_directory_perms', 'perm_petty_cash_manage')
 
         # alias مجوز (گام ۸): سرپرست کارگاه سرپرست شمارش ماژول‌های دیگر حساب نمی‌شود
         contribute('permission_aliases:count_supervisor_exclusion', 'perm_approve_personnel_supervisor')
