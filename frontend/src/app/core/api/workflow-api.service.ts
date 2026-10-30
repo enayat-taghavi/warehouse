@@ -69,6 +69,20 @@ export class WorkflowApiService {
     return this.api.post<WorkflowInstanceState>(`${WF}/instances/${instanceId}/cancel`, { reason }, WorkflowApiService.direct());
   }
 
+  /** ارجاع موازی سند («برای اقدام» یا «برای اطلاع») */
+  referInstance(
+    instanceId: number,
+    body: {
+      targets: number[];
+      kind: 'refer' | 'inform';
+      instruction?: string;
+      due_at?: string | null;
+      parent_task?: number | null;
+    }
+  ): Observable<any> {
+    return this.api.post<any>(`${WF}/instances/${instanceId}/refer`, body, WorkflowApiService.direct());
+  }
+
   getDefinitions(): Observable<WorkflowDefinition[]> {
     return this.api.get<WorkflowDefinition[]>(`${WF}/definitions`, undefined, WorkflowApiService.direct());
   }

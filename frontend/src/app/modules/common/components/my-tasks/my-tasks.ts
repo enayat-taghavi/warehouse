@@ -17,6 +17,7 @@ import { WorkflowApiService } from '../../../../core/api/workflow-api.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import {
+  WorkflowPerson,
   WorkflowTaskAction,
   WorkflowTaskCard,
   WorkflowTaskNotice
@@ -92,6 +93,17 @@ export class MyTasksComponent implements OnInit, OnDestroy {
   reasonDialogAction: WorkflowTaskAction | null = null;
   targetCard: WorkflowTaskCard | null = null;
   reasonServerError = '';
+
+  // پنجره ارجاع موازی سند (فیلم ۱۰)
+  referDialogOpen = false;
+  referTargetCard: WorkflowTaskCard | null = null;
+  referCandidates: WorkflowPerson[] = [];
+  referTargetUserId = '';
+  referKind: 'refer' | 'inform' = 'refer';
+  referInstruction = '';
+  referDueDate = '';
+  referSubmitting = false;
+  referServerError = '';
 
   private sub?: Subscription;
 
@@ -417,6 +429,67 @@ export class MyTasksComponent implements OnInit, OnDestroy {
     this.targetCard = null;
     this.reasonDialogAction = null;
     this.reasonServerError = '';
+  }
+
+  openReferModal(card: WorkflowTaskCard, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.referTargetCard = card;
+    this.referTargetUserId = '';
+    this.referKind = 'refer';
+    this.referInstruction = '';
+    this.referDueDate = '';
+    this.referServerError = '';
+    this.referSubmitting = false;
+    this.referDialogOpen = true;
+    this.workflowApi.getSubstituteCandidates(undefined, card.company?.id ?? null).subscribe({
+      next: (list) => {
+        this.referCandidates = list || [];
+        if (this.referCandidates.length > 0 && !this.referTargetUserId) {
+          this.referTargetUserId = String(this.referCandidates[0].id);
+        }
+        this.cdr?.markForCheck();
+      },
+      error: () => {
+        this.referCandidates = [];
+        this.cdr?.markForCheck();
+      }
+    });
+  }
+
+  closeReferModal(): void {
+    this.referDialogOpen = false;
+    this.referTargetCard = null;
+    this.referServerError = '';
+  }
+
+  submitReferral(): void {
+    if (!this.referTargetCard || !this.referTargetUserId || this.referSubmitting) return;
+    this.referSubmitting = true;
+    this.referServerError = '';
+    let dueAtIso: string | null = null;
+    if (this.referDueDate && this.referDueDate.trim()) {
+      dueAtIso = new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
+    }
+    this.workflowApi.referInstance(this.referTargetCard.instance_id, {
+      targets: [Number(this.referTargetUserId)],
+      kind: this.referKind,
+      instruction: this.referInstruction.trim(),
+      due_at: dueAtIso,
+      parent_task: this.referTargetCard.task_id
+    }).subscribe({
+      next: () => {
+        this.referSubmitting = false;
+        this.referDialogOpen = false;
+        this.toast.success(this.referKind === 'inform' ? 'ارجاع برای اطلاع ارسال شد' : 'ارجاع برای اقدام ارسال شد');
+        void this.workflowTasks.refresh();
+        this.cdr?.markForCheck();
+      },
+      error: (err) => {
+        this.referSubmitting = false;
+        this.referServerError = err?.error?.detail || err?.error?.error || 'خطا در ارسال ارجاع';
+        this.cdr?.markForCheck();
+      }
+    });
   }
 
   formatCardAmount(amount: string | null): string {

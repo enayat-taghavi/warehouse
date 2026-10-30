@@ -306,8 +306,8 @@
 
       <!-- بخش دکمه‌ها و اقدامات پایین کارت -->
       <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-        <!-- دکمه باز کردن سند -->
-        <div>
+        <!-- دکمه باز کردن سند و ارجاع -->
+        <div class="flex items-center gap-2 flex-wrap">
           <button
             *ngIf="card.route"
             type="button"
@@ -319,6 +319,18 @@
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="external-link"></svg>
             <span class="hidden sm:inline">مشاهدهٔ سند</span>
+          </button>
+          <button
+            *ngIf="activeTab === 'my-tasks' && !isReferral(card)"
+            type="button"
+            (click)="openReferModal(card, $event)"
+            [disabled]="isPending(card)"
+            class="px-3 py-1.5 min-h-[40px] text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 flex items-center gap-1.5 disabled:opacity-50"
+            title="ارجاع موازی سند"
+            aria-label="ارجاع موازی سند"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
+            <span>ارجاع</span>
           </button>
         </div>
 
@@ -400,4 +412,96 @@
     (confirmed)="onReasonConfirmed($event)"
     (cancelled)="onReasonCancelled()"
   ></app-workflow-reason-dialog>
+
+  <!-- پنجره ارجاع موازی سند -->
+  <div
+    *ngIf="referDialogOpen"
+    role="dialog"
+    aria-modal="true"
+    aria-label="ارجاع سند"
+    class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+  >
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md p-5 flex flex-col gap-3 text-xs">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-sm font-black text-slate-800">ارجاع موازی: {{ referTargetCard?.workflow_title_fa }}</h3>
+        <button
+          type="button"
+          (click)="closeReferModal()"
+          class="w-8 h-8 min-w-[40px] min-h-[40px] rounded-xl text-slate-500 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
+          title="بستن"
+          aria-label="بستن"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        </button>
+      </div>
+
+      <div>
+        <label for="refer-target-user" class="block font-bold text-slate-700 mb-1">گیرندهٔ ارجاع:</label>
+        <select
+          id="refer-target-user"
+          [(ngModel)]="referTargetUserId"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 min-h-[40px]"
+        >
+          <option *ngFor="let u of referCandidates" [value]="u.id">{{ u.name }}</option>
+        </select>
+      </div>
+
+      <div>
+        <span class="block font-bold text-slate-700 mb-1">نوع ارجاع:</span>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 cursor-pointer" [ngClass]="referKind === 'refer' ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-black' : 'bg-slate-50 text-slate-700'">
+            <input type="radio" name="referKind" [(ngModel)]="referKind" value="refer" />
+            <span>برای اقدام</span>
+          </label>
+          <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 cursor-pointer" [ngClass]="referKind === 'inform' ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-black' : 'bg-slate-50 text-slate-700'">
+            <input type="radio" name="referKind" [(ngModel)]="referKind" value="inform" />
+            <span>برای اطلاع</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label for="refer-instruction" class="block font-bold text-slate-700 mb-1">دستور یا توضیح ارجاع:</label>
+        <textarea
+          id="refer-instruction"
+          rows="2"
+          [(ngModel)]="referInstruction"
+          placeholder="دستور یا توضیح..."
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+        ></textarea>
+      </div>
+
+      <div *ngIf="referKind === 'refer'">
+        <label for="refer-due-date" class="block font-bold text-slate-700 mb-1">مهلت انجام (شمسی، اختیاری):</label>
+        <input
+          id="refer-due-date"
+          type="text"
+          [(ngModel)]="referDueDate"
+          placeholder="1405/08/10"
+          dir="ltr"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-mono text-slate-800 min-h-[40px]"
+        />
+      </div>
+
+      <p *ngIf="referServerError" class="text-rose-700 font-bold">{{ referServerError }}</p>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          (click)="closeReferModal()"
+          class="px-3.5 py-2 min-h-[40px] rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold cursor-pointer"
+        >
+          انصراف
+        </button>
+        <button
+          type="button"
+          (click)="submitReferral()"
+          [disabled]="!referTargetUserId || referSubmitting"
+          class="px-4 py-2 min-h-[40px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer disabled:opacity-50"
+        >
+          ارسال ارجاع
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
