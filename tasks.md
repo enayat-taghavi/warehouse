@@ -3919,7 +3919,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 3 — Training videos v-d: release the frontend route fix (the treasurer may open the petty cash page from My Tasks to pay a charge), then fast-test video 4-a again (desktop and mobile) on app and purge the demo data
+[DONE] [ ] Session 3 — Training videos v-d: release the frontend route fix (the treasurer may open the petty cash page from My Tasks to pay a charge), then fast-test video 4-a again (desktop and mobile) on app and purge the demo data
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
