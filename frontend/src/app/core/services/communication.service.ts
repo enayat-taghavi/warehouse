@@ -35,7 +35,12 @@ export interface ChatMessage {
   sender: number;
   sender_details?: UserShort;
   text?: string;
-  reply_to?: string;
+  reply_to?: string | null;
+  /** null، یا پیام اصلی حذف‌شده، یا خلاصهٔ پیام اصلی */
+  reply_to_details?: { id: string | number; deleted: true } | { id: string | number; deleted: false; text: string; sender_name: string; has_attachment: boolean } | null;
+  edited_at?: string | null;
+  /** فرستنده تا این زمان می‌تواند متن را ویرایش کند */
+  editable_until?: string | null;
   is_system?: boolean;
   created_at: string;
   updated_at?: string;
@@ -429,6 +434,10 @@ export class CommunicationService implements OnDestroy {
           } else if (payload.event === 'chat.message.updated') {
             const msg: ChatMessage = payload.data;
             this.handleUpdatedMessage(msg);
+          } else if (payload.event === 'chat.message.deleted') {
+            const mid = payload.data?.id;
+            const cid = payload.data?.conversation;
+            if (mid !== undefined && mid !== null) this.handleDeletedMessage(String(mid), cid !== undefined && cid !== null ? String(cid) : null);
           } else if (payload.event === 'chat.conversation.removed') {
             const cid = payload.data?.conversation_id;
             if (cid !== undefined && cid !== null) this.handleConversationRemoved(String(cid));
@@ -1066,12 +1075,12 @@ export class CommunicationService implements OnDestroy {
   /**
    * بارگذاری پیام‌های قدیمی‌تر (Infinite Scroll)
    */
-  public async loadOlderMessages(conversationId: string, offset: number, limit = 30): Promise<ChatMessage[]> {
+  public async loadOlderMessages(conversationId: string, beforeId: string | number, limit = 30): Promise<ChatMessage[]> {
     try {
       const params = new HttpParams()
         .set('conversation_id', conversationId)
         .set('limit', limit.toString())
-        .set('offset', offset.toString());
+        .set('before_id', String(beforeId));
 
       const res: any = await firstValueFrom(
         this.http.get<any>('/api/communications/messages/', {
@@ -1096,6 +1105,66 @@ export class CommunicationService implements OnDestroy {
     } catch (err) {
       console.debug('[CommunicationService] Failed to load older messages', err);
       return [];
+    }
+  }
+
+  /** شناسهٔ قدیمی‌ترین پیام واقعی (سرور) در فهرست؛ پیام‌های محلی «در انتظار/ناموفق» نادیده گرفته می‌شوند */
+  public oldestServerMessageId(): string | null {
+    const real = this.activeMessages$.value.filter(m =>
+      m.delivery_status !== 'pending' && m.delivery_status !== 'failed' && !m.is_pending
+      && !String(m.id).startsWith('temp-') && Number.isFinite(Number(m.id)));
+    if (real.length === 0) return null;
+    return String(real.reduce((a, b) => (Number(b.id) < Number(a.id) ? b : a)).id);
+  }
+
+  /** ویرایش متن پیام خودم؛ نیازمند اتصال است و وارد صف آفلاین نمی‌شود */
+  public async editMessage(messageId: string, text: string): Promise<ChatMessage> {
+    const res = await firstValueFrom(
+      this.http.patch<ChatMessage>(`/api/communications/messages/${messageId}/`, { text }, {
+        context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
+      })
+    );
+    this.handleUpdatedMessage(res);
+    return res;
+  }
+
+  /** حذف پیام؛ نیازمند اتصال است و وارد صف آفلاین نمی‌شود */
+  public async deleteMessage(messageId: string): Promise<void> {
+    const conv = this.activeMessages$.value.find(m => String(m.id) === String(messageId))?.conversation ?? null;
+    await firstValueFrom(
+      this.http.delete(`/api/communications/messages/${messageId}/`, {
+        context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
+      })
+    );
+    this.handleDeletedMessage(String(messageId), conv !== null ? String(conv) : null);
+  }
+
+  /** حذف پیام از فهرست باز و تازه‌سازی پیش‌نمایش آخرین پیام گفتگو */
+  private handleDeletedMessage(messageId: string, conversationId: string | null): void {
+    const current = this.activeMessages$.value;
+    const target = current.find(m => String(m.id) === messageId);
+    const convId = conversationId ?? (target ? String(target.conversation) : null);
+    const active = this.activeConversation$.value;
+    let remaining = current;
+    if (target && (!convId || !active || String(active.id) === convId)) {
+      remaining = current.filter(m => String(m.id) !== messageId);
+      this.activeMessages$.next(remaining);
+    }
+    if (!convId) return;
+    const convs = this.conversations$.value;
+    const hit = convs.find(c => String(c.id) === convId);
+    if (!hit || !hit.last_message || String(hit.last_message.id) !== messageId) return;
+    const inConv = remaining.filter(m => String(m.conversation) === convId && !m.is_system && !m.is_pending);
+    const last = inConv[inConv.length - 1];
+    if (last) {
+      const has = !!(last.attachments && last.attachments.length > 0);
+      this.conversations$.next(convs.map(c => String(c.id) === convId ? {
+        ...c,
+        last_message: { id: last.id, text: last.text || '', sender_name: last.sender_details?.full_name || '', created_at: last.created_at, has_attachment: has }
+      } : c));
+    } else {
+      // پیام قبلی در حافظه نیست؛ فهرست از سرور تازه می‌شود
+      void this.loadConversations(this.currentWarehouseId);
     }
   }
 
@@ -1137,7 +1206,7 @@ export class CommunicationService implements OnDestroy {
         ...currentConv,
         last_message: {
           id: tempId,
-          text: text || (file ? '📎 فایل پیوست' : ''),
+          text: text || '',
           sender_name: 'شما',
           created_at: new Date().toISOString(),
           has_attachment: !!file
@@ -1323,8 +1392,16 @@ export class CommunicationService implements OnDestroy {
     this.markReadDebounceTimers.set(conversationId, timer);
   }
 
+  private lastTypingSentAt = 0;
+
   public sendTypingStatus(conversationId: string, isTyping: boolean): void {
     if (!conversationId || String(conversationId).startsWith('draft_')) return;
+    if (isTyping) {
+      // رویداد «در حال نوشتن» حداکثر هر ۳ ثانیه یک بار
+      const now = Date.now();
+      if (now - this.lastTypingSentAt < 3000) return;
+      this.lastTypingSentAt = now;
+    }
     if (this.chatWs && this.chatWs.readyState === WebSocket.OPEN) {
       this.chatWs.send(JSON.stringify({
         type: 'typing',
@@ -1435,7 +1512,7 @@ export class CommunicationService implements OnDestroy {
           ...c,
           last_message: {
             id: msg.id,
-            text: msg.text || (msg.attachments && msg.attachments.length > 0 ? '📎 فایل پیوست' : ''),
+            text: msg.text || '',
             sender_name: msg.sender_details?.full_name || '',
             created_at: msg.created_at,
             has_attachment: (msg.attachments && msg.attachments.length > 0) || false
@@ -1525,7 +1602,7 @@ export class CommunicationService implements OnDestroy {
           ...c,
           last_message: {
             ...c.last_message,
-            text: msg.text || (msg.attachments && msg.attachments.length > 0 ? '📎 فایل پیوست' : ''),
+            text: msg.text || '',
             has_attachment: (msg.attachments && msg.attachments.length > 0) || false
           }
         };

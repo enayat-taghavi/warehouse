@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django.urls import reverse
 from common.media_urls import signed_media_url
 from rest_framework.exceptions import PermissionDenied
@@ -10,6 +13,12 @@ from .models import Conversation, ConversationParticipant, Message, MessageAttac
 from .membership import MAX_GROUP_MEMBERS_PER_REQUEST
 
 User = get_user_model()
+
+# مهلت ویرایش پیام توسط فرستنده (E12)
+MESSAGE_EDIT_WINDOW = timedelta(minutes=15)
+# فاصلهٔ updated_at از created_at که «ویرایش‌شده» حساب می‌شود (auto_now و auto_now_add چند میکروثانیه فرق دارند)
+_EDITED_THRESHOLD = timedelta(seconds=2)
+_REPLY_TO_ERROR = 'پیام مورد پاسخ در این گفتگو نیست'
 
 
 class UserShortSerializer(serializers.ModelSerializer):
@@ -54,13 +63,21 @@ class MessageSerializer(serializers.ModelSerializer):
     text = serializers.CharField(max_length=4000, required=False, allow_blank=True, allow_null=True)
     is_me = serializers.SerializerMethodField()
     read_by_count = serializers.SerializerMethodField()
+    # خطای یکسان برای «پیام وجود ندارد» و «در گفتگوی دیگر است» تا وجود پیام‌های دیگر لو نرود
+    reply_to = serializers.PrimaryKeyRelatedField(
+        queryset=Message.objects.all(), required=False, allow_null=True,
+        error_messages={'does_not_exist': _REPLY_TO_ERROR, 'incorrect_type': _REPLY_TO_ERROR},
+    )
+    edited_at = serializers.SerializerMethodField()
+    editable_until = serializers.SerializerMethodField()
+    reply_to_details = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = [
             'id', 'client_temp_id', 'conversation', 'sender', 'sender_details',
-            'text', 'reply_to', 'is_system', 'created_at', 'updated_at',
-            'attachments', 'is_me', 'read_by_count'
+            'text', 'reply_to', 'reply_to_details', 'is_system', 'created_at', 'updated_at',
+            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count'
         ]
         read_only_fields = ['id', 'sender', 'sender_details', 'created_at', 'updated_at', 'is_system']
 
@@ -75,11 +92,58 @@ class MessageSerializer(serializers.ModelSerializer):
             return obj.annotated_read_by_count
         return obj.read_by.count()
 
+    def get_edited_at(self, obj):
+        # بدون فیلد جدید: پیامی که دیرتر از ساختش ذخیره شده ویرایش‌شده است (فقط مسیر ویرایش متن، پیام را دوباره ذخیره می‌کند)
+        if obj.created_at and obj.updated_at and obj.updated_at - obj.created_at > _EDITED_THRESHOLD:
+            return obj.updated_at.isoformat()
+        return None
+
+    def get_editable_until(self, obj):
+        if obj.is_system or not obj.created_at:
+            return None
+        return (obj.created_at + MESSAGE_EDIT_WINDOW).isoformat()
+
+    def get_reply_to_details(self, obj):
+        target = obj.reply_to if obj.reply_to_id else None
+        if target is None:
+            return None
+        if target.is_deleted or target.conversation_id != obj.conversation_id:
+            return {'id': target.id, 'deleted': True}
+        sender = target.sender
+        return {
+            'id': target.id,
+            'deleted': False,
+            'text': (target.text or '')[:200],
+            'sender_name': (sender.get_full_name() or sender.username) if sender else '',
+            'has_attachment': target.attachments.exists(),
+        }
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        reply_to = attrs.get('reply_to')
+        if reply_to is not None and self.instance is None:
+            conversation = attrs.get('conversation')
+            if conversation is None or reply_to.is_deleted or reply_to.conversation_id != conversation.id:
+                raise serializers.ValidationError({'reply_to': _REPLY_TO_ERROR})
+        return attrs
+
     def update(self, instance, validated_data):
-        # فیلدهای ساختاری مانند conversation، client_temp_id و sender نباید با ویرایش تغییر کنند
+        # فیلدهای ساختاری مانند conversation، client_temp_id، sender و reply_to نباید با ویرایش تغییر کنند
         validated_data.pop('conversation', None)
         validated_data.pop('client_temp_id', None)
         validated_data.pop('sender', None)
+        validated_data.pop('reply_to', None)
+        if 'text' in validated_data:
+            if instance.is_system:
+                raise PermissionDenied('پیام سیستمی ویرایش نمی‌شود')
+            if timezone.now() > instance.created_at + MESSAGE_EDIT_WINDOW:
+                raise PermissionDenied('مهلت ویرایش این پیام تمام شده است')
+            new_text = (validated_data.get('text') or '').strip()
+            if not new_text and not instance.attachments.exists():
+                raise serializers.ValidationError({'text': 'متن پیام نمی‌تواند خالی باشد'})
+            if new_text == (instance.text or '').strip():
+                # بدون تغییر: ذخیره نمی‌شود تا «ویرایش‌شده» نخورد
+                return instance
         return super().update(instance, validated_data)
 
 

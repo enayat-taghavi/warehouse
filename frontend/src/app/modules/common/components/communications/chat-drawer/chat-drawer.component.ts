@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -11,6 +11,14 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob } from '../../../../../core/platform/file-output';
+
+/** بخشی از متن پیام: متن ساده یا نشانی http/https */
+export interface TextSegment { url: boolean; text: string }
+
+/** عنصر فهرست پیام‌ها: جداکنندهٔ روز یا پیام */
+export type ChatItem =
+  | { kind: 'sep'; key: string; label: string }
+  | { kind: 'msg'; key: string; msg: ChatMessage };
 
 @Component({
   selector: 'app-chat-drawer',
@@ -34,6 +42,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private state = inject(StateService);
   private auth = inject(AuthService);
   private toast = inject(ToastService);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private api = inject(ApiService);
   private sub = new Subscription();
   /** پیش‌نمایش عکس پیوست‌ها (blob با توکن، چون <img> هدر Authorization نمی‌فرستد) */
@@ -90,6 +99,39 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private typingTimeout: any = null;
   private typingIndicatorClearTimer: any = null;
 
+  // ─── منوی پیام، پاسخ، ویرایش، حذف ───
+  /** شناسهٔ پیامی که منویش باز است */
+  public menuFor = signal<string | null>(null);
+  public replyTo = signal<ChatMessage | null>(null);
+  public editing = signal<ChatMessage | null>(null);
+  public deleteTarget = signal<ChatMessage | null>(null);
+  public deleteBusy = signal<boolean>(false);
+
+  // ─── اسکرول ───
+  /** نمایش دکمهٔ شناور «پیام جدید» وقتی کاربر بالاتر است */
+  public showNewBtn = signal<boolean>(false);
+  /** تا رسیدن اولین پیام‌های گفتگوی تازه باز شده، به پایین می‌رود */
+  private openedFresh = false;
+  private lastMsgKey = '';
+  private restoreScroll: { height: number; top: number } | null = null;
+
+  /** فهرست نمایشی: پیام‌ها همراه جداکنندهٔ روز */
+  public items = computed<ChatItem[]>(() => {
+    const out: ChatItem[] = [];
+    let lastDay = '';
+    for (const m of this.messages()) {
+      const day = this.dayKey(m.created_at);
+      if (day && day !== lastDay) {
+        out.push({ kind: 'sep', key: 'sep-' + day, label: this.dayLabel(m.created_at) });
+        lastDay = day;
+      }
+      out.push({ kind: 'msg', key: m.id || m.client_temp_id || '', msg: m });
+    }
+    return out;
+  });
+
+  private linkCache = new Map<string, TextSegment[]>();
+
   ngOnInit(): void {
     const whId = this.state.appState.activeWarehouseId === 'ALL' ? undefined : Number(this.state.appState.activeWarehouseId);
     this.commService.ensureConnected(whId);
@@ -130,7 +172,18 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         this.activeConv.set(conv);
         if (conv) {
           this.activeTab.set('chat');
-          this.shouldScrollBottom = true;
+          if (!this.lastConvId || this.lastConvId !== String(conv.id)) {
+            this.openedFresh = true;
+            this.lastMsgKey = '';
+            this.showNewBtn.set(false);
+            this.replyTo.set(null);
+            this.editing.set(null);
+            this.menuFor.set(null);
+            this.messageInputText = '';
+          }
+          this.lastConvId = String(conv.id);
+        } else {
+          this.lastConvId = '';
         }
       })
     );
@@ -138,10 +191,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     // اشتراک در پیام‌های پیام‌رسان
     this.sub.add(
       this.commService.activeMessages$.subscribe(msgs => {
-        this.messages.set(msgs);
-        if (!this.isLoadingOlder()) {
-          this.shouldScrollBottom = true;
-        }
+        this.onMessagesChanged(msgs);
       })
     );
 
@@ -165,7 +215,55 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     );
   }
 
+  private lastConvId = '';
+
+  /** تغییر فهرست پیام‌ها: فقط وقتی کاربر پایین است (یا پیام از خودش است) به پایین می‌رود */
+  private onMessagesChanged(msgs: ChatMessage[]): void {
+    this.messages.set(msgs);
+    if (this.isLoadingOlder()) return; // بعد از افزودن پیام‌های قدیمی، جای اسکرول حفظ می‌شود
+    const last = msgs.length ? msgs[msgs.length - 1] : null;
+    const key = last ? String(last.id || last.client_temp_id || '') : '';
+    const changedTail = key !== this.lastMsgKey;
+    this.lastMsgKey = key;
+    if (this.openedFresh && msgs.length > 0) {
+      this.openedFresh = false;
+      this.shouldScrollBottom = true;
+      return;
+    }
+    if (!changedTail || !last) return;
+    if (last.is_me || this.isNearBottom()) {
+      this.shouldScrollBottom = true;
+    } else if (!last.is_system) {
+      this.showNewBtn.set(true);
+    }
+  }
+
+  private isNearBottom(): boolean {
+    const el = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= 120;
+  }
+
+  public onThreadScroll(): void {
+    const el = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
+    if (!el || this.activeTab() !== 'chat') return;
+    if (this.isNearBottom()) this.showNewBtn.set(false);
+    if (el.scrollTop < 40 && this.hasMoreMessages() && !this.isLoadingOlder() && this.messages().length >= 30) {
+      void this.loadOlder();
+    }
+  }
+
+  public jumpToNew(): void {
+    this.showNewBtn.set(false);
+    this.scrollToBottom();
+  }
+
   ngAfterViewChecked(): void {
+    if (this.restoreScroll) {
+      const el = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
+      if (el) el.scrollTop = this.restoreScroll.top + (el.scrollHeight - this.restoreScroll.height);
+      this.restoreScroll = null;
+    }
     if (this.shouldScrollBottom) {
       this.scrollToBottom();
       this.shouldScrollBottom = false;
@@ -217,14 +315,226 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const conv = this.activeConv();
     if (!conv || this.isLoadingOlder() || !this.hasMoreMessages()) return;
 
+    // پیام‌های محلیِ «در انتظار»/«ناموفق» روی سرور نیستند؛ قدیمی‌ترین پیام واقعی مرجع است
+    const beforeId = this.commService.oldestServerMessageId();
+    if (beforeId === null) return;
     this.isLoadingOlder.set(true);
-    // پیام‌های محلیِ «در انتظار»/«ناموفق» روی سرور نیستند و نباید در offset شمرده شوند
-    const offset = this.messages().filter(m => m.delivery_status !== 'pending' && m.delivery_status !== 'failed').length;
-    const older = await this.commService.loadOlderMessages(conv.id, offset, 30);
-    if (older.length < 30) {
-      this.hasMoreMessages.set(false);
+    const el = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
+    if (el) this.restoreScroll = { height: el.scrollHeight, top: el.scrollTop };
+    try {
+      const older = await this.commService.loadOlderMessages(conv.id, beforeId, 30);
+      if (older.length < 30) {
+        this.hasMoreMessages.set(false);
+      }
+    } finally {
+      this.isLoadingOlder.set(false);
+      // اگر چیزی اضافه نشد، جای اسکرول بدون تغییر می‌ماند
+      if (this.restoreScroll && el && el.scrollHeight === this.restoreScroll.height) this.restoreScroll = null;
     }
-    this.isLoadingOlder.set(false);
+  }
+
+  // ─── متن پیام: لینک‌ها بدون innerHTML ───
+  public segments(text?: string | null): TextSegment[] {
+    const t = text || '';
+    const hit = this.linkCache.get(t);
+    if (hit) return hit;
+    const out: TextSegment[] = [];
+    const re = /https?:\/\/[^\s<>"']+/gi;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(t)) !== null) {
+      let url = m[0];
+      // نشانه‌گذاری انتهای جمله جزو نشانی نیست
+      const trimmed = url.replace(/[.,;:!?)\]}،؛؟]+$/u, '');
+      url = trimmed;
+      let ok = false;
+      try { const u = new URL(url); ok = u.protocol === 'http:' || u.protocol === 'https:'; } catch { ok = false; }
+      if (!ok) continue;
+      if (m.index > last) out.push({ url: false, text: t.slice(last, m.index) });
+      out.push({ url: true, text: url });
+      last = m.index + url.length;
+      re.lastIndex = last;
+    }
+    if (last < t.length) out.push({ url: false, text: t.slice(last) });
+    if (this.linkCache.size > 300) this.linkCache.clear();
+    this.linkCache.set(t, out);
+    return out;
+  }
+
+  // ─── جداکنندهٔ روز ───
+  private dayKey(iso?: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+
+  public dayLabel(iso?: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    if (this.dayKey(iso) === this.dayKey(now.toISOString())) return 'امروز';
+    const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (this.dayKey(iso) === this.dayKey(y.toISOString())) return 'دیروز';
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
+  }
+
+  // ─── منوی پیام ───
+  public isOnline(): boolean {
+    return typeof navigator === 'undefined' ? true : navigator.onLine !== false;
+  }
+
+  /** فقط پیام‌های واقعی (نه موقت/ناموفق/سیستمی) منو دارند */
+  public hasMenu(msg: ChatMessage): boolean {
+    return !msg.is_system && !msg.is_pending && msg.delivery_status !== 'failed' && Number.isFinite(Number(msg.id)) && !String(msg.id).startsWith('temp-');
+  }
+
+  public canReply(): boolean {
+    return this.activeConv()?.can_post !== false;
+  }
+
+  public canEdit(msg: ChatMessage): boolean {
+    if (!msg.is_me || !msg.text || !msg.editable_until) return false;
+    const until = Date.parse(msg.editable_until);
+    return Number.isFinite(until) && Date.now() < until;
+  }
+
+  public canDelete(msg: ChatMessage): boolean {
+    if (msg.is_me) return true;
+    return this.auth.user()?.is_superuser === true && this.activeConv()?.conv_type !== 'direct';
+  }
+
+  public toggleMenu(msg: ChatMessage, ev?: Event): void {
+    ev?.stopPropagation();
+    this.menuFor.set(this.menuFor() === String(msg.id) ? null : String(msg.id));
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocClick(ev: Event): void {
+    if (this.menuFor() === null) return;
+    const t = ev.target as HTMLElement | null;
+    const root = t?.closest?.('[data-msg-menu-root]');
+    if (root && root.getAttribute('data-msg-menu-root') === this.menuFor()) return;
+    this.menuFor.set(null);
+  }
+
+  public isMenuOpen(msg: ChatMessage): boolean {
+    return this.menuFor() === String(msg.id);
+  }
+
+  /** Escape منوی پیام را می‌بندد و تمرکز را به دکمهٔ همان منو برمی‌گرداند */
+  @HostListener('document:keydown.escape')
+  onMenuEscape(): void {
+    const open = this.menuFor();
+    if (open === null) return;
+    this.menuFor.set(null);
+    const sel = `[data-msg-menu-root="${open.replace(/"/g, '')}"] [data-testid="msg-menu-btn"]`;
+    (this.host.nativeElement.querySelector(sel) as HTMLElement | null)?.focus();
+  }
+
+  public startReply(msg: ChatMessage): void {
+    this.menuFor.set(null);
+    this.editing.set(null);
+    this.replyTo.set(msg);
+    setTimeout(() => this.composer?.nativeElement?.focus(), 0);
+  }
+
+  public startEdit(msg: ChatMessage): void {
+    this.menuFor.set(null);
+    if (!this.isOnline()) { this.toast.error('ویرایش پیام نیاز به اتصال به اینترنت دارد'); return; }
+    this.replyTo.set(null);
+    this.editing.set(msg);
+    this.messageInputText = msg.text || '';
+    setTimeout(() => { this.autoGrow(); this.composer?.nativeElement?.focus(); }, 0);
+  }
+
+  public cancelCompose(): void {
+    if (this.editing()) this.messageInputText = '';
+    this.editing.set(null);
+    this.replyTo.set(null);
+    setTimeout(() => this.autoGrow(), 0);
+  }
+
+  public async copyText(msg: ChatMessage): Promise<void> {
+    this.menuFor.set(null);
+    const text = msg.text || '';
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        this.toast.success('متن کپی شد');
+      } else {
+        this.toast.error('کپی در این دستگاه پشتیبانی نمی‌شود');
+      }
+    } catch {
+      this.toast.error('کپی انجام نشد');
+    }
+  }
+
+  public askRemoveMsg(msg: ChatMessage): void {
+    this.menuFor.set(null);
+    if (!this.isOnline()) { this.toast.error('حذف پیام نیاز به اتصال به اینترنت دارد'); return; }
+    this.deleteTarget.set(msg);
+    setTimeout(() => document.getElementById('msg-delete-cancel')?.focus(), 0);
+  }
+
+  public cancelRemoveMsg(): void {
+    this.deleteTarget.set(null);
+  }
+
+  public async runRemoveMsg(): Promise<void> {
+    const msg = this.deleteTarget();
+    if (!msg || this.deleteBusy()) return;
+    this.deleteBusy.set(true);
+    try {
+      await this.commService.deleteMessage(msg.id);
+      if (this.replyTo()?.id === msg.id) this.replyTo.set(null);
+      if (this.editing()?.id === msg.id) this.cancelCompose();
+      this.deleteTarget.set(null);
+    } catch (e: any) {
+      this.deleteTarget.set(null);
+      this.toast.error(e?.status === 403 ? 'اجازهٔ حذف این پیام را ندارید' : 'حذف پیام انجام نشد');
+    } finally {
+      this.deleteBusy.set(false);
+    }
+  }
+
+  /** خلاصهٔ پیام اصلی برای پاسخ: از جزئیات سرور، وگرنه از پیام‌های بارگذاری‌شده */
+  public replyInfo(msg: ChatMessage): { deleted: boolean; id: string; sender: string; text: string; hasAttachment: boolean } | null {
+    if (!msg.reply_to && !msg.reply_to_details) return null;
+    const d = msg.reply_to_details;
+    const id = String(d?.id ?? msg.reply_to);
+    if (d && d.deleted) return { deleted: true, id, sender: '', text: '', hasAttachment: false };
+    if (d && !d.deleted) return { deleted: false, id, sender: d.sender_name, text: d.text, hasAttachment: d.has_attachment };
+    const orig = this.messages().find(m => String(m.id) === id);
+    if (orig) return { deleted: false, id, sender: orig.sender_details?.full_name || '', text: orig.text || '', hasAttachment: !!orig.attachments?.length };
+    return { deleted: false, id, sender: '', text: '', hasAttachment: false };
+  }
+
+  public goToQuoted(ri: { deleted: boolean; id: string }): void {
+    if (!ri.deleted) this.scrollToMessage(ri.id);
+  }
+
+  public scrollToMessage(id: string): void {
+    const root = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
+    const el = root?.querySelector(`[data-msg-id="${String(id).replace(/[^0-9a-zA-Z_-]/g, '')}"]`) as HTMLElement | null;
+    el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ─── کادر نوشتن ───
+  @ViewChild('composer') private composer?: ElementRef<HTMLTextAreaElement>;
+
+  public onComposerKey(ev: KeyboardEvent): void {
+    if (ev.key !== 'Enter' || ev.shiftKey || ev.isComposing) return;
+    ev.preventDefault();
+    void this.sendMessage();
+  }
+
+  public autoGrow(): void {
+    const el = this.composer?.nativeElement;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }
 
   public startDirectChat(user: UserShort): void {
@@ -290,8 +600,30 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
     if ((!text && !file) || !conv || this.isSending()) return;
 
+    // حالت ویرایش: PATCH متن؛ نیازمند اتصال، و هرگز وارد صف آفلاین نمی‌شود
+    const editTarget = this.editing();
+    if (editTarget) {
+      if (!text) { this.toast.error('متن پیام نمی‌تواند خالی باشد'); return; }
+      if (!this.isOnline()) { this.toast.error('ویرایش پیام نیاز به اتصال به اینترنت دارد'); return; }
+      this.isSending.set(true);
+      try {
+        await this.commService.editMessage(editTarget.id, text);
+        this.editing.set(null);
+        this.messageInputText = '';
+        setTimeout(() => this.autoGrow(), 0);
+      } catch (e: any) {
+        this.toast.error(e?.status === 403 ? 'زمان ویرایش این پیام گذشته است' : 'ویرایش پیام انجام نشد');
+      } finally {
+        this.isSending.set(false);
+      }
+      return;
+    }
+
+    const replyId = this.replyTo()?.id;
     this.isSending.set(true);
     this.messageInputText = '';
+    this.replyTo.set(null);
+    setTimeout(() => this.autoGrow(), 0);
     this.removeSelectedFile();
     let handedToService = false;
 
@@ -317,12 +649,13 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       }
 
       handedToService = true;
-      await this.commService.sendMessage(conv.id, text, undefined, file || undefined);
+      await this.commService.sendMessage(conv.id, text, replyId, file || undefined);
     } catch (e) {
       console.error('Send error', e);
       // اگر ساخت گفتگو شکست خورد، متن و فایل کاربر به کادر ورود برمی‌گردند تا گم نشوند
       if (!handedToService) {
         if (!this.messageInputText) this.messageInputText = text;
+        if (replyId && !this.replyTo()) this.replyTo.set(this.messages().find(m => String(m.id) === String(replyId)) ?? null);
         if (file && !this.selectedFile) {
           this.selectedFile = file;
           if (file.type.startsWith('image/')) {
@@ -484,6 +817,14 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public trackByMessageId(index: number, msg: ChatMessage): string {
     return msg.id || msg.client_temp_id || String(index);
+  }
+
+  public trackItem(index: number, it: ChatItem): string {
+    return it.key || String(index);
+  }
+
+  public asMsg(it: ChatItem): ChatMessage | null {
+    return it.kind === 'msg' ? it.msg : null;
   }
 
   public trackByConvId(index: number, conv: Conversation): string {

@@ -58,7 +58,7 @@
       <button *ngIf="activeTab() === 'chat' && isGroup()" type="button" (click)="openInfo()"
               data-testid="group-info-btn"
               title="اطلاعات گروه" aria-label="اطلاعات گروه"
-              class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors flex items-center justify-center gap-1.5 cursor-pointer tap-target">
+              class="p-2 min-w-10 min-h-10 rounded-xl text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors flex items-center justify-center gap-1.5 cursor-pointer tap-target">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="info"></svg>
         <span class="hidden sm:inline text-[11px] font-bold">اطلاعات</span>
       </button>
@@ -106,7 +106,7 @@
   </div>
 
   <!-- ─── Drawer Content ─── -->
-  <div #messagesScrollContainer class="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/40 relative">
+  <div #messagesScrollContainer (scroll)="onThreadScroll()" class="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/40 relative">
 
     <!-- 1. Conversations List -->
     <div *ngIf="activeTab() === 'conversations'" class="p-2 space-y-1">
@@ -132,8 +132,15 @@
               {{ getConversationTitle(conv) }}
               <span *ngIf="conv.conv_type === 'group' && conv.member_count" class="text-[10px] font-normal text-fg-muted ms-1">· {{ conv.member_count.toLocaleString('fa-IR') }} عضو</span>
             </h4>
-            <p class="text-[11px] text-slate-400 truncate max-w-[200px] mt-0.5">
-              {{ conv.last_message?.text || 'بدون پیام' }}
+            <p class="text-[11px] text-fg-muted truncate max-w-[200px] mt-0.5 flex items-center gap-1">
+              <ng-container *ngIf="conv.last_message?.text; else noText">{{ conv.last_message?.text }}</ng-container>
+              <ng-template #noText>
+                <ng-container *ngIf="conv.last_message?.has_attachment; else noMsg">
+                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip" aria-hidden="true"></svg>
+                  <span data-testid="last-file">فایل</span>
+                </ng-container>
+              </ng-template>
+              <ng-template #noMsg>بدون پیام</ng-template>
             </p>
           </div>
         </div>
@@ -166,7 +173,10 @@
             <span class="text-[10px] text-slate-400 font-mono">@{{ user.username }}</span>
           </div>
         </div>
-        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold">شروع چت 💬</span>
+        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+          شروع چت
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="message-square" aria-hidden="true"></svg>
+        </span>
       </button>
     </div>
 
@@ -176,8 +186,11 @@
       <div *ngIf="messages().length >= 30 && hasMoreMessages()" class="text-center pb-2 shrink-0">
         <button (click)="loadOlder()" 
                 [disabled]="isLoadingOlder()"
-                class="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 px-3 py-1 rounded-full transition-colors disabled:opacity-50">
-          <span *ngIf="!isLoadingOlder()">بارگذاری پیام‌های قدیمی‌تر... ⬆</span>
+                class="text-[11px] font-bold text-fg bg-surface-muted hover:bg-line-subtle min-h-[40px] px-3 py-1 rounded-full transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer">
+          <span *ngIf="!isLoadingOlder()" class="inline-flex items-center gap-1.5">
+            بارگذاری پیام‌های قدیمی‌تر
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="arrow-up" aria-hidden="true"></svg>
+          </span>
           <span *ngIf="isLoadingOlder()">در حال دریافت...</span>
         </button>
       </div>
@@ -185,7 +198,13 @@
       <!-- فاصله انعطاف‌پذیر جهت چسبیدن پیام‌ها به بالای کادر تایپ در چت‌های کم‌پیام -->
       <div class="flex-1 min-h-0"></div>
 
-      <ng-container *ngFor="let msg of messages(); trackBy: trackByMessageId">
+      <ng-container *ngFor="let it of items(); trackBy: trackItem">
+      <!-- جداکنندهٔ روز -->
+      <div *ngIf="it.kind === 'sep'" data-testid="date-sep" class="shrink-0 flex justify-center py-1">
+        <span class="text-[11px] font-bold text-fg-muted bg-surface-muted border border-line-subtle rounded-full px-3 py-0.5">{{ $any(it).label }}</span>
+      </div>
+
+      <ng-container *ngIf="asMsg(it) as msg">
       <!-- پیام سیستمی: وسط، کوچک، بدون حباب -->
       <div *ngIf="msg.is_system" data-testid="system-message"
            class="shrink-0 text-center text-[11px] text-fg-muted px-4 py-1">
@@ -193,7 +212,8 @@
       </div>
 
       <div *ngIf="!msg.is_system"
-           class="flex flex-col shrink-0"
+           class="flex flex-col shrink-0 group"
+           [attr.data-msg-id]="msg.id"
            [class.items-start]="!msg.is_me"
            [class.items-end]="msg.is_me">
 
@@ -203,8 +223,9 @@
           {{ msg.sender_details?.full_name || 'کاربر' }}
         </span>
 
+        <div class="flex items-center gap-1 max-w-full" [attr.data-msg-menu-root]="msg.id">
         <!-- Message Bubble -->
-        <div class="max-w-[80%] rounded-2xl p-3 text-xs leading-relaxed shadow-sm"
+        <div class="max-w-[80%] min-w-0 rounded-2xl p-3 text-xs leading-relaxed shadow-sm break-words"
              [class.bg-blue-600]="msg.is_me"
              [class.text-white]="msg.is_me"
              [class.rounded-br-none]="msg.is_me"
@@ -216,7 +237,26 @@
              [class.border-slate-200]="!msg.is_me"
              [class.dark:border-slate-700]="!msg.is_me"
              [class.rounded-bl-none]="!msg.is_me">
-          
+
+          <!-- نقل‌قول پیام اصلی (پاسخ) -->
+          <ng-container *ngIf="replyInfo(msg) as ri">
+            <button type="button" data-testid="reply-quote"
+                    (click)="goToQuoted(ri)"
+                    [attr.title]="ri.deleted ? 'پیام حذف شد' : 'رفتن به پیام اصلی'"
+                    [class.border-white/60]="msg.is_me" [class.bg-white/10]="msg.is_me"
+                    [class.border-indigo-500]="!msg.is_me" [class.bg-surface-muted]="!msg.is_me"
+                    class="block w-full text-start mb-2 rounded-lg border-s-4 px-2 py-1 text-[11px] cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500">
+              <ng-container *ngIf="ri.deleted"><span class="italic opacity-80">پیام حذف شد</span></ng-container>
+              <ng-container *ngIf="!ri.deleted">
+                <span *ngIf="ri.sender" class="block font-bold truncate">{{ ri.sender }}</span>
+                <span class="block truncate opacity-90">
+                  <ng-container *ngIf="ri.text">{{ ri.text }}</ng-container>
+                  <ng-container *ngIf="!ri.text && ri.hasAttachment">فایل</ng-container>
+                </span>
+              </ng-container>
+            </button>
+          </ng-container>
+
           <!-- Attachment Preview -->
           <div *ngIf="msg.attachments && msg.attachments.length > 0" class="mb-2 space-y-1.5">
             <div *ngFor="let att of msg.attachments">
@@ -249,7 +289,7 @@
             <span class="shrink-0 opacity-80">{{ msg.delivery_status === 'failed' ? '(ارسال نشد)' : '(در حال ارسال)' }}</span>
           </div>
 
-          <p class="whitespace-pre-wrap">{{ msg.text }}</p>
+          <p class="whitespace-pre-wrap"><ng-container *ngFor="let seg of segments(msg.text)"><a *ngIf="seg.url" [href]="seg.text" target="_blank" rel="noopener noreferrer" class="underline break-all" dir="ltr">{{ seg.text }}</a><ng-container *ngIf="!seg.url">{{ seg.text }}</ng-container></ng-container></p>
 
           <!-- علت رد قطعی سرور برای پیام ناموفق -->
           <p *ngIf="msg.delivery_status === 'failed' && msg.failure_reason"
@@ -257,24 +297,25 @@
              class="mt-1 text-[10px] font-bold text-rose-100 bg-rose-500/20 rounded px-1.5 py-0.5">{{ msg.failure_reason }}</p>
           
           <!-- Timestamp & Status -->
-          <div class="flex items-center justify-end gap-1.5 mt-1.5 text-[9px] opacity-80">
+          <div class="flex items-center justify-end gap-1.5 mt-1.5 text-[10px]">
+            <span *ngIf="msg.edited_at" data-testid="edited-label">ویرایش‌شده</span>
             <span>{{ formatTime(msg.created_at) }}</span>
             <ng-container *ngIf="msg.is_me">
               <!-- Pending State -->
-              <span *ngIf="msg.delivery_status === 'pending' || (msg.is_pending && msg.delivery_status !== 'failed')" 
-                    title="در حال ارسال..." 
-                    class="animate-pulse">⏳</span>
-              
+              <svg *ngIf="msg.delivery_status === 'pending' || (msg.is_pending && msg.delivery_status !== 'failed')"
+                   class="w-3 h-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="clock"
+                   role="img" title="در حال ارسال..." aria-label="در حال ارسال"></svg>
+
               <!-- Sent vs Read State -->
               <ng-container *ngIf="msg.delivery_status !== 'failed' && !msg.is_pending">
                 <!-- Two ticks: Read / Seen -->
-                <span *ngIf="msg.read_by_count && msg.read_by_count > 0" 
-                      title="خوانده شده" 
-                      class="font-mono text-[11px] font-bold text-sky-200 tracking-tighter">✓✓</span>
+                <svg *ngIf="msg.read_by_count && msg.read_by_count > 0"
+                     class="w-3.5 h-3.5 text-sky-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check-check"
+                     role="img" title="خوانده شده" aria-label="خوانده شده"></svg>
                 <!-- Single tick: Sent to server -->
-                <span *ngIf="!msg.read_by_count || msg.read_by_count === 0" 
-                      title="ارسال شده" 
-                      class="font-mono text-[10px] opacity-80">✓</span>
+                <svg *ngIf="!msg.read_by_count || msg.read_by_count === 0"
+                     class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check"
+                     role="img" title="ارسال شده" aria-label="ارسال شده"></svg>
                 <!-- خوانده‌شده توسط (فقط گروه) -->
                 <button *ngIf="canShowReadBy(msg)" type="button" (click)="openReadBy(msg)"
                         data-testid="read-by-btn"
@@ -286,7 +327,10 @@
               
               <!-- Failed State + Retry Button -->
               <div *ngIf="msg.delivery_status === 'failed'" class="flex items-center gap-1 bg-rose-500/20 text-rose-200 px-1.5 py-0.5 rounded border border-rose-400/30">
-                <span title="خطا در ارسال پیام">⚠️ ناموفق</span>
+                <span title="خطا در ارسال پیام" class="inline-flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="alert-triangle" aria-hidden="true"></svg>
+                  ناموفق
+                </span>
                 <button (click)="retryMessage(msg)" 
                         type="button"
                         title="تلاش مجدد برای ارسال"
@@ -307,8 +351,70 @@
             </ng-container>
           </div>
         </div>
+
+        <!-- منوی پیام -->
+        <div *ngIf="hasMenu(msg)" class="relative shrink-0">
+          <button type="button" (click)="toggleMenu(msg, $event)"
+                  data-testid="msg-menu-btn"
+                  title="گزینه‌های پیام" aria-label="گزینه‌های پیام"
+                  [attr.aria-expanded]="isMenuOpen(msg)"
+                  class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:text-fg hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target transition-opacity sm:opacity-60 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 [@media(hover:none)]:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500"
+                  [class.sm:opacity-100]="isMenuOpen(msg)">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="more-vertical"></svg>
+          </button>
+          <div *ngIf="isMenuOpen(msg)" data-testid="msg-menu"
+               class="absolute z-20 top-full mt-1 end-0 w-40 bg-surface border border-line rounded-xl shadow-lg p-1">
+            <button *ngIf="canReply()" type="button" data-testid="menu-reply" (click)="startReply(msg)"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-reply" aria-hidden="true"></svg>پاسخ
+            </button>
+            <button *ngIf="canEdit(msg)" type="button" data-testid="menu-edit" (click)="startEdit(msg)"
+                    [disabled]="!isOnline()"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="edit" aria-hidden="true"></svg>ویرایش
+            </button>
+            <button *ngIf="msg.text" type="button" data-testid="menu-copy" (click)="copyText(msg)"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="copy" aria-hidden="true"></svg>کپی
+            </button>
+            <button *ngIf="canDelete(msg)" type="button" data-testid="menu-delete" (click)="askRemoveMsg(msg)"
+                    [disabled]="!isOnline()"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-rose-600 hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-delete" aria-hidden="true"></svg>حذف
+            </button>
+          </div>
+        </div>
+        </div>
       </div>
       </ng-container>
+      </ng-container>
+
+      <!-- دکمهٔ شناور «پیام جدید» -->
+      <div *ngIf="showNewBtn()" class="sticky bottom-2 h-0 shrink-0 flex justify-center overflow-visible z-10">
+        <button type="button" data-testid="new-msg-btn" (click)="jumpToNew()"
+                title="رفتن به پیام جدید" aria-label="رفتن به پیام جدید"
+                class="-translate-y-full min-h-[40px] px-3 rounded-full bg-indigo-600 text-white text-xs font-bold shadow-lg inline-flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="arrow-down" aria-hidden="true"></svg>
+          پیام جدید
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- تأیید حذف پیام -->
+  <div *ngIf="deleteTarget()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-center justify-center p-4"
+       (keydown)="onDialogKey($event, cancelRemoveMsg.bind(this))">
+    <div role="alertdialog" aria-modal="true" aria-labelledby="msg-delete-title" data-testid="delete-dialog"
+         class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4">
+      <h3 id="msg-delete-title" class="text-sm font-bold text-fg">حذف پیام</h3>
+      <p class="text-xs text-fg-muted mt-2">این پیام برای همه حذف می‌شود و برگشت‌پذیر نیست. ادامه می‌دهید؟</p>
+      <div class="mt-3 flex items-center justify-end gap-2">
+        <button id="msg-delete-cancel" type="button" (click)="cancelRemoveMsg()"
+                class="min-h-[40px] px-4 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">انصراف</button>
+        <button type="button" (click)="runRemoveMsg()" [disabled]="deleteBusy()" data-testid="delete-confirm"
+                class="min-h-[40px] px-4 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50 cursor-pointer">
+          {{ deleteBusy() ? 'در حال حذف...' : 'حذف' }}</button>
+      </div>
     </div>
   </div>
 
@@ -328,19 +434,47 @@
       <button appAction="close" size="sm" display="icon" tone="rose" label="حذف فایل پیوست" (click)="removeSelectedFile()"></button>
     </div>
 
+    <!-- نوار پاسخ / ویرایش -->
+    <div *ngIf="replyTo() as r" data-testid="reply-strip"
+         class="flex items-center justify-between gap-2 p-2 mb-2 bg-surface-muted rounded-lg border-s-4 border-indigo-500 text-xs">
+      <div class="min-w-0">
+        <span class="block font-bold text-fg truncate">پاسخ به {{ r.is_me ? 'خودم' : (r.sender_details?.full_name || 'کاربر') }}</span>
+        <span class="block text-fg-muted truncate">{{ r.text || (r.attachments?.length ? 'فایل' : '') }}</span>
+      </div>
+      <button type="button" (click)="cancelCompose()" data-testid="reply-cancel"
+              title="لغو پاسخ" aria-label="لغو پاسخ"
+              class="min-w-[40px] min-h-[40px] shrink-0 rounded-xl text-fg-muted hover:bg-line-subtle flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+      </button>
+    </div>
+    <div *ngIf="editing() as e" data-testid="edit-strip"
+         class="flex items-center justify-between gap-2 p-2 mb-2 bg-surface-muted rounded-lg border-s-4 border-amber-500 text-xs">
+      <div class="min-w-0">
+        <span class="block font-bold text-fg">ویرایش پیام</span>
+        <span class="block text-fg-muted truncate">{{ e.text }}</span>
+      </div>
+      <button type="button" (click)="cancelCompose()" data-testid="edit-cancel"
+              title="لغو ویرایش" aria-label="لغو ویرایش"
+              class="min-w-[40px] min-h-[40px] shrink-0 rounded-xl text-fg-muted hover:bg-line-subtle flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+      </button>
+    </div>
+
     <!-- Input Form -->
-    <div class="flex items-center gap-1.5">
+    <div class="flex items-end gap-1.5">
       <label class="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors flex items-center justify-center tap-target" title="پیوست فایل" aria-label="پیوست فایل">
         <input type="file" (change)="onFileSelected($event)" class="hidden" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.xlsx,.xls,.doc,.docx,.txt,.csv" />
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
       </label>
 
-      <input type="text"
-             [(ngModel)]="messageInputText"
-             (input)="onInputTyping()"
-             (keydown.enter)="sendMessage()"
-             placeholder="پیام خود را بنویسید..."
-             class="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 min-h-[44px] text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+      <textarea #composer rows="1"
+                data-testid="composer"
+                [(ngModel)]="messageInputText"
+                (input)="onInputTyping(); autoGrow()"
+                (keydown.enter)="onComposerKey($any($event))"
+                aria-label="متن پیام"
+                placeholder="پیام خود را بنویسید..."
+                class="flex-1 resize-none text-xs bg-surface-muted border border-line rounded-xl px-3 py-3 min-h-[44px] max-h-[120px] text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"></textarea>
 
       <button appAction="send"
               size="lg"

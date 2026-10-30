@@ -12,6 +12,7 @@ from django.db.models import Q, Prefetch, Count, Subquery, OuterRef, Value, Inte
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -41,7 +42,8 @@ from .access import (
 )
 from .broadcast import (
     broadcast_message_ws, broadcast_comment_ws,
-    broadcast_message_updated_ws, broadcast_read_receipt_ws, broadcast_membership_ws
+    broadcast_message_updated_ws, broadcast_message_deleted_ws, broadcast_read_receipt_ws,
+    broadcast_membership_ws
 )
 from .membership import (
     add_member, add_members, remove_member, leave_conversation, member_role, active_member_records,
@@ -623,7 +625,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         qs = Message.objects.filter(
             conversation=conversation
-        ).select_related('sender').prefetch_related('attachments').annotate(
+        ).select_related('sender', 'reply_to__sender').prefetch_related('attachments').annotate(
             annotated_read_by_count=Count('read_by', distinct=True)
         )
 
@@ -637,6 +639,18 @@ class MessageViewSet(viewsets.ModelViewSet):
                 )
             except (Message.DoesNotExist, ValueError):
                 pass
+
+        # مکان‌نمای پیام‌های قدیمی‌تر (E21): پیام‌های در انتظار/ناموفق کلاینت جابه‌جایی نمی‌سازند؛ offset برای سازگاری می‌ماند
+        before_id = self.request.query_params.get('before_id')
+        if before_id:
+            try:
+                ref_msg = Message.all_objects.get(id=before_id, conversation=conversation)
+            except (Message.DoesNotExist, ValueError, DjangoValidationError):
+                return Message.objects.none()
+            qs = qs.filter(
+                Q(created_at__lt=ref_msg.created_at) |
+                Q(created_at=ref_msg.created_at, id__lt=ref_msg.id)
+            )
 
         return qs.order_by('-created_at', '-id')
 
@@ -710,6 +724,9 @@ class MessageViewSet(viewsets.ModelViewSet):
             before_state={'id': str(instance.id), 'text': instance.text}
         )
         instance.soft_delete()
+        # خبر زندهٔ حذف به همهٔ خوانندگان و دستگاه‌های خود حذف‌کننده (E12)
+        conversation, message_id = instance.conversation, instance.id
+        transaction.on_commit(lambda: broadcast_message_deleted_ws(conversation, message_id))
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_attachment(self, request):

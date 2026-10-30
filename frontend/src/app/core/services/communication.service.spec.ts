@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -247,8 +247,8 @@ describe('CommunicationService', () => {
     };
     service.activeMessages$.next([initialMsg]);
 
-    const promise = service.loadOlderMessages('conv-1', 1, 30);
-    const req = httpMock.expectOne(req => req.url === '/api/communications/messages/' && req.params.get('offset') === '1');
+    const promise = service.loadOlderMessages('conv-1', 'msg-current-1', 30);
+    const req = httpMock.expectOne(req => req.url === '/api/communications/messages/' && req.params.get('before_id') === 'msg-current-1');
     expect(req.request.method).toBe('GET');
 
     const olderMsg: ChatMessage = {
@@ -1041,5 +1041,121 @@ describe('CommunicationService', () => {
     httpMock.expectOne('/api/communications/conversations/g1/').flush({}, { status: 403, statusText: 'Forbidden' });
     await new Promise(r => setTimeout(r, 0));
     expect(service.conversations$.value.length).toBe(0);
+  });
+
+  // ─── مرحلهٔ ۵ چت: منوی پیام، حذف/ویرایش، before_id، throttle تایپ ───
+  const wsMsg = (event: string, data: any) => {
+    (service as any).chatWs = { send: () => {}, close: () => {} };
+    (service as any).initChatSocket('ws://mock');
+    (service as any).chatWs.onmessage({ data: JSON.stringify({ event, data }) });
+  };
+  const openConv = (id = 'conv-1') => service.activeConversation$.next({
+    id, conv_type: 'direct', participants: [1, 2], is_active: true,
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  } as any);
+  const m = (id: any, extra: any = {}): ChatMessage => ({
+    id, conversation: 'conv-1', sender: 2, text: 't' + id, created_at: new Date().toISOString(), ...extra
+  } as ChatMessage);
+
+  it('WS chat.message.deleted removes the message from the open conversation', () => {
+    service.getCurrentUserId = () => 1;
+    openConv();
+    service.activeMessages$.next([m(10), m(11), m(12)]);
+    wsMsg('chat.message.deleted', { id: 11, conversation: 'conv-1' });
+    expect(service.activeMessages$.value.map(x => String(x.id))).toEqual(['10', '12']);
+  });
+
+  it('WS chat.message.deleted of the last message refreshes the conversation preview from the new last message', () => {
+    service.getCurrentUserId = () => 1;
+    openConv();
+    service.activeMessages$.next([m(10, { text: 'قبلی' }), m(11, { text: 'آخر' })]);
+    service.conversations$.next([{
+      id: 'conv-1', conv_type: 'direct', participants: [1, 2], is_active: true, created_at: '', updated_at: '',
+      last_message: { id: '11', text: 'آخر', sender_name: 'x', created_at: '', has_attachment: false }
+    } as any]);
+    wsMsg('chat.message.deleted', { id: 11, conversation: 'conv-1' });
+    expect(service.conversations$.value[0].last_message?.id).toBe(10);
+    expect(service.conversations$.value[0].last_message?.text).toBe('قبلی');
+  });
+
+  it('WS chat.message.updated updates text and edited_at in place', () => {
+    service.getCurrentUserId = () => 1;
+    openConv();
+    service.activeMessages$.next([m(20, { sender: 1, is_me: true, text: 'اول', delivery_status: 'sent' })]);
+    wsMsg('chat.message.updated', { id: 20, conversation: 'conv-1', sender: 1, text: 'دوم', edited_at: '2026-10-31T10:00:00Z', created_at: new Date().toISOString() });
+    const cur = service.activeMessages$.value;
+    expect(cur.length).toBe(1);
+    expect(cur[0].text).toBe('دوم');
+    expect(cur[0].edited_at).toBe('2026-10-31T10:00:00Z');
+  });
+
+  it('loadOlderMessages uses before_id of the oldest server message and skips pending/failed ones', async () => {
+    service.activeMessages$.next([
+      m('temp-1', { is_pending: true, delivery_status: 'pending' }),
+      m(30), m(25), m(40),
+      m('temp-2', { delivery_status: 'failed' })
+    ]);
+    expect(service.oldestServerMessageId()).toBe('25');
+    const p = service.loadOlderMessages('conv-1', service.oldestServerMessageId()!, 30);
+    const req = httpMock.expectOne(r => r.url === '/api/communications/messages/' && r.params.get('before_id') === '25');
+    expect(req.request.params.get('offset')).toBeNull();
+    req.flush({ results: [] });
+    await p;
+  });
+
+  it('sendMessage with a reply puts reply_to in the create body', async () => {
+    service.getCurrentUserId = () => 1;
+    const p = service.sendMessage('conv-1', 'پاسخ', '77');
+    const req = httpMock.expectOne('/api/communications/messages/');
+    expect(req.request.body.reply_to).toBe('77');
+    req.flush({ id: 90, conversation: 'conv-1', sender: 1, text: 'پاسخ', reply_to: 77, created_at: new Date().toISOString() });
+    await p;
+  });
+
+  it('editMessage PATCHes the text and updates the message in place', async () => {
+    service.getCurrentUserId = () => 1;
+    openConv();
+    service.activeMessages$.next([m(50, { sender: 1, is_me: true, text: 'قدیم', delivery_status: 'sent' })]);
+    const p = service.editMessage('50', 'جدید');
+    const req = httpMock.expectOne('/api/communications/messages/50/');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ text: 'جدید' });
+    expect(req.request.context.get(SKIP_OFFLINE)).toBe(true);
+    req.flush({ id: 50, conversation: 'conv-1', sender: 1, text: 'جدید', edited_at: '2026-10-31T10:00:00Z', created_at: new Date().toISOString() });
+    await p;
+    expect(service.activeMessages$.value[0].text).toBe('جدید');
+    expect(service.activeMessages$.value[0].edited_at).toBeTruthy();
+  });
+
+  it('deleteMessage sends DELETE (not queued offline) and removes the message', async () => {
+    service.getCurrentUserId = () => 1;
+    openConv();
+    service.activeMessages$.next([m(60, { sender: 1, is_me: true }), m(61)]);
+    const p = service.deleteMessage('60');
+    const req = httpMock.expectOne('/api/communications/messages/60/');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.context.get(SKIP_OFFLINE)).toBe(true);
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await p;
+    expect(service.activeMessages$.value.map(x => String(x.id))).toEqual(['61']);
+  });
+
+  it('typing events are throttled to once per 3 seconds', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-31T10:00:00Z'));
+      const sent: any[] = [];
+      (service as any).chatWs = { readyState: WebSocket.OPEN, send: (d: string) => sent.push(JSON.parse(d)), close: () => {} };
+      service.sendTypingStatus('conv-1', true);
+      service.sendTypingStatus('conv-1', true);
+      vi.advanceTimersByTime(2900);
+      service.sendTypingStatus('conv-1', true);
+      expect(sent.length).toBe(1);
+      vi.advanceTimersByTime(200);
+      service.sendTypingStatus('conv-1', true);
+      expect(sent.length).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

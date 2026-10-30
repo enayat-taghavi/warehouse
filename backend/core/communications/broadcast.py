@@ -146,6 +146,18 @@ def broadcast_message_updated_ws(msg, request=None):
     _send_message_event(msg, "chat.message.updated", effective_reader_ids(msg.conversation))
 
 
+def broadcast_message_deleted_ws(conversation, message_id):
+    """
+    خبر زندهٔ حذف پیام (E12) به روم شخصی همهٔ خوانندگان مؤثر گفتگو؛ فقط شناسه‌ها، بدون متن
+    """
+    from .access import effective_reader_ids
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    data = {'id': message_id, 'conversation': str(conversation.id)}
+    _send_to_user_rooms(channel_layer, sorted(effective_reader_ids(conversation)), "chat.message.deleted", data)
+
+
 def broadcast_comment_ws(comment, request=None):
     """
     برودکست بلادرنگ کامنت جدید به روم تعاملی شیء هدف و هشدارهای منشن
