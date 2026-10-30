@@ -26,3 +26,26 @@ class InventoryConfig(AppConfig):
         contribute('comment_target_models', 'item')
         contribute('comment_target_models', 'counttask')
         contribute('comment_target_models', 'doctask')
+
+        # دسترسی به نظرات کالا و تسک‌ها همان دیدِ نماهای خودشان است (E6 بازبینی چت):
+        # دامنهٔ انبار + دامنهٔ شرکت با همان scope_tenant_queryset که item/count/doc views به کار می‌برند
+        from inventory.models import DocTask
+
+        def _inventory_comment_target_access(user, target):
+            if isinstance(target, Item):
+                wh_id, company_field = target.warehouse_id, 'warehouse__company_id'
+            elif isinstance(target, (CountTask, DocTask)):
+                item = getattr(target, 'item', None)
+                if item is None:
+                    return False
+                wh_id, company_field = item.warehouse_id, 'item__warehouse__company_id'
+            else:
+                return None
+            from common.warehouse_scope import can_access_warehouse
+            from common.tenant_scope import scope_tenant_queryset
+            if not can_access_warehouse(user, wh_id):
+                return False
+            scoped = scope_tenant_queryset(type(target).objects.filter(pk=target.pk), user, company_field=company_field)
+            return scoped.exists()
+
+        contribute('comment_target_access', _inventory_comment_target_access)

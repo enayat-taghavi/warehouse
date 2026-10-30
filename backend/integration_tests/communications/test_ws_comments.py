@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
-from channels.testing import WebsocketCommunicator
+from integration_tests.communications.base import FirstMessageAuthCommunicator as WebsocketCommunicator, make_company
 from channels.db import database_sync_to_async
 
 from config.asgi import application
@@ -29,8 +29,8 @@ class WebSocketCommentsTestCase(TransactionTestCase):
         super().setUp()
         close_old_connections()
 
-        self.wh1 = Warehouse.objects.create(name="انبار مرکزی ۱", project_name="شیراز")
-        self.wh2 = Warehouse.objects.create(name="انبار فرعی ۲", project_name="بوشهر")
+        self.wh1 = Warehouse.objects.create(name="انبار مرکزی ۱", project_name="شیراز", company=make_company("WSC-CO-1"))
+        self.wh2 = Warehouse.objects.create(name="انبار فرعی ۲", project_name="بوشهر", company=make_company("WSC-CO-2"))
 
         self.manager1 = User.objects.create_user(
             username="manager_wh1_ws",

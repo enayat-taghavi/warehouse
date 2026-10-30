@@ -1,7 +1,7 @@
 from django.test import TransactionTestCase
 from django.db import close_old_connections
 from django.contrib.auth import get_user_model
-from channels.testing import WebsocketCommunicator
+from integration_tests.communications.base import FirstMessageAuthCommunicator as WebsocketCommunicator
 from config.asgi import application
 from rest_framework_simplejwt.tokens import AccessToken
 from communications.presence import add_online_user_sync, remove_online_user_sync, get_online_users_sync

@@ -5,7 +5,7 @@ from django.db import close_old_connections
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from rest_framework_simplejwt.tokens import AccessToken
-from channels.testing import WebsocketCommunicator
+from integration_tests.communications.base import FirstMessageAuthCommunicator as WebsocketCommunicator, make_company
 
 from config.asgi import application
 from warehouses.models import Warehouse
@@ -26,8 +26,8 @@ class WebSocketSecurityTestCase(TransactionTestCase):
         close_old_connections()
 
         # ۱. ساخت انبارهای تستی
-        self.wh1 = Warehouse.objects.create(name="انبار مرکزی ۱", project_name="شیراز")
-        self.wh2 = Warehouse.objects.create(name="انبار فرعی ۲", project_name="بوشهر")
+        self.wh1 = Warehouse.objects.create(name="انبار مرکزی ۱", project_name="شیراز", company=make_company("WSA-CO-1"))
+        self.wh2 = Warehouse.objects.create(name="انبار فرعی ۲", project_name="بوشهر", company=make_company("WSA-CO-2"))
 
         # ۲. ساخت کاربران
         self.admin = User.objects.create_superuser(username="admin_ws", email="admin_ws@test.com", password="Password123!")

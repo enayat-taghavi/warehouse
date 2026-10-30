@@ -1,5 +1,7 @@
 import json
 from decimal import Decimal
+from urllib.parse import urlsplit, parse_qsl, urlencode
+from channels.testing import WebsocketCommunicator as _ChannelsWebsocketCommunicator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
@@ -16,6 +18,41 @@ from communications.models import (
 User = get_user_model()
 
 
+def make_company(code):
+    """شرکت تستی؛ انبارهای تست باید شرکت داشته باشند تا دامنهٔ شرکت (scope_tenant_queryset) مثل نماها اعمال شود"""
+    from companies.models import Company
+    return Company.objects.create(code=code, name=f"شرکت {code}")
+
+
+class FirstMessageAuthCommunicator(_ChannelsWebsocketCommunicator):
+    """
+    سرور دیگر ?token= را در آدرس نمی‌پذیرد (E9)؛ این کمک‌کننده توکنِ آدرس را برمی‌دارد و
+    بلافاصله پس از اتصال با پیام authenticate می‌فرستد تا تست‌های قبلی بی‌تغییر بمانند.
+    connect() مثل قبل (True, None) یا (False, کد بستن) برمی‌گرداند.
+    """
+
+    def __init__(self, application, path, *args, **kwargs):
+        parts = urlsplit(path)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        self._auth_token = next((v for k, v in query if k == 'token'), None)
+        rest = urlencode([(k, v) for k, v in query if k != 'token'])
+        super().__init__(application, parts.path + (f'?{rest}' if rest else ''), *args, **kwargs)
+
+    async def connect(self, timeout=1):
+        connected, code = await super().connect(timeout)
+        if not connected or not self._auth_token:
+            return connected, code
+        await self.send_json_to({'type': 'authenticate', 'token': self._auth_token})
+        while True:
+            out = await self.receive_output(timeout=5)
+            if out.get('type') == 'websocket.close':
+                return False, out.get('code')
+            if out.get('type') == 'websocket.send':
+                data = json.loads(out.get('text') or '{}')
+                if data.get('type') == 'authenticated':
+                    return True, None
+
+
 class BaseCommsTestCase(TestCase):
     """
     کلاس پایه جهت راه‌اندازی و ایزولاسیون داده‌های آزمون سیستم ارتباطات
@@ -27,13 +64,17 @@ class BaseCommsTestCase(TestCase):
         self.client = APIClient()
 
         # ۱. ساخت انبارهای تستی (انبار ۱ و انبار ۲)
+        self.company1 = make_company("COMMS-CO-1")
+        self.company2 = make_company("COMMS-CO-2")
         self.wh1 = Warehouse.objects.create(
             name="انبار مرکزی ۱",
-            project_name="پروژه شیراز"
+            project_name="پروژه شیراز",
+            company=self.company1
         )
         self.wh2 = Warehouse.objects.create(
             name="انبار فرعی ۲",
-            project_name="پروژه بوشهر"
+            project_name="پروژه بوشهر",
+            company=self.company2
         )
 
         # ۲. ساخت کاربران

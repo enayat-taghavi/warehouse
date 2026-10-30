@@ -1,19 +1,38 @@
+import asyncio
 import json
 import logging
+import time
 from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .models import Conversation
-from .access import can_read_conversation, can_access_comment_target
+from .access import can_read_conversation, can_access_comment_target, resolve_comment_content_type
 from .presence import add_online_user, remove_online_user, get_online_users
 from common.warehouse_scope import can_access_warehouse
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+# E9: مهلت احراز هویت پیام اول و فاصلهٔ کمینهٔ بررسی فعال بودن کاربر روی ping
+WS_AUTH_TIMEOUT_SECONDS = 10
+WS_ACTIVE_CHECK_INTERVAL_SECONDS = 60
+WS_CLOSE_AUTH = 4003
+
+
+def _decode_token(token_str):
+    """(کاربر فعال، زمان exp) یا (None, None)"""
+    try:
+        access_token = AccessToken(token_str)
+        user_id = access_token['user_id']
+        exp = access_token.get('exp')
+        user = User.objects.get(id=user_id, is_active=True)
+        return user, (float(exp) if exp else None)
+    except Exception as e:
+        logger.debug(f"[WebSocketAuth] Token decode error: {e}")
+        return None, None
 
 
 @database_sync_to_async
@@ -21,13 +40,18 @@ def get_user_from_token(token_str):
     """
     اعتبارسنجی و استخراج کاربر از توکن JWT
     """
-    try:
-        access_token = AccessToken(token_str)
-        user_id = access_token['user_id']
-        return User.objects.get(id=user_id, is_active=True)
-    except Exception as e:
-        logger.debug(f"[WebSocketAuth] Token decode error: {e}")
-        return None
+    return _decode_token(token_str)[0]
+
+
+@database_sync_to_async
+def get_user_and_exp_from_token(token_str):
+    """اعتبارسنجی توکن JWT؛ خروجی (کاربر، exp)"""
+    return _decode_token(token_str)
+
+
+@database_sync_to_async
+def check_user_is_active(user_id):
+    return User.objects.filter(id=user_id, is_active=True).exists()
 
 
 @database_sync_to_async
@@ -38,7 +62,7 @@ def check_can_read_conversation(user, conv_id):
     try:
         conv = Conversation.objects.get(id=conv_id)
         return can_read_conversation(user, conv)
-    except (Conversation.DoesNotExist, ValueError):
+    except Exception:
         return False
 
 
@@ -53,18 +77,28 @@ def check_can_access_warehouse(user, wh_id):
         return False
 
 
+def resolve_comment_subscription(user, model_name, object_id):
+    """
+    نام مدلِ حل‌شدهٔ هدف (برای نام گروه comments_<model>_<id>) یا None اگر مجاز نباشد.
+    فقط مدل‌های فهرست مجاز و ContentType بی‌ابهام پذیرفته می‌شوند (E6).
+    """
+    try:
+        ct = resolve_comment_content_type(model_name)
+        if not ct:
+            return None
+        if not can_access_comment_target(user, ct, str(object_id)):
+            return None
+        return ct.model
+    except Exception:
+        return None
+
+
 @database_sync_to_async
 def check_can_access_comment_target(user, model_name, object_id):
     """
-    بررسی دسترسی کاربر به موجودیت هدف کامنت
+    بررسی دسترسی کاربر به موجودیت هدف کامنت؛ خروجی نام مدل حل‌شده یا None
     """
-    try:
-        ct = ContentType.objects.filter(model=model_name.lower()).first()
-        if not ct:
-            return False
-        return can_access_comment_target(user, ct, str(object_id))
-    except Exception:
-        return False
+    return resolve_comment_subscription(user, model_name, object_id)
 
 
 @database_sync_to_async
@@ -80,11 +114,89 @@ def check_is_chat_enabled(wh_id=None):
     return bool(get_setting('chat_enabled', warehouse_id=wh_id_int))
 
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class WsAuthLifecycleMixin:
+    """
+    چرخهٔ عمر احراز هویت وب‌سوکت (E9):
+    - توکن فقط در پیام اول پذیرفته می‌شود (نه در آدرس)؛
+    - اتصال احرازنشده پس از WS_AUTH_TIMEOUT_SECONDS بسته می‌شود؛
+    - authenticate دوم روی اتصال احرازشده رد می‌شود؛
+    - با انقضای توکن یا غیرفعال شدن کاربر، اتصال با کد 4003 بسته می‌شود.
+    """
+
+    def _init_auth_state(self):
+        self.is_authenticated = False
+        self.user = None
+        self.token_exp = None
+        self._last_active_check = 0.0
+        self._auth_timeout_task = None
+
+    def _start_auth_timeout(self):
+        self._auth_timeout_task = asyncio.ensure_future(self._auth_timeout())
+
+    def _cancel_auth_timeout(self):
+        task = getattr(self, '_auth_timeout_task', None)
+        if task and not task.done():
+            task.cancel()
+        self._auth_timeout_task = None
+
+    async def _auth_timeout(self):
+        try:
+            await asyncio.sleep(WS_AUTH_TIMEOUT_SECONDS)
+        except asyncio.CancelledError:
+            return
+        if not getattr(self, 'is_authenticated', False):
+            try:
+                await self.send(text_data=json.dumps({'type': 'error', 'code': 4001, 'message': 'مهلت احراز هویت به پایان رسید'}))
+            except Exception:
+                pass
+            await self.close(code=WS_CLOSE_AUTH)
+
+    async def _handle_authenticate(self, payload):
+        """True اگر احراز هویت موفق شد؛ در غیر این صورت پاسخ خطا (و در صورت لزوم بستن) انجام شده است."""
+        if getattr(self, 'is_authenticated', False):
+            # تغییر هویت روی یک اتصال باز ممنوع است؛ هویت فعلی دست‌نخورده می‌ماند
+            await self.send(text_data=json.dumps({'type': 'error', 'code': 4009, 'message': 'این اتصال قبلاً احراز هویت شده است'}))
+            return False
+        token = payload.get('token')
+        if not token:
+            await self.send(text_data=json.dumps({'type': 'error', 'code': 4003, 'message': 'توکن نامعتبر است'}))
+            await self.close(code=WS_CLOSE_AUTH)
+            return False
+        user, exp = await get_user_and_exp_from_token(token)
+        if not user or not user.is_authenticated:
+            await self.send(text_data=json.dumps({'type': 'error', 'code': 4003, 'message': 'احراز هویت ناموفق بود'}))
+            await self.close(code=WS_CLOSE_AUTH)
+            return False
+        self._cancel_auth_timeout()
+        self.token_exp = exp
+        self._last_active_check = time.monotonic()
+        await self._setup_authenticated_session(user)
+        return True
+
+    async def _session_still_valid(self, check_active=False):
+        """انقضای توکن همیشه؛ فعال بودن کاربر فقط وقتی check_active و حداکثر هر ۶۰ ثانیه یک بار"""
+        if self.token_exp is not None and time.time() >= self.token_exp:
+            await self.close(code=WS_CLOSE_AUTH)
+            return False
+        if check_active:
+            now = time.monotonic()
+            if now - self._last_active_check >= WS_ACTIVE_CHECK_INTERVAL_SECONDS:
+                self._last_active_check = now
+                if not await check_user_is_active(self.user.id):
+                    await self.close(code=WS_CLOSE_AUTH)
+                    return False
+        return True
+
+
+class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
     async def connect(self):
         query_string = self.scope.get('query_string', b'').decode('utf-8')
         params = parse_qs(query_string)
-        token = params.get('token', [None])[0]
+
+        self._init_auth_state()
+        self.joined_conversations = set()
+        self.user_group = None
+        self.presence_group = None
 
         self.wh_id = params.get('warehouse_id', [None])[0]
         chat_enabled = await check_is_chat_enabled(self.wh_id)
@@ -92,22 +204,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4003)
             return
 
-        self.joined_conversations = set()
-        self.is_authenticated = False
-        self.user = None
-        self.user_group = None
-        self.presence_group = None
-
-        if token:
-            user = await get_user_from_token(token)
-            if not user or not user.is_authenticated:
-                await self.close(code=4003)
-                return
-            await self.accept()
-            await self._setup_authenticated_session(user, send_ack=False)
-        else:
-            # کلاینت توکن را در پیام اول به صورت امن (First-message handshake) ارسال خواهد کرد
-            await self.accept()
+        # کلاینت توکن را در پیام اول به صورت امن (First-message handshake) می‌فرستد؛
+        # ?token= در آدرس دیگر پذیرفته نمی‌شود چون در لاگ پروکسی‌ها می‌ماند (E9)
+        await self.accept()
+        self._start_auth_timeout()
 
     async def _setup_authenticated_session(self, user, send_ack=True):
         self.user = user
@@ -143,6 +243,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def disconnect(self, close_code):
+        self._cancel_auth_timeout()
         if getattr(self, 'is_authenticated', False) and getattr(self, 'user', None):
             # حذف کاربر از کش آنلاین‌ها
             await remove_online_user(self.user.id)
@@ -176,22 +277,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             # دریافت توکن در پیام اول جهت امنیت و عدم نشت در لاگ پروکسی‌ها
             if msg_type in ['authenticate', 'auth']:
-                token = payload.get('token')
-                if not token:
-                    await self.send(text_data=json.dumps({'type': 'error', 'code': 4003, 'message': 'توکن نامعتبر است'}))
-                    await self.close(code=4003)
-                    return
-                user = await get_user_from_token(token)
-                if not user or not user.is_authenticated:
-                    await self.send(text_data=json.dumps({'type': 'error', 'code': 4003, 'message': 'احراز هویت ناموفق بود'}))
-                    await self.close(code=4003)
-                    return
-                await self._setup_authenticated_session(user)
+                await self._handle_authenticate(payload)
                 return
 
             if not getattr(self, 'is_authenticated', False) or not self.user:
                 await self.send(text_data=json.dumps({'type': 'error', 'code': 4001, 'message': 'ابتدا باید احراز هویت شوید'}))
                 await self.close(code=4003)
+                return
+
+            if not await self._session_still_valid(check_active=(msg_type == 'ping')):
                 return
 
             if msg_type == 'ping':
@@ -292,26 +386,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
 
-class CommentConsumer(AsyncWebsocketConsumer):
+class CommentConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
     async def connect(self):
-        query_string = self.scope.get('query_string', b'').decode('utf-8')
-        params = parse_qs(query_string)
-        token = params.get('token', [None])[0]
-
+        self._init_auth_state()
         self.subscribed_groups = set()
-        self.is_authenticated = False
-        self.user = None
         self.user_group = None
 
-        if token:
-            user = await get_user_from_token(token)
-            if not user or not user.is_authenticated:
-                await self.close(code=4003)
-                return
-            await self.accept()
-            await self._setup_authenticated_session(user, send_ack=False)
-        else:
-            await self.accept()
+        # توکن فقط در پیام اول پذیرفته می‌شود (E9)
+        await self.accept()
+        self._start_auth_timeout()
 
     async def _setup_authenticated_session(self, user, send_ack=True):
         self.user = user
@@ -326,6 +409,7 @@ class CommentConsumer(AsyncWebsocketConsumer):
             }))
 
     async def disconnect(self, close_code):
+        self._cancel_auth_timeout()
         if getattr(self, 'user_group', None):
             await self.channel_layer.group_discard(self.user_group, self.channel_name)
         if hasattr(self, 'subscribed_groups'):
@@ -340,22 +424,15 @@ class CommentConsumer(AsyncWebsocketConsumer):
             msg_type = payload.get('type')
 
             if msg_type in ['authenticate', 'auth']:
-                token = payload.get('token')
-                if not token:
-                    await self.send(text_data=json.dumps({'type': 'error', 'code': 4003, 'message': 'توکن نامعتبر است'}))
-                    await self.close(code=4003)
-                    return
-                user = await get_user_from_token(token)
-                if not user or not user.is_authenticated:
-                    await self.send(text_data=json.dumps({'type': 'error', 'code': 4003, 'message': 'احراز هویت ناموفق بود'}))
-                    await self.close(code=4003)
-                    return
-                await self._setup_authenticated_session(user)
+                await self._handle_authenticate(payload)
                 return
 
             if not getattr(self, 'is_authenticated', False) or not self.user:
                 await self.send(text_data=json.dumps({'type': 'error', 'code': 4001, 'message': 'ابتدا باید احراز هویت شوید'}))
                 await self.close(code=4003)
+                return
+
+            if not await self._session_still_valid(check_active=(msg_type == 'ping')):
                 return
 
             if msg_type == 'ping':
@@ -368,9 +445,10 @@ class CommentConsumer(AsyncWebsocketConsumer):
                 model = payload.get('model') or payload.get('content_type') or 'item'
                 obj_id = payload.get('object_id')
                 if obj_id:
-                    allowed = await check_can_access_comment_target(self.user, model, obj_id)
-                    if allowed:
-                        target_group = f"comments_{model}_{obj_id}"
+                    resolved_model = await check_can_access_comment_target(self.user, model, obj_id)
+                    if resolved_model:
+                        # نام گروه با همان نام مدلی ساخته می‌شود که broadcast_comment_ws به کار می‌برد
+                        target_group = f"comments_{resolved_model}_{obj_id}"
                         self.subscribed_groups.add(target_group)
                         await self.channel_layer.group_add(target_group, self.channel_name)
                         await self.send(text_data=json.dumps({
@@ -390,7 +468,8 @@ class CommentConsumer(AsyncWebsocketConsumer):
                 model = payload.get('model') or payload.get('content_type') or 'item'
                 obj_id = payload.get('object_id')
                 if obj_id:
-                    target_group = f"comments_{model}_{obj_id}"
+                    model_key = str(model).strip().lower().split('.')[-1]
+                    target_group = f"comments_{model_key}_{obj_id}"
                     self.subscribed_groups.discard(target_group)
                     await self.channel_layer.group_discard(target_group, self.channel_name)
                     await self.send(text_data=json.dumps({

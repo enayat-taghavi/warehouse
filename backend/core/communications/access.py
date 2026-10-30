@@ -1,9 +1,28 @@
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from common.warehouse_scope import user_warehouse_ids, can_access_warehouse
+from platform_core.registry import contributions, has_permission_alias
 from .models import Conversation, Message, GenericComment, ConversationType
 
 User = get_user_model()
+
+# قابلیت عمومی «مدیر گروه چت»؛ هر ماژول مجوز خودش را با
+# contribute('permission_aliases:chat_group_manager', codename) به آن وصل می‌کند (E19)
+CHAT_GROUP_MANAGER_CAPABILITY = 'chat_group_manager'
+
+
+def is_chat_group_manager(user):
+    """سوپرکاربر، is_staff یا دارندهٔ قابلیت chat_group_manager"""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser or getattr(user, 'is_staff', False):
+        return True
+    return has_permission_alias(user, CHAT_GROUP_MANAGER_CAPABILITY)
+
+
+def _is_participant(user, conversation):
+    return conversation.participants.filter(id=user.id).exists()
 
 
 def visible_conversations(user):
@@ -44,11 +63,16 @@ def can_read_conversation(user, conversation):
     """
     if not user or not user.is_authenticated:
         return False
+
+    # چت دو‌نفره فقط برای اعضای خودش، حتی سوپرکاربر (تصمیم کاربر، E5)
+    if conversation.conv_type == ConversationType.DIRECT:
+        return _is_participant(user, conversation)
+
     if user.is_superuser:
         return True
 
     # عضویت مستقیم در گفتگو
-    if conversation.participants.filter(id=user.id).exists():
+    if _is_participant(user, conversation):
         return True
 
     # اطلاعیه عمومی
@@ -71,26 +95,26 @@ def can_post_to_conversation(user, conversation):
     """
     if not user or not user.is_authenticated:
         return False
+
+    # در گفتگوی خصوصی، فرستنده حتماً باید عضو گفتگو باشد (سوپرکاربر هم، E5)
+    if conversation.conv_type == ConversationType.DIRECT:
+        return _is_participant(user, conversation)
+
     if user.is_superuser:
         return True
 
     # در کانال اطلاعیه تنها مدیران، ادمین‌ها یا ایجادکننده همان انبار مجاز به ارسال پیام هستند
     if conversation.conv_type == ConversationType.ANNOUNCEMENT:
-        is_manager = getattr(user, 'is_staff', False) or user.has_perm('warehouses.can_act_as_manager')
-        if not is_manager and conversation.created_by_id != user.id:
+        if not is_chat_group_manager(user) and conversation.created_by_id != user.id:
             return False
         # اگر اطلاعیه متعلق به انبار مشخصی است، کاربر حتماً باید به آن انبار دسترسی داشته باشد
         if conversation.warehouse_id is not None:
             return can_access_warehouse(user, conversation.warehouse_id)
         return True
 
-    # در گفتگوی خصوصی، فرستنده حتماً باید عضو گفتگو باشد
-    if conversation.conv_type == ConversationType.DIRECT:
-        return conversation.participants.filter(id=user.id).exists()
-
     # در گروه کاری انبار، عضویت یا دسترسی انبار لازم است
     if conversation.conv_type == ConversationType.WAREHOUSE_GROUP:
-        if conversation.participants.filter(id=user.id).exists():
+        if _is_participant(user, conversation):
             return True
         if conversation.warehouse_id:
             return can_access_warehouse(user, conversation.warehouse_id)
@@ -100,19 +124,70 @@ def can_post_to_conversation(user, conversation):
 
 def can_modify_message(user, message):
     """
-    آیا کاربر مجاز به ویرایش، الصاق فایل یا حذف این پیام است؟
-    تنها فرستنده پیام یا سوپریوزر مجاز هستند.
+    آیا کاربر مجاز به ویرایش متن یا الصاق فایل به این پیام است؟
+    فقط فرستنده؛ سوپرکاربر هم متن پیام دیگران را ویرایش نمی‌کند (E5).
     """
     if not user or not user.is_authenticated:
         return False
-    if user.is_superuser:
-        return True
     return message.sender_id == user.id
+
+
+def can_delete_message(user, message):
+    """
+    آیا کاربر مجاز به حذف این پیام است؟
+    فرستنده همیشه؛ سوپرکاربر فقط در گفتگوهای غیرخصوصی (حذف پیام نامناسب، با ثبت ممیزی؛ E5).
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if message.sender_id == user.id:
+        return True
+    conversation = getattr(message, 'conversation', None)
+    if user.is_superuser and conversation is not None:
+        return conversation.conv_type != ConversationType.DIRECT
+    return False
+
+
+def get_allowed_comment_models() -> set[str]:
+    """
+    دریافت مدل‌های مجاز برای ارسال نظر از مشارکت ماژول‌ها (Extension Point: comment_target_models).
+    """
+    models = set()
+    for item in contributions('comment_target_models'):
+        if isinstance(item, (set, list, tuple)):
+            models.update(str(m).lower() for m in item)
+        else:
+            models.add(str(item).lower())
+    return models
+
+
+def resolve_comment_content_type(model_name):
+    """
+    حل بی‌ابهام ContentType هدف نظر از «app_label.model» یا نام خالی مدل (E6).
+    فقط مدل‌های فهرست مجاز پذیرفته می‌شوند؛ نام خالی‌ای که به بیش از یک ContentType برسد رد می‌شود.
+    """
+    if not model_name or not isinstance(model_name, str):
+        return None
+    raw = model_name.strip().lower()
+    if '.' in raw:
+        app_label, model = raw.split('.', 1)
+        if not app_label or not model:
+            return None
+        qs = ContentType.objects.filter(app_label=app_label, model=model)
+    else:
+        model = raw
+        qs = ContentType.objects.filter(model=model)
+    if model not in get_allowed_comment_models():
+        return None
+    matches = list(qs[:2])
+    if len(matches) != 1:
+        return None
+    return matches[0]
 
 
 def can_access_comment_target(user, content_type, object_id):
     """
     آیا کاربر به موجودیت هدف کامنت (کالا، سند، تسک انبارگردانی) دسترسی دارد؟
+    ترتیب: قلاب ماژول مالک (comment_target_access) ← ستون انبار شیء ← پیش‌فرض رد (E6).
     """
     if not user or not user.is_authenticated:
         return False
@@ -120,6 +195,8 @@ def can_access_comment_target(user, content_type, object_id):
         return True
 
     try:
+        if content_type is None or content_type.model not in get_allowed_comment_models():
+            return False
         model_cls = content_type.model_class()
         if model_cls is None:
             return False
@@ -127,22 +204,35 @@ def can_access_comment_target(user, content_type, object_id):
         if not target:
             return False
 
-        if hasattr(target, 'warehouse_id') and target.warehouse_id is not None:
-            return can_access_warehouse(user, target.warehouse_id)
-        if hasattr(target, 'warehouse') and target.warehouse:
-            return can_access_warehouse(user, target.warehouse.id)
+        # ۱. قلاب دسترسی ماژول مالک مدل: fn(user, target) -> bool | None (None یعنی «مال من نیست»)
+        for hook in contributions('comment_target_access'):
+            verdict = hook(user, target)
+            if verdict is not None:
+                return bool(verdict)
 
-        return True
+        # ۲. شیء دارای ستون انبار
+        if hasattr(target, 'warehouse_id'):
+            return can_access_warehouse(user, target.warehouse_id)
+
+        # ۳. شیء ناشناخته: پیش‌فرض رد
+        return False
     except Exception:
         return False
 
 
 def can_modify_comment(user, comment):
     """
-    آیا کاربر مجاز به ویرایش یا حذف این کامنت است؟
+    آیا کاربر مجاز به ویرایش متن این کامنت است؟ فقط نویسنده؛ سوپرکاربر هم نه (همان قاعدهٔ پیام، E5).
     """
     if not user or not user.is_authenticated:
         return False
-    if user.is_superuser:
-        return True
     return comment.author_id == user.id
+
+
+def can_delete_comment(user, comment):
+    """
+    آیا کاربر مجاز به حذف این کامنت است؟ نویسنده، یا سوپرکاربر (حذف نظر نامناسب، با ثبت ممیزی).
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return comment.author_id == user.id or user.is_superuser

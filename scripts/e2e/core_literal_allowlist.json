@@ -254,13 +254,6 @@
       "reason": "نام مدل در django_content_type (مقدار ذخیره‌شده)"
     },
     {
-      "file": "communications/access.py",
-      "text": "if hasattr(target, 'warehouse') and target.warehouse:",
-      "match": "warehouse",
-      "category": "data_field",
-      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
-    },
-    {
       "file": "communications/models.py",
       "text": "if 'warehouse' in kwargs:",
       "match": "warehouse",

@@ -217,7 +217,7 @@ class AccessControlRESTTestCase(BaseCommsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_nonexistent_object_id_rejected(self):
-        """ارسال شناسه شیء ناموجود باید با ۴۰۰ رد شود"""
+        """ارسال شناسه شیء ناموجود همان ۴۰۳ «دسترسی ندارید» را می‌گیرد تا وجود شیء افشا نشود"""
         self.auth(self.staff_wh1)
         payload = {
             'content_type_str': 'inventory.item',
@@ -225,7 +225,7 @@ class AccessControlRESTTestCase(BaseCommsTestCase):
             'text': 'کامنت روی کالای ناموجود'
         }
         response = self.client.post('/api/communications/comments/', payload)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     # ─── ۴. آزمون‌های لیست مخاطبین (Contacts List) ───
 

@@ -7,7 +7,6 @@ from django.db.models import Q, Prefetch, Count, Subquery, OuterRef, Value, Inte
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -32,7 +31,8 @@ from .permissions import (
 )
 from .access import (
     visible_conversations, can_read_conversation, can_post_to_conversation,
-    can_modify_message, can_access_comment_target, can_modify_comment
+    can_modify_message, can_access_comment_target, can_modify_comment,
+    is_chat_group_manager, resolve_comment_content_type
 )
 from .broadcast import (
     broadcast_message_ws, broadcast_comment_ws,
@@ -203,8 +203,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         # ساخت کانال اطلاعیه یا گروه کاری تنها توسط مدیران، سوپریوزرها یا کاربران دارای پرمیشن مجاز است
         if conv_type in [ConversationType.ANNOUNCEMENT, ConversationType.WAREHOUSE_GROUP]:
-            is_manager = getattr(user, 'is_staff', False) or user.has_perm('warehouses.can_act_as_manager')
-            if not is_manager and not user.is_superuser:
+            if not is_chat_group_manager(user):
                 raise PermissionDenied('شما مجاز به ایجاد گروه کاری یا کانال اطلاعیه نیستید')
             warehouse_id = serializer.validated_data.get('warehouse_id')
             if warehouse_id and not can_access_warehouse(user, warehouse_id):
@@ -476,7 +475,8 @@ class GenericCommentViewSet(viewsets.ModelViewSet):
         if not model_name or not object_id:
             raise ValidationError({'detail': 'پارامترهای model_name و object_id الزامی هستند'})
 
-        ct = ContentType.objects.filter(model=model_name.lower()).first()
+        # فقط مدل‌های فهرست مجاز و با حل بی‌ابهام (app_label.model یا نام یکتای مدل) — E6
+        ct = resolve_comment_content_type(model_name)
         if not ct:
             raise ValidationError({'model_name': 'نوع موجودیت نامعتبر است'})
 
@@ -493,10 +493,10 @@ class GenericCommentViewSet(viewsets.ModelViewSet):
         client_temp_id = request.data.get('client_temp_id')
         content_type_str = request.data.get('content_type_str', '')
         object_id = request.data.get('object_id')
-        if client_temp_id and content_type_str and object_id and '.' in content_type_str:
-            app_label, model = content_type_str.split('.', 1)
-            ct = ContentType.objects.filter(app_label=app_label, model=model.lower()).first()
-            if ct:
+        if client_temp_id and content_type_str and object_id and '.' in str(content_type_str):
+            # همان فهرست مجاز و همان بررسی دسترسی مسیر عادی، پیش از برگرداندن نظر موجود
+            ct = resolve_comment_content_type(str(content_type_str))
+            if ct and can_access_comment_target(request.user, ct, str(object_id)):
                 existing = GenericComment.objects.filter(
                     content_type=ct,
                     object_id=str(object_id),

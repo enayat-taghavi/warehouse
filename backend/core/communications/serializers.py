@@ -1,25 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from common.media_urls import signed_media_url
-from platform_core.registry import contributions
+from rest_framework.exceptions import PermissionDenied
+from .access import (  # noqa: F401 (get_allowed_comment_models re-export)
+    get_allowed_comment_models, resolve_comment_content_type, can_access_comment_target
+)
 from .models import Conversation, ConversationParticipant, Message, MessageAttachment, GenericComment, ConversationType
 
 User = get_user_model()
-
-
-def get_allowed_comment_models() -> set[str]:
-    """
-    دریافت مدل‌های مجاز برای ارسال نظر از مشارکت ماژول‌ها (Extension Point: comment_target_models).
-    """
-    models = set()
-    for item in contributions('comment_target_models'):
-        if isinstance(item, (set, list, tuple)):
-            models.update(str(m).lower() for m in item)
-        else:
-            models.add(str(item).lower())
-    return models
-
 
 
 class UserShortSerializer(serializers.ModelSerializer):
@@ -138,6 +126,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         validated_data.pop('conv_type', None)
         validated_data.pop('participants', None)
         validated_data.pop('target_user_id', None)
+        # انبار گفتگو پس از ساخت تغییر نمی‌کند (E23)
+        validated_data.pop('warehouse_id', None)
         return super().update(instance, validated_data)
 
     def get_last_message(self, obj):
@@ -192,7 +182,11 @@ class GenericCommentSerializer(serializers.ModelSerializer):
             'mentioned_users', 'mentioned_users_details', 'attachment', 'attachment_url',
             'replies_count', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'author', 'author_details', 'content_type', 'created_at', 'updated_at']
+        # منشن فقط از راه mentioned_user_ids و توکن متن (با بررسی دسترسی) ثبت می‌شود؛ پیوست از این مسیر نوشته نمی‌شود (E25)
+        read_only_fields = [
+            'id', 'author', 'author_details', 'content_type', 'mentioned_users', 'attachment',
+            'created_at', 'updated_at'
+        ]
 
     def get_attachment_url(self, obj):
         if obj.attachment:
@@ -210,6 +204,9 @@ class GenericCommentSerializer(serializers.ModelSerializer):
         content_type_str = attrs.pop('content_type_str', None)
         object_id = attrs.get('object_id')
 
+        if self.instance is None and not content_type_str:
+            raise serializers.ValidationError({'content_type_str': 'نوع موجودیت هدف (app_label.model) الزامی است'})
+
         if content_type_str:
             if '.' not in content_type_str:
                 raise serializers.ValidationError({'content_type_str': 'فرمت content_type_str باید شامل app_label.model باشد (مثال: inventory.item)'})
@@ -220,16 +217,28 @@ class GenericCommentSerializer(serializers.ModelSerializer):
             if model_lower not in get_allowed_comment_models():
                 raise serializers.ValidationError({'content_type_str': f'ارسال نظر روی مدل {model} مجاز نیست'})
 
-            ct = ContentType.objects.filter(app_label=app_label, model=model_lower).first()
+            ct = resolve_comment_content_type(f'{app_label}.{model_lower}')
             if not ct:
                 raise serializers.ValidationError({'content_type_str': 'مدل مورد نظر در سیستم یافت نشد'})
 
             attrs['content_type'] = ct
 
             if object_id:
+                # اول دسترسی، بعد وجود: «نبودن» و «دسترسی نداشتن» یک پاسخ ۴۰۳ یکسان می‌گیرند (بدون افشای وجود شیء)
+                # (بدون request — مصرف داخلی — بررسی دسترسی به perform_create سپرده می‌شود)
+                request = self.context.get('request')
+                if request is not None and not can_access_comment_target(request.user, ct, str(object_id)):
+                    raise PermissionDenied('شما به موجودیت هدف این کامنت دسترسی ندارید')
                 model_cls = ct.model_class()
                 if model_cls is None or not model_cls.objects.filter(id=object_id).exists():
                     raise serializers.ValidationError({'object_id': 'شناسه شیء مورد نظر یافت نشد'})
+
+            # پاسخ فقط به نظری روی همان شیء (E25)
+            parent = attrs.get('parent')
+            if parent is not None and (
+                parent.content_type_id != ct.id or str(parent.object_id) != str(object_id)
+            ):
+                raise serializers.ValidationError({'parent': 'نظر والد متعلق به همین موجودیت نیست'})
 
         return attrs
 
@@ -240,4 +249,7 @@ class GenericCommentSerializer(serializers.ModelSerializer):
         validated_data.pop('warehouse_id', None)
         validated_data.pop('author', None)
         validated_data.pop('client_temp_id', None)
+        validated_data.pop('parent', None)
+        validated_data.pop('mentioned_users', None)
+        validated_data.pop('attachment', None)
         return super().update(instance, validated_data)

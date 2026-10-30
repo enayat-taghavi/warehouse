@@ -116,12 +116,27 @@ class WarehousesConfig(AppConfig):
         # ثبت مدل هدف نظر در هسته ارتباطات (فاز ۴ گام ۲)
         contribute('comment_target_models', 'warehouse')
 
+        # دسترسی به نظرات روی خودِ انبار: دامنهٔ انبار + دامنهٔ شرکت (E6 بازبینی چت)
+        def _warehouse_comment_target_access(user, target):
+            if isinstance(target, Warehouse):
+                from common.warehouse_scope import can_access_warehouse
+                from common.tenant_scope import scope_tenant_queryset
+                if not can_access_warehouse(user, target.id):
+                    return False
+                scoped = scope_tenant_queryset(Warehouse.objects.filter(pk=target.pk), user, company_field='company_id')
+                return scoped.exists()
+            return None
+
+        contribute('comment_target_access', _warehouse_comment_target_access)
+
         # مجوزهای این ماژول که هسته در نقطه‌های توسعه می‌خواند (گام ۷)
         contribute('audit_view_perms', 'view_wh_audit')
         contribute('org_structure_write_perms', 'accounts.can_act_as_manager')
         contribute('sensitive_field_bypass_perms', 'view_sys_manager_review')
         # alias مجوز (گام ۸): مجوزهای این ماژول که ماژول‌های دیگر با نام توانایی می‌شناسند
         contribute('permission_aliases:manager_approver', 'can_act_as_manager')
+        # مدیر گروه چت در هستهٔ ارتباطات (E19)
+        contribute('permission_aliases:chat_group_manager', 'can_act_as_manager')
         contribute('permission_aliases:supervisor_approver', 'view_sys_supervisor')
         for key_perm in (
             ('can_act_as_counter', 'انبارگردان'),
