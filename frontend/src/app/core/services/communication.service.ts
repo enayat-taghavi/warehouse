@@ -6,6 +6,7 @@ import { ConfigApiService } from '../api/config-api.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { wsUrl } from '../platform/server-origin';
+import { isServerUnreachable } from './server-reachability';
 
 export interface UserShort {
   id: number;
@@ -42,6 +43,10 @@ export interface ChatMessage {
   read_by_count?: number;
   is_pending?: boolean; // برای Optimistic UI
   delivery_status?: 'pending' | 'sent' | 'failed';
+  /** نام فایلی که هنوز آپلود نشده (فقط سمت کاربر) */
+  pending_file_name?: string;
+  /** متن رد قطعی سرور برای پیام ناموفق (فقط سمت کاربر) */
+  failure_reason?: string;
 }
 
 export interface Conversation {
@@ -124,6 +129,19 @@ export class CommunicationService implements OnDestroy {
   private processedIncomingMessageIds = new Set<string>();
   private markReadDebounceTimers = new Map<string, any>();
 
+  /** فایل پیوست هر پیام ارسالی (کلید: client_temp_id) تا وقتی آپلودش با 2xx تأیید نشده، اینجا می‌ماند */
+  private pendingFiles = new Map<string, File>();
+  /** پیام‌های ارسالی «در انتظار» یا «ناموفق» (کلید: client_temp_id) تا با جابه‌جایی گفتگو یا بارگذاری دوباره گم نشوند */
+  private outgoingMessages = new Map<string, ChatMessage>();
+  /** کاربری که سوکت‌ها برای او باز شده‌اند */
+  private connectedUserId: number | null = null;
+  /** آیا سوکت چت دست‌کم یک بار احراز هویت شده است (برای تشخیص اتصال دوباره) */
+  private chatAuthenticatedOnce = false;
+  /** کاربری که پیام‌ها/فایل‌های ارسال‌نشده را نوشته است */
+  private outgoingOwnerId: number | null = null;
+  /** شمارهٔ ترتیبی درخواست‌های loadMessages برای نادیده گرفتن پاسخ‌های کهنه */
+  private loadMessagesSeq = 0;
+
   constructor() {
     this.initAudio();
     this.configApi.getPublicConfig().subscribe({
@@ -149,6 +167,10 @@ export class CommunicationService implements OnDestroy {
           const active = this.activeConversation$.value;
           if (active) {
             this.loadMessages(active.id);
+            // کاربر دوباره صفحه را می‌بیند؛ اگر کشوی چت همین گفتگو را نشان می‌دهد، خوانده‌شده ثبت شود
+            if (this.isChatDrawerOpen()) {
+              this.markAsRead(active.id);
+            }
           }
           this.loadConversations(this.currentWarehouseId);
         }
@@ -243,11 +265,35 @@ export class CommunicationService implements OnDestroy {
     const isChatAlive = this.chatWs && (this.chatWs.readyState === WebSocket.OPEN || this.chatWs.readyState === WebSocket.CONNECTING);
     const isCommentAlive = this.commentWs && (this.commentWs.readyState === WebSocket.OPEN || this.commentWs.readyState === WebSocket.CONNECTING);
 
-    if (isChatAlive && isCommentAlive && this.currentWarehouseId === warehouseId) {
+    // اگر کاربر لاگین‌شده با کاربری که سوکت برایش باز شده فرق دارد (دستگاه مشترک)، حالت قبلی پاک و اتصال تازه ساخته می‌شود
+    const currentUserId = this.getCurrentUserId();
+    const userChanged = this.connectedUserId !== null && currentUserId !== this.connectedUserId;
+    if (userChanged) {
+      this.disconnect();
+      this.resetInMemoryState(false, false);
+    }
+    // پیام‌های ارسال‌نشدهٔ کاربر دیگر (مثلاً پس از خروج اجباری) فقط در صورت تغییر کاربر پاک می‌شوند
+    this.guardOutgoingOwner();
+
+    if (!userChanged && isChatAlive && isCommentAlive && this.currentWarehouseId === warehouseId) {
       return;
     }
 
     this.connectSockets(warehouseId);
+  }
+
+  /**
+   * بستن امن یک سوکت: پیش از بستن، رویدادهایش جدا می‌شوند تا onclose آن اتصال دوباره زمان‌بندی نکند
+   */
+  private closeSocketSilently(ws: WebSocket | null): void {
+    if (!ws) return;
+    try {
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+    } catch {}
+    try { ws.close(); } catch {}
   }
 
   public connectSockets(warehouseId?: number): void {
@@ -262,15 +308,12 @@ export class CommunicationService implements OnDestroy {
       this.reconnectTimer = null;
     }
 
-    // بستن سوکت‌های قبلی پیش از ایجاد کانکشن جدید
-    if (this.chatWs) {
-      try { this.chatWs.close(); } catch {}
-      this.chatWs = null;
-    }
-    if (this.commentWs) {
-      try { this.commentWs.close(); } catch {}
-      this.commentWs = null;
-    }
+    // بستن سوکت‌های قبلی پیش از ایجاد کانکشن جدید (بدون فعال شدن onclose و حلقهٔ اتصال دوباره)
+    this.closeSocketSilently(this.chatWs);
+    this.chatWs = null;
+    this.closeSocketSilently(this.commentWs);
+    this.commentWs = null;
+    this.connectedUserId = this.getCurrentUserId();
 
     let chatPath = '/ws/chat/';
     if (warehouseId) {
@@ -302,32 +345,40 @@ export class CommunicationService implements OnDestroy {
 
   private initChatSocket(url: string, token: string): void {
     try {
-      this.chatWs = new WebSocket(url);
+      const ws = new WebSocket(url);
+      this.chatWs = ws;
 
-      this.chatWs.onopen = () => {
+      ws.onopen = () => {
+        if (this.chatWs !== ws) return; // رویداد سوکت کهنه نادیده گرفته می‌شود
         this.reconnectAttempts = 0;
         this.lastPongTime = Date.now();
         // ارسال توکن در پیام اول جهت ارتقای امنیت و عدم نشت توکن در لاگ سرورها و پروکسی‌ها
-        if (this.chatWs && this.chatWs.readyState === WebSocket.OPEN) {
-          this.chatWs.send(JSON.stringify({
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
             type: 'authenticate',
             token: token
           }));
         }
       };
 
-      this.chatWs.onmessage = (event) => {
+      ws.onmessage = (event) => {
+        if (this.chatWs !== ws) return;
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'authenticated') {
             this.refreshPresence();
             const active = this.activeConversation$.value;
-            if (active && this.chatWs && this.chatWs.readyState === WebSocket.OPEN) {
-              this.chatWs.send(JSON.stringify({
+            if (active && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
                 type: 'join_conversation',
                 conversation_id: active.id
               }));
             }
+            // در اتصال دوباره (نه اولین اتصال)، پیام‌های جاافتادهٔ زمان قطع گرفته می‌شوند
+            if (this.chatAuthenticatedOnce) {
+              void this.syncMissedMessages();
+            }
+            this.chatAuthenticatedOnce = true;
             return;
           }
 
@@ -368,7 +419,8 @@ export class CommunicationService implements OnDestroy {
         }
       };
 
-      this.chatWs.onclose = () => {
+      ws.onclose = () => {
+        if (this.chatWs !== ws) return; // سوکت قدیمی که عمداً بسته شده، اتصال دوباره نمی‌سازد
         if (!this.isDestroyed && this.isChatEnabled()) {
           this.scheduleReconnect();
         }
@@ -381,30 +433,33 @@ export class CommunicationService implements OnDestroy {
 
   private initCommentSocket(url: string, token: string): void {
     try {
-      this.commentWs = new WebSocket(url);
+      const ws = new WebSocket(url);
+      this.commentWs = ws;
 
-      this.commentWs.onopen = () => {
+      ws.onopen = () => {
+        if (this.commentWs !== ws) return;
         this.reconnectAttempts = 0;
         this.lastPongTime = Date.now();
         // ارسال توکن در پیام اول جهت امنیت و عدم نشت توکن در لاگ‌ها
-        if (this.commentWs && this.commentWs.readyState === WebSocket.OPEN) {
-          this.commentWs.send(JSON.stringify({
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
             type: 'authenticate',
             token: token
           }));
         }
       };
 
-      this.commentWs.onmessage = (event) => {
+      ws.onmessage = (event) => {
+        if (this.commentWs !== ws) return;
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'authenticated') {
             // اشتراک مجدد در تمام روم‌های فعال کامنت پس از تایید احراز هویت
-            if (this.commentWs && this.commentWs.readyState === WebSocket.OPEN) {
+            if (ws.readyState === WebSocket.OPEN) {
               for (const sub of this.activeCommentSubscriptions) {
                 const [modelName, objectId] = sub.split(':');
                 if (modelName && objectId) {
-                  this.commentWs.send(JSON.stringify({
+                  ws.send(JSON.stringify({
                     type: 'subscribe_comments',
                     content_type: modelName,
                     model: modelName,
@@ -432,7 +487,8 @@ export class CommunicationService implements OnDestroy {
         }
       };
 
-      this.commentWs.onclose = () => {
+      ws.onclose = () => {
+        if (this.commentWs !== ws) return;
         if (!this.isDestroyed && this.isChatEnabled()) {
           this.scheduleReconnect();
         }
@@ -443,23 +499,74 @@ export class CommunicationService implements OnDestroy {
     }
   }
 
+  /**
+   * قطع عمدی اتصال: هیچ اتصال دوباره‌ای زمان‌بندی نمی‌شود
+   */
   public disconnect(): void {
-    if (this.pingInterval) clearInterval(this.pingInterval);
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
     this.reconnectAttempts = 0;
 
-    if (this.chatWs) {
-      try { this.chatWs.close(); } catch {}
-      this.chatWs = null;
-    }
-    if (this.commentWs) {
-      try { this.commentWs.close(); } catch {}
-      this.commentWs = null;
-    }
+    this.closeSocketSilently(this.chatWs);
+    this.chatWs = null;
+    this.closeSocketSilently(this.commentWs);
+    this.commentWs = null;
+    this.chatAuthenticatedOnce = false;
     this.onlineUsers.set(new Set());
+  }
+
+  /**
+   * خروج از حساب: بستن هر دو سوکت بدون اتصال دوباره، پاک کردن زمان‌سنج‌ها و همهٔ حالت حافظهٔ کاربر قبلی.
+   * هرگز خطا پرتاب نمی‌کند.
+   */
+  public resetForLogout(): void {
+    try { this.disconnect(); } catch {}
+    try { this.resetInMemoryState(true, true); } catch {}
+  }
+
+  /**
+   * خروج اجباری (مثلاً رد شدن رفرش توکن): سوکت‌ها بسته و حالت گرفته‌شده از سرور پاک می‌شود،
+   * ولی پیام‌ها و فایل‌های ارسال‌نشدهٔ کاربر نگه داشته می‌شوند تا پس از ورود دوبارهٔ همان کاربر قابل ارسال باشند.
+   * اگر کاربر دیگری وارد شود، guardOutgoingOwner آن‌ها را پاک می‌کند. هرگز خطا پرتاب نمی‌کند.
+   */
+  public resetForForcedLogout(): void {
+    try { this.disconnect(); } catch {}
+    try { this.resetInMemoryState(true, false); } catch {}
+  }
+
+  private resetInMemoryState(closeDrawer: boolean, dropOutgoing: boolean): void {
+    for (const t of this.markReadDebounceTimers.values()) {
+      try { clearTimeout(t); } catch {}
+    }
+    this.markReadDebounceTimers.clear();
+    this.connectedUserId = null;
+    this.currentWarehouseId = undefined;
+    this.chatAuthenticatedOnce = false;
+    this.conversations$.next([]);
+    this.activeConversation$.next(null);
+    this.activeMessages$.next([]);
+    this.onlineUsers.set(new Set());
+    this.totalUnreadCount.set(0);
+    this.totalUnreadCount$.next(0);
+    this.hasNewIncomingPulse.set(false);
+    this.processedIncomingMessageIds.clear();
+    this.playedMessageIds.clear();
+    this.activeCommentSubscriptions.clear();
+    // پیام‌ها و فایل‌های ارسال‌نشده متعلق به کاربر قبلی‌اند و نباید به کاربر بعدی روی همین دستگاه برسند
+    if (dropOutgoing) {
+      this.pendingFiles.clear();
+      this.outgoingMessages.clear();
+      this.outgoingOwnerId = null;
+    }
+    if (closeDrawer) {
+      this.isChatDrawerOpen.set(false);
+    }
   }
 
   private startHeartbeat(): void {
@@ -470,8 +577,8 @@ export class CommunicationService implements OnDestroy {
       // تشخیص سوکت مرده: اگر بیش از ۷۵ ثانیه پونگ دریافت نشده باشد
       if (Date.now() - this.lastPongTime > 75000) {
         console.warn('[CommunicationService] Dead socket detected (missed pong), reconnecting...');
-        if (this.chatWs) try { this.chatWs.close(); } catch {}
-        if (this.commentWs) try { this.commentWs.close(); } catch {}
+        this.closeSocketSilently(this.chatWs);
+        this.closeSocketSilently(this.commentWs);
         this.scheduleReconnect();
         return;
       }
@@ -559,6 +666,7 @@ export class CommunicationService implements OnDestroy {
   }
 
   public async loadMessages(conversationId: string): Promise<void> {
+    const seq = ++this.loadMessagesSeq;
     try {
       const params = new HttpParams()
         .set('conversation_id', conversationId)
@@ -576,10 +684,212 @@ export class CommunicationService implements OnDestroy {
         ...m,
         is_me: currentUserId !== null ? Number(m.sender) === currentUserId : !!m.is_me
       }));
-      this.activeMessages$.next(messages.reverse());
+      // پاسخ کهنه (درخواست جدیدتری فرستاده شده، یا گفتگوی دیگری باز است) نادیده گرفته می‌شود
+      if (seq !== this.loadMessagesSeq) return;
+      const active = this.activeConversation$.value;
+      if (active && String(active.id) !== String(conversationId)) return;
+      // ادغام، نه جایگزینی: پیام‌های «در انتظار»/«ناموفق» محلی و پیام‌های تازه‌تر از این پاسخ حفظ می‌شوند
+      this.activeMessages$.next(this.mergeWithLocalOutgoing(conversationId, messages.reverse()));
     } catch (err) {
       console.debug('[CommunicationService] Failed to load messages', err);
     }
+  }
+
+  private isLocalOutgoing(m: ChatMessage): boolean {
+    return m.delivery_status === 'pending' || m.delivery_status === 'failed';
+  }
+
+  /**
+   * ادغام فهرست سرور (به ترتیب زمانی) با پیام‌های ارسالی محلی که هنوز «در انتظار» یا «ناموفق»اند.
+   * - اگر پیام محلی روی سرور هست (با client_temp_id) ولی فایلش هنوز آپلود نشده، نسخهٔ سرور با وضعیت محلی نشان داده می‌شود.
+   * - اگر پیام محلی روی سرور هست و فایلی در انتظار ندارد، سرور آن را پذیرفته و نسخهٔ سرور جایگزین می‌شود.
+   * - بقیهٔ پیام‌های محلی بعد از پیام‌های سرور می‌آیند.
+   */
+  private mergeWithLocalOutgoing(conversationId: string, serverMessages: ChatMessage[]): ChatMessage[] {
+    this.guardOutgoingOwner();
+    const local = new Map<string, ChatMessage>();
+    for (const m of this.outgoingMessages.values()) {
+      if (String(m.conversation) === String(conversationId) && m.client_temp_id) local.set(m.client_temp_id, m);
+    }
+    for (const m of this.activeMessages$.value) {
+      if (String(m.conversation) === String(conversationId) && m.client_temp_id && this.isLocalOutgoing(m) && !local.has(m.client_temp_id)) {
+        local.set(m.client_temp_id, m);
+      }
+    }
+
+    const result: ChatMessage[] = [];
+    const seenIds = new Set<string>();
+    for (const s of serverMessages) {
+      const sid = String(s.id);
+      if (seenIds.has(sid)) continue;
+      seenIds.add(sid);
+      const tid = s.client_temp_id;
+      const l = tid ? local.get(tid) : undefined;
+      if (tid && l) {
+        local.delete(tid);
+        if (this.pendingFiles.has(tid)) {
+          result.push({ ...s, client_temp_id: tid, is_me: true, is_pending: l.is_pending, delivery_status: l.delivery_status });
+          continue;
+        }
+        this.outgoingMessages.delete(tid);
+      }
+      result.push(s);
+    }
+
+    // پیام‌هایی که همین حالا روی صفحه‌اند و تازه‌تر از جدیدترین پیام این پاسخ‌اند (مثلاً پیامی که در حین درخواست
+    // ارسال شد یا زنده رسید) حفظ می‌شوند تا پاسخ دیرتر رسیده آن‌ها را حذف نکند
+    const serverTempIds = new Set(serverMessages.map(s => s.client_temp_id).filter((t): t is string => !!t));
+    const newestServerTime = serverMessages.reduce((acc, s) => {
+      const t = Date.parse(s.created_at);
+      return isNaN(t) ? acc : Math.max(acc, t);
+    }, -Infinity);
+    for (const m of this.activeMessages$.value) {
+      if (String(m.conversation) !== String(conversationId) || this.isLocalOutgoing(m)) continue;
+      if (seenIds.has(String(m.id)) || (m.client_temp_id && serverTempIds.has(m.client_temp_id))) continue;
+      if (String(m.id).startsWith('temp-')) continue;
+      const t = Date.parse(m.created_at);
+      if (!isNaN(t) && t > newestServerTime) {
+        seenIds.add(String(m.id));
+        result.push(m);
+      }
+    }
+
+    for (const l of local.values()) {
+      result.push(l);
+    }
+    return result;
+  }
+
+  /**
+   * پیام‌ها و فایل‌های ارسال‌نشده فقط به کاربری تعلق دارند که آن‌ها را نوشته است؛
+   * اگر کاربر دیگری روی همین دستگاه وارد شده باشد، پاک می‌شوند (حریم خصوصی دستگاه مشترک).
+   */
+  private guardOutgoingOwner(): void {
+    const uid = this.getCurrentUserId();
+    if (this.outgoingOwnerId !== null && uid !== null && uid !== this.outgoingOwnerId) {
+      this.pendingFiles.clear();
+      this.outgoingMessages.clear();
+      this.outgoingOwnerId = null;
+    }
+  }
+
+  /**
+   * حذف عمدی یک پیام ارسال‌نشده توسط خود کاربر (پس از تأیید او): متن و فایل محلی آن کنار گذاشته می‌شود
+   */
+  public discardOutgoing(tempId: string): void {
+    const msg = this.activeMessages$.value.find(m => m.client_temp_id === tempId || m.id === tempId)
+      || this.outgoingMessages.get(tempId);
+    if (!msg || !this.isLocalOutgoing(msg)) return;
+    const tid = msg.client_temp_id || tempId;
+    this.pendingFiles.delete(tid);
+    this.outgoingMessages.delete(tid);
+    this.activeMessages$.next(this.activeMessages$.value.filter(m => m.client_temp_id !== tid && m.id !== tid));
+  }
+
+  /** متن خطای سرور برای رد قطعی (4xx به‌جز 401/408/429)؛ برای خطای موقت null */
+  private permanentRejectionText(err: any): string | null {
+    const status = typeof err?.status === 'number' ? err.status : 0;
+    const isClientError = status >= 400 && status <= 499;
+    if (!isClientError || isServerUnreachable(status) || status === 401 || status === 408 || status === 429) return null;
+    const body = err?.error;
+    let text = '';
+    if (typeof body === 'string') {
+      text = body;
+    } else if (body && typeof body === 'object') {
+      const first = body.detail ?? body.error ?? body.message ?? Object.values(body)[0];
+      text = Array.isArray(first) ? String(first[0] ?? '') : (typeof first === 'string' ? first : '');
+    }
+    text = (text || '').trim();
+    if (!text || text.length > 200 || /<[a-z!]/i.test(text)) {
+      text = 'سرور این پیام را نپذیرفت.';
+    }
+    return text;
+  }
+
+  /**
+   * تغییر وضعیت یک پیام ارسالی در فهرست نمایش و در نگه‌دارندهٔ پیام‌های ارسال‌نشده
+   */
+  private applyOutgoingUpdate(tempId: string, next: (m: ChatMessage) => ChatMessage): void {
+    const stored = this.outgoingMessages.get(tempId);
+    let latest: ChatMessage | null = stored ? next(stored) : null;
+    let changed = false;
+    const updated = this.activeMessages$.value.map(m => {
+      if (m.client_temp_id === tempId || m.id === tempId) {
+        changed = true;
+        const n = next(m);
+        if (!latest) latest = n;
+        return n;
+      }
+      return m;
+    });
+    if (changed) this.activeMessages$.next(updated);
+    const finalMsg = latest as ChatMessage | null;
+    if (finalMsg) {
+      if (this.isLocalOutgoing(finalMsg)) {
+        this.outgoingMessages.set(tempId, { ...finalMsg, client_temp_id: tempId });
+      } else {
+        this.outgoingMessages.delete(tempId);
+      }
+    }
+  }
+
+  /**
+   * پس از اتصال دوباره: پیام‌های جاافتادهٔ گفتگوی فعال با since_id گرفته و بدون تکرار ادغام می‌شوند؛ فهرست گفتگوها هم تازه می‌شود
+   */
+  private async syncMissedMessages(): Promise<void> {
+    const active = this.activeConversation$.value;
+    const conversationId = active ? String(active.id) : '';
+    if (conversationId && !conversationId.startsWith('draft_')) {
+      const lastServer = [...this.activeMessages$.value].reverse().find(m =>
+        String(m.conversation) === conversationId && !this.isLocalOutgoing(m) && m.id && !String(m.id).startsWith('temp-')
+      );
+      if (!lastServer) {
+        await this.loadMessages(conversationId);
+      } else {
+        try {
+          const params = new HttpParams()
+            .set('conversation_id', conversationId)
+            .set('since_id', String(lastServer.id))
+            .set('limit', '100');
+          const res: any = await firstValueFrom(
+            this.http.get<any>('/api/communications/messages/', {
+              params,
+              context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
+            })
+          );
+          const raw: ChatMessage[] = res?.results || res || [];
+          const currentUserId = this.getCurrentUserId();
+          const newer = raw.map(m => ({
+            ...m,
+            is_me: currentUserId !== null ? Number(m.sender) === currentUserId : !!m.is_me
+          })).reverse();
+          const stillActive = this.activeConversation$.value;
+          if (newer.length > 0 && stillActive && String(stillActive.id) === conversationId) {
+            const current = this.activeMessages$.value;
+            const ids = new Set(current.map(m => String(m.id)));
+            const tempIds = new Set(current.map(m => m.client_temp_id).filter((t): t is string => !!t));
+            const fresh = newer.filter(m => !ids.has(String(m.id)) && !(m.client_temp_id && tempIds.has(m.client_temp_id)));
+            if (fresh.length > 0) {
+              for (const m of fresh) this.processedIncomingMessageIds.add(String(m.id));
+              // پیام‌های سرور پیش از پیام‌های محلیِ ارسال‌نشده قرار می‌گیرند
+              const serverPart = current.filter(m => !this.isLocalOutgoing(m));
+              const localPart = current.filter(m => this.isLocalOutgoing(m));
+              this.activeMessages$.next([...serverPart, ...fresh, ...localPart]);
+              if (this.isChatDrawerOpen() && this.isPageVisible()) {
+                this.markAsRead(conversationId);
+              }
+            }
+          }
+        } catch (err) {
+          console.debug('[CommunicationService] Failed to sync missed messages', err);
+        }
+      }
+    }
+    await this.loadConversations(this.currentWarehouseId);
+  }
+
+  private isPageVisible(): boolean {
+    return typeof document === 'undefined' || document.visibilityState === 'visible';
   }
 
   /**
@@ -632,8 +942,17 @@ export class CommunicationService implements OnDestroy {
       created_at: new Date().toISOString(),
       is_me: true,
       is_pending: true,
-      delivery_status: 'pending'
+      delivery_status: 'pending',
+      pending_file_name: file ? (file.name || 'فایل پیوست') : undefined
     };
+
+    // فایل تا تأیید 2xx آپلود در حافظه می‌ماند تا «تلاش مجدد» بتواند دوباره بفرستد
+    this.guardOutgoingOwner();
+    this.outgoingOwnerId = this.getCurrentUserId();
+    if (file) {
+      this.pendingFiles.set(tempId, file);
+    }
+    this.outgoingMessages.set(tempId, optimisticMsg);
 
     const currentMsgs = this.activeMessages$.value;
     this.activeMessages$.next([...currentMsgs, optimisticMsg]);
@@ -656,101 +975,111 @@ export class CommunicationService implements OnDestroy {
       this.conversations$.next([updatedConv, ...otherConvs]);
     }
 
-    try {
-      const payload: any = {
-        conversation: conversationId,
-        text: text,
-        client_temp_id: tempId,
-        reply_to: replyTo
-      };
-
-      const response: any = await firstValueFrom(
-        this.http.post<ChatMessage>('/api/communications/messages/', payload)
-      );
-
-      // اگر آفلاین است و اینترسپتور پاسخ _offlinePending برگردانده باشد
-      if (response && response._offlinePending) {
-        const updated = this.activeMessages$.value.map(m =>
-          m.client_temp_id === tempId ? { ...m, is_pending: true, delivery_status: 'pending' as const } : m
-        );
-        this.activeMessages$.next(updated);
-        return;
-      }
-
-      const savedMsg: ChatMessage = response;
-
-      // اگر فایلی وجود دارد، آن را فشرده کرده و آپلود می‌کنیم
-      if (file && savedMsg && savedMsg.id) {
-        try {
-          const att = await this.uploadAttachment(file, savedMsg.id);
-          savedMsg.attachments = [att];
-        } catch (e) {
-          console.warn('[CommunicationService] Attachment upload failed, will be retried', e);
-        }
-      }
-
-      // جایگزینی پیام خوش‌بینانه با پیام نهایی
-      const updated = this.activeMessages$.value.map(m =>
-        m.client_temp_id === tempId ? { ...savedMsg, is_me: true, is_pending: false, delivery_status: 'sent' as const } : m
-      );
-      this.activeMessages$.next(updated);
-    } catch (err) {
-      console.error('[CommunicationService] Failed to send message', err);
-      // متن کاربر هرگز دور ریخته نمی‌شود؛ وضعیت به failed تغییر می‌کند
-      const updated = this.activeMessages$.value.map(m =>
-        m.client_temp_id === tempId ? { ...m, is_pending: false, delivery_status: 'failed' as const } : m
-      );
-      this.activeMessages$.next(updated);
-    }
+    await this.deliverOutgoing(tempId, {
+      conversation: conversationId,
+      text: text,
+      client_temp_id: tempId,
+      reply_to: replyTo
+    });
   }
 
-  public async retryMessage(tempId: string, file?: File): Promise<void> {
-    const msg = this.activeMessages$.value.find(m => m.client_temp_id === tempId || m.id === tempId);
+  /**
+   * تلاش مجدد برای پیام ناموفق؛ فایل پیوست (اگر بوده) از حافظهٔ سرویس برداشته می‌شود.
+   * ارسال دوباره با همان client_temp_id است و سرور برای شناسهٔ تکراری همان پیام قبلی را برمی‌گرداند (idempotent).
+   */
+  public async retryMessage(tempId: string): Promise<void> {
+    const msg = this.activeMessages$.value.find(m => m.client_temp_id === tempId || m.id === tempId)
+      || this.outgoingMessages.get(tempId);
     if (!msg) return;
+    const clientTempId = msg.client_temp_id || tempId;
 
-    // تغییر وضعیت به pending
-    const pendingMsgs = this.activeMessages$.value.map(m =>
-      (m.client_temp_id === tempId || m.id === tempId) ? { ...m, is_pending: true, delivery_status: 'pending' as const } : m
-    );
-    this.activeMessages$.next(pendingMsgs);
+    this.applyOutgoingUpdate(clientTempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: undefined }));
+
+    await this.deliverOutgoing(clientTempId, {
+      conversation: msg.conversation,
+      text: msg.text || '',
+      client_temp_id: clientTempId,
+      reply_to: msg.reply_to
+    });
+  }
+
+  /**
+   * ارسال متن و سپس فایل پیوست یک پیام. هیچ متن یا فایلی بی‌صدا دور ریخته نمی‌شود:
+   * - شکست ارسال متن یا آپلود فایل ⇒ وضعیت «ناموفق» با دکمهٔ تلاش مجدد؛ فایل در حافظه می‌ماند.
+   * - پیام دارای فایل از صف آفلاین عبور نمی‌کند (SKIP_OFFLINE) تا نسخهٔ بی‌فایل در صف نرود.
+   * - پیام فقط‌متنی مثل قبل در صورت قطع شبکه به صف آفلاین می‌رود و «در انتظار» می‌ماند.
+   */
+  private async deliverOutgoing(tempId: string, payload: any): Promise<void> {
+    const file = this.pendingFiles.get(tempId);
+    let savedMsg: ChatMessage | null = null;
 
     try {
-      const payload: any = {
-        conversation: msg.conversation,
-        text: msg.text || '',
-        client_temp_id: msg.client_temp_id || tempId,
-        reply_to: msg.reply_to
-      };
-
+      const options = file
+        ? { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) }
+        : {};
       const response: any = await firstValueFrom(
-        this.http.post<ChatMessage>('/api/communications/messages/', payload)
+        this.http.post<ChatMessage>('/api/communications/messages/', payload, options)
       );
 
+      // اگر آفلاین است و اینترسپتور پاسخ _offlinePending برگردانده باشد (فقط پیام بی‌فایل)
       if (response && response._offlinePending) {
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const }));
         return;
       }
-
-      const savedMsg: ChatMessage = response;
-      if (file && savedMsg && savedMsg.id) {
-        try {
-          const att = await this.uploadAttachment(file, savedMsg.id);
-          savedMsg.attachments = [att];
-        } catch (e) {
-          console.warn('[CommunicationService] Retry attachment upload failed', e);
-        }
+      savedMsg = response as ChatMessage;
+    } catch (err: any) {
+      const status = typeof err?.status === 'number' ? err.status : 0;
+      if (isServerUnreachable(status)) {
+        console.warn('[CommunicationService] Server unreachable; message kept as failed for retry', status);
+      } else {
+        console.error('[CommunicationService] Failed to send message', err);
       }
-
-      const updated = this.activeMessages$.value.map(m =>
-        (m.client_temp_id === tempId || m.id === tempId) ? { ...savedMsg, is_me: true, is_pending: false, delivery_status: 'sent' as const } : m
-      );
-      this.activeMessages$.next(updated);
-    } catch (err) {
-      console.error('[CommunicationService] Retry failed', err);
-      const updated = this.activeMessages$.value.map(m =>
-        (m.client_temp_id === tempId || m.id === tempId) ? { ...m, is_pending: false, delivery_status: 'failed' as const } : m
-      );
-      this.activeMessages$.next(updated);
+      // متن (و فایل) کاربر هرگز دور ریخته نمی‌شود؛ وضعیت به failed تغییر می‌کند
+      const reason = this.permanentRejectionText(err) ?? undefined;
+      this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: false, delivery_status: 'failed' as const, failure_reason: reason }));
+      return;
     }
+
+    if (file) {
+      if (!savedMsg || !savedMsg.id) {
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: false, delivery_status: 'failed' as const }));
+        return;
+      }
+      // تلاش مجدد: اگر آپلود قبلی به سرور رسیده ولی پاسخش گم شده بود، پیام برگشتی پیوست دارد؛ دوباره آپلود نمی‌شود
+      if (Array.isArray(savedMsg.attachments) && savedMsg.attachments.length > 0) {
+        this.pendingFiles.delete(tempId);
+        const already = savedMsg;
+        this.applyOutgoingUpdate(tempId, () => ({
+          ...already, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const,
+          pending_file_name: undefined, failure_reason: undefined
+        }));
+        return;
+      }
+      try {
+        const att = await this.uploadAttachment(file, savedMsg.id);
+        // فقط پس از پاسخ 2xx آپلود، فایل از حافظه برداشته می‌شود
+        this.pendingFiles.delete(tempId);
+        const sent: ChatMessage = { ...savedMsg, attachments: [att] };
+        this.applyOutgoingUpdate(tempId, () => ({
+          ...sent, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const, pending_file_name: undefined, failure_reason: undefined
+        }));
+      } catch (e) {
+        console.warn('[CommunicationService] Attachment upload failed; message kept as failed for retry', e);
+        const base = savedMsg;
+        this.applyOutgoingUpdate(tempId, m => ({
+          ...base, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'failed' as const,
+          pending_file_name: m.pending_file_name || file.name || 'فایل پیوست',
+          failure_reason: this.permanentRejectionText(e) ?? undefined
+        }));
+      }
+      return;
+    }
+
+    const finalMsg = savedMsg;
+    this.applyOutgoingUpdate(tempId, m => ({
+      ...m, ...(finalMsg || {}), client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const,
+      failure_reason: undefined
+    }));
   }
 
   public async uploadAttachment(file: File, messageId: string): Promise<MessageAttachment> {
@@ -775,9 +1104,16 @@ export class CommunicationService implements OnDestroy {
     formData.append('file', uploadFile);
     formData.append('message_id', messageId);
 
-    return await firstValueFrom(
-      this.http.post<MessageAttachment>('/api/communications/messages/upload/', formData)
+    // فایل از صف آفلاین عبور نمی‌کند؛ شکست آپلود به فراخواننده برمی‌گردد تا پیام «ناموفق» و فایل نگه داشته شود
+    const res: any = await firstValueFrom(
+      this.http.post<MessageAttachment>('/api/communications/messages/upload/', formData, {
+        context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
+      })
     );
+    if (!res || res._offlinePending) {
+      throw new Error('attachment upload not confirmed by server');
+    }
+    return res as MessageAttachment;
   }
 
   /**
@@ -870,7 +1206,8 @@ export class CommunicationService implements OnDestroy {
     };
 
     const msgConvId = String(msg.conversation);
-    const isCurrentlyViewing = this.isChatDrawerOpen() && active && String(active.id) === msgConvId;
+    // فقط وقتی کشو باز است و صفحه واقعاً دیده می‌شود (تب پنهان یا گوشی قفل نیست) پیام خوانده‌شده حساب می‌شود
+    const isCurrentlyViewing = this.isChatDrawerOpen() && this.isPageVisible() && active && String(active.id) === msgConvId;
 
     if (isCurrentlyViewing) {
       const current = this.activeMessages$.value;
@@ -964,7 +1301,23 @@ export class CommunicationService implements OnDestroy {
       const index = current.findIndex(m => String(m.id) === String(msg.id) || (m.client_temp_id && m.client_temp_id === msg.client_temp_id));
       if (index !== -1) {
         const updated = [...current];
-        updated[index] = { ...updated[index], ...msg, is_me: updated[index].is_me ?? msg.is_me, is_pending: false, delivery_status: 'sent' };
+        const existing = updated[index];
+        const tid = existing.client_temp_id || msg.client_temp_id;
+        if (tid && this.pendingFiles.has(tid)) {
+          // فایل این پیام هنوز آپلود نشده: وضعیت «ناموفق/در انتظار» و دکمهٔ تلاش مجدد حفظ می‌شود
+          const kept: ChatMessage = {
+            ...existing, ...msg, client_temp_id: tid, is_me: existing.is_me ?? msg.is_me,
+            is_pending: existing.is_pending, delivery_status: existing.delivery_status,
+            pending_file_name: existing.pending_file_name, failure_reason: existing.failure_reason
+          };
+          updated[index] = kept;
+          if (this.outgoingMessages.has(tid) && this.isLocalOutgoing(kept)) {
+            this.outgoingMessages.set(tid, kept);
+          }
+        } else {
+          updated[index] = { ...existing, ...msg, is_me: existing.is_me ?? msg.is_me, is_pending: false, delivery_status: 'sent' };
+          if (tid) this.outgoingMessages.delete(tid);
+        }
         this.activeMessages$.next(updated);
       }
     }

@@ -164,7 +164,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (!conv || this.isLoadingOlder() || !this.hasMoreMessages()) return;
 
     this.isLoadingOlder.set(true);
-    const offset = this.messages().length;
+    // پیام‌های محلیِ «در انتظار»/«ناموفق» روی سرور نیستند و نباید در offset شمرده شوند
+    const offset = this.messages().filter(m => m.delivery_status !== 'pending' && m.delivery_status !== 'failed').length;
     const older = await this.commService.loadOlderMessages(conv.id, offset, 30);
     if (older.length < 30) {
       this.hasMoreMessages.set(false);
@@ -238,6 +239,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.isSending.set(true);
     this.messageInputText = '';
     this.removeSelectedFile();
+    let handedToService = false;
 
     try {
       // در صورتی که چت در حالت پیش‌نویس (Draft) باشد، ابتدا آن را در سرور ذخیره می‌کنیم
@@ -260,9 +262,21 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         await this.commService.loadConversations(whId);
       }
 
+      handedToService = true;
       await this.commService.sendMessage(conv.id, text, undefined, file || undefined);
     } catch (e) {
       console.error('Send error', e);
+      // اگر ساخت گفتگو شکست خورد، متن و فایل کاربر به کادر ورود برمی‌گردند تا گم نشوند
+      if (!handedToService) {
+        if (!this.messageInputText) this.messageInputText = text;
+        if (file && !this.selectedFile) {
+          this.selectedFile = file;
+          if (file.type.startsWith('image/')) {
+            this.filePreviewUrl = URL.createObjectURL(file);
+          }
+        }
+        this.toast.show('error', 'ارسال پیام انجام نشد. متن و فایل شما حفظ شد؛ دوباره تلاش کنید.');
+      }
     } finally {
       this.isSending.set(false);
       this.shouldScrollBottom = true;
@@ -273,6 +287,17 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public async retryMessage(msg: ChatMessage): Promise<void> {
     const tempId = msg.client_temp_id || msg.id;
     await this.commService.retryMessage(tempId);
+  }
+
+  /** کنار گذاشتن پیام ارسال‌نشده، فقط پس از تأیید صریح کاربر */
+  public discardMessage(msg: ChatMessage): void {
+    const tempId = msg.client_temp_id || msg.id;
+    const hasFile = !!msg.pending_file_name;
+    const question = hasFile
+      ? 'این پیام ارسال‌نشده و فایل پیوستش حذف شود؟ این کار برگشت‌پذیر نیست.'
+      : 'این پیام ارسال‌نشده حذف شود؟ این کار برگشت‌پذیر نیست.';
+    if (typeof window !== 'undefined' && !window.confirm(question)) return;
+    this.commService.discardOutgoing(tempId);
   }
 
   public onFileSelected(event: any): void {

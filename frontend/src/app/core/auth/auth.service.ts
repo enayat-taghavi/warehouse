@@ -15,6 +15,7 @@ import {
 import { detectClientDeviceModel } from '../utils/device-detector';
 import { SessionTabService } from '../services/session-tab.service';
 import { WebSocketService } from '../http/websocket.service';
+import { CommunicationService } from '../services/communication.service';
 import { PushService } from '../platform/push.service';
 import { WebPushService } from '../platform/web-push.service';
 
@@ -136,7 +137,27 @@ export class AuthService {
     this.removeItem(REFRESH_KEY);
     this.removeItem(USER_KEY);
     this._user.set(null);
+    this.resetChatForLogout();
     this.router.navigate(['/login']);
+  }
+
+  /** بستن سوکت‌های چت و پاک کردن حالت حافظهٔ چت کاربر قبلی (دستگاه مشترک)؛ هرگز خطا پرتاب نمی‌کند */
+  private resetChatForLogout(): void {
+    try {
+      const comm = this.injector.get(CommunicationService, null);
+      comm?.resetForLogout();
+    } catch {}
+  }
+
+  /**
+   * خروج اجباری (رد رفرش توکن و هر مسیری که clearAuth را صدا می‌زند): سوکت‌های چت بسته و حالت سرور پاک می‌شود،
+   * ولی پیام‌ها و فایل‌های ارسال‌نشده برای ورود دوبارهٔ همان کاربر نگه داشته می‌شوند. هرگز خطا پرتاب نمی‌کند.
+   */
+  private disconnectChatForForcedLogout(): void {
+    try {
+      const comm = this.injector.get(CommunicationService, null);
+      comm?.resetForForcedLogout();
+    } catch {}
   }
 
   /** لاگین — mock یا API واقعی */
@@ -237,6 +258,7 @@ export class AuthService {
     } catch {}
 
     this.clearAuth();
+    this.resetChatForLogout();
     offlineDb.clearServerDerivedCaches().catch(() => {});
     this.router.navigate(['/login']);
   }
@@ -481,6 +503,7 @@ export class AuthService {
       sessionStorage.removeItem('active_company_data');
     }
     this._user.set(null);
+    this.disconnectChatForForcedLogout();
   }
 
   private loadUserFromStorage(): AuthUserProfile | null {

@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { CommunicationService, ChatMessage } from './communication.service';
 import { ImageCompressorService } from './image-compressor.service';
 import { ConfigApiService } from '../api/config-api.service';
+import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -506,5 +507,389 @@ describe('CommunicationService', () => {
     await sendPromise;
 
     expect(service.conversations$.value[0].id).toBe('conv-2');
+  });
+
+  // ─── مرحلهٔ ۱ سخت‌سازی چت: E1، E2، E7، E8، E16، E24 ───
+
+  const flushAsync = () => new Promise(resolve => setTimeout(resolve, 0));
+
+  class FakeWS {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+    static instances: FakeWS[] = [];
+    readyState = 1;
+    sent: any[] = [];
+    onopen: any = null;
+    onmessage: any = null;
+    onerror: any = null;
+    onclose: any = null;
+    constructor(public url: string) { FakeWS.instances.push(this); }
+    send(data: any) { this.sent.push(data); }
+    close() {
+      this.readyState = 3;
+      // مثل مرورگر: اگر onclose هنوز وصل باشد، صدا زده می‌شود
+      if (this.onclose) this.onclose({});
+    }
+  }
+
+  const withFakeSockets = (fn: () => Promise<void> | void) => async () => {
+    const original = (globalThis as any).WebSocket;
+    (globalThis as any).WebSocket = FakeWS as any;
+    FakeWS.instances = [];
+    sessionStorage.setItem('wh_access_token', 'test-token');
+    try {
+      await fn();
+    } finally {
+      service.disconnect();
+      sessionStorage.removeItem('wh_access_token');
+      (globalThis as any).WebSocket = original;
+    }
+  };
+
+  const conv = (id: string) => ({
+    id, conv_type: 'direct' as const, participants: [1, 2], is_active: true,
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  });
+
+  it('E1: keeps the file and marks failed when attachment upload fails; retry re-posts and uploads the kept file', async () => {
+    service.getCurrentUserId = () => 1;
+    const file = new File(['abc'], 'factor.txt', { type: 'text/plain' });
+    const p = service.sendMessage('conv-1', 'فاکتور', undefined, file);
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    expect(service.activeMessages$.value[0].pending_file_name).toBe('factor.txt');
+
+    const post = httpMock.expectOne('/api/communications/messages/');
+    // پیام دارای فایل نباید وارد صف آفلاین شود
+    expect(post.request.context.get(SKIP_OFFLINE)).toBe(true);
+    post.flush({ id: '300', client_temp_id: tempId, conversation: 'conv-1', sender: 1, text: 'فاکتور', created_at: new Date().toISOString() });
+    await flushAsync();
+
+    const upload = httpMock.expectOne('/api/communications/messages/upload/');
+    upload.flush({ error: 'x' }, { status: 500, statusText: 'Server Error' });
+    await p;
+
+    let msgs = service.activeMessages$.value;
+    expect(msgs.length).toBe(1);
+    expect(msgs[0].delivery_status).toBe('failed');
+    expect(msgs[0].text).toBe('فاکتور');
+    expect(msgs[0].client_temp_id).toBe(tempId);
+    expect((service as any).pendingFiles.get(tempId)).toBe(file);
+
+    const retry = service.retryMessage(tempId);
+    expect(service.activeMessages$.value[0].delivery_status).toBe('pending');
+    const post2 = httpMock.expectOne('/api/communications/messages/');
+    expect(post2.request.body.client_temp_id).toBe(tempId);
+    post2.flush({ id: '300', client_temp_id: tempId, conversation: 'conv-1', sender: 1, text: 'فاکتور', created_at: new Date().toISOString() });
+    await flushAsync();
+
+    const upload2 = httpMock.expectOne('/api/communications/messages/upload/');
+    const body = upload2.request.body as FormData;
+    expect((body.get('file') as File).name).toBe('factor.txt');
+    expect(body.get('message_id')).toBe('300');
+    upload2.flush({ id: 'att-1', file_name: 'factor.txt', file_size: 3, content_type: 'text/plain' });
+    await retry;
+
+    msgs = service.activeMessages$.value;
+    expect(msgs.length).toBe(1);
+    expect(msgs[0].delivery_status).toBe('sent');
+    expect(msgs[0].attachments?.length).toBe(1);
+    expect((service as any).pendingFiles.has(tempId)).toBe(false);
+  });
+
+  it('E1: keeps text and file as failed when the message POST itself fails (server unreachable)', async () => {
+    const file = new File(['abc'], 'a.txt', { type: 'text/plain' });
+    const p = service.sendMessage('conv-1', 'متن', undefined, file);
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    httpMock.expectOne('/api/communications/messages/').flush(null, { status: 503, statusText: 'Unavailable' });
+    await p;
+    const m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('failed');
+    expect(m.text).toBe('متن');
+    expect((service as any).pendingFiles.get(tempId)).toBe(file);
+  });
+
+  it('E2: loadMessages merges server list with local failed/pending messages and restores them after switching conversation', async () => {
+    service.getCurrentUserId = () => 1;
+    service.activeConversation$.next(conv('conv-1'));
+    const p = service.sendMessage('conv-1', 'پیام ناموفق');
+    httpMock.expectOne('/api/communications/messages/').flush({}, { status: 400, statusText: 'Bad Request' });
+    await p;
+    expect(service.activeMessages$.value[0].delivery_status).toBe('failed');
+
+    const serverMsg = { id: '1', conversation: 'conv-1', sender: 2, text: 'سلام', created_at: new Date().toISOString() };
+    let load = service.loadMessages('conv-1');
+    httpMock.expectOne(r => r.url === '/api/communications/messages/' && r.params.get('conversation_id') === 'conv-1').flush([serverMsg]);
+    await load;
+    let msgs = service.activeMessages$.value;
+    expect(msgs.length).toBe(2);
+    expect(msgs[0].id).toBe('1');
+    expect(msgs[1].text).toBe('پیام ناموفق');
+    expect(msgs[1].delivery_status).toBe('failed');
+
+    // رفتن به گفتگوی دیگر و برگشتن
+    service.activeConversation$.next(conv('conv-2'));
+    load = service.loadMessages('conv-2');
+    httpMock.expectOne(r => r.params.get('conversation_id') === 'conv-2').flush([]);
+    await load;
+    expect(service.activeMessages$.value.length).toBe(0);
+
+    service.activeConversation$.next(conv('conv-1'));
+    load = service.loadMessages('conv-1');
+    httpMock.expectOne(r => r.params.get('conversation_id') === 'conv-1').flush([serverMsg]);
+    await load;
+    msgs = service.activeMessages$.value;
+    expect(msgs.length).toBe(2);
+    expect(msgs[1].delivery_status).toBe('failed');
+  });
+
+  it('E2: a pending message already accepted by the server (same client_temp_id) is not duplicated', async () => {
+    service.getCurrentUserId = () => 1;
+    service.activeConversation$.next(conv('conv-1'));
+    const p = service.sendMessage('conv-1', 'آفلاین');
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    httpMock.expectOne('/api/communications/messages/').flush({ _offlinePending: true });
+    await p;
+    expect(service.activeMessages$.value[0].delivery_status).toBe('pending');
+
+    const load = service.loadMessages('conv-1');
+    httpMock.expectOne(r => r.params.get('conversation_id') === 'conv-1')
+      .flush([{ id: '9', client_temp_id: tempId, conversation: 'conv-1', sender: 1, text: 'آفلاین', created_at: new Date().toISOString() }]);
+    await load;
+    const msgs = service.activeMessages$.value;
+    expect(msgs.length).toBe(1);
+    expect(msgs[0].id).toBe('9');
+    expect((service as any).outgoingMessages.has(tempId)).toBe(false);
+  });
+
+  it('E7: closing an old socket (reconnect or disconnect) never schedules a reconnect', withFakeSockets(() => {
+    service.connectSockets();
+    const firstChat = FakeWS.instances[0];
+    const firstComment = FakeWS.instances[1];
+    service.connectSockets();
+    expect(firstChat.readyState).toBe(3);
+    expect(firstComment.readyState).toBe(3);
+    expect(firstChat.onclose).toBeNull();
+    expect((service as any).reconnectTimer).toBeNull();
+    expect((service as any).chatWs).toBe(FakeWS.instances[2]);
+
+    service.disconnect();
+    expect((service as any).reconnectTimer).toBeNull();
+    expect((service as any).chatWs).toBeNull();
+    expect((service as any).commentWs).toBeNull();
+    expect(FakeWS.instances[2].readyState).toBe(3);
+  }));
+
+  it('E7: an unexpected close of the current socket still schedules a reconnect', withFakeSockets(() => {
+    service.connectSockets();
+    FakeWS.instances[0].close();
+    expect((service as any).reconnectTimer).not.toBeNull();
+  }));
+
+  it('E8: after a RE-connect the active conversation is synced with since_id and merged without duplicates', withFakeSockets(async () => {
+    service.getCurrentUserId = () => 1;
+    service.connectSockets();
+    FakeWS.instances[0].onmessage({ data: JSON.stringify({ type: 'authenticated' }) });
+    httpMock.expectNone(r => r.params.has('since_id'));
+
+    service.activeConversation$.next(conv('conv-1'));
+    const m10 = { id: '10', conversation: 'conv-1', sender: 2, text: 'قبلی', created_at: new Date().toISOString() };
+    service.activeMessages$.next([m10]);
+
+    service.connectSockets();
+    FakeWS.instances[2].onmessage({ data: JSON.stringify({ type: 'authenticated' }) });
+    const req = httpMock.expectOne(r => r.url === '/api/communications/messages/' && r.params.get('since_id') === '10');
+    expect(req.request.params.get('conversation_id')).toBe('conv-1');
+    req.flush([{ id: '11', conversation: 'conv-1', sender: 2, text: 'جاافتاده', created_at: new Date().toISOString() }, m10]);
+    await flushAsync();
+    httpMock.expectOne(r => r.url === '/api/communications/conversations/').flush([]);
+    await flushAsync();
+
+    expect(service.activeMessages$.value.map(m => m.id)).toEqual(['10', '11']);
+  }));
+
+  it('E24: resetForLogout closes both sockets without reconnect and clears in-memory state', withFakeSockets(() => {
+    service.connectSockets();
+    const chat = FakeWS.instances[0];
+    const comment = FakeWS.instances[1];
+    service.conversations$.next([conv('conv-1')]);
+    service.activeConversation$.next(conv('conv-1'));
+    service.activeMessages$.next([{ id: '1', conversation: 'conv-1', sender: 2, created_at: '' }]);
+    service.onlineUsers.set(new Set([2, 3]));
+    service.isChatDrawerOpen.set(true);
+    (service as any).processedIncomingMessageIds.add('1');
+    (service as any).playedMessageIds.add('1');
+    (service as any).pendingFiles.set('t1', new File(['a'], 'a.txt'));
+
+    expect(() => service.resetForLogout()).not.toThrow();
+
+    expect(chat.readyState).toBe(3);
+    expect(comment.readyState).toBe(3);
+    expect((service as any).chatWs).toBeNull();
+    expect((service as any).commentWs).toBeNull();
+    expect((service as any).reconnectTimer).toBeNull();
+    expect(service.conversations$.value).toEqual([]);
+    expect(service.activeConversation$.value).toBeNull();
+    expect(service.activeMessages$.value).toEqual([]);
+    expect(service.onlineUsers().size).toBe(0);
+    expect(service.isChatDrawerOpen()).toBe(false);
+    expect((service as any).processedIncomingMessageIds.size).toBe(0);
+    expect((service as any).playedMessageIds.size).toBe(0);
+    expect((service as any).pendingFiles.size).toBe(0);
+  }));
+
+  it('E24: ensureConnected opens a fresh connection and drops old state when the logged-in user changed', withFakeSockets(() => {
+    service.getCurrentUserId = () => 1;
+    service.ensureConnected();
+    const firstChat = FakeWS.instances[0];
+    service.conversations$.next([conv('conv-1')]);
+
+    service.ensureConnected();
+    expect((service as any).chatWs).toBe(firstChat);
+
+    service.getCurrentUserId = () => 2;
+    service.ensureConnected();
+    expect((service as any).chatWs).not.toBe(firstChat);
+    expect(firstChat.readyState).toBe(3);
+    expect(service.conversations$.value).toEqual([]);
+    expect((service as any).reconnectTimer).toBeNull();
+  }));
+
+  it('E16: does not mark as read while the page is hidden, even with the drawer open', () => {
+    service.getCurrentUserId = () => 1;
+    service.isChatDrawerOpen.set(true);
+    service.activeConversation$.next(conv('conv-1'));
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    try {
+      (service as any).handleNewMessage({ id: 'm1', conversation: 'conv-1', sender: 2, text: 'سلام', created_at: new Date().toISOString() });
+      expect((service as any).markReadDebounceTimers.size).toBe(0);
+      expect(service.activeMessages$.value.some(m => m.id === 'm1')).toBe(true);
+    } finally {
+      delete (document as any).visibilityState;
+    }
+
+    (service as any).handleNewMessage({ id: 'm2', conversation: 'conv-1', sender: 2, text: 'دوباره', created_at: new Date().toISOString() });
+    expect((service as any).markReadDebounceTimers.size).toBe(1);
+    service.resetForLogout();
+  });
+
+  // ─── اصلاحات بازبینی داده (data-loss review) ───
+
+  const failUploadOnce = async (tempIdHolder: { id?: string }, file: File) => {
+    service.activeConversation$.next(conv('conv-1'));
+    const p = service.sendMessage('conv-1', 'با فایل', undefined, file);
+    tempIdHolder.id = service.activeMessages$.value[service.activeMessages$.value.length - 1].client_temp_id!;
+    httpMock.expectOne('/api/communications/messages/')
+      .flush({ id: '500', client_temp_id: tempIdHolder.id, conversation: 'conv-1', sender: 1, text: 'با فایل', created_at: new Date().toISOString() });
+    await flushAsync();
+    httpMock.expectOne('/api/communications/messages/upload/').flush(null, { status: 503, statusText: 'Unavailable' });
+    await p;
+  };
+
+  it('R1: chat.message.updated keeps the failed state while the file is still waiting for upload', async () => {
+    service.getCurrentUserId = () => 1;
+    const holder: { id?: string } = {};
+    await failUploadOnce(holder, new File(['x'], 'f.txt', { type: 'text/plain' }));
+    expect(service.activeMessages$.value[0].delivery_status).toBe('failed');
+
+    (service as any).handleUpdatedMessage({ id: '500', client_temp_id: holder.id, conversation: 'conv-1', sender: 1, text: 'ویرایش‌شده', created_at: new Date().toISOString() });
+    const m = service.activeMessages$.value[0];
+    expect(m.text).toBe('ویرایش‌شده');
+    expect(m.delivery_status).toBe('failed');
+    expect((service as any).pendingFiles.has(holder.id)).toBe(true);
+  });
+
+  it('R2: retry does not upload again when the re-POST shows the attachment already reached the server', async () => {
+    service.getCurrentUserId = () => 1;
+    const holder: { id?: string } = {};
+    await failUploadOnce(holder, new File(['x'], 'f.txt', { type: 'text/plain' }));
+
+    const retry = service.retryMessage(holder.id!);
+    httpMock.expectOne('/api/communications/messages/').flush({
+      id: '500', client_temp_id: holder.id, conversation: 'conv-1', sender: 1, text: 'با فایل', created_at: new Date().toISOString(),
+      attachments: [{ id: 'att-9', file_name: 'f.txt', file_size: 1, content_type: 'text/plain' }]
+    });
+    await retry;
+    await flushAsync();
+    httpMock.expectNone('/api/communications/messages/upload/');
+    const m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('sent');
+    expect(m.attachments?.length).toBe(1);
+    expect((service as any).pendingFiles.has(holder.id)).toBe(false);
+  });
+
+  it('R3: forced logout keeps unsent messages/files for the same user; a different user drops them', withFakeSockets(async () => {
+    service.getCurrentUserId = () => 1;
+    const holder: { id?: string } = {};
+    const file = new File(['x'], 'f.txt', { type: 'text/plain' });
+    await failUploadOnce(holder, file);
+
+    service.resetForForcedLogout();
+    expect(service.activeMessages$.value).toEqual([]);
+    expect(service.conversations$.value).toEqual([]);
+    expect((service as any).pendingFiles.get(holder.id)).toBe(file);
+    expect((service as any).outgoingMessages.has(holder.id)).toBe(true);
+
+    // ورود دوبارهٔ همان کاربر: پیام ناموفق با بازکردن گفتگو برمی‌گردد
+    service.activeConversation$.next(conv('conv-1'));
+    const load = service.loadMessages('conv-1');
+    httpMock.expectOne(r => r.params.get('conversation_id') === 'conv-1').flush([]);
+    await load;
+    expect(service.activeMessages$.value.some(m => m.client_temp_id === holder.id && m.delivery_status === 'failed')).toBe(true);
+
+    // ورود کاربر دیگر روی همان دستگاه
+    service.resetForForcedLogout();
+    service.getCurrentUserId = () => 2;
+    service.ensureConnected();
+    expect((service as any).pendingFiles.size).toBe(0);
+    expect((service as any).outgoingMessages.size).toBe(0);
+  }));
+
+  it('R4: a stale loadMessages response is ignored', async () => {
+    service.activeConversation$.next(conv('conv-1'));
+    const first = service.loadMessages('conv-1');
+    const second = service.loadMessages('conv-1');
+    const reqs = httpMock.match(r => r.params.get('conversation_id') === 'conv-1');
+    expect(reqs.length).toBe(2);
+    reqs[1].flush([{ id: 'new', conversation: 'conv-1', sender: 2, text: 'تازه', created_at: '2026-10-30T10:00:00Z' }]);
+    await second;
+    reqs[0].flush([{ id: 'old', conversation: 'conv-1', sender: 2, text: 'کهنه', created_at: '2026-10-30T09:00:00Z' }]);
+    await first;
+    expect(service.activeMessages$.value.map(m => m.id)).toEqual(['new']);
+  });
+
+  it('R4: a message sent while loadMessages is in flight is not dropped by its response', async () => {
+    service.getCurrentUserId = () => 1;
+    service.activeConversation$.next(conv('conv-1'));
+    const load = service.loadMessages('conv-1');
+    const getReq = httpMock.expectOne(r => r.method === 'GET' && r.params.get('conversation_id') === 'conv-1');
+
+    const send = service.sendMessage('conv-1', 'همین حالا');
+    httpMock.expectOne(r => r.method === 'POST' && r.url === '/api/communications/messages/')
+      .flush({ id: 'sent-1', conversation: 'conv-1', sender: 1, text: 'همین حالا', created_at: '2026-10-30T10:05:00Z' });
+    await send;
+    expect((service as any).outgoingMessages.size).toBe(0);
+
+    getReq.flush([{ id: 'srv-1', conversation: 'conv-1', sender: 2, text: 'قبلی', created_at: '2026-10-30T10:00:00Z' }]);
+    await load;
+    expect(service.activeMessages$.value.map(m => m.id)).toEqual(['srv-1', 'sent-1']);
+  });
+
+  it('R5: a permanent 4xx shows the server text and the user can discard the local message and file', async () => {
+    service.getCurrentUserId = () => 1;
+    const file = new File(['x'], 'f.txt', { type: 'text/plain' });
+    const p = service.sendMessage('conv-1', 'رد می‌شود', undefined, file);
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    httpMock.expectOne('/api/communications/messages/').flush({ detail: 'شما اجازهٔ ارسال در این گفتگو را ندارید.' }, { status: 403, statusText: 'Forbidden' });
+    await p;
+    const m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('failed');
+    expect(m.failure_reason).toBe('شما اجازهٔ ارسال در این گفتگو را ندارید.');
+
+    service.discardOutgoing(tempId);
+    expect(service.activeMessages$.value.length).toBe(0);
+    expect((service as any).pendingFiles.has(tempId)).toBe(false);
+    expect((service as any).outgoingMessages.has(tempId)).toBe(false);
   });
 });
