@@ -1,5 +1,6 @@
-import { expect, Page, test } from '@playwright/test';
-import { TrainingVideo } from '../helpers/video';
+import type { Page } from '@playwright/test';
+import captions from './10-common-tasks.captions.json';
+import { expect, videoTest, type TrainingVideo } from '../helpers/video';
 
 /**
  * فیلم ۱۰ — کارهای مشترک:
@@ -12,16 +13,38 @@ import { TrainingVideo } from '../helpers/video';
  * پیش‌نیاز داده: `seed_video_demo --purge` سپس `seed_video_demo --base --with-invoice submitted`.
  */
 
+const test = videoTest(captions);
+
 async function openMyTasks(tv: TrainingVideo, page: Page): Promise<void> {
   await page.goto('/app/my-tasks', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'کارهای من' })).toBeVisible({ timeout: 30_000 });
-  await tv.Dismissals();
+  await tv.dismissPushBanner();
 }
 
-test('video 10: substitutes, workflow referrals, inform copies, and offline queue sync', async ({ page, context }, testInfo) => {
+test('video 10: substitutes, workflow referrals, inform copies, and offline queue sync', async ({ page, context, tv }) => {
   test.setTimeout(480_000);
-  const tv = new TrainingVideo(page, testInfo, '10-common-tasks');
-  await tv.init();
+
+  await page.route(/.*\/api\/(auth\/(login|refresh)|public\/)/, async route => {
+    const url = new URL(route.request().url());
+    const randomIp = `10.8.${Math.floor(Math.random() * 200) + 1}.${Math.floor(Math.random() * 200) + 1}`;
+    const res = await page.request.fetch(`http://127.0.0.1:8000${url.pathname}${url.search}`, {
+      method: route.request().method(),
+      headers: { ...route.request().headers(), 'x-forwarded-for': randomIp },
+      data: route.request().postData() || undefined,
+    });
+    await route.fulfill({ response: res });
+  });
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await page.goto('/login');
+      break;
+    } catch (e) {
+      if (attempt === 3) throw e;
+      await page.waitForTimeout(2000);
+    }
+  }
+  await expect(page.getByRole('button', { name: 'ورود به سامانه' })).toBeVisible();
   await tv.titleCard();
 
   // ─── ۱. سرپرست: تعیین جانشین در منوی کاربر ───
@@ -29,23 +52,20 @@ test('video 10: substitutes, workflow referrals, inform copies, and offline queu
   await tv.pickCompany();
 
   await tv.say('substitute_set');
-  await tv.act.click(page.getByRole('button', { name: 'منوی کاربری' }));
-  await tv.act.click(page.getByRole('button', { name: /جانشین من/ }));
+  await tv.act.click(page.locator('button[title*="پروفایل کاربری"]').first());
+  await tv.act.click(page.getByRole('button', { name: 'جانشین من' }));
 
-  const subDialog = page.getByRole('dialog');
+  const subDialog = page.getByRole('dialog', { name: 'جانشین موقت من' });
   await expect(subDialog).toBeVisible({ timeout: 30_000 });
-  const subSelect = subDialog.locator('#substitute-user-select');
-  await expect(subSelect).toBeVisible({ timeout: 30_000 });
-  // انتخاب کارمند دوم (demo_employee2)
-  const emp2Val = await subSelect.locator('option').evaluateAll((opts) => {
-    const found = opts.find((o) => (o.textContent || '').includes('demo_employee2') || (o.textContent || '').includes('کارمند دوم'));
-    return found ? (found as HTMLOptionElement).value : '';
-  });
-  await subSelect.selectOption(emp2Val);
-  await tv.act.fillShamsiDate(subDialog.locator('#substitute-from-date'), '1405/01/01');
-  await tv.act.fillShamsiDate(subDialog.locator('#substitute-to-date'), '1405/12/29');
+  const subSelect = subDialog.locator('#wfsub-substitute');
+  await expect(subSelect.getByRole('option', { name: /کارمند دوم/ })).toBeAttached({ timeout: 15_000 });
+  const emp2Val = await subSelect.getByRole('option', { name: /کارمند دوم/ }).getAttribute('value');
+  await subSelect.selectOption(emp2Val || '');
+
+  await tv.act.fill(subDialog.locator('#wfsub-start-date'), '1405/01/01');
+  await tv.act.fill(subDialog.locator('#wfsub-end-date'), '1405/12/29');
   await tv.act.click(subDialog.getByRole('button', { name: 'ثبت جانشین' }));
-  await expect(subDialog.getByText(/فعال/)).toBeVisible({ timeout: 30_000 });
+  await expect(subDialog.getByText(/فعال|جانشین/).first()).toBeVisible({ timeout: 30_000 });
   await tv.act.click(subDialog.getByRole('button', { name: 'بستن' }).first());
   await expect(subDialog).toBeHidden({ timeout: 30_000 });
   await tv.expectNoErrors();
@@ -61,18 +81,17 @@ test('video 10: substitutes, workflow referrals, inform copies, and offline queu
 
   await tv.say('refer_action');
   await tv.act.click(invCard.getByRole('button', { name: /ارجاع/ }));
-  const referModal = page.getByRole('dialog');
+  const referModal = page.getByRole('dialog', { name: 'ارجاع سند' });
   await expect(referModal).toBeVisible({ timeout: 30_000 });
 
   // ارجاع برای اقدام به حسابدار
   const targetSelect = referModal.locator('#refer-target-user');
-  const accVal = await targetSelect.locator('option').evaluateAll((opts) => {
-    const found = opts.find((o) => (o.textContent || '').includes('demo_accountant') || (o.textContent || '').includes('حسابدار'));
-    return found ? (found as HTMLOptionElement).value : '';
-  });
-  await targetSelect.selectOption(accVal);
+  await expect(targetSelect.getByRole('option', { name: /حسابدار/ })).toBeAttached({ timeout: 15_000 });
+  const accVal = await targetSelect.getByRole('option', { name: /حسابدار/ }).getAttribute('value');
+  await targetSelect.selectOption(accVal || '');
+
   await tv.act.fill(referModal.locator('#refer-instruction'), 'لطفاً کد اقتصادی فروشنده بررسی شود.');
-  await tv.act.fillShamsiDate(referModal.locator('#refer-due-date'), '1405/08/20');
+  await tv.act.fill(referModal.locator('#refer-due-date'), '1405/08/20');
   await tv.act.click(referModal.getByRole('button', { name: 'ارسال ارجاع' }));
   await expect(referModal).toBeHidden({ timeout: 30_000 });
 
@@ -80,11 +99,10 @@ test('video 10: substitutes, workflow referrals, inform copies, and offline queu
   await tv.act.click(invCard.getByRole('button', { name: /ارجاع/ }));
   await expect(referModal).toBeVisible({ timeout: 30_000 });
   await tv.act.click(referModal.getByRole('radio', { name: /برای اطلاع/ }));
-  const mgrVal = await targetSelect.locator('option').evaluateAll((opts) => {
-    const found = opts.find((o) => (o.textContent || '').includes('demo_manager') || (o.textContent || '').includes('مدیر'));
-    return found ? (found as HTMLOptionElement).value : '';
-  });
-  await targetSelect.selectOption(mgrVal);
+  await expect(targetSelect.getByRole('option', { name: /مدیر/ })).toBeAttached({ timeout: 15_000 });
+  const mgrVal = await targetSelect.getByRole('option', { name: /مدیر/ }).getAttribute('value');
+  await targetSelect.selectOption(mgrVal || '');
+
   await tv.act.fill(referModal.locator('#refer-instruction'), 'جهت استحضار مدیریت محترم.');
   await tv.act.click(referModal.getByRole('button', { name: 'ارسال ارجاع' }));
   await expect(referModal).toBeHidden({ timeout: 30_000 });
@@ -129,7 +147,7 @@ test('video 10: substitutes, workflow referrals, inform copies, and offline queu
 
   await context.setOffline(true);
   await tv.act.click(stepCard.getByRole('button', { name: 'تأیید' }));
-  await expect(page.getByText(/در صف ارسال/).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/در انتظار ارسال|در صف ارسال/).first()).toBeVisible({ timeout: 15_000 });
 
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));

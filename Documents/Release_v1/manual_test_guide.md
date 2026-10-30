@@ -19,7 +19,33 @@
 
 ---
 
+## فیلم‌های آموزشی
+
+پیش از هر بخش می‌توانید فیلم همان کار را ببینید. فهرست کامل با پخش‌کننده: [index.html](../Training_Videos/videos/index.html).
+
+| فیلم | کامپیوتر | گوشی |
+|---|---|---|
+| ۰. آشنایی | [دیدن](../Training_Videos/videos/00-intro-desktop.mp4) | [دیدن](../Training_Videos/videos/00-intro-mobile.mp4) |
+| ۱. کاربران و شرکت (بخش ۱) | [دیدن](../Training_Videos/videos/01-users-company-desktop.mp4) | [دیدن](../Training_Videos/videos/01-users-company-mobile.mp4) |
+| ۲. تنظیمات حسابداری | [دیدن](../Training_Videos/videos/02-accounting-setup-desktop.mp4) | [دیدن](../Training_Videos/videos/02-accounting-setup-mobile.mp4) |
+| ۳-الف. ثبت فاکتور | [دیدن](../Training_Videos/videos/03a-invoice-record-desktop.mp4) | [دیدن](../Training_Videos/videos/03a-invoice-record-mobile.mp4) |
+| ۳-ب. تأیید فاکتور | [دیدن](../Training_Videos/videos/03b-invoice-approvals-desktop.mp4) | [دیدن](../Training_Videos/videos/03b-invoice-approvals-mobile.mp4) |
+| ۳-ج. پرداخت فاکتور | [دیدن](../Training_Videos/videos/03c-invoice-payment-desktop.mp4) | [دیدن](../Training_Videos/videos/03c-invoice-payment-mobile.mp4) |
+| ۴-الف. حساب و شارژ تنخواه | [دیدن](../Training_Videos/videos/04a-petty-account-charge-desktop.mp4) | [دیدن](../Training_Videos/videos/04a-petty-account-charge-mobile.mp4) |
+| ۴-ب. صورت‌حساب تنخواه | [دیدن](../Training_Videos/videos/04b-petty-statement-desktop.mp4) | [دیدن](../Training_Videos/videos/04b-petty-statement-mobile.mp4) |
+| ۴-ج. بستن تنخواه | [دیدن](../Training_Videos/videos/04c-petty-close-desktop.mp4) | [دیدن](../Training_Videos/videos/04c-petty-close-mobile.mp4) |
+| ۵. پروندهٔ پرسنلی | [دیدن](../Training_Videos/videos/05-personnel-file-desktop.mp4) | [دیدن](../Training_Videos/videos/05-personnel-file-mobile.mp4) |
+| ۶. کارکرد | [دیدن](../Training_Videos/videos/06-attendance-desktop.mp4) | [دیدن](../Training_Videos/videos/06-attendance-mobile.mp4) |
+| ۷. حقوق | [دیدن](../Training_Videos/videos/07-payroll-desktop.mp4) | [دیدن](../Training_Videos/videos/07-payroll-mobile.mp4) |
+| ۸. ناوگان | [دیدن](../Training_Videos/videos/08-fleet-desktop.mp4) | [دیدن](../Training_Videos/videos/08-fleet-mobile.mp4) |
+| ۹. گزارش‌ها | [دیدن](../Training_Videos/videos/09-reports-desktop.mp4) | [دیدن](../Training_Videos/videos/09-reports-mobile.mp4) |
+| ۱۰. کارهای مشترک (جانشین، ارجاع، آفلاین) | [دیدن](../Training_Videos/videos/10-common-tasks-desktop.mp4) | [دیدن](../Training_Videos/videos/10-common-tasks-mobile.mp4) |
+
+---
+
 ## بخش ۱. کاربران، شرکت و دسترسی
+
+**فیلم این بخش:** [کامپیوتر](../Training_Videos/videos/01-users-company-desktop.mp4) · [گوشی](../Training_Videos/videos/01-users-company-mobile.mp4)
 
 **هدف:** یک شرکت تست با یک پروژه و دو بخش بسازید. بعد برای هر نقش یک کاربر بسازید. این کاربرها در بخش‌های بعدی (فاکتور و تنخواه) هم لازم‌اند.
 
