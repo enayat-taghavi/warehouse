@@ -99,13 +99,14 @@ class ConversationSerializer(serializers.ModelSerializer):
     )
     my_role = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    is_muted = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'title', 'conv_type', 'warehouse', 'participants', 'target_user_id',
             'participants_details', 'is_active', 'created_at', 'updated_at',
-            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count'
+            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count', 'is_muted'
         ]
         read_only_fields = ['id', 'participants', 'created_at', 'updated_at', 'is_active']
 
@@ -129,6 +130,16 @@ class ConversationSerializer(serializers.ModelSerializer):
             return None
         from .membership import member_role
         return member_role(obj, request.user)
+
+    def get_is_muted(self, obj):
+        if hasattr(obj, 'annotated_is_muted'):
+            return bool(obj.annotated_is_muted)
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return ConversationParticipant.objects.filter(
+            conversation=obj, user=request.user, left_at__isnull=True, is_muted=True
+        ).exists()
 
     def get_member_count(self, obj):
         if obj.conv_type != ConversationType.GROUP:

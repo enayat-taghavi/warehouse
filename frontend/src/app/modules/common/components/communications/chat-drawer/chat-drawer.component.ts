@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, ViewChild, ElementRef, Af
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { CommunicationService, Conversation, ChatMessage, UserShort } from '../../../../../core/services/communication.service';
+import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember } from '../../../../../core/services/communication.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
@@ -57,6 +57,35 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public isLoadingOlder = signal<boolean>(false);
   public hasMoreMessages = signal<boolean>(true);
 
+  // ─── گروه‌ها ───
+  public canCreateGroup = signal<boolean>(false);
+  public createOpen = signal<boolean>(false);
+  public groupTitle = signal<string>('');
+  public pickerSearch = signal<string>('');
+  public pickedIds = signal<number[]>([]);
+  public groupBusy = signal<boolean>(false);
+  public groupError = signal<string>('');
+  public infoOpen = signal<boolean>(false);
+  public members = signal<ConversationMember[]>([]);
+  public membersLoading = signal<boolean>(false);
+  public membersError = signal<boolean>(false);
+  public renaming = signal<boolean>(false);
+  public renameText = signal<string>('');
+  public addOpen = signal<boolean>(false);
+  /** تأیید دومرحله‌ای: حذف عضو یا ترک گروه */
+  public confirmAction = signal<{ kind: 'remove'; member: ConversationMember } | { kind: 'leave' } | null>(null);
+
+  private infoReturnFocus: HTMLElement | null = null;
+
+  private static readonly SENDER_COLORS = [
+    'text-rose-600',
+    'text-emerald-700',
+    'text-amber-700',
+    'text-sky-700',
+    'text-violet-600',
+    'text-teal-600',
+  ];
+
   private shouldScrollBottom = false;
   private typingTimeout: any = null;
   private typingIndicatorClearTimer: any = null;
@@ -67,6 +96,26 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.commService.refreshPresence();
     this.commService.loadConversations(whId);
     this.loadContacts(whId);
+    this.commService.getCapabilities()
+      .then(c => this.canCreateGroup.set(!!c?.can_create_group))
+      .catch(() => this.canCreateGroup.set(false));
+
+    // رویدادهای عضویت گروه
+    this.sub.add(
+      this.commService.membershipEvents$.subscribe(ev => {
+        const active = this.activeConv();
+        if (!active || String(active.id) !== String(ev.conversationId)) return;
+        if (ev.type === 'removed') {
+          this.infoOpen.set(false);
+          this.confirmAction.set(null);
+          this.activeConv.set(null);
+          this.activeTab.set('conversations');
+          this.toast.show('warning', 'شما از گروه حذف شدید');
+        } else if (this.infoOpen()) {
+          void this.loadMembers();
+        }
+      })
+    );
 
     // اشتراک در مکالمات
     this.sub.add(
@@ -479,6 +528,243 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       await saveBlob(blob, att.file_name || 'attachment');
     } catch {
       this.toast.error('دانلود فایل انجام نشد');
+    }
+  }
+
+  // ─── گروه‌ها: ساخت ───
+  private currentUserId(): number | null {
+    const id = this.commService.getCurrentUserId() ?? this.auth.user()?.id;
+    return id === null || id === undefined ? null : Number(id);
+  }
+
+  public openCreate(): void {
+    this.groupTitle.set('');
+    this.pickerSearch.set('');
+    this.pickedIds.set([]);
+    this.groupError.set('');
+    this.addOpen.set(false);
+    this.createOpen.set(true);
+    setTimeout(() => (document.getElementById('group-title-input') as HTMLInputElement | null)?.focus(), 0);
+  }
+
+  public closeCreate(): void {
+    this.createOpen.set(false);
+  }
+
+  public pickerCandidates(): UserShort[] {
+    const q = this.pickerSearch().toLowerCase().trim();
+    const me = this.currentUserId();
+    const exclude = this.addOpen() ? new Set(this.members().map(m => m.id)) : new Set<number>();
+    return (Array.isArray(this.contacts()) ? this.contacts() : []).filter(u =>
+      u.id !== me && !exclude.has(u.id) &&
+      (!q || (u.full_name || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q)));
+  }
+
+  public isPicked(id: number): boolean {
+    return this.pickedIds().includes(id);
+  }
+
+  public togglePick(id: number): void {
+    const cur = this.pickedIds();
+    this.pickedIds.set(cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]);
+  }
+
+  public canSubmitGroup(): boolean {
+    const t = this.groupTitle().trim();
+    return t.length > 0 && t.length <= 120 && !this.groupBusy();
+  }
+
+  private groupErrorText(e: any, fallback: string): string {
+    const body = e?.error;
+    if (e?.status === 400 && body && (body.user_ids || body.invalid_ids)) {
+      return 'برخی کاربران انتخاب‌شده معتبر نیستند';
+    }
+    return fallback;
+  }
+
+  public async submitCreateGroup(): Promise<void> {
+    if (!this.canSubmitGroup()) return;
+    this.groupBusy.set(true);
+    this.groupError.set('');
+    try {
+      const conv = await this.commService.createGroup(this.groupTitle().trim(), this.pickedIds());
+      this.createOpen.set(false);
+      this.selectConversation(conv);
+    } catch (e) {
+      this.groupError.set(this.groupErrorText(e, 'ساخت گروه انجام نشد'));
+    } finally {
+      this.groupBusy.set(false);
+    }
+  }
+
+  // ─── گروه‌ها: اطلاعات و اعضا ───
+  public isGroup(): boolean {
+    return this.activeConv()?.conv_type === 'group';
+  }
+
+  public canManage(): boolean {
+    const r = this.activeConv()?.my_role;
+    return r === 'owner' || r === 'admin';
+  }
+
+  public isOwner(): boolean {
+    return this.activeConv()?.my_role === 'owner';
+  }
+
+  public roleLabel(role: string): string {
+    return role === 'owner' ? 'مالک' : role === 'admin' ? 'مدیر گروه' : 'عضو';
+  }
+
+  public canRemove(m: ConversationMember): boolean {
+    if (m.id === this.currentUserId()) return false;
+    if (this.isOwner()) return m.role !== 'owner';
+    return this.canManage() && m.role === 'member';
+  }
+
+  public async openInfo(): Promise<void> {
+    if (!this.isGroup()) return;
+    this.renaming.set(false);
+    this.addOpen.set(false);
+    this.confirmAction.set(null);
+    this.infoReturnFocus = document.activeElement as HTMLElement | null;
+    this.infoOpen.set(true);
+    setTimeout(() => document.getElementById('group-info-title')?.focus(), 0);
+    await this.loadMembers();
+  }
+
+  public closeInfo(): void {
+    this.infoOpen.set(false);
+    this.addOpen.set(false);
+    this.renaming.set(false);
+    this.confirmAction.set(null);
+    const back = this.infoReturnFocus;
+    this.infoReturnFocus = null;
+    if (back?.isConnected) setTimeout(() => back.focus(), 0);
+  }
+
+  public async loadMembers(): Promise<void> {
+    const conv = this.activeConv();
+    if (!conv) return;
+    this.membersLoading.set(true);
+    this.membersError.set(false);
+    try {
+      this.members.set(await this.commService.getMembers(conv.id));
+    } catch {
+      this.membersError.set(true);
+    } finally {
+      this.membersLoading.set(false);
+    }
+  }
+
+  public startRename(): void {
+    this.renameText.set(this.activeConv()?.title || '');
+    this.renaming.set(true);
+  }
+
+  public async saveRename(): Promise<void> {
+    const conv = this.activeConv();
+    const t = this.renameText().trim();
+    if (!conv || !t || t.length > 120) return;
+    try {
+      const updated = await this.commService.renameGroup(conv.id, t);
+      this.activeConv.set({ ...conv, ...updated, title: updated?.title ?? t });
+      this.renaming.set(false);
+    } catch {
+      this.toast.error('تغییر نام گروه انجام نشد');
+    }
+  }
+
+  public openAdd(): void {
+    this.pickerSearch.set('');
+    this.pickedIds.set([]);
+    this.groupError.set('');
+    this.addOpen.set(true);
+  }
+
+  public async submitAddMembers(): Promise<void> {
+    const conv = this.activeConv();
+    if (!conv || this.pickedIds().length === 0 || this.groupBusy()) return;
+    this.groupBusy.set(true);
+    this.groupError.set('');
+    try {
+      await this.commService.addMembers(conv.id, this.pickedIds());
+      this.addOpen.set(false);
+      this.pickedIds.set([]);
+      await this.loadMembers();
+    } catch (e) {
+      this.groupError.set(this.groupErrorText(e, 'افزودن عضو انجام نشد'));
+    } finally {
+      this.groupBusy.set(false);
+    }
+  }
+
+  public askRemove(m: ConversationMember): void {
+    this.confirmAction.set({ kind: 'remove', member: m });
+    setTimeout(() => document.getElementById('confirm-cancel')?.focus(), 0);
+  }
+
+  public askLeave(): void {
+    this.confirmAction.set({ kind: 'leave' });
+    setTimeout(() => document.getElementById('confirm-cancel')?.focus(), 0);
+  }
+
+  public cancelConfirm(): void {
+    this.confirmAction.set(null);
+  }
+
+  public async runConfirm(): Promise<void> {
+    const conv = this.activeConv();
+    const action = this.confirmAction();
+    if (!conv || !action) return;
+    this.confirmAction.set(null);
+    try {
+      if (action.kind === 'remove') {
+        await this.commService.removeMember(conv.id, action.member.id);
+        await this.loadMembers();
+      } else {
+        await this.commService.leaveGroup(conv.id);
+        this.closeInfo();
+        this.activeConv.set(null);
+        this.activeTab.set('conversations');
+      }
+    } catch {
+      this.toast.error(action.kind === 'remove' ? 'حذف عضو انجام نشد' : 'ترک گروه انجام نشد');
+    }
+  }
+
+  public async toggleRole(m: ConversationMember): Promise<void> {
+    const conv = this.activeConv();
+    if (!conv || !this.isOwner() || m.role === 'owner') return;
+    try {
+      await this.commService.setMemberRole(conv.id, m.id, m.role === 'admin' ? 'member' : 'admin');
+      await this.loadMembers();
+    } catch {
+      this.toast.error('تغییر نقش انجام نشد');
+    }
+  }
+
+  public async toggleGroupMute(): Promise<void> {
+    const conv = this.activeConv();
+    if (!conv) return;
+    const next = !conv.is_muted;
+    try {
+      await this.commService.muteConversation(conv.id, next);
+      this.activeConv.set({ ...conv, is_muted: next });
+    } catch {
+      this.toast.error('تغییر وضعیت صدا انجام نشد');
+    }
+  }
+
+  // ─── پیام‌های گروه ───
+  public senderColor(msg: ChatMessage): string {
+    const id = Math.abs(Number(msg.sender) || 0);
+    return ChatDrawerComponent.SENDER_COLORS[id % ChatDrawerComponent.SENDER_COLORS.length];
+  }
+
+  public onDialogKey(ev: KeyboardEvent, close: () => void): void {
+    if (ev.key === 'Escape') {
+      ev.stopPropagation();
+      close();
     }
   }
 }

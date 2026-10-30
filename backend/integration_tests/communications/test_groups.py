@@ -83,6 +83,22 @@ class GroupApiTests(BaseCommsTestCase):
         resp = self.client.post(CONV_URL, {'conv_type': 'group', 'title': 'گروه من'}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_capabilities_reports_group_creation(self):
+        self.auth(self.staff_wh1)
+        self.assertEqual(self.client.get('/api/communications/capabilities/').data, {'can_create_group': False})
+        self.auth(self.manager_wh1)
+        self.assertEqual(self.client.get('/api/communications/capabilities/').data, {'can_create_group': True})
+
+    def test_is_muted_in_conversation_output(self):
+        self.auth(self.staff_wh1)
+        resp = self.client.post(f'{CONV_URL}{self.wh1_group.id}/mute/', {'muted': True}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.content)
+        listed = {str(c['id']): c for c in _items(self.client.get(CONV_URL).data)}
+        self.assertTrue(listed[str(self.wh1_group.id)]['is_muted'])
+        self.assertTrue(self.client.get(f'{CONV_URL}{self.wh1_group.id}/').data['is_muted'])
+        self.auth(self.manager_wh1)
+        self.assertFalse(self.client.get(f'{CONV_URL}{self.wh1_group.id}/').data['is_muted'])
+
     def test_create_group_rejects_inactive_or_missing_user_and_empty_title(self):
         inactive = User.objects.create_user(username='inactive_member', password='x', is_active=False)
         self.auth(self.manager_wh1)

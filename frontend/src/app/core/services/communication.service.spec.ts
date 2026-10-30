@@ -892,4 +892,106 @@ describe('CommunicationService', () => {
     expect((service as any).pendingFiles.has(tempId)).toBe(false);
     expect((service as any).outgoingMessages.has(tempId)).toBe(false);
   });
+  // ─── گروه‌ها (مرحلهٔ ۳-ب) ───
+  const grp = (id: string, extra: any = {}) => ({ id, conv_type: 'group', title: 'گروه', participants: [], is_active: true, created_at: '', updated_at: '', ...extra });
+
+  it('getCapabilities calls capabilities endpoint', async () => {
+    const p = service.getCapabilities();
+    const req = httpMock.expectOne('/api/communications/capabilities/');
+    expect(req.request.method).toBe('GET');
+    req.flush({ can_create_group: true });
+    expect((await p).can_create_group).toBe(true);
+  });
+
+  it('createGroup posts body and inserts the conversation into the list', async () => {
+    const p = service.createGroup('تیم', [2, 3]);
+    const req = httpMock.expectOne('/api/communications/conversations/');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ conv_type: 'group', title: 'تیم', member_ids: [2, 3] });
+    req.flush(grp('g1', { title: 'تیم', my_role: 'owner', member_count: 3 }));
+    await p;
+    expect(service.conversations$.value.map(c => c.id)).toEqual(['g1']);
+    expect(service.conversations$.value[0].my_role).toBe('owner');
+  });
+
+  it('getMembers, removeMember, setMemberRole use the right URLs', async () => {
+    const p1 = service.getMembers('g1');
+    const r1 = httpMock.expectOne('/api/communications/conversations/g1/members/');
+    expect(r1.request.method).toBe('GET');
+    r1.flush([{ id: 2, username: 'a', role: 'member' }]);
+    expect((await p1)[0].username).toBe('a');
+
+    const p2 = service.removeMember('g1', 2);
+    const r2 = httpMock.expectOne('/api/communications/conversations/g1/members/2/');
+    expect(r2.request.method).toBe('DELETE');
+    r2.flush(null, { status: 204, statusText: 'No Content' });
+    await p2;
+
+    const p3 = service.setMemberRole('g1', 2, 'admin');
+    const r3 = httpMock.expectOne('/api/communications/conversations/g1/members/2/');
+    expect(r3.request.method).toBe('PATCH');
+    expect(r3.request.body).toEqual({ role: 'admin' });
+    r3.flush({});
+    await p3;
+  });
+
+  it('leaveGroup removes the conversation from the list and clears it if active', async () => {
+    service.conversations$.next([grp('g1') as any, grp('g2') as any]);
+    service.activeConversation$.next(grp('g1') as any);
+    const p = service.leaveGroup('g1');
+    const req = httpMock.expectOne('/api/communications/conversations/g1/leave/');
+    expect(req.request.method).toBe('POST');
+    req.flush({ status: 'left', conversation_id: 'g1', new_owner_id: null });
+    await p;
+    expect(service.conversations$.value.map(c => c.id)).toEqual(['g2']);
+    expect(service.activeConversation$.value).toBeNull();
+  });
+
+  it('muteConversation posts muted flag and merges it into the list', async () => {
+    service.conversations$.next([grp('g1') as any]);
+    const p = service.muteConversation('g1', true);
+    const req = httpMock.expectOne('/api/communications/conversations/g1/mute/');
+    expect(req.request.body).toEqual({ muted: true });
+    req.flush({ muted: true });
+    await p;
+    expect(service.conversations$.value[0].is_muted).toBe(true);
+  });
+
+  it('WS chat.conversation.removed removes the conversation and emits a removed event', () => {
+    service.conversations$.next([grp('g1') as any, grp('g2') as any]);
+    service.activeConversation$.next(grp('g1') as any);
+    const events: any[] = [];
+    service.membershipEvents$.subscribe(e => events.push(e));
+    (service as any).chatWs = { send: () => {}, close: () => {} };
+    (service as any).initChatSocket('ws://mock');
+    (service as any).chatWs.onmessage({ data: JSON.stringify({ event: 'chat.conversation.removed', data: { conversation_id: 'g1' } }) });
+    expect(service.conversations$.value.map(c => c.id)).toEqual(['g2']);
+    expect(service.activeConversation$.value).toBeNull();
+    expect(events).toEqual([{ type: 'removed', conversationId: 'g1' }]);
+  });
+
+  it('WS chat.conversation.updated refetches the conversation and merges it', async () => {
+    service.conversations$.next([grp('g1', { title: 'قدیمی' }) as any]);
+    const events: any[] = [];
+    service.membershipEvents$.subscribe(e => events.push(e));
+    (service as any).chatWs = { send: () => {}, close: () => {} };
+    (service as any).initChatSocket('ws://mock');
+    (service as any).chatWs.onmessage({ data: JSON.stringify({ event: 'chat.conversation.updated', data: { conversation_id: 'g1' } }) });
+    const req = httpMock.expectOne('/api/communications/conversations/g1/');
+    expect(req.request.method).toBe('GET');
+    req.flush(grp('g1', { title: 'جدید', my_role: 'admin' }));
+    await new Promise(r => setTimeout(r, 0));
+    expect(service.conversations$.value[0].title).toBe('جدید');
+    expect(events).toEqual([{ type: 'updated', conversationId: 'g1' }]);
+  });
+
+  it('WS chat.conversation.updated treats 403 as removal', async () => {
+    service.conversations$.next([grp('g1') as any]);
+    (service as any).chatWs = { send: () => {}, close: () => {} };
+    (service as any).initChatSocket('ws://mock');
+    (service as any).chatWs.onmessage({ data: JSON.stringify({ event: 'chat.conversation.updated', data: { conversation_id: 'g1' } }) });
+    httpMock.expectOne('/api/communications/conversations/g1/').flush({}, { status: 403, statusText: 'Forbidden' });
+    await new Promise(r => setTimeout(r, 0));
+    expect(service.conversations$.value.length).toBe(0);
+  });
 });

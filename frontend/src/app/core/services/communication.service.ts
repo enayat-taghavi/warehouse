@@ -68,6 +68,24 @@ export interface Conversation {
     has_attachment: boolean;
   };
   unread_count?: number;
+  my_role?: 'owner' | 'admin' | 'member' | null;
+  member_count?: number;
+  is_muted?: boolean;
+}
+
+export interface ConversationMember {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  role: 'owner' | 'admin' | 'member';
+  joined_at?: string;
+}
+
+export interface MembershipEvent {
+  type: 'removed' | 'updated';
+  conversationId: string;
 }
 
 export interface GenericComment {
@@ -116,6 +134,8 @@ export class CommunicationService implements OnDestroy {
   public incomingMessage$ = new Subject<ChatMessage>();
   public incomingComment$ = new Subject<GenericComment>();
   public typingUser$ = new Subject<{ conversation_id: string; username: string; is_typing: boolean }>();
+  /** رویدادهای عضویت گروه (حذف شدن از گفتگو یا تغییر آن) برای واکنش رابط کاربری */
+  public membershipEvents$ = new Subject<MembershipEvent>();
 
   private pingInterval: any = null;
   private isDestroyed = false;
@@ -394,6 +414,12 @@ export class CommunicationService implements OnDestroy {
           } else if (payload.event === 'chat.message.updated') {
             const msg: ChatMessage = payload.data;
             this.handleUpdatedMessage(msg);
+          } else if (payload.event === 'chat.conversation.removed') {
+            const cid = payload.data?.conversation_id;
+            if (cid !== undefined && cid !== null) this.handleConversationRemoved(String(cid));
+          } else if (payload.event === 'chat.conversation.updated') {
+            const cid = payload.data?.conversation_id;
+            if (cid !== undefined && cid !== null) void this.handleConversationUpdated(String(cid));
           } else if (payload.event === 'chat.read_receipt') {
             this.handleReadReceipt(payload.data);
           } else if (payload.event === 'chat.typing') {
@@ -630,6 +656,135 @@ export class CommunicationService implements OnDestroy {
         context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
       })
     );
+  }
+
+  private chatCtx(): HttpContext {
+    return new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true);
+  }
+
+  private recomputeUnread(convs: Conversation[]): void {
+    const total = convs.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+    this.totalUnreadCount.set(total);
+    this.totalUnreadCount$.next(total);
+  }
+
+  /** گفتگو را از فهرست برمی‌دارد و اگر باز بود می‌بندد؛ پیام‌های در صف ارسال حفظ می‌شوند */
+  private removeConversationFromState(conversationId: string): void {
+    const convs = this.conversations$.value.filter(c => String(c.id) !== conversationId);
+    this.conversations$.next(convs);
+    this.recomputeUnread(convs);
+    const active = this.activeConversation$.value;
+    if (active && String(active.id) === conversationId) {
+      this.leaveConversation(active.id);
+      this.activeConversation$.next(null);
+      this.activeMessages$.next([]);
+    }
+  }
+
+  private mergeConversationIntoState(conv: Conversation): void {
+    const id = String(conv.id);
+    const list = this.conversations$.value;
+    const exists = list.some(c => String(c.id) === id);
+    const convs = exists
+      ? list.map(c => (String(c.id) === id ? { ...c, ...conv } : c))
+      : [conv, ...list];
+    this.conversations$.next(convs);
+    this.recomputeUnread(convs);
+    const active = this.activeConversation$.value;
+    if (active && String(active.id) === id) {
+      this.activeConversation$.next({ ...active, ...conv });
+    }
+  }
+
+  private handleConversationRemoved(conversationId: string): void {
+    this.removeConversationFromState(conversationId);
+    this.membershipEvents$.next({ type: 'removed', conversationId });
+  }
+
+  private async handleConversationUpdated(conversationId: string): Promise<void> {
+    try {
+      const conv = await firstValueFrom(
+        this.http.get<Conversation>(`/api/communications/conversations/${conversationId}/`, { context: this.chatCtx() })
+      );
+      this.mergeConversationIntoState(conv);
+      this.membershipEvents$.next({ type: 'updated', conversationId });
+    } catch (err: any) {
+      if (err?.status === 403 || err?.status === 404) {
+        this.handleConversationRemoved(conversationId);
+      } else {
+        console.debug('[CommunicationService] Failed to refetch conversation', err);
+      }
+    }
+  }
+
+  // ─── گروه‌ها ───
+  public async getCapabilities(): Promise<{ can_create_group: boolean }> {
+    return await firstValueFrom(
+      this.http.get<{ can_create_group: boolean }>('/api/communications/capabilities/', { context: this.chatCtx() })
+    );
+  }
+
+  public async createGroup(title: string, memberIds: number[]): Promise<Conversation> {
+    const conv = await firstValueFrom(
+      this.http.post<Conversation>('/api/communications/conversations/',
+        { conv_type: 'group', title, member_ids: memberIds }, { context: this.chatCtx() })
+    );
+    this.mergeConversationIntoState(conv);
+    return conv;
+  }
+
+  public async getMembers(conversationId: string): Promise<ConversationMember[]> {
+    return await firstValueFrom(
+      this.http.get<ConversationMember[]>(`/api/communications/conversations/${conversationId}/members/`, { context: this.chatCtx() })
+    );
+  }
+
+  public async addMembers(conversationId: string, userIds: number[]): Promise<{ added: any[] }> {
+    const res = await firstValueFrom(
+      this.http.post<{ added: any[] }>(`/api/communications/conversations/${conversationId}/members/`,
+        { user_ids: userIds }, { context: this.chatCtx() })
+    );
+    void this.handleConversationUpdated(String(conversationId));
+    return res;
+  }
+
+  public async removeMember(conversationId: string, userId: number): Promise<void> {
+    await firstValueFrom(
+      this.http.delete<void>(`/api/communications/conversations/${conversationId}/members/${userId}/`, { context: this.chatCtx() })
+    );
+  }
+
+  public async setMemberRole(conversationId: string, userId: number, role: 'admin' | 'member'): Promise<any> {
+    return await firstValueFrom(
+      this.http.patch<any>(`/api/communications/conversations/${conversationId}/members/${userId}/`,
+        { role }, { context: this.chatCtx() })
+    );
+  }
+
+  public async leaveGroup(conversationId: string): Promise<{ status: string; conversation_id: string; new_owner_id: number | null }> {
+    const res = await firstValueFrom(
+      this.http.post<{ status: string; conversation_id: string; new_owner_id: number | null }>(
+        `/api/communications/conversations/${conversationId}/leave/`, {}, { context: this.chatCtx() })
+    );
+    this.removeConversationFromState(String(conversationId));
+    return res;
+  }
+
+  public async renameGroup(conversationId: string, title: string): Promise<Conversation> {
+    const conv = await firstValueFrom(
+      this.http.patch<Conversation>(`/api/communications/conversations/${conversationId}/`, { title }, { context: this.chatCtx() })
+    );
+    this.mergeConversationIntoState({ ...conv, id: conv?.id ?? conversationId, title: conv?.title ?? title } as Conversation);
+    return conv;
+  }
+
+  public async muteConversation(conversationId: string, muted: boolean): Promise<any> {
+    const res = await firstValueFrom(
+      this.http.post<any>(`/api/communications/conversations/${conversationId}/mute/`, { muted }, { context: this.chatCtx() })
+    );
+    const existing = this.conversations$.value.find(c => String(c.id) === String(conversationId));
+    if (existing) this.mergeConversationIntoState({ ...existing, is_muted: muted } as Conversation);
+    return res;
   }
 
   public leaveConversation(conversationId: string): void {

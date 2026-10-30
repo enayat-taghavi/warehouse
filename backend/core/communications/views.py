@@ -241,7 +241,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
             last_msg_prefetch
         ).annotate(
             annotated_unread_count=Coalesce(unread_count_subquery, Value(0)),
-            annotated_my_role=my_role_subquery
+            annotated_my_role=my_role_subquery,
+            annotated_is_muted=Coalesce(Subquery(
+                ConversationParticipant.objects.filter(
+                    conversation_id=OuterRef('pk'), user=user, left_at__isnull=True
+                ).values('is_muted')[:1]
+            ), Value(False))
         )
 
         if wh_id:
@@ -876,3 +881,11 @@ class ChatContactsListView(APIView):
         qs = User.objects.filter(is_active=True).exclude(id=user.id).distinct().order_by('first_name', 'last_name', 'username')
         data = UserShortSerializer(qs, many=True).data
         return Response(data)
+
+
+class ChatCapabilitiesView(APIView):
+    """قابلیت‌های چت کاربر جاری برای ظاهر (مثلاً نمایش دکمهٔ «گروه جدید»)"""
+    permission_classes = [permissions.IsAuthenticated, IsChatEnabled]
+
+    def get(self, request):
+        return Response({'can_create_group': is_chat_group_manager(request.user)})
