@@ -15817,3 +15817,47 @@ The muxing process (`tools\mux.py`) has been started in the background. I am wai
 تست سریع سناریوی `03a` روی دسکتاپ با موفقیت پاس شد (`1 passed`). تزریق مجدد داده‌ها و اجرای تست سریع نسخه موبایل سن...
 
 ---
+
+### Task 1 of 1 — 2026-10-30 07:23:46
+- **Status:** DONE
+- **Conversation:** `2601531d-0deb-492d-ba2d-2fb18c7250c9`
+- **Steps:** 72
+- **Tokens:** 108901
+- **Duration:** 5m 46s
+- **Checks:**
+  - require: 3/3 passed
+  - verify round 0: 2/3 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check --backend-only`
+  - verify round 1: 3/3 passed
+- **Task:**
+```
+[ ] Session 1 — Training videos v-d: the runner restarts Daphne (new petty-cash user-directory permission), then fast-test video 4-a (desktop and mobile) on app and purge the demo data
+
+
+
+1. Critical rules: exactly the critical rules of Session 1 (Training videos v-b) above, unchanged. The runner already restarted Daphne before your turn; do not restart or build anything. Step c always runs.
+
+2. Context: same as Session 1 (Training videos v-b). Video 4-a is `scenarios/04a-petty-account-charge.spec.ts` (seed `--base`). It is a new draft: it has never passed end to end yet, so a failure is expected information, not your fault. Only fix a locator when the error clearly says an element was not found or a wait timed out and the screenshot shows the element under another name; otherwise just report. Every run needs a fresh seed right before it. SEED means, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge >> ..\scratch\logs\vd_seed.txt 2>&1; .\venv\Scripts\python.exe manage.py seed_video_demo --base >> ..\scratch\logs\vd_seed.txt 2>&1`.
+
+3. Task, in this order:
+   - a) `curl.exe -s -o NUL -w "%{http_code}" https://app.farsalish.ir/api/public/config/` must print 200.
+   - b) For each profile P in desktop, mobile: SEED, then in `tests\playwright`: `$env:VIDEO_MODE='test'; npx playwright test --project=P scenarios/04a-petty-account-charge.spec.ts --reporter=list > ..\..\scratch\logs\vd_test_04a_P.txt 2>&1`. At most 2 attempts per profile, each after its own SEED. If a test fails with «red error toasts seen during the video», do NOT change the scenario: write the toast text in the report.
+   - c) ALWAYS, even if earlier steps failed, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_video_demo --purge > ..\scratch\logs\vd_purge.txt 2>&1`, then read the file.
+   - d) If you changed a scenario file, commit only that file with the subject `test(training-videos v-d): selector fixes for video 4-a`.
+
+4. Tool policy: only the commands above, `git status --short`, `git add`/`git commit` for step d, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading. No browser tools of your own.
+
+5. Before finishing: step c done; `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report: the last 15 lines of each `vd_test_04a_*.txt` log, the first error line and the step of the scenario where it stopped, the content of `error-context.md` headings if a test failed, any selector you changed and why. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### الگوی ۴ مرحله‌ای (4-Step Execution Protocol)
+
+۱. **توضیح ساده:** بررسی تاییدیه رانر (`release-check --backend-only`) به دلیل عدم وجود فایل پشتیبان دیتابیس (`.dump` به همراه `.meta.json`) ثبت‌شده پس از نشانه‌گذاری انتشار (`release-mark`) با خطا مواجه شده بود.
+۲. **بررسی صحت فنی:** دستور `verify_tools.py release-check --backend-only` تاریخ ثبت نشان انتشار (`start` در فایل `scratch/runner-cache/release_start.json`) را بررسی می‌کند و نیاز دارد که یک نسخه پشتیبان تازه پس از آن در مسیر `backend/backups/db` ایجاد شده باشد.
+۳. **تایید و حل مستقیم:** دستور `run_auto_backup` در بک‌اند اجرا شد و نسخه پشتیبان تازه `backup_20261030_072311.dump` ایجاد گردید. سپس دستور اع...
+
+---

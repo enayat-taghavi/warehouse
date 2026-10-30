@@ -42,8 +42,9 @@ BASE_USERS = (
     ('demo_employee', 'مریم', 'کارمند', 'employee', 'section1'),
     ('demo_employee2', 'علی', 'کارمند دوم', 'employee', 'section1'),
     ('demo_supervisor', 'زهرا', 'سرپرست', 'supervisor', 'section1'),
-    ('demo_accountant', 'رضا', 'حسابدار', 'accountant', 'project'),
-    ('demo_manager', 'سارا', 'مدیر', 'manager', 'project'),
+    # حسابدار و مدیر در سطح شرکت: حساب تنخواه و سقف آن فقط با انتساب سطح شرکت ساخته می‌شود (فیلم ۴)
+    ('demo_accountant', 'رضا', 'حسابدار', 'accountant', 'company'),
+    ('demo_manager', 'سارا', 'مدیر', 'manager', 'company'),
     ('demo_treasury', 'حسین', 'خزانه‌دار', 'treasury', 'company'),
 )
 DEMO_USERNAMES = (ADMIN, *(row[0] for row in BASE_USERS))
