@@ -271,8 +271,10 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     expect(removes.length).toBe(1);
   });
 
-  it('7b. file above the default 10 MB limit is refused with a Persian message; same for a server-configured 2 MB limit', async () => {
-    const big = new File([new Uint8Array(11 * 1024 * 1024)], 'big.pdf', { type: 'application/pdf' });
+  it('7b. file above the default 100 MB limit is refused with a Persian message; same for a server-configured 2 MB limit', async () => {
+    expect(component.maxUploadMb()).toBe(100);
+    const big = new File([new Uint8Array(1)], 'big.pdf', { type: 'application/pdf' });
+    Object.defineProperty(big, 'size', { value: 101 * 1024 * 1024 });
     component.addFiles([big]);
     expect(component.pickedFiles().length).toBe(0);
     expect(toast.show).toHaveBeenCalledWith('error', expect.stringContaining('مگابایت'));
@@ -283,6 +285,31 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     component.addFiles([three]);
     expect(component.pickedFiles().length).toBe(0);
     expect(toast.show).toHaveBeenLastCalledWith('error', expect.stringContaining('۲'));
+  });
+
+  it('7c. conversation filter: «همه» lists every conversation, «شخصی» only direct ones, «گروه» groups and the announcement channel', async () => {
+    component.activeConv.set(null);
+    component.activeTab.set('conversations');
+    component.conversations.set([
+      { id: 'd1', conv_type: 'direct', title: '', participants_details: [] },
+      { id: 'g1', conv_type: 'group', title: 'گروه یک', participants_details: [] },
+      { id: 'a1', conv_type: 'announcement', title: 'اطلاعیه', participants_details: [] },
+    ] as any);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="conv-filter"]')).toBeTruthy();
+    expect(component.filteredConversations().map(c => c.id)).toEqual(['d1', 'g1', 'a1']);
+
+    (el.querySelector('[data-testid="conv-filter-direct"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.filteredConversations().map(c => c.id)).toEqual(['d1']);
+    expect(el.querySelector('[data-testid="conv-filter-direct"]')!.getAttribute('aria-checked')).toBe('true');
+
+    (el.querySelector('[data-testid="conv-filter-group"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.filteredConversations().map(c => c.id)).toEqual(['g1', 'a1']);
+    expect(component.convKindCount('group')).toBe(2);
+    expect(component.convKindCount('all')).toBe(3);
   });
 
   it('8. a file named x.svg passed to addFiles is refused (strip stays empty) and ToastService.show was called with "error"', async () => {

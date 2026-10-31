@@ -103,6 +103,21 @@
       </button>
     </div>
 
+    <div *ngIf="activeTab() === 'conversations'" role="radiogroup" aria-label="نوع گفتگو" data-testid="conv-filter"
+         class="mt-2.5 flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 w-full">
+      <button *ngFor="let f of convFilters" type="button" role="radio"
+              [attr.aria-checked]="convFilter() === f.id" [attr.data-testid]="'conv-filter-' + f.id"
+              (click)="convFilter.set(f.id)"
+              [class.bg-white]="convFilter() === f.id" [class.text-indigo-700]="convFilter() === f.id"
+              [class.shadow-sm]="convFilter() === f.id" [class.font-black]="convFilter() === f.id"
+              [class.text-slate-600]="convFilter() !== f.id" [class.font-bold]="convFilter() !== f.id"
+              class="flex-1 min-h-[40px] px-2 rounded-lg text-xs flex items-center justify-center gap-1.5 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <span>{{ f.label }}</span>
+        <span class="text-[10px] font-mono font-bold px-1.5 rounded-md tabular-nums"
+              [class.bg-indigo-50]="convFilter() === f.id" [class.bg-slate-200]="convFilter() !== f.id">{{ convKindCount(f.id).toLocaleString('fa-IR') }}</span>
+      </button>
+    </div>
+
     <div class="mt-2.5 relative">
       <input type="text"
              [ngModel]="searchQuery()" 
@@ -119,7 +134,8 @@
     <!-- 1. Conversations List -->
     <div *ngIf="activeTab() === 'conversations'" class="p-2 space-y-1">
       <div *ngIf="filteredConversations().length === 0" class="text-center py-12 text-slate-400 text-xs">
-        گفتگویی یافت نشد. از تب «همکاران و پرسنل» پیام جدیدی ارسال کنید.
+        <ng-container *ngIf="convFilter() === 'group' && !searchQuery().trim(); else noConvText">هنوز گروهی ندارید.</ng-container>
+        <ng-template #noConvText>گفتگویی یافت نشد. از تب «همکاران و پرسنل» پیام جدیدی ارسال کنید.</ng-template>
       </div>
 
       <button *ngFor="let conv of filteredConversations(); trackBy: trackByConvId"

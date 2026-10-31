@@ -43,7 +43,7 @@ export const CHAT_ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'
 /** بیشترین تعداد فایل در یک پیام */
 export const CHAT_MAX_FILES = 10;
 /** سقف پیش‌فرض حجم هر فایل (مگابایت)؛ تا رسیدن تنظیم سرور (chat_max_upload_mb) یا در حالت آفلاین */
-export const CHAT_DEFAULT_MAX_FILE_MB = 10;
+export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 
 @Component({
   selector: 'app-chat-drawer',
@@ -70,7 +70,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private api = inject(ApiService);
   private configApi = inject(ConfigApiService);
-  /** سقف مؤثر حجم هر فایل به مگابایت (تنظیم سرور، پیش‌فرض ۱۰) */
+  /** سقف مؤثر حجم هر فایل به مگابایت (تنظیم سرور، پیش‌فرض ۱۰۰) */
   public maxUploadMb = signal<number>(CHAT_DEFAULT_MAX_FILE_MB);
   private sub = new Subscription();
   /** پیش‌نمایش عکس پیوست‌ها (blob با توکن، چون <img> هدر Authorization نمی‌فرستد) */
@@ -85,6 +85,13 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public contacts = signal<UserShort[]>([]);
   
   public searchQuery = signal<string>('');
+  /** صافی فهرست گفتگوها: همه، شخصی یا گروه */
+  public convFilter = signal<'all' | 'direct' | 'group'>('all');
+  readonly convFilters: { id: 'all' | 'direct' | 'group'; label: string }[] = [
+    { id: 'all', label: 'همه' },
+    { id: 'direct', label: 'شخصی' },
+    { id: 'group', label: 'گروه' },
+  ];
   public messageInputText: string = '';
   public isSending = signal<boolean>(false);
   public isTyping = signal<boolean>(false);
@@ -179,7 +186,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.commService.getCapabilities()
       .then(c => this.canCreateGroup.set(!!c?.can_create_group))
       .catch(() => this.canCreateGroup.set(false));
-    // سقف حجم فایل از تنظیم سرور؛ بدون پاسخ (آفلاین) همان ۱۰ مگابایت می‌ماند
+    // سقف حجم فایل از تنظیم سرور؛ بدون پاسخ (آفلاین) همان ۱۰۰ مگابایت می‌ماند
     this.sub.add(this.configApi.getPublicConfig().subscribe({
       next: (cfg) => {
         const mb = Number(cfg?.chat_max_upload_mb);
@@ -1191,8 +1198,20 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.commService.isChatDrawerOpen.set(false);
   }
 
-  public filteredConversations(): Conversation[] {
+  /** نوع گفتگو در زبانهٔ «گفتگوها»: شخصی = دونفره؛ گروه = گروه‌ها و کانال اطلاعیه */
+  public convKindOf(conv: Conversation): 'direct' | 'group' {
+    return conv.conv_type === 'direct' ? 'direct' : 'group';
+  }
+
+  public convKindCount(kind: 'all' | 'direct' | 'group'): number {
     const list = Array.isArray(this.conversations()) ? this.conversations() : [];
+    return kind === 'all' ? list.length : list.filter(c => this.convKindOf(c) === kind).length;
+  }
+
+  public filteredConversations(): Conversation[] {
+    const all = Array.isArray(this.conversations()) ? this.conversations() : [];
+    const kind = this.convFilter();
+    const list = kind === 'all' ? all : all.filter(c => this.convKindOf(c) === kind);
     const q = this.searchQuery().toLowerCase().trim();
     if (!q) return list;
     return list.filter(c => {
@@ -1509,6 +1528,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     try {
       const conv = await this.commService.createGroup(this.groupTitle().trim(), this.pickedIds());
       this.createOpen.set(false);
+      this.convFilter.set('group');
       this.selectConversation(conv);
     } catch (e) {
       this.groupError.set(this.groupErrorText(e, 'ساخت گروه انجام نشد'));

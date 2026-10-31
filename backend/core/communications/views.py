@@ -722,7 +722,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         if not file_obj:
             return Response({'error': 'فایلی ارسال نشده است'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # اعتبارسنجی حجم فایل (سقف از تنظیم chat_max_upload_mb، پیش‌فرض ۱۰ مگابایت)
+        # اعتبارسنجی حجم فایل (سقف از تنظیم chat_max_upload_mb، پیش‌فرض ۱۰۰ مگابایت)
         max_mb = get_chat_max_upload_mb()
         if file_obj.size > max_mb * 1024 * 1024:
             return Response(

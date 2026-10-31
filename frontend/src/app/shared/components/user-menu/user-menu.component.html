@@ -110,7 +110,14 @@
           <span *ngIf="!hasPendingUpdate" class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">PWA</span>
         </button>
       }
-      <p data-testid="user-menu-app-version" class="px-3 pb-1 text-[10px] text-fg-muted" dir="rtl">{{ versionLabel }}</p>
+      <!-- درباره ما و شمارهٔ نسخه -->
+      <button type="button" data-testid="user-menu-about" (click)="openAbout()"
+        class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        title="درباره ما و شمارهٔ نسخه">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
+        <span class="flex-1">درباره ما</span>
+        <span data-testid="user-menu-app-version" class="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full font-bold tabular-nums" dir="rtl">{{ versionLabel }}</span>
+      </button>
 
       <!-- بروزرسانی عمیق داده‌ها -->
       <button (click)="onDeepUpdate(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-orange-600 hover:bg-orange-50 cursor-pointer" [disabled]="isOffline || pendingCount > 0" [title]="isOffline ? 'در حالت آفلاین در دسترس نیست' : (pendingCount > 0 ? 'لطفا ابتدا تغییرات را Sync کنید' : 'بروزرسانی عمیق داده‌ها از سرور')" [class.opacity-50]="isOffline || pendingCount > 0" [class.cursor-not-allowed]="isOffline || pendingCount > 0">
@@ -381,3 +388,20 @@
   </div>
 </div>
 
+<!-- درباره ما -->
+<app-modal [isOpen]="isAboutOpen" (closed)="isAboutOpen = false" title="درباره ما" size="sm">
+  <div data-testid="about-dialog" class="flex flex-col items-center text-center gap-3" dir="rtl">
+    <img src="icons/icon-192x192.png" alt="" width="64" height="64" class="w-16 h-16 rounded-2xl" />
+    <div>
+      <p data-testid="about-system-name" class="text-sm font-black text-fg">{{ BRANDING.systemName }}</p>
+      @if (BRANDING.organizationName) {
+        <p class="text-xs text-fg-muted mt-1">{{ BRANDING.organizationName }}</p>
+      }
+    </div>
+    <p data-testid="about-version" class="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full tabular-nums">{{ versionLabel }}</p>
+    <div class="w-full border-t border-line pt-3">
+      <p class="text-[11px] text-fg-muted">طراحی و توسعه</p>
+      <p data-testid="about-developers" class="text-xs font-bold text-fg mt-1">{{ aboutDevelopers }}</p>
+    </div>
+  </div>
+</app-modal>

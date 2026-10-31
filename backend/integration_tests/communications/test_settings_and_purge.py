@@ -104,13 +104,14 @@ class SettingsAndPurgeTestCase(BaseCommsTestCase):
             format='multipart',
         )
 
-    def test_upload_limit_default_is_10mb(self):
-        """بدون تنظیم، سقف ۱۰ مگابایت است و ۱۱ مگابایت رد می‌شود"""
+    def test_upload_limit_default_is_100mb(self):
+        """بدون تنظیم، سقف ۱۰۰ مگابایت است و ۱۱ مگابایت از بررسی حجم رد می‌شود"""
         SystemSetting.objects.filter(key='chat_max_upload_mb').delete()
         clear_setting_cache('chat_max_upload_mb')
+        from settings_core.services import get_chat_max_upload_mb
+        self.assertEqual(get_chat_max_upload_mb(), 100)
         resp = self._upload_size_probe(11 * 1024 * 1024)
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('10', resp.data['error'])
+        self.assertNotIn('حجم فایل نباید', str(resp.data.get('error', '')))
 
     def test_upload_limit_setting_applies(self):
         """با تنظیم ۲ مگابایت، ۳ مگابایت رد و ۱ مگابایت از بررسی حجم رد می‌شود"""
@@ -125,13 +126,13 @@ class SettingsAndPurgeTestCase(BaseCommsTestCase):
         self.assertNotIn('حجم فایل نباید', str(ok.data.get('error', '')))
 
     def test_upload_limit_bad_value_falls_back_to_default(self):
-        """مقدار خراب در دیتابیس سقف را به ۱۰ برمی‌گرداند"""
+        """مقدار خراب در دیتابیس سقف را به پیش‌فرض ۱۰۰ برمی‌گرداند"""
         SystemSetting.objects.update_or_create(
             key='chat_max_upload_mb', warehouse_id=None, defaults={'value': 'abc'}
         )
         clear_setting_cache('chat_max_upload_mb')
         from settings_core.services import get_chat_max_upload_mb
-        self.assertEqual(get_chat_max_upload_mb(), 10)
+        self.assertEqual(get_chat_max_upload_mb(), 100)
 
     def test_public_config_exposes_upload_limit(self):
         """/api/public/config/ مقدار chat_max_upload_mb را می‌دهد"""
@@ -140,7 +141,7 @@ class SettingsAndPurgeTestCase(BaseCommsTestCase):
         self.client.credentials()
         resp = self.client.get('/api/public/config/')
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data['chat_max_upload_mb'], 10)
+        self.assertEqual(resp.data['chat_max_upload_mb'], 100)
         SystemSetting.objects.update_or_create(
             key='chat_max_upload_mb', warehouse_id=None, defaults={'value': 25}
         )

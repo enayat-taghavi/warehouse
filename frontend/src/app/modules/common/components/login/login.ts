@@ -14,6 +14,8 @@ import { Subscription } from 'rxjs';
 import { detectClientDeviceModel } from '../../../../core/utils/device-detector';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { BRANDING } from '../../../../core/branding';
+import { APP_VERSION } from '../../../../core/platform/app-version';
+import { formatVersionFa } from '../../../../core/platform/release-notes';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
 import { resolveLoginLanding } from '../../../../core/modules/login-landing';
 @Component({
@@ -30,6 +32,7 @@ export class Login implements OnInit, OnDestroy {
   loginErrorMessage: string | null = null;
   showForgotModal = false;
   readonly branding = BRANDING;
+  readonly versionLabel = `نسخهٔ ${formatVersionFa(APP_VERSION)}`;
   private activeCompany = inject(ActiveCompanyService);
 
   constructor(

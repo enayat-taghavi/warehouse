@@ -76,9 +76,16 @@ class AttachmentsSecurityTestCase(BaseCommsTestCase):
         self.assertIsNone(response.data['thumbnail_url'])
 
     def test_rejects_oversize_file(self):
-        """فایل‌های بزرگ‌تر از سقف مجاز (۱۰ مگابایت) باید با خطای ۴۰۰ رد شوند"""
+        """فایل‌های بزرگ‌تر از سقف تنظیم‌شده (۱۰ مگابایت) باید با خطای ۴۰۰ رد شوند"""
+        from settings_core.models import SystemSetting
+        from warehouses.services import clear_setting_cache
+        SystemSetting.objects.update_or_create(
+            key='chat_max_upload_mb', warehouse_id=None, defaults={'value': 10}
+        )
+        clear_setting_cache('chat_max_upload_mb')
+        self.addCleanup(clear_setting_cache, 'chat_max_upload_mb')
         self.auth(self.manager_wh1)
-        # فایل ۱۱ مگابایتی واقعی
+        # فایل ۱۱ مگابایتی واقعی با سقف تنظیم‌شدهٔ ۱۰ مگابایت
         large_bytes = self.valid_png_bytes + (b'\x00' * (10 * 1024 * 1024 + 1024))
         large_file = SimpleUploadedFile("large.png", large_bytes, content_type="image/png")
         response = self.client.post(

@@ -36,6 +36,7 @@ import { BRANDING } from '../../../core/branding';
 import { APP_VERSION } from '../../../core/platform/app-version';
 import { activeLiveBundleVersion } from '../../../core/platform/live-update';
 import { formatVersionFa } from '../../../core/platform/release-notes';
+import { ModalComponent } from '../modal/modal.component';
 
 export interface ShortcutCategory {
   id: string;
@@ -71,7 +72,8 @@ const SUMMARY_BADGE_CLASSES: Record<string, string> = {
     WorkflowSubstitutesComponent,
     SvgIconDirective,
     ActionButtonComponent,
-    AttachmentsComponent
+    AttachmentsComponent,
+    ModalComponent
   ],
   templateUrl: './user-menu.component.html',
   styleUrl: './user-menu.component.css'
@@ -106,6 +108,15 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     const bundle = activeLiveBundleVersion();
     const base = `نسخهٔ ${formatVersionFa(APP_VERSION)}`;
     return bundle && bundle !== APP_VERSION ? `${base} (بستهٔ ${formatVersionFa(bundle)})` : base;
+  }
+
+  /** پنجرهٔ «درباره ما» */
+  public isAboutOpen = false;
+  public readonly aboutDevelopers = 'شرکت پاینده توان ساینا و بحرآفرینان فارس';
+
+  public openAbout(): void {
+    this.closeUserMenu();
+    this.isAboutOpen = true;
   }
 
   public get taskCount(): number {
@@ -825,6 +836,10 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       }
       if (this.isShortcutsHelpOpen) {
         this.isShortcutsHelpOpen = false;
+        this.cdr.detectChanges();
+      }
+      if (this.isAboutOpen) {
+        this.isAboutOpen = false;
         this.cdr.detectChanges();
       }
       if (this.isSubstituteModalOpen) {

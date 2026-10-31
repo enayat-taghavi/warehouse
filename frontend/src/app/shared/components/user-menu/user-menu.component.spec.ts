@@ -393,6 +393,16 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     expect(component.BRANDING.systemName.length).toBeGreaterThan(0);
   });
 
+  it('«درباره ما» منوی کاربر را می‌بندد، پنجره را باز می‌کند و نام توسعه‌دهنده و شمارهٔ نسخه را دارد', () => {
+    component.isUserMenuOpen = true;
+    component.openAbout();
+    expect(component.isUserMenuOpen).toBe(false);
+    expect(component.isAboutOpen).toBe(true);
+    expect(component.aboutDevelopers).toContain('پاینده توان ساینا');
+    expect(component.aboutDevelopers).toContain('بحرآفرینان فارس');
+    expect(component.versionLabel).toContain('نسخهٔ');
+  });
+
   describe('Modular Extension Points & Configuration Behavior', () => {
     it('حالت ۱: هر دو ماژول فعال — دسته‌بندی انبارگردانی در کلیدها و قابلیت دیپ‌سینک انبار فعال است', () => {
       expect(component.isWarehouseInstalled).toBe(true);

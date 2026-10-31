@@ -18,7 +18,7 @@ DEFAULT_SETTINGS = {
     'chat_enabled': True,
     'chat_file_sharing': True,
     # سقف حجم هر پیوست چت به مگابایت (۱ تا ۱۰۰)
-    'chat_max_upload_mb': 10,
+    'chat_max_upload_mb': 100,
     'app_min_version': '',
     'app_recommended_version': '',
     'app_download_url_direct': '',
