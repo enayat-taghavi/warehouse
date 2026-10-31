@@ -40,6 +40,7 @@ CHAINS = {  # scheduled task name -> (state file, lock file) under scratch/
     'release-v1-stage5-chain': ('chain_state_stage5.json', 'chain_stage5.lock'),
     'training-videos-chain': ('chain_state_videos.json', 'chain_videos.lock'),
     'chat-plan-chain': ('chain_state_chat.json', 'chain_chat.lock'),
+    'chat-access-chain': ('chain_state_chat_access.json', 'chain_chat_access.lock'),
 }
 DEFAULT_CHAIN = 'release-v1-chain'
 STATE = ROOT / 'scratch' / CHAINS[DEFAULT_CHAIN][0]
