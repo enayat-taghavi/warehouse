@@ -400,7 +400,7 @@
                class="mb-2 flex items-center gap-1.5 rounded-lg border border-white/20 bg-black/5 dark:bg-white/5 p-2 text-[11px]">
             <svg class="w-4 h-4 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
             <span class="truncate font-bold">{{ msg.pending_file_name }}</span>
-            <span class="shrink-0 opacity-80">{{ msg.delivery_status === 'failed' ? '(ارسال نشد)' : (msg.waiting_network ? '(در انتظار اینترنت)' : '(در حال ارسال)') }}</span>
+            <span class="shrink-0 opacity-80">{{ msg.delivery_status === 'failed' ? '(ارسال نشد)' : (msg.waiting_network ? '' : '(در حال ارسال)') }}</span>
           </div>
 
           <!-- پیشرفت آپلود فایل جاری و لغو -->
@@ -425,8 +425,8 @@
           <p class="whitespace-pre-wrap"><ng-container *ngFor="let seg of segments(msg.text)"><a *ngIf="seg.url" [href]="seg.text" target="_blank" rel="noopener noreferrer" class="underline break-all" dir="ltr">{{ seg.text }}</a><ng-container *ngIf="!seg.url">{{ seg.text }}</ng-container></ng-container></p>
 
           <!-- پیام در صندوق خروجی منتظر اینترنت است و خودکار فرستاده می‌شود -->
-          <p *ngIf="msg.delivery_status === 'pending' && msg.waiting_network" data-testid="waiting-network"
-             class="mt-1 text-[10px] font-bold opacity-90">در انتظار اینترنت؛ پس از وصل شدن خودکار فرستاده می‌شود</p>
+          <p *ngIf="msg.delivery_status === 'pending' && msg.waiting_network" data-testid="waiting-network" role="status"
+             class="mt-1 text-[11px] font-bold">در انتظار اینترنت؛ پس از وصل شدن خودکار فرستاده می‌شود</p>
 
           <!-- علت رد قطعی سرور برای پیام ناموفق -->
           <p *ngIf="msg.delivery_status === 'failed' && msg.failure_reason"

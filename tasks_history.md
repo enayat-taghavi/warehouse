@@ -16138,3 +16138,87 @@ feat(chat 5-c): attachment cards, image grid, file-type icons, media tab, DOM sp
 ۳. افزودن تب «رسانه و فایل‌ها» در پنل اطلاعات گفت‌وگو شامل زیربخش‌های «عکس‌ها» (گرید سه‌ستونه) و ...
 
 ---
+
+### Task 1 of 1 — 2026-10-31 06:18:49
+- **Status:** DONE
+- **Conversation:** `f97b4a43-d879-425e-9d82-c865bb4da040`
+- **Steps:** 321
+- **Tokens:** 590298
+- **Duration:** 40m 39s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Chat plan final step: specs for the persistent chat outbox (communication.service) and the logout warning (layout)
+
+
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`.
+- Change only two files: `frontend/src/app/core/services/communication.service.spec.ts` and `frontend/src/app/modules/common/components/layout/layout.spec.ts`. Never edit any non-spec `.ts`, any html, anything under `scripts/` or `Documents/`, `tasks.md` or `tasks_history.md`.
+- Existing tests in both files must keep passing unchanged. Spec descriptions in English.
+- No push. Stage only your own two files.
+
+2. Context (read these; nothing else is needed):
+- `frontend/src/app/core/services/chat-outbox.ts` (whole file, about 100 lines): `ChatOutboxRow` (`tempId, userId, conversation, message, files, uploadedCount, autoRetry, createdAt`), `toOutboxFiles`, `fromOutboxFiles`, `putChatOutbox`, `updateChatOutbox`, `deleteChatOutbox`, `listChatOutbox(userId)`, `countChatOutbox(userId)`, `deleteChatOutboxForUser(userId)`.
+- `frontend/src/app/core/services/communication.service.ts`: line 14 (the import from `./chat-outbox`), lines 1030–1190 (`outboxSync`, `outboxDelete`, `restoreOutbox`, `flushOutbox`, `unsentOutboxCount`, `discardOutboxForLogout`, `discardOutgoing`), lines 1470–1625 (the send-with-files path that calls `outboxSync`/`outboxDelete`, states `pending`, `failed`, `waiting_network`, flag `autoRetry`), and `getCurrentUserId()`.
+- `frontend/src/app/core/services/communication.service.spec.ts`: lines 1–80 (TestBed setup, HttpTestingController), lines 585–620 (`withFakeSockets`), lines 920–1000 (`failUploadOnce` and the R3 tests). Reuse these helpers and the existing way the current user is set.
+- `frontend/src/app/modules/common/components/layout/layout.ts` lines 1336–1400 (`logout()`: calls `commService.unsentOutboxCount()`, opens `confirmDialog.open(...)` when > 0, returns on cancel, then calls `commService.discardOutboxForLogout()` and the auth logout; read the exact calls there) and `layout.spec.ts` (whole file, 60 lines).
+
+3. Definitions:
+- "Outbox mock" = at the top of `communication.service.spec.ts`, `vi.mock('./chat-outbox', ...)` backed by an in-memory `Map<string, ChatOutboxRow>` (jsdom has no indexedDB). Keep `toOutboxFiles`/`fromOutboxFiles` real via `vi.importActual`; implement `putChatOutbox` (set, return true), `updateChatOutbox` (merge, return 1 or 0), `deleteChatOutbox`, `listChatOutbox` (filter by userId, sort by createdAt), `countChatOutbox`, `deleteChatOutboxForUser` as `vi.fn` wrappers over the Map. Clear the Map and the mock calls in `beforeEach`. Make sure the existing tests still pass with the mock in place.
+- "Waiting row" = a row with `autoRetry: true` and a message whose status is `pending`.
+
+4. Task — add one `describe('chat outbox (stage 6)', ...)` block in `communication.service.spec.ts` with these tests:
+- a) send with one file: `putChatOutbox` is called before the upload/POST request is flushed, with the files and the current user id.
+- b) the message POST and every file upload return 2xx → `deleteChatOutbox` called with that tempId; the Map no longer has the row.
+- c) upload returns 503 → the row stays in the Map; the in-memory message is `pending` with `waiting_network` set (use the exact field name from the service).
+- d) upload returns 400 with `{ detail: '...' }` → message status `failed`, row kept with `autoRetry: false`.
+- e) `discardOutgoing(tempId)` → `deleteChatOutbox` called and the row is gone.
+- f) restore: Map pre-filled with two rows of user 1 (one with `uploadedCount: 1` of 2 files) and one row of user 2; with user 1 logged in, after `restoreOutbox` (call it the way the service does, through `flushOutbox` or the public entry used on connect) only user 1's rows appear in `outgoingMessages`/`pendingFiles`, and `uploadedCount` is preserved; user 2's row is never shown and never deleted.
+- g) flush order: three waiting rows of user 1 with createdAt t1 < t2 < t3; `flushOutbox()` sends them in that order (check the order of HTTP requests); when the second one gets 503, the third is not sent in that flush.
+- h) `unsentOutboxCount()` returns the count of the current user's rows only.
+- i) `discardOutboxForLogout()` deletes only the current user's rows (user 2's row stays in the Map).
+- In `layout.spec.ts` add a `describe('logout with unsent chat messages', ...)` with three tests: spy `component.commService.unsentOutboxCount` and `discardOutboxForLogout`, the `ConfirmDialogService.open`, and the auth logout call used in `logout()`:
+  - count 1 → confirm dialog opened once with a danger type;
+  - cancel (open resolves false) → no discard, no auth logout;
+  - confirm (open resolves true for every dialog) → discard called, then auth logout called (check the order).
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/core/services/communication.service.spec.ts --include=src/app/modules/common/components/layout/layout.spec.ts` (at most 8 times).
+- If a command fails, read its output and change approach; do not repeat the same call unchanged.
+- If a scenario cannot be tested exactly as written because the service behaves differently, test the real behaviour, never change non-spec code, and say so in the report.
+
+6. Before finishing:
+- The test command passes with zero failures (existing specs included).
+- `git status --short` shows only your two files (plus the pre-existing `tests/playwright/tools/index.py`) before the commit and only that pre-existing file after it.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(chat 6): outbox persistence, restore, flush order and logout warning specs
+- Short English report: what you tested per file, the test summary line, and anything that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### بررسی درخواست
+درخواست شما مربوط به گام نهایی بخش چت (Chat stage 6) است:
+۱. افزودن تست‌های واحد برای صندوق خروجی چت (`chat-outbox` در `CommunicationService`) شامل ذخیره‌سازی، بازیابی، ترتیب ارسال مجدد (flush order) و پاک‌سازی.
+۲. افزودن تست‌های واحد برای هشدار خروج (`logout` در کامپوننت `Layout`) در صورتی که پیام ارسال‌نشده چت وجود داشته باشد.
+
+تست مبنا (baseline) در حال اجرا است تا از پاس شدن تست‌های موجود اطمینان حاصل شود؛ به محض پایان اجرا ادامه خواهیم داد.
+
+</div>
+<div dir="rtl" align="right">
+
+تست‌های نوشته‌شده برای صندوق خروجی چت و هشدار خروج در حال اجرا می‌باشند. منتظر تکمیل اجرای آزمون‌ها هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+در حال آزمودن رو...
+
+---

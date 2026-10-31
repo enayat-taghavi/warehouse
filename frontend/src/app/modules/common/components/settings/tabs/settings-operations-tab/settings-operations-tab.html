@@ -251,9 +251,9 @@
                 <div class="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                   <div>
                     <label for="chat-max-upload-mb" class="block text-xs font-bold text-slate-800">حداکثر حجم هر فایل در پیام‌ها</label>
-                    <p class="text-[11px] text-slate-500 mt-0.5">فایل بزرگ‌تر از این سقف در چت پذیرفته نمی‌شود</p>
+                    <p id="chat-max-upload-mb-hint" class="text-[11px] text-slate-500 mt-0.5">فایل بزرگ‌تر از این سقف در چت پذیرفته نمی‌شود</p>
                   </div>
-                  <select id="chat-max-upload-mb" [(ngModel)]="settings.chat_max_upload_mb" class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer">
+                  <select id="chat-max-upload-mb" aria-describedby="chat-max-upload-mb-hint" [(ngModel)]="settings.chat_max_upload_mb" class="px-3 py-2.5 min-h-[40px] bg-white border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
                     <option [ngValue]="5">۵ مگابایت</option>
                     <option [ngValue]="10">۱۰ مگابایت (پیش‌فرض)</option>
                     <option [ngValue]="20">۲۰ مگابایت</option>
