@@ -323,6 +323,26 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     expect(q('[data-testid="msg-menu"]')).toBeNull();
   });
 
+  it('message menu opens upward and flips side when it would leave the messages box', async () => {
+    await setup({ conv: groupConv('member') });
+    comm.activeMessages$.next([mk('88', { sender: 1, is_me: true })]);
+    await flush(fixture);
+    await openMenu('88');
+    const rect = (top: number, bottom: number, left: number, right: number) =>
+      ({ top, bottom, left, right, width: right - left, height: bottom - top, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
+    const scrollBox = (fixture.componentInstance as any).messagesScrollContainer.nativeElement as HTMLElement;
+    vi.spyOn(scrollBox, 'getBoundingClientRect').mockReturnValue(rect(0, 500, 0, 300));
+    const menu = q('[data-testid="msg-menu"]') as HTMLElement;
+    vi.spyOn(menu, 'getBoundingClientRect').mockReturnValue(rect(460, 620, -40, 120));
+    vi.spyOn(menu.parentElement as HTMLElement, 'getBoundingClientRect').mockReturnValue(rect(420, 460, 120, 160));
+    (fixture.componentInstance as any).fitMenu('88');
+    fixture.detectChanges();
+    const cls = (q('[data-testid="msg-menu"]') as HTMLElement).classList;
+    expect(cls.contains('bottom-full')).toBe(true);
+    expect(cls.contains('top-full')).toBe(false);
+    expect(cls.contains('start-0')).toBe(true);
+  });
+
   it('U2: edit is offered only for own message with text inside the edit window', async () => {
     await setup({ conv: groupConv('member') });
     const future = new Date(Date.now() + 5 * 60000).toISOString();

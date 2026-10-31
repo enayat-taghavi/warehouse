@@ -531,7 +531,10 @@
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="more-vertical"></svg>
           </button>
           <div *ngIf="isMenuOpen(msg)" data-testid="msg-menu"
-               class="absolute z-20 top-full mt-1 end-0 w-40 bg-surface border border-line rounded-xl shadow-lg p-1">
+               [class.top-full]="!menuPlacement().up" [class.mt-1]="!menuPlacement().up"
+               [class.bottom-full]="menuPlacement().up" [class.mb-1]="menuPlacement().up"
+               [class.end-0]="!menuPlacement().flipX" [class.start-0]="menuPlacement().flipX"
+               class="absolute z-20 w-40 bg-surface border border-line rounded-xl shadow-lg p-1">
             <button *ngIf="canReply()" type="button" data-testid="menu-reply" (click)="startReply(msg)"
                     class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-reply" aria-hidden="true"></svg>پاسخ

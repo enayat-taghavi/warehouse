@@ -138,6 +138,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   // ─── منوی پیام، پاسخ، ویرایش، حذف ───
   /** شناسهٔ پیامی که منویش باز است */
   public menuFor = signal<string | null>(null);
+  /** جهت باز شدن منوی پیام تا کامل درون کادر پیام‌ها دیده شود */
+  public menuPlacement = signal<{ up: boolean; flipX: boolean }>({ up: false, flipX: false });
   public replyTo = signal<ChatMessage | null>(null);
   public editing = signal<ChatMessage | null>(null);
   public deleteTarget = signal<ChatMessage | null>(null);
@@ -455,7 +457,30 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public toggleMenu(msg: ChatMessage, ev?: Event): void {
     ev?.stopPropagation();
-    this.menuFor.set(this.menuFor() === String(msg.id) ? null : String(msg.id));
+    const id = String(msg.id);
+    if (this.menuFor() === id) { this.menuFor.set(null); return; }
+    this.menuPlacement.set({ up: false, flipX: false });
+    this.menuFor.set(id);
+    setTimeout(() => this.fitMenu(id), 0);
+  }
+
+  /** اگر منو از پایین یا کنار کادر پیام‌ها بیرون بزند، به بالا یا سوی دیگر برمی‌گردد و در دید می‌آید */
+  private fitMenu(id: string): void {
+    if (this.menuFor() !== id) return;
+    const box = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
+    const menu = box?.querySelector(`[data-msg-menu-root="${id.replace(/[^0-9a-zA-Z_-]/g, '')}"] [data-testid="msg-menu"]`) as HTMLElement | null;
+    if (!box || !menu?.getBoundingClientRect) return;
+    const b = box.getBoundingClientRect();
+    const m = menu.getBoundingClientRect();
+    const trigger = (menu.parentElement as HTMLElement).getBoundingClientRect();
+    const up = m.bottom > b.bottom && trigger.top - b.top > b.bottom - trigger.bottom;
+    const flipX = m.left < b.left || m.right > b.right;
+    this.menuPlacement.set({ up, flipX });
+    setTimeout(() => {
+      if (this.menuFor() !== id) return;
+      (box.querySelector(`[data-msg-menu-root="${id.replace(/[^0-9a-zA-Z_-]/g, '')}"] [data-testid="msg-menu"]`) as HTMLElement | null)
+        ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }, 0);
   }
 
   @HostListener('document:click', ['$event'])
