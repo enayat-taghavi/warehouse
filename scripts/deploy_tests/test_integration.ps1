@@ -51,6 +51,7 @@ $env:FAKE_SSH_FP = $fingerprint
 $env:FAKE_SSH_DOCKER = $container
 $env:FAKE_SSH_DOCKER_EXE = $DockerExe
 $ConfigFile = Join-Path $TestRoot 'config.json'
+$MobileEnvFile = Join-Path $TestRoot 'environment.mobile.ts'
 Write-Utf8LfFile $ConfigFile (@{
         ServerHost = 'example.test'; SshUser = 'deploy'; SshPort = 22; Domain = 'soft.example.test'
         HostKeyFingerprint = $fingerprint; DbName = 'warehouse_db'; DbUser = 'warehouse_user'
@@ -465,6 +466,15 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     Assert-True ((Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json).Domain -eq 'sub.domain.test') 'Save-ConfigDomain updates domain in config'
     Assert-True (@(Get-ChildItem -LiteralPath (Split-Path $ConfigFile) -Filter "$(Split-Path $ConfigFile -Leaf).bak-*" -File).Count -ge 1) '... and timestamped backup is created'
     Save-ConfigDomain $origDomainCfg
+
+    # 13.4 Update-MobileServerOrigin rewrites only serverOrigin and the header of the mobile environment copy
+    Write-Utf8LfFile $MobileEnvFile "/**`n * Environment - Mobile Production (old.example.test)`n */`nexport const environment = {`n  apiUrl: '/api',`n  serverOrigin: 'https://old.example.test',`n};`n"
+    Assert-True (Update-MobileServerOrigin 'new.example.test') 'Update-MobileServerOrigin reports success'
+    $mobileText = [System.IO.File]::ReadAllText($MobileEnvFile)
+    Assert-True ($mobileText.Contains("serverOrigin: 'https://new.example.test'") -and -not $mobileText.Contains('old.example.test')) '... serverOrigin and header point at the new domain'
+    Assert-True ($mobileText.Contains("apiUrl: '/api'")) '... other lines kept'
+    Write-Utf8LfFile $MobileEnvFile "export const environment = {};`n"
+    Assert-True (-not (Update-MobileServerOrigin 'new.example.test')) '... and reports failure when serverOrigin is missing'
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

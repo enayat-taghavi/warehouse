@@ -111,6 +111,8 @@ $env:FAKE_SSH_FP = $fingerprint
 $env:FAKE_SSH_DOCKER = $container
 $env:FAKE_SSH_DOCKER_EXE = $DockerExe
 $ConfigFile = Join-Path $TestRoot 'config_e2e.json'
+$MobileEnvFile = Join-Path $TestRoot 'environment.mobile.ts'
+Write-Utf8LfFile $MobileEnvFile "export const environment = {`n  serverOrigin: 'https://$Domain',`n};`n"
 Write-Utf8LfFile $ConfigFile (@{
         ServerHost = 'example.test'; SshUser = 'deploy'; SshPort = 22; Domain = $Domain
         HostKeyFingerprint = $fingerprint; DbName = 'warehouse_db'; DbUser = 'warehouse_user'
@@ -983,6 +985,7 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     $script:ChangeDomain = 'new.example.test'
     Assert-True ((Invoke-TestMode 'ChangeDomain') -eq 0) 'ChangeDomain exit 0'
     $script:ChangeDomain = ''
+    Assert-True ([System.IO.File]::ReadAllText($MobileEnvFile).Contains("serverOrigin: 'https://new.example.test'")) 'ChangeDomain points the mobile serverOrigin at the new domain'
 
     # Verify DOMAIN and DOMAINS_LEGACY
     Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAIN')[0] -eq 'new.example.test') 'shared/DOMAIN updated to new.example.test'

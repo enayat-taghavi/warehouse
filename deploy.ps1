@@ -73,6 +73,7 @@ $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
 $LocalBackupRoot = Join-Path $ScriptRoot 'backups\soft'
 $LocalDeployScratch = Join-Path $ScriptRoot 'scratch\deploy'
+$MobileEnvFile = ''  # empty = frontend\src\environments\environment.mobile.ts (Get-MobileEnvPath)
 $FrontDistRelative = 'dist\warehouse-app\browser'
 
 $RemoteBackupDir = '/var/www/warehouse/shared/backups'
@@ -530,6 +531,32 @@ function Save-ConfigModuleList([string]$Modules) {
 function Save-ConfigDomain([string]$Domain) {
     # Records the server's new primary domain.
     Save-ConfigSetting ([ordered]@{ Domain = $Domain })
+}
+
+function Get-MobileEnvPath {
+    # Tests point $MobileEnvFile at a copy so the repository file is never touched.
+    if ($script:MobileEnvFile) { return $script:MobileEnvFile }
+    return (Join-Path $ScriptRoot 'frontend\src\environments\environment.mobile.ts')
+}
+
+function Update-MobileServerOrigin([string]$Domain) {
+    # The next production APK talks to the new primary domain. Apps already installed move on their own
+    # (DomainMigrationService) once nothing is left unsent; only this build-time default changes here.
+    $path = Get-MobileEnvPath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        Write-Warn "Mobile environment file not found ($path): set serverOrigin to https://$Domain before the next APK build."
+        return $false
+    }
+    $text = [System.IO.File]::ReadAllText($path, $Utf8NoBom)
+    $originRe = "(serverOrigin:\s*')https://[^']*(')"
+    if ($text -notmatch $originRe) {
+        Write-Warn "No serverOrigin line in ${path}: set it to https://$Domain before the next APK build."
+        return $false
+    }
+    $text = [regex]::Replace($text, $originRe, "`${1}https://$Domain`${2}")
+    $text = [regex]::Replace($text, '(Mobile Production \()[^)]*(\))', "`${1}$Domain`${2}")
+    Write-Utf8LfFile $path $text
+    return $true
 }
 
 function Get-ConfigPath {
@@ -2811,12 +2838,19 @@ function Invoke-ChangeDomainMode([string]$NewDomain) {
 
     # Update deploy_config.json with timestamped backup
     Save-ConfigDomain $NewDomain
+    $mobileUpdated = Update-MobileServerOrigin $NewDomain
 
     Write-Success "Domain changed successfully!"
     Write-Success "  Primary domain (active): $NewDomain"
     Write-Success "  Legacy domain (transition): $($config.Domain)"
+    if ($mobileUpdated) {
+        Write-Success "  Mobile app server origin: https://$NewDomain ($(Get-MobileEnvPath))"
+    }
     Write-Warn "CRITICAL: OAuth redirect URI in Google Cloud Console must be updated to:"
     Write-Warn "  https://$NewDomain/api/accounts/gdrive/callback/"
+    Write-Warn "Commit the mobile environment change and build and publish a new APK (npm run build:mobile); installed apps switch to $NewDomain by themselves once their offline data is sent."
+    Write-Warn "Web notifications: browsers must allow notifications again on $NewDomain (permission is per domain); Android (FCM) notifications need nothing."
+    Write-Warn "ID cards: if a custom domain is set in the ID card settings, change it to https://$NewDomain; cards already printed keep working only while $($config.Domain) still redirects."
     Write-Warn "Run -FinishDomainChange only after users have opened the app on $NewDomain. Even then $($config.Domain) keeps serving the API and app files (only page navigation is redirected), so an installed app can still send its offline data before it moves."
     return 0
 }
@@ -2847,6 +2881,7 @@ function Invoke-RemoveLegacyDomainMode([string]$LegacyDomain) {
     Assert-Interactive 'RemoveLegacyDomain'
     Write-Warn "This will remove the 301 redirect for legacy domain '$LegacyDomain'."
     Write-Warn "Its TLS certificate directory will be archived into shared/retired/tls/ (no files deleted)."
+    Write-Warn "Links on that domain stop working, including QR codes on ID cards printed while it was the primary domain."
     if (-not (Confirm-TypedWord "RETIRE $LegacyDomain" "Type 'RETIRE $LegacyDomain' to confirm removal")) {
         Write-Warn "Removal of legacy domain $LegacyDomain cancelled."
         return 0
