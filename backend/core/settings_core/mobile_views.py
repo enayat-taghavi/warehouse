@@ -64,12 +64,15 @@ class MobileFileDownloadView(APIView):
             raise Http404("File not found.")
 
         if kind == 'apk':
-            return FileResponse(
+            response = FileResponse(
                 open(file_path, 'rb'),
                 as_attachment=True,
                 filename=name,
                 content_type='application/vnd.android.package-archive',
             )
+            # APK با همان نام دوباره منتشر می‌شود (publish_mobile_apk)؛ Cloudflare نباید نسخهٔ قدیمی را نگه دارد
+            response['Cache-Control'] = 'no-store'
+            return response
         else:
             return FileResponse(
                 open(file_path, 'rb'),

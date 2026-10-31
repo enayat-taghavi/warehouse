@@ -230,6 +230,8 @@ class MobileReleaseTests(TestCase):
         self.assertEqual(res.headers.get('Content-Type'), 'application/vnd.android.package-archive')
         self.assertIn('attachment;', res.headers.get('Content-Disposition', ''))
         self.assertIn('CoManage-2.0.0-myket.apk', res.headers.get('Content-Disposition', ''))
+        # همان نام دوباره منتشر می‌شود؛ کش Cloudflare نباید APK قدیمی را بدهد
+        self.assertEqual(res.headers.get('Cache-Control'), 'no-store')
         if hasattr(res, 'close'):
             res.close()
 
