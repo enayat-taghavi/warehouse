@@ -16739,3 +16739,95 @@ feat(chat access ui): messenger section in user edit and company chat contact-sc
 1. **همگام‌سازی مایگریشن‌ها:** با به‌روزرسانی اسکریپت ...
 
 ---
+
+### Task 1 of 1 — 2026-10-31 23:25:34
+- **Status:** DONE
+- **Conversation:** `997a66ab-8058-4d92-aa8d-7eef84f110f0`
+- **Steps:** 84
+- **Tokens:** 133214
+- **Duration:** 4m 9s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 9/9 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Unified invoices menu, sub-step d: update Playwright scenarios 03b and 03c, their captions, the training-videos plan table and the manual test guide to the new «فاکتورها» menu item and the treasurer «تن‌خواه» item
+
+
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only these six existing files, and only as described in section 4: `tests/playwright/scenarios/03b-invoice-approvals.spec.ts`, `tests/playwright/scenarios/03b-invoice-approvals.captions.json`, `tests/playwright/scenarios/03c-invoice-payment.spec.ts`, `tests/playwright/scenarios/03c-invoice-payment.captions.json`, `Documents/Training_Videos/plan_training_videos.md`, `Documents/Release_v1/manual_test_guide.md`. Create no file. Never edit `frontend/`, `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, any `03a-*` file or any other scenario.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- Do not run Playwright, do not record or render any video, do not generate audio, do not run `seed_video_demo`, and do not touch the database. This session edits text only.
+- All user-facing text (captions, guide and plan cells) stays Persian, exactly as given below. Keep the JSON files valid (UTF-8, same keys, same indentation). Persian markdown files keep their `<div dir="rtl" align="right">` wrapper.
+
+2. Context (read these; nothing else is needed):
+- The app now has ONE menu item «فاکتورها» (route `/app/finance/invoices`) for supervisor, accountant, manager and treasurer, instead of the old items «تایید فاکتورها» (`supervisor-invoices`), «ممیزی فاکتورها» (`accountant-invoices`), the invoice tab of «کارتابل تاییدات» (`manager-approvals`) and «تسویه فاکتور و تن‌خواه» (`treasurer-invoices`). The old routes still redirect to `/app/finance/invoices?view=cartable`.
+- The page has two top sub-tabs: the role cartable (default, `view=cartable`) and «فاکتورهای من» (`view=mine`). The cartable sub-tab label per role (`frontend/src/app/modules/accounting/components/finance/invoices-hub/invoices-hub.ts` lines 23–28): supervisor «تایید فاکتورها», accountant «ممیزی فاکتورها», manager «مجوز پرداخت فاکتورها», treasurer «پرداخت فاکتورها». Inside the cartable each role sees the same list and buttons as before. The manager cartable is a plain list (no inner invoice tab to click); its row buttons are «مجوز پرداخت», «بازنگری», «چاپ / PDF».
+- The treasurer petty-cash refills moved to a separate menu item «تن‌خواه» (route `/app/finance/treasurer-petty-cash`). The treasurer invoice cartable shows only invoices ready for payment.
+- A plain employee (`demo_employee`, `t_employee`) keeps the old employee menu item «ثبت فاکتور» (`/app/finance/employee-invoices`); nothing changes for employee steps. An employee who opens `/app/finance/invoices` directly sees only «فاکتورهای من» and no cartable.
+- `tests/playwright/helpers/video.ts` lines 354–370: `tv.openMenu(label, fallbackPath)` clicks the sidebar button whose accessible name is exactly `label`, else goes to `fallbackPath`.
+- `tests/playwright/scenarios/03b-invoice-approvals.spec.ts` lines 1–98 and `tests/playwright/scenarios/03c-invoice-payment.spec.ts` lines 52–57.
+- `Documents/Training_Videos/plan_training_videos.md` lines 124–130 (the video table) and the progress log section «## ۷. گزارش پیشرفت» (it ends right before «## ۸.»).
+- `Documents/Release_v1/manual_test_guide.md` lines 78–84.
+
+3. Definitions:
+- NEW_CALL = `await tv.openMenu('فاکتورها', '/app/finance/invoices?view=cartable');`
+
+4. Task:
+- a) `03b-invoice-approvals.spec.ts`:
+  - Replace the supervisor calls at lines 31 and 67, the accountant call at line 77 and the manager call at line 87 with NEW_CALL (four times in total, same indentation).
+  - Delete line 88 (the line that clicks `page.getByRole('tab', { name: /^(فاکتورهای هزینه|فاکتور)/ })`). Nothing else in the manager block changes.
+  - Line 47 (employee, `'ثبت فاکتور'`, `/app/finance/employee-invoices`) stays exactly as it is.
+  - In the header comment (lines 1–5) add one line after line 4: ` * Supervisor, accountant and manager open the unified «فاکتورها» menu item; its default sub-tab is the role cartable.`
+- b) `03b-invoice-approvals.captions.json`, change only these three values (the text between the outer quotes below is the exact new JSON string value; the inner «» are part of the text):
+  - `supervisor`: "سرپرست وارد می‌شود و از منو «فاکتورها» را باز می‌کند. زیرتب «تایید فاکتورها» کارتابل اوست و فاکتور کارمند اینجا منتظر اوست."
+  - `accountant`: "حسابدار در «فاکتورها»، زیرتب «ممیزی فاکتورها»، ردیف‌ها، مالیات و مبلغ را بررسی می‌کند و «صدور سند» را می‌زند."
+  - `manager`: "مدیر در «فاکتورها»، زیرتب «مجوز پرداخت فاکتورها»، «مجوز پرداخت» را می‌دهد."
+- c) `03c-invoice-payment.spec.ts` line 55: replace with NEW_CALL. No other change.
+- d) `03c-invoice-payment.captions.json`, change only `login` to: "با حساب خزانه‌دار وارد می‌شویم و از منو «فاکتورها» را باز می‌کنیم. زیرتب «پرداخت فاکتورها» فقط فاکتورهای آمادهٔ پرداخت را دارد؛ تن‌خواه در آیتم جدای «تن‌خواه» است."
+- e) `plan_training_videos.md`, in the video table change only the fourth cell (the menu-pages cell) of three rows:
+  - row ۳-ب, new cell: «فاکتورها» (زیرتب‌های «تایید فاکتورها»، «ممیزی فاکتورها» و «مجوز پرداخت فاکتورها»)، «ثبت فاکتور» (کارمند)، «کارهای من»
+  - row ۳-ج, new cell: «فاکتورها» (زیرتب «پرداخت فاکتورها»)
+  - row ۴-ب: in that cell replace the item «تسویه فاکتور و تن‌خواه» with «تن‌خواه» (خزانه‌دار); keep the other items of the cell.
+  - At the end of the «## ۷. گزارش پیشرفت» section (as the last bullet before «## ۸.», keeping one blank line before «## ۸.»), add this bullet:
+    `- ۳۱ اکتبر ۲۰۲۶، منوی یکپارچهٔ فاکتورها: سرپرست، حسابدار، مدیر و خزانه‌دار حالا یک آیتم «فاکتورها» دارند و تن‌خواه خزانه‌دار آیتم جدای «تن‌خواه» است. سناریوهای ``03b`` و ``03c`` و زیرنویس‌هایشان با منوی تازه به‌روز شدند (آزموده و ضبط نشدند). **مانده:** آزمون و ضبط دوبارهٔ فیلم‌های ۳-ب و ۳-ج.`
+    (write `03b` and `03c` each in single backticks, as inline code.)
+  - Do not change any other line (older log entries keep the old names on purpose).
+- f) `manual_test_guide.md`, rows 1.10 to 1.16 (lines 78–84); columns are: step, page link, user, action, expected, empty result cell:
+  - 1.10 (`t_employee`) stays as it is.
+  - 1.11 (`t_supervisor`): page cell `[فاکتورها](https://app.farsalish.ir/app/finance/invoices)`; action: وارد شوید و از منو «فاکتورها» را باز کنید; expected: در منو فقط یک آیتم «فاکتورها» باشد؛ زیرتب «تایید فاکتورها» باز شود و فقط اسناد بخش الف بیاید (الان احتمالاً خالی است)؛ زیرتب «فاکتورهای من» هم باشد
+  - 1.12 (`t_accountant`): page cell `[فاکتورها](https://app.farsalish.ir/app/finance/invoices)`; action: وارد شوید و از منو «فاکتورها» را باز کنید; expected: زیرتب «ممیزی فاکتورها» باز شود و زیرتب «فاکتورهای من» هم باشد
+  - 1.13 (`t_manager`): page cell `[فاکتورها](https://app.farsalish.ir/app/finance/invoices)`; action: وارد شوید و از منو «فاکتورها» را باز کنید; expected: زیرتب «مجوز پرداخت فاکتورها» باز شود؛ در «کارتابل تاییدات» دیگر تب فاکتور نباشد
+  - 1.14 (`t_treasury`): page cell `[فاکتورها](https://app.farsalish.ir/app/finance/invoices)`; action: وارد شوید، از منو «فاکتورها» و بعد [تن‌خواه](https://app.farsalish.ir/app/finance/treasurer-petty-cash) را باز کنید; expected: در «فاکتورها» زیرتب «پرداخت فاکتورها» باز شود و هیچ اثری از تن‌خواه در آن نباشد؛ شارژ تن‌خواه فقط در آیتم جدای «تن‌خواه» باشد
+  - 1.15 stays as it is.
+  - 1.16 (`t_employee`): page cell `[فاکتورها](https://app.farsalish.ir/app/finance/invoices)`; action: لینک را مستقیم باز کنید; expected: فقط زیرتب «فاکتورهای من» دیده شود و هیچ کارتابل تایید یا ممیزی باز نشود
+  - Keep the column count and the empty last cell of each row. No other change in this file.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Once at the end, from the repository root: `node tests/playwright/node_modules/typescript/bin/tsc --noEmit -p tests/playwright` (must exit 0) and `python -X utf8 -c "import json; [json.load(open(p, encoding='utf-8')) for p in ['tests/playwright/scenarios/03b-invoice-approvals.captions.json', 'tests/playwright/scenarios/03c-invoice-payment.captions.json']]; print('json ok')"`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If the existing file differs from this task (line numbers, text), follow the real file and say so in the report.
+
+6. Before finishing:
+- Both commands in section 5 pass.
+- `git status --short` shows only the six files of section 1 (plus the pre-existing `tests/playwright/tools/index.py` and the runner files) before the commit, and only those pre-existing files after it.
+
+7. Output and stop condition:
+- Stage only the six files and commit with this message, without push:
+test(playwright): unified invoices menu in scenarios 03b/03c, captions, video plan and manual guide
+- Short English report: each file and what changed, the two command results, and anything that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست (Explanation)
+کاربر درخواست به‌روزرسانی سناریوهای آزمون ویدیویی پلی‌رایت (`03b` و `03c`)، فایل‌های زیرنویس آن‌ها، جدول طرح فیلم‌های آموزشی و راهنمای آزمون دستی را داشت تا با آیتم یکپارچه‌شدهٔ جدید «فاکتورها» (`/app/finance/invoices?view=cartable`) و تفکیک آیتم «تنخواه» خزانه‌دار (`/app/finance/treasurer-petty-cash`) منطبق شوند؛ بدون اجرای تست‌های سنگین مرورگری، رندر ویدیو یا دستکاری پایگاه داده.
+
+### ۲. اعتبارسنجی فنی (Verification)
+- مسیرها، شناسه‌های صفحات و ساختار سناریوهای `03b-invoice-approvals.spec.ts` و `03c-invoice-payment.spec.ts` و همچنین جداول مستندات `plan_training_videos.md` و `manual_test_guide.md` بررسی و تأیید شدند.
+- ...
+
+---
