@@ -4290,7 +4290,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 
 ===
 
-[ ] Session 1 of 1 — Backend restart on the local app environment for the APK no-store header (no build)
+[DONE] [ ] Session 1 of 1 — Backend restart on the local app environment for the APK no-store header (no build)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
