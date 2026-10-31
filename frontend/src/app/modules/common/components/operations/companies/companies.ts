@@ -48,13 +48,14 @@ import { ExcelImportModal } from '../../../../../shared/components/excel-import-
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
 import { CompanyProjectsTabComponent } from './company-projects-tab/company-projects-tab';
 import { CompanyWorkflowTabComponent } from './company-workflow-tab/company-workflow-tab.component';
+import { CompanyChatScopeCardComponent } from './company-chat-scope-card/company-chat-scope-card';
 import { CompanySettingsTabComponent } from './company-settings-tab/company-settings-tab.component';
 import { CompanyNumberingTabComponent } from './company-numbering-tab/company-numbering-tab.component';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal, CompanyProjectsTabComponent, CompanyWorkflowTabComponent, CompanySettingsTabComponent, CompanyNumberingTabComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal, CompanyProjectsTabComponent, CompanyWorkflowTabComponent, CompanyChatScopeCardComponent, CompanySettingsTabComponent, CompanyNumberingTabComponent],
   providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']

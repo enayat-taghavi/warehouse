@@ -1611,6 +1611,8 @@
                   </div>
                   <app-toggle-switch [checked]="userForm.is_superuser" (checkedChange)="userForm.is_superuser = $event" title="مدیر ارشد" />
                 </div>
+
+                <app-user-chat-policy *ngIf="editingUser?.id && !editingUser.is_superuser && editingUser.id !== auth.user()?.id" [userId]="editingUser.id" />
               </div>
             </div>
           </div>

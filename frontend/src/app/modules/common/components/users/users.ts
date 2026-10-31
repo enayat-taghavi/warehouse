@@ -38,6 +38,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { ToggleSwitchComponent } from '../../../../shared/components/toggle-switch/toggle-switch.component';
+import { UserChatPolicyComponent } from './user-chat-policy/user-chat-policy';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { RoleBundlesPanel } from './role-bundles-panel/role-bundles-panel';
 import { UserPermissionsTabComponent } from './user-permissions-tab/user-permissions-tab';
@@ -60,7 +61,7 @@ interface AuthorizedSystems {
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ToggleSwitchComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent, WorkflowSubstitutesComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ToggleSwitchComponent, ServerUrlPipe, RoleBundlesPanel, UserPermissionsTabComponent, WorkflowSubstitutesComponent, UserChatPolicyComponent],
   providers: [UsersFacade],
   templateUrl: './users.html',
   styleUrl: './users.css'

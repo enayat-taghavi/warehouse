@@ -1246,6 +1246,7 @@
                 برای دیدن تنظیمات شرکت، ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید.
               </div>
             } @else {
+              <app-company-chat-scope-card [companyId]="companyModal.data.id!" />
               <app-company-settings-tab [companyId]="companyModal.data.id!" />
             }
           </div>
