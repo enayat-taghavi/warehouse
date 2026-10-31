@@ -45,14 +45,14 @@
               }
             </dl>
             @if (isDeleted) {
-              <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm font-bold flex items-start gap-2">
-                <svg appIcon="alert-triangle" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+              <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm font-bold flex items-start gap-2" role="alert">
+                <svg appIcon="alert-triangle" class="w-5 h-5 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
                 <span>این سند چاپ معتبری دارد اما دیگر در سامانه وجود ندارد (حذف شده است).</span>
               </div>
             }
             @if (current(); as cur) {
               <div class="border-t border-line pt-3 mt-1">
-                <h2 class="text-xs font-black text-fg-muted mb-2">وضعیت فعلی در سامانه</h2>
+                <h2 class="text-sm font-black text-fg mb-2">وضعیت فعلی در سامانه</h2>
                 <dl class="text-sm space-y-2">
                   @if (cur.number) {
                     <div class="flex justify-between gap-3">
@@ -82,7 +82,7 @@
                   }
                 </dl>
                 @if (cur.number && cur.number !== result()?.number) {
-                  <div class="text-xs text-fg-muted mt-2">شمارهٔ فعلی سند با شمارهٔ چاپشده فرق دارد.</div>
+                  <div class="text-xs text-fg-muted mt-2">شمارهٔ فعلی سند با شمارهٔ چاپ‌شده فرق دارد.</div>
                 }
               </div>
             }
