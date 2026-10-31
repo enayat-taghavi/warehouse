@@ -24,14 +24,16 @@ class SettingsAndPurgeTestCase(BaseCommsTestCase):
 
     def setUp(self):
         super().setUp()
-        SystemSetting.objects.filter(key__in=['chat_enabled', 'chat_file_sharing']).delete()
+        SystemSetting.objects.filter(key__in=['chat_enabled', 'chat_file_sharing', 'chat_max_upload_mb']).delete()
+        clear_setting_cache('chat_max_upload_mb')
         clear_setting_cache('chat_enabled')
         clear_setting_cache('chat_file_sharing')
         clear_setting_cache('chat_enabled', self.wh1.id)
         clear_setting_cache('chat_enabled', self.wh2.id)
 
     def tearDown(self):
-        SystemSetting.objects.filter(key__in=['chat_enabled', 'chat_file_sharing']).delete()
+        SystemSetting.objects.filter(key__in=['chat_enabled', 'chat_file_sharing', 'chat_max_upload_mb']).delete()
+        clear_setting_cache('chat_max_upload_mb')
         clear_setting_cache('chat_enabled')
         clear_setting_cache('chat_file_sharing')
         clear_setting_cache('chat_enabled', self.wh1.id)
@@ -92,6 +94,59 @@ class SettingsAndPurgeTestCase(BaseCommsTestCase):
 
         resp = self.client.post(url, {'file': uploaded_file, 'message_id': self.direct_message.id}, format='multipart')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def _upload_size_probe(self, size_bytes):
+        self.auth(self.manager_wh1)
+        data = SimpleUploadedFile("big.txt", b"a" * size_bytes, content_type="text/plain")
+        return self.client.post(
+            "/api/communications/messages/upload/",
+            {'file': data, 'message_id': self.direct_message.id},
+            format='multipart',
+        )
+
+    def test_upload_limit_default_is_10mb(self):
+        """بدون تنظیم، سقف ۱۰ مگابایت است و ۱۱ مگابایت رد می‌شود"""
+        SystemSetting.objects.filter(key='chat_max_upload_mb').delete()
+        clear_setting_cache('chat_max_upload_mb')
+        resp = self._upload_size_probe(11 * 1024 * 1024)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('10', resp.data['error'])
+
+    def test_upload_limit_setting_applies(self):
+        """با تنظیم ۲ مگابایت، ۳ مگابایت رد و ۱ مگابایت از بررسی حجم رد می‌شود"""
+        SystemSetting.objects.update_or_create(
+            key='chat_max_upload_mb', warehouse_id=None, defaults={'value': 2}
+        )
+        clear_setting_cache('chat_max_upload_mb')
+        too_big = self._upload_size_probe(3 * 1024 * 1024)
+        self.assertEqual(too_big.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('2', too_big.data['error'])
+        ok = self._upload_size_probe(1 * 1024 * 1024)
+        self.assertNotIn('حجم فایل نباید', str(ok.data.get('error', '')))
+
+    def test_upload_limit_bad_value_falls_back_to_default(self):
+        """مقدار خراب در دیتابیس سقف را به ۱۰ برمی‌گرداند"""
+        SystemSetting.objects.update_or_create(
+            key='chat_max_upload_mb', warehouse_id=None, defaults={'value': 'abc'}
+        )
+        clear_setting_cache('chat_max_upload_mb')
+        from settings_core.services import get_chat_max_upload_mb
+        self.assertEqual(get_chat_max_upload_mb(), 10)
+
+    def test_public_config_exposes_upload_limit(self):
+        """/api/public/config/ مقدار chat_max_upload_mb را می‌دهد"""
+        SystemSetting.objects.filter(key='chat_max_upload_mb').delete()
+        clear_setting_cache('chat_max_upload_mb')
+        self.client.credentials()
+        resp = self.client.get('/api/public/config/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['chat_max_upload_mb'], 10)
+        SystemSetting.objects.update_or_create(
+            key='chat_max_upload_mb', warehouse_id=None, defaults={'value': 25}
+        )
+        clear_setting_cache('chat_max_upload_mb')
+        resp = self.client.get('/api/public/config/')
+        self.assertEqual(resp.data['chat_max_upload_mb'], 25)
 
     def test_purge_preserves_soft_delete_tombstone(self):
         """دستور purge_expired_chat_media به صورت پیش‌فرض فایل فیزیکی را پاک کرده و Tombstone را برای کلاینت‌های آفلاین حفظ می‌کند"""

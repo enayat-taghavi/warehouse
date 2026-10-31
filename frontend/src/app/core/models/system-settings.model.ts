@@ -21,6 +21,7 @@ export interface SystemSettingsConfig {
   scanner_custom_try_harder: boolean;
   chat_enabled: boolean;
   chat_file_sharing: boolean;
+  chat_max_upload_mb?: number;
   [key: string]: any; // To support future fields temporarily
 }
 

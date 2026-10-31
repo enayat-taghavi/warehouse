@@ -12,6 +12,8 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob } from '../../../../../core/platform/file-output';
+import { ConfigApiService } from '../../../../../core/api/config-api.service';
+import { getChatThumb, putChatThumb } from './chat-thumb-cache';
 
 /** بخشی از متن پیام: متن ساده یا نشانی http/https */
 export interface TextSegment { url: boolean; text: string }
@@ -40,7 +42,8 @@ export interface MediaEntry { msg: ChatMessage; att: MessageAttachment }
 export const CHAT_ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls', '.doc', '.docx', '.txt', '.csv'];
 /** بیشترین تعداد فایل در یک پیام */
 export const CHAT_MAX_FILES = 10;
-const CHAT_MAX_FILE_BYTES = 10 * 1024 * 1024;
+/** سقف پیش‌فرض حجم هر فایل (مگابایت)؛ تا رسیدن تنظیم سرور (chat_max_upload_mb) یا در حالت آفلاین */
+export const CHAT_DEFAULT_MAX_FILE_MB = 10;
 
 @Component({
   selector: 'app-chat-drawer',
@@ -66,6 +69,9 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private toast = inject(ToastService);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private api = inject(ApiService);
+  private configApi = inject(ConfigApiService);
+  /** سقف مؤثر حجم هر فایل به مگابایت (تنظیم سرور، پیش‌فرض ۱۰) */
+  public maxUploadMb = signal<number>(CHAT_DEFAULT_MAX_FILE_MB);
   private sub = new Subscription();
   /** پیش‌نمایش عکس پیوست‌ها (blob با توکن، چون <img> هدر Authorization نمی‌فرستد) */
   private attachmentPreviews = new Map<string, string | null>();
@@ -171,6 +177,14 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.commService.getCapabilities()
       .then(c => this.canCreateGroup.set(!!c?.can_create_group))
       .catch(() => this.canCreateGroup.set(false));
+    // سقف حجم فایل از تنظیم سرور؛ بدون پاسخ (آفلاین) همان ۱۰ مگابایت می‌ماند
+    this.sub.add(this.configApi.getPublicConfig().subscribe({
+      next: (cfg) => {
+        const mb = Number(cfg?.chat_max_upload_mb);
+        if (Number.isFinite(mb) && mb >= 1 && mb <= 100) this.maxUploadMb.set(Math.floor(mb));
+      },
+      error: () => { /* سقف پیش‌فرض می‌ماند */ }
+    }));
 
     // رویدادهای عضویت گروه
     this.sub.add(
@@ -652,12 +666,6 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       return;
     }
 
-    // بی‌اینترنت، چند فایل با هم فرستاده نمی‌شود (صف آفلاین فایل ندارد)؛ فایل‌ها و متن در کادر می‌مانند
-    if (files.length > 1 && !this.isOnline()) {
-      this.toast.show('warning', 'ارسال چند فایل با هم به اینترنت نیاز دارد. فایل‌ها و متن شما نگه داشته شد؛ پس از وصل شدن، دوباره «ارسال» را بزنید.');
-      return;
-    }
-
     const replyId = this.replyTo()?.id;
     this.isSending.set(true);
     this.messageInputText = '';
@@ -742,8 +750,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         this.toast.show('error', `نوع فایل «${name || 'بی‌نام'}» مجاز نیست. فقط عکس، PDF، Word، Excel، متن و CSV.`);
         continue;
       }
-      if (file.size > CHAT_MAX_FILE_BYTES) {
-        this.toast.show('error', `حجم فایل «${name}» نباید بیش از ۱۰ مگابایت باشد.`);
+      if (file.size > this.maxUploadMb() * 1024 * 1024) {
+        this.toast.show('error', `حجم فایل «${name}» نباید بیش از ${this.maxUploadMb().toLocaleString('fa-IR')} مگابایت باشد.`);
         continue;
       }
       accepted.push(file);
@@ -1010,9 +1018,20 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const key = `${att.id}|${url}`;
     if (this.attachmentPreviews.has(key)) return this.attachmentPreviews.get(key) ?? null;
     this.attachmentPreviews.set(key, null);
+    const isThumb = !!att.thumbnail_url && url === att.thumbnail_url;
+    const attId = String(att.id);
+    const uid = this.currentUserId();
     firstValueFrom(this.api.download(this.apiPath(url)))
-      .then((blob) => this.attachmentPreviews.set(key, URL.createObjectURL(blob)))
-      .catch(() => { /* پیش‌نمایش اختیاری است */ });
+      .then((blob) => {
+        this.attachmentPreviews.set(key, URL.createObjectURL(blob));
+        if (isThumb) void putChatThumb(uid, attId, blob);
+      })
+      .catch(async () => {
+        // آفلاین یا خطای شبکه: بندانگشتی دیده‌شدهٔ قبلی از کش نشان داده می‌شود
+        if (!isThumb) return;
+        const cached = await getChatThumb(uid, attId);
+        if (cached) this.attachmentPreviews.set(key, URL.createObjectURL(cached));
+      });
     return null;
   }
 

@@ -12,6 +12,7 @@ import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ApiService } from '../../../../../core/api/api.service';
+import { ConfigApiService } from '../../../../../core/api/config-api.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -96,7 +97,8 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
         { provide: StateService, useValue: { appState: { activeWarehouseId: 'ALL' } } },
         { provide: AuthService, useValue: { user: () => ({ id: 1, username: 'me', first_name: '', last_name: '' }) } },
         { provide: ToastService, useValue: toast },
-        { provide: ApiService, useValue: { download: vi.fn() } }
+        { provide: ApiService, useValue: { download: vi.fn() } },
+        { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } }
       ]
     }).compileComponents();
 

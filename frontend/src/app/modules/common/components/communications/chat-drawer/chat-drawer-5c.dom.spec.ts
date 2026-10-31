@@ -12,6 +12,7 @@ import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ApiService } from '../../../../../core/api/api.service';
+import { ConfigApiService } from '../../../../../core/api/config-api.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -24,6 +25,8 @@ const flush = async (fixture: ComponentFixture<any>) => {
     fixture.detectChanges();
   }
 };
+
+let publicConfig$ = new BehaviorSubject<any>({});
 
 describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
   let fixture: ComponentFixture<ChatDrawerComponent>;
@@ -55,6 +58,7 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
   const qa = (sel: string) => Array.from(fixture.nativeElement.querySelectorAll(sel)) as HTMLElement[];
 
   beforeEach(async () => {
+    publicConfig$ = new BehaviorSubject<any>({});
     const showFn = vi.fn();
     toast = {
       show: showFn,
@@ -98,7 +102,8 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
         { provide: StateService, useValue: { appState: { activeWarehouseId: 'ALL' } } },
         { provide: AuthService, useValue: { user: () => ({ id: 1, username: 'me', first_name: '', last_name: '' }) } },
         { provide: ToastService, useValue: toast },
-        { provide: ApiService, useValue: { download: vi.fn() } }
+        { provide: ApiService, useValue: { download: vi.fn() } },
+        { provide: ConfigApiService, useValue: { getPublicConfig: () => publicConfig$ } }
       ]
     }).compileComponents();
 
@@ -265,6 +270,20 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     expect(removes.length).toBe(1);
   });
 
+  it('7b. file above the default 10 MB limit is refused with a Persian message; same for a server-configured 2 MB limit', async () => {
+    const big = new File([new Uint8Array(11 * 1024 * 1024)], 'big.pdf', { type: 'application/pdf' });
+    component.addFiles([big]);
+    expect(component.pickedFiles().length).toBe(0);
+    expect(toast.show).toHaveBeenCalledWith('error', expect.stringContaining('مگابایت'));
+
+    publicConfig$.next({ chat_max_upload_mb: 2 });
+    expect(component.maxUploadMb()).toBe(2);
+    const three = new File([new Uint8Array(3 * 1024 * 1024)], 'three.pdf', { type: 'application/pdf' });
+    component.addFiles([three]);
+    expect(component.pickedFiles().length).toBe(0);
+    expect(toast.show).toHaveBeenLastCalledWith('error', expect.stringContaining('۲'));
+  });
+
   it('8. a file named x.svg passed to addFiles is refused (strip stays empty) and ToastService.show was called with "error"', async () => {
     const toastSpy = vi.spyOn(toast, 'show');
     const svg = new File(['<svg></svg>'], 'x.svg', { type: 'image/svg+xml' });
@@ -276,7 +295,7 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     expect(toastSpy).toHaveBeenCalledWith('error', expect.any(String));
   });
 
-  it('9. with two picked files and vi.spyOn(component, "isOnline").mockReturnValue(false), offline-multi-note is visible; calling component.sendMessage() does NOT call the mocked service sendMessage, and pickedFiles().length is still 2', async () => {
+  it('9. offline with two picked files there is no refusal note; sendMessage hands both files to the service (the chat outbox keeps them until the network returns)', async () => {
     vi.stubGlobal('URL', {
       ...URL,
       createObjectURL: vi.fn(() => 'blob:p'),
@@ -289,11 +308,12 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     fixture.detectChanges();
 
     const note = q('[data-testid="offline-multi-note"]');
-    expect(note).not.toBeNull();
+    expect(note).toBeNull();
 
     await component.sendMessage();
-    expect(comm.sendMessage).not.toHaveBeenCalled();
-    expect(component.pickedFiles().length).toBe(2);
+    expect(comm.sendMessage).toHaveBeenCalledTimes(1);
+    const sentFiles = (comm.sendMessage as any).mock.calls[0][3] as File[];
+    expect(sentFiles.map(f => f.name)).toEqual(['a.png', 'b.pdf']);
   });
 
   it('9b. picked files and text stay with their conversation: switching to another conversation empties the strip, switching back restores them; closing the drawer keeps them for the next open', async () => {

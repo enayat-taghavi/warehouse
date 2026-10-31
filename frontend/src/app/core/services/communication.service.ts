@@ -7,6 +7,11 @@ import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { wsUrl } from '../platform/server-origin';
 import { isServerUnreachable } from './server-reachability';
+import { NetworkStatusService } from './network-status.service';
+import {
+  ChatOutboxRow, countChatOutbox, deleteChatOutbox, deleteChatOutboxForUser, fromOutboxFiles, listChatOutbox,
+  putChatOutbox, toOutboxFiles, updateChatOutbox
+} from './chat-outbox';
 
 /** لغو آپلود به دست کاربر */
 export class UploadCancelledError extends Error {
@@ -64,6 +69,8 @@ export interface ChatMessage {
   pending_file_name?: string;
   /** متن رد قطعی سرور برای پیام ناموفق (فقط سمت کاربر) */
   failure_reason?: string;
+  /** پیام در انتظار برگشت اینترنت است و خودکار فرستاده می‌شود (فقط سمت کاربر) */
+  waiting_network?: boolean;
   /** پیشرفت آپلود فایل جاری، ۰ تا ۱۰۰ (فقط سمت کاربر) */
   upload_progress?: number | null;
   /** شمارهٔ فایل جاری (از ۱) و تعداد کل فایل‌های این پیام (فقط سمت کاربر) */
@@ -204,11 +211,29 @@ export class CommunicationService implements OnDestroy {
   private chatAuthenticatedOnce = false;
   /** کاربری که پیام‌ها/فایل‌های ارسال‌نشده را نوشته است */
   private outgoingOwnerId: number | null = null;
+  /** پیام‌هایی که ردیفشان در صندوق خروجی IndexedDB نوشته شده است */
+  private outboxRows = new Set<string>();
+  /** ارسال خودکار پس از برگشت اتصال برای هر پیام (رد قطعی سرور یا لغو کاربر: false) */
+  private outboxAutoRetry = new Map<string, boolean>();
+  /** زنجیرهٔ نوشتن در صندوق خروجی تا ترتیب نوشتن/پاک کردن به هم نریزد */
+  private outboxChain: Promise<void> = Promise.resolve();
+  /** بازیابی صندوق خروجی برای کاربر فعلی (یک بار برای هر کاربر) */
+  private outboxRestore: { userId: number; done: Promise<void> } | null = null;
+  /** ارسال صف در حال اجراست */
+  private outboxFlushing = false;
+  /** درخواست ارسال صف در حین ارسال قبلی رسید؛ پس از پایان یک دور دیگر اجرا می‌شود */
+  private outboxFlushAgain = false;
   /** شمارهٔ ترتیبی درخواست‌های loadMessages برای نادیده گرفتن پاسخ‌های کهنه */
   private loadMessagesSeq = 0;
 
   constructor() {
     this.initAudio();
+    // برگشت اینترنت یا در دسترس شدن سرور (حتی وقتی سوکت چت وصل مانده بود): صندوق خروجی فرستاده می‌شود
+    try {
+      NetworkStatusService.getInstance().state$.subscribe(state => {
+        if (state === 'online' && this.getCurrentUserId() !== null && this.outgoingMessages.size > 0) void this.flushOutbox();
+      });
+    } catch {}
     this.configApi.getPublicConfig().subscribe({
       next: (config) => {
         if (config && config.chat_enabled !== undefined) {
@@ -379,6 +404,7 @@ export class CommunicationService implements OnDestroy {
     this.closeSocketSilently(this.commentWs);
     this.commentWs = null;
     this.connectedUserId = this.getCurrentUserId();
+    void this.restoreOutbox();
 
     let chatPath = '/ws/chat/';
     if (warehouseId) {
@@ -444,6 +470,8 @@ export class CommunicationService implements OnDestroy {
               void this.syncMissedMessages();
             }
             this.chatAuthenticatedOnce = true;
+            // سرور در دسترس است: پیام‌های صندوق خروجی به ترتیب فرستاده می‌شوند
+            void this.flushOutbox();
             return;
           }
 
@@ -634,10 +662,12 @@ export class CommunicationService implements OnDestroy {
     this.playedMessageIds.clear();
     this.activeCommentSubscriptions.clear();
     // پیام‌ها و فایل‌های ارسال‌نشده متعلق به کاربر قبلی‌اند و نباید به کاربر بعدی روی همین دستگاه برسند
+    // ردیف‌های صندوق خروجی در IndexedDB می‌مانند (فقط به همان کاربر نشان داده می‌شوند)؛ پاک کردنشان فقط با discardOutboxForLogout
     if (dropOutgoing) {
       this.clearOutgoingFiles();
       this.outgoingMessages.clear();
       this.outgoingOwnerId = null;
+      this.forgetOutboxMemory();
     }
     if (closeDrawer) {
       this.isChatDrawerOpen.set(false);
@@ -936,6 +966,8 @@ export class CommunicationService implements OnDestroy {
           continue;
         }
         this.outgoingMessages.delete(tid);
+        // سرور پیام را پذیرفته و فایلی در انتظار ندارد
+        this.outboxDelete(tid);
       }
       result.push(s);
     }
@@ -974,7 +1006,170 @@ export class CommunicationService implements OnDestroy {
       this.clearOutgoingFiles();
       this.outgoingMessages.clear();
       this.outgoingOwnerId = null;
+      this.forgetOutboxMemory();
     }
+  }
+
+  private forgetOutboxMemory(): void {
+    this.outboxRows.clear();
+    this.outboxAutoRetry.clear();
+    this.outboxRestore = null;
+  }
+
+  /** اجرای نوشتن‌های صندوق خروجی به ترتیب؛ خطای IndexedDB فقط گزارش می‌شود و ارسال را نمی‌شکند */
+  private queueOutbox(op: () => Promise<unknown>): Promise<void> {
+    this.outboxChain = this.outboxChain.then(op).then(() => undefined, (e) => {
+      console.warn('[CommunicationService] Chat outbox write failed', e);
+    });
+    return this.outboxChain;
+  }
+
+  /** نسخهٔ قابل ذخیرهٔ حباب (بدون پیشرفت آپلود) */
+  private outboxSnapshot(m: ChatMessage): Record<string, unknown> {
+    const { upload_progress, upload_index, ...rest } = m;
+    return { ...rest };
+  }
+
+  /**
+   * نوشتن حالت فعلی پیام ارسالی در صندوق خروجی. فقط وقتی پیام هنوز در حافظه هست نوشته می‌شود؛
+   * پاک کردن ردیف هرگز از نبودن در حافظه نتیجه گرفته نمی‌شود (فقط outboxDelete).
+   */
+  private outboxSync(tempId: string): Promise<void> {
+    const msg = this.outgoingMessages.get(tempId);
+    const userId = this.outgoingOwnerId;
+    if (!msg || userId === null || !this.isLocalOutgoing(msg)) return this.outboxChain;
+    const autoRetry = this.outboxAutoRetry.get(tempId) ?? true;
+    const uploadedCount = this.uploadedCounts.get(tempId) ?? 0;
+    const snapshot = this.outboxSnapshot(msg);
+    const row: ChatOutboxRow = {
+      tempId, userId, conversation: String(msg.conversation), message: snapshot,
+      files: toOutboxFiles(this.pendingFiles.get(tempId) || []),
+      uploadedCount, autoRetry, createdAt: msg.created_at || new Date().toISOString()
+    };
+    const put = async () => {
+      try {
+        await putChatOutbox(row);
+      } catch (e) {
+        // نوشتن نشد (مثلاً فضای دستگاه پر است): دفعهٔ بعد دوباره کامل نوشته می‌شود
+        this.outboxRows.delete(tempId);
+        throw e;
+      }
+    };
+    if (this.outboxRows.has(tempId)) {
+      return this.queueOutbox(async () => {
+        const n = await updateChatOutbox(tempId, { message: snapshot, uploadedCount, autoRetry });
+        // ردیف نیست (نوشتن قبلی شکست خورده بود) ولی پیام هنوز ارسال نشده: دوباره کامل نوشته می‌شود
+        if (!n && this.outgoingMessages.has(tempId)) await put();
+      });
+    }
+    this.outboxRows.add(tempId);
+    return this.queueOutbox(put);
+  }
+
+  /** پاک کردن ردیف صندوق خروجی؛ فقط پس از پذیرش سرور یا کنار گذاشتن عمدی کاربر */
+  private outboxDelete(tempId: string): void {
+    this.outboxRows.delete(tempId);
+    this.outboxAutoRetry.delete(tempId);
+    void this.queueOutbox(() => deleteChatOutbox(tempId));
+  }
+
+  /** بازیابی پیام‌ها و فایل‌های ارسال‌نشدهٔ کاربر فعلی پس از بارگذاری دوبارهٔ برنامه (فقط ردیف‌های همین کاربر) */
+  private restoreOutbox(): Promise<void> {
+    const uid = this.getCurrentUserId();
+    if (uid === null) return Promise.resolve();
+    this.guardOutgoingOwner();
+    if (this.outboxRestore && this.outboxRestore.userId === uid) return this.outboxRestore.done;
+    const done = (async () => {
+      let rows: ChatOutboxRow[] = [];
+      try {
+        rows = await listChatOutbox(uid);
+      } catch (e) {
+        console.warn('[CommunicationService] Chat outbox read failed', e);
+        return;
+      }
+      if (this.getCurrentUserId() !== uid) return;
+      for (const row of rows) {
+        if (this.outgoingMessages.has(row.tempId) || this.outboxRows.has(row.tempId)) continue;
+        const files = fromOutboxFiles(row.files);
+        const base = row.message as unknown as ChatMessage;
+        const msg: ChatMessage = {
+          ...base, client_temp_id: row.tempId, conversation: row.conversation, is_me: true,
+          is_pending: base.delivery_status !== 'failed', delivery_status: base.delivery_status === 'failed' ? 'failed' : 'pending',
+          upload_progress: undefined, upload_index: undefined
+        };
+        this.outgoingOwnerId = uid;
+        this.outboxRows.add(row.tempId);
+        this.outboxAutoRetry.set(row.tempId, row.autoRetry !== false);
+        if (files.length) {
+          this.pendingFiles.set(row.tempId, files);
+          this.uploadedCounts.set(row.tempId, row.uploadedCount || 0);
+        }
+        this.outgoingMessages.set(row.tempId, msg);
+        const active = this.activeConversation$.value;
+        if (active && String(active.id) === row.conversation
+          && !this.activeMessages$.value.some(m => m.client_temp_id === row.tempId)) {
+          this.activeMessages$.next([...this.activeMessages$.value, msg]);
+        }
+      }
+    })();
+    this.outboxRestore = { userId: uid, done };
+    return done;
+  }
+
+  /**
+   * ارسال پیام‌های صندوق خروجی به ترتیب ساخت، از همان فایلی که ماند (uploadedCount).
+   * پیام ردشدهٔ قطعی سرور یا لغوشده به دست کاربر خودکار فرستاده نمی‌شود (کاربر «تلاش مجدد» یا حذف را می‌زند).
+   */
+  public async flushOutbox(): Promise<void> {
+    if (this.outboxFlushing) {
+      this.outboxFlushAgain = true;
+      return;
+    }
+    this.outboxFlushing = true;
+    try {
+      await this.restoreOutbox();
+      const uid = this.getCurrentUserId();
+      const queue = [...this.outgoingMessages.values()]
+        .filter(m => !!m.client_temp_id && this.isLocalOutgoing(m) && this.outboxAutoRetry.get(m.client_temp_id) !== false)
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      for (const m of queue) {
+        if (this.getCurrentUserId() !== uid) return;
+        const tid = m.client_temp_id as string;
+        if (!this.outgoingMessages.has(tid) || this.retrying.has(tid)) continue;
+        await this.retryMessage(tid);
+        // اگر سرور باز هم در دسترس نبود، بقیه همان‌جا در صف می‌مانند تا اتصال بعدی
+        if (this.outgoingMessages.get(tid)?.waiting_network) return;
+      }
+    } finally {
+      this.outboxFlushing = false;
+      if (this.outboxFlushAgain) {
+        this.outboxFlushAgain = false;
+        void this.flushOutbox();
+      }
+    }
+  }
+
+  /** تعداد پیام‌های ارسال‌نشدهٔ کاربر فعلی در این دستگاه (برای هشدار خروج) */
+  public async unsentOutboxCount(): Promise<number> {
+    const uid = this.getCurrentUserId();
+    if (uid === null) return 0;
+    try {
+      const stored = await countChatOutbox(uid);
+      return Math.max(stored, [...this.outgoingMessages.values()].filter(m => this.isLocalOutgoing(m)).length);
+    } catch {
+      return [...this.outgoingMessages.values()].filter(m => this.isLocalOutgoing(m)).length;
+    }
+  }
+
+  /** پاک کردن پیام‌های ارسال‌نشدهٔ کاربر فعلی؛ فقط پس از تأیید صریح خروج در رابط کاربری */
+  public async discardOutboxForLogout(): Promise<void> {
+    const uid = this.getCurrentUserId();
+    if (uid === null) return;
+    this.clearOutgoingFiles();
+    this.outgoingMessages.clear();
+    this.outgoingOwnerId = null;
+    this.forgetOutboxMemory();
+    await this.queueOutbox(() => deleteChatOutboxForUser(uid));
   }
 
   /**
@@ -988,6 +1183,7 @@ export class CommunicationService implements OnDestroy {
     this.uploadAborts.get(tid)?.();
     this.forgetFiles(tid);
     this.outgoingMessages.delete(tid);
+    this.outboxDelete(tid);
     this.activeMessages$.next(this.activeMessages$.value.filter(m => m.client_temp_id !== tid && m.id !== tid));
   }
 
@@ -1277,6 +1473,11 @@ export class CommunicationService implements OnDestroy {
       this.conversations$.next([updatedConv, ...otherConvs]);
     }
 
+    // پیش از اولین درخواست شبکه، پیام و فایل‌ها در صندوق خروجی IndexedDB نوشته می‌شوند تا با بارگذاری دوباره گم نشوند
+    // (نوشتن پیش از درخواست در زنجیرهٔ IndexedDB قرار می‌گیرد؛ منتظر آن نمی‌مانیم تا ارسال کند نشود)
+    this.outboxAutoRetry.set(tempId, true);
+    void this.outboxSync(tempId);
+
     await this.deliverOutgoing(tempId, {
       conversation: conversationId,
       text: text,
@@ -1297,7 +1498,8 @@ export class CommunicationService implements OnDestroy {
     if (this.retrying.has(clientTempId)) return;
     this.retrying.add(clientTempId);
 
-    this.applyOutgoingUpdate(clientTempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: undefined }));
+    this.outboxAutoRetry.set(clientTempId, true);
+    this.applyOutgoingUpdate(clientTempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: undefined, waiting_network: undefined }));
 
     try {
       await this.deliverOutgoing(clientTempId, {
@@ -1315,43 +1517,48 @@ export class CommunicationService implements OnDestroy {
    * ارسال متن و سپس فایل‌های پیوست یک پیام، یکی‌یکی و به ترتیب. هیچ متن یا فایلی بی‌صدا دور ریخته نمی‌شود:
    * - شکست ارسال متن یا آپلود هر فایل ⇒ وضعیت «ناموفق» با دکمهٔ تلاش مجدد؛ فایل‌های آپلودنشده در حافظه می‌مانند.
    * - لغو آپلود به دست کاربر هم همین‌طور: پیام «ناموفق» می‌ماند و فایل‌ها نگه داشته می‌شوند.
-   * - پیام دارای فایل از صف آفلاین عبور نمی‌کند (SKIP_OFFLINE) تا نسخهٔ بی‌فایل در صف نرود.
-   * - پیام فقط‌متنی مثل قبل در صورت قطع شبکه به صف آفلاین می‌رود و «در انتظار» می‌ماند.
+   * - پیام از صف آفلاین عمومی عبور نمی‌کند (SKIP_OFFLINE)؛ صف ماندگارش صندوق خروجی چت است.
+   * - سرور در دسترس نیست (isServerUnreachable) ⇒ «در انتظار اینترنت» و ارسال خودکار پس از اتصال دوباره.
+   * - رد قطعی 4xx یا لغو کاربر ⇒ «ناموفق» با دلیل؛ فقط با «تلاش مجدد» یا حذف کاربر تغییر می‌کند.
+   * - ردیف صندوق خروجی فقط پس از 2xx پیام و همهٔ فایل‌ها پاک می‌شود.
    */
   private async deliverOutgoing(tempId: string, payload: any): Promise<void> {
     const files = this.pendingFiles.get(tempId);
     let savedMsg: ChatMessage | null = null;
 
     try {
-      const options = files
-        ? { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) }
-        : {};
+      const options = { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) };
       const response: any = await firstValueFrom(
         this.http.post<ChatMessage>('/api/communications/messages/', payload, options)
       );
 
       // اگر آفلاین است و اینترسپتور پاسخ _offlinePending برگردانده باشد (فقط پیام بی‌فایل)
       if (response && response._offlinePending) {
-        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const }));
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, waiting_network: true }));
+        void this.outboxSync(tempId);
         return;
       }
       savedMsg = response as ChatMessage;
     } catch (err: any) {
       const status = typeof err?.status === 'number' ? err.status : 0;
+      // متن (و فایل) کاربر هرگز دور ریخته نمی‌شود
       if (isServerUnreachable(status)) {
-        console.warn('[CommunicationService] Server unreachable; message kept as failed for retry', status);
+        console.warn('[CommunicationService] Server unreachable; message waits in the chat outbox', status);
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: undefined, waiting_network: true }));
       } else {
         console.error('[CommunicationService] Failed to send message', err);
+        const reason = this.permanentRejectionText(err) ?? undefined;
+        if (reason) this.outboxAutoRetry.set(tempId, false);
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: false, delivery_status: 'failed' as const, failure_reason: reason, waiting_network: undefined }));
       }
-      // متن (و فایل) کاربر هرگز دور ریخته نمی‌شود؛ وضعیت به failed تغییر می‌کند
-      const reason = this.permanentRejectionText(err) ?? undefined;
-      this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: false, delivery_status: 'failed' as const, failure_reason: reason }));
+      void this.outboxSync(tempId);
       return;
     }
 
     if (files) {
       if (!savedMsg || !savedMsg.id) {
         this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: false, delivery_status: 'failed' as const }));
+        void this.outboxSync(tempId);
         return;
       }
       const base = savedMsg;
@@ -1359,7 +1566,7 @@ export class CommunicationService implements OnDestroy {
       const atts: MessageAttachment[] = Array.isArray(base.attachments) ? [...base.attachments] : [];
       const start = Math.max(this.uploadedCounts.get(tempId) ?? 0, atts.length);
       for (let i = start; i < files.length; i++) {
-        this.applyOutgoingUpdate(tempId, m => ({ ...m, upload_index: i + 1, upload_total: files.length, upload_progress: 0 }));
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, upload_index: i + 1, upload_total: files.length, upload_progress: 0, waiting_network: undefined }));
         try {
           const att = await this.uploadAttachment(files[i], base.id, {
             onProgress: pct => this.applyOutgoingUpdate(tempId, m => ({ ...m, upload_progress: pct })),
@@ -1369,24 +1576,33 @@ export class CommunicationService implements OnDestroy {
           atts.push(att);
           // فقط پس از پاسخ 2xx، این فایل آپلودشده حساب می‌شود
           this.uploadedCounts.set(tempId, i + 1);
+          void this.outboxSync(tempId);
         } catch (e) {
           this.uploadAborts.delete(tempId);
           // کاربر پیام را پس از تأیید کنار گذاشته است
           if (!this.pendingFiles.has(tempId)) return;
           const cancelled = e instanceof UploadCancelledError;
-          if (!cancelled) console.warn('[CommunicationService] Attachment upload failed; message kept as failed for retry', e);
+          if (!cancelled) console.warn('[CommunicationService] Attachment upload failed; message kept for retry', e);
           const rest = files.slice(i);
+          const errStatus = typeof (e as any)?.status === 'number' ? (e as any).status : -1;
+          const waiting = !cancelled && isServerUnreachable(errStatus);
+          const reason = cancelled ? 'ارسال فایل لغو شد؛ برای ارسال دوباره «تلاش مجدد» را بزنید.' : (this.permanentRejectionText(e) ?? undefined);
+          if (cancelled || (reason && !waiting)) this.outboxAutoRetry.set(tempId, false);
           this.applyOutgoingUpdate(tempId, () => ({
-            ...base, attachments: [...atts], client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'failed' as const,
+            ...base, attachments: [...atts], client_temp_id: tempId, is_me: true,
+            is_pending: waiting, delivery_status: waiting ? 'pending' as const : 'failed' as const,
+            waiting_network: waiting || undefined,
             pending_file_name: this.pendingNames(rest),
             upload_progress: null, upload_index: undefined, upload_total: files.length,
-            failure_reason: cancelled ? 'ارسال فایل لغو شد؛ برای ارسال دوباره «تلاش مجدد» را بزنید.' : (this.permanentRejectionText(e) ?? undefined)
+            failure_reason: waiting ? undefined : reason
           }));
+          void this.outboxSync(tempId);
           return;
         }
       }
       // فقط پس از تأیید همهٔ فایل‌ها، فایل‌ها از حافظه برداشته می‌شوند
       this.forgetFiles(tempId);
+      this.outboxDelete(tempId);
       const sent: ChatMessage = { ...base, attachments: atts };
       this.applyOutgoingUpdate(tempId, () => ({
         ...sent, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const,
@@ -1399,8 +1615,9 @@ export class CommunicationService implements OnDestroy {
     const finalMsg = savedMsg;
     this.applyOutgoingUpdate(tempId, m => ({
       ...m, ...(finalMsg || {}), client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const,
-      failure_reason: undefined
+      failure_reason: undefined, waiting_network: undefined
     }));
+    this.outboxDelete(tempId);
   }
 
   /** نام فایل‌های آپلودنشده برای نمایش در حباب */
@@ -1418,6 +1635,9 @@ export class CommunicationService implements OnDestroy {
     opts?: { onProgress?: (percent: number) => void; register?: (abort: () => void) => void }
   ): Promise<MessageAttachment> {
     let uploadFile = file;
+    // لغو در حین فشرده‌سازی هم پذیرفته می‌شود (پیش از شروع درخواست)
+    let cancelledEarly = false;
+    opts?.register?.(() => { cancelledEarly = true; });
 
     // اگر تصویر است، فشرده‌سازی در کلاینت به فرمت WebP
     if (file.type.startsWith('image/')) {
@@ -1433,6 +1653,7 @@ export class CommunicationService implements OnDestroy {
         console.warn('[ImageCompressor] Fallback to original image', e);
       }
     }
+    if (cancelledEarly) throw new UploadCancelledError();
 
     const formData = new FormData();
     formData.append('file', uploadFile);
@@ -1697,7 +1918,11 @@ export class CommunicationService implements OnDestroy {
           }
         } else {
           updated[index] = { ...existing, ...msg, is_me: existing.is_me ?? msg.is_me, is_pending: false, delivery_status: 'sent' };
-          if (tid) this.outgoingMessages.delete(tid);
+          if (tid) {
+            this.outgoingMessages.delete(tid);
+            // سرور پیام را پذیرفته (رسیدن زنده از سرور) و فایلی در انتظار ندارد
+            this.outboxDelete(tid);
+          }
         }
         this.activeMessages$.next(updated);
       }

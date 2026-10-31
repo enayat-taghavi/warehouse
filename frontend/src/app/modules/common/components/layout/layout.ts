@@ -1339,6 +1339,19 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   async logout() {
+    // پیام‌های چتِ ارسال‌نشده با خروج عمدی پاک می‌شوند (حریم خصوصی دستگاه مشترک)؛ فقط پس از تأیید صریح کاربر
+    const unsentChat = await this.commService.unsentOutboxCount().catch(() => 0);
+    if (unsentChat > 0) {
+      const confirmedChat = await this.confirmDialog.open({
+        title: 'پیام‌های ارسال‌نشده دارید!',
+        message: `${unsentChat.toLocaleString('fa-IR')} پیام چت هنوز فرستاده نشده است. با خروج، پیام‌های ارسال‌نشده و فایل‌هایشان از این دستگاه پاک می‌شوند.`,
+        confirmText: 'پاک کن و خارج شو',
+        cancelText: 'انصراف (پیشنهادی)',
+        type: 'danger',
+      });
+      if (!confirmedChat) return;
+    }
+
     // هشدار جدی وقتی تغییرات ارسال‌نشده در صف است — دادهٔ کاربر نباید بی‌خبر رها شود.
     // (Dexie در logout پاک نمی‌شود؛ پس از ورود مجددِ همان کاربر، صف ارسال می‌شود.)
     if (this.pendingCount > 0) {
@@ -1350,20 +1363,20 @@ export class Layout implements OnInit, OnDestroy {
         type: 'danger',
       });
       if (!confirmed) return;
-      this.auth.logout();
-      return;
+    } else if (unsentChat === 0) {
+      const confirmed = await this.confirmDialog.open({
+        title: 'خروج از حساب',
+        message: 'آیا مطمئنید می‌خواهید از حساب کاربری خارج شوید؟',
+        confirmText: 'بله، خروج',
+        cancelText: 'انصراف',
+        type: 'warning',
+      });
+      if (!confirmed) return;
     }
 
-    const confirmed = await this.confirmDialog.open({
-      title: 'خروج از حساب',
-      message: 'آیا مطمئنید می‌خواهید از حساب کاربری خارج شوید؟',
-      confirmText: 'بله، خروج',
-      cancelText: 'انصراف',
-      type: 'warning',
-    });
-    if (confirmed) {
-      this.auth.logout();
-    }
+    // پیام‌های چت فقط پس از تأیید همهٔ هشدارها پاک می‌شوند
+    if (unsentChat > 0) await this.commService.discardOutboxForLogout().catch(() => undefined);
+    this.auth.logout();
   }
 
   /** ──── Private ──── */

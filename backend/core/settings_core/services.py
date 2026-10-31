@@ -17,6 +17,8 @@ DEFAULT_SETTINGS = {
     'offline_cache_ttl_minutes': 60,
     'chat_enabled': True,
     'chat_file_sharing': True,
+    # سقف حجم هر پیوست چت به مگابایت (۱ تا ۱۰۰)
+    'chat_max_upload_mb': 10,
     'app_min_version': '',
     'app_recommended_version': '',
     'app_download_url_direct': '',
@@ -140,6 +142,9 @@ def validate_settings_payload(data, global_scope=True):
         elif key == 'offline_sync_interval_minutes':
             if not is_strict_int(value) or value < 1 or value > 1440:
                 invalid_keys.append(key)
+        elif key == 'chat_max_upload_mb':
+            if not is_strict_int(value) or value < 1 or value > 100:
+                invalid_keys.append(key)
         elif key == 'offline_cache_ttl_minutes':
             if not is_strict_int(value) or value < 0 or value > 10080:
                 invalid_keys.append(key)
@@ -246,6 +251,18 @@ def get_setting(key, warehouse_id=None):
 
     cache.set(cache_key, result, SETTINGS_CACHE_TTL)
     return result
+
+
+def get_chat_max_upload_mb(warehouse_id=None):
+    """سقف حجم پیوست چت (مگابایت)؛ مقدار خراب یا بیرون از ۱..۱۰۰ به پیش‌فرض برمی‌گردد."""
+    default = DEFAULT_SETTINGS['chat_max_upload_mb']
+    try:
+        value = get_setting('chat_max_upload_mb', warehouse_id=warehouse_id)
+    except Exception:
+        return default
+    if not is_strict_int(value) or value < 1 or value > 100:
+        return default
+    return value
 
 
 def get_all_settings(warehouse_id=None):

@@ -51,7 +51,7 @@ from .membership import (
 )
 from rest_framework import serializers as drf_serializers
 from common.warehouse_scope import can_access_warehouse
-from settings_core.services import get_setting
+from settings_core.services import get_setting, get_chat_max_upload_mb
 from .previews import ALLOWED_EXTENSIONS, validate_uploaded_file, schedule_attachment_preview
 
 logger = logging.getLogger(__name__)
@@ -697,9 +697,13 @@ class MessageViewSet(viewsets.ModelViewSet):
         if not file_obj:
             return Response({'error': 'فایلی ارسال نشده است'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # اعتبارسنجی حجم فایل (حداکثر ۱۰ مگابایت)
-        if file_obj.size > 10 * 1024 * 1024:
-            return Response({'error': 'حجم فایل نباید بیش از ۱۰ مگابایت باشد'}, status=status.HTTP_400_BAD_REQUEST)
+        # اعتبارسنجی حجم فایل (سقف از تنظیم chat_max_upload_mb، پیش‌فرض ۱۰ مگابایت)
+        max_mb = get_chat_max_upload_mb()
+        if file_obj.size > max_mb * 1024 * 1024:
+            return Response(
+                {'error': f'حجم فایل نباید بیش از {max_mb} مگابایت باشد'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # اعتبارسنجی ساختار و نوع فایل
         is_valid, err_msg, detected_type = validate_uploaded_file(file_obj)

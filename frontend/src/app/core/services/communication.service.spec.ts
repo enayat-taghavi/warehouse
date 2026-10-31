@@ -646,14 +646,15 @@ describe('CommunicationService', () => {
     expect((service as any).pendingFiles.has(tempId)).toBe(false);
   });
 
-  it('E1: keeps text and file as failed when the message POST itself fails (server unreachable)', async () => {
+  it('E1: keeps text and file waiting for the network when the message POST itself fails (server unreachable)', async () => {
     const file = new File(['abc'], 'a.txt', { type: 'text/plain' });
     const p = service.sendMessage('conv-1', 'متن', undefined, file);
     const tempId = service.activeMessages$.value[0].client_temp_id!;
     httpMock.expectOne('/api/communications/messages/').flush(null, { status: 503, statusText: 'Unavailable' });
     await p;
     const m = service.activeMessages$.value[0];
-    expect(m.delivery_status).toBe('failed');
+    expect(m.delivery_status).toBe('pending');
+    expect(m.waiting_network).toBe(true);
     expect(m.text).toBe('متن');
     expect((service as any).pendingFiles.get(tempId)).toEqual([file]);
   });
@@ -680,7 +681,8 @@ describe('CommunicationService', () => {
     await p;
 
     let m = service.activeMessages$.value[0];
-    expect(m.delivery_status).toBe('failed');
+    expect(m.delivery_status).toBe('pending');
+    expect(m.waiting_network).toBe(true);
     expect(m.attachments?.length).toBe(1);
     expect(m.pending_file_name).toContain('b.txt');
     expect(m.pending_file_name).toContain('c.txt');
@@ -719,7 +721,7 @@ describe('CommunicationService', () => {
     await flushAsync();
     httpMock.expectOne('/api/communications/messages/upload/').flush(null, { status: 502, statusText: 'Bad Gateway' });
     await p;
-    expect(service.activeMessages$.value[0].delivery_status).toBe('failed');
+    expect(service.activeMessages$.value[0].delivery_status).toBe('pending');
 
     const retry = service.retryMessage(tempId);
     const both = [
@@ -931,16 +933,16 @@ describe('CommunicationService', () => {
     await p;
   };
 
-  it('R1: chat.message.updated keeps the failed state while the file is still waiting for upload', async () => {
+  it('R1: chat.message.updated keeps the waiting state while the file is still waiting for upload', async () => {
     service.getCurrentUserId = () => 1;
     const holder: { id?: string } = {};
     await failUploadOnce(holder, new File(['x'], 'f.txt', { type: 'text/plain' }));
-    expect(service.activeMessages$.value[0].delivery_status).toBe('failed');
+    expect(service.activeMessages$.value[0].delivery_status).toBe('pending');
 
     (service as any).handleUpdatedMessage({ id: '500', client_temp_id: holder.id, conversation: 'conv-1', sender: 1, text: 'ویرایش‌شده', created_at: new Date().toISOString() });
     const m = service.activeMessages$.value[0];
     expect(m.text).toBe('ویرایش‌شده');
-    expect(m.delivery_status).toBe('failed');
+    expect(m.delivery_status).toBe('pending');
     expect((service as any).pendingFiles.has(holder.id)).toBe(true);
   });
 
@@ -980,7 +982,7 @@ describe('CommunicationService', () => {
     const load = service.loadMessages('conv-1');
     httpMock.expectOne(r => r.params.get('conversation_id') === 'conv-1').flush([]);
     await load;
-    expect(service.activeMessages$.value.some(m => m.client_temp_id === holder.id && m.delivery_status === 'failed')).toBe(true);
+    expect(service.activeMessages$.value.some(m => m.client_temp_id === holder.id && m.delivery_status === 'pending')).toBe(true);
 
     // ورود کاربر دیگر روی همان دستگاه
     service.resetForForcedLogout();

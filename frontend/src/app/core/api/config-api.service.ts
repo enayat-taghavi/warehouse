@@ -16,6 +16,7 @@ export interface PublicConfig {
   offline_cache_ttl_minutes?: number;
   chat_enabled?: boolean;
   chat_file_sharing?: boolean;
+  chat_max_upload_mb?: number;
   disabled_sections?: string[];
   toggle_sections?: ToggleSection[];
   app_min_version?: string;

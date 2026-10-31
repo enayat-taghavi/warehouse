@@ -247,6 +247,20 @@
                   </div>
                   <app-toggle-switch [(checked)]="settings.chat_file_sharing" label="امکان ارسال تصویر و فایل در پیام‌ها"></app-toggle-switch>
                 </div>
+
+                <div class="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div>
+                    <label for="chat-max-upload-mb" class="block text-xs font-bold text-slate-800">حداکثر حجم هر فایل در پیام‌ها</label>
+                    <p class="text-[11px] text-slate-500 mt-0.5">فایل بزرگ‌تر از این سقف در چت پذیرفته نمی‌شود</p>
+                  </div>
+                  <select id="chat-max-upload-mb" [(ngModel)]="settings.chat_max_upload_mb" class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer">
+                    <option [ngValue]="5">۵ مگابایت</option>
+                    <option [ngValue]="10">۱۰ مگابایت (پیش‌فرض)</option>
+                    <option [ngValue]="20">۲۰ مگابایت</option>
+                    <option [ngValue]="50">۵۰ مگابایت</option>
+                    <option [ngValue]="100">۱۰۰ مگابایت</option>
+                  </select>
+                </div>
               </div>
             </div>
 
