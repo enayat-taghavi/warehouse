@@ -4467,7 +4467,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 
 ===
 
-[ ] Session 1 of 1 — Migration history sync and release on the local app environment: backup, replace the old migration rows with the new one-file-per-app set (`migrate --fake`, schema untouched), web build with the ngsw patch; the runner restarts Daphne and runs the health checks (no APK)
+[DONE] [ ] Session 1 of 1 — Migration history sync and release on the local app environment: backup, replace the old migration rows with the new one-file-per-app set (`migrate --fake`, schema untouched), web build with the ngsw patch; the runner restarts Daphne and runs the health checks (no APK)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
