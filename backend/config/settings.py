@@ -37,12 +37,16 @@ if _ENV_FILE.exists():
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-856c7!+vun4k3&l*i%bi)+nb%(!-p#x5@xq*e!3u^w!yp=hl!g')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+# پیش‌فرض خاموش: فراموش شدن DJANGO_DEBUG هرگز حالت اشکال‌زدایی را روشن نمی‌کند
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 if os.environ.get('DJANGO_ENV') == 'production':
     DEBUG = False
     if not os.environ.get('DJANGO_SECRET_KEY'):
         raise RuntimeError("DJANGO_SECRET_KEY must be set in production environment!")
+    # ورود API با JWT است؛ کوکی‌های نشست و CSRF (پنل مدیریت) فقط روی HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 DEFAULT_ALLOWED_HOSTS = [
     'soft.farsalish.ir',
