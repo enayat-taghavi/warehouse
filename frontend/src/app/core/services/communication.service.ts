@@ -192,6 +192,10 @@ export class CommunicationService implements OnDestroy {
   private uploadedCounts = new Map<string, number>();
   /** لغو آپلود در حال اجرا (کلید: client_temp_id) */
   private uploadAborts = new Map<string, () => void>();
+  /** تلاش مجددهای در حال اجرا (جلوی دو آپلود هم‌زمان با دو بار زدن «تلاش مجدد» را می‌گیرد) */
+  private retrying = new Set<string>();
+  /** پیش‌نویس هر گفتگو (فایل‌های انتخاب‌شدهٔ هنوز ارسال‌نشده و متن)، تا با بستن کشو یا عوض کردن گفتگو گم نشود */
+  private composerDrafts = new Map<string, { files: File[]; text: string }>();
   /** پیام‌های ارسالی «در انتظار» یا «ناموفق» (کلید: client_temp_id) تا با جابه‌جایی گفتگو یا بارگذاری دوباره گم نشوند */
   private outgoingMessages = new Map<string, ChatMessage>();
   /** کاربری که سوکت‌ها برای او باز شده‌اند */
@@ -998,9 +1002,25 @@ export class CommunicationService implements OnDestroy {
     this.uploadAborts.delete(tempId);
   }
 
+  /** نگه داشتن پیش‌نویس گفتگو (فایل‌ها و متن)؛ پیش‌نویس خالی، پیش‌نویس قبلی را پاک می‌کند */
+  public stashComposerDraft(conversationId: string, files: File[], text: string): void {
+    if (!conversationId) return;
+    if (files.length || text.trim()) this.composerDrafts.set(conversationId, { files: [...files], text });
+    else this.composerDrafts.delete(conversationId);
+  }
+
+  /** برداشتن پیش‌نویس گفتگو (یک بار؛ بعد از برداشتن در سرویس نمی‌ماند) */
+  public takeComposerDraft(conversationId: string): { files: File[]; text: string } | null {
+    const d = this.composerDrafts.get(conversationId) || null;
+    this.composerDrafts.delete(conversationId);
+    return d;
+  }
+
   private clearOutgoingFiles(): void {
     this.uploadAborts.forEach(abort => abort());
     this.pendingFiles.clear();
+    this.composerDrafts.clear();
+    this.retrying.clear();
     this.uploadedCounts.clear();
     this.uploadAborts.clear();
   }
@@ -1274,15 +1294,21 @@ export class CommunicationService implements OnDestroy {
       || this.outgoingMessages.get(tempId);
     if (!msg) return;
     const clientTempId = msg.client_temp_id || tempId;
+    if (this.retrying.has(clientTempId)) return;
+    this.retrying.add(clientTempId);
 
     this.applyOutgoingUpdate(clientTempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: undefined }));
 
-    await this.deliverOutgoing(clientTempId, {
-      conversation: msg.conversation,
-      text: msg.text || '',
-      client_temp_id: clientTempId,
-      reply_to: msg.reply_to
-    });
+    try {
+      await this.deliverOutgoing(clientTempId, {
+        conversation: msg.conversation,
+        text: msg.text || '',
+        client_temp_id: clientTempId,
+        reply_to: msg.reply_to
+      });
+    } finally {
+      this.retrying.delete(clientTempId);
+    }
   }
 
   /**

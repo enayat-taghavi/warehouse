@@ -1254,4 +1254,31 @@ describe('CommunicationService', () => {
       vi.useRealTimers();
     }
   });
+
+  it('composer draft (picked files and text) is kept per conversation and taken once', () => {
+    const f = new File(['x'], 'a.pdf', { type: 'application/pdf' });
+    service.stashComposerDraft('c1', [f], 'سلام');
+    service.stashComposerDraft('c2', [], '  ');
+    expect(service.takeComposerDraft('c2')).toBeNull();
+    const d = service.takeComposerDraft('c1');
+    expect(d?.files).toEqual([f]);
+    expect(d?.text).toBe('سلام');
+    expect(service.takeComposerDraft('c1')).toBeNull();
+  });
+
+  it('a second retry while the first is still running does not start another delivery', async () => {
+    const msg: any = { id: 't1', client_temp_id: 't1', conversation: 'c1', text: 'x', delivery_status: 'failed', is_me: true };
+    (service as any).outgoingMessages.set('t1', msg);
+    let release!: () => void;
+    const deliver = vi.spyOn(service as any, 'deliverOutgoing').mockImplementation(() => new Promise<void>(r => { release = r; }));
+    const first = service.retryMessage('t1');
+    await service.retryMessage('t1');
+    expect(deliver).toHaveBeenCalledTimes(1);
+    release();
+    await first;
+    const third = service.retryMessage('t1');
+    release();
+    await third;
+    expect(deliver).toHaveBeenCalledTimes(2);
+  });
 });

@@ -16045,3 +16045,96 @@ test(chat 5-b): attachment allowlist, content sniffing, image/PDF previews, fail
 بررسی فایل‌های مربوطه در `backend/core/commun...
 
 ---
+
+### Task 1 of 1 — 2026-10-31 04:31:16
+- **Status:** DONE
+- **Conversation:** `8ca6e4f4-fe27-4ebe-92c0-75bf2c084c44`
+- **Steps:** 346
+- **Tokens:** 565297
+- **Duration:** 25m 49s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Chat plan stage 5-c: attachment cards in the chat bubble (image thumbnail with real ratio, 2x2 image grid, PDF card, file-type cards), file-type icons, the media tab in the conversation info panel, and DOM specs
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply. Read `.claude/skills/design-system/SKILL.md` once (semantic tokens `surface`/`fg`/`line`, `<svg appIcon="name">` only, no inline svg paths in templates, touch targets at least 40x40 px, Persian `title` and `aria-label` on every icon-only button, Persian digits).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`.
+- Change only these four files: `chat-drawer.component.html` (edit), `shared/icons/icon-registry.ts` (add entries only), and two NEW spec files `chat-drawer/chat-drawer-5c.dom.spec.ts` and `shared/components/document-preview/document-preview-gallery.spec.ts`. Never edit any `.ts` component or service, any existing spec, anything under `scripts/` or `Documents/`, `tasks.md` or `tasks_history.md`.
+- All UI text is Persian. Spec descriptions may be English; comments in Persian or English.
+- No push. Stage only your own files.
+
+2. Context (read these; nothing else is needed):
+- `frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.ts`: read the exported types at the top (`AttachmentKind`, `PickedFile`, `MediaEntry`, `CHAT_ALLOWED_EXTENSIONS`, `CHAT_MAX_FILES`) and these public members (search their names): `attachmentPreview(att)` (blob URL of the server thumbnail, `null` while loading or while `preview_status === 'pending'`), `attachmentKind(att)` (`'image' | 'pdf' | 'word' | 'excel' | 'text' | 'file'`), `fileExt(name)`, `fileSizeFa(bytes)` (for example «۱٫۲ مگابایت»), `fileMetaFa(att)` (for example «۳ صفحه · ۱٫۲ مگابایت»), `openAttachment(msg, att)` (opens the lightbox gallery for images and PDFs, downloads other files), `downloadAttachment(att)`, `mediaImages()` and `mediaFiles()` (computed `MediaEntry[]` of the loaded messages), `addFiles(files)`, `pickedFiles()`, `removePicked(key)`, `isOnline()`, `sendMessage()`, `infoOpen`.
+- `frontend/src/app/core/services/communication.service.ts` lines 19–40: `MessageAttachment` (`id, file_name, file_size, content_type, download_url, thumbnail_url, width, height, page_count, preview_status`).
+- `chat-drawer.component.html`: the bubble block that starts at the comment `` (about lines 268–290; it already calls `openAttachment(msg, att)`), the composer strip `data-testid="picked-strip"` (already done by the manager; do not change it), and the info panel `data-testid="info-panel"` (the members section starts at the comment ``; the mute/leave buttons start at the comment ``).
+- `frontend/src/app/shared/components/document-preview/document-preview.component.ts` and `.html`: gallery API `openGallery(items, index)`, `next()`, `prev()`, `hasNext`, `hasPrev`, `isGallery`, `galleryIndex`, `current`, `requestGoToMessage()`, output `goToMessage`, `DocumentPreviewSource` fields `kind`, `subtitle`, `messageId`, `downloadName`, `load`; test ids `gallery-prev`, `gallery-next`, `preview-goto`, `preview-subtitle`, `preview-resolving`, `preview-resolve-failed`. Arrow keys: `ArrowLeft` = next, `ArrowRight` = previous (right-to-left).
+- Spec style references: `chat-drawer/chat-drawer.component.dom.spec.ts` lines 1–115 (TestBed setup, mocked `CommunicationService`, `q()` helper; copy its setup into your new file) and `document-preview/document-preview.component.spec.ts` lines 1–60.
+- `frontend/src/app/shared/icons/icon-registry.ts` (entry format, look at `'file-text'`).
+
+3. Definitions:
+- "Image attachment" = `content_type` starting with `image/`. "PDF attachment" = `attachmentKind(att) === 'pdf'`. "Other attachment" = every other kind.
+- "Ratio box" = a wrapper whose `aspect-ratio` style is `width / height` when both are positive numbers (bind `[style.aspect-ratio]="att.width && att.height ? att.width + ' / ' + att.height : null"`), with `max-h-64` and full bubble width, so the bubble reserves space before the image loads.
+- "Skeleton" = `<div class="animate-pulse bg-black/10 dark:bg-white/10 ...">` shown inside the ratio box while `attachmentPreview(att)` is `null`; when the preview exists show `<img [src]=... loading="lazy" class="w-full h-full object-cover">` (never `NgOptimizedImage`, these are blob URLs).
+
+4. Task:
+- a) Icons: add four entries to `icon-registry.ts`, lucide-style 24x24 stroke paths, names `file-pdf`, `file-word`, `file-excel`, `file-image` (a file outline with a small distinguishing mark; reuse the `file-text` outline path). Do not change existing entries.
+- b) Bubble (replace the body of the `` block; keep `*ngIf="msg.attachments && msg.attachments.length > 0"`):
+  - Split the message's attachments into images and the rest (use template expressions with `attachmentKind`; you may not add `.ts` code).
+  - One image: a full-width button `data-testid="att-image"` containing the ratio box with skeleton/img; click → `openAttachment(msg, att)`; `aria-label` and `title` «نمایش » + file name.
+  - Two or more images: a `grid grid-cols-2 gap-1` wrapper `data-testid="att-grid"` showing at most 4 square tiles (`aspect-square`, each a button with `data-testid="att-image"`); when there are more than 4 images, the 4th tile shows a dark overlay with «+N» where N = images − 3, in Persian digits (`(n).toLocaleString('fa-IR')`), `data-testid="att-more"`; click on any tile → `openAttachment(msg, that att)`.
+  - PDF: card `data-testid="att-card-pdf"`: on top the thumbnail (ratio box with skeleton/img when `att.thumbnail_url` or `preview_status === 'pending'`, otherwise a `file-pdf` icon block), below it the file name (truncate, `title`) and `fileMetaFa(att)`; the card body is a button → `openAttachment(msg, att)` with `aria-label` «نمایش » + name; a separate icon-only download button (`appIcon="action-download"`, 40x40, `aria-label`/`title` «دانلود » + name) → `downloadAttachment(att)`.
+  - Other files: card `data-testid="att-card-file"` with a coloured icon (`file-word` blue, `file-excel` green, `file-text` slate for text, `hero-paper-clip` for the rest), the name, the extension uppercased in a small `dir="ltr"` badge, `fileSizeFa(att.file_size)`, and the download button as above; clicking the card → `downloadAttachment(att)`.
+  - Keep the existing "pending file" block and the `upload-progress` block below it untouched.
+- c) Info panel media tab: insert a new section between the members section and the comment ``, wrapper `data-testid="media-tab"`, heading «رسانه و فایل‌ها» (h4, same style as the members heading). Render two sub-sections one under the other: «عکس‌ها» as a `grid grid-cols-3 gap-1` of square thumbnail buttons (`data-testid="media-image"`, using `attachmentPreview(e.att)` with skeleton) and «فایل‌ها» as a list of rows (`data-testid="media-file"`, icon + name + `fileMetaFa(e.att)`); each opens `openAttachment(e.msg, e.att)`. Empty states: «عکسی در این گفتگو نیست» / «فایلی در این گفتگو نیست» (`data-testid="media-empty"`). Each sub-section has an h5 heading «عکس‌ها» / «فایل‌ها». Lists come only from loaded messages, add a small muted line «فقط پیام‌های بارگذاری‌شده».
+- d) Spec `chat-drawer-5c.dom.spec.ts` (at least 9 tests), using the same TestBed setup as the existing DOM spec, a conversation opened with `activeTab` `'chat'`, and messages set through the component's `messages` signal:
+  1. one image attachment with `width: 800, height: 400` renders `att-image` whose ratio box has `aspect-ratio` `800 / 400`, and a skeleton while `attachmentPreview` returns null (spy on it with `vi.spyOn(component, 'attachmentPreview').mockReturnValue(null)`);
+  2. with the spy returning `'blob:x'` an `<img loading="lazy">` with that src is rendered;
+  3. five images in one message render `att-grid` with exactly 4 `att-image` tiles and `att-more` text containing «+۲»;
+  4. a PDF attachment with `page_count: 3, file_size: 1258291` renders `att-card-pdf` containing «۳ صفحه» and «مگابایت»;
+  5. a `.docx` attachment renders `att-card-file` containing «DOCX» (case-insensitive check) and uses `appIcon` `file-word`;
+  6. clicking `att-image` calls `openAttachment` with the message and the attachment (spy, `mockImplementation(() => {})`); clicking the PDF download button calls `downloadAttachment` and NOT `openAttachment`;
+  7. `component.addFiles([png, pdf])` (Files named `a.png` type `image/png` and `b.pdf` type `application/pdf`; stub `URL.createObjectURL` with `vi.fn(() => 'blob:p')` and `URL.revokeObjectURL` with `vi.fn()`) shows `picked-strip` with two items; clicking the first `picked-remove` leaves one item;
+  8. a file named `x.svg` passed to `addFiles` is refused (strip stays empty) and `ToastService.show` (spy) was called with `'error'`;
+  9. with two picked files and `vi.spyOn(component, 'isOnline').mockReturnValue(false)`, `offline-multi-note` is visible; calling `component.sendMessage()` does NOT call the mocked service `sendMessage`, and `pickedFiles().length` is still 2;
+  10. opening the info panel (`component.infoOpen.set(true)`, members signal empty) with one image and one PDF message shows `media-tab` with one `media-image` and one `media-file`; with no attachments both `media-empty` texts appear.
+- e) Spec `document-preview-gallery.spec.ts` (at least 6 tests) on `DocumentPreviewComponent` (setup like the existing spec):
+  1. `openGallery([a, b, c], 1)` with sources `{ title: 'a.png', url: '/media/a.png', kind: 'image' }` etc. shows `gallery-prev` and `gallery-next` enabled and `preview-subtitle` containing «۲ از ۳»;
+  2. clicking `gallery-next` shows the third title and disables `gallery-next`;
+  3. dispatching `new KeyboardEvent('keydown', { key: 'ArrowLeft' })` on `document` moves to the next item; `ArrowRight` moves back;
+  4. a source with `url: ''` and `load: () => Promise.resolve('blob:z')` shows `preview-resolving` first, then (after `await fixture.whenStable()`) an `<img>` whose src is `blob:z`; a source whose `load` rejects shows `preview-resolve-failed`;
+  5. a source with `messageId: '7'` shows `preview-goto`; clicking it emits `goToMessage` with that source and closes the lightbox;
+  6. single `open({ title: 'x.png', url: '/media/x.png' })` shows no `gallery-prev`/`gallery-next` and no counter.
+
+Out of scope: any `.ts` component/service change, the composer strip, the send path, offline queue, backend.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/modules/common/components/communications/chat-drawer/chat-drawer-5c.dom.spec.ts --include=src/app/shared/components/document-preview/document-preview-gallery.spec.ts --include=src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts --include=src/app/shared/components/document-preview/document-preview.component.spec.ts` (at most 6 times).
+- From the repository root: `python -X utf8 scripts/e2e/guardian_52_icon_registry.py` and, after your commit, `python -X utf8 scripts/e2e/guardian_56_change_integrity.py --base HEAD~1 --head HEAD`.
+- If a command fails, read its output and change approach; do not repeat the same call unchanged.
+
+6. Before finishing:
+- The test command passes with zero failures (existing specs included).
+- `git status --short` shows only your four files before the commit and nothing after it.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(chat 5-c): attachment cards, image grid, file-type icons, media tab, DOM specs
+- Short English report: what you changed per file, the test summary line, and anything that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام اول: توضیح سادهٔ خواستهٔ کاربر
+کاربر پیاده‌سازی فاز ۵-ج از برنامهٔ گفت‌وگو (چت) را درخواست کرده است که شامل موارد زیر است:
+۱. اضافه کردن ۴ آیکون جدید نوع فایل (`file-pdf`، `file-word`، `file-excel`، `file-image`) به رجیستری مشترک آیکون‌ها.
+۲. اصلاح بخش نمایش پیوست‌ها در حباب پیام: پشتیبانی از یک تصویر تمام‌عرض با نسبت واقعی (`aspect-ratio`) و اسکلت لودینگ، گرید ۲×۲ برای ۲ تا ۴ تصویر، کاشی چهارم همراه با برچسب «+N» برای بیش از ۴ تصویر، کارت PDF شامل پیش‌نمایش بندانگشتی/آیکون و دکمهٔ دانلود مجزا، و کارت انواع دیگر فایل‌ها همراه با نشان پسوند و آیکون‌های رنگی.
+۳. افزودن تب «رسانه و فایل‌ها» در پنل اطلاعات گفت‌وگو شامل زیربخش‌های «عکس‌ها» (گرید سه‌ستونه) و ...
+
+---

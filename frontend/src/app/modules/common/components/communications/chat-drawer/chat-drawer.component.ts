@@ -203,6 +203,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         if (conv) {
           this.activeTab.set('chat');
           if (!this.lastConvId || this.lastConvId !== String(conv.id)) {
+            this.stashDraft();
             this.openedFresh = true;
             this.lastMsgKey = '';
             this.showNewBtn.set(false);
@@ -210,9 +211,11 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
             this.editing.set(null);
             this.menuFor.set(null);
             this.messageInputText = '';
+            this.restoreDraft(String(conv.id));
           }
           this.lastConvId = String(conv.id);
         } else {
+          this.stashDraft();
           this.lastConvId = '';
         }
       })
@@ -307,7 +310,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.commService.activeConversation$.next(null);
     }
     this.sub.unsubscribe();
-    this.clearPicked();
+    this.stashDraft();
     this.attachmentPreviews.forEach((u) => { if (u) URL.revokeObjectURL(u); });
     this.attachmentPreviews.clear();
     this.fullBlobUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -776,6 +779,21 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public clearPicked(): void {
     this.pickedFiles().forEach(p => this.revokePick(p));
     this.pickedFiles.set([]);
+  }
+
+  /** پیش‌نویس گفتگوی فعلی (فایل‌های نوار و متن) در سرویس می‌ماند تا با بستن کشو یا عوض کردن گفتگو گم نشود یا به گفتگوی دیگری نرود */
+  private stashDraft(): void {
+    if (this.lastConvId) {
+      this.commService.stashComposerDraft(this.lastConvId, this.pickedFiles().map(p => p.file), this.messageInputText || '');
+    }
+    this.clearPicked();
+  }
+
+  private restoreDraft(convId: string): void {
+    const draft = this.commService.takeComposerDraft(convId);
+    if (!draft) return;
+    this.messageInputText = draft.text;
+    if (draft.files.length) this.restorePicked(draft.files);
   }
 
   /** بازگرداندن فایل‌ها به نوار، وقتی ارسال پیش از تحویل به سرویس شکست خورد */

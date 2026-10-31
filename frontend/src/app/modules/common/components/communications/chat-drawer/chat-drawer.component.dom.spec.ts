@@ -54,6 +54,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     toast = { show: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
     const convs = new BehaviorSubject<Conversation[]>([]);
     const active = new BehaviorSubject<Conversation | null>(null);
+    const drafts = new Map<string, { files: File[]; text: string }>();
     comm = {
       isChatDrawerOpen: signal(true),
       isMuted: signal(false),
@@ -81,6 +82,8 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
       muteConversation: vi.fn().mockResolvedValue({}),
       openConversation: vi.fn().mockImplementation(async (c: Conversation) => active.next(c)),
       leaveConversation: vi.fn(),
+      stashComposerDraft: vi.fn((id: string, files: File[], text: string) => drafts.set(id, { files, text })),
+      takeComposerDraft: vi.fn((id: string) => { const d = drafts.get(id) || null; drafts.delete(id); return d; }),
       getCurrentUserId: vi.fn().mockReturnValue(1),
       isUserOnline: vi.fn().mockReturnValue(false),
       toggleMute: vi.fn()

@@ -67,6 +67,7 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     const convs = new BehaviorSubject<Conversation[]>([defaultConv]);
     const active = new BehaviorSubject<Conversation | null>(defaultConv);
 
+    const drafts = new Map<string, { files: File[]; text: string }>();
     comm = {
       isChatDrawerOpen: signal(true),
       isMuted: signal(false),
@@ -84,6 +85,8 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
       sendMessage: vi.fn().mockResolvedValue({}),
       openConversation: vi.fn().mockImplementation(async (c: Conversation) => active.next(c)),
       leaveConversation: vi.fn(),
+      stashComposerDraft: vi.fn((id: string, files: File[], text: string) => drafts.set(id, { files, text })),
+      takeComposerDraft: vi.fn((id: string) => { const d = drafts.get(id) || null; drafts.delete(id); return d; }),
       getCurrentUserId: vi.fn().mockReturnValue(1),
       isUserOnline: vi.fn().mockReturnValue(false)
     };
@@ -291,6 +294,23 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     await component.sendMessage();
     expect(comm.sendMessage).not.toHaveBeenCalled();
     expect(component.pickedFiles().length).toBe(2);
+  });
+
+  it('9b. picked files and text stay with their conversation: switching to another conversation empties the strip, switching back restores them; closing the drawer keeps them for the next open', async () => {
+    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:p'), revokeObjectURL: vi.fn() });
+    const pdf = new File(['2'], 'b.pdf', { type: 'application/pdf' });
+    component.addFiles([pdf]);
+    component.messageInputText = 'پیش‌نویس';
+    comm.activeConversation$.next({ ...defaultConv, id: 'c2' });
+    fixture.detectChanges();
+    expect(component.pickedFiles().length).toBe(0);
+    expect(component.messageInputText).toBe('');
+    comm.activeConversation$.next(defaultConv);
+    fixture.detectChanges();
+    expect(component.pickedFiles().map(p => p.file)).toEqual([pdf]);
+    expect(component.messageInputText).toBe('پیش‌نویس');
+    fixture.destroy();
+    expect(comm.stashComposerDraft).toHaveBeenLastCalledWith('c1', [pdf], 'پیش‌نویس');
   });
 
   it('10. opening the info panel (component.infoOpen.set(true), members signal empty) with one image and one PDF message shows media-tab with one media-image and one media-file; with no attachments both media-empty texts appear', async () => {

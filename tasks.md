@@ -4013,7 +4013,7 @@ test(chat 5-b): attachment allowlist, content sniffing, image/PDF previews, fail
 
 ===
 
-[ ] Session 1 of 1 — Chat plan stage 5-c: attachment cards in the chat bubble (image thumbnail with real ratio, 2x2 image grid, PDF card, file-type cards), file-type icons, the media tab in the conversation info panel, and DOM specs
+[DONE] [ ] Session 1 of 1 — Chat plan stage 5-c: attachment cards in the chat bubble (image thumbnail with real ratio, 2x2 image grid, PDF card, file-type cards), file-type icons, the media tab in the conversation info panel, and DOM specs
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
