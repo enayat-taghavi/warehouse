@@ -6,6 +6,7 @@
 import io
 import logging
 import os
+import re
 import zipfile
 
 from django.core.files.base import ContentFile
@@ -27,8 +28,25 @@ ALLOWED_EXTENSIONS = {
     '.doc': 'application/msword',
     '.txt': 'text/plain',
     '.csv': 'text/csv',
+    # پیام صوتی (U9): خروجی MediaRecorder در کروم/اندروید webm، در فایرفاکس ogg و در سافاری m4a است
+    '.webm': 'audio/webm',
+    '.ogg': 'audio/ogg',
+    '.m4a': 'audio/mp4',
 }
 IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.webp', '.gif')
+AUDIO_EXTENSIONS = ('.webm', '.ogg', '.m4a')
+# نام فایل پیام صوتی ضبط‌شده: voice_<زمان>_<مدت به ثانیه>s.<پسوند> (مدت پیش از پخش نشان داده می‌شود)
+VOICE_NAME_RE = re.compile(r'^voice_[\w-]*_(\d{1,6})s\.(webm|ogg|m4a)$', re.IGNORECASE)
+MAX_VOICE_SECONDS = 24 * 3600
+
+
+def voice_duration_from_name(name):
+    """مدت پیام صوتی از نام فایل ضبط‌شده؛ None برای فایل‌های دیگر یا عدد نامعتبر."""
+    m = VOICE_NAME_RE.match(os.path.basename(name or ''))
+    if not m:
+        return None
+    seconds = int(m.group(1))
+    return seconds if 0 < seconds <= MAX_VOICE_SECONDS else None
 
 THUMB_MAX_SIDE = 320
 # مرز ایمنی: عکس‌های بزرگ‌تر از این تعداد پیکسل باز نمی‌شوند (بمب فشرده‌سازی)
@@ -79,6 +97,12 @@ def detect_content_type(file_obj, ext):
         names = _zip_member_names(file_obj) if head.startswith(b'PK\x03\x04') else None
         marker = 'xl/' if ext == '.xlsx' else 'word/'
         ok = bool(names) and '[Content_Types].xml' in names and any(n.startswith(marker) for n in names)
+    elif ext == '.webm':
+        ok = head.startswith(b'\x1a\x45\xdf\xa3')
+    elif ext == '.ogg':
+        ok = head.startswith(b'OggS')
+    elif ext == '.m4a':
+        ok = head[4:8] == b'ftyp'
     elif ext in ('.txt', '.csv'):
         lower = head.lower()
         ok = b'\x00' not in head and not any(m in lower for m in _DANGEROUS_MARKERS)
@@ -94,7 +118,7 @@ def validate_uploaded_file(file_obj):
     """
     ext = os.path.splitext(file_obj.name or '')[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        return False, "این نوع فایل مجاز نیست. فقط عکس، PDF، Word، Excel، متن و CSV پذیرفته می‌شود", None
+        return False, "این نوع فایل مجاز نیست. فقط عکس، PDF، Word، Excel، متن، CSV و پیام صوتی پذیرفته می‌شود", None
     detected = detect_content_type(file_obj, ext)
     if detected is None:
         return False, "محتوای فایل با نوع آن (پسوند) هم‌خوانی ندارد", None

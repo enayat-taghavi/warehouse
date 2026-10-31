@@ -321,6 +321,37 @@
 
             <!-- سایر پیوست‌ها (PDF و فایل‌ها) -->
             <ng-container *ngFor="let att of msg.attachments.filter((a) => attachmentKind(a) !== 'image')">
+              <!-- پیام صوتی: پخش، نوار جای پخش، مدت و دانلود -->
+              <div *ngIf="attachmentKind(att) === 'audio'" data-testid="att-audio"
+                   class="rounded-xl border border-white/20 bg-black/5 p-1.5 flex items-center gap-1.5 min-w-[200px]">
+                <button type="button" (click)="toggleAudio(att)" data-testid="audio-toggle"
+                        [attr.aria-label]="audioLoadingId() === att.id + '' ? 'در حال بارگیری پیام صوتی' : (isPlaying(att) ? 'توقف پیام صوتی' : 'پخش پیام صوتی')"
+                        [attr.title]="isPlaying(att) ? 'توقف' : 'پخش'"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg *ngIf="audioLoadingId() === att.id + ''" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" aria-hidden="true"></svg>
+                  <svg *ngIf="audioLoadingId() !== att.id + ''" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" [appIcon]="isPlaying(att) ? 'pause' : 'play'" aria-hidden="true"></svg>
+                </button>
+                <div class="flex-1 min-w-0">
+                  <input type="range" dir="ltr" min="0" step="0.1" data-testid="audio-seek"
+                         [max]="playingAudioId() === att.id + '' ? (audioDur() || att.duration || 0) : (att.duration || 0)"
+                         [value]="playingAudioId() === att.id + '' ? audioPos() : 0"
+                         [disabled]="playingAudioId() !== att.id + ''"
+                         (input)="seekAudio(att, $any($event.target).valueAsNumber)"
+                         aria-label="جای پخش پیام صوتی"
+                         [attr.aria-valuetext]="playingAudioId() === att.id + '' ? durationFa(audioPos()) + ' از ' + durationFa(audioDur() || att.duration) : durationFa(att.duration)"
+                         class="w-full h-6 cursor-pointer accent-current disabled:cursor-default disabled:opacity-60" />
+                  <p class="text-[11px] font-bold opacity-90 flex justify-between gap-2" data-testid="audio-time">
+                    <span>پیام صوتی</span>
+                    <span>{{ playingAudioId() === att.id + '' ? durationFa(audioPos()) + ' / ' : '' }}{{ durationFa(playingAudioId() === att.id + '' ? (audioDur() || att.duration) : att.duration) }}</span>
+                  </p>
+                </div>
+                <button type="button" (click)="downloadAttachment(att)"
+                        aria-label="دانلود پیام صوتی" title="دانلود پیام صوتی"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
+                </button>
+              </div>
+
               <!-- PDF -->
               <div *ngIf="attachmentKind(att) === 'pdf'" data-testid="att-card-pdf" class="rounded-xl border border-white/20 bg-black/5 dark:bg-white/5 overflow-hidden">
                 <button
@@ -362,7 +393,7 @@
 
               <!-- سایر فایل‌ها -->
               <div
-                *ngIf="attachmentKind(att) !== 'pdf'"
+                *ngIf="attachmentKind(att) !== 'pdf' && attachmentKind(att) !== 'audio'"
                 data-testid="att-card-file"
                 class="rounded-xl border border-white/20 bg-black/5 dark:bg-white/5 p-2.5 flex items-center justify-between gap-2">
                 <button type="button" (click)="downloadAttachment(att)" [attr.aria-label]="'دانلود ' + att.file_name"
@@ -613,10 +644,29 @@
       </button>
     </div>
 
+    <!-- در حال ضبط پیام صوتی -->
+    <div *ngIf="recording()" data-testid="recording-bar" class="flex items-center gap-1.5">
+      <button type="button" (click)="stopRecording(false)" data-testid="record-cancel"
+              aria-label="لغو پیام صوتی" title="لغو پیام صوتی"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="trash-2" aria-hidden="true"></svg>
+      </button>
+      <div class="flex-1 flex items-center gap-2 bg-surface-muted border border-line rounded-xl px-3 min-h-[44px] text-xs text-fg">
+        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" aria-hidden="true"></span>
+        <span class="font-bold">در حال ضبط</span>
+        <span class="ms-auto font-bold tabular-nums" data-testid="record-time" role="timer" aria-label="مدت ضبط">{{ durationFa(recordSeconds()) }}</span>
+      </div>
+      <button type="button" (click)="stopRecording(true)" data-testid="record-send"
+              aria-label="فرستادن پیام صوتی" title="فرستادن پیام صوتی"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="send" aria-hidden="true"></svg>
+      </button>
+    </div>
+
     <!-- Input Form -->
-    <div class="flex items-end gap-1.5">
+    <div *ngIf="!recording()" class="flex items-end gap-1.5">
       <label class="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors flex items-center justify-center tap-target" title="پیوست فایل" aria-label="پیوست فایل">
-        <input type="file" multiple data-testid="file-input" (change)="onFileSelected($event)" class="hidden" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.xlsx,.xls,.doc,.docx,.txt,.csv" />
+        <input type="file" multiple data-testid="file-input" (change)="onFileSelected($event)" class="hidden" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.xlsx,.xls,.doc,.docx,.txt,.csv,.webm,.ogg,.m4a" />
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
       </label>
 
@@ -630,6 +680,14 @@
                 placeholder="پیام خود را بنویسید..."
                 class="flex-1 resize-none text-xs bg-surface-muted border border-line rounded-xl px-3 py-3 min-h-[44px] max-h-[120px] text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"></textarea>
 
+      <!-- میکروفون فقط وقتی متن و فایلی نیست (مثل پیام‌رسان‌های رایج)؛ سقف مدت ندارد -->
+      <button *ngIf="canRecord() && !messageInputText.trim() && pickedFiles().length === 0 && !editing(); else sendBtn"
+              type="button" (click)="startRecording()" data-testid="record-start"
+              aria-label="ضبط پیام صوتی" title="ضبط پیام صوتی"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="mic" aria-hidden="true"></svg>
+      </button>
+      <ng-template #sendBtn>
       <button appAction="send"
               size="lg"
               display="icon"
@@ -638,6 +696,7 @@
               [busy]="isSending()"
               (click)="sendMessage()">
       </button>
+      </ng-template>
     </div>
   </div>
 

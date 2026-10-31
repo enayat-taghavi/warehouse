@@ -52,7 +52,10 @@ from .membership import (
 from rest_framework import serializers as drf_serializers
 from common.warehouse_scope import can_access_warehouse
 from settings_core.services import get_setting, get_chat_max_upload_mb
-from .previews import ALLOWED_EXTENSIONS, validate_uploaded_file, schedule_attachment_preview
+from .previews import (
+    ALLOWED_EXTENSIONS, AUDIO_EXTENSIONS, validate_uploaded_file, schedule_attachment_preview,
+    voice_duration_from_name,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -739,7 +742,8 @@ class MessageViewSet(viewsets.ModelViewSet):
             file=file_obj,
             file_name=original_name,
             file_size=file_obj.size,
-            content_type=detected_type
+            content_type=detected_type,
+            duration=voice_duration_from_name(original_name) if ext in AUDIO_EXTENSIONS else None,
         )
 
         broadcast_message_updated_ws(msg, request)

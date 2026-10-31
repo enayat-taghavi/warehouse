@@ -24,7 +24,7 @@ export type ChatItem =
   | { kind: 'msg'; key: string; msg: ChatMessage };
 
 /** نوع نمایشی پیوست */
-export type AttachmentKind = 'image' | 'pdf' | 'word' | 'excel' | 'text' | 'file';
+export type AttachmentKind = 'image' | 'pdf' | 'word' | 'excel' | 'text' | 'audio' | 'file';
 
 /** فایل انتخاب‌شده پیش از ارسال */
 export interface PickedFile {
@@ -39,7 +39,7 @@ export interface PickedFile {
 export interface MediaEntry { msg: ChatMessage; att: MessageAttachment }
 
 /** پسوندهای مجاز؛ باید با accept ورودی فایل و ALLOWED_EXTENSIONS در backend/core/communications/previews.py یکی بماند */
-export const CHAT_ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls', '.doc', '.docx', '.txt', '.csv'];
+export const CHAT_ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls', '.doc', '.docx', '.txt', '.csv', '.webm', '.ogg', '.m4a'];
 /** بیشترین تعداد فایل در یک پیام */
 export const CHAT_MAX_FILES = 10;
 /** سقف پیش‌فرض حجم هر فایل (مگابایت)؛ تا رسیدن تنظیم سرور (chat_max_upload_mb) یا در حالت آفلاین */
@@ -332,6 +332,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.attachmentFull.clear();
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
     if (this.typingIndicatorClearTimer) clearTimeout(this.typingIndicatorClearTimer);
+    if (this.audioEl) { this.audioEl.pause(); this.audioEl.removeAttribute('src'); this.audioEl = null; }
   }
 
   private scrollToBottom(): void {
@@ -747,7 +748,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       const name = file.name || '';
       const ext = name.includes('.') ? name.substring(name.lastIndexOf('.')).toLowerCase() : '';
       if (!CHAT_ALLOWED_EXTENSIONS.includes(ext) || file.type === 'image/svg+xml') {
-        this.toast.show('error', `نوع فایل «${name || 'بی‌نام'}» مجاز نیست. فقط عکس، PDF، Word، Excel، متن و CSV.`);
+        this.toast.show('error', `نوع فایل «${name || 'بی‌نام'}» مجاز نیست. فقط عکس، PDF، Word، Excel، متن، CSV و صوت.`);
         continue;
       }
       if (file.size > this.maxUploadMb() * 1024 * 1024) {
@@ -791,10 +792,210 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   /** پیش‌نویس گفتگوی فعلی (فایل‌های نوار و متن) در سرویس می‌ماند تا با بستن کشو یا عوض کردن گفتگو گم نشود یا به گفتگوی دیگری نرود */
   private stashDraft(): void {
+    // ضبطِ در حال اجرا فرستاده نمی‌شود و گم هم نمی‌شود: به پیش‌نویس همان گفتگو می‌رود
+    const voice = this.recording() ? this.takeRecordingNow() : null;
     if (this.lastConvId) {
-      this.commService.stashComposerDraft(this.lastConvId, this.pickedFiles().map(p => p.file), this.messageInputText || '');
+      const files = this.pickedFiles().map(p => p.file);
+      if (voice) files.push(voice);
+      this.commService.stashComposerDraft(this.lastConvId, files, this.messageInputText || '');
     }
     this.clearPicked();
+  }
+
+  // ─── پیام صوتی (U9) ───
+  /** در حال ضبط پیام صوتی */
+  public recording = signal<boolean>(false);
+  /** مدت ضبط تا این لحظه (ثانیه) */
+  public recordSeconds = signal<number>(0);
+  private recorder: MediaRecorder | null = null;
+  private recordStream: MediaStream | null = null;
+  private recordChunks: Blob[] = [];
+  private recordBytes = 0;
+  private recordMime = '';
+  private recordStartedAt = 0;
+  private recordEndedAt = 0;
+  private recordTimer: ReturnType<typeof setInterval> | null = null;
+  /** پس از stop: فرستادن، رفتن به نوار پیش از ارسال یا دور ریختن */
+  private recordOnStop: 'send' | 'discard' = 'discard';
+
+  /** مرورگر ضبط صدا را پشتیبانی می‌کند (در jsdom و مرورگرهای قدیمی دکمه نشان داده نمی‌شود) */
+  public canRecord(): boolean {
+    return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  }
+
+  private pickRecordMime(): string {
+    const options = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm'];
+    for (const m of options) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m; } catch { /* ادامه */ }
+    }
+    return '';
+  }
+
+  public async startRecording(): Promise<void> {
+    if (this.recording() || this.editing() || !this.canRecord()) return;
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      this.toast.error('دسترسی به میکروفون داده نشد. اجازهٔ میکروفون را در تنظیمات مرورگر یا برنامه روشن کنید.');
+      return;
+    }
+    const mime = this.pickRecordMime();
+    let rec: MediaRecorder;
+    try {
+      rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 });
+    } catch {
+      stream.getTracks().forEach(t => t.stop());
+      this.toast.error('ضبط صدا در این دستگاه پشتیبانی نمی‌شود');
+      return;
+    }
+    this.recorder = rec;
+    this.recordStream = stream;
+    this.recordChunks = [];
+    this.recordBytes = 0;
+    this.recordMime = (rec.mimeType || mime || 'audio/webm').split(';')[0];
+    this.recordOnStop = 'discard';
+    this.recordStartedAt = Date.now();
+    this.recordEndedAt = 0;
+    this.recordSeconds.set(0);
+    // سقف مدت نداریم (کاربر)؛ فقط سقف حجم فایل چت که پیش از رسیدن به آن ضبط خودکار فرستاده می‌شود
+    const limit = this.maxUploadMb() * 1024 * 1024 * 0.95;
+    rec.ondataavailable = (ev: BlobEvent) => {
+      if (!ev.data || ev.data.size === 0) return;
+      this.recordChunks.push(ev.data);
+      this.recordBytes += ev.data.size;
+      if (this.recordBytes >= limit && this.recording()) {
+        this.toast.show('warning', 'پیام صوتی به سقف حجم فایل رسید و فرستاده شد.');
+        this.stopRecording(true);
+      }
+    };
+    rec.onstop = () => this.onRecorderStopped();
+    rec.start(1000);
+    this.recording.set(true);
+    // فوکوس به دکمهٔ فرستادن نوار ضبط (کادر نوشتن تا پایان ضبط برداشته می‌شود)
+    setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('[data-testid="record-send"]')?.focus(), 0);
+    this.recordTimer = setInterval(() => this.recordSeconds.set(Math.floor((Date.now() - this.recordStartedAt) / 1000)), 500);
+  }
+
+  /** پایان ضبط؛ send=true یعنی فرستادن، false یعنی لغو */
+  public stopRecording(send: boolean): void {
+    if (!this.recorder || !this.recording()) return;
+    this.recordOnStop = send ? 'send' : 'discard';
+    this.recordEndedAt = Date.now();
+    this.recording.set(false);
+    if (this.recordTimer) { clearInterval(this.recordTimer); this.recordTimer = null; }
+    setTimeout(() => this.composer?.nativeElement?.focus(), 0);
+    try { this.recorder.stop(); } catch { this.onRecorderStopped(); }
+  }
+
+  private onRecorderStopped(): void {
+    const action = this.recordOnStop;
+    const file = action === 'send' ? this.buildVoiceFile() : null;
+    this.releaseRecorder();
+    if (!file) return;
+    if (file.size === 0 || this.voiceSeconds() < 1) {
+      this.toast.show('warning', 'پیام صوتی خیلی کوتاه بود و فرستاده نشد.');
+      return;
+    }
+    this.addFiles([file]);
+    if (this.pickedFiles().some(p => p.file === file)) void this.sendMessage();
+  }
+
+  private voiceSeconds(): number {
+    return Math.max(0, Math.round(((this.recordEndedAt || Date.now()) - this.recordStartedAt) / 1000));
+  }
+
+  private buildVoiceFile(): File | null {
+    if (this.recordChunks.length === 0) return null;
+    const ext = this.recordMime.includes('ogg') ? 'ogg' : this.recordMime.includes('mp4') ? 'm4a' : 'webm';
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+    // نام قراردادی: سرور مدت را از آن می‌خواند (backend/core/communications/previews.py VOICE_NAME_RE)
+    const name = `voice_${stamp}_${Math.max(1, this.voiceSeconds())}s.${ext}`;
+    return new File(this.recordChunks, name, { type: ext === 'm4a' ? 'audio/mp4' : `audio/${ext}` });
+  }
+
+  /** ضبط را همین حالا (هم‌زمان) به فایل تبدیل می‌کند؛ برای عوض شدن گفتگو یا بسته شدن کشو */
+  private takeRecordingNow(): File | null {
+    this.recordEndedAt = Date.now();
+    const file = this.buildVoiceFile();
+    this.recordOnStop = 'discard';
+    this.recording.set(false);
+    if (this.recordTimer) { clearInterval(this.recordTimer); this.recordTimer = null; }
+    try { this.recorder?.stop(); } catch { /* آزادسازی در releaseRecorder */ }
+    this.releaseRecorder();
+    return file;
+  }
+
+  private releaseRecorder(): void {
+    this.recordStream?.getTracks().forEach(t => t.stop());
+    if (this.recorder) { this.recorder.ondataavailable = null; this.recorder.onstop = null; }
+    this.recorder = null;
+    this.recordStream = null;
+    this.recordChunks = [];
+    this.recordBytes = 0;
+  }
+
+  /** ۷۵ ثانیه → «۱:۱۵» با رقم فارسی */
+  public durationFa(seconds?: number | null): string {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    const two = (n: number) => n.toLocaleString('fa-IR', { minimumIntegerDigits: 2, useGrouping: false });
+    return h > 0 ? `${h.toLocaleString('fa-IR')}:${two(m)}:${two(r)}` : `${m.toLocaleString('fa-IR')}:${two(r)}`;
+  }
+
+  // پخش: یک پخش‌کنندهٔ مشترک؛ فایل با توکن گرفته می‌شود (مثل لایت‌باکس)
+  private audioEl: HTMLAudioElement | null = null;
+  public playingAudioId = signal<string | null>(null);
+  public audioLoadingId = signal<string | null>(null);
+  public audioPos = signal<number>(0);
+  public audioDur = signal<number>(0);
+  private audioPaused = signal<boolean>(true);
+
+  public isPlaying(att: MessageAttachment): boolean {
+    return this.playingAudioId() === String(att.id) && !this.audioPaused();
+  }
+
+  public async toggleAudio(att: MessageAttachment): Promise<void> {
+    const id = String(att.id);
+    if (this.playingAudioId() === id && this.audioEl) {
+      if (this.audioEl.paused) { void this.audioEl.play().catch(() => undefined); } else { this.audioEl.pause(); }
+      return;
+    }
+    if (!att.download_url) { this.toast.error('فایل هنوز آماده نیست؛ گفتگو را دوباره باز کنید'); return; }
+    this.audioLoadingId.set(id);
+    try {
+      const url = await this.fullAttachmentUrl(att);
+      if (!this.audioEl) {
+        this.audioEl = new Audio();
+        this.audioEl.ontimeupdate = () => this.audioPos.set(this.audioEl?.currentTime || 0);
+        this.audioEl.onloadedmetadata = () => {
+          const d = this.audioEl?.duration;
+          if (d && Number.isFinite(d)) this.audioDur.set(d);
+        };
+        this.audioEl.onended = () => { this.audioPos.set(0); this.playingAudioId.set(null); this.audioPaused.set(true); };
+        this.audioEl.onpause = () => this.audioPaused.set(true);
+        this.audioEl.onplay = () => this.audioPaused.set(false);
+      }
+      this.audioEl.pause();
+      this.audioEl.src = url;
+      this.audioPos.set(0);
+      this.audioDur.set(att.duration || 0);
+      this.playingAudioId.set(id);
+      await this.audioEl.play();
+    } catch {
+      this.playingAudioId.set(null);
+      this.toast.error('پخش پیام صوتی انجام نشد');
+    } finally {
+      this.audioLoadingId.set(null);
+    }
+  }
+
+  public seekAudio(att: MessageAttachment, value: number): void {
+    if (this.playingAudioId() !== String(att.id) || !this.audioEl || !Number.isFinite(value)) return;
+    this.audioEl.currentTime = value;
+    this.audioPos.set(value);
   }
 
   private restoreDraft(convId: string): void {
@@ -1040,6 +1241,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const type = (att?.content_type || '').toLowerCase();
     const ext = this.fileExt(att?.file_name);
     if (type.startsWith('image/')) return 'image';
+    if (type.startsWith('audio/') || ext === 'webm' || ext === 'ogg' || ext === 'm4a') return 'audio';
     if (type === 'application/pdf' || ext === 'pdf') return 'pdf';
     if (ext === 'doc' || ext === 'docx' || type.includes('word')) return 'word';
     if (ext === 'xls' || ext === 'xlsx' || type.includes('sheet') || type.includes('excel')) return 'excel';

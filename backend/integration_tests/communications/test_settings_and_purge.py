@@ -148,80 +148,48 @@ class SettingsAndPurgeTestCase(BaseCommsTestCase):
         resp = self.client.get('/api/public/config/')
         self.assertEqual(resp.data['chat_max_upload_mb'], 25)
 
-    def test_purge_preserves_soft_delete_tombstone(self):
-        """دستور purge_expired_chat_media به صورت پیش‌فرض فایل فیزیکی را پاک کرده و Tombstone را برای کلاینت‌های آفلاین حفظ می‌کند"""
-        old_time = timezone.now() - timedelta(days=200)
+    def test_chat_media_purge_command_is_gone(self):
+        """کاربر (۹ آبان ۱۴۰۵): فایل‌ها و پیام‌های صوتی چت هرگز خودکار پاک نمی‌شوند"""
+        from django.core.management.base import CommandError
+        with self.assertRaises(CommandError):
+            call_command('purge_expired_chat_media', days=180)
 
-        # ساخت پیوست
-        att = MessageAttachment.objects.create(
-            message=self.direct_message,
-            file=SimpleUploadedFile("old_attachment.txt", b"old attachment content"),
-            file_name="old_attachment.txt",
-            file_size=22
+    def _upload(self, name, content):
+        self.auth(self.manager_wh1)
+        return self.client.post(
+            "/api/communications/messages/upload/",
+            {'file': SimpleUploadedFile(name, content, content_type='application/octet-stream'),
+             'message_id': self.direct_message.id},
+            format='multipart',
         )
-        file_path = att.file.path
-        MessageAttachment.objects.filter(id=att.id).update(created_at=old_time)
-        self.assertTrue(os.path.exists(file_path))
 
-        # اجرای دستور با روزهای کمتر از ۲۰۰
-        call_command('purge_expired_chat_media', days=180)
+    def test_voice_webm_upload_keeps_duration_from_name(self):
+        """پیام صوتی webm پذیرفته می‌شود؛ نوع از محتوا و مدت از نام فایل ضبط‌شده"""
+        resp = self._upload('voice_20261031-101500_754s.webm', b'\x1a\x45\xdf\xa3' + b'\x00' * 64)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data['content_type'], 'audio/webm')
+        self.assertEqual(resp.data['duration'], 754)
+        self.assertEqual(MessageAttachment.objects.get(pk=resp.data['id']).duration, 754)
 
-        # فایل فیزیکی از دیسک پاک شده باشد
-        self.assertFalse(os.path.exists(file_path))
-        # در objects عادی مخفی است (حذف نرم شده)
-        self.assertEqual(MessageAttachment.objects.filter(id=att.id).count(), 0)
-        # در all_objects به عنوان Tombstone برای سینک آفلاین باقی مانده است
-        att.refresh_from_db()
-        self.assertTrue(att.is_deleted)
-        self.assertEqual(MessageAttachment.all_objects.filter(id=att.id).count(), 1)
+    def test_voice_ogg_and_m4a_accepted(self):
+        ogg = self._upload('voice_a_3s.ogg', b'OggS' + b'\x00' * 64)
+        self.assertEqual(ogg.status_code, status.HTTP_201_CREATED, ogg.data)
+        self.assertEqual(ogg.data['content_type'], 'audio/ogg')
+        m4a = self._upload('note.m4a', b'\x00\x00\x00\x20ftypM4A ' + b'\x00' * 64)
+        self.assertEqual(m4a.status_code, status.HTTP_201_CREATED, m4a.data)
+        self.assertEqual(m4a.data['content_type'], 'audio/mp4')
+        # نام غیرضبطی مدت ندارد (هنگام پخش خوانده می‌شود)
+        self.assertIsNone(m4a.data['duration'])
 
-    def test_purge_hard_delete_flag(self):
-        """فلگ --hard-delete در صورت ارسال صریح رکورد را کاملاً از all_objects نیز حذف می‌کند"""
-        old_time = timezone.now() - timedelta(days=200)
+    def test_voice_with_fake_content_rejected(self):
+        """پسوند صوتی با محتوای دیگر (مثلاً HTML) رد می‌شود"""
+        resp = self._upload('voice_x_5s.webm', b'<html><script>alert(1)</script>')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-        att = MessageAttachment.objects.create(
-            message=self.direct_message,
-            file=SimpleUploadedFile("hard_delete.txt", b"hard delete content"),
-            file_name="hard_delete.txt",
-            file_size=19
-        )
-        MessageAttachment.objects.filter(id=att.id).update(created_at=old_time)
+    def test_voice_bad_duration_in_name_ignored(self):
+        from communications.previews import voice_duration_from_name
+        self.assertIsNone(voice_duration_from_name('voice_x_0s.webm'))
+        self.assertIsNone(voice_duration_from_name('voice_x_999999s.webm'))
+        self.assertIsNone(voice_duration_from_name('report_12s.webm'))
+        self.assertEqual(voice_duration_from_name('voice_x_12s.ogg'), 12)
 
-        call_command('purge_expired_chat_media', days=180, hard_delete=True)
-
-        self.assertEqual(MessageAttachment.all_objects.filter(id=att.id).count(), 0)
-
-    def test_purge_dry_run_changes_nothing(self):
-        """فلگ --dry-run نباید هیچ رکوردی یا فایلی را تغییر دهد"""
-        old_time = timezone.now() - timedelta(days=200)
-
-        att = MessageAttachment.objects.create(
-            message=self.direct_message,
-            file=SimpleUploadedFile("dry_run_file.txt", b"dry run content"),
-            file_name="dry_run_file.txt",
-            file_size=15
-        )
-        file_path = att.file.path
-        MessageAttachment.objects.filter(id=att.id).update(created_at=old_time)
-
-        call_command('purge_expired_chat_media', days=180, dry_run=True)
-
-        self.assertEqual(MessageAttachment.all_objects.filter(id=att.id).count(), 1)
-        self.assertTrue(os.path.exists(file_path))
-
-    def test_purge_respects_days_argument(self):
-        """پیوست‌های تازه‌تر از سقف روز مشخص‌شده نباید پاک شوند"""
-        fresh_time = timezone.now() - timedelta(days=30)
-
-        att = MessageAttachment.objects.create(
-            message=self.direct_message,
-            file=SimpleUploadedFile("fresh_file.png", b"\x89PNG fresh"),
-            file_name="fresh_file.png",
-            file_size=10
-        )
-        MessageAttachment.objects.filter(id=att.id).update(created_at=fresh_time)
-
-        call_command('purge_expired_chat_media', days=180)
-
-        # فایل تازه باید همچنان در سیستم باقی مانده باشد
-        self.assertEqual(MessageAttachment.objects.filter(id=att.id).count(), 1)
