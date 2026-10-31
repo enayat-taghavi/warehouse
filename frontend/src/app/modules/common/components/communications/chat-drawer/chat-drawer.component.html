@@ -267,26 +267,132 @@
 
           <!-- Attachment Preview -->
           <div *ngIf="msg.attachments && msg.attachments.length > 0" class="mb-2 space-y-1.5">
-            <div *ngFor="let att of msg.attachments">
-              <button
-                type="button"
-                (click)="openAttachment(msg, att)"
-                [attr.aria-label]="'باز کردن ' + att.file_name"
-                [attr.title]="'باز کردن ' + att.file_name"
-                class="block w-full text-start rounded-lg overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
-                <img *ngIf="att.content_type.startsWith('image/') && attachmentPreview(att) as src" [src]="src" [alt]="att.file_name" class="max-h-48 w-full object-cover" />
-                <span *ngIf="!att.content_type.startsWith('image/')" class="block p-2.5 flex items-center justify-between gap-2">
-                  <span class="block flex items-center gap-1.5 truncate">
-                    <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
-                    <span class="truncate text-[11px] font-bold">{{ att.file_name }}</span>
-                  </span>
-                  <span class="text-[10px] bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded font-bold shrink-0 flex items-center gap-1">
-                    <span>دانلود</span>
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
-                  </span>
-                </span>
-              </button>
-            </div>
+            <!-- عکس‌ها -->
+            <ng-container *ngIf="msg.attachments.filter((a) => attachmentKind(a) === 'image') as images">
+              <!-- یک عکس -->
+              <div *ngIf="images.length === 1">
+                <button
+                  type="button"
+                  data-testid="att-image"
+                  (click)="openAttachment(msg, images[0])"
+                  [attr.aria-label]="'نمایش ' + images[0].file_name"
+                  [attr.title]="'نمایش ' + images[0].file_name"
+                  class="block w-full text-start rounded-xl overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
+                  <div
+                    class="w-full max-h-64 overflow-hidden flex items-center justify-center bg-black/10 dark:bg-white/10"
+                    [style.aspect-ratio]="images[0].width && images[0].height ? images[0].width + ' / ' + images[0].height : null">
+                    <div *ngIf="!attachmentPreview(images[0])" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full min-h-[120px]"></div>
+                    <img
+                      *ngIf="attachmentPreview(images[0]) as src"
+                      [src]="src"
+                      [alt]="images[0].file_name"
+                      loading="lazy"
+                      class="w-full h-full object-cover" />
+                  </div>
+                </button>
+              </div>
+
+              <!-- دو یا چند عکس -->
+              <div *ngIf="images.length > 1" class="grid grid-cols-2 gap-1" data-testid="att-grid">
+                <button
+                  *ngFor="let img of images.slice(0, 4); let i = index"
+                  type="button"
+                  data-testid="att-image"
+                  (click)="openAttachment(msg, img)"
+                  [attr.aria-label]="'نمایش ' + img.file_name"
+                  [attr.title]="'نمایش ' + img.file_name"
+                  class="relative aspect-square w-full rounded-xl overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
+                  <div *ngIf="!attachmentPreview(img)" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full"></div>
+                  <img
+                    *ngIf="attachmentPreview(img) as src"
+                    [src]="src"
+                    [alt]="img.file_name"
+                    loading="lazy"
+                    class="w-full h-full object-cover" />
+                  <div
+                    *ngIf="i === 3 && images.length > 4"
+                    data-testid="att-more"
+                    class="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-base font-bold">
+                    +{{ (images.length - 3).toLocaleString('fa-IR') }}
+                  </div>
+                </button>
+              </div>
+            </ng-container>
+
+            <!-- سایر پیوست‌ها (PDF و فایل‌ها) -->
+            <ng-container *ngFor="let att of msg.attachments.filter((a) => attachmentKind(a) !== 'image')">
+              <!-- PDF -->
+              <div *ngIf="attachmentKind(att) === 'pdf'" data-testid="att-card-pdf" class="rounded-xl border border-white/20 bg-black/5 dark:bg-white/5 overflow-hidden">
+                <button
+                  type="button"
+                  (click)="openAttachment(msg, att)"
+                  [attr.aria-label]="'نمایش ' + att.file_name"
+                  [attr.title]="'نمایش ' + att.file_name"
+                  class="block w-full text-start cursor-pointer hover:opacity-90 transition-opacity">
+                  <div *ngIf="att.thumbnail_url || att.preview_status === 'pending'"
+                       class="w-full max-h-64 overflow-hidden flex items-center justify-center bg-black/10 dark:bg-white/10"
+                       [style.aspect-ratio]="att.width && att.height ? att.width + ' / ' + att.height : null">
+                    <div *ngIf="!attachmentPreview(att)" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full min-h-[100px]"></div>
+                    <img *ngIf="attachmentPreview(att) as src" [src]="src" [alt]="att.file_name" loading="lazy" class="w-full h-full object-cover" />
+                  </div>
+                  <div *ngIf="!att.thumbnail_url && att.preview_status !== 'pending'"
+                       class="w-full h-24 flex items-center justify-center bg-rose-500/10 text-rose-500">
+                    <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" appIcon="file-pdf"></svg>
+                  </div>
+                </button>
+                <div class="p-2.5 flex items-center justify-between gap-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    (click)="openAttachment(msg, att)"
+                    [attr.aria-label]="'نمایش ' + att.file_name"
+                    class="min-w-0 flex-1 text-start cursor-pointer">
+                    <p class="truncate text-[11px] font-bold text-fg" [title]="att.file_name">{{ att.file_name }}</p>
+                    <p class="text-[10px] text-fg-muted font-bold mt-0.5">{{ fileMetaFa(att) }}</p>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="downloadAttachment(att)"
+                    [attr.aria-label]="'دانلود ' + att.file_name"
+                    [attr.title]="'دانلود ' + att.file_name"
+                    class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- سایر فایل‌ها -->
+              <div
+                *ngIf="attachmentKind(att) !== 'pdf'"
+                data-testid="att-card-file"
+                (click)="downloadAttachment(att)"
+                class="rounded-xl border border-white/20 bg-black/5 dark:bg-white/5 p-2.5 flex items-center justify-between gap-2 cursor-pointer hover:opacity-90 transition-opacity">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-black/5 dark:bg-white/5">
+                    <svg *ngIf="attachmentKind(att) === 'word'" class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-word"></svg>
+                    <svg *ngIf="attachmentKind(att) === 'excel'" class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-excel"></svg>
+                    <svg *ngIf="attachmentKind(att) === 'text'" class="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+                    <svg *ngIf="attachmentKind(att) === 'file'" class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip"></svg>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-[11px] font-bold text-fg" [title]="att.file_name">{{ att.file_name }}</p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <span *ngIf="fileExt(att.file_name)" dir="ltr" class="text-[10px] font-mono font-bold uppercase px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-fg-muted">
+                        {{ fileExt(att.file_name).toUpperCase() }}
+                      </span>
+                      <span *ngIf="fileSizeFa(att.file_size) as size" class="text-[10px] text-fg-muted font-bold">{{ size }}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  (click)="downloadAttachment(att); $event.stopPropagation()"
+                  [attr.aria-label]="'دانلود ' + att.file_name"
+                  [attr.title]="'دانلود ' + att.file_name"
+                  class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
+                </button>
+              </div>
+            </ng-container>
           </div>
 
           <!-- فایلی که هنوز آپلود نشده (در انتظار یا ناموفق) -->
@@ -701,6 +807,69 @@
               </div>
             </li>
           </ul>
+        </div>
+
+        <!-- رسانه و فایل‌ها -->
+        <div data-testid="media-tab" class="space-y-3">
+          <div>
+            <h4 class="text-xs font-bold text-fg-muted">رسانه و فایل‌ها</h4>
+            <p class="text-[10px] text-fg-subtle mt-0.5">فقط پیام‌های بارگذاری‌شده</p>
+          </div>
+
+          <!-- عکس‌ها -->
+          <div>
+            <h5 class="text-[11px] font-bold text-fg-muted mb-1.5">عکس‌ها</h5>
+            <p *ngIf="mediaImages().length === 0" data-testid="media-empty" class="text-[11px] text-fg-subtle py-1">عکسی در این گفتگو نیست</p>
+            <div *ngIf="mediaImages().length > 0" class="grid grid-cols-3 gap-1">
+              <button
+                *ngFor="let e of mediaImages()"
+                type="button"
+                (click)="openAttachment(e.msg, e.att)"
+                data-testid="media-image"
+                [attr.aria-label]="'نمایش ' + e.att.file_name"
+                [attr.title]="'نمایش ' + e.att.file_name"
+                class="relative aspect-square w-full rounded-lg overflow-hidden border border-line hover:opacity-90 transition-opacity bg-surface-muted cursor-pointer">
+                <div *ngIf="!attachmentPreview(e.att)" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full"></div>
+                <img
+                  *ngIf="attachmentPreview(e.att) as src"
+                  [src]="src"
+                  [alt]="e.att.file_name"
+                  loading="lazy"
+                  class="w-full h-full object-cover" />
+              </button>
+            </div>
+          </div>
+
+          <!-- فایل‌ها -->
+          <div>
+            <h5 class="text-[11px] font-bold text-fg-muted mb-1.5">فایل‌ها</h5>
+            <p *ngIf="mediaFiles().length === 0" data-testid="media-empty" class="text-[11px] text-fg-subtle py-1">فایلی در این گفتگو نیست</p>
+            <ul *ngIf="mediaFiles().length > 0" class="divide-y divide-line-subtle border border-line rounded-xl overflow-hidden">
+              <li *ngFor="let e of mediaFiles()">
+                <button
+                  type="button"
+                  (click)="openAttachment(e.msg, e.att)"
+                  data-testid="media-file"
+                  [attr.aria-label]="'باز کردن ' + e.att.file_name"
+                  [attr.title]="'باز کردن ' + e.att.file_name"
+                  class="w-full p-2.5 flex items-center justify-between gap-2 text-start hover:bg-surface-muted cursor-pointer transition-colors">
+                  <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-surface-muted text-fg-muted">
+                      <svg *ngIf="attachmentKind(e.att) === 'pdf'" class="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-pdf"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'word'" class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-word"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'excel'" class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-excel"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'text'" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'file'" class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip"></svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-xs font-bold text-fg">{{ e.att.file_name }}</p>
+                      <p class="text-[10px] text-fg-muted font-bold mt-0.5">{{ fileMetaFa(e.att) }}</p>
+                    </div>
+                  </div>
+                </button>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <!-- صدا و ترک گروه -->
