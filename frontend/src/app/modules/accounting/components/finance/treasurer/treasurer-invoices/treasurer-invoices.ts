@@ -23,10 +23,8 @@ import { isServerUnreachable } from '../../../../../../core/services/server-reac
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { saveBlob } from '../../../../../../core/platform/file-output';
-import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
-import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
@@ -48,21 +46,6 @@ export interface PayableInvoiceItem {
   remaining: number;
 }
 
-export interface PettyCashRefillItem {
-  id: number;
-  custodian_name: string;
-  section_name: string;
-  ceiling_limit: number;
-  current_balance: number;
-  requested_refill_amount: number;
-  card_number: string;
-  status: 'pending_refill' | 'refilled';
-  tracking_code?: string;
-  /** کسر بدهی و خالص واریز (د۴)؛ در شارژهای قدیمی خالی است */
-  offset_total?: number;
-  net_amount?: number;
-}
-
 @Component({
   selector: 'app-treasurer-invoices-hub',
   standalone: true,
@@ -71,7 +54,6 @@ export interface PettyCashRefillItem {
     AttachmentsComponent,
     FormsModule,
     ReactiveFormsModule,
-    TabBarComponent,
     ActionButtonComponent,
     CommandCenterComponent,
     ModalComponent,
@@ -84,13 +66,6 @@ export interface PettyCashRefillItem {
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
-  activeSubTab: 'payable_invoices' | 'petty_cash_refills' = 'payable_invoices';
-
-  readonly tabs: TabDef[] = [
-    { id: 'payable_invoices', label: 'فاکتورهای آماده پرداخت', shortLabel: 'فاکتورها', icon: ACCOUNTING_ENTITY_ICONS.invoices },
-    { id: 'petty_cash_refills', label: 'شارژ دفاتر تنخواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash }
-  ];
-
   // Section Isolation
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -105,7 +80,6 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   isLoading = false;
 
   invoices: PayableInvoiceItem[] = [];
-  refills: PettyCashRefillItem[] = [];
 
   private routeSub?: Subscription;
   private docSub?: Subscription;
@@ -126,9 +100,6 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
-      if (params['tab'] && ['payable_invoices', 'petty_cash_refills'].includes(params['tab'])) {
-        this.activeSubTab = params['tab'];
-      }
       if (params['section_id']) {
         this.selectedSectionId = Number(params['section_id']);
       }
@@ -139,8 +110,8 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
     this.loadSections();
 
-    // ص۶ طرح ۲.۵: ردیف‌های این صفحه برچسب وضعیت خودشان را دارند، پس هر تغییر فاکتور یا تنخواه = بازخوانی بی‌صدا
-    this.docSub = this.ws?.documentChanges$?.(['expense_invoice', 'petty_cash']).subscribe(() => this.loadTreasuryData(true));
+    // ص۶ طرح ۲.۵: ردیف‌های این صفحه برچسب وضعیت خودشان را دارند، پس هر تغییر فاکتور = بازخوانی بی‌صدا
+    this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(() => this.loadTreasuryData(true));
   }
 
   ngOnDestroy(): void {
@@ -192,18 +163,10 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.loadTreasuryData();
   }
 
-  switchSubTab(tab: string): void {
-    if (tab === 'payable_invoices' || tab === 'petty_cash_refills') {
-      this.activeSubTab = tab;
-      this.syncUrlParams();
-    }
-  }
-
   syncUrlParams(): void {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
-        tab: this.activeSubTab,
         section_id: this.selectedSectionId || null,
         q: this.searchQuery ? this.searchQuery : null
       },
@@ -234,34 +197,8 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
           remaining: inv.remaining !== undefined && inv.remaining !== null ? Number(inv.remaining) : Number(inv.amount || 0) - Number(inv.paid_amount || 0)
         }));
 
-        this.personnelApi.getPettyCashTransactions({
-          section_id: this.selectedSectionId || undefined,
-          transaction_type: 'allocation'
-        }).subscribe({
-          next: (txs: any[]) => {
-            this.isLoading = false;
-            // فقط ردیف‌های قدیمی در انتظار؛ شارژهای تازه از «کارهای من» و واریز pay-charge می‌گذرند
-            const legacyPending = ['pending_supervisor', 'pending_accountant'];
-            this.refills = (txs || []).filter((t: any) => legacyPending.includes(t.status)).map((t: any) => ({
-              id: t.id,
-              custodian_name: t.custodian_name || 'مسئول تنخواه',
-              section_name: t.section_name || '',
-              ceiling_limit: 50000000,
-              current_balance: 0,
-              requested_refill_amount: t.amount,
-              card_number: t.receipt_number || '---',
-              status: t.status === 'approved' ? 'refilled' : 'pending_refill',
-              tracking_code: t.receipt_number,
-              offset_total: Number(t.offset_total || 0),
-              net_amount: t.net_amount !== null && t.net_amount !== undefined ? Number(t.net_amount) : Number(t.amount || 0) - Number(t.offset_total || 0)
-            }));
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            this.isLoading = false;
-            this.cdr.detectChanges();
-          }
-        });
+        this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isLoading = false;
@@ -606,57 +543,6 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   printInvoice(item: PayableInvoiceItem): void {
     void this.printService.downloadPdf('expense_invoice', item.id);
-  }
-
-  // ─── پنجرهٔ ثبت شمارهٔ پیگیری واریز شارژ تنخواه ───
-  refillModalOpen = false;
-  refillItem: PettyCashRefillItem | null = null;
-  refillTrackingCode = '';
-  refillError = '';
-
-  refillPettyCash(item: PettyCashRefillItem): void {
-    this.refillItem = item;
-    this.refillTrackingCode = '';
-    this.refillError = '';
-    this.refillModalOpen = true;
-  }
-
-  closeRefillModal(): void {
-    this.refillModalOpen = false;
-    this.refillItem = null;
-    this.refillError = '';
-  }
-
-  confirmRefill(): void {
-    const item = this.refillItem;
-    if (!item) return;
-    const code = this.refillTrackingCode.trim();
-    if (!code) {
-      this.refillError = 'ورود شماره پیگیری الزامی است.';
-      return;
-    }
-    this.refillModalOpen = false;
-    this.refillError = '';
-    this.isLoading = true;
-    this.personnelApi.approvePettyCashTransaction(item.id).subscribe({
-      next: () => {
-        this.isLoading = false;
-        item.status = 'refilled';
-        item.tracking_code = code;
-        this.refillItem = null;
-        this.toast.success(`شارژ تن‌خواه به حساب ${item.custodian_name} با موفقیت ثبت شد.`);
-        this.loadTreasuryData();
-      },
-      error: (err: any) => {
-        this.isLoading = false;
-        if (err?.status === 409 && err?.error?.code === 'ceiling_exceeded_at_pay') {
-          this.toast.error('مبلغ این شارژ از سقف تنخواه بیشتر شده است. شارژ باید برگردانده شود و دوباره برای مدیر ارسال شود.');
-        } else {
-          this.toast.error('خطا در ثبت شارژ تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
-        }
-        this.cdr.detectChanges();
-      }
-    });
   }
 
   /** خروجی اکسل فاکتورهای هزینهٔ در دسترس خزانه‌دار (پیش‌تر فقط پیام موفقیت نشان می‌داد و فایلی نمی‌ساخت) */

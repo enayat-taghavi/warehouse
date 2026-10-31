@@ -154,29 +154,11 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
     fixture.detectChanges();
   });
 
-  it('Bug 1: Manager Cartable renders tabs for Invoices and Petty Cash and dispatches approval actions', () => {
-    // 1. Verify counts
-    expect(component.pendingInvoicesCount).toBe(1);
+  it('Bug 1: Manager Cartable keeps Petty Cash (invoices moved to the unified invoices tab) and dispatches approval actions', () => {
+    // 1. Verify counts; the invoices tab is gone
     expect(component.pendingPettyCashCount).toBe(1);
-
-    // 2. Switch to invoices tab and load data
-    component.setTab('invoices');
-    component.loadInvoices();
-    fixture.detectChanges();
-
+    expect(component.mainTabs.map(t => t.id)).not.toContain('invoices');
     const hostElem: HTMLElement = fixture.nativeElement;
-    expect(hostElem.textContent).toContain('فاکتورهای هزینه');
-    expect(hostElem.textContent).toContain('فروشگاه آذرخش');
-    expect(hostElem.textContent).toContain('INV-1405-09');
-
-    // 3. Approve invoice
-    const sampleInv = { id: 201, invoice_number: 'INV-1405-09' };
-    component.approveInvoiceManager(sampleInv);
-    expect(mockApi.postCartableAction).toHaveBeenCalledWith('manager', {
-      action: 'approve',
-      model: 'invoice',
-      id: 201
-    });
 
     // 4. Switch to petty cash tab and load data
     component.setTab('petty_cash');

@@ -1,0 +1,119 @@
+<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: دراپ‌داون بخش -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-teal-700 focus:outline-none cursor-pointer">
+          <option [ngValue]="null">همه بخش‌ها</option>
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div cc-actions class="flex items-center gap-2 justify-end">
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        (click)="loadRefills()"
+      ></button>
+    </div>
+  </app-command-center>
+
+  <!-- جدول شارژ دفاتر تن‌خواه کارگاه‌ها -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
+      <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+      <h2 class="text-sm font-black text-slate-900">درخواست‌های شارژ تن‌خواه‌گردان کارگاه‌ها و پروژه‌ها</h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-xs">
+        <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
+          <tr>
+            <th class="py-3 px-3">ردیف</th>
+            <th class="py-3 px-3">مسئول تن‌خواه</th>
+            <th class="py-3 px-3">بخش / کارگاه</th>
+            <th class="py-3 px-3 font-mono">سقف مصوب تن‌خواه</th>
+            <th class="py-3 px-3 font-mono">مانده فعلی کارت</th>
+            <th class="py-3 px-3 font-mono">مبلغ درخواستی شارژ</th>
+            <th class="py-3 px-3 font-mono">شماره کارت تن‌خواه</th>
+            <th class="py-3 px-3 text-center">وضعیت</th>
+            <th class="py-3 px-3 text-center">عملیات خزانه‌دار</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr *ngFor="let item of refills; let idx = index" class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
+            <td class="py-3 px-3 font-bold text-slate-900">{{ item.custodian_name }}</td>
+            <td class="py-3 px-3 text-slate-600">{{ item.section_name }}</td>
+            <td class="py-3 px-3 font-mono text-slate-700">{{ item.ceiling_limit | number }}</td>
+            <td class="py-3 px-3 font-mono font-bold text-rose-600">{{ item.current_balance | number }}</td>
+            <td class="py-3 px-3 font-mono font-black text-teal-700 text-sm">{{ item.requested_refill_amount | number }}</td>
+            <td class="py-3 px-3 font-mono text-slate-700">{{ item.card_number }}</td>
+            <td class="py-3 px-3 text-center">
+              <span *ngIf="item.status === 'pending_refill'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">در انتظار شارژ</span>
+              <span *ngIf="item.status === 'refilled'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">شارژ شد</span>
+            </td>
+            <td class="py-3 px-3 text-center">
+              <button
+                *ngIf="item.status === 'pending_refill'"
+                type="button"
+                appAction="confirm"
+                label="واریز شارژ"
+                display="label"
+                size="sm"
+                (click)="refillPettyCash(item)"
+              ></button>
+              <span *ngIf="item.status === 'refilled'" class="text-[11px] font-mono text-emerald-600 font-bold">{{ item.tracking_code }}</span>
+            </td>
+          </tr>
+          <tr *ngIf="!isLoading && refills.length === 0">
+            <td colspan="9" class="p-8 text-center text-slate-400 font-medium">درخواست شارژ تن‌خواهی در انتظار واریز نیست.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- شمارهٔ پیگیری واریز شارژ تنخواه -->
+  <app-modal [isOpen]="refillModalOpen" size="md" [title]="'واریز شارژ تنخواه ' + (refillItem?.custodian_name || '')" (closed)="closeRefillModal()">
+    <form class="space-y-3" (ngSubmit)="confirmRefill()" novalidate>
+      <dl *ngIf="refillItem" class="grid grid-cols-3 gap-2 text-[11px] bg-surface-muted rounded-xl p-3">
+        <div>
+          <dt class="text-fg-muted">مبلغ شارژ</dt>
+          <dd class="font-mono font-bold text-fg">{{ faAmount(refillItem.requested_refill_amount) }}</dd>
+        </div>
+        <div>
+          <dt class="text-fg-muted">کسر بدهی</dt>
+          <dd class="font-mono font-bold text-rose-700">{{ faAmount(refillItem.offset_total || 0) }}</dd>
+        </div>
+        <div>
+          <dt class="text-fg-muted">خالص واریز</dt>
+          <dd class="font-mono font-black text-emerald-700">{{ faAmount(refillItem.net_amount) }}</dd>
+        </div>
+      </dl>
+      <p class="text-[11px] text-fg-muted">مبلغ خالص واریز را به حساب تنخواه‌گردان واریز کنید و شمارهٔ پیگیری را بنویسید (ریال).</p>
+      <div>
+        <label for="refill_tracking_code" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری واریز <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <input id="refill_tracking_code" type="text" [(ngModel)]="refillTrackingCode" name="refillTrackingCode" aria-required="true"
+          [attr.aria-invalid]="refillError ? 'true' : 'false'"
+          class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+      </div>
+      <div *ngIf="refillError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ refillError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeRefillModal()"></button>
+        <button type="submit" appAction="confirm" label="ثبت واریز" display="label" size="sm"></button>
+      </div>
+    </form>
+  </app-modal>
+
+</div>

@@ -74,6 +74,7 @@ const ROUTE_PERMISSIONS_LITERAL: Record<string, string[]> = {
   'manager-reports': ['perm_accounting_reports', 'admin_all'],
   'treasurer-disbursements': ['perm_treasury_disburse_action', 'admin_all'],
   'treasurer-invoices': ['perm_treasury_disburse_action', 'admin_all'],
+  'treasurer-petty-cash': ['perm_treasury_disburse_action', 'admin_all'],
   'treasurer-bank-accounts': ['perm_treasury_disburse_action', 'admin_all'],
   'treasurer-cheques': ['perm_treasury_disburse_action', 'admin_all'],
   'treasurer-reconciliation': ['perm_treasury_disburse_action', 'admin_all']
@@ -202,7 +203,7 @@ describe('Route Access Characterization Spec', () => {
     });
 
     it('validates Group 17: Treasurer Portal (treasurer-disbursements, treasurer-invoices, treasurer-bank-accounts, treasurer-cheques, treasurer-reconciliation)', () => {
-      for (const k of ['treasurer-disbursements', 'treasurer-invoices', 'treasurer-bank-accounts', 'treasurer-cheques', 'treasurer-reconciliation']) {
+      for (const k of ['treasurer-disbursements', 'treasurer-invoices', 'treasurer-petty-cash', 'treasurer-bank-accounts', 'treasurer-cheques', 'treasurer-reconciliation']) {
         verifyRouteKey(k);
       }
     });

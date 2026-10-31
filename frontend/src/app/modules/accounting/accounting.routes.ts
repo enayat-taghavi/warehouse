@@ -14,7 +14,6 @@ import { EmployeeNewVehicleHubComponent } from './components/finance/employee/em
 import { EmployeeNewPersonnelHubComponent } from './components/finance/employee/employee-new-personnel/employee-new-personnel';
 import { SupervisorAttendanceHubComponent } from './components/finance/supervisor/supervisor-attendance/supervisor-attendance';
 import { SupervisorFleetHubComponent } from './components/finance/supervisor/supervisor-fleet/supervisor-fleet';
-import { SupervisorInvoicesHubComponent } from './components/finance/supervisor/supervisor-invoices/supervisor-invoices';
 import { SupervisorPettyCashHubComponent } from './components/finance/supervisor/supervisor-petty-cash/supervisor-petty-cash';
 import { SupervisorNewProfilesHubComponent } from './components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles';
 import { SupervisorPersonnelHubComponent } from './components/finance/supervisor/supervisor-personnel/supervisor-personnel';
@@ -22,7 +21,6 @@ import { SupervisorPeriodLockHubComponent } from './components/finance/superviso
 import { AccountantPayrollHubComponent } from './components/finance/accountant/accountant-payroll/accountant-payroll';
 import { AccountantFleetHubComponent } from './components/finance/accountant/accountant-fleet/accountant-fleet';
 import { AccountantPersonnelHubComponent } from './components/finance/accountant/accountant-personnel/accountant-personnel';
-import { AccountantInvoicesHubComponent } from './components/finance/accountant/accountant-invoices/accountant-invoices';
 import { AccountantPettyCashHubComponent } from './components/finance/accountant/accountant-petty-cash/accountant-petty-cash';
 import { AccountantDiskettesHubComponent } from './components/finance/accountant/accountant-diskettes/accountant-diskettes';
 import { AccountantNewProfilesHubComponent } from './components/finance/accountant/accountant-new-profiles/accountant-new-profiles';
@@ -33,7 +31,8 @@ import { ManagerBudgetComponent } from './components/finance/manager/manager-bud
 import { ManagerContractsComponent } from './components/finance/manager/manager-contracts/manager-contracts';
 import { ManagerReportsComponent } from './components/finance/manager/manager-reports/manager-reports';
 import { TreasurerDisbursementsComponent } from './components/finance/treasurer/treasurer-disbursements/treasurer-disbursements';
-import { TreasurerInvoicesComponent } from './components/finance/treasurer/treasurer-invoices/treasurer-invoices';
+import { TreasurerPettyCashComponent } from './components/finance/treasurer/treasurer-petty-cash/treasurer-petty-cash';
+import { InvoicesHubComponent } from './components/finance/invoices-hub/invoices-hub';
 import { TreasurerBankAccountsComponent } from './components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts';
 import { TreasurerChequesComponent } from './components/finance/treasurer/treasurer-cheques/treasurer-cheques';
 import { TreasurerReconciliationComponent } from './components/finance/treasurer/treasurer-reconciliation/treasurer-reconciliation';
@@ -48,6 +47,8 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'employee-attendance', component: EmployeeAttendanceHubComponent, data: { reuse: true } },
   { path: 'employee-fleet', component: EmployeeFleetHubComponent, data: { reuse: true, sectionKey: 'accounting.fleet' } },
   { path: 'employee-invoices', component: EmployeeInvoicesHubComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
+  // تب یکپارچهٔ «فاکتورها» (سرپرست، حسابدار، مدیر، خزانه‌دار)؛ صفحه‌های فاکتور قبلی هر نقش به آن هدایت می‌شوند
+  { path: 'invoices', component: InvoicesHubComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
   { path: 'employee-petty-cash', component: EmployeePettyCashHubComponent, data: { reuse: true, sectionKey: 'accounting.petty_cash' } },
   { path: 'employee-new-vehicle', component: EmployeeNewVehicleHubComponent, data: { reuse: true, sectionKey: 'accounting.fleet' } },
   { path: 'employee-new-personnel', component: EmployeeNewPersonnelHubComponent, data: { reuse: true } },
@@ -61,14 +62,14 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'supervisor-personnel', component: SupervisorPersonnelHubComponent, data: { reuse: true } },
   { path: 'supervisor-attendance', component: SupervisorAttendanceHubComponent, data: { reuse: true } },
   { path: 'supervisor-fleet', component: SupervisorFleetHubComponent, data: { reuse: true, sectionKey: 'accounting.fleet' } },
-  { path: 'supervisor-invoices', component: SupervisorInvoicesHubComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
+  { path: 'supervisor-invoices', redirectTo: 'invoices', pathMatch: 'full' },
   { path: 'supervisor-petty-cash', component: SupervisorPettyCashHubComponent, data: { reuse: true, sectionKey: 'accounting.petty_cash' } },
   { path: 'supervisor-new-profiles', redirectTo: 'supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor-period-lock', component: SupervisorPeriodLockHubComponent, data: { reuse: true } },
   { path: 'supervisor/personnel', redirectTo: 'supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor/attendance', redirectTo: 'supervisor-attendance', pathMatch: 'full' },
   { path: 'supervisor/fleet', redirectTo: 'supervisor-fleet', pathMatch: 'full' },
-  { path: 'supervisor/invoices', redirectTo: 'supervisor-invoices', pathMatch: 'full' },
+  { path: 'supervisor/invoices', redirectTo: 'invoices', pathMatch: 'full' },
   { path: 'supervisor/petty-cash', redirectTo: 'supervisor-petty-cash', pathMatch: 'full' },
   { path: 'supervisor/new-profiles', redirectTo: 'supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor/period-lock', redirectTo: 'supervisor-period-lock', pathMatch: 'full' },
@@ -76,7 +77,7 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'accountant-personnel', component: AccountantPersonnelHubComponent, data: { reuse: true } },
   { path: 'accountant-payroll', component: AccountantPayrollHubComponent, data: { reuse: true } },
   { path: 'accountant-fleet', component: AccountantFleetHubComponent, data: { reuse: true, sectionKey: 'accounting.fleet' } },
-  { path: 'accountant-invoices', component: AccountantInvoicesHubComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
+  { path: 'accountant-invoices', redirectTo: 'invoices', pathMatch: 'full' },
   { path: 'accountant-petty-cash', component: AccountantPettyCashHubComponent, data: { reuse: true, sectionKey: 'accounting.petty_cash' } },
   { path: 'accountant-diskettes', component: AccountantDiskettesHubComponent, data: { reuse: true } },
   { path: 'accountant-counterparties', component: CounterpartiesComponent, data: { reuse: true } },
@@ -84,7 +85,7 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'accountant/personnel', redirectTo: 'accountant-personnel', pathMatch: 'full' },
   { path: 'accountant/payroll', redirectTo: 'accountant-payroll', pathMatch: 'full' },
   { path: 'accountant/fleet', redirectTo: 'accountant-fleet', pathMatch: 'full' },
-  { path: 'accountant/invoices', redirectTo: 'accountant-invoices', pathMatch: 'full' },
+  { path: 'accountant/invoices', redirectTo: 'invoices', pathMatch: 'full' },
   { path: 'accountant/petty-cash', redirectTo: 'accountant-petty-cash', pathMatch: 'full' },
   { path: 'accountant/diskettes', redirectTo: 'accountant-diskettes', pathMatch: 'full' },
   { path: 'accountant/counterparties', redirectTo: 'accountant-counterparties', pathMatch: 'full' },
@@ -106,8 +107,10 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'treasurer', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
   { path: 'treasurer-disbursements', component: TreasurerDisbursementsComponent, data: { reuse: true } },
   { path: 'treasurer/disbursements', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
-  { path: 'treasurer-invoices', component: TreasurerInvoicesComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
-  { path: 'treasurer/invoices', redirectTo: 'treasurer-invoices', pathMatch: 'full' },
+  // زیرتب قدیمی شارژ تن‌خواه به صفحهٔ جدای تن‌خواه خزانه‌دار، بقیه به تب «فاکتورها»
+  { path: 'treasurer-invoices', redirectTo: ({ queryParams }) => queryParams['tab'] === 'petty_cash_refills' ? 'treasurer-petty-cash' : 'invoices', pathMatch: 'full' },
+  { path: 'treasurer/invoices', redirectTo: 'invoices', pathMatch: 'full' },
+  { path: 'treasurer-petty-cash', component: TreasurerPettyCashComponent, data: { reuse: true, sectionKey: 'accounting.petty_cash' } },
   { path: 'treasurer-bank-accounts', component: TreasurerBankAccountsComponent, data: { reuse: true } },
   { path: 'treasurer/bank-accounts', redirectTo: 'treasurer-bank-accounts', pathMatch: 'full' },
   { path: 'treasurer-cheques', component: TreasurerChequesComponent, data: { reuse: true } },

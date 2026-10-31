@@ -36,6 +36,12 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'employee-attendance': ['view_sys_personnel_attendance', 'admin_all'],
     'employee-fleet': ['view_sys_personnel_attendance', 'view_sys_fleet_attendance', 'admin_all'],
     'employee-invoices': ['view_sys_personnel_attendance', 'perm_invoice_record', 'admin_all'],
+    // تب یکپارچهٔ «فاکتورها»: اجتماع مجوز صفحه‌های قبلی؛ هر زیرتب با کلید صفحهٔ قبلی خودش (زیر) سنجیده می‌شود
+    'invoices': [
+      'view_sys_personnel_attendance', 'perm_invoice_record', 'perm_invoice_approve', 'view_sys_payroll', 'perm_invoice_review',
+      'perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', permissionAlias('manager_approver'),
+      'perm_treasury_disburse_action', 'admin_all'
+    ],
     // خزانه‌دار شارژ و صورت‌حساب تنخواه را از مسیر «کارهای من» همین صفحه واریز می‌کند (canTreasuryPay)
     'employee-petty-cash': ['view_sys_personnel_attendance', 'perm_petty_cash_manage', 'perm_treasury_disburse_action', 'admin_all'],
     'employee-new-vehicle': ['view_sys_personnel_attendance', 'view_sys_fleet_attendance', 'admin_all'],
@@ -58,6 +64,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'manager-reports': ['perm_accounting_reports', 'admin_all'],
     'treasurer-disbursements': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-invoices': ['perm_treasury_disburse_action', 'admin_all'],
+    'treasurer-petty-cash': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-bank-accounts': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-cheques': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-reconciliation': ['perm_treasury_disburse_action', 'admin_all']

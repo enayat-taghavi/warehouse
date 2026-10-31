@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of } from 'rxjs';
 import { TreasurerInvoicesComponent } from './treasurer-invoices';
 
-describe('TreasurerInvoicesComponent — ارگونومی واکنش‌گرا و تب‌ها', () => {
+describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پرداخت', () => {
   let component: TreasurerInvoicesComponent;
   let mockToast: any;
   let mockPersonnelApi: any;
@@ -29,22 +29,10 @@ describe('TreasurerInvoicesComponent — ارگونومی واکنش‌گرا و
     );
   });
 
-  it('1. defines responsive ergonomics tabs with short labels and entity icons', () => {
-    expect(component.tabs.length).toBe(2);
-    expect(component.tabs[0].id).toBe('payable_invoices');
-    expect(component.tabs[0].label).toBe('فاکتورهای آماده پرداخت');
-    expect(component.tabs[0].shortLabel).toBe('فاکتورها');
-    expect(component.tabs[1].id).toBe('petty_cash_refills');
-    expect(component.tabs[1].label).toBe('شارژ دفاتر تنخواه');
-    expect(component.tabs[1].shortLabel).toBe('تنخواه');
-  });
-
-  it('2. switches sub-tabs with explicit validation', () => {
-    component.switchSubTab('petty_cash_refills');
-    expect(component.activeSubTab).toBe('petty_cash_refills');
-    component.switchSubTab('invalid_sub_tab');
-    expect(component.activeSubTab).toBe('petty_cash_refills');
-    component.switchSubTab('payable_invoices');
-    expect(component.activeSubTab).toBe('payable_invoices');
+  it('1. loads only payable invoices; petty cash refills moved to their own treasurer page', () => {
+    component.loadTreasuryData();
+    expect(mockPersonnelApi.getTreasuryCartable).toHaveBeenCalled();
+    expect(mockPersonnelApi.getPettyCashTransactions).not.toHaveBeenCalled();
+    expect((component as any).tabs).toBeUndefined();
   });
 });

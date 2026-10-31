@@ -1,0 +1,28 @@
+<div dir="rtl">
+  @if (tabs().length > 1) {
+    <div class="px-3 md:px-6 pt-3 md:pt-6">
+      <app-tab-bar
+        [tabs]="tabs()"
+        [active]="view() ?? ''"
+        (activeChange)="switchView($event)"
+        mobile="short"
+        fullLabelFrom="lg"
+      />
+    </div>
+  }
+
+  @switch (view()) {
+    @case ('cartable') {
+      @switch (cartableRole()) {
+        @case ('supervisor') { <app-supervisor-invoices-hub /> }
+        @case ('accountant') { <app-accountant-invoices-hub /> }
+        @case ('manager') { <app-manager-invoices /> }
+        @case ('treasury') { <app-treasurer-invoices-hub /> }
+      }
+    }
+    @case ('mine') { <app-employee-invoices-hub /> }
+    @default {
+      <p class="p-8 text-center text-sm text-slate-500">دسترسی به فاکتورها برای نقش فعلی تعریف نشده است.</p>
+    }
+  }
+</div>

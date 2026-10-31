@@ -23,7 +23,6 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { WorkflowReasonDialogComponent } from '../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
-import { PrintService } from '../../../../../core/services/print.service';
 
 @Component({
   selector: 'app-manager-approvals',
@@ -34,7 +33,7 @@ import { PrintService } from '../../../../../core/services/print.service';
 })
 export class ManagerApprovals implements OnInit, OnDestroy {
   // 6 Main Tabs:
-  activeTab: 'new_personnel' | 'new_fleet' | 'change_requests' | 'work_periods' | 'invoices' | 'petty_cash' = 'new_personnel';
+  activeTab: 'new_personnel' | 'new_fleet' | 'change_requests' | 'work_periods' | 'petty_cash' = 'new_personnel';
   
   // Status Filters: 'ALL' | 'pending_manager' | 'revision_required' | 'approved' | 'rejected'
   approvalStatusFilter: string = 'pending_manager';
@@ -66,7 +65,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   personnelChangeRequests: PersonnelChangeRequest[] = [];
   vehicleChangeRequests: VehicleChangeRequest[] = [];
   workPeriods: any[] = [];
-  invoicesList: any[] = [];
   pettyCashList: any[] = [];
   yearlySettings: PayrollYearlySettings | null = null;
 
@@ -123,8 +121,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     private confirmDialog: ConfirmDialogService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router,
-    private printService: PrintService
+    private router: Router
   ) {}
 
   get canApprovePersonnelManager(): boolean {
@@ -155,10 +152,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     return this.workPeriods.filter(wp => wp.status === 'OPEN' || wp.status === 'REJECTED').length;
   }
 
-  get pendingInvoicesCount(): number {
-    return this.invoicesList.filter(inv => inv.status === 'pending_manager' || inv.status === 'ready_to_pay').length;
-  }
-
   get pendingPettyCashCount(): number {
     return this.pettyCashList.filter(pc => pc.status === 'pending_manager').length;
   }
@@ -181,7 +174,12 @@ export class ManagerApprovals implements OnInit, OnDestroy {
 
     // Listen to query params for two-way state syncing
     this.querySub = this.route.queryParams.subscribe(params => {
-      if (params['tab'] && ['new_personnel', 'new_fleet', 'change_requests', 'work_periods', 'invoices', 'petty_cash'].includes(params['tab'])) {
+      // فاکتورهای مدیر به تب یکپارچهٔ «فاکتورها» رفت؛ نشانی قدیمی همان‌جا هدایت می‌شود
+      if (params['tab'] === 'invoices') {
+        void this.router.navigate(['../invoices'], { relativeTo: this.route, queryParams: { view: 'cartable' }, replaceUrl: true });
+        return;
+      }
+      if (params['tab'] &&['new_personnel', 'new_fleet', 'change_requests', 'work_periods', 'petty_cash'].includes(params['tab'])) {
         this.activeTab = params['tab'];
       }
       if (params['status']) {
@@ -226,13 +224,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
       },
       error: () => {}
     });
-    this.api.getExpenseInvoices({ status: 'pending_manager' }).subscribe({
-      next: (res: any) => {
-        this.invoicesList = Array.isArray(res) ? res : (res?.results || []);
-        this.cdr.detectChanges();
-      },
-      error: () => {}
-    });
     this.api.getPettyCashTransactions({ status: 'pending_manager' }).subscribe({
       next: (res: any) => {
         this.pettyCashList = Array.isArray(res) ? res : (res?.results || []);
@@ -266,7 +257,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   private mainTabsKey = '';
   private mainTabsCache: TabDef[] = [];
   get mainTabs(): TabDef[] {
-    const key = `${this.pendingPersonnelCount}:${this.pendingFleetCount}:${this.pendingCRCount}:${this.pendingWorkPeriodCount}:${this.pendingInvoicesCount}:${this.pendingPettyCashCount}`;
+    const key = `${this.pendingPersonnelCount}:${this.pendingFleetCount}:${this.pendingCRCount}:${this.pendingWorkPeriodCount}:${this.pendingPettyCashCount}`;
     if (key !== this.mainTabsKey) {
       this.mainTabsKey = key;
       this.mainTabsCache = [
@@ -305,14 +296,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
           icon: ACCOUNTING_ENTITY_ICONS.attendance,
           count: this.pendingWorkPeriodCount,
           tone: 'indigo'
-        },
-        {
-          id: 'invoices',
-          label: 'فاکتورهای هزینه',
-          shortLabel: 'فاکتور',
-          icon: ACCOUNTING_ENTITY_ICONS.invoices,
-          count: this.pendingInvoicesCount,
-          tone: 'emerald'
         },
         {
           id: 'petty_cash',
@@ -359,7 +342,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
       tab === 'new_fleet' ||
       tab === 'change_requests' ||
       tab === 'work_periods' ||
-      tab === 'invoices' ||
       tab === 'petty_cash'
     ) {
       this.activeTab = tab;
@@ -412,8 +394,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
       this.loadChangeRequests();
     } else if (this.activeTab === 'work_periods') {
       this.loadWorkPeriods();
-    } else if (this.activeTab === 'invoices') {
-      this.loadInvoices();
     } else if (this.activeTab === 'petty_cash') {
       this.loadPettyCash();
     }
@@ -851,23 +831,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     }
   }
 
-  // ─── 5. Invoices & Petty Cash (Manager Approval Hub) ──────────
-  loadInvoices(): void {
-    this.isLoading = true;
-    this.api.getExpenseInvoices({ status: 'pending_manager' }).subscribe({
-      next: (res: any) => {
-        this.invoicesList = Array.isArray(res) ? res : (res?.results || []);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err: any) => {
-        this.isLoading = false;
-        this.toast.show('error', err?.error?.error || 'خطا در دریافت لیست فاکتورهای هزینه');
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
+  // ─── 5. Petty Cash (Manager Approval Hub) ──────────
   loadPettyCash(): void {
     this.isLoading = true;
     this.api.getPettyCashTransactions({ status: 'pending_manager' }).subscribe({
@@ -882,63 +846,6 @@ export class ManagerApprovals implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     });
-  }
-
-  approveInvoiceManager(inv: any): void {
-    this.api.postCartableAction('manager', { action: 'approve', model: 'invoice', id: inv.id }).subscribe({
-      next: () => {
-        this.toast.show('success', `فاکتور هزینه «${inv.invoice_number || inv.id}» تایید و مجوز پرداخت صادر گردید.`);
-        this.loadInvoices();
-      },
-      error: (err: any) => {
-        this.toast.show('error', err?.error?.error || 'خطا در صدور مجوز پرداخت فاکتور');
-      }
-    });
-  }
-
-  isInvoiceReasonOpen = false;
-  invoiceReasonTitle = '';
-  invoiceReasonServerError = '';
-  pendingInvoiceRevision: any = null;
-
-  rejectInvoiceManager(inv: any): void {
-    this.pendingInvoiceRevision = inv;
-    this.invoiceReasonTitle = `علت بازنگری یا رد فاکتور «${inv.number || inv.invoice_number || inv.id}»`;
-    this.invoiceReasonServerError = '';
-    this.isInvoiceReasonOpen = true;
-  }
-
-  onInvoiceReasonConfirmed(reason: string): void {
-    const inv = this.pendingInvoiceRevision;
-    if (!inv) return;
-    this.api.postCartableAction('manager', { action: 'revision', model: 'invoice', id: inv.id, reason }).subscribe({
-      next: () => {
-        this.isInvoiceReasonOpen = false;
-        this.pendingInvoiceRevision = null;
-        this.toast.show('warning', 'فاکتور هزینه جهت بازنگری عودت گردید.');
-        this.loadInvoices();
-      },
-      error: (err: any) => {
-        this.invoiceReasonServerError = err?.error?.error || err?.error?.detail || 'خطا در ارجاع بازنگری فاکتور';
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
-  onInvoiceReasonCancelled(): void {
-    this.isInvoiceReasonOpen = false;
-    this.pendingInvoiceRevision = null;
-    this.invoiceReasonServerError = '';
-  }
-
-  faAmount(value: string | number | null | undefined): string {
-    if (value === null || value === undefined || value === '') return '—';
-    const n = Number(value);
-    return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
-  }
-
-  printInvoice(inv: any): void {
-    void this.printService.downloadPdf('expense_invoice', inv.id);
   }
 
   approvePettyCashManager(pc: any): void {

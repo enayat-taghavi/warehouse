@@ -104,8 +104,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     expect(items).toEqual([
       'supervisor-personnel',
       'supervisor-fleet',
-      'employee-invoices',
-      'supervisor-invoices',
+      'invoices',
       'supervisor-petty-cash',
       'supervisor-period-lock'
     ]);
@@ -120,8 +119,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'accountant-personnel',
       'accountant-payroll',
       'accountant-fleet',
-      'employee-invoices',
-      'accountant-invoices',
+      'invoices',
       'accountant-petty-cash',
       'accountant-diskettes',
       'accountant-counterparties',
@@ -143,7 +141,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'manager-personnel',
       'manager-fleet',
       'manager-approvals',
-      'employee-invoices',
+      'invoices',
       'manager-budget',
       'manager-reports',
       'base-settings'
@@ -154,7 +152,10 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     for (const role of ['supervisor', 'accountant', 'manager', 'treasury']) {
       expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-invoices')).toBe(false);
       expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-attendance')).toBe(true);
+      // the unified «فاکتورها» tab is open to the four roles
+      expect(isAccountingRouteDeniedForRole(role, '/app/finance/invoices')).toBe(false);
     }
+    expect(isAccountingRouteDeniedForRole('org_admin', '/app/finance/invoices')).toBe(true);
   });
 
   it('e) treasurer bundle: resolves treasury persona and treasurer menu items', () => {
@@ -164,33 +165,34 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     const items = menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, treasurerPerms);
     expect(items).toEqual([
       'treasurer-disbursements',
-      'employee-invoices',
-      'treasurer-invoices',
+      'invoices',
+      'treasurer-petty-cash',
       'treasurer-bank-accounts',
       'treasurer-cheques',
       'treasurer-reconciliation'
     ]);
   });
 
-  it('f) supervisor bundle without perm_invoice_approve: supervisor menu hides invoices and petty cash', () => {
+  // the unified invoices tab stays (its «فاکتورهای من» view needs only perm_invoice_record); petty cash approval hides
+  it('f) supervisor bundle without perm_invoice_approve: supervisor menu keeps the invoices tab and hides petty cash', () => {
     const perms = supervisorPerms.filter(p => p !== 'perm_invoice_approve');
     const items = menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, perms);
     expect(items).toEqual([
       'supervisor-personnel',
       'supervisor-fleet',
-      'employee-invoices',
+      'invoices',
       'supervisor-period-lock'
     ]);
   });
 
   // treasurer has perm_counterparty_manage, so only that item passes; the accountant menu is never shown to the treasury persona
   it('g) cross-role: menus of another role stay empty', () => {
-    // the invoice entry passes on its own perm_invoice_record; the layout shows only the active persona's menu
-    expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual(['employee-invoices']);
+    // the invoices tab passes only on the role's own action permission; the layout shows only the active persona's menu
+    expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual([]);
     // the accountant bundle holds perm_accounting_reports, so only the reports page of the manager menu opens (plan 4.7 d8)
-    expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual(['employee-invoices', 'manager-reports']);
-    expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual(['employee-invoices']);
-    expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['employee-invoices', 'accountant-counterparties']);
+    expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual(['manager-reports']);
+    expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual([]);
+    expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['accountant-counterparties']);
   });
 
   it('h) none of the five removed codes appears in any nav item, role marker, or route access permission', () => {
