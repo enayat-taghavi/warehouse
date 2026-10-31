@@ -530,7 +530,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       description: '',
       status: 'draft' // Guardian G2: تحمیل وضعیت پیش‌نویس
     };
-    this.formLines = [this.blankLine(this.singleExpenseHeadId)];
+    this.formLines = [this.blankLine(this.defaultExpenseHeadId)];
     this.descriptionTouched = false;
     this.invoiceDateControl.setValue(this.todayShamsi, { emitEvent: false });
     this.showTotalsExtras = false;
@@ -601,7 +601,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return;
     }
     const last = this.formLines[this.formLines.length - 1];
-    this.formLines = [...this.formLines, this.blankLine(last?.expense_head ?? null)];
+    this.formLines = [...this.formLines, this.blankLine(this.defaultExpenseHeadId ?? last?.expense_head ?? null)];
   }
 
   removeLine(i: number): void {
@@ -632,11 +632,53 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     return (this.newInvoice.description || '').trim() || (this.formLines[0]?.description || '').trim();
   }
 
-  /** وقتی شرکت فقط یک سرفصل فعال دارد، ردیف تازه همان را از پیش دارد */
-  private get singleExpenseHeadId(): number | null {
-    const heads = this.expenseHeadGroups.flatMap(g => g.heads);
+  /**
+   * سرفصل پیش‌فرض ردیف تازه: آخرین سرفصلی که کاربر در این شرکت انتخاب کرده (اگر هنوز فعال است)،
+   * وگرنه تنها سرفصل فعال شرکت
+   */
+  private get defaultExpenseHeadId(): number | null {
     if (this.isLoadingExpenseHeads || this.expenseHeadsCompanyId !== this.sectionCompanyId) return null;
+    const heads = this.expenseHeadGroups.flatMap(g => g.heads);
+    const last = this.readLastExpenseHead();
+    if (last !== null && heads.some(h => h.id === last)) return last;
     return heads.length === 1 ? (heads[0].id ?? null) : null;
+  }
+
+  private get lastExpenseHeadKey(): string | null {
+    const companyId = this.sectionCompanyId;
+    return companyId ? `employee-invoices.last-expense-head.${companyId}` : null;
+  }
+
+  private readLastExpenseHead(): number | null {
+    const key = this.lastExpenseHeadKey;
+    if (!key) return null;
+    try {
+      const v = Number(localStorage.getItem(key));
+      return Number.isFinite(v) && v > 0 ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** انتخاب سرفصل یک ردیف: آخرین انتخاب برای ردیف و فاکتور بعدی به خاطر سپرده می‌شود */
+  onLineHeadChange(headId: number | null): void {
+    this.expenseHeadError = '';
+    const key = this.lastExpenseHeadKey;
+    if (!key || !headId) return;
+    try {
+      localStorage.setItem(key, String(headId));
+    } catch {
+      // حافظهٔ مرورگر در دسترس نیست؛ فقط پیش‌فرض از دست می‌رود
+    }
+  }
+
+  /** طرف‌حساب انتخاب‌شده حساب فعال با شبای معتبر ندارد (فقط وقتی فهرست حساب‌ها را داریم) */
+  get counterpartyShebaMissing(): boolean {
+    const cp = this.counterparties.find(c => c.id === Number(this.newInvoice.counterparty));
+    if (!cp || !Array.isArray(cp.bank_accounts)) return false;
+    // شبای پوشیده (چهار رقم آخر) را این‌جا نمی‌شود سنجید؛ داوری نهایی با سرور است
+    return !cp.bank_accounts.some(a => a.is_active !== false && !!a.sheba_number
+      && (cp.bank_masked || validateSheba(a.sheba_number).isValid));
   }
 
   // ─── جستجوی طرف‌حساب: فهرست کوتاه می‌شود؛ تنها نتیجه خودش انتخاب می‌شود ───
@@ -824,7 +866,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         if (companyId !== this.expenseHeadsCompanyId) return;
         this.expenseHeadGroups = buildExpenseHeadOptions(heads);
         this.isLoadingExpenseHeads = false;
-        const only = this.singleExpenseHeadId;
+        const only = this.defaultExpenseHeadId;
         if (only !== null) this.formLines.forEach(l => { if (l.expense_head == null) l.expense_head = only; });
         this.cdr.detectChanges();
       },
@@ -929,6 +971,10 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     }
     if (mode === 'send' && this.isOffline) {
       this.toast.show('warning', 'ارسال فاکتور به گردش فقط در حالت آنلاین ممکن است؛ فعلاً فقط ذخیره کنید.');
+      return;
+    }
+    if (mode === 'send' && this.counterpartyShebaMissing) {
+      this.toast.show('warning', 'طرف‌حساب شبای معتبر ندارد؛ فاکتور را پیش‌نویس ذخیره کنید و پس از ثبت شبا بفرستید.');
       return;
     }
     if (!this.validateForm()) return;
@@ -1144,6 +1190,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         }
         const msg = (typeof err?.status === 'number' && isServerUnreachable(err.status))
           ? 'اتصال به سرور برقرار نیست؛ ارسال فقط آنلاین ممکن است.'
+          : err?.error?.code === 'counterparty_sheba_required'
+          ? String(err.error.error || '')
           : (fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در ارسال به سرپرست: ' + (err.error?.error || err.error?.detail || err.message || 'نامشخص')));
         if (this.isDuplicateReasonOpen) {
           this.duplicateReasonServerError = msg;

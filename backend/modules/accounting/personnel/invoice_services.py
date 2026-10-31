@@ -108,3 +108,18 @@ def void_invoice_number(invoice, user):
     issued = IssuedNumber.objects.filter(pk=invoice.issued_number_id).first()
     if issued is not None and issued.status != IssuedNumber.STATUS_VOID:
         void(issued, VOID_REASON_DELETE, user=user)
+
+
+SHEBA_REQUIRED_CODE = 'counterparty_sheba_required'
+SHEBA_REQUIRED_MESSAGE = 'طرف‌حساب این فاکتور شبای معتبر ندارد؛ پیش از ارسال، شمارهٔ شبای درست را برای او ثبت کنید.'
+
+
+def counterparty_has_valid_sheba(counterparty) -> bool:
+    """ارسال فاکتور به گردش: طرف‌حساب دست‌کم یک حساب فعال با شبای معتبر (رقم کنترل درست) دارد."""
+    from .models import PartyBankAccount
+    from .sheba_utils import validate_sheba
+    if counterparty is None or not getattr(counterparty, 'party_id', None):
+        return False
+    shebas = PartyBankAccount.objects.filter(party_id=counterparty.party_id, is_active=True).values_list(
+        'sheba_number', flat=True)
+    return any(validate_sheba(s)[0] for s in shebas)

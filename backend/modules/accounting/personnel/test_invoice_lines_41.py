@@ -134,6 +134,28 @@ class InvoiceLines41Tests(HeadFixtures):
         self.assertEqual(r5.status_code, 200, r5.content)
         self.assertEqual(r5.json()['description'], 'z')
 
+    def test_submit_requires_counterparty_valid_sheba(self):
+        from personnel.models import Counterparty, PartyBankAccount
+        cp = Counterparty.objects.create(company=self.company, name='no-sheba', counterparty_type='other')
+        r = self.api.post(INVOICES, self.body(discount_amount='0', counterparty=cp.id), format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        inv_id = r.json()['id']
+        r1 = self.api.post(f'{INVOICES}{inv_id}/submit/', {}, format='json')
+        self.assertEqual(r1.status_code, 400, r1.content)
+        self.assertEqual(r1.json()['code'], 'counterparty_sheba_required')
+        acc = PartyBankAccount.objects.create(party=cp.party, sheba_number='IR450120000000101111111002')
+        r2 = self.api.post(f'{INVOICES}{inv_id}/submit/', {}, format='json')
+        self.assertEqual(r2.status_code, 400, r2.content)  # رقم کنترل نادرست
+        acc.sheba_number = 'IR450120000000101111111001'
+        acc.is_active = False
+        acc.save()
+        r3 = self.api.post(f'{INVOICES}{inv_id}/submit/', {}, format='json')
+        self.assertEqual(r3.status_code, 400, r3.content)  # حساب غیرفعال
+        PartyBankAccount.objects.filter(pk=acc.pk).update(is_active=True)
+        r4 = self.api.post(f'{INVOICES}{inv_id}/submit/', {}, format='json')
+        self.assertEqual(r4.status_code, 200, r4.content)
+        self.assertEqual(ExpenseInvoice.objects.get(pk=inv_id).status != 'draft', True)
+
     def test_edit_with_new_attachment_multipart(self):
         import json
         from django.core.files.uploadedfile import SimpleUploadedFile

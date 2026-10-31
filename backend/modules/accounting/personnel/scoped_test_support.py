@@ -94,3 +94,12 @@ def pay_request(action_or_url, data):
     if 'receipt' not in data:
         out['receipt'] = receipt_file()
     return out, 'multipart'
+
+
+VALID_TEST_SHEBA = 'IR450120000000101111111001'
+
+
+def give_valid_sheba(counterparty, sheba=VALID_TEST_SHEBA):
+    """ارسال فاکتور به گردش شبای معتبر طرف‌حساب را لازم دارد؛ فیکسچرها با این تابع حساب فعال می‌گیرند."""
+    from personnel.models import PartyBankAccount
+    return PartyBankAccount.objects.create(party=counterparty.party, bank_name='test', sheba_number=sheba)

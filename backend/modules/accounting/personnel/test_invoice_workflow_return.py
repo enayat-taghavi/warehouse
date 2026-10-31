@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 
 from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 from personnel.models import Counterparty, ExpenseInvoice
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import give_valid_sheba, grant_section_perms
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.models import WorkflowStep, WorkflowSubstitute, WorkflowThreshold
@@ -27,6 +27,7 @@ class InvoiceReturnScenarioTests(TestCase):
         project = Project.objects.create(company=self.company, code='IWF-P', name='پروژه')
         self.sec = ProjectSection.objects.create(project=project, code='IWF-S', name='بخش')
         self.cp = Counterparty.objects.create(company=self.company, name='طرف', counterparty_type='other')
+        give_valid_sheba(self.cp)
         self.emp = self.user('emp', 'employee')
         self.sup = self.user('sup', 'supervisor')
         self.acc = self.user('acc', 'accountant')

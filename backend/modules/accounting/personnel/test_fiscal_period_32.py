@@ -19,7 +19,7 @@ from personnel.models import (
     CompanyFiscalPeriod, Counterparty, ExpenseInvoice, PettyCashAccount, PettyCashTransaction,
 )
 from personnel.workflows import is_invoice_locked
-from personnel.scoped_test_support import expense_head_id
+from personnel.scoped_test_support import give_valid_sheba, expense_head_id
 
 User = get_user_model()
 PERIODS = '/api/personnel/company-fiscal-periods/'
@@ -38,6 +38,7 @@ class FiscalFixtures(TestCase):
         self.sec = ProjectSection.objects.create(project=project, code='FP32-S', name='بخش الف')
         self.other_sec = ProjectSection.objects.create(project=other_project, code='FP32-SB', name='بخش ب')
         self.cp = Counterparty.objects.create(company=self.company, name='طرف حساب دوره', counterparty_type='other')
+        give_valid_sheba(self.cp)
         self.admin = User.objects.create_superuser(username='fp32_admin', password='x')
         UserCompanyAccess.objects.create(user=self.admin, company=self.company, is_default=True)
         UserCompanyAccess.objects.create(user=self.admin, company=self.other)

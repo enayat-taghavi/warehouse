@@ -21,7 +21,7 @@ from personnel.models import (
     InvoicePayment,
     PartyBankAccount,
 )
-from personnel.scoped_test_support import grant_section_perms, pay_request, temp_media
+from personnel.scoped_test_support import give_valid_sheba, grant_section_perms, pay_request, temp_media
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
@@ -38,6 +38,7 @@ class InvoicePayments41Tests(TestCase):
         project = Project.objects.create(company=self.company, code='IPS-P', name='پروژه')
         self.sec = ProjectSection.objects.create(project=project, code='IPS-S', name='بخش')
         self.cp = Counterparty.objects.create(company=self.company, name='طرف', counterparty_type='other')
+        give_valid_sheba(self.cp)
         self.bank = CompanyBankAccount.objects.create(
             company=self.company, bank_name='ملت', sheba_number='IR120120000000000000000001'
         )

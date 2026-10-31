@@ -338,6 +338,44 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
     });
 
+    it('سرفصل ردیف تازه و فاکتور تازه همان آخرین سرفصل انتخاب‌شده است', () => {
+      const store = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => { store.set(k, v); }
+      });
+      mockPersonnelApi.getExpenseHeads.mockReturnValue(of([
+        { id: 1, company: 1, parent: null, code: '10', title: 'عملیاتی', is_active: true },
+        { id: 11, company: 1, parent: 1, code: '1001', title: 'تعمیرات', is_active: true },
+        { id: 12, company: 1, parent: 1, code: '1002', title: 'سوخت', is_active: true }
+      ]));
+      component.selectedSection = { ...(component.selectedSection as any), company_id: 77 };
+      component.openNewInvoiceModal();
+      expect(component.formLines[0].expense_head).toBeNull();
+      component.formLines[0].expense_head = 12;
+      component.onLineHeadChange(12);
+      component.formLines[0].expense_head = 11;
+      component.addLine();
+      expect(component.formLines[1].expense_head).toBe(12);
+      component.closeNewInvoiceModal();
+      component.openNewInvoiceModal();
+      expect(component.formLines[0].expense_head).toBe(12);
+      vi.unstubAllGlobals();
+    });
+
+    it('طرف‌حساب بی شبای معتبر: هشدار و «ذخیره و ارسال» انجام نمی‌شود', () => {
+      component.counterparties = [{ id: 101, name: 'بی‌شبا', counterparty_type: 'other', is_active: true, bank_accounts: [] }] as any;
+      component.openNewInvoiceModal();
+      fillHeader();
+      component.formLines = [{ description: 'سرویس', quantity: 1, unit: '', unit_price: 1000, expense_head: 11 }];
+      expect(component.counterpartyShebaMissing).toBe(true);
+      component.saveInvoice('send');
+      expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
+      component.counterparties = [{ id: 101, name: 'باشبا', counterparty_type: 'other', is_active: true,
+        bank_accounts: [{ sheba_number: 'IR450120000000101111111001', is_active: true }] }] as any;
+      expect(component.counterpartyShebaMissing).toBe(false);
+    });
+
     it('«ذخیره و ارسال» پس از ذخیره همان فاکتور را به سرپرست می‌فرستد', () => {
       component.openNewInvoiceModal();
       fillHeader();

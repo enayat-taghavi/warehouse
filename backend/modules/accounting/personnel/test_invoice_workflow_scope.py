@@ -16,7 +16,7 @@ from rest_framework.test import APIClient
 
 from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 from personnel.models import Counterparty, ExpenseInvoice, PersonnelProfile
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import give_valid_sheba, grant_section_perms
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
 from workflow import realtime
@@ -43,6 +43,7 @@ class InvoiceScopeScenarioTests(TestCase):
         self.sec = ProjectSection.objects.create(project=self.project, code='IWS-S', name='بخش')
         self.other = ProjectSection.objects.create(project=self.project, code='IWS-S2', name='بخش دو')
         self.cp = Counterparty.objects.create(company=self.company, name='طرف', counterparty_type='other')
+        give_valid_sheba(self.cp)
         self.emp = self.user('emp', 'employee')
         self.sup = self.user('sup', 'supervisor')
         self.acc = self.user('acc', 'accountant')

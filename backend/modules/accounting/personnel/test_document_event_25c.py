@@ -21,7 +21,7 @@ from personnel.models import (
     PettyCashAccount,
     PettyCashTransaction,
 )
-from personnel.scoped_test_support import grant_section_perms, expense_head_id
+from personnel.scoped_test_support import give_valid_sheba, grant_section_perms, expense_head_id
 from personnel.workflow_engine import (
     notify_document_changed,
     advance_workflow_step,
@@ -47,6 +47,7 @@ class DocumentChangedEventTests(TestCase):
         project = Project.objects.create(company=self.company, code='DOC25C-P', name='پروژه تست')
         self.sec = ProjectSection.objects.create(project=project, code='DOC25C-S', name='بخش تست')
         self.cp = Counterparty.objects.create(company=self.company, name='طرف‌حساب تست', counterparty_type='other')
+        give_valid_sheba(self.cp)
 
         self.emp = self.user('emp', 'employee')
         self.admin = User.objects.create_superuser(username='doc25c_admin', password='x')

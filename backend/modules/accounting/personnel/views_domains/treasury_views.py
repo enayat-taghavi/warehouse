@@ -79,7 +79,8 @@ from ..workflows import (INVOICE_ENTITY, INVOICE_WORKFLOW, can_view_invoice, can
                          can_view_petty_tx)
 from ..workflow_engine import notify_document_changed
 from ..fiscal import ensure_period_open
-from ..invoice_services import (duplicate_queryset, ensure_invoice_number, invoice_duplicates,
+from ..invoice_services import (SHEBA_REQUIRED_CODE, SHEBA_REQUIRED_MESSAGE, counterparty_has_valid_sheba,
+                                duplicate_queryset, ensure_invoice_number, invoice_duplicates,
                                 void_invoice_number)
 from ..invoice_payments import (PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, RECEIPT_FIELD, add_payment,
                                 attach_receipt, invoice_remaining, read_receipt,
@@ -783,6 +784,10 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         # ثبت‌کننده باید در بخش فاکتور «ثبت و دیدن فاکتور» داشته باشد (get_object همین را سنجیده است)
         if not request.user.is_superuser and not can(request.user, INVOICE_PERM, instance.section):
             raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
+        # پرداخت به طرف‌حساب بی شبای معتبر ممکن نیست؛ فاکتور بی آن به گردش نمی‌رود (پیش‌نویس می‌ماند)
+        if not counterparty_has_valid_sheba(instance.counterparty):
+            return Response({'code': SHEBA_REQUIRED_CODE, 'error': SHEBA_REQUIRED_MESSAGE},
+                            status=status.HTTP_400_BAD_REQUEST)
         # د۳: فاکتور تکراری فقط با دلیل ارسال می‌شود؛ ثبت و ویرایش هرگز به‌خاطر تکراری رد نمی‌شود
         matches = invoice_duplicates(instance)
         reason = str(request.data.get('duplicate_reason') or '').strip()

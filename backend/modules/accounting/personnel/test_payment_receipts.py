@@ -14,7 +14,7 @@ from attachments.models import Attachment
 from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 from personnel.models import (CompanyBankAccount, Counterparty, ExpenseInvoice, InvoicePayment, PettyCashAccount,
                               PettyCashTransaction)
-from personnel.scoped_test_support import grant_section_perms, pay_request, receipt_file, temp_media
+from personnel.scoped_test_support import give_valid_sheba, grant_section_perms, pay_request, receipt_file, temp_media
 from personnel.workflows import INVOICE_WORKFLOW, PETTY_CHARGE_WORKFLOW, PETTY_STATEMENT_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
@@ -46,6 +46,7 @@ class InvoicePaymentReceiptTests(_ClientMixin, TestCase):
         self.sec = ProjectSection.objects.create(project=project, code='RCP-S', name='بخش')
         self.sec2 = ProjectSection.objects.create(project=project, code='RCP-S2', name='بخش دیگر')
         self.cp = Counterparty.objects.create(company=self.company, name='طرف', counterparty_type='other')
+        give_valid_sheba(self.cp)
         self.bank = CompanyBankAccount.objects.create(company=self.company, bank_name='ملت',
                                                       sheba_number='IR120120000000000000000001')
         self.emp = self.user('emp', 'employee')

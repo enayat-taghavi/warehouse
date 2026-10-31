@@ -335,7 +335,7 @@
           </div>
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInvoiceId ? 'ویرایش فاکتور پیش‌نویس' : 'ثبت فاکتور هزینه جدید' }}</h3>
-            <p class="text-[10px] text-fg-muted font-medium">پیش‌نویس ذخیره می‌شود؛ بعد با «ارسال» به سرپرست می‌رود.</p>
+            <p class="text-[11px] text-fg-muted font-medium">بخش «{{ selectedSection?.name || 'بخش جاری' }}» · ذخیره به‌صورت پیش‌نویس</p>
           </div>
         </div>
         <button
@@ -350,21 +350,16 @@
       <!-- بدنه فرم -->
       <div class="p-5 space-y-4 overflow-y-auto flex-1">
         
-        <!-- بنر بخش فعال -->
-        <div class="p-2.5 bg-emerald-50/70 border border-emerald-100 rounded-xl flex items-center justify-between text-xs">
-          <span class="font-bold text-emerald-800">بخش انتسابی:</span>
-          <span class="font-black text-emerald-700 font-mono">{{ selectedSection?.name || 'بخش جاری' }}</span>
-        </div>
-
-        <!-- فیلد طرف‌حساب و دکمه تعریف سریع -->
+        <!-- مشخصات فاکتور -->
+        <section class="p-3 rounded-2xl border border-line bg-surface-muted/30 space-y-3" aria-label="مشخصات فاکتور">
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="text-[11px] font-bold text-slate-700">طرف‌حساب (فروشگاه یا شخص) *</label>
             <button
               type="button"
               (click)="openQuickCounterpartyModal()"
-              class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer">
-              <span>+ تعریف سریع طرف‌حساب جدید</span>
+              class="min-h-[32px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <span>+ طرف‌حساب جدید</span>
             </button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -387,6 +382,12 @@
               </option>
             </select>
           </div>
+          @if (counterpartyShebaMissing) {
+            <p class="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800" role="status">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0" aria-hidden="true"></svg>
+              <span>این طرف‌حساب شبای معتبر ندارد؛ فاکتور ذخیره می‌شود اما ارسال به سرپرست پس از ثبت شبا ممکن است.</span>
+            </p>
+          }
         </div>
 
         <!-- شماره فاکتور و تاریخ شمسی -->
@@ -400,7 +401,7 @@
               (ngModelChange)="onDuplicateKeyChange()"
               aria-label="شماره فاکتور یا رسید"
               placeholder="اگر فاکتور شماره دارد"
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
           <div>
             <label for="invoice_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ فاکتور (شمسی) *</label>
@@ -423,6 +424,7 @@
             }
           </div>
         </div>
+        </section>
 
         <!-- هشدار فاکتور تکراری (فقط هشدار است؛ ثبت رد نمی‌شود) -->
         @if (duplicateInfo; as dup) {
@@ -462,7 +464,7 @@
           }
 
           <!-- سرستون‌ها فقط در دسکتاپ -->
-          <div class="hidden md:grid grid-cols-12 gap-2 px-1 pb-1 text-[10px] font-bold text-fg-muted">
+          <div class="hidden md:grid grid-cols-12 gap-2 px-1.5 pb-1 text-[11px] font-bold text-fg-muted">
             <span class="col-span-3">شرح</span>
             <span class="col-span-1">تعداد</span>
             <span class="col-span-1">واحد</span>
@@ -504,7 +506,7 @@
                   <div class="col-span-2 md:col-span-2">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_head_' + i">سرفصل هزینه</label>
                     <select [id]="'line_head_' + i" [(ngModel)]="line.expense_head" [name]="'line_head_' + i"
-                      (ngModelChange)="expenseHeadError = ''" aria-label="سرفصل هزینهٔ ردیف"
+                      (ngModelChange)="onLineHeadChange($event)" aria-label="سرفصل هزینهٔ ردیف"
                       class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                       <option [ngValue]="null" disabled>{{ isLoadingExpenseHeads ? 'در حال بارگذاری...' : 'انتخاب سرفصل' }}</option>
                       @for (group of expenseHeadGroups; track group.id) {
@@ -545,7 +547,6 @@
             aria-describedby="invoice_description_hint"
             [(ngModel)]="newInvoice.description"
             (ngModelChange)="onDescriptionInput($event)"
-            placeholder="خودکار از شرح ردیف اول پر می‌شود"
             class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
           <p id="invoice_description_hint" class="mt-1 text-[11px] text-fg-muted">از شرح ردیف اول پر می‌شود؛ اگر خودتان تغییرش دهید، دیگر عوض نمی‌شود.</p>
         </div>
@@ -599,8 +600,12 @@
         <!-- جمع‌های زنده (جمع نهایی را سرور حساب می‌کند) -->
         <dl class="p-3 rounded-2xl border border-line bg-surface-muted/50 text-xs space-y-1" aria-live="polite">
           <div class="flex justify-between"><dt class="text-fg-muted">جمع ردیف‌ها</dt><dd class="font-bold tabular-nums">{{ formatNumber(subtotal) }}</dd></div>
-          <div class="flex justify-between"><dt class="text-fg-muted">تخفیف</dt><dd class="font-bold tabular-nums">{{ formatNumber(discountAmount) }}</dd></div>
-          <div class="flex justify-between"><dt class="text-fg-muted">مالیات</dt><dd class="font-bold tabular-nums">{{ formatNumber(vatAmount) }}</dd></div>
+          @if (discountAmount > 0) {
+            <div class="flex justify-between"><dt class="text-fg-muted">تخفیف</dt><dd class="font-bold tabular-nums">{{ formatNumber(discountAmount) }}</dd></div>
+          }
+          @if (vatApplicable) {
+            <div class="flex justify-between"><dt class="text-fg-muted">مالیات</dt><dd class="font-bold tabular-nums">{{ formatNumber(vatAmount) }}</dd></div>
+          }
           <div class="flex justify-between pt-1 border-t border-line text-sm"><dt class="font-black text-fg">مبلغ قابل پرداخت (ریال)</dt><dd class="font-black text-emerald-700 tabular-nums">{{ formatNumber(payableAmount) }}</dd></div>
           <p class="text-[11px] text-emerald-700 font-bold" *ngIf="payableAmount > 0">معادل: {{ formatNumber(Math.floor(payableAmount / 10)) }} تومان</p>
         </dl>
@@ -627,7 +632,8 @@
                 class="hidden" />
             </label>
             <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5">
-              <span>📎 انتخاب فایل...</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip" aria-hidden="true"></svg>
+              <span>انتخاب فایل</span>
               <input
                 type="file"
                 (change)="onInvoiceFileSelected($event)"
@@ -665,6 +671,7 @@
             type="button"
             appAction="create"
             label="ذخیره و فاکتور بعدی"
+            tone="indigo"
             hint="ذخیرهٔ پیش‌نویس و باز شدن فرم خالی با همان تاریخ"
             [busy]="isSaving"
             (click)="saveInvoice('new')">
@@ -674,6 +681,7 @@
           type="button"
           appAction="save"
           label="ذخیره پیش‌نویس"
+          tone="indigo"
           [busy]="isSaving"
           (click)="saveInvoice()">
         </button>
@@ -681,8 +689,9 @@
           type="button"
           appAction="send"
           label="ذخیره و ارسال به سرپرست"
-          [hint]="isOffline ? 'ارسال فقط در حالت آنلاین ممکن است' : 'ذخیره و ارسال فوری به کارتابل سرپرست'"
-          [disabled]="isOffline"
+          tone="primary"
+          [hint]="isOffline ? 'ارسال فقط در حالت آنلاین ممکن است' : counterpartyShebaMissing ? 'طرف‌حساب شبای معتبر ندارد' : 'ذخیره و ارسال فوری به کارتابل سرپرست'"
+          [disabled]="isOffline || counterpartyShebaMissing"
           [busy]="isSaving"
           (click)="saveInvoice('send')">
         </button>

@@ -225,7 +225,7 @@ describe('EmployeeInvoicesHubComponent — Lines Form and Duplicate Dialog DOM S
 
     const dds = dl.querySelectorAll('dd');
     expect(dds[0].textContent?.trim()).toBe(component.formatNumber(expectedSubtotal));
-    expect(dds[3].textContent?.trim()).toBe(component.formatNumber(expectedPayable));
+    expect(dds[dds.length - 1].textContent?.trim()).toBe(component.formatNumber(expectedPayable));
   });
 
   it('b2) typing the first line description fills the invoice description until the user edits it', async () => {
