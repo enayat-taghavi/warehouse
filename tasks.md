@@ -4249,3 +4249,41 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `scratch/logs/apk_voice_badging.txt` exists; `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
 
 6. Output and stop condition: a short English report with the backup filename and size, the web build result and the patch line, the APK path and size, the badging first line, the RECORD_AUDIO line, and the publish path. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Chat voice review release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history. The file `tests/playwright/tools/index.py` belongs to another session: never touch it.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`), never a prod APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Never print the content of any file in `E:\warehouse-secrets\`, and never print the value of `FIREBASE_CREDENTIALS_FILE` or any key path.
+
+2. Context: commit `fad1f16b` lets the user listen to a voice message before sending it (a new check button in the recording bar keeps the voice in the pre-send strip with a play button) and makes a voice in the conversation media panel play instead of download. The app version stays `1.0.0` (`versionCode 10000`); do not change any version. The command `publish_mobile_apk --apk <path> --version 1.0.0 --channel direct --env staging` overwrites `CoManage-1.0.0-direct-test.apk` on the download path `/api/public/mobile-files/apk/<file>` and prints the public path. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app chat voice review'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Web build in `frontend`: `npx ng build --delete-output-path=false`, wait for it to finish, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear). Then in `frontend`: `npm run build:mobile-test`, then in `frontend\android`: `.\gradlew.bat assembleStagingDirectRelease`.
+- d) Badging: `E:\Android\Sdk\build-tools\36.0.0\aapt.exe dump badging frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk > scratch\logs\apk_voice2_badging.txt` (from the repo root; if `aapt.exe` is missing there, use `35.0.0`). Read the first line of that file: it must show package `ir.comanage.soft.test`, `versionCode='10000'` and `versionName='1.0.0'`. Also confirm with `Select-String -Path scratch\logs\apk_voice2_badging.txt -Pattern RECORD_AUDIO` that the permission `android.permission.RECORD_AUDIO` is listed.
+- e) Publish, in `backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk ..\frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk --version 1.0.0 --channel direct --env staging` and note the printed path.
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. The web build at most twice, Gradle at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `scratch/logs/apk_voice2_badging.txt` exists; `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
+
+6. Output and stop condition: a short English report with the backup filename and size, the web build result and the patch line, the APK path and size, the badging first line, the RECORD_AUDIO line, and the publish path. No commit. End the turn after the report.
