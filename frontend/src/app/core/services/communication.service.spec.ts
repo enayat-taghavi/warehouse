@@ -9,6 +9,84 @@ import { CommunicationService, ChatMessage } from './communication.service';
 import { ImageCompressorService } from './image-compressor.service';
 import { ConfigApiService } from '../api/config-api.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
+import type { ChatOutboxRow } from './chat-outbox';
+import * as chatOutbox from './chat-outbox';
+
+if (!(globalThis as any).indexedDB) {
+  (globalThis as any).indexedDB = {} as any;
+}
+
+const { outboxDbMock, mockOutboxTable, MockDexie } = vi.hoisted(() => {
+  const map = new Map<string, any>();
+  const table = {
+    put: vi.fn(async (row: any) => {
+      map.set(row.tempId, { ...row });
+      return row.tempId;
+    }),
+    update: vi.fn(async (tempId: string, changes: any) => {
+      const existing = map.get(tempId);
+      if (!existing) return 0;
+      map.set(tempId, { ...existing, ...changes });
+      return 1;
+    }),
+    delete: vi.fn(async (tempId: string) => {
+      map.delete(tempId);
+    }),
+    where: vi.fn((field: string) => ({
+      equals: vi.fn((val: any) => ({
+        toArray: vi.fn(async () => {
+          const rows = [...map.values()].filter(r => (r as any)[field] === val);
+          return rows.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+        }),
+        count: vi.fn(async () => {
+          return [...map.values()].filter(r => (r as any)[field] === val).length;
+        }),
+        delete: vi.fn(async () => {
+          for (const [k, v] of [...map.entries()]) {
+            if ((v as any)[field] === val) {
+              map.delete(k);
+            }
+          }
+        })
+      }))
+    }))
+  };
+
+  class BaseMockDexie {
+    constructor(public name: string) {
+      return new Proxy(this, {
+        get(target, prop, receiver) {
+          if (prop === 'outbox') return table;
+          return Reflect.get(target, prop, receiver);
+        }
+      });
+    }
+    version() {
+      return {
+        stores: () => {
+          (this as any).outbox = table;
+          return this;
+        }
+      };
+    }
+    table(name: string) {
+      if (name === 'outbox') return table;
+      return {
+        put: vi.fn(async () => 1),
+        get: vi.fn(async () => null),
+        delete: vi.fn(async () => undefined),
+        where: vi.fn(() => ({ equals: () => ({ toArray: async () => [], count: async () => 0 }) }))
+      };
+    }
+  }
+
+  return { outboxDbMock: map, mockOutboxTable: table, MockDexie: BaseMockDexie };
+});
+
+vi.mock('dexie', () => ({
+  Dexie: MockDexie,
+  default: MockDexie,
+}));
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -19,6 +97,13 @@ describe('CommunicationService', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
+    (globalThis as any).indexedDB = {} as any;
+    outboxDbMock.clear();
+    mockOutboxTable.put.mockClear();
+    mockOutboxTable.update.mockClear();
+    mockOutboxTable.delete.mockClear();
+    mockOutboxTable.where.mockClear();
+
     TestBed.configureTestingModule({
       providers: [
         CommunicationService,
@@ -1282,5 +1367,324 @@ describe('CommunicationService', () => {
     release();
     await third;
     expect(deliver).toHaveBeenCalledTimes(2);
+  });
+
+  describe('chat outbox (stage 6)', () => {
+    it('a) send with one file: putChatOutbox is called before HTTP is flushed, with files and current user id', async () => {
+      service.getCurrentUserId = () => 1;
+      const file = new File(['content'], 'report.pdf', { type: 'application/pdf' });
+      const sendPromise = service.sendMessage('conv-1', 'گزارش پیوست شد', undefined, file);
+
+      await flushAsync();
+
+      expect(mockOutboxTable.put).toHaveBeenCalled();
+      const row = mockOutboxTable.put.mock.calls[0][0];
+      expect(row.userId).toBe(1);
+      expect(row.conversation).toBe('conv-1');
+      expect(row.files.length).toBe(1);
+      expect(row.files[0].name).toBe('report.pdf');
+
+      const postReq = httpMock.expectOne('/api/communications/messages/');
+      const tempId = row.tempId;
+      postReq.flush({
+        id: 'msg-100',
+        client_temp_id: tempId,
+        conversation: 'conv-1',
+        sender: 1,
+        text: 'گزارش پیوست شد',
+        created_at: new Date().toISOString()
+      });
+      await flushAsync();
+
+      const uploadReq = httpMock.expectOne('/api/communications/messages/upload/');
+      uploadReq.flush({ id: 'att-100', file_name: 'report.pdf', file_size: 7, content_type: 'application/pdf' });
+      await sendPromise;
+      await flushAsync();
+    });
+
+    it('b) message POST and every file upload return 2xx: deleteChatOutbox called and row removed from Map', async () => {
+      service.getCurrentUserId = () => 1;
+      const file = new File(['data'], 'invoice.pdf', { type: 'application/pdf' });
+      const sendPromise = service.sendMessage('conv-1', 'فاکتور', undefined, file);
+      await flushAsync();
+
+      const tempId = service.activeMessages$.value[0].client_temp_id!;
+      expect(outboxDbMock.has(tempId)).toBe(true);
+
+      const postReq = httpMock.expectOne('/api/communications/messages/');
+      postReq.flush({
+        id: 'msg-200',
+        client_temp_id: tempId,
+        conversation: 'conv-1',
+        sender: 1,
+        text: 'فاکتور',
+        created_at: new Date().toISOString()
+      });
+      await flushAsync();
+
+      const uploadReq = httpMock.expectOne('/api/communications/messages/upload/');
+      uploadReq.flush({ id: 'att-200', file_name: 'invoice.pdf', file_size: 4, content_type: 'application/pdf' });
+      await sendPromise;
+      await flushAsync();
+
+      expect(mockOutboxTable.delete).toHaveBeenCalledWith(tempId);
+      expect(outboxDbMock.has(tempId)).toBe(false);
+    });
+
+    it('c) upload returns 503: row stays in Map; message status is pending with waiting_network set', async () => {
+      service.getCurrentUserId = () => 1;
+      const file = new File(['data'], 'file.txt', { type: 'text/plain' });
+      const sendPromise = service.sendMessage('conv-1', 'تصویر', undefined, file);
+      await flushAsync();
+
+      const tempId = service.activeMessages$.value[0].client_temp_id!;
+
+      const postReq = httpMock.expectOne('/api/communications/messages/');
+      postReq.flush({
+        id: 'msg-300',
+        client_temp_id: tempId,
+        conversation: 'conv-1',
+        sender: 1,
+        text: 'تصویر',
+        created_at: new Date().toISOString()
+      });
+      await flushAsync();
+
+      const uploadReq = httpMock.expectOne('/api/communications/messages/upload/');
+      uploadReq.flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await sendPromise;
+      await flushAsync();
+
+      expect(outboxDbMock.has(tempId)).toBe(true);
+      const msg = service.activeMessages$.value.find(m => m.client_temp_id === tempId);
+      expect(msg?.delivery_status).toBe('pending');
+      expect(msg?.waiting_network).toBe(true);
+      expect(mockOutboxTable.delete).not.toHaveBeenCalledWith(tempId);
+    });
+
+    it('d) upload returns 400 with detail: message status failed, row kept with autoRetry false', async () => {
+      service.getCurrentUserId = () => 1;
+      const file = new File(['data'], 'bad.exe', { type: 'application/octet-stream' });
+      const sendPromise = service.sendMessage('conv-1', 'فایل نامعتبر', undefined, file);
+      await flushAsync();
+
+      const tempId = service.activeMessages$.value[0].client_temp_id!;
+
+      const postReq = httpMock.expectOne('/api/communications/messages/');
+      postReq.flush({
+        id: 'msg-400',
+        client_temp_id: tempId,
+        conversation: 'conv-1',
+        sender: 1,
+        text: 'فایل نامعتبر',
+        created_at: new Date().toISOString()
+      });
+      await flushAsync();
+
+      const uploadReq = httpMock.expectOne('/api/communications/messages/upload/');
+      uploadReq.flush({ detail: 'پسوند فایل مجاز نیست.' }, { status: 400, statusText: 'Bad Request' });
+      await sendPromise;
+      await flushAsync();
+
+      expect(outboxDbMock.has(tempId)).toBe(true);
+      const row = outboxDbMock.get(tempId);
+      expect(row?.autoRetry).toBe(false);
+
+      const msg = service.activeMessages$.value.find(m => m.client_temp_id === tempId);
+      expect(msg?.delivery_status).toBe('failed');
+      expect(msg?.failure_reason).toBe('پسوند فایل مجاز نیست.');
+    });
+
+    it('e) discardOutgoing(tempId): deleteChatOutbox called and row is gone', async () => {
+      service.getCurrentUserId = () => 1;
+      const file = new File(['data'], 'cancel.txt', { type: 'text/plain' });
+      const sendPromise = service.sendMessage('conv-1', 'انصراف', undefined, file);
+      await flushAsync();
+
+      const tempId = service.activeMessages$.value[0].client_temp_id!;
+      expect(outboxDbMock.has(tempId)).toBe(true);
+
+      const postReq = httpMock.expectOne('/api/communications/messages/');
+      postReq.flush({
+        id: 'msg-500',
+        client_temp_id: tempId,
+        conversation: 'conv-1',
+        sender: 1,
+        text: 'انصراف',
+        created_at: new Date().toISOString()
+      });
+      await flushAsync();
+
+      const uploadReq = httpMock.expectOne('/api/communications/messages/upload/');
+      uploadReq.flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await sendPromise;
+      await flushAsync();
+
+      expect(outboxDbMock.has(tempId)).toBe(true);
+
+      service.discardOutgoing(tempId);
+      await flushAsync();
+
+      expect(mockOutboxTable.delete).toHaveBeenCalledWith(tempId);
+      expect(outboxDbMock.has(tempId)).toBe(false);
+    });
+
+    it('f) restore: Map pre-filled with rows of user 1 and user 2; restoreOutbox restores only user 1 rows', async () => {
+      service.getCurrentUserId = () => 1;
+      outboxDbMock.set('u1-row-1', {
+        tempId: 'u1-row-1',
+        userId: 1,
+        conversation: 'conv-1',
+        message: { id: 'u1-row-1', client_temp_id: 'u1-row-1', conversation: 'conv-1', text: 'u1 msg 1', delivery_status: 'pending' },
+        files: [
+          { blob: new Blob(['f1']), name: 'f1.txt', type: 'text/plain', lastModified: 1000 },
+          { blob: new Blob(['f2']), name: 'f2.txt', type: 'text/plain', lastModified: 2000 }
+        ],
+        uploadedCount: 1,
+        autoRetry: true,
+        createdAt: '2026-10-31T01:00:00.000Z'
+      });
+      outboxDbMock.set('u1-row-2', {
+        tempId: 'u1-row-2',
+        userId: 1,
+        conversation: 'conv-1',
+        message: { id: 'u1-row-2', client_temp_id: 'u1-row-2', conversation: 'conv-1', text: 'u1 msg 2', delivery_status: 'failed' },
+        files: [],
+        uploadedCount: 0,
+        autoRetry: false,
+        createdAt: '2026-10-31T01:05:00.000Z'
+      });
+      outboxDbMock.set('u2-row-1', {
+        tempId: 'u2-row-1',
+        userId: 2,
+        conversation: 'conv-2',
+        message: { id: 'u2-row-1', client_temp_id: 'u2-row-1', conversation: 'conv-2', text: 'u2 msg', delivery_status: 'pending' },
+        files: [
+          { blob: new Blob(['u2f']), name: 'u2.txt', type: 'text/plain', lastModified: 3000 }
+        ],
+        uploadedCount: 0,
+        autoRetry: true,
+        createdAt: '2026-10-31T01:10:00.000Z'
+      });
+
+      await (service as any).restoreOutbox();
+
+      const outgoing = (service as any).outgoingMessages as Map<string, any>;
+      const pendingFiles = (service as any).pendingFiles as Map<string, File[]>;
+      const uploadedCounts = (service as any).uploadedCounts as Map<string, number>;
+
+      expect(outgoing.has('u1-row-1')).toBe(true);
+      expect(outgoing.has('u1-row-2')).toBe(true);
+      expect(outgoing.has('u2-row-1')).toBe(false);
+
+      expect(uploadedCounts.get('u1-row-1')).toBe(1);
+      expect(pendingFiles.get('u1-row-1')?.length).toBe(2);
+
+      expect(outboxDbMock.has('u2-row-1')).toBe(true);
+      expect(mockOutboxTable.delete).not.toHaveBeenCalledWith('u2-row-1');
+    });
+
+    it('g) flush order: three waiting rows sent in createdAt order; 503 on second stops subsequent flush', async () => {
+      service.getCurrentUserId = () => 1;
+      outboxDbMock.set('tid-1', {
+        tempId: 'tid-1',
+        userId: 1,
+        conversation: 'conv-1',
+        message: { id: 'tid-1', client_temp_id: 'tid-1', conversation: 'conv-1', text: 'msg 1', delivery_status: 'pending' },
+        files: [],
+        uploadedCount: 0,
+        autoRetry: true,
+        createdAt: '2026-10-31T01:00:00.000Z'
+      });
+      outboxDbMock.set('tid-2', {
+        tempId: 'tid-2',
+        userId: 1,
+        conversation: 'conv-1',
+        message: { id: 'tid-2', client_temp_id: 'tid-2', conversation: 'conv-1', text: 'msg 2', delivery_status: 'pending' },
+        files: [],
+        uploadedCount: 0,
+        autoRetry: true,
+        createdAt: '2026-10-31T02:00:00.000Z'
+      });
+      outboxDbMock.set('tid-3', {
+        tempId: 'tid-3',
+        userId: 1,
+        conversation: 'conv-1',
+        message: { id: 'tid-3', client_temp_id: 'tid-3', conversation: 'conv-1', text: 'msg 3', delivery_status: 'pending' },
+        files: [],
+        uploadedCount: 0,
+        autoRetry: true,
+        createdAt: '2026-10-31T03:00:00.000Z'
+      });
+
+      const flushPromise = service.flushOutbox();
+      await flushAsync();
+
+      const req1 = httpMock.expectOne('/api/communications/messages/');
+      expect(req1.request.body.client_temp_id).toBe('tid-1');
+      req1.flush({ id: 'msg-1', client_temp_id: 'tid-1', conversation: 'conv-1', sender: 1, text: 'msg 1', created_at: '2026-10-31T01:00:00.000Z' });
+      await flushAsync();
+
+      const req2 = httpMock.expectOne('/api/communications/messages/');
+      expect(req2.request.body.client_temp_id).toBe('tid-2');
+      req2.flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await flushAsync();
+      await flushPromise;
+
+      httpMock.expectNone('/api/communications/messages/');
+      expect(outboxDbMock.has('tid-1')).toBe(false);
+      expect(outboxDbMock.has('tid-2')).toBe(true);
+      expect(outboxDbMock.has('tid-3')).toBe(true);
+    });
+
+    it('h) unsentOutboxCount returns the count of the current user rows only', async () => {
+      service.getCurrentUserId = () => 1;
+      outboxDbMock.set('u1-1', {
+        tempId: 'u1-1', userId: 1, conversation: 'c1', files: [], uploadedCount: 0, autoRetry: true,
+        message: { client_temp_id: 'u1-1', delivery_status: 'pending' }, createdAt: '2026-10-31T01:00:00Z'
+      });
+      outboxDbMock.set('u1-2', {
+        tempId: 'u1-2', userId: 1, conversation: 'c1', files: [], uploadedCount: 0, autoRetry: false,
+        message: { client_temp_id: 'u1-2', delivery_status: 'failed' }, createdAt: '2026-10-31T01:01:00Z'
+      });
+      outboxDbMock.set('u2-1', {
+        tempId: 'u2-1', userId: 2, conversation: 'c2', files: [], uploadedCount: 0, autoRetry: true,
+        message: { client_temp_id: 'u2-1', delivery_status: 'pending' }, createdAt: '2026-10-31T01:02:00Z'
+      });
+
+      const countUser1 = await service.unsentOutboxCount();
+      expect(countUser1).toBe(2);
+
+      service.getCurrentUserId = () => 2;
+      const countUser2 = await service.unsentOutboxCount();
+      expect(countUser2).toBe(1);
+
+      service.getCurrentUserId = () => 999;
+      const countOther = await service.unsentOutboxCount();
+      expect(countOther).toBe(0);
+
+      service.getCurrentUserId = () => null;
+      const countNull = await service.unsentOutboxCount();
+      expect(countNull).toBe(0);
+    });
+
+    it('i) discardOutboxForLogout deletes only the current user rows', async () => {
+      service.getCurrentUserId = () => 1;
+      outboxDbMock.set('u1-1', {
+        tempId: 'u1-1', userId: 1, conversation: 'c1', files: [], uploadedCount: 0, autoRetry: true,
+        message: { client_temp_id: 'u1-1', delivery_status: 'pending' }, createdAt: '2026-10-31T01:00:00Z'
+      });
+      outboxDbMock.set('u2-1', {
+        tempId: 'u2-1', userId: 2, conversation: 'c2', files: [], uploadedCount: 0, autoRetry: true,
+        message: { client_temp_id: 'u2-1', delivery_status: 'pending' }, createdAt: '2026-10-31T01:02:00Z'
+      });
+
+      await service.discardOutboxForLogout();
+      await flushAsync();
+
+      expect(mockOutboxTable.where).toHaveBeenCalledWith('userId');
+      expect(outboxDbMock.has('u1-1')).toBe(false);
+      expect(outboxDbMock.has('u2-1')).toBe(true);
+    });
   });
 });
