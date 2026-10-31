@@ -117,6 +117,7 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     TestBed.resetTestingModule();
   });
 
