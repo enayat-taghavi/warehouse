@@ -4287,3 +4287,25 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `scratch/logs/apk_voice2_badging.txt` exists; `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
 
 6. Output and stop condition: a short English report with the backup filename and size, the web build result and the patch line, the APK path and size, the badging first line, the RECORD_AUDIO line, and the publish path. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Backend restart on the local app environment for the APK no-store header (no build)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background.
+- Do not edit, create, stage or commit any tracked file. Do not run `taskkill`, `wt.exe`, `migrate`, any build, or anything against `soft.farsalish.ir`.
+
+2. Context: commit adds `Cache-Control: no-store` to the APK download view (`backend/core/settings_core/mobile_views.py`). The runner restarts Daphne after your turn; the release check also needs a fresh GDrive worker.
+
+3. Task: from the repo root run `python scripts/automation/verify_tools.py restart-worker` and wait for it to print the new worker pids and a fresh heartbeat. Then run `git status --short`.
+
+4. Output and stop condition: a short English report with the restart-worker output lines and the git status output. No commit. End the turn after the report.
