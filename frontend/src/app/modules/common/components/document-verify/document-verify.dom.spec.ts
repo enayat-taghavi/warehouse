@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { ɵresolveComponentResources } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { DocumentVerify } from './document-verify';
 
@@ -18,6 +21,17 @@ describe('DocumentVerify DOM Spec', () => {
   let fixture: ComponentFixture<DocumentVerify>;
   let component: DocumentVerify;
   let httpMock: HttpTestingController;
+
+  beforeAll(async () => {
+    await ɵresolveComponentResources(async (url) => {
+      const filename = path.basename(url);
+      const localPath = path.resolve(__dirname, filename);
+      if (fs.existsSync(localPath)) {
+        return fs.readFileSync(localPath, 'utf-8');
+      }
+      return '';
+    });
+  });
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
@@ -106,5 +120,86 @@ describe('DocumentVerify DOM Spec', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).not.toContain('999999');
+  });
+
+  it('shows live current data', () => {
+    const req = httpMock.expectOne('/api/public/verify/abc%3Adef/');
+    req.flush({
+      valid: true,
+      number: '1405-9',
+      title: 'فاکتور هزینه',
+      date: '1405/08/01',
+      company_name: 'C',
+      live: true,
+      exists: true,
+      current: {
+        number: '1405-9',
+        date: '1405/08/02',
+        amount: '3000',
+        status: 'پرداختشده',
+      },
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('وضعیت فعلی در سامانه');
+    expect(text).toContain('پرداختشده');
+    expect(text).toContain(new Intl.NumberFormat('fa-IR').format(3000));
+    expect(text).toContain('ریال');
+    expect(text).not.toContain('فرق دارد');
+  });
+
+  it('warns when the number changed', () => {
+    const req = httpMock.expectOne('/api/public/verify/abc%3Adef/');
+    req.flush({
+      valid: true,
+      number: '1405-9',
+      title: 'فاکتور هزینه',
+      date: '1405/08/01',
+      company_name: 'C',
+      live: true,
+      exists: true,
+      current: {
+        number: '1405-10',
+        date: '1405/08/02',
+        amount: '3000',
+        status: 'پرداختشده',
+      },
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('فرق دارد');
+  });
+
+  it('shows deleted warning', () => {
+    const req = httpMock.expectOne('/api/public/verify/abc%3Adef/');
+    req.flush({
+      valid: true,
+      number: '1',
+      title: 'T',
+      live: true,
+      exists: false,
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('حذف شده است');
+    expect(text).not.toContain('وضعیت فعلی در سامانه');
+  });
+
+  it('no live block when not live', () => {
+    const req = httpMock.expectOne('/api/public/verify/abc%3Adef/');
+    req.flush({
+      valid: true,
+      number: '1',
+      title: 'T',
+      live: false,
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).not.toContain('وضعیت فعلی در سامانه');
+    expect(text).not.toContain('حذف شده است');
   });
 });

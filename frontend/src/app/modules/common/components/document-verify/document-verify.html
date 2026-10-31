@@ -44,6 +44,48 @@
                 }
               }
             </dl>
+            @if (isDeleted) {
+              <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm font-bold flex items-start gap-2">
+                <svg appIcon="alert-triangle" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+                <span>این سند چاپ معتبری دارد اما دیگر در سامانه وجود ندارد (حذف شده است).</span>
+              </div>
+            }
+            @if (current(); as cur) {
+              <div class="border-t border-line pt-3 mt-1">
+                <h2 class="text-xs font-black text-fg-muted mb-2">وضعیت فعلی در سامانه</h2>
+                <dl class="text-sm space-y-2">
+                  @if (cur.number) {
+                    <div class="flex justify-between gap-3">
+                      <dt class="text-fg-muted shrink-0">شماره</dt>
+                      <dd class="font-bold min-w-0 break-words" dir="ltr">{{ cur.number }}</dd>
+                    </div>
+                  }
+                  @if (cur.date) {
+                    <div class="flex justify-between gap-3">
+                      <dt class="text-fg-muted shrink-0">تاریخ</dt>
+                      <dd class="font-bold min-w-0 break-words">{{ cur.date }}</dd>
+                    </div>
+                  }
+                  @if (formatAmount(cur.amount)) {
+                    <div class="flex justify-between gap-3">
+                      <dt class="text-fg-muted shrink-0">مبلغ قابل پرداخت</dt>
+                      <dd class="font-bold min-w-0 break-words">{{ formatAmount(cur.amount) }}</dd>
+                    </div>
+                  }
+                  @if (cur.status) {
+                    <div class="flex justify-between gap-3">
+                      <dt class="text-fg-muted shrink-0">وضعیت</dt>
+                      <dd class="font-bold min-w-0 break-words">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700">{{ cur.status }}</span>
+                      </dd>
+                    </div>
+                  }
+                </dl>
+                @if (cur.number && cur.number !== result()?.number) {
+                  <div class="text-xs text-fg-muted mt-2">شمارهٔ فعلی سند با شمارهٔ چاپشده فرق دارد.</div>
+                }
+              </div>
+            }
           </div>
         }
         @case ('invalid') {

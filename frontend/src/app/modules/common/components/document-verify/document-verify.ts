@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
@@ -12,6 +12,14 @@ interface DocumentVerifyResponse {
   title?: string;
   date?: string;
   company_name?: string;
+  live?: boolean;
+  exists?: boolean;
+  current?: {
+    number?: string;
+    date?: string;
+    amount?: string;
+    status?: string;
+  };
 }
 
 type VerifyState = 'loading' | 'valid' | 'invalid' | 'error';
@@ -72,5 +80,30 @@ export class DocumentVerify {
   get isFull(): boolean {
     const r = this.result();
     return !!r && !!(r.title || r.date || r.company_name);
+  }
+
+  readonly current = computed(() => {
+    const r = this.result();
+    return r?.live === true && r?.exists === true ? (r.current ?? null) : null;
+  });
+
+  get isDeleted(): boolean {
+    const r = this.result();
+    return r?.live === true && r?.exists === false;
+  }
+
+  formatAmount(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    const str = String(value).trim();
+    if (!str) {
+      return '';
+    }
+    const n = Number(str);
+    if (Number.isNaN(n)) {
+      return '';
+    }
+    return new Intl.NumberFormat('fa-IR').format(n) + ' ریال';
   }
 }
