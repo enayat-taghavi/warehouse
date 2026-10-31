@@ -12,6 +12,7 @@
 - `register_module(spec)` — ثبت خودکار ماژول از `AppConfig.ready()`.
 """
 
+import logging
 from dataclasses import dataclass
 
 
@@ -261,6 +262,25 @@ def printable_document(user, kind: str, entity_id):
             return None
         if doc is not None:
             return doc
+    return None
+
+
+# ─── خلاصهٔ زندهٔ صحت‌سنجی عمومی (O3 طرح شبانه) ─────────────────────────────────────────────────────
+# contribute('verify_summary:<kind>', fn): fn(entity_id) → dict | None؛ سند حذف‌شده = {'exists': False}،
+# وگرنه {'exists': True, 'company_id', 'number', 'date', 'amount', 'status'}. فقط همین چند فیلد بیرون می‌رود.
+
+def verify_summary(kind: str, entity_id):
+    """اولین پاسخ dict از قلاب ماژول صاحب؛ نوع بی‌قلاب یا خطای قلاب = None (صفحه فقط دادهٔ توکن را نشان می‌دهد)."""
+    if not kind or not entity_id:
+        return None
+    for hook in contributions(f'verify_summary:{kind}'):
+        try:
+            summary = hook(entity_id)
+        except Exception:
+            logging.getLogger(__name__).exception('verify_summary hook failed for %s', kind)
+            return None
+        if isinstance(summary, dict):
+            return summary
     return None
 
 
