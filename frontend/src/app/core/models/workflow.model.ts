@@ -118,6 +118,8 @@ export interface WorkflowHistoryInstance {
   closed_at_shamsi: string;
   /** ثبت‌کننده، گردش باز، و هنوز نفر دیگری اقدام نکرده */
   can_cancel: boolean;
+  /** کار باز کسی را برای اقدام ندارد (مثلاً ثبت‌کننده تنها دارندهٔ نقش مرحله است)؛ فقط مدیر کل اقدام می‌کند */
+  waiting_for_superuser?: boolean;
   steps: WorkflowHistoryStep[];
 }
 

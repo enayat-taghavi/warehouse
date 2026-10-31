@@ -99,6 +99,16 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             </div>
           </div>
 
+          <p
+            *ngIf="instance.waiting_for_superuser"
+            class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2 flex items-start gap-1.5"
+            role="note"
+            data-waiting-superuser
+          >
+            <svg appIcon="alert-triangle" class="w-3.5 h-3.5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>در این بخش کس دیگری برای اقدام روی این مرحله نیست (ثبت‌کننده نمی‌تواند سند خودش را بررسی کند). مدیر کل سامانه باخبر شده و اقدام می‌کند؛ برای رفع دائمی، نفر دوم یا جانشینی با همین نقش به بخش اضافه کنید.</span>
+          </p>
+
           <!-- خط زمان عمودی مراحل (Vertical Timeline) -->
           <div class="relative ps-4 ms-1 border-s-2 border-indigo-100 flex flex-col gap-3.5 my-1">
             <div *ngFor="let step of instance.steps" class="relative flex flex-col gap-1 text-xs">

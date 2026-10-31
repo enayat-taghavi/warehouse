@@ -104,6 +104,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     expect(items).toEqual([
       'supervisor-personnel',
       'supervisor-fleet',
+      'employee-invoices',
       'supervisor-invoices',
       'supervisor-petty-cash',
       'supervisor-period-lock'
@@ -119,6 +120,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'accountant-personnel',
       'accountant-payroll',
       'accountant-fleet',
+      'employee-invoices',
       'accountant-invoices',
       'accountant-petty-cash',
       'accountant-diskettes',
@@ -141,10 +143,19 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'manager-personnel',
       'manager-fleet',
       'manager-approvals',
+      'employee-invoices',
       'manager-budget',
       'manager-reports',
       'base-settings'
     ]);
+  });
+
+  it('d2) supervisor, accountant and manager personas open the invoice entry page, but no other employee page', () => {
+    for (const role of ['supervisor', 'accountant', 'manager']) {
+      expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-invoices')).toBe(false);
+      expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-attendance')).toBe(true);
+    }
+    expect(isAccountingRouteDeniedForRole('treasury', '/app/finance/employee-invoices')).toBe(true);
   });
 
   it('e) treasurer bundle: resolves treasury persona and treasurer menu items', () => {
@@ -167,17 +178,19 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     expect(items).toEqual([
       'supervisor-personnel',
       'supervisor-fleet',
+      'employee-invoices',
       'supervisor-period-lock'
     ]);
   });
 
   // treasurer has perm_counterparty_manage, so only that item passes; the accountant menu is never shown to the treasury persona
   it('g) cross-role: menus of another role stay empty', () => {
-    expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual([]);
+    // the invoice entry passes on its own perm_invoice_record; the layout shows only the active persona's menu
+    expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual(['employee-invoices']);
     // the accountant bundle holds perm_accounting_reports, so only the reports page of the manager menu opens (plan 4.7 d8)
-    expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual(['manager-reports']);
+    expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual(['employee-invoices', 'manager-reports']);
     expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual([]);
-    expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['accountant-counterparties']);
+    expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['employee-invoices', 'accountant-counterparties']);
   });
 
   it('h) none of the five removed codes appears in any nav item, role marker, or route access permission', () => {

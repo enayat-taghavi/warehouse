@@ -2,6 +2,8 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Injector, runInInjectionContext } from '@angular/core';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { of, throwError, Subject } from 'rxjs';
 import { WorkflowHistoryComponent } from './workflow-history.component';
 import { WorkflowApiService } from '../../../core/api/workflow-api.service';
@@ -141,5 +143,43 @@ describe('WorkflowHistoryComponent', () => {
     // When can_cancel is false
     instance!.can_cancel = false;
     expect(instance?.can_cancel).toBe(false);
+  });
+});
+
+describe('WorkflowHistoryComponent (DOM): no-recipient note', () => {
+  try {
+    getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+  } catch {}
+
+  async function hasNote(waiting: boolean): Promise<boolean> {
+    const history = {
+      entity_kind: 'k', entity_id: 1,
+      instances: [{
+        instance_id: 1, workflow_key: 'k', workflow_title_fa: 't', version: 1, status: 'in_progress', status_fa: 's',
+        current_step: 'review', current_step_title_fa: 'r', revision: 1, created_by: null, company: null, section: null,
+        amount: null, submitted_at: null, submitted_at_shamsi: '', closed_at: null, closed_at_shamsi: '',
+        can_cancel: false, waiting_for_superuser: waiting, steps: [],
+      }],
+    };
+    TestBed.configureTestingModule({
+      imports: [WorkflowHistoryComponent],
+      providers: [
+        { provide: WorkflowApiService, useValue: { getHistory: vi.fn().mockReturnValue(of(history)) } },
+        { provide: WorkflowTasksService, useValue: { events$: new Subject() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(WorkflowHistoryComponent);
+    fixture.componentInstance.kind = 'k';
+    fixture.componentInstance.entityId = 1;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    const found = !!(fixture.nativeElement as HTMLElement).querySelector('[data-waiting-superuser]');
+    TestBed.resetTestingModule();
+    return found;
+  }
+
+  it('shows the note only when the open step has nobody to act', async () => {
+    expect(await hasNote(true)).toBe(true);
+    expect(await hasNote(false)).toBe(false);
   });
 });

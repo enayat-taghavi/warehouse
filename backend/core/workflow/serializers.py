@@ -186,6 +186,9 @@ def history_instance(inst, user) -> dict:
         'closed_at': _dt(inst.closed_at),
         'closed_at_shamsi': _shamsi_dt(inst.closed_at),
         'can_cancel': (inst.created_by_id == user.pk and inst.status == inst.IN_PROGRESS and not inst.others_acted),
+        # کار باز بی‌دریافت‌کننده (مثلاً ثبت‌کننده تنها دارندهٔ نقش مرحله است): فقط مدیر کل سامانه اقدام می‌کند
+        'waiting_for_superuser': (inst.status == inst.IN_PROGRESS
+                                  and inst.tasks.filter(is_open=True, has_recipients=False).exists()),
         'steps': [history_step(spec, s) for s in inst.steps.all()],
     }
 

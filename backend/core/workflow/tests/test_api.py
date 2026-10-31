@@ -162,6 +162,7 @@ class HistoryApiTests(ApiBase):
         self.assertEqual((item['instance_id'], item['status']), (inst.pk, 'in_progress'))
         self.assertEqual(item['current_step_title_fa'], 'بررسی')
         self.assertFalse(item['can_cancel'])
+        self.assertFalse(item['waiting_for_superuser'])
         submit_row, act_row = item['steps']
         self.assertEqual(submit_row['action'], 'submit')
         self.assertIn({'step': 'boss_ok', 'step_title_fa': 'تأیید رئیس', 'reason': 'threshold',
@@ -177,6 +178,13 @@ class HistoryApiTests(ApiBase):
         self.assertEqual(self.get(self.payer, 'history/', kind=KIND, id=d.pk).status_code, 404)
         self.assertEqual(self.get(self.member, 'history/', kind=KIND, id=999999).status_code, 404)
         self.assertEqual(self.get(self.member, 'history/', kind=KIND).status_code, 400)
+
+    def test_waiting_for_superuser(self):
+        # کار باز بی‌دریافت‌کننده (ثبت‌کننده تنها دارندهٔ نقش مرحله) در سابقه نشان داده می‌شود
+        d, inst = self.submit()
+        inst.tasks.filter(is_open=True).update(has_recipients=False)
+        r = self.get(self.su, 'history/', kind=KIND, id=d.pk)
+        self.assertTrue(r.data['instances'][0]['waiting_for_superuser'])
 
     def test_view_permission(self):
         self.set_spec(make_spec(view_permission='zz_wf_pay'))

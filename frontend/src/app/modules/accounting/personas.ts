@@ -114,12 +114,17 @@ export function resolveAccountingRoleCodes(ctx: {
 }
 
 
+/** «ثبت فاکتور» صفحهٔ کارمند است ولی در منوی سرپرست، حسابدار و مدیر هم هست (مجوز perm_invoice_record پیش‌فرض این نقش‌هاست) */
+function isSharedInvoiceRoute(cleanRoute: string): boolean {
+  return cleanRoute.endsWith('/employee-invoices');
+}
+
 export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string): boolean {
   if (role === 'accountant') {
     // حسابدار نباید به صفحات کارمند، سرپرست کارگاه، مدیر، خزانه‌دار دسترسی داشته باشد
     // گزارش‌های مدیریتی با مجوز perm_accounting_reports برای حسابدار هم باز است (طرح ۴.۷ د۸)
     const isReports = cleanRoute.endsWith('/manager-reports');
-    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/supervisor-') || (cleanRoute.includes('/manager-') && !isReports) || cleanRoute.includes('/treasurer-')) {
+    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash') && !isSharedInvoiceRoute(cleanRoute)) || cleanRoute.includes('/supervisor-') || (cleanRoute.includes('/manager-') && !isReports) || cleanRoute.includes('/treasurer-')) {
       return true;
     }
     if (cleanRoute.includes('treasury-cartable') || cleanRoute.includes('manager-approvals') || cleanRoute.includes('/attendance') || cleanRoute.includes('/fleet')) {
@@ -135,7 +140,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     }
   } else if (role === 'supervisor') {
     // سرپرست نباید به منوی کارمند، حسابدار، مدیر یا خزانه‌دار دسترسی داشته باشد
-    if (cleanRoute.includes('/employee-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
+    if ((cleanRoute.includes('/employee-') && !isSharedInvoiceRoute(cleanRoute)) || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
       return true;
     }
     if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('treasury-cartable')) {
@@ -143,7 +148,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     }
   } else if (role === 'manager') {
     // مدیر نباید به ثبت خام کارمند یا سرپرست یا محاسبات خام حسابدار دسترسی مستقیم داشته باشد
-    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/treasurer-')) {
+    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash') && !isSharedInvoiceRoute(cleanRoute)) || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/treasurer-')) {
       return true;
     }
   } else if (role === 'treasury') {
