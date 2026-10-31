@@ -12,16 +12,9 @@ import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ExcelImportModal } from '../../../../../shared/components/excel-import-modal/excel-import-modal';
-import { Counterparty, CounterpartyKind, PartyBankAccount } from '../../../models/personnel.model';
-import {
-  IRANIAN_BANKS,
-  IranianBankInfo,
-  validateSheba,
-  ShebaValidationResult,
-  extractShebaDigits,
-  generateShebaFromAccount,
-  validateAccountNumber
-} from '../../../../../core/utils/sheba-utils';
+import { Counterparty, PartyBankAccount } from '../../../models/personnel.model';
+import { CounterpartyFormFieldsComponent, COUNTERPARTY_TYPE_OPTIONS, CounterpartyTypeOption } from './counterparty-form/counterparty-form-fields.component';
+import { CounterpartyFormState, isMaskedValue, normalizeDigits } from './counterparty-form/counterparty-form.state';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
@@ -31,18 +24,12 @@ import { saveBlob } from '../../../../../core/platform/file-output';
 import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
 
-export interface CounterpartyTypeOption {
-  key: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
-  label: string;
-  badgeClass: string;
-  bgClass: string;
-  icon: string;
-}
+export type { CounterpartyTypeOption } from './counterparty-form/counterparty-form-fields.component';
 
 @Component({
   selector: 'app-counterparties',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, TabBarComponent, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, TabBarComponent, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, CounterpartyFormFieldsComponent],
   templateUrl: './counterparties.html',
   styleUrl: './counterparties.css'
 })
@@ -126,22 +113,15 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     return this.typeFilterTabsCache;
   }
 
-  // تعاریف ۵ گانه انواع طرف‌حساب
-  readonly typeOptions: CounterpartyTypeOption[] = [
-    { key: 'driver', label: 'راننده / مالک خودرو', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200', bgClass: 'bg-blue-50', icon: '🚚' },
-    { key: 'repair_shop', label: 'تعمیرگاه و قطعات', badgeClass: 'bg-amber-100 text-amber-800 border-amber-200', bgClass: 'bg-amber-50', icon: '🔧' },
-    { key: 'fuel_station', label: 'جایگاه سوخت', badgeClass: 'bg-rose-100 text-rose-800 border-rose-200', bgClass: 'bg-rose-50', icon: '⛽' },
-    { key: 'contractor', label: 'پیمانکار خدماتی', badgeClass: 'bg-purple-100 text-purple-800 border-purple-200', bgClass: 'bg-purple-50', icon: '🏗️' },
-    { key: 'other', label: 'سایر اشخاص حقیقی/حقوقی', badgeClass: 'bg-slate-100 text-slate-800 border-slate-200', bgClass: 'bg-slate-50', icon: '🏢' },
-  ];
+  readonly typeOptions: CounterpartyTypeOption[] = COUNTERPARTY_TYPE_OPTIONS;
 
-  readonly kindOptions: { key: CounterpartyKind; label: string }[] = [
-    { key: 'person', label: 'حقیقی' },
-    { key: 'legal', label: 'حقوقی' },
-  ];
-
-  // مدل فرم ایجاد و ویرایش
-  newCounterparty: Partial<Counterparty> = this.emptyForm();
+  // فرم مشترک ایجاد و ویرایش (همان فرم تعریف طرف‌حساب در فاکتور)
+  readonly cpForm = new CounterpartyFormState(
+    (type, message) => this.toast.show(type, message),
+    () => this.cdr.detectChanges()
+  );
+  get newCounterparty(): Partial<Counterparty> { return this.cpForm.model; }
+  set newCounterparty(value: Partial<Counterparty>) { this.cpForm.model = value; }
   editingCounterparty: Counterparty | null = null;
 
   // حساب‌های بانکی طرف حساب در حال ویرایش (ص۹ طرح ۳.۱)؛ فیلدهای بانکی فرم در ویرایش «حساب تازه» هستند
@@ -149,19 +129,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   isBankAccountsLoading = false;
   bankAccountsError = '';
   isBankSaving = false;
-  bankCardNumber = '';
-  bankOwnerName = '';
   copiedBankKey = '';
-
-  // مدیریت بانک عامل و شماره شبا
-  iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
-  shebaValidationResult: ShebaValidationResult | null = null;
-  shebaDigitsDisplay: string = '';
-  isBankDropdownOpen: boolean = false;
-  bankSearchQuery: string = '';
-  isShebaCopied: boolean = false;
-  isAccountCopied: boolean = false;
-  private _isSyncingBank = false;
 
   // مودال اکسل
   isExcelModalOpen = false;
@@ -445,8 +413,8 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     this.resetForm();
     this.editingCounterparty = cp;
     // فیلدهای بانکی فرم در ویرایش خالی می‌مانند و فقط حساب تازه می‌سازند؛ حساب‌های موجود در زیرفهرست‌اند
-    this.newCounterparty = {
-      ...this.emptyForm(),
+    this.cpForm.model = {
+      ...this.cpForm.model,
       kind: cp.kind || 'person',
       name: cp.name,
       counterparty_type: cp.counterparty_type,
@@ -475,96 +443,30 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
 
   resetForm(): void {
     this.editingCounterparty = null;
-    this.newCounterparty = this.emptyForm();
     this.bankAccounts = [];
     this.isBankAccountsLoading = false;
     this.bankAccountsError = '';
-    this.resetBankForm();
-  }
-
-  private emptyForm(): Partial<Counterparty> {
-    return {
-      kind: undefined,
-      name: '',
-      counterparty_type: 'driver',
-      national_id: '',
-      economic_code: '',
-      registration_number: '',
-      phone: '',
-      mobile: '',
-      email: '',
-      address: '',
-      postal_code: '',
-      notes: '',
-      bank_name: '',
-      account_number: '',
-      sheba_number: '',
-      account_code: '',
-      is_active: true
-    };
-  }
-
-  private resetBankForm(): void {
-    this.newCounterparty.bank_name = '';
-    this.newCounterparty.account_number = '';
-    this.newCounterparty.sheba_number = '';
-    this.bankCardNumber = '';
-    this.bankOwnerName = '';
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-    this.isAccountCopied = false;
-    this.isShebaCopied = false;
+    this.cpForm.reset();
   }
 
   /** مقدار پوشیده (دارای *) از سرور آمده و نباید دوباره فرستاده شود. */
-  isMaskedValue(val?: string | null): boolean {
-    return !!val && val.includes('*');
-  }
+  readonly isMaskedValue = isMaskedValue;
 
   /** طرف حساب در حال ویرایش برای این کاربر پوشیده است (فقط نمایش، بی کپی). */
   get isEditingMasked(): boolean {
     return !!this.editingCounterparty?.bank_masked;
   }
 
-  /** فیلدهای هویتی و مالی بی بانک؛ مقدار پوشیده و `company` (در ویرایش) فرستاده نمی‌شوند. */
   private buildIdentityPayload(name: string): Partial<Counterparty> {
-    const f = this.newCounterparty;
-    const payload: Partial<Counterparty> = {
-      name,
-      counterparty_type: f.counterparty_type || 'other',
-      economic_code: this.normalizeInput(f.economic_code),
-      registration_number: this.normalizeInput(f.registration_number),
-      phone: this.normalizeInput(f.phone),
-      mobile: this.normalizeInput(f.mobile),
-      email: (f.email || '').trim(),
-      address: (f.address || '').trim(),
-      postal_code: this.normalizeInput(f.postal_code),
-      notes: (f.notes || '').trim(),
-      account_code: this.normalizeInput(f.account_code),
-      is_active: f.is_active !== false
-    };
-    if (f.kind) payload.kind = f.kind;
-    const nationalId = this.normalizeInput(f.national_id);
-    if (!this.isMaskedValue(nationalId)) payload.national_id = nationalId;
-    return payload;
+    return this.cpForm.buildIdentityPayload(name);
   }
 
-  /** فرم بانک چیزی برای ثبت دارد (شبا اجباری است). */
   hasPendingBankAccount(): boolean {
-    return !!this.newCounterparty.sheba_number && !this.isMaskedValue(this.newCounterparty.sheba_number);
+    return this.cpForm.hasPendingBankAccount();
   }
 
   private buildBankAccountPayload(): PartyBankAccount {
-    const digits = extractShebaDigits(this.newCounterparty.sheba_number || '');
-    return {
-      bank_name: (this.newCounterparty.bank_name || '').trim(),
-      account_number: this.normalizeInput(this.newCounterparty.account_number),
-      sheba_number: digits ? `IR${digits}` : '',
-      card_number: this.normalizeInput(this.bankCardNumber).replace(/\D/g, ''),
-      owner_name: this.bankOwnerName.trim()
-    };
+    return this.cpForm.buildBankAccountPayload();
   }
 
   // ── زیرفهرست حساب‌های بانکی (`/api/personnel/party-bank-accounts/?party=`) ──
@@ -596,7 +498,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'لطفاً شماره شبا را وارد نمایید.');
       return;
     }
-    if (this.shebaValidationResult && !this.shebaValidationResult.isValid) {
+    if (this.cpForm.isShebaInvalid) {
       this.toast.show('warning', 'شماره شبا معتبر نیست.');
       return;
     }
@@ -610,7 +512,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
       next: () => {
         this.isBankSaving = false;
         this.toast.show('success', 'حساب بانکی ثبت شد.');
-        this.resetBankForm();
+        this.cpForm.resetBank();
         this.afterBankChange();
       },
       error: (err) => {
@@ -725,107 +627,13 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     });
   }
 
-  // مدیریت بانک عامل و شماره شبا
-  get filteredBanks(): IranianBankInfo[] {
-    if (!this.bankSearchQuery?.trim()) return this.iranianBanks;
-    const q = this.bankSearchQuery.trim().toLowerCase();
-    return this.iranianBanks.filter(b => b.name.toLowerCase().includes(q) || b.code.includes(q));
-  }
-
-  toggleBankDropdown(event?: MouseEvent): void {
-    if (event) event.stopPropagation();
-    this.isBankDropdownOpen = !this.isBankDropdownOpen;
-    if (this.isBankDropdownOpen) {
-      this.bankSearchQuery = '';
-    }
-  }
-
-  selectBank(bank: IranianBankInfo, event?: MouseEvent): void {
-    if (event) event.stopPropagation();
-    this.newCounterparty.bank_name = bank.name;
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-
-    const accValidation = validateAccountNumber(this.newCounterparty.account_number);
-    if (accValidation.isValid) {
-      const generated = generateShebaFromAccount(bank.name, this.newCounterparty.account_number);
-      if (generated) {
-        this.onShebaInput(generated);
-      }
-    }
-    this.cdr.detectChanges();
-  }
-
-  onShebaInput(event: any): void {
-    if (this._isSyncingBank) return;
-    this._isSyncingBank = true;
-    try {
-      const rawVal = typeof event === 'string' ? event : (event?.target?.value || '');
-      const digits = extractShebaDigits(rawVal);
-      const res = validateSheba(digits);
-      this.shebaValidationResult = res;
-      this.shebaDigitsDisplay = res.formattedDigits || digits;
-      this.newCounterparty.sheba_number = digits;
-      if (res.bank) {
-        this.newCounterparty.bank_name = res.bank.name;
-      }
-      if (res.accountNumber) {
-        this.newCounterparty.account_number = res.accountNumber;
-      }
-      if (event?.target) {
-        event.target.value = this.shebaDigitsDisplay;
-      }
-    } finally {
-      this._isSyncingBank = false;
-    }
-    this.cdr.detectChanges();
-  }
-
-  onAccountNumberInput(event: any): void {
-    if (this._isSyncingBank) return;
-    const rawVal = typeof event === 'string' ? event : (event?.target?.value || '');
-    const cleanAcc = this.normalizeInput(rawVal).replace(/\D/g, '').substring(0, 18);
-    this.newCounterparty.account_number = cleanAcc;
-    if (event?.target) {
-      event.target.value = cleanAcc;
-    }
-    if (cleanAcc && this.newCounterparty.bank_name) {
-      const generated = generateShebaFromAccount(this.newCounterparty.bank_name, cleanAcc);
-      if (generated) {
-        this._isSyncingBank = true;
-        try {
-          const res = validateSheba(generated);
-          this.shebaValidationResult = res;
-          this.shebaDigitsDisplay = res.formattedDigits;
-          this.newCounterparty.sheba_number = res.rawSheba?.replace(/^IR/i, '') || '';
-        } finally {
-          this._isSyncingBank = false;
-        }
-      }
-    }
-    this.cdr.detectChanges();
-  }
-
+  /** کپی شبای ردیف جدول یا کارت (بدون IR). */
   copyShebaToClipboard(targetSheba?: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
-    const shebaDigits = targetSheba || this.newCounterparty.sheba_number;
-    if (!shebaDigits || this.isMaskedValue(shebaDigits)) return;
-    const cleanDigits = shebaDigits.toString().trim().toUpperCase().replace(/^IR/i, '');
+    if (!targetSheba || isMaskedValue(targetSheba)) return;
+    const cleanDigits = targetSheba.toString().trim().toUpperCase().replace(/^IR/i, '');
     navigator.clipboard.writeText(cleanDigits).then(() => {
-      this.isShebaCopied = true;
       this.toast.show('success', `شماره شبا (بدون IR) در کلیپ‌بورد کپی شد: ${cleanDigits}`);
-      setTimeout(() => { this.isShebaCopied = false; this.cdr.detectChanges(); }, 2000);
-      this.cdr.detectChanges();
-    });
-  }
-
-  copyAccountNumberToClipboard(): void {
-    const acc = this.newCounterparty.account_number || '';
-    if (!acc || this.isMaskedValue(acc)) return;
-    navigator.clipboard.writeText(acc).then(() => {
-      this.isAccountCopied = true;
-      this.toast.show('success', `شماره حساب ${acc} کپی شد.`);
-      setTimeout(() => { this.isAccountCopied = false; this.cdr.detectChanges(); }, 2000);
       this.cdr.detectChanges();
     });
   }
@@ -929,12 +737,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   }
 
   normalizeInput(val?: string | null): string {
-    if (!val) return '';
-    return val
-      .toString()
-      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
-      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
-      .trim();
+    return normalizeDigits(val);
   }
 
   extractApiErrorMessage(err: any, fallback: string): string {

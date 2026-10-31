@@ -763,7 +763,8 @@
   <!-- مودال ۲: تعریف سریع طرف‌حساب جدید                                       -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isQuickCounterpartyModalOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden fade-in flex flex-col">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden fade-in flex flex-col"
+      role="dialog" aria-modal="true" aria-labelledby="quick-cp-title">
       
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -772,7 +773,7 @@
             👥
           </div>
           <div>
-            <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingCounterpartyId ? 'ویرایش طرف‌حساب' : 'تعریف سریع طرف‌حساب جدید' }}</h3>
+            <h3 id="quick-cp-title" class="text-xs md:text-sm font-black text-slate-800">{{ editingCounterpartyId ? 'ویرایش طرف‌حساب' : 'تعریف سریع طرف‌حساب جدید' }}</h3>
             <p class="text-[10px] text-fg-muted">{{ editingCounterpartyId ? 'طرف‌حسابی که خودتان ثبت کرده‌اید' : 'افزودن فروشگاه، تعمیرگاه، راننده یا پیمانکار' }}</p>
           </div>
         </div>
@@ -785,95 +786,15 @@
         </button>
       </div>
 
-      <!-- بدنه فرم -->
-      <div class="p-4 space-y-3">
-        
-        <!-- نام شخص یا شرکت -->
-        <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">نام شخص یا فروشگاه / شرکت *</label>
-          <input
-            type="text"
-            [(ngModel)]="newCounterparty.name"
-            placeholder="مثال: فروشگاه قطعات البرز یا آقای رضایی"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+      <!-- بدنه فرم: همان فرم مشترک صفحهٔ طرف‌حساب‌های حسابدار -->
+      <div class="p-4 overflow-y-auto flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <app-counterparty-form-fields
+            [form]="cpForm"
+            layout="modal"
+            [showAccountCode]="false"
+          ></app-counterparty-form-fields>
         </div>
-
-        <!-- نوع طرف‌حساب -->
-        <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع طرف‌حساب</label>
-          <select
-            [(ngModel)]="newCounterparty.counterparty_type"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-            <option value="repair_shop">تعمیرگاه و قطعات یدکی</option>
-            <option value="fuel_station">جایگاه سوخت و روانکارها</option>
-            <option value="driver">راننده / مالک خودرو</option>
-            <option value="contractor">پیمانکار خدماتی</option>
-            <option value="other">سایر اشخاص حقیقی / حقوقی</option>
-          </select>
-        </div>
-
-        <!-- تلفن تماس و کد ملی -->
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">تلفن همراه / تماس</label>
-            <input
-              type="text"
-              [(ngModel)]="newCounterparty.phone"
-              placeholder="۰۹۱۲..."
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی / شناسه</label>
-            <input
-              type="text"
-              [(ngModel)]="newCounterparty.national_id"
-              placeholder="۱۰ یا ۱۱ رقم..."
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-          </div>
-        </div>
-
-        <!-- شماره شبا و اعتبارسنجی آنلاین -->
-        <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره شبا (۲۴ رقم)</label>
-          <input
-            type="text"
-            [(ngModel)]="newCounterparty.sheba_number"
-            (input)="onShebaInput()"
-            placeholder="IR..."
-            class="w-full px-3 py-2 text-xs font-mono uppercase bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-          
-          <!-- فیدبک شبا -->
-          <div *ngIf="shebaValidationResult" class="text-[10px] mt-1 font-bold"
-               [ngClass]="shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-600'">
-            <span *ngIf="shebaValidationResult.isValid">
-              {{ shebaValidationResult.bank?.icon }} بانک: {{ shebaValidationResult.bank?.name }} (تایید شد)
-            </span>
-            <span *ngIf="!shebaValidationResult.isValid">
-              ⚠️ {{ shebaValidationResult.errorMessage }}
-            </span>
-          </div>
-        </div>
-
-        <!-- نام بانک و شماره حساب -->
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">نام بانک</label>
-            <input
-              type="text"
-              [(ngModel)]="newCounterparty.bank_name"
-              placeholder="بانک ملت، ملی..."
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب</label>
-            <input
-              type="text"
-              [(ngModel)]="newCounterparty.account_number"
-              placeholder="شماره حساب..."
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-          </div>
-        </div>
-
       </div>
 
       <!-- فوتر مودال -->

@@ -14,7 +14,9 @@ import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
-import { validateSheba, ShebaValidationResult } from '../../../../../../core/utils/sheba-utils';
+import { validateSheba } from '../../../../../../core/utils/sheba-utils';
+import { CounterpartyFormFieldsComponent } from '../../counterparties/counterparty-form/counterparty-form-fields.component';
+import { CounterpartyFormState, emptyCounterpartyForm, isMaskedValue } from '../../counterparties/counterparty-form/counterparty-form.state';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
@@ -56,7 +58,7 @@ function normalizeSearchText(v: string): string {
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
@@ -157,17 +159,13 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   // ─── مودال تعریف سریع طرف‌حساب جدید ───
   isQuickCounterpartyModalOpen: boolean = false;
-  newCounterparty: Partial<Counterparty> = {
-    name: '',
-    counterparty_type: 'repair_shop',
-    phone: '',
-    national_id: '',
-    bank_name: '',
-    account_number: '',
-    sheba_number: '',
-    is_active: true
-  };
-  shebaValidationResult: ShebaValidationResult | null = null;
+  /** همان فرم مشترک صفحهٔ طرف‌حساب‌های حسابدار (اعتبارسنجی شبا، بانک عامل، شبا از شماره حساب) */
+  readonly cpForm = new CounterpartyFormState(
+    (type, message) => this.toast.show(type, message),
+    () => this.cdr.detectChanges()
+  );
+  get newCounterparty(): Partial<Counterparty> { return this.cpForm.model; }
+  set newCounterparty(value: Partial<Counterparty>) { this.cpForm.model = value; }
 
   // ─── مودال پیش‌نمایش تصویر پیوست فاکتور ───
   isAttachmentPreviewModalOpen: boolean = false;
@@ -1084,36 +1082,32 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   openEditCounterpartyModal(): void {
     const cp = this.counterparties.find(c => c.id === Number(this.newInvoice.counterparty));
     if (!cp?.id) return;
-    const sheba = (cp.sheba_number || '').replace(/^IR/i, '');
-    this.newCounterparty = {
+    this.cpForm.reset({
+      ...emptyCounterpartyForm(),
+      kind: cp.kind || 'person',
       name: cp.name,
       counterparty_type: cp.counterparty_type,
-      phone: cp.phone || '',
       national_id: cp.national_id || '',
-      bank_name: cp.bank_name || '',
-      account_number: cp.account_number || '',
-      sheba_number: sheba ? `IR${sheba}` : '',
-      is_active: true
-    };
+      economic_code: cp.economic_code || '',
+      registration_number: cp.registration_number || '',
+      phone: cp.phone || '',
+      mobile: cp.mobile || '',
+      email: cp.email || '',
+      address: cp.address || '',
+      postal_code: cp.postal_code || '',
+      notes: cp.notes || '',
+      account_code: cp.account_code || '',
+      is_active: cp.is_active !== false
+    });
+    this.cpForm.loadBank(cp);
     this.editingCounterpartyId = cp.id;
-    this.onShebaInput();
     this.isQuickCounterpartyModalOpen = true;
     this.cdr.detectChanges();
   }
 
   openQuickCounterpartyModal(): void {
     this.editingCounterpartyId = null;
-    this.newCounterparty = {
-      name: '',
-      counterparty_type: 'repair_shop',
-      phone: '',
-      national_id: '',
-      bank_name: '',
-      account_number: '',
-      sheba_number: '',
-      is_active: true
-    };
-    this.shebaValidationResult = null;
+    this.cpForm.reset({ ...emptyCounterpartyForm(), counterparty_type: 'repair_shop' });
     this.isQuickCounterpartyModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -1124,39 +1118,29 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  onShebaInput(): void {
-    if (!this.newCounterparty.sheba_number) {
-      this.shebaValidationResult = null;
+  saveQuickCounterparty(): void {
+    const name = this.newCounterparty.name?.trim() || '';
+    if (!name) {
+      this.toast.show('warning', 'نام شخص یا شرکت/فروشگاه الزامی است.');
       return;
     }
-    const val = this.newCounterparty.sheba_number.trim();
-    this.shebaValidationResult = validateSheba(val);
-    if (this.shebaValidationResult.isValid && this.shebaValidationResult.bank) {
-      this.newCounterparty.bank_name = this.shebaValidationResult.bank.name;
-    }
-  }
-
-  saveQuickCounterparty(): void {
-    if (!this.newCounterparty.name?.trim()) {
-      this.toast.show('warning', 'نام شخص یا شرکت/فروشگاه الزامی است.');
+    if (this.cpForm.isShebaInvalid) {
+      this.toast.show('warning', 'شماره شبا معتبر نیست.');
       return;
     }
 
     this.isSaving = true;
-    const payload = {
-      ...this.newCounterparty,
-      name: this.newCounterparty.name.trim(),
-      phone: this.newCounterparty.phone?.trim() || undefined,
-      national_id: this.newCounterparty.national_id?.trim() || undefined,
-      sheba_number: this.newCounterparty.sheba_number?.trim() || undefined,
-      bank_name: this.newCounterparty.bank_name?.trim() || undefined,
-      account_number: this.newCounterparty.account_number?.trim() || undefined,
-      is_active: true
-    };
+    const payload: Partial<Counterparty> = this.cpForm.buildIdentityPayload(name);
 
     const editId = this.editingCounterpartyId;
     if (editId) {
-      // پوشیده‌ها (دارای *) را سرور نادیده می‌گیرد؛ شبا همیشه کامل است
+      // ویرایش حساب اصلی با فیلدهای تخت؛ مقدار پوشیده (دارای *) فرستاده نمی‌شود
+      if (this.cpForm.hasPendingBankAccount()) {
+        const bank = this.cpForm.buildBankAccountPayload();
+        payload.sheba_number = bank.sheba_number;
+        payload.bank_name = bank.bank_name;
+        if (!isMaskedValue(bank.account_number)) payload.account_number = bank.account_number;
+      }
       this.personnelApi.updateCounterparty(editId, payload).subscribe({
         next: (saved: Counterparty) => {
           this.isSaving = false;
@@ -1178,6 +1162,10 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     }
 
     // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب در شرکت درست ساخته شود
+    // حساب اولیه (اصلی) تو در تو در همان درخواست، مثل صفحهٔ طرف‌حساب‌ها
+    if (this.cpForm.hasPendingBankAccount()) {
+      payload.bank_accounts = [{ ...this.cpForm.buildBankAccountPayload(), is_primary: true }];
+    }
     const companyId = this.activeCompanyService?.activeCompanyId;
     this.personnelApi.createCounterparty(companyId ? { ...payload, company: companyId } : payload).subscribe({
       next: (created: Counterparty) => {

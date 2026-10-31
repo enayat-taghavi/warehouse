@@ -545,9 +545,8 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
     });
 
     it('اعتبارسنجی شماره شبا باید نام بانک را تشخیص دهد', () => {
-      component.newCounterparty.sheba_number = 'IR120120000000000000000001';
-      component.onShebaInput();
-      expect(component.shebaValidationResult).not.toBeNull();
+      component.cpForm.onShebaInput('IR120120000000000000000001');
+      expect(component.cpForm.shebaValidationResult).not.toBeNull();
     });
   });
 

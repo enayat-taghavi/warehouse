@@ -1,0 +1,269 @@
+<!-- ۱. نام شخص یا شرکت -->
+<div>
+  <label for="cp-name" class="block text-xs font-bold text-slate-600 mb-1.5">
+    نام شخص یا شرکت: <span class="text-rose-500">*</span>
+  </label>
+  <input
+    type="text"
+    id="cp-name"
+    [(ngModel)]="form.model.name"
+    name="name"
+    placeholder="مثلاً شرکت حمل‌ونقل تیزرو"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+    required
+  />
+</div>
+
+<!-- ۲. نوع طرف‌حساب -->
+<div>
+  <label for="cp-type" class="block text-xs font-bold text-slate-600 mb-1.5">
+    نوع طرف‌حساب: <span class="text-rose-500">*</span>
+  </label>
+  <select
+    id="cp-type"
+    [(ngModel)]="form.model.counterparty_type"
+    name="counterparty_type"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer"
+  >
+    <option *ngFor="let opt of typeOptions" [value]="opt.key">
+      {{ opt.icon }} {{ opt.label }}
+    </option>
+  </select>
+</div>
+
+<!-- ۳. تلفن تماس / همراه -->
+<div>
+  <label for="cp-phone" class="block text-xs font-bold text-slate-600 mb-1.5">تلفن تماس / همراه:</label>
+  <input
+    type="text"
+    id="cp-phone"
+    [(ngModel)]="form.model.phone"
+    name="phone"
+    placeholder="مثلاً ۰۹۱۲۱۲۳۴۵۶۷"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold font-mono focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+  />
+</div>
+
+<!-- ۴. کد ملی / شناسه اقتصادی -->
+<div>
+  <label for="cp-national" class="block text-xs font-bold text-slate-600 mb-1.5">کد ملی / شناسه اقتصادی:</label>
+  <input
+    type="text"
+    id="cp-national"
+    [(ngModel)]="form.model.national_id"
+    name="national_id"
+    dir="ltr"
+    placeholder="۱۰ یا ۱۱ رقم عددی..."
+    [readonly]="form.isMaskedValue(form.model.national_id)"
+    [attr.aria-describedby]="form.isMaskedValue(form.model.national_id) ? 'cp-national-masked' : null"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold font-mono text-left focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+    [class.text-slate-400]="form.isMaskedValue(form.model.national_id)"
+  />
+  <p *ngIf="form.isMaskedValue(form.model.national_id)" id="cp-national-masked" class="mt-1 text-[10px] font-bold text-slate-500">
+    پوشیده است؛ دسترسی دیدن کامل را ندارید.
+  </p>
+</div>
+
+<!-- حقیقی / حقوقی -->
+<div>
+  <label for="cp-kind" class="block text-xs font-bold text-slate-600 mb-1.5">نوع شخص:</label>
+  <select
+    id="cp-kind"
+    [(ngModel)]="form.model.kind"
+    name="kind"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors text-slate-800 cursor-pointer"
+  >
+    <option [ngValue]="undefined">تشخیص از روی شناسه</option>
+    <option *ngFor="let k of kindOptions" [ngValue]="k.key">{{ k.label }}</option>
+  </select>
+</div>
+
+<!-- کد اقتصادی -->
+<div>
+  <label for="cp-economic" class="block text-xs font-bold text-slate-600 mb-1.5">کد اقتصادی:</label>
+  <input id="cp-economic" type="text" dir="ltr" inputmode="numeric" [(ngModel)]="form.model.economic_code" name="economic_code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+</div>
+
+<!-- شماره ثبت (حقوقی) -->
+<div *ngIf="form.model.kind === 'legal'">
+  <label for="cp-registration" class="block text-xs font-bold text-slate-600 mb-1.5">شماره ثبت:</label>
+  <input id="cp-registration" type="text" dir="ltr" inputmode="numeric" [(ngModel)]="form.model.registration_number" name="registration_number" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+</div>
+
+<!-- موبایل -->
+<div>
+  <label for="cp-mobile" class="block text-xs font-bold text-slate-600 mb-1.5">موبایل:</label>
+  <input id="cp-mobile" type="tel" dir="ltr" inputmode="tel" [(ngModel)]="form.model.mobile" name="mobile" placeholder="09xxxxxxxxx" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+</div>
+
+<!-- ایمیل -->
+<div>
+  <label for="cp-email" class="block text-xs font-bold text-slate-600 mb-1.5">ایمیل:</label>
+  <input id="cp-email" type="email" dir="ltr" [(ngModel)]="form.model.email" name="email" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+</div>
+
+<!-- کد پستی -->
+<div>
+  <label for="cp-postal" class="block text-xs font-bold text-slate-600 mb-1.5">کد پستی:</label>
+  <input id="cp-postal" type="text" dir="ltr" inputmode="numeric" maxlength="10" [(ngModel)]="form.model.postal_code" name="postal_code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+</div>
+
+<!-- نشانی -->
+<div [ngClass]="halfRow">
+  <label for="cp-address" class="block text-xs font-bold text-slate-600 mb-1.5">نشانی:</label>
+  <input id="cp-address" type="text" [(ngModel)]="form.model.address" name="address" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors" />
+</div>
+
+<!-- عنوان بخش حساب بانکی -->
+<div class="pt-2 border-t border-slate-100" [ngClass]="fullRow">
+  <h3 class="text-xs font-black text-slate-700">{{ bankTitle }}</h3>
+</div>
+
+<!-- ۵. شماره شبا (۲۴ رقم بدون IR) -->
+<div>
+  <div class="flex items-center justify-between mb-1.5">
+    <label for="cp-sheba" class="text-xs font-bold text-slate-600">شماره شبا (۲۴ رقم):</label>
+    <span
+      *ngIf="form.shebaValidationResult"
+      [ngClass]="form.shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-500'"
+      class="text-[10px] font-bold flex items-center gap-0.5"
+    >
+      <span>{{ form.shebaValidationResult.isValid ? '✓ معتبر' : '✕ نامعتبر' }}</span>
+    </span>
+  </div>
+  <div class="relative flex items-center">
+    <input
+      type="text"
+      id="cp-sheba"
+      dir="ltr"
+      [value]="form.shebaDigitsDisplay"
+      (input)="form.onShebaInput($event)"
+      [readonly]="form.isShebaMasked"
+      placeholder="000000000000000000000000"
+      maxlength="32"
+      class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors pl-14 text-left"
+      [ngClass]="form.shebaValidationResult?.isValid ? 'border-emerald-300' : (form.shebaValidationResult ? 'border-rose-300' : '')"
+    />
+    <span class="absolute left-2.5 text-xs font-mono font-black text-slate-400 select-none">IR-</span>
+    <button
+      *ngIf="form.model.sheba_number && !form.isShebaMasked"
+      type="button"
+      (click)="form.copyShebaToClipboard($event)"
+      class="absolute left-8 text-slate-400 hover:text-indigo-600 p-0.5 text-xs cursor-pointer transition-colors"
+      title="کپی شماره شبا (بدون IR)"
+      aria-label="کپی شماره شبا (بدون IR)"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [appIcon]="form.isShebaCopied ? 'check' : 'copy'"></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ۶. بانک عامل -->
+<div class="relative">
+  <label class="block text-xs font-bold text-slate-600 mb-1.5">بانک عامل:</label>
+  <div
+    (click)="form.toggleBankDropdown($event)"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-between cursor-pointer hover:bg-white transition-colors"
+  >
+    <span [class.text-slate-400]="!form.model.bank_name" class="truncate">
+      {{ form.model.bank_name || 'انتخاب بانک عامل...' }}
+    </span>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" appIcon="chevron-down"></svg>
+  </div>
+
+  <!-- منوی بازشونده بانک‌ها -->
+  <div
+    *ngIf="form.isBankDropdownOpen"
+    class="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto p-2 space-y-1"
+  >
+    <input
+      type="text"
+      [(ngModel)]="form.bankSearchQuery"
+      name="bankSearchQuery"
+      (click)="$event.stopPropagation()"
+      placeholder="جستجوی نام یا کد بانک..."
+      class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:bg-white focus:outline-none mb-1"
+    />
+    <div
+      *ngFor="let b of form.filteredBanks"
+      (click)="form.selectBank(b, $event)"
+      class="px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 cursor-pointer text-xs font-bold flex items-center justify-between transition-colors"
+    >
+      <span>{{ b.name }}</span>
+      <span class="text-[10px] text-slate-400 font-mono">{{ b.code }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ۷. شماره حساب بانکی -->
+<div>
+  <label for="cp-account" class="block text-xs font-bold text-slate-600 mb-1.5">شماره حساب بانکی:</label>
+  <div class="relative flex items-center">
+    <input
+      type="text"
+      id="cp-account"
+      dir="ltr"
+      [value]="form.model.account_number || ''"
+      (input)="form.onAccountNumberInput($event)"
+      [readonly]="form.isMaskedValue(form.model.account_number)"
+      placeholder="شماره حساب..."
+      class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold font-mono focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors pl-7 text-left"
+    />
+    <button
+      *ngIf="form.model.account_number && !form.isMaskedValue(form.model.account_number)"
+      type="button"
+      (click)="form.copyAccountNumberToClipboard()"
+      class="absolute left-2 text-slate-400 hover:text-indigo-600 p-0.5 text-xs cursor-pointer transition-colors"
+      title="کپی شماره حساب"
+      aria-label="کپی شماره حساب"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [appIcon]="form.isAccountCopied ? 'check' : 'copy'"></svg>
+    </button>
+  </div>
+</div>
+
+<!-- شماره کارت -->
+<div>
+  <label for="cp-card" class="block text-xs font-bold text-slate-600 mb-1.5">شماره کارت:</label>
+  <input id="cp-card" type="text" dir="ltr" inputmode="numeric" maxlength="19" [(ngModel)]="form.bankCardNumber" name="bank_card_number" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors font-mono text-left" />
+</div>
+
+<!-- نام صاحب حساب -->
+<div>
+  <label for="cp-owner" class="block text-xs font-bold text-slate-600 mb-1.5">نام صاحب حساب:</label>
+  <input id="cp-owner" type="text" [(ngModel)]="form.bankOwnerName" name="bank_owner_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors" />
+</div>
+
+<!-- ۸. کد حساب تفصیلی (دفتر کل) -->
+<div *ngIf="showAccountCode">
+  <label for="cp-account-code" class="block text-xs font-bold text-slate-600 mb-1.5">کد حساب تفصیلی:</label>
+  <input
+    type="text"
+    id="cp-account-code"
+    [(ngModel)]="form.model.account_code"
+    name="account_code"
+    placeholder="مثلاً ۱۰۱۰۲۰۳"
+    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold font-mono focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+  />
+</div>
+
+<!-- برچسب اعتبارسنجی زنده شبا در صورت وجود -->
+<div *ngIf="form.shebaValidationResult" class="-mt-2" [ngClass]="fullRow" aria-live="polite">
+  <span
+    *ngIf="form.shebaValidationResult.isValid"
+    class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200"
+  >
+    <span>{{ form.shebaValidationResult.bank?.icon || '🏦' }}</span>
+    <span>شبا معتبر: {{ form.shebaValidationResult.bank?.name }}</span>
+    <span class="text-slate-400">|</span>
+    <span class="font-mono dir-ltr font-bold text-[10px]">حساب: {{ form.shebaValidationResult.accountNumber }}</span>
+    <span class="font-black">✓</span>
+  </span>
+  <span
+    *ngIf="!form.shebaValidationResult.isValid"
+    class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200"
+  >
+    <span>✕</span>
+    <span>{{ form.shebaValidationResult.errorMessage || 'شماره شبا نامعتبر است' }}</span>
+  </span>
+</div>

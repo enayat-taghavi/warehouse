@@ -287,7 +287,7 @@ describe('CounterpartiesComponent DOM Spec (Release v1 step 3.1-c: bank-accounts
     component.bankAccounts = [];
     mockPersonnelApi.createPartyBankAccount.mockReturnValue(of({ id: 999 }));
 
-    component.onShebaInput('450120000000101111111001');
+    component.cpForm.onShebaInput('450120000000101111111001');
     component.addBankAccount();
 
     expect(mockPersonnelApi.createPartyBankAccount).toHaveBeenCalledWith(
@@ -310,7 +310,7 @@ describe('CounterpartiesComponent DOM Spec (Release v1 step 3.1-c: bank-accounts
       { id: 101, party: 7, bank_name: 'بانک ملت', sheba_number: 'IR450120000000101111111001', is_primary: true }
     ];
 
-    component.onShebaInput('450120000000101111111001');
+    component.cpForm.onShebaInput('450120000000101111111001');
     component.addBankAccount();
 
     expect(mockPersonnelApi.createPartyBankAccount).toHaveBeenCalledWith(
@@ -381,7 +381,7 @@ describe('CounterpartiesComponent DOM Spec (Release v1 step 3.1-c: bank-accounts
     component.resetForm();
     component.newCounterparty.name = 'تعمیرگاه زاگرس';
     component.newCounterparty.counterparty_type = 'repair_shop';
-    component.onShebaInput('450120000000101111111001');
+    component.cpForm.onShebaInput('450120000000101111111001');
 
     const createdResponse: Counterparty = {
       id: 45,
