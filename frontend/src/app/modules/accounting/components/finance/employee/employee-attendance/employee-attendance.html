@@ -987,9 +987,11 @@
             type="file"
             accept="image/*,.pdf"
             (change)="onSignedTimesheetSelected($event)"
-            class="text-xs text-slate-600 max-w-[210px] cursor-pointer"
+            [disabled]="isUploadingSignedTimesheet"
+            class="text-xs text-slate-600 max-w-[210px] cursor-pointer disabled:opacity-50 disabled:cursor-wait"
             aria-label="بارگذاری برگه امضاشده"
           />
+          <span *ngIf="isUploadingSignedTimesheet" class="text-xs text-slate-500" role="status">در حال بارگذاری…</span>
           <span *ngIf="signedTimesheetUploaded" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
             تصویر برگهٔ امضاشده ثبت شد
           </span>

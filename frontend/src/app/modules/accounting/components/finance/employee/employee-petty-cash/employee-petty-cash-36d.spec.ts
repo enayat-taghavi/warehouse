@@ -401,7 +401,12 @@ describe('EmployeePettyCashHubComponent 3.6-d', () => {
     txSubject.next([chargeTx]);
     expect(chargeComponent.detailTx?.id).toBe(9);
     expect(chargeComponent.isLoadingDetail).toBe(false);
-    mockAuth.userPermissions.mockReturnValue(['perm_treasury_pay']);
+    mockAuth.userPermissions.mockReturnValue(['perm_treasury_disburse_action']);
+    // دکمهٔ واریز فقط وقتی گردش به مرحلهٔ خزانه‌دار رسیده باشد (همان گارد سرور)
+    expect(chargeComponent.canPayCharge).toBe(false);
+    chargeComponent.detailWfStep = 'manager_approve';
+    expect(chargeComponent.canPayCharge).toBe(false);
+    chargeComponent.detailWfStep = 'treasury_pay';
     expect(chargeComponent.canPayCharge).toBe(true);
   });
 });

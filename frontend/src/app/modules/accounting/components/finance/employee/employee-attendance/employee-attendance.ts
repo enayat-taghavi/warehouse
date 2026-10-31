@@ -5,7 +5,7 @@ import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
 import { ATTENDANCE_PERIOD_LOCKED_FA, attendanceActionErrorMessage, attendanceWriteErrorMessage } from '../../../../attendance-period-error';
-import { Subscription } from 'rxjs';
+import { Subscription, catchError, concat, map, of, toArray } from 'rxjs';
 import { SKIP_OFFLINE } from '../../../../../../core/interceptors/offline.interceptor';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -1388,12 +1388,47 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  signedTimesheetUploaded = false; onPrintTimesheetModal_anchor = false; openPrintTimesheetModal(): void {
+  signedTimesheetUploaded = false;
+  isUploadingSignedTimesheet = false;
+
+  openPrintTimesheetModal(): void {
+    this.signedTimesheetUploaded = false;
     this.isPrintModalOpen = true;
   }
 
-  closePrintTimesheetModal(): void { this.isPrintModalOpen = false; } onSignedTimesheetSelected(event: any): void { const file: File | undefined = event?.target?.files?.[0]; if (!file) return; this.signedTimesheetUploaded = true; const firstPid = this.monthlyGridRows[0]?.personnel_id || this.attendanceRows[0]?.personnel_id; if (firstPid && this.personnelApi?.uploadPersonnelDocument) { this.personnelApi.uploadPersonnelDocument(firstPid, file, 'other').subscribe({ next: () => { this.toast.show('success', 'تصویر برگهٔ امضاشده ثبت شد.'); this.cdr.detectChanges(); }, error: () => { this.cdr.detectChanges(); } }); } else { this.toast.show('success', 'تصویر برگهٔ امضاشده ثبت شد.'); this.cdr.detectChanges(); } } private _unusedCloseModalOld(): void {
+  closePrintTimesheetModal(): void {
     this.isPrintModalOpen = false;
+  }
+
+  // برگهٔ امضاشده همهٔ پرسنل همین شیت را دارد؛ در پروندهٔ هر نفر یک مدرک ثبت می‌شود و نشان «ثبت شد» فقط وقتی
+  // همهٔ بارگذاری‌ها پذیرفته شوند دیده می‌شود (در خطا فایل دوباره قابل انتخاب است)
+  onSignedTimesheetSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (input) input.value = '';
+    if (!file || this.isUploadingSignedTimesheet) return;
+    const ids = [...new Set(this.monthlyGridRows.map(r => r.personnel_id).filter((id): id is number => !!id))];
+    if (ids.length === 0) {
+      this.toast.show('error', 'پرسنلی در این شیت نیست تا برگهٔ امضاشده در پرونده‌اش ثبت شود.');
+      return;
+    }
+    this.signedTimesheetUploaded = false;
+    this.isUploadingSignedTimesheet = true;
+    this.cdr.detectChanges();
+    concat(...ids.map(id => this.personnelApi.uploadPersonnelDocument(id, file, 'other').pipe(
+      map(() => true),
+      catchError(() => of(false)),
+    ))).pipe(toArray()).subscribe(results => {
+      this.isUploadingSignedTimesheet = false;
+      const failed = results.filter(ok => !ok).length;
+      if (failed === 0) {
+        this.signedTimesheetUploaded = true;
+        this.toast.show('success', 'تصویر برگهٔ امضاشده ثبت شد.');
+      } else {
+        this.toast.show('error', `ثبت برگهٔ امضاشده برای ${failed.toLocaleString('fa-IR')} نفر از ${ids.length.toLocaleString('fa-IR')} نفر انجام نشد؛ دوباره فایل را انتخاب کنید.`);
+      }
+      this.cdr.detectChanges();
+    });
   }
 
   triggerPrint(): void {

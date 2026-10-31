@@ -358,6 +358,45 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
       expect(component.selectedSection?.name).toBe('بخش مهندسی و فنی');
       expect(component.selectedSection?.project_name).toBe('پروژه پردیس');
     });
+
+    function pickSignedSheet(): void {
+      const file = new File(['x'], 'signed.png', { type: 'image/png' });
+      component.onSignedTimesheetSelected({ target: { files: [file], value: 'signed.png' } } as any);
+    }
+
+    it('uploads the signed sheet to every person on the sheet and shows the badge only after all succeed', () => {
+      component.monthlyGridRows = [{ personnel_id: 1 }, { personnel_id: 2 }, { personnel_id: 1 }] as any;
+      mockPersonnelApi.uploadPersonnelDocument = vi.fn().mockReturnValue(of({ id: 5 }));
+      pickSignedSheet();
+      expect(mockPersonnelApi.uploadPersonnelDocument).toHaveBeenCalledTimes(2);
+      expect(mockPersonnelApi.uploadPersonnelDocument.mock.calls.map((c: any[]) => c[0])).toEqual([1, 2]);
+      expect(component.signedTimesheetUploaded).toBe(true);
+      expect(component.isUploadingSignedTimesheet).toBe(false);
+      expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('ثبت شد'));
+    });
+
+    it('does not show the badge when an upload fails', () => {
+      component.monthlyGridRows = [{ personnel_id: 1 }, { personnel_id: 2 }] as any;
+      const fail = new Subject<any>();
+      mockPersonnelApi.uploadPersonnelDocument = vi.fn()
+        .mockReturnValueOnce(of({ id: 5 }))
+        .mockReturnValueOnce(fail.asObservable());
+      pickSignedSheet();
+      expect(component.isUploadingSignedTimesheet).toBe(true);
+      fail.error({ status: 400 });
+      expect(component.signedTimesheetUploaded).toBe(false);
+      expect(component.isUploadingSignedTimesheet).toBe(false);
+      expect(mockToast.show).toHaveBeenCalledWith('error', expect.stringContaining('انجام نشد'));
+    });
+
+    it('refuses the upload when the sheet has no personnel', () => {
+      component.monthlyGridRows = [];
+      mockPersonnelApi.uploadPersonnelDocument = vi.fn();
+      pickSignedSheet();
+      expect(mockPersonnelApi.uploadPersonnelDocument).not.toHaveBeenCalled();
+      expect(component.signedTimesheetUploaded).toBe(false);
+      expect(mockToast.show).toHaveBeenCalledWith('error', expect.any(String));
+    });
   });
 
   describe('8. Section-Isolated Monthly Excel, MISSION & Workflow Actions', () => {

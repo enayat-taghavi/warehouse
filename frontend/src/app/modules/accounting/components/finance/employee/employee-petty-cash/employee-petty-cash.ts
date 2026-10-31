@@ -16,6 +16,7 @@ import {
   PettyCashDebtSettlement
 } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
+import { WorkflowApiService } from '../../../../../../core/api/workflow-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
@@ -125,6 +126,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   readonly expenseHeadLabel = expenseHeadLabel;
   // ساخت دستی در آزمون‌ها بیرون از زمینهٔ تزریق است (مثل confirmDialog)
   private readonly activeCompanyService = (() => { try { return inject(ActiveCompanyService, { optional: true }); } catch { return null; } })();
+  private readonly workflowApi = (() => { try { return inject(WorkflowApiService, { optional: true }); } catch { return null; } })();
 
   // ─── مودال ثبت هزینه از محل تنخواه (آفلاین مثل قبل ساخته می‌شود) ───
   isNewExpenseModalOpen: boolean = false;
@@ -160,6 +162,8 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   detailKind: PettyCashDetailKind | null = null;
   detailId: number | null = null;
   detailTx: PettyCashTransaction | null = null;
+  /** مرحلهٔ جاری گردش باز شارژ؛ دکمهٔ واریز فقط در مرحلهٔ treasury_pay (همان گارد سرور) */
+  detailWfStep: string | null = null;
   detailStatement: PettyCashStatement | null = null;
   detailLines: PettyCashTransaction[] = [];
   isLoadingDetail = false;
@@ -1063,6 +1067,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.detailKind = null;
     this.detailId = null;
     this.detailTx = null;
+    this.detailWfStep = null;
     this.detailStatement = null;
     this.detailLines = [];
     this.router.navigate([], {
@@ -1082,6 +1087,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       const found = this.transactions.find(t => t.id === id) || null;
       this.detailTx = found;
       this.isLoadingDetail = !found && this.isLoading;
+      this.loadChargeWorkflowStep(id);
       this.cdr.detectChanges();
       return;
     }
@@ -1166,7 +1172,25 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   get canPayCharge(): boolean {
     const tx = this.detailTx;
-    return !!tx && this.canTreasuryPay && tx.transaction_type === 'allocation' && tx.status !== 'approved' && tx.status !== 'rejected';
+    return !!tx && this.canTreasuryPay && tx.transaction_type === 'allocation' && tx.status !== 'approved'
+      && tx.status !== 'rejected' && this.detailWfStep === 'treasury_pay';
+  }
+
+  private loadChargeWorkflowStep(id: number): void {
+    if (!this.workflowApi) return;
+    this.workflowApi.getHistory('petty_cash_charge', id).subscribe({
+      next: (h) => {
+        if (this.detailKind !== 'petty_cash_charge' || this.detailId !== id) return;
+        const open = (h?.instances || []).find(i => !i.closed_at && !!i.current_step);
+        this.detailWfStep = open?.current_step || null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        if (this.detailId !== id) return;
+        this.detailWfStep = null;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   payDetail(): void {
