@@ -137,12 +137,14 @@ def compute_recipients_batch(items, *, bundles=None, today=None) -> dict:
     تفاوت‌های کاربر، یک پرس‌وجوی جانشین‌ها و یک پرس‌وجوی عضویت جانشین‌ها در شرکت (فقط انتساب فعال).
     items: [(key, (section_id, project_id, company_id), role, permission, creator_id[, target_user_id
     (section_id=None و project_id=None یعنی سند سطح شرکت: فقط انتساب‌های سطح شرکت)
-    [, allow_substitute]])]. target_user_id (کار ارجاع، ر۵ طرح ۲.۳-و): دریافت‌کنندهٔ اصلی فقط همین کاربر است، اگر
+    [, allow_substitute[, creator_may_act]]])]. creator_may_act (مرحلهٔ «اجرا» با همین پرچم): ثبت‌کننده از
+    دریافت‌کنندگان اصلی کم نمی‌شود، ولی هرگز جانشین نیست. target_user_id (کار ارجاع، ر۵ طرح ۲.۳-و): دریافت‌کنندهٔ اصلی فقط همین کاربر است، اگر
     فعال و عضو فعال شرکت نمونه باشد؛ نقش، مجوز و قاعدهٔ ثبت‌کننده سنجیده نمی‌شود (یک پرس‌وجوی کاربر و یک پرس‌وجوی
     عضویت برای همهٔ کارهای ارجاع). allow_substitute=False (ر۴): ردیف جانشین ساخته نمی‌شود.
     خروجی {key: (principals:set, sub_rows:list, holders:set)} که holders دارندگان فعال و غیر مدیر کل نقش‌اند
     (برای کار ارجاع همان principals).
     """
+    may_act = {it[0] for it in items if len(it) > 7 and it[7]}
     items = [(*it[:5], it[5] if len(it) > 5 else None, it[6] if len(it) > 6 else True) for it in items]
     if not items:
         return {}
@@ -167,7 +169,8 @@ def compute_recipients_batch(items, *, bundles=None, today=None) -> dict:
                 pid = None
             holders = {uid for uid, r, *_ in index.covering(sid, pid, cid) if r == role} if ckey is not None else set()
             allowed = perm_holders.get((ckey, _split_code(permission)[1]), set()) if holders else set()
-            out[key] = ((holders & allowed) - {creator_id}, [], holders)
+            excluded = set() if key in may_act else {creator_id}
+            out[key] = ((holders & allowed) - excluded, [], holders)
     ref_items = [it for it in items if it[5] is not None]
     if ref_items:
         from django.contrib.auth import get_user_model

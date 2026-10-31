@@ -98,11 +98,14 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     title_fa='فاکتور هزینه',
     steps=(
         StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_invoice_approve', APPROVE),
-        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_invoice_review', REVIEW),
+        # حسابدارِ ثبت‌کننده‌ای که تنها حسابدار بخش است این مرحله را رد می‌کند (تصمیم کاربر ۹ آبان ۱۴۰۵)
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_invoice_review', REVIEW,
+                 skip_when_creator_only=True),
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', 'perm_manager_payment_authorize', APPROVE),
-        # پرداخت فقط از اکشن pay فاکتور (شمارهٔ پیگیری لازم است)؛ رد قطعی در این مرحله نیست
+        # پرداخت فقط از اکشن pay فاکتور (شمارهٔ پیگیری لازم است)؛ رد قطعی در این مرحله نیست. خزانه‌دارِ ثبت‌کننده
+        # فاکتور خودش را پس از تأیید حسابدار و مدیر پرداخت می‌کند (creator_may_act)
         StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', 'perm_treasury_disburse_action', EXECUTE,
-                 actions=(ACT, RETURN)),
+                 actions=(ACT, RETURN), creator_may_act=True),
     ),
     on_state_change=_invoice_state_change,
     summary=_invoice_summary,

@@ -91,21 +91,32 @@ class InvoiceWorkflowTests(TestCase):
         inv = self.invoice(self.acc)
         self.post(self.acc, inv, 'submit')
         self.assertEqual(self.step(inv), 'accountant_review')
-        self.assertEqual(self.post(self.acc, inv, 'approve').status_code, 403)  # بررسی سند خود نه
+        res = self.post(self.acc, inv, 'approve')
+        self.assertEqual((res.status_code, res.data.get('code')), (403, 'self_approval'))  # بررسی سند خود نه
         self.assertEqual(self.post(self.acc2, inv, 'approve').status_code, 200)
         self.assertEqual(self.step(inv), 'manager_ok')
-        # بخشی با یک حسابدار: کار بررسی بی‌دریافت‌کننده منتظر می‌ماند و مدیر کل هشدار می‌گیرد
+        # ثبت‌کننده تنها حسابدار بخش: «بررسی حسابدار» با «بدون تأیید دوم» رد می‌شود و کار نزد مدیر است
         self.acc2.is_active = False
         self.acc2.save()
         inv2 = self.invoice(self.acc)
+        self.post(self.acc, inv2, 'submit')
+        self.assertEqual(self.step(inv2), 'manager_ok')
+        skipped = WorkflowStep.objects.get(instance__entity_id=inv2.pk, action='submit').skipped
+        self.assertEqual(skipped, [{'step': 'supervisor_ok', 'reason': 'creator_level'},
+                                   {'step': 'accountant_review', 'reason': 'no_second_approval'}])
+        # بخش بی حسابدار: کار بررسی بی‌دریافت‌کننده منتظر می‌ماند و مدیر کل هشدار می‌گیرد
+        self.acc.is_active = False
+        self.acc.save()
+        inv3 = self.invoice(self.sup)
         with mock.patch.object(events, 'emit', wraps=events.emit) as emit:
-            self.post(self.acc, inv2, 'submit')
-        task = wf_engine.open_task(INVOICE_WORKFLOW, inv2.pk)
+            self.post(self.sup, inv3, 'submit')
+        task = wf_engine.open_task(INVOICE_WORKFLOW, inv3.pk)
         self.assertEqual((task.step_key, task.has_recipients), ('accountant_review', False))
         self.assertIn(events.SUPERUSER_ALERT, [c.args[0] for c in emit.call_args_list])
-        self.assertEqual(self.post(self.acc, inv2, 'approve').status_code, 403)
+        from workflow.serializers import history_instance
+        self.assertTrue(history_instance(task.instance, self.sup)['waiting_for_superuser'])
 
-    def test_5_treasurer_invoice_keeps_manager_and_goes_to_other_treasurer(self):
+    def test_5_treasurer_invoice_keeps_manager_and_treasurer_pays_own(self):
         # ت۵: رتبهٔ خزانه‌دار (۳۰) از مدیر (۴۰) کمتر است؛ تأیید مدیر رد نمی‌شود، فقط سرپرست
         trs2 = self.user('trs2', 'treasury')
         inv = self.invoice(self.trs)
@@ -117,9 +128,14 @@ class InvoiceWorkflowTests(TestCase):
         self.assertEqual(self.step(inv), 'treasury_pay')
         skipped = [s['step'] for st in WorkflowStep.objects.filter(instance__entity_id=inv.pk) for s in st.skipped]
         self.assertEqual(skipped, ['supervisor_ok'])
-        self.assertEqual(self.post(self.trs, inv, 'pay', tracking_code='TRK-5').status_code, 403)  # پرداخت سند خود نه
-        self.assertEqual(self.post(trs2, inv, 'pay', tracking_code='TRK-5').status_code, 200)
-        self.assertEqual(self.status(inv), 'paid')
+        # مرحلهٔ پرداخت (creator_may_act): ثبت‌کننده هم دریافت‌کننده است و فاکتور تأییدشدهٔ خودش را پرداخت می‌کند
+        from workflow.models import WorkflowTaskRecipient
+        task = wf_engine.open_task(INVOICE_WORKFLOW, inv.pk)
+        self.assertEqual(set(WorkflowTaskRecipient.objects.filter(task=task).values_list('user_id', flat=True)),
+                         {self.trs.pk, trs2.pk})
+        self.assertEqual(self.post(self.trs, inv, 'pay', tracking_code='TRK-5').status_code, 200)
+        inv.refresh_from_db()
+        self.assertEqual((inv.status, inv.paid_by_id), ('paid', self.trs.pk))
 
     def test_4_manager_invoice_goes_to_other_manager_or_no_second_approval(self):
         inv = self.invoice(self.mgr)

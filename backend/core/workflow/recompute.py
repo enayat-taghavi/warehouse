@@ -62,7 +62,7 @@ def _version_sync(instance, stats) -> None:
 
 
 def _skip_lost(spec, instance, task, holders, bundles, now, stats) -> bool:
-    """قاعدهٔ ۳ ت۶ روی کار «تأیید» بی‌دریافت‌کننده. False اگر سند پیدا نشد (کار منتظر می‌ماند)."""
+    """قاعدهٔ ۳ ت۶ روی کار «تأیید» (یا skip_when_creator_only) بی‌دریافت‌کننده. False اگر سند پیدا نشد (کار منتظر می‌ماند)."""
     from .engine import _Ctx, _resolve, skip_lost_task
     try:
         obj = _resolve(spec, instance.entity_id, None)
@@ -123,11 +123,15 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         stats['tasks'] = len(tasks)
         bundles = effective_bundles()
         items = []
+        step_specs = {}
         for task in tasks:
             inst = instances[task.instance_id]
             target = task.target_user_id if task.track == WorkflowTask.TRACK_REFERRAL else None
+            spec = specs.get(inst.workflow_key) if target is None else None
+            step = spec.step(task.step_key) if spec is not None else None
+            step_specs[task.pk] = step
             items.append((task.pk, scope_triplet(inst.section, inst.company_id), task.role, task.permission,
-                          inst.created_by_id, target, inst.allow_substitute))
+                          inst.created_by_id, target, inst.allow_substitute, step is not None and step.creator_may_act))
         computed = compute_recipients_batch(items, bundles=bundles, today=today)
 
         existing = {}
@@ -141,8 +145,11 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         for task in tasks:
             inst = instances[task.instance_id]
             principals, subs, holders = computed[task.pk]
-            if (not principals and task.track == WorkflowTask.TRACK_STEP and task.step_kind == APPROVE
-                    and task.has_recipients and inst.workflow_key in specs):
+            step = step_specs[task.pk]
+            if (not principals and task.track == WorkflowTask.TRACK_STEP and task.has_recipients
+                    and inst.workflow_key in specs
+                    and (task.step_kind == APPROVE
+                         or (step is not None and step.skips_without_recipient(inst.created_by_id, holders)))):
                 lost.append((task, holders))
                 continue
             stale, new, changed, received, removed = diff_rows(

@@ -5,9 +5,11 @@
 - ص۷ طرح ۳.۶: سند بی‌بخش با company_field «سطح شرکت» است (نمونه با section=None)؛ همهٔ قاعده‌ها روی زنجیرهٔ
   (None, None, company_id) یعنی فقط انتساب‌های سطح شرکت کار می‌کنند. ص۸: قلاب required مرحلهٔ «تأیید».
 - ت۳: دریافت‌کننده = نقش مرحله در بخش ∩ مجوز مرحله در همان بخش − ثبت‌کننده؛ مدیر کل دریافت‌کننده نیست ولی
-  روی هر کار جز سند خودش اقدام می‌کند (as_superuser در سابقه).
+  روی هر کار جز سند خودش اقدام می‌کند (as_superuser در سابقه). مرحلهٔ «اجرا» با creator_may_act ثبت‌کننده را
+  کم نمی‌کند و او روی سند خودش اقدام می‌کند.
 - ت۶ (فقط مرحله‌های «تأیید»؛ «بررسی» و «اجرا» همیشه اجباری‌اند): ۱. سقف، ۲. سطح ثبت‌کننده (هنگام ارسال،
-  در skip_plan)، ۳. بی‌دریافت‌کننده (هنگام رسیدن به مرحله).
+  در skip_plan)، ۳. بی‌دریافت‌کننده (هنگام رسیدن به مرحله). قاعدهٔ ۳ برای «بررسی»/«اجرا» با
+  skip_when_creator_only فقط وقتی تنها دارندهٔ نقش ثبت‌کننده است (no_second_approval).
 - ت۸: عودت و رد با دلیل؛ لغو فقط به دست ثبت‌کننده و پیش از اقدام نفر دیگر.
 - ت۱۳: هر اقدام در transaction.atomic با select_for_update روی نمونه و کار (به همین ترتیب) و سنجش revision.
 - ت۱۵: نمونهٔ باز با نسخهٔ قدیم پیش از هر اقدام به نسخهٔ تازه برده می‌شود.
@@ -208,7 +210,7 @@ def _compute_recipients(ctx, instance, step, today=None):
     (compute_recipients_batch با یک کار).
     """
     item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
-            getattr(instance, "allow_substitute", True))
+            getattr(instance, "allow_substitute", True), step.creator_may_act)
     return compute_recipients_batch([item], bundles=ctx.bundles, today=today)[0]
 
 
@@ -244,7 +246,7 @@ def _enter_step(ctx, instance, step, now, force=False):
     force: مرحله حتماً باز شود (ت۱۵: آخرین مرحلهٔ نسخهٔ تازه؛ هرگز پایان خودکار).
     """
     principals, subs, holders = _compute_recipients(ctx, instance, step)
-    if not principals and step.kind == APPROVE and not force:
+    if not principals and not force and step.skips_without_recipient(instance.created_by_id, holders):
         return None, {'step': step.key, 'reason': no_recipient_reason(instance, holders)}
     instance.current_step = step.key
     task = _open_task(ctx, instance, step, principals, subs, now)
@@ -290,7 +292,7 @@ def _history(instance, action, *, task=None, actor=None, on_behalf_of_id=None, a
 
 def skip_lost_task(ctx, instance, task, holders, now, from_step=None):
     """
-    ت۷ (قاعدهٔ ۳ ت۶ پس از رسیدن): کار باز مرحلهٔ «تأیید» که دریافت‌کنندهٔ اصلی‌اش را از دست داد بسته می‌شود
+    ت۷ (قاعدهٔ ۳ ت۶ پس از رسیدن): کار باز مرحلهٔ «تأیید» (یا مرحلهٔ skip_when_creator_only) که دریافت‌کنندهٔ اصلی‌اش را از دست داد بسته می‌شود
     (نتیجهٔ skipped)، گردش با _advance پیش می‌رود و ردیف auto با دلیل رد شدن ثبت می‌شود. نمونه و کار باید
     قفل باشند (به همین ترتیب). خروجی کار باز تازه یا None.
     """
@@ -355,7 +357,8 @@ def _ensure_current_version(instance, ctx, now=None) -> bool:
             task.step_kind, task.role, task.permission = step.kind, step.role, step.permission
             task.save(update_fields=['step_kind', 'role', 'permission'])
             principals, subs, holders = _compute_recipients(ctx, instance, step)
-            if not principals and step.kind == APPROVE and task.has_recipients:
+            if (not principals and task.has_recipients
+                    and step.skips_without_recipient(instance.created_by_id, holders)):
                 # قاعدهٔ ۳ ت۶ روی مرحلهٔ نگه‌داشته (ت۷)؛ skip_lost_task نمونه را ذخیره می‌کند
                 skip_lost_task(ctx, instance, task, holders, now)
                 return True
@@ -495,11 +498,14 @@ def _authorize(user, instance, task, ctx, today):
     """
     if not getattr(user, 'is_active', False) or not user.pk:
         raise WorkflowPermissionDenied()
-    if instance.created_by_id and user.pk == instance.created_by_id:
+    step = ctx.spec.step(task.step_key)
+    # مدیر کلِ ثبت‌کننده هرگز روی سند خودش اقدام نمی‌کند؛ ثبت‌کنندهٔ دیگر فقط در مرحلهٔ creator_may_act و فقط
+    # اگر خودش دریافت‌کنندهٔ اصلی باشد (جانشینی ثبت‌کننده در compute_recipients_batch ساخته نمی‌شود)
+    own_step = step is not None and step.creator_may_act and not user.is_superuser
+    if instance.created_by_id and user.pk == instance.created_by_id and not own_step:
         raise WorkflowPermissionDenied('self_approval', 'ثبت‌کنندهٔ سند نمی‌تواند روی سند خودش اقدام کند', 403)
     if user.is_superuser:
         return True, None
-    step = ctx.spec.step(task.step_key)
     principals, subs, _holders = _compute_recipients(ctx, instance, step, today=today)
     if user.pk in principals:
         return False, None

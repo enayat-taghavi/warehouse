@@ -114,12 +114,15 @@ class InvoicePayments41Tests(TestCase):
         self.assertEqual(res2.data.get('code'), 'amount_exceeds_remaining')
         self.assertEqual(InvoicePayment.objects.filter(invoice=inv).count(), 1)
 
-    def test_creator_cannot_pay_even_with_treasurer_perm(self):
+    def test_creator_pays_only_as_treasurer(self):
+        # مرحلهٔ پرداخت creator_may_act است: ثبت‌کنندهٔ بی‌نقش خزانه‌دار نه، همان ثبت‌کننده با نقش خزانه‌دار بله
         inv = self.payable_invoice('1000')
-        grant_section_perms(self.emp, [], section=self.sec, role='treasury', exact=False)
         res = self.pay(self.emp, inv, 100)
         self.assertEqual(res.status_code, 403, res.data)
-        self.assertEqual(res.data.get('code'), 'creator_cannot_pay')
+        self.assertEqual(res.data.get('code'), 'payment_not_allowed')
+        grant_section_perms(self.emp, [], section=self.sec, role='treasury', exact=False)
+        res = self.pay(self.emp, inv, 100)
+        self.assertEqual(res.status_code, 201, res.data)
 
     def test_delegate_of_treasurer_can_pay(self):
         delegate = self.user('delegate', 'employee')

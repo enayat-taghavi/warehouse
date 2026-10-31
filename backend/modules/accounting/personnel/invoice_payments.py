@@ -4,7 +4,7 @@
 - هر قسط در یک تراکنش: قفل نمونهٔ گردش و سپس ردیف فاکتور (همین ترتیب در قلاب `_invoice_state_change`)، پس دو
   قسط همزمان هرگز از مانده بیشتر نمی‌شوند.
 - فقط کسی که الان می‌تواند روی کار باز `treasury_pay` اقدام کند (دریافت‌کننده یا جانشین؛ `wf_engine.can_act`)،
-  و هرگز ثبت‌کنندهٔ فاکتور.
+  ثبت‌کنندهٔ فاکتور فقط اگر خودش خزانه‌دار این مرحله باشد (creator_may_act).
 - قسطی که مانده را صفر کند در همان تراکنش `wf_engine.act` را صدا می‌زند؛ گردش تمام و وضعیت «پرداخت‌شده» می‌شود.
 - قسط حذف نمی‌شود؛ اصلاح فقط با ابطال با دلیل و فقط تا وقتی فاکتور کامل پرداخت نشده.
 """
@@ -51,8 +51,8 @@ def _lock(invoice_id):
 
 
 def _ensure_treasurer(user, invoice, task):
-    if invoice.created_by_id and invoice.created_by_id == user.pk:
-        raise WorkflowError('creator_cannot_pay', 'ثبت‌کنندهٔ فاکتور نمی‌تواند پرداخت آن را ثبت یا باطل کند.', 403)
+    # ثبت‌کننده‌ای که خزانه‌دار همین بخش است فاکتور خودش را پرداخت می‌کند (creator_may_act مرحلهٔ پرداخت)؛
+    # ثبت‌کنندهٔ بی‌نقش خزانه‌دار را can_act رد می‌کند
     if task is None or task.step_key != PAY_STEP or invoice.status not in PAYABLE_STATUSES:
         raise WorkflowError('not_payable', 'فاکتور در مرحلهٔ پرداخت نیست یا کار پرداخت باز ندارد.', 409)
     if not wf_engine.can_act(user, task, ACT):

@@ -492,3 +492,93 @@ class ReviewOrderTests(EngineBase):
             engine.act(self.fresh(self.lead), self.task(d), obj=other)
         self.assertEqual((cm.exception.code, cm.exception.status), ('entity_mismatch', 400))
         self.assertEqual(self.task(d).step_key, 'lead_ok')
+
+
+class CreatorFlagTests(EngineBase):
+    """skip_when_creator_only (بررسی) و creator_may_act (اجرا): اختیاری و روی مرحله‌های اعلام‌شده."""
+
+    def setUp(self):
+        super().setUp()
+        from dataclasses import replace
+        steps = (STEPS[0], replace(STEPS[1], skip_when_creator_only=True), STEPS[2],
+                 replace(STEPS[3], creator_may_act=True))
+        self.specs[:] = [make_spec(steps=steps)]
+        reset_workflow_cache()
+
+    def test_sole_reviewer_creator_skips_review_no_second_approval(self):
+        d, inst = self.submit(user=self.reviewer)
+        self.assertEqual(self.task(d).step_key, 'boss_ok')
+        self.assertEqual(self.last_step(inst).skipped, [{'step': 'lead_ok', 'reason': 'creator_level'},
+                                                        {'step': 'review', 'reason': 'no_second_approval'}])
+
+    def test_second_reviewer_still_reviews_creator_forbidden(self):
+        reviewer2 = self.user('reviewer2', 'wf_reviewer')
+        d, _ = self.submit(user=self.reviewer)
+        task = self.task(d)
+        self.assertEqual((task.step_key, self.recipients(task)), ('review', {reviewer2.pk}))
+        with self.assertRaises(WorkflowPermissionDenied) as cm:
+            self.act(self.reviewer, d)
+        self.assertEqual(cm.exception.code, 'self_approval')
+
+    def test_review_without_any_holder_still_waits(self):
+        self.reviewer.section_assignments.update(is_active=False)
+        d, _ = self.submit()
+        self.act(self.lead, d)
+        task = self.task(d)
+        self.assertEqual((task.step_key, task.has_recipients), ('review', False))
+
+    def test_recompute_skips_review_when_only_creator_left(self):
+        from companies.models import SectionAssignment
+        from workflow.recompute import recompute_open_tasks
+        reviewer2 = self.user('reviewer2', 'wf_reviewer')
+        d, inst = self.submit(user=self.reviewer)
+        self.assertEqual(self.task(d).step_key, 'review')
+        SectionAssignment.objects.filter(user=reviewer2).update(is_active=False)
+        with self.captureOnCommitCallbacks(execute=True):
+            recompute_open_tasks(user_ids={reviewer2.pk})
+        self.assertEqual(self.task(d).step_key, 'boss_ok')
+        auto = self.last_step(inst)
+        self.assertEqual((auto.action, auto.skipped), ('auto', [{'step': 'review', 'reason': 'no_second_approval'}]))
+
+    def test_payer_creator_receives_and_acts_on_execute_step_only(self):
+        d, inst = self.submit(user=self.payer)
+        self.assertEqual(self.task(d).step_key, 'review')
+        self.assertFalse(engine.can_act(self.fresh(self.payer), self.task(d)))
+        self.act(self.reviewer, d)
+        self.act(self.boss, d)
+        task = self.task(d)
+        self.assertEqual((task.step_key, self.recipients(task)), ('pay', {self.payer.pk}))
+        self.assertTrue(engine.can_act(self.fresh(self.payer), task))
+        self.act(self.payer, d)
+        inst.refresh_from_db()
+        self.assertEqual(inst.status, WorkflowInstance.COMPLETED)
+
+    def test_creator_as_substitute_or_superuser_never_acts_on_execute_step(self):
+        today = timezone.localdate()
+        WorkflowSubstitute.objects.create(principal=self.payer, substitute=self.member,
+                                          start_date=today - datetime.timedelta(days=1),
+                                          end_date=today + datetime.timedelta(days=3))
+        d, _ = self.submit(user=self.member)
+        self.act(self.lead, d)
+        self.act(self.reviewer, d)
+        self.act(self.boss, d)
+        task = self.task(d)
+        self.assertEqual(task.step_key, 'pay')
+        self.assertFalse(WorkflowTaskRecipient.objects.filter(task=task, user=self.member).exists())
+        self.assertFalse(engine.can_act(self.fresh(self.member), task))
+        d2, _ = self.submit(user=self.su)
+        self.act(self.lead, d2)
+        self.act(self.reviewer, d2)
+        self.act(self.boss, d2)
+        with self.assertRaises(WorkflowPermissionDenied) as cm:
+            self.act(self.su, d2)
+        self.assertEqual(cm.exception.code, 'self_approval')
+
+    def test_flags_validated_by_step_kind(self):
+        from dataclasses import replace
+        from django.core.exceptions import ImproperlyConfigured
+        from workflow.registry import validate_specs
+        for steps in ((replace(STEPS[0], skip_when_creator_only=True),),
+                      (replace(STEPS[1], creator_may_act=True),)):
+            with self.assertRaises(ImproperlyConfigured):
+                validate_specs([make_spec(steps=steps)])

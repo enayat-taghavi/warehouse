@@ -44,6 +44,17 @@ class StepSpec:
     actions: tuple = STEP_ACTIONS
     # ص۸ طرح ۳.۶: قلاب اختیاری required(obj) -> bool فقط برای مرحلهٔ «تأیید»؛ False یعنی رد شدن هنگام ارسال
     required: object = None
+    # فقط «بررسی» و «اجرا»: رد شدن هنگام رسیدن وقتی تنها دارندهٔ نقش مرحله ثبت‌کننده است (مثل قاعدهٔ ۳ ت۶؛
+    # بی هیچ دارنده‌ای کار همچنان منتظر مدیر کل می‌ماند)
+    skip_when_creator_only: bool = False
+    # فقط «اجرا»: ثبت‌کننده هم دریافت‌کنندهٔ این مرحله است و روی سند خودش اقدام می‌کند (مرحله‌های پیش تأیید شده‌اند)
+    creator_may_act: bool = False
+
+    def skips_without_recipient(self, creator_id, holders) -> bool:
+        """مرحلهٔ بی‌دریافت‌کنندهٔ اصلی رد می‌شود؟ «تأیید» همیشه (قاعدهٔ ۳ ت۶)؛ بقیه فقط با skip_when_creator_only."""
+        if self.kind == APPROVE:
+            return True
+        return bool(self.skip_when_creator_only and creator_id and holders == {creator_id})
 
 
 @dataclass(frozen=True)
@@ -125,6 +136,10 @@ def _validate_step(spec, step, ranks, perm_specs):
         _fail(f'{where}: مجوز «{step.permission}» اعلام نشده یا بخشی نیست')
     if step.required is not None and (step.kind != APPROVE or not callable(step.required)):
         _fail(f'{where}: قلاب required فقط برای مرحلهٔ «تأیید» و callable مجاز است')
+    if step.skip_when_creator_only and step.kind == APPROVE:
+        _fail(f'{where}: skip_when_creator_only برای مرحلهٔ «تأیید» لازم نیست (قاعدهٔ ۳ ت۶)')
+    if step.creator_may_act and step.kind != EXECUTE:
+        _fail(f'{where}: creator_may_act فقط برای مرحلهٔ «اجرا» مجاز است')
 
 
 def validate_specs(items=None) -> dict:

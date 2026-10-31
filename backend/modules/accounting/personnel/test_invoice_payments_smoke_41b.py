@@ -92,12 +92,11 @@ class InvoicePaymentSmokeTests(TestCase):
         self.assertEqual(res.data['status'], 'ready_to_pay')
         self.assertEqual(res.data['remaining'], '1000')
 
-    def test_creator_cannot_pay(self):
+    def test_only_treasurer_pays_even_own_invoice(self):
         inv = self.payable_invoice()
-        ExpenseInvoice.objects.filter(pk=inv.pk).update(created_by=self.trs)
-        res = self.pay(self.trs, inv, 100)
+        res = self.pay(self.emp, inv, 100)  # ثبت‌کنندهٔ بی‌نقش خزانه‌دار
         self.assertEqual(res.status_code, 403)
-        self.assertEqual(res.data['code'], 'creator_cannot_pay')
+        self.assertEqual(res.data['code'], 'payment_not_allowed')
         res = self.pay(self.acc, inv, 100)
         self.assertEqual(res.status_code, 403)
 
