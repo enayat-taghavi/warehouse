@@ -479,6 +479,14 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
             vat = Decimal('0')
             attrs.update(vat_rate=None, vat_amount=vat, vat_manual=False)
         attrs.update(subtotal=subtotal, discount_amount=discount, amount=base + vat)
+        if (instance is None or 'description' in attrs) and not (attrs.get('description') or '').strip():
+            # شرح کلی خالی: از شرح ردیف اول (همان رفتار فرم؛ درخواست صف آفلاین هم رد نمی‌شود)
+            if lines:
+                first_desc = lines[0].get('description') or ''
+            else:
+                first_line = instance.lines.order_by('position').first() if instance is not None else None
+                first_desc = getattr(first_line, 'description', '') or ''
+            attrs['description'] = first_desc.strip()
         return attrs
 
     @staticmethod

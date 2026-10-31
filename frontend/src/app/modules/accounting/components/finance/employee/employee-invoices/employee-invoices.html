@@ -119,7 +119,7 @@
             <!-- شماره فاکتور -->
             <td class="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
               <span class="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px]">
-                {{ inv.invoice_number }}
+                {{ inv.invoice_number || '—' }}
               </span>
               <div *ngIf="inv.number" class="mt-1 text-[10px] text-fg-muted" title="شمارهٔ داخلی فاکتور">شمارهٔ داخلی: {{ inv.number }}</div>
               <div class="mt-1 flex flex-wrap gap-1 font-sans">
@@ -335,7 +335,7 @@
           </div>
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInvoiceId ? 'ویرایش فاکتور پیش‌نویس' : 'ثبت فاکتور هزینه جدید' }}</h3>
-            <p class="text-[10px] text-fg-muted font-medium">ذخیره خودکار در وضعیت پیش‌نویس کارمند</p>
+            <p class="text-[10px] text-fg-muted font-medium">پیش‌نویس ذخیره می‌شود؛ بعد با «ارسال» به سرپرست می‌رود.</p>
           </div>
         </div>
         <button
@@ -382,13 +382,14 @@
         <!-- شماره فاکتور و تاریخ شمسی -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره فاکتور / رسید *</label>
+            <label for="invoice_number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره فاکتور / رسید <span class="font-normal text-fg-muted">(اختیاری)</span></label>
             <input
+              id="invoice_number"
               type="text"
               [(ngModel)]="newInvoice.invoice_number"
               (ngModelChange)="onDuplicateKeyChange()"
               aria-label="شماره فاکتور یا رسید"
-              placeholder="مثال: INV-1042 یا شماره رسید"
+              placeholder="اگر فاکتور شماره دارد"
               class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
           <div>
@@ -465,6 +466,7 @@
                   <div class="col-span-2 md:col-span-3">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_desc_' + i">شرح</label>
                     <input type="text" [id]="'line_desc_' + i" [(ngModel)]="line.description" [name]="'line_desc_' + i"
+                      (ngModelChange)="onLineDescriptionChange(i, $event)"
                       placeholder="شرح کالا یا خدمت" aria-label="شرح ردیف"
                       class="w-full min-h-[40px] px-3 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
                   </div>
@@ -518,6 +520,20 @@
               </div>
             }
           </div>
+        </div>
+
+        <!-- شرح کلی: خودکار از شرح ردیف اول، قابل ویرایش -->
+        <div>
+          <label for="invoice_description" class="block text-[11px] font-bold text-slate-700 mb-1">شرح کلی فاکتور</label>
+          <textarea
+            id="invoice_description"
+            rows="2"
+            aria-describedby="invoice_description_hint"
+            [(ngModel)]="newInvoice.description"
+            (ngModelChange)="onDescriptionInput($event)"
+            placeholder="خودکار از شرح ردیف اول پر می‌شود"
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
+          <p id="invoice_description_hint" class="mt-1 text-[11px] text-fg-muted">از شرح ردیف اول پر می‌شود؛ اگر خودتان تغییرش دهید، دیگر عوض نمی‌شود.</p>
         </div>
 
         <!-- تخفیف و مالیات -->
@@ -588,23 +604,6 @@
               فرمت‌های مجاز: JPG, PNG, PDF (حداکثر ۱۰ مگابایت)
             </span>
           </div>
-        </div>
-
-        <!-- شرح و توضیحات هزینه -->
-        <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">شرح و جزئیات هزینه *</label>
-          <textarea
-            rows="2"
-            aria-label="شرح و جزئیات هزینه"
-            [(ngModel)]="newInvoice.description"
-            placeholder="مثال: خرید روغن هیدرولیک و فیلتر گازوئیل لودر..."
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
-        </div>
-
-        <!-- هشدار نگهبان G2 -->
-        <div class="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 leading-relaxed">
-          <span class="font-bold">قانون پیش‌نویس:</span>
-          این فاکتور با وضعیت «پیش‌نویس کارمند» ذخیره می‌گردد و پس از تایید توسط شما، به کارتابل سرپرست ارسال خواهد شد.
         </div>
 
       </div>
@@ -826,7 +825,7 @@
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار فاکتور</h3>
             <p class="text-[10px] text-fg-muted font-medium font-mono" *ngIf="selectedInvoiceDetail">
-              شماره: {{ selectedInvoiceDetail.invoice_number }}
+              شماره: {{ invoiceLabel(selectedInvoiceDetail) }}
             </p>
           </div>
         </div>
@@ -851,7 +850,7 @@
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/70 text-xs">
             <div>
               <span class="text-slate-400 text-[11px] block">شماره فاکتور:</span>
-              <span class="font-mono font-bold text-slate-800">{{ selectedInvoiceDetail.invoice_number }}</span>
+              <span class="font-mono font-bold text-slate-800">{{ selectedInvoiceDetail.invoice_number || '—' }}</span>
             </div>
             <div>
               <span class="text-slate-400 text-[11px] block">تاریخ:</span>

@@ -68,7 +68,7 @@ def printable_invoice(user, entity_id):
         return None
     paragraphs = [
         f'شمارهٔ داخلی: {fa_digits(invoice.number) if invoice.number else "—"}',
-        f'شمارهٔ فاکتور فروشنده: {fa_digits(invoice.invoice_number)}',
+        f'شمارهٔ فاکتور فروشنده: {fa_digits(invoice.invoice_number) if invoice.invoice_number else "—"}',
         f'تاریخ فاکتور: {fa_digits(invoice.invoice_date_shamsi)}',
         f'طرف حساب: {invoice.counterparty.name if invoice.counterparty_id else ""}',
         f'پروژه / بخش: {invoice.section.project.name} / {invoice.section.name}',

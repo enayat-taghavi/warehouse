@@ -1107,7 +1107,7 @@ class TreasuryCartableAPIView(APIView):
                                 status=exc.status)
             updated_invoice.refresh_from_db()
             return Response({
-                'message': f'فاکتور شماره «{invoice.invoice_number}» با موفقیت تسویه و پرداخت شد.',
+                'message': f'فاکتور شماره «{invoice.number or invoice.invoice_number or invoice.pk}» با موفقیت تسویه و پرداخت شد.',
                 'invoice': ExpenseInvoiceSerializer(updated_invoice).data
             })
 

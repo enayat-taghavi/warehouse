@@ -264,6 +264,44 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(component.formLines.length).toBe(1);
     });
 
+    it('شماره فاکتور اختیاری است و شرح کلی خالی از شرح ردیف اول فرستاده می‌شود', () => {
+      component.openNewInvoiceModal();
+      component.newInvoice.counterparty = 101;
+      component.formLines = [{ description: 'خرید سیمان', quantity: 1, unit: '', unit_price: 1000, expense_head: 11 }];
+      component.newInvoice.description = '';
+      component.saveInvoice();
+      const body = mockPersonnelApi.createExpenseInvoice.mock.calls[0][0];
+      expect(body.invoice_number).toBe('');
+      expect(body.description).toBe('خرید سیمان');
+    });
+
+    it('شرح کلی تا وقتی کاربر دست نزده از ردیف اول پر می‌شود و شرح دستی بازنویسی نمی‌شود', () => {
+      component.openNewInvoiceModal();
+      component.onLineDescriptionChange(0, 'میلگرد');
+      expect(component.newInvoice.description).toBe('میلگرد');
+      component.onLineDescriptionChange(1, 'ردیف دوم');
+      expect(component.newInvoice.description).toBe('میلگرد');
+
+      component.newInvoice.description = 'خرید مصالح هفته';
+      component.onDescriptionInput('خرید مصالح هفته');
+      component.onLineDescriptionChange(0, 'میلگرد ۱۲');
+      expect(component.newInvoice.description).toBe('خرید مصالح هفته');
+
+      // پاک کردن کامل شرح: برگشت به حالت خودکار
+      component.newInvoice.description = '';
+      component.onDescriptionInput('');
+      component.onLineDescriptionChange(0, 'میلگرد ۱۴');
+      expect(component.newInvoice.description).toBe('میلگرد ۱۴');
+
+      // ویرایش فاکتوری که شرح دستی دارد
+      component.openEditInvoiceModal({
+        id: 7, status: 'draft', section: 10, counterparty: 101, invoice_number: '', invoice_date_shamsi: '1405/04/10',
+        description: 'شرح دستی', lines: [{ description: 'ردیف یک', quantity: 1, unit: '', unit_price: 10, expense_head: 11 }]
+      } as any);
+      component.onLineDescriptionChange(0, 'ردیف تازه');
+      expect(component.newInvoice.description).toBe('شرح دستی');
+    });
+
     it('جمع‌های زنده: جمع ردیف‌ها، تخفیف، مالیات پیشنهادی و مالیات دستی', () => {
       component.openNewInvoiceModal();
       component.formLines = [
@@ -287,11 +325,6 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       component.openNewInvoiceModal();
       component.saveInvoice();
       expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('طرف‌حساب'));
-
-      fillHeader();
-      component.newInvoice.invoice_number = '';
-      component.saveInvoice();
-      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('شماره فاکتور'));
 
       fillHeader();
       component.saveInvoice();

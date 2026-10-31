@@ -107,6 +107,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   };
   /** شناسهٔ فاکتوری که در حال ویرایش است (null = فاکتور تازه) */
   editingInvoiceId: number | null = null;
+  /** کاربر شرح کلی را خودش نوشته؛ تا وقتی false است شرح کلی از شرح ردیف اول پر می‌شود */
+  descriptionTouched = false;
   // ─── ردیف‌ها، تخفیف و مالیات (۴.۱-ج؛ جمع‌های نهایی را سرور حساب می‌کند) ───
   readonly maxLines = 100;
   formLines: InvoiceLineForm[] = [];
@@ -500,7 +502,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       description: '',
       status: 'draft' // Guardian G2: تحمیل وضعیت پیش‌نویس
     };
-    this.formLines = [this.blankLine()];
+    this.formLines = [this.blankLine(this.singleExpenseHeadId)];
+    this.descriptionTouched = false;
     this.discountInput = null;
     this.vatApplicable = false;
     this.vatManualInput = null;
@@ -539,6 +542,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       expense_head: l.expense_head
     }));
     this.formLines = lines.length ? lines : [this.blankLine()];
+    const desc = (inv.description || '').trim();
+    this.descriptionTouched = !!desc && desc !== (this.formLines[0]?.description || '').trim();
     const disc = Number(inv.discount_amount) || 0;
     this.discountInput = disc > 0 ? String(disc) : null;
     this.vatApplicable = !!inv.vat_applicable;
@@ -571,6 +576,39 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.formLines = this.formLines.filter((_, idx) => idx !== i);
     this.lineErrors = {};
     this.linesError = '';
+    if (i === 0) this.syncDescriptionFromFirstLine();
+  }
+
+  // ─── شرح کلی: خودکار از ردیف اول تا وقتی کاربر خودش آن را ننوشته ───
+  onLineDescriptionChange(i: number, value: string): void {
+    if (i === 0) this.syncDescriptionFromFirstLine(value);
+  }
+
+  onDescriptionInput(value: string): void {
+    // پاک کردن کامل شرح یعنی برگشت به حالت خودکار
+    this.descriptionTouched = !!(value || '').trim();
+  }
+
+  private syncDescriptionFromFirstLine(value?: string): void {
+    if (this.descriptionTouched) return;
+    this.newInvoice.description = value ?? this.formLines[0]?.description ?? '';
+  }
+
+  /** شرحی که فرستاده می‌شود: شرح کلی، وگرنه شرح ردیف اول */
+  private get effectiveDescription(): string {
+    return (this.newInvoice.description || '').trim() || (this.formLines[0]?.description || '').trim();
+  }
+
+  /** وقتی شرکت فقط یک سرفصل فعال دارد، ردیف تازه همان را از پیش دارد */
+  private get singleExpenseHeadId(): number | null {
+    const heads = this.expenseHeadGroups.flatMap(g => g.heads);
+    if (this.isLoadingExpenseHeads || this.expenseHeadsCompanyId !== this.sectionCompanyId) return null;
+    return heads.length === 1 ? (heads[0].id ?? null) : null;
+  }
+
+  /** نام کوتاه فاکتور در پیام‌ها (شمارهٔ فروشنده اختیاری است) */
+  invoiceLabel(inv: Partial<ExpenseInvoice> | null | undefined): string {
+    return inv?.invoice_number || inv?.number || (inv?.id ? `#${inv.id}` : '');
   }
 
   lineAmount(l: InvoiceLineForm): number {
@@ -713,6 +751,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         if (companyId !== this.expenseHeadsCompanyId) return;
         this.expenseHeadGroups = buildExpenseHeadOptions(heads);
         this.isLoadingExpenseHeads = false;
+        const only = this.singleExpenseHeadId;
+        if (only !== null) this.formLines.forEach(l => { if (l.expense_head == null) l.expense_head = only; });
         this.cdr.detectChanges();
       },
       error: () => {
@@ -731,17 +771,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.toast.show('warning', 'لطفاً طرف‌حساب فاکتور را انتخاب کنید.');
       return false;
     }
-    if (!this.newInvoice.invoice_number?.trim()) {
-      this.toast.show('warning', 'شماره فاکتور / رسید الزامی است.');
-      return false;
-    }
     if (!this.newInvoice.invoice_date_shamsi?.trim()) {
       this.toast.show('warning', 'تاریخ فاکتور الزامی است.');
-      return false;
-    }
-    // سرور شرح خالی را با ۴۰۰ رد می‌کند؛ همین‌جا پیام روشن داده می‌شود
-    if (!this.newInvoice.description?.trim()) {
-      this.toast.show('warning', 'شرح و جزئیات هزینه الزامی است.');
       return false;
     }
     this.lineErrors = {};
@@ -838,13 +869,13 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       const formData = new FormData();
       formData.append('section', String(this.selectedSectionId));
       formData.append('counterparty', String(this.newInvoice.counterparty));
-      formData.append('invoice_number', this.newInvoice.invoice_number!.trim());
+      formData.append('invoice_number', (this.newInvoice.invoice_number || '').trim());
       formData.append('invoice_date_shamsi', this.newInvoice.invoice_date_shamsi!.trim());
       formData.append('lines', JSON.stringify(lines));
       formData.append('discount_amount', String(totals.discount_amount));
       formData.append('vat_applicable', String(totals.vat_applicable));
       if (totals.vat_amount !== undefined) formData.append('vat_amount', String(totals.vat_amount));
-      formData.append('description', this.newInvoice.description || '');
+      formData.append('description', this.effectiveDescription);
       formData.append('status', 'draft'); // Guardian G2
       formData.append('attachment', this.selectedInvoiceAttachment);
       payload = formData;
@@ -852,11 +883,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       const body: Partial<ExpenseInvoice> = {
         section: this.selectedSectionId,
         counterparty: this.newInvoice.counterparty,
-        invoice_number: this.newInvoice.invoice_number!.trim(),
+        invoice_number: (this.newInvoice.invoice_number || '').trim(),
         invoice_date_shamsi: this.newInvoice.invoice_date_shamsi!.trim(),
         lines,
         ...totals,
-        description: this.newInvoice.description || ''
+        description: this.effectiveDescription
       };
       if (!editingId) body.status = 'draft'; // Guardian G2
       payload = body;
@@ -869,8 +900,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       next: (saved: ExpenseInvoice) => {
         this.isSaving = false;
         this.toast.show('success', editingId
-          ? `فاکتور «${saved?.invoice_number ?? this.newInvoice.invoice_number}» ویرایش شد.`
-          : `فاکتور «${saved?.invoice_number}» با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
+          ? `فاکتور «${this.invoiceLabel(saved) || this.invoiceLabel(this.newInvoice)}» ویرایش شد.`
+          : `فاکتور${this.invoiceLabel(saved) ? ` «${this.invoiceLabel(saved)}»` : ''} با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
         this.closeNewInvoiceModal();
         this.loadInvoices();
       },
@@ -987,7 +1018,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال فاکتور شماره «${invoice.invoice_number}» به سرپرست جهت بررسی و تایید اطمینان دارید؟`, type: 'info' })) !== true) {
+    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال فاکتور شماره «${this.invoiceLabel(invoice)}» به سرپرست جهت بررسی و تایید اطمینان دارید؟`, type: 'info' })) !== true) {
       return;
     }
 
@@ -1006,7 +1037,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       next: () => {
         this.isSaving = false;
         this.closeDuplicateReason();
-        this.toast.show('success', `فاکتور شماره «${invoice.invoice_number}» با موفقیت جهت تایید به کارتابل سرپرست ارسال شد.`);
+        this.toast.show('success', `فاکتور شماره «${this.invoiceLabel(invoice)}» با موفقیت جهت تایید به کارتابل سرپرست ارسال شد.`);
         this.loadInvoices();
       },
       error: (err: any) => {
@@ -1059,7 +1090,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف فاکتور پیش‌نویس شماره «${invoice.invoice_number}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`, type: 'danger', confirmText: 'حذف' })) !== true) {
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف فاکتور پیش‌نویس شماره «${this.invoiceLabel(invoice)}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`, type: 'danger', confirmText: 'حذف' })) !== true) {
       return;
     }
 
@@ -1067,7 +1098,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.deleteExpenseInvoice(invoice.id).subscribe({
       next: () => {
         this.isSaving = false;
-        this.toast.show('success', `فاکتور پیش‌نویس «${invoice.invoice_number}» حذف شد.`);
+        this.toast.show('success', `فاکتور پیش‌نویس «${this.invoiceLabel(invoice)}» حذف شد.`);
         this.loadInvoices();
       },
       error: (err: any) => {
@@ -1081,7 +1112,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   openAttachmentPreview(invoice: ExpenseInvoice): void {
     if (!invoice.attachment) return;
     this.previewAttachmentUrl = invoice.attachment;
-    this.previewInvoiceTitle = `پیوست فاکتور شماره ${invoice.invoice_number} - ${invoice.counterparty_name || ''}`;
+    this.previewInvoiceTitle = `پیوست فاکتور شماره ${this.invoiceLabel(invoice)} - ${invoice.counterparty_name || ''}`;
     this.isAttachmentPreviewModalOpen = true;
     this.cdr.detectChanges();
   }

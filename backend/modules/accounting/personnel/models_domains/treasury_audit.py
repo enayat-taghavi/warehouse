@@ -202,7 +202,8 @@ class ExpenseInvoice(models.Model):
         related_name='invoices',
         verbose_name="طرف‌حساب"
     )
-    invoice_number = models.CharField(max_length=100, verbose_name="شماره فاکتور / رسید")
+    # شمارهٔ فاکتور فروشنده اختیاری است (رسید بی شماره هم ثبت می‌شود)؛ خالی در یافتن تکراری شرکت نمی‌کند
+    invoice_number = models.CharField(max_length=100, blank=True, default='', verbose_name="شماره فاکتور / رسید")
     invoice_date_shamsi = models.CharField(max_length=10, verbose_name="تاریخ فاکتور (شمسی)")
     # مبلغ قابل پرداخت = subtotal − discount_amount + vat_amount (د۱ طرح ۴.۱)؛ سقف گردش و سند از همین می‌خوانند.
     amount = models.DecimalField(max_digits=15, decimal_places=0, verbose_name="مبلغ فاکتور (ریال)")
@@ -228,7 +229,8 @@ class ExpenseInvoice(models.Model):
         related_name='+',
         verbose_name="شمارهٔ صادرشده"
     )
-    description = models.TextField(verbose_name="شرح هزینه")
+    # خالی بیاید، سریالایزر از شرح ردیف اول پر می‌کند
+    description = models.TextField(blank=True, verbose_name="شرح هزینه")
     attachment = models.FileField(upload_to='invoices/', blank=True, null=True, verbose_name="تصویر یا فایل فاکتور")
     status = models.CharField(max_length=30, choices=INVOICE_STATUS_CHOICES, default='draft', verbose_name="وضعیت فاکتور")
     rejection_reason = models.TextField(blank=True, null=True, verbose_name="علت رد یا بازنگری فاکتور")

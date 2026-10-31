@@ -228,6 +228,32 @@ describe('EmployeeInvoicesHubComponent — Lines Form and Duplicate Dialog DOM S
     expect(dds[3].textContent?.trim()).toBe(component.formatNumber(expectedPayable));
   });
 
+  it('b2) typing the first line description fills the invoice description until the user edits it', async () => {
+    component.openNewInvoiceModal();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const desc0 = fixture.nativeElement.querySelector('#line_desc_0') as HTMLInputElement;
+    const total = fixture.nativeElement.querySelector('#invoice_description') as HTMLTextAreaElement;
+    expect(desc0).toBeTruthy();
+    expect(total).toBeTruthy();
+
+    desc0.value = 'cement';
+    desc0.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(total.value).toBe('cement');
+
+    total.value = 'weekly purchase';
+    total.dispatchEvent(new Event('input'));
+    desc0.value = 'cement 2';
+    desc0.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.newInvoice.description).toBe('weekly purchase');
+    expect(total.value).toBe('weekly purchase');
+  });
+
   it('c) turning the VAT checkbox on shows the VAT amount input; turning it off hides it', () => {
     component.openNewInvoiceModal();
     fixture.detectChanges();

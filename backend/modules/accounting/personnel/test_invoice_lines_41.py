@@ -109,6 +109,31 @@ class InvoiceLines41Tests(HeadFixtures):
         self.assertEqual(Decimal(d['subtotal']), 300)
         self.assertEqual(ExpenseInvoiceLine.objects.filter(invoice_id=inv_id).count(), 1)
 
+    def test_invoice_number_optional_and_description_from_first_line(self):
+        body = self.body(discount_amount='0')
+        body.pop('invoice_number')
+        body['description'] = '  '
+        r = self.api.post(INVOICES, body, format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        d = r.json()
+        self.assertEqual(d['invoice_number'], '')
+        self.assertEqual(d['description'], 'a')
+        self.assertFalse(d['possible_duplicate'])
+        # فاکتور دوم بی شماره برای همان طرف‌حساب تکراری حساب نمی‌شود
+        r2 = self.api.post(INVOICES, {**body, 'invoice_number': ''}, format='json')
+        self.assertEqual(r2.status_code, 201, r2.content)
+        self.assertFalse(r2.json()['possible_duplicate'])
+        # شرح دستی دست نمی‌خورد؛ ویرایش بی کلید شرح، شرح قبلی را نگه می‌دارد
+        r3 = self.api.post(INVOICES, self.body(discount_amount='0', description='custom'), format='json')
+        self.assertEqual(r3.json()['description'], 'custom')
+        one_line = [{'description': 'z', 'quantity': '1', 'unit_price': '10', 'expense_head': self.head.id}]
+        r4 = self.api.patch(f"{INVOICES}{r3.json()['id']}/", {'lines': one_line}, format='json')
+        self.assertEqual(r4.json()['description'], 'custom')
+        # شرح خالی در ویرایش: از ردیف اول موجود
+        r5 = self.api.patch(f"{INVOICES}{r3.json()['id']}/", {'description': ''}, format='json')
+        self.assertEqual(r5.status_code, 200, r5.content)
+        self.assertEqual(r5.json()['description'], 'z')
+
     def test_manual_vat_and_rate_snapshot(self):
         r = self.api.post(INVOICES, self.body(), format='json')
         self.assertEqual(r.status_code, 201, r.content)
