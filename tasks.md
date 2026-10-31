@@ -4309,3 +4309,43 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 3. Task: from the repo root run `python scripts/automation/verify_tools.py restart-worker` and wait for it to print the new worker pids and a fresh heartbeat. Then run `git status --short`.
 
 4. Output and stop condition: a short English report with the restart-worker output lines and the git status output. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Payment receipt release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history. The file `tests/playwright/tools/index.py` belongs to another session: never touch it.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`), never a prod APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Never print the content of any file in `E:\warehouse-secrets\`, and never print the value of `FIREBASE_CREDENTIALS_FILE` or any key path.
+
+2. Context: commit `5399f19b` makes a payment receipt file required on every invoice instalment and every petty cash charge or statement payment (the pay forms get a required file input), and shows a read-only list of payment receipts in the invoice and petty cash details. There is no migration. The app version stays `1.0.0` (`versionCode 10000`); do not change any version. The command `publish_mobile_apk --apk <path> --version 1.0.0 --channel direct --env staging` overwrites `CoManage-1.0.0-direct-test.apk` on the download path `/api/public/mobile-files/apk/<file>` and prints the public path. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app payment receipt'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Check: `.\venv\Scripts\python.exe manage.py check`. It must end with `System check identified 1 issue (0 silenced).` (the known Redis hint) or `no issues`. Stop and report any error.
+- c) Web build in `frontend`: `npx ng build --delete-output-path=false`, wait for it to finish, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- d) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear). Then in `frontend`: `npm run build:mobile-test`, then in `frontend\android`: `.\gradlew.bat assembleStagingDirectRelease`.
+- e) Badging: `E:\Android\Sdk\build-tools\36.0.0\aapt.exe dump badging frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk > scratch\logs\apk_receipt_badging.txt` (from the repo root; if `aapt.exe` is missing there, use `35.0.0`). Read the first line of that file: it must show package `ir.comanage.soft.test`, `versionCode='10000'` and `versionName='1.0.0'`.
+- f) Publish, in `backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk ..\frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk --version 1.0.0 --channel direct --env staging` and note the printed path.
+- g) Confirm the new web code is in the build: `Select-String -Path frontend\dist\*\browser\*.js -Pattern payment_receipt -List | Select-Object -First 1` must print at least one file (if the path pattern finds nothing, use `Get-ChildItem frontend\dist -Recurse -Filter *.js | Select-String -Pattern payment_receipt -List | Select-Object -First 1`).
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading files under `scratch/logs/` and `frontend/dist/`. The web build at most twice, Gradle at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `scratch/logs/apk_receipt_badging.txt` exists; `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
+
+6. Output and stop condition: a short English report with the backup filename and size, the check result, the web build result and the patch line, the APK path and size, the badging first line, the publish path, and the step g file name. No commit. End the turn after the report.
