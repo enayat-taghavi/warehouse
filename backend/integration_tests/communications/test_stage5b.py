@@ -186,7 +186,6 @@ class Stage5bAttachmentAndPreviewTests(BaseCommsTestCase):
         att_csv = MessageAttachment.objects.get(id=resp_csv.data['id'])
         self.assertEqual(att_csv.content_type, ALLOWED_EXTENSIONS['.csv'])
 
-    @unittest.expectedFailure
     def test_thumbnail_download_only_for_members(self):
         """دانلود بندانگشتی فقط برای اعضای گفتگو مجاز است؛ بدون بندانگشتی ۴۰۴ می‌دهد"""
         img_bytes = self._make_image_bytes(800, 400)

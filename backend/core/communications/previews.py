@@ -160,39 +160,56 @@ def build_attachment_preview(attachment):
     else:
         builder = None
 
+    old_thumb = attachment.thumbnail.name if attachment.thumbnail else None
     if builder is None:
         attachment.preview_status = PreviewStatus.NONE
     else:
-        old_thumb = attachment.thumbnail.name if attachment.thumbnail else None
         try:
             builder(attachment)
             attachment.preview_status = PreviewStatus.READY
         except Exception as exc:  # هر خطای کتابخانه: فایل اصلی دست‌نخورده می‌ماند
             logger.warning("[chat preview] attachment %s preview failed: %s", attachment.pk, exc)
-            if attachment.thumbnail and attachment.thumbnail.name != old_thumb:
-                attachment.thumbnail.delete(save=False)  # فقط بندانگشتیِ نیمه‌کارهٔ همین اجرا
-            attachment.thumbnail = old_thumb
+            _discard_new_thumbnail(attachment, old_thumb)
             attachment.preview_status = PreviewStatus.FAILED
-    attachment.save(update_fields=['thumbnail', 'width', 'height', 'page_count', 'preview_status', 'updated_at'])
+    try:
+        attachment.save(update_fields=['thumbnail', 'width', 'height', 'page_count', 'preview_status', 'updated_at'])
+    except Exception:
+        _discard_new_thumbnail(attachment, old_thumb)  # بندانگشتیِ بی‌صاحب روی دیسک نماند
+        raise
+    new_thumb = attachment.thumbnail.name if attachment.thumbnail else None
+    if old_thumb and new_thumb and new_thumb != old_thumb:
+        # بندانگشتی قبلی (نه فایل اصلی) پس از ذخیرهٔ موفق جایگزین برداشته می‌شود
+        try:
+            attachment.thumbnail.storage.delete(old_thumb)
+        except Exception as exc:
+            logger.warning("[chat preview] old thumbnail %s not removed: %s", old_thumb, exc)
     return attachment.preview_status
+
+
+def _discard_new_thumbnail(attachment, old_thumb):
+    """فقط بندانگشتی تازه‌نوشتهٔ همین اجرا را برمی‌دارد و نام قبلی را برمی‌گرداند؛ فایل اصلی هرگز."""
+    if attachment.thumbnail and attachment.thumbnail.name != old_thumb:
+        try:
+            attachment.thumbnail.delete(save=False)
+        except Exception as exc:
+            logger.warning("[chat preview] half-written thumbnail not removed: %s", exc)
+    attachment.thumbnail = old_thumb
 
 
 def schedule_attachment_preview(attachment_id):
     """پس از commit درخواست اجرا می‌شود تا آپلود کند نشود؛ سپس پیام دوباره برودکست می‌شود."""
     def _run():
-        from .models import MessageAttachment
-        from .broadcast import broadcast_message_updated_ws
-        att = MessageAttachment.objects.select_related('message__conversation').filter(pk=attachment_id).first()
-        if att is None or not att.file:
-            return
+        # هر خطایی این‌جا فقط ثبت می‌شود: پاسخ آپلود (فایل ذخیره‌شده) نباید ۵۰۰ شود
         try:
+            from .models import MessageAttachment
+            from .broadcast import broadcast_message_updated_ws
+            att = MessageAttachment.objects.select_related('message__conversation').filter(pk=attachment_id).first()
+            if att is None or not att.file:
+                return
             build_attachment_preview(att)
+            msg = att.message
+            if (att.thumbnail or att.page_count or att.width) and not msg.is_deleted:
+                broadcast_message_updated_ws(msg)
         except Exception as exc:
-            logger.warning("[chat preview] attachment %s preview save failed: %s", attachment_id, exc)
-            return
-        if att.thumbnail or att.page_count or att.width:
-            try:
-                broadcast_message_updated_ws(att.message)
-            except Exception as exc:
-                logger.warning("[chat preview] broadcast after preview failed: %s", exc)
+            logger.warning("[chat preview] attachment %s preview task failed: %s", attachment_id, exc)
     transaction.on_commit(_run)

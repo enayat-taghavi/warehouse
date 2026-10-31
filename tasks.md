@@ -3945,7 +3945,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-[ ] Session 1 of 1 — Chat plan stage 5-b: server tests for the attachment allowlist, content sniffing, previews (image and PDF), failed previews and the backfill command
+[DONE] [ ] Session 1 of 1 — Chat plan stage 5-b: server tests for the attachment allowlist, content sniffing, previews (image and PDF), failed previews and the backfill command
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

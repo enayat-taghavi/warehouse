@@ -52,7 +52,7 @@ from .membership import (
 from rest_framework import serializers as drf_serializers
 from common.warehouse_scope import can_access_warehouse
 from settings_core.services import get_setting
-from .previews import validate_uploaded_file, schedule_attachment_preview
+from .previews import ALLOWED_EXTENSIONS, validate_uploaded_file, schedule_attachment_preview
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -116,7 +116,8 @@ class ChatAttachmentDownloadView(APIView):
             name = os.path.basename(field.name)
         # نوع محتوا از پسوند فایل ذخیره‌شده (نه از هدر ارسالی کلاینت)
         stored_ext = os.path.splitext(field.name)[1].lower()
-        content_type = mimetypes.guess_type(field.name)[0] or 'application/octet-stream'
+        content_type = (ALLOWED_EXTENSIONS.get(stored_ext) or mimetypes.guess_type(field.name)[0]
+                        or 'application/octet-stream')
         if getattr(settings, 'MEDIA_ACCEL_REDIRECT', False):
             response = HttpResponse(content_type=content_type)
             response['X-Accel-Redirect'] = f'/internal_media/{quote(field.name)}'
