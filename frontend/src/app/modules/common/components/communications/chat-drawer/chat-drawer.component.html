@@ -599,12 +599,22 @@
         <li *ngFor="let p of pickedFiles(); trackBy: trackPick" [attr.data-testid]="'picked-' + p.kind"
             class="relative shrink-0 w-24 rounded-xl border border-line bg-surface-muted overflow-hidden">
           <img *ngIf="p.previewUrl" [src]="p.previewUrl" [alt]="p.file.name" class="w-24 h-24 object-cover bg-white" />
-          <div *ngIf="!p.previewUrl" class="w-24 h-24 flex flex-col items-center justify-center gap-1 p-2 text-fg-muted">
+          <!-- پیام صوتیِ آمادهٔ ارسال: کاربر پیش از فرستادن گوش می‌دهد -->
+          <div *ngIf="p.kind === 'audio'" class="w-24 h-24 flex flex-col items-center justify-center gap-1 p-2 text-fg">
+            <button type="button" (click)="togglePickedAudio(p)" data-testid="picked-audio-toggle"
+                    [attr.aria-label]="isPickPlaying(p) ? 'توقف پیام صوتی' : 'گوش دادن به پیام صوتی پیش از فرستادن'"
+                    [attr.title]="isPickPlaying(p) ? 'توقف' : 'گوش دادن'"
+                    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" [appIcon]="isPickPlaying(p) ? 'pause' : 'play'" aria-hidden="true"></svg>
+            </button>
+            <span class="text-[11px] font-bold tabular-nums" data-testid="picked-audio-time">{{ playingAudioId() === 'pick:' + p.key ? durationFa(audioPos()) + ' / ' : '' }}{{ durationFa(voiceNameSeconds(p.file.name) || audioDur()) }}</span>
+          </div>
+          <div *ngIf="!p.previewUrl && p.kind !== 'audio'" class="w-24 h-24 flex flex-col items-center justify-center gap-1 p-2 text-fg-muted">
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="file-text" aria-hidden="true"></svg>
             <span class="text-[10px] font-bold uppercase" dir="ltr">{{ fileExt(p.file.name) }}</span>
           </div>
           <div class="px-1.5 py-1 text-[10px] text-fg">
-            <span class="block truncate font-bold" [title]="p.file.name">{{ p.file.name }}</span>
+            <span class="block truncate font-bold" [title]="p.file.name">{{ p.kind === 'audio' ? 'پیام صوتی' : p.file.name }}</span>
             <span class="block text-fg-muted">{{ fileSizeFa(p.file.size) }}</span>
           </div>
           <button type="button" (click)="removePicked(p.key)" data-testid="picked-remove"
@@ -656,6 +666,11 @@
         <span class="font-bold">در حال ضبط</span>
         <span class="ms-auto font-bold tabular-nums" data-testid="record-time" role="timer" aria-label="مدت ضبط">{{ durationFa(recordSeconds()) }}</span>
       </div>
+      <button type="button" (click)="stopRecording('review')" data-testid="record-review"
+              aria-label="پایان ضبط و گوش دادن پیش از فرستادن" title="پایان ضبط و گوش دادن"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl border border-line text-fg hover:bg-line-subtle flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="check" aria-hidden="true"></svg>
+      </button>
       <button type="button" (click)="stopRecording(true)" data-testid="record-send"
               aria-label="فرستادن پیام صوتی" title="فرستادن پیام صوتی"
               class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">

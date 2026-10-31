@@ -30,7 +30,7 @@ export type AttachmentKind = 'image' | 'pdf' | 'word' | 'excel' | 'text' | 'audi
 export interface PickedFile {
   key: string;
   file: File;
-  kind: 'image' | 'pdf' | 'file';
+  kind: 'image' | 'pdf' | 'audio' | 'file';
   /** blob عکس یا data URL صفحهٔ اول PDF؛ null یعنی کارت فایل */
   previewUrl: string | null;
 }
@@ -764,7 +764,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const take = accepted.slice(0, Math.max(0, room));
     if (take.length === 0) return;
     const added: PickedFile[] = take.map(file => {
-      const kind: PickedFile['kind'] = file.type.startsWith('image/') ? 'image' : this.isPdfName(file.name, file.type) ? 'pdf' : 'file';
+      const kind = this.pickKind(file);
       return { key: `pick-${++this.pickSeq}`, file, kind, previewUrl: kind === 'image' ? URL.createObjectURL(file) : null };
     });
     this.pickedFiles.set([...this.pickedFiles(), ...added]);
@@ -815,8 +815,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private recordStartedAt = 0;
   private recordEndedAt = 0;
   private recordTimer: ReturnType<typeof setInterval> | null = null;
-  /** پس از stop: فرستادن، رفتن به نوار پیش از ارسال یا دور ریختن */
-  private recordOnStop: 'send' | 'discard' = 'discard';
+  /** پس از stop: فرستادن، رفتن به نوار پیش از ارسال برای گوش دادن، یا دور ریختن */
+  private recordOnStop: 'send' | 'review' | 'discard' = 'discard';
 
   /** مرورگر ضبط صدا را پشتیبانی می‌کند (در jsdom و مرورگرهای قدیمی دکمه نشان داده نمی‌شود) */
   public canRecord(): boolean {
@@ -877,10 +877,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.recordTimer = setInterval(() => this.recordSeconds.set(Math.floor((Date.now() - this.recordStartedAt) / 1000)), 500);
   }
 
-  /** پایان ضبط؛ send=true یعنی فرستادن، false یعنی لغو */
-  public stopRecording(send: boolean): void {
+  /** پایان ضبط؛ true یعنی فرستادن، false یعنی لغو، 'review' یعنی رفتن به نوار پیش از ارسال تا کاربر پیش از فرستادن گوش دهد */
+  public stopRecording(send: boolean | 'review'): void {
     if (!this.recorder || !this.recording()) return;
-    this.recordOnStop = send ? 'send' : 'discard';
+    this.recordOnStop = send === 'review' ? 'review' : send ? 'send' : 'discard';
     this.recordEndedAt = Date.now();
     this.recording.set(false);
     if (this.recordTimer) { clearInterval(this.recordTimer); this.recordTimer = null; }
@@ -890,7 +890,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   private onRecorderStopped(): void {
     const action = this.recordOnStop;
-    const file = action === 'send' ? this.buildVoiceFile() : null;
+    const file = action !== 'discard' ? this.buildVoiceFile() : null;
     this.releaseRecorder();
     if (!file) return;
     if (file.size === 0 || this.voiceSeconds() < 1) {
@@ -898,7 +898,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       return;
     }
     this.addFiles([file]);
-    if (this.pickedFiles().some(p => p.file === file)) void this.sendMessage();
+    if (action === 'send' && this.pickedFiles().some(p => p.file === file)) void this.sendMessage();
   }
 
   private voiceSeconds(): number {
@@ -967,29 +967,67 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.audioLoadingId.set(id);
     try {
       const url = await this.fullAttachmentUrl(att);
-      if (!this.audioEl) {
-        this.audioEl = new Audio();
-        this.audioEl.ontimeupdate = () => this.audioPos.set(this.audioEl?.currentTime || 0);
-        this.audioEl.onloadedmetadata = () => {
-          const d = this.audioEl?.duration;
-          if (d && Number.isFinite(d)) this.audioDur.set(d);
-        };
-        this.audioEl.onended = () => { this.audioPos.set(0); this.playingAudioId.set(null); this.audioPaused.set(true); };
-        this.audioEl.onpause = () => this.audioPaused.set(true);
-        this.audioEl.onplay = () => this.audioPaused.set(false);
-      }
-      this.audioEl.pause();
-      this.audioEl.src = url;
-      this.audioPos.set(0);
-      this.audioDur.set(att.duration || 0);
-      this.playingAudioId.set(id);
-      await this.audioEl.play();
+      await this.playUrl(id, url, att.duration || 0);
     } catch {
       this.playingAudioId.set(null);
       this.toast.error('پخش پیام صوتی انجام نشد');
     } finally {
       this.audioLoadingId.set(null);
     }
+  }
+
+  /** پیام صوتیِ نوار پیش از ارسال: پخش و توقف از خودِ فایل محلی (بی شبکه) */
+  public isPickPlaying(p: PickedFile): boolean {
+    return this.playingAudioId() === `pick:${p.key}` && !this.audioPaused();
+  }
+
+  public async togglePickedAudio(p: PickedFile): Promise<void> {
+    const id = `pick:${p.key}`;
+    if (this.playingAudioId() === id && this.audioEl) {
+      if (this.audioEl.paused) { void this.audioEl.play().catch(() => undefined); } else { this.audioEl.pause(); }
+      return;
+    }
+    let url = this.pickAudioUrls.get(p.key);
+    if (!url) { url = URL.createObjectURL(p.file); this.pickAudioUrls.set(p.key, url); }
+    try {
+      await this.playUrl(id, url, this.voiceNameSeconds(p.file.name));
+    } catch {
+      this.playingAudioId.set(null);
+      this.toast.error('پخش پیام صوتی انجام نشد');
+    }
+  }
+
+  /** مدت از نام قراردادی voice_<زمان>_<ثانیه>s.<پسوند> */
+  public voiceNameSeconds(name?: string): number {
+    const m = /_(\d+)s\.[a-z0-9]+$/i.exec(name || '');
+    return m ? Number(m[1]) : 0;
+  }
+
+  private pickAudioUrls = new Map<string, string>();
+
+  private ensureAudioEl(): HTMLAudioElement {
+    if (!this.audioEl) {
+      this.audioEl = new Audio();
+      this.audioEl.ontimeupdate = () => this.audioPos.set(this.audioEl?.currentTime || 0);
+      this.audioEl.onloadedmetadata = () => {
+        const d = this.audioEl?.duration;
+        if (d && Number.isFinite(d)) this.audioDur.set(d);
+      };
+      this.audioEl.onended = () => { this.audioPos.set(0); this.playingAudioId.set(null); this.audioPaused.set(true); };
+      this.audioEl.onpause = () => this.audioPaused.set(true);
+      this.audioEl.onplay = () => this.audioPaused.set(false);
+    }
+    return this.audioEl;
+  }
+
+  private async playUrl(id: string, url: string, duration: number): Promise<void> {
+    const el = this.ensureAudioEl();
+    el.pause();
+    el.src = url;
+    this.audioPos.set(0);
+    this.audioDur.set(duration || 0);
+    this.playingAudioId.set(id);
+    await el.play();
   }
 
   public seekAudio(att: MessageAttachment, value: number): void {
@@ -1008,7 +1046,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   /** بازگرداندن فایل‌ها به نوار، وقتی ارسال پیش از تحویل به سرویس شکست خورد */
   private restorePicked(files: File[]): void {
     const added: PickedFile[] = files.map(file => {
-      const kind: PickedFile['kind'] = file.type.startsWith('image/') ? 'image' : this.isPdfName(file.name, file.type) ? 'pdf' : 'file';
+      const kind = this.pickKind(file);
       return { key: `pick-${++this.pickSeq}`, file, kind, previewUrl: kind === 'image' ? URL.createObjectURL(file) : null };
     });
     this.pickedFiles.set(added);
@@ -1019,6 +1057,18 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   private revokePick(p: PickedFile): void {
     if (p.previewUrl && p.previewUrl.startsWith('blob:')) URL.revokeObjectURL(p.previewUrl);
+    const audioUrl = this.pickAudioUrls.get(p.key);
+    if (audioUrl) {
+      if (this.playingAudioId() === `pick:${p.key}` && this.audioEl) { this.audioEl.pause(); this.playingAudioId.set(null); }
+      URL.revokeObjectURL(audioUrl);
+      this.pickAudioUrls.delete(p.key);
+    }
+  }
+
+  private pickKind(file: File): PickedFile['kind'] {
+    if (file.type.startsWith('image/')) return 'image';
+    if (this.isPdfName(file.name, file.type)) return 'pdf';
+    return this.attachmentKind({ content_type: file.type, file_name: file.name }) === 'audio' ? 'audio' : 'file';
   }
 
   private isPdfName(name?: string, type?: string): boolean {
@@ -1293,6 +1343,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   /** کلیک روی عکس یا PDF: لایت‌باکس با همهٔ عکس‌ها و PDFهای گفتگو؛ فایل‌های دیگر دانلود می‌شوند */
   public openAttachment(msg: ChatMessage, att: MessageAttachment): void {
     const kind = this.attachmentKind(att);
+    if (kind === 'audio') {
+      void this.toggleAudio(att);
+      return;
+    }
     if (kind !== 'image' && kind !== 'pdf') {
       void this.downloadAttachment(att);
       return;

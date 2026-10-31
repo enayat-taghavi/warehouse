@@ -406,4 +406,57 @@ describe('ChatDrawerComponent - Voice Messages (DOM Specs)', () => {
     expect(component.durationFa(75)).toBe('۱:۱۵');
     expect(component.durationFa(3725)).toBe('۱:۰۲:۰۵');
   });
+
+  it('m) review: record-review stops recording without sending; the voice waits in the picked strip, plays locally, and goes out with the normal send', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    (URL as any).createObjectURL = vi.fn(() => 'blob:voice-review');
+    (URL as any).revokeObjectURL = vi.fn();
+    vi.useFakeTimers();
+    try {
+      q('[data-testid="record-start"]')?.click();
+      await vi.advanceTimersByTimeAsync(0);
+      fixture.detectChanges();
+      lastRecorder?.emit(2000);
+      await vi.advanceTimersByTimeAsync(4000);
+      fixture.detectChanges();
+
+      q('[data-testid="record-review"]')?.click();
+      await vi.advanceTimersByTimeAsync(0);
+      fixture.detectChanges();
+
+      expect(comm.sendMessage).not.toHaveBeenCalled();
+      expect(fakeTrack.stop).toHaveBeenCalled();
+      expect(q('[data-testid="recording-bar"]')).toBeNull();
+      expect(component.pickedFiles()).toHaveLength(1);
+      expect(component.pickedFiles()[0].kind).toBe('audio');
+      expect(q('[data-testid="picked-audio"]')).not.toBeNull();
+      expect(q('[data-testid="picked-audio-time"]')?.textContent).toContain('۰:۰۴');
+
+      q('[data-testid="picked-audio-toggle"]')?.click();
+      await vi.advanceTimersByTimeAsync(0);
+      fixture.detectChanges();
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(component.playingAudioId()).toBe('pick:' + component.pickedFiles()[0].key);
+
+      await component.sendMessage();
+      expect(comm.sendMessage).toHaveBeenCalledTimes(1);
+      const sent = (comm.sendMessage as any).mock.calls[0][3] as File[];
+      expect(sent[0].name).toMatch(/_4s\.webm$/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('n) media panel: opening a voice attachment plays it instead of downloading', async () => {
+    const att: MessageAttachment = {
+      id: '9', file_name: 'voice_x_3s.webm', file_size: 3000, content_type: 'audio/webm', duration: 3,
+      download_url: '/api/communications/attachments/9/download/'
+    };
+    const toggle = vi.spyOn(component, 'toggleAudio').mockResolvedValue(undefined);
+    const download = vi.spyOn(component, 'downloadAttachment').mockResolvedValue(undefined);
+    component.openAttachment(makeMsg('m9', '', [att]), att);
+    expect(toggle).toHaveBeenCalledWith(att);
+    expect(download).not.toHaveBeenCalled();
+  });
 });
