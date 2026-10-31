@@ -65,6 +65,7 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
 
 export const TREASURER_NAV_ITEMS: NavItem[] = [
   { id: 'treasurer-disbursements', label: 'پرداخت حقوق و ناوگان', icon: ACCOUNTING_ENTITY_ICONS.payroll, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
+  { id: 'employee-invoices', label: 'ثبت فاکتور', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_invoice_record', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
   { id: 'treasurer-invoices', label: 'تسویه فاکتور و تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
   { id: 'treasurer-bank-accounts', label: 'حساب‌های بانکی و صندوق', icon: ACCOUNTING_ENTITY_ICONS.bankAccounts, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
   { id: 'treasurer-cheques', label: 'مدیریت چک و اسناد', icon: ACCOUNTING_ENTITY_ICONS.cheques, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },

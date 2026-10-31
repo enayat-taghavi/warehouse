@@ -150,12 +150,11 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     ]);
   });
 
-  it('d2) supervisor, accountant and manager personas open the invoice entry page, but no other employee page', () => {
-    for (const role of ['supervisor', 'accountant', 'manager']) {
+  it('d2) supervisor, accountant, manager and treasury personas open the invoice entry page, but no other employee page', () => {
+    for (const role of ['supervisor', 'accountant', 'manager', 'treasury']) {
       expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-invoices')).toBe(false);
       expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-attendance')).toBe(true);
     }
-    expect(isAccountingRouteDeniedForRole('treasury', '/app/finance/employee-invoices')).toBe(true);
   });
 
   it('e) treasurer bundle: resolves treasury persona and treasurer menu items', () => {
@@ -165,6 +164,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     const items = menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, treasurerPerms);
     expect(items).toEqual([
       'treasurer-disbursements',
+      'employee-invoices',
       'treasurer-invoices',
       'treasurer-bank-accounts',
       'treasurer-cheques',
@@ -189,7 +189,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     expect(menuIds(SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS, employeePerms)).toEqual(['employee-invoices']);
     // the accountant bundle holds perm_accounting_reports, so only the reports page of the manager menu opens (plan 4.7 d8)
     expect(menuIds(MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS, accountantPerms)).toEqual(['employee-invoices', 'manager-reports']);
-    expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual([]);
+    expect(menuIds(TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS, managerPerms)).toEqual(['employee-invoices']);
     expect(menuIds(ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS, treasurerPerms)).toEqual(['employee-invoices', 'accountant-counterparties']);
   });
 

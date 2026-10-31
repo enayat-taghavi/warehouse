@@ -114,7 +114,7 @@ export function resolveAccountingRoleCodes(ctx: {
 }
 
 
-/** «ثبت فاکتور» صفحهٔ کارمند است ولی در منوی سرپرست، حسابدار و مدیر هم هست (مجوز perm_invoice_record پیش‌فرض این نقش‌هاست) */
+/** «ثبت فاکتور» صفحهٔ کارمند است ولی در منوی سرپرست، حسابدار، مدیر و خزانه‌دار هم هست (مجوز perm_invoice_record پیش‌فرض این نقش‌هاست) */
 function isSharedInvoiceRoute(cleanRoute: string): boolean {
   return cleanRoute.endsWith('/employee-invoices');
 }
@@ -153,7 +153,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     }
   } else if (role === 'treasury') {
     // خزانه‌دار فقط به امور پرداخت و بانک دسترسی دارد
-    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-')) {
+    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash') && !isSharedInvoiceRoute(cleanRoute)) || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-')) {
       return true;
     }
     if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('manager-approvals')) {
