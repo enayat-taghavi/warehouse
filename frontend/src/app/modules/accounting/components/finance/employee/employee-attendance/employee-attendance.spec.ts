@@ -8,7 +8,6 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
   let component: EmployeeAttendanceHubComponent;
   let mockAuth: any;
   let mockPersonnelApi: any;
-  let mockWhService: any;
   let mockWsService: any;
   let mockToast: any;
   let mockCdr: any;
@@ -111,12 +110,6 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
       periodWorkflowAction: vi.fn().mockReturnValue(of({ message: 'دوره کارکرد جهت بررسی مالی ارسال گردید' }))
     };
 
-    mockWhService = {
-      getAll: vi.fn().mockReturnValue(of([
-        { id: 1, name: 'انبار مرکزی' }
-      ]))
-    };
-
     mockWsService = {
       notifications$: new Subject<any>(),
       connected$: new Subject<boolean>(),
@@ -147,7 +140,6 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
     component = new EmployeeAttendanceHubComponent(
       mockAuth,
       mockPersonnelApi,
-      mockWhService,
       mockWsService,
       mockToast,
       mockCdr,
@@ -421,7 +413,6 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
     });
 
     it('should call exportMonthlyAttendanceExcel passing selectedSectionId for section isolation', () => {
-      component.selectedWarehouseId = 1;
       component.selectedYearMonth = '1405/06';
       component.selectedSectionId = 10;
       component.selectedSection = { id: 10, name: 'بخش مهندسی' } as any;
@@ -434,12 +425,11 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
 
       component.exportMonthlyExcel();
 
-      expect(mockPersonnelApi.exportMonthlyAttendanceExcel).toHaveBeenCalledWith(1, '1405/06', 10);
+      expect(mockPersonnelApi.exportMonthlyAttendanceExcel).toHaveBeenCalledWith(null, '1405/06', 10);
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('دانلود شد'));
     });
 
     it('should open submit modal and submit period for review with section scope', () => {
-      component.selectedWarehouseId = 1;
       component.selectedSectionId = 10;
       component.selectedYearMonth = '1405/06';
 
@@ -450,7 +440,7 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
       component.submitPeriodForReview();
 
       expect(mockPersonnelApi.periodWorkflowAction).toHaveBeenCalledWith({
-        warehouse_id: 1,
+        warehouse_id: null,
         section_id: 10,
         year_month: '1405/06',
         action: 'submit',
@@ -461,7 +451,6 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
     });
 
     it('should append section_id to FormData during monthly excel upload', () => {
-      component.selectedWarehouseId = 1;
       component.selectedSectionId = 10;
       component.selectedYearMonth = '1405/06';
       component.selectedExcelImportFile = new File(['dummy'], 'attendance.xlsx');
@@ -471,7 +460,7 @@ describe('EmployeeAttendanceHubComponent Comprehensive Vitest Suite (Phase 1)', 
       expect(mockPersonnelApi.importMonthlyAttendanceExcel).toHaveBeenCalled();
       const calledFormData: FormData = mockPersonnelApi.importMonthlyAttendanceExcel.mock.calls[0][0];
       expect(calledFormData.get('section_id')).toBe('10');
-      expect(calledFormData.get('warehouse_id')).toBe('1');
+      expect(calledFormData.get('warehouse_id')).toBeNull();
       expect(calledFormData.get('year_month')).toBe('1405/06');
     });
   });

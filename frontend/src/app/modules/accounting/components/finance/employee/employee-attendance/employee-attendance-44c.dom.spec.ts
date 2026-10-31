@@ -11,7 +11,6 @@ import { EmployeeAttendanceHubComponent } from './employee-attendance';
 import { ATTENDANCE_PERIOD_LOCKED_FA } from '../../../../attendance-period-error';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ScopeDirectoryService } from '../../../../../../core/http/scope-directory.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
@@ -40,7 +39,6 @@ describe('EmployeeAttendanceHubComponent 4.4-c DOM Specs', () => {
   let component: EmployeeAttendanceHubComponent;
   let mockAuth: any;
   let mockPersonnelApi: any;
-  let mockWhService: any;
   let mockWsService: any;
   let mockToast: any;
 
@@ -83,12 +81,6 @@ describe('EmployeeAttendanceHubComponent 4.4-c DOM Specs', () => {
       periodWorkflowAction: vi.fn().mockReturnValue(of({ message: 'دوره کارکرد جهت بررسی مالی ارسال گردید' }))
     };
 
-    mockWhService = {
-      getAll: vi.fn().mockReturnValue(of([
-        { id: 1, name: 'انبار مرکزی' }
-      ]))
-    };
-
     mockWsService = {
       notifications$: new Subject<any>(),
       connected$: new Subject<boolean>(),
@@ -109,7 +101,6 @@ describe('EmployeeAttendanceHubComponent 4.4-c DOM Specs', () => {
         provideRouter([]),
         { provide: AuthService, useValue: mockAuth },
         { provide: PersonnelApiService, useValue: mockPersonnelApi },
-        { provide: ScopeDirectoryService, useValue: mockWhService },
         { provide: WebSocketService, useValue: mockWsService },
         { provide: ToastService, useValue: mockToast }
       ]
@@ -245,5 +236,39 @@ describe('EmployeeAttendanceHubComponent 4.4-c DOM Specs', () => {
         action: 'submit'
       })
     );
+  });
+
+  it('has no reference warehouse column or picker', () => {
+    mockPersonnelApi.getAttendanceMatrix.mockReturnValue(of({
+      warehouse_id: null,
+      date_shamsi: '1405/06/08',
+      is_locked: false,
+      period_status: 'OPEN',
+      rows: [
+        {
+          personnel_id: 101,
+          full_name: 'محمد صادقی',
+          national_code: '1234567890',
+          job_title: 'کارشناس',
+          status: 'PRESENT_10H',
+          effective_hours: 10,
+          overtime_hours: 0,
+          advance_payment: 0,
+          notes: '',
+          warehouse_id: null,
+          is_existing: true,
+          _isDirty: false
+        }
+      ]
+    }));
+
+    component.activeMode = 'daily';
+    component.loadAttendanceMatrix();
+    fixture.detectChanges();
+
+    const root: HTMLElement = fixture.nativeElement;
+    const whSelects = root.querySelectorAll('[id^="select-wh-"], [id^="m-select-wh-"]');
+    expect(whSelects.length).toBe(0);
+    expect(root.textContent).not.toContain('انبار مرجع');
   });
 });

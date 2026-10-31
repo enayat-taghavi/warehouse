@@ -10,7 +10,6 @@ import { SKIP_OFFLINE } from '../../../../../../core/interceptors/offline.interc
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ScopeDirectoryService } from '../../../../../../core/http/scope-directory.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import {
   ProjectSection,
@@ -71,11 +70,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   selectedSectionId: number | null = null;
   selectedSection: ProjectSection | null = null;
   isLoadingSections = false;
-
-  // Warehouses (Optional tag assignment per row)
-  warehouses: any[] = [];
-  selectedWarehouseId: number | null = null;
-  isWarehouseMenuOpen = false;
 
   // Date State
   selectedDateShamsi = '';
@@ -220,7 +214,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   constructor(
     public auth: AuthService,
     private personnelApi: PersonnelApiService,
-    private scopeDirectory: ScopeDirectoryService,
     private wsService: WebSocketService,
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
@@ -230,7 +223,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initDefaultDate();
-    this.loadWarehouses();
     this.loadMySections();
     this.setupWebSocket();
   }
@@ -262,17 +254,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       this.fiscalYear = '1405';
       this.attendanceDateControl.setValue('1405/04/01', { emitEvent: false });
     }
-  }
-
-  // --- بارگذاری انبارها (جهت تگ‌گذاری سطرها) ---
-  loadWarehouses(): void {
-    this.scopeDirectory.getAll().subscribe({
-      next: (whs: any[]) => {
-        this.warehouses = whs || [];
-        this.cdr.detectChanges();
-      },
-      error: () => {}
-    });
   }
 
   // --- بارگذاری بخش‌های مجاز کاربر (Guardian G1) ---
@@ -420,7 +401,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     this.selectedPersonnelIds.clear();
     this.selectAllChecked = false;
 
-    this.personnelApi.getAttendanceMatrix(this.selectedWarehouseId, this.selectedDateShamsi, {
+    this.personnelApi.getAttendanceMatrix(null, this.selectedDateShamsi, {
       section_id: this.selectedSectionId
     }).subscribe({
       next: res => {
@@ -446,7 +427,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   refreshAttendanceMatrixSilently(forceFresh = true): void {
     if (!this.selectedDateShamsi || !this.selectedSectionId) return;
     const context = forceFresh ? new HttpContext().set(SKIP_OFFLINE, true) : undefined;
-    this.personnelApi.getAttendanceMatrix(this.selectedWarehouseId, this.selectedDateShamsi, {
+    this.personnelApi.getAttendanceMatrix(null, this.selectedDateShamsi, {
       context,
       section_id: this.selectedSectionId
     }).subscribe({
@@ -648,7 +629,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     this.isAttendanceLoading = true;
     const yesterdayStr = this.shiftShamsiDay(this.selectedDateShamsi, -1);
 
-    this.personnelApi.getAttendanceMatrix(this.selectedWarehouseId, yesterdayStr, {
+    this.personnelApi.getAttendanceMatrix(null, yesterdayStr, {
       section_id: this.selectedSectionId
     }).subscribe({
       next: res => {
@@ -879,9 +860,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     }
     const formData = new FormData();
     formData.append('file', file);
-    if (this.selectedWarehouseId) {
-      formData.append('warehouse_id', this.selectedWarehouseId.toString());
-    }
     if (this.selectedSectionId) {
       formData.append('section_id', this.selectedSectionId.toString());
     }
@@ -936,13 +914,13 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     this.isSavingAttendance = true;
 
     const payload = {
-      warehouse_id: this.selectedWarehouseId,
+      warehouse_id: null,
       section_id: this.selectedSectionId,
       date_shamsi: this.selectedDateShamsi,
       client_tab_id: this.wsService.tabId,
       items: dirtyRows.map(r => ({
         personnel_id: r.personnel_id,
-        warehouse_id: r.warehouse_id || this.selectedWarehouseId || null,
+        warehouse_id: r.warehouse_id ?? null,
         status: r.status || '',
         effective_hours: Number(r.effective_hours) || 0,
         overtime_hours: Number(r.overtime_hours) || 0,
@@ -965,7 +943,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
         this.toast.show('success', res.message || (this.hasExistingAttendance ? 'کارکرد روزانه با موفقیت به‌روزرسانی شد' : 'کارکرد روزانه با موفقیت ثبت شد'));
 
         if (this.selectedYearMonth) {
-          this.personnelApi.getMonthlyAttendanceGrid(this.selectedWarehouseId, this.selectedYearMonth, {
+          this.personnelApi.getMonthlyAttendanceGrid(null, this.selectedYearMonth, {
             context: new HttpContext().set(SKIP_OFFLINE, true),
             section_id: this.selectedSectionId!
           }).subscribe({
@@ -997,7 +975,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     this.hasUnsavedMonthlyGrid = false;
     this.dirtyMonthlyCells.clear();
 
-    this.personnelApi.getMonthlyAttendanceGrid(this.selectedWarehouseId, this.selectedYearMonth, {
+    this.personnelApi.getMonthlyAttendanceGrid(null, this.selectedYearMonth, {
       section_id: this.selectedSectionId
     }).subscribe({
       next: (res: MonthlyGridResponse) => {
@@ -1023,7 +1001,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   refreshMonthlyGridSilently(forceFresh = true): void {
     if (!this.selectedYearMonth || !this.selectedSectionId) return;
     const context = forceFresh ? new HttpContext().set(SKIP_OFFLINE, true) : undefined;
-    this.personnelApi.getMonthlyAttendanceGrid(this.selectedWarehouseId, this.selectedYearMonth, {
+    this.personnelApi.getMonthlyAttendanceGrid(null, this.selectedYearMonth, {
       context,
       section_id: this.selectedSectionId
     }).subscribe({
@@ -1086,7 +1064,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     }
 
     this.personnelApi.bulkSaveMonthlyGrid({
-      warehouse_id: this.selectedWarehouseId,
+      warehouse_id: null,
       section_id: this.selectedSectionId,
       year_month: this.selectedYearMonth,
       client_tab_id: this.wsService.tabId,
@@ -1284,7 +1262,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   exportMonthlyExcel(): void {
     if (!this.selectedYearMonth) return;
     this.isExportingMonthlyExcel = true;
-    this.personnelApi.exportMonthlyAttendanceExcel(this.selectedWarehouseId, this.selectedYearMonth, this.selectedSectionId).subscribe({
+    this.personnelApi.exportMonthlyAttendanceExcel(null, this.selectedYearMonth, this.selectedSectionId).subscribe({
       next: (blob: Blob) => {
         this.isExportingMonthlyExcel = false;
         const secName = this.selectedSection?.name || 'all_sections';
@@ -1326,9 +1304,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     this.isImportingMonthlyExcel = true;
     const formData = new FormData();
     formData.append('file', this.selectedExcelImportFile);
-    if (this.selectedWarehouseId) {
-      formData.append('warehouse_id', this.selectedWarehouseId.toString());
-    }
     if (this.selectedSectionId) {
       formData.append('section_id', this.selectedSectionId.toString());
     }
@@ -1352,8 +1327,8 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   // --- ۶. گردش کار ارسال کارکرد به واحد مالی ---
   openSubmitModal(): void {
-    if (!this.selectedSectionId && !this.selectedWarehouseId) {
-      this.toast.show('warning', 'برای ارسال کارکرد ماهانه به واحد مالی، لطفاً ابتدا یک بخش یا انبار مشخص را انتخاب کنید.');
+    if (!this.selectedSectionId) {
+      this.toast.show('warning', 'برای ارسال کارکرد ماهانه به واحد مالی، لطفاً ابتدا یک بخش مشخص را انتخاب کنید.');
       return;
     }
     this.submitNotes = '';
@@ -1367,7 +1342,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     }
     this.isSubmittingWorkflow = true;
     this.personnelApi.periodWorkflowAction({
-      warehouse_id: this.selectedWarehouseId,
+      warehouse_id: null,
       section_id: this.selectedSectionId,
       year_month: this.selectedYearMonth,
       action: 'submit',
@@ -1450,7 +1425,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   // --- ناوبری صفحه کلید (Keyboard Grid Ergonomics) ---
-  onAttendanceGridKeydown(event: KeyboardEvent, colType: 'status' | 'eff' | 'ot' | 'adv' | 'note' | 'wh', rowIndex: number, statusType?: string, row?: AttendanceMatrixRow): void {
+  onAttendanceGridKeydown(event: KeyboardEvent, colType: 'status' | 'eff' | 'ot' | 'adv' | 'note', rowIndex: number, statusType?: string, row?: AttendanceMatrixRow): void {
     const key = event.key;
 
     if (colType === 'status') {
@@ -1499,14 +1474,14 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
     if (key === 'ArrowUp') {
       event.preventDefault();
-      const prevEl = document.getElementById(colType === 'wh' ? `select-wh-${rowIndex - 1}` : `input-${colType}-${rowIndex - 1}`);
+      const prevEl = document.getElementById(`input-${colType}-${rowIndex - 1}`);
       if (prevEl) {
         (prevEl as HTMLElement).focus();
         (prevEl as HTMLInputElement).select?.();
       }
     } else if (key === 'ArrowDown' || key === 'Enter') {
       event.preventDefault();
-      const nextEl = document.getElementById(colType === 'wh' ? `select-wh-${rowIndex + 1}` : `input-${colType}-${rowIndex + 1}`);
+      const nextEl = document.getElementById(`input-${colType}-${rowIndex + 1}`);
       if (nextEl) {
         (nextEl as HTMLElement).focus();
         (nextEl as HTMLInputElement).select?.();
@@ -1522,7 +1497,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
         if (colType === 'eff') nextColId = `input-ot-${rowIndex}`;
         else if (colType === 'ot') nextColId = `input-adv-${rowIndex}`;
         else if (colType === 'adv') nextColId = `input-note-${rowIndex}`;
-        else if (colType === 'note') nextColId = `select-wh-${rowIndex}`;
         if (nextColId) {
           const el = document.getElementById(nextColId);
           if (el) {
@@ -1537,8 +1511,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       if (isAtStart || target.type === 'number' || target.tagName === 'SELECT') {
         event.preventDefault();
         let prevColId = '';
-        if (colType === 'wh') prevColId = `input-note-${rowIndex}`;
-        else if (colType === 'note') prevColId = `input-adv-${rowIndex}`;
+        if (colType === 'note') prevColId = `input-adv-${rowIndex}`;
         else if (colType === 'adv') prevColId = `input-ot-${rowIndex}`;
         else if (colType === 'ot') prevColId = `input-eff-${rowIndex}`;
         else if (colType === 'eff') {
@@ -1593,14 +1566,12 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     if (event) event.stopPropagation();
     this.isAttendanceDatePickerOpen = !this.isAttendanceDatePickerOpen;
     this.isMonthPickerOpen = false;
-    this.isWarehouseMenuOpen = false;
     this.cdr.detectChanges();
   }
 
   openAttendanceDatePicker(): void {
     this.isAttendanceDatePickerOpen = true;
     this.isMonthPickerOpen = false;
-    this.isWarehouseMenuOpen = false;
     this.cdr.detectChanges();
   }
 

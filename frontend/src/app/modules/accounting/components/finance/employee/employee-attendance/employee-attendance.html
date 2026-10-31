@@ -291,13 +291,12 @@
               <th class="p-2.5 w-20 text-center bg-slate-100/70">مجموع ساعات</th>
               <th class="p-2.5 w-28 text-center">مساعده (ریال)</th>
               <th class="p-2.5 min-w-[180px]">توضیحات روزانه</th>
-              <th class="p-2.5 w-32 text-center">انبار مرجع</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <!-- Loading Indicator -->
             <tr *ngIf="isAttendanceLoading">
-              <td colspan="10" class="p-8 text-center text-slate-400 font-bold">
+              <td colspan="9" class="p-8 text-center text-slate-400 font-bold">
                 <div class="flex items-center justify-center gap-2">
                   <span class="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></span>
                   <span>در حال بارگذاری کارکرد روزانه بخش...</span>
@@ -307,7 +306,7 @@
 
             <!-- Empty State -->
             <tr *ngIf="!isAttendanceLoading && filteredAttendanceRows.length === 0">
-              <td colspan="10" class="p-8 text-center text-slate-400 font-medium">
+              <td colspan="9" class="p-8 text-center text-slate-400 font-medium">
                 هیچ پرسنلی در این بخش یافت نشد. پرسنل باید به این بخش منتسب باشند.
               </td>
             </tr>
@@ -383,14 +382,6 @@
               <td class="p-2 min-w-[180px]">
                 <input [id]="'input-note-' + idx" type="text" [(ngModel)]="row.notes" (ngModelChange)="onAttendanceCellChange(row)" (keydown)="onAttendanceGridKeydown($event, 'note', idx, undefined, row)" [disabled]="isPeriodLocked" placeholder="توضیحات روزانه..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </td>
-
-              <!-- انبار مرجع (شناور یا اختصاصی) -->
-              <td class="p-2 w-32">
-                <select [id]="'select-wh-' + idx" [(ngModel)]="row.warehouse_id" (ngModelChange)="onAttendanceCellChange(row)" (keydown)="onAttendanceGridKeydown($event, 'wh', idx, undefined, row)" [disabled]="isPeriodLocked" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                  <option [ngValue]="null">🌐 شناور</option>
-                  <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{ wh.name }}</option>
-                </select>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -425,13 +416,6 @@
                 <span *ngIf="row.job_title" class="text-slate-500 font-sans">• {{ row.job_title }}</span>
               </div>
             </div>
-          </div>
-
-          <div class="shrink-0">
-            <select [id]="'m-select-wh-' + idx" [(ngModel)]="row.warehouse_id" (ngModelChange)="onAttendanceCellChange(row)" [disabled]="isPeriodLocked" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-              <option [ngValue]="null">🌐 شناور</option>
-              <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{ wh.name }}</option>
-            </select>
           </div>
         </div>
 
