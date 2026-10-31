@@ -1,4 +1,4 @@
-import { Router, Routes } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { AppPersonaService } from '../../core/services/app-persona.service';
 import { ActiveCompanyService } from '../../core/services/active-company.service';
@@ -122,7 +122,13 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'timesheet', redirectTo: 'employee-attendance', pathMatch: 'full' },
   { path: 'fleet', redirectTo: 'employee-fleet', pathMatch: 'full' },
   { path: 'fleet-attendance', redirectTo: 'employee-fleet', pathMatch: 'full' },
-  { path: 'manager-approvals', component: ManagerApprovals, data: { reuse: true } },
+  {
+    path: 'manager-approvals', component: ManagerApprovals, data: { reuse: true },
+    // زیرتب قدیمی فاکتور مدیر به تب یکپارچهٔ «فاکتورها» رفت؛ هدایت در گارد تا با بار اول صفحه هم کار کند
+    canActivate: [(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => route.queryParams['tab'] === 'invoices'
+      ? inject(Router).createUrlTree([state.url.split('?')[0].replace(/manager-approvals$/, 'invoices')], { queryParams: { view: 'cartable' } })
+      : true]
+  },
   { path: 'treasury-cartable', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
   { path: 'treasury', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
   { path: 'profiles', component: PersonnelProfilesHub, data: { reuse: true } },
