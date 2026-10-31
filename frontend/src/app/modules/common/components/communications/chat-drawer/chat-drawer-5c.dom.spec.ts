@@ -310,6 +310,16 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     expect(component.filteredConversations().map(c => c.id)).toEqual(['g1', 'a1']);
     expect(component.convKindCount('group')).toBe(2);
     expect(component.convKindCount('all')).toBe(3);
+
+    // بالای فهرست یک ردیف است: جستجو تا زدن دکمهٔ جستجو پنهان است و «همکاران» کنار صافی است
+    expect(el.querySelector('[data-testid="drawer-search-input"]')).toBeNull();
+    (el.querySelector('[data-testid="conv-search-btn"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="drawer-search-input"]')).toBeTruthy();
+    (el.querySelector('[data-testid="open-contacts-btn"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.activeTab()).toBe('contacts');
+    expect(el.querySelector('[data-testid="conv-filter"]')).toBeNull();
   });
 
   it('8. a file named x.svg passed to addFiles is refused (strip stays empty) and ToastService.show was called with "error"', async () => {

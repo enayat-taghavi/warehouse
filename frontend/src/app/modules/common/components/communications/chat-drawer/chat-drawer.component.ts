@@ -8,7 +8,6 @@ import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
-import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob } from '../../../../../core/platform/file-output';
@@ -48,20 +47,23 @@ export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent, DocumentPreviewComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
 export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked {
-  readonly drawerTabs: TabDef[] = [
-    { id: 'conversations', label: 'گفتگوها', shortLabel: 'گفتگوها', icon: 'message-square' },
-    { id: 'contacts', label: 'همکاران و پرسنل', shortLabel: 'همکاران', icon: 'users' },
-  ];
+  /** صفحهٔ «همکاران» (شروع گفتگو و ساخت گروه) از دکمهٔ کنار صافی گفتگوها باز می‌شود */
+  openContacts(): void {
+    this.searchQuery.set('');
+    this.searchOpen.set(false);
+    this.activeTab.set('contacts');
+  }
 
-  onTabSelect(tabId: string): void {
-    if (tabId === 'conversations' || tabId === 'contacts') {
-      this.activeTab.set(tabId);
-    }
+  /** جستجوی فهرست گفتگوها فقط با دکمهٔ جستجو باز می‌شود تا بالای فهرست یک ردیف بماند */
+  toggleSearch(): void {
+    const open = !this.searchOpen();
+    this.searchOpen.set(open);
+    if (!open) this.searchQuery.set('');
   }
   public commService = inject(CommunicationService);
   private state = inject(StateService);
@@ -85,6 +87,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public contacts = signal<UserShort[]>([]);
   
   public searchQuery = signal<string>('');
+  public searchOpen = signal<boolean>(false);
   /** صافی فهرست گفتگوها: همه، شخصی یا گروه */
   public convFilter = signal<'all' | 'direct' | 'group'>('all');
   readonly convFilters: { id: 'all' | 'direct' | 'group'; label: string }[] = [
@@ -1184,6 +1187,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.commService.activeConversation$.next(null);
     }
     this.activeConv.set(null);
+    if (this.activeTab() === 'contacts') this.searchQuery.set('');
     this.activeTab.set('conversations');
   }
 

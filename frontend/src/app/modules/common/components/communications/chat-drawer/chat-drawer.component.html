@@ -22,7 +22,7 @@
     
     <!-- Title or Back Button -->
     <div class="flex items-center gap-2">
-      <button *ngIf="activeTab() === 'chat'" appAction="back" display="icon" (click)="backToList()"></button>
+      <button *ngIf="activeTab() === 'chat' || activeTab() === 'contacts'" appAction="back" display="icon" (click)="backToList()" data-testid="drawer-back"></button>
 
       <div *ngIf="activeTab() === 'chat' && activeConv()" class="flex items-center gap-2.5">
         <div class="relative">
@@ -53,16 +53,25 @@
         </div>
       </div>
 
-      <div *ngIf="activeTab() !== 'chat'" class="flex items-center gap-2">
+      <div *ngIf="activeTab() === 'conversations'" class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-chat"></svg>
         </div>
         <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">پیام‌رسان سازمانی</h2>
       </div>
+      <h2 *ngIf="activeTab() === 'contacts'" data-testid="contacts-title" class="text-sm font-bold text-fg">همکاران و پرسنل</h2>
     </div>
 
-    <!-- Actions: Mute & Close -->
+    <!-- Actions: Search, Mute & Close -->
     <div class="flex items-center gap-1">
+      <button *ngIf="activeTab() === 'conversations'" type="button" (click)="toggleSearch()"
+              data-testid="conv-search-btn" [attr.aria-pressed]="searchOpen()"
+              title="جستجو در گفتگوها" aria-label="جستجو در گفتگوها"
+              [class.text-indigo-600]="searchOpen()" [class.bg-indigo-50]="searchOpen()"
+              class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center cursor-pointer tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-search"></svg>
+      </button>
+
       <button *ngIf="activeTab() === 'chat' && isGroup()" type="button" (click)="openInfo()"
               data-testid="group-info-btn"
               title="اطلاعات گروه" aria-label="اطلاعات گروه"
@@ -83,18 +92,32 @@
     </div>
   </div>
 
-  <!-- ─── Tab Navigation (If not in chat thread) ─── -->
+  <!-- ─── بالای فهرست: یک ردیف (همه، شخصی، گروه + همکاران) ─── -->
   <div *ngIf="activeTab() !== 'chat'" class="px-4 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-    <app-tab-bar
-      [tabs]="drawerTabs"
-      [active]="activeTab()"
-      mobile="short"
-      fullLabelFrom="sm"
-      (activeChange)="onTabSelect($event)"
-    />
+    <div *ngIf="activeTab() === 'conversations'" class="flex items-center gap-2">
+      <div role="radiogroup" aria-label="نوع گفتگو" data-testid="conv-filter"
+           class="flex-1 min-w-0 flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
+        <button *ngFor="let f of convFilters" type="button" role="radio"
+                [attr.aria-checked]="convFilter() === f.id" [attr.data-testid]="'conv-filter-' + f.id"
+                (click)="convFilter.set(f.id)"
+                [class.bg-white]="convFilter() === f.id" [class.text-indigo-700]="convFilter() === f.id"
+                [class.shadow-sm]="convFilter() === f.id" [class.font-black]="convFilter() === f.id"
+                [class.text-slate-600]="convFilter() !== f.id" [class.font-bold]="convFilter() !== f.id"
+                class="flex-1 min-w-0 min-h-[40px] px-1.5 rounded-lg text-xs flex items-center justify-center gap-1 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <span>{{ f.label }}</span>
+          <span class="text-[10px] font-mono font-bold px-1 rounded-md tabular-nums"
+                [class.bg-indigo-50]="convFilter() === f.id" [class.bg-slate-200]="convFilter() !== f.id">{{ convKindCount(f.id).toLocaleString('fa-IR') }}</span>
+        </button>
+      </div>
+      <button type="button" (click)="openContacts()" data-testid="open-contacts-btn"
+              title="همکاران و شروع گفتگو" aria-label="همکاران و شروع گفتگو"
+              class="shrink-0 self-stretch min-w-[44px] px-2.5 rounded-xl border border-line text-indigo-700 bg-indigo-50 hover:bg-indigo-100 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="user-plus"></svg>
+        <span class="hidden sm:inline">همکاران</span>
+      </button>
+    </div>
 
-    <!-- Search Input -->
-    <div *ngIf="activeTab() === 'conversations' && canCreateGroup()" class="mt-2.5">
+    <div *ngIf="activeTab() === 'contacts' && canCreateGroup()" class="mb-2.5">
       <button type="button" (click)="openCreate()" data-testid="new-group-btn"
               title="گروه جدید" aria-label="گروه جدید"
               class="w-full min-h-[40px] px-3 rounded-xl border border-line text-fg text-xs font-bold hover:bg-surface-muted transition-colors flex items-center justify-center gap-2 cursor-pointer tap-target">
@@ -103,25 +126,12 @@
       </button>
     </div>
 
-    <div *ngIf="activeTab() === 'conversations'" role="radiogroup" aria-label="نوع گفتگو" data-testid="conv-filter"
-         class="mt-2.5 flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 w-full">
-      <button *ngFor="let f of convFilters" type="button" role="radio"
-              [attr.aria-checked]="convFilter() === f.id" [attr.data-testid]="'conv-filter-' + f.id"
-              (click)="convFilter.set(f.id)"
-              [class.bg-white]="convFilter() === f.id" [class.text-indigo-700]="convFilter() === f.id"
-              [class.shadow-sm]="convFilter() === f.id" [class.font-black]="convFilter() === f.id"
-              [class.text-slate-600]="convFilter() !== f.id" [class.font-bold]="convFilter() !== f.id"
-              class="flex-1 min-h-[40px] px-2 rounded-lg text-xs flex items-center justify-center gap-1.5 hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-        <span>{{ f.label }}</span>
-        <span class="text-[10px] font-mono font-bold px-1.5 rounded-md tabular-nums"
-              [class.bg-indigo-50]="convFilter() === f.id" [class.bg-slate-200]="convFilter() !== f.id">{{ convKindCount(f.id).toLocaleString('fa-IR') }}</span>
-      </button>
-    </div>
-
-    <div class="mt-2.5 relative">
-      <input type="text"
-             [ngModel]="searchQuery()" 
+    <div *ngIf="activeTab() === 'contacts' || searchOpen() || searchQuery()" class="relative"
+         [class.mt-2.5]="activeTab() === 'conversations'">
+      <input type="text" data-testid="drawer-search-input"
+             [ngModel]="searchQuery()"
              (ngModelChange)="searchQuery.set($event)"
+             [attr.aria-label]="activeTab() === 'conversations' ? 'جستجو در گفتگوها' : 'جستجوی نام همکار'"
              [placeholder]="activeTab() === 'conversations' ? 'جستجو در گفتگوها...' : 'جستجوی نام همکار...'"
              class="w-full bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-800 dark:text-slate-100 pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
       <svg class="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-search"></svg>
@@ -135,7 +145,7 @@
     <div *ngIf="activeTab() === 'conversations'" class="p-2 space-y-1">
       <div *ngIf="filteredConversations().length === 0" class="text-center py-12 text-slate-400 text-xs">
         <ng-container *ngIf="convFilter() === 'group' && !searchQuery().trim(); else noConvText">هنوز گروهی ندارید.</ng-container>
-        <ng-template #noConvText>گفتگویی یافت نشد. از تب «همکاران و پرسنل» پیام جدیدی ارسال کنید.</ng-template>
+        <ng-template #noConvText>گفتگویی یافت نشد. با دکمهٔ «همکاران» گفتگوی تازه شروع کنید.</ng-template>
       </div>
 
       <button *ngFor="let conv of filteredConversations(); trackBy: trackByConvId"

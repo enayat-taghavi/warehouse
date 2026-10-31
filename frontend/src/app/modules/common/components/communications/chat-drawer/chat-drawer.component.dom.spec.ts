@@ -116,18 +116,29 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   beforeEach(() => TestBed.resetTestingModule());
 
+  /** گروه جدید در صفحهٔ «همکاران» است که با دکمهٔ کنار صافی باز می‌شود */
+  const openContacts = async () => {
+    q('[data-testid="open-contacts-btn"]')!.click();
+    await flush(fixture);
+  };
+
   it('hides the new-group button when can_create_group is false', async () => {
     await setup({ canCreate: false });
+    await openContacts();
     expect(q('[data-testid="new-group-btn"]')).toBeNull();
   });
 
   it('shows the new-group button when can_create_group is true', async () => {
     await setup({ canCreate: true });
+    expect(q('[data-testid="new-group-btn"]')).toBeNull();
+    await openContacts();
+    expect(q('[data-testid="contacts-title"]')).not.toBeNull();
     expect(q('[data-testid="new-group-btn"]')).not.toBeNull();
   });
 
   it('create dialog submits the trimmed title and selected ids', async () => {
     await setup({ canCreate: true });
+    await openContacts();
     q('[data-testid="new-group-btn"]')!.click();
     await flush(fixture);
     expect(q('[data-testid="create-dialog"]')).not.toBeNull();
@@ -151,6 +162,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
   it('keeps the dialog state and shows a Persian error when creation fails', async () => {
     await setup({ canCreate: true });
     comm.createGroup.mockRejectedValue({ status: 400, error: { user_ids: ['x'] } });
+    await openContacts();
     q('[data-testid="new-group-btn"]')!.click();
     await flush(fixture);
     const input = q('[data-testid="group-title-input"]') as HTMLInputElement;
