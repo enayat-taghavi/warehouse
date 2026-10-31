@@ -240,7 +240,7 @@ export class PersonnelApiService {
   getExpenseHeads(companyId: number, activeOnly = false): Observable<ExpenseHead[]> { return this.treasuryOrg.getExpenseHeads(companyId, activeOnly); }
   getExpenseInvoices(params?: { section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> { return this.treasuryOrg.getExpenseInvoices(params); }
   createExpenseInvoice(data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> { return this.treasuryOrg.createExpenseInvoice(data); }
-  updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice>): Observable<ExpenseInvoice> { return this.treasuryOrg.updateExpenseInvoice(id, data); }
+  updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> { return this.treasuryOrg.updateExpenseInvoice(id, data); }
   deleteExpenseInvoice(id: number): Observable<void> { return this.treasuryOrg.deleteExpenseInvoice(id); }
   submitExpenseInvoice(id: number): Observable<ExpenseInvoice> { return this.treasuryOrg.submitExpenseInvoice(id); }
   approveExpenseInvoice(id: number): Observable<ExpenseInvoice> { return this.treasuryOrg.approveExpenseInvoice(id); }

@@ -280,7 +280,7 @@ export class TreasuryOrgApiService {
     return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices`, data);
   }
 
-  updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice>): Observable<ExpenseInvoice> {
+  updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> {
     return this.api.patch<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}`, data);
   }
 

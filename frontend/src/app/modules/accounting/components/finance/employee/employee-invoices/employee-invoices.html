@@ -367,16 +367,26 @@
               <span>+ تعریف سریع طرف‌حساب جدید</span>
             </button>
           </div>
-          <select
-            [(ngModel)]="newInvoice.counterparty"
-            (ngModelChange)="onDuplicateKeyChange()"
-            aria-label="طرف‌حساب"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-            <option [ngValue]="undefined" disabled>انتخاب طرف‌حساب از لیست...</option>
-            <option *ngFor="let cp of counterparties" [value]="cp.id">
-              {{ cp.name }} ({{ cp.counterparty_type_display || cp.counterparty_type }})
-            </option>
-          </select>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="relative">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" aria-hidden="true"
+                class="absolute top-1/2 -translate-y-1/2 start-3 text-fg-muted pointer-events-none"></svg>
+              <input type="search" id="invoice_counterparty_search"
+                [ngModel]="counterpartySearch" (ngModelChange)="onCounterpartySearch($event)"
+                placeholder="جستجوی نام، کد ملی یا تلفن" aria-label="جستجوی طرف‌حساب"
+                class="min-h-[40px] ps-8 w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+            </div>
+            <select
+              [(ngModel)]="newInvoice.counterparty"
+              (ngModelChange)="onDuplicateKeyChange()"
+              aria-label="طرف‌حساب"
+              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <option [ngValue]="undefined" disabled>{{ filteredCounterparties.length ? 'انتخاب طرف‌حساب از لیست...' : 'طرف‌حسابی پیدا نشد' }}</option>
+              <option *ngFor="let cp of filteredCounterparties" [ngValue]="cp.id">
+                {{ cp.name }} ({{ cp.counterparty_type_display || cp.counterparty_type }})
+              </option>
+            </select>
+          </div>
         </div>
 
         <!-- شماره فاکتور و تاریخ شمسی -->
@@ -393,17 +403,21 @@
               class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
           </div>
           <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ فاکتور (شمسی) *</label>
-            <input
-              type="text"
-              [(ngModel)]="newInvoice.invoice_date_shamsi"
-              (ngModelChange)="invoiceDateError = ''"
-              placeholder="۱۴۰۵/۰۱/۰۱"
-              aria-label="تاریخ فاکتور (شمسی)"
-              [attr.aria-invalid]="!!invoiceDateError"
-              [attr.aria-describedby]="invoiceDateError ? 'invoice_date_error' : null"
-              [class.border-rose-400]="!!invoiceDateError"
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+            <label for="invoice_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ فاکتور (شمسی) *</label>
+            <div class="relative datepicker-left">
+              <ng-persian-datepicker [dateFormat]="'YYYY/MM/DD'" [uiHideAfterSelectDate]="true">
+                <input
+                  id="invoice_date"
+                  type="text"
+                  [formControl]="invoiceDateControl"
+                  placeholder="۱۴۰۵/۰۱/۰۱"
+                  autocomplete="off"
+                  [attr.aria-invalid]="!!invoiceDateError"
+                  [attr.aria-describedby]="invoiceDateError ? 'invoice_date_error' : null"
+                  [class.border-rose-400]="!!invoiceDateError"
+                  class="min-h-[40px] font-mono w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+              </ng-persian-datepicker>
+            </div>
             @if (invoiceDateError) {
               <p id="invoice_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ invoiceDateError }}</p>
             }
@@ -462,7 +476,7 @@
             @for (line of formLines; track $index; let i = $index) {
               <div class="rounded-2xl border border-line bg-surface-muted/40 p-2.5 md:p-1.5 md:bg-transparent md:border-0 md:rounded-none"
                    [class.border-rose-400]="!!lineErrors[i]">
-                <div class="grid grid-cols-2 md:grid-cols-12 gap-2 items-start">
+                <div class="grid grid-cols-2 md:grid-cols-12 gap-2 items-start" (keydown.enter)="onLineEnter(i, $event)">
                   <div class="col-span-2 md:col-span-3">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_desc_' + i">شرح</label>
                     <input type="text" [id]="'line_desc_' + i" [(ngModel)]="line.description" [name]="'line_desc_' + i"
@@ -536,8 +550,19 @@
           <p id="invoice_description_hint" class="mt-1 text-[11px] text-fg-muted">از شرح ردیف اول پر می‌شود؛ اگر خودتان تغییرش دهید، دیگر عوض نمی‌شود.</p>
         </div>
 
-        <!-- تخفیف و مالیات -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- تخفیف و مالیات (پیش‌فرض بسته) -->
+        <button type="button" (click)="showTotalsExtras = !showTotalsExtras"
+          [attr.aria-expanded]="showTotalsExtras" aria-controls="invoice_totals_extras"
+          class="min-h-[40px] inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" aria-hidden="true"
+            class="transition-transform" [class.rotate-180]="showTotalsExtras"></svg>
+          <span>تخفیف و مالیات</span>
+          @if (!showTotalsExtras && (discountAmount > 0 || vatApplicable)) {
+            <span class="font-medium text-fg-muted">(دارد)</span>
+          }
+        </button>
+        @if (showTotalsExtras) {
+        <div id="invoice_totals_extras" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label for="invoice_discount" class="block text-[11px] font-bold text-slate-700 mb-1">تخفیف کل فاکتور (ریال)</label>
             <app-amount-input inputId="invoice_discount" ariaLabel="تخفیف کل فاکتور (ریال)" placeholder="۰"
@@ -569,6 +594,7 @@
             }
           </div>
         </div>
+        }
 
         <!-- جمع‌های زنده (جمع نهایی را سرور حساب می‌کند) -->
         <dl class="p-3 rounded-2xl border border-line bg-surface-muted/50 text-xs space-y-1" aria-live="polite">
@@ -579,10 +605,27 @@
           <p class="text-[11px] text-emerald-700 font-bold" *ngIf="payableAmount > 0">معادل: {{ formatNumber(Math.floor(payableAmount / 10)) }} تومان</p>
         </dl>
 
-        <!-- فایل پیوست فاکتور (فقط هنگام ثبت تازه) -->
-        <div *ngIf="!editingInvoiceId">
+        <!-- فایل پیوست فاکتور (در ویرایش، فایل تازه جای پیوست فعلی را می‌گیرد) -->
+        <div>
           <label class="block text-[11px] font-bold text-slate-700 mb-1">تصویر یا فایل پیوست فاکتور</label>
-          <div class="flex items-center gap-2">
+          @if (editingInvoiceId && existingAttachmentUrl && !attachmentFileName) {
+            <p class="mb-1.5 text-[11px] text-fg-muted">
+              پیوست فعلی:
+              <a [href]="existingAttachmentUrl | serverUrl" target="_blank" rel="noopener" class="font-bold text-indigo-700 underline">مشاهده</a>
+              — برای جایگزینی، فایل تازه انتخاب کنید.
+            </p>
+          }
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="md:hidden min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera" aria-hidden="true"></svg>
+              <span>عکس با دوربین</span>
+              <input
+                type="file"
+                (change)="onInvoiceFileSelected($event)"
+                accept="image/*"
+                capture="environment"
+                class="hidden" />
+            </label>
             <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5">
               <span>📎 انتخاب فایل...</span>
               <input
@@ -596,7 +639,8 @@
               <button
                 type="button"
                 (click)="removeSelectedAttachment()"
-                class="text-rose-500 hover:text-rose-700 font-black mr-1 cursor-pointer">
+                title="حذف فایل انتخاب‌شده" aria-label="حذف فایل انتخاب‌شده"
+                class="min-w-[32px] min-h-[32px] text-rose-500 hover:text-rose-700 font-black ms-1 cursor-pointer">
                 ✕
               </button>
             </span>
@@ -609,21 +653,38 @@
       </div>
 
       <!-- فوتر مودال -->
-      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-end gap-2">
         <button
           type="button"
           appAction="close"
-          display="label"
           label="انصراف"
           (click)="closeNewInvoiceModal()">
         </button>
+        @if (!editingInvoiceId) {
+          <button
+            type="button"
+            appAction="create"
+            label="ذخیره و فاکتور بعدی"
+            hint="ذخیرهٔ پیش‌نویس و باز شدن فرم خالی با همان تاریخ"
+            [busy]="isSaving"
+            (click)="saveInvoice('new')">
+          </button>
+        }
         <button
           type="button"
           appAction="save"
-          display="label"
-          label="ذخیره فاکتور پیش‌نویس"
+          label="ذخیره پیش‌نویس"
           [busy]="isSaving"
           (click)="saveInvoice()">
+        </button>
+        <button
+          type="button"
+          appAction="send"
+          label="ذخیره و ارسال به سرپرست"
+          [hint]="isOffline ? 'ارسال فقط در حالت آنلاین ممکن است' : 'ذخیره و ارسال فوری به کارتابل سرپرست'"
+          [disabled]="isOffline"
+          [busy]="isSaving"
+          (click)="saveInvoice('send')">
         </button>
       </div>
 

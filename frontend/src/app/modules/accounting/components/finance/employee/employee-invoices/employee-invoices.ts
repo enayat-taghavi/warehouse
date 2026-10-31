@@ -6,7 +6,8 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
 import { Subscription } from 'rxjs';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
+import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectSection, Counterparty, ExpenseInvoice, ExpenseInvoiceLine, InvoiceDuplicatesResponse } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
@@ -42,10 +43,20 @@ export interface InvoiceLineForm {
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
+/** ارقام فارسی/عربی به لاتین (تاریخ تقویم) */
+function toAsciiDigits(v: string): string {
+  return v.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+}
+
+/** یکسان‌سازی متن جستجو: ی/ک عربی، ارقام، فاصله‌ها و نیم‌فاصله */
+function normalizeSearchText(v: string): string {
+  return toAsciiDigits(v || '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\u200c\s]+/g, ' ').trim().toLowerCase();
+}
+
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
@@ -134,6 +145,15 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   readonly printOfflineTitle = PRINT_OFFLINE_TITLE;
   selectedInvoiceAttachment: File | null = null;
   attachmentFileName: string = '';
+  /** پیوست فعلی فاکتوری که ویرایش می‌شود (فایل تازه جای آن را می‌گیرد) */
+  existingAttachmentUrl: string | null = null;
+  /** متن جستجوی طرف‌حساب در فرم فاکتور */
+  counterpartySearch = '';
+  /** تقویم شمسی تاریخ فاکتور؛ ng-persian-datepicker فقط با FormControl روز ماه را می‌کشد (AGENTS.md) */
+  readonly invoiceDateControl = new FormControl<string>('', { nonNullable: true });
+  private invoiceDateSub?: Subscription;
+  /** تخفیف و مالیات به‌طور پیش‌فرض بسته است؛ با مقدار یا خطا خودش باز می‌شود */
+  showTotalsExtras = false;
 
   // ─── مودال تعریف سریع طرف‌حساب جدید ───
   isQuickCounterpartyModalOpen: boolean = false;
@@ -184,12 +204,18 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.docSub?.unsubscribe();
+    this.invoiceDateSub?.unsubscribe();
     if (this.searchTimer) clearTimeout(this.searchTimer);
     if (this.duplicateTimer) clearTimeout(this.duplicateTimer);
   }
 
   ngOnInit(): void {
     this.initTodayShamsi();
+    this.invoiceDateSub?.unsubscribe();
+    this.invoiceDateSub = this.invoiceDateControl.valueChanges.subscribe(v => {
+      this.newInvoice.invoice_date_shamsi = toAsciiDigits(v || '').replace(/-/g, '/').trim();
+      this.invoiceDateError = '';
+    });
     // ص۶ طرح ۲.۵: فاکتوری از این بخش که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
     this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
       if (patchDocumentRow(this.invoices, ev)) {
@@ -484,6 +510,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.duplicateSeq++;
     this.selectedInvoiceAttachment = null;
     this.attachmentFileName = '';
+    this.existingAttachmentUrl = null;
+    this.counterpartySearch = '';
   }
 
   openNewInvoiceModal(): void {
@@ -504,6 +532,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     };
     this.formLines = [this.blankLine(this.singleExpenseHeadId)];
     this.descriptionTouched = false;
+    this.invoiceDateControl.setValue(this.todayShamsi, { emitEvent: false });
+    this.showTotalsExtras = false;
     this.discountInput = null;
     this.vatApplicable = false;
     this.vatManualInput = null;
@@ -549,6 +579,9 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.vatApplicable = !!inv.vat_applicable;
     this.vatRate = Number(inv.vat_rate) || 10;
     this.vatManualInput = inv.vat_applicable && inv.vat_manual ? String(Number(inv.vat_amount) || 0) : null;
+    this.showTotalsExtras = disc > 0 || this.vatApplicable;
+    this.invoiceDateControl.setValue(inv.invoice_date_shamsi || '', { emitEvent: false });
+    this.existingAttachmentUrl = inv.attachment || null;
     this.isNewInvoiceModalOpen = true;
     this.onDuplicateKeyChange();
     this.cdr.detectChanges();
@@ -604,6 +637,44 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     const heads = this.expenseHeadGroups.flatMap(g => g.heads);
     if (this.isLoadingExpenseHeads || this.expenseHeadsCompanyId !== this.sectionCompanyId) return null;
     return heads.length === 1 ? (heads[0].id ?? null) : null;
+  }
+
+  // ─── جستجوی طرف‌حساب: فهرست کوتاه می‌شود؛ تنها نتیجه خودش انتخاب می‌شود ───
+  private counterpartyMatches(query: string): Counterparty[] {
+    const q = normalizeSearchText(query);
+    if (!q) return this.counterparties;
+    return this.counterparties.filter(cp =>
+      normalizeSearchText(`${cp.name} ${cp.national_id || ''} ${cp.phone || ''} ${cp.mobile || ''}`).includes(q));
+  }
+
+  get filteredCounterparties(): Counterparty[] {
+    const matches = this.counterpartyMatches(this.counterpartySearch);
+    const selected = this.counterparties.find(cp => cp.id === Number(this.newInvoice.counterparty));
+    // طرف‌حساب انتخاب‌شده همیشه در فهرست می‌ماند تا انتخاب خالی نشود
+    return selected && !matches.includes(selected) ? [selected, ...matches] : matches;
+  }
+
+  onCounterpartySearch(value: string): void {
+    this.counterpartySearch = value;
+    if (!normalizeSearchText(value)) return;
+    const matches = this.counterpartyMatches(value);
+    if (matches.length === 1 && matches[0].id !== Number(this.newInvoice.counterparty)) {
+      this.newInvoice.counterparty = matches[0].id;
+      this.onDuplicateKeyChange();
+    }
+  }
+
+  // ─── Enter در ردیف: به ردیف بعد می‌رود و در ردیف آخر ردیف تازه می‌سازد ───
+  onLineEnter(i: number, event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (!target || target.tagName !== 'INPUT') return;
+    event.preventDefault();
+    if (i === this.formLines.length - 1) {
+      if (this.formLines.length >= this.maxLines) return;
+      this.addLine();
+      this.cdr.detectChanges();
+    }
+    setTimeout(() => (document.getElementById(`line_desc_${i + 1}`) as HTMLInputElement | null)?.focus());
   }
 
   /** نام کوتاه فاکتور در پیام‌ها (شمارهٔ فروشنده اختیاری است) */
@@ -718,6 +789,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.selectedInvoiceAttachment = file;
       this.attachmentFileName = file.name;
     }
+    // انتخاب دوبارهٔ همان فایل هم رویداد change بدهد
+    if (event.target) event.target.value = '';
   }
 
   removeSelectedAttachment(): void {
@@ -792,11 +865,13 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return false;
     }
     if (this.discountAmount > this.subtotal) {
+      this.showTotalsExtras = true;
       this.discountError = 'تخفیف نمی‌تواند از جمع ردیف‌ها بیشتر باشد.';
       this.toast.show('warning', this.discountError);
       return false;
     }
     if (this.vatApplicable && this.vatAmount > this.vatBase) {
+      this.showTotalsExtras = true;
       this.vatError = 'مالیات نمی‌تواند از مبلغ پس از تخفیف بیشتر باشد.';
       this.toast.show('warning', this.vatError);
       return false;
@@ -846,9 +921,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     return !!shown;
   }
 
-  saveInvoice(): void {
+  /** mode: close = فقط ذخیره؛ send = ذخیره و ارسال به سرپرست (فقط آنلاین)؛ new = ذخیره و فرم خالی برای فاکتور بعدی */
+  saveInvoice(mode: 'close' | 'send' | 'new' = 'close'): void {
     if (!this.selectedSectionId) {
       this.toast.show('warning', 'بخش فعال مشخص نیست.');
+      return;
+    }
+    if (mode === 'send' && this.isOffline) {
+      this.toast.show('warning', 'ارسال فاکتور به گردش فقط در حالت آنلاین ممکن است؛ فعلاً فقط ذخیره کنید.');
       return;
     }
     if (!this.validateForm()) return;
@@ -865,7 +945,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
     // در صورت وجود پیوست از FormData استفاده می‌کنیم (`lines` به‌صورت رشتهٔ JSON؛ سرور می‌پذیرد)
     let payload: Partial<ExpenseInvoice> | FormData;
-    if (!editingId && this.selectedInvoiceAttachment) {
+    if (this.selectedInvoiceAttachment) {
       const formData = new FormData();
       formData.append('section', String(this.selectedSectionId));
       formData.append('counterparty', String(this.newInvoice.counterparty));
@@ -876,7 +956,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       formData.append('vat_applicable', String(totals.vat_applicable));
       if (totals.vat_amount !== undefined) formData.append('vat_amount', String(totals.vat_amount));
       formData.append('description', this.effectiveDescription);
-      formData.append('status', 'draft'); // Guardian G2
+      if (!editingId) formData.append('status', 'draft'); // Guardian G2
       formData.append('attachment', this.selectedInvoiceAttachment);
       payload = formData;
     } else {
@@ -894,15 +974,26 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     }
 
     const request$ = editingId
-      ? this.personnelApi.updateExpenseInvoice(editingId, payload as Partial<ExpenseInvoice>)
+      ? this.personnelApi.updateExpenseInvoice(editingId, payload)
       : this.personnelApi.createExpenseInvoice(payload);
     request$.subscribe({
       next: (saved: ExpenseInvoice) => {
         this.isSaving = false;
+        const keptDate = this.newInvoice.invoice_date_shamsi || this.todayShamsi;
+        this.closeNewInvoiceModal();
+        if (mode === 'send' && saved?.id) {
+          // ارسال همان مسیر دکمهٔ «ارسال» است (دلیل تکراری و خطاها را خودش نشان می‌دهد)
+          this.submitInvoice(saved);
+          return;
+        }
         this.toast.show('success', editingId
           ? `فاکتور «${this.invoiceLabel(saved) || this.invoiceLabel(this.newInvoice)}» ویرایش شد.`
           : `فاکتور${this.invoiceLabel(saved) ? ` «${this.invoiceLabel(saved)}»` : ''} با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
-        this.closeNewInvoiceModal();
+        if (mode === 'new') {
+          this.openNewInvoiceModal();
+          this.newInvoice.invoice_date_shamsi = keptDate;
+          this.invoiceDateControl.setValue(keptDate, { emitEvent: false });
+        }
         this.loadInvoices();
       },
       error: (err: any) => {
@@ -917,9 +1008,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         } else if (this.applyLineErrors(err)) {
           // خطای ردیف‌ها (سرفصل نادرست و ...) کنار همان ردیف نمایش داده شد
         } else if (firstOf(e?.discount_amount)) {
+          this.showTotalsExtras = true;
           this.discountError = firstOf(e.discount_amount);
           this.toast.show('error', this.discountError);
         } else if (firstOf(e?.vat_amount)) {
+          this.showTotalsExtras = true;
           this.vatError = firstOf(e.vat_amount);
           this.toast.show('error', this.vatError);
         } else {

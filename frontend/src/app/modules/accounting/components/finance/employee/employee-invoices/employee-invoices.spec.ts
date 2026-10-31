@@ -338,6 +338,50 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
     });
 
+    it('«ذخیره و ارسال» پس از ذخیره همان فاکتور را به سرپرست می‌فرستد', () => {
+      component.openNewInvoiceModal();
+      fillHeader();
+      component.formLines = [{ description: 'سرویس', quantity: 1, unit: '', unit_price: 1000, expense_head: 11 }];
+      component.saveInvoice('send');
+      expect(mockPersonnelApi.createExpenseInvoice).toHaveBeenCalledTimes(1);
+      expect(mockTreasuryOrgApi.submitExpenseInvoice).toHaveBeenCalledWith(4, undefined);
+      expect(component.isNewInvoiceModalOpen).toBe(false);
+    });
+
+    it('«ذخیره و فاکتور بعدی» فرم خالی با همان تاریخ باز می‌کند', () => {
+      component.openNewInvoiceModal();
+      fillHeader();
+      component.newInvoice.invoice_date_shamsi = '1405/03/01';
+      component.formLines = [{ description: 'سرویس', quantity: 1, unit: '', unit_price: 1000, expense_head: 11 }];
+      component.saveInvoice('new');
+      expect(mockPersonnelApi.createExpenseInvoice).toHaveBeenCalledTimes(1);
+      expect(component.isNewInvoiceModalOpen).toBe(true);
+      expect(component.newInvoice.invoice_date_shamsi).toBe('1405/03/01');
+      expect(component.invoiceDateControl.value).toBe('1405/03/01');
+      expect(component.newInvoice.counterparty).toBeUndefined();
+      expect(component.formLines.length).toBe(1);
+      expect(component.formLines[0].description).toBe('');
+    });
+
+    it('ویرایش با فایل تازه FormData می‌فرستد و status نمی‌فرستد؛ تاریخ تقویم در فرم می‌نشیند', () => {
+      component.openEditInvoiceModal({
+        id: 7, status: 'draft', section: 10, counterparty: 101, invoice_number: '', invoice_date_shamsi: '1405/04/10',
+        description: 'd', attachment: '/media/invoices/a.jpg',
+        lines: [{ description: 'ردیف', quantity: 1, unit: '', unit_price: 10, expense_head: 11 }]
+      } as any);
+      expect(component.existingAttachmentUrl).toBe('/media/invoices/a.jpg');
+      component.invoiceDateControl.setValue('۱۴۰۵/۰۴/۱۲');
+      expect(component.newInvoice.invoice_date_shamsi).toBe('1405/04/12');
+      component.onInvoiceFileSelected({ target: { files: [new File(['x'], 'b.jpg', { type: 'image/jpeg' })], value: 'b.jpg' } });
+      component.saveInvoice();
+      const [id, payload] = mockPersonnelApi.updateExpenseInvoice.mock.calls[0];
+      expect(id).toBe(7);
+      expect(payload instanceof FormData).toBe(true);
+      expect(payload.get('status')).toBeNull();
+      expect(payload.get('invoice_date_shamsi')).toBe('1405/04/12');
+      expect((payload.get('attachment') as File).name).toBe('b.jpg');
+    });
+
     it('ذخیرهٔ موفق باید ردیف‌ها و status="draft" را بفرستد و مالیات پیشنهادی را نفرستد', () => {
       component.openNewInvoiceModal();
       fillHeader();

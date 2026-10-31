@@ -134,6 +134,26 @@ class InvoiceLines41Tests(HeadFixtures):
         self.assertEqual(r5.status_code, 200, r5.content)
         self.assertEqual(r5.json()['description'], 'z')
 
+    def test_edit_with_new_attachment_multipart(self):
+        import json
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        r = self.api.post(INVOICES, self.body(discount_amount='0'), format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        inv_id = r.json()['id']
+        lines = [{'description': 'm', 'quantity': '2', 'unit_price': '50', 'expense_head': self.head.id}]
+        r2 = self.api.patch(f'{INVOICES}{inv_id}/', {
+            'section': self.sec.id, 'counterparty': self.cp.id, 'invoice_number': '',
+            'invoice_date_shamsi': '1405/08/02', 'lines': json.dumps(lines), 'discount_amount': '0',
+            'vat_applicable': 'false', 'description': '',
+            'attachment': SimpleUploadedFile('r.jpg', b'\xff\xd8\xff', content_type='image/jpeg'),
+        }, format='multipart')
+        self.assertEqual(r2.status_code, 200, r2.content)
+        d = r2.json()
+        self.assertTrue(d['attachment'])
+        self.assertEqual(Decimal(d['subtotal']), 100)
+        self.assertEqual(d['description'], 'm')
+        self.assertEqual(d['status'], 'draft')
+
     def test_manual_vat_and_rate_snapshot(self):
         r = self.api.post(INVOICES, self.body(), format='json')
         self.assertEqual(r.status_code, 201, r.content)
