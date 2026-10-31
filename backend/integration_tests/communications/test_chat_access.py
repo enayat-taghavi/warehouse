@@ -425,6 +425,16 @@ class PolicyApiTests(ChatAccessTestBase):
                          status.HTTP_403_FORBIDDEN)
         self.assertFalse(ChatUserPolicy.objects.filter(user=self.user_ab).exists())
 
+    def test_admin_cannot_edit_company_less_user(self):
+        loner = self.make_user()
+        self.assertEqual(self.put_user_policy(self.admin_a, loner, chat_allowed=False).status_code,
+                         status.HTTP_403_FORBIDDEN)
+        self.auth(self.admin_a)
+        self.assertEqual(self.client.get(USER_POLICY_URL.format(loner.id)).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(ChatUserPolicy.objects.filter(user=loner).exists())
+        self.assertEqual(self.put_user_policy(self.superuser, loner, chat_allowed=False).status_code,
+                         status.HTTP_200_OK)
+
     def test_admin_of_a_edits_own_company_user_with_audit(self):
         before = AuditLog.objects.filter(target_model='ChatUserPolicy').count()
         resp = self.put_user_policy(self.admin_a, self.user_a, chat_allowed=False, contact_scope='section')

@@ -1009,10 +1009,14 @@ class ChatUserPolicyView(APIView):
 
     @staticmethod
     def _can_manage(actor, target):
-        from accounts.scope import actor_controls_user
+        from accounts.permission_admin import member_company_ids
+        from accounts.scope import actor_controls_user, user_company_ids
         if actor.is_superuser:
             return True
-        return bool(actor.has_perm('accounts.perm_usr_edit') and actor_controls_user(actor, target))
+        if not (actor.has_perm('accounts.perm_usr_edit') and actor_controls_user(actor, target)):
+            return False
+        # کاربر بی‌شرکت زیر تسلط هیچ مدیر شرکتی نیست (مجموعهٔ تهی زیرمجموعهٔ همه است)؛ دست‌کم یک شرکت مشترک لازم است
+        return bool(user_company_ids(target) & member_company_ids(actor))
 
     def _get_target(self, user_id):
         target = User.objects.filter(pk=user_id).first()
