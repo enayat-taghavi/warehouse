@@ -4214,7 +4214,7 @@ test(chat voice): recording, send, cancel, draft on switch, size limit and playe
 
 ===
 
-[ ] Session 1 of 1 — Chat voice messages release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
+[DONE] [ ] Session 1 of 1 — Chat voice messages release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
