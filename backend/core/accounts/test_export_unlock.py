@@ -189,3 +189,31 @@ class AuditExportAndUnlockTestCase(TestCase):
         # Verify an AuditLog is recorded for the unlock action
         unlock_log = AuditLog.objects.filter(action='UPDATE', target_repr__contains='locked_user').first()
         self.assertIsNotNone(unlock_log)
+
+    def test_heartbeat_open_to_any_signed_in_user_but_logs_stay_restricted(self):
+        # پالس حضور روزانه برای هر کاربر واردشده؛ فهرست و آمار گزارش ورودها همچنان فقط با مجوز
+        client = APIClient()
+        client.force_authenticate(user=self.normal_user)
+
+        first = client.post('/api/auth/login-logs/heartbeat/', {}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.json().get('status'), 'logged')
+        self.assertEqual(UserLoginLog.objects.filter(user=self.normal_user, status='DAILY_ACTIVE').count(), 1)
+
+        second = client.post('/api/auth/login-logs/heartbeat/', {}, format='json')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.json().get('status'), 'already_recorded')
+        self.assertEqual(UserLoginLog.objects.filter(user=self.normal_user, status='DAILY_ACTIVE').count(), 1)
+
+        self.assertEqual(client.get('/api/auth/login-logs/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(client.get('/api/auth/login-logs/stats/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(client.get('/api/auth/login-logs/locked_users/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(client.post('/api/auth/login-logs/purge/', {}, format='json').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(client.post('/api/auth/login-logs/reset_lockout/', {'username': 'locked_user'}, format='json').status_code,
+                         status.HTTP_403_FORBIDDEN)
+        self.assertTrue(AccessAttempt.objects.filter(username='locked_user').exists())
+
+    def test_heartbeat_rejects_anonymous(self):
+        response = APIClient().post('/api/auth/login-logs/heartbeat/', {}, format='json')
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.assertFalse(UserLoginLog.objects.filter(status='DAILY_ACTIVE').exists())

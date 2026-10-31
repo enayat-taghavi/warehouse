@@ -170,6 +170,9 @@ class UserLoginLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_permissions(self):
         from ..permissions import HasMenuAccess
+        # پالس حضور روزانه را هر کاربر واردشده برای خودش می‌فرستد؛ بقیهٔ گزارش ورودها فقط برای دارندگان مجوز گزارش
+        if getattr(self, 'action', None) == 'heartbeat':
+            return [permissions.IsAuthenticated()]
         return [HasMenuAccess('perm_sys_logs') | HasMenuAccess('perm_sys_audit_export') | HasMenuAccess('perm_sys_purge_logs')]
 
     def get_queryset(self):
