@@ -76,6 +76,28 @@ class PettyCashWorkflowTests(TestCase):
         self.act(PETTY_CHARGE_WORKFLOW, tx2_id, self.acc)
         self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx2_id), 'manager_ok')
 
+    def test_accountant_custodian_skips_review_only_when_sole_accountant(self):
+        from workflow.models import WorkflowStep
+        acc_c = self.user('accc', 'accountant', ['perm_petty_cash_manage'])
+        PettyCashAccount.objects.create(company=self.co, custodian=acc_c, ceiling_amount=Decimal('1000000'))
+        res = self.call(acc_c, 'post', f'{TX}request-charge/', {'amount': '100000'})
+        self.assertEqual(res.status_code, 201, res.content)
+        tx1 = res.json()['id']
+        self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx1), 'accountant_review')  # حسابدار دیگر هست
+        self.act(PETTY_CHARGE_WORKFLOW, tx1, self.acc)
+        self.acc.is_active = False
+        self.acc.save()
+        res = self.call(acc_c, 'post', f'{TX}request-charge/', {'amount': '100000'})
+        self.assertEqual(res.status_code, 201, res.content)
+        tx2 = res.json()['id']
+        self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx2), 'treasury_pay')
+        skipped = WorkflowStep.objects.get(instance__entity_id=tx2, instance__workflow_key=PETTY_CHARGE_WORKFLOW,
+                                           action='submit').skipped
+        self.assertIn({'step': 'accountant_review', 'reason': 'no_second_approval'}, skipped)
+        # واریز شارژ خود همچنان نه: creator_may_act برای تنخواه روشن نیست
+        self.assertFalse(wf_engine.can_act(acc_c, wf_engine.open_task(PETTY_CHARGE_WORKFLOW, tx2)))
+        self.assertTrue(wf_engine.can_act(self.trs, wf_engine.open_task(PETTY_CHARGE_WORKFLOW, tx2)))
+
     def test_statement_under_company_threshold_skips_manager(self):
         WorkflowThreshold.objects.create(
             workflow_key=PETTY_STATEMENT_WORKFLOW, step_key='manager_ok',

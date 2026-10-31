@@ -245,18 +245,17 @@ def _petty_offset_subquery():
 
 
 def _manager_approved_current_round(tx):
-    """آیا مدیر در دور فعلی گردش این شارژ (پس از آخرین بررسی حسابدار) تأیید کرده است؟"""
+    """
+    آیا مدیر در دور فعلی گردش این شارژ (از آخرین ارسال) تأیید کرده است؟ مرز دور زمان ارسال است، نه کار بررسی
+    حسابدار، چون بررسی برای حسابدارِ ثبت‌کننده‌ای که تنها حسابدار است رد می‌شود و کاری باز نمی‌کند.
+    """
     from workflow.models import WorkflowTask
     inst = wf_engine.instance_of(PETTY_CHARGE_WORKFLOW, tx.pk)
     if inst is None:
         return False
-    tasks = WorkflowTask.objects.filter(instance=inst, track=WorkflowTask.TRACK_STEP)
-    last_review = tasks.filter(step_key='accountant_review').order_by('-opened_at') \
-        .values_list('opened_at', flat=True).first()
-    approved = tasks.filter(step_key='manager_ok', outcome=WorkflowTask.ACTED)
-    if last_review is not None:
-        approved = approved.filter(opened_at__gte=last_review)
-    return approved.exists()
+    return WorkflowTask.objects.filter(
+        instance=inst, track=WorkflowTask.TRACK_STEP, step_key='manager_ok', outcome=WorkflowTask.ACTED,
+        opened_at__gte=inst.submitted_at).exists()
 
 
 def _petty_account_has_activity(account):

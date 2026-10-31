@@ -307,7 +307,10 @@ PETTY_CHARGE_WORKFLOW_SPEC = WorkflowSpec(
     entity_kind=PETTY_CHARGE_ENTITY,
     title_fa='شارژ تنخواه',
     steps=(
-        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', PETTY_REVIEW_PERM, REVIEW),
+        # حسابدارِ ثبت‌کننده‌ای که تنها حسابدار شرکت است بررسی را رد می‌کند؛ واریز شارژ خودِ خزانه‌دار همچنان
+        # با خزانه‌دار دیگر است (تصمیم کاربر ۹ آبان ۱۴۰۵: creator_may_act برای تنخواه نه)
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', PETTY_REVIEW_PERM, REVIEW,
+                 skip_when_creator_only=True),
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', PETTY_MANAGER_PERM, APPROVE, required=_charge_needs_manager),
         # واریز فقط از اکشن pay-charge (شمارهٔ پیگیری لازم است)
         StepSpec('treasury_pay', 'واریز خزانه‌دار', 'treasury', PETTY_TREASURY_PERM, EXECUTE, actions=(ACT, RETURN)),
@@ -406,7 +409,9 @@ PETTY_STATEMENT_WORKFLOW_SPEC = WorkflowSpec(
     entity_kind=PETTY_STATEMENT_ENTITY,
     title_fa='صورت‌حساب تنخواه',
     steps=(
-        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', PETTY_REVIEW_PERM, REVIEW),
+        # مثل شارژ: تنها حسابدارِ ثبت‌کننده بررسی را رد می‌کند (ردیف‌های باز هنگام شارژ دوباره تأیید می‌شوند)
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', PETTY_REVIEW_PERM, REVIEW,
+                 skip_when_creator_only=True),
         # سقف مبلغ شرکت (WorkflowThreshold) این مرحله را برای صورت‌حساب کوچک رد می‌کند
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', PETTY_MANAGER_PERM, APPROVE),
         StepSpec('treasury_pay', 'شارژ دوباره به دست خزانه‌دار', 'treasury', PETTY_TREASURY_PERM, EXECUTE,
