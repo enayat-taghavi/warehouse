@@ -42,6 +42,9 @@ export interface PermissionGroupView {
   rows: PermissionRowView[];
   /** کدهایی که «انتخاب همه» تیک می‌زند (بی‌حساس و بی‌قفل و تیک‌نخورده) */
   selectable: string[];
+  /** شمار تیک‌خورده‌ها و کل ردیف‌های دسته (بی‌اثر از جست‌وجو) برای شمارندهٔ سرِ دسته */
+  checkedCount: number;
+  total: number;
 }
 
 export interface PermissionBlockView {
@@ -98,6 +101,13 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
   /** خطای سرور هر بلوک (کلید بلوک → پیام فارسی) */
   blockErrors: Record<string, string> = {};
   private expanded = new Set<string>();
+  /** دسته‌های بازِ بلوک‌های چنددسته‌ای (`<کلید بلوک>|<کلید دسته>`)؛ دسته‌ها بسته شروع می‌شوند */
+  private openGroups = new Set<string>();
+  /** عبارت جست‌وجوی مجوز؛ با آن همهٔ بلوک‌ها و دسته‌های مطابق باز دیده می‌شوند */
+  query = '';
+  /** نمای بلوک‌ها پس از جست‌وجو (بی‌جست‌وجو همان `blocks`) */
+  viewBlocks: PermissionBlockView[] = [];
+  matchCount = 0;
 
   get isOnline(): boolean {
     return this.network.isOnline;
@@ -241,6 +251,9 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
       this.blocks = [];
       this.blockErrors = {};
       this.expanded.clear();
+      this.openGroups.clear();
+      this.query = '';
+      this.applyFilter();
       if (this.userId) void this.load();
     }
   }
@@ -298,6 +311,7 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
     const p = this.payload;
     if (!p) {
       this.blocks = [];
+      this.applyFilter();
       return;
     }
     const blocks: PermissionBlockView[] = [];
@@ -332,6 +346,53 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
       }));
     }
     this.blocks = blocks;
+    this.applyFilter();
+  }
+
+  /** حروف عربی/فارسی یکسان، بی‌فاصله و بی‌نیم‌فاصله: «فاکتور ها» با «فاکتورها» جور می‌شود */
+  static normalizeSearch(s: string): string {
+    return (s || '').toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\s‌]+/g, '');
+  }
+
+  private applyFilter(): void {
+    const q = UserPermissionsTabComponent.normalizeSearch(this.query);
+    if (!q) {
+      this.viewBlocks = this.blocks;
+      this.matchCount = 0;
+      return;
+    }
+    const norm = UserPermissionsTabComponent.normalizeSearch;
+    let count = 0;
+    const view: PermissionBlockView[] = [];
+    for (const block of this.blocks) {
+      const groups: PermissionGroupView[] = [];
+      for (const g of block.groups) {
+        const groupHit = norm(`${g.moduleLabel}${g.categoryLabel}`).includes(q);
+        const rows = groupHit ? g.rows : g.rows.filter(r => norm(r.label).includes(q) || r.code.toLowerCase().includes(q));
+        if (rows.length === 0) continue;
+        const codes = new Set(rows.map(r => r.code));
+        // «انتخاب همه» در نمای جست‌وجو فقط ردیف‌های دیده‌شده را تیک می‌زند
+        groups.push({ ...g, rows, selectable: g.selectable.filter(c => codes.has(c)) });
+        count += rows.length;
+      }
+      if (groups.length) view.push({ ...block, groups });
+    }
+    this.viewBlocks = view;
+    this.matchCount = count;
+  }
+
+  onQueryChange(value: string): void {
+    this.query = value ?? '';
+    this.applyFilter();
+    this.cdr.markForCheck();
+  }
+
+  clearQuery(): void {
+    this.onQueryChange('');
+  }
+
+  get isFiltering(): boolean {
+    return !!UserPermissionsTabComponent.normalizeSearch(this.query);
   }
 
   private buildBlock(opts: {
@@ -371,6 +432,8 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
           categoryLabel: cat?.label ?? (module == null ? '' : OTHER_CATEGORY_LABEL),
           rows: [],
           selectable: [],
+          checkedCount: 0,
+          total: 0,
           sortKey: [modIdx, cat ? cat.order : Number.MAX_SAFE_INTEGER],
         };
         groups.set(groupKey, group);
@@ -383,6 +446,8 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
         : removed.has(code) ? 'removed'
         : (fromRoles.has(code) && checked) ? 'role' : null;
       group.rows.push({ code, label: spec?.label_fa || code, sensitive, checked, badge, lockReason });
+      group.total++;
+      if (checked) group.checkedCount++;
       if (!checked && !sensitive && !lockReason) group.selectable.push(code);
     }
     const sorted = [...groups.values()].sort((a, b) => a.sortKey[0] - b.sortKey[0] || a.sortKey[1] - b.sortKey[1]);
@@ -402,12 +467,32 @@ export class UserPermissionsTabComponent implements OnInit, OnChanges, OnDestroy
   // ─────────────────────────── تعامل ───────────────────────────
 
   isExpanded(block: PermissionBlockView): boolean {
-    return this.expanded.has(block.key);
+    return this.isFiltering || this.expanded.has(block.key);
   }
 
   toggleBlock(block: PermissionBlockView): void {
+    if (this.isFiltering) return;
     if (this.expanded.has(block.key)) this.expanded.delete(block.key);
     else this.expanded.add(block.key);
+  }
+
+  /** بلوک تک‌دسته‌ای دستهٔ تاشو ندارد؛ در بلوک چنددسته‌ای هر دسته جدا باز و بسته می‌شود */
+  isCollapsible(block: PermissionBlockView): boolean {
+    return block.groups.length > 1 && !this.isFiltering;
+  }
+
+  isGroupOpen(block: PermissionBlockView, group: PermissionGroupView): boolean {
+    return !this.isCollapsible(block) || this.openGroups.has(`${block.key}|${group.key}`);
+  }
+
+  toggleGroup(block: PermissionBlockView, group: PermissionGroupView): void {
+    const key = `${block.key}|${group.key}`;
+    if (this.openGroups.has(key)) this.openGroups.delete(key);
+    else this.openGroups.add(key);
+  }
+
+  groupDomId(block: PermissionBlockView, group: PermissionGroupView): string {
+    return `up-group-${block.key}-${group.key.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
   }
 
   canEdit(block: PermissionBlockView): boolean {

@@ -121,9 +121,32 @@
       }
     </section>
 
-    @for (block of blocks; track block.key) {
+    <!-- جست‌وجوی مجوز: بلوک‌ها و دسته‌های مطابق باز و بقیه پنهان می‌شوند -->
+    <div class="relative" data-permission-search>
+      <label for="up-permission-search" class="sr-only">جست‌وجوی مجوز</label>
+      <svg appIcon="search" class="absolute top-1/2 -translate-y-1/2 start-3 w-3.5 h-3.5 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <input #searchInput id="up-permission-search" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" [value]="query" (input)="onQueryChange($any($event.target).value)"
+        placeholder="جست‌وجوی مجوز (مثلاً فاکتور)"
+        class="w-full min-h-[40px] ps-9 pe-10 rounded-xl text-xs bg-surface-muted border border-line text-fg placeholder:text-fg-subtle focus:bg-surface focus:border-indigo-500 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+      @if (query) {
+        <button type="button" (click)="clearQuery(); searchInput.focus()" title="پاک کردن جست‌وجو" aria-label="پاک کردن جست‌وجو" data-clear-search
+          class="absolute inset-y-0 end-0 inline-flex items-center justify-center min-w-[40px] min-h-[40px] rounded-xl text-fg-subtle hover:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg appIcon="x" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        </button>
+      }
+    </div>
+    <p class="sr-only" role="status" aria-live="polite">
+      @if (isFiltering && matchCount > 0) { {{ formatFa(matchCount) }} مجوز پیدا شد. }
+    </p>
+    @if (isFiltering && viewBlocks.length === 0) {
+      <p class="py-6 text-center text-xs text-fg-muted border border-dashed border-line rounded-2xl" data-search-empty>
+        مجوزی با «<bdi>{{ query }}</bdi>» پیدا نشد.
+      </p>
+    }
+
+    @for (block of viewBlocks; track block.key) {
       <section class="bg-surface rounded-2xl border border-line shadow-sm" [attr.data-block]="block.key" [attr.aria-busy]="savingKey === block.key ? true : null">
-        <button type="button" (click)="toggleBlock(block)" [attr.aria-expanded]="isExpanded(block)" [attr.aria-controls]="'up-block-' + block.key"
+        <button type="button" (click)="toggleBlock(block)" [disabled]="isFiltering" [attr.aria-expanded]="isExpanded(block)" [attr.aria-controls]="isExpanded(block) ? 'up-block-' + block.key : null"
           class="w-full min-h-[44px] flex items-center gap-2 px-3 py-2 text-start rounded-2xl hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <svg [appIcon]="block.companyId == null ? 'shield' : 'briefcase'" class="w-4 h-4 text-indigo-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           <span class="flex-1 min-w-0 text-xs font-black text-fg break-words"><bdi>{{ block.title }}</bdi></span>
@@ -131,7 +154,7 @@
             <svg appIcon="lock" class="w-3.5 h-3.5 text-fg-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           }
           <span class="text-[10px] font-bold text-fg-muted tabular-nums shrink-0">{{ formatFa(block.checkedCount) }} مجوز</span>
-          <svg appIcon="chevron-down" class="w-4 h-4 text-fg-muted shrink-0 transition-transform" [class.rotate-180]="isExpanded(block)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <svg appIcon="chevron-down" class="w-4 h-4 text-fg-muted shrink-0 transition-transform" [class.rotate-180]="isExpanded(block)" [class.invisible]="isFiltering" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
 
         @if (isExpanded(block)) {
@@ -154,52 +177,74 @@
               <p class="text-[11px] text-fg-muted">مجوزی در این بخش تعریف نشده است.</p>
             }
 
-            @for (group of block.groups; track group.key) {
-              <fieldset class="min-w-0 space-y-1" [attr.data-group]="group.key">
-                <legend class="text-[11px] font-black text-fg-muted min-w-0 break-words mb-1">
-                  {{ group.moduleLabel }}@if (group.categoryLabel) { › {{ group.categoryLabel }}}
-                </legend>
-                @if (block.editable) {
-                  <div class="flex justify-end">
-                    <button type="button" (click)="selectAll(block, group)" [disabled]="!canEdit(block) || group.selectable.length === 0"
-                      data-select-all [attr.title]="'انتخاب همهٔ مجوزهای ' + (group.categoryLabel || group.moduleLabel)" [attr.aria-label]="'انتخاب همهٔ مجوزهای ' + (group.categoryLabel || group.moduleLabel)"
-                      class="tap-target shrink-0 inline-flex items-center justify-center gap-1 min-w-[40px] min-h-[40px] px-2 text-[11px] font-bold rounded-xl text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-                      <svg appIcon="check-square" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                      <span class="hidden sm:inline">انتخاب همه</span>
-                    </button>
-                  </div>
-                }
-                @for (row of group.rows; track row.code) {
-                  <label class="flex items-start gap-2 min-h-[40px] px-2 py-1.5 rounded-xl hover:bg-surface-muted"
-                    [class.cursor-pointer]="!rowDisabled(block, row)"
-                    [attr.title]="row.lockReason || null" [attr.data-code]="row.code">
-                    <input type="checkbox" class="mt-0.5 w-4 h-4 shrink-0 accent-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                      [checked]="row.checked" [disabled]="rowDisabled(block, row)" (change)="onCheckboxChange($event, block, row)"
-                      [attr.aria-describedby]="row.lockReason ? 'up-lock-' + block.key + '-' + row.code : null" />
-                    <span class="flex-1 min-w-0">
-                      <span class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-xs text-fg break-words" [class.opacity-70]="rowDisabled(block, row)">{{ row.label }}</span>
-                        @if (row.sensitive) {
-                          <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg border border-amber-200 bg-amber-50 text-[10px] font-bold text-amber-800" data-sensitive>
-                            <svg appIcon="alert-triangle" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                            حساس
-                          </span>
-                        }
-                        @if (row.badge) {
-                          <span class="px-1.5 py-0.5 rounded-lg border text-[10px] font-bold" [ngClass]="badgeClass(row.badge)" [attr.data-badge]="row.badge">{{ badgeLabel(row.badge) }}</span>
-                        }
+            <!-- چند دسته: دو ستون در صفحهٔ پهن؛ یک دسته: ردیف‌ها خودشان دو ستون می‌شوند -->
+            <div class="grid grid-cols-1 gap-2 items-start" [ngClass]="{ 'md:grid-cols-2': block.groups.length > 1 }">
+              @for (group of block.groups; track group.key) {
+                <fieldset class="min-w-0" [ngClass]="{ 'rounded-xl border border-line': block.groups.length > 1 }"
+                  [attr.data-group]="group.key">
+                  @if (isCollapsible(block)) {
+                    <legend class="sr-only">{{ group.moduleLabel }}@if (group.categoryLabel) { › {{ group.categoryLabel }}}</legend>
+                    <button type="button" (click)="toggleGroup(block, group)" [attr.aria-expanded]="isGroupOpen(block, group)" [attr.aria-controls]="isGroupOpen(block, group) ? groupDomId(block, group) : null" data-group-toggle
+                      class="w-full min-h-[40px] flex items-center gap-2 px-2.5 py-1.5 text-start rounded-xl hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                      <span class="flex-1 min-w-0 text-[11px] font-black text-fg-muted break-words">{{ group.categoryLabel || group.moduleLabel }}</span>
+                      <span class="text-[10px] font-bold tabular-nums shrink-0" [class.text-indigo-700]="group.checkedCount > 0" [class.text-fg-muted]="group.checkedCount === 0" data-group-count>
+                        {{ formatFa(group.checkedCount) }} از {{ formatFa(group.total) }}
                       </span>
-                      @if (row.lockReason && block.editable) {
-                        <span [id]="'up-lock-' + block.key + '-' + row.code" class="mt-0.5 flex items-center gap-1 text-[10px] text-fg-muted" data-lock-reason>
-                          <svg appIcon="lock" class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                          {{ row.lockReason }}
-                        </span>
+                      <svg appIcon="chevron-down" class="w-3.5 h-3.5 text-fg-muted shrink-0 transition-transform" [class.rotate-180]="isGroupOpen(block, group)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    </button>
+                  } @else {
+                    <legend class="text-[11px] font-black text-fg-muted min-w-0 break-words mb-1" [ngClass]="{ 'px-2.5 pt-1.5': block.groups.length > 1 }">
+                      {{ group.moduleLabel }}@if (group.categoryLabel) { › {{ group.categoryLabel }}}
+                    </legend>
+                  }
+                  @if (isGroupOpen(block, group)) {
+                    <div [id]="groupDomId(block, group)" class="space-y-1" [ngClass]="{ 'px-1 pb-1': block.groups.length > 1 }">
+                      @if (block.editable) {
+                        <div class="flex justify-end">
+                          <button type="button" (click)="selectAll(block, group)" [disabled]="!canEdit(block) || group.selectable.length === 0"
+                            data-select-all [attr.title]="'انتخاب همهٔ مجوزهای ' + (group.categoryLabel || group.moduleLabel)" [attr.aria-label]="'انتخاب همهٔ مجوزهای ' + (group.categoryLabel || group.moduleLabel)"
+                            class="tap-target shrink-0 inline-flex items-center justify-center gap-1 min-w-[40px] min-h-[40px] px-2 text-[11px] font-bold rounded-xl text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                            <svg appIcon="check-square" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                            <span class="hidden sm:inline">انتخاب همه</span>
+                          </button>
+                        </div>
                       }
-                    </span>
-                  </label>
-                }
-              </fieldset>
-            }
+                      <div class="grid grid-cols-1 gap-x-2 gap-y-1" [ngClass]="{ 'md:grid-cols-2': block.groups.length === 1 }">
+                        @for (row of group.rows; track row.code) {
+                          <label class="flex items-start gap-2 min-h-[40px] px-2 py-1.5 rounded-xl hover:bg-surface-muted"
+                            [class.cursor-pointer]="!rowDisabled(block, row)"
+                            [attr.title]="row.lockReason || null" [attr.data-code]="row.code">
+                            <input type="checkbox" class="mt-0.5 w-4 h-4 shrink-0 accent-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                              [checked]="row.checked" [disabled]="rowDisabled(block, row)" (change)="onCheckboxChange($event, block, row)"
+                              [attr.aria-describedby]="row.lockReason ? 'up-lock-' + block.key + '-' + row.code : null" />
+                            <span class="flex-1 min-w-0">
+                              <span class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-xs text-fg break-words" [class.opacity-70]="rowDisabled(block, row)">{{ row.label }}</span>
+                                @if (row.sensitive) {
+                                  <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg border border-amber-200 bg-amber-50 text-[10px] font-bold text-amber-800" data-sensitive>
+                                    <svg appIcon="alert-triangle" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                                    حساس
+                                  </span>
+                                }
+                                @if (row.badge) {
+                                  <span class="px-1.5 py-0.5 rounded-lg border text-[10px] font-bold" [ngClass]="badgeClass(row.badge)" [attr.data-badge]="row.badge">{{ badgeLabel(row.badge) }}</span>
+                                }
+                              </span>
+                              @if (row.lockReason && block.editable) {
+                                <span [id]="'up-lock-' + block.key + '-' + row.code" class="mt-0.5 flex items-center gap-1 text-[10px] text-fg-muted" data-lock-reason>
+                                  <svg appIcon="lock" class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                                  {{ row.lockReason }}
+                                </span>
+                              }
+                            </span>
+                          </label>
+                        }
+                      </div>
+                    </div>
+                  }
+                </fieldset>
+              }
+            </div>
           </div>
         }
       </section>

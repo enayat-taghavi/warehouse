@@ -61,6 +61,7 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
   let api: { getUserPermissions: ReturnType<typeof vi.fn>; updateUserPermissions: ReturnType<typeof vi.fn> };
   let changed$: Subject<PermissionsUpdatedEvent>;
   let editorSuperuser: boolean;
+  let catalog: PermissionCatalog;
   let confirm: { open: ReturnType<typeof vi.fn> };
   let org: { getProjects: ReturnType<typeof vi.fn>; getSections: ReturnType<typeof vi.fn>; bulkAssign: ReturnType<typeof vi.fn> };
 
@@ -86,6 +87,7 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
 
   beforeEach(async () => {
     editorSuperuser = false;
+    catalog = CATALOG;
     changed$ = new Subject();
     api = {
       getUserPermissions: vi.fn().mockImplementation(() => of(payload())),
@@ -104,8 +106,8 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
         {
           provide: PermissionService,
           useValue: {
-            ensureCatalog: vi.fn().mockResolvedValue(CATALOG),
-            catalog: () => CATALOG,
+            ensureCatalog: vi.fn().mockImplementation(async () => catalog),
+            catalog: () => catalog,
             isSuperuser: () => editorSuperuser,
             permissionsChanged$: changed$,
           },
@@ -337,6 +339,75 @@ describe('UserPermissionsTabComponent (تب «مجوزها» پنجرهٔ کار
       expect(selectAllBtn).toBeTruthy();
       expect(selectAllBtn.getAttribute('aria-label')).toBeTruthy();
       expect(selectAllBtn.classList.contains('min-w-[40px]')).toBe(true);
+    });
+  });
+
+  describe('دسته‌های تاشو، شمارنده و جست‌وجو', () => {
+    // دستهٔ دوم بلوک شرکت را چنددسته‌ای می‌کند
+    const MULTI: PermissionCatalog = {
+      ...CATALOG,
+      categories: [...CATALOG.categories, { module: 'mod_a', key: 'cat2', label_fa: 'دستهٔ دو', order: 2, menu: null }],
+      permissions: [
+        ...CATALOG.permissions,
+        { code: 'perm_delta', label_fa: 'ثبت فاکتور‌ها', module: 'mod_a', category: 'cat2', scope: 'section', sensitive: false },
+        { code: 'perm_epsilon', label_fa: 'دیدن فاکتور', module: 'mod_a', category: 'cat2', scope: 'section', sensitive: false },
+      ],
+    };
+    const search = (value: string) => {
+      const input = el().querySelector('#up-permission-search') as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => { catalog = MULTI; });
+
+    it('در بلوک چنددسته‌ای دسته‌ها بسته شروع می‌شوند، شمارنده دارند و جدا باز می‌شوند', async () => {
+      await create();
+      expect(row('c3', 'perm_alpha')).toBeNull();
+      const toggles = block('c3').querySelectorAll('[data-group-toggle]');
+      expect(toggles.length).toBe(2);
+      expect(block('c3').querySelector('[data-group="mod_a:cat1"] [data-group-count]')?.textContent).toContain('۱ از ۳');
+      expect(block('c3').querySelector('[data-group="mod_a:cat2"] [data-group-count]')?.textContent).toContain('۰ از ۲');
+      (toggles[0] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(toggles[0].getAttribute('aria-expanded')).toBe('true');
+      expect(box('c3', 'perm_alpha').checked).toBe(true);
+      expect(row('c3', 'perm_delta')).toBeNull();
+      // بلوک تک‌دسته‌ای (سامانه) دکمهٔ دسته ندارد و ردیف‌هایش باز است
+      expect(block('system').querySelector('[data-group-toggle]')).toBeNull();
+      expect(row('system', 'sys_view')).not.toBeNull();
+    });
+
+    it('جست‌وجو با فاصله و نیم‌فاصلهٔ متفاوت فقط مجوزهای مطابق را در همهٔ شرکت‌ها باز نشان می‌دهد', async () => {
+      await create();
+      search('فاکتور ها');
+      expect(block('system')).toBeNull();
+      expect(row('c3', 'perm_delta')).not.toBeNull();
+      expect(row('c3', 'perm_epsilon')).toBeNull();
+      expect(row('c3', 'perm_alpha')).toBeNull();
+      // بلوک c5 که جمع‌شده بود در جست‌وجو باز است
+      expect(row('c5', 'perm_delta')).not.toBeNull();
+      expect(component.matchCount).toBe(2);
+
+      search('فاکتور');
+      expect(row('c3', 'perm_epsilon')).not.toBeNull();
+      // «انتخاب همه» فقط ردیف‌های دیده‌شده
+      (block('c3').querySelector('[data-select-all]') as HTMLButtonElement).click();
+      await settle();
+      expect(api.updateUserPermissions).toHaveBeenCalledWith(7, { company_id: 3, add: ['perm_delta', 'perm_epsilon'], remove: ['perm_beta'] });
+    });
+
+    it('جست‌وجوی بی‌نتیجه پیام خالی دارد و پاک‌کردن، نمای پیشین را برمی‌گرداند', async () => {
+      await create();
+      search('ناموجود');
+      expect(el().querySelector('[data-search-empty]')).not.toBeNull();
+      expect(block('c3')).toBeNull();
+      (el().querySelector('[data-clear-search]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(el().querySelector('[data-search-empty]')).toBeNull();
+      expect(block('c3').querySelectorAll('[data-group-toggle]').length).toBe(2);
+      expect(block('c5').querySelector('[data-code]')).toBeNull();
     });
   });
 });
