@@ -16910,3 +16910,88 @@ fix(attendance): remove reference warehouse column and picker from employee atte
 - **Task Complete.**
 
 ---
+
+### Task 1 of 1 — 2026-11-01 02:45:17
+- **Status:** DONE
+- **Conversation:** `d0c35142-e7f2-42d7-83ec-8732c55f202a`
+- **Steps:** 252
+- **Tokens:** 507213
+- **Duration:** 23m 41s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/7 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py`
+  - verify round 1: 7/7 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Overnight fixes O2: clean, well-structured invoice print (info box, weighted table, totals box, payments table)
+
+
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only `backend/core/reports/document_pdf.py` and `backend/modules/accounting/personnel/invoice_print.py`, and create only the new test file `backend/core/reports/test_document_pdf_layout_o2.py`. Never edit any other file (not `personnel_print.py`, not `petty_print.py`, not `document_views.py`, not `scratch/o2_render_sample.py`, not `tasks.md`, not `tasks_history.md`, not `frontend/`).
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- Do not touch the database, do not run migrations, do not run `manage.py test` without labels. All text printed on the document stays Persian.
+- Every existing `PrintableDocument` user that does not pass the new fields must render exactly the same content as today (same title, paragraphs, main table, signers, QR, header box). New fields default to empty.
+
+2. Context (read these; nothing else is needed):
+- `backend/core/reports/document_pdf.py` (331 lines). `PrintableDocument` dataclass lines 50–63. Helpers: `_rtl_para(text, style, width)` lines 131–133 (wraps logical text and returns a ReportLab `Paragraph`), `_cell_text(value)` lines 136–145. `render_document_pdf(doc)` lines 221–331: page header drawn in `on_page` (lines 238–275, do not change it), styles lines 277–281, story: title + `paragraphs` (283–286), main table (288–303: every column has the same width `content_w / ncols`, grid `#94a3b8`, header `#e2e8f0`), signers (305–323), build (325–331). Columns are reversed so the first column is on the right (RTL).
+- `backend/modules/accounting/personnel/invoice_print.py` lines 59–108 `printable_invoice`: today every header field, the totals and the payment instalments are dumped as plain `paragraphs` lines BEFORE the item table, which is why the print looks bad. `_money()` lines 12–14 formats with a Latin comma.
+- Current look (rendered from a sample): equal column widths make the «شرح» column so narrow that every description wraps to five lines while «ردیف»/«تعداد»/«واحد» columns are mostly empty; totals and payments are loose text lines above the table; no visual hierarchy.
+- The check script `scratch/o2_render_sample.py` (already present, do not edit) builds a sample document with the new fields if they exist (`info_pairs`, `totals`, `extra_tables` with `DocTable(title=, headers=, rows=)`), renders A4 and A5 to `scratch/o2_invoice_sample_*.pdf` and PNG pages, and fails if the A4 sample needs more than 2 pages. Look at the PNG files it writes (open them as images) to check your result.
+- Existing tests: `backend/core/reports/test_document_pdf_27b.py` (see `make_doc` at the top for how a test document is built).
+
+3. Definitions:
+- "RTL order": the first item of any list is drawn at the right side.
+- "numeric column": a column whose values are amounts; values are right-aligned so the units digits line up.
+- Colours (print, light only): grid and box lines `#cbd5e1` 0.5pt; header and label shading `#f1f5f9`; zebra shading for even body rows `#f8fafc`; text default black; secondary labels `#475569`.
+
+4. Task:
+- a) In `document_pdf.py` add a dataclass `DocTable` (before `PrintableDocument`) with fields: `title: str = ''`, `headers: list = field(default_factory=list)`, `rows: list = field(default_factory=list)`, `col_widths: list = field(default_factory=list)` (relative weights, one per column; empty = equal), `center_cols: list = field(default_factory=list)` (column indexes, in the logical order of `headers`, whose cells are centred).
+- b) Add to `PrintableDocument` (all defaulting to empty, keep existing fields and their order, add the new ones at the end): `info_pairs: list` (list of `(label, value)`), `totals: list` (list of `(label, value)` or `(label, value, emphasize: bool)`), `extra_tables: list` (list of `DocTable`), `table_col_widths: list` (weights for the main table), `table_center_cols: list` (indexes for the main table).
+- c) Write one private helper `_doc_table(headers, rows, content_w, col_widths, center_cols, ...styles)` that builds the ReportLab `Table` used for BOTH the main table and every `extra_tables` entry: column widths from the weights scaled to `content_w` (equal when the list is empty or its length differs from the column count), RTL order (reverse each row exactly as today), `repeatRows=1`, header row bold and centred on `#f1f5f9`, body cells right-aligned except `center_cols` which are centred, zebra `#f8fafc` on even body rows, `GRID` 0.5pt `#cbd5e1`, `VALIGN MIDDLE`, top/bottom padding 3pt, left/right padding 4pt. Replace the current main-table code with a call to this helper, passing `doc.table_col_widths` and `doc.table_center_cols`. A document without weights therefore keeps equal widths.
+- d) Story order in `render_document_pdf`: title → info box (only if `info_pairs`) → `paragraphs` → main table → totals box (only if `totals`) → each extra table (its `title` as a small bold right-aligned heading, then the table) → signers. Spacing between blocks 4mm (A4) / 3mm (A5).
+- e) Info box: a table with 4 columns in RTL order label, value, label, value (two pairs per row; an odd last pair leaves the other half empty), full content width, column weights 1.1 : 1.9 : 1.1 : 1.9, label cells bold on `#f1f5f9` in colour `#475569`, value cells normal, box border and inner grid 0.5pt `#cbd5e1`, padding 4pt. Use `_cell_text` for values so `None`/`''` shows «—».
+- f) Totals box: a 2-column table (label on the right, value on the left of it) with width 50% of `content_w`, placed at the LEFT side of the page (`hAlign='LEFT'`), label cells on `#f1f5f9`, value cells right-aligned, grid 0.5pt `#cbd5e1`. Rows whose third item is True are bold in both cells and get a slightly darker shading `#e2e8f0` on the whole row. Wrap the totals box in `KeepTogether` so it never splits across pages.
+- g) Wrap the signers table together with its 8mm spacer in `KeepTogether` so the signature row is never split. Do not change how signer images are chosen.
+- h) Invoice (`invoice_print.py` `printable_invoice`):
+  - `_money`: use the Persian thousands separator «٬» (U+066C) instead of the Latin comma. Check in the PNG that the glyph renders (no empty box); if it does not render, keep the Latin comma and say so in the report.
+  - `info_pairs` (in this order): («شمارهٔ داخلی», internal number or «—»), («شمارهٔ فاکتور فروشنده», vendor number or «—»), («تاریخ فاکتور», date), («طرف حساب», counterparty name or «—»), («پروژه / بخش», «project / section»), («وضعیت», status display). Digits through `fa_digits` exactly as today.
+  - `paragraphs`: only «شرح: …» when `invoice.description` is set; otherwise empty.
+  - Main table: same headers and rows as today; `table_col_widths=[0.6, 3.2, 1.7, 0.8, 0.9, 1.6, 1.8]`; `table_center_cols=[0, 3, 4]`.
+  - `totals`: («جمع ردیف‌ها», subtotal), («تخفیف», discount) only when the discount is not zero, («مالیات بر ارزش افزوده», VAT) only when VAT is not zero, («مبلغ قابل پرداخت», amount, True), («پرداخت‌شده», paid), («مانده», remaining, True).
+  - `extra_tables`: only when there are non-voided payments: one `DocTable(title='قسط‌های پرداخت', headers=['ردیف', 'تاریخ', 'مبلغ', 'روش', 'شمارهٔ پیگیری'], rows=..., col_widths=[0.6, 1.4, 2, 1.6, 2], center_cols=[0, 1])`, rows from the same sorted non-voided payments as today (`fa_digits` for the index, date and tracking code; `_money` for the amount; `get_method_display()`).
+  - Remove the old `totals` list of strings and the `paragraphs=paragraphs + totals` argument.
+- i) New test file `backend/core/reports/test_document_pdf_layout_o2.py` (Django `SimpleTestCase`, no database), following the import style of `test_document_pdf_27b.py`:
+  - `test_old_style_document_still_renders`: a document with only title, paragraphs, table headers/rows renders A4 and A5 PDFs (bytes start with `%PDF`).
+  - `test_structured_document_renders`: a document with `info_pairs` (3 pairs, odd count), `totals` with one emphasized row, one `extra_tables` entry, `table_col_widths` and `table_center_cols` renders A4 and A5 PDFs.
+  - `test_doc_table_widths`: the helper from (c) with weights `[1, 3]` and `content_w=400` gives column widths summing to 400 with the wider column on the LEFT (index 0 after RTL reversal is the last logical column); a weights list of the wrong length gives equal widths. This test may call the private helper directly.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From `backend`: `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test reports personnel.test_invoice_payments_41 personnel.test_invoice_payments_smoke_41b --keepdb` (at most 6 times; never without labels).
+- From the repository root: `backend\venv\Scripts\python.exe -X utf8 scratch\o2_render_sample.py` (as often as needed), then open `scratch/o2_invoice_sample_A4_p1.png` and `scratch/o2_invoice_sample_A5_p1.png` as images and check: description column wide enough that each sample description fits in at most 2 lines on A4; totals box at the left under the table with «مبلغ قابل پرداخت» and «مانده» bold; payments table under it with its title; info box at the top with two pairs per row; nothing overlaps the header box or the QR code at the bottom-left.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If a real file differs from this task (line numbers, text), follow the real file and say so in the report.
+
+6. Before finishing:
+- The tests above pass (only failures that also fail before your change are acceptable; say which) and the sample script exits 0 with `A4 pages=1` or `A4 pages=2`.
+- `git status --short` shows only the three files of section 1 (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit.
+
+7. Output and stop condition:
+- Stage only those three files and commit with this message, without push:
+feat(print): structured invoice print (info box, weighted RTL table, totals box, payments table)
+- Short English report: what changed per file, test results, sample page counts for A4 and A5, whether «٬» renders, and anything that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح درخواست به زبان ساده (Explain Simply)
+رانر اعلام کرد که راستی‌آزمایی پس از دور قبل با خطای `clean-tree` متوقف شده بود، زیرا فایل‌های کاری مربوط به تسک O3 (شامل تغییرات ثبت‌شده در رجیستری و viewهای مربوط به احراز اصالت سند و فایل‌های تست آن) در درخت کاری به صورت uncommitted وجود داشتند و مانع تمیز بودن درخت کاری برای تسک O2 می‌شدند.
+
+### ۲. اعتبارسنجی و بررسی فنی (Verify Immediately)
+- فایل‌های مورد اشاره متعلق به فاز O3 بودند که همزمان در محیط توسعه آماده شده بودند، اما در محدوده مجاز (`scope`) تسک O2 نبودند. افزودن آن‌ها به commit تسک O2 باعث شکست قانون `scope` می‌شد.
+- تمام کارهای مربوط به فاز O3 با دقت کامل و بدون از دست رفتن هیچ داده‌ای در پوشه...
+
+---
