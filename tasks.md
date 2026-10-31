@@ -4429,7 +4429,7 @@ feat(chat access ui): messenger section in user edit and company chat contact-sc
 
 ===
 
-[ ] Session 1 of 1 — Chat access release on the local app environment: backup, check, web build with the ngsw patch; the runner restarts Daphne and runs the health checks (no APK)
+[DONE] [ ] Session 1 of 1 — Chat access release on the local app environment: backup, check, web build with the ngsw patch; the runner restarts Daphne and runs the health checks (no APK)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
