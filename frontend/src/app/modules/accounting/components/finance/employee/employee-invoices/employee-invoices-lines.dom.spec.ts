@@ -267,13 +267,17 @@ describe('EmployeeInvoicesHubComponent — Lines Form and Duplicate Dialog DOM S
     fixture.detectChanges();
     expect(component.formLines.length).toBe(2);
 
-    component.onCounterpartySearch('0012345678');
-    expect(component.filteredCounterparties.map(c => c.id)).toEqual([2]);
+    // search happens in the counterparty box itself; Enter picks the single match
+    const cpInput = fixture.nativeElement.querySelector('#invoice_counterparty') as HTMLInputElement;
+    cpInput.dispatchEvent(new Event('focus'));
+    cpInput.value = '0012345678';
+    cpInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('[role="option"]').length).toBe(1);
+    cpInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
     expect(component.newInvoice.counterparty).toBe(2);
-    // selected item stays in the list even when the search no longer matches it
-    component.onCounterpartySearch('xyz');
-    expect(component.filteredCounterparties.map(c => c.id)).toEqual([2]);
-    expect(component.newInvoice.counterparty).toBe(2);
+    expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeNull();
   });
 
   it('c) turning the VAT checkbox on shows the VAT amount input; turning it off hides it', () => {

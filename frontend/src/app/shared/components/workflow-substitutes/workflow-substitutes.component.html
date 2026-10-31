@@ -43,30 +43,15 @@
             کاربر جانشین *
           </label>
           <div class="flex flex-col gap-1.5">
-            <label *ngIf="availableUsers.length > 5" for="wfsub-user-search" class="sr-only">جستجوی کاربر جانشین</label>
-            <input
-              *ngIf="availableUsers.length > 5"
-              type="text"
-              id="wfsub-user-search"
-              [(ngModel)]="userSearch"
-              name="userSearch"
-              placeholder="جستجوی نام..."
-              aria-label="جستجوی کاربر جانشین"
-              class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
-            />
-            <select
-              id="wfsub-substitute"
+            <app-search-select
+              inputId="wfsub-substitute"
+              [options]="userOptions"
               [(ngModel)]="substituteId"
               name="substituteId"
-              class="w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
-              [class.border-rose-400]="fieldErrors.substitute"
-              [class.border-slate-200]="!fieldErrors.substitute"
-            >
-              <option [ngValue]="null" disabled>انتخاب کاربر جانشین...</option>
-              <option *ngFor="let u of filteredUsers" [value]="u.id">
-                {{ u.name }}
-              </option>
-            </select>
+              placeholder="نام کاربر جانشین را بنویسید..."
+              emptyText="کاربری پیدا نشد"
+              [inputClass]="'w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ' + (fieldErrors.substitute ? 'border-rose-400' : 'border-slate-200')"
+            ></app-search-select>
             <div
               *ngIf="usersLoadError"
               role="alert"

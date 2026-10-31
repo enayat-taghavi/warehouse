@@ -422,26 +422,17 @@
             </button>
             </div>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div class="relative">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" aria-hidden="true"
-                class="absolute top-1/2 -translate-y-1/2 start-3 text-fg-muted pointer-events-none"></svg>
-              <input type="search" id="invoice_counterparty_search"
-                [ngModel]="counterpartySearch" (ngModelChange)="onCounterpartySearch($event)"
-                placeholder="جستجوی نام، کد ملی یا تلفن" aria-label="جستجوی طرف‌حساب"
-                class="min-h-[40px] ps-8 w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-            </div>
-            <select
-              [(ngModel)]="newInvoice.counterparty"
-              (ngModelChange)="onDuplicateKeyChange()"
-              aria-label="طرف‌حساب"
-              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-              <option [ngValue]="undefined" disabled>{{ filteredCounterparties.length ? 'انتخاب طرف‌حساب از لیست...' : 'طرف‌حسابی پیدا نشد' }}</option>
-              <option *ngFor="let cp of filteredCounterparties" [ngValue]="cp.id">
-                {{ cp.name }} ({{ cp.counterparty_type_display || cp.counterparty_type }})
-              </option>
-            </select>
-          </div>
+          <app-search-select
+            inputId="invoice_counterparty"
+            ariaLabel="طرف‌حساب"
+            [options]="counterpartyOptions"
+            [ngModel]="newInvoice.counterparty"
+            [ngModelOptions]="{standalone: true}"
+            (selected)="onCounterpartySelected($event)"
+            [placeholder]="counterparties.length ? 'نام، کد ملی یا تلفن طرف‌حساب را بنویسید...' : 'طرف‌حسابی ثبت نشده است'"
+            emptyText="طرف‌حسابی پیدا نشد"
+            inputClass="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          ></app-search-select>
           @if (counterpartyShebaMissing) {
             <p class="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800" role="status">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0" aria-hidden="true"></svg>

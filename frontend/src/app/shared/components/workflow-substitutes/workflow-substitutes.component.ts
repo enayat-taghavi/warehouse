@@ -7,6 +7,7 @@ import {
   ChangeDetectorRef,
   inject
 } from '@angular/core';
+import { SearchSelectComponent, SearchSelectOption } from '../search-select/search-select.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
@@ -44,7 +45,8 @@ export function parseShamsiToGregorianIso(val: string | null | undefined): strin
     ReactiveFormsModule,
     NgPersianDatepickerModule,
     SvgIconDirective,
-    ActionButtonComponent
+    ActionButtonComponent,
+    SearchSelectComponent
   ],
   templateUrl: './workflow-substitutes.component.html'
 })
@@ -77,7 +79,6 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
 
   // لیست کاربران برای جستجو و انتخاب
   availableUsers: { id: number; name: string }[] = [];
-  userSearch = '';
   isLoadingUsers = false;
   usersLoadError = '';
 
@@ -89,10 +90,15 @@ export class WorkflowSubstitutesComponent implements OnInit, OnChanges {
     return this.activeCompany?.manageableCompanies?.() || [];
   }
 
-  get filteredUsers() {
-    if (!this.userSearch.trim()) return this.availableUsers;
-    const q = this.userSearch.trim().toLowerCase();
-    return this.availableUsers.filter((u) => u.name.toLowerCase().includes(q));
+  private userOptionsSource: { id: number; name: string }[] | null = null;
+  private userOptionsCache: SearchSelectOption[] = [];
+  /** گزینه‌های کادر جستجوپذیر جانشین (جستجو در همان کادر) */
+  get userOptions(): SearchSelectOption[] {
+    if (this.userOptionsSource !== this.availableUsers) {
+      this.userOptionsSource = this.availableUsers;
+      this.userOptionsCache = this.availableUsers.map(u => ({ value: u.id, label: u.name }));
+    }
+    return this.userOptionsCache;
   }
 
   ngOnInit(): void {

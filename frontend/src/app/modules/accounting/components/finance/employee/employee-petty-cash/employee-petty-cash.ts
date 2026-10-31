@@ -22,7 +22,8 @@ import { WorkflowApiService } from '../../../../../../core/api/workflow-api.serv
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
-import { validateSheba, ShebaValidationResult } from '../../../../../../core/utils/sheba-utils';
+import { CounterpartyFormFieldsComponent } from '../../counterparties/counterparty-form/counterparty-form-fields.component';
+import { CounterpartyFormState, emptyCounterpartyForm } from '../../counterparties/counterparty-form/counterparty-form.state';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
@@ -57,7 +58,7 @@ import { AmountInputComponent } from '../../../../../../shared/components/amount
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule, CounterpartyFormFieldsComponent],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
@@ -185,17 +186,13 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   // ─── مودال تعریف سریع طرف‌حساب ───
   isQuickCounterpartyModalOpen: boolean = false;
-  newCounterparty: Partial<Counterparty> = {
-    name: '',
-    counterparty_type: 'other',
-    phone: '',
-    national_id: '',
-    bank_name: '',
-    account_number: '',
-    sheba_number: '',
-    is_active: true
-  };
-  shebaValidationResult: ShebaValidationResult | null = null;
+  /** همان فرم مشترک صفحهٔ طرف‌حساب‌های حسابدار (اعتبارسنجی شبا، بانک عامل، شبا از شماره حساب) */
+  readonly cpForm = new CounterpartyFormState(
+    (type, message) => this.toast.show(type, message),
+    () => this.cdr.detectChanges()
+  );
+  get newCounterparty(): Partial<Counterparty> { return this.cpForm.model; }
+  set newCounterparty(value: Partial<Counterparty>) { this.cpForm.model = value; }
 
   // ─── مودال پیش‌نمایش تصویر پیوست ───
   isAttachmentPreviewModalOpen: boolean = false;
@@ -1260,17 +1257,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   // ─── مودال تعریف سریع طرف‌حساب ───
   openQuickCounterpartyModal(): void {
-    this.newCounterparty = {
-      name: '',
-      counterparty_type: 'other',
-      phone: '',
-      national_id: '',
-      bank_name: '',
-      account_number: '',
-      sheba_number: '',
-      is_active: true
-    };
-    this.shebaValidationResult = null;
+    this.cpForm.reset({ ...emptyCounterpartyForm(), counterparty_type: 'other' });
     this.isQuickCounterpartyModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -1280,35 +1267,26 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  onShebaInput(): void {
-    if (!this.newCounterparty.sheba_number) {
-      this.shebaValidationResult = null;
+  saveQuickCounterparty(): void {
+    const name = this.newCounterparty.name?.trim() || '';
+    if (!name) {
+      this.toast.show('warning', 'نام شخص یا فروشگاه الزامی است.');
       return;
     }
-    const val = this.newCounterparty.sheba_number.trim();
-    this.shebaValidationResult = validateSheba(val);
-    if (this.shebaValidationResult.isValid && this.shebaValidationResult.bank) {
-      this.newCounterparty.bank_name = this.shebaValidationResult.bank.name;
-    }
-  }
-
-  saveQuickCounterparty(): void {
-    if (!this.newCounterparty.name?.trim()) {
-      this.toast.show('warning', 'نام شخص یا فروشگاه الزامی است.');
+    if (this.cpForm.isShebaInvalid) {
+      this.toast.show('warning', 'شماره شبا معتبر نیست.');
       return;
     }
 
     this.isSaving = true;
-    const payload = {
-      ...this.newCounterparty,
-      name: this.newCounterparty.name.trim(),
-      phone: this.newCounterparty.phone?.trim() || undefined,
-      national_id: this.newCounterparty.national_id?.trim() || undefined,
-      sheba_number: this.newCounterparty.sheba_number?.trim() || undefined,
-      bank_name: this.newCounterparty.bank_name?.trim() || undefined,
-      account_number: this.newCounterparty.account_number?.trim() || undefined,
-      is_active: true
-    };
+    const payload: Partial<Counterparty> = this.cpForm.buildIdentityPayload(name);
+    // حساب اولیه (اصلی) تو در تو در همان درخواست، مثل صفحهٔ طرف‌حساب‌ها
+    if (this.cpForm.hasPendingBankAccount()) {
+      payload.bank_accounts = [{ ...this.cpForm.buildBankAccountPayload(), is_primary: true }];
+    }
+    // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب در شرکت درست ساخته شود
+    const companyId = this.activeCompanyService?.activeCompanyId;
+    if (companyId) payload.company = companyId;
 
     this.personnelApi.createCounterparty(payload).subscribe({
       next: (created: Counterparty) => {

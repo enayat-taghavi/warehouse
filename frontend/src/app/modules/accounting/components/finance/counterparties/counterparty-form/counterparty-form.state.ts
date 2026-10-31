@@ -8,6 +8,7 @@ import {
   generateShebaFromAccount,
   validateAccountNumber
 } from '../../../../../../core/utils/sheba-utils';
+import { SearchSelectOption } from '../../../../../../shared/components/search-select/search-select.component';
 
 type Notify = (type: 'success' | 'error' | 'warning' | 'info', message: string) => void;
 
@@ -57,10 +58,9 @@ export class CounterpartyFormState {
   bankCardNumber = '';
   bankOwnerName = '';
   readonly iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
+  readonly bankOptions: SearchSelectOption[] = IRANIAN_BANKS.map(b => ({ value: b.name, label: b.name, hint: b.code, keywords: b.code }));
   shebaValidationResult: ShebaValidationResult | null = null;
   shebaDigitsDisplay = '';
-  isBankDropdownOpen = false;
-  bankSearchQuery = '';
   isShebaCopied = false;
   isAccountCopied = false;
   private isSyncingBank = false;
@@ -82,8 +82,6 @@ export class CounterpartyFormState {
     this.bankOwnerName = '';
     this.shebaValidationResult = null;
     this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
     this.isAccountCopied = false;
     this.isShebaCopied = false;
   }
@@ -150,26 +148,14 @@ export class CounterpartyFormState {
     return payload;
   }
 
-  get filteredBanks(): IranianBankInfo[] {
-    if (!this.bankSearchQuery?.trim()) return this.iranianBanks;
-    const q = this.bankSearchQuery.trim().toLowerCase();
-    return this.iranianBanks.filter(b => b.name.toLowerCase().includes(q) || b.code.includes(q));
+  /** انتخاب بانک از کادر جستجوپذیر بانک عامل */
+  onBankSelected(name: string): void {
+    const bank = this.iranianBanks.find(b => b.name === name);
+    if (bank) this.selectBank(bank);
   }
 
-  toggleBankDropdown(event?: Event): void {
-    if (event) event.stopPropagation();
-    if (this.isShebaMasked) return;
-    this.isBankDropdownOpen = !this.isBankDropdownOpen;
-    if (this.isBankDropdownOpen) {
-      this.bankSearchQuery = '';
-    }
-  }
-
-  selectBank(bank: IranianBankInfo, event?: Event): void {
-    if (event) event.stopPropagation();
+  selectBank(bank: IranianBankInfo): void {
     this.model.bank_name = bank.name;
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
 
     const accValidation = validateAccountNumber(this.model.account_number);
     if (accValidation.isValid) {

@@ -15,6 +15,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { validateSheba } from '../../../../../../core/utils/sheba-utils';
+import { SearchSelectComponent, SearchSelectOption } from '../../../../../../shared/components/search-select/search-select.component';
 import { CounterpartyFormFieldsComponent } from '../../counterparties/counterparty-form/counterparty-form-fields.component';
 import { CounterpartyFormState, emptyCounterpartyForm, isMaskedValue } from '../../counterparties/counterparty-form/counterparty-form.state';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
@@ -50,15 +51,10 @@ function toAsciiDigits(v: string): string {
   return v.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 }
 
-/** یکسان‌سازی متن جستجو: ی/ک عربی، ارقام، فاصله‌ها و نیم‌فاصله */
-function normalizeSearchText(v: string): string {
-  return toAsciiDigits(v || '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\u200c\s]+/g, ' ').trim().toLowerCase();
-}
-
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
@@ -150,7 +146,6 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   /** پیوست فعلی فاکتوری که ویرایش می‌شود (فایل تازه جای آن را می‌گیرد) */
   existingAttachmentUrl: string | null = null;
   /** متن جستجوی طرف‌حساب در فرم فاکتور */
-  counterpartySearch = '';
   /** تقویم شمسی تاریخ فاکتور؛ ng-persian-datepicker فقط با FormControl روز ماه را می‌کشد (AGENTS.md) */
   readonly invoiceDateControl = new FormControl<string>('', { nonNullable: true });
   private invoiceDateSub?: Subscription;
@@ -509,7 +504,6 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.selectedInvoiceAttachment = null;
     this.attachmentFileName = '';
     this.existingAttachmentUrl = null;
-    this.counterpartySearch = '';
   }
 
   openNewInvoiceModal(): void {
@@ -680,28 +674,24 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── جستجوی طرف‌حساب: فهرست کوتاه می‌شود؛ تنها نتیجه خودش انتخاب می‌شود ───
-  private counterpartyMatches(query: string): Counterparty[] {
-    const q = normalizeSearchText(query);
-    if (!q) return this.counterparties;
-    return this.counterparties.filter(cp =>
-      normalizeSearchText(`${cp.name} ${cp.national_id || ''} ${cp.phone || ''} ${cp.mobile || ''}`).includes(q));
-  }
-
-  get filteredCounterparties(): Counterparty[] {
-    const matches = this.counterpartyMatches(this.counterpartySearch);
-    const selected = this.counterparties.find(cp => cp.id === Number(this.newInvoice.counterparty));
-    // طرف‌حساب انتخاب‌شده همیشه در فهرست می‌ماند تا انتخاب خالی نشود
-    return selected && !matches.includes(selected) ? [selected, ...matches] : matches;
-  }
-
-  onCounterpartySearch(value: string): void {
-    this.counterpartySearch = value;
-    if (!normalizeSearchText(value)) return;
-    const matches = this.counterpartyMatches(value);
-    if (matches.length === 1 && matches[0].id !== Number(this.newInvoice.counterparty)) {
-      this.newInvoice.counterparty = matches[0].id;
-      this.onDuplicateKeyChange();
+  /** گزینه‌های کادر جستجوپذیر طرف‌حساب (جستجو در نام، کد ملی و تلفن در همان کادر) */
+  private cpOptionsSource: Counterparty[] | null = null;
+  private cpOptionsCache: SearchSelectOption[] = [];
+  get counterpartyOptions(): SearchSelectOption[] {
+    if (this.cpOptionsSource !== this.counterparties) {
+      this.cpOptionsSource = this.counterparties;
+      this.cpOptionsCache = this.counterparties.map(cp => ({
+        value: cp.id,
+        label: `${cp.name} (${cp.counterparty_type_display || cp.counterparty_type})`,
+        keywords: `${cp.national_id || ''} ${cp.phone || ''} ${cp.mobile || ''}`
+      }));
     }
+    return this.cpOptionsCache;
+  }
+
+  onCounterpartySelected(id: number): void {
+    this.newInvoice.counterparty = id;
+    this.onDuplicateKeyChange();
   }
 
   // ─── Enter در ردیف: به ردیف بعد می‌رود و در ردیف آخر ردیف تازه می‌سازد ───

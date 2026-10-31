@@ -158,41 +158,19 @@
   </div>
 </div>
 
-<!-- ۶. بانک عامل -->
-<div class="relative">
-  <label class="block text-xs font-bold text-slate-600 mb-1.5">بانک عامل:</label>
-  <div
-    (click)="form.toggleBankDropdown($event)"
-    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-between cursor-pointer hover:bg-white transition-colors"
-  >
-    <span [class.text-slate-400]="!form.model.bank_name" class="truncate">
-      {{ form.model.bank_name || 'انتخاب بانک عامل...' }}
-    </span>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" appIcon="chevron-down"></svg>
-  </div>
-
-  <!-- منوی بازشونده بانک‌ها -->
-  <div
-    *ngIf="form.isBankDropdownOpen"
-    class="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto p-2 space-y-1"
-  >
-    <input
-      type="text"
-      [(ngModel)]="form.bankSearchQuery"
-      name="bankSearchQuery"
-      (click)="$event.stopPropagation()"
-      placeholder="جستجوی نام یا کد بانک..."
-      class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:bg-white focus:outline-none mb-1"
-    />
-    <div
-      *ngFor="let b of form.filteredBanks"
-      (click)="form.selectBank(b, $event)"
-      class="px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 cursor-pointer text-xs font-bold flex items-center justify-between transition-colors"
-    >
-      <span>{{ b.name }}</span>
-      <span class="text-[10px] text-slate-400 font-mono">{{ b.code }}</span>
-    </div>
-  </div>
+<!-- ۶. بانک عامل (جستجو در همان کادر) -->
+<div>
+  <label for="cp-bank" class="block text-xs font-bold text-slate-600 mb-1.5">بانک عامل:</label>
+  <app-search-select
+    inputId="cp-bank"
+    [options]="form.bankOptions"
+    [ngModel]="form.model.bank_name"
+    name="bank_name"
+    [disabled]="form.isShebaMasked"
+    (selected)="form.onBankSelected($event)"
+    placeholder="نام یا کد بانک را بنویسید..."
+    emptyText="بانکی با این مشخصات یافت نشد"
+  ></app-search-select>
 </div>
 
 <!-- ۷. شماره حساب بانکی -->

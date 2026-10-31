@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, HostListener, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
@@ -28,6 +28,7 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
+import { SearchSelectComponent, SearchSelectOption } from '../../../../../shared/components/search-select/search-select.component';
 import { AmountInputComponent } from '../../../../../shared/components/amount-input/amount-input.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 
@@ -41,7 +42,7 @@ export const TREASURY_TAB_ID = 'treasury';
 @Component({
   selector: 'app-company-treasury-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, OfflinePendingBadgeComponent, LoadingSkeletonComponent, ModalComponent, AmountInputComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, OfflinePendingBadgeComponent, LoadingSkeletonComponent, ModalComponent, AmountInputComponent, SearchSelectComponent],
   providers: [CompaniesStudioFacade],
   templateUrl: './company-treasury-tab.html'
 })
@@ -75,8 +76,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   copiedShebaId: number | string | null = null;
   copiedSheba: string | null = null;
   iranianBanksList: IranianBankInfo[] = IRANIAN_BANKS;
-  bankSearchQuery = '';
-  isBankDropdownOpen = false;
+  readonly bankOptions: SearchSelectOption[] = IRANIAN_BANKS.map(b => ({ value: b.name, label: b.name, hint: b.code, keywords: `${b.shortName} ${b.code}` }));
 
   newAccount = this.getEmptyBankAccountData();
   /** خطای کنار فیلدهای موجودی اولیه در فرم ساخت (۳.۳) */
@@ -183,15 +183,6 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
     this.openingAccount = null;
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (this.isBankDropdownOpen && !target.closest('.bank-combobox-container')) {
-      this.isBankDropdownOpen = false;
-      this.cdr.markForCheck();
-    }
   }
 
   hasPendingForm(): boolean {
@@ -311,21 +302,13 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
 
   selectBankForAccount(bank: IranianBankInfo): void {
     this.newAccount.bank_name = bank.name;
-    this.isBankDropdownOpen = false;
     this.onAccountNumberInput();
     this.cdr.markForCheck();
   }
 
-  filterBanks(): IranianBankInfo[] {
-    if (!this.bankSearchQuery.trim()) {
-      return this.iranianBanksList;
-    }
-    const q = this.bankSearchQuery.trim().toLowerCase();
-    return this.iranianBanksList.filter(b =>
-      b.name.toLowerCase().includes(q) ||
-      b.shortName.toLowerCase().includes(q) ||
-      b.code.includes(q)
-    );
+  onBankSelected(name: string): void {
+    const bank = this.iranianBanksList.find(b => b.name === name);
+    if (bank) this.selectBankForAccount(bank);
   }
 
   onAccountNumberInput(event?: any): void {

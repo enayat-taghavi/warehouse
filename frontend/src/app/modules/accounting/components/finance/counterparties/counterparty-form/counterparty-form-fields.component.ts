@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CounterpartyKind } from '../../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { CounterpartyFormState } from './counterparty-form.state';
+import { SearchSelectComponent } from '../../../../../../shared/components/search-select/search-select.component';
 
 export interface CounterpartyTypeOption {
   key: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
@@ -29,7 +30,7 @@ export const COUNTERPARTY_TYPE_OPTIONS: CounterpartyTypeOption[] = [
 @Component({
   selector: 'app-counterparty-form-fields',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, SearchSelectComponent],
   templateUrl: './counterparty-form-fields.component.html',
   host: { class: 'contents' }
 })
