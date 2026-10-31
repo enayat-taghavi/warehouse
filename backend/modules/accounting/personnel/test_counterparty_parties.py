@@ -188,14 +188,15 @@ class CounterpartyPartiesTests(TestCase):
         data = res.data
 
         self.assertTrue(data['bank_masked'])
-        self.assertIn('*', data['sheba_number'])
+        # شبا برای همه آشکار است (تصمیم کاربر ۱۰ آبان ۱۴۰۵)؛ کد ملی حقیقی پوشیده می‌ماند
+        self.assertNotIn('*', data['sheba_number'])
         self.assertTrue(data['sheba_number'].endswith(VALID_SHEBA[-4:]))
 
         self.assertIn('*', data['national_id'])
         self.assertTrue(data['national_id'].endswith(VALID_PERSON_NID[-4:]))
 
         self.assertEqual(len(data['bank_accounts']), 1)
-        self.assertIn('*', data['bank_accounts'][0]['sheba_number'])
+        self.assertNotIn('*', data['bank_accounts'][0]['sheba_number'])
         self.assertTrue(data['bank_accounts'][0]['sheba_number'].endswith(VALID_SHEBA[-4:]))
 
     def test_accountant_and_treasury_of_same_company_see_full(self):
@@ -240,9 +241,9 @@ class CounterpartyPartiesTests(TestCase):
         res_b = self._get(treasury_b, f'{URL}{cp.id}/')
         self.assertEqual(res_b.status_code, 200, res_b.content)
         self.assertTrue(res_b.data['bank_masked'])
-        self.assertIn('*', res_b.data['sheba_number'])
+        self.assertNotIn('*', res_b.data['sheba_number'])
         self.assertTrue(res_b.data['sheba_number'].endswith(VALID_SHEBA[-4:]))
         self.assertIn('*', res_b.data['national_id'])
         self.assertTrue(res_b.data['national_id'].endswith(VALID_PERSON_NID[-4:]))
-        self.assertIn('*', res_b.data['bank_accounts'][0]['sheba_number'])
+        self.assertNotIn('*', res_b.data['bank_accounts'][0]['sheba_number'])
         self.assertTrue(res_b.data['bank_accounts'][0]['sheba_number'].endswith(VALID_SHEBA[-4:]))

@@ -90,10 +90,60 @@
       </div>
     </div>
 
+    <!-- موبایل: هر فاکتور یک کارت -->
+    <ul class="md:hidden divide-y divide-line" aria-label="فهرست فاکتورها">
+      @for (inv of invoices; track inv.id) {
+        <li class="p-3 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-black text-fg truncate">{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</p>
+              <p class="mt-0.5 text-[11px] text-fg-muted">
+                <span class="tabular-nums">{{ inv.invoice_date_shamsi }}</span>
+                @if (inv.invoice_number) { · شماره {{ inv.invoice_number }} }
+                @if (inv.number) { · داخلی {{ inv.number }} }
+              </p>
+            </div>
+            <span [ngClass]="getStatusBadgeClass(inv.status)"
+                  class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border">{{ getStatusLabel(inv.status) }}</span>
+          </div>
+          <p class="text-xs text-fg line-clamp-2">{{ inv.description || '-' }}</p>
+          <div class="flex items-end justify-between gap-2">
+            <span class="px-2 py-0.5 rounded-lg bg-surface-muted text-[11px] font-bold text-fg-muted truncate">{{ headsSummary(inv) }}</span>
+            <div class="text-end shrink-0">
+              <p class="text-sm font-black text-fg tabular-nums">{{ formatNumber(inv.amount) }} <span class="text-[10px] font-medium text-fg-muted">ریال</span></p>
+              @if (inv.paid_amount && +inv.paid_amount > 0) {
+                <p class="text-[10px] text-emerald-700">پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}</p>
+              }
+            </div>
+          </div>
+          @if (inv.possible_duplicate || inv.vat_manual) {
+            <div class="flex flex-wrap gap-1">
+              @if (inv.possible_duplicate) { <span class="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">تکراری</span> }
+              @if (inv.vat_manual) { <span class="px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span> }
+            </div>
+          }
+          <div class="flex flex-wrap items-center gap-1.5 pt-1">
+            @if (isEditable(inv)) {
+              <button type="button" appAction="send" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)"></button>
+              <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)"></button>
+            }
+            @if (inv.attachment) {
+              <button type="button" appAction="view" display="icon" label="تصویر فاکتور" size="sm" (click)="openAttachmentPreview(inv)"></button>
+            }
+            <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint" (click)="printInvoice(inv)"></button>
+            <button type="button" appAction="history" display="icon" label="سابقه" size="sm" (click)="openInvoiceHistory(inv.id)"></button>
+            @if (inv.status === 'draft') {
+              <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)"></button>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+
     <!-- بدنه جدول -->
     <div class="overflow-x-auto">
       <table class="w-full text-start border-collapse text-xs">
-        <thead>
+        <thead class="hidden md:table-header-group">
           <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
             <th class="py-3 px-3 text-center w-12">#</th>
             <th class="py-3 px-3">شماره فاکتور</th>
@@ -109,7 +159,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
-          <tr *ngFor="let inv of invoices; let idx = index" class="hover:bg-slate-50/80 transition-colors">
+          <tr *ngFor="let inv of invoices; let idx = index" class="hidden md:table-row hover:bg-slate-50/80 transition-colors">
             
             <!-- ردیف -->
             <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">
@@ -355,12 +405,22 @@
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="text-[11px] font-bold text-slate-700">طرف‌حساب (فروشگاه یا شخص) *</label>
+            <div class="flex items-center gap-1">
+            @if (canEditSelectedCounterparty) {
+              <button type="button" (click)="openEditCounterpartyModal()"
+                class="min-h-[32px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                title="ویرایش طرف‌حساب انتخاب‌شده" aria-label="ویرایش طرف‌حساب انتخاب‌شده">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit" aria-hidden="true"></svg>
+                <span>ویرایش</span>
+              </button>
+            }
             <button
               type="button"
               (click)="openQuickCounterpartyModal()"
               class="min-h-[32px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>+ طرف‌حساب جدید</span>
             </button>
+            </div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div class="relative">
@@ -451,11 +511,7 @@
 
         <!-- ردیف‌های فاکتور (۱ تا ۱۰۰ ردیف) -->
         <div>
-          <div class="flex items-center justify-between mb-1">
-            <h4 class="text-[11px] font-bold text-slate-700">ردیف‌های فاکتور *</h4>
-            <button type="button" appAction="create" display="label" label="افزودن ردیف" size="sm"
-              [disabled]="formLines.length >= maxLines" (click)="addLine()"></button>
-          </div>
+          <h4 class="mb-1 text-[11px] font-bold text-slate-700">ردیف‌های فاکتور *</h4>
           @if (linesError) {
             <p class="mb-2 text-[11px] font-bold text-rose-700" role="alert">{{ linesError }}</p>
           }
@@ -478,6 +534,7 @@
             @for (line of formLines; track $index; let i = $index) {
               <div class="rounded-2xl border border-line bg-surface-muted/40 p-2.5 md:p-1.5 md:bg-transparent md:border-0 md:rounded-none"
                    [class.border-rose-400]="!!lineErrors[i]">
+                <p class="md:hidden mb-1.5 text-[11px] font-black text-fg-muted">ردیف {{ formatNumber(i + 1) }}</p>
                 <div class="grid grid-cols-2 md:grid-cols-12 gap-2 items-start" (keydown.enter)="onLineEnter(i, $event)">
                   <div class="col-span-2 md:col-span-3">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_desc_' + i">شرح</label>
@@ -536,6 +593,8 @@
               </div>
             }
           </div>
+          <button type="button" appAction="create" display="label" label="افزودن ردیف" size="sm" tone="indigo"
+            class="mt-2" [disabled]="formLines.length >= maxLines" (click)="addLine()"></button>
         </div>
 
         <!-- شرح کلی: خودکار از شرح ردیف اول، قابل ویرایش -->
@@ -713,8 +772,8 @@
             👥
           </div>
           <div>
-            <h3 class="text-xs md:text-sm font-black text-slate-800">تعریف سریع طرف‌حساب جدید</h3>
-            <p class="text-[10px] text-fg-muted">افزودن فروشگاه، تعمیرگاه، راننده یا پیمانکار</p>
+            <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingCounterpartyId ? 'ویرایش طرف‌حساب' : 'تعریف سریع طرف‌حساب جدید' }}</h3>
+            <p class="text-[10px] text-fg-muted">{{ editingCounterpartyId ? 'طرف‌حسابی که خودتان ثبت کرده‌اید' : 'افزودن فروشگاه، تعمیرگاه، راننده یا پیمانکار' }}</p>
           </div>
         </div>
         <button

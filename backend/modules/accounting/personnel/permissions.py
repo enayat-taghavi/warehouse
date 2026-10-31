@@ -46,6 +46,21 @@ def ensure_counterparty_manager(user, company_id, message="شما مجوز مد�
         raise PermissionDenied(message)
 
 
+def is_counterparty_creator(user, party, counterparty=None):
+    """ثبت‌کنندهٔ نقش طرف‌حساب (نه سازندهٔ طرف بیرونی که ممکن است برای نقش دیگری ساخته شده باشد)."""
+    if not user or not user.is_authenticated or counterparty is None:
+        return False
+    return bool(counterparty.created_by_id and counterparty.created_by_id == user.id)
+
+
+def ensure_counterparty_editor(user, party, counterparty=None,
+                               message="شما مجوز ویرایش این طرف‌حساب را ندارید."):
+    """ویرایش طرف‌حساب و حساب‌های بانکی آن: مدیر طرف‌حساب‌های شرکت، یا کارمندی که خودش آن را ثبت کرده است."""
+    if is_counterparty_creator(user, party, counterparty):
+        return
+    ensure_counterparty_manager(user, party.company_id, message)
+
+
 class IsPayrollSettingsManagerOrReadOnly(permissions.BasePermission):
     """
     اجازه خواندن و مشاهده تنظیمات پایه به کلیه کاربران احراز هویت شده،

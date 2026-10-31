@@ -36,6 +36,9 @@ from ..models import (
 PARTY_INPUT_FIELDS = ('kind', 'name', 'national_id', 'economic_code', 'registration_number', 'phone', 'mobile',
                       'email', 'address', 'postal_code', 'notes')
 MASKABLE_BANK_FIELDS = ('sheba_number', 'account_number', 'card_number')
+# شبای طرف‌حساب برای هر کسی که طرف‌حساب را می‌بیند آشکار است (تصمیم کاربر، ۱۰ آبان ۱۴۰۵)؛
+# فقط شماره‌حساب و کارت برای نداشتن دید کامل پوشیده می‌مانند
+MASKED_PARTY_BANK_FIELDS = ('account_number', 'card_number')
 
 
 def _head_value(obj, key):
@@ -130,7 +133,7 @@ class PartyBankAccountSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if not _can_view_full(self, instance.party):
-            for key in MASKABLE_BANK_FIELDS:
+            for key in MASKED_PARTY_BANK_FIELDS:
                 data[key] = mask_tail(data.get(key))
         return data
 
@@ -246,7 +249,7 @@ class CounterpartySerializer(serializers.ModelSerializer):
             # سازگاری با فرانت پیش از ۳.۱-ج: حساب اصلی، شبا بی «IR» مثل شکل پیشین
             'bank_name': primary.bank_name if primary else None,
             'account_number': guard(primary.account_number) if primary else None,
-            'sheba_number': guard(primary_sheba[2:] if primary_sheba and primary_sheba.startswith('IR') else primary_sheba),
+            'sheba_number': primary_sheba[2:] if primary_sheba and primary_sheba.startswith('IR') else primary_sheba,
             'created_by': instance.created_by_id,
             'created_at': stamp.to_representation(instance.created_at) if instance.created_at else None,
             'updated_at': stamp.to_representation(instance.updated_at) if instance.updated_at else None,
@@ -374,6 +377,8 @@ class InvoicePaymentSerializer(serializers.ModelSerializer):
         if bank is None:
             return None
         value = getattr(bank, key)
+        if key == 'sheba_number':
+            return value
         return value if _can_view_full(self, bank.party) else mask_tail(value)
 
     def get_party_sheba_number(self, obj):

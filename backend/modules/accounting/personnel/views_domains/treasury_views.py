@@ -44,7 +44,9 @@ from ..serializers import (
     WorkflowAuditLogSerializer,
 )
 from ..permissions import (
+    ensure_counterparty_editor,
     ensure_counterparty_manager,
+    is_counterparty_manager,
     IsCounterpartyManagerOrReadOnly,
     requires_company_scope,
 )
@@ -409,7 +411,8 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
     pagination_class = OptionalPageNumberPagination
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'create']:
+        # ویرایش: ثبت‌کننده هم مجاز است؛ داوری در perform_update (ensure_counterparty_editor)
+        if self.action in ['list', 'retrieve', 'create', 'update', 'partial_update']:
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsCounterpartyManagerOrReadOnly()]
 
@@ -501,8 +504,11 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
         instance = serializer.instance
         if requires_company_scope(user):
             ensure_scoped_write(user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید.")
-        ensure_counterparty_manager(user, instance.company_id)
+        ensure_counterparty_editor(user, instance.party, instance)
         party_data, role_data, flat_bank, _rows = serializer.split_validated()
+        if not user.is_superuser and not is_counterparty_manager(user, instance.company_id):
+            # ثبت‌کننده فقط مشخصات و حساب بانکی را اصلاح می‌کند؛ فعال‌بودن، نوع و کد حساب با مدیر است
+            role_data = {}
         new_nid = party_data.get('national_id')
         if new_nid and new_nid != instance.party.national_id:
             from contacts.services import find_party
@@ -560,6 +566,12 @@ class PartyBankAccountViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsCounterpartyManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
 
+    def get_permissions(self):
+        # افزودن و ویرایش حساب: ثبت‌کنندهٔ طرف‌حساب هم مجاز است (داوری در _ensure_party_scope)؛ حذف فقط مدیر
+        if self.action in ['list', 'retrieve', 'create', 'update', 'partial_update']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsCounterpartyManagerOrReadOnly()]
+
     def get_queryset(self):
         user = self.request.user
         qs = PartyBankAccount.objects.select_related('party').filter(party__counterparty__isnull=False)
@@ -573,21 +585,24 @@ class PartyBankAccountViewSet(viewsets.ModelViewSet):
                 return qs.none()
         return qs.order_by('-is_primary', '-created_at')
 
-    def _ensure_party_scope(self, party):
+    def _ensure_party_scope(self, party, allow_creator=False):
         if requires_company_scope(self.request.user):
             ensure_scoped_write(self.request.user, party.company_id, "فقط حساب بانکی طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید تغییر دهید.")
-        ensure_counterparty_manager(self.request.user, party.company_id)
+        if allow_creator:
+            ensure_counterparty_editor(self.request.user, party, Counterparty.objects.filter(party=party).first())
+        else:
+            ensure_counterparty_manager(self.request.user, party.company_id)
 
     def perform_create(self, serializer):
         party = serializer.validated_data.get('party')
         if party is None or not Counterparty.objects.filter(party=party).exists():
             raise ValidationError({'party': "طرف‌حساب را انتخاب کنید."})
-        self._ensure_party_scope(party)
+        self._ensure_party_scope(party, allow_creator=True)
         data = {k: v for k, v in serializer.validated_data.items() if k != 'party'}
         serializer.instance = create_bank_account(party, data, self.request.user)
 
     def perform_update(self, serializer):
-        self._ensure_party_scope(serializer.instance.party)
+        self._ensure_party_scope(serializer.instance.party, allow_creator=True)
         data = {k: v for k, v in serializer.validated_data.items() if k != 'party'}
         serializer.instance = update_bank_account(serializer.instance, data, self.request.user)
 

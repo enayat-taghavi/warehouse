@@ -298,8 +298,8 @@ class InvoicePayments41Tests(TestCase):
         self.assertEqual(res_get.status_code, 200, res_get.data)
         self.assertGreater(len(res_get.data['results']), 0)
         sheba = res_get.data['results'][0]['party_sheba_number']
-        self.assertTrue(sheba.startswith('*'), f'Expected masked sheba starting with *, got {sheba}')
-        self.assertNotIn('IR120120000000000000000002', sheba)
+        # شبای طرف‌حساب برای همه آشکار است (تصمیم کاربر ۱۰ آبان ۱۴۰۵)
+        self.assertEqual(sheba, 'IR120120000000000000000002')
 
     def test_outsider_gets_404(self):
         inv = self.payable_invoice('1000')

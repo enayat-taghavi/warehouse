@@ -1069,8 +1069,40 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── مودال تعریف سریع طرف‌حساب جدید ───
+  // ─── مودال تعریف سریع / ویرایش طرف‌حساب ───
+  /** طرف‌حسابی که در مودال ویرایش می‌شود (null = تعریف تازه) */
+  editingCounterpartyId: number | null = null;
+
+  /** کارمند طرف‌حسابی را که خودش ثبت کرده ویرایش می‌کند (سرور هم همین را می‌سنجد) */
+  get canEditSelectedCounterparty(): boolean {
+    const cp = this.counterparties.find(c => c.id === Number(this.newInvoice.counterparty));
+    if (!cp) return false;
+    const userId = this.auth.user()?.id;
+    return !!this.auth.user()?.is_superuser || (!!userId && cp.created_by === userId);
+  }
+
+  openEditCounterpartyModal(): void {
+    const cp = this.counterparties.find(c => c.id === Number(this.newInvoice.counterparty));
+    if (!cp?.id) return;
+    const sheba = (cp.sheba_number || '').replace(/^IR/i, '');
+    this.newCounterparty = {
+      name: cp.name,
+      counterparty_type: cp.counterparty_type,
+      phone: cp.phone || '',
+      national_id: cp.national_id || '',
+      bank_name: cp.bank_name || '',
+      account_number: cp.account_number || '',
+      sheba_number: sheba ? `IR${sheba}` : '',
+      is_active: true
+    };
+    this.editingCounterpartyId = cp.id;
+    this.onShebaInput();
+    this.isQuickCounterpartyModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
   openQuickCounterpartyModal(): void {
+    this.editingCounterpartyId = null;
     this.newCounterparty = {
       name: '',
       counterparty_type: 'repair_shop',
@@ -1088,6 +1120,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   closeQuickCounterpartyModal(): void {
     this.isQuickCounterpartyModalOpen = false;
+    this.editingCounterpartyId = null;
     this.cdr.detectChanges();
   }
 
@@ -1120,6 +1153,29 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       account_number: this.newCounterparty.account_number?.trim() || undefined,
       is_active: true
     };
+
+    const editId = this.editingCounterpartyId;
+    if (editId) {
+      // پوشیده‌ها (دارای *) را سرور نادیده می‌گیرد؛ شبا همیشه کامل است
+      this.personnelApi.updateCounterparty(editId, payload).subscribe({
+        next: (saved: Counterparty) => {
+          this.isSaving = false;
+          this.toast.show('success', `طرف‌حساب «${saved?.name || payload.name}» ویرایش شد.`);
+          this.closeQuickCounterpartyModal();
+          this.loadCounterparties();
+          this.cdr.detectChanges();
+        },
+        error: (err: any) => {
+          this.isSaving = false;
+          const e = err?.error;
+          const first = (v: any): string => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
+          this.toast.show('error', first(e?.sheba_number) || first(e?.national_id) || first(e?.detail)
+            || first(e?.error) || 'ویرایش طرف‌حساب انجام نشد.');
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
 
     // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب در شرکت درست ساخته شود
     const companyId = this.activeCompanyService?.activeCompanyId;

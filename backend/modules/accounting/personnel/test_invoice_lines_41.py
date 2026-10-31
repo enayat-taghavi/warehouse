@@ -156,6 +156,40 @@ class InvoiceLines41Tests(HeadFixtures):
         self.assertEqual(r4.status_code, 200, r4.content)
         self.assertEqual(ExpenseInvoice.objects.get(pk=inv_id).status != 'draft', True)
 
+    def test_creator_edits_own_counterparty_and_bank_but_not_others(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+        from companies.testing import grant_membership
+        from personnel.models import Counterparty, PartyBankAccount
+        emp = get_user_model().objects.create_user(username='cp_creator_emp', password='x')
+        grant_membership(emp, self.company)
+        api = APIClient()
+        api.force_authenticate(emp)
+        hdr = {'HTTP_X_COMPANY_ID': str(self.company.id)}
+        r = api.post('/api/personnel/counterparties/', {'name': 'own shop', 'counterparty_type': 'other',
+                                                        'company': self.company.id}, format='json', **hdr)
+        self.assertIn(r.status_code, (200, 201), r.content)
+        own_id = r.json()['id']
+        r2 = api.patch(f'/api/personnel/counterparties/{own_id}/',
+                       {'name': 'own shop 2', 'sheba_number': '450120000000101111111001', 'is_active': False},
+                       format='json', **hdr)
+        self.assertEqual(r2.status_code, 200, r2.content)
+        own = Counterparty.objects.select_related('party').get(pk=own_id)
+        self.assertEqual(own.party.name, 'own shop 2')
+        self.assertTrue(own.is_active)  # فعال‌بودن با مدیر است
+        acc = PartyBankAccount.objects.get(party=own.party)
+        self.assertEqual(acc.sheba_number, 'IR450120000000101111111001')
+        r3 = api.patch(f'/api/personnel/party-bank-accounts/{acc.id}/', {'bank_name': 'Mellat'}, format='json', **hdr)
+        self.assertEqual(r3.status_code, 200, r3.content)
+        # طرف‌حساب دیگران: ویرایش و حذف ممنوع
+        r4 = api.patch(f'/api/personnel/counterparties/{self.cp.id}/', {'name': 'hijack'}, format='json', **hdr)
+        self.assertEqual(r4.status_code, 403, r4.content)
+        other_acc = PartyBankAccount.objects.filter(party=self.cp.party).first()
+        r5 = api.patch(f'/api/personnel/party-bank-accounts/{other_acc.id}/', {'bank_name': 'x'}, format='json', **hdr)
+        self.assertEqual(r5.status_code, 403, r5.content)
+        r6 = api.delete(f'/api/personnel/counterparties/{own_id}/', **hdr)
+        self.assertEqual(r6.status_code, 403, r6.content)
+
     def test_edit_with_new_attachment_multipart(self):
         import json
         from django.core.files.uploadedfile import SimpleUploadedFile

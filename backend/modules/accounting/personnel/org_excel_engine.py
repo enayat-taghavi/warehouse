@@ -117,7 +117,7 @@ def export_counterparties_excel(section_id=None, company_ids=None, user=None):
             (party.phone or '-', align_data),
             ((primary.bank_name if primary else '') or '-', align_text),
             ((guard(primary.account_number) if primary else '') or '-', align_data),
-            ((guard(primary.sheba_number) if primary else '') or '-', align_data),
+            ((primary.sheba_number if primary else '') or '-', align_data),
             (cp.account_code or '-', align_data),
             ('بله' if cp.is_active else 'خیر', align_data),
             (KIND_TITLES.get(party.kind, party.kind), align_data),
