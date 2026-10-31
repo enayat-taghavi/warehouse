@@ -4708,3 +4708,60 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only those three files and commit with this message, without push:
 feat(print): structured invoice print (info box, weighted RTL table, totals box, payments table)
 - Short English report: what changed per file, test results, sample page counts for A4 and A5, whether «٬» renders, and anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — Overnight fixes O3: the public document verify page shows the live invoice data (number, date, amount, status) or a deleted warning
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/common/components/document-verify/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/document-verify/document-verify.html --contains "current()" --regex-contains "وضعیت" --contains appIcon
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/common/components/document-verify/*.spec.ts"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} frontend/src/app/modules/common/components/document-verify/document-verify.dom.spec.ts
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(verify): live document data"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only the three files in `frontend/src/app/modules/common/components/document-verify/` (`document-verify.ts`, `document-verify.html`, `document-verify.dom.spec.ts`). Create no file. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md` or any other frontend file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- No new inline `<svg>` with paths: icons only as `<svg appIcon="name" ...></svg>` with names that already exist in `frontend/src/app/shared/icons/` (for example `check-circle`, `alert-circle`, `alert-triangle`, `loader`). Use semantic colour tokens (`text-fg`, `text-fg-muted`, `bg-surface`, `border-line`) as the existing template does. All user-facing text stays Persian.
+- Do not delete or weaken any existing test. The existing test `never renders an amount` stays unchanged (a top-level `amount` field must still never be shown).
+
+2. Context (read these; nothing else is needed):
+- Page `/verify/:token` is public (no login). It is opened by scanning the QR code printed on a document. Component: `document-verify.ts` (76 lines; response interface lines 9–15; `isFull` getter lines 71–75) and `document-verify.html` (71 lines; `@case ('valid')` block lines 13–47).
+- The backend `GET /api/public/verify/<token>/` response for a valid, non-confidential document now also has:
+  - `live: boolean` — false when the document kind has no live data (then nothing below is present; show the page exactly as today).
+  - `exists: boolean` (only when `live` is true) — false when the document was deleted from the system.
+  - `current: { number: string, date: string, amount: string, status: string }` (only when `exists` is true) — the LIVE values from the database: internal number, Shamsi date like `1405/08/01`, payable amount in rials as a plain integer string like `3000`, and a Persian status label like «پرداخت‌شده».
+- A confidential document still returns only `{ valid: true, number }` (no `live`).
+
+3. Task:
+- a) `document-verify.ts`: extend the response interface with `live?: boolean; exists?: boolean; current?: { number?: string; date?: string; amount?: string; status?: string };`. Add a `current` computed signal (or getter) returning `result()?.current ?? null` only when `result()?.live === true && result()?.exists === true`, a getter `isDeleted` (`live === true && exists === false`), and a method `formatAmount(value)` that returns `''` for empty or non-numeric input and otherwise `new Intl.NumberFormat('fa-IR').format(Number(value)) + ' ریال'`.
+- b) `document-verify.html`, inside the `valid` case, after the existing `<dl>` (keep it unchanged):
+  - When `isDeleted`: an amber notice box (`rounded-xl border border-amber-200 bg-amber-50 text-amber-800 p-3 text-sm font-bold flex items-start gap-2`) with `<svg appIcon="alert-triangle" class="w-5 h-5 shrink-0" ...></svg>` and the text «این سند چاپ معتبری دارد اما دیگر در سامانه وجود ندارد (حذف شده است).»
+  - When `current()` is set: a section with a top border (`border-t border-line pt-3 mt-1`), a heading «وضعیت فعلی در سامانه» (`text-xs font-black text-fg-muted mb-2`) and a `<dl class="text-sm space-y-2">` in the same row style as the existing one (`flex justify-between gap-3`, `dt` muted and `shrink-0`, `dd` bold with `min-w-0 break-words`) for: «شماره» (`dir="ltr"`), «تاریخ», «مبلغ قابل پرداخت» (`formatAmount(...)`), «وضعیت» (the status shown as a pill: `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700`). Each row only when its value is non-empty. If `current().number` is non-empty and differs from `result()?.number`, add under the list a muted small line (`text-xs text-fg-muted`) «شمارهٔ فعلی سند با شمارهٔ چاپ‌شده فرق دارد.»
+- c) `document-verify.dom.spec.ts`: keep every existing test; add, following the same setup (flush on `httpMock.expectOne('/api/public/verify/abc%3Adef/')`, then `fixture.detectChanges()`):
+  - `shows live current data`: flush `{ valid: true, number: '1405-9', title: 'فاکتور هزینه', date: '1405/08/01', company_name: 'C', live: true, exists: true, current: { number: '1405-9', date: '1405/08/02', amount: '3000', status: 'پرداخت‌شده' } }`; the text contains «وضعیت فعلی در سامانه», «پرداخت‌شده», `new Intl.NumberFormat('fa-IR').format(3000)` and «ریال», and does NOT contain «فرق دارد».
+  - `warns when the number changed`: same but `current.number = '1405-10'`; text contains «فرق دارد».
+  - `shows deleted warning`: flush `{ valid: true, number: '1', title: 'T', live: true, exists: false }`; text contains «حذف شده است» and not «وضعیت فعلی در سامانه».
+  - `no live block when not live`: flush `{ valid: true, number: '1', title: 'T', live: false }`; text contains neither «وضعیت فعلی در سامانه» nor «حذف شده است».
+
+4. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/modules/common/components/document-verify/document-verify.dom.spec.ts` (at most 8 times). Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If a real file differs from this task (line numbers, text), follow the real file and say so in the report.
+
+5. Before finishing:
+- The spec passes and guardian 52 passes.
+- `git status --short` shows only the three files of this folder (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+feat(verify): live document data on the public QR verify page (current number, date, amount, status; deleted warning)
+- Short English report: what changed, test results, anything that differed from this task. End the turn after the commit and the report.
