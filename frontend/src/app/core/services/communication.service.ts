@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
-import { HttpClient, HttpParams, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpContext, HttpEvent, HttpEventType } from '@angular/common/http';
 import { BehaviorSubject, Subject, Observable, firstValueFrom } from 'rxjs';
 import { ImageCompressorService } from './image-compressor.service';
 import { ConfigApiService } from '../api/config-api.service';
@@ -7,6 +7,11 @@ import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { wsUrl } from '../platform/server-origin';
 import { isServerUnreachable } from './server-reachability';
+
+/** لغو آپلود به دست کاربر */
+export class UploadCancelledError extends Error {
+  constructor() { super('attachment upload cancelled'); this.name = 'UploadCancelledError'; }
+}
 
 export interface UserShort {
   id: number;
@@ -25,6 +30,12 @@ export interface MessageAttachment {
   /** مسیر دانلود که در هر درخواست عضویت را می‌سنجد (E27)؛ با توکن خوانده می‌شود */
   download_url?: string;
   thumbnail_url?: string | null;
+  /** ابعاد عکس یا صفحهٔ اول PDF (برای جای درست حباب پیش از بارگذاری) */
+  width?: number | null;
+  height?: number | null;
+  page_count?: number | null;
+  duration?: number | null;
+  preview_status?: 'pending' | 'ready' | 'none' | 'failed';
   created_at?: string;
 }
 
@@ -53,6 +64,11 @@ export interface ChatMessage {
   pending_file_name?: string;
   /** متن رد قطعی سرور برای پیام ناموفق (فقط سمت کاربر) */
   failure_reason?: string;
+  /** پیشرفت آپلود فایل جاری، ۰ تا ۱۰۰ (فقط سمت کاربر) */
+  upload_progress?: number | null;
+  /** شمارهٔ فایل جاری (از ۱) و تعداد کل فایل‌های این پیام (فقط سمت کاربر) */
+  upload_index?: number;
+  upload_total?: number;
 }
 
 export interface Conversation {
@@ -170,8 +186,12 @@ export class CommunicationService implements OnDestroy {
   private processedIncomingMessageIds = new Set<string>();
   private markReadDebounceTimers = new Map<string, any>();
 
-  /** فایل پیوست هر پیام ارسالی (کلید: client_temp_id) تا وقتی آپلودش با 2xx تأیید نشده، اینجا می‌ماند */
-  private pendingFiles = new Map<string, File>();
+  /** فایل‌های پیوست هر پیام ارسالی (کلید: client_temp_id) تا وقتی آپلود همه‌شان با 2xx تأیید نشده، اینجا می‌مانند */
+  private pendingFiles = new Map<string, File[]>();
+  /** چند فایل اولِ هر پیام که آپلودشان با 2xx تأیید شده است (آپلود به ترتیب است) */
+  private uploadedCounts = new Map<string, number>();
+  /** لغو آپلود در حال اجرا (کلید: client_temp_id) */
+  private uploadAborts = new Map<string, () => void>();
   /** پیام‌های ارسالی «در انتظار» یا «ناموفق» (کلید: client_temp_id) تا با جابه‌جایی گفتگو یا بارگذاری دوباره گم نشوند */
   private outgoingMessages = new Map<string, ChatMessage>();
   /** کاربری که سوکت‌ها برای او باز شده‌اند */
@@ -611,7 +631,7 @@ export class CommunicationService implements OnDestroy {
     this.activeCommentSubscriptions.clear();
     // پیام‌ها و فایل‌های ارسال‌نشده متعلق به کاربر قبلی‌اند و نباید به کاربر بعدی روی همین دستگاه برسند
     if (dropOutgoing) {
-      this.pendingFiles.clear();
+      this.clearOutgoingFiles();
       this.outgoingMessages.clear();
       this.outgoingOwnerId = null;
     }
@@ -947,7 +967,7 @@ export class CommunicationService implements OnDestroy {
   private guardOutgoingOwner(): void {
     const uid = this.getCurrentUserId();
     if (this.outgoingOwnerId !== null && uid !== null && uid !== this.outgoingOwnerId) {
-      this.pendingFiles.clear();
+      this.clearOutgoingFiles();
       this.outgoingMessages.clear();
       this.outgoingOwnerId = null;
     }
@@ -961,9 +981,28 @@ export class CommunicationService implements OnDestroy {
       || this.outgoingMessages.get(tempId);
     if (!msg || !this.isLocalOutgoing(msg)) return;
     const tid = msg.client_temp_id || tempId;
-    this.pendingFiles.delete(tid);
+    this.uploadAborts.get(tid)?.();
+    this.forgetFiles(tid);
     this.outgoingMessages.delete(tid);
     this.activeMessages$.next(this.activeMessages$.value.filter(m => m.client_temp_id !== tid && m.id !== tid));
+  }
+
+  /** لغو آپلود در حال اجرای یک پیام؛ پیام «ناموفق» می‌ماند و فایل‌هایش برای تلاش مجدد نگه داشته می‌شوند */
+  public cancelUpload(tempId: string): void {
+    this.uploadAborts.get(tempId)?.();
+  }
+
+  private forgetFiles(tempId: string): void {
+    this.pendingFiles.delete(tempId);
+    this.uploadedCounts.delete(tempId);
+    this.uploadAborts.delete(tempId);
+  }
+
+  private clearOutgoingFiles(): void {
+    this.uploadAborts.forEach(abort => abort());
+    this.pendingFiles.clear();
+    this.uploadedCounts.clear();
+    this.uploadAborts.clear();
   }
 
   /** متن خطای سرور برای رد قطعی (4xx به‌جز 401/408/429)؛ برای خطای موقت null */
@@ -1168,8 +1207,10 @@ export class CommunicationService implements OnDestroy {
     }
   }
 
-  public async sendMessage(conversationId: string, text: string, replyTo?: string, file?: File): Promise<void> {
+  public async sendMessage(conversationId: string, text: string, replyTo?: string, fileOrFiles?: File | File[]): Promise<void> {
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const files = (Array.isArray(fileOrFiles) ? fileOrFiles : fileOrFiles ? [fileOrFiles] : []).filter(Boolean);
+    const file = files[0];
 
     // Optimistic UI Message
     const optimisticMsg: ChatMessage = {
@@ -1183,14 +1224,15 @@ export class CommunicationService implements OnDestroy {
       is_me: true,
       is_pending: true,
       delivery_status: 'pending',
-      pending_file_name: file ? (file.name || 'فایل پیوست') : undefined
+      pending_file_name: files.length ? this.pendingNames(files) : undefined,
+      upload_total: files.length || undefined
     };
 
-    // فایل تا تأیید 2xx آپلود در حافظه می‌ماند تا «تلاش مجدد» بتواند دوباره بفرستد
+    // فایل‌ها تا تأیید 2xx آپلود در حافظه می‌مانند تا «تلاش مجدد» بتواند دوباره بفرستد
     this.guardOutgoingOwner();
     this.outgoingOwnerId = this.getCurrentUserId();
-    if (file) {
-      this.pendingFiles.set(tempId, file);
+    if (files.length) {
+      this.pendingFiles.set(tempId, files);
     }
     this.outgoingMessages.set(tempId, optimisticMsg);
 
@@ -1244,17 +1286,18 @@ export class CommunicationService implements OnDestroy {
   }
 
   /**
-   * ارسال متن و سپس فایل پیوست یک پیام. هیچ متن یا فایلی بی‌صدا دور ریخته نمی‌شود:
-   * - شکست ارسال متن یا آپلود فایل ⇒ وضعیت «ناموفق» با دکمهٔ تلاش مجدد؛ فایل در حافظه می‌ماند.
+   * ارسال متن و سپس فایل‌های پیوست یک پیام، یکی‌یکی و به ترتیب. هیچ متن یا فایلی بی‌صدا دور ریخته نمی‌شود:
+   * - شکست ارسال متن یا آپلود هر فایل ⇒ وضعیت «ناموفق» با دکمهٔ تلاش مجدد؛ فایل‌های آپلودنشده در حافظه می‌مانند.
+   * - لغو آپلود به دست کاربر هم همین‌طور: پیام «ناموفق» می‌ماند و فایل‌ها نگه داشته می‌شوند.
    * - پیام دارای فایل از صف آفلاین عبور نمی‌کند (SKIP_OFFLINE) تا نسخهٔ بی‌فایل در صف نرود.
    * - پیام فقط‌متنی مثل قبل در صورت قطع شبکه به صف آفلاین می‌رود و «در انتظار» می‌ماند.
    */
   private async deliverOutgoing(tempId: string, payload: any): Promise<void> {
-    const file = this.pendingFiles.get(tempId);
+    const files = this.pendingFiles.get(tempId);
     let savedMsg: ChatMessage | null = null;
 
     try {
-      const options = file
+      const options = files
         ? { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) }
         : {};
       const response: any = await firstValueFrom(
@@ -1280,38 +1323,50 @@ export class CommunicationService implements OnDestroy {
       return;
     }
 
-    if (file) {
+    if (files) {
       if (!savedMsg || !savedMsg.id) {
         this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: false, delivery_status: 'failed' as const }));
         return;
       }
-      // تلاش مجدد: اگر آپلود قبلی به سرور رسیده ولی پاسخش گم شده بود، پیام برگشتی پیوست دارد؛ دوباره آپلود نمی‌شود
-      if (Array.isArray(savedMsg.attachments) && savedMsg.attachments.length > 0) {
-        this.pendingFiles.delete(tempId);
-        const already = savedMsg;
-        this.applyOutgoingUpdate(tempId, () => ({
-          ...already, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const,
-          pending_file_name: undefined, failure_reason: undefined
-        }));
-        return;
+      const base = savedMsg;
+      // سرور پیوست‌ها را به ترتیب آپلود دارد؛ اگر پاسخ آپلودی به سرور رسیده ولی گم شده بود، آن فایل دوباره فرستاده نمی‌شود
+      const atts: MessageAttachment[] = Array.isArray(base.attachments) ? [...base.attachments] : [];
+      const start = Math.max(this.uploadedCounts.get(tempId) ?? 0, atts.length);
+      for (let i = start; i < files.length; i++) {
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, upload_index: i + 1, upload_total: files.length, upload_progress: 0 }));
+        try {
+          const att = await this.uploadAttachment(files[i], base.id, {
+            onProgress: pct => this.applyOutgoingUpdate(tempId, m => ({ ...m, upload_progress: pct })),
+            register: abort => this.uploadAborts.set(tempId, abort)
+          });
+          this.uploadAborts.delete(tempId);
+          atts.push(att);
+          // فقط پس از پاسخ 2xx، این فایل آپلودشده حساب می‌شود
+          this.uploadedCounts.set(tempId, i + 1);
+        } catch (e) {
+          this.uploadAborts.delete(tempId);
+          // کاربر پیام را پس از تأیید کنار گذاشته است
+          if (!this.pendingFiles.has(tempId)) return;
+          const cancelled = e instanceof UploadCancelledError;
+          if (!cancelled) console.warn('[CommunicationService] Attachment upload failed; message kept as failed for retry', e);
+          const rest = files.slice(i);
+          this.applyOutgoingUpdate(tempId, () => ({
+            ...base, attachments: [...atts], client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'failed' as const,
+            pending_file_name: this.pendingNames(rest),
+            upload_progress: null, upload_index: undefined, upload_total: files.length,
+            failure_reason: cancelled ? 'ارسال فایل لغو شد؛ برای ارسال دوباره «تلاش مجدد» را بزنید.' : (this.permanentRejectionText(e) ?? undefined)
+          }));
+          return;
+        }
       }
-      try {
-        const att = await this.uploadAttachment(file, savedMsg.id);
-        // فقط پس از پاسخ 2xx آپلود، فایل از حافظه برداشته می‌شود
-        this.pendingFiles.delete(tempId);
-        const sent: ChatMessage = { ...savedMsg, attachments: [att] };
-        this.applyOutgoingUpdate(tempId, () => ({
-          ...sent, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const, pending_file_name: undefined, failure_reason: undefined
-        }));
-      } catch (e) {
-        console.warn('[CommunicationService] Attachment upload failed; message kept as failed for retry', e);
-        const base = savedMsg;
-        this.applyOutgoingUpdate(tempId, m => ({
-          ...base, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'failed' as const,
-          pending_file_name: m.pending_file_name || file.name || 'فایل پیوست',
-          failure_reason: this.permanentRejectionText(e) ?? undefined
-        }));
-      }
+      // فقط پس از تأیید همهٔ فایل‌ها، فایل‌ها از حافظه برداشته می‌شوند
+      this.forgetFiles(tempId);
+      const sent: ChatMessage = { ...base, attachments: atts };
+      this.applyOutgoingUpdate(tempId, () => ({
+        ...sent, client_temp_id: tempId, is_me: true, is_pending: false, delivery_status: 'sent' as const,
+        pending_file_name: undefined, failure_reason: undefined,
+        upload_progress: undefined, upload_index: undefined, upload_total: undefined
+      }));
       return;
     }
 
@@ -1322,7 +1377,20 @@ export class CommunicationService implements OnDestroy {
     }));
   }
 
-  public async uploadAttachment(file: File, messageId: string): Promise<MessageAttachment> {
+  /** نام فایل‌های آپلودنشده برای نمایش در حباب */
+  private pendingNames(files: File[]): string {
+    return files.map(f => f.name || 'فایل پیوست').join('، ');
+  }
+
+  /**
+   * آپلود یک فایل برای پیام. `onProgress` درصد پیشرفت را می‌گیرد و `register` تابع لغو را؛
+   * لغو، وعده را با UploadCancelledError رد می‌کند.
+   */
+  public async uploadAttachment(
+    file: File,
+    messageId: string,
+    opts?: { onProgress?: (percent: number) => void; register?: (abort: () => void) => void }
+  ): Promise<MessageAttachment> {
     let uploadFile = file;
 
     // اگر تصویر است، فشرده‌سازی در کلاینت به فرمت WebP
@@ -1345,15 +1413,29 @@ export class CommunicationService implements OnDestroy {
     formData.append('message_id', messageId);
 
     // فایل از صف آفلاین عبور نمی‌کند؛ شکست آپلود به فراخواننده برمی‌گردد تا پیام «ناموفق» و فایل نگه داشته شود
-    const res: any = await firstValueFrom(
-      this.http.post<MessageAttachment>('/api/communications/messages/upload/', formData, {
-        context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
-      })
-    );
-    if (!res || res._offlinePending) {
-      throw new Error('attachment upload not confirmed by server');
-    }
-    return res as MessageAttachment;
+    return new Promise<MessageAttachment>((resolve, reject) => {
+      let settled = false;
+      const finish = (fn: () => void) => { if (!settled) { settled = true; fn(); } };
+      const sub = this.http.post<MessageAttachment>('/api/communications/messages/upload/', formData, {
+        context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true),
+        reportProgress: true,
+        observe: 'events'
+      }).subscribe({
+        next: (ev: HttpEvent<MessageAttachment>) => {
+          if (ev.type === HttpEventType.UploadProgress) {
+            if (ev.total) opts?.onProgress?.(Math.min(100, Math.round((100 * ev.loaded) / ev.total)));
+          } else if (ev.type === HttpEventType.Response) {
+            const body: any = ev.body;
+            finish(() => (!body || body._offlinePending)
+              ? reject(new Error('attachment upload not confirmed by server'))
+              : resolve(body as MessageAttachment));
+          }
+        },
+        error: (e) => finish(() => reject(e)),
+        complete: () => finish(() => reject(new Error('attachment upload not confirmed by server')))
+      });
+      opts?.register?.(() => finish(() => { sub.unsubscribe(); reject(new UploadCancelledError()); }));
+    });
   }
 
   /**

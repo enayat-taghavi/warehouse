@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy, inject, signal, computed, ViewChild, Elem
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember, ReadStatus } from '../../../../../core/services/communication.service';
+import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember, ReadStatus, MessageAttachment } from '../../../../../core/services/communication.service';
+import { DocumentPreviewComponent, DocumentPreviewSource } from '../../../../../shared/components/document-preview/document-preview.component';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
@@ -20,10 +21,31 @@ export type ChatItem =
   | { kind: 'sep'; key: string; label: string }
   | { kind: 'msg'; key: string; msg: ChatMessage };
 
+/** نوع نمایشی پیوست */
+export type AttachmentKind = 'image' | 'pdf' | 'word' | 'excel' | 'text' | 'file';
+
+/** فایل انتخاب‌شده پیش از ارسال */
+export interface PickedFile {
+  key: string;
+  file: File;
+  kind: 'image' | 'pdf' | 'file';
+  /** blob عکس یا data URL صفحهٔ اول PDF؛ null یعنی کارت فایل */
+  previewUrl: string | null;
+}
+
+/** پیوست همراه پیام مبدأش (برای گالری و تب «رسانه و فایل‌ها») */
+export interface MediaEntry { msg: ChatMessage; att: MessageAttachment }
+
+/** پسوندهای مجاز؛ باید با accept ورودی فایل و ALLOWED_EXTENSIONS در backend/core/communications/previews.py یکی بماند */
+export const CHAT_ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls', '.doc', '.docx', '.txt', '.csv'];
+/** بیشترین تعداد فایل در یک پیام */
+export const CHAT_MAX_FILES = 10;
+const CHAT_MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent, DocumentPreviewComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
@@ -61,8 +83,16 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public isSending = signal<boolean>(false);
   public isTyping = signal<boolean>(false);
   public typingUserText = signal<string>('');
-  public selectedFile: File | null = null;
-  public filePreviewUrl: string | null = null;
+  /** فایل‌های انتخاب‌شده پیش از ارسال، با پیش‌نمایش (عکس واقعی یا صفحهٔ اول PDF) */
+  public pickedFiles = signal<PickedFile[]>([]);
+  /** فایلی روی کشو کشیده شده و هنوز رها نشده است */
+  public dragOver = signal<boolean>(false);
+  private pickSeq = 0;
+  /** نشانی blob فایل کامل پیوست‌ها برای لایت‌باکس (با توکن دریافت می‌شود) */
+  private attachmentFull = new Map<string, Promise<string>>();
+  private fullBlobUrls: string[] = [];
+
+  @ViewChild('docPreview') private docPreview?: DocumentPreviewComponent;
   public isLoadingOlder = signal<boolean>(false);
   public hasMoreMessages = signal<boolean>(true);
 
@@ -277,12 +307,12 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.commService.activeConversation$.next(null);
     }
     this.sub.unsubscribe();
-    if (this.filePreviewUrl) {
-      URL.revokeObjectURL(this.filePreviewUrl);
-      this.filePreviewUrl = null;
-    }
+    this.clearPicked();
     this.attachmentPreviews.forEach((u) => { if (u) URL.revokeObjectURL(u); });
     this.attachmentPreviews.clear();
+    this.fullBlobUrls.forEach((u) => URL.revokeObjectURL(u));
+    this.fullBlobUrls = [];
+    this.attachmentFull.clear();
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
     if (this.typingIndicatorClearTimer) clearTimeout(this.typingIndicatorClearTimer);
   }
@@ -595,10 +625,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public async sendMessage(): Promise<void> {
     const text = this.messageInputText.trim();
-    const file = this.selectedFile;
+    const files = this.pickedFiles().map(p => p.file);
     let conv = this.activeConv();
 
-    if ((!text && !file) || !conv || this.isSending()) return;
+    if ((!text && files.length === 0) || !conv || this.isSending()) return;
 
     // حالت ویرایش: PATCH متن؛ نیازمند اتصال، و هرگز وارد صف آفلاین نمی‌شود
     const editTarget = this.editing();
@@ -619,12 +649,18 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       return;
     }
 
+    // بی‌اینترنت، چند فایل با هم فرستاده نمی‌شود (صف آفلاین فایل ندارد)؛ فایل‌ها و متن در کادر می‌مانند
+    if (files.length > 1 && !this.isOnline()) {
+      this.toast.show('warning', 'ارسال چند فایل با هم به اینترنت نیاز دارد. فایل‌ها و متن شما نگه داشته شد؛ پس از وصل شدن، دوباره «ارسال» را بزنید.');
+      return;
+    }
+
     const replyId = this.replyTo()?.id;
     this.isSending.set(true);
     this.messageInputText = '';
     this.replyTo.set(null);
     setTimeout(() => this.autoGrow(), 0);
-    this.removeSelectedFile();
+    this.clearPicked();
     let handedToService = false;
 
     try {
@@ -649,18 +685,15 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       }
 
       handedToService = true;
-      await this.commService.sendMessage(conv.id, text, replyId, file || undefined);
+      await this.commService.sendMessage(conv.id, text, replyId, files.length ? files : undefined);
     } catch (e) {
       console.error('Send error', e);
       // اگر ساخت گفتگو شکست خورد، متن و فایل کاربر به کادر ورود برمی‌گردند تا گم نشوند
       if (!handedToService) {
         if (!this.messageInputText) this.messageInputText = text;
         if (replyId && !this.replyTo()) this.replyTo.set(this.messages().find(m => String(m.id) === String(replyId)) ?? null);
-        if (file && !this.selectedFile) {
-          this.selectedFile = file;
-          if (file.type.startsWith('image/')) {
-            this.filePreviewUrl = URL.createObjectURL(file);
-          }
+        if (files.length && this.pickedFiles().length === 0) {
+          this.restorePicked(files);
         }
         this.toast.show('error', 'ارسال پیام انجام نشد. متن و فایل شما حفظ شد؛ دوباره تلاش کنید.');
       }
@@ -688,50 +721,151 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   public onFileSelected(event: any): void {
-    const file = event.target?.files?.[0];
-    if (this.filePreviewUrl) {
-      URL.revokeObjectURL(this.filePreviewUrl);
-      this.filePreviewUrl = null;
-    }
-    if (!file) {
-      this.selectedFile = null;
-      return;
-    }
+    const input = event?.target as HTMLInputElement | null;
+    const files: File[] = Array.from((input?.files ?? []) as ArrayLike<File>);
+    this.addFiles(files);
+    // تا انتخاب دوبارهٔ همان فایل هم رویداد change بدهد
+    if (input) input.value = '';
+  }
 
-    const fileName = file.name || '';
-    const ext = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')).toLowerCase() : '';
-    const disallowedExtensions = ['.svg', '.html', '.htm', '.exe', '.bat', '.sh', '.js', '.php', '.py', '.vbs', '.msi', '.cmd', '.scr', '.pif'];
-
-    if (disallowedExtensions.includes(ext) || file.type === 'image/svg+xml') {
-      this.toast.show('error', 'آپلود فایل‌های SVG یا اسکریپتی به دلایل امنیتی مجاز نیست.');
-      if (event.target) {
-        event.target.value = '';
+  /** افزودن فایل‌ها به نوار پیش از ارسال؛ فایل نامجاز یا بزرگ با پیام فارسی کنار گذاشته می‌شود */
+  public addFiles(files: File[]): void {
+    const accepted: File[] = [];
+    for (const file of files) {
+      if (!file) continue;
+      const name = file.name || '';
+      const ext = name.includes('.') ? name.substring(name.lastIndexOf('.')).toLowerCase() : '';
+      if (!CHAT_ALLOWED_EXTENSIONS.includes(ext) || file.type === 'image/svg+xml') {
+        this.toast.show('error', `نوع فایل «${name || 'بی‌نام'}» مجاز نیست. فقط عکس، PDF، Word، Excel، متن و CSV.`);
+        continue;
       }
-      this.selectedFile = null;
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      this.toast.show('error', 'حجم فایل نباید بیش از ۱۰ مگابایت باشد.');
-      if (event.target) {
-        event.target.value = '';
+      if (file.size > CHAT_MAX_FILE_BYTES) {
+        this.toast.show('error', `حجم فایل «${name}» نباید بیش از ۱۰ مگابایت باشد.`);
+        continue;
       }
-      this.selectedFile = null;
-      return;
+      accepted.push(file);
     }
-
-    this.selectedFile = file;
-    if (file.type.startsWith('image/')) {
-      this.filePreviewUrl = URL.createObjectURL(file);
+    const room = CHAT_MAX_FILES - this.pickedFiles().length;
+    if (accepted.length > room) {
+      this.toast.show('warning', `در هر پیام حداکثر ${CHAT_MAX_FILES.toLocaleString('fa-IR')} فایل می‌شود فرستاد.`);
+    }
+    const take = accepted.slice(0, Math.max(0, room));
+    if (take.length === 0) return;
+    const added: PickedFile[] = take.map(file => {
+      const kind: PickedFile['kind'] = file.type.startsWith('image/') ? 'image' : this.isPdfName(file.name, file.type) ? 'pdf' : 'file';
+      return { key: `pick-${++this.pickSeq}`, file, kind, previewUrl: kind === 'image' ? URL.createObjectURL(file) : null };
+    });
+    this.pickedFiles.set([...this.pickedFiles(), ...added]);
+    for (const p of added) {
+      if (p.kind === 'pdf') void this.renderPdfThumb(p);
     }
   }
 
-  public removeSelectedFile(): void {
-    if (this.filePreviewUrl) {
-      URL.revokeObjectURL(this.filePreviewUrl);
-      this.filePreviewUrl = null;
+  public trackPick(_: number, p: PickedFile): string {
+    return p.key;
+  }
+
+  public removePicked(key: string): void {
+    const hit = this.pickedFiles().find(p => p.key === key);
+    if (!hit) return;
+    this.revokePick(hit);
+    this.pickedFiles.set(this.pickedFiles().filter(p => p.key !== key));
+  }
+
+  /** همهٔ فایل‌های نوار پیش از ارسال (فقط پیش‌نمایش‌ها آزاد می‌شوند؛ خود فایل‌ها اگر ارسال شده باشند در سرویس می‌مانند) */
+  public clearPicked(): void {
+    this.pickedFiles().forEach(p => this.revokePick(p));
+    this.pickedFiles.set([]);
+  }
+
+  /** بازگرداندن فایل‌ها به نوار، وقتی ارسال پیش از تحویل به سرویس شکست خورد */
+  private restorePicked(files: File[]): void {
+    const added: PickedFile[] = files.map(file => {
+      const kind: PickedFile['kind'] = file.type.startsWith('image/') ? 'image' : this.isPdfName(file.name, file.type) ? 'pdf' : 'file';
+      return { key: `pick-${++this.pickSeq}`, file, kind, previewUrl: kind === 'image' ? URL.createObjectURL(file) : null };
+    });
+    this.pickedFiles.set(added);
+    for (const p of added) {
+      if (p.kind === 'pdf') void this.renderPdfThumb(p);
     }
-    this.selectedFile = null;
+  }
+
+  private revokePick(p: PickedFile): void {
+    if (p.previewUrl && p.previewUrl.startsWith('blob:')) URL.revokeObjectURL(p.previewUrl);
+  }
+
+  private isPdfName(name?: string, type?: string): boolean {
+    return type === 'application/pdf' || /\.pdf$/i.test(name || '');
+  }
+
+  /** صفحهٔ اول PDF با همان pdf.js در مرورگر؛ شکست یعنی کارت فایل */
+  private async renderPdfThumb(p: PickedFile): Promise<void> {
+    try {
+      const buffer = await p.file.arrayBuffer();
+      const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.js');
+      if (pdfjsLib.GlobalWorkerOptions) pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+      const page = await doc.getPage(1);
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: Math.min(2, 240 / Math.max(1, base.width)) });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const url = canvas.toDataURL('image/png');
+      try { doc.destroy?.(); } catch { /* اختیاری */ }
+      // اگر کاربر در این فاصله فایل را برداشته باشد، چیزی تغییر نمی‌کند
+      this.pickedFiles.set(this.pickedFiles().map(x => x.key === p.key ? { ...x, previewUrl: url } : x));
+    } catch {
+      /* پیش‌نمایش اختیاری است؛ کارت فایل نشان داده می‌شود */
+    }
+  }
+
+  /** چسباندن عکس با Ctrl+V در کادر پیام */
+  public onComposerPaste(event: ClipboardEvent): void {
+    const items = Array.from(event.clipboardData?.items ?? []);
+    const files = items
+      .filter(it => it.kind === 'file' && it.type.startsWith('image/'))
+      .map(it => it.getAsFile())
+      .filter((f): f is File => !!f)
+      .map(f => f.name && f.name.includes('.') ? f : new File([f], `image-${Date.now()}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: f.type }));
+    if (files.length === 0) return;
+    event.preventDefault();
+    this.addFiles(files);
+  }
+
+  /** کشیدن و رها کردن فایل روی کشو (فقط وقتی گفتگو باز است و نوشتن مجاز است) */
+  public canDropFiles(): boolean {
+    return this.activeTab() === 'chat' && this.activeConv()?.can_post !== false && !this.editing();
+  }
+
+  public onDragOver(event: DragEvent): void {
+    if (!this.canDropFiles() || !Array.from(event.dataTransfer?.types ?? []).includes('Files')) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    this.dragOver.set(true);
+  }
+
+  public onDragLeave(event: DragEvent): void {
+    const to = event.relatedTarget as Node | null;
+    if (to && this.host.nativeElement.contains(to)) return;
+    this.dragOver.set(false);
+  }
+
+  public onDrop(event: DragEvent): void {
+    this.dragOver.set(false);
+    if (!this.canDropFiles()) return;
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length === 0) return;
+    event.preventDefault();
+    this.addFiles(files);
+  }
+
+  /** لغو آپلود در حال اجرا؛ پیام «ناموفق» با فایل‌هایش برای تلاش مجدد می‌ماند */
+  public cancelUpload(msg: ChatMessage): void {
+    this.commService.cancelUpload(msg.client_temp_id || msg.id);
   }
 
   public backToList(): void {
@@ -845,17 +979,144 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     return url.replace(/^\/?api\//, '');
   }
 
-  /** نشانی blob پیش‌نمایش عکس؛ بار اول دریافت را شروع می‌کند و تا آماده شدن null می‌دهد */
-  public attachmentPreview(att: { id?: string; download_url?: string; thumbnail_url?: string | null }): string | null {
-    const url = att?.thumbnail_url || att?.download_url;
-    if (!att?.id || !url) return null;
-    if (this.attachmentPreviews.has(att.id)) return this.attachmentPreviews.get(att.id) ?? null;
-    this.attachmentPreviews.set(att.id, null);
-    const id = att.id;
+  /**
+   * نشانی blob پیش‌نمایش پیوست در حباب؛ بار اول دریافت را شروع می‌کند و تا آماده شدن null می‌دهد.
+   * بندانگشتی سرور اولویت دارد؛ تا ساخته شدنش (pending) چیزی دریافت نمی‌شود و حباب اسکلت نشان می‌دهد.
+   * فقط عکسی که بندانگشتی ندارد (قدیمی یا ناموفق) فایل کامل را نشان می‌دهد.
+   */
+  public attachmentPreview(att: { id?: string; download_url?: string; thumbnail_url?: string | null; content_type?: string; preview_status?: string }): string | null {
+    if (!att?.id) return null;
+    const fallback = att.preview_status === 'pending' || !(att.content_type || '').startsWith('image/') ? null : att.download_url;
+    const url = att.thumbnail_url || fallback;
+    if (!url) return null;
+    const key = `${att.id}|${url}`;
+    if (this.attachmentPreviews.has(key)) return this.attachmentPreviews.get(key) ?? null;
+    this.attachmentPreviews.set(key, null);
     firstValueFrom(this.api.download(this.apiPath(url)))
-      .then((blob) => this.attachmentPreviews.set(id, URL.createObjectURL(blob)))
+      .then((blob) => this.attachmentPreviews.set(key, URL.createObjectURL(blob)))
       .catch(() => { /* پیش‌نمایش اختیاری است */ });
     return null;
+  }
+
+  /** نوع نمایشی پیوست از نوع تشخیص‌داده‌شده در سرور و پسوند */
+  public attachmentKind(att: { content_type?: string; file_name?: string }): AttachmentKind {
+    const type = (att?.content_type || '').toLowerCase();
+    const ext = this.fileExt(att?.file_name);
+    if (type.startsWith('image/')) return 'image';
+    if (type === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (ext === 'doc' || ext === 'docx' || type.includes('word')) return 'word';
+    if (ext === 'xls' || ext === 'xlsx' || type.includes('sheet') || type.includes('excel')) return 'excel';
+    if (ext === 'txt' || ext === 'csv' || type.startsWith('text/')) return 'text';
+    return 'file';
+  }
+
+  /** پسوند فایل با حروف کوچک و بدون نقطه */
+  public fileExt(name?: string): string {
+    const n = name || '';
+    return n.includes('.') ? n.substring(n.lastIndexOf('.') + 1).toLowerCase() : '';
+  }
+
+  /** حجم فایل به فارسی، مثل «۱٫۲ مگابایت» */
+  public fileSizeFa(bytes?: number | null): string {
+    const b = Number(bytes);
+    if (!Number.isFinite(b) || b < 0) return '';
+    const fmt = (v: number) => new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 1 }).format(v);
+    if (b < 1024) return `${fmt(b)} بایت`;
+    if (b < 1024 * 1024) return `${fmt(b / 1024)} کیلوبایت`;
+    return `${fmt(b / (1024 * 1024))} مگابایت`;
+  }
+
+  /** خط توضیح کارت فایل، مثل «۳ صفحه · ۱٫۲ مگابایت» */
+  public fileMetaFa(att: { page_count?: number | null; file_size?: number }): string {
+    const parts: string[] = [];
+    if (att?.page_count) parts.push(`${att.page_count.toLocaleString('fa-IR')} صفحه`);
+    const size = this.fileSizeFa(att?.file_size);
+    if (size) parts.push(size);
+    return parts.join(' · ');
+  }
+
+  /** همهٔ پیوست‌های پیام‌های بارگذاری‌شدهٔ این گفتگو، به ترتیب پیام‌ها */
+  public mediaEntries = computed<MediaEntry[]>(() => {
+    const out: MediaEntry[] = [];
+    for (const msg of this.messages()) {
+      if (msg.is_system || !Array.isArray(msg.attachments)) continue;
+      for (const att of msg.attachments) {
+        if (att?.id) out.push({ msg, att });
+      }
+    }
+    return out;
+  });
+  /** تب «عکس‌ها» */
+  public mediaImages = computed<MediaEntry[]>(() => this.mediaEntries().filter(e => this.attachmentKind(e.att) === 'image'));
+  /** تب «فایل‌ها» */
+  public mediaFiles = computed<MediaEntry[]>(() => this.mediaEntries().filter(e => this.attachmentKind(e.att) !== 'image'));
+
+  /** کلیک روی عکس یا PDF: لایت‌باکس با همهٔ عکس‌ها و PDFهای گفتگو؛ فایل‌های دیگر دانلود می‌شوند */
+  public openAttachment(msg: ChatMessage, att: MessageAttachment): void {
+    const kind = this.attachmentKind(att);
+    if (kind !== 'image' && kind !== 'pdf') {
+      void this.downloadAttachment(att);
+      return;
+    }
+    if (!att.download_url || !this.docPreview) {
+      void this.downloadAttachment(att);
+      return;
+    }
+    const list = this.mediaEntries().filter(e => {
+      const k = this.attachmentKind(e.att);
+      return (k === 'image' || k === 'pdf') && !!e.att.download_url;
+    });
+    let index = list.findIndex(e => e.att.id === att.id);
+    if (index === -1) {
+      list.push({ msg, att });
+      index = list.length - 1;
+    }
+    this.docPreview.openGallery(list.map(e => this.toPreviewSource(e)), index);
+  }
+
+  private toPreviewSource(e: MediaEntry): DocumentPreviewSource {
+    const kind = this.attachmentKind(e.att);
+    const sender = e.msg.is_me ? 'شما' : (e.msg.sender_details?.full_name || 'کاربر');
+    const when = this.shamsiDateTime(e.msg.created_at);
+    return {
+      title: e.att.file_name || 'فایل',
+      url: '',
+      kind: kind === 'pdf' ? 'pdf' : 'image',
+      subtitle: when ? `${sender} · ${when}` : sender,
+      messageId: String(e.msg.id),
+      downloadName: e.att.file_name || 'attachment',
+      load: () => this.fullAttachmentUrl(e.att)
+    };
+  }
+
+  /** فایل کامل پیوست با توکن (هرگز نشانی خام media)؛ نتیجه برای باز کردن دوباره نگه داشته می‌شود */
+  private fullAttachmentUrl(att: MessageAttachment): Promise<string> {
+    const id = String(att.id);
+    const cached = this.attachmentFull.get(id);
+    if (cached) return cached;
+    const p = firstValueFrom(this.api.download(this.apiPath(att.download_url || '')))
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        this.fullBlobUrls.push(url);
+        return url;
+      });
+    p.catch(() => this.attachmentFull.delete(id));
+    this.attachmentFull.set(id, p);
+    return p;
+  }
+
+  private shamsiDateTime(iso?: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
+  }
+
+  /** «برو به پیام» از لایت‌باکس */
+  public onGalleryGoTo(doc: DocumentPreviewSource): void {
+    if (!doc?.messageId) return;
+    if (this.infoOpen()) this.closeInfo();
+    setTimeout(() => this.scrollToMessage(doc.messageId!), 0);
   }
 
   public async downloadAttachment(att: { download_url?: string; file_name?: string }): Promise<void> {

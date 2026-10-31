@@ -15,6 +15,16 @@ let nextPreviewId = 0;
 export interface DocumentPreviewSource {
   title: string;
   url: string;
+  /** نوع فایل؛ برای نشانی blob که پسوند ندارد لازم است (پیش‌فرض: از نشانی یا عنوان) */
+  kind?: 'pdf' | 'image' | 'other';
+  /** خط دوم سرتیتر، مثلاً نام فرستنده و تاریخ شمسی */
+  subtitle?: string;
+  /** شناسهٔ پیام مبدأ؛ اگر باشد دکمهٔ «برو به پیام» دیده می‌شود */
+  messageId?: string;
+  /** نام فایل هنگام دانلود */
+  downloadName?: string;
+  /** اگر `url` خالی است، نشانی (مثلاً blob دریافت‌شده با توکن) هنگام نمایش از این تابع گرفته می‌شود */
+  load?: () => Promise<string>;
 }
 
 /**
@@ -35,6 +45,29 @@ export class DocumentPreviewComponent implements OnDestroy {
 
   /** پس از بسته شدن لایت‌باکس */
   @Output() closed = new EventEmitter<void>();
+  /** «برو به پیام»: لایت‌باکس بسته می‌شود و سند فعلی به میزبان داده می‌شود */
+  @Output() goToMessage = new EventEmitter<DocumentPreviewSource>();
+
+  /** حالت گالری: فهرست سندها و شمارهٔ سند فعلی (در حالت تک‌سند، فهرست خالی است) */
+  gallery: DocumentPreviewSource[] = [];
+  galleryIndex = 0;
+  /** سند در حال نمایش */
+  current: DocumentPreviewSource | null = null;
+  /** دریافت نشانی سند با `load()` */
+  isResolving = false;
+  resolveFailed = false;
+  /** شمارندهٔ نمایش؛ پاسخ دیررسیدهٔ `load()` سند قبلی نادیده گرفته می‌شود */
+  private showSeq = 0;
+
+  get isGallery(): boolean {
+    return this.gallery.length > 1;
+  }
+  get hasPrev(): boolean {
+    return this.isGallery && this.galleryIndex > 0;
+  }
+  get hasNext(): boolean {
+    return this.isGallery && this.galleryIndex < this.gallery.length - 1;
+  }
 
   @ViewChild('dialogPanel') private dialogPanel?: ElementRef<HTMLElement>;
   @ViewChild('closeButton') private closeButton?: ElementRef<HTMLButtonElement>;
@@ -170,6 +203,82 @@ export class DocumentPreviewComponent implements OnDestroy {
 
   // پیش‌نمایش درجا (In-Place Preview)
   open(doc: DocumentPreviewSource): void {
+    this.gallery = [];
+    this.galleryIndex = 0;
+    this.show(doc);
+  }
+
+  /** حالت گالری: چند سند با رفتن به قبلی و بعدی (دکمه، کلیدهای جهت، کشیدن انگشت) */
+  openGallery(items: DocumentPreviewSource[], index = 0): void {
+    const list = (items || []).filter(Boolean);
+    if (list.length === 0) return;
+    this.gallery = list;
+    this.galleryIndex = Math.min(Math.max(0, index), list.length - 1);
+    this.show(list[this.galleryIndex]);
+  }
+
+  next(): void {
+    if (!this.hasNext) return;
+    this.galleryIndex++;
+    this.show(this.gallery[this.galleryIndex]);
+  }
+
+  prev(): void {
+    if (!this.hasPrev) return;
+    this.galleryIndex--;
+    this.show(this.gallery[this.galleryIndex]);
+  }
+
+  /** «برو به پیام»: بستن لایت‌باکس و خبر دادن به میزبان */
+  requestGoToMessage(): void {
+    const doc = this.current;
+    if (!doc?.messageId) return;
+    this.closePreview();
+    this.goToMessage.emit(doc);
+  }
+
+  /** کلیدهای جهت در گالری؛ در چیدمان راست‌به‌چپ، چپ یعنی بعدی */
+  @HostListener('document:keydown', ['$event'])
+  onGalleryKey(event: KeyboardEvent): void {
+    if (!this.previewModal.isOpen || !this.isGallery) return;
+    const target = event.target as HTMLElement | null;
+    if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.next();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.prev();
+    }
+  }
+
+  private show(doc: DocumentPreviewSource): void {
+    const seq = ++this.showSeq;
+    this.current = doc;
+    this.resolveFailed = false;
+    if (!doc.url && doc.load) {
+      this.isResolving = true;
+      this.render({ ...doc, url: '' });
+      doc.load().then(
+        (url) => {
+          if (seq !== this.showSeq || !this.previewModal.isOpen) return;
+          this.isResolving = false;
+          this.render({ ...doc, url });
+        },
+        () => {
+          if (seq !== this.showSeq) return;
+          this.isResolving = false;
+          this.resolveFailed = true;
+          this.cdr.markForCheck();
+        }
+      );
+      return;
+    }
+    this.isResolving = false;
+    this.render(doc);
+  }
+
+  private render(doc: DocumentPreviewSource): void {
     const url = doc.url;
     const wasOpen = this.previewModal.isOpen;
 
@@ -177,9 +286,21 @@ export class DocumentPreviewComponent implements OnDestroy {
       URL.revokeObjectURL(this.previewBlobUrl);
       this.previewBlobUrl = null;
     }
+    if (this.pdfRenderTask) {
+      try {
+        this.pdfRenderTask.cancel();
+      } catch (_) {}
+      this.pdfRenderTask = null;
+    }
+    this.pdfDoc = null;
+    this.isPdfLoading = false;
 
-    const isPdf = url.toLowerCase().includes('.pdf') || Boolean(doc.title && doc.title.toLowerCase().includes('.pdf'));
-    const isImage = /\.(jpe?g|png|webp|svg|gif|bmp)(\?.*)?$/i.test(url) || Boolean(doc.title && /\.(jpe?g|png|webp|svg|gif|bmp)$/i.test(doc.title));
+    const isPdf = doc.kind
+      ? doc.kind === 'pdf'
+      : url.toLowerCase().includes('.pdf') || Boolean(doc.title && doc.title.toLowerCase().includes('.pdf'));
+    const isImage = doc.kind
+      ? doc.kind === 'image'
+      : /\.(jpe?g|png|webp|svg|gif|bmp)(\?.*)?$/i.test(url) || Boolean(doc.title && /\.(jpe?g|png|webp|svg|gif|bmp)$/i.test(doc.title));
 
     // تبدیل آدرس‌های مطلق به مسیر نسبی جهت عبور بهینه از پروکسی و جلوگیری از خطای هم‌مبدایی فریم‌ها
     let cleanUrl = url;
@@ -223,10 +344,11 @@ export class DocumentPreviewComponent implements OnDestroy {
       }, 0);
     }
 
-    if (isPdf) {
-      if (this.pdfTimeoutId) {
-        clearTimeout(this.pdfTimeoutId);
-      }
+    if (this.pdfTimeoutId) {
+      clearTimeout(this.pdfTimeoutId);
+      this.pdfTimeoutId = null;
+    }
+    if (isPdf && cleanUrl) {
       this.pdfTimeoutId = setTimeout(() => {
         this.loadPdfWithPdfJs(cleanUrl);
       }, 50);
@@ -240,7 +362,7 @@ export class DocumentPreviewComponent implements OnDestroy {
 
       // دانلود مستقیم باینری با استفاده از HttpClient و رعایت توکن‌های احراز هویت
       let buffer: ArrayBuffer;
-      if (this.http) {
+      if (this.http && !url.startsWith('blob:')) {
         buffer = await firstValueFrom(this.http.get(url, { responseType: 'arraybuffer' }));
       } else {
         const res = await fetch(resolveServerUrl(url));
@@ -428,7 +550,16 @@ export class DocumentPreviewComponent implements OnDestroy {
       return;
     }
     if (this.activePointers.size === 0) {
+      const wasDragging = this.isDragging;
       this.isDragging = false;
+      // کشیدن افقی در اندازهٔ اصلی، در گالری سند بعدی یا قبلی را نشان می‌دهد (راست‌به‌چپ: کشیدن به راست یعنی بعدی)
+      if (wasDragging && this.isGallery && this.previewScale === 1 && Math.abs(this.panX) > 60 && Math.abs(this.panY) < 80) {
+        const goNext = this.panX > 0;
+        this.panX = 0;
+        this.panY = 0;
+        if (goNext) this.next();
+        else this.prev();
+      }
     }
   }
 
@@ -468,6 +599,11 @@ export class DocumentPreviewComponent implements OnDestroy {
     }
   }
 
+  /** دانلود سند فعلی با نام فایلش (اگر میزبان داده باشد) */
+  downloadCurrent(): void {
+    this.downloadFile(this.previewModal.fileUrl, this.current?.downloadName);
+  }
+
   closePreview(): void {
     const wasOpen = this.previewModal.isOpen;
     if (this.pdfTimeoutId) {
@@ -486,6 +622,12 @@ export class DocumentPreviewComponent implements OnDestroy {
       this.previewBlobUrl = null;
     }
     this.isLoadingPreview = false;
+    this.showSeq++;
+    this.gallery = [];
+    this.galleryIndex = 0;
+    this.current = null;
+    this.isResolving = false;
+    this.resolveFailed = false;
     this.previewModal = {
       isOpen: false,
       title: '',

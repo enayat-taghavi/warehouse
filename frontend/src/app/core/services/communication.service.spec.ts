@@ -623,7 +623,7 @@ describe('CommunicationService', () => {
     expect(msgs[0].delivery_status).toBe('failed');
     expect(msgs[0].text).toBe('فاکتور');
     expect(msgs[0].client_temp_id).toBe(tempId);
-    expect((service as any).pendingFiles.get(tempId)).toBe(file);
+    expect((service as any).pendingFiles.get(tempId)).toEqual([file]);
 
     const retry = service.retryMessage(tempId);
     expect(service.activeMessages$.value[0].delivery_status).toBe('pending');
@@ -655,7 +655,103 @@ describe('CommunicationService', () => {
     const m = service.activeMessages$.value[0];
     expect(m.delivery_status).toBe('failed');
     expect(m.text).toBe('متن');
-    expect((service as any).pendingFiles.get(tempId)).toBe(file);
+    expect((service as any).pendingFiles.get(tempId)).toEqual([file]);
+  });
+
+  it('U11: several files upload one by one; a failed file keeps the rest and retry skips the confirmed ones', async () => {
+    service.getCurrentUserId = () => 1;
+    const f1 = new File(['1'], 'a.txt', { type: 'text/plain' });
+    const f2 = new File(['2'], 'b.txt', { type: 'text/plain' });
+    const f3 = new File(['3'], 'c.txt', { type: 'text/plain' });
+    const p = service.sendMessage('conv-1', '', undefined, [f1, f2, f3]);
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    expect(service.activeMessages$.value[0].upload_total).toBe(3);
+    const saved = { id: '400', client_temp_id: tempId, conversation: 'conv-1', sender: 1, text: '', created_at: new Date().toISOString() };
+    httpMock.expectOne('/api/communications/messages/').flush(saved);
+    await flushAsync();
+
+    const up1 = httpMock.expectOne('/api/communications/messages/upload/');
+    expect(((up1.request.body as FormData).get('file') as File).name).toBe('a.txt');
+    up1.flush({ id: 'att-a', file_name: 'a.txt', file_size: 1, content_type: 'text/plain' });
+    await flushAsync();
+    const up2 = httpMock.expectOne('/api/communications/messages/upload/');
+    expect(((up2.request.body as FormData).get('file') as File).name).toBe('b.txt');
+    up2.flush(null, { status: 503, statusText: 'Unavailable' });
+    await p;
+
+    let m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('failed');
+    expect(m.attachments?.length).toBe(1);
+    expect(m.pending_file_name).toContain('b.txt');
+    expect(m.pending_file_name).toContain('c.txt');
+    expect(m.pending_file_name).not.toContain('a.txt');
+    expect((service as any).pendingFiles.get(tempId)).toEqual([f1, f2, f3]);
+
+    // تلاش مجدد: سرور همان پیام را با پیوست اول برمی‌گرداند؛ فقط b و c فرستاده می‌شوند
+    const retry = service.retryMessage(tempId);
+    httpMock.expectOne('/api/communications/messages/').flush({ ...saved, attachments: [{ id: 'att-a', file_name: 'a.txt', file_size: 1, content_type: 'text/plain' }] });
+    await flushAsync();
+    const up3 = httpMock.expectOne('/api/communications/messages/upload/');
+    expect(((up3.request.body as FormData).get('file') as File).name).toBe('b.txt');
+    up3.flush({ id: 'att-b', file_name: 'b.txt', file_size: 1, content_type: 'text/plain' });
+    await flushAsync();
+    const up4 = httpMock.expectOne('/api/communications/messages/upload/');
+    expect(((up4.request.body as FormData).get('file') as File).name).toBe('c.txt');
+    up4.flush({ id: 'att-c', file_name: 'c.txt', file_size: 1, content_type: 'text/plain' });
+    await retry;
+
+    m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('sent');
+    expect(m.attachments?.map(a => a.id)).toEqual(['att-a', 'att-b', 'att-c']);
+    expect(m.upload_progress).toBeUndefined();
+    expect((service as any).pendingFiles.has(tempId)).toBe(false);
+    httpMock.expectNone('/api/communications/messages/upload/');
+  });
+
+  it('U11: retry does not re-upload files the server already has (lost upload response)', async () => {
+    service.getCurrentUserId = () => 1;
+    const f1 = new File(['1'], 'a.txt', { type: 'text/plain' });
+    const f2 = new File(['2'], 'b.txt', { type: 'text/plain' });
+    const p = service.sendMessage('conv-1', 'x', undefined, [f1, f2]);
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    const saved = { id: '401', client_temp_id: tempId, conversation: 'conv-1', sender: 1, text: 'x', created_at: new Date().toISOString() };
+    httpMock.expectOne('/api/communications/messages/').flush(saved);
+    await flushAsync();
+    httpMock.expectOne('/api/communications/messages/upload/').flush(null, { status: 502, statusText: 'Bad Gateway' });
+    await p;
+    expect(service.activeMessages$.value[0].delivery_status).toBe('failed');
+
+    const retry = service.retryMessage(tempId);
+    const both = [
+      { id: 'att-a', file_name: 'a.txt', file_size: 1, content_type: 'text/plain' },
+      { id: 'att-b', file_name: 'b.txt', file_size: 1, content_type: 'text/plain' }
+    ];
+    httpMock.expectOne('/api/communications/messages/').flush({ ...saved, attachments: both });
+    await retry;
+    httpMock.expectNone('/api/communications/messages/upload/');
+    const m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('sent');
+    expect(m.attachments?.length).toBe(2);
+    expect((service as any).pendingFiles.has(tempId)).toBe(false);
+  });
+
+  it('U11: cancelling an upload keeps the message failed with all its files for retry', async () => {
+    service.getCurrentUserId = () => 1;
+    const f1 = new File(['1'], 'a.txt', { type: 'text/plain' });
+    const p = service.sendMessage('conv-1', 'x', undefined, [f1]);
+    const tempId = service.activeMessages$.value[0].client_temp_id!;
+    httpMock.expectOne('/api/communications/messages/').flush({ id: '402', client_temp_id: tempId, conversation: 'conv-1', sender: 1, text: 'x', created_at: new Date().toISOString() });
+    await flushAsync();
+    const up = httpMock.expectOne('/api/communications/messages/upload/');
+    expect(service.activeMessages$.value[0].upload_progress).toBe(0);
+    service.cancelUpload(tempId);
+    await p;
+    expect(up.cancelled).toBe(true);
+    const m = service.activeMessages$.value[0];
+    expect(m.delivery_status).toBe('failed');
+    expect(m.failure_reason).toBeTruthy();
+    expect(m.pending_file_name).toBe('a.txt');
+    expect((service as any).pendingFiles.get(tempId)).toEqual([f1]);
   });
 
   it('E2: loadMessages merges server list with local failed/pending messages and restores them after switching conversation', async () => {
@@ -768,7 +864,7 @@ describe('CommunicationService', () => {
     service.isChatDrawerOpen.set(true);
     (service as any).processedIncomingMessageIds.add('1');
     (service as any).playedMessageIds.add('1');
-    (service as any).pendingFiles.set('t1', new File(['a'], 'a.txt'));
+    (service as any).pendingFiles.set('t1', [new File(['a'], 'a.txt')]);
 
     expect(() => service.resetForLogout()).not.toThrow();
 
@@ -876,7 +972,7 @@ describe('CommunicationService', () => {
     service.resetForForcedLogout();
     expect(service.activeMessages$.value).toEqual([]);
     expect(service.conversations$.value).toEqual([]);
-    expect((service as any).pendingFiles.get(holder.id)).toBe(file);
+    expect((service as any).pendingFiles.get(holder.id)).toEqual([file]);
     expect((service as any).outgoingMessages.has(holder.id)).toBe(true);
 
     // ورود دوبارهٔ همان کاربر: پیام ناموفق با بازکردن گفتگو برمی‌گردد
