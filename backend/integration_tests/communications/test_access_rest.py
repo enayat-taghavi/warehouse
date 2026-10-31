@@ -230,11 +230,22 @@ class AccessControlRESTTestCase(BaseCommsTestCase):
     # ─── ۴. آزمون‌های لیست مخاطبین (Contacts List) ───
 
     def test_contacts_returns_all_active_users(self):
-        """لیست مخاطبین باید تمام پرسنل فعال سازمان را بدون محدودیت انبار برگرداند و خود کاربر را استثنا کند"""
+        """
+        حوزهٔ `all` (سیاست پایهٔ این آزمون‌ها): همهٔ کاربران فعال بدون محدودیت انبار، بدون خود کاربر.
+        بدون سیاست و بدون عضویت در شرکت (طرح دسترسی به چت، ت۴): فقط مدیران کل.
+        """
+        def contact_ids():
+            response = self.client.get('/api/communications/contacts/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            data = response.data
+            return [u['id'] for u in (data.get('results', data) if isinstance(data, dict) else data)]
+
         self.auth(self.staff_wh1)
-        response = self.client.get('/api/communications/contacts/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        user_ids = [u['id'] for u in (response.data.get('results', response.data) if isinstance(response.data, dict) else response.data)]
+        user_ids = contact_ids()
         self.assertIn(self.manager_wh1.id, user_ids)
         self.assertIn(self.staff_wh2.id, user_ids)
         self.assertNotIn(self.staff_wh1.id, user_ids, "خود کاربر نباید در لیست مخاطبین خود باشد")
+
+        from communications.models import ChatUserPolicy
+        ChatUserPolicy.objects.filter(user=self.staff_wh1).delete()
+        self.assertEqual(set(contact_ids()), {self.admin.id})

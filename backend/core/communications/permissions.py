@@ -29,6 +29,14 @@ class IsChatEnabled(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
+        # کاربر بسته‌شده (طرح دسترسی به چت، ت۲): هیچ مسیر چت؛ فقط نماهایی که خودشان وضعیت را
+        # گزارش می‌کنند (capabilities با allow_chat_blocked) باز می‌مانند
+        if not getattr(view, 'allow_chat_blocked', False):
+            from .contact_scope import chat_allowed, BLOCKED_MESSAGE
+            if not chat_allowed(request.user):
+                self.message = BLOCKED_MESSAGE
+                return False
+
         wh_id = request.query_params.get('warehouse_id')
         data = request.data if isinstance(getattr(request, 'data', None), dict) else {}
         # E18: برای پیام و پیوست، انبار از خودِ گفتگوی هدف خوانده می‌شود، نه از ورودی کلاینت

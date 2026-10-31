@@ -122,6 +122,12 @@ class BaseCommsTestCase(TestCase):
             password="Password123!"
         )
 
+        # این کاربران عضو هیچ شرکتی نیستند؛ آزمون‌های پیش از «حوزهٔ مخاطبان چت» با حوزهٔ `all` بی‌تغییر می‌مانند.
+        # آزمون‌های حوزه در test_chat_access.py کاربران و شرکت‌های خودشان را می‌سازند.
+        from communications.models import ChatUserPolicy
+        for u in (self.manager_wh1, self.staff_wh1, self.staff_wh2, self.unassigned_user):
+            ChatUserPolicy.objects.create(user=u, contact_scope='all')
+
         # ۳. ساخت گفتگوهای نمونه
         # گفتگوی خصوصی دو‌نفره بین مدیر انبار ۱ و پرسنل انبار ۱
         self.direct_conv = Conversation.objects.create(

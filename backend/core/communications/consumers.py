@@ -182,13 +182,34 @@ class WsAuthLifecycleMixin:
             now = time.monotonic()
             if now - self._last_active_check >= WS_ACTIVE_CHECK_INTERVAL_SECONDS:
                 self._last_active_check = now
-                if not await check_user_is_active(self.user.id):
+                if not await self._still_permitted():
                     await self.close(code=WS_CLOSE_AUTH)
                     return False
         return True
 
+    async def _still_permitted(self):
+        """بررسی دوره‌ای روی ping؛ مصرف‌کننده‌ها می‌توانند شرط افزوده داشته باشند"""
+        return await check_user_is_active(self.user.id)
+
+
+@database_sync_to_async
+def check_user_chat_allowed(user):
+    from .contact_scope import chat_allowed
+    return chat_allowed(user)
+
+
+@database_sync_to_async
+def check_user_active_and_chat_allowed(user_id):
+    from .contact_scope import chat_allowed
+    user = User.objects.filter(id=user_id, is_active=True).first()
+    return bool(user) and chat_allowed(user)
+
 
 class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
+    async def _still_permitted(self):
+        # کاربری که در میانهٔ اتصال بسته شود، حداکثر تا ping بعدی (۶۰ ثانیه) بیرون می‌رود (طرح دسترسی به چت، ت۲)
+        return await check_user_active_and_chat_allowed(self.user.id)
+
     async def connect(self):
         query_string = self.scope.get('query_string', b'').decode('utf-8')
         params = parse_qs(query_string)
@@ -210,6 +231,16 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
         self._start_auth_timeout()
 
     async def _setup_authenticated_session(self, user, send_ack=True):
+        # کاربر بسته‌شده (طرح دسترسی به چت، ت۲): اتصال با پیام فارسی بسته می‌شود؛ هیچ داده‌ای پاک نمی‌شود
+        if not await check_user_chat_allowed(user):
+            from .contact_scope import BLOCKED_MESSAGE
+            try:
+                await self.send(text_data=json.dumps({'type': 'error', 'code': WS_CLOSE_AUTH, 'message': BLOCKED_MESSAGE}))
+            except Exception:
+                pass
+            await self.close(code=WS_CLOSE_AUTH)
+            return
+
         self.user = user
         self.is_authenticated = True
 

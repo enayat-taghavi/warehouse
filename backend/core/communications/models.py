@@ -319,3 +319,79 @@ class GenericComment(SyncModelMixin):
 
     def __str__(self):
         return f"{self.author} on {self.content_type.model} #{self.object_id}: {self.text[:30]}"
+
+
+class ChatContactScope(models.TextChoices):
+    SECTION = 'section', 'فقط بخش'
+    PROJECT = 'project', 'فقط پروژه'
+    COMPANY = 'company', 'فقط شرکت'
+    ALL = 'all', 'همهٔ شرکت‌ها'
+
+
+class ChatUserPolicy(models.Model):
+    """
+    سیاست چت هر کاربر (طرح دسترسی به چت، ت۱ و ت۹): نبودن ردیف یعنی پیش‌فرض
+    (دسترسی باز و «پیروی از شرکت»). contact_scope خالی یعنی «پیروی از شرکت».
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='chat_policy',
+        verbose_name="کاربر"
+    )
+    chat_allowed = models.BooleanField(default=True, verbose_name="دسترسی به پیام‌رسان")
+    contact_scope = models.CharField(
+        max_length=20,
+        choices=ChatContactScope.choices,
+        blank=True,
+        default='',
+        verbose_name="حوزهٔ مخاطبان"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="آخرین تغییردهنده"
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
+
+    class Meta:
+        verbose_name = "سیاست چت کاربر"
+        verbose_name_plural = "سیاست‌های چت کاربران"
+
+    def __str__(self):
+        return f"{self.user_id}: allowed={self.chat_allowed} scope={self.contact_scope or '-'}"
+
+
+class ChatCompanyPolicy(models.Model):
+    """پیش‌فرض حوزهٔ مخاطبان چت هر شرکت (ت۳)؛ نبودن ردیف یعنی «company»."""
+    company = models.OneToOneField(
+        'companies.Company',
+        on_delete=models.CASCADE,
+        related_name='chat_policy',
+        verbose_name="شرکت"
+    )
+    contact_scope = models.CharField(
+        max_length=20,
+        choices=ChatContactScope.choices,
+        default=ChatContactScope.COMPANY,
+        verbose_name="حوزهٔ پیش‌فرض مخاطبان"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="آخرین تغییردهنده"
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
+
+    class Meta:
+        verbose_name = "سیاست چت شرکت"
+        verbose_name_plural = "سیاست‌های چت شرکت‌ها"
+
+    def __str__(self):
+        return f"{self.company_id}: scope={self.contact_scope}"

@@ -153,7 +153,8 @@ class ReadStateAndPerformanceTestCase(BaseCommsTestCase):
 
         # نباید ۲۰ کوئری COUNT اجرا شده باشد
         # +1 constant lookup of the open unread notification for batching (E15); still independent of member count
-        self.assertLessEqual(len(ctx.captured_queries), 6)
+        # +1 constant lookup of blocked recipients (chat access plan, T2)
+        self.assertLessEqual(len(ctx.captured_queries), 7)
 
     def test_broadcast_bulk_notifications_still_schedule_push(self):
         """اعلان‌ها یکجا ساخته می‌شوند و پوش هر گیرندهٔ دارای توکن، بعد از commit، با یک کوئری توکن زمان‌بندی می‌شود"""

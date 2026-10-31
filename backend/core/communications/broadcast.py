@@ -58,6 +58,13 @@ def _notify_chat_message(msg, recipient_ids):
     notify_ids = sorted(p_id for p_id in recipient_ids if p_id != msg.sender_id and p_id not in muted_user_ids)
     if not notify_ids:
         return
+    # کاربر بسته‌شده اعلان و پوش نمی‌گیرد؛ پیام برایش ذخیره می‌ماند (طرح دسترسی به چت، ت۲)
+    from .contact_scope import blocked_user_ids
+    blocked = blocked_user_ids(notify_ids)
+    if blocked:
+        notify_ids = [p_id for p_id in notify_ids if p_id not in blocked]
+        if not notify_ids:
+            return
 
     sender = getattr(msg, 'sender', None)
     sender_display = (

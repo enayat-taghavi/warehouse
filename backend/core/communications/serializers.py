@@ -369,3 +369,22 @@ class GenericCommentSerializer(serializers.ModelSerializer):
         validated_data.pop('mentioned_users', None)
         validated_data.pop('attachment', None)
         return super().update(instance, validated_data)
+
+
+_SCOPE_CHOICES = ('section', 'project', 'company', 'all')
+
+
+class ChatUserPolicyWriteSerializer(serializers.Serializer):
+    """بدنهٔ PUT سیاست چت کاربر؛ هر دو فیلد اختیاری‌اند. contact_scope خالی یعنی «پیروی از شرکت»."""
+    chat_allowed = serializers.BooleanField(required=False)
+    contact_scope = serializers.ChoiceField(choices=('',) + _SCOPE_CHOICES, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError('دست‌کم یکی از chat_allowed یا contact_scope لازم است')
+        return attrs
+
+
+class ChatCompanyPolicyWriteSerializer(serializers.Serializer):
+    """بدنهٔ PUT پیش‌فرض حوزهٔ مخاطبان شرکت"""
+    contact_scope = serializers.ChoiceField(choices=_SCOPE_CHOICES)

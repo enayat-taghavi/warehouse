@@ -85,9 +85,9 @@ class GroupApiTests(BaseCommsTestCase):
 
     def test_capabilities_reports_group_creation(self):
         self.auth(self.staff_wh1)
-        self.assertEqual(self.client.get('/api/communications/capabilities/').data, {'can_create_group': False})
+        self.assertEqual(self.client.get('/api/communications/capabilities/').data['can_create_group'], False)
         self.auth(self.manager_wh1)
-        self.assertEqual(self.client.get('/api/communications/capabilities/').data, {'can_create_group': True})
+        self.assertEqual(self.client.get('/api/communications/capabilities/').data['can_create_group'], True)
 
     def test_is_muted_in_conversation_output(self):
         self.auth(self.staff_wh1)

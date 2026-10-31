@@ -29,7 +29,12 @@ from .models import (
 )
 from .serializers import (
     ConversationSerializer, MessageSerializer,
-    MessageAttachmentSerializer, GenericCommentSerializer, UserShortSerializer
+    MessageAttachmentSerializer, GenericCommentSerializer, UserShortSerializer,
+    ChatUserPolicyWriteSerializer, ChatCompanyPolicyWriteSerializer,
+)
+from .contact_scope import (
+    can_contact, contact_queryset, ids_outside_scope, chat_allowed, display_contact_scope,
+    OUT_OF_SCOPE_MESSAGE, MEMBERS_OUT_OF_SCOPE_MESSAGE, SCOPE_ALL,
 )
 from .permissions import (
     IsChatEnabled, IsConversationParticipantOrAdmin,
@@ -263,6 +268,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
             ).filter(participants=target_user).order_by('created_at', 'id').first()
             if existing:
                 return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
+            # گفتگوی تازه فقط با کسی در حوزهٔ مخاطبان؛ گفتگوی موجود بالا همیشه برگردانده می‌شود (ت۶)
+            if not can_contact(user, target_user):
+                raise PermissionDenied(OUT_OF_SCOPE_MESSAGE)
             conv = serializer.save(created_by=user, conv_type=ConversationType.DIRECT, warehouse_id=None)
             add_member(conv, user)
             add_member(conv, target_user)
@@ -304,9 +312,21 @@ class ConversationViewSet(viewsets.ModelViewSet):
             raise ValidationError({'user_ids': 'برخی کاربران یافت نشدند یا غیرفعال هستند', 'invalid_ids': missing})
         return users
 
+    @staticmethod
+    def _ensure_members_in_scope(actor, users, already_member_ids=()):
+        """
+        اعضای تازه باید در حوزهٔ مخاطبان سازنده یا افزاینده باشند؛ مدیر کل استثناست (ت۶).
+        یکی بیرون باشد ← ۴۰۰ و هیچ عضوی اضافه نمی‌شود.
+        """
+        skip = set(already_member_ids)
+        outside = ids_outside_scope(actor, [u.id for u in users if u.id not in skip])
+        if outside:
+            raise ValidationError({'user_ids': MEMBERS_OUT_OF_SCOPE_MESSAGE, 'out_of_scope_ids': outside})
+
     def _create_group(self, serializer):
         user = self.request.user
         members = self._resolve_member_users(serializer.validated_data.get('member_ids'))
+        self._ensure_members_in_scope(user, members)
         with transaction.atomic():
             # گروه به انبار وابسته نیست؛ عضویت فقط با فهرست اعضا تعیین می‌شود (U1)
             conv = serializer.save(created_by=user, warehouse_id=None)
@@ -362,6 +382,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
         ids_ser = _UserIdsSerializer(data=request.data)
         ids_ser.is_valid(raise_exception=True)
         users = self._resolve_member_users(ids_ser.validated_data['user_ids'])
+        current_ids = set(active_member_records(conv).values_list('user_id', flat=True))
+        self._ensure_members_in_scope(request.user, users, already_member_ids=current_ids)
         with transaction.atomic():
             Conversation.objects.select_for_update().filter(pk=conv.pk).first()
             added = add_members(conv, users)
@@ -916,20 +938,196 @@ class GenericCommentViewSet(viewsets.ModelViewSet):
 
 class ChatContactsListView(APIView):
     """
-    فهرست مخاطبین مجاز جهت گفتگوی سازمانی (تمام کاربران فعال سیستم به جز خود کاربر)
+    فهرست مخاطبین مجاز جهت گفتگوی سازمانی: کاربران فعال درون حوزهٔ مخاطبان کاربر جاری
+    (طرح دسترسی به چت، ت۳ تا ت۵؛ جایگزین تصمیم قبلی «همهٔ کاربران»)، بدون خود کاربر و کاربران بسته‌شده
     """
     permission_classes = [permissions.IsAuthenticated, IsChatEnabled]
 
     def get(self, request):
-        user = request.user
-        qs = User.objects.filter(is_active=True).exclude(id=user.id).distinct().order_by('first_name', 'last_name', 'username')
+        qs = contact_queryset(request.user).order_by('first_name', 'last_name', 'username')
         data = UserShortSerializer(qs, many=True).data
         return Response(data)
 
 
 class ChatCapabilitiesView(APIView):
-    """قابلیت‌های چت کاربر جاری برای ظاهر (مثلاً نمایش دکمهٔ «گروه جدید»)"""
+    """
+    قابلیت‌های چت کاربر جاری برای ظاهر (مثلاً نمایش دکمهٔ «گروه جدید»).
+    کاربر بسته‌شده هم پاسخ می‌گیرد (chat_allowed=false) تا ظاهر دکمهٔ چت را پنهان کند.
+    contact_scope: حوزهٔ خود کاربر اگر تعیین شده باشد، وگرنه گسترده‌ترین پیش‌فرضِ شرکت‌های عضو
+    (contact_scope_source: user / company / superuser).
+    """
     permission_classes = [permissions.IsAuthenticated, IsChatEnabled]
+    allow_chat_blocked = True
 
     def get(self, request):
-        return Response({'can_create_group': is_chat_group_manager(request.user)})
+        allowed = chat_allowed(request.user)
+        scope, source = display_contact_scope(request.user)
+        return Response({
+            'can_create_group': allowed and is_chat_group_manager(request.user),
+            'chat_allowed': allowed,
+            'contact_scope': scope,
+            'contact_scope_source': source,
+        })
+
+
+# ─── API سیاست‌های چت (طرح دسترسی به چت، ت۸) ───
+
+MSG_POLICY_SELF = 'تغییر دسترسی پیام‌رسانِ خودتان مجاز نیست'
+MSG_POLICY_FORBIDDEN = 'شما اجازهٔ تغییر سیاست پیام‌رسان این کاربر را ندارید'
+MSG_POLICY_SUPERUSER_BLOCK = 'دسترسی مدیر کل به پیام‌رسان را نمی‌توان بست'
+MSG_POLICY_ALL_ONLY_SUPERUSER = 'فقط مدیر کل می‌تواند حوزهٔ «همهٔ شرکت‌ها» را تعیین کند'
+MSG_COMPANY_POLICY_FORBIDDEN = 'شما اجازهٔ تغییر حوزهٔ مخاطبان چت این شرکت را ندارید'
+
+
+def _user_policy_payload(target, policy):
+    return {
+        'user_id': target.id,
+        'chat_allowed': True if policy is None else policy.chat_allowed,
+        'contact_scope': '' if policy is None else (policy.contact_scope or ''),
+        'updated_by': None if policy is None else policy.updated_by_id,
+        'updated_at': None if policy is None or not policy.updated_at else policy.updated_at.isoformat(),
+    }
+
+
+def _company_policy_payload(company, policy):
+    from .contact_scope import DEFAULT_COMPANY_SCOPE
+    return {
+        'company_id': company.id,
+        'contact_scope': DEFAULT_COMPANY_SCOPE if policy is None else policy.contact_scope,
+        'updated_by': None if policy is None else policy.updated_by_id,
+        'updated_at': None if policy is None or not policy.updated_at else policy.updated_at.isoformat(),
+    }
+
+
+class ChatUserPolicyView(APIView):
+    """
+    GET/PUT /api/communications/policies/users/<user_id>/
+    مدیر کل، یا دارندهٔ حق ویرایش کاربر (perm_usr_edit، همان صفحهٔ کاربران) که بر هدف تسلط دارد
+    (actor_controls_user). هیچ‌کس سیاست خودش را تغییر نمی‌دهد؛ خواندنِ سیاست خود آزاد است.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    @staticmethod
+    def _can_manage(actor, target):
+        from accounts.scope import actor_controls_user
+        if actor.is_superuser:
+            return True
+        return bool(actor.has_perm('accounts.perm_usr_edit') and actor_controls_user(actor, target))
+
+    def _get_target(self, user_id):
+        target = User.objects.filter(pk=user_id).first()
+        if target is None:
+            raise Http404
+        return target
+
+    def get(self, request, user_id):
+        target = self._get_target(user_id)
+        if target.pk != request.user.pk and not self._can_manage(request.user, target):
+            raise PermissionDenied(MSG_POLICY_FORBIDDEN)
+        from .models import ChatUserPolicy
+        return Response(_user_policy_payload(target, ChatUserPolicy.objects.filter(user=target).first()))
+
+    def put(self, request, user_id):
+        from accounts.audit_utils import log_audit_event
+        from .models import ChatUserPolicy
+        actor = request.user
+        target = self._get_target(user_id)
+        if target.pk == actor.pk:
+            raise PermissionDenied(MSG_POLICY_SELF)
+        if not self._can_manage(actor, target):
+            raise PermissionDenied(MSG_POLICY_FORBIDDEN)
+        ser = ChatUserPolicyWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        if data.get('chat_allowed') is False and target.is_superuser:
+            raise ValidationError({'chat_allowed': MSG_POLICY_SUPERUSER_BLOCK})
+        if data.get('contact_scope') == SCOPE_ALL and not actor.is_superuser:
+            raise PermissionDenied(MSG_POLICY_ALL_ONLY_SUPERUSER)
+
+        with transaction.atomic():
+            policy = ChatUserPolicy.objects.select_for_update().filter(user=target).first()
+            before = _user_policy_payload(target, policy)
+            new_allowed = data.get('chat_allowed', before['chat_allowed'])
+            new_scope = data.get('contact_scope', before['contact_scope'])
+            changed = (new_allowed, new_scope) != (before['chat_allowed'], before['contact_scope'])
+            if changed:
+                if policy is None:
+                    policy = ChatUserPolicy(user=target)
+                policy.chat_allowed = new_allowed
+                policy.contact_scope = new_scope
+                policy.updated_by = actor
+                policy.save()
+                after = _user_policy_payload(target, policy)
+                log_audit_event(
+                    module='users', action='UPDATE', target_model='ChatUserPolicy',
+                    target_object_id=str(target.id),
+                    target_repr=f"سیاست پیام‌رسان کاربر {target.username}",
+                    severity='warning' if before['chat_allowed'] != new_allowed else 'info',
+                    user=actor,
+                    before_state={'chat_allowed': before['chat_allowed'], 'contact_scope': before['contact_scope']},
+                    after_state={'chat_allowed': after['chat_allowed'], 'contact_scope': after['contact_scope']},
+                )
+        return Response(_user_policy_payload(target, policy))
+
+
+class ChatCompanyPolicyView(APIView):
+    """
+    GET/PUT /api/communications/policies/companies/<company_id>/
+    مدیر کل، یا نویسندهٔ ساختار سازمانیِ همان شرکت (has_structure_write_permission + ensure_scoped_write).
+    حوزهٔ `all` فقط با مدیر کل.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    @staticmethod
+    def _ensure_can_manage(actor, company):
+        if actor.is_superuser:
+            return
+        from companies.access import ensure_scoped_write
+        from companies.permissions import has_structure_write_permission
+        if not has_structure_write_permission(actor):
+            raise PermissionDenied(MSG_COMPANY_POLICY_FORBIDDEN)
+        ensure_scoped_write(actor, company.id, MSG_COMPANY_POLICY_FORBIDDEN)
+
+    def _get_company(self, company_id):
+        from companies.models import Company
+        company = Company.objects.filter(pk=company_id).first()
+        if company is None:
+            raise Http404
+        return company
+
+    def get(self, request, company_id):
+        from .models import ChatCompanyPolicy
+        company = self._get_company(company_id)
+        self._ensure_can_manage(request.user, company)
+        return Response(_company_policy_payload(company, ChatCompanyPolicy.objects.filter(company=company).first()))
+
+    def put(self, request, company_id):
+        from accounts.audit_utils import log_audit_event
+        from .models import ChatCompanyPolicy
+        actor = request.user
+        company = self._get_company(company_id)
+        self._ensure_can_manage(actor, company)
+        ser = ChatCompanyPolicyWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        new_scope = ser.validated_data['contact_scope']
+        if new_scope == SCOPE_ALL and not actor.is_superuser:
+            raise PermissionDenied(MSG_POLICY_ALL_ONLY_SUPERUSER)
+
+        with transaction.atomic():
+            policy = ChatCompanyPolicy.objects.select_for_update().filter(company=company).first()
+            before = _company_policy_payload(company, policy)
+            if new_scope != before['contact_scope']:
+                if policy is None:
+                    policy = ChatCompanyPolicy(company=company)
+                policy.contact_scope = new_scope
+                policy.updated_by = actor
+                policy.save()
+                log_audit_event(
+                    module='settings', action='UPDATE', target_model='ChatCompanyPolicy',
+                    target_object_id=str(company.id),
+                    target_repr=f"حوزهٔ مخاطبان چت شرکت {company.name}"[:255],
+                    user=actor, company_id=company.id,
+                    before_state={'contact_scope': before['contact_scope']},
+                    after_state={'contact_scope': new_scope},
+                )
+        return Response(_company_policy_payload(company, policy))
