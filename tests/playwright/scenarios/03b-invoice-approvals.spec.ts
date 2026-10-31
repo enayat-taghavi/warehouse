@@ -2,6 +2,7 @@
  * Video 3-b: invoice approvals (plan §4 row 3-b). Users demo_supervisor, demo_employee, demo_accountant, demo_manager
  * (seed: --purge, then --base --with-invoice submitted → DEMO-INV-100 waits for the supervisor).
  * Supervisor returns it for a fix, the employee edits and resends, supervisor, accountant and manager approve.
+ * Supervisor, accountant and manager open the unified «فاکتورها» menu item; its default sub-tab is the role cartable.
  */
 import type { Locator, Page } from '@playwright/test';
 import captions from './03b-invoice-approvals.captions.json';
@@ -28,7 +29,7 @@ test('video 3-b: invoice approvals', async ({ page, tv }) => {
   // ─── سرپرست: عودت برای اصلاح ───
   await tv.loginAs('demo_supervisor');
   await tv.pickCompany();
-  await tv.openMenu('تایید فاکتورها', '/app/finance/supervisor-invoices');
+  await tv.openMenu('فاکتورها', '/app/finance/invoices?view=cartable');
   await expect(invoiceRow(page)).toBeVisible({ timeout: 30_000 });
   await tv.say('supervisor');
   await tv.say('return');
@@ -64,7 +65,7 @@ test('video 3-b: invoice approvals', async ({ page, tv }) => {
   // ─── سرپرست: تأیید ───
   await tv.loginAs('demo_supervisor');
   await tv.pickCompany();
-  await tv.openMenu('تایید فاکتورها', '/app/finance/supervisor-invoices');
+  await tv.openMenu('فاکتورها', '/app/finance/invoices?view=cartable');
   await expect(invoiceRow(page)).toBeVisible({ timeout: 30_000 });
   await tv.say('approve');
   await tv.act.click(invoiceRow(page).getByRole('button', { name: /تایید|تأیید/ }).first());
@@ -74,7 +75,7 @@ test('video 3-b: invoice approvals', async ({ page, tv }) => {
   // ─── حسابدار: صدور سند ───
   await tv.loginAs('demo_accountant');
   await tv.pickCompany();
-  await tv.openMenu('ممیزی فاکتورها', '/app/finance/accountant-invoices');
+  await tv.openMenu('فاکتورها', '/app/finance/invoices?view=cartable');
   await expect(invoiceRow(page)).toBeVisible({ timeout: 30_000 });
   await tv.say('accountant');
   await tv.act.click(invoiceRow(page).getByRole('button', { name: /صدور سند/ }));
@@ -84,8 +85,7 @@ test('video 3-b: invoice approvals', async ({ page, tv }) => {
   // ─── مدیر: مجوز پرداخت ───
   await tv.loginAs('demo_manager');
   await tv.pickCompany();
-  await tv.openMenu('کارتابل تاییدات', '/app/finance/manager-approvals');
-  await tv.act.click(page.getByRole('tab', { name: /^(فاکتورهای هزینه|فاکتور)/ }).first());
+  await tv.openMenu('فاکتورها', '/app/finance/invoices?view=cartable');
   await expect(invoiceRow(page)).toBeVisible({ timeout: 30_000 });
   await tv.say('manager');
   await tv.act.click(invoiceRow(page).getByRole('button', { name: /مجوز پرداخت/ }));

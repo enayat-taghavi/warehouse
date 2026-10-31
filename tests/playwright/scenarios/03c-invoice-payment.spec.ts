@@ -52,7 +52,7 @@ test('video 3-c: invoice payment', async ({ page, tv }) => {
   await tv.say('login');
   await tv.loginAs('demo_treasury');
   await tv.pickCompany();
-  await tv.openMenu('تسویه فاکتور و تن‌خواه', '/app/finance/treasurer-invoices');
+  await tv.openMenu('فاکتورها', '/app/finance/invoices?view=cartable');
   await expect(invoiceRow(page)).toBeVisible({ timeout: 30_000 });
   await tv.say('list');
 
