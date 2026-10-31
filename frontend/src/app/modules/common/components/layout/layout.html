@@ -327,7 +327,7 @@
 
         <!-- ─── پیام‌رسان سازمانی انبار ─── -->
         <button 
-          *ngIf="commService.isChatEnabled()"
+          *ngIf="commService.isChatAvailable()"
           (click)="toggleChatDrawer()" 
           class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 tap-target"
           title="پیام‌رسان سازمانی"
@@ -469,7 +469,7 @@
 </div>
 
 <!-- کشوی پیام‌رسان سازمانی -->
-<app-chat-drawer />
+<app-chat-drawer *ngIf="commService.isChatAvailable()" />
 
 <!-- مودال هوشمند انتخاب شرکت کاری هنگام ورود یا تغییر -->
 <app-company-selection-modal></app-company-selection-modal>

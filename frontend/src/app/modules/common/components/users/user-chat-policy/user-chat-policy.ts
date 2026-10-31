@@ -11,6 +11,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../core/api/api.service';
+import { HttpContext } from '@angular/common/http';
+import { SKIP_OFFLINE } from '../../../../../core/interceptors/offline.interceptor';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../../../../core/error/error.interceptor';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ToggleSwitchComponent } from '../../../../../shared/components/toggle-switch/toggle-switch.component';
@@ -51,6 +54,11 @@ export class UserChatPolicyComponent implements OnInit, OnChanges {
 
   private loadSeq = 0;
 
+  /** ۴۰۳ و خطاها را خود کارت نشان می‌دهد؛ تغییر سیاست هرگز در صف آفلاین نمی‌رود */
+  private ctx(): HttpContext {
+    return new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true);
+  }
+
   get isSuperuser(): boolean {
     return this.permission.isSuperuser();
   }
@@ -79,7 +87,7 @@ export class UserChatPolicyComponent implements OnInit, OnChanges {
 
     try {
       const res = await firstValueFrom(
-        this.api.get<UserChatPolicy>(`communications/policies/users/${this.userId}`)
+        this.api.get<UserChatPolicy>(`communications/policies/users/${this.userId}`, undefined, { context: this.ctx() })
       );
       if (seq !== this.loadSeq) return;
       this.chatAllowed = res.chat_allowed;
@@ -93,7 +101,7 @@ export class UserChatPolicyComponent implements OnInit, OnChanges {
       if (status === 403) {
         this.hidden = true;
       } else {
-        this.error = 'دریافت تنظیمات پیامرسان ممکن نشد.';
+        this.error = 'دریافت تنظیمات پیام‌رسان ممکن نشد.';
       }
     }
     this.cdr.markForCheck();
@@ -124,16 +132,16 @@ export class UserChatPolicyComponent implements OnInit, OnChanges {
         this.api.put<UserChatPolicy>(`communications/policies/users/${this.userId}`, {
           chat_allowed: this.chatAllowed,
           contact_scope: this.contactScope
-        })
+        }, { context: this.ctx() })
       );
       this.chatAllowed = res.chat_allowed;
       this.contactScope = res.contact_scope ?? '';
       this.savedScope = res.contact_scope ?? '';
-      this.toast?.success('تنظیمات پیامرسان ذخیره شد');
+      this.toast?.success('تنظیمات پیام‌رسان ذخیره شد');
     } catch (err: unknown) {
       this.chatAllowed = prevAllowed;
       this.contactScope = prevScope;
-      const msg = this.extractError(err, 'ذخیرهٔ تنظیمات پیامرسان ممکن نشد.');
+      const msg = this.extractError(err, 'ذخیرهٔ تنظیمات پیام‌رسان ممکن نشد.');
       this.toast?.error(msg);
     } finally {
       this.saving = false;

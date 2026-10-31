@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams, HttpContext, HttpEvent, HttpEventType } from '@angular/common/http';
 import { BehaviorSubject, Subject, Observable, firstValueFrom } from 'rxjs';
 import { ImageCompressorService } from './image-compressor.service';
@@ -149,6 +149,14 @@ export interface GenericComment {
   is_pending?: boolean;
 }
 
+/** پاسخ /api/communications/capabilities/ (حوزه: '' یعنی پیروی از شرکت) */
+export interface ChatCapabilities {
+  can_create_group: boolean;
+  chat_allowed?: boolean;
+  contact_scope?: '' | 'section' | 'project' | 'company' | 'all';
+  contact_scope_source?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -164,6 +172,10 @@ export class CommunicationService implements OnDestroy {
   public isChatDrawerOpen = signal<boolean>(false);
   public isMuted = signal<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('wh_chat_muted') === 'true' : false);
   public isChatEnabled = signal<boolean>(true);
+  /** دسترسی کاربر فعلی به پیام‌رسان (طرح دسترسی به چت، ت۲)؛ تا پاسخ سرور باز فرض می‌شود */
+  public chatAllowed = signal<boolean>(true);
+  /** پیام‌رسان هم در سامانه روشن است و هم برای این کاربر باز است (دکمه و کشوی چت) */
+  public isChatAvailable = computed(() => this.isChatEnabled() && this.chatAllowed());
   public totalUnreadCount = signal<number>(0);
   public hasNewIncomingPulse = signal<boolean>(false);
   public onlineUsers = signal<Set<number>>(new Set<number>());
@@ -223,6 +235,10 @@ export class CommunicationService implements OnDestroy {
   private outboxFlushing = false;
   /** درخواست ارسال صف در حین ارسال قبلی رسید؛ پس از پایان یک دور دیگر اجرا می‌شود */
   private outboxFlushAgain = false;
+  /** کاربری که chatAllowed برای او گرفته شده است (دستگاه مشترک) */
+  private chatAccessUserId: number | null = null;
+  private chatAccessCheck: Promise<boolean> | null = null;
+  private blockedHeartbeats = 0;
   /** شمارهٔ ترتیبی درخواست‌های loadMessages برای نادیده گرفتن پاسخ‌های کهنه */
   private loadMessagesSeq = 0;
 
@@ -254,6 +270,7 @@ export class CommunicationService implements OnDestroy {
           if (!isChatAlive && this.isChatEnabled()) {
             this.ensureConnected(this.currentWarehouseId);
           }
+          if (!this.chatAllowed()) return;
           const active = this.activeConversation$.value;
           if (active) {
             this.loadMessages(active.id);
@@ -271,6 +288,7 @@ export class CommunicationService implements OnDestroy {
       window.addEventListener('online', () => {
         if (this.isChatEnabled()) {
           this.connectSockets(this.currentWarehouseId);
+          if (!this.chatAllowed()) return;
           const active = this.activeConversation$.value;
           if (active) {
             this.loadMessages(active.id);
@@ -404,6 +422,10 @@ export class CommunicationService implements OnDestroy {
     this.closeSocketSilently(this.commentWs);
     this.commentWs = null;
     this.connectedUserId = this.getCurrentUserId();
+    if (this.chatAccessUserId !== this.connectedUserId) {
+      this.chatAccessUserId = this.connectedUserId;
+      this.chatAllowed.set(true);
+    }
     void this.restoreOutbox();
 
     let chatPath = '/ws/chat/';
@@ -413,9 +435,46 @@ export class CommunicationService implements OnDestroy {
     const chatUrl = wsUrl(chatPath);
     const commentUrl = wsUrl('/ws/comments/');
 
-    this.initChatSocket(chatUrl, token);
+    // کاربر بسته‌شده سوکت چت ندارد؛ سوکت کامنت‌ها (بیرون از پیام‌رسان) می‌ماند
+    if (this.chatAllowed()) this.initChatSocket(chatUrl, token);
     this.initCommentSocket(commentUrl, token);
     this.startHeartbeat();
+    void this.refreshChatAccess();
+  }
+
+  /**
+   * دسترسی کاربر فعلی به پیام‌رسان از سرور (capabilities). بسته شدن هیچ داده‌ای را پاک نمی‌کند:
+   * گفتگوها، پیام‌ها و صندوق خروجی می‌مانند؛ فقط کشو بسته و سوکت چت قطع می‌شود و صف فرستاده نمی‌شود.
+   * خطای شبکه وضعیت قبلی را نگه می‌دارد.
+   */
+  public refreshChatAccess(): Promise<boolean> {
+    if (this.chatAccessCheck) return this.chatAccessCheck;
+    const uid = this.getCurrentUserId();
+    this.chatAccessCheck = this.getCapabilities()
+      .then(c => {
+        if (this.getCurrentUserId() !== uid) return this.chatAllowed();
+        this.applyChatAccess(c?.chat_allowed !== false);
+        return this.chatAllowed();
+      })
+      .catch(() => this.chatAllowed())
+      .finally(() => { this.chatAccessCheck = null; });
+    return this.chatAccessCheck;
+  }
+
+  private applyChatAccess(allowed: boolean): void {
+    const wasAllowed = this.chatAllowed();
+    this.chatAccessUserId = this.getCurrentUserId();
+    this.chatAllowed.set(allowed);
+    if (!allowed) {
+      this.isChatDrawerOpen.set(false);
+      this.closeSocketSilently(this.chatWs);
+      this.chatWs = null;
+      this.onlineUsers.set(new Set());
+    } else if (!wasAllowed && !this.isDestroyed && this.isChatEnabled()) {
+      // دوباره باز شد: سوکت چت وصل می‌شود و صندوق خروجی پس از احراز هویت فرستاده می‌شود
+      this.connectSockets(this.currentWarehouseId);
+      void this.loadConversations(this.currentWarehouseId);
+    }
   }
 
   private scheduleReconnect(): void {
@@ -524,7 +583,7 @@ export class CommunicationService implements OnDestroy {
 
       ws.onclose = () => {
         if (this.chatWs !== ws) return; // سوکت قدیمی که عمداً بسته شده، اتصال دوباره نمی‌سازد
-        if (!this.isDestroyed && this.isChatEnabled()) {
+        if (!this.isDestroyed && this.isChatEnabled() && this.chatAllowed()) {
           this.scheduleReconnect();
         }
       };
@@ -691,6 +750,8 @@ export class CommunicationService implements OnDestroy {
       if (this.chatWs && this.chatWs.readyState === WebSocket.OPEN) {
         this.chatWs.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
       }
+      // کاربر بسته‌شده: هر ۵ دقیقه (۱۰ ضربان) دسترسی دوباره پرسیده می‌شود تا باز شدن آن دیده شود
+      if (!this.chatAllowed() && ++this.blockedHeartbeats % 10 === 0) void this.refreshChatAccess();
       if (this.commentWs && this.commentWs.readyState === WebSocket.OPEN) {
         this.commentWs.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
       }
@@ -699,7 +760,7 @@ export class CommunicationService implements OnDestroy {
 
   // ─── عملیات پیام‌رسان (Chat API) ───
   public async loadConversations(warehouseId?: number): Promise<void> {
-    if (!this.isChatEnabled()) return;
+    if (!this.isChatAvailable()) return;
     let token: string | null = null;
     try {
       token = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('wh_access_token')) ||
@@ -796,9 +857,9 @@ export class CommunicationService implements OnDestroy {
   }
 
   // ─── گروه‌ها ───
-  public async getCapabilities(): Promise<{ can_create_group: boolean }> {
+  public async getCapabilities(): Promise<ChatCapabilities> {
     return await firstValueFrom(
-      this.http.get<{ can_create_group: boolean }>('/api/communications/capabilities/', { context: this.chatCtx() })
+      this.http.get<ChatCapabilities>('/api/communications/capabilities/', { context: this.chatCtx() })
     );
   }
 
@@ -1125,6 +1186,8 @@ export class CommunicationService implements OnDestroy {
       this.outboxFlushAgain = true;
       return;
     }
+    // کاربر بسته‌شده: صف دست نمی‌خورد تا پس از باز شدن دوباره خودکار فرستاده شود
+    if (!this.chatAllowed()) return;
     this.outboxFlushing = true;
     try {
       await this.restoreOutbox();
@@ -1545,6 +1608,9 @@ export class CommunicationService implements OnDestroy {
       if (isServerUnreachable(status)) {
         console.warn('[CommunicationService] Server unreachable; message waits in the chat outbox', status);
         this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: undefined, waiting_network: true }));
+      } else if (status === 403 && !(await this.refreshChatAccess())) {
+        // کاربر بسته‌شده (ت۲): پیام با دلیل سرور در صف می‌ماند و پس از باز شدن دسترسی خودکار فرستاده می‌شود
+        this.applyOutgoingUpdate(tempId, m => ({ ...m, is_pending: true, delivery_status: 'pending' as const, failure_reason: this.permanentRejectionText(err) ?? undefined, waiting_network: true }));
       } else {
         console.error('[CommunicationService] Failed to send message', err);
         const reason = this.permanentRejectionText(err) ?? undefined;

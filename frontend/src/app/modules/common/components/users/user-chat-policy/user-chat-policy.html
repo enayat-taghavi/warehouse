@@ -2,7 +2,7 @@
   @if (loading) {
     <div class="p-3.5 rounded-2xl border border-slate-200 bg-white space-y-2" role="status" aria-live="polite" dir="rtl">
       <div class="h-10 rounded-xl bg-slate-100 animate-pulse"></div>
-      <span class="sr-only">در حال بارگذاری تنظیمات پیامرسان…</span>
+      <span class="sr-only">در حال بارگذاری تنظیمات پیام‌رسان…</span>
     </div>
   } @else if (error) {
     <div class="flex items-center justify-between gap-2 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700" role="alert" dir="rtl">
@@ -12,29 +12,30 @@
         (click)="load()"
         title="تلاش دوباره"
         aria-label="تلاش دوباره"
-        class="inline-flex items-center justify-center min-h-[40px] px-3 rounded-xl border border-rose-300 bg-white font-semibold cursor-pointer hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
-        <span>تلاش دوباره</span>
+        class="inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-rose-300 bg-white font-semibold cursor-pointer hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" appIcon="refresh-cw"></svg>
+        <span class="hidden sm:inline">تلاش دوباره</span>
       </button>
     </div>
   } @else {
     <section class="p-3.5 bg-white border border-slate-200 rounded-2xl space-y-3.5 text-xs" dir="rtl">
       <div class="flex items-center gap-2 border-b border-slate-100 pb-2.5">
         <svg appIcon="message-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="w-4 h-4 text-slate-600"></svg>
-        <h4 class="font-black text-slate-800">پیامرسان</h4>
+        <h4 class="font-black text-slate-800">پیام‌رسان</h4>
       </div>
 
       <div class="flex items-center justify-between gap-3">
         <div class="space-y-0.5">
-          <span class="font-bold text-slate-800">دسترسی به پیامرسان</span>
+          <span class="font-bold text-slate-800">دسترسی به پیام‌رسان</span>
           <p class="text-[10px] text-slate-500">
-            {{ chatAllowed ? 'کاربر میتواند گفتگو کند و پیام بفرستد' : 'پیامرسان برای این کاربر بسته است؛ گفتگوها و پیامهایش پاک نمیشوند' }}
+            {{ chatAllowed ? 'کاربر می‌تواند گفتگو کند و پیام بفرستد' : 'پیام‌رسان برای این کاربر بسته است؛ گفتگوها و پیام‌هایش پاک نمی‌شوند' }}
           </p>
         </div>
         <app-toggle-switch
           data-testid="chat-policy-toggle"
           [checked]="chatAllowed"
           (checkedChange)="setAllowed($event)"
-          title="دسترسی به پیامرسان"
+          label="دسترسی به پیام‌رسان"
           [class.pointer-events-none]="saving"
           [class.opacity-50]="saving"
         />
@@ -54,14 +55,14 @@
           <option value="project">پروژه</option>
           <option value="company">شرکت</option>
           @if (isSuperuser || savedScope === 'all') {
-            <option value="all">همهٔ شرکتها</option>
+            <option value="all">همهٔ شرکت‌ها</option>
           }
         </select>
         @if (savedScope === 'all' && !isSuperuser) {
-          <p class="text-[11px] text-amber-600 font-medium">فقط مدیر کل میتواند این حوزه را تغییر دهد</p>
+          <p class="text-[11px] text-amber-700 font-medium">فقط مدیر کل می‌تواند این حوزه را تغییر دهد</p>
         }
         <p class="text-[10px] text-slate-500">
-          کاربر فقط افراد داخل این حوزه را در فهرست مخاطبان میبیند. گفتگوهای موجود دست نمیخورند.
+          کاربر فقط افراد داخل این حوزه را در فهرست مخاطبان می‌بیند. گفتگوهای موجود دست نمی‌خورند.
         </p>
       </div>
     </section>

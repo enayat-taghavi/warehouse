@@ -4312,7 +4312,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 
 ===
 
-[ ] Session 1 of 1 — Payment receipt release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
+[DONE] [ ] Session 1 of 1 — Payment receipt release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
@@ -4349,3 +4349,80 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `scratch/logs/apk_receipt_badging.txt` exists; `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
 
 6. Output and stop condition: a short English report with the backup filename and size, the check result, the web build result and the patch line, the APK path and size, the badging first line, the publish path, and the step g file name. No commit. End the turn after the report.
+
+===
+
+[DONE] [ ] Session 1 of 1 — Chat access UI: messenger section in the user edit dialog and the company chat contact-scope card, with DOM specs
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/common/components/users/user-chat-policy/*" --allow "frontend/src/app/modules/common/components/users/users.html" --allow "frontend/src/app/modules/common/components/users/users.ts" --allow "frontend/src/app/modules/common/components/operations/companies/company-chat-scope-card/*" --allow "frontend/src/app/modules/common/components/operations/companies/companies.html" --allow "frontend/src/app/modules/common/components/operations/companies/companies.ts"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/common/components/users/user-chat-policy/user-chat-policy.dom.spec.ts --min-tests 8 --require "communications/policies/users/" --require "chat_allowed" --require "contact_scope" --require "chat-policy-scope" --require "chat-policy-toggle"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/modules/common/components/operations/companies/company-chat-scope-card/company-chat-scope-card.dom.spec.ts --min-tests 5 --require "communications/policies/companies/" --require "contact_scope" --require "chat-scope-select"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/common/components/users/user-chat-policy/*.spec.ts" --include "src/app/modules/common/components/operations/companies/company-chat-scope-card/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(chat access ui)"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`.
+- Create only these NEW files: `frontend/src/app/modules/common/components/users/user-chat-policy/user-chat-policy.ts`, `user-chat-policy.html`, `user-chat-policy.dom.spec.ts` (same folder), and `frontend/src/app/modules/common/components/operations/companies/company-chat-scope-card/company-chat-scope-card.ts`, `company-chat-scope-card.html`, `company-chat-scope-card.dom.spec.ts` (same folder).
+- Edit only these existing files, and only as described in section 4: `users/users.html`, `users/users.ts`, `operations/companies/companies.html`, `operations/companies/companies.ts` (all under `frontend/src/app/modules/common/components/`). Never edit any other file (no service, no `core/`, no `shared/`, no layout, no chat drawer, no `scripts/`, `Documents/`, `tasks.md`, `tasks_history.md`, `backend/`).
+- All user-facing text in Persian, exactly as given below. Spec descriptions in English. No push. Stage only the files listed above.
+- Icons only as `<svg appIcon="name" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with `SvgIconDirective`, and only the names `message-square` and `users` (both exist in `frontend/src/app/shared/icons/icon-registry.ts`). Never write an inline svg path.
+
+2. Context (read these; nothing else is needed):
+- Style and structure to copy: `frontend/src/app/modules/common/components/operations/companies/company-settings-tab/company-settings-tab.component.ts` (whole file: `ApiService`, `firstValueFrom`, `loadSeq`, `ToastService` optional, `ChangeDetectorRef`), its `.html` (loading, error with retry button, section card) and its `company-settings-tab.dom.spec.ts` (TestBed setup and the mocked `ApiService`).
+- `frontend/src/app/core/api/api.service.ts`: `get`/`put` add the `/api/` prefix and the trailing slash, so pass endpoints like `communications/policies/users/12`.
+- `frontend/src/app/core/services/permission.service.ts` line 83: `isSuperuser` signal (the acting user).
+- `frontend/src/app/shared/components/toggle-switch/toggle-switch.component.ts`: `<app-toggle-switch [checked] (checkedChange) title>`.
+- `users/users.html` lines 1580–1625 (the security tab with the active and superuser toggles; the superuser block is `<div *ngIf="auth.user()?.is_superuser" ...>` and its closing `</div>` is followed by three more closing `</div>`s). `users/users.ts` line 63 (component `imports` array) and line 40 (ToggleSwitch import as an example of the relative import path). In `users.html` the edited user is `editingUser` (has `id`, `is_superuser`) and the acting user is `auth.user()`.
+- `operations/companies/companies.html` lines 1240–1252 (the `settings` tab panel that renders `<app-company-settings-tab [companyId]="companyModal.data.id!" />`), and `operations/companies/companies.ts` line 57 (component `imports` array).
+
+3. Definitions (server API, already built):
+- User policy: `GET communications/policies/users/<id>` returns `{ user_id, chat_allowed: boolean, contact_scope: '' | 'section' | 'project' | 'company' | 'all', updated_by, updated_at }`. `PUT` on the same endpoint with body `{ chat_allowed, contact_scope }` returns the same shape. `''` means "follow the company". A 403 on GET means the acting user may not manage this user.
+- Company policy: `GET communications/policies/companies/<id>` returns `{ company_id, contact_scope: 'section' | 'project' | 'company' | 'all', updated_by, updated_at }`; `PUT` body `{ contact_scope }`. A 403 on GET means the acting user may not manage this company.
+- Only a superuser may send `all`; the server answers 403 otherwise. Error text from the server is in `err.error.detail`, or else the first value of `err.error` (a string or the first item of an array).
+- Scope labels (exact Persian): `''` → «پیروی از شرکت», `section` → «بخش», `project` → «پروژه», `company` → «شرکت», `all` → «همهٔ شرکت‌ها».
+
+4. Task:
+- a) `UserChatPolicyComponent` (selector `app-user-chat-policy`, standalone, imports `CommonModule`, `FormsModule`, `SvgIconDirective`, `ToggleSwitchComponent`). Input `@Input({ required: true }) userId!: number`. On init, and when `userId` changes, GET the policy. States:
+  - loading: a small pulse skeleton with `role="status"` and sr-only text «در حال بارگذاری تنظیمات پیام‌رسان…».
+  - GET 403: render nothing at all (set a `hidden` flag; the template is empty).
+  - other GET error: a rose alert with «دریافت تنظیمات پیام‌رسان ممکن نشد.» and a retry button (copy the settings tab retry button, label «تلاش دوباره»).
+  - loaded: a card with a header row (`message-square` icon + title «پیام‌رسان») containing:
+    - a row «دسترسی به پیام‌رسان» with helper text, when on: «کاربر می‌تواند گفتگو کند و پیام بفرستد»; when off: «پیام‌رسان برای این کاربر بسته است؛ گفتگوها و پیام‌هایش پاک نمی‌شوند». Control: `<app-toggle-switch data-testid="chat-policy-toggle" [checked]="chatAllowed" (checkedChange)="setAllowed($event)" title="دسترسی به پیام‌رسان" />`.
+    - a `<select data-testid="chat-policy-scope" id="chat-policy-scope">` with `<label for="chat-policy-scope">حوزهٔ مخاطبان</label>`. Options in this order: `''`, `section`, `project`, `company`, and `all` only when the acting user is a superuser OR the saved value is `all`. When the saved value is `all` and the acting user is not a superuser, the select is `disabled` and a small helper text shows «فقط مدیر کل می‌تواند این حوزه را تغییر دهد». Helper text under the select: «کاربر فقط افراد داخل این حوزه را در فهرست مخاطبان می‌بیند. گفتگوهای موجود دست نمی‌خورند.»
+  - Saving: each change PUTs immediately with the full body `{ chat_allowed, contact_scope }` (current values with the one changed field). While saving, the toggle and the select are disabled. On success apply the server response and call `toast.success('تنظیمات پیام‌رسان ذخیره شد')`. On error revert to the previous values and call `toast.error(<server text, or 'ذخیرهٔ تنظیمات پیام‌رسان ممکن نشد.'>)`.
+  - Styling like the settings tab (white card, `border-slate-200`, `rounded-2xl`, `text-xs`), select at least 40px tall (`min-h-[40px]`), `dir="rtl"`, visible focus ring.
+- b) In `users.html`, inside the security tab, right after the closing `</div>` of the superuser block and still inside the same container, add:
+  `<app-user-chat-policy *ngIf="editingUser?.id && !editingUser.is_superuser && editingUser.id !== auth.user()?.id" [userId]="editingUser.id" />`
+  (superuser targets cannot be blocked and nobody edits their own access). Add `UserChatPolicyComponent` to the `imports` array and import it in `users.ts`. No other change in these two files.
+- c) `CompanyChatScopeCardComponent` (selector `app-company-chat-scope-card`, standalone, imports `CommonModule`, `FormsModule`, `SvgIconDirective`). Input `@Input({ required: true }) companyId!: number`. GET on init and on `companyId` change. Same loading / 403 hidden / error-with-retry states as (a), error text «دریافت حوزهٔ مخاطبان چت ممکن نشد.». Loaded: a card with header (`users` icon + title «حوزهٔ مخاطبان چت»), a `<select data-testid="chat-scope-select" id="chat-scope-select">` with `<label for="chat-scope-select">پیش‌فرض این شرکت</label>`, options `section`, `project`, `company`, and `all` only when the acting user is a superuser OR the saved value is `all` (then disabled for non-superusers, with the same helper text as in a). Helper text: «کاربرانی که «پیروی از شرکت» دارند فقط افراد این حوزه را در فهرست مخاطبان می‌بینند.» A change PUTs `{ contact_scope }` immediately; success toast «حوزهٔ مخاطبان چت ذخیره شد»; an error reverts and shows the server text or «ذخیرهٔ حوزهٔ مخاطبان چت ممکن نشد.».
+- d) In `companies.html`, in the `settings` tab panel, inside the `@else` branch, put `<app-company-chat-scope-card [companyId]="companyModal.data.id!" />` directly above `<app-company-settings-tab ... />`. Add `CompanyChatScopeCardComponent` to the `imports` array and import it in `companies.ts`. No other change in these two files.
+- e) `user-chat-policy.dom.spec.ts` (mock `ApiService` with `get`/`put` as `vi.fn()` returning `of(...)` or `throwError(() => ({ status, error }))`; mock `PermissionService` with an `isSuperuser` signal; mock `ToastService`), at least these tests:
+  1. GET is called with `communications/policies/users/12` and the toggle reflects `chat_allowed`.
+  2. switching the toggle off PUTs `{ chat_allowed: false, contact_scope: '' }` to the same endpoint and shows the success toast.
+  3. choosing `section` PUTs `{ chat_allowed: true, contact_scope: 'section' }`; choosing `''` («پیروی از شرکت») PUTs `contact_scope: ''`.
+  4. non-superuser actor: no option with value `all`; superuser actor: the option `all` exists.
+  5. non-superuser actor and saved value `all`: the option exists and the select is disabled.
+  6. PUT error: the values revert and the error toast receives the server `detail` text.
+  7. GET 403: no card, no toggle and no select are rendered.
+  8. GET 500: the error alert and the retry button are shown; clicking retry calls GET again.
+- f) `company-chat-scope-card.dom.spec.ts`, at least: GET endpoint `communications/policies/companies/5` and the selected value; changing to `project` PUTs `{ contact_scope: 'project' }` with the success toast; `all` hidden for a non-superuser and shown for a superuser; GET 403 renders nothing; PUT error reverts with the error toast.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/modules/common/components/users/user-chat-policy/user-chat-policy.dom.spec.ts --include=src/app/modules/common/components/operations/companies/company-chat-scope-card/company-chat-scope-card.dom.spec.ts` (at most 8 times). Once at the end, from the repository root: `python scripts/e2e/guardian_52_icon_registry.py` and `python scripts/e2e/guardian_56_change_integrity.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If the existing code differs from this task (line numbers, names), follow the real code and say so in the report.
+
+6. Before finishing:
+- The test command passes with zero failures; both guardians pass.
+- `git status --short` shows only the files listed in section 1 (plus the pre-existing `tests/playwright/tools/index.py` and the runner files) before the commit, and only those pre-existing files after it.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(chat access ui): messenger section in user edit and company chat contact-scope card; DOM specs
+- Short English report: what you built, tests per scenario, the test summary line, guardian results, and anything that differed from this task. End the turn after the commit and the report.

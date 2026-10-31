@@ -123,6 +123,8 @@ describe('CommunicationService', () => {
   });
 
   afterEach(() => {
+    // connectSockets also refreshes chat access (capabilities); tests that do not care answer it here
+    httpMock.match('/api/communications/capabilities/').forEach(r => r.flush({ can_create_group: false, chat_allowed: true }));
     httpMock.verify();
     service.disconnect();
     TestBed.resetTestingModule();
@@ -1113,6 +1115,9 @@ describe('CommunicationService', () => {
     const p = service.sendMessage('conv-1', 'رد می‌شود', undefined, file);
     const tempId = service.activeMessages$.value[0].client_temp_id!;
     httpMock.expectOne('/api/communications/messages/').flush({ detail: 'شما اجازهٔ ارسال در این گفتگو را ندارید.' }, { status: 403, statusText: 'Forbidden' });
+    // a 403 first re-checks chat access; access is still open, so it is a real rejection
+    await flushAsync();
+    httpMock.expectOne('/api/communications/capabilities/').flush({ can_create_group: false, chat_allowed: true });
     await p;
     const m = service.activeMessages$.value[0];
     expect(m.delivery_status).toBe('failed');
@@ -1686,5 +1691,151 @@ describe('CommunicationService', () => {
       expect(outboxDbMock.has('u1-1')).toBe(false);
       expect(outboxDbMock.has('u2-1')).toBe(true);
     });
+  });
+
+  describe('chat access (plan chat-access, stage 2)', () => {
+    const capsReq = () => httpMock.expectOne('/api/communications/capabilities/');
+
+    it('blocked user: chat socket is closed, comment socket stays, drawer closes, nothing is cleared', withFakeSockets(async () => {
+      service.getCurrentUserId = () => 1;
+      service.isChatDrawerOpen.set(true);
+      service.conversations$.next([conv('conv-1') as any]);
+      service.connectSockets();
+      const chatWs = FakeWS.instances.find(w => w.url.includes('/ws/chat/'))!;
+      const commentWs = FakeWS.instances.find(w => w.url.includes('/ws/comments/'))!;
+      capsReq().flush({ can_create_group: false, chat_allowed: false, contact_scope: 'company', contact_scope_source: 'company' });
+      await flushAsync();
+
+      expect(service.chatAllowed()).toBe(false);
+      expect(service.isChatAvailable()).toBe(false);
+      expect(service.isChatDrawerOpen()).toBe(false);
+      expect(chatWs.readyState).toBe(3);
+      expect((service as any).chatWs).toBeNull();
+      expect((service as any).commentWs).toBe(commentWs);
+      expect(commentWs.readyState).not.toBe(3);
+      expect((service as any).reconnectTimer).toBeNull();
+      // conversations stay in memory (plan T2: no data is removed)
+      expect(service.conversations$.value.length).toBe(1);
+    }));
+
+    it('blocked user: a reconnect opens only the comment socket and conversations are not loaded', withFakeSockets(async () => {
+      service.getCurrentUserId = () => 1;
+      service.connectSockets();
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await flushAsync();
+      FakeWS.instances = [];
+
+      service.connectSockets();
+      expect(FakeWS.instances.some(w => w.url.includes('/ws/chat/'))).toBe(false);
+      expect(FakeWS.instances.some(w => w.url.includes('/ws/comments/'))).toBe(true);
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await flushAsync();
+
+      await service.loadConversations();
+      httpMock.expectNone('/api/communications/conversations/');
+    }));
+
+    it('blocked user: flushOutbox leaves queued messages untouched (no POST, no delete)', withFakeSockets(async () => {
+      service.getCurrentUserId = () => 1;
+      outboxDbMock.set('q-1', {
+        tempId: 'q-1', userId: 1, conversation: 'conv-1', files: [],
+        message: { client_temp_id: 'q-1', conversation: 'conv-1', sender: 1, text: 'hi', delivery_status: 'pending', created_at: '2026-10-31T01:00:00Z' },
+        createdAt: '2026-10-31T01:00:00Z'
+      });
+      service.connectSockets();
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await flushAsync();
+
+      await service.flushOutbox();
+      await flushAsync();
+      httpMock.expectNone('/api/communications/messages/');
+      expect(mockOutboxTable.delete).not.toHaveBeenCalled();
+      expect(outboxDbMock.has('q-1')).toBe(true);
+    }));
+
+    it('a 403 because the user was just blocked keeps the message queued with auto retry and the server reason', async () => {
+      service.getCurrentUserId = () => 1;
+      const p = service.sendMessage('conv-1', 'hello');
+      await flushAsync();
+      const tempId = service.activeMessages$.value[0].client_temp_id!;
+      httpMock.expectOne('/api/communications/messages/')
+        .flush({ detail: 'blocked-text' }, { status: 403, statusText: 'Forbidden' });
+      await flushAsync();
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await p;
+      await flushAsync();
+
+      const msg = service.activeMessages$.value.find(m => m.client_temp_id === tempId)!;
+      expect(msg.delivery_status).toBe('pending');
+      expect(msg.waiting_network).toBe(true);
+      expect(msg.failure_reason).toBe('blocked-text');
+      expect((service as any).outboxAutoRetry.get(tempId)).not.toBe(false);
+      expect((service as any).outgoingMessages.has(tempId)).toBe(true);
+      expect(service.chatAllowed()).toBe(false);
+    });
+
+    it('a 403 while access is still open stays a permanent rejection', async () => {
+      service.getCurrentUserId = () => 1;
+      const p = service.sendMessage('conv-1', 'hello');
+      await flushAsync();
+      const tempId = service.activeMessages$.value[0].client_temp_id!;
+      httpMock.expectOne('/api/communications/messages/')
+        .flush({ detail: 'not-a-member' }, { status: 403, statusText: 'Forbidden' });
+      await flushAsync();
+      capsReq().flush({ can_create_group: false, chat_allowed: true });
+      await p;
+      await flushAsync();
+
+      const msg = service.activeMessages$.value.find(m => m.client_temp_id === tempId)!;
+      expect(msg.delivery_status).toBe('failed');
+      expect(msg.failure_reason).toBe('not-a-member');
+      expect((service as any).outboxAutoRetry.get(tempId)).toBe(false);
+    });
+
+    it('re-opened access reconnects the chat socket and reloads conversations', withFakeSockets(async () => {
+      service.getCurrentUserId = () => 1;
+      service.connectSockets();
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await flushAsync();
+      FakeWS.instances = [];
+
+      const p = service.refreshChatAccess();
+      capsReq().flush({ can_create_group: false, chat_allowed: true });
+      await p;
+      await flushAsync();
+
+      expect(service.chatAllowed()).toBe(true);
+      expect(FakeWS.instances.some(w => w.url.includes('/ws/chat/'))).toBe(true);
+      httpMock.expectOne('/api/communications/conversations/').flush([]);
+      // the reconnect reuses the running access check: no second capabilities request, no loop
+      httpMock.expectNone('/api/communications/capabilities/');
+    }));
+
+    it('a network error while checking access keeps the last known state', withFakeSockets(async () => {
+      service.getCurrentUserId = () => 1;
+      service.connectSockets();
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await flushAsync();
+
+      const p = service.refreshChatAccess();
+      capsReq().flush(null, { status: 530, statusText: 'Origin unreachable' });
+      expect(await p).toBe(false);
+      expect(service.chatAllowed()).toBe(false);
+    }));
+
+    it('another user logging in on the same device starts with chat open until the server answers', withFakeSockets(async () => {
+      let uid = 1;
+      service.getCurrentUserId = () => uid;
+      service.connectSockets();
+      capsReq().flush({ can_create_group: false, chat_allowed: false });
+      await flushAsync();
+      expect(service.chatAllowed()).toBe(false);
+
+      uid = 2;
+      FakeWS.instances = [];
+      service.connectSockets();
+      expect(service.chatAllowed()).toBe(true);
+      expect(FakeWS.instances.some(w => w.url.includes('/ws/chat/'))).toBe(true);
+    }));
   });
 });

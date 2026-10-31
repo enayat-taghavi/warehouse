@@ -68,6 +68,7 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
 
     mockComm = {
       isChatEnabled: () => false,
+      isChatAvailable: () => false,
       totalUnreadCount: () => 0,
       hasNewIncomingPulse: () => false,
       isChatDrawerOpen: Object.assign(vi.fn().mockReturnValue(false), { set: vi.fn() }),

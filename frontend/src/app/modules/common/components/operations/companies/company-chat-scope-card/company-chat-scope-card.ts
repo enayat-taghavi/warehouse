@@ -11,6 +11,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../../core/api/api.service';
+import { HttpContext } from '@angular/common/http';
+import { SKIP_OFFLINE } from '../../../../../../core/interceptors/offline.interceptor';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../../../../../core/error/error.interceptor';
 import { PermissionService } from '../../../../../../core/services/permission.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
@@ -48,6 +51,11 @@ export class CompanyChatScopeCardComponent implements OnInit, OnChanges {
 
   private loadSeq = 0;
 
+  /** ۴۰۳ و خطاها را خود کارت نشان می‌دهد؛ تغییر سیاست هرگز در صف آفلاین نمی‌رود */
+  private ctx(): HttpContext {
+    return new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true);
+  }
+
   get isSuperuser(): boolean {
     return this.permission.isSuperuser();
   }
@@ -76,7 +84,7 @@ export class CompanyChatScopeCardComponent implements OnInit, OnChanges {
 
     try {
       const res = await firstValueFrom(
-        this.api.get<CompanyChatPolicy>(`communications/policies/companies/${this.companyId}`)
+        this.api.get<CompanyChatPolicy>(`communications/policies/companies/${this.companyId}`, undefined, { context: this.ctx() })
       );
       if (seq !== this.loadSeq) return;
       this.contactScope = res.contact_scope ?? 'company';
@@ -110,7 +118,7 @@ export class CompanyChatScopeCardComponent implements OnInit, OnChanges {
       const res = await firstValueFrom(
         this.api.put<CompanyChatPolicy>(`communications/policies/companies/${this.companyId}`, {
           contact_scope: this.contactScope
-        })
+        }, { context: this.ctx() })
       );
       this.contactScope = res.contact_scope ?? 'company';
       this.savedScope = res.contact_scope ?? 'company';

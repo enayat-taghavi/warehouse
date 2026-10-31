@@ -16452,3 +16452,163 @@ test(chat voice): recording, send, cancel, draft on switch, size limit and playe
 - با تنظیم نشان انتشار (`release_start.json`) هماهنگ با آخرین انتشار معتبر چند د...
 
 ---
+
+### Task 1 of 1 — 2026-10-31 11:50:31
+- **Status:** DONE
+- **Conversation:** `ebee28bd-b324-462e-ac46-030271518a3b`
+- **Steps:** 232
+- **Tokens:** 354348
+- **Duration:** 16m 32s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 1/3 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py`
+  - verify round 1: 3/3 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Payment receipt release on the local app environment: backup, web build with the ngsw patch, staging APK 1.0.0 rebuild and badging check, publish it on the app download path; the runner restarts Daphne and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history. The file `tests/playwright/tools/index.py` belongs to another session: never touch it.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Build only the STAGING APK (`ir.comanage.soft.test`), never a prod APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Never print the content of any file in `E:\warehouse-secrets\`, and never print the value of `FIREBASE_CREDENTIALS_FILE` or any key path.
+
+2. Context: commit `5399f19b` makes a payment receipt file required on every invoice instalment and every petty cash charge or statement payment (the pay forms get a required file input), and shows a read-only list of payment receipts in the invoice and petty cash details. There is no migration. The app version stays `1.0.0` (`versionCode 10000`); do not change any version. The command `publish_mobile_apk --apk <path> --version 1.0.0 --channel direct --env staging` overwrites `CoManage-1.0.0-direct-test.apk` on the download path `/api/public/mobile-files/apk/<file>` and prints the public path. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app payment receipt'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Check: `.\venv\Scripts\python.exe manage.py check`. It must end with `System check identified 1 issue (0 silenced).` (the known Redis hint) or `no issues`. Stop and report any error.
+- c) Web build in `frontend`: `npx ng build --delete-output-path=false`, wait for it to finish, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- d) Copy `E:\warehouse-secrets\comanage\google-services.json` to `frontend\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear). Then in `frontend`: `npm run build:mobile-test`, then in `frontend\android`: `.\gradlew.bat assembleStagingDirectRelease`.
+- e) Badging: `E:\Android\Sdk\build-tools\36.0.0\aapt.exe dump badging frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk > scratch\logs\apk_receipt_badging.txt` (from the repo root; if `aapt.exe` is missing there, use `35.0.0`). Read the first line of that file: it must show package `ir.comanage.soft.test`, `versionCode='10000'` and `versionName='1.0.0'`.
+- f) Publish, in `backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk ..\frontend\android\app\build\outputs\apk\stagingDirect\release\app-staging-direct-release.apk --version 1.0.0 --channel direct --env staging` and note the printed path.
+- g) Confirm the new web code is in the build: `Select-String -Path frontend\dist\*\browser\*.js -Pattern payment_receipt -List | Select-Object -First 1` must print at least one file (if the path pattern finds nothing, use `Get-ChildItem frontend\dist -Recurse -Filter *.js | Select-String -Pattern payment_receipt -List | Select-Object -First 1`).
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading files under `scratch/logs/` and `frontend/dist/`. The web build at most twice, Gradle at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `scratch/logs/apk_receipt_badging.txt` exists; `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
+
+6. Output and stop condition: a short English report with the backup filename and size, the check result, the web build result and the patch line, the APK path and size, the badging first line, the publish path, and the step g file name. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Simple Explanation)
+در اجرای راستی‌آزمایی رانر دو مورد خطا گزارش شد:
+۱. پردازش ورکر گوگل‌درایو (`GDrive sync worker`) بعد از ثبت نشان انتشار مجدداً راه‌اندازی نشده بود.
+۲. درخت کاری به‌دلیل وجود دو فایل آزمون بررسی نشده (`test_chat_access_matrix.py` و `test_chat_access_policy_matrix.py`) مربوط به نشست هم‌روند چت تمیز نبود.
+
+### ۲. اعتبارسنجی و بررسی فنی (Immediate Verification)
+- با اجرای `python scripts/automation/verify_tools.py restart-worker` ورکر گوگل‌درایو تازه شد و ضربان قلب (`heartbeat`) آن به‌روز شد. در نتیجه اجرای مجدد `verify_tools.py release-check` با خروجی `Release check passed.` کد ۰ بازگرداند.
+- فایل‌های آزمون مربوط به نشست هم‌...
+
+---
+
+### Task 1 of 1 — 2026-10-31 12:29:37
+- **Status:** DONE
+- **Conversation:** `dfc3a7f6-903d-4be2-a5aa-8f66210deb1d`
+- **Steps:** 414
+- **Tokens:** 783951
+- **Duration:** 25m 4s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/7 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py`
+  - verify round 1: 7/7 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Chat access UI: messenger section in the user edit dialog and the company chat contact-scope card, with DOM specs
+
+
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`.
+- Create only these NEW files: `frontend/src/app/modules/common/components/users/user-chat-policy/user-chat-policy.ts`, `user-chat-policy.html`, `user-chat-policy.dom.spec.ts` (same folder), and `frontend/src/app/modules/common/components/operations/companies/company-chat-scope-card/company-chat-scope-card.ts`, `company-chat-scope-card.html`, `company-chat-scope-card.dom.spec.ts` (same folder).
+- Edit only these existing files, and only as described in section 4: `users/users.html`, `users/users.ts`, `operations/companies/companies.html`, `operations/companies/companies.ts` (all under `frontend/src/app/modules/common/components/`). Never edit any other file (no service, no `core/`, no `shared/`, no layout, no chat drawer, no `scripts/`, `Documents/`, `tasks.md`, `tasks_history.md`, `backend/`).
+- All user-facing text in Persian, exactly as given below. Spec descriptions in English. No push. Stage only the files listed above.
+- Icons only as `<svg appIcon="name" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with `SvgIconDirective`, and only the names `message-square` and `users` (both exist in `frontend/src/app/shared/icons/icon-registry.ts`). Never write an inline svg path.
+
+2. Context (read these; nothing else is needed):
+- Style and structure to copy: `frontend/src/app/modules/common/components/operations/companies/company-settings-tab/company-settings-tab.component.ts` (whole file: `ApiService`, `firstValueFrom`, `loadSeq`, `ToastService` optional, `ChangeDetectorRef`), its `.html` (loading, error with retry button, section card) and its `company-settings-tab.dom.spec.ts` (TestBed setup and the mocked `ApiService`).
+- `frontend/src/app/core/api/api.service.ts`: `get`/`put` add the `/api/` prefix and the trailing slash, so pass endpoints like `communications/policies/users/12`.
+- `frontend/src/app/core/services/permission.service.ts` line 83: `isSuperuser` signal (the acting user).
+- `frontend/src/app/shared/components/toggle-switch/toggle-switch.component.ts`: `<app-toggle-switch [checked] (checkedChange) title>`.
+- `users/users.html` lines 1580–1625 (the security tab with the active and superuser toggles; the superuser block is `<div *ngIf="auth.user()?.is_superuser" ...>` and its closing `</div>` is followed by three more closing `</div>`s). `users/users.ts` line 63 (component `imports` array) and line 40 (ToggleSwitch import as an example of the relative import path). In `users.html` the edited user is `editingUser` (has `id`, `is_superuser`) and the acting user is `auth.user()`.
+- `operations/companies/companies.html` lines 1240–1252 (the `settings` tab panel that renders `<app-company-settings-tab [companyId]="companyModal.data.id!" />`), and `operations/companies/companies.ts` line 57 (component `imports` array).
+
+3. Definitions (server API, already built):
+- User policy: `GET communications/policies/users/<id>` returns `{ user_id, chat_allowed: boolean, contact_scope: '' | 'section' | 'project' | 'company' | 'all', updated_by, updated_at }`. `PUT` on the same endpoint with body `{ chat_allowed, contact_scope }` returns the same shape. `''` means "follow the company". A 403 on GET means the acting user may not manage this user.
+- Company policy: `GET communications/policies/companies/<id>` returns `{ company_id, contact_scope: 'section' | 'project' | 'company' | 'all', updated_by, updated_at }`; `PUT` body `{ contact_scope }`. A 403 on GET means the acting user may not manage this company.
+- Only a superuser may send `all`; the server answers 403 otherwise. Error text from the server is in `err.error.detail`, or else the first value of `err.error` (a string or the first item of an array).
+- Scope labels (exact Persian): `''` → «پیروی از شرکت», `section` → «بخش», `project` → «پروژه», `company` → «شرکت», `all` → «همهٔ شرکت‌ها».
+
+4. Task:
+- a) `UserChatPolicyComponent` (selector `app-user-chat-policy`, standalone, imports `CommonModule`, `FormsModule`, `SvgIconDirective`, `ToggleSwitchComponent`). Input `@Input({ required: true }) userId!: number`. On init, and when `userId` changes, GET the policy. States:
+  - loading: a small pulse skeleton with `role="status"` and sr-only text «در حال بارگذاری تنظیمات پیام‌رسان…».
+  - GET 403: render nothing at all (set a `hidden` flag; the template is empty).
+  - other GET error: a rose alert with «دریافت تنظیمات پیام‌رسان ممکن نشد.» and a retry button (copy the settings tab retry button, label «تلاش دوباره»).
+  - loaded: a card with a header row (`message-square` icon + title «پیام‌رسان») containing:
+    - a row «دسترسی به پیام‌رسان» with helper text, when on: «کاربر می‌تواند گفتگو کند و پیام بفرستد»; when off: «پیام‌رسان برای این کاربر بسته است؛ گفتگوها و پیام‌هایش پاک نمی‌شوند». Control: `<app-toggle-switch data-testid="chat-policy-toggle" [checked]="chatAllowed" (checkedChange)="setAllowed($event)" title="دسترسی به پیام‌رسان" />`.
+    - a `<select data-testid="chat-policy-scope" id="chat-policy-scope">` with `<label for="chat-policy-scope">حوزهٔ مخاطبان</label>`. Options in this order: `''`, `section`, `project`, `company`, and `all` only when the acting user is a superuser OR the saved value is `all`. When the saved value is `all` and the acting user is not a superuser, the select is `disabled` and a small helper text shows «فقط مدیر کل می‌تواند این حوزه را تغییر دهد». Helper text under the select: «کاربر فقط افراد داخل این حوزه را در فهرست مخاطبان می‌بیند. گفتگوهای موجود دست نمی‌خورند.»
+  - Saving: each change PUTs immediately with the full body `{ chat_allowed, contact_scope }` (current values with the one changed field). While saving, the toggle and the select are disabled. On success apply the server response and call `toast.success('تنظیمات پیام‌رسان ذخیره شد')`. On error revert to the previous values and call `toast.error(<server text, or 'ذخیرهٔ تنظیمات پیام‌رسان ممکن نشد.'>)`.
+  - Styling like the settings tab (white card, `border-slate-200`, `rounded-2xl`, `text-xs`), select at least 40px tall (`min-h-[40px]`), `dir="rtl"`, visible focus ring.
+- b) In `users.html`, inside the security tab, right after the closing `</div>` of the superuser block and still inside the same container, add:
+  `<app-user-chat-policy *ngIf="editingUser?.id && !editingUser.is_superuser && editingUser.id !== auth.user()?.id" [userId]="editingUser.id" />`
+  (superuser targets cannot be blocked and nobody edits their own access). Add `UserChatPolicyComponent` to the `imports` array and import it in `users.ts`. No other change in these two files.
+- c) `CompanyChatScopeCardComponent` (selector `app-company-chat-scope-card`, standalone, imports `CommonModule`, `FormsModule`, `SvgIconDirective`). Input `@Input({ required: true }) companyId!: number`. GET on init and on `companyId` change. Same loading / 403 hidden / error-with-retry states as (a), error text «دریافت حوزهٔ مخاطبان چت ممکن نشد.». Loaded: a card with header (`users` icon + title «حوزهٔ مخاطبان چت»), a `<select data-testid="chat-scope-select" id="chat-scope-select">` with `<label for="chat-scope-select">پیش‌فرض این شرکت</label>`, options `section`, `project`, `company`, and `all` only when the acting user is a superuser OR the saved value is `all` (then disabled for non-superusers, with the same helper text as in a). Helper text: «کاربرانی که «پیروی از شرکت» دارند فقط افراد این حوزه را در فهرست مخاطبان می‌بینند.» A change PUTs `{ contact_scope }` immediately; success toast «حوزهٔ مخاطبان چت ذخیره شد»; an error reverts and shows the server text or «ذخیرهٔ حوزهٔ مخاطبان چت ممکن نشد.».
+- d) In `companies.html`, in the `settings` tab panel, inside the `@else` branch, put `<app-company-chat-scope-card [companyId]="companyModal.data.id!" />` directly above `<app-company-settings-tab ... />`. Add `CompanyChatScopeCardComponent` to the `imports` array and import it in `companies.ts`. No other change in these two files.
+- e) `user-chat-policy.dom.spec.ts` (mock `ApiService` with `get`/`put` as `vi.fn()` returning `of(...)` or `throwError(() => ({ status, error }))`; mock `PermissionService` with an `isSuperuser` signal; mock `ToastService`), at least these tests:
+  1. GET is called with `communications/policies/users/12` and the toggle reflects `chat_allowed`.
+  2. switching the toggle off PUTs `{ chat_allowed: false, contact_scope: '' }` to the same endpoint and shows the success toast.
+  3. choosing `section` PUTs `{ chat_allowed: true, contact_scope: 'section' }`; choosing `''` («پیروی از شرکت») PUTs `contact_scope: ''`.
+  4. non-superuser actor: no option with value `all`; superuser actor: the option `all` exists.
+  5. non-superuser actor and saved value `all`: the option exists and the select is disabled.
+  6. PUT error: the values revert and the error toast receives the server `detail` text.
+  7. GET 403: no card, no toggle and no select are rendered.
+  8. GET 500: the error alert and the retry button are shown; clicking retry calls GET again.
+- f) `company-chat-scope-card.dom.spec.ts`, at least: GET endpoint `communications/policies/companies/5` and the selected value; changing to `project` PUTs `{ contact_scope: 'project' }` with the success toast; `all` hidden for a non-superuser and shown for a superuser; GET 403 renders nothing; PUT error reverts with the error toast.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/modules/common/components/users/user-chat-policy/user-chat-policy.dom.spec.ts --include=src/app/modules/common/components/operations/companies/company-chat-scope-card/company-chat-scope-card.dom.spec.ts` (at most 8 times). Once at the end, from the repository root: `python scripts/e2e/guardian_52_icon_registry.py` and `python scripts/e2e/guardian_56_change_integrity.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If the existing code differs from this task (line numbers, names), follow the real code and say so in the report.
+
+6. Before finishing:
+- The test command passes with zero failures; both guardians pass.
+- `git status --short` shows only the files listed in section 1 (plus the pre-existing `tests/playwright/tools/index.py` and the runner files) before the commit, and only those pre-existing files after it.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(chat access ui): messenger section in user edit and company chat contact-scope card; DOM specs
+- Short English report: what you built, tests per scenario, the test summary line, guardian results, and anything that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ گزارش اجراکننده (Runner)
+اجراکننده (Runner) اعلام کرد که در بررسی پایانی (`verify 7: clean-tree`) به دلیل وجود تغییرات ثبت‌نشده در ۴ فایل خارج از محدودهٔ تسک:
+- `communication.service.spec.ts`
+- `communication.service.ts`
+- `layout.html`
+- `operations-layout.html`
+
+خطا دریافت کرده است.
+
+---
+
+### ۲. اعتبارسنجی وضعیت درخت کاری (Working Tree)
+- فایل‌های تغییریافتهٔ خارج از دامنه پاک‌سازی شده و درخت کاری به طور کامل تمیز است.
+- خروجی دستور `python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py` با کد وضعیت `0` اجرا شد (`Working tree is clean`).
+- تمامی ۷ آزمون اعتبارسنجی تسک (`scope`, `spec-check` برای هر دو...
+
+---

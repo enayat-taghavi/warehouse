@@ -71,7 +71,7 @@ describe('CompanyChatScopeCardComponent DOM Spec', () => {
 
   it('1. GET endpoint communications/policies/companies/5 and the selected value', async () => {
     await createComponent({ contact_scope: 'project' }, 5);
-    expect(api.get).toHaveBeenCalledWith('communications/policies/companies/5');
+    expect(api.get).toHaveBeenCalledWith('communications/policies/companies/5', undefined, expect.objectContaining({ context: expect.anything() }));
     const select = fixture.nativeElement.querySelector('[data-testid="chat-scope-select"]') as HTMLSelectElement;
     expect(select).toBeTruthy();
     expect(select.value).toBe('project');
@@ -90,7 +90,7 @@ describe('CompanyChatScopeCardComponent DOM Spec', () => {
 
     expect(api.put).toHaveBeenCalledWith('communications/policies/companies/5', {
       contact_scope: 'project'
-    });
+    }, expect.objectContaining({ context: expect.anything() }));
     expect(toast.success).toHaveBeenCalledWith('حوزهٔ مخاطبان چت ذخیره شد');
     expect(component.contactScope).toBe('project');
   });
@@ -108,7 +108,7 @@ describe('CompanyChatScopeCardComponent DOM Spec', () => {
     select = fixture.nativeElement.querySelector('[data-testid="chat-scope-select"]') as HTMLSelectElement;
     optionAll = select.querySelector('option[value="all"]');
     expect(optionAll).not.toBeNull();
-    expect(optionAll?.textContent?.trim()).toBe('همهٔ شرکتها');
+    expect(optionAll?.textContent?.trim()).toBe('همهٔ شرکت‌ها');
   });
 
   it('4. GET 403 renders nothing', async () => {
@@ -148,7 +148,7 @@ describe('CompanyChatScopeCardComponent DOM Spec', () => {
     const optionAll = select.querySelector('option[value="all"]');
     expect(optionAll).not.toBeNull();
     expect(select.disabled).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('فقط مدیر کل میتواند این حوزه را تغییر دهد');
+    expect(fixture.nativeElement.textContent).toContain('فقط مدیر کل می‌تواند این حوزه را تغییر دهد');
   });
 
   it('7. GET 500 shows error alert and retry button reloads', async () => {

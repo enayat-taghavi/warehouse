@@ -72,7 +72,7 @@ describe('UserChatPolicyComponent DOM Spec', () => {
 
   it('1. GET is called with communications/policies/users/12 and the toggle reflects chat_allowed', async () => {
     await createComponent({ chat_allowed: true }, 12);
-    expect(api.get).toHaveBeenCalledWith('communications/policies/users/12');
+    expect(api.get).toHaveBeenCalledWith('communications/policies/users/12', undefined, expect.objectContaining({ context: expect.anything() }));
     const toggleBtn = fixture.nativeElement.querySelector('[data-testid="chat-policy-toggle"] button') as HTMLButtonElement;
     expect(toggleBtn).toBeTruthy();
     expect(toggleBtn.getAttribute('aria-checked')).toBe('true');
@@ -91,8 +91,8 @@ describe('UserChatPolicyComponent DOM Spec', () => {
     expect(api.put).toHaveBeenCalledWith('communications/policies/users/12', {
       chat_allowed: false,
       contact_scope: ''
-    });
-    expect(toast.success).toHaveBeenCalledWith('تنظیمات پیامرسان ذخیره شد');
+    }, expect.objectContaining({ context: expect.anything() }));
+    expect(toast.success).toHaveBeenCalledWith('تنظیمات پیام‌رسان ذخیره شد');
     expect(component.chatAllowed).toBe(false);
   });
 
@@ -109,7 +109,7 @@ describe('UserChatPolicyComponent DOM Spec', () => {
     expect(api.put).toHaveBeenCalledWith('communications/policies/users/12', {
       chat_allowed: true,
       contact_scope: 'section'
-    });
+    }, expect.objectContaining({ context: expect.anything() }));
 
     select.value = '';
     select.dispatchEvent(new Event('change'));
@@ -119,7 +119,7 @@ describe('UserChatPolicyComponent DOM Spec', () => {
     expect(api.put).toHaveBeenCalledWith('communications/policies/users/12', {
       chat_allowed: true,
       contact_scope: ''
-    });
+    }, expect.objectContaining({ context: expect.anything() }));
   });
 
   it('4. non-superuser actor: no option with value all; superuser actor: the option all exists', async () => {
@@ -135,7 +135,7 @@ describe('UserChatPolicyComponent DOM Spec', () => {
     select = fixture.nativeElement.querySelector('[data-testid="chat-policy-scope"]') as HTMLSelectElement;
     optionAll = select.querySelector('option[value="all"]');
     expect(optionAll).not.toBeNull();
-    expect(optionAll?.textContent?.trim()).toBe('همهٔ شرکتها');
+    expect(optionAll?.textContent?.trim()).toBe('همهٔ شرکت‌ها');
   });
 
   it('5. non-superuser actor and saved value all: the option exists and the select is disabled', async () => {
@@ -146,7 +146,7 @@ describe('UserChatPolicyComponent DOM Spec', () => {
     const optionAll = select.querySelector('option[value="all"]');
     expect(optionAll).not.toBeNull();
     expect(select.disabled).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('فقط مدیر کل میتواند این حوزه را تغییر دهد');
+    expect(fixture.nativeElement.textContent).toContain('فقط مدیر کل می‌تواند این حوزه را تغییر دهد');
   });
 
   it('6. PUT error: the values revert and the error toast receives the server detail text', async () => {
@@ -195,7 +195,7 @@ describe('UserChatPolicyComponent DOM Spec', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('دریافت تنظیمات پیامرسان ممکن نشد.');
+    expect(fixture.nativeElement.textContent).toContain('دریافت تنظیمات پیام‌رسان ممکن نشد.');
     const retryBtn = fixture.nativeElement.querySelector('button[title="تلاش دوباره"]') as HTMLButtonElement;
     expect(retryBtn).toBeTruthy();
 
