@@ -909,6 +909,12 @@
             </div>
           </div>
 
+          <!-- رسیدهای پرداخت (دیدنی برای همهٔ شرکت‌کنندگان گردش و مدیران و حسابداران دامنه) -->
+          <div *ngIf="selectedInvoiceDetail.id as invId">
+            <h4 class="text-xs font-black text-slate-700 mb-2">رسیدهای پرداخت</h4>
+            <app-attachments kind="expense_invoice" [entityId]="invId" [label]="receiptLabel"></app-attachments>
+          </div>
+
           <!-- کامپوننت سابقه گردش کار -->
           <div *ngIf="selectedInvoiceDetail.id as invId">
             <h4 class="text-xs font-black text-slate-700 mb-2">سابقه گردش کار و اقدامات</h4>

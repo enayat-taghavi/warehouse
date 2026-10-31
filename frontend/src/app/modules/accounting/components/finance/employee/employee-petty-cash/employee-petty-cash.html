@@ -606,7 +606,19 @@
                 @if (trackingError) {
                   <p id="trackingErrorSt" class="text-[11px] font-bold text-rose-700" role="alert">{{ trackingError }}</p>
                 }
-                <button type="button" appAction="save" display="label" label="ثبت پرداخت" size="sm" tone="emerald" [busy]="isActing" (click)="payDetail()"></button>
+                <label for="payReceiptSt" class="block font-bold text-slate-700">رسید پرداخت <span class="text-rose-600" aria-hidden="true">*</span></label>
+                <input id="payReceiptSt" type="file" [attr.accept]="receiptAccept" (change)="onPayReceiptChange($event)"
+                  aria-required="true" [attr.aria-invalid]="!!receiptError" [attr.aria-describedby]="receiptError ? 'receiptHintSt receiptErrorSt' : 'receiptHintSt'"
+                  class="block w-full min-h-[40px] text-xs text-slate-700 file:me-3 file:min-h-[40px] file:px-3 file:rounded-xl file:border-0 file:bg-emerald-100 file:text-emerald-800 file:font-bold file:cursor-pointer cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"/>
+                <p id="receiptHintSt" class="text-[11px] text-slate-600">PDF یا تصویر رسید بانکی، حداکثر ۲۵ مگابایت؛ همهٔ کسانی که در گردش این سند بوده‌اند آن را می‌بینند.</p>
+                @if (receiptError) {
+                  <p id="receiptErrorSt" class="text-[11px] font-bold text-rose-700" role="alert">{{ receiptError }}</p>
+                }
+                @if (!payReceipt) {
+                  <p class="text-[11px] text-slate-600">برای ثبت، نخست رسید پرداخت را پیوست کنید.</p>
+                }
+                <button type="button" appAction="save" display="label" label="ثبت پرداخت" size="sm" tone="emerald" [busy]="isActing" [disabled]="!payReceipt"
+                  [hint]="payReceipt ? '' : 'نخست رسید پرداخت را پیوست کنید'" (click)="payDetail()"></button>
               </div>
             }
           }
@@ -627,7 +639,19 @@
                   @if (trackingError) {
                     <p id="trackingErrorCh" class="text-[11px] font-bold text-rose-700" role="alert">{{ trackingError }}</p>
                   }
-                  <button type="button" appAction="save" display="label" label="ثبت واریز" size="sm" tone="emerald" [busy]="isActing" (click)="payDetail()"></button>
+                  <label for="payReceiptCh" class="block font-bold text-slate-700">رسید پرداخت <span class="text-rose-600" aria-hidden="true">*</span></label>
+                  <input id="payReceiptCh" type="file" [attr.accept]="receiptAccept" (change)="onPayReceiptChange($event)"
+                    aria-required="true" [attr.aria-invalid]="!!receiptError" [attr.aria-describedby]="receiptError ? 'receiptHintCh receiptErrorCh' : 'receiptHintCh'"
+                    class="block w-full min-h-[40px] text-xs text-slate-700 file:me-3 file:min-h-[40px] file:px-3 file:rounded-xl file:border-0 file:bg-emerald-100 file:text-emerald-800 file:font-bold file:cursor-pointer cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"/>
+                  <p id="receiptHintCh" class="text-[11px] text-slate-600">PDF یا تصویر رسید بانکی، حداکثر ۲۵ مگابایت؛ همهٔ کسانی که در گردش این سند بوده‌اند آن را می‌بینند.</p>
+                  @if (receiptError) {
+                    <p id="receiptErrorCh" class="text-[11px] font-bold text-rose-700" role="alert">{{ receiptError }}</p>
+                  }
+                  @if (!payReceipt) {
+                    <p class="text-[11px] text-slate-600">برای ثبت، نخست رسید پرداخت را پیوست کنید.</p>
+                  }
+                  <button type="button" appAction="save" display="label" label="ثبت واریز" size="sm" tone="emerald" [busy]="isActing" [disabled]="!payReceipt"
+                    [hint]="payReceipt ? '' : 'نخست رسید پرداخت را پیوست کنید'" (click)="payDetail()"></button>
                 </div>
               }
             } @else if (!isLoadingDetail) {
@@ -636,6 +660,10 @@
           }
 
           @if (detailId) {
+            <div>
+              <h4 class="text-xs font-black text-slate-700 mb-2">رسیدهای پرداخت</h4>
+              <app-attachments #detailReceipts [kind]="detailKind!" [entityId]="detailId" [label]="receiptLabel"></app-attachments>
+            </div>
             <div>
               <h4 class="text-xs font-black text-slate-700 mb-2">سابقهٔ گردش کار و اقدامات</h4>
               <app-workflow-history [kind]="detailKind!" [entityId]="detailId"></app-workflow-history>

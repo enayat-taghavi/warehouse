@@ -12,6 +12,8 @@ from workflow.registry import (APPROVE, CANCELLED, COMPLETED, EXECUTE, REJECTED,
 
 INVOICE_WORKFLOW = 'expense_invoice'
 INVOICE_ENTITY = 'expense_invoice'
+# نقش‌هایی که همهٔ سندهای مالی دامنهٔ خود را همیشه می‌بینند (رسید پرداخت، ۹ آبان ۱۴۰۵)
+DOCUMENT_OVERSEER_ROLES = ('manager', 'accountant')
 
 # مرحلهٔ موتور → وضعیت فاکتور
 INVOICE_STEP_STATUS = {
@@ -140,11 +142,34 @@ def _invoice_in_scope(user, invoice) -> bool:
     return _invoice_company_allowed(user, invoice) and can(user, INVOICE_PERM, invoice.section)
 
 
+def _participant_or_overseer(user, kind, entity_id, *, section=None, company_id=None) -> bool:
+    """
+    دیدن سند پس از پایان گردش (رسید پرداخت، ۹ آبان ۱۴۰۵): هر کس در گردش آن شرکت داشته، یا مدیر و حسابدارِ
+    فعالی که انتسابش دامنهٔ سند را می‌پوشاند (حتی اگر روی این سند اقدامی نکرده باشد).
+    """
+    from workflow import engine as wf_engine
+    return (wf_engine.participant_grants_view(user, kind, entity_id)
+            or wf_engine.role_covers(user, DOCUMENT_OVERSEER_ROLES, section=section, company_id=company_id))
+
+
+def _invoice_participant_or_overseer(user, invoice) -> bool:
+    # شرکت فعال با ماژول روشن (همان قاعدهٔ get_user_allowed_companies)، سپس شرکت‌کننده یا ناظر دامنه
+    return _invoice_company_allowed(user, invoice) and _participant_or_overseer(
+        user, INVOICE_ENTITY, invoice.pk, section=invoice.section)
+
+
+def _petty_participant_or_overseer(user, kind, entity_id, company_id) -> bool:
+    return petty_company_allowed(user, company_id) and _participant_or_overseer(
+        user, kind, entity_id, company_id=company_id)
+
+
 def can_view_invoice(user, entity_id):
     invoice = resolve_invoice(entity_id)
     if invoice is None:
         return None
-    return True if _invoice_in_scope(user, invoice) else None
+    if _invoice_in_scope(user, invoice) or _invoice_participant_or_overseer(user, invoice):
+        return True
+    return None
 
 
 def can_attach_invoice(user, entity_id):
@@ -262,12 +287,15 @@ def _charges_in_flight(account, tx):
 
 def _tracking_required():
     from workflow.errors import WorkflowError
-    raise WorkflowError('payment_ref_required', 'واریز خزانه‌دار فقط با ثبت شمارهٔ پیگیری از صفحهٔ تنخواه انجام می‌شود', 400)
+    raise WorkflowError('payment_ref_required',
+                        'واریز خزانه‌دار فقط با ثبت شمارهٔ پیگیری و رسید پرداخت از صفحهٔ تنخواه انجام می‌شود', 400)
 
 
 def _charge_state_change(tx, state, instance):
     if state == COMPLETED:
-        if not (tx.receipt_number or '').strip():
+        # رسید پرداخت اجباری است (۹ آبان ۱۴۰۵): فقط اکشن pay-charge که رسید را سنجیده این پرچم را می‌گذارد؛
+        # اقدام عمومی «کارهای من» شارژ را بی‌رسید نمی‌بندد
+        if not (tx.receipt_number or '').strip() or not getattr(tx, '_payment_receipt_checked', False):
             _tracking_required()
         new_status = 'approved'
     elif state == REJECTED:
@@ -471,7 +499,10 @@ def can_view_petty_tx(user, entity_id):
     tx = resolve_petty_tx(entity_id)
     if tx is None:
         return None
-    return True if _petty_tx_in_scope(user, tx) else None
+    if _petty_tx_in_scope(user, tx) or _petty_participant_or_overseer(user, PETTY_CHARGE_ENTITY, tx.pk,
+                                                                      tx.wf_company_id):
+        return True
+    return None
 
 
 def can_attach_petty_tx(user, entity_id):
@@ -517,7 +548,10 @@ def can_view_petty_statement(user, entity_id):
     statement = resolve_petty_statement(entity_id)
     if statement is None:
         return None
-    return True if _petty_statement_in_scope(user, statement) else None
+    if _petty_statement_in_scope(user, statement) or _petty_participant_or_overseer(
+            user, PETTY_STATEMENT_ENTITY, statement.pk, statement.company_id):
+        return True
+    return None
 
 
 def can_attach_petty_statement(user, entity_id):

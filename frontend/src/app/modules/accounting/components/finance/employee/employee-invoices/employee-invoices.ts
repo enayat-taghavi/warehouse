@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
+import { PAYMENT_RECEIPT_LABEL } from '../../../../payment-receipt';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
@@ -43,11 +45,13 @@ export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
 export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
+  /** برچسب پیوست رسید پرداخت (فهرست فقط خواندنی در جزئیات فاکتور) */
+  readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
   readonly Math = Math;
 
   // شمارندهٔ تب‌ها حذف شد: فهرست صفحه‌بندی سمت سرور است و شمار هر وضعیت از یک صفحه درست نمی‌شود

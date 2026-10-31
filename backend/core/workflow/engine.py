@@ -1012,6 +1012,50 @@ def referral_grants_view(user, kind, entity_id) -> bool:
     return bool(company_ids) and bool(company_member_pairs([user.pk], list(company_ids)))
 
 
+def participant_grants_view(user, kind, entity_id) -> bool:
+    """
+    کاربر در گردش این سند شرکت داشته است: ثبت‌کنندهٔ نمونه، انجام‌دهنده یا «به جانشینی از» در یکی از قدم‌ها،
+    یا دریافت‌کنندهٔ امروزِ کار باز آن. فقط با عضویت فعال امروز در شرکت نمونه (کسی که از شرکت رفته نمی‌بیند).
+    مرحلهٔ ردشده (بی‌کار) دیدن نمی‌دهد. ماژول از این در قلاب can_view برای دیدن سند پس از پایان گردش استفاده می‌کند.
+    """
+    if not getattr(user, 'is_active', False) or not getattr(user, 'pk', None):
+        return False
+    try:
+        entity_id = int(entity_id)
+    except (TypeError, ValueError):
+        return False
+    acted = WorkflowStep.objects.filter(instance_id=OuterRef('pk')).filter(
+        Q(actor_id=user.pk) | Q(on_behalf_of_id=user.pk))
+    instances = WorkflowInstance.objects.filter(entity_kind=kind, entity_id=entity_id, company__is_active=True)
+    company_ids = set(instances.filter(Q(created_by_id=user.pk) | Exists(acted)).values_list('company_id', flat=True))
+    if not company_ids and task_grants_view(user, kind, entity_id):
+        company_ids = set(instances.values_list('company_id', flat=True))
+    return bool(company_ids) and bool(company_member_pairs([user.pk], list(company_ids)))
+
+
+def role_covers(user, roles, *, section=None, company_id=None) -> bool:
+    """
+    کاربر انتساب فعال با یکی از نقش‌های roles دارد که دامنهٔ سند را می‌پوشاند (همان قاعدهٔ
+    covering_assignment_rows): سند بخش‌دار = انتساب همان بخش، پروژهٔ آن یا شرکت آن؛ سند سطح شرکت
+    (section=None) = فقط انتساب سطح همان شرکت. انتساب فعال خودش عضویت فعال در شرکت است. یک پرس‌وجو.
+    نقش‌ها را ماژول می‌دهد؛ هسته کلید نقشی نمی‌شناسد.
+    """
+    roles = tuple(roles or ())
+    if not roles or not getattr(user, 'is_active', False) or not getattr(user, 'pk', None):
+        return False
+    from companies.models import SectionAssignment
+    if section is not None:
+        sid, pid, cid = scope_triplet(section)
+        scope_q = Q(section_id=sid) | Q(project_id=pid) | Q(company_id=cid)
+    elif company_id:
+        scope_q = Q(company_id=company_id)
+    else:
+        return False
+    return SectionAssignment.objects.filter(scope_q, user_id=user.pk, role__in=roles, is_active=True).filter(
+        Q(company__is_active=True) | Q(project__company__is_active=True)
+        | Q(section__project__company__is_active=True)).exists()
+
+
 def set_allow_substitute(instance, value) -> WorkflowInstance:
     """ر۴: پرچم جانشین نمونه؛ ردیف‌های جانشین کارهای باز بی‌درنگ با محاسبهٔ دوباره تازه می‌شوند."""
     from .recompute import recompute_open_tasks

@@ -21,7 +21,7 @@ from personnel.models import (
     InvoicePayment,
     PartyBankAccount,
 )
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import grant_section_perms, pay_request, temp_media
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
@@ -31,6 +31,7 @@ User = get_user_model()
 BASE = '/api/personnel/expense-invoices/'
 
 
+@temp_media
 class InvoicePayments41Tests(TestCase):
     def setUp(self):
         self.company = Company.objects.create(code='IPS', name='شرکت قسط', is_active=True)
@@ -55,8 +56,9 @@ class InvoicePayments41Tests(TestCase):
     def post(self, user, inv, action, **data):
         c = APIClient()
         c.force_authenticate(user)
+        data, fmt = pay_request(action, data)
         with self.captureOnCommitCallbacks(execute=True):
-            return c.post(f'{BASE}{inv.pk}/{action}/', data, format='json', HTTP_X_COMPANY_ID=str(self.company.pk))
+            return c.post(f'{BASE}{inv.pk}/{action}/', data, format=fmt, HTTP_X_COMPANY_ID=str(self.company.pk))
 
     def payable_invoice(self, amount='1000'):
         inv = ExpenseInvoice.objects.create(

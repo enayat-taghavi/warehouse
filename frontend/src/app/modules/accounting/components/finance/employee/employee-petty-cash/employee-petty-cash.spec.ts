@@ -420,13 +420,29 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
 
     component.trackingCode = 'TRK-1';
     component.payDetail();
-    expect(mockPersonnelApi.payPettyCashStatement).toHaveBeenCalledWith(7, 'TRK-1');
+    // رسید پرداخت اجباری است: بی‌رسید فراخوانی نمی‌شود و خطای فارسی می‌آید
+    expect(component.receiptError).toContain('رسید');
+    expect(mockPersonnelApi.payPettyCashStatement).not.toHaveBeenCalled();
+
+    const receipt1 = new File(['%PDF'], 'r1.pdf', { type: 'application/pdf' });
+    component.onPayReceiptChange({ target: { files: [receipt1], value: 'r1.pdf' } } as unknown as Event);
+    expect(component.payReceipt).toBe(receipt1);
+    component.payDetail();
+    expect(mockPersonnelApi.payPettyCashStatement).toHaveBeenCalledWith(7, 'TRK-1', receipt1);
+    expect(component.payReceipt).toBeNull();
 
     component.detailKind = 'petty_cash_charge';
     component.detailId = 88;
     component.trackingCode = 'TRK-2';
+    const receipt2 = new File(['%PDF'], 'r2.pdf', { type: 'application/pdf' });
+    component.onPayReceiptChange({ target: { files: [receipt2], value: 'r2.pdf' } } as unknown as Event);
     component.payDetail();
-    expect(mockPersonnelApi.payPettyCashCharge).toHaveBeenCalledWith(88, 'TRK-2');
+    expect(mockPersonnelApi.payPettyCashCharge).toHaveBeenCalledWith(88, 'TRK-2', receipt2);
+
+    // پسوند غیرمجاز پذیرفته نمی‌شود
+    component.onPayReceiptChange({ target: { files: [new File(['x'], 'a.exe')], value: 'a.exe' } } as unknown as Event);
+    expect(component.payReceipt).toBeNull();
+    expect(component.receiptError).toContain('مجاز');
   });
 
   it('20. should show the ceiling editor only with the payment-authorize permission', () => {

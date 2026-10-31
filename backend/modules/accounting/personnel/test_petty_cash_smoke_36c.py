@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 
 from companies.models import Company, UserCompanyAccess
 from personnel.models import PettyCashAccount, PettyCashTransaction, WorkflowAuditLog
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import grant_section_perms, pay_request, temp_media
 from personnel.workflows import PETTY_CHARGE_WORKFLOW, PETTY_STATEMENT_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.registry import validate_specs
@@ -21,6 +21,7 @@ ACC = '/api/personnel/petty-cash-accounts/'
 ST = '/api/personnel/petty-cash-statements/'
 
 
+@temp_media
 class PettyCashSmokeTests(TestCase):
     def setUp(self):
         self.co = Company.objects.create(code='PC36', name='شرکت تنخواه', is_active=True)
@@ -43,8 +44,9 @@ class PettyCashSmokeTests(TestCase):
     def call(self, user, method, url, data=None, company=None):
         c = APIClient()
         c.force_authenticate(user)
+        data, fmt = pay_request(url, data or {})
         with self.captureOnCommitCallbacks(execute=True):
-            return getattr(c, method)(url, data or {}, format='json',
+            return getattr(c, method)(url, data, format=fmt,
                                       HTTP_X_COMPANY_ID=str((company or self.co).pk))
 
     def act(self, key, pk, user):

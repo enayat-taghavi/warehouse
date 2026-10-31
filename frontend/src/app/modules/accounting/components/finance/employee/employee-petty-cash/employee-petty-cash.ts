@@ -1,4 +1,6 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, inject } from '@angular/core';
+import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
+import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
@@ -55,7 +57,7 @@ import { AmountInputComponent } from '../../../../../../shared/components/amount
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
@@ -172,6 +174,13 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   rejectReasonError = '';
   trackingCode = '';
   trackingError = '';
+  // رسید پرداخت اجباری واریز شارژ و شارژ دوبارهٔ صورت‌حساب (۹ آبان ۱۴۰۵)
+  payReceipt: File | null = null;
+  receiptError = '';
+  readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
+  readonly receiptAccept = PAYMENT_RECEIPT_ACCEPT;
+  private payReceiptInput: HTMLInputElement | null = null;
+  @ViewChild('detailReceipts') detailReceipts?: AttachmentsComponent;
   isActing = false;
 
   // ─── مودال تعریف سریع طرف‌حساب ───
@@ -1053,6 +1062,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     this.rejectReasonError = '';
     this.trackingCode = '';
     this.trackingError = '';
+    this.clearPayReceipt();
     if (updateUrl) {
       this.router.navigate([], {
         relativeTo: this.route,
@@ -1193,31 +1203,56 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  onPayReceiptChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.payReceiptInput = input;
+    const file = input.files?.[0] ?? null;
+    this.receiptError = file ? receiptFileError(file) : '';
+    this.payReceipt = file && !this.receiptError ? file : null;
+  }
+
+  private clearPayReceipt(): void {
+    this.payReceipt = null;
+    this.receiptError = '';
+    if (this.payReceiptInput) this.payReceiptInput.value = '';
+  }
+
   payDetail(): void {
     const code = this.trackingCode.trim();
     if (!code) {
       this.trackingError = 'درج شماره پیگیری یا شماره سند بانکی الزامی است.';
-      return;
     }
+    if (!this.payReceipt) {
+      this.receiptError = this.receiptError || 'رسید پرداخت را پیوست کنید.';
+    }
+    const receipt = this.payReceipt;
+    if (!code || !receipt) return;
     const kind = this.detailKind;
     const id = this.detailId;
     if (!kind || !id) return;
     this.trackingError = '';
+    this.receiptError = '';
     this.isActing = true;
     const call$ = kind === 'petty_cash_statement'
-      ? this.personnelApi.payPettyCashStatement(id, code)
-      : this.personnelApi.payPettyCashCharge(id, code);
+      ? this.personnelApi.payPettyCashStatement(id, code, receipt)
+      : this.personnelApi.payPettyCashCharge(id, code, receipt);
     (call$ as any).subscribe({
       next: () => {
         this.isActing = false;
         this.trackingCode = '';
+        this.clearPayReceipt();
+        void this.detailReceipts?.load();
         this.toast.show('success', 'پرداخت ثبت شد.');
         this.refreshData();
         this.loadDetail(true);
       },
       error: (err: any) => {
         this.isActing = false;
-        this.trackingError = this.errorText(err, 'خطا در ثبت پرداخت.');
+        const receiptErr = err?.status === 400 ? err?.error?.receipt : null;
+        if (Array.isArray(receiptErr) && receiptErr[0]) this.receiptError = String(receiptErr[0]);
+        // بی‌اتصال: فایل نزد کاربر می‌ماند؛ پیام کنار فیلد رسید، نه زیر شمارهٔ پیگیری
+        else if (isServerUnreachable(Number(err?.status ?? 0))) this.receiptError = this.errorText(err, 'اتصال به سرور برقرار نیست.');
+        else this.trackingError = this.errorText(err, 'خطا در ثبت پرداخت.');
         this.cdr.detectChanges();
       }
     });

@@ -1097,11 +1097,11 @@ class TreasuryCartableAPIView(APIView):
                 raise ValidationError("فاکتور در مرحلهٔ پرداخت نیست یا یافت نشد.")
             _validate_instance_company_access(invoice, 'invoice', user)
             # د۵ طرح ۴.۱: همان مسیر pay/ قدیمی = یک قسط به اندازهٔ کل مانده (خزانه‌دار، نه ثبت‌کننده)
-            from .invoice_payments import add_payment
+            from .invoice_payments import RECEIPT_FIELD, add_payment
             try:
                 _payment, updated_invoice = add_payment(
                     user, invoice.pk, {'tracking_code': tracking_code, 'notes': request.data.get('notes') or ''},
-                    legacy=True)
+                    legacy=True, receipt=request.FILES.get(RECEIPT_FIELD))
             except WorkflowError as exc:
                 return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa},
                                 status=exc.status)

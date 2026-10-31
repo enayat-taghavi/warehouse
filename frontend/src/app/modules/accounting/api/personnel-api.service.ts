@@ -246,7 +246,7 @@ export class PersonnelApiService {
   approveExpenseInvoice(id: number): Observable<ExpenseInvoice> { return this.treasuryOrg.approveExpenseInvoice(id); }
   rejectExpenseInvoice(id: number, reason: string): Observable<ExpenseInvoice> { return this.treasuryOrg.rejectExpenseInvoice(id, reason); }
   requestRevisionExpenseInvoice(id: number, reason: string): Observable<ExpenseInvoice> { return this.treasuryOrg.requestRevisionExpenseInvoice(id, reason); }
-  payExpenseInvoice(id: number, data: { payment_ref: string; treasury_account_id?: number }): Observable<ExpenseInvoice> { return this.treasuryOrg.payExpenseInvoice(id, data); }
+  payExpenseInvoice(id: number, data: { payment_ref: string; treasury_account_id?: number }, receipt: File): Observable<ExpenseInvoice> { return this.treasuryOrg.payExpenseInvoice(id, data, receipt); }
   exportExpenseInvoicesExcel(params?: { section_id?: number; status?: string }): Observable<Blob> { return this.treasuryOrg.exportExpenseInvoicesExcel(params); }
   getPettyCashAccounts(params?: { section_id?: number; custodian_id?: number }): Observable<PettyCashAccount[]> { return this.treasuryOrg.getPettyCashAccounts(params); }
   getPettyCashTransactions(params?: { section_id?: number; custodian_id?: number; transaction_type?: string; status?: string; search?: string; statement_id?: number; line_status?: string; }): Observable<PettyCashTransaction[]> { return this.treasuryOrg.getPettyCashTransactions(params); }
@@ -258,14 +258,14 @@ export class PersonnelApiService {
   rejectPettyCashTransaction(id: number, reason: string): Observable<PettyCashTransaction> { return this.treasuryOrg.rejectPettyCashTransaction(id, reason); }
   requestPettyCashCharge(data: { amount: number; title?: string; description?: string }): Observable<PettyCashTransaction> { return this.treasuryOrg.requestPettyCashCharge(data); }
   sendPettyCashCharge(id: number): Observable<PettyCashTransaction> { return this.treasuryOrg.sendPettyCashCharge(id); }
-  payPettyCashCharge(id: number, trackingCode: string): Observable<PettyCashTransaction> { return this.treasuryOrg.payPettyCashCharge(id, trackingCode); }
+  payPettyCashCharge(id: number, trackingCode: string, receipt: File): Observable<PettyCashTransaction> { return this.treasuryOrg.payPettyCashCharge(id, trackingCode, receipt); }
   updatePettyCashAccount(id: number, data: Partial<PettyCashAccount>): Observable<PettyCashAccount> { return this.treasuryOrg.updatePettyCashAccount(id, data); }
   getPettyCashStatements(params?: { status?: string; custodian_id?: number }): Observable<PettyCashStatement[]> { return this.treasuryOrg.getPettyCashStatements(params); }
   getPettyCashStatement(id: number): Observable<PettyCashStatement> { return this.treasuryOrg.getPettyCashStatement(id); }
   createPettyCashStatement(data: { line_ids: number[]; statement_date_shamsi?: string }): Observable<PettyCashStatement> { return this.treasuryOrg.createPettyCashStatement(data); }
   sendPettyCashStatement(id: number): Observable<PettyCashStatement> { return this.treasuryOrg.sendPettyCashStatement(id); }
   rejectPettyCashStatementLine(id: number, lineId: number, reason: string): Observable<PettyCashStatement> { return this.treasuryOrg.rejectPettyCashStatementLine(id, lineId, reason); }
-  payPettyCashStatement(id: number, trackingCode: string): Observable<PettyCashStatement> { return this.treasuryOrg.payPettyCashStatement(id, trackingCode); }
+  payPettyCashStatement(id: number, trackingCode: string, receipt: File): Observable<PettyCashStatement> { return this.treasuryOrg.payPettyCashStatement(id, trackingCode, receipt); }
   exportPettyCashTransactionsExcel(params?: { section_id?: number; custodian_id?: number; transaction_type?: string; status?: string; search?: string; }): Observable<Blob> { return this.treasuryOrg.exportPettyCashTransactionsExcel(params); }
   getWorkflowAuditLogs(params?: { content_type?: string; object_id?: number }): Observable<WorkflowAuditLog[]> { return this.treasuryOrg.getWorkflowAuditLogs(params); }
   exportCounterpartiesExcel(): Observable<Blob> { return this.treasuryOrg.exportCounterpartiesExcel(); }

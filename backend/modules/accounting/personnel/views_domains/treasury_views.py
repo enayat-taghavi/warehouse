@@ -75,12 +75,14 @@ from django.db import transaction
 from django.http import Http404
 from workflow import engine as wf_engine
 from workflow.errors import WorkflowError
-from ..workflows import INVOICE_ENTITY, INVOICE_WORKFLOW
+from ..workflows import (INVOICE_ENTITY, INVOICE_WORKFLOW, can_view_invoice, can_view_petty_statement,
+                         can_view_petty_tx)
 from ..workflow_engine import notify_document_changed
 from ..fiscal import ensure_period_open
 from ..invoice_services import (duplicate_queryset, ensure_invoice_number, invoice_duplicates,
                                 void_invoice_number)
-from ..invoice_payments import (PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, add_payment, invoice_remaining,
+from ..invoice_payments import (PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, RECEIPT_FIELD, add_payment,
+                                attach_receipt, invoice_remaining, read_receipt,
                                 void_payment)
 from ..models import InvoicePayment
 from ..serializers import InvoicePaymentSerializer
@@ -731,14 +733,16 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         matches = duplicate_queryset(counterparty.company_id, counterparty.pk, norm, int(exclude) if exclude else None)
         return Response(self._duplicate_payload(matches))
 
-    def _workflow_invoice(self):
+    def _workflow_invoice(self, read_only=False):
         """
         فاکتور برای اقدام گردش کار: از فهرست بخش‌های «ثبت و دیدن فاکتور» کاربر، یا از راه کار باز همین فاکتور
         (ت۱۱: دریافت‌کننده یا جانشینی که مجوز فهرست آن بخش را ندارد). نادیدنی = 404.
+        read_only (فقط دیدن جزئیات): شرکت‌کنندهٔ گردش و مدیر/حسابدار دامنه هم (قلاب can_view، رسید پرداخت).
         """
         pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
         obj = self.filter_queryset(self.get_queryset()).filter(pk=pk).first()
-        if obj is None and wf_engine.task_grants_view(self.request.user, INVOICE_ENTITY, pk):
+        if obj is None and (wf_engine.task_grants_view(self.request.user, INVOICE_ENTITY, pk)
+                            or (read_only and can_view_invoice(self.request.user, pk))):
             obj = ExpenseInvoice.objects.select_related('section', 'section__project', 'counterparty__party').filter(pk=pk).first()
             if obj is not None and not self._invoice_company_visible(obj):
                 obj = None
@@ -759,7 +763,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         return True
 
     def retrieve(self, request, *args, **kwargs):
-        return Response(self.get_serializer(self._workflow_invoice()).data)
+        return Response(self.get_serializer(self._workflow_invoice(read_only=True)).data)
 
     def _act_on_open_task(self, request, instance, fn):
         task = wf_engine.open_task(INVOICE_WORKFLOW, instance.pk)
@@ -886,7 +890,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         instance = self._workflow_invoice()
         _ensure_invoice_open(instance)
         result, err = self._payment_call(lambda: add_payment(
-            request.user, instance.pk, request.data, revision=self._revision(request), legacy=True))
+            request.user, instance.pk, request.data, revision=self._revision(request), legacy=True,
+            receipt=request.FILES.get(RECEIPT_FIELD)))
         if err is not None:
             return err
         payment, invoice = result
@@ -906,7 +911,8 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             })
         _ensure_invoice_open(instance)
         result, err = self._payment_call(lambda: add_payment(
-            request.user, instance.pk, request.data, revision=self._revision(request)))
+            request.user, instance.pk, request.data, revision=self._revision(request),
+            receipt=request.FILES.get(RECEIPT_FIELD)))
         if err is not None:
             return err
         payment, invoice = result
@@ -1394,11 +1400,15 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
 
         return qs.annotate(offset_total_amount=_petty_offset_subquery()).order_by('-transaction_date_shamsi', '-created_at')
 
-    def _petty_tx_object(self):
-        """سند برای اقدام گردش: از فهرست قلمرو کاربر، یا از راه کار باز همین سند در شرکت فعال (مثل فاکتور)."""
+    def _petty_tx_object(self, read_only=False):
+        """
+        سند برای اقدام گردش: از فهرست قلمرو کاربر، یا از راه کار باز همین سند در شرکت فعال (مثل فاکتور).
+        read_only (فقط دیدن جزئیات): شرکت‌کنندهٔ گردش و مدیر/حسابدار سطح شرکت هم (قلاب can_view).
+        """
         pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
         obj = self.filter_queryset(self.get_queryset()).filter(pk=pk).first()
-        if obj is None and wf_engine.task_grants_view(self.request.user, PETTY_CHARGE_ENTITY, pk):
+        if obj is None and (wf_engine.task_grants_view(self.request.user, PETTY_CHARGE_ENTITY, pk)
+                            or (read_only and can_view_petty_tx(self.request.user, pk))):
             obj = PettyCashTransaction.objects.select_related('account', 'section__project', 'custodian').filter(pk=pk).first()
             active = get_request_company_id(self.request)
             if obj is not None and (not petty_company_allowed(self.request.user, obj.wf_company_id)
@@ -1409,7 +1419,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         return obj
 
     def retrieve(self, request, *args, **kwargs):
-        return Response(self.get_serializer(self._petty_tx_object()).data)
+        return Response(self.get_serializer(self._petty_tx_object(read_only=True)).data)
 
     @staticmethod
     def _ensure_same_company(company_id, section, project):
@@ -1740,6 +1750,8 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
         tracking = str(request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
         if not tracking:
             return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        receipt = request.FILES.get(RECEIPT_FIELD)
+        receipt_meta = read_receipt(receipt)
         task = wf_engine.open_task(PETTY_CHARGE_WORKFLOW, tx.pk)
         if task is None or task.step_key != 'treasury_pay':
             return Response({'code': 'not_payable', 'error': 'درخواست شارژ هنوز به مرحلهٔ واریز نرسیده است.'},
@@ -1759,11 +1771,13 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
                                 status=status.HTTP_409_CONFLICT)
             tx.receipt_number = tracking[:100]
             tx.save(update_fields=['receipt_number', 'updated_at'])
+            tx._payment_receipt_checked = True  # قلاب پایان گردش فقط با این پرچم شارژ را می‌بندد
             try:
                 wf_engine.act(request.user, task, reason=str(request.data.get('notes') or '').strip(),
                               revision=revision, obj=tx)
                 # د۴: با واریز، کسرهای در انتظار این شارژ قطعی می‌شوند (خزانه‌دار مبلغ خالص را واریز کرده است)
                 complete_charge_offsets(tx, request.user)
+                attach_receipt(request.user, PETTY_CHARGE_ENTITY, tx.pk, receipt, receipt_meta)
             except WorkflowError as exc:
                 err = exc
                 transaction.set_rollback(True)
@@ -1926,10 +1940,11 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
                 | deputy_account_q(user, prefix='account__'))
         return qs.order_by('-statement_date_shamsi', '-created_at')
 
-    def _statement_object(self):
+    def _statement_object(self, read_only=False):
         pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
         obj = self.get_queryset().filter(pk=pk).first()
-        if obj is None and wf_engine.task_grants_view(self.request.user, PETTY_STATEMENT_ENTITY, pk):
+        if obj is None and (wf_engine.task_grants_view(self.request.user, PETTY_STATEMENT_ENTITY, pk)
+                            or (read_only and can_view_petty_statement(self.request.user, pk))):
             obj = PettyCashStatement.objects.select_related('company', 'account', 'custodian').filter(pk=pk).first()
             active = get_request_company_id(self.request)
             if obj is not None and (not petty_company_allowed(self.request.user, obj.company_id)
@@ -1940,7 +1955,7 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
         return obj
 
     def retrieve(self, request, *args, **kwargs):
-        return Response(self.get_serializer(self._statement_object()).data)
+        return Response(self.get_serializer(self._statement_object(read_only=True)).data)
 
     @staticmethod
     def _submit(statement, user):
@@ -2074,6 +2089,8 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
         tracking = str(request.data.get('tracking_code') or request.data.get('payment_ref') or '').strip()
         if not tracking:
             return Response({'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+        receipt = request.FILES.get(RECEIPT_FIELD)
+        receipt_meta = read_receipt(receipt)
         task = wf_engine.open_task(PETTY_STATEMENT_WORKFLOW, statement.pk)
         if task is None or task.step_key != 'treasury_pay':
             return Response({'code': 'not_payable', 'error': 'صورت‌حساب هنوز به مرحلهٔ شارژ دوباره نرسیده است.'},
@@ -2087,6 +2104,7 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
             try:
                 wf_engine.act(request.user, task, reason=str(request.data.get('notes') or '').strip(),
                               revision=revision, obj=statement)
+                attach_receipt(request.user, PETTY_STATEMENT_ENTITY, statement.pk, receipt, receipt_meta)
             except WorkflowError as exc:
                 err = exc
                 transaction.set_rollback(True)

@@ -30,6 +30,32 @@ PAYABLE_STATUSES = ('ready_to_pay', 'partially_paid')
 PAYMENTS_EXIST_CODE = 'payments_exist'
 PAYMENTS_EXIST_MESSAGE = ('برای این فاکتور قسط پرداخت ثبت شده است؛ عودت یا لغو ممکن نیست. '
                           'قسط اشتباه را با ثبت دلیل باطل کنید.')
+# رسید پرداخت (۹ آبان ۱۴۰۵): در هر پرداخت اجباری است و پیوست هستهٔ همان سند با این برچسب می‌شود
+RECEIPT_LABEL = 'payment_receipt'
+RECEIPT_FIELD = 'receipt'
+RECEIPT_REQUIRED_MESSAGE = 'رسید پرداخت لازم است.'
+
+
+def read_receipt(upload):
+    """
+    رسید اجباری پرداخت را پیش از هر نوشتن می‌سنجد (حجم، پسوند، sha256). خروجی meta برای attach_receipt.
+    خطا: ValidationError روی فیلد receipt (۴۰۰).
+    """
+    from attachments.services import read_upload
+    if not upload:
+        raise ValidationError({RECEIPT_FIELD: [RECEIPT_REQUIRED_MESSAGE], 'code': 'receipt_required'})
+    try:
+        return read_upload(upload)
+    except ValidationError as exc:
+        detail = exc.detail if isinstance(exc.detail, list) else [exc.detail]
+        raise ValidationError({RECEIPT_FIELD: [str(d) for d in detail]})
+
+
+def attach_receipt(user, kind, entity_id, upload, meta, *, payment_id=None):
+    """پیوست رسید روی سند؛ درون تراکنش پرداخت صدا زده می‌شود تا با شکست پرداخت ردیفش هم برگردد."""
+    from attachments.services import create_attachment
+    return create_attachment(user, kind, entity_id, upload, label=RECEIPT_LABEL,
+                             description=f'payment:{payment_id}' if payment_id else '', meta=meta)
 
 
 def invoice_remaining(invoice) -> Decimal:
@@ -161,13 +187,14 @@ def _audit(action, payment, invoice, user, details=None):
     )
 
 
-def add_payment(user, invoice_id, data, *, revision=None, legacy=False):
+def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=None):
     """
     ثبت یک قسط. legacy=True (اکشن قدیمی pay/) یعنی کل مانده در یک قسط. خروجی (قسط، فاکتور به‌روز).
     خطا: ValidationError (400) یا WorkflowError (403/409)؛ هر خطا کل تراکنش را برمی‌گرداند.
     """
     from .models import InvoicePayment
     from .workflow_engine import notify_document_changed
+    receipt_meta = read_receipt(receipt)
     with transaction.atomic():
         invoice, task = _lock(invoice_id)
         _ensure_treasurer(user, invoice, task)
@@ -184,6 +211,7 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False):
                 invoice.paid_by = user
                 invoice.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_at'])
                 wf_engine.act(user, task, reason=fields['notes'], revision=revision, obj=invoice)
+                attach_receipt(user, INVOICE_ENTITY, invoice.pk, receipt, receipt_meta)
                 return None, invoice
             if amount <= 0:
                 raise WorkflowError('nothing_to_pay', 'مانده‌ای برای پرداخت این فاکتور نیست.', 409)
@@ -194,6 +222,7 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False):
                                    'code': 'amount_exceeds_remaining', 'remaining': str(remaining)})
         fields = _clean_payment(invoice, data, legacy=legacy)
         payment = InvoicePayment.objects.create(invoice=invoice, amount=amount, created_by=user, **fields)
+        attach_receipt(user, INVOICE_ENTITY, invoice.pk, receipt, receipt_meta, payment_id=payment.pk)
         _recompute(invoice)
         invoice.save(update_fields=['paid_amount', 'payment_ref', 'paid_at', 'paid_by', 'updated_at'])
         _audit('invoice_payment_added', payment, invoice, user)

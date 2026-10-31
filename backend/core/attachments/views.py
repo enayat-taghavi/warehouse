@@ -6,7 +6,6 @@ API پیوست عمومی (ص۵، ص۶، ص۷ و ص۹ طرح ۲.۶).
 - دانلود فقط از همین API است و `can_view` را در **هر** درخواست می‌سنجد؛ مسیر `/media/attachments/` همیشه ۴۰۳ است.
 - حذف نرم است: `archived_at` پر می‌شود و فایل روی دیسک می‌ماند (ق۱۶).
 """
-import hashlib
 import mimetypes
 import os
 import re
@@ -22,15 +21,15 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.serializer_fields import validate_uploaded_document
-from platform_core.registry import can_attach, can_view, company_of, is_entity_confidential, is_entity_locked
+from platform_core.registry import can_attach, can_view, is_entity_locked
 
 from .models import Attachment
-from .services import record_entity_view
+from .services import (  # noqa: F401  (SERVER_ONLY_LABELS و _storage_for را تست‌ها از همین‌جا می‌خوانند)
+    SERVER_ONLY_LABELS, _enqueue_drive_copy, _int_or_zero, _read_upload, _storage_for, create_attachment,
+    record_entity_view,
+)
 
 _KIND_RE = re.compile(r'^[a-z][a-z0-9_]{0,49}$')
-# برچسب‌هایی که همیشه فقط روی سرور می‌مانند (امضا و مهر کاربر، ص۹)
-SERVER_ONLY_LABELS = ('signature', 'stamp')
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
@@ -62,56 +61,6 @@ def _entity_params(data):
     if not _KIND_RE.match(kind) or not entity_id or len(entity_id) > 64:
         raise serializers.ValidationError({'detail': 'نوع یا شناسهٔ سند نامعتبر است.'})
     return kind, entity_id
-
-
-def _storage_for(kind, entity_id, label, company_id):
-    """
-    جای نگه‌داری (ص۷). امضا و مهر، پیوست کاربر، سند محرمانه و شرکت بی‌درایوِ متصل همیشه سرور؛ وگرنه درایو.
-    فایل در هر حال روی سرور هم می‌ماند و درایو فقط رونوشت است.
-    """
-    if (label or '').lower() in SERVER_ONLY_LABELS or kind == 'user' or not company_id:
-        return Attachment.STORAGE_SERVER
-    from settings_core.models import CompanyGoogleDriveConfig
-    connected = CompanyGoogleDriveConfig.objects.filter(
-        company_id=company_id, is_enabled=True, refresh_token__isnull=False,
-    ).exclude(refresh_token='').exists()
-    if not connected or is_entity_confidential(kind, entity_id):
-        return Attachment.STORAGE_SERVER
-    return Attachment.STORAGE_GDRIVE
-
-
-def _enqueue_drive_copy(obj):
-    """یک ردیف بارگذاری در صف درایو شرکت؛ ورکر هسته فایل را از همان مسیر سرور می‌فرستد."""
-    if obj.storage != Attachment.STORAGE_GDRIVE or not obj.company_id:
-        return
-    from settings_core.models import GoogleDriveSyncQueue
-    GoogleDriveSyncQueue.objects.create(
-        company_id=obj.company_id, model_name='Attachment', object_id=obj.pk, field_name='file',
-        source_file_path=obj.file.name, target_folder_path=f'پیوست‌ها/{obj.entity_kind}',
-        target_filename=f'{obj.pk}_{obj.original_name or os.path.basename(obj.file.name)}'[:300],
-        action='upload', status='pending',
-    )
-
-
-def _read_upload(upload):
-    """اعتبارسنجی حجم و پسوند و محاسبهٔ sha256 (فایل برای ذخیره به ابتدا برمی‌گردد)."""
-    validate_uploaded_document(upload)
-    digest = hashlib.sha256()
-    for chunk in upload.chunks():
-        digest.update(chunk)
-    upload.seek(0)
-    original = os.path.basename(getattr(upload, 'name', '') or '')[:255]
-    # نوع از پسوند مجاز، نه از هدر کاربر (تا فایل با نوع ساختگی مثل image/svg+xml درون صفحه باز نشود)
-    content_type = (mimetypes.guess_type(original)[0] or 'application/octet-stream')[:100]
-    return {'original_name': original, 'size': upload.size or 0, 'content_type': content_type,
-            'sha256': digest.hexdigest()}
-
-
-def _int_or_zero(value):
-    try:
-        return max(0, int(value))
-    except (TypeError, ValueError):
-        return 0
 
 
 def _active_or_404(pk):
@@ -151,18 +100,11 @@ class AttachmentListCreateView(APIView):
         if not upload:
             return Response({'file': ['فایل پیوست لازم است.']}, status=status.HTTP_400_BAD_REQUEST)
         meta = _read_upload(upload)
-        label = str(request.data.get('label') or '').strip()[:30]
-        company_id = company_of(kind, entity_id)
         with transaction.atomic():
-            obj = Attachment.objects.create(
-                company_id=company_id,
-                entity_kind=kind, entity_id=entity_id, label=label,
-                order=_int_or_zero(request.data.get('order')),
-                description=str(request.data.get('description') or '')[:2000],
-                file=upload, storage=_storage_for(kind, entity_id, label, company_id),
-                uploaded_by=request.user, **meta,
+            obj = create_attachment(
+                request.user, kind, entity_id, upload, label=request.data.get('label'),
+                description=request.data.get('description'), order=request.data.get('order'), meta=meta,
             )
-            _enqueue_drive_copy(obj)
         return Response(AttachmentSerializer(obj).data, status=status.HTTP_201_CREATED)
 
 

@@ -50,6 +50,17 @@ import {
   VehicleDocument
 } from './personnel-api.models';
 
+/** بدنهٔ multipart پرداخت: فیلدهای پرداخت + رسید اجباری (فیلد receipt)؛ مقدار خالی فرستاده نمی‌شود */
+export function paymentFormData(fields: object, receipt: File): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === null || value === undefined || value === '') continue;
+    form.append(key, String(value));
+  }
+  form.append('receipt', receipt, receipt.name);
+  return form;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TreasuryOrgApiService {
   private readonly baseUrl = 'personnel';
@@ -251,8 +262,9 @@ export class TreasuryOrgApiService {
     return this.api.get<InvoicePaymentsResponse>(`${this.baseUrl}/expense-invoices/${id}/payments/`);
   }
 
-  addInvoicePayment(id: number, data: InvoicePaymentCreate): Observable<InvoicePaymentResult> {
-    return this.api.post<InvoicePaymentResult>(`${this.baseUrl}/expense-invoices/${id}/payments/`, data);
+  /** ثبت قسط با رسید اجباری (multipart؛ در حالت آفلاین صف نمی‌شود و فایل نزد کاربر می‌ماند) */
+  addInvoicePayment(id: number, data: InvoicePaymentCreate, receipt: File): Observable<InvoicePaymentResult> {
+    return this.api.upload<InvoicePaymentResult>(`${this.baseUrl}/expense-invoices/${id}/payments/`, paymentFormData(data, receipt));
   }
 
   voidInvoicePayment(id: number, paymentId: number, reason: string): Observable<InvoicePaymentResult> {
@@ -304,8 +316,9 @@ export class TreasuryOrgApiService {
     return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/request-revision/`, { reason });
   }
 
-  payExpenseInvoice(id: number, data: { payment_ref: string; treasury_account_id?: number }): Observable<ExpenseInvoice> {
-    return this.api.post<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/pay/`, data);
+  /** پرداخت قدیمی کل مانده؛ رسید پرداخت اجباری است (multipart) */
+  payExpenseInvoice(id: number, data: { payment_ref: string; treasury_account_id?: number }, receipt: File): Observable<ExpenseInvoice> {
+    return this.api.upload<ExpenseInvoice>(`${this.baseUrl}/expense-invoices/${id}/pay/`, paymentFormData(data, receipt));
   }
 
   exportExpenseInvoicesExcel(params?: { section_id?: number; status?: string }): Observable<Blob> {
@@ -366,8 +379,9 @@ export class TreasuryOrgApiService {
     return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/send-charge/`, {});
   }
 
-  payPettyCashCharge(id: number, trackingCode: string): Observable<PettyCashTransaction> {
-    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/pay-charge/`, { tracking_code: trackingCode });
+  payPettyCashCharge(id: number, trackingCode: string, receipt: File): Observable<PettyCashTransaction> {
+    return this.api.upload<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/pay-charge/`,
+      paymentFormData({ tracking_code: trackingCode }, receipt));
   }
 
   updatePettyCashAccount(id: number, data: Partial<PettyCashAccount>): Observable<PettyCashAccount> {
@@ -462,8 +476,9 @@ export class TreasuryOrgApiService {
     return this.api.post<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}/reject-line/`, { line_id: lineId, reason });
   }
 
-  payPettyCashStatement(id: number, trackingCode: string): Observable<PettyCashStatement> {
-    return this.api.post<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}/pay/`, { tracking_code: trackingCode });
+  payPettyCashStatement(id: number, trackingCode: string, receipt: File): Observable<PettyCashStatement> {
+    return this.api.upload<PettyCashStatement>(`${this.baseUrl}/petty-cash-statements/${id}/pay/`,
+      paymentFormData({ tracking_code: trackingCode }, receipt));
   }
 
   exportPettyCashTransactionsExcel(params?: {

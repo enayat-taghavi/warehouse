@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
@@ -28,6 +28,8 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
+import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
+import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -66,6 +68,7 @@ export interface PettyCashRefillItem {
   standalone: true,
   imports: [
     CommonModule,
+    AttachmentsComponent,
     FormsModule,
     ReactiveFormsModule,
     TabBarComponent,
@@ -285,6 +288,12 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   isPaying = false;
   payments: InvoicePayment[] = [];
   paymentsLoading = false;
+  // رسید پرداخت اجباری هر قسط (۹ آبان ۱۴۰۵)
+  payReceipt: File | null = null;
+  readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
+  readonly receiptAccept = PAYMENT_RECEIPT_ACCEPT;
+  private payReceiptInput: HTMLInputElement | null = null;
+  @ViewChild('payReceipts') payReceipts?: AttachmentsComponent;
   companyAccounts: CompanyBankAccount[] = [];
   partyAccounts: PartyBankAccount[] = [];
   readonly methodOptions: { value: InvoicePaymentMethod; label: string }[] = [
@@ -325,6 +334,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.payPartyAccount = null;
     this.payTracking = '';
     this.payNotes = '';
+    this.clearPayReceipt();
     this.payFieldErrors = {};
     this.payGeneralError = '';
     this.isPayDatePickerOpen = false;
@@ -455,6 +465,21 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     return '';
   }
 
+  onPayReceiptChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.payReceiptInput = input;
+    const file = input.files?.[0] ?? null;
+    const error = file ? receiptFileError(file) : '';
+    this.payReceipt = file && !error ? file : null;
+    const { receipt: _old, ...rest } = this.payFieldErrors;
+    this.payFieldErrors = error ? { ...rest, receipt: error } : rest;
+  }
+
+  private clearPayReceipt(): void {
+    this.payReceipt = null;
+    if (this.payReceiptInput) this.payReceiptInput.value = '';
+  }
+
   submitPayment(): void {
     const item = this.payItem;
     if (!item || this.isPaying) return;
@@ -470,6 +495,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     if (this.needsCompanyAccount && !this.payCompanyAccount) errors['company_bank_account'] = 'حساب بانکی شرکت را انتخاب کنید.';
     const date = (this.payDateControl.value || '').trim();
     if (!date) errors['payment_date_shamsi'] = 'تاریخ پرداخت را وارد کنید.';
+    if (!this.payReceipt) errors['receipt'] = 'رسید پرداخت را پیوست کنید.';
     this.payFieldErrors = errors;
     this.payGeneralError = '';
     if (Object.keys(errors).length) return;
@@ -485,10 +511,11 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     if (this.payPartyAccount) body.party_bank_account = this.payPartyAccount;
 
     this.isPaying = true;
-    this.treasuryApi.addInvoicePayment(item.id, body).subscribe({
+    this.treasuryApi.addInvoicePayment(item.id, body, this.payReceipt!).subscribe({
       next: (res) => {
         this.isPaying = false;
         this.toast.success(res.message || 'قسط پرداخت ثبت شد.');
+        void this.payReceipts?.load();
         item.paid_amount = Number(res.paid_amount || 0);
         item.remaining = Number(res.remaining || 0);
         if (item.remaining <= 0) {
@@ -517,7 +544,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     }
     const body = err?.error;
     if (err?.status === 400 && body && typeof body === 'object' && !Array.isArray(body)) {
-      const known = ['amount', 'payment_date_shamsi', 'tracking_code', 'method', 'company_bank_account', 'party_bank_account', 'notes'];
+      const known = ['amount', 'payment_date_shamsi', 'tracking_code', 'method', 'company_bank_account', 'party_bank_account', 'notes', 'receipt'];
       const errs: Record<string, string> = {};
       for (const k of known) {
         const m = this.fieldMessage(body[k]);

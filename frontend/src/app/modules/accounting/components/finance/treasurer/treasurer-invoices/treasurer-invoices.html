@@ -245,6 +245,11 @@
         </div>
       </div>
 
+      <div>
+        <h3 class="text-xs font-black mb-1.5">رسیدهای پرداخت</h3>
+        <app-attachments #payReceipts kind="expense_invoice" [entityId]="it.id" [label]="receiptLabel"></app-attachments>
+      </div>
+
       <!-- فرم قسط تازه -->
       <form *ngIf="it.remaining > 0" (ngSubmit)="submitPayment()" class="space-y-3 border-t border-line pt-3" novalidate>
         <h3 class="text-xs font-black">قسط تازه</h3>
@@ -306,6 +311,15 @@
               [class.border-rose-400]="payFieldErrors['tracking_code']" />
             <p *ngIf="payFieldErrors['tracking_code']" id="pay-tracking-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['tracking_code'] }}</p>
           </div>
+
+          <div class="sm:col-span-2">
+            <label for="pay-receipt" class="block font-bold mb-1">رسید پرداخت <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <input id="pay-receipt" name="payReceipt" type="file" [attr.accept]="receiptAccept" (change)="onPayReceiptChange($event)"
+              aria-required="true" [attr.aria-invalid]="payFieldErrors['receipt'] ? 'true' : 'false'" [attr.aria-describedby]="payFieldErrors['receipt'] ? 'pay-receipt-hint pay-receipt-err' : 'pay-receipt-hint'"
+              class="block w-full min-h-[40px] text-xs text-fg file:me-3 file:min-h-[40px] file:px-3 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-bold file:cursor-pointer cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl" />
+            <p id="pay-receipt-hint" class="mt-1 text-[10px] text-fg-muted">تصویر یا PDF رسید بانکی؛ همهٔ کسانی که در گردش این فاکتور بوده‌اند آن را می‌بینند.</p>
+            <p *ngIf="payFieldErrors['receipt']" id="pay-receipt-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['receipt'] }}</p>
+          </div>
         </div>
 
         <div>
@@ -314,9 +328,11 @@
             class="w-full bg-surface border border-line rounded-xl px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
         </div>
 
-        <div class="flex items-center justify-end gap-2">
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <p *ngIf="!payReceipt" id="pay-receipt-need" class="me-auto text-[11px] text-fg-muted">برای ثبت قسط، نخست رسید پرداخت را پیوست کنید.</p>
           <button type="button" appAction="close" label="انصراف" size="sm" (click)="closePayModal()"></button>
-          <button type="submit" appAction="confirm" label="ثبت قسط" size="sm" [busy]="isPaying"></button>
+          <button type="submit" appAction="confirm" label="ثبت قسط" size="sm" [busy]="isPaying" [disabled]="!payReceipt"
+            [hint]="payReceipt ? '' : 'نخست رسید پرداخت را پیوست کنید'"></button>
         </div>
       </form>
     </div>

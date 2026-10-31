@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 
 from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 from personnel.models import Counterparty, ExpenseInvoice
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import grant_section_perms, pay_request, temp_media
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
 from workflow.models import WorkflowStep, WorkflowSubstitute, WorkflowThreshold
@@ -20,6 +20,7 @@ User = get_user_model()
 BASE = '/api/personnel/expense-invoices/'
 
 
+@temp_media
 class InvoiceFlowScenarioTests(TestCase):
     def setUp(self):
         self.company = Company.objects.create(code='IWF', name='شرکت گردش', is_active=True)
@@ -53,8 +54,9 @@ class InvoiceFlowScenarioTests(TestCase):
     def post(self, user, inv, action, **data):
         c = APIClient()
         c.force_authenticate(user)
+        data, fmt = pay_request(action, data)
         with self.captureOnCommitCallbacks(execute=True):
-            return c.post(f'{BASE}{inv.pk}/{action}/', data, format='json', HTTP_X_COMPANY_ID=str(self.company.pk))
+            return c.post(f'{BASE}{inv.pk}/{action}/', data, format=fmt, HTTP_X_COMPANY_ID=str(self.company.pk))
 
     def step(self, inv):
         task = wf_engine.open_task(INVOICE_WORKFLOW, inv.pk)

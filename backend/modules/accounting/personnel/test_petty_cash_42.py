@@ -17,7 +17,7 @@ from personnel.models import (
     PettyCashTransaction,
     WorkflowAuditLog,
 )
-from personnel.scoped_test_support import grant_section_perms
+from personnel.scoped_test_support import grant_section_perms, pay_request, temp_media
 from personnel.workflows import (
     PETTY_CHARGE_WORKFLOW,
     PETTY_STATEMENT_WORKFLOW,
@@ -34,6 +34,7 @@ REC = '/api/personnel/petty-cash-reconciliations/'
 SHEBA_A = 'IR820540102680020817909002'
 
 
+@temp_media
 class PettyCash42Tests(TestCase):
     def setUp(self):
         self.co = Company.objects.create(code='PC42', name='شرکت تنخواه سناریو', is_active=True)
@@ -57,9 +58,10 @@ class PettyCash42Tests(TestCase):
     def call(self, user, method, url, data=None, company=None):
         c = APIClient()
         c.force_authenticate(user)
+        data, fmt = pay_request(url, data or {})
         with self.captureOnCommitCallbacks(execute=True):
             return getattr(c, method)(
-                url, data or {}, format='json',
+                url, data, format=fmt,
                 HTTP_X_COMPANY_ID=str((company or self.co).pk)
             )
 

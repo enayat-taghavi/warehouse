@@ -291,6 +291,8 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     component.payMethod = 'transfer';
     component.payCompanyAccount = 5;
     component.payDateControl.setValue('1405/04/15');
+    const receipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
+    component.onPayReceiptChange({ target: { files: [receipt], value: 'receipt.pdf' } } as unknown as Event);
 
     mockTreasuryOrgApi.addInvoicePayment.mockReturnValue(of({
       message: 'قسط با موفقیت ثبت شد',
@@ -309,9 +311,40 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
         tracking_code: 'TR-555',
         method: 'transfer',
         company_bank_account: 5
-      })
+      }),
+      receipt
     );
     expect(component.payModalOpen).toBe(false);
+  });
+
+  it('g) without a receipt the submit button is disabled, submit shows #pay-receipt-err and does not call addInvoicePayment', () => {
+    component.payInvoice(component.invoices[0]);
+    fixture.detectChanges();
+    component.payAmount = '600000';
+    component.payTracking = 'TR-1';
+    component.payCompanyAccount = 5;
+    component.payDateControl.setValue('1405/04/15');
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('#pay-receipt') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    expect(input.getAttribute('aria-required')).toBe('true');
+    const submit = fixture.nativeElement.querySelector('form button[type="submit"]') as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    // ثبت از راه رویداد فرم (مثل کلیک یا Enter کاربر) تا نمای OnPush هم تازه شود
+    (submit.closest('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    const err = fixture.nativeElement.querySelector('#pay-receipt-err');
+    expect(err?.textContent).toContain('رسید');
+    expect(mockTreasuryOrgApi.addInvoicePayment).not.toHaveBeenCalled();
+
+    // انتخاب فایل از راه رویداد change خود input (مثل کاربر)
+    Object.defineProperty(input, 'files', { value: [new File(['%PDF'], 'r.pdf')], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(component.payReceipt?.name).toBe('r.pdf');
+    expect(submit.disabled).toBe(false);
   });
 
   it('f) a 400 response { amount: [\'too much\'] } shows #pay-amount-err with that text; a 409 { code: \'void_after_full_payment\', error: \'X\' } on void shows X in the reason dialog (serverError)', () => {
@@ -323,6 +356,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     component.payMethod = 'transfer';
     component.payCompanyAccount = 5;
     component.payDateControl.setValue('1405/04/15');
+    component.payReceipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
 
     mockTreasuryOrgApi.addInvoicePayment.mockReturnValue(throwError(() => ({
       status: 400,
