@@ -1,5 +1,5 @@
 /**
- * Environment — Mobile Production (soft.farsalish.ir)
+ * Environment — Mobile Production (soft.comanage.ir)
  * در زمان build نهایی اپ موبایل استفاده می‌شود
  */
 
@@ -10,6 +10,6 @@ export const environment = {
   useMockData: false,
   // Local-First شمارش: false = برگشت فوری به مسیر سرور-محور قبلی (feature flag)
   useLocalFirstCounting: true,
-  serverOrigin: 'https://soft.farsalish.ir',
+  serverOrigin: 'https://soft.comanage.ir',
   appChannel: 'direct',
 };
