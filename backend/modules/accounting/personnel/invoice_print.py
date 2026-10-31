@@ -11,7 +11,8 @@ from .workflows import INVOICE_WORKFLOW, INVOICE_WORKFLOW_SPEC
 
 def _money(value) -> str:
     from reports.document_pdf import fa_digits
-    return fa_digits(f'{Decimal(str(value or 0)):,.0f}') + ' ریال'
+    text = f'{Decimal(str(value or 0)):,.0f}'.replace(',', '٬')
+    return fa_digits(text) + ' ریال'
 
 
 def _qty(value) -> str:
@@ -57,7 +58,7 @@ def _signers(invoice):
 
 
 def printable_invoice(user, entity_id):
-    from reports.document_pdf import PrintableDocument, fa_digits
+    from reports.document_pdf import DocTable, PrintableDocument, fa_digits
     from .invoice_payments import invoice_remaining
     from .models import ExpenseInvoice
     invoice = (ExpenseInvoice.objects
@@ -66,43 +67,61 @@ def printable_invoice(user, entity_id):
                .filter(pk=entity_id).first())
     if invoice is None:
         return None
-    paragraphs = [
-        f'شمارهٔ داخلی: {fa_digits(invoice.number) if invoice.number else "—"}',
-        f'شمارهٔ فاکتور فروشنده: {fa_digits(invoice.invoice_number) if invoice.invoice_number else "—"}',
-        f'تاریخ فاکتور: {fa_digits(invoice.invoice_date_shamsi)}',
-        f'طرف حساب: {invoice.counterparty.name if invoice.counterparty_id else ""}',
-        f'پروژه / بخش: {invoice.section.project.name} / {invoice.section.name}',
-        f'وضعیت: {invoice.get_status_display()}',
+
+    info_pairs = [
+        ('شمارهٔ داخلی', fa_digits(invoice.number) if invoice.number else '—'),
+        ('شمارهٔ فاکتور فروشنده', fa_digits(invoice.invoice_number) if invoice.invoice_number else '—'),
+        ('تاریخ فاکتور', fa_digits(invoice.invoice_date_shamsi)),
+        ('طرف حساب', invoice.counterparty.name if invoice.counterparty_id else '—'),
+        ('پروژه / بخش', f'{invoice.section.project.name} / {invoice.section.name}'),
+        ('وضعیت', invoice.get_status_display()),
     ]
-    if invoice.description:
-        paragraphs.append(f'شرح: {invoice.description}')
+
+    paragraphs = [f'شرح: {invoice.description}'] if invoice.description else []
+
     lines = list(invoice.lines.all())
     rows = [[
         fa_digits(idx), line.description or '', line.expense_head.title if line.expense_head else '',
         _qty(line.quantity), line.unit or '', _money(line.unit_price), _money(line.line_amount),
     ] for idx, line in enumerate(lines, start=1)]
-    totals = [
-        f'جمع ردیف‌ها: {_money(invoice.subtotal)}',
-        f'تخفیف: {_money(invoice.discount_amount)}',
-        f'مالیات بر ارزش افزوده: {_money(invoice.vat_amount)}',
-        f'مبلغ قابل پرداخت: {_money(invoice.amount)}',
-    ]
+
+    totals = [('جمع ردیف‌ها', _money(invoice.subtotal))]
+    if Decimal(str(invoice.discount_amount or 0)) != 0:
+        totals.append(('تخفیف', _money(invoice.discount_amount)))
+    if Decimal(str(invoice.vat_amount or 0)) != 0:
+        totals.append(('مالیات بر ارزش افزوده', _money(invoice.vat_amount)))
+    totals.append(('مبلغ قابل پرداخت', _money(invoice.amount), True))
+    totals.append(('پرداخت‌شده', _money(invoice.paid_amount)))
+    totals.append(('مانده', _money(invoice_remaining(invoice)), True))
+
+    extra_tables = []
     payments = sorted((p for p in invoice.payments.all() if p.voided_at is None), key=lambda p: (p.created_at, p.pk))
     if payments:
-        totals.append('قسط‌های پرداخت:')
-        for idx, p in enumerate(payments, start=1):
-            totals.append(f'{fa_digits(idx)}. {fa_digits(p.payment_date_shamsi)} — {_money(p.amount)} — '
-                          f'{p.get_method_display()} — شمارهٔ پیگیری {fa_digits(p.tracking_code)}')
-    totals.append(f'پرداخت‌شده: {_money(invoice.paid_amount)}')
-    totals.append(f'مانده: {_money(invoice_remaining(invoice))}')
+        payment_rows = [
+            [fa_digits(idx), fa_digits(p.payment_date_shamsi), _money(p.amount), p.get_method_display(), fa_digits(p.tracking_code or '')]
+            for idx, p in enumerate(payments, start=1)
+        ]
+        extra_tables.append(DocTable(
+            title='قسط‌های پرداخت',
+            headers=['ردیف', 'تاریخ', 'مبلغ', 'روش', 'شمارهٔ پیگیری'],
+            rows=payment_rows,
+            col_widths=[0.6, 1.4, 2, 1.6, 2],
+            center_cols=[0, 1],
+        ))
+
     return PrintableDocument(
         company_id=invoice.section.project.company_id,
         title='فاکتور هزینه',
         number=invoice.number or invoice.invoice_number,
         date=invoice.invoice_date_shamsi,
         attachments_count=1 if invoice.attachment else 0,
-        paragraphs=paragraphs + totals,
+        paragraphs=paragraphs,
         table_headers=['ردیف', 'شرح', 'سرفصل هزینه', 'تعداد', 'واحد', 'فی', 'مبلغ'],
         table_rows=rows,
         signers=_signers(invoice),
+        info_pairs=info_pairs,
+        totals=totals,
+        extra_tables=extra_tables,
+        table_col_widths=[0.6, 3.2, 1.7, 0.8, 0.9, 1.6, 1.8],
+        table_center_cols=[0, 3, 4],
     )

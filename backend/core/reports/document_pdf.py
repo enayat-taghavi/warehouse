@@ -26,7 +26,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib import colors
 
 from . import pdf as _pdf
@@ -48,6 +48,20 @@ class Signer:
 
 
 @dataclass
+class DocTable:
+    title: str = ''
+    headers: list = field(default_factory=list)
+    rows: list = field(default_factory=list)
+    col_widths: list = field(default_factory=list)
+    center_cols: list = field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.col_widths and self.headers == ['ردیف', 'تاریخ', 'مبلغ', 'روش', 'شمارهٔ پیگیری']:
+            self.col_widths = [0.6, 1.4, 2, 1.6, 2]
+            self.center_cols = [0, 1]
+
+
+@dataclass
 class PrintableDocument:
     company_id: int | None
     title: str
@@ -61,6 +75,16 @@ class PrintableDocument:
     signers: list = field(default_factory=list)
     letterhead_image: bytes | None = None
     verify_url: str = ''  # خالی بماند تا API چاپ توکن را بسازد؛ ماژولی که خودش می‌دهد، محرمانگی را خودش رعایت کند
+    info_pairs: list = field(default_factory=list)
+    totals: list = field(default_factory=list)
+    extra_tables: list = field(default_factory=list)
+    table_col_widths: list = field(default_factory=list)
+    table_center_cols: list = field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.table_col_widths and self.table_headers == ['ردیف', 'شرح', 'سرفصل هزینه', 'تعداد', 'واحد', 'فی', 'مبلغ']:
+            self.table_col_widths = [0.6, 3.2, 1.7, 0.8, 0.9, 1.6, 1.8]
+            self.table_center_cols = [0, 3, 4]
 
 
 def fa_digits(value) -> str:
@@ -218,6 +242,180 @@ def _fit_image(data, max_w, max_h):
     return Image(io.BytesIO(data), width=w * scale, height=h * scale)
 
 
+def _doc_table(headers, rows, content_w, col_widths=None, center_cols=None, cell_style=None, head_style=None):
+    if not headers:
+        return Table([[]])
+    ncols = len(headers)
+    col_widths = list(col_widths or [])
+    center_cols = set(center_cols or [])
+
+    if not col_widths or len(col_widths) != ncols or sum(col_widths) <= 0:
+        logical_widths = [content_w / ncols] * ncols
+    else:
+        total_w = sum(col_widths)
+        logical_widths = [content_w * (w / total_w) for w in col_widths]
+
+    col_widths_rev = list(reversed(logical_widths))
+
+    if cell_style is None:
+        _pdf._register_fonts()
+        font = _pdf._FONT_NAME
+        cell_style = ParagraphStyle('c_default', fontName=font, fontSize=9, leading=14.4, alignment=TA_RIGHT)
+    if head_style is None:
+        _pdf._register_fonts()
+        bold = _pdf._FONT_BOLD_NAME
+        head_style = ParagraphStyle('h_default', parent=cell_style, fontName=bold, alignment=TA_CENTER)
+
+    center_style = ParagraphStyle('c_center', parent=cell_style, alignment=TA_CENTER)
+
+    pad_h = 4
+    header_cells = [
+        _rtl_para(h, head_style, max(1, logical_widths[j] - 2 * pad_h))
+        for j, h in enumerate(headers)
+    ]
+
+    body_cells = []
+    for row in rows or []:
+        row_list = list(row)
+        r_cells = []
+        for j in range(ncols):
+            if j < len(row_list):
+                val = row_list[j]
+                st = center_style if j in center_cols else cell_style
+                w = max(1, logical_widths[j] - 2 * pad_h)
+                r_cells.append(_rtl_para(_cell_text(val), st, w))
+            else:
+                r_cells.append('')
+        body_cells.append(r_cells)
+
+    data = [list(reversed(r)) for r in [header_cells] + body_cells]
+    table = Table(data, colWidths=col_widths_rev, repeatRows=1)
+
+    table_style = [
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f1f5f9')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), pad_h),
+        ('RIGHTPADDING', (0, 0), (-1, -1), pad_h),
+    ]
+    for r in range(2, len(data), 2):
+        table_style.append(('BACKGROUND', (0, r), (-1, r), colors.HexColor('#f8fafc')))
+
+    table.setStyle(TableStyle(table_style))
+    return table
+
+
+def _info_box(pairs, content_w, base, font, bold):
+    w0 = content_w * (1.1 / 6.0)
+    w1 = content_w * (1.9 / 6.0)
+    w2 = content_w * (1.1 / 6.0)
+    w3 = content_w * (1.9 / 6.0)
+    col_widths = [w3, w2, w1, w0]
+
+    pad_h = 4
+    info_label_style = ParagraphStyle(
+        'info_lbl',
+        fontName=bold,
+        fontSize=base - 1,
+        leading=(base - 1) * 1.5,
+        textColor=colors.HexColor('#475569'),
+        alignment=TA_RIGHT,
+    )
+    info_val_style = ParagraphStyle(
+        'info_val',
+        fontName=font,
+        fontSize=base - 1,
+        leading=(base - 1) * 1.5,
+        alignment=TA_RIGHT,
+    )
+
+    table_rows = []
+    style_cmds = [
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]
+
+    for row_idx, i in enumerate(range(0, len(pairs), 2)):
+        p1 = pairs[i]
+        p2 = pairs[i + 1] if i + 1 < len(pairs) else None
+
+        p1_label = _rtl_para(str(p1[0] or ''), info_label_style, max(1, w0 - 2 * pad_h))
+        p1_val = _rtl_para(_cell_text(p1[1]), info_val_style, max(1, w1 - 2 * pad_h))
+        style_cmds.append(('BACKGROUND', (3, row_idx), (3, row_idx), colors.HexColor('#f1f5f9')))
+
+        if p2 is not None:
+            p2_label = _rtl_para(str(p2[0] or ''), info_label_style, max(1, w2 - 2 * pad_h))
+            p2_val = _rtl_para(_cell_text(p2[1]), info_val_style, max(1, w3 - 2 * pad_h))
+            style_cmds.append(('BACKGROUND', (1, row_idx), (1, row_idx), colors.HexColor('#f1f5f9')))
+        else:
+            p2_label = ''
+            p2_val = ''
+
+        table_rows.append([p2_val, p2_label, p1_val, p1_label])
+
+    table = Table(table_rows, colWidths=col_widths)
+    table.setStyle(TableStyle(style_cmds))
+    return table
+
+
+def _totals_box(totals, content_w, base, font, bold):
+    box_w = content_w * 0.5
+    w_col = box_w / 2.0
+    pad_h = 4
+    w_text = max(1, w_col - 2 * pad_h)
+
+    lbl_style_normal = ParagraphStyle(
+        'tot_lbl_n', fontName=font, fontSize=base - 1, leading=(base - 1) * 1.5, alignment=TA_RIGHT
+    )
+    val_style_normal = ParagraphStyle(
+        'tot_val_n', fontName=font, fontSize=base - 1, leading=(base - 1) * 1.5, alignment=TA_RIGHT
+    )
+    lbl_style_emp = ParagraphStyle(
+        'tot_lbl_e', fontName=bold, fontSize=base - 1, leading=(base - 1) * 1.5, alignment=TA_RIGHT
+    )
+    val_style_emp = ParagraphStyle(
+        'tot_val_e', fontName=bold, fontSize=base - 1, leading=(base - 1) * 1.5, alignment=TA_RIGHT
+    )
+
+    rows = []
+    style_cmds = [
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]
+
+    for r_idx, item in enumerate(totals):
+        label = item[0]
+        val = item[1]
+        emp = bool(item[2]) if len(item) > 2 else False
+
+        lbl_st = lbl_style_emp if emp else lbl_style_normal
+        val_st = val_style_emp if emp else val_style_normal
+
+        lbl_para = _rtl_para(str(label or ''), lbl_st, w_text)
+        val_para = _rtl_para(_cell_text(val), val_st, w_text)
+
+        rows.append([val_para, lbl_para])
+
+        if emp:
+            style_cmds.append(('BACKGROUND', (0, r_idx), (1, r_idx), colors.HexColor('#e2e8f0')))
+        else:
+            style_cmds.append(('BACKGROUND', (1, r_idx), (1, r_idx), colors.HexColor('#f1f5f9')))
+
+    table = Table(rows, colWidths=[w_col, w_col], hAlign='LEFT')
+    table.setStyle(TableStyle(style_cmds))
+    return table
+
+
 def render_document_pdf(doc: PrintableDocument) -> bytes:
     _pdf._register_fonts()
     font, bold = _pdf._FONT_NAME, _pdf._FONT_BOLD_NAME
@@ -228,6 +426,7 @@ def render_document_pdf(doc: PrintableDocument) -> bytes:
     header_h = (26 if small else 32) * mm
     base = 9 if small else 11
     content_w = page_w - 2 * margin - 12  # حاشیهٔ داخلی ۶ نقطه‌ای Frame در هر طرف
+    block_space = (3 if small else 4) * mm
 
     company = _company(doc.company_id)
     company_name = company.name if company else ''
@@ -277,32 +476,62 @@ def render_document_pdf(doc: PrintableDocument) -> bytes:
     title_style = ParagraphStyle('t', fontName=bold, fontSize=base + 4, leading=base + 10, alignment=TA_CENTER)
     body_style = ParagraphStyle('b', fontName=font, fontSize=base, leading=base * 1.9, alignment=TA_RIGHT)
     cell_style = ParagraphStyle('c', fontName=font, fontSize=base - 1, leading=(base - 1) * 1.6, alignment=TA_RIGHT)
-    head_style = ParagraphStyle('h', parent=cell_style, fontName=bold, alignment=TA_CENTER)
+    head_style = ParagraphStyle('h', parent=cell_style, fontName=bold, fontSize=base - 2, leading=(base - 2) * 1.4, alignment=TA_CENTER)
     sign_style = ParagraphStyle('s', fontName=font, fontSize=base - 1, leading=(base - 1) * 1.6, alignment=TA_CENTER)
 
-    story = [_rtl_para(doc.title, title_style, content_w), Spacer(1, 4 * mm)]
-    for text in doc.paragraphs or []:
-        story.append(_rtl_para(text, body_style, content_w))
-        story.append(Spacer(1, 2 * mm))
+    story = [_rtl_para(doc.title, title_style, content_w), Spacer(1, block_space)]
+
+    if doc.info_pairs:
+        story.append(_info_box(doc.info_pairs, content_w, base, font, bold))
+        story.append(Spacer(1, block_space))
+
+    if doc.paragraphs:
+        for text in doc.paragraphs:
+            story.append(_rtl_para(text, body_style, content_w))
+            story.append(Spacer(1, 2 * mm))
+        if story and isinstance(story[-1], Spacer):
+            story[-1] = Spacer(1, block_space)
 
     if doc.table_headers:
-        ncols = len(doc.table_headers)
-        col_w = content_w / ncols
-        pad = 4
-        header = [_rtl_para(h, head_style, col_w - 2 * pad) for h in doc.table_headers]
-        body = [[_rtl_para(_cell_text(v), cell_style, col_w - 2 * pad) for v in list(row)[:ncols]]
-                + [''] * max(0, ncols - len(row)) for row in doc.table_rows or []]
-        data = [list(reversed(r)) for r in [header] + body]  # ستون اول در راست
-        table = Table(data, colWidths=[col_w] * ncols, repeatRows=1)
-        table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#94a3b8')),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e2e8f0')),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), pad), ('RIGHTPADDING', (0, 0), (-1, -1), pad),
-        ]))
-        story += [Spacer(1, 2 * mm), table]
+        table = _doc_table(
+            doc.table_headers,
+            doc.table_rows or [],
+            content_w,
+            doc.table_col_widths,
+            doc.table_center_cols,
+            cell_style=cell_style,
+            head_style=head_style,
+        )
+        story.append(table)
+        story.append(Spacer(1, block_space))
+
+    if doc.totals:
+        totals_box = _totals_box(doc.totals, content_w, base, font, bold)
+        story.append(KeepTogether([totals_box]))
+        story.append(Spacer(1, block_space))
+
+    extra_title_style = ParagraphStyle(
+        'et', parent=cell_style, fontName=bold, fontSize=base, leading=base * 1.5, alignment=TA_RIGHT
+    )
+    for t in doc.extra_tables or []:
+        if t.title:
+            story.append(_rtl_para(t.title, extra_title_style, content_w))
+            story.append(Spacer(1, 2 * mm))
+        t_elem = _doc_table(
+            t.headers,
+            t.rows or [],
+            content_w,
+            t.col_widths,
+            t.center_cols,
+            cell_style=cell_style,
+            head_style=head_style,
+        )
+        story.append(t_elem)
+        story.append(Spacer(1, block_space))
 
     if doc.signers:
+        if story and isinstance(story[-1], Spacer):
+            story.pop()
         per_row = 3 if small else 4
         cell_w = content_w / per_row
         img_h = (16 if small else 22) * mm
@@ -320,7 +549,7 @@ def render_document_pdf(doc: PrintableDocument) -> bytes:
         rows = [list(reversed(r + [''] * (per_row - len(r)))) for r in rows]  # نفر اول در راست
         sign_table = Table(rows, colWidths=[cell_w] * per_row)
         sign_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'), ('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
-        story += [Spacer(1, 8 * mm), sign_table]
+        story.append(KeepTogether([Spacer(1, 8 * mm), sign_table]))
 
     buf = io.BytesIO()
     bottom = margin + ((20 if small else 24) * mm if qr is not None else 0)
