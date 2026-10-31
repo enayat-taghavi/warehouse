@@ -147,5 +147,16 @@ class WarehousesConfig(AppConfig):
         ):
             contribute('key_role_permissions', key_perm)
 
+        # نقش‌های سازمانی پیش‌فرض این ماژول برای init_roles هسته؛ در نصب بی‌انبار ساخته نمی‌شوند
+        for role_def in (
+            {'name': 'supervisor', 'title': 'سرپرست اجرا / شمارش', 'color': '#059669'},
+            {'name': 'counter', 'title': 'انباردار میدانی / انبارگردان', 'color': '#d97706'},
+            {'name': 'doc_worker', 'title': 'کارشناس اسناد', 'color': '#64748b'},
+            {'name': 'doc_supervisor', 'title': 'سرپرست اسناد', 'color': '#7c3aed'},
+            {'name': 'document_expert', 'title': 'کارشناس مدارک', 'color': '#7c3aed'},
+            {'name': 'feeding_operator', 'title': 'اپراتور تغذیه MT', 'color': '#be123c'},
+        ):
+            contribute('default_roles', role_def)
+
 
 
