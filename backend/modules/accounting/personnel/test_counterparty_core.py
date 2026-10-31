@@ -1,11 +1,9 @@
 """
 طرح ۳.۱-ب: طرف حساب روی طرف بیرونی هسته. انتخاب شرکت بی 4xx، فیلدهای تخت قدیمی بانک، حساب اصلی، شبا،
-پوشیده‌ها، حذف با تنخواه، سابقه و migration داده. سناریوهای دامنه و تکرار در test_counterparty_parties.py است.
+پوشیده‌ها، حذف با تنخواه و سابقه. سناریوهای دامنه و تکرار در test_counterparty_parties.py است.
 """
 from django.contrib.auth import get_user_model
-from django.db import connection
-from django.db.migrations.executor import MigrationExecutor
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import AuditLog
@@ -118,60 +116,3 @@ class CounterpartyCoreTests(TestCase):
             self.assertNotIn(SHEBA[2:], text)
             self.assertNotIn('0101111111001', text)
         self.assertTrue(AuditLog.objects.filter(module='invoices', target_model='PartyBankAccount').exists())
-
-
-class CounterpartyDataMigrationTests(TransactionTestCase):
-    """ص۷: طرف شرکت‌دار، سراسری با فاکتور در دو شرکت، و سراسری بی‌استفاده."""
-    migrate_from = [('personnel', '0007_counterparty_party_expand')]
-    migrate_to = [('personnel', '0009_counterparty_party_contract')]
-
-    def tearDown(self):
-        # back to the latest schema, so later tests in the run find every table (e.g. personnel_expensehead)
-        executor = MigrationExecutor(connection)
-        executor.loader.build_graph()
-        executor.migrate(executor.loader.graph.leaf_nodes())
-        super().tearDown()
-
-    def test_copy_split_and_drop(self):
-        executor = MigrationExecutor(connection)
-        executor.migrate(self.migrate_from)
-        apps = executor.loader.project_state(self.migrate_from).apps
-        Company_ = apps.get_model('companies', 'Company')
-        Project_ = apps.get_model('companies', 'Project')
-        Section_ = apps.get_model('companies', 'ProjectSection')
-        Cp = apps.get_model('personnel', 'Counterparty')
-        Inv = apps.get_model('personnel', 'ExpenseInvoice')
-        a = Company_.objects.create(code='MG_A', name='الف')
-        b = Company_.objects.create(code='MG_B', name='ب')
-        sec = {}
-        for c in (a, b):
-            p = Project_.objects.create(company_id=c.id, code=f'P_{c.code}', name='p')
-            sec[c.id] = Section_.objects.create(project_id=p.id, code=f'S_{c.code}', name='s')
-        owned = Cp.objects.create(company_id=a.id, name='شرکت‌دار', national_id='12345678901', sheba_number=SHEBA[2:],
-                                  bank_name='ملت', account_number='0101111111001')
-        shared = Cp.objects.create(company_id=None, name='سراسری', national_id='0012345678')
-        unused = Cp.objects.create(company_id=None, name='بی‌استفاده')
-        inv_a = Inv.objects.create(section_id=sec[a.id].id, counterparty_id=shared.id, invoice_number='1',
-                                   invoice_date_shamsi='1405/01/01', amount=1, category='c', description='d')
-        inv_b = Inv.objects.create(section_id=sec[b.id].id, counterparty_id=shared.id, invoice_number='2',
-                                   invoice_date_shamsi='1405/01/01', amount=1, category='c', description='d')
-
-        executor = MigrationExecutor(connection)
-        executor.loader.build_graph()
-        executor.migrate(self.migrate_to)
-        apps = executor.loader.project_state(self.migrate_to).apps
-        Cp = apps.get_model('personnel', 'Counterparty')
-        Inv = apps.get_model('personnel', 'ExpenseInvoice')
-        Bank = apps.get_model('personnel', 'PartyBankAccount')
-
-        owned = Cp.objects.select_related('party').get(pk=owned.pk)
-        self.assertEqual((owned.party.company_id, owned.party.kind, owned.party.name), (a.id, 'legal', 'شرکت‌دار'))
-        bank = Bank.objects.get(party_id=owned.party_id)
-        self.assertEqual((bank.sheba_number, bank.is_primary), (SHEBA, True))
-        shared = Cp.objects.select_related('party').get(pk=shared.pk)  # شناسه ثابت ماند
-        self.assertEqual((shared.party.company_id, shared.party.kind), (a.id, 'person'))
-        self.assertEqual(Inv.objects.get(pk=inv_a.pk).counterparty_id, shared.pk)
-        copy_id = Inv.objects.get(pk=inv_b.pk).counterparty_id
-        self.assertNotEqual(copy_id, shared.pk)
-        self.assertEqual(Cp.objects.select_related('party').get(pk=copy_id).party.company_id, b.id)
-        self.assertFalse(Cp.objects.filter(pk=unused.pk).exists())

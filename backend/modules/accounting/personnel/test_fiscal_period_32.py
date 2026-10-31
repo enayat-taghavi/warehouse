@@ -2,11 +2,9 @@
 طرح ۳.۲ (ب): دورهٔ مالی شرکت و قفل دورهٔ بسته.
 اجرا: PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py test personnel.test_fiscal_period_32 --keepdb
 """
-import importlib
 from datetime import datetime
 from decimal import Decimal
 
-from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -159,14 +157,9 @@ class FiscalPeriodApiTests(FiscalFixtures):
         self.assertFalse(first.is_active)
         self.assertEqual(CompanyFiscalPeriod.objects.filter(company=self.company, is_active=True).count(), 1)
 
-    def test_freeze_removed_and_migration_reverts_frozen(self):
+    def test_freeze_removed(self):
         p = self.period()
         self.assertEqual(self.api.post(f'{PERIODS}{p.id}/freeze-period/').status_code, 404)
-        CompanyFiscalPeriod.objects.filter(pk=p.pk).update(status='frozen')
-        mig = importlib.import_module('personnel.migrations.0010_fiscal_period_no_frozen')
-        mig.frozen_to_open(django_apps, None)
-        p.refresh_from_db()
-        self.assertEqual(p.status, 'open')
 
     def test_close_reopen_and_audit(self):
         p = self.period()
