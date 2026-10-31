@@ -4464,3 +4464,45 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
 
 6. Output and stop condition: a short English report with the backup filename and size, the check result, the showmigrations lines, the web build result and the patch line, and the step e file name. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Migration history sync and release on the local app environment: backup, replace the old migration rows with the new one-file-per-app set (`migrate --fake`, schema untouched), web build with the ngsw patch; the runner restarts Daphne and runs the health checks (no APK)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any tracked file. Write only under `scratch/logs/`. Do not run `git` commands that change the working tree or history. The file `tests/playwright/tools/index.py` belongs to another session: never touch it.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`. Do not build any APK and do not run Gradle.
+- Do not run `run_auto_backup`, `makemigrations`, `flush`, any `manage.py test`, any `migrate` without `--fake`, or any command that deletes files under `backend/backups/`, `backend/media/` or `frontend/dist/`. Never drop or truncate a table and never run SQL by hand: the only database change allowed is the one done by the script in step c and the `migrate --fake` in step d.
+- Never print the content of any file in `E:\warehouse-secrets\`.
+
+2. Context: commit `9d1b5041` replaced the 57 old migration files with one initial migration per app (`accounts` has `0001_initial` and `0002_initial`). The database schema produced by the new set is identical to the old one (checked on two empty databases), so this database needs no schema change: only its `django_migrations` rows for the 13 project apps must be replaced. Commit `a6ec8f25` changed the app icons, so the web build is needed. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order (all `manage.py` commands in `backend`, with `PYTHONUTF8=1`):
+- a) Backup:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app migration sync'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Check: `.\venv\Scripts\python.exe manage.py check`. It must end with `System check identified 1 issue (0 silenced).` (the known Redis hint) or `no issues`. Stop and report any error.
+- c) Replace the old migration rows:
+  `.\venv\Scripts\python.exe manage.py shell -c "exec(open('../scratch/sync_migration_history.py', encoding='utf-8').read())"`
+  It must print a line starting with `SYNC: removed` or `SYNC: already synced`. If it prints `SYNC ABORTED` or fails, stop and report the full output (do not continue).
+- d) Record the new set: `.\venv\Scripts\python.exe manage.py migrate --fake`. Every applied line must end with `FAKED`; no line may say `OK` without `FAKED`.
+- e) Confirm: `.\venv\Scripts\python.exe manage.py showmigrations`. Every line must start with `[X]`. If any line starts with `[ ]`, stop and report it.
+- f) Web build in `frontend`: `npx ng build --delete-output-path=false`, wait for it to finish, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- g) Confirm the new icon is in the build: `Get-Content frontend\dist\browser\icons\icon-512x512.svg -TotalCount 3` (or `frontend\dist\icons\icon-512x512.svg` if the first path does not exist) must show `iconGradient`.
+
+4. Tool policy: only the commands above, `git status --short`, and `Get-Content`/`Select-String`/`Get-ChildItem` for reading files under `scratch/logs/` and `frontend/dist/`. The web build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
+
+6. Output and stop condition: a short English report with the backup filename and size, the check result, the SYNC line, the number of FAKED lines, whether every showmigrations line is `[X]`, the web build result and the patch line, and the step g output. No commit. End the turn after the report.
