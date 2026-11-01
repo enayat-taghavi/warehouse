@@ -17,6 +17,7 @@ import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
 @Component({
   selector: 'app-supervisor-invoices-hub',
@@ -197,6 +198,11 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     }
   }
 
+  onSearch(): void {
+    this.syncUrlParams();
+    this.fetchInvoices();
+  }
+
   syncUrlParams(): void {
     this.router.navigate([], {
       relativeTo: this.route,
@@ -226,7 +232,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isLoading = false;
         if (silent) return;
-        this.toast.error('خطا در دریافت فاکتورهای هزینه: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت فاکتورهای هزینه'));
         this.cdr.detectChanges();
       }
     });
@@ -260,7 +266,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در تایید فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید فاکتور'));
         this.cdr.detectChanges();
       }
     });
@@ -296,9 +302,9 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        const detail = err.error?.detail || err.error?.error || err.message || 'خطا در عودت فاکتور';
+        const detail = attendanceActionErrorMessage(err, 'خطا در عودت فاکتور');
         this.reasonDialogServerError = detail;
-        this.toast.error('خطا در عودت فاکتور: ' + detail);
+        this.toast.error(detail);
         this.cdr.detectChanges();
       }
     });
@@ -312,10 +318,14 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
 
   exportExcel(): void {
     this.toast.info('در حال تولید فایل اکسل فاکتورها...');
-    this.personnelApi.exportExpenseInvoicesExcel({
+    const params: any = {
       section_id: this.selectedSectionId || undefined,
       status: this.activeSubTab === 'pending' ? 'pending_supervisor' : undefined
-    }).subscribe({
+    };
+    if (this.searchQuery?.trim()) {
+      params.search = this.searchQuery.trim();
+    }
+    this.personnelApi.exportExpenseInvoicesExcel(params).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `Expense_Invoices_${this.selectedSectionId || 'all'}.xlsx`);
         this.toast.success('فایل اکسل فاکتورها با موفقیت دریافت شد.');
@@ -326,9 +336,6 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  importExcel(): void {
-    this.toast.info('قالب اکسل فاکتورها بارگیری شد.');
-  }
 
   clearSearch(): void {
     this.searchQuery = '';

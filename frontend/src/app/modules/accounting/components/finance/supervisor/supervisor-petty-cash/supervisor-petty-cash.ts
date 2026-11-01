@@ -14,6 +14,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
 @Component({
   selector: 'app-supervisor-petty-cash-hub',
@@ -162,6 +163,11 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
     }
   }
 
+  onSearch(): void {
+    this.syncUrlParams();
+    this.fetchPettyCash();
+  }
+
   syncUrlParams(): void {
     this.router.navigate([], {
       relativeTo: this.route,
@@ -191,7 +197,7 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isLoading = false;
         if (silent) return;
-        this.toast.error('خطا در دریافت اسناد تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت اسناد تن‌خواه'));
         this.cdr.detectChanges();
       }
     });
@@ -226,7 +232,7 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در تایید تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید تن‌خواه'));
         this.cdr.detectChanges();
       }
     });
@@ -265,7 +271,7 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در عودت تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در عودت تن‌خواه'));
         this.cdr.detectChanges();
       }
     });
@@ -273,10 +279,14 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
 
   exportExcel(): void {
     this.toast.info('در حال تولید فایل اکسل تن‌خواه...');
-    this.personnelApi.exportPettyCashTransactionsExcel({
+    const params: { section_id?: number; status?: string; search?: string } = {
       section_id: this.selectedSectionId || undefined,
       status: this.activeSubTab === 'pending' ? 'pending_supervisor' : undefined
-    }).subscribe({
+    };
+    if (this.searchQuery?.trim()) {
+      params.search = this.searchQuery.trim();
+    }
+    this.personnelApi.exportPettyCashTransactionsExcel(params).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `Petty_Cash_${this.selectedSectionId || 'all'}.xlsx`);
         this.toast.success('فایل اکسل اسناد تن‌خواه با موفقیت دریافت شد.');
@@ -287,9 +297,7 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  importExcel(): void {
-    this.toast.info('قالب اکسل تن‌خواه آماده بارگیری است.');
-  }
+  // دکمهٔ صوری قالب اکسل تن‌خواه حذف شد (ی۵۸)
 
   clearSearch(): void {
     this.searchQuery = '';

@@ -35,12 +35,6 @@
 
       <button
         type="button"
-        appAction="import-excel"
-        (click)="importExcel()"
-      ></button>
-
-      <button
-        type="button"
         appAction="refresh"
         [busy]="isLoading"
         (click)="fetchPettyCash()"
@@ -56,7 +50,7 @@
         <input
           type="text"
           [(ngModel)]="searchQuery"
-          (keyup.enter)="syncUrlParams()"
+          (keyup.enter)="onSearch()"
           placeholder="جستجو بر اساس عنوان سند تن‌خواه یا گیرنده وجه..."
           class="w-full pr-9 pl-8 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-sans" />
         <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>

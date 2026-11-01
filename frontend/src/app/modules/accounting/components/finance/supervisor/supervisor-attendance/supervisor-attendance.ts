@@ -215,7 +215,7 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error('خطا در دریافت لیست کارکرد: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت لیست کارکرد'));
         this.cdr.detectChanges();
       }
     });
@@ -384,14 +384,6 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     });
   }
 
-
-  exportExcel(): void {
-    this.toast.info('در حال صدور فایل اکسل کارکرد...');
-  }
-
-  importExcel(): void {
-    this.toast.info('قالب اکسل بازبینی کارکرد آماده بارگیری است.');
-  }
 
   clearSearch(): void {
     this.searchQuery = '';

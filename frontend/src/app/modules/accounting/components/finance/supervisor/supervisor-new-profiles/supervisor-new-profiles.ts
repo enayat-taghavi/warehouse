@@ -19,6 +19,8 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
+import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 
 export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
 
@@ -35,6 +37,7 @@ export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_req
     RouterLink,
     SvgIconDirective,
     WorkflowReasonDialogComponent,
+    PersianDatePipe,
   ],
   templateUrl: './supervisor-new-profiles.html',
   styleUrl: './supervisor-new-profiles.css'
@@ -54,6 +57,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
   selectedSection: ProjectSection | null = null;
   isLoadingSections = false;
 
+  loadError = '';
   searchQuery = '';
   isLoading = false;
   personnelItems: any[] = [];
@@ -96,7 +100,11 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
 
   // ─── دیالوگ علت رد (تغییرات ناوگان) ───
   isReasonDialogOpen = false;
-  reasonTarget: VehicleChangeRequest | null = null;
+  reasonTarget: any = null;
+  reasonTargetType: 'vehicle' | 'vehicle_cr' = 'vehicle_cr';
+  reasonDialogTitle = 'علت رد تغییرات خودرو';
+  reasonDialogConfirmLabel = 'ثبت رد';
+  isSavingReason = false;
   reasonServerError = '';
 
   private routeSub?: Subscription;
@@ -224,6 +232,13 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     }
   }
 
+  onSearch(): void {
+    this.pages.personnel = 1;
+    this.pages.personnel_cr = 1;
+    this.syncUrlParams();
+    this.fetchProfiles();
+  }
+
   syncUrlParams(): void {
     this.router.navigate([], {
       relativeTo: this.route,
@@ -253,6 +268,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
 
   fetchProfiles(): void {
     this.isLoading = true;
+    this.loadError = '';
     const params: any = { approval_status: 'pending_supervisor,draft' };
     if (this.selectedSectionId) {
       params.section_id = this.selectedSectionId;
@@ -261,20 +277,33 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       params.search = this.searchQuery.trim();
     }
 
+    let pending = 4;
+    const checkDone = () => {
+      pending--;
+      if (pending <= 0) {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    };
+    const onError = () => {
+      this.loadError = 'دریافت اطلاعات انجام نشد.';
+      this.toast.error('دریافت اطلاعات انجام نشد.');
+      this.cdr.detectChanges();
+      checkDone();
+    };
+
     // پرونده‌های پرسنل: فهرست فقط‌خواندنی با صفحه‌بندی سمت سرور (تایید در «کارهای من»)
     this.personnelApi.getPersonnelProfilesPage({ ...params, page: this.pages.personnel, page_size: this.pageSize }).subscribe({
       next: (res: PagedResult<any>) => {
         this.personnelItems = res?.results || [];
         this.totals.personnel = res?.count ?? this.personnelItems.length;
         this.updateCounters();
-        this.isLoading = false;
         this.cdr.detectChanges();
+        checkDone();
       },
       error: (err: any) => {
         if (err?.status === 404 && this.pages.personnel > 1) { this.pages.personnel = 1; this.fetchProfiles(); return; }
-        this.isLoading = false;
-        this.toast.error('خطا در دریافت لیست پرسنل: ' + (err.error?.error || err.message || 'نامشخص'));
-        this.cdr.detectChanges();
+        onError();
       }
     });
 
@@ -283,9 +312,10 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
         this.vehicleItems = vList || [];
         this.updateCounters();
         this.cdr.detectChanges();
+        checkDone();
       },
       error: () => {
-        this.cdr.detectChanges();
+        onError();
       }
     });
 
@@ -296,10 +326,11 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
         this.totals.personnel_cr = res?.count ?? this.personnelChangeRequests.length;
         this.updateCounters();
         this.cdr.detectChanges();
+        checkDone();
       },
       error: (err: any) => {
         if (err?.status === 404 && this.pages.personnel_cr > 1) { this.pages.personnel_cr = 1; this.fetchProfiles(); return; }
-        this.cdr.detectChanges();
+        onError();
       }
     });
 
@@ -310,9 +341,10 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
         this.vehicleChangeRequests = all.filter((cr: any) => cr.status === 'pending_supervisor' || cr.status === 'draft');
         this.updateCounters();
         this.cdr.detectChanges();
+        checkDone();
       },
       error: () => {
-        this.cdr.detectChanges();
+        onError();
       }
     });
   }
@@ -374,21 +406,18 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.error('خطا در تایید خودرو: ' + this.vehicleErrorText(err, err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید خودرو'));
       }
     });
   }
 
   rejectVehicle(item: any): void {
-    this.personnelApi.requestVehicleRevision(item.id, 'نیازمند اصلاح مدارک ناوگان توسط اپراتور').subscribe({
-      next: () => {
-        this.toast.warning(`پرونده خودرو ${item.plate_number} عودت گردید.`);
-        this.fetchProfiles();
-      },
-      error: (err: any) => {
-        this.toast.error('خطا در عودت خودرو: ' + this.vehicleErrorText(err, err.message || 'نامشخص'));
-      }
-    });
+    this.reasonTargetType = 'vehicle';
+    this.reasonTarget = item;
+    this.reasonDialogTitle = `علت عودت پرونده خودرو ${item.plate_number || ''}`;
+    this.reasonDialogConfirmLabel = 'ثبت عودت';
+    this.reasonServerError = '';
+    this.isReasonDialogOpen = true;
   }
 
   approveVehicleChange(cr: VehicleChangeRequest, note?: string): void {
@@ -405,36 +434,65 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.error('خطا در تایید تغییرات ناوگان: ' + this.vehicleErrorText(err, err.message || 'نامشخص'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید تغییرات ناوگان'));
       }
     });
   }
 
   /** رد تغییرات ناوگان: علت با دیالوگ مشترک گرفته می‌شود (به‌جای prompt مرورگر) */
   rejectVehicleChange(cr: VehicleChangeRequest): void {
+    this.reasonTargetType = 'vehicle_cr';
     this.reasonTarget = cr;
+    this.reasonDialogTitle = 'علت رد تغییرات خودرو';
+    this.reasonDialogConfirmLabel = 'ثبت رد';
     this.reasonServerError = '';
     this.isReasonDialogOpen = true;
   }
 
   onReasonConfirmed(reason: string): void {
-    const cr = this.reasonTarget;
-    if (!cr) return;
-    this.personnelApi.rejectVehicleChangeRequest(cr.id, reason.trim()).subscribe({
-      next: () => {
-        this.isReasonDialogOpen = false;
-        this.reasonTarget = null;
-        this.toast.warning(`درخواست تغییرات خودرو «${cr.plate_number || ''}» عودت داده شد.`);
-        this.isDiffModalOpen = false;
-        this.fetchProfiles();
-      },
-      error: (err: any) => {
-        this.reasonServerError = this.vehicleErrorText(err, 'خطا در رد تغییرات ناوگان');
-      }
-    });
+    const trimmed = (reason || '').trim();
+    if (!trimmed || this.isSavingReason) return;
+    const target = this.reasonTarget;
+    if (!target) return;
+
+    if (this.reasonTargetType === 'vehicle') {
+      this.isSavingReason = true;
+      this.reasonServerError = '';
+      this.personnelApi.requestVehicleRevision(target.id, trimmed).subscribe({
+        next: () => {
+          this.isSavingReason = false;
+          this.isReasonDialogOpen = false;
+          this.reasonTarget = null;
+          this.toast.warning(`پرونده خودرو ${target.plate_number || ''} عودت گردید.`);
+          this.fetchProfiles();
+        },
+        error: (err: any) => {
+          this.isSavingReason = false;
+          this.reasonServerError = attendanceActionErrorMessage(err, 'خطا در عودت خودرو');
+        }
+      });
+    } else {
+      this.isSavingReason = true;
+      this.reasonServerError = '';
+      this.personnelApi.rejectVehicleChangeRequest(target.id, trimmed).subscribe({
+        next: () => {
+          this.isSavingReason = false;
+          this.isReasonDialogOpen = false;
+          this.reasonTarget = null;
+          this.toast.warning(`درخواست تغییرات خودرو «${target.plate_number || ''}» عودت داده شد.`);
+          this.isDiffModalOpen = false;
+          this.fetchProfiles();
+        },
+        error: (err: any) => {
+          this.isSavingReason = false;
+          this.reasonServerError = attendanceActionErrorMessage(err, 'خطا در رد تغییرات ناوگان');
+        }
+      });
+    }
   }
 
   onReasonCancelled(): void {
+    if (this.isSavingReason) return;
     this.isReasonDialogOpen = false;
     this.reasonTarget = null;
     this.reasonServerError = '';
@@ -581,6 +639,9 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
 
   clearSearch(): void {
     this.searchQuery = '';
+    this.pages.personnel = 1;
+    this.pages.personnel_cr = 1;
     this.syncUrlParams();
+    this.fetchProfiles();
   }
 }
