@@ -118,6 +118,108 @@
         </div>
       </div>
 
+      <!-- Field Mapping Summary Card (وضعیت شناسایی و انطباق فیلدها) -->
+      <div *ngIf="previewResult.fields_info" class="field-mapping-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px;">🔍</span>
+            <span style="font-size: 11px; font-weight: bold; color: #1e293b;">وضعیت شناسایی ستون‌های فایل</span>
+          </div>
+
+          <div style="display: flex; gap: 4px; background: #f1f5f9; padding: 2px; border-radius: 8px;">
+            <button
+              type="button"
+              (click)="activeFieldTab = 'detected'"
+              [style.background]="activeFieldTab === 'detected' ? '#ffffff' : 'transparent'"
+              [style.color]="activeFieldTab === 'detected' ? '#047857' : '#64748b'"
+              [style.box-shadow]="activeFieldTab === 'detected' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+              style="border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 32px;"
+            >
+              <span>✓ شناسایی‌شده</span>
+              <span style="background: rgba(16, 185, 129, 0.15); color: #047857; padding: 1px 5px; border-radius: 9999px; font-size: 10px;">
+                {{ previewResult.fields_info.detected_count }}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              *ngIf="previewResult.fields_info.unrecognized_count > 0"
+              (click)="activeFieldTab = 'unrecognized'"
+              [style.background]="activeFieldTab === 'unrecognized' ? '#ffffff' : 'transparent'"
+              [style.color]="activeFieldTab === 'unrecognized' ? '#b45309' : '#64748b'"
+              [style.box-shadow]="activeFieldTab === 'unrecognized' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+              style="border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 32px;"
+            >
+              <span>⚠ ناشناخته در فایل</span>
+              <span style="background: rgba(245, 158, 11, 0.15); color: #b45309; padding: 1px 5px; border-radius: 9999px; font-size: 10px;">
+                {{ previewResult.fields_info.unrecognized_count }}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              *ngIf="previewResult.fields_info.missing_count > 0"
+              (click)="activeFieldTab = 'missing'"
+              [style.background]="activeFieldTab === 'missing' ? '#ffffff' : 'transparent'"
+              [style.color]="activeFieldTab === 'missing' ? '#475569' : '#64748b'"
+              [style.box-shadow]="activeFieldTab === 'missing' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
+              style="border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 32px;"
+            >
+              <span>ستون‌های غایب</span>
+              <span style="background: rgba(100, 116, 139, 0.15); color: #475569; padding: 1px 5px; border-radius: 9999px; font-size: 10px;">
+                {{ previewResult.fields_info.missing_count }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Detected fields badges -->
+        <div *ngIf="activeFieldTab === 'detected'" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 110px; overflow-y: auto; padding: 2px;">
+          <span
+            *ngFor="let f of previewResult.fields_info.detected_fields"
+            style="display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"
+            [title]="'عنوان در فایل: ' + f.header"
+          >
+            <span style="color: #059669;">✓</span>
+            <span>{{ f.label }}</span>
+            <span style="color: #047857; opacity: 0.75; font-size: 9px;">(ستون {{ f.column }})</span>
+          </span>
+        </div>
+
+        <!-- Unrecognized columns badges -->
+        <div *ngIf="activeFieldTab === 'unrecognized'" style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="font-size: 10px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; padding: 4px 8px; border-radius: 6px;">
+            ستون‌های زیر در فایل اکسل شناسایی نشدند و محتوای آنها ذخیره نمی‌شود:
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 90px; overflow-y: auto; padding: 2px;">
+            <span
+              *ngFor="let u of previewResult.fields_info.unrecognized_columns"
+              style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"
+            >
+              <span>⚠</span>
+              <span>{{ u.header }}</span>
+              <span style="opacity: 0.75; font-size: 9px;">(ستون {{ u.column }})</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Missing system fields badges -->
+        <div *ngIf="activeFieldTab === 'missing'" style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="font-size: 10px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px;">
+            ستون‌های زیر در فایل اکسل شما وجود ندارند و برای آنها مقادیر پیش‌فرض منظور می‌شود:
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 90px; overflow-y: auto; padding: 2px;">
+            <span
+              *ngFor="let m of previewResult.fields_info.missing_fields"
+              style="display: inline-flex; align-items: center; gap: 3px; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 6px;"
+            >
+              <span>—</span>
+              <span>{{ m.label }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Upsert Option in Preview -->
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
         <span style="font-size: 11px; color: #334155; font-weight: bold;">به‌روزرسانی رکوردهای تکراری در صورت تطابق شناسه یا کد ملی</span>
@@ -200,6 +302,19 @@
 
     <!-- Step 3: Final Results -->
     <div *ngIf="step === 'result' && result" class="result-section">
+
+      <!-- Result Field Mapping Badges -->
+      <div *ngIf="result.fields_info" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <span style="font-size: 11px; font-weight: bold; color: #334155;">وضعیت تطبیق فیلدها:</span>
+        <div style="display: flex; gap: 6px;">
+          <span style="font-size: 10px; font-weight: bold; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px;">
+            {{ result.fields_info.detected_count }} فیلد شناسایی و اعمال شد
+          </span>
+          <span *ngIf="result.fields_info.unrecognized_count > 0" style="font-size: 10px; font-weight: bold; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px;">
+            {{ result.fields_info.unrecognized_count }} ستون ناشناخته نادیده گرفته شد
+          </span>
+        </div>
+      </div>
 
       <!-- Success Summary -->
       <div *ngIf="result.success" class="result-summary success">

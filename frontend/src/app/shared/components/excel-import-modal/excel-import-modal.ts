@@ -30,6 +30,7 @@ export class ExcelImportModal {
   previewResult: ImportResult | null = null;
   result: ImportResult | null = null;
   fileError: string | null = null;
+  activeFieldTab: 'detected' | 'unrecognized' | 'missing' = 'detected';
 
   constructor(private cdr: ChangeDetectorRef) {}
 
@@ -150,6 +151,7 @@ export class ExcelImportModal {
     this.isAnalyzing = false;
     this.isUploading = false;
     this.uploadProgress = 0;
+    this.activeFieldTab = 'detected';
     this.cdr.detectChanges();
   }
 

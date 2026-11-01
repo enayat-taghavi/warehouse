@@ -54,9 +54,37 @@ export interface User {
   user_permissions?: any[];
 }
 
+export interface ImportFieldDetection {
+  column: number;
+  header: string;
+  field: string;
+  label: string;
+}
+
+export interface ImportUnrecognizedColumn {
+  column: number;
+  header: string;
+}
+
+export interface ImportMissingField {
+  field: string;
+  label: string;
+}
+
+export interface ImportFieldsInfo {
+  detected_count: number;
+  detected_fields: ImportFieldDetection[];
+  unrecognized_count: number;
+  unrecognized_columns: ImportUnrecognizedColumn[];
+  missing_count: number;
+  missing_fields: ImportMissingField[];
+}
+
 export interface ImportResult {
   success: boolean;
   dry_run?: boolean;
+  message?: string;
+  fields_info?: ImportFieldsInfo;
   summary: {
     total_rows: number;
     created: number;

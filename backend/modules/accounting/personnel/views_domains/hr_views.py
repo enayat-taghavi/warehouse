@@ -1539,6 +1539,101 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
                 'errors': [{'row': header_row_idx, 'field': 'ستون‌ها', 'message': 'شیت پرسنلی یا ستون‌های الزامی (کد ملی، نام خانوادگی) در فایل یافت نشد.'}]
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        FIELD_DISPLAY_LABELS = {
+            'national_code': 'کد ملی',
+            'first_name': 'نام',
+            'last_name': 'نام خانوادگی',
+            'father_name': 'نام پدر',
+            'birth_date': 'تاریخ تولد',
+            'id_number': 'شماره شناسنامه',
+            'birth_place': 'محل تولد',
+            'education_level': 'مدرک تحصیلی',
+            'insurance_type': 'نوع بیمه',
+            'insurance_number': 'شماره بیمه',
+            'insurance_name': 'نام بیمه',
+            'exemption_type': 'نوع معافیت',
+            'nationality_code': 'ملیت',
+            'citizenship_country_code': 'کشور محل تابعیت',
+            'residence_country_code': 'کشور محل زندگی',
+            'postal_code': 'کد پستی',
+            'address': 'آدرس',
+            'job_category': 'رسته شغلی',
+            'job_title': 'سمت و عنوان شغل',
+            'employment_type': 'نوع استخدام',
+            'start_date': 'تاریخ شروع به کار',
+            'end_date': 'تاریخ پایان کار',
+            'retirement_date': 'تاریخ بازنشستگی',
+            'job_code': 'کد شغل',
+            'id_series': 'مسلسل شناسنامه',
+            'id_serial': 'سریال شناسنامه',
+            'issue_place': 'محل صدور',
+            'issue_date': 'تاریخ صدور',
+            'gender': 'جنسیت',
+            'phone_number': 'شماره موبایل',
+            'account_number': 'شماره حساب',
+            'sheba_number': 'شماره شبا',
+            'bank_name': 'نام بانک',
+            'marital_status': 'وضعیت تاهل',
+            'children_count': 'تعداد فرزند',
+            'contract_hours': 'ساعت کار قرارداد',
+            'contract_base_salary': 'حقوق قرارداد شده',
+            'job_grade': 'گروه شغلی',
+            'daily_base_wage': 'مزد روزانه',
+            'daily_seniority_bonus': 'پایه سنواتی',
+            'base_years_experience': 'تعداد سال کارکرد',
+            'base_daily_rate': 'مزد مبنا',
+            'status_category': 'وضعیت پرسنل',
+            'group_status': 'گروه پرسنل',
+            'include_in_tax': 'مشمول مالیات',
+            'include_in_insurance': 'مشمول بیمه',
+            'include_in_bank': 'پرداخت بانکی',
+        }
+
+        detected_fields = []
+        unrecognized_columns = []
+        col_to_field = {col_idx: f_name for f_name, col_idx in col_map.items()}
+
+        for c in range(1, ws.max_column + 1):
+            val1 = str(ws.cell(row=header_row_idx, column=c).value or '').strip()
+            val2 = str(ws.cell(row=header_row_idx + 1, column=c).value or '').strip() if header_row_idx + 1 < data_start_row else ''
+            col_title = val1 or val2 or f'ستون {c}'
+
+            if c in col_to_field:
+                fn = col_to_field[c]
+                detected_fields.append({
+                    'column': c,
+                    'header': col_title,
+                    'field': fn,
+                    'label': FIELD_DISPLAY_LABELS.get(fn, fn),
+                })
+            else:
+                has_content = bool(val1 or val2) or any(
+                    ws.cell(row=r, column=c).value is not None and str(ws.cell(row=r, column=c).value).strip() != ''
+                    for r in range(data_start_row, min(ws.max_row + 1, data_start_row + 15))
+                )
+                if has_content:
+                    unrecognized_columns.append({
+                        'column': c,
+                        'header': col_title,
+                    })
+
+        missing_fields = []
+        for fn, flabel in FIELD_DISPLAY_LABELS.items():
+            if fn not in col_map:
+                missing_fields.append({
+                    'field': fn,
+                    'label': flabel,
+                })
+
+        fields_info = {
+            'detected_count': len(detected_fields),
+            'detected_fields': detected_fields,
+            'unrecognized_count': len(unrecognized_columns),
+            'unrecognized_columns': unrecognized_columns,
+            'missing_count': len(missing_fields),
+            'missing_fields': missing_fields,
+        }
+
         created_count = 0
         updated_count = 0
         skipped_count = 0
@@ -1927,6 +2022,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             'preview_rows': preview_rows,
             'errors': errors,
             'warnings': import_warnings,
+            'fields_info': fields_info,
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='export-excel')

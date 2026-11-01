@@ -128,4 +128,62 @@ describe('ExcelImportModal Component & DOM Normalization Tests', () => {
 
     document.body.removeChild(container);
   });
+
+  it('should correctly handle fields_info with detected, unrecognized, and missing fields', () => {
+    const responseWithFields: ImportResult = {
+      success: true,
+      dry_run: true,
+      errors: [],
+      summary: {
+        total_rows: 59,
+        valid_count: 59,
+        error_count: 0,
+        created: 59,
+        updated: 0,
+        skipped: 0
+      },
+      fields_info: {
+        detected_count: 45,
+        detected_fields: [
+          { column: 4, header: 'کد ملی', field: 'national_code', label: 'کد ملی' },
+          { column: 5, header: 'نام', field: 'first_name', label: 'نام' },
+          { column: 6, header: 'نام خانوادگی', field: 'last_name', label: 'نام خانوادگی' }
+        ],
+        unrecognized_count: 1,
+        unrecognized_columns: [
+          { column: 2, header: 'ردیف' }
+        ],
+        missing_count: 2,
+        missing_fields: [
+          { field: 'sheba_number', label: 'شماره شبا' },
+          { field: 'bank_name', label: 'نام بانک' }
+        ]
+      }
+    };
+
+    component.importFn = vi.fn().mockReturnValue(of(responseWithFields));
+    const testFile = new File(['sample'], 'personnel.xlsx');
+
+    component.handleFileSelection(testFile);
+
+    expect(component.step).toBe('preview');
+    expect(component.previewResult?.fields_info).toBeDefined();
+    expect(component.previewResult?.fields_info?.detected_count).toBe(45);
+    expect(component.previewResult?.fields_info?.unrecognized_count).toBe(1);
+    expect(component.previewResult?.fields_info?.missing_count).toBe(2);
+    expect(component.activeFieldTab).toBe('detected');
+
+    // تب را به ستون‌های ناشناخته تغییر دهیم
+    component.activeFieldTab = 'unrecognized';
+    expect(component.activeFieldTab).toBe('unrecognized');
+
+    // تب را به فیلدهای غایب تغییر دهیم
+    component.activeFieldTab = 'missing';
+    expect(component.activeFieldTab).toBe('missing');
+
+    // حذف فایل باید تب را ریست کند
+    component.removeFile();
+    expect(component.activeFieldTab).toBe('detected');
+    expect(component.previewResult).toBeNull();
+  });
 });
