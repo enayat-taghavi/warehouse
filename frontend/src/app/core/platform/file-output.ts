@@ -269,7 +269,7 @@ export async function shareBlob(blob: Blob, filename: string): Promise<ShareResu
         throw shareErr;
       }
     } catch (err) {
-      notifyError('اشتراکگذاری فایل انجام نشد. دوباره تلاش کنید.', err);
+      notifyError('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.', err);
       throw err;
     }
   }
@@ -297,14 +297,14 @@ export async function shareBlob(blob: Blob, filename: string): Promise<ShareResu
         }
         // Fall through to download fallback below
       } else {
-        notifyError('اشتراکگذاری فایل انجام نشد. دوباره تلاش کنید.', err);
+        notifyError('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.', err);
         throw err;
       }
     }
   }
 
   await saveBlob(blob, filename, { offerShare: false });
-  fileOutputInfoNotifier?.('مرورگر شما اشتراکگذاری این فایل را پشتیبانی نمیکند؛ فایل دانلود شد.');
+  fileOutputInfoNotifier?.('مرورگر شما اشتراک‌گذاری این فایل را پشتیبانی نمی‌کند؛ فایل دانلود شد.');
   return 'downloaded';
 }
 
@@ -360,7 +360,7 @@ export async function shareUrl(url: string, filename?: string): Promise<ShareRes
     }
     blob = await response.blob();
   } catch (err) {
-    notifyError('اشتراکگذاری فایل انجام نشد. دوباره تلاش کنید.', err);
+    notifyError('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.', err);
     throw err;
   }
 

@@ -790,7 +790,7 @@ describe('file-output', () => {
       expect(result).toBe('downloaded');
       expect(clickCount).toBe(1);
       expect(infoNotifier).toHaveBeenCalledTimes(1);
-      expect(infoNotifier).toHaveBeenCalledWith('مرورگر شما اشتراکگذاری این فایل را پشتیبانی نمیکند؛ فایل دانلود شد.');
+      expect(infoNotifier).toHaveBeenCalledWith('مرورگر شما اشتراک‌گذاری این فایل را پشتیبانی نمی‌کند؛ فایل دانلود شد.');
     });
 
     it('27. web shareBlob falls back to download when file sharing is unsupported or canShare is false', async () => {
@@ -827,7 +827,7 @@ describe('file-output', () => {
 
       expect(result).toBe('downloaded');
       expect(clickCount).toBe(1);
-      expect(infoNotifier).toHaveBeenCalledWith('مرورگر شما اشتراکگذاری این فایل را پشتیبانی نمیکند؛ فایل دانلود شد.');
+      expect(infoNotifier).toHaveBeenCalledWith('مرورگر شما اشتراک‌گذاری این فایل را پشتیبانی نمی‌کند؛ فایل دانلود شد.');
     });
 
     it('28. web shareBlob on unexpected error calls notifyError and rethrows', async () => {
@@ -847,7 +847,7 @@ describe('file-output', () => {
 
       await expect(shareBlob(new Blob(['hello']), 'doc.pdf')).rejects.toThrow('Unexpected share crash');
       expect(errorNotifier).toHaveBeenCalledTimes(1);
-      expect(errorNotifier).toHaveBeenCalledWith('اشتراکگذاری فایل انجام نشد. دوباره تلاش کنید.');
+      expect(errorNotifier).toHaveBeenCalledWith('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.');
     });
 
     it('29. native shareBlob writes file as base64 with Directory.Documents and invokes bridge share returning shared', async () => {
@@ -905,7 +905,7 @@ describe('file-output', () => {
 
       await expect(shareBlob(new Blob(['data']), 'fail.pdf')).rejects.toThrow('Disk I/O error');
       expect(errorNotifier).toHaveBeenCalledTimes(1);
-      expect(errorNotifier).toHaveBeenCalledWith('اشتراکگذاری فایل انجام نشد. دوباره تلاش کنید.');
+      expect(errorNotifier).toHaveBeenCalledWith('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.');
     });
   });
 
@@ -1021,7 +1021,7 @@ describe('file-output', () => {
 
       await expect(shareUrl('/api/missing.pdf')).rejects.toThrow('Failed to download file: 404 Not Found');
       expect(errorNotifier).toHaveBeenCalledTimes(1);
-      expect(errorNotifier).toHaveBeenCalledWith('اشتراکگذاری فایل انجام نشد. دوباره تلاش کنید.');
+      expect(errorNotifier).toHaveBeenCalledWith('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.');
     });
   });
 
