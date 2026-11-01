@@ -68,6 +68,7 @@ export class ExcelImportModal {
     this.fileError = null;
     this.result = null;
     this.previewResult = null;
+    this.activeFieldTab = 'detected';
 
     if (!file.name.endsWith('.xlsx')) {
       this.fileError = 'فقط فایل‌های با فرمت xlsx پشتیبانی می‌شوند.';

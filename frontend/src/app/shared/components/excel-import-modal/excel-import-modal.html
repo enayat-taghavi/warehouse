@@ -119,101 +119,110 @@
       </div>
 
       <!-- Field Mapping Summary Card (وضعیت شناسایی و انطباق فیلدها) -->
-      <div *ngIf="previewResult.fields_info" class="field-mapping-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 13px;">🔍</span>
-            <span style="font-size: 11px; font-weight: bold; color: #1e293b;">وضعیت شناسایی ستون‌های فایل</span>
+      <div *ngIf="previewResult.fields_info" class="field-mapping-card flex flex-col gap-2 rounded-xl border border-line bg-surface p-3">
+        <div class="flex flex-wrap items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1.5 text-fg">
+            <svg class="h-4 w-4 text-fg-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="search" aria-hidden="true"></svg>
+            <span class="text-[11px] font-bold">وضعیت شناسایی ستون‌های فایل</span>
           </div>
 
-          <div style="display: flex; gap: 4px; background: #f1f5f9; padding: 2px; border-radius: 8px;">
+          <div class="flex flex-wrap gap-1 rounded-lg bg-surface-muted p-0.5">
             <button
               type="button"
               (click)="activeFieldTab = 'detected'"
-              [style.background]="activeFieldTab === 'detected' ? '#ffffff' : 'transparent'"
-              [style.color]="activeFieldTab === 'detected' ? '#047857' : '#64748b'"
-              [style.box-shadow]="activeFieldTab === 'detected' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
-              style="border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 32px;"
+              [attr.aria-pressed]="activeFieldTab === 'detected'"
+              [class.bg-surface]="activeFieldTab === 'detected'"
+              [class.shadow-sm]="activeFieldTab === 'detected'"
+              [class.text-emerald-700]="activeFieldTab === 'detected'"
+              [class.text-fg-muted]="activeFieldTab !== 'detected'"
+              class="flex min-h-[40px] cursor-pointer items-center gap-1 rounded-md px-2.5 text-[11px] font-bold"
+              title="ستون‌های شناسایی‌شده"
+              aria-label="ستون‌های شناسایی‌شده"
             >
-              <span>✓ شناسایی‌شده</span>
-              <span style="background: rgba(16, 185, 129, 0.15); color: #047857; padding: 1px 5px; border-radius: 9999px; font-size: 10px;">
-                {{ previewResult.fields_info.detected_count }}
-              </span>
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="check" aria-hidden="true"></svg>
+              <span>شناسایی‌شده</span>
+              <span class="rounded-full bg-emerald-500/15 px-1.5 text-[10px] text-emerald-700">{{ previewResult.fields_info.detected_count }}</span>
             </button>
 
             <button
               type="button"
               *ngIf="previewResult.fields_info.unrecognized_count > 0"
               (click)="activeFieldTab = 'unrecognized'"
-              [style.background]="activeFieldTab === 'unrecognized' ? '#ffffff' : 'transparent'"
-              [style.color]="activeFieldTab === 'unrecognized' ? '#b45309' : '#64748b'"
-              [style.box-shadow]="activeFieldTab === 'unrecognized' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
-              style="border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 32px;"
+              [attr.aria-pressed]="activeFieldTab === 'unrecognized'"
+              [class.bg-surface]="activeFieldTab === 'unrecognized'"
+              [class.shadow-sm]="activeFieldTab === 'unrecognized'"
+              [class.text-amber-700]="activeFieldTab === 'unrecognized'"
+              [class.text-fg-muted]="activeFieldTab !== 'unrecognized'"
+              class="flex min-h-[40px] cursor-pointer items-center gap-1 rounded-md px-2.5 text-[11px] font-bold"
+              title="ستون‌های ناشناخته در فایل"
+              aria-label="ستون‌های ناشناخته در فایل"
             >
-              <span>⚠ ناشناخته در فایل</span>
-              <span style="background: rgba(245, 158, 11, 0.15); color: #b45309; padding: 1px 5px; border-radius: 9999px; font-size: 10px;">
-                {{ previewResult.fields_info.unrecognized_count }}
-              </span>
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
+              <span>ناشناخته در فایل</span>
+              <span class="rounded-full bg-amber-500/15 px-1.5 text-[10px] text-amber-700">{{ previewResult.fields_info.unrecognized_count }}</span>
             </button>
 
             <button
               type="button"
               *ngIf="previewResult.fields_info.missing_count > 0"
               (click)="activeFieldTab = 'missing'"
-              [style.background]="activeFieldTab === 'missing' ? '#ffffff' : 'transparent'"
-              [style.color]="activeFieldTab === 'missing' ? '#475569' : '#64748b'"
-              [style.box-shadow]="activeFieldTab === 'missing' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'"
-              style="border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 32px;"
+              [attr.aria-pressed]="activeFieldTab === 'missing'"
+              [class.bg-surface]="activeFieldTab === 'missing'"
+              [class.shadow-sm]="activeFieldTab === 'missing'"
+              [class.text-fg]="activeFieldTab === 'missing'"
+              [class.text-fg-muted]="activeFieldTab !== 'missing'"
+              class="flex min-h-[40px] cursor-pointer items-center gap-1 rounded-md px-2.5 text-[11px] font-bold"
+              title="ستون‌هایی که در فایل نیستند"
+              aria-label="ستون‌هایی که در فایل نیستند"
             >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="minus" aria-hidden="true"></svg>
               <span>ستون‌های غایب</span>
-              <span style="background: rgba(100, 116, 139, 0.15); color: #475569; padding: 1px 5px; border-radius: 9999px; font-size: 10px;">
-                {{ previewResult.fields_info.missing_count }}
-              </span>
+              <span class="rounded-full bg-fg-muted/15 px-1.5 text-[10px] text-fg-muted">{{ previewResult.fields_info.missing_count }}</span>
             </button>
           </div>
         </div>
 
         <!-- Detected fields badges -->
-        <div *ngIf="activeFieldTab === 'detected'" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 110px; overflow-y: auto; padding: 2px;">
+        <div *ngIf="activeFieldTab === 'detected'" class="flex max-h-[110px] flex-wrap gap-1.5 overflow-y-auto p-0.5">
           <span
             *ngFor="let f of previewResult.fields_info.detected_fields"
-            style="display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"
+            class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800"
             [title]="'عنوان در فایل: ' + f.header"
           >
-            <span style="color: #059669;">✓</span>
+            <svg class="h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="check" aria-hidden="true"></svg>
             <span>{{ f.label }}</span>
-            <span style="color: #047857; opacity: 0.75; font-size: 9px;">(ستون {{ f.column }})</span>
+            <span class="text-[9px] text-emerald-700/75">(ستون {{ f.column }})</span>
           </span>
         </div>
 
         <!-- Unrecognized columns badges -->
-        <div *ngIf="activeFieldTab === 'unrecognized'" style="display: flex; flex-direction: column; gap: 5px;">
-          <div style="font-size: 10px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; padding: 4px 8px; border-radius: 6px;">
+        <div *ngIf="activeFieldTab === 'unrecognized'" class="flex flex-col gap-1.5">
+          <div class="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
             ستون‌های زیر در فایل اکسل شناسایی نشدند و محتوای آنها ذخیره نمی‌شود:
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 90px; overflow-y: auto; padding: 2px;">
+          <div class="flex max-h-[90px] flex-wrap gap-1.5 overflow-y-auto p-0.5">
             <span
               *ngFor="let u of previewResult.fields_info.unrecognized_columns"
-              style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"
+              class="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800"
             >
-              <span>⚠</span>
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
               <span>{{ u.header }}</span>
-              <span style="opacity: 0.75; font-size: 9px;">(ستون {{ u.column }})</span>
+              <span class="text-[9px] opacity-75">(ستون {{ u.column }})</span>
             </span>
           </div>
         </div>
 
         <!-- Missing system fields badges -->
-        <div *ngIf="activeFieldTab === 'missing'" style="display: flex; flex-direction: column; gap: 5px;">
-          <div style="font-size: 10px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px;">
-            ستون‌های زیر در فایل اکسل شما وجود ندارند و برای آنها مقادیر پیش‌فرض منظور می‌شود:
+        <div *ngIf="activeFieldTab === 'missing'" class="flex flex-col gap-1.5">
+          <div class="rounded-md border border-line bg-surface-muted px-2 py-1 text-[10px] text-fg-muted">
+            ستون‌های زیر در فایل اکسل شما وجود ندارند. پرسنل جدید برای آنها مقدار پیش‌فرض می‌گیرد و مقدار فعلی پرسنلِ موجود دست نمی‌خورد:
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 90px; overflow-y: auto; padding: 2px;">
+          <div class="flex max-h-[90px] flex-wrap gap-1.5 overflow-y-auto p-0.5">
             <span
               *ngFor="let m of previewResult.fields_info.missing_fields"
-              style="display: inline-flex; align-items: center; gap: 3px; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 6px;"
+              class="inline-flex items-center gap-1 rounded-md border border-line bg-surface-muted px-2 py-0.5 text-[10px] font-semibold text-fg-muted"
             >
-              <span>—</span>
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="minus" aria-hidden="true"></svg>
               <span>{{ m.label }}</span>
             </span>
           </div>
@@ -304,13 +313,13 @@
     <div *ngIf="step === 'result' && result" class="result-section">
 
       <!-- Result Field Mapping Badges -->
-      <div *ngIf="result.fields_info" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-        <span style="font-size: 11px; font-weight: bold; color: #334155;">وضعیت تطبیق فیلدها:</span>
-        <div style="display: flex; gap: 6px;">
-          <span style="font-size: 10px; font-weight: bold; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px;">
+      <div *ngIf="result.fields_info" class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-muted px-3.5 py-2.5">
+        <span class="text-[11px] font-bold text-fg">وضعیت تطبیق فیلدها:</span>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
             {{ result.fields_info.detected_count }} فیلد شناسایی و اعمال شد
           </span>
-          <span *ngIf="result.fields_info.unrecognized_count > 0" style="font-size: 10px; font-weight: bold; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px;">
+          <span *ngIf="result.fields_info.unrecognized_count > 0" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
             {{ result.fields_info.unrecognized_count }} ستون ناشناخته نادیده گرفته شد
           </span>
         </div>
