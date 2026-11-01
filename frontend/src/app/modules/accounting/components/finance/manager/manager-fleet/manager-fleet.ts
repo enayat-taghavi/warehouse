@@ -23,6 +23,7 @@ export type ManagerFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 @Component({
   selector: 'app-manager-fleet-hub',
   standalone: true,
+  host: { '(document:keydown.escape)': 'onGlobalEscape()' },
   imports: [
     CommonModule,
     FormsModule,
@@ -95,6 +96,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
   fiscalYear = '1405';
   selectedMonth = 'تیر';
   isLoading = false;
+  loadError = '';
 
   readonly monthsList = [
     'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
@@ -248,6 +250,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingSections = false;
+        this.toast.showError('دریافت اطلاعات بخش‌ها انجام نشد.');
         this.fetchFleetData();
       }
     });
@@ -282,6 +285,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
 
   fetchFleetData(): void {
     this.isLoading = true;
+    this.loadError = '';
     const baseParams: any = {};
     if (this.selectedSectionId) baseParams.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) baseParams.search = this.searchQuery.trim();
@@ -289,6 +293,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     // ۱. ناوگان جدید در انتظار تصویب مدیر
     this.personnelApi.getVehicleProfiles(baseParams).subscribe({
       next: (res: VehicleDriverProfile[]) => {
+        this.loadError = '';
         const allList = res || [];
         this.allVehiclesList = allList;
         this.statusCounters.allTotal = allList.length;
@@ -298,7 +303,9 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: () => {
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
         this.isLoading = false;
+        this.toast.showError('دریافت اطلاعات انجام نشد.');
         this.cdr.detectChanges();
       }
     });
@@ -318,6 +325,8 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
       error: () => {
         this.settlementItems = [];
         this.settlementSummary = null;
+        this.toast.showError('دریافت اطلاعات تسویه ناوگان انجام نشد.');
+        this.cdr.detectChanges();
       }
     });
 
@@ -330,6 +339,8 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.changeRequests = [];
+        this.toast.showError('دریافت اطلاعات تغییرات ناوگان انجام نشد.');
+        this.cdr.detectChanges();
       }
     });
   }
@@ -366,6 +377,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingCostAnalysis = false;
+        this.toast.showError('دریافت تحلیل بار مالی انجام نشد.');
         this.cdr.detectChanges();
       }
     });
@@ -490,6 +502,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
       error: () => {
         this.deleteImpactHistory = { can_delete: false, reasons: ['خطا در استعلام سوابق تردد خودرو از سرور'] };
         this.deleteImpactLoading = false;
+        this.toast.showError('استعلام سوابق تردد خودرو با خطا مواجه شد.');
         this.cdr.detectChanges();
       }
     });
@@ -602,6 +615,37 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     this.isDiffModalOpen = false;
     this.selectedDiffCR = null;
     this.diffFieldRows = [];
+  }
+
+  onGlobalEscape(): void {
+    if (this.isDeleteModalOpen) {
+      if (!this.isDeletingVehicle) {
+        this.closeDeleteModal();
+      }
+      return;
+    }
+    if (this.isEndCollaborationModalOpen) {
+      if (!this.isEndingCollaboration) {
+        this.closeEndCollaborationModal();
+      }
+      return;
+    }
+    if (this.isDiffModalOpen) {
+      this.closeDiffModal();
+      return;
+    }
+    if (this.isRejectModalOpen) {
+      if (!this.isSubmittingReject) {
+        this.closeRejectModal();
+      }
+      return;
+    }
+    if (this.isApprovalModalOpen) {
+      if (!this.isApproving) {
+        this.closeApproveModal();
+      }
+      return;
+    }
   }
 
   formatPrice(val: number | null | undefined): string {

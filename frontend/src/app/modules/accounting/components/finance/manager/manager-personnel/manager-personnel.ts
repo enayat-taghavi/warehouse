@@ -22,6 +22,7 @@ export type ManagerPersonnelSubTab = 'new' | 'contracts' | 'changes' | 'all';
 @Component({
   selector: 'app-manager-personnel-hub',
   standalone: true,
+  host: { '(document:keydown.escape)': 'onGlobalEscape()' },
   imports: [
     CommonModule,
     FormsModule,
@@ -183,7 +184,9 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
         this.yearlySettings = res;
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => {
+        this.toast.showError('دریافت تنظیمات سالانه انجام نشد.');
+      }
     });
   }
 
@@ -221,6 +224,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingSections = false;
+        this.toast.showError('دریافت اطلاعات بخش‌ها انجام نشد.');
         this.fetchData();
       }
     });
@@ -281,9 +285,8 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     if (this.selectedSectionId) baseParams.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) baseParams.search = this.searchQuery.trim();
     const failed = (err: any) => {
-      this.loadError = isServerUnreachable(err?.status ?? 0)
-        ? 'ارتباط با سرور برقرار نیست؛ پس از اتصال دوباره تلاش کنید.'
-        : 'بارگذاری فهرست انجام نشد.';
+      this.loadError = 'دریافت اطلاعات انجام نشد.';
+      this.toast.showError('دریافت اطلاعات انجام نشد.');
     };
     const paged = (tab: ManagerPersonnelSubTab) => ({ page: this.pages[tab], page_size: this.pageSize });
 
@@ -341,6 +344,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     // ۴. تمام پرسنل فعال و مصوب
     this.personnelApi.getPersonnelProfilesPage({ ...baseParams, ...paged('all') }).subscribe({
       next: (res: PagedResult<PersonnelProfile>) => {
+        this.loadError = '';
         this.allPersonnelList = res?.results || [];
         this.totals.all = res?.count ?? this.allPersonnelList.length;
         this.statusCounters.allTotal = this.totals.all;
@@ -381,6 +385,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingCostAnalysis = false;
+        this.toast.showError('دریافت تحلیل بار مالی انجام نشد.');
         this.cdr.detectChanges();
       }
     });
@@ -390,7 +395,9 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
         this.companyCostSummary = summary;
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => {
+        this.toast.showError('دریافت میانگین هزینه شرکت انجام نشد.');
+      }
     });
   }
 
@@ -440,6 +447,29 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
   closeCostModal(): void {
     this.isCostModalOpen = false;
     this.costTarget = null;
+  }
+
+  onGlobalEscape(): void {
+    if (this.isDeleteModalOpen) {
+      if (!this.isDeletingPersonnel) {
+        this.closeDeleteModal();
+      }
+      return;
+    }
+    if (this.isEndCollaborationModalOpen) {
+      if (!this.isEndingCollaboration) {
+        this.closeEndCollaborationModal();
+      }
+      return;
+    }
+    if (this.isDiffModalOpen) {
+      this.closeDiffModal();
+      return;
+    }
+    if (this.isCostModalOpen) {
+      this.closeCostModal();
+      return;
+    }
   }
 
   // ─── مقایسه تفاوت‌ها (Diff Viewer) ───
@@ -552,6 +582,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
       error: () => {
         this.deleteImpactHistory = { can_delete: false, reasons: ['خطا در استعلام سوابق از سرور'] };
         this.deleteImpactLoading = false;
+        this.toast.showError('استعلام سوابق کارکرد پرسنل با خطا مواجه شد.');
         this.cdr.detectChanges();
       }
     });

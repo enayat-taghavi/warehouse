@@ -12,6 +12,7 @@
           <select
             [(ngModel)]="selectedSectionId"
             (change)="onSectionChanged()"
+            aria-label="بخش فعال"
             class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
             <option *ngFor="let sec of mySections" [value]="sec.id">
               {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
@@ -35,6 +36,7 @@
           <select
             [(ngModel)]="selectedMonth"
             (change)="fetchFleetData()"
+            aria-label="ماه"
             class="bg-transparent font-bold text-fg/80 focus:outline-none cursor-pointer">
             <option *ngFor="let m of monthsList" [value]="m">{{ m }}</option>
           </select>
@@ -46,9 +48,10 @@
             [(ngModel)]="searchQuery"
             (input)="fetchFleetData()"
             placeholder="جستجوی پلاک، مدل، راننده..."
-            class="w-full bg-surface-muted text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-          <span class="absolute right-2.5 top-2 text-fg-subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="w-3.5 h-3.5"></svg></span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg text-xs cursor-pointer flex items-center justify-center tap-target"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" class="w-3.5 h-3.5"></svg></button>
+            aria-label="جستجو"
+            class="w-full bg-surface-muted text-xs py-1.5 ps-8 pe-10 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+          <span class="absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-fg-subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="w-4 h-4" aria-hidden="true"></svg></span>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" class="w-4 h-4" aria-hidden="true"></svg></button>
         </div>
 
         <button
@@ -86,13 +89,18 @@
         </span>
       </div>
 
-      <div *ngIf="newVehiclesList.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+      <div *ngIf="loadError" role="alert" class="p-8 text-center text-rose-700 bg-rose-50/80 rounded-2xl border border-rose-200">
+        <span>{{ loadError }}</span>
+        <button type="button" (click)="fetchFleetData()" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>
+      </div>
+
+      <div *ngIf="newVehiclesList.length === 0 && !isLoading && !loadError" class="p-12 text-center text-fg-subtle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2" aria-hidden="true"></svg>
         هیچ پرونده خودرویی در انتظار تصویب مدیر وجود ندارد.
       </div>
 
       <div *ngIf="newVehiclesList.length > 0" class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line-subtle">
             <tr>
               <th class="p-3">شماره پلاک</th>
@@ -106,15 +114,15 @@
           </thead>
           <tbody class="divide-y divide-line-subtle">
             <tr *ngFor="let v of newVehiclesList" class="hover:bg-surface-muted/70 transition-colors">
-              <td class="p-3 font-mono font-black text-fg">{{ v.plate_number }}</td>
+              <td class="p-3 font-mono font-black text-fg"><bdi dir="ltr">{{ v.plate_number }}</bdi></td>
               <td class="p-3 font-medium text-fg/80">{{ v.vehicle_type_display || v.vehicle_type }}</td>
               <td class="p-3">
                 <div class="font-bold text-fg">{{ v.driver_name || '—' }}</div>
-                <div class="text-[10px] text-fg-subtle font-mono">{{ v.driver_national_code || 'بدون کدملی' }}</div>
+                <div class="text-[10px] text-fg-subtle font-mono"><bdi dir="ltr">{{ v.driver_national_code || 'بدون کدملی' }}</bdi></div>
               </td>
               <td class="p-3">
                 <div class="font-bold text-fg">{{ v.owner_name || v.driver_name || '—' }}</div>
-                <div class="text-[10px] text-fg-subtle font-mono">{{ v.owner_national_code || '' }}</div>
+                <div class="text-[10px] text-fg-subtle font-mono"><bdi dir="ltr">{{ v.owner_national_code || '' }}</bdi></div>
               </td>
               <td class="p-3 font-mono font-bold text-indigo-700">
                 {{ formatPrice(v.default_service_rate) }}
@@ -183,13 +191,13 @@
         </div>
       </div>
 
-      <div *ngIf="settlementItems.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+      <div *ngIf="settlementItems.length === 0 && !isLoading" class="p-12 text-center text-fg-subtle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2" aria-hidden="true"></svg>
         هیچ صورت‌حسابی برای ماه انتخابی یافت نشد.
       </div>
 
       <div *ngIf="settlementItems.length > 0" class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line-subtle">
             <tr>
               <th class="p-3">شماره پلاک</th>
@@ -203,7 +211,7 @@
           </thead>
           <tbody class="divide-y divide-line-subtle">
             <tr *ngFor="let s of settlementItems" class="hover:bg-surface-muted/70 transition-colors">
-              <td class="p-3 font-mono font-black text-fg">{{ s.plate_number }}</td>
+              <td class="p-3 font-mono font-black text-fg"><bdi dir="ltr">{{ s.plate_number }}</bdi></td>
               <td class="p-3 font-bold text-fg">{{ s.driver_name || '—' }}</td>
               <td class="p-3 tabular-nums text-fg/80">{{ (s.trip_count || 0).toLocaleString('fa-IR') }} سرویس</td>
               <td class="p-3 font-mono text-fg/80">{{ formatPrice(s.default_service_rate) }}</td>
@@ -235,13 +243,13 @@
         </span>
       </div>
 
-      <div *ngIf="changeRequests.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+      <div *ngIf="changeRequests.length === 0 && !isLoading" class="p-12 text-center text-fg-subtle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2" aria-hidden="true"></svg>
         هیچ درخواست تغییری در انتظار تایید وجود ندارد.
       </div>
 
       <div *ngIf="changeRequests.length > 0" class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line-subtle">
             <tr>
               <th class="p-3">شماره پلاک</th>
@@ -253,7 +261,7 @@
           </thead>
           <tbody class="divide-y divide-line-subtle">
             <tr *ngFor="let cr of changeRequests" class="hover:bg-surface-muted/70 transition-colors">
-              <td class="p-3 font-mono font-black text-fg">{{ cr.plate_number || 'خودرو' }}</td>
+              <td class="p-3 font-mono font-black text-fg"><bdi dir="ltr">{{ cr.plate_number || 'خودرو' }}</bdi></td>
               <td class="p-3 text-fg/80">{{ cr.requested_by_name || 'کارشناس' }}</td>
               <td class="p-3">
                 <button
@@ -307,13 +315,18 @@
         </span>
       </div>
 
-      <div *ngIf="allVehiclesList.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="folder" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+      <div *ngIf="loadError" role="alert" class="p-8 text-center text-rose-700 bg-rose-50/80 rounded-2xl border border-rose-200">
+        <span>{{ loadError }}</span>
+        <button type="button" (click)="fetchFleetData()" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>
+      </div>
+
+      <div *ngIf="allVehiclesList.length === 0 && !isLoading && !loadError" class="p-12 text-center text-fg-subtle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="folder" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2" aria-hidden="true"></svg>
         هیچ ناوگانی در این بخش ثبت نشده است.
       </div>
 
       <div *ngIf="allVehiclesList.length > 0" class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line-subtle">
             <tr>
               <th class="p-3">شماره پلاک</th>
@@ -328,11 +341,11 @@
           </thead>
           <tbody class="divide-y divide-line-subtle">
             <tr *ngFor="let v of allVehiclesList" class="hover:bg-surface-muted/70 transition-colors">
-              <td class="p-3 font-mono font-black text-fg">{{ v.plate_number }}</td>
+              <td class="p-3 font-mono font-black text-fg"><bdi dir="ltr">{{ v.plate_number }}</bdi></td>
               <td class="p-3 text-fg/80">{{ v.vehicle_type_display || v.vehicle_type }}</td>
               <td class="p-3 font-bold text-fg">{{ v.driver_name || '—' }}</td>
-              <td class="p-3 font-mono text-fg-muted">{{ v.driver_national_code || '—' }}</td>
-              <td class="p-3 font-mono text-fg-muted">{{ v.driver_phone || '—' }}</td>
+              <td class="p-3 font-mono text-fg-muted"><bdi dir="ltr">{{ v.driver_national_code || '—' }}</bdi></td>
+              <td class="p-3 font-mono text-fg-muted"><bdi dir="ltr">{{ v.driver_phone || '—' }}</bdi></td>
               <td class="p-3 font-mono font-bold text-indigo-700">{{ formatPrice(v.default_service_rate) }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-md text-[10px] font-bold"
@@ -372,9 +385,10 @@
 
   <!-- ── مودال تایید و تصویب مدیر (تسک ۱۰.۱ و ۱۰.۲) ── -->
   <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto"
+         role="dialog" aria-modal="true" aria-labelledby="mf-modal-1-title">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
-        <h3 class="text-sm font-black text-fg">{{ approvalTarget?.title }}</h3>
+        <h3 id="mf-modal-1-title" class="text-sm font-black text-fg">{{ approvalTarget?.title }}</h3>
         <button
           type="button"
           appAction="close"
@@ -452,6 +466,7 @@
           [(ngModel)]="approvalNote"
           rows="3"
           placeholder="توضیحات تکمیلی یا شرایط تایید مدیر..."
+          aria-label="یادداشت / دستور مدیریتی (اختیاری)"
           class="w-full bg-surface-muted border border-line rounded-xl p-2.5 text-xs text-fg focus:bg-surface focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
       </div>
 
@@ -477,9 +492,10 @@
 
   <!-- ── مودال رد پرونده یا عودت (تسک ۱۰.۲) ── -->
   <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4">
+    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4"
+         role="dialog" aria-modal="true" aria-labelledby="mf-modal-2-title">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
-        <h3 class="text-sm font-black text-rose-700">
+        <h3 id="mf-modal-2-title" class="text-sm font-black text-rose-700">
           تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
         </h3>
         <button
@@ -493,16 +509,16 @@
         <!-- رادیوباتن انتخاب عودت به حسابدار در برابر رد قطعی برای پرونده خودرو -->
         <div *ngIf="rejectTarget?.type === 'vehicle'" class="space-y-1.5">
           <label class="text-xs font-bold text-fg-muted block">اقدام مورد نظر مدیریت ارشد:</label>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="اقدام مورد نظر مدیریت ارشد:">
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
                    [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-surface-muted border-line text-fg-muted'">
-              <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5"></svg><span>عودت برای اصلاح</span>
+              <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" aria-label="عودت برای اصلاح" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5" aria-hidden="true"></svg><span>عودت برای اصلاح</span>
             </label>
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
                    [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-surface-muted border-line text-fg-muted'">
-              <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-reject" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
+              <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" aria-label="رد قطعی پرونده" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-reject" class="w-3.5 h-3.5" aria-hidden="true"></svg><span>رد قطعی پرونده</span>
             </label>
           </div>
         </div>
@@ -513,6 +529,7 @@
             [(ngModel)]="rejectReason"
             rows="3"
             placeholder="علت عودت جهت بازنگری احکام/نرخ، یا دلیل مستند رد قطعی پرونده..."
+            aria-label="علت یا دستور مستند"
             class="w-full bg-surface-muted border border-line rounded-xl p-2.5 text-xs text-fg focus:bg-surface focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
         </div>
       </div>
@@ -539,10 +556,11 @@
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Modal) ── -->
   <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-xl w-full p-5 space-y-4">
+    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-xl w-full p-5 space-y-4"
+         role="dialog" aria-modal="true" aria-labelledby="mf-modal-3-title">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
-        <h3 class="text-sm font-black text-fg">
-          مقایسه تفاوت‌های درخواست خودرو: {{ selectedDiffCR?.plate_number }}
+        <h3 id="mf-modal-3-title" class="text-sm font-black text-fg">
+          مقایسه تفاوت‌های درخواست خودرو: <bdi dir="ltr">{{ selectedDiffCR?.plate_number }}</bdi>
         </h3>
         <button
           type="button"
@@ -552,7 +570,7 @@
       </div>
 
       <div class="max-h-80 overflow-y-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line-subtle">
             <tr>
               <th class="p-2">فیلد</th>
@@ -583,11 +601,12 @@
 
   <!-- ── مودال قطع همکاری ناوگان (تسک ۱۰.۳) ── -->
   <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4 fade-in zoom-in duration-150">
+    <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4 fade-in zoom-in duration-150"
+         role="dialog" aria-modal="true" aria-labelledby="mf-modal-4-title">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
-        <h3 class="text-sm font-black text-amber-800 flex items-center gap-1.5">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" class="w-4 h-4"></svg>
-          قطع همکاری ناوگان: {{ endCollaborationTarget?.plate_number }}
+        <h3 id="mf-modal-4-title" class="text-sm font-black text-amber-800 flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" class="w-4 h-4" aria-hidden="true"></svg>
+          قطع همکاری ناوگان: <bdi dir="ltr">{{ endCollaborationTarget?.plate_number }}</bdi>
         </h3>
         <button
           type="button"
@@ -607,6 +626,7 @@
             type="text"
             [(ngModel)]="endCollaborationDate"
             placeholder="۱۴۰۵/۰۷/۱۵"
+            aria-label="تاریخ پایان همکاری (شمسی، مانند ۱۴۰۵/۰۷/۱۵)"
             dir="ltr"
             class="w-full bg-surface-muted border border-line rounded-xl p-2.5 text-xs text-center font-mono font-bold text-fg focus:bg-surface focus:outline-none focus:ring-1 focus:ring-amber-500" />
         </div>
@@ -617,6 +637,7 @@
             [(ngModel)]="endCollaborationReason"
             rows="3"
             placeholder="علت اتمام قرارداد، تسویه، پایان کار پروژه یا درخواست راننده..."
+            aria-label="دلیل قطع همکاری"
             class="w-full bg-surface-muted border border-line rounded-xl p-2.5 text-xs text-fg focus:bg-surface focus:outline-none focus:ring-1 focus:ring-amber-500"></textarea>
         </div>
       </div>
@@ -653,10 +674,11 @@
 
   <!-- ── استعلام سابقه و مسدودسازی حذف پروندهٔ خودروی دارای سابقه (تسک ۱۰.۳) ── -->
   <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150"
+         role="dialog" aria-modal="true" aria-labelledby="mf-modal-5-title">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
-        <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2" class="w-4 h-4 text-rose-600"></svg> حذف پرونده خودرو: {{ deleteTargetVehicle?.plate_number }} ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})
+        <h3 id="mf-modal-5-title" class="text-sm font-black text-rose-950 flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2" class="w-4 h-4 text-rose-600" aria-hidden="true"></svg> حذف پرونده خودرو: <bdi dir="ltr">{{ deleteTargetVehicle?.plate_number }}</bdi> ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})
         </h3>
         <button
           type="button"
@@ -667,7 +689,7 @@
 
       <div class="p-4 space-y-3">
         <div *ngIf="deleteImpactLoading" class="py-6 text-center text-muted text-xs">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-4 h-4 animate-spin inline-block mr-1"></svg> در حال استعلام اثرات حذف و سوابق تردد خودرو از پایگاه داده...
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-4 h-4 animate-spin inline-block me-1" aria-hidden="true"></svg> در حال استعلام اثرات حذف و سوابق تردد خودرو از پایگاه داده...
         </div>
 
         <div *ngIf="!deleteImpactLoading && deleteImpactHistory">
