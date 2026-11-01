@@ -8,8 +8,9 @@
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
         <!-- انتخابگر بخش فعال -->
         <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش:</span>
+          <label for="pay-section" class="text-[11px] font-bold text-slate-500">بخش:</label>
           <select
+            id="pay-section"
             [(ngModel)]="selectedSectionId"
             (change)="onSectionChanged()"
             aria-label="بخش فعال"
@@ -22,9 +23,9 @@
 
         <!-- انتخابگر دوره (سال و ماه) -->
         <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
-          <label for="acc-payroll-year" class="text-[11px] font-bold text-fg-muted">دوره:</label>
+          <label for="pay-fiscal-year" class="text-[11px] font-bold text-fg-muted">دوره:</label>
           <select
-            id="acc-payroll-year"
+            id="pay-fiscal-year"
             [(ngModel)]="fiscalYear"
             (change)="onPeriodChanged()"
             aria-label="سال مالی دوره حقوق"
@@ -34,6 +35,7 @@
             }
           </select>
           <select
+            id="pay-selected-month"
             [(ngModel)]="selectedMonth"
             (change)="onPeriodChanged()"
             aria-label="ماه دوره حقوق"
@@ -47,11 +49,12 @@
         <!-- دامنهٔ محاسبه: کل شرکت یا یک انبار -->
         @if (showWarehouseScope) {
           <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
-            <label for="acc-payroll-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
+            <label for="pay-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
             <select
-              id="acc-payroll-scope"
+              id="pay-scope"
               [(ngModel)]="selectedWarehouseId"
               (change)="onPeriodChanged()"
+              aria-label="دامنه محاسبه حقوق"
               class="bg-transparent text-xs font-black text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
               <option [ngValue]="null">کل شرکت (سراسری)</option>
               @for (wh of warehouses; track wh.id) {
@@ -110,7 +113,7 @@
           [disabled]="isCalculating || isPayrollFrozen || !isOnline"
           [title]="!isOnline ? offlineMessage : (isPayrollFrozen ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده')"
           [attr.aria-label]="isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق'"
-          class="tap-target px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+          class="tap-target px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <svg *ngIf="!isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
           <svg *ngIf="isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" appIcon="action-loading"></svg>
           <span>{{ isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق' }}</span>
@@ -240,7 +243,7 @@
       } @else if (workSummaryError) {
         <div class="p-10 text-center space-y-3">
           <p class="text-xs font-bold text-rose-700">دریافت خلاصه کارکرد ممکن نشد.</p>
-          <button type="button" (click)="loadWorkSummary()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer">تلاش دوباره</button>
+          <button type="button" (click)="loadWorkSummary()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">تلاش دوباره</button>
         </div>
       } @else if (workSummaryRows.length === 0) {
         <div class="p-10 text-center">
@@ -285,33 +288,35 @@
     <!-- نوار بالای جدول: جستجو، گروه و نمای جزئیات -->
     <div class="p-3 md:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
       <div class="relative flex-1 min-w-[240px] max-w-md">
+        <svg appIcon="search" class="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
+          id="pay-search"
           type="text"
           [(ngModel)]="searchQuery"
           (input)="applyFilters()"
           (keyup.enter)="syncUrlParams()"
           aria-label="جستجو در رکوردهای حقوق"
           placeholder="جستجو بر اساس نام پرسنل، کد ملی یا گروه شغلی..."
-          class="w-full pr-9 pl-8 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-sans" />
-        <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>
+          class="w-full ps-9 pe-10 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-sans" />
         <button
           *ngIf="searchQuery"
           type="button"
           (click)="clearSearch()"
-          class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
           title="پاک‌سازی جستجو"
-          aria-label="پاک‌سازی جستجو">
-          ✕
+          aria-label="پاک‌سازی جستجو"
+          class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
 
       <div class="flex flex-wrap items-center gap-3 text-xs">
         <div class="flex items-center gap-1.5">
-          <label for="acc-payroll-category" class="text-fg-muted font-bold">گروه:</label>
+          <label for="pay-category" class="text-fg-muted font-bold">گروه:</label>
           <select
-            id="acc-payroll-category"
+            id="pay-category"
             [(ngModel)]="statusCategoryFilter"
             (change)="applyFilters()"
+            aria-label="فیلتر گروه شغلی"
             class="bg-surface border border-line text-fg text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
             <option value="ALL">همه گروه‌ها</option>
             <option value="نفرات شرکتی">نفرات شرکتی</option>
@@ -319,8 +324,8 @@
           </select>
         </div>
 
-        <label class="flex items-center gap-1.5 cursor-pointer font-bold text-fg-muted">
-          <input type="checkbox" [(ngModel)]="showDetailedColumns" class="rounded border-line accent-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
+        <label for="pay-detailed-columns" class="flex items-center gap-1.5 cursor-pointer font-bold text-fg-muted">
+          <input id="pay-detailed-columns" type="checkbox" [(ngModel)]="showDetailedColumns" aria-label="نمای جزئیات (مزایا و کارکرد)" class="rounded border-line accent-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
           <span>نمای جزئیات (مزایا و کارکرد)</span>
         </label>
 
@@ -342,8 +347,8 @@
     </div>
 
     <div *ngIf="!isLoading && !loadError && items.length === 0" class="p-12 text-center space-y-3">
-      <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
-        💳
+      <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+        <svg appIcon="credit-card" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
       </div>
       <h3 class="text-sm font-black text-slate-800">هیچ سندی در این وضعیت برای محاسبه یا نمایش وجود ندارد</h3>
       <p class="text-xs text-slate-500 max-w-md mx-auto">
@@ -352,7 +357,7 @@
     </div>
 
     <div *ngIf="!isLoading && !loadError && items.length > 0" class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
+      <table class="w-full text-start text-xs">
         <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-black">
           <tr>
             <th class="p-3">ردیف</th>
@@ -481,8 +486,8 @@
         @if (taxModalMode === 'file') {
           <div class="space-y-3">
             <div class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 focus-within:border-indigo-500 rounded-2xl p-6 text-center transition-colors bg-indigo-50/20">
-              <input type="file" (change)="onTaxFileSelected($event)" accept=".xlsx,.xls" class="sr-only" id="acc-tax-file-input" />
-              <label for="acc-tax-file-input" class="cursor-pointer flex flex-col items-center gap-2.5">
+              <input type="file" (change)="onTaxFileSelected($event)" accept=".xlsx,.xls" class="sr-only" id="pay-tax-file-input" aria-label="انتخاب فایل اکسل خروجی سامانه دارایی" />
+              <label for="pay-tax-file-input" class="cursor-pointer flex flex-col items-center gap-2.5">
                 <span class="w-12 h-12 rounded-2xl bg-indigo-100/80 text-indigo-700 flex items-center justify-center shadow-sm">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-plus"></svg>
                 </span>
@@ -502,10 +507,11 @@
           </div>
         } @else {
           <div class="space-y-3">
-            <label for="acc-tax-paste" class="block text-fg-muted leading-relaxed text-[11px]">
+            <label for="pay-tax-paste" class="block text-fg-muted leading-relaxed text-[11px]">
               سطرهای کپی‌شده از اکسل (شامل <span class="font-bold text-fg">کد ملی</span> و <span class="font-bold text-fg">مبلغ مالیات</span>) را اینجا بچسبانید:
             </label>
-            <textarea id="acc-tax-paste" [(ngModel)]="taxExcelText" (input)="onTaxTextChange()" rows="5" dir="ltr"
+            <textarea id="pay-tax-paste" [(ngModel)]="taxExcelText" (input)="onTaxTextChange()" rows="5" dir="ltr"
+              aria-label="سطرهای کپی شده از اکسل مالیات"
               class="w-full bg-surface-muted border border-line rounded-2xl p-3 text-xs font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               placeholder="1234567890	4500000"></textarea>
 

@@ -15,6 +15,7 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { PettyAccountManagerComponent } from './petty-account-manager/petty-account-manager';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 
@@ -29,12 +30,14 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
     ActionButtonComponent,
     CommandCenterComponent,
     WorkflowReasonDialogComponent,
-    PettyAccountManagerComponent
+    PettyAccountManagerComponent,
+    SvgIconDirective
   ],
   templateUrl: './accountant-petty-cash.html',
   styleUrl: './accountant-petty-cash.css'
 })
 export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
+  loadError = '';
   activeSubTab: 'pending_review' | 'settled' | 'all' | 'accounts' = 'pending_review';
 
   // Memoized tabs for app-tab-bar (NG0100 prevention)
@@ -212,7 +215,10 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
 
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   fetchPettyCash(silent = false): void {
-    if (!silent) this.isLoading = true;
+    if (!silent) {
+      this.isLoading = true;
+      this.loadError = '';
+    }
     const params: { section_id?: number; search?: string } = {};
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;
     if (this.searchQuery?.trim()) params.search = this.searchQuery.trim();
@@ -220,12 +226,16 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     this.personnelApi.getPettyCashTransactions(params).subscribe({
       next: (data: PettyCashTransaction[]) => {
         this.isLoading = false;
+        this.loadError = '';
         this.allTransactions = data || [];
         this.updateViewAndCounters();
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isLoading = false;
+        if (!silent) {
+          this.loadError = 'دریافت اطلاعات انجام نشد.';
+        }
         if (silent) return;
         this.toast.error('خطا در دریافت اسناد تنخواه حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();

@@ -6,10 +6,12 @@
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <!-- انتخابگر بخش فعال -->
       <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-        <span class="text-[11px] font-bold text-slate-500">بخش:</span>
+        <label for="pc-section" class="text-[11px] font-bold text-slate-500">بخش:</label>
         <select
+          id="pc-section"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
+          aria-label="بخش فعال"
           class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
           <option *ngFor="let sec of mySections" [value]="sec.id">
             {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
@@ -58,19 +60,23 @@
     <!-- نوار بالای جدول: جستجو -->
     <div class="p-3 md:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
       <div class="relative flex-1 min-w-[240px] max-w-md">
+        <svg appIcon="search" class="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
+          id="pc-search"
           type="text"
           [(ngModel)]="searchQuery"
           (keyup.enter)="syncUrlParams()"
+          aria-label="جستجو بر اساس عنوان تنخواه یا مسئول تنخواه"
           placeholder="جستجو بر اساس عنوان تنخواه یا مسئول تنخواه..."
-          class="w-full pr-9 pl-8 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-sans" />
-        <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>
+          class="w-full ps-9 pe-10 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-sans" />
         <button
           *ngIf="searchQuery"
+          type="button"
           (click)="clearSearch()"
-          class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
-          title="پاک‌سازی جستجو">
-          ✕
+          title="پاک‌سازی جستجو"
+          aria-label="پاک‌سازی جستجو"
+          class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
 
@@ -86,9 +92,19 @@
       <p class="text-xs text-slate-500 font-bold">در حال بارگذاری اسناد و صورت‌جلسات تنخواه...</p>
     </div>
 
-    <div *ngIf="!isLoading && items.length === 0" class="p-12 text-center space-y-3">
-      <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
-        💰
+    <div *ngIf="!isLoading && loadError" class="p-10 text-center space-y-3" role="alert">
+      <p class="text-xs font-bold text-rose-700">{{ loadError }}</p>
+      <button
+        type="button"
+        (click)="fetchPettyCash()"
+        class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+        تلاش دوباره
+      </button>
+    </div>
+
+    <div *ngIf="!isLoading && !loadError && items.length === 0" class="p-12 text-center space-y-3">
+      <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+        <svg appIcon="credit-card" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
       </div>
       <h3 class="text-sm font-black text-slate-800">هیچ سندی برای ممیزی تنخواه وجود ندارد</h3>
       <p class="text-xs text-slate-500 max-w-md mx-auto">
@@ -96,8 +112,8 @@
       </p>
     </div>
 
-    <div *ngIf="!isLoading && items.length > 0" class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
+    <div *ngIf="!isLoading && !loadError && items.length > 0" class="overflow-x-auto">
+      <table class="w-full text-start text-xs">
         <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-black">
           <tr>
             <th class="p-3">ردیف</th>
@@ -112,14 +128,14 @@
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let item of items; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-            <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
+            <td class="p-3 font-mono text-slate-400"><bdi>{{ idx + 1 }}</bdi></td>
             <td class="p-3 font-bold text-slate-800">{{ item.title }}</td>
             <td class="p-3 font-bold text-slate-700">{{ item.custodian_name || item.counterparty_name || 'تنخواه‌دار' }}</td>
             <td class="p-3 text-slate-600">{{ item.category }}</td>
-            <td class="p-3 font-mono font-bold text-emerald-600">{{ item.amount | number }}</td>
-            <td class="p-3 font-mono text-slate-600">{{ item.transaction_date_shamsi }}</td>
+            <td class="p-3 font-mono font-bold text-emerald-600"><bdi dir="ltr">{{ item.amount | number }}</bdi></td>
+            <td class="p-3 font-mono text-slate-600"><bdi dir="ltr">{{ item.transaction_date_shamsi }}</bdi></td>
             <td class="p-3">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
                 [ngClass]="{
                   'bg-sky-50 text-sky-800 border-sky-200': item.status === 'pending_accountant',
                   'bg-indigo-50 text-indigo-800 border-indigo-200': item.status === 'pending_manager',
@@ -127,11 +143,29 @@
                   'bg-rose-50 text-rose-800 border-rose-200': item.status === 'rejected',
                   'bg-amber-100 text-amber-900 border-amber-300': item.status === 'revision_required'
                 }">
-                {{ item.status === 'pending_accountant' ? '💼 در انتظار حسابداری' :
-                   item.status === 'pending_manager' ? '👔 در انتظار مدیریت' :
-                   item.status === 'approved' ? '✅ تایید نهایی' :
-                   item.status === 'revision_required' ? '⚠️ نیازمند بازنگری' :
-                   item.status === 'rejected' ? '❌ ابطال شده' : item.status }}
+                <ng-container [ngSwitch]="item.status">
+                  <span *ngSwitchCase="'pending_accountant'" class="inline-flex items-center gap-1">
+                    <svg appIcon="briefcase" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>در انتظار حسابداری</span>
+                  </span>
+                  <span *ngSwitchCase="'pending_manager'" class="inline-flex items-center gap-1">
+                    <svg appIcon="user" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>در انتظار مدیریت</span>
+                  </span>
+                  <span *ngSwitchCase="'approved'" class="inline-flex items-center gap-1">
+                    <svg appIcon="check-circle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>تایید نهایی</span>
+                  </span>
+                  <span *ngSwitchCase="'revision_required'" class="inline-flex items-center gap-1">
+                    <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>نیازمند بازنگری</span>
+                  </span>
+                  <span *ngSwitchCase="'rejected'" class="inline-flex items-center gap-1">
+                    <svg appIcon="x-circle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>ابطال شده</span>
+                  </span>
+                  <span *ngSwitchDefault>{{ item.status }}</span>
+                </ng-container>
               </span>
             </td>
             <td class="p-3 text-center">
@@ -154,7 +188,11 @@
                 ></button>
               </div>
               <div *ngIf="item.status !== 'pending_accountant'" class="text-[11px] text-slate-400 font-bold">
-                {{ item.status === 'approved' ? '✅ تایید شده' : 'ارسال شده' }}
+                <span *ngIf="item.status === 'approved'" class="inline-flex items-center gap-1">
+                  <svg appIcon="check" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>تایید شده</span>
+                </span>
+                <span *ngIf="item.status !== 'approved'">ارسال شده</span>
               </div>
             </td>
           </tr>

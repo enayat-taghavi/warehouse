@@ -247,9 +247,9 @@
       <fieldset>
         <legend class="block text-[11px] font-bold text-fg mb-1">روش تسویه</legend>
         <div class="flex flex-wrap gap-3 text-xs text-fg">
-          <label class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="cash" [(ngModel)]="settleForm.method" /> نقدی (واریز یا دریافت)</label>
-          <label class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="charge_offset" [(ngModel)]="settleForm.method" /> کسر از شارژ بعدی</label>
-          <label *ngIf="balance?.payroll_deduction_available" class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="payroll" [(ngModel)]="settleForm.method" /> کسر از حقوق</label>
+          <label class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="cash" [(ngModel)]="settleForm.method" aria-label="روش تسویه نقدی (واریز یا دریافت)" /> نقدی (واریز یا دریافت)</label>
+          <label class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="charge_offset" [(ngModel)]="settleForm.method" aria-label="روش تسویه کسر از شارژ بعدی" /> کسر از شارژ بعدی</label>
+          <label *ngIf="balance?.payroll_deduction_available" class="inline-flex items-center gap-1.5 min-h-[40px] cursor-pointer"><input type="radio" name="method" value="payroll" [(ngModel)]="settleForm.method" aria-label="روش تسویه کسر از حقوق" /> کسر از حقوق</label>
         </div>
       </fieldset>
 
@@ -270,6 +270,7 @@
         <p *ngIf="isLoadingCharges" class="text-[11px] text-fg-muted">در حال دریافت شارژها...</p>
         <p *ngIf="!isLoadingCharges && openCharges.length === 0" class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">شارژ بازی برای این حساب نیست.</p>
         <select *ngIf="openCharges.length > 0" id="pam_settle_charge" [(ngModel)]="settleForm.charge" name="charge"
+          aria-label="انتخاب شارژ باز"
           class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <option [ngValue]="null">انتخاب کنید</option>
           <option *ngFor="let c of openCharges" [ngValue]="c.id">{{ c.title || ('شارژ ' + c.id) }} — باقی‌مانده {{ faAmount(chargeRemaining(c)) }} ریال</option>

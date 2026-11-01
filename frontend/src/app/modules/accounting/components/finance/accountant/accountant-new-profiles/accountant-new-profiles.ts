@@ -47,6 +47,9 @@ export type AccountantStatusFilter = 'ALL' | 'pending_accountant' | 'pending_man
 @Component({
   selector: 'app-accountant-new-profiles-hub',
   standalone: true,
+  host: {
+    '(document:keydown.escape)': 'onGlobalEscape()'
+  },
   imports: [
     CommonModule,
     FormsModule,
@@ -771,6 +774,25 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     this.diffRows = [];
   }
 
+  onGlobalEscape(): void {
+    if (this.isDiffModalOpen) {
+      this.closeDiffModal();
+      return;
+    }
+    if (this.isRejectModalOpen) {
+      if (!this.isSubmittingReject) {
+        this.closeRejectModal();
+      }
+      return;
+    }
+    if (this.isPersonnelModalOpen) {
+      if (!this.isSavingPersonnel) {
+        this.closePersonnelModal();
+      }
+      return;
+    }
+  }
+
   approveChangeRequestFinance(cr: any): void {
     const call = this.personnelApi.approveVehicleChangeRequestFinance(cr.id);
 
@@ -832,17 +854,17 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     switch (status) {
       case 'pending_accountant':
       case 'supervisor_approved':
-        return '💼 در انتظار تایید حسابدار';
+        return 'در انتظار تایید حسابدار';
       case 'pending_manager':
-        return '⏳ در انتظار تصویب مدیر';
+        return 'در انتظار تصویب مدیر';
       case 'approved':
-        return '✓ مصوب و فعال';
+        return 'مصوب و فعال';
       case 'revision_required':
-        return '↩️ نیازمند اصلاح';
+        return 'نیازمند اصلاح';
       case 'rejected':
-        return '✕ رد شده';
+        return 'رد شده';
       case 'draft':
-        return '📝 پیش‌نویس اولیه';
+        return 'پیش‌نویس اولیه';
       default:
         return status || 'نامشخص';
     }

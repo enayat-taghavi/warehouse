@@ -6,10 +6,12 @@
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <!-- انتخابگر بخش فعال (Section Isolation) -->
       <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-100/90 py-1 px-2.5 rounded-xl border border-slate-200/80">
-        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <label for="np-section" class="text-[11px] font-bold text-slate-500">بخش فعال:</label>
         <select
+          id="np-section"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
+          aria-label="بخش فعال"
           class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
           <option *ngFor="let sec of mySections" [value]="sec.id">
             {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
@@ -30,33 +32,38 @@
     <div cc-actions class="flex items-center gap-2 w-full md:w-auto justify-end">
       <!-- فیلتر وضعیت حسابداری -->
       <select
+        id="np-status-filter"
         [(ngModel)]="statusFilter"
         (change)="onFiltersChanged()"
+        aria-label="فیلتر وضعیت پرونده‌های پرسنل"
         class="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none cursor-pointer">
         <option value="ALL">همه وضعیت‌ها</option>
-        <option value="pending_accountant">💼 فقط در انتظار تایید حسابدار</option>
-        <option value="pending_manager">⏳ در انتظار تایید مدیر</option>
-        <option value="approved">✓ مصوب و فعال</option>
-        <option value="revision_required">↩️ نیازمند اصلاح</option>
-        <option value="rejected">✕ رد شده</option>
+        <option value="pending_accountant">فقط در انتظار تایید حسابدار</option>
+        <option value="pending_manager">در انتظار تایید مدیر</option>
+        <option value="approved">مصوب و فعال</option>
+        <option value="revision_required">نیازمند اصلاح</option>
+        <option value="rejected">رد شده</option>
       </select>
 
       <!-- کادر جستجوی زنده با کلید پاکسازی -->
       <div class="relative flex-1 md:w-56">
+        <svg appIcon="search" class="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
+          id="np-search"
           type="text"
           [(ngModel)]="searchQuery"
           (input)="onFiltersChanged()"
+          aria-label="جستجوی نام، کد ملی، پلاک"
           placeholder="جستجوی نام، کد ملی، پلاک..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 pl-7 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" />
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 ps-9 pe-10 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" />
         <button
           *ngIf="searchQuery"
           type="button"
           (click)="clearSearch()"
           title="پاک‌سازی جستجو"
           aria-label="پاک‌سازی جستجو"
-          class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">
-          ✕
+          class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
 
@@ -75,7 +82,7 @@
   <div *ngIf="activeSubTab === 'personnel' || activeSubTab === 'all'" class="space-y-3">
     <div class="flex items-center justify-between px-1">
       <h3 class="text-xs font-black text-slate-700 flex items-center gap-1.5">
-        <span>👥 پرونده‌های پرسنل بخش</span>
+        <span class="inline-flex items-center gap-1.5"><svg appIcon="users" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><span>پرونده‌های پرسنل بخش</span></span>
         <span class="text-[10px] text-slate-400 font-normal">({{ formatNumber(personnelCount) }} نفر)</span>
       </h3>
       <div class="flex items-center gap-2 flex-wrap">
@@ -86,7 +93,7 @@
         <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_profile'}"
          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
          title="اقدام روی این موارد (تایید، عودت، رد) از کارهای من انجام می‌شود" aria-label="رفتن به کارهای من">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check" aria-hidden="true"></svg>
         <span>کارهای من</span>
       </a>
       </div>
@@ -144,7 +151,7 @@
 
           <!-- اطلاعات بانکی -->
           <div *ngIf="p.bank_name || p.sheba_number" class="mt-2 px-2.5 py-1.5 bg-blue-50/40 rounded-xl border border-blue-100 text-[11px] flex items-center justify-between">
-            <span class="text-slate-600 font-bold">🏦 {{ p.bank_name || 'بانک' }}</span>
+            <span class="text-slate-600 font-bold inline-flex items-center gap-1"><svg appIcon="building" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><span>{{ p.bank_name || 'بانک' }}</span></span>
             <span class="font-mono font-bold text-slate-800" dir="ltr">{{ p.sheba_number ? (isMasked(p.sheba_number) ? p.sheba_number : formatSheba(p.sheba_number)) : (p.account_number || '—') }}</span>
           </div>
           <p *ngIf="isMasked(p.sheba_number) || isMasked(p.account_number)" class="text-[11px] text-fg-muted mt-1">برای دیدن کامل مجوز لازم است</p>
@@ -178,17 +185,17 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="personnelCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPersonnelPage(personnelPage - 1)" [disabled]="personnelPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right" aria-hidden="true"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(personnelPage) }} از {{ formatNumber(personnelTotalPages) }}</span>
       <button type="button" (click)="goToPersonnelPage(personnelPage + 1)" [disabled]="personnelPage >= personnelTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left" aria-hidden="true"></svg>
       </button>
     </div>
 
@@ -198,11 +205,12 @@
   <div *ngIf="activeSubTab === 'vehicles' || activeSubTab === 'all'" class="space-y-3 pt-2">
     <div class="flex items-center justify-between px-1">
       <h3 class="text-xs font-black text-slate-700 flex items-center gap-1.5">
-        <span>🚚 پرونده‌های ناوگان و خودروهای بخش</span>
+        <span class="inline-flex items-center gap-1.5"><svg appIcon="truck" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><span>پرونده‌های ناوگان و خودروهای بخش</span></span>
         <span class="text-[10px] text-slate-400 font-normal">({{ vehicleItems.length }} دستگاه)</span>
       </h3>
-      <span *ngIf="statusCounters.vehiclesPending > 0" class="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200">
-        ⚠️ {{ statusCounters.vehiclesPending }} خودرو نیازمند تایید مالی نرخ هستند
+      <span *ngIf="statusCounters.vehiclesPending > 0" class="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 inline-flex items-center gap-1.5">
+        <svg appIcon="alert-triangle" class="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span>{{ statusCounters.vehiclesPending }} خودرو نیازمند تایید مالی نرخ هستند</span>
       </span>
     </div>
 
@@ -309,7 +317,7 @@
         <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'personnel_change'}"
          class="min-h-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"
          title="اقدام روی این موارد (تایید، عودت، رد) از کارهای من انجام می‌شود" aria-label="رفتن به کارهای من">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard-check" aria-hidden="true"></svg>
         <span>کارهای من</span>
       </a>
       </div>
@@ -335,17 +343,17 @@
     <!-- صفحه‌بندی -->
     <div *ngIf="personnelCrCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs">
       <button type="button" (click)="goToPersonnelCrPage(personnelCrPage - 1)" [disabled]="personnelCrPage <= 1 || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right" aria-hidden="true"></svg>
         <span class="hidden sm:inline">قبلی</span>
       </button>
       <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ formatNumber(personnelCrPage) }} از {{ formatNumber(personnelCrTotalPages) }}</span>
       <button type="button" (click)="goToPersonnelCrPage(personnelCrPage + 1)" [disabled]="personnelCrPage >= personnelCrTotalPages || isLoading"
-        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+        class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
         <span class="hidden sm:inline">بعدی</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left" aria-hidden="true"></svg>
       </button>
     </div>
     </div>
@@ -394,16 +402,17 @@
   <div *ngIf="isPersonnelModalOpen && editingPersonnel"
        role="dialog"
        aria-modal="true"
+       aria-labelledby="np-modal-1-title"
        class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-sm">
     <div class="bg-white rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
       
       <!-- هدر مودال -->
       <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
         <div>
-          <h3 class="text-sm font-black text-slate-800">
+          <h3 id="np-modal-1-title" class="text-sm font-black text-slate-800">
             تکمیل مدارک و احکام مالی: {{ editingPersonnel.first_name }} {{ editingPersonnel.last_name }}
           </h3>
-          <span class="text-[11px] text-slate-500 font-mono">کد ملی: {{ editingPersonnel.national_code }}</span>
+          <span class="text-[11px] text-slate-500 font-mono">کد ملی: <bdi dir="ltr">{{ editingPersonnel.national_code }}</bdi></span>
         </div>
         <button
           type="button"
@@ -430,7 +439,7 @@
           <!-- بنر فرمول آنی مزد مبنا -->
           <div class="bg-blue-50/70 p-3.5 rounded-2xl border border-blue-100 space-y-2">
             <div class="flex items-center justify-between text-xs font-black text-blue-950">
-              <span>⚡ فرمول محاسباتی آنی مزد مبنا (مزد پایه + سنوات × سابقه)</span>
+              <span class="inline-flex items-center gap-1.5"><svg appIcon="zap" class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><span>فرمول محاسباتی آنی مزد مبنا (مزد پایه + سنوات × سابقه)</span></span>
               <span class="text-[11px] bg-blue-200/70 text-blue-900 px-2 py-0.5 rounded-md">گروه شغلی {{ editingPersonnel.job_grade }}</span>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-center">
@@ -456,10 +465,12 @@
           <!-- فیلدهای انتخاب گروه شغلی و سنوات -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">گروه شغلی (جدول ۲۰ گانه) *</label>
+              <label for="np-job-grade" class="block text-[11px] font-bold text-slate-700 mb-1">گروه شغلی (جدول ۲۰ گانه) *</label>
               <select
+                id="np-job-grade"
                 [(ngModel)]="editingPersonnel.job_grade"
                 (change)="onJobGradeChange(editingPersonnel.job_grade || '19')"
+                aria-label="گروه شغلی (جدول ۲۰ گانه)"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:outline-none">
                 <option *ngFor="let g of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]" [value]="g.toString()">
                   گروه شغلی {{ g }}
@@ -468,19 +479,23 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">سال سابقه سنوات تجربی</label>
+              <label for="np-years-experience" class="block text-[11px] font-bold text-slate-700 mb-1">سال سابقه سنوات تجربی</label>
               <input
+                id="np-years-experience"
                 type="number"
                 min="0"
                 [(ngModel)]="editingPersonnel.base_years_experience"
                 (input)="recalculatePersonnelRates()"
+                aria-label="سال سابقه سنوات تجربی"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:outline-none" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع قرارداد کاری</label>
+              <label for="np-contract-type" class="block text-[11px] font-bold text-slate-700 mb-1">نوع قرارداد کاری</label>
               <select
+                id="np-contract-type"
                 [(ngModel)]="editingPersonnel.contract_type"
+                aria-label="نوع قرارداد کاری"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:bg-white focus:outline-none">
                 <option value="daily">روزمزد (مبنا ۱۰ ساعت روزانه)</option>
                 <option value="hourly">ساعتی</option>
@@ -492,26 +507,32 @@
           <!-- فیلدهای مزایای رفاهی ماهانه -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">حق مسکن ماهانه (ریال)</label>
+              <label for="np-housing-allowance" class="block text-[11px] font-bold text-slate-700 mb-1">حق مسکن ماهانه (ریال)</label>
               <input
+                id="np-housing-allowance"
                 type="number"
                 [(ngModel)]="editingPersonnel.housing_allowance"
+                aria-label="حق مسکن ماهانه (ریال)"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">بن کارگری / اقلام مصرفی (ریال)</label>
+              <label for="np-food-allowance" class="block text-[11px] font-bold text-slate-700 mb-1">بن کارگری / اقلام مصرفی (ریال)</label>
               <input
+                id="np-food-allowance"
                 type="number"
                 [(ngModel)]="editingPersonnel.food_allowance"
+                aria-label="بن کارگری / اقلام مصرفی (ریال)"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">حق تاهل ماهانه (ریال)</label>
+              <label for="np-spouse-allowance" class="block text-[11px] font-bold text-slate-700 mb-1">حق تاهل ماهانه (ریال)</label>
               <input
+                id="np-spouse-allowance"
                 type="number"
                 [(ngModel)]="editingPersonnel.spouse_allowance"
+                aria-label="حق تاهل ماهانه (ریال)"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
           </div>
@@ -521,28 +542,34 @@
         <div *ngIf="personnelModalTab === 'insurance'" class="space-y-3">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره بیمه تامین اجتماعی</label>
+              <label for="np-insurance-number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره بیمه تامین اجتماعی</label>
               <input
+                id="np-insurance-number"
                 type="text"
                 maxlength="10"
                 [(ngModel)]="editingPersonnel.insurance_number"
                 placeholder="مثال: 63605949"
+                aria-label="شماره بیمه تامین اجتماعی"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-rose-800" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">کد شغل بیمه تامین اجتماعی</label>
+              <label for="np-job-code" class="block text-[11px] font-bold text-slate-700 mb-1">کد شغل بیمه تامین اجتماعی</label>
               <input
+                id="np-job-code"
                 type="text"
                 [(ngModel)]="editingPersonnel.job_code"
                 placeholder="مثال: 027212"
+                aria-label="کد شغل بیمه تامین اجتماعی"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">رده وضعیتی پرسنل</label>
+              <label for="np-status-category" class="block text-[11px] font-bold text-slate-700 mb-1">رده وضعیتی پرسنل</label>
               <select
+                id="np-status-category"
                 [(ngModel)]="editingPersonnel.status_category"
+                aria-label="رده وضعیتی پرسنل"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                 <option value="نفرات شرکتی">نفرات شرکتی</option>
                 <option value="نفرات قراردادی">نفرات قراردادی</option>
@@ -551,9 +578,11 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع استخدام دارایی (مالیات)</label>
+              <label for="np-employment-type" class="block text-[11px] font-bold text-slate-700 mb-1">نوع استخدام دارایی (مالیات)</label>
               <select
+                id="np-employment-type"
                 [(ngModel)]="editingPersonnel.employment_type"
+                aria-label="نوع استخدام دارایی (مالیات)"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                 <option value="2">شرکتی (۲)</option>
                 <option value="1">قراردادی (۱)</option>
@@ -568,9 +597,11 @@
         <div *ngIf="personnelModalTab === 'contact'" class="space-y-3">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام بانک عامل</label>
+              <label for="np-bank-name" class="block text-[11px] font-bold text-slate-700 mb-1">نام بانک عامل</label>
               <select
+                id="np-bank-name"
                 [(ngModel)]="editingPersonnel.bank_name"
+                aria-label="نام بانک عامل"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                 <option *ngFor="let b of iranianBanks" [value]="b.name">{{ b.icon }} {{ b.name }}</option>
               </select>
@@ -578,19 +609,23 @@
 
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="block text-[11px] font-bold text-slate-700">شماره حساب بانکی</label>
+                <label for="np-account-number" class="block text-[11px] font-bold text-slate-700">شماره حساب بانکی</label>
                 <button
                   *ngIf="editingPersonnel.account_number && editingPersonnel.bank_name"
                   type="button"
                   (click)="convertAccountToShebaNow()"
-                  class="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded cursor-pointer hover:bg-blue-100">
-                  ⚡ تولید خودکار شبا
+                  aria-label="تولید خودکار شبا"
+                  class="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded cursor-pointer hover:bg-blue-100 inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                  <svg appIcon="zap" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>تولید خودکار شبا</span>
                 </button>
               </div>
               <input
+                id="np-account-number"
                 type="text"
                 [(ngModel)]="editingPersonnel.account_number"
                 [readOnly]="isMasked(editingPersonnel.account_number)"
+                aria-label="شماره حساب بانکی"
                 placeholder="مثال: 0101234567001"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" dir="ltr" />
             </div>
@@ -598,20 +633,24 @@
 
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-[11px] font-bold text-slate-700">شماره شبا (۲۴ رقم)</label>
-              <span *ngIf="shebaValidationResult" class="text-[10px] font-bold"
+              <label for="np-sheba-number" class="block text-[11px] font-bold text-slate-700">شماره شبا (۲۴ رقم)</label>
+              <span *ngIf="shebaValidationResult" class="text-[10px] font-bold inline-flex items-center gap-1"
                     [ngClass]="shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-600'">
-                {{ shebaValidationResult.isValid ? '✓ شبا معتبر است' : '✕ شماره شبا نامعتبر' }}
+                <svg *ngIf="shebaValidationResult.isValid" appIcon="check" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <svg *ngIf="!shebaValidationResult.isValid" appIcon="x" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>{{ shebaValidationResult.isValid ? 'شبا معتبر است' : 'شماره شبا نامعتبر' }}</span>
               </span>
             </div>
             <div dir="ltr" class="flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden">
               <span class="px-3 py-2 bg-slate-100 border-r border-slate-200 font-mono font-bold text-xs text-slate-600">IR</span>
               <input
+                id="np-sheba-number"
                 type="text"
                 maxlength="29"
                 [value]="shebaDigitsDisplay"
                 [readOnly]="isMasked(editingPersonnel.sheba_number)"
                 (input)="onShebaInput($event)"
+                aria-label="شماره شبا"
                 placeholder="12 3456 7890 1234 5678 9012 34"
                 class="w-full px-3 py-2 text-xs font-mono font-bold text-left focus:outline-none" />
             </div>
@@ -622,28 +661,28 @@
         <div *ngIf="personnelModalTab === 'identity'" class="space-y-3">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام *</label>
-              <input type="text" [(ngModel)]="editingPersonnel.first_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+              <label for="np-first-name" class="block text-[11px] font-bold text-slate-700 mb-1">نام *</label>
+              <input id="np-first-name" type="text" [(ngModel)]="editingPersonnel.first_name" aria-label="نام" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی *</label>
-              <input type="text" [(ngModel)]="editingPersonnel.last_name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+              <label for="np-last-name" class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی *</label>
+              <input id="np-last-name" type="text" [(ngModel)]="editingPersonnel.last_name" aria-label="نام خانوادگی" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی *</label>
-              <input type="text" [(ngModel)]="editingPersonnel.national_code" [readOnly]="isMasked(editingPersonnel.national_code)" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <label for="np-national-code" class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی *</label>
+              <input id="np-national-code" type="text" [(ngModel)]="editingPersonnel.national_code" [readOnly]="isMasked(editingPersonnel.national_code)" aria-label="کد ملی" dir="ltr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره همراه</label>
-              <input type="text" [(ngModel)]="editingPersonnel.phone_number" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" dir="ltr" />
+              <label for="np-phone-number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره همراه</label>
+              <input id="np-phone-number" type="text" [(ngModel)]="editingPersonnel.phone_number" aria-label="شماره همراه" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" dir="ltr" />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان شغلی</label>
-              <input type="text" [(ngModel)]="editingPersonnel.job_title" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
+              <label for="np-job-title" class="block text-[11px] font-bold text-slate-700 mb-1">عنوان شغلی</label>
+              <input id="np-job-title" type="text" [(ngModel)]="editingPersonnel.job_title" aria-label="عنوان شغلی" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold" />
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">تعداد فرزندان</label>
-              <input type="number" min="0" [(ngModel)]="editingPersonnel.children_count" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <label for="np-children-count" class="block text-[11px] font-bold text-slate-700 mb-1">تعداد فرزندان</label>
+              <input id="np-children-count" type="number" min="0" [(ngModel)]="editingPersonnel.children_count" aria-label="تعداد فرزندان" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
           </div>
         </div>
@@ -677,11 +716,14 @@
   <div *ngIf="isRejectModalOpen && rejectTarget"
        role="dialog"
        aria-modal="true"
+       aria-labelledby="np-modal-2-title"
        class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-sm">
     <div class="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-5 space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-black text-slate-800">
-          {{ rejectTarget.action === 'reject' ? '❌ رد قطعی پرونده' : '🔄 ارجاع به بازنگری و عودت' }}
+        <h3 id="np-modal-2-title" class="text-sm font-black text-slate-800 inline-flex items-center gap-1.5">
+          <svg *ngIf="rejectTarget.action === 'reject'" appIcon="x-circle" class="w-4 h-4 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <svg *ngIf="rejectTarget.action !== 'reject'" appIcon="rotate-ccw" class="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>{{ rejectTarget.action === 'reject' ? 'رد قطعی پرونده' : 'ارجاع به بازنگری و عودت' }}</span>
         </h3>
         <button
           type="button"
@@ -695,11 +737,14 @@
         پرونده «<strong>{{ rejectTarget.title }}</strong>» را ارجاع می‌دهید. لطفاً علت مستند را جهت اطلاع کارمند ثبت نمایید:
       </p>
 
+      <label for="np-reject-reason" class="sr-only">علت رد یا عودت مدارک</label>
       <textarea
+        id="np-reject-reason"
         rows="3"
         [(ngModel)]="rejectReason"
+        aria-label="علت رد یا عودت مدارک"
         placeholder="علت رد یا عودت مدارک را اینجا بنویسید..."
-        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:bg-white focus:border-blue-500 focus:outline-none"></textarea>
+        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:bg-white focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
         <button
@@ -727,11 +772,13 @@
   <div *ngIf="isDiffModalOpen"
        role="dialog"
        aria-modal="true"
+       aria-labelledby="np-modal-3-title"
        class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-sm">
     <div class="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl p-5 space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-black text-slate-800">
-          🔍 مشاهده تفاوت‌ها و تغییرات پیشنهادی
+        <h3 id="np-modal-3-title" class="text-sm font-black text-slate-800 inline-flex items-center gap-1.5">
+          <svg appIcon="search" class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>مشاهده تفاوت‌ها و تغییرات پیشنهادی</span>
         </h3>
         <button
           type="button"
@@ -742,7 +789,7 @@
       </div>
 
       <div class="border border-slate-100 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
-        <table class="w-full text-xs text-right">
+        <table class="w-full text-xs text-start">
           <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
             <tr>
               <th class="p-2.5">فیلد تغییر یافته</th>

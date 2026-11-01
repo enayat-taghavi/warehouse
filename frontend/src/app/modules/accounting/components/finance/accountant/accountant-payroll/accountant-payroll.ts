@@ -305,7 +305,9 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
         this.availableYears = mergeFiscalYears(res?.years, this.fiscalYear);
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => {
+        this.toast.error('دریافت اطلاعات انجام نشد.');
+      }
     });
 
     const hasWhFilter = this.moduleRegistry?.getExtensions('scopeDirectory').some(e => !!e.extension.offersScopeFilter);
@@ -315,7 +317,9 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
           this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));
           this.cdr.detectChanges();
         },
-        error: () => {}
+        error: () => {
+          this.toast.error('دریافت اطلاعات انجام نشد.');
+        }
       });
     }
 
