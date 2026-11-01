@@ -235,6 +235,14 @@
         <input type="checkbox" [(ngModel)]="updateExisting" (change)="onUpdateExistingToggle()" style="width: 16px; height: 16px; cursor: pointer; accent-color: #4f46e5;">
       </div>
 
+      <!-- Duplicate Notice (When all records already exist) -->
+      <div *ngIf="(previewResult.summary.skipped || 0) > 0 && ((previewResult.summary.valid_count || 0) === 0)" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 14px;">ℹ️</span>
+        <span style="font-size: 11px; color: #1e40af; font-weight: bold;">
+          {{ previewResult.summary.skipped }} رکورد این فایل قبلاً در سامانه ثبت شده‌اند. برای به‌روزرسانی اطلاعات آنها، گزینهٔ «به‌روزرسانی رکوردهای تکراری» را فعال کنید.
+        </span>
+      </div>
+
       <!-- Error Notice & Table (If errors exist) -->
       <div *ngIf="previewResult.errors && previewResult.errors.length > 0" style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 12px; max-height: 170px; overflow-y: auto;">
         <div style="display: flex; align-items: center; gap: 6px; color: #c2410c; font-size: 12px; font-weight: bold; margin-bottom: 6px;">

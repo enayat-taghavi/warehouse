@@ -21,7 +21,7 @@ export class ExcelImportModal {
 
   step: 'select' | 'preview' | 'result' = 'select';
   selectedFile: File | null = null;
-  updateExisting = false;
+  updateExisting = true;
   isDragging = false;
   isAnalyzing = false;
   isUploading = false;
