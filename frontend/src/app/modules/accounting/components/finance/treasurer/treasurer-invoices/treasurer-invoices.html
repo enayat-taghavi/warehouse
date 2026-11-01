@@ -76,6 +76,9 @@
               <div *ngIf="item.paid_amount > 0" class="text-[10px] font-bold text-slate-500">
                 پرداخت‌شده {{ item.paid_amount | number }} · مانده {{ item.remaining | number }}
               </div>
+              <div *ngIf="item.paid_amount > 0" class="mt-1">
+                <app-invoice-receipt-button [invoiceId]="item.id"></app-invoice-receipt-button>
+              </div>
             </td>
             <td class="py-3 px-3 font-mono text-slate-600 text-[11px]">{{ item.sheba_number }}</td>
             <td class="py-3 px-3 text-center font-mono text-slate-600">{{ item.due_date }}</td>

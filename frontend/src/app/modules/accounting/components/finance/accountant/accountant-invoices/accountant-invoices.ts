@@ -16,6 +16,7 @@ import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
+import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -27,7 +28,8 @@ import { PrintService } from '../../../../../../core/services/print.service';
     TabBarComponent,
     ActionButtonComponent,
     CommandCenterComponent,
-    WorkflowReasonDialogComponent
+    WorkflowReasonDialogComponent,
+    InvoiceReceiptButtonComponent
   ],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'

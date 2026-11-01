@@ -114,6 +114,11 @@
               @if (inv.paid_amount && +inv.paid_amount > 0) {
                 <p class="text-[10px] text-emerald-700">پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}</p>
               }
+              @if (inv.paid_amount && +inv.paid_amount > 0) {
+                <div class="mt-1">
+                  <app-invoice-receipt-button [invoiceId]="inv.id"></app-invoice-receipt-button>
+                </div>
+              }
             </div>
           </div>
           @if (inv.possible_duplicate || inv.vat_manual) {
@@ -214,6 +219,9 @@
               <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="text-[10px] text-emerald-700 mt-0.5">
                 پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}
                 <span *ngIf="inv.remaining && +inv.remaining > 0" class="text-amber-700"> | مانده: {{ formatNumber(inv.remaining) }}</span>
+              </div>
+              <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="mt-1">
+                <app-invoice-receipt-button [invoiceId]="inv.id"></app-invoice-receipt-button>
               </div>
             </td>
 

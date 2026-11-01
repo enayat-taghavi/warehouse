@@ -40,6 +40,9 @@
                 <div *ngIf="inv.discount_amount && +inv.discount_amount > 0">تخفیف {{ faAmount(inv.discount_amount) }}</div>
                 <div *ngIf="inv.vat_amount && +inv.vat_amount > 0">مالیات {{ faAmount(inv.vat_amount) }}</div>
                 <div *ngIf="inv.paid_amount && +inv.paid_amount > 0">پرداخت‌شده {{ faAmount(inv.paid_amount) }} · مانده {{ faAmount(inv.remaining) }}</div>
+                <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="mt-1">
+                  <app-invoice-receipt-button [invoiceId]="inv.id"></app-invoice-receipt-button>
+                </div>
               </div>
             </td>
             <td class="p-3 font-mono">{{ inv.issue_date_shamsi || inv.date || '—' }}</td>

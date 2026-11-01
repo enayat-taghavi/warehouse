@@ -128,6 +128,9 @@
                 <div *ngIf="item.discount_amount && +item.discount_amount > 0">تخفیف {{ faAmount(item.discount_amount) }}</div>
                 <div *ngIf="item.vat_amount && +item.vat_amount > 0">مالیات {{ faAmount(item.vat_amount) }}</div>
                 <div *ngIf="item.paid_amount && +item.paid_amount > 0">پرداخت‌شده {{ faAmount(item.paid_amount) }} · مانده {{ faAmount(item.remaining) }}</div>
+                <div *ngIf="item.paid_amount && +item.paid_amount > 0" class="mt-1">
+                  <app-invoice-receipt-button [invoiceId]="item.id"></app-invoice-receipt-button>
+                </div>
               </div>
             </td>
             <td class="p-3 font-bold text-slate-600">{{ item.supervisor_approver_name || 'سرپرست کارگاه' }}</td>

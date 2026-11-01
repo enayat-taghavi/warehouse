@@ -16,6 +16,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { validateSheba } from '../../../../../../core/utils/sheba-utils';
 import { SearchSelectComponent, SearchSelectOption } from '../../../../../../shared/components/search-select/search-select.component';
+import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { CounterpartyFormFieldsComponent } from '../../counterparties/counterparty-form/counterparty-form-fields.component';
 import { CounterpartyFormState, emptyCounterpartyForm, isMaskedValue } from '../../counterparties/counterparty-form/counterparty-form.state';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
@@ -54,7 +55,7 @@ function toAsciiDigits(v: string): string {
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent, InvoiceReceiptButtonComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })

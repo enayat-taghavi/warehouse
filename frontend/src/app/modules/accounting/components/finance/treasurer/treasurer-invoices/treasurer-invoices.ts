@@ -28,6 +28,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
+import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -60,7 +61,8 @@ export interface PayableInvoiceItem {
     AmountInputComponent,
     WorkflowReasonDialogComponent,
     NgPersianDatepickerModule,
-    SvgIconDirective
+    SvgIconDirective,
+    InvoiceReceiptButtonComponent
   ],
   templateUrl: './treasurer-invoices.html',
   styleUrl: './treasurer-invoices.css'

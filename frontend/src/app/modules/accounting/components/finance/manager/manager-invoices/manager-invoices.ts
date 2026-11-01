@@ -9,6 +9,7 @@ import { WorkflowReasonDialogComponent } from '../../../../../../shared/componen
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
+import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 
 /**
  * کارتابل فاکتور مدیر (صدور مجوز پرداخت)؛ از زیرتب «فاکتورهای هزینه» کارتابل تاییدات جدا شد
@@ -17,7 +18,7 @@ import { WebSocketService } from '../../../../../../core/http/websocket.service'
 @Component({
   selector: 'app-manager-invoices',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent, InvoiceReceiptButtonComponent],
   templateUrl: './manager-invoices.html',
 })
 export class ManagerInvoicesComponent implements OnInit, OnDestroy {
