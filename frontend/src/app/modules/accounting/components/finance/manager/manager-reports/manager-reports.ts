@@ -210,6 +210,7 @@ export class ManagerReportsComponent implements OnInit {
   readonly dateToCtrl = new FormControl<string>('', { nonNullable: true });
   fromPickerOpen = false;
   toPickerOpen = false;
+  filtersError = false;
 
   readonly activeDef = computed(() => this.tabs.find(t => t.id === this.activeTab()) ?? this.tabs[0]);
   readonly current = computed(() => this.cache()[this.activeTab()] ?? null);
@@ -295,15 +296,24 @@ export class ManagerReportsComponent implements OnInit {
   private loadLookups(): void {
     this.companyApi.getUserAvailable().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => this.companies.set(r?.companies ?? []),
-      error: () => this.companies.set([]),
+      error: () => {
+        this.companies.set([]);
+        this.filtersError = true;
+      },
     });
     this.api.getFinancialProjects({ is_active: true }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => this.projects.set(r ?? []),
-      error: () => this.projects.set([]),
+      error: () => {
+        this.projects.set([]);
+        this.filtersError = true;
+      },
     });
     this.api.getProjectSections({ is_active: true }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => this.sections.set(r ?? []),
-      error: () => this.sections.set([]),
+      error: () => {
+        this.sections.set([]);
+        this.filtersError = true;
+      },
     });
   }
 

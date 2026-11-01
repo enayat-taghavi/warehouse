@@ -31,7 +31,10 @@ export type { CounterpartyTypeOption } from './counterparty-form/counterparty-fo
   standalone: true,
   imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, TabBarComponent, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, CounterpartyFormFieldsComponent],
   templateUrl: './counterparties.html',
-  styleUrl: './counterparties.css'
+  styleUrl: './counterparties.css',
+  host: {
+    '(document:keydown.escape)': 'onEscapeKey($event)'
+  }
 })
 export class CounterpartiesComponent implements OnInit, OnDestroy {
   counterparties: Counterparty[] = [];
@@ -728,6 +731,19 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   closeConfirmDialog(): void {
     this.confirmModal.isOpen = false;
     this.cdr.detectChanges();
+  }
+
+  onEscapeKey(event?: Event): void {
+    if (this.confirmModal.isOpen) {
+      this.closeConfirmDialog();
+      event?.preventDefault();
+      return;
+    }
+    if (this.isExcelModalOpen) {
+      this.closeExcelModal();
+      event?.preventDefault();
+      return;
+    }
   }
 
   executeConfirmDialog(): void {

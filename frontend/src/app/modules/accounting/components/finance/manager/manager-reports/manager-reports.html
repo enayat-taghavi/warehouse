@@ -119,6 +119,10 @@
         </div>
       </div>
 
+      @if (filtersError) {
+        <p role="alert" class="text-xs text-rose-600 mt-1">بارگذاری فهرست فیلترها انجام نشد.</p>
+      }
+
       @if (!online()) {
         <p class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2" role="status">
           {{ offlineMessage }}
@@ -165,7 +169,7 @@
       <div [class.opacity-60]="loading()">
         <!-- جدول دسکتاپ -->
         <div class="hidden md:block overflow-x-auto print:block print:overflow-visible print:text-[10px]">
-          <table class="w-full text-right text-xs">
+          <table class="w-full text-start text-xs">
             <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
               <tr>
                 @for (col of columns(); track col.key) {
@@ -238,7 +242,7 @@
             <p class="text-xs text-fg-muted py-4 text-center">مورد ریزی پیدا نشد.</p>
           } @else {
             <div class="hidden md:block overflow-x-auto print:block print:overflow-visible print:text-[10px]">
-              <table class="w-full text-right text-xs">
+              <table class="w-full text-start text-xs">
                 <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
                   <tr>
                     @for (col of detailColumns(); track col.key) {

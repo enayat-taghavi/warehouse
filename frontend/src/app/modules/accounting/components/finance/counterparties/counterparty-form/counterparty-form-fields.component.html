@@ -26,7 +26,7 @@
     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer"
   >
     <option *ngFor="let opt of typeOptions" [value]="opt.key">
-      {{ opt.icon }} {{ opt.label }}
+      {{ opt.label }}
     </option>
   </select>
 </div>
@@ -128,7 +128,8 @@
       [ngClass]="form.shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-500'"
       class="text-[10px] font-bold flex items-center gap-0.5"
     >
-      <span>{{ form.shebaValidationResult.isValid ? '✓ معتبر' : '✕ نامعتبر' }}</span>
+      <svg [appIcon]="form.shebaValidationResult.isValid ? 'check' : 'x'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>{{ form.shebaValidationResult.isValid ? 'معتبر' : 'نامعتبر' }}</span>
     </span>
   </div>
   <div class="relative flex items-center">
@@ -149,7 +150,7 @@
       *ngIf="form.model.sheba_number && !form.isShebaMasked"
       type="button"
       (click)="form.copyShebaToClipboard($event)"
-      class="absolute left-8 text-slate-400 hover:text-indigo-600 p-0.5 text-xs cursor-pointer transition-colors"
+      class="absolute left-8 text-slate-400 hover:text-indigo-600 min-w-10 min-h-10 inline-flex items-center justify-center text-xs cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
       title="کپی شماره شبا (بدون IR)"
       aria-label="کپی شماره شبا (بدون IR)"
     >
@@ -191,7 +192,7 @@
       *ngIf="form.model.account_number && !form.isMaskedValue(form.model.account_number)"
       type="button"
       (click)="form.copyAccountNumberToClipboard()"
-      class="absolute left-2 text-slate-400 hover:text-indigo-600 p-0.5 text-xs cursor-pointer transition-colors"
+      class="absolute left-2 text-slate-400 hover:text-indigo-600 min-w-10 min-h-10 inline-flex items-center justify-center text-xs cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
       title="کپی شماره حساب"
       aria-label="کپی شماره حساب"
     >
@@ -231,17 +232,17 @@
     *ngIf="form.shebaValidationResult.isValid"
     class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200"
   >
-    <span>{{ form.shebaValidationResult.bank?.icon || '🏦' }}</span>
+    <svg appIcon="building" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
     <span>شبا معتبر: {{ form.shebaValidationResult.bank?.name }}</span>
     <span class="text-slate-400">|</span>
     <span class="font-mono dir-ltr font-bold text-[10px]">حساب: {{ form.shebaValidationResult.accountNumber }}</span>
-    <span class="font-black">✓</span>
+    <svg appIcon="check" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
   </span>
   <span
     *ngIf="!form.shebaValidationResult.isValid"
     class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200"
   >
-    <span>✕</span>
+    <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
     <span>{{ form.shebaValidationResult.errorMessage || 'شماره شبا نامعتبر است' }}</span>
   </span>
 </div>

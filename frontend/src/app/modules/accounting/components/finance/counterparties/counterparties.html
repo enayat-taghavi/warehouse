@@ -1,4 +1,4 @@
-<div class="p-4 md:p-6 space-y-4 bg-slate-50 min-h-screen dir-rtl text-right font-sans">
+<div class="p-4 md:p-6 space-y-4 bg-slate-50 min-h-screen dir-rtl text-start font-sans">
 
   <!-- ── کانتینر چسبان هدر، تب‌ها و ابزارهای اکشن (Unified Sticky Command Center) ── -->
   <app-command-center>
@@ -47,7 +47,7 @@
     <!-- نوار وضعیت ویرایش (تنها در صورت فعال بودن حالت ویرایش نمایش داده می‌شود) -->
     <div *ngIf="editingCounterparty" class="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded-2xl text-xs font-bold text-amber-800 fade-in">
       <div class="flex items-center gap-2">
-        <span>✏️</span>
+        <svg appIcon="edit" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <span>در حال ویرایش طرف‌حساب: <strong>{{ editingCounterparty.name }}</strong></span>
       </div>
       <button
@@ -120,7 +120,7 @@
                   *ngIf="!isEditingMasked && !isMaskedValue(acc.sheba_number)"
                   type="button"
                   (click)="copyBankValue(acc, 'sheba_number')"
-                  class="tap-target shrink-0 text-slate-400 hover:text-indigo-600 rounded-lg focus-visible:ring-2 focus-visible:ring-indigo-500 inline-flex items-center justify-center min-w-[40px] min-h-[40px] cursor-pointer"
+                  class="tap-target shrink-0 text-slate-400 hover:text-indigo-600 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 inline-flex items-center justify-center min-w-10 min-h-10 cursor-pointer"
                   title="کپی شبا"
                   aria-label="کپی شبا"
                 >
@@ -201,6 +201,7 @@
           <select
             [ngModel]="statusFilter"
             (ngModelChange)="onStatusFilterChange($event)"
+            aria-label="فیلتر وضعیت"
             class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 focus:border-indigo-500 focus:outline-none"
           >
             <option value="all">همه وضعیت‌ها</option>
@@ -220,22 +221,24 @@
 
       <!-- سمت چپ: باکس جستجوی درجا -->
       <div class="relative w-full sm:w-72">
+        <svg appIcon="search" class="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
           type="text"
           [ngModel]="searchQuery"
           (ngModelChange)="onSearchChange($event)"
-          placeholder="🔍 جستجو در نام، تلفن، کد ملی، شبا..."
-          class="w-full bg-white border border-slate-200 rounded-xl pr-3 pl-8 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
+          aria-label="جستجوی طرف‌حساب"
+          placeholder="جستجو در نام، تلفن، کد ملی، شبا..."
+          class="w-full bg-white border border-slate-200 rounded-xl ps-9 pe-10 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
         />
         <button
           *ngIf="searchQuery"
           type="button"
           (click)="onSearchChange('')"
-          class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer font-bold"
+          class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl text-slate-400 hover:text-slate-600 cursor-pointer"
           title="پاک کردن جستجو"
           aria-label="پاک کردن جستجو"
         >
-          ✕
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
     </div>
@@ -252,7 +255,7 @@
 
     <!-- ── نمای ۱: جدول تفصیلی طرف‌حساب‌های مالی ── -->
     <div *ngIf="viewMode === 'table' && !(isLoading && counterparties.length === 0)" class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
+      <table class="w-full text-start text-xs">
         <thead class="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200">
           <tr>
             <th class="p-3 w-10 text-center">#</th>
@@ -279,22 +282,23 @@
             </td>
             <td class="p-3">
               <span [ngClass]="getTypeOption(cp.counterparty_type).badgeClass" class="px-2 py-0.5 rounded-full border text-[10px] font-black inline-flex items-center gap-1">
-                <span>{{ getTypeOption(cp.counterparty_type).icon }}</span>
+                <svg [appIcon]="getTypeOption(cp.counterparty_type).iconName" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>{{ getTypeOption(cp.counterparty_type).label }}</span>
               </span>
             </td>
-            <td class="p-3 font-mono text-slate-600">{{ cp.national_id || '-' }}</td>
-            <td class="p-3 font-mono text-slate-600">{{ cp.phone || '-' }}</td>
+            <td class="p-3 font-mono text-slate-600"><bdi dir="ltr">{{ cp.national_id || '-' }}</bdi></td>
+            <td class="p-3 font-mono text-slate-600"><bdi dir="ltr">{{ cp.phone || '-' }}</bdi></td>
             <!-- ستون شبا با برجستگی و کلید کپی سریع -->
             <td class="p-3">
               <div *ngIf="cp.sheba_number" class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg group hover:border-indigo-300 transition-colors">
-                <span class="font-mono text-slate-800 text-[11px] font-bold dir-ltr select-all">{{ cp.bank_masked ? '' : 'IR' }}{{ cp.sheba_number }}</span>
+                <span class="font-mono text-slate-800 text-[11px] font-bold select-all"><bdi dir="ltr">{{ cp.bank_masked ? '' : 'IR' }}{{ cp.sheba_number }}</bdi></span>
                 <button
                   *ngIf="!cp.bank_masked"
                   type="button"
                   (click)="copyShebaToClipboard(cp.sheba_number, $event)"
-                  class="text-slate-400 hover:text-indigo-600 text-[11px] cursor-pointer"
+                  class="text-slate-400 hover:text-indigo-600 text-[11px] cursor-pointer min-w-10 min-h-10 inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
                   title="کپی شماره شبا (بدون IR)"
+                  aria-label="کپی شماره شبا (بدون IR)"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
                 </button>
@@ -305,7 +309,7 @@
             <td class="p-3">
               <div *ngIf="cp.bank_name || cp.account_number" class="space-y-0.5">
                 <span class="text-slate-800 block font-bold">{{ cp.bank_name || 'بانک نامشخص' }}</span>
-                <span class="text-[10px] font-mono text-slate-400 block">{{ cp.account_number }}</span>
+                <span class="text-[10px] font-mono text-slate-400 block"><bdi dir="ltr">{{ cp.account_number }}</bdi></span>
               </div>
               <span *ngIf="!cp.bank_name && !cp.account_number" class="text-slate-400">-</span>
             </td>
@@ -320,7 +324,7 @@
                 type="button"
                 (click)="toggleCounterpartyStatus(cp, $event)"
                 [ngClass]="cp.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'"
-                class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold cursor-pointer hover:shadow-sm transition-all tap-target"
+                class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold cursor-pointer hover:shadow-sm transition-all tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [title]="cp.is_active ? 'کلیک جهت غیرفعال‌سازی' : 'کلیک جهت فعال‌سازی'"
                 [attr.aria-label]="cp.is_active ? 'غیرفعال‌سازی طرف‌حساب' : 'فعال‌سازی طرف‌حساب'"
               >
@@ -368,7 +372,7 @@
           <div>
             <h3 class="text-xs font-black text-slate-800">{{ cp.name }}</h3>
             <span [ngClass]="getTypeOption(cp.counterparty_type).badgeClass" class="px-2 py-0.5 rounded-full border text-[9px] font-black inline-flex items-center gap-1 mt-1">
-              <span>{{ getTypeOption(cp.counterparty_type).icon }}</span>
+              <svg [appIcon]="getTypeOption(cp.counterparty_type).iconName" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <span>{{ getTypeOption(cp.counterparty_type).label }}</span>
             </span>
           </div>
@@ -377,7 +381,7 @@
               type="button"
               (click)="toggleCounterpartyStatus(cp, $event)"
               [ngClass]="cp.is_active ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-500 bg-slate-100 border-slate-200'"
-              class="px-2.5 py-1 rounded-full border text-[10px] font-bold cursor-pointer tap-target"
+              class="px-2.5 py-1 rounded-full border text-[10px] font-bold cursor-pointer tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [title]="cp.is_active ? 'کلیک جهت غیرفعال‌سازی' : 'کلیک جهت فعال‌سازی'"
               [attr.aria-label]="cp.is_active ? 'غیرفعال‌سازی طرف‌حساب' : 'فعال‌سازی طرف‌حساب'"
             >
@@ -400,13 +404,14 @@
 
         <!-- شماره شبا (برجسته در نمای کارت) -->
         <div *ngIf="cp.sheba_number" class="bg-white p-2.5 rounded-xl border border-indigo-100 shadow-sm flex items-center justify-between text-[11px] font-mono">
-          <span class="text-slate-800 dir-ltr font-black">{{ cp.bank_masked ? '' : 'IR' }}{{ cp.sheba_number }}</span>
+          <span class="text-slate-800 font-black"><bdi dir="ltr">{{ cp.bank_masked ? '' : 'IR' }}{{ cp.sheba_number }}</bdi></span>
           <button
             *ngIf="!cp.bank_masked"
             type="button"
             (click)="copyShebaToClipboard(cp.sheba_number, $event)"
-            class="text-indigo-600 hover:text-indigo-800 text-[10px] font-sans font-bold cursor-pointer flex items-center gap-1"
+            class="text-indigo-600 hover:text-indigo-800 text-[10px] font-sans font-bold cursor-pointer flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg px-1.5 py-1"
             title="کپی شماره شبا (بدون IR)"
+            aria-label="کپی شماره شبا (بدون IR)"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
             <span>کپی شبا</span>
@@ -417,16 +422,16 @@
         <div class="grid grid-cols-2 gap-2 text-[11px] font-bold">
           <div>
             <span class="text-slate-400 block text-[10px]">تلفن تماس:</span>
-            <span class="font-mono text-slate-700">{{ cp.phone || '-' }}</span>
+            <span class="font-mono text-slate-700"><bdi dir="ltr">{{ cp.phone || '-' }}</bdi></span>
           </div>
           <div>
             <span class="text-slate-400 block text-[10px]">کد ملی / شناسه:</span>
-            <span class="font-mono text-slate-700">{{ cp.national_id || '-' }}</span>
+            <span class="font-mono text-slate-700"><bdi dir="ltr">{{ cp.national_id || '-' }}</bdi></span>
           </div>
           <div>
             <span class="text-slate-400 block text-[10px]">بانک و حساب:</span>
             <span class="text-slate-700">{{ cp.bank_name || '-' }}</span>
-            <span *ngIf="cp.account_number" class="text-[9px] font-mono text-slate-400 block">{{ cp.account_number }}</span>
+            <span *ngIf="cp.account_number" class="text-[9px] font-mono text-slate-400 block"><bdi dir="ltr">{{ cp.account_number }}</bdi></span>
           </div>
           <div>
             <span class="text-slate-400 block text-[10px]">کد تفصیلی:</span>
@@ -449,12 +454,17 @@
 
   <!-- ── مدال تایید اختصاصی ── -->
   <div *ngIf="confirmModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in duration-150">
-    <div class="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full border border-slate-100 space-y-4 text-center">
-      <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center text-2xl" [ngClass]="confirmModal.isDanger ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'">
-        {{ confirmModal.isDanger ? '⚠️' : 'ℹ️' }}
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="cp-confirm-title"
+      class="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full border border-slate-100 space-y-4 text-center"
+    >
+      <div class="w-12 h-12 rounded-full mx-auto flex items-center justify-center" [ngClass]="confirmModal.isDanger ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'">
+        <svg [appIcon]="confirmModal.isDanger ? 'alert-triangle' : 'info'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
       </div>
       <div>
-        <h3 class="text-sm font-black text-slate-800">{{ confirmModal.title }}</h3>
+        <h3 id="cp-confirm-title" class="text-sm font-black text-slate-800">{{ confirmModal.title }}</h3>
         <p class="text-xs text-slate-500 font-bold mt-1.5 leading-relaxed">{{ confirmModal.message }}</p>
       </div>
       <div class="flex items-center justify-center gap-2 pt-2 border-t border-slate-100">

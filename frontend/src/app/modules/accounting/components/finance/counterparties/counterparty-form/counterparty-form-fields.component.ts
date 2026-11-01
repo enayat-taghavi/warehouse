@@ -11,16 +11,17 @@ export interface CounterpartyTypeOption {
   label: string;
   badgeClass: string;
   bgClass: string;
+  iconName: string;
   icon: string;
 }
 
 // تعاریف ۵ گانه انواع طرف‌حساب
 export const COUNTERPARTY_TYPE_OPTIONS: CounterpartyTypeOption[] = [
-  { key: 'driver', label: 'راننده / مالک خودرو', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200', bgClass: 'bg-blue-50', icon: '🚚' },
-  { key: 'repair_shop', label: 'تعمیرگاه و قطعات', badgeClass: 'bg-amber-100 text-amber-800 border-amber-200', bgClass: 'bg-amber-50', icon: '🔧' },
-  { key: 'fuel_station', label: 'جایگاه سوخت', badgeClass: 'bg-rose-100 text-rose-800 border-rose-200', bgClass: 'bg-rose-50', icon: '⛽' },
-  { key: 'contractor', label: 'پیمانکار خدماتی', badgeClass: 'bg-purple-100 text-purple-800 border-purple-200', bgClass: 'bg-purple-50', icon: '🏗️' },
-  { key: 'other', label: 'سایر اشخاص حقیقی/حقوقی', badgeClass: 'bg-slate-100 text-slate-800 border-slate-200', bgClass: 'bg-slate-50', icon: '🏢' },
+  { key: 'driver', label: 'راننده / مالک خودرو', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200', bgClass: 'bg-blue-50', iconName: 'truck', icon: 'truck' },
+  { key: 'repair_shop', label: 'تعمیرگاه و قطعات', badgeClass: 'bg-amber-100 text-amber-800 border-amber-200', bgClass: 'bg-amber-50', iconName: 'tool', icon: 'tool' },
+  { key: 'fuel_station', label: 'جایگاه سوخت', badgeClass: 'bg-rose-100 text-rose-800 border-rose-200', bgClass: 'bg-rose-50', iconName: 'droplet', icon: 'droplet' },
+  { key: 'contractor', label: 'پیمانکار خدماتی', badgeClass: 'bg-purple-100 text-purple-800 border-purple-200', bgClass: 'bg-purple-50', iconName: 'tool', icon: 'tool' },
+  { key: 'other', label: 'سایر اشخاص حقیقی/حقوقی', badgeClass: 'bg-slate-100 text-slate-800 border-slate-200', bgClass: 'bg-slate-50', iconName: 'building', icon: 'building' },
 ];
 
 /**
