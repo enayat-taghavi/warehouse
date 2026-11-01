@@ -16,6 +16,7 @@ import { ExternalLinkDirective } from '../../../../../../shared/directives/exter
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
 export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all';
 
@@ -373,7 +374,14 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     if (!this.approvalTarget) return;
     this.isApproving = true;
     const { item } = this.approvalTarget;
-    this.personnelApi.patchDailyAttendance(item.id, { notes: this.approvalNote ? `${item.notes || ''} | تایید سرپرست: ${this.approvalNote}` : 'تایید سرپرست' }).subscribe({
+    // تأیید واقعی ردیف کارکرد در کارتابل سرپرست (نه فقط نوشتن یادداشت)
+    const note = this.approvalNote.trim();
+    this.personnelApi.postCartableAction('supervisor', {
+      action: 'approve',
+      model: 'attendance',
+      id: item.id,
+      ...(note ? { reason: note } : {}),
+    }).subscribe({
       next: () => {
         this.toast.showSuccess('کارکرد روزانه با موفقیت تایید شد.');
         this.isApproving = false;
@@ -382,7 +390,7 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.showError(err?.error?.detail || 'خطا در تایید کارکرد');
+        this.toast.showError(attendanceActionErrorMessage(err, 'خطا در تایید کارکرد'));
       }
     });
   }

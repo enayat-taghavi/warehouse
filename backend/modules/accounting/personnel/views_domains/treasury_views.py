@@ -1573,8 +1573,15 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             return _petty_retired()
         # Plan 2.2 (T13): approving petty cash is petty-cash management in the record's own section
         _ensure_petty_cash_manager(request.user, instance.section_id)
+        # ی۴۹: شمارهٔ پیگیری واریزی که خزانه‌دار در پنجرهٔ شارژ می‌نویسد روی سند می‌ماند
+        # (فقط اگر خالی است، تا رسید یا مرجع قبلی جایگزین نشود؛ با گام گردش در یک تراکنش)
+        tracking = str(request.data.get('tracking_code') or '').strip()
         from ..workflow_engine import advance_workflow_step
-        advance_workflow_step(instance, request.user, notes=request.data.get('notes'), is_financial=True)
+        with transaction.atomic():
+            if tracking and not instance.receipt_number:
+                instance.receipt_number = tracking[:100]
+                instance.save(update_fields=['receipt_number', 'updated_at'])
+            advance_workflow_step(instance, request.user, notes=request.data.get('notes'), is_financial=True)
         return Response({'message': 'تایید تراکنش تنخواه با موفقیت ثبت شد.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='reject')

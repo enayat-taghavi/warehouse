@@ -97,6 +97,7 @@ describe('SupervisorPersonnelHubComponent - Phase 8 Comprehensive Tests', () => 
       getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       approvePersonnelSupervisor: vi.fn().mockReturnValue(of({ success: true })),
       patchDailyAttendance: vi.fn().mockReturnValue(of({ success: true })),
+      postCartableAction: vi.fn().mockReturnValue(of({ message: 'ok' })),
       approvePersonnelChangeRequestSupervisor: vi.fn().mockReturnValue(of({ success: true })),
       rejectPersonnel: vi.fn().mockReturnValue(of({ success: true })),
       requestPersonnelRevision: vi.fn().mockReturnValue(of({ success: true })),

@@ -124,10 +124,11 @@ class AccountantHereEmployeeThereTests(ScopedAccessFixture):
         self.assertEqual(ids, {self.petty['A'].id})
 
         self.client.force_authenticate(user=User.objects.get(pk=self.user.pk))
-        res = self.client.post(f"{PETTY_CASH}{self.petty['A'].id}/approve/", {}, format='json')
+        res = self.client.post(f"{PETTY_CASH}{self.petty['A'].id}/approve/", {'tracking_code': ' TRK-49 '}, format='json')
         self.assertEqual(res.status_code, 200, res.content)
         self.petty['A'].refresh_from_db()
         self.assertNotEqual(self.petty['A'].status, 'pending_supervisor')
+        self.assertEqual(self.petty['A'].receipt_number, 'TRK-49')  # ی۴۹
 
         # سند تنخواه ب دیده نمی‌شود و تأیید نمی‌شود
         res = self.client.post(f"{PETTY_CASH}{self.petty['B'].id}/approve/", {}, format='json')

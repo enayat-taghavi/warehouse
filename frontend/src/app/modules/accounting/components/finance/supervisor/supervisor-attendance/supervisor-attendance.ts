@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,6 +13,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
+import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../../shared/icons/semantic-icons';
 
 @Component({
@@ -71,6 +72,8 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   // State & Indicators
   isLoading = false;
   isSaving = false;
+  // در تست‌های سازنده‌ای (بدون injection context) نبودنش یعنی بدون پرسش
+  private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined; } })();
   items: any[] = [];
   rawItems: any[] = [];
 
@@ -337,28 +340,50 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  approveBatch(): void {
-    const pendingItems = this.rawItems.filter(it => it.approval_status === 'PENDING_SUPERVISOR' || it.approval_status === 'DRAFT');
+  async approveBatch(): Promise<void> {
+    if (this.isSaving) return;
+    // فقط ردیف‌هایی که کاربر با جستجوی فعلی می‌بیند (همان شمارندهٔ دکمه)
+    const q = this.searchQuery?.trim().toLowerCase();
+    const visible = q
+      ? this.rawItems.filter(x =>
+          (x.personnel_name && x.personnel_name.toLowerCase().includes(q)) ||
+          (x.national_code && x.national_code.includes(q)))
+      : this.rawItems;
+    const pendingItems = visible.filter(it => it.approval_status === 'PENDING_SUPERVISOR' || it.approval_status === 'DRAFT');
     if (pendingItems.length === 0) {
       this.toast.info('هیچ کارکرد در انتظاری برای تایید وجود ندارد.');
       return;
     }
 
     const ids = pendingItems.map(it => it.id);
+    if (this.confirmDialog) {
+      const ok = await this.confirmDialog.open({
+        title: 'تایید دسته‌ای کارکرد',
+        message: `${ids.length} کارکرد در انتظار تایید می‌شود. ادامه می‌دهید؟`,
+        confirmText: 'تایید همه',
+        cancelText: 'انصراف',
+        type: 'warning',
+      });
+      if (ok !== true) return;
+    }
+    this.isSaving = true;
     this.personnelApi.postCartableAction('supervisor', {
       action: 'approve',
       model: 'attendance',
       ids: ids
     }).subscribe({
       next: () => {
+        this.isSaving = false;
         this.toast.success(`تعداد ${ids.length} کارکرد در انتظار با موفقیت توسط سرپرست تایید شدند.`);
         this.fetchAttendanceData();
       },
       error: (err: any) => {
+        this.isSaving = false;
         this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید دسته‌ای کارکردها'));
       }
     });
   }
+
 
   exportExcel(): void {
     this.toast.info('در حال صدور فایل اکسل کارکرد...');

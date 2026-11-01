@@ -15,10 +15,7 @@ export interface PettyCashRefillItem {
   id: number;
   custodian_name: string;
   section_name: string;
-  ceiling_limit: number;
-  current_balance: number;
   requested_refill_amount: number;
-  card_number: string;
   status: 'pending_refill' | 'refilled';
   tracking_code?: string;
   /** کسر بدهی و خالص واریز (د۴)؛ در شارژهای قدیمی خالی است */
@@ -126,10 +123,7 @@ export class TreasurerPettyCashComponent implements OnInit, OnDestroy {
           id: t.id,
           custodian_name: t.custodian_name || 'مسئول تنخواه',
           section_name: t.section_name || '',
-          ceiling_limit: 50000000,
-          current_balance: 0,
           requested_refill_amount: t.amount,
-          card_number: t.receipt_number || '---',
           status: t.status === 'approved' ? 'refilled' : 'pending_refill',
           tracking_code: t.receipt_number,
           offset_total: Number(t.offset_total || 0),
@@ -175,7 +169,7 @@ export class TreasurerPettyCashComponent implements OnInit, OnDestroy {
     this.refillModalOpen = false;
     this.refillError = '';
     this.isLoading = true;
-    this.personnelApi.approvePettyCashTransaction(item.id).subscribe({
+    this.personnelApi.approvePettyCashTransaction(item.id, code).subscribe({
       next: () => {
         this.isLoading = false;
         item.status = 'refilled';

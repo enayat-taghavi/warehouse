@@ -307,6 +307,11 @@
       <p class="font-bold text-sm">هیچ رکورد کارکرد ماشین‌آلاتی در این تاریخ ثبت نشده است.</p>
     </div>
 
+    <p *ngIf="workLogsList.length > 0" class="text-xs text-muted">
+      این فهرست فقط نمایشی است؛ کارکرد ماشین‌آلات همراه دورهٔ ماهانه در
+      <a routerLink="/app/my-tasks" class="font-bold text-indigo-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded">«کارهای من»</a>
+      تأیید می‌شود.
+    </p>
     <div *ngIf="workLogsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
@@ -316,8 +321,6 @@
               <th class="p-3">راننده</th>
               <th class="p-3">تعداد سرویس</th>
               <th class="p-3">ساعات کارکرد</th>
-              <th class="p-3">وضعیت تایید</th>
-              <th class="p-3 text-center">عملیات</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-line/60">
@@ -326,38 +329,6 @@
               <td class="p-3 font-bold text-fg">{{ item.driver_name }}</td>
               <td class="p-3 font-mono">{{ item.trips_count }} سرویس</td>
               <td class="p-3 font-mono font-bold text-indigo-600">{{ item.work_hours }} ساعت</td>
-              <td class="p-3">
-                <span class="px-2 py-0.5 rounded-md text-[11px] font-black inline-flex items-center gap-1"
-                      [ngClass]="item.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" *ngIf="item.status === 'approved'" appIcon="check" class="w-3 h-3"></svg>
-                  <span>{{ item.status === 'approved' ? 'تایید شده' : 'در انتظار تایید' }}</span>
-                </span>
-              </td>
-              <td class="p-3 text-center">
-                <div class="flex items-center justify-center gap-1.5" *ngIf="item.status !== 'approved'">
-                  <button
-                    type="button"
-                    appAction="approve"
-                    size="sm"
-                    display="label"
-                    label="تایید کارکرد"
-                    [disabled]="!isOnline"
-                    [hint]="isOnline ? '' : offlineHint"
-                    (click)="openApproveModal('work_logs', item)"
-                  ></button>
-                  <button
-                    type="button"
-                    appAction="return"
-                    size="sm"
-                    display="label"
-                    label="عودت"
-                    [disabled]="!isOnline"
-                    [hint]="isOnline ? '' : offlineHint"
-                    (click)="openRejectModal('work_logs', item, 'revision')"
-                  ></button>
-                </div>
-                <span *ngIf="item.status === 'approved'" class="text-xs text-muted font-bold">تایید شده</span>
-              </td>
             </tr>
           </tbody>
         </table>

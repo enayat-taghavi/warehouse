@@ -310,7 +310,8 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           trips_count: v.trips_count || v.total_trips || 0,
           status: v.status || 'pending_supervisor'
         }));
-        this.statusCounters.workLogsCount = this.workLogsList.filter(x => x.status === 'pending_supervisor' || !x.status).length;
+        // ردیف کارکرد ماشین‌آلات وضعیت تأیید ندارد (تأیید در دورهٔ ماهانه است)؛ شمارندهٔ «در انتظار» نمی‌گیرد
+        this.statusCounters.workLogsCount = 0;
       },
       error: () => {
         this.workLogsList = [];
@@ -480,20 +481,6 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت تایید سرپرست'));
         }
       });
-    } else if (type === 'work_logs') {
-      const targetId = item.id || item.trip_id;
-      this.personnelApi.patchVehicleTrip(targetId, { notes: this.approvalNote || 'تایید سرپرست' }).subscribe({
-        next: () => {
-          this.toast.showSuccess(`کارکرد خودرو «${item.plate_number || ''}» با موفقیت تایید شد.`);
-          this.isApproving = false;
-          this.closeApproveModal();
-          this.fetchFleetData();
-        },
-        error: (err) => {
-          this.isApproving = false;
-          this.toast.showError(this.workflowErrorText(err, 'خطا در تایید کارکرد'));
-        }
-      });
     } else if (type === 'changes') {
       this.personnelApi.approveVehicleChangeRequestSupervisor(item.id, this.approvalNote).subscribe({
         next: () => {
@@ -590,20 +577,6 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           }
         });
       }
-    } else if (type === 'work_logs') {
-      const targetId = item.id || item.trip_id;
-      this.personnelApi.patchVehicleTrip(targetId, { notes: `عودت سرپرست: ${this.rejectReason}` }).subscribe({
-        next: () => {
-          this.toast.showWarning('کارکرد خودرو جهت اصلاح عودت داده شد.');
-          this.isRejecting = false;
-          this.closeRejectModal();
-          this.fetchFleetData();
-        },
-        error: (err) => {
-          this.isRejecting = false;
-          this.toast.showError(this.workflowErrorText(err, 'خطا در ثبت عودت کارکرد'));
-        }
-      });
     } else if (type === 'changes') {
       this.personnelApi.cancelVehicleChangeRequest(item.id, this.rejectReason.trim()).subscribe({
         next: () => {

@@ -14,6 +14,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
+import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ProjectSection } from '../../../models/personnel.model';
 
 function createStorageMock() {
@@ -169,7 +170,8 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
         { provide: StateService, useValue: mockState },
         { provide: ToastService, useValue: mockToast },
         { provide: PersonnelApiService, useValue: mockPersonnelApi },
-        { provide: ActivatedRoute, useValue: mockRoute }
+        { provide: ActivatedRoute, useValue: mockRoute },
+        { provide: ConfirmDialogService, useValue: { open: vi.fn().mockResolvedValue(true) } }
       ]
     }).compileComponents();
 
@@ -306,11 +308,11 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
   });
 
   // ─── تسک ۹: تایید دسته‌ای کارکردهای در انتظار ─────────────────────────────────
-  it('مورد ۹: دکمه تایید دسته‌ای در DOM باید تمام رکوردهای در انتظار را یکجا به کارتابل ارسال کند', () => {
+  it('مورد ۹: دکمه تایید دسته‌ای در DOM باید تمام رکوردهای در انتظار را یکجا به کارتابل ارسال کند', async () => {
     attendanceComp.ngOnInit();
     attendanceFixture.detectChanges();
 
-    attendanceComp.approveBatch();
+    await attendanceComp.approveBatch();
     expect(mockPersonnelApi.postCartableAction).toHaveBeenCalledWith('supervisor', {
       action: 'approve',
       model: 'attendance',

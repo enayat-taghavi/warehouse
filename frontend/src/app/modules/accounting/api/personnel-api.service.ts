@@ -254,7 +254,7 @@ export class PersonnelApiService {
   createPettyCashTransaction(data: Partial<PettyCashTransaction> | FormData): Observable<PettyCashTransaction> { return this.treasuryOrg.createPettyCashTransaction(data); }
   updatePettyCashTransaction(id: number, data: Partial<PettyCashTransaction>): Observable<PettyCashTransaction> { return this.treasuryOrg.updatePettyCashTransaction(id, data); }
   deletePettyCashTransaction(id: number): Observable<void> { return this.treasuryOrg.deletePettyCashTransaction(id); }
-  approvePettyCashTransaction(id: number): Observable<PettyCashTransaction> { return this.treasuryOrg.approvePettyCashTransaction(id); }
+  approvePettyCashTransaction(id: number, trackingCode?: string): Observable<PettyCashTransaction> { return this.treasuryOrg.approvePettyCashTransaction(id, trackingCode); }
   rejectPettyCashTransaction(id: number, reason: string): Observable<PettyCashTransaction> { return this.treasuryOrg.rejectPettyCashTransaction(id, reason); }
   requestPettyCashCharge(data: { amount: number; title?: string; description?: string }): Observable<PettyCashTransaction> { return this.treasuryOrg.requestPettyCashCharge(data); }
   sendPettyCashCharge(id: number): Observable<PettyCashTransaction> { return this.treasuryOrg.sendPettyCashCharge(id); }

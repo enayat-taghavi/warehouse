@@ -63,6 +63,7 @@ describe('SupervisorPersonnelHubComponent Unit Tests', () => {
       getPersonnelChangeRequestsPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: [mockCrPersonnel] })),
       approvePersonnelSupervisor: vi.fn().mockReturnValue(of({ success: true })),
       patchDailyAttendance: vi.fn().mockReturnValue(of({ success: true })),
+      postCartableAction: vi.fn().mockReturnValue(of({ message: 'ok' })),
       approvePersonnelChangeRequestSupervisor: vi.fn().mockReturnValue(of({ success: true })),
       rejectPersonnel: vi.fn().mockReturnValue(of({ success: true })),
       requestPersonnelRevision: vi.fn().mockReturnValue(of({ success: true }))
@@ -126,7 +127,8 @@ describe('SupervisorPersonnelHubComponent Unit Tests', () => {
     component.approvalNote = 'کارکرد صحیح است.';
 
     component.submitApproval();
-    expect(mockPersonnelApi.patchDailyAttendance).toHaveBeenCalled();
+    expect(mockPersonnelApi.postCartableAction).toHaveBeenCalledWith('supervisor', expect.objectContaining({ action: 'approve', model: 'attendance', id: 201 }));
+    expect(mockPersonnelApi.patchDailyAttendance).not.toHaveBeenCalled();
     expect(mockPersonnelApi.approvePersonnelSupervisor).not.toHaveBeenCalled();
     expect(mockToast.showSuccess).toHaveBeenCalled();
     expect(component.isApprovalModalOpen).toBe(false);

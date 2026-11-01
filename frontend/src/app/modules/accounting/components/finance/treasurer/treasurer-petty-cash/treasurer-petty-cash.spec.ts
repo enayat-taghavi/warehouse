@@ -40,7 +40,7 @@ describe('TreasurerPettyCashComponent — تن‌خواه جدای خزانه‌
     expect(api.approvePettyCashTransaction).not.toHaveBeenCalled();
     component.refillTrackingCode = 'TRK-1';
     component.confirmRefill();
-    expect(api.approvePettyCashTransaction).toHaveBeenCalledWith(1);
+    expect(api.approvePettyCashTransaction).toHaveBeenCalledWith(1, 'TRK-1');
     expect(toast.success).toHaveBeenCalled();
   });
 });

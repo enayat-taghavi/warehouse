@@ -362,8 +362,9 @@ export class TreasuryOrgApiService {
     return this.api.delete<void>(`${this.baseUrl}/petty-cash-transactions/${id}`);
   }
 
-  approvePettyCashTransaction(id: number): Observable<PettyCashTransaction> {
-    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/approve/`, {});
+  approvePettyCashTransaction(id: number, trackingCode?: string): Observable<PettyCashTransaction> {
+    return this.api.post<PettyCashTransaction>(`${this.baseUrl}/petty-cash-transactions/${id}/approve/`,
+      trackingCode ? { tracking_code: trackingCode } : {});
   }
 
   rejectPettyCashTransaction(id: number, reason: string): Observable<PettyCashTransaction> {

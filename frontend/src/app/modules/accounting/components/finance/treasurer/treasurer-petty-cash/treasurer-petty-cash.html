@@ -42,10 +42,7 @@
             <th class="py-3 px-3">ردیف</th>
             <th class="py-3 px-3">مسئول تن‌خواه</th>
             <th class="py-3 px-3">بخش / کارگاه</th>
-            <th class="py-3 px-3 font-mono">سقف مصوب تن‌خواه</th>
-            <th class="py-3 px-3 font-mono">مانده فعلی کارت</th>
             <th class="py-3 px-3 font-mono">مبلغ درخواستی شارژ</th>
-            <th class="py-3 px-3 font-mono">شماره کارت تن‌خواه</th>
             <th class="py-3 px-3 text-center">وضعیت</th>
             <th class="py-3 px-3 text-center">عملیات خزانه‌دار</th>
           </tr>
@@ -55,10 +52,7 @@
             <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
             <td class="py-3 px-3 font-bold text-slate-900">{{ item.custodian_name }}</td>
             <td class="py-3 px-3 text-slate-600">{{ item.section_name }}</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.ceiling_limit | number }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-rose-600">{{ item.current_balance | number }}</td>
             <td class="py-3 px-3 font-mono font-black text-teal-700 text-sm">{{ item.requested_refill_amount | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-700">{{ item.card_number }}</td>
             <td class="py-3 px-3 text-center">
               <span *ngIf="item.status === 'pending_refill'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">در انتظار شارژ</span>
               <span *ngIf="item.status === 'refilled'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">شارژ شد</span>
@@ -77,7 +71,7 @@
             </td>
           </tr>
           <tr *ngIf="!isLoading && refills.length === 0">
-            <td colspan="9" class="p-8 text-center text-slate-400 font-medium">درخواست شارژ تن‌خواهی در انتظار واریز نیست.</td>
+            <td colspan="6" class="p-8 text-center text-slate-400 font-medium">درخواست شارژ تن‌خواهی در انتظار واریز نیست.</td>
           </tr>
         </tbody>
       </table>

@@ -537,6 +537,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
         this.fleetPeriods = Array.isArray(data?.fleet_periods) ? data.fleet_periods : [];
 
         // Map Payrolls
+        // ی۵۲: دورهٔ خروجی پایا/اکسل در هر بارگذاری از نو تعیین می‌شود تا دورهٔ پرداخت‌شدهٔ قبلی نماند
+        this.currentPeriodId = null;
         if (data?.payrolls && Array.isArray(data.payrolls)) {
           for (const p of data.payrolls) {
             // سریالایزر رکورد حقوق شناسهٔ دوره را در فیلد `period` می‌فرستد
