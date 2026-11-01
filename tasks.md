@@ -5047,3 +5047,480 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only those files and commit with this message, without push:
 fix(employee): a11y, RTL and error states on attendance, fleet, vehicle and petty cash pages
 - Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — Overnight fixes O4-b3: accessibility, RTL and error state on the employee attendance page template
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance.html --count "54:‌" --contains "ذخیره‌نشده" --contains "aria-modal" --contains "<bdi" --contains "loadError" --contains "تلاش دوباره" --absent "⚠️" --absent "🔄" --absent "🔒" --absent "⭐" --absent "📥" --absent "🗑️" --absent "🔍" --absent "⚡" --absent "💰" --absent "🖨️" --absent "pr-7 pl-6"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-attendance/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(employee): a11y, RTL and error state on the attendance page"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside `frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/` (mainly `employee-attendance.html`; `employee-attendance.ts` only for item e if needed). No new files except the temporary tsconfig (see Tool policy), deleted before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- Edit the html with small, targeted edits (one element at a time). Do NOT use global regex / sed replacements over the whole file: a previous run broke a `(click)` expression containing `>` that way. After editing, open the file once and check every `(click)="..."` you touched is still intact.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner (ZWNJ, U+200C), e.g. «ذخیره‌نشده», «نیمه‌وقت». Keep every ZWNJ exactly. Never retype existing Persian text; edit only attributes, tags and emoji around it. The runner fails if the html has fewer than 54 ZWNJ. In new Persian text write a half-space as U+200C.
+- Icons only as `<svg appIcon="name" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts` (check each name). Suggested: `alert-triangle`, `refresh-cw`, `lock`, `star`, `upload`, `trash-2`, `check`, `search`, `x`, `zap`, `dollar-sign`, `printer`, `calendar`. No inline `<svg>` with `<path>`. The component must import `SvgIconDirective` if it does not already.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any test. All user-facing text stays Persian.
+- If the real file differs from this task, follow the real file and say so in the report.
+
+2. Context:
+- Plan findings ی۲۳–ی۳۱ (`Documents/Overnight_Fixes_2026_11/plan_overnight_fixes.md`; do not edit the plan). The same fixes are already done in the sibling `employee-fleet/employee-fleet.html` — open it and copy its patterns (icons, clear-search button, error row, day-cell button, dialogs).
+- `employee-attendance.ts` ALREADY has `loadError` (set in `loadAttendanceMatrix()`, loading flag `isAttendanceLoading`) and an extended `onGlobalEscape()`. Only the html part is missing.
+- The page is Persian RIGHT-TO-LEFT. Physical → logical mapping in RTL: `right` = start, `left` = end. So: `mr-*`→`ms-*`, `ml-*`→`me-*`, `pr-*`→`ps-*`, `pl-*`→`pe-*`, `right-*`→`start-*`, `left-*`→`end-*`, `-right-*`→`-start-*`, `text-right`→`text-start`, `text-left`→`text-end`, `border-r`→`border-s`, `border-l`→`border-e`, `sticky right-0` → `sticky start-0`. (This keeps the look identical and makes it direction-safe.)
+- The «انبار مرجع» column and the top warehouse picker were removed on purpose: do not restore them. Do NOT replace raw colours (`slate-*`, `bg-white`) with tokens.
+
+3. Task (all in `employee-attendance.html`, line numbers approximate):
+- a) Emoji used as icons (~lines 6, 11, 168, 213, 244, 250, 257, 260, 271, 516–522, 596, 649, 876, 960): replace each with the matching `appIcon` svg (⚠️ `alert-triangle`, 🔄 `refresh-cw`, 🔒 `lock`, ⭐ `star`, 📥 `upload`, 🗑️ `trash-2`, ✓ `check`, 🔍 `search`, ✕ `x`, ⚡ `zap`, 💰 `dollar-sign`, 🖨️ `printer`, 📅 `calendar`). Keep the Persian text; wrap icon + text in `inline-flex items-center gap-1` when the parent is not flex. In `<option>` / `placeholder` just remove the emoji and its space. If a spec asserts an old string, update only that expected string and say so.
+- b) Accessible names: section select (`aria-label="بخش فعال"` if no `<label for>`), date input (`aria-label="تاریخ"`), search (`aria-label="جستجوی پرسنل"`), select-all checkbox (`aria-label="انتخاب همه"`), row checkboxes (`[attr.aria-label]="'انتخاب ' + (row.full_name || 'پرسنل')"` with the real row variable), grid inputs (`[attr.aria-label]="'<real column header> ' + (row.full_name || 'پرسنل')"`), month input (`aria-label="ماه"`). Modal fields (~751–776, 800, 835–858, 891–908): `for`/`id` pairs with ids prefixed `att-`.
+- c) Modals (`fixed inset-0` overlays, ~741, 790, 822, 872, 954, 1087, 1115): on the inner panel add `role="dialog" aria-modal="true" aria-labelledby="att-modal-<n>-title"` and put that id on the modal's title element.
+- d) Monthly-grid day cells (~715): move `(click)` from the `<td>` to a new `<button type="button" class="w-full min-h-10 flex items-center justify-center rounded cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" [attr.aria-label]="(row.full_name || 'پرسنل') + ' روز ' + <day>">` wrapping the cell content (real variable names); keep the other `<td>` classes/bindings, drop `cursor-pointer` from the td.
+- e) Error state: next to the empty row of the daily table (~308–312) change the empty row condition to also require `!loadError`, and add before it `<tr *ngIf="!isAttendanceLoading && loadError"><td [attr.colspan]="<same colspan as the empty row>" role="alert" class="p-8 text-center text-xs font-bold text-rose-600">{{ loadError }} <button type="button" (click)="loadAttendanceMatrix()" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button></td></tr>` (if the page also has a mobile card list with its own empty `div`, add the same as a `div`, like `employee-fleet.html`). If the empty row uses `@if` syntax, use `@if` too.
+- f) Clear-search button (~268–271): `<button type="button" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">` with the `x` icon; search icon at `absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none`; input padding `ps-9 pe-10` instead of `pr-7 pl-6`. Keep the existing `(click)`.
+- g) Icon-only date-picker button (~140): `inline-flex items-center justify-center w-10 h-10 rounded-xl`, `aria-label` equal to its `title` (add `title="انتخاب تاریخ تقویمی"` if missing), plus `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`. Add those three `focus-visible:` classes to every other custom `<button>` in the file that has no `focus-visible:` class and no `appAction` attribute (add them as a separate class token; never put them inside another attribute).
+- h) Physical RTL classes: apply the mapping from Context to the whole html EXCEPT elements with `dir="ltr"`, the print sheet (`print:` blocks, ~1005–1047) and the symmetric `left-3 right-3` pair (~471).
+- i) National code cells (~707; skip the print sheet): wrap the interpolation in `<bdi dir="ltr">…</bdi>`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: create `frontend/tsconfig.o4tmp.json` (inside `frontend/`):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/employee/employee-attendance/*.spec.ts"], "exclude": [] }`
+  and from `frontend` run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/employee/employee-attendance/*.spec.ts"` once before and once after your changes (at most 5 runs). Delete the tsconfig before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py` and `python scripts/e2e/guardian_56_change_integrity.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If the network fails, simply continue where you stopped.
+
+5. Before finishing:
+- Attendance specs pass, guardians 52 and 56 pass.
+- No listed emoji remains in the html; ZWNJ count ≥ 54 (`python -c "import sys;print(open(sys.argv[1],encoding='utf-8').read().count('‌'))" <file>`).
+- `git status --short` shows only files of `employee-attendance/` (plus the pre-existing `tests/playwright/tools/index.py`); the temp tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(employee): a11y, RTL and error state on the attendance page
+- Short English report: what changed, test results, anything that differed or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — Overnight fixes O4-b2: icons, touch targets, focus rings, RTL and bdi on the employee new personnel page
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html --count "81:‌" --contains "<bdi" --contains "[appIcon]" --absent "👥" --absent "🚗" --absent "⚠️" --absent "💡" --absent "🔄" --absent "🔒" --absent "🛡️" --absent "💳" --absent "⭐" --absent "➕" --absent "📎" --absent "👁️" --absent "🗑️" --absent "🔍" --absent "⚡" --absent "dir-ltr" --absent "pr-8 pl-8"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.ts --absent "return '📤'" --absent "return '📝'" --absent "return '⏳'" --absent "|| '🏦'"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-new-personnel/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(personnel): icons, touch targets, focus rings and RTL on new personnel page"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside `frontend/src/app/modules/accounting/components/finance/employee/employee-new-personnel/`. No new files except a temporary tsconfig (see Tool policy) that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, routes or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner character (ZWNJ, U+200C), e.g. «پیش‌نمایش», «حساب‌ها». Keep every ZWNJ exactly as it is. Never retype existing Persian text; edit only the attributes, tags and emoji around it. The runner counts ZWNJ characters in `employee-new-personnel.html` and fails below 81. In new Persian text write a half-space as U+200C.
+- Icons only as `<svg appIcon="name" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` (or `[appIcon]="expr"` for dynamic names) with names that exist in `frontend/src/app/shared/icons/icon-registry.ts` — open it and check every name before use; if a suggested name is missing, pick the closest existing one. No inline `<svg>` with `<path>`. Decorative icons get `aria-hidden="true"`. The component must import `SvgIconDirective` if it does not already.
+- Do not rename any method, input/output or field. Do not delete any test. All user-facing text stays Persian.
+- Do NOT replace raw colour classes (`slate-*`, `bg-white`) with tokens in this task.
+- If a real file differs from this task (line numbers, text), follow the real file and say so in the report. Skip an item only if it does not exist in the file, and say so.
+
+2. Context:
+- A static audit found plan findings ی۳۲–ی۳۳ (in `Documents/Overnight_Fixes_2026_11/plan_overnight_fixes.md`; do not edit the plan). The page uses about 60 emoji as icons, icon-only buttons of ~24px without `aria-label`, custom buttons without focus rings, physical left/right classes and codes without `bdi`. The app is Persian right-to-left; use Tailwind 3.4 logical classes.
+- Line numbers are approximate.
+
+3. Task:
+- a) Emoji → icons in `employee-new-personnel.html` (examples ~lines 14, 22, 99, 133, 227, 252–268, 476, 591–655, 705–708, 777–780, 971–1019, 1197–1209, 1322–1370, 1479–1537): 👥 `users`, 🚗 `truck`, 👤 `user`, ⚠️ `alert-triangle`, 💡 `info`, 🔄 `refresh-cw`, 📋 (copy) `copy`, ✓ `check`, ✕ `x`, 🔒 `lock`, 🛡️ `shield-check`, 💳 and 🏦 `credit-card`, ⭐ `star`, ➕ `plus`, 📎 `hero-paper-clip`, 📄 `file-text`, 👁️ `eye`, 🗑️ `trash-2`, 🔍 `search`, ⚡ `zap`. Keep the Persian text next to it (use an `inline-flex items-center gap-1` wrapper when the parent is not flex). In `<option>` / `placeholder` / `title` attributes just remove the emoji and the following space.
+- b) Icon mappers in `employee-new-personnel.ts`: change `getWorkflowActionIcon()` (~line 926) and `getStatusIcon()` (~line 2727) to return icon NAMES instead of glyphs: submit `send`; approve_supervisor/approve_accountant/approve_finance `check-circle`; approve_manager `star`; batch_approve `users`; revision/request_revision `undo`; reject/purge/delete/change_request_rejected `x-circle`; cancel_change_request/change_request_cancelled `slash`; auto_pass `zap`; reopen `rotate-ccw`; end_collaboration `pause`; create/change_request_created `file-pen`; default `circle` — and for getStatusIcon: draft `file-pen`; pending_* `clock`; manager_approved/approved `check`; revision_required `undo`; rejected `x`; default `circle`. (Check each in the registry; substitute the closest existing name.) Where the html renders them as text (`{{ getStatusIcon(...) }}` ~lines 1364, 1543, 1846 and `{{ getWorkflowActionIcon(...) }}` ~1878 — search for every usage), replace the text with `<svg [appIcon]="getStatusIcon(...)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` (same argument as before). Update the expected values in `employee-new-personnel-phase7.spec.ts` (~lines 191–194) and `employee-new-personnel.spec.ts` (~lines 519–520) to the new names — only those expected strings, nothing else. Line ~716 `shebaValidationResult.bank?.icon || '🏦'`: if `bank.icon` is an emoji/text from the server, keep showing it as text but change the fallback so that when it is empty an `credit-card` svg is shown instead (use `@if`/`*ngIf`), and remove the `'🏦'` literal from html and ts.
+- c) Icon-only buttons (~lines 645, 705, 777, 850, 982, 1011, 1019, 1322, 1341, 1352, and any other `<button>` whose only content is an icon/emoji): `inline-flex items-center justify-center w-10 h-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`, `aria-label` identical to the existing `title` (add a Persian `title` + `aria-label` if both are missing, describing the action), svg icon inside. For the sheba / account copy buttons inside an input (~705, 777): place the button container at `end-1.5` and give the input `ps-3 pe-20` (keep `dir="ltr"` on the input).
+- d) Focus rings: add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500` to every custom `<button>` in the html that has no `focus-visible:` class and no `appAction` attribute (e.g. the «تعیین به عنوان اصلی» button ~line 633).
+- e) Clear-search button (~lines 1203–1209): `<button type="button" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">` with the `x` icon (keep its `(click)`); the search icon `absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none`; input `ps-9 pe-10` instead of `pr-8 pl-8`.
+- f) Physical classes: (RTL page: right = start, left = end) `mr-*`→`ms-*`, `ml-*`→`me-*`, `pr-*`→`ps-*`, `pl-*`→`pe-*`, `right-*`→`start-*`, `left-*`→`end-*`, `text-right`→`text-start`, `text-left`→`text-end`, `border-l`/`border-r` → `border-e`/`border-s`. Edit element by element, never with a global regex/sed over a file (a previous run broke a `(click)` expression containing `>`). EXCEPTIONS: elements with `dir="ltr"` keep `text-left`; anything inside a print template stays as is.
+- g) `bdi`: wrap national code, phone, sheba (`formatShebaDisplay(...)`), account number and similar code interpolations (~lines 1315–1334, 1562–1590, 1713) in `<bdi dir="ltr">…</bdi>`; replace the non-existent class `dir-ltr` (~line 1334) by wrapping its content in `<bdi dir="ltr">` and removing the class.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. An unrelated spec has a pre-existing compile error, so create a temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`, not in `scratch/`):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/employee/employee-new-personnel/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/employee/employee-new-personnel/*.spec.ts"` (once before your changes for the baseline, then after; at most 6 runs). Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the folder pass (same as the baseline), guardian 52 passes.
+- No emoji listed above remains in the html; ZWNJ count of the html ≥ 81 (`python -c "import sys;print(open(sys.argv[1],encoding='utf-8').read().count('‌'))" <file>`).
+- `git status --short` shows only files of the folder (plus `tests/playwright/tools/index.py` and runner files); `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(personnel): icons, touch targets, focus rings and RTL on new personnel page
+- Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 2 — Overnight fixes O4-c1: accessibility, RTL and state fixes on accountant payroll, petty cash and new profiles pages
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-payroll/*" --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/*" --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-payroll/accountant-payroll.html --count "38:‌" --contains "درون‌ریزی" --absent "💳" --absent "🔍"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/accountant-petty-cash.html --count "12:‌" --contains "<bdi" --absent "💰" --absent "💼" --absent "👔" --absent "🔍" --absent "pr-9 pl-8"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html --count "34:‌" --contains "پرونده‌های" --contains "aria-labelledby" --absent "💼" --absent "🔄" --absent "🚚" --absent "🏦" --absent "👥" --absent "🔍"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.ts --contains "پیش‌نویس اولیه" --absent "💼" --absent "📝"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-payroll/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(accountant): a11y, RTL and error states on payroll, petty cash and new profiles pages"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these three folders (base `frontend/src/app/modules/accounting/components/finance/accountant/`): `accountant-payroll/`, `accountant-petty-cash/` (including its subfolders), `accountant-new-profiles/`. No new files except a temporary tsconfig (see Tool policy) that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, routes or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner character (ZWNJ, U+200C), e.g. «درون‌ریزی», «پرونده‌های», «پیش‌نویس». Keep every ZWNJ exactly as it is. Never retype existing Persian text; edit only the attributes, tags and emoji around it. The runner counts the ZWNJ characters per html file and fails if any is lost (payroll 38, petty-cash 12, new-profiles 34 — at least these numbers). In new Persian text write a half-space as U+200C.
+- Icons only as `<svg appIcon="name" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts` (open it and check each name before use). Suggested names: `search`, `x`, `check`, `corner-up-right` or `rotate-ccw` (for ↩), `alert-triangle`, `zap`, `x-circle`, `check-circle`, `briefcase`, `user`, `users`, `refresh-cw`, `truck`, `landmark` or `building`, `credit-card`, `dollar-sign`, `wallet`. If a suggested name is missing, pick the closest existing one. No inline `<svg>` with `<path>`. Decorative icons get `aria-hidden="true"`. The component must import `SvgIconDirective` (`shared/icons/svg-icon.directive`) if it does not already.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any existing test. All user-facing text stays Persian.
+- If a real file differs from this task (line numbers, text), follow the real file and say so in the report. Skip an item only if it does not exist in the file, and say so.
+
+2. Context:
+- A static accessibility/RTL audit of the accountant pages found the items below (plan findings ی۳۵–ی۴۱ in `Documents/Overnight_Fixes_2026_11/plan_overnight_fixes.md`; do not edit the plan). The app is Persian right-to-left; Tailwind 3.4 logical classes (`start-*`, `end-*`, `ps-*`, `pe-*`, `ms-*`, `me-*`, `text-start`, `text-end`, `border-s`, `border-e`, `rounded-s-*`, `rounded-e-*`) must be used instead of physical ones in the touched elements.
+- Line numbers are approximate. The payroll page is already good on dialogs (its modals ~452 and ~600 have `role="dialog"` and `onEscapeKey()`); use it as the model.
+- Do NOT replace raw colour classes (`slate-*`, `bg-white`) with tokens in this task; that is a later task.
+
+3. Task:
+- a) Emoji used as icons (ی۳۵): `accountant-payroll.html` (~296 🔍, ~304 ✕, ~346 💳), `accountant-petty-cash.html` (all of ⚠ ✅ ✕ ❌ 👔 💰 💼 🔍, e.g. ~67, 73, 91, 130, 131), `accountant-new-profiles.html` (all of ↩ ⚠ ⚡ ✓ ✕ ❌ 🏦 👥 💼 🔄 🔍 🚚, e.g. ~37–41, 59, 604): replace each emoji with the matching `appIcon` svg. Keep the Persian text next to it; put icon + text in an `inline-flex items-center gap-1` wrapper when the parent is not already flex. Inside `<option>`, `placeholder`, `title` attributes and toast strings an svg is impossible: just remove the emoji and the following space. In `accountant-new-profiles.ts` (~lines 835–845) the status-label function returns strings like `'💼 در انتظار تایید حسابدار'`, `'✓ مصوب و فعال'`, `'↩️ نیازمند اصلاح'`, `'✕ رد شده'`, `'📝 پیش‌نویس اولیه'`: remove the emoji and the following space from each returned string (keep the Persian words exactly). Before that, `grep` the folders' `*.spec.ts` for these strings/emoji; if a spec asserts an old string, update only that expected string and say so in the report.
+- b) Controls without an accessible name (ی۳۶): in the three html files, every `<input>`, `<select>` and `<textarea>` must have either a visible `<label>` connected by a `for`/`id` pair (ids prefixed `pay-`, `pc-`, `np-`) or an `aria-label` equal to the visible label text / the purpose in Persian (search fields: `aria-label="جستجو"` plus the placeholder meaning, e.g. `aria-label="جستجوی پرسنل"`). Checkboxes in table rows: `[attr.aria-label]="'انتخاب ' + <real row name expression>"`. Do not add `id` to elements inside `*ngFor` unless it is made unique with the row index.
+- c) Dialogs in `accountant-new-profiles.html` (ی۳۷): the three overlays (~392 `isPersonnelModalOpen && editingPersonnel`, ~676 `isRejectModalOpen && rejectTarget`, ~726 `isDiffModalOpen`) already have `role="dialog" aria-modal="true"`; add `aria-labelledby="np-modal-<n>-title"` and give that id to each modal's title element. In `accountant-new-profiles.ts` add to the `@Component` a `host: { '(document:keydown.escape)': 'onGlobalEscape()' }` (or extend an existing `host` object / `@HostListener` if one exists) and an `onGlobalEscape(): void` that closes, one per key press, the open modal of highest z-order: diff, then reject, then personnel — using each modal's existing close method (find them in the ts; e.g. the methods bound to the modal's «انصراف»/close button), then `return`. Do not close a modal while a save flag for it is true (if such a flag exists, e.g. `isSaving`).
+- d) Error state (ی۳۸) in `accountant-petty-cash` and `accountant-payroll`: petty-cash ts: add `loadError = '';` and in the method that loads the main list shown in the table set `this.loadError = ''` on start/success and `this.loadError = 'دریافت اطلاعات انجام نشد.'` in its `error` callback (keep the existing toast). In the html, make the existing empty state also require `!loadError` and add, next to it, an element with `role="alert"` showing `{{ loadError }}` and a `<button type="button" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>` calling the same reload method. Payroll ts ~lines 308 and 318 have empty `error: () => {}` handlers: replace each with a call to the component's existing toast/notification service showing a short Persian error (e.g. `'دریافت اطلاعات انجام نشد.'`) — use the same service/method the file already uses for other errors; if the file has none, leave these two handlers unchanged and say so.
+- e) Icon-only buttons (ی۳۹): petty-cash clear-search button (~71) and the same in payroll and new-profiles search boxes: `<button type="button" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">` with the `x` icon; the search icon at `start-3` (`absolute top-1/2 -translate-y-1/2 pointer-events-none`); input padding `ps-9 pe-10` instead of `pr-9 pl-8` etc. Keep the existing `(click)` handler. Every other icon-only `<button>` in the three html files: `aria-label` equal to its `title` (add a short Persian one if none), at least `min-w-10 min-h-10 inline-flex items-center justify-center`. Add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500` to every custom `<button>` in the three html files that has no `focus-visible:` class and no `appAction` attribute.
+- f) Physical RTL classes (ی۴۰) in the three html files and their css: (RTL page: right = start, left = end) `mr-*`→`ms-*`, `ml-*`→`me-*`, `pr-*`→`ps-*`, `pl-*`→`pe-*`, `right-*`→`start-*`, `left-*`→`end-*`, `text-right`→`text-start`, `text-left`→`text-end`, `border-l`→`border-e`, `border-r`→`border-s`, `rounded-l*`→`rounded-e*`, `rounded-r*`→`rounded-s*`; in css `margin-left`→`margin-inline-end` etc. Edit element by element, never with a global regex/sed over a file (a previous run broke a `(click)` expression containing `>`). EXCEPTIONS (leave unchanged): elements with `dir="ltr"` (sheba, account, numeric LTR inputs) and their children, print-only blocks (`print:` classes or a print sheet), and symmetric pairs (`left-3 right-3`, `inset-x-*`).
+- g) Codes without `bdi` (ی۴۱): in petty-cash and new-profiles, wrap interpolations of national code, phone, sheba/IBAN (including the `IR` prefix), account number and card number in `<bdi dir="ltr">…</bdi>` (skip ones already inside `dir="ltr"` or `bdi`).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. An unrelated spec has a pre-existing compile error, so create a temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`, not in `scratch/`; if it already exists, overwrite it):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/accountant/accountant-payroll/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/accountant/accountant-payroll/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-new-profiles/*.spec.ts"` (once BEFORE your changes for the baseline, then after; at most 6 runs in total). Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the three folders pass (same as the baseline), guardian 52 passes.
+- In the touched html files: no emoji listed above remains; the ZWNJ count of each html is not lower than the numbers in Critical rules (check with `python -c "import sys;print(open(sys.argv[1],encoding='utf-8').read().count('‌'))" <file>`).
+- `git status --short` shows only files of the three folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(accountant): a11y, RTL and error states on payroll, petty cash and new profiles pages
+- Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 2 of 2 — Overnight fixes O4-c2: accessibility, RTL and state fixes on accountant personnel, fleet and diskettes pages
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-personnel/*" --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-fleet/*" --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-diskettes/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-personnel/accountant-personnel.html --count "21:‌" --contains "صفحه‌بندی" --contains "aria-labelledby" --contains "<bdi" --contains "role=\"alert\""
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-fleet/accountant-fleet.html --count "33:‌" --contains "هم‌تیپ" --contains "<bdi" --contains "role=\"alert\"" --absent "pr-8 pl-6"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-diskettes/accountant-diskettes.html --count "23:‌" --contains "فایل‌های" --contains "role=\"alert\""
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/accountant/accountant-personnel/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-fleet/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-diskettes/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(accountant): a11y, RTL and error states on personnel, fleet and diskettes pages"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these three folders (base `frontend/src/app/modules/accounting/components/finance/accountant/`): `accountant-personnel/`, `accountant-fleet/`, `accountant-diskettes/`. No new files except a temporary tsconfig (see Tool policy) that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, routes or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner character (ZWNJ, U+200C), e.g. «صفحه‌بندی», «هم‌تیپ», «فایل‌های». Keep every ZWNJ exactly as it is. Never retype existing Persian text; edit only the attributes, tags and classes around it. The runner counts the ZWNJ characters per html file and fails if any is lost (personnel 21, fleet 33, diskettes 23 — at least these numbers). In new Persian text write a half-space as U+200C.
+- Icons only as `<svg appIcon="name" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts`. No inline `<svg>` with `<path>`.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any existing test. All user-facing text stays Persian.
+- If a real file differs from this task (line numbers, text), follow the real file and say so in the report. Skip an item only if it does not exist in the file, and say so.
+
+2. Context:
+- Same audit as session 1 (plan findings ی۳۶–ی۴۱; do not edit the plan). These three pages have no emoji. The accountant fleet page already has one compliant dialog (the approval modal ~945 with `role="dialog" aria-modal="true" aria-labelledby="acc-fleet-approve-title"` and `onApprovalEscape()` in the `host` at ~line 47 of `accountant-fleet.ts`); use it as the model.
+- Line numbers are approximate. Do NOT replace raw colour classes (`slate-*`, `bg-white`) with tokens.
+
+3. Task:
+- a) Controls without an accessible name (ی۳۶): in the three html files, every `<input>`, `<select>` and `<textarea>` must have either a visible `<label>` connected by a `for`/`id` pair (ids prefixed `ap-`, `af-`, `ad-`) or an `aria-label` equal to the visible label text / the purpose in Persian (e.g. personnel ~12, ~35, modal fields ~498–548). Checkboxes in table rows: `[attr.aria-label]="'انتخاب ' + <real row name expression>"`. Ids inside `*ngFor` must include the row index.
+- b) Dialogs (ی۳۷): `accountant-personnel.html` overlays ~460 (`isPersonnelModalOpen`) and ~843 (`isDiffModalOpen`); `accountant-fleet.html` overlays ~585 (`isVehicleModalOpen && editingVehicle`), ~799 (`isRejectModalOpen`), ~843 (`isBatchApprovalModalOpen`), ~887 (`isDiffModalOpen`). On the inner panel (or the overlay, as the fleet approval modal does) add `role="dialog" aria-modal="true" aria-labelledby="<id>"` and give the modal's title element that id (`ap-modal-<n>-title`, `af-modal-<n>-title`). Escape: in `accountant-fleet.ts` extend `onApprovalEscape()` (~line 678) so that, when the approval modal is not open, it closes one other open modal per key press in this order: diff, batch approval, reject, vehicle — using each modal's existing close method (the method bound to its close/«انصراف» button), not while that modal's saving flag is true, then `return`. In `accountant-personnel.ts` add `host: { '(document:keydown.escape)': 'onGlobalEscape()' }` to the `@Component` (merge into an existing `host` if present) and `onGlobalEscape(): void` closing diff, then personnel modal, the same way. Backdrop divs with `(click)` that only close a modal get `aria-hidden="true"`.
+- c) Error state (ی۳۸): in `accountant-fleet.ts` (main list loader ~line 161 `loadAllVehiclesPage`, which swallows errors other than 404), `accountant-personnel.ts` (main list loader ~383/429), `accountant-diskettes.ts` (~207): add `loadError = '';` if not present, set `this.loadError = ''` at the start/success of the main list fetch and `this.loadError = 'دریافت اطلاعات انجام نشد.'` in its error path (keep the existing 404 handling; a 404 that means «empty» is not an error). In each html, make the existing empty state of that main list also require `!loadError` and add, next to it, an element with `role="alert"` showing `{{ loadError }}` and a `<button type="button" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>` calling the same reload method. Empty `error: () => {}` handlers in these three ts files (fleet ~305, personnel ~260, 398, 404, diskettes ~161, 171): replace each with a call to the toast/notification service the file already uses, showing a short Persian error (e.g. `'دریافت اطلاعات انجام نشد.'`); if the file has none, leave them and say so.
+- d) Icon-only buttons (ی۳۹): fleet copy buttons (~205 plate, ~223 sheba) and every other icon-only `<button>` in the three html files: `aria-label` equal to its `title` (add a short Persian one if none), `min-w-10 min-h-10 inline-flex items-center justify-center`. Add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500` to every custom `<button>` in the three html files that has no `focus-visible:` class and no `appAction` attribute.
+- e) Physical RTL classes (ی۴۰) in the three html files and their css: (RTL page: right = start, left = end) `mr-*`→`ms-*`, `ml-*`→`me-*`, `pr-*`→`ps-*`, `pl-*`→`pe-*`, `right-*`→`start-*`, `left-*`→`end-*`, `text-right`→`text-start`, `text-left`→`text-end`, `border-l`→`border-e`, `border-r`→`border-s`, `rounded-l*`→`rounded-e*`, `rounded-r*`→`rounded-s*` (fleet ~67 places, e.g. ~80 `pr-8 pl-6`, tables ~170, 430, 476, 538 `text-right`). Edit element by element, never with a global regex/sed over a file (a previous run broke a `(click)` expression containing `>`). EXCEPTIONS (leave unchanged): elements with `dir="ltr"` and their children, print-only blocks, symmetric pairs (`left-3 right-3`, `inset-x-*`).
+- f) Codes without `bdi` (ی۴۱): fleet plate (~201, ~296), sheba with its `IR` prefix (~222, ~324); personnel phone (~113), sheba (~147, ~245); diskettes account/sheba/national code cells if any: wrap in `<bdi dir="ltr">…</bdi>` (skip ones already inside `dir="ltr"` or `bdi`).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`; overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/accountant/accountant-personnel/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-fleet/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-diskettes/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/accountant/accountant-personnel/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-fleet/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-diskettes/*.spec.ts"` (once BEFORE your changes for the baseline, then after; at most 6 runs). Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the three folders pass (same as the baseline), guardian 52 passes.
+- ZWNJ count of each html is not lower than the numbers in Critical rules.
+- `git status --short` shows only files of the three folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(accountant): a11y, RTL and error states on personnel, fleet and diskettes pages
+- Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 2 — Overnight fixes O4-d1: accessibility, RTL and error states on manager fleet and manager personnel pages
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-fleet/*" --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-personnel/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/manager/manager-fleet/manager-fleet.html --count "30:‌" --contains "aria-labelledby" --contains "<bdi" --contains "role=\"alert\"" --absent "pr-8 pl-6"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/manager/manager-personnel/manager-personnel.html --count "30:‌" --contains "پرونده‌های" --contains "<bdi" --contains "role=\"alert\"" --absent "🔍" --absent "📜" --absent "👑" --absent "📊" --absent "💡" --absent "⚠" --absent "pr-8 pl-6"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/manager/manager-fleet/*.spec.ts" --include "src/app/modules/accounting/components/finance/manager/manager-personnel/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(manager): a11y, RTL and error states on fleet and personnel pages"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these two folders (base `frontend/src/app/modules/accounting/components/finance/manager/`): `manager-fleet/`, `manager-personnel/`. No new files except a temporary tsconfig (see Tool policy) that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, routes or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner character (ZWNJ, U+200C), e.g. «پرونده‌های», «صفحه‌بندی», «فقط‌خواندنی». Keep every ZWNJ exactly as it is. Never retype existing Persian text; edit only the attributes, tags, classes and emoji around it. The runner counts the ZWNJ characters per html file and fails if any is lost (manager-fleet.html 30, manager-personnel.html 30 — at least these numbers). In new Persian text write a half-space as U+200C.
+- Icons only as `<svg appIcon="name" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts`. Names to use: 🔍 `search`, ✕ `x`, 📜 `file-text`, 👑 `crown`, 📊 `bar-chart-2`, 💡 `info`, ⚠️ `alert-triangle`. No inline `<svg>` with `<path>`. The component must import `SvgIconDirective` (`shared/icons/svg-icon.directive`) if it does not already.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any existing test. All user-facing text stays Persian.
+- If a real file differs from this task (line numbers, text), follow the real file and say so in the report. Skip an item only if it does not exist in the file, and say so.
+
+2. Context:
+- A static accessibility/RTL audit of the manager pages found the items below (plan findings ی۴۲–ی۴۸ in `Documents/Overnight_Fixes_2026_11/plan_overnight_fixes.md`; do not edit the plan). The app is Persian right-to-left; Tailwind 3.4 logical classes (`start-*`, `end-*`, `ps-*`, `pe-*`, `ms-*`, `me-*`, `text-start`, `text-end`, `border-s`, `border-e`, `rounded-s-*`, `rounded-e-*`) must be used instead of physical ones.
+- Line numbers are approximate. `manager-personnel.html` ~473 already has a compliant dialog (`role="dialog" aria-modal="true" aria-labelledby`); use it as the model.
+- Do NOT replace raw colour classes (`slate-*`, `bg-white`) with tokens in this task.
+
+3. Task:
+- a) Emoji (ی۴۲) in `manager-personnel.html` (~40 🔍, ~41 ✕, ~151 📜, ~351 👑, ~361 📊, ~544 💡, ~567 ⚠️, and any other emoji in the two html/ts files except box-drawing `─` and `◀`): replace with the matching `appIcon` svg; keep the Persian text next to it in an `inline-flex items-center gap-1` wrapper when the parent is not flex. Inside `<option>`, `placeholder`, `title` and toast strings just remove the emoji and the following space. First grep the folders' `*.spec.ts` for any string you change; if a spec asserts it, update only that expected string and say so.
+- b) Controls without an accessible name (ی۴۳): `manager-fleet.html` section select ~12 (`aria-label="بخش فعال"`), month select ~35 (`aria-label="ماه"`), search input ~44 (`aria-label="جستجو"`), radios ~499/504 (wrap them in a `role="radiogroup"` with `aria-label` equal to the question text shown above them, and give each radio an `aria-label` equal to its visible option text if it is not inside a `<label>`), textareas ~451, ~512, ~616 and input ~606 (`aria-label` equal to the visible label text near them). `manager-personnel.html` section select ~12 and search input ~34 the same way. Any other `<input>/<select>/<textarea>` in the two html files without a `<label for>`/`id` pair or `aria-label` gets an `aria-label` with its purpose in Persian. Ids inside `*ngFor` must include the row index.
+- c) Dialogs (ی۴۴): `manager-fleet.html` overlays ~374, ~479, ~541, ~585, ~655 and `manager-personnel.html` overlays ~347, ~430, ~516: on the inner panel add `role="dialog" aria-modal="true" aria-labelledby="<id>"` and give the modal's title element that id (`mf-modal-<n>-title`, `mp-modal-<n>-title`). Backdrop divs whose `(click)` only closes a modal get `aria-hidden="true"`. Escape: in each ts add to the `@Component` `host: { '(document:keydown.escape)': 'onGlobalEscape()' }` (merge into an existing `host`/`@HostListener` if present) and `onGlobalEscape(): void` that closes, one per key press, the open modal shown last in the html (highest in the file order = last checked first), using each modal's existing close method (the one bound to its close/«انصراف» button), not while that modal's saving/submitting flag is true, then `return`. In personnel include the modal at ~473 too.
+- d) Error state (ی۴۵): `manager-fleet.ts` loaders ~249 (sections), ~300 (vehicles), ~318 (settlement), ~331 (change requests) and `manager-personnel.ts` ~186, ~222, ~382, ~393: add `loadError = '';` and, for the MAIN list of each page (fleet: vehicles; personnel: the main personnel list loader), set `this.loadError = ''` at start/success and `this.loadError = 'دریافت اطلاعات انجام نشد.'` in its error callback; do not clear an already loaded list on error. In the html make that list's empty state also require `!loadError` and add next to it an element with `role="alert"` showing `{{ loadError }}` and a `<button type="button" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>` calling the same reload method. For the other loaders listed (and every `error: () => {}` in the two ts files) call the toast/notification service the file already uses with a short Persian error (e.g. `'دریافت اطلاعات انجام نشد.'`); if the file has none, inject nothing and say so. In `manager-fleet.ts` ~318/~331 also call `this.cdr.detectChanges()` after resetting state if the file uses `cdr` elsewhere. In `manager-fleet.html` make the empty states of the settlement and change-request tables also require `!isLoading`.
+- e) Icon-only buttons (ی۴۶): the clear-search buttons in both pages: `<button type="button" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">` with the `x` icon; search icon `absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none`; input padding `ps-8 pe-10` instead of `pr-8 pl-6`. Keep the existing `(click)`. Every other icon-only `<button>` in the two html files: `aria-label` equal to its `title` (add a short Persian one if none) and `min-w-10 min-h-10 inline-flex items-center justify-center`. Add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500` to every custom `<button>` that has no `focus-visible:` class and no `appAction` attribute.
+- f) Physical RTL classes (ی۴۷) in the two html files and their css: (RTL page: right = start, left = end) `mr-*`→`ms-*`, `ml-*`→`me-*`, `pr-*`→`ps-*`, `pl-*`→`pe-*`, `right-*`→`start-*`, `left-*`→`end-*`, `text-right`→`text-start`, `text-left`→`text-end`, `border-l`→`border-e`, `border-r`→`border-s`, `rounded-l*`→`rounded-e*`, `rounded-r*`→`rounded-s*`; css `margin-left`→`margin-inline-end` etc. Edit element by element, never with a global regex/sed over a file (a previous run broke a `(click)` expression containing `>`). EXCEPTIONS: elements with `dir="ltr"` and their children, print-only blocks, symmetric pairs (`left-3 right-3`, `inset-x-*`).
+- g) Codes without `bdi` (ی۴۸): `manager-fleet.html` plate numbers (~109, ~206, ~256, ~331, ~545, ~590) and `manager-personnel.html` sheba (~110, ~292) and any national code/phone interpolation: wrap the interpolation in `<bdi dir="ltr">…</bdi>` (skip ones already inside a `bdi`).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`; overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/manager/manager-fleet/*.spec.ts", "src/app/modules/accounting/components/finance/manager/manager-personnel/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/manager/manager-fleet/*.spec.ts" --include="src/app/modules/accounting/components/finance/manager/manager-personnel/*.spec.ts"` (once BEFORE your changes for the baseline, then after; at most 6 runs). Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the two folders pass (same as the baseline), guardian 52 passes.
+- ZWNJ count of each html is not lower than the numbers in Critical rules (check with `python -c "import sys;print(open(sys.argv[1],encoding='utf-8').read().count('‌'))" <file>`).
+- `git status --short` shows only files of the two folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(manager): a11y, RTL and error states on fleet and personnel pages
+- Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 2 of 2 — Overnight fixes O4-d2: accessibility, RTL and icon fixes on counterparties and manager reports pages
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/counterparties/*" --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-reports/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.html --count "53:‌" --contains "<bdi" --contains "aria-labelledby" --absent "✏" --absent "🔍" --absent "ℹ" --absent "⚠"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/counterparties/counterparty-form/counterparty-form-fields.component.html --count "3:‌" --absent "🏦" --absent "✓"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/counterparties/counterparty-form/counterparty-form-fields.component.ts --count "2:‌" --absent "⛽" --absent "🏢" --absent "🔧" --absent "🚚"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/manager/manager-reports/manager-reports.html --count "14:‌" --contains "گروه‌بندی"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/counterparties/*.spec.ts" --include "src/app/modules/accounting/components/finance/manager/manager-reports/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(counterparties): a11y, RTL and icons on counterparties and manager reports pages"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these folders (base `frontend/src/app/modules/accounting/components/finance/`): `counterparties/` (including `counterparty-form/`) and `manager/manager-reports/`. No new files except a temporary tsconfig that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, routes or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: keep every ZWNJ (U+200C) exactly, e.g. «طرف‌حساب», «گروه‌بندی». Never retype existing Persian text. The runner fails if the ZWNJ count drops (counterparties.html 53, counterparty-form-fields.component.html 3, counterparty-form-fields.component.ts 2, manager-reports.html 14 — at least these). Also keep the ZWNJ count of `counterparties.ts` (49) and `manager-reports.ts` (20).
+- Icons only as `<svg appIcon="name" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts`. Names to use: ✏️ `edit`, 🔍 `search`, ✕ `x`, ⚠️ `alert-triangle`, ℹ️ `info`, ✓ `check`, 🏦 `building`, ⛽ `droplet`, 🏗 `tool`, 🏢 `building`, 🔧 `tool`, 🚚 `truck`. No inline `<svg>` with `<path>`. Import `SvgIconDirective` (`shared/icons/svg-icon.directive`) in each component that renders one, if not already.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any existing test. All user-facing text stays Persian.
+- If a real file differs from this task, follow the real file and say so in the report. Skip an item only if it does not exist, and say so.
+
+2. Context:
+- Same audit as session 1 (plan findings ی۴۲–ی۴۸; do not edit the plan). Line numbers are approximate. Do NOT replace raw colour classes with tokens.
+
+3. Task:
+- a) Emoji (ی۴۲): `counterparties.html` ~50 ✏️, ~227 🔍 (inside the search `placeholder`: remove it from the placeholder and add a `search` svg overlay `absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none`), ~238 ✕, ~454 ⚠️/ℹ️ (confirm modal). `counterparty-form-fields.component.html` ~131 ✓, ~244 ✕, ~234 `bank?.icon || '🏦'`: render the `building` svg instead of the emoji fallback (keep showing `bank.icon` only if it is an image URL the file already renders as `<img>`; otherwise always the svg). `counterparty-form-fields.component.ts`: the counterparty-type option list has emoji (⛽ 🏗 🏢 🔧 🚚): replace each emoji value with an `iconName` field holding the matching registry name (rename the property only if no spec or other file reads it — grep first; if it is read elsewhere, keep the property name and just change its values to icon names) and render it in the html with `<svg [appIcon]="t.iconName" …>` (check how `SvgIconDirective` takes a bound name — open `shared/icons/svg-icon.directive.ts`). Emoji inside `<option>` text: just remove it.
+- b) Accessible names (ی۴۳) in `counterparties.html`: status select ~201 `aria-label="فیلتر وضعیت"`, search ~223 `aria-label="جستجوی طرف‌حساب"` (write the half-space as U+200C), and any other control without `<label for>`/`aria-label`. In `manager-reports.html` the same check (most already have ids).
+- c) Dialog (ی۴۴): `counterparties.html` confirm modal ~451: `role="alertdialog" aria-modal="true" aria-labelledby="cp-confirm-title"` on the panel and that id on its title. Escape: in `counterparties.ts` add a `host` `(document:keydown.escape)` handler (merge into an existing one if present) that closes the confirm modal via its existing cancel method when it is open and not busy; if the page has other overlays, close them too in reverse file order, one per key press, the same way.
+- d) Error state (ی۴۵) in `manager-reports.ts` ~298/302/306: the filter lists (`companies`, `projects`, `sections`) silently become `[]` on error. Add `filtersError = false;`, set it `true` in those error callbacks (keep the `[]`), and in `manager-reports.html` under the filter row add `<p *ngIf="filtersError" role="alert" class="text-xs text-rose-600 mt-1">بارگذاری فهرست فیلترها انجام نشد.</p>` (use `@if` if the file uses the new control flow).
+- e) Icon-only buttons (ی۴۶): the counterparties clear-search button ~238: `type="button" title="پاک کردن جستجو" aria-label="پاک کردن جستجو"`, `absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl`, `x` icon; input padding `ps-9 pe-10` instead of `pr-3 pl-8`. Every other icon-only `<button>` in the touched html files: `aria-label` equal to its `title` (add a short Persian one if none), `min-w-10 min-h-10 inline-flex items-center justify-center`. Add `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500` to every custom `<button>` without a `focus-visible:` class and without `appAction`.
+- f) Physical RTL classes (ی۴۷) in `counterparties.html`, `counterparty-form-fields.component.html`, `manager-reports.html` and their css (same mapping as always: `mr→me`, `ml→ms`, `pr→pe`, `pl→ps`, `right→end`, `left→start`, `text-right→text-start`, `text-left→text-end`, `border-l/r→border-s/e`, `rounded-l/r→rounded-s/e`). Edit element by element, never with a global regex/sed over a file (a previous run broke a `(click)` expression containing `>`). EXCEPTIONS: `dir="ltr"` elements and their children, print-only blocks, symmetric pairs.
+- g) Codes without `bdi` (ی۴۸) in `counterparties.html` ~286, 287, 291, 308, 403, 420, 424, 429 (national id, phone, sheba with its `IR` prefix, account number): wrap the interpolation in `<bdi dir="ltr">…</bdi>`; remove the non-existent class `dir-ltr` where you add the `bdi`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`; overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/counterparties/*.spec.ts", "src/app/modules/accounting/components/finance/manager/manager-reports/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/counterparties/*.spec.ts" --include="src/app/modules/accounting/components/finance/manager/manager-reports/*.spec.ts"` (once before your changes, then after; at most 6 runs). Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the two folders pass (same as the baseline), guardian 52 passes.
+- ZWNJ counts not lower than in Critical rules.
+- `git status --short` shows only files of the allowed folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(counterparties): a11y, RTL and icons on counterparties and manager reports pages
+- Short English report: what changed per file, test results, anything that differed or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 2 — Overnight fixes O5-a1: search, error handling and fake buttons on supervisor new profiles, invoices, petty cash and attendance pages
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/*" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/*" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.html --count "39:‌" --contains "persianDate" --absent "keyup.enter)=\"syncUrlParams()\""
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles.ts --count "24:‌" --absent "err.message"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/supervisor-invoices.html --count "16:‌" --absent "keyup.enter)=\"syncUrlParams()\"" --absent "importExcel"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/supervisor-invoices.ts --count "6:‌" --absent "err.message" --absent "importExcel"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/supervisor-petty-cash.html --count "14:‌" --absent "keyup.enter)=\"syncUrlParams()\"" --absent "importExcel"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/supervisor-petty-cash.ts --count "17:‌" --absent "err.message" --absent "importExcel"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.html --count "13:‌" --absent "importExcel" --absent "exportExcel"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.ts --count "7:‌" --absent "err.message"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD --allow-removed importExcel,exportExcel
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(supervisor): working search, Persian errors and no fake excel buttons"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these four folders (base `frontend/src/app/modules/accounting/components/finance/supervisor/`): `supervisor-new-profiles/`, `supervisor-invoices/`, `supervisor-petty-cash/`, `supervisor-attendance/`. No new files except a temporary tsconfig (see Tool policy) that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared files, API services, routes or any other file.
+- In `supervisor-attendance.ts` change ONLY what item e) and item f) say. Do not touch `approveBatch`, `approveSingle` or any approve/return logic (another fix will change them later).
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner character (ZWNJ, U+200C), e.g. «پرونده‌های», «فاکتورها», «تن‌خواه». Keep every ZWNJ exactly as it is. Never retype existing Persian text. The runner counts ZWNJ per file and fails if any is lost (see the numbers in the runner comment above; these are minimums). In new Persian text write a half-space as U+200C.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any existing test, except that a spec test which only asserts the toast of a removed fake `importExcel`/`exportExcel` method may be removed (say so in the report). All user-facing text stays Persian.
+- If a real file differs from this task (line numbers, text), follow the real file and say so in the report. Skip an item only if it does not exist in the file, and say so.
+
+2. Context:
+- A static logic audit found these items (plan findings ی۵۳, ی۵۴, ی۵۵, ی۵۶, ی۵۷, ی۵۸ in `Documents/Overnight_Fixes_2026_11/plan_overnight_fixes.md`; do not edit the plan). Line numbers are approximate.
+- Shared error helper that already exists: `attendanceActionErrorMessage(err, fallback)` exported from `frontend/src/app/modules/accounting/attendance-period-error.ts`. It maps 403/404 and the server `error`/`detail` fields to Persian and never shows `err.message`. Import it with the correct relative path.
+- Shared date pipe: `PersianDatePipe` (`name: 'persianDate'`) in `frontend/src/app/shared/pipes/persian-date.pipe.ts`; usage `{{ value | persianDate:'short-time' }}`. Add it to the component `imports` if missing.
+
+3. Task:
+- a) Search on Enter does nothing (ی۵۳). In `supervisor-new-profiles.html` ~66, `supervisor-invoices.html` ~64 and `supervisor-petty-cash.html` ~59 the search input has `(keyup.enter)="syncUrlParams()"`, which only changes the URL; the list is never fetched with the new search. In each ts add a method `onSearch(): void` that resets the current page to 1 (look at how the file stores the page, e.g. `this.pages`/`this.currentPage`, and reset the same way the tab-change method does), then calls `this.syncUrlParams()` and then the file's list fetch method (`fetchProfiles()` / `fetchInvoices()` / `fetchPettyCash()` — use the real names). Bind `(keyup.enter)="onSearch()"`. Make sure the fetch method sends `this.searchQuery` as the `search` param (it should already; if not, add it in the same way other params are sent). In `supervisor-new-profiles.ts` `clearSearch()` must also reset the page and call the fetch method (as the other two files already do).
+- b) Silent errors (ی۵۴) in `supervisor-new-profiles.ts` ~273-317: the four loaders (profiles, vehicles, change requests, and any other in `fetchProfiles`/its siblings) have empty or missing error handlers and `isLoading` is cleared only by the first one. Add `loadError = '';`. In every error callback: set `this.loadError = 'دریافت اطلاعات انجام نشد.'` and show a toast with the toast service the file already uses (same message). Do not clear lists that were already loaded. Clear `isLoading` only when all requests of that load have finished (simplest: a local counter `let pending = N;` decremented in both `next` and `error`, or `forkJoin` + `finalize` if it is cleaner — your choice, keep the same requests). In the html show, above the tabs content, `<p *ngIf="loadError" role="alert" class="text-sm text-rose-700 my-2">{{ loadError }} <button type="button" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500" (click)="fetchProfiles()">تلاش دوباره</button></p>` (use the real fetch method name; use `@if` instead of `*ngIf` if the file uses the new control flow) and set `loadError = ''` at the start of each load.
+- c) Fixed return reason (ی۵۵) in `supervisor-new-profiles.ts` ~383-391 `rejectVehicle()` sends a hard-coded reason and asks nothing. Change it to open the SAME reason dialog the file already uses for `rejectVehicleChange` (or for profile rejection), and send the reason the user typed. Disable the dialog's confirm button while the reason is empty or while saving. If the existing dialog is tied to one target type, add a small target-type field to it instead of duplicating the html.
+- d) Gregorian dates (ی۵۶) in `supervisor-new-profiles.html` ~285 and ~379: `cr.created_at | date:'yyyy/MM/dd HH:mm'` → `cr.created_at | persianDate:'short-time'`. Check all four html files for any other Angular `| date` pipe on a date shown to the user and convert it the same way.
+- e) Raw English error text (ی۵۷): in all four ts files replace every `err.error?.error || err.message || 'نامشخص'`-like expression (any expression that can show `err.message` or `error.message` from an HttpErrorResponse to the user) with `attendanceActionErrorMessage(err, '<the Persian fallback that the toast already uses, or «انجام نشد؛ دوباره تلاش کنید.»>')`. Keep the existing Persian prefix of each toast if it reads well, e.g. `'خطا در تایید: ' + attendanceActionErrorMessage(err, 'نامشخص')` is NOT allowed — use only the helper's result as the message, with the old prefix text as the fallback.
+- f) Fake excel buttons (ی۵۸): these methods only show an info toast and do nothing real: `supervisor-invoices.ts` `importExcel()` ~329, `supervisor-petty-cash.ts` `importExcel()` ~290, `supervisor-attendance.ts` `exportExcel()` ~363 and `importExcel()` ~367. Remove each such method AND its button in the html (`supervisor-invoices.html` ~43, `supervisor-petty-cash.html` ~39, `supervisor-attendance.html` ~45 and ~52). Keep the real `exportExcel()` of invoices and petty cash (they download from the server). Before removing, open the method: if it does anything real (an HTTP call, a file download), keep it and say so. `supervisor-new-profiles.ts` `importExcel()` is real — keep it. If removing a button leaves an empty wrapper div, remove the wrapper too.
+- g) Export scope (low): in `supervisor-invoices.ts` ~313-327 and `supervisor-petty-cash.ts` ~274-288 `exportExcel()` sends a `status` only for the pending tab. Also send `search: this.searchQuery` when it is not empty, and for the other tabs send the same status value the list fetch sends for that tab (read the fetch method; if the list fetch sends no status for a tab, send none).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`; overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/*.spec.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/*.spec.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/supervisor/supervisor-new-profiles/*.spec.ts" --include="src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/supervisor/supervisor-petty-cash/*.spec.ts" --include="src/app/modules/accounting/components/finance/supervisor/supervisor-attendance/*.spec.ts"` (once BEFORE your changes for the baseline, then after; at most 6 runs). If a folder has no spec file the include simply matches nothing. Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the four folders pass (same as the baseline), guardian 52 passes.
+- ZWNJ count of each file is not lower than the numbers in the runner comment (check with `python -c "import sys;print(open(sys.argv[1],encoding='utf-8').read().count('‌'))" <file>`).
+- `git status --short` shows only files of the four folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(supervisor): working search, Persian errors and no fake excel buttons
+- Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 2 of 2 — Overnight fixes O5-a2: errors, dates, numbers and current period on supervisor fleet, period lock, treasurer disbursements and treasurer petty cash
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-fleet/*" --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-period-lock/*" --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/*" --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-petty-cash/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-fleet/supervisor-fleet.html --count "39:‌" --absent "(input)=\"fetchFleetData()\""
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-fleet/supervisor-fleet.ts --count "12:‌" --contains "debounceTime" --absent "err.message"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.ts --count "5:‌" --absent "fiscalYear = '1405'" --contains "gregorianToJalali"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements.ts --count "37:‌" --absent "fiscalYear = '1405'" --absent "amount.toLocaleString()" --contains "gregorianToJalali"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements.html --count "42:‌" --absent "م.ر"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-petty-cash/treasurer-petty-cash.ts --count "12:‌" --absent "err.message"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-petty-cash/treasurer-petty-cash.html --count "13:‌"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/supervisor/supervisor-fleet/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-period-lock/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-petty-cash/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(treasury): Persian errors, Shamsi dates, current period and fleet search debounce"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these four folders (base `frontend/src/app/modules/accounting/components/finance/`): `supervisor/supervisor-fleet/`, `supervisor/supervisor-period-lock/`, `treasurer/treasurer-disbursements/`, `treasurer/treasurer-petty-cash/`. No new files except a temporary tsconfig that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared files, API services, routes or any other file.
+- Do NOT change approve/return/pay logic: in `supervisor-fleet.ts` leave `submitApproval`/`submitReject` (approve and return methods) as they are; in `treasurer-petty-cash.ts` leave `confirmRefill()` and the refill list mapping (~115-196) as they are except the error text of item c); in `treasurer-disbursements.ts` do not change `refreshData()`'s API call arguments or `currentPeriodId` logic, nor the payment methods. Another fix will change those later.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: keep every ZWNJ (U+200C) exactly; never retype existing Persian text. The runner fails if the ZWNJ count of a file drops (numbers in the runner comment are minimums). In new Persian text write a half-space as U+200C.
+- Do not rename any method, input/output or field used by a spec. Do not delete or weaken any existing test. All user-facing text stays Persian.
+- If a real file differs from this task, follow the real file and say so in the report. Skip an item only if it does not exist, and say so.
+
+2. Context:
+- Same audit as session 1 (plan findings ی۵۴, ی۵۶, ی۵۷, ی۵۹, ی۶۰; do not edit the plan). Line numbers are approximate.
+- Helpers that already exist: `attendanceActionErrorMessage(err, fallback)` in `frontend/src/app/modules/accounting/attendance-period-error.ts`; `treasuryErrorMessage(err, fallback)` exported from `treasurer-disbursements.ts` itself; `gregorianToJalali(gy, gm, gd)` returning `{ jy, jm, jd }` in `frontend/src/app/core/utils/date-utils.ts`; pipe `persianDate` (`PersianDatePipe`, `frontend/src/app/shared/pipes/persian-date.pipe.ts`).
+
+3. Task:
+- a) Fleet loading and search (ی۵۴) in `supervisor-fleet.ts` ~279-344 and `supervisor-fleet.html` ~36: `fetchFleetData()` fires 4 requests; errors on the first three silently empty the lists, and `isLoading` is cleared only by the fourth. Make every error callback show a toast via the toast service the file uses (`'دریافت اطلاعات ناوگان انجام نشد.'`) and not clear an already loaded list; clear `isLoading` only after all four finished (counter or `forkJoin`+`finalize`). Search: replace `(input)="fetchFleetData()"` with `(input)="onSearchInput()"`; in the ts add a `private searchInput$ = new Subject<void>();` piped with `debounceTime(300)` subscribed once in `ngOnInit` (unsubscribed in `ngOnDestroy` the same way the file cleans its other subscriptions) that calls `this.syncUrlParams()` if that method exists and then `this.fetchFleetData()`; `onSearchInput(): void { this.searchInput$.next(); }`. Also add `.catch(() => this.toast.<error method>('کپی انجام نشد.'))` to the clipboard `writeText` promise in `copyToClipboard` (~690) using the file's toast method name.
+- b) Shamsi dates (ی۵۶) in `treasurer-disbursements.html` ~320: the payment date column shows raw `payment_date`, which for payroll rows is the ISO timestamp `paid_at`. Pipe the value through `persianDate:'short'` when it is not already a Shamsi string: simplest is in `treasurer-disbursements.ts` ~560 (inside the row mapping only — not the API call) map payroll rows' display date with the pipe's logic, or in the html use `{{ row.date_shamsi || (row.payment_date | persianDate:'short') }}` — read the row shape and pick what is correct; fleet rows already have Shamsi. In `supervisor-fleet.ts` ~678 the export filename uses `new Date().toISOString().slice(0,10)`: use the Jalali date from `gregorianToJalali` formatted `YYYY-MM-DD` instead.
+- c) Raw English error text (ی۵۷): in `supervisor-fleet.ts`, `treasurer-petty-cash.ts` (~142, ~192) and `supervisor-period-lock.ts`, replace every expression that can show `err.message`/`error.message` of an HttpErrorResponse with `attendanceActionErrorMessage(err, '<existing Persian fallback/prefix text>')` (treasurer files may use `treasuryErrorMessage` instead — import it from `../treasurer-disbursements/treasurer-disbursements` only if that does not create a circular import; otherwise use `attendanceActionErrorMessage`). Use only the helper's result as the toast text.
+- d) Numbers (ی۵۹) in `treasurer-disbursements.ts` ~474: `this.payingItem?.amount.toLocaleString()` → `new Intl.NumberFormat('fa-IR').format(Number(this.payingItem?.amount ?? 0))`. In `treasurer-disbursements.html` ~46 the abbreviation «م.ر» is unclear: write «میلیون ریال» and round the shown value with a component method or `| number:'1.0-0'` (check how the value is computed; if it is a division in the template, move it to a getter that uses `Math.round`).
+- e) Fixed period (ی۶۰) in `supervisor-period-lock.ts` ~32-33 and `treasurer-disbursements.ts` ~122-123: `fiscalYear = '1405'` and `selectedMonth = 'تیر'` are fixed. Initialise them from today: `const t = new Date(); const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());` `fiscalYear = String(j.jy)`, `selectedMonth` = the Persian month name at index `j.jm - 1` of the file's own month list (the keys of `monthMap` in period-lock, in their declared order; in disbursements use its month list/map the same way — read the file). Do it in the field initialisers or at the very start of `ngOnInit`, before the first load. If the route query params set year/month, they still win (keep that code). In `treasurer-disbursements.ts` ~204-224: if loading the sections fails, show a toast `'دریافت فهرست بخش‌ها انجام نشد.'` (half-space U+200C) and still call the data refresh like the success path does with no section (read the success path; if it needs a section, just set a `loadError` field and show it with `role="alert"` and a «تلاش دوباره» button calling the sections loader, same classes as in other pages: `ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500`).
+- f) Live refresh compare (low): `supervisor-fleet.ts` ~201 `msg.section_id === this.selectedSectionId` → `Number(msg.section_id) === Number(this.selectedSectionId)`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`; overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-fleet/*.spec.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-period-lock/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-petty-cash/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/supervisor/supervisor-fleet/*.spec.ts" --include="src/app/modules/accounting/components/finance/supervisor/supervisor-period-lock/*.spec.ts" --include="src/app/modules/accounting/components/finance/treasurer/treasurer-disbursements/*.spec.ts" --include="src/app/modules/accounting/components/finance/treasurer/treasurer-petty-cash/*.spec.ts"` (once before your changes, then after; at most 6 runs). A spec that asserts the old fixed year/month: update only that expected value to be computed the same way, and say so. Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the four folders pass (same as the baseline), guardian 52 passes.
+- ZWNJ counts not lower than in the runner comment.
+- `git status --short` shows only files of the allowed folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(treasury): Persian errors, Shamsi dates, current period and fleet search debounce
+- Short English report: what changed per file, test results, anything that differed or was skipped. End the turn after the commit and the report.

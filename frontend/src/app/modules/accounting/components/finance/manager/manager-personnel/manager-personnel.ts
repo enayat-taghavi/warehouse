@@ -344,7 +344,6 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     // ۴. تمام پرسنل فعال و مصوب
     this.personnelApi.getPersonnelProfilesPage({ ...baseParams, ...paged('all') }).subscribe({
       next: (res: PagedResult<PersonnelProfile>) => {
-        this.loadError = '';
         this.allPersonnelList = res?.results || [];
         this.totals.all = res?.count ?? this.allPersonnelList.length;
         this.statusCounters.allTotal = this.totals.all;

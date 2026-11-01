@@ -293,7 +293,6 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     // ۱. ناوگان جدید در انتظار تصویب مدیر
     this.personnelApi.getVehicleProfiles(baseParams).subscribe({
       next: (res: VehicleDriverProfile[]) => {
-        this.loadError = '';
         const allList = res || [];
         this.allVehiclesList = allList;
         this.statusCounters.allTotal = allList.length;

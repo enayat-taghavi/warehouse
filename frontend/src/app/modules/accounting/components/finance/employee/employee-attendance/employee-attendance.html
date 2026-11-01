@@ -115,7 +115,7 @@
       
       <!-- Date Navigator (RTL Flow: Right = Prev Day, Left = Next Day) -->
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1 relative">
-        <button type="button" (click)="goToPrevDay()" title="روز قبل" aria-label="روز قبل" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <button type="button" (click)="goToPrevDay()" title="روز قبل" aria-label="روز قبل" class="min-w-10 min-h-10 inline-flex items-center justify-center p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-back"></svg>
         </button>
 
@@ -146,7 +146,7 @@
           </button>
         </div>
 
-        <button type="button" (click)="goToNextDay()" title="روز بعد" aria-label="روز بعد" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <button type="button" (click)="goToNextDay()" title="روز بعد" aria-label="روز بعد" class="min-w-10 min-h-10 inline-flex items-center justify-center p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-forward"></svg>
         </button>
 

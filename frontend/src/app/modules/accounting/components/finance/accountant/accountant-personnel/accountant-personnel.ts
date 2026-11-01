@@ -376,7 +376,6 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     }
     this.personnelApi.getPersonnelProfilesPage(pParams).subscribe({
       next: (res) => {
-        this.loadError = '';
         this.personnelItems = res?.results || [];
         this.personnelCount = res?.count ?? this.personnelItems.length;
         if (this.activeSubTab === 'new') this.statusCounters.newPending = this.personnelCount;
