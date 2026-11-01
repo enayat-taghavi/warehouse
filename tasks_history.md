@@ -17075,3 +17075,92 @@ feat(verify): live document data on the public QR verify page (current number, d
    - تمام فایل‌های محدودهٔ تسک ([`document-verify.ts`](file:///E:/comanager/frontend/src/app/modules/common/components/document-verify/document-verify.ts)، [`document-verify.html`](file:///E:/comanager/frontend/src/app/modules/common/components/document-verify/doc...
 
 ---
+
+### Task 1 of 1 — 2026-11-01 04:10:01
+- **Status:** FAILED (verify still failing)
+- **Conversation:** `aa48cb18-a203-46ab-b28f-b179d6d9b219`
+- **Steps:** 702
+- **Tokens:** 1037316
+- **Duration:** 43m 48s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/8 passed
+    - FAILED (exit 2): `python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/invoice-receipt-button/invoice-receipt-button.ts --contains "expense_invoice" --regex-contains "دانلود رسید" --contains appIcon`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base a5d2e973 --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/invoice-receipt-button/*.spec.ts"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py`
+  - verify round 1: 7/8 passed
+    - FAILED (exit 2): `python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/invoice-receipt-button/invoice-receipt-button.ts --contains "expense_invoice" --regex-contains "دانلود رسید" --contains appIcon`
+  - verify round 2: 7/8 passed
+    - FAILED (exit 2): `python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/invoice-receipt-button/invoice-receipt-button.ts --contains "expense_invoice" --regex-contains "دانلود رسید" --contains appIcon`
+- **Task:**
+```
+Session 1 of 1 — Overnight fixes O7: quick «دانلود رسید» (payment receipt download) button on the five invoice list pages
+
+
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Create only the folder `frontend/src/app/modules/accounting/components/finance/invoice-receipt-button/` with two files: `invoice-receipt-button.ts` and `invoice-receipt-button.dom.spec.ts`. Edit only the five list pages named in section 2 (their `.html` and `.ts`). Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- No new inline `<svg>` with paths: icons only as `<svg appIcon="name" ...></svg>` with names that already exist in `frontend/src/app/shared/icons/icon-registry.ts` (`download`, `loader` exist). Use semantic colour tokens (`text-fg`, `text-fg-muted`, `bg-surface`, `border-line`) for the button and menu. All user-facing text stays Persian.
+- Do not delete or weaken any existing test.
+
+2. Context (read these; nothing else is needed):
+- When the treasurer pays an invoice, the payment receipt file is stored as a core attachment of the invoice with label `payment_receipt` (constant `PAYMENT_RECEIPT_LABEL` in `frontend/src/app/modules/accounting/payment-receipt.ts`; import it, do not repeat the string). The attachment kind for an expense invoice is `expense_invoice`.
+- List endpoint: `this.api.get<ReceiptItem[]>('attachments', { kind: 'expense_invoice', id: invoiceId, label: PAYMENT_RECEIPT_LABEL })` (request URL `/api/attachments/?kind=expense_invoice&id=<id>&label=payment_receipt`). The server already checks access: users who may view the invoice get the list; others get 403. Do not add any access logic in the frontend.
+- Download pattern to copy: `frontend/src/app/shared/components/attachments/attachments.component.ts` lines 1–34 (imports and the `AttachmentItem` interface — do not edit that file; declare a small local interface `ReceiptItem` with `id`, `original_name`, `created_at`, `download_url` in the new component), lines 94–147 (`load`, `apiPath`, `messageOf`) and lines 149–160 (`download`: `this.api.download(this.apiPath(item.download_url))` then `saveBlob(blob, item.original_name || 'attachment')` from `core/platform/file-output`). Toast: `ToastService` from `shared/components/toast/toast.component` injected with `{ optional: true }`, methods `info(msg)` and `error(msg)`.
+- Existing paid-amount blocks (where the button goes), base `frontend/src/app/modules/accounting/components/finance/`:
+  - `treasurer/treasurer-invoices/treasurer-invoices.html` lines 76–78: `<div *ngIf="item.paid_amount > 0" ...>پرداخت‌شده ... مانده ...</div>` inside the amount cell (row variable `item`).
+  - `employee/employee-invoices/employee-invoices.html` mobile card lines 114–116 (`@if (inv.paid_amount && +inv.paid_amount > 0) { <p ...>پرداخت‌شده ...</p> }`) and desktop table lines 214–216 (`<div *ngIf="inv.paid_amount && +inv.paid_amount > 0" ...>`), row variable `inv`.
+  - `accountant/accountant-invoices/accountant-invoices.html` line 130 (`<div *ngIf="item.paid_amount && +item.paid_amount > 0">...</div>`), row variable `item`.
+  - `supervisor/supervisor-invoices/supervisor-invoices.html` line 131, same shape, row variable `item`.
+  - `manager/manager-invoices/manager-invoices.html` line 42, same shape, row variable `inv`.
+
+3. Task:
+- a) New standalone component `InvoiceReceiptButtonComponent`, selector `app-invoice-receipt-button`, `ChangeDetectionStrategy.OnPush`, inline template, imports `CommonModule` and `SvgIconDirective`. Input `invoiceId` (number, required). State: `busy`, `items` (list), `menuOpen`.
+  - Button: `type="button"`, classes `inline-flex items-center justify-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-bold text-fg hover:bg-slate-50 min-h-[40px] min-w-[40px]`, `title="دانلود رسید پرداخت"`, `aria-label="دانلود رسید پرداخت"`, `[disabled]="busy"`, `[attr.aria-busy]="busy"`, `[attr.aria-expanded]="menuOpen"`, `aria-haspopup="menu"`. Content: `<svg appIcon="download" class="w-4 h-4" aria-hidden="true"></svg>` (or `appIcon="loader"` with `animate-spin` while busy) plus `<span class="hidden md:inline">دانلود رسید</span>` (icon-only on mobile).
+  - Click (call `event.stopPropagation()` so row click handlers do not fire): GET the list as in section 2. Result:
+    - 0 items: `toast.info('رسیدی برای این فاکتور ثبت نشده است')`.
+    - 1 item: download it directly.
+    - 2 or more items: open a small menu (`role="menu"`, absolutely positioned under the button, `rounded-xl border border-line bg-surface shadow-lg p-1 z-20 min-w-[12rem]`; wrapper `relative inline-block`) with one `role="menuitem"` button per item showing `original_name` and the date (`new Date(created_at).toLocaleDateString('fa-IR')`); clicking an item downloads it and closes the menu; the `Escape` key and a click outside close it (`@HostListener('document:click', ['$event'])` closing when the target is outside the host element; `@HostListener('keydown.escape')`).
+    - HTTP 403: `toast.info('رسیدی برای این فاکتور ثبت نشده است')` (reveal nothing more). Any other error: `toast.error(messageOf(err, 'دریافت رسید انجام نشد'))`.
+    - Download error: `toast.error(messageOf(err, 'دانلود رسید انجام نشد'))`.
+  - Always reset `busy` in `finally` and call `cdr.markForCheck()`. Ignore clicks while `busy`.
+- b) In each of the five pages add `<app-invoice-receipt-button [invoiceId]="ROWVAR.id"></app-invoice-receipt-button>` directly after (as a sibling of) the paid-amount block listed in section 2, guarded by the same condition (`+ROWVAR.paid_amount > 0`), wrapped in its own `<div class="mt-1">` using `*ngIf` or `@if`, matching the style the file already uses at that spot. Employee page: both the mobile card and the desktop table. Import `InvoiceReceiptButtonComponent` in each page's `.ts` `imports` array (relative path `../../invoice-receipt-button/invoice-receipt-button`).
+- c) `invoice-receipt-button.dom.spec.ts` (Vitest + jsdom; `TestBed` with `provideHttpClient()`, `provideHttpClientTesting()`, a mocked `ToastService` `{ info: vi.fn(), error: vi.fn() }`; mock `saveBlob` with `vi.mock('../../../../../core/platform/file-output', ...)` — check the exact relative path — or, if module mocking does not work, `vi.spyOn` the component's own download method). Use `HttpTestingController`; match the list request with a predicate `req.url.endsWith('attachments/') || req.url.endsWith('attachments')` plus `req.params.get('label') === 'payment_receipt'` (check how `ApiService.get` builds the URL and adapt). Cases:
+  - `one receipt downloads directly`: flush one item; then exactly one download request for the item's `download_url` path is made (flush a `Blob`); no `[role="menu"]` rendered.
+  - `several receipts open a menu`: flush two items; the rendered text contains both `original_name`s and `[role="menu"]` exists; clicking the second menu item makes a download request for it and closes the menu.
+  - `no receipt shows info toast`: flush `[]`; `toast.info` called with «رسیدی برای این فاکتور ثبت نشده است».
+  - `403 shows the same info toast`: flush with `{ status: 403, statusText: 'Forbidden' }`; `toast.info` called with the same text, `toast.error` not called.
+  - `has Persian aria-label and download icon`: the button has `aria-label` «دانلود رسید پرداخت» and contains an `svg` with the `appIcon` attribute value `download`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/finance/invoice-receipt-button/invoice-receipt-button.dom.spec.ts` (at most 8 times), and once at the end `npx ng test --watch=false --include=src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts --include=src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts --include=src/app/modules/accounting/components/finance/manager/manager-invoices/*.spec.ts --include=src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts` (a failure that also happens without your change is acceptable; say which). Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If a real file differs from this task (line numbers, text), follow the real file and say so in the report.
+
+5. Before finishing:
+- The new spec passes and guardian 52 passes.
+- `git status --short` shows only the new folder and the ten page files (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+feat(invoices): quick payment receipt download button on invoice lists
+- Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام ۱: توضیح سادهٔ پیام اجراکننده (Runner)
+در دور دوم پایانی (دور ۲ از ۲)، تنها خطای باقی‌مانده مربوط به پارامتر ناشناختهٔ پایتون است:
+- دستور ارزیابی مندرج در `tasks.md` حاوی پرچم `--regex-contains "دانلود رسید"` برای اسکریپت `verify_tools.py` است، در حالی که پارسر این ابزار چنین سوئیچی ندارد و با کد خروج ۲ متوقف می‌شود (`verify_tools.py: error: unrecognized arguments: --regex-contains دانلود رسید`).
+
+---
+
+### گام ۲: بررسی فنی و اعتبارسنجی تطابق
+۱. **عدم دستکاری زیرساخت و ابزارهای آزمون:**
+   - طبق قوانین بنیادین سیستم و مأموریت، ویرایش فایل‌های `scripts/`، `tasks.md` و ابزارهای آزمون اکیداً ممنوع است.
+   - محدودهٔ تغییرات منحصراً به ۱۲ فایل مشخص‌شده در دا...
+
+---
