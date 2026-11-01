@@ -6,6 +6,7 @@ import { DomainMigrationBannerComponent } from './shared/components/domain-migra
 import { AppVersionLockComponent } from './shared/components/app-version-lock/app-version-lock.component';
 import { UpdateBarComponent } from './shared/components/update-bar/update-bar.component';
 import { WebPushBarComponent } from './shared/components/webpush-bar/webpush-bar.component';
+import { ShareOfferBarComponent } from './shared/components/share-offer-bar/share-offer-bar.component';
 import { WhatsNewComponent } from './shared/components/whats-new/whats-new.component';
 import { DomainMigrationService } from './core/services/domain-migration.service';
 import { AuthService } from './core/auth/auth.service';
@@ -15,13 +16,13 @@ import { PermissionService } from './core/services/permission.service';
 import { WorkflowTasksService } from './core/services/workflow-tasks.service';
 import { AppUpdateService } from './core/platform/app-update.service';
 import { initNativeShell } from './core/platform/native-shell';
-import { setFileOutputErrorNotifier } from './core/platform/file-output';
+import { setFileOutputErrorNotifier, setFileOutputInfoNotifier } from './core/platform/file-output';
 import { initResumeSync, requestPersistentStorage } from './core/platform/device-lifecycle';
 import { OfflineSyncService } from './core/services/offline-sync.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent, AppVersionLockComponent, UpdateBarComponent, WebPushBarComponent, WhatsNewComponent],
+  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent, AppVersionLockComponent, UpdateBarComponent, WebPushBarComponent, ShareOfferBarComponent, WhatsNewComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -40,6 +41,7 @@ export class App {
 
   constructor() {
     setFileOutputErrorNotifier((m) => this.toast.error(m));
+    setFileOutputInfoNotifier((m) => this.toast.show('info', m));
     // پشتیبانی از لینک‌های دارای هش استعلام
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash;
