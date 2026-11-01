@@ -18,6 +18,11 @@ import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
  * فهرست فقط‌خواندنی دوره‌های کارکرد بخش‌ها (۴.۴-ج).
  * تأیید، عودت و رد دوره از «کارهای من» (`/app/my-tasks?workflow=attendance_period`) انجام می‌شود.
  */
+const PERIOD_LOCK_MONTHS = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+];
+
 @Component({
   selector: 'app-supervisor-period-lock-hub',
   standalone: true,
@@ -30,8 +35,16 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
   selectedSectionId: number | null = null;
   isLoadingSections = false;
 
-  fiscalYear = '1405';
-  selectedMonth = 'تیر';
+  fiscalYear = (() => {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    return String(j.jy);
+  })();
+  selectedMonth = (() => {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    return PERIOD_LOCK_MONTHS[j.jm - 1] || 'تیر';
+  })();
   isLoading = false;
   loadFailed = false;
 

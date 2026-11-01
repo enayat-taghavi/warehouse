@@ -120,8 +120,16 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
 
   // Fiscal Context & Filters
   searchQuery = '';
-  fiscalYear = '1405';
-  selectedMonth = 'تیر';
+  fiscalYear = (() => {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    return String(j.jy);
+  })();
+  selectedMonth = (() => {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    return FLEET_MONTH_NAMES_FA[j.jm - 1] || 'تیر';
+  })();
   selectedPaymentType: 'all' | 'payroll' | 'fleet' = 'all';
 
   // State
