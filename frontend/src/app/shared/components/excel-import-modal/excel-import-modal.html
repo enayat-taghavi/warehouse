@@ -236,9 +236,9 @@
       </div>
 
       <!-- Duplicate Notice (When all records already exist) -->
-      <div *ngIf="(previewResult.summary.skipped || 0) > 0 && ((previewResult.summary.valid_count || 0) === 0)" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 14px;">ℹ️</span>
-        <span style="font-size: 11px; color: #1e40af; font-weight: bold;">
+      <div *ngIf="(previewResult.summary.skipped || 0) > 0 && ((previewResult.summary.valid_count || 0) === 0)" class="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2.5 text-sky-800" role="status">
+        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="alert-circle" aria-hidden="true"></svg>
+        <span class="text-[11px] font-bold">
           {{ previewResult.summary.skipped }} رکورد این فایل قبلاً در سامانه ثبت شده‌اند. برای به‌روزرسانی اطلاعات آنها، گزینهٔ «به‌روزرسانی رکوردهای تکراری» را فعال کنید.
         </span>
       </div>

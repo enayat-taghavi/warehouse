@@ -72,9 +72,8 @@ export class InvoicePreviewModalComponent implements OnChanges {
       this.invoiceDetail = this.invoice;
     }
     if ((changes['isOpen'] && this.isOpen) || (changes['invoiceId'] && this.invoiceId)) {
-      if (changes['initialTab'] && this.initialTab) {
-        this.activeTab = this.initialTab;
-      }
+      // هر بار بازشدن از همان تبی شروع می‌شود که صفحه خواسته، نه تب دفعهٔ قبل
+      this.activeTab = this.initialTab || 'preview';
       this.loadInvoice();
     }
   }
@@ -95,6 +94,8 @@ export class InvoicePreviewModalComponent implements OnChanges {
     this.isLoading = true;
     this.treasuryApi.getExpenseInvoice(id).subscribe({
       next: (inv) => {
+        // پاسخ دیرِ فاکتور قبلی جای فاکتور تازه را نمی‌گیرد
+        if (id !== (this.invoiceId || this.invoice?.id)) return;
         this.invoiceDetail = inv;
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -129,7 +130,7 @@ export class InvoicePreviewModalComponent implements OnChanges {
   getStatusBadgeClass(status?: string): string {
     switch (status) {
       case 'draft':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-surface-muted text-fg border-line';
       case 'pending_supervisor':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'pending_accountant':
@@ -148,7 +149,7 @@ export class InvoicePreviewModalComponent implements OnChanges {
       case 'rejected':
         return 'bg-rose-50 text-rose-700 border-rose-200';
       default:
-        return 'bg-slate-50 text-slate-600 border-slate-200';
+        return 'bg-surface-muted text-fg-muted border-line';
     }
   }
 

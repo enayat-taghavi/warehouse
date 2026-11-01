@@ -10,14 +10,14 @@
 
     <!-- ── نمای کارتی در صفحه موبایل (Mobile Cards View) ── -->
     <div *ngIf="invoicesList.length > 0" class="md:hidden p-3 space-y-3">
-      <div *ngFor="let inv of invoicesList" class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 space-y-2.5">
+      <div *ngFor="let inv of invoicesList" class="bg-surface rounded-2xl border border-line shadow-sm p-3.5 space-y-2.5">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <h4 class="font-bold text-sm text-slate-900 truncate">{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</h4>
+            <h4 class="font-bold text-sm text-fg truncate">{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</h4>
             <button
               type="button"
               (click)="openPreview(inv, 'preview')"
-              class="text-start font-mono text-[11px] text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer mt-0.5 block"
+              class="text-start font-mono text-[11px] text-fg-muted hover:text-indigo-600 transition-colors cursor-pointer mt-0.5 block"
               title="مشاهده پیش‌نمایش و سابقه فاکتور">
               <span *ngIf="inv.number">داخلی: <bdi dir="ltr">{{ inv.number }}</bdi> · </span>
               <span>شماره: <bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi></span>
@@ -28,8 +28,8 @@
           </span>
         </div>
 
-        <div class="flex items-center justify-between text-[11px] bg-slate-50/70 p-2 rounded-xl border border-slate-100 text-slate-600">
-          <span>بخش: <strong class="text-slate-800">{{ inv.section_name || '—' }}</strong></span>
+        <div class="flex items-center justify-between text-[11px] bg-surface-muted p-2 rounded-xl border border-line text-fg-muted">
+          <span>بخش: <strong class="text-fg">{{ inv.section_name || '—' }}</strong></span>
           <span class="font-mono">{{ inv.issue_date_shamsi || inv.date || '—' }}</span>
         </div>
 
@@ -38,18 +38,18 @@
           <span *ngIf="inv.vat_manual" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات دستی">مالیات دستی</span>
         </div>
 
-        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-          <div class="text-[11px] text-slate-500">
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-line">
+          <div class="text-[11px] text-fg-muted">
             <span *ngIf="inv.lines?.length">{{ faAmount(inv.lines.length) }} ردیف</span>
             <span *ngIf="inv.paid_amount && +inv.paid_amount > 0"> · مانده: {{ faAmount(inv.remaining) }}</span>
           </div>
           <div class="text-end">
             <span class="font-mono font-black text-indigo-700 text-sm">{{ (inv.amount ?? inv.total_amount ?? 0) | number }}</span>
-            <span class="text-[10px] text-slate-400 font-sans ms-1">ریال</span>
+            <span class="text-[10px] text-fg-subtle font-sans ms-1">ریال</span>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-slate-100">
+        <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-line">
           <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
           <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
           <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
@@ -76,7 +76,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let inv of invoicesList" class="hover:bg-slate-50 transition-colors">
-            <td class="p-3 font-mono font-bold text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(inv, 'preview')" title="مشاهده پیش‌نمایش و سابقه فاکتور">
+            <td class="p-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(inv, 'preview')" (keydown.enter)="openPreview(inv, 'preview')" (keydown.space)="$event.preventDefault(); openPreview(inv, 'preview')" tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه فاکتور">
               <div *ngIf="inv.number"><bdi dir="ltr">{{ inv.number }}</bdi></div>
               <div [class.text-[10px]]="inv.number" [class.text-slate-500]="inv.number"><bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi></div>
               <div class="flex flex-wrap gap-1 mt-1 font-sans">

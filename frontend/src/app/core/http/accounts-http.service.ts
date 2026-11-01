@@ -84,6 +84,8 @@ export interface ImportResult {
   success: boolean;
   dry_run?: boolean;
   message?: string;
+  created_count?: number;
+  updated_count?: number;
   fields_info?: ImportFieldsInfo;
   summary: {
     total_rows: number;

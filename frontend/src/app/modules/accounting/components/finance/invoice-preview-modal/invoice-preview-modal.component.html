@@ -6,7 +6,7 @@
 >
   <div class="space-y-4" dir="rtl">
     <!-- تب‌های فرعی در بالای مودال -->
-    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+    <div class="flex items-center justify-between pb-2 border-b border-line">
       <app-tab-bar
         [tabs]="tabs"
         [active]="activeTab"
@@ -17,84 +17,85 @@
 
     <!-- ── تب ۱: پیش‌نمایش فاکتور ── -->
     <div *ngIf="activeTab === 'preview'" class="space-y-4">
-      <div *ngIf="isLoading && !invoiceDetail" class="py-12 text-center text-slate-500">
+      <div *ngIf="isLoading && !invoiceDetail" class="py-12 text-center text-fg-muted">
         <svg appIcon="spinner" class="w-7 h-7 animate-spin mx-auto mb-2 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <p class="text-xs font-bold">در حال بارگذاری مشخصات فاکتور...</p>
       </div>
 
       <div *ngIf="invoiceDetail as inv" class="space-y-4">
         <!-- کارت خلاصه مشخصات اصلی فاکتور -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70 text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-surface-muted rounded-2xl border border-line text-xs">
           <div>
-            <span class="text-slate-400 text-[11px] block font-medium">شماره فاکتور:</span>
-            <span class="font-mono font-bold text-slate-800"><bdi dir="ltr">{{ inv.invoice_number || '—' }}</bdi></span>
+            <span class="text-fg-subtle text-[11px] block font-medium">شماره فاکتور:</span>
+            <span class="font-mono font-bold text-fg"><bdi dir="ltr">{{ inv.invoice_number || '—' }}</bdi></span>
           </div>
 
           <div *ngIf="inv.number">
-            <span class="text-slate-400 text-[11px] block font-medium">شماره داخلی سیستم:</span>
-            <span class="font-mono font-bold text-slate-800"><bdi dir="ltr">{{ inv.number }}</bdi></span>
+            <span class="text-fg-subtle text-[11px] block font-medium">شماره داخلی سیستم:</span>
+            <span class="font-mono font-bold text-fg"><bdi dir="ltr">{{ inv.number }}</bdi></span>
           </div>
 
           <div>
-            <span class="text-slate-400 text-[11px] block font-medium">تاریخ فاکتور:</span>
-            <span class="font-mono font-bold text-slate-800">{{ inv.issue_date_shamsi || inv.date || inv.invoice_date_shamsi || '—' }}</span>
+            <span class="text-fg-subtle text-[11px] block font-medium">تاریخ فاکتور:</span>
+            <span class="font-mono font-bold text-fg">{{ inv.issue_date_shamsi || inv.date || inv.invoice_date_shamsi || '—' }}</span>
           </div>
 
           <div>
-            <span class="text-slate-400 text-[11px] block font-medium">طرف‌حساب / فروشنده:</span>
-            <span class="font-bold text-slate-800">{{ inv.counterparty_name || inv.vendor_name || '—' }}</span>
+            <span class="text-fg-subtle text-[11px] block font-medium">طرف‌حساب / فروشنده:</span>
+            <span class="font-bold text-fg">{{ inv.counterparty_name || inv.vendor_name || '—' }}</span>
           </div>
 
           <div>
-            <span class="text-slate-400 text-[11px] block font-medium">بخش / پروژه:</span>
-            <span class="font-bold text-slate-800">{{ inv.section_name || '—' }} {{ inv.project_name ? ('(' + inv.project_name + ')') : '' }}</span>
+            <span class="text-fg-subtle text-[11px] block font-medium">بخش / پروژه:</span>
+            <span class="font-bold text-fg">{{ inv.section_name || '—' }} {{ inv.project_name ? ('(' + inv.project_name + ')') : '' }}</span>
           </div>
 
           <div *ngIf="inv.created_by_name">
-            <span class="text-slate-400 text-[11px] block font-medium">ثبت‌کننده:</span>
-            <span class="font-bold text-slate-700">{{ inv.created_by_name }}</span>
+            <span class="text-fg-subtle text-[11px] block font-medium">ثبت‌کننده:</span>
+            <span class="font-bold text-fg">{{ inv.created_by_name }}</span>
           </div>
 
           <div>
-            <span class="text-slate-400 text-[11px] block font-medium">وضعیت گردش:</span>
+            <span class="text-fg-subtle text-[11px] block font-medium">وضعیت گردش:</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block mt-0.5" [ngClass]="getStatusBadgeClass(inv.status)">
               {{ inv.status_display || getStatusLabel(inv.status) }}
             </span>
           </div>
 
-          <div *ngIf="inv.possible_duplicate" class="col-span-2 sm:col-span-3 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-xl">
-            ⚠️ این فاکتور ممکن است تکراری باشد
+          <div *ngIf="inv.possible_duplicate" class="col-span-2 sm:col-span-3 flex flex-wrap items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-xl">
+            <svg appIcon="alert-triangle" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>این فاکتور ممکن است تکراری باشد</span>
             <span *ngIf="inv.duplicate_reason" class="font-normal"> — دلیل: {{ inv.duplicate_reason }}</span>
           </div>
 
-          <div *ngIf="inv.description" class="col-span-2 sm:col-span-3 pt-1 border-t border-slate-200/50">
-            <span class="text-slate-400 text-[11px] block font-medium">شرح هزینه:</span>
-            <span class="text-slate-700 font-medium">{{ inv.description }}</span>
+          <div *ngIf="inv.description" class="col-span-2 sm:col-span-3 pt-1 border-t border-line">
+            <span class="text-fg-subtle text-[11px] block font-medium">شرح هزینه:</span>
+            <span class="text-fg font-medium">{{ inv.description }}</span>
           </div>
         </div>
 
         <!-- جدول اقلام و ردیف‌های هزینه -->
-        <div *ngIf="inv.lines?.length" class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs">
-          <div class="px-3.5 py-2.5 bg-slate-100/70 border-b border-slate-200 text-xs font-black text-slate-800 flex items-center justify-between">
+        <div *ngIf="inv.lines?.length" class="bg-surface rounded-2xl border border-line overflow-hidden shadow-sm">
+          <div class="px-3.5 py-2.5 bg-surface-muted border-b border-line text-xs font-black text-fg flex items-center justify-between">
             <span>اقلام و ردیف‌های هزینه ({{ faAmount(inv.lines.length) }} ردیف)</span>
-            <span class="text-[11px] text-slate-500 font-mono font-normal">جمع ردیف‌ها: {{ faAmount(inv.subtotal) }} ریال</span>
+            <span class="text-[11px] text-fg-muted font-mono font-normal">جمع ردیف‌ها: {{ faAmount(inv.subtotal) }} ریال</span>
           </div>
           <!-- نمای کارتی اقلام در موبایل (md:hidden) -->
-          <div class="md:hidden divide-y divide-slate-100 p-2.5 space-y-2">
-            <div *ngFor="let line of inv.lines; let idx = index" class="p-2.5 space-y-1.5 text-xs bg-slate-50/60 rounded-xl border border-slate-100">
+          <div class="md:hidden divide-y divide-line p-2.5 space-y-2">
+            <div *ngFor="let line of inv.lines; let idx = index" class="p-2.5 space-y-1.5 text-xs bg-surface-muted rounded-xl border border-line">
               <div class="flex items-start justify-between gap-2">
-                <span class="font-bold text-slate-800">{{ line.description || '—' }}</span>
-                <span class="text-[10px] font-mono text-slate-400">#{{ line.position || (idx + 1) }}</span>
+                <span class="font-bold text-fg">{{ line.description || '—' }}</span>
+                <span class="text-[10px] font-mono text-fg-subtle">#{{ line.position || (idx + 1) }}</span>
               </div>
-              <div class="flex items-center justify-between text-[11px] text-slate-600">
-                <span>مقدار: <b class="font-mono text-slate-800">{{ faAmount(line.quantity) }} {{ line.unit || '' }}</b></span>
-                <span>فی: <b class="font-mono text-slate-800">{{ faAmount(line.unit_price) }}</b></span>
+              <div class="flex items-center justify-between text-[11px] text-fg-muted">
+                <span>مقدار: <b class="font-mono text-fg">{{ faAmount(line.quantity) }} {{ line.unit || '' }}</b></span>
+                <span>فی: <b class="font-mono text-fg">{{ faAmount(line.unit_price) }}</b></span>
               </div>
-              <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/50">
-                <span class="px-1.5 py-0.5 rounded text-[10px] bg-white text-slate-700 border border-slate-200">
+              <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-line">
+                <span class="px-1.5 py-0.5 rounded text-[10px] bg-surface text-fg border border-line">
                   {{ line.expense_head_title || '—' }}
                 </span>
-                <span class="font-mono font-black text-slate-900">{{ faAmount(line.line_amount) }} ریال</span>
+                <span class="font-mono font-black text-fg">{{ faAmount(line.line_amount) }} ریال</span>
               </div>
             </div>
           </div>
@@ -102,7 +103,7 @@
           <!-- نمای جدول در تبلت و دسکتاپ (hidden md:block) -->
           <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-[11px] text-start">
-              <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+              <thead class="bg-surface-muted text-fg-muted font-bold border-b border-line">
                 <tr>
                   <th class="py-2 px-3 text-center w-10">#</th>
                   <th class="py-2 px-3">شرح کالا / خدمات</th>
@@ -112,18 +113,18 @@
                   <th class="py-2 px-3 text-end">مبلغ کل ردیف (ریال)</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100 text-slate-700">
-                <tr *ngFor="let line of inv.lines; let idx = index" class="hover:bg-slate-50/50">
-                  <td class="py-2 px-3 text-center font-mono text-slate-400">{{ line.position || (idx + 1) }}</td>
-                  <td class="py-2 px-3 font-medium text-slate-800">{{ line.description || '—' }}</td>
+              <tbody class="divide-y divide-line text-fg">
+                <tr *ngFor="let line of inv.lines; let idx = index" class="hover:bg-surface-muted">
+                  <td class="py-2 px-3 text-center font-mono text-fg-subtle">{{ line.position || (idx + 1) }}</td>
+                  <td class="py-2 px-3 font-medium text-fg">{{ line.description || '—' }}</td>
                   <td class="py-2 px-3 text-center font-mono">{{ faAmount(line.quantity) }} {{ line.unit || '' }}</td>
                   <td class="py-2 px-3 font-mono text-start">{{ faAmount(line.unit_price) }}</td>
                   <td class="py-2 px-3">
-                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200 font-sans">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-surface-muted text-fg border border-line font-sans">
                       {{ line.expense_head_title || '—' }}
                     </span>
                   </td>
-                  <td class="py-2 px-3 text-end font-mono font-bold text-slate-900">{{ faAmount(line.line_amount) }}</td>
+                  <td class="py-2 px-3 text-end font-mono font-bold text-fg">{{ faAmount(line.line_amount) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -131,8 +132,8 @@
         </div>
 
         <!-- خلاصه مبالغ مالی، تخفیف و مالیات -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
-          <div class="flex justify-between items-center text-slate-600">
+        <div class="bg-surface-muted p-3.5 rounded-2xl border border-line space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-fg-muted">
             <span>جمع کل ردیف‌ها:</span>
             <span class="font-mono font-bold">{{ faAmount(inv.subtotal) }} ریال</span>
           </div>
@@ -143,23 +144,23 @@
           <div *ngIf="inv.vat_amount && +inv.vat_amount > 0" class="flex justify-between items-center text-sky-700">
             <span class="flex items-center gap-1">
               <span>مالیات بر ارزش افزوده:</span>
-              <span *ngIf="inv.vat_manual" class="text-[9px] px-1 py-0.2 rounded bg-sky-100 text-sky-800 font-bold border border-sky-200">دستی</span>
+              <span *ngIf="inv.vat_manual" class="text-[9px] px-1 py-px rounded bg-sky-100 text-sky-800 font-bold border border-sky-200">دستی</span>
             </span>
             <span class="font-mono font-bold">+ {{ faAmount(inv.vat_amount) }} ریال</span>
           </div>
-          <div class="flex justify-between items-center pt-2 border-t border-slate-200 font-black text-sm text-slate-900">
+          <div class="flex justify-between items-center pt-2 border-t border-line font-black text-sm text-fg">
             <span>مبلغ نهایی قابل پرداخت:</span>
             <span class="font-mono text-emerald-700 text-base">{{ faAmount(inv.amount ?? inv.total_amount) }} ریال</span>
           </div>
-          <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="flex justify-between items-center pt-1 text-slate-500 text-[11px]">
+          <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="flex justify-between items-center pt-1 text-fg-muted text-[11px]">
             <span>پرداخت‌شده / مانده:</span>
             <span class="font-mono font-bold">{{ faAmount(inv.paid_amount) }} / {{ faAmount(inv.remaining) }} ریال</span>
           </div>
         </div>
 
         <!-- پیوست‌ها و مدارک فاکتور -->
-        <div *ngIf="inv.id" class="space-y-2 pt-2 border-t border-slate-100">
-          <h4 class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+        <div *ngIf="inv.id" class="space-y-2 pt-2 border-t border-line">
+          <h4 class="text-xs font-black text-fg flex items-center gap-1.5">
             <svg appIcon="hero-paper-clip" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             <span>مدارک و پیوست‌های فاکتور</span>
           </h4>
@@ -180,8 +181,8 @@
   </div>
 
   <!-- فوتر مودال -->
-  <div modal-footer class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
-    <div class="text-[11px] text-slate-400 font-mono">
+  <div modal-footer class="p-3 bg-surface-muted border-t border-line flex items-center justify-between gap-2">
+    <div class="text-[11px] text-fg-subtle font-mono">
       <span *ngIf="invoiceId || invoiceDetail?.id">شناسه سند: {{ invoiceId || invoiceDetail?.id }}</span>
     </div>
     <div class="flex items-center gap-2">

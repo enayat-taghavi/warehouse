@@ -1,4 +1,6 @@
-import os
+import io
+
+import openpyxl
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -10,7 +12,40 @@ from personnel.scoped_test_support import grant_section_perms
 
 User = get_user_model()
 
-EXCEL_FILE_PATH = r'C:\Users\Payandeh\.gemini\antigravity\brain\c9c48d14-b4bf-4400-af12-1648052157a3\.user_uploaded\media_1793545864594_4da0abf2.xlsx'
+ROW_COUNT = 59
+
+# سربرگ‌ها همان کلید انگلیسی فیلدهاست (هر کلید جزو نام‌های مستعار خودش است)
+HEADER_FIELDS = [
+    'national_code', 'first_name', 'last_name', 'father_name', 'birth_date', 'id_number',
+    'birth_place', 'education_level', 'insurance_type', 'insurance_number', 'postal_code',
+    'address', 'job_category', 'job_title', 'employment_type', 'start_date', 'gender',
+    'phone_number', 'account_number', 'sheba_number', 'bank_name', 'marital_status',
+    'children_count', 'contract_hours', 'contract_base_salary',
+]
+
+
+def _national_code(seed):
+    """کد ملی معتبر (با رقم کنترل) از روی یک عدد"""
+    body = f'{seed:09d}'
+    s = sum(int(d) * (10 - i) for i, d in enumerate(body)) % 11
+    return body + str(s if s < 2 else 11 - s)
+
+
+def _build_workbook_bytes():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Emp_info'
+    ws.append(HEADER_FIELDS)
+    for i in range(ROW_COUNT):
+        row = {f: None for f in HEADER_FIELDS}
+        row['national_code'] = _national_code(100000001 + i * 7)
+        row['first_name'] = f'نام{i}'
+        row['last_name'] = f'خانوادگی{i}'
+        row['contract_base_salary'] = 700000000
+        ws.append([row[f] for f in HEADER_FIELDS])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 class PersonnelExcelImportRolesTests(TestCase):
@@ -23,14 +58,9 @@ class PersonnelExcelImportRolesTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.excel_bytes = None
-        if os.path.exists(EXCEL_FILE_PATH):
-            with open(EXCEL_FILE_PATH, 'rb') as f:
-                cls.excel_bytes = f.read()
+        cls.excel_bytes = _build_workbook_bytes()
 
     def setUp(self):
-        self.assertIsNotNone(self.excel_bytes, "فایل اکسل آپلود شده کاربر باید در مسیر آرتیفکت وجود داشته باشد.")
-
         # شرکت و پروژه و بخش اصلی
         self.company = Company.objects.create(code='CMP-A', name='شرکت مهندسی بتا')
         self.project = Project.objects.create(company=self.company, code='PRJ-A', name='پروژه پارس جنوبی')
@@ -106,7 +136,7 @@ class PersonnelExcelImportRolesTests(TestCase):
         data_dry = res_dry.json()
         self.assertTrue(data_dry['success'])
         self.assertTrue(data_dry['dry_run'])
-        self.assertEqual(data_dry['summary']['created'], 59)
+        self.assertEqual(data_dry['summary']['created'], ROW_COUNT)
         self.assertIn('fields_info', data_dry)
         self.assertGreater(data_dry['fields_info']['detected_count'], 20)
         # در dry-run نباید رکوردی در دیتابیس ایجاد شده باشد
@@ -122,11 +152,11 @@ class PersonnelExcelImportRolesTests(TestCase):
         self.assertEqual(res_commit.status_code, 200)
         data_commit = res_commit.json()
         self.assertTrue(data_commit['success'])
-        self.assertEqual(data_commit['created_count'], 59)
+        self.assertEqual(data_commit['created_count'], ROW_COUNT)
 
         # بررسی در دیتابیس
         profiles = PersonnelProfile.objects.filter(section=self.section)
-        self.assertEqual(profiles.count(), 59)
+        self.assertEqual(profiles.count(), ROW_COUNT)
 
         # فیلد حقوق قرارداد شده در اکسل مقدار دارد (مثلا ۷۰۰ میلیون ریال)، اما فیلدهای مزد روزانه/پایه سنواتی در این فایل خاص #REF! هستند
         sample = profiles.filter(contract_base_salary__gt=0).first()
@@ -148,10 +178,10 @@ class PersonnelExcelImportRolesTests(TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['created_count'], 59)
+        self.assertEqual(data['created_count'], ROW_COUNT)
 
         profiles = PersonnelProfile.objects.filter(section=self.section)
-        self.assertEqual(profiles.count(), 59)
+        self.assertEqual(profiles.count(), ROW_COUNT)
 
         # بررسی اینکه دستمزدها/حقوق به عنوان حسابدار حذف نشده‌اند (DEF-21: user_can_view_wages برای حسابدار True است)
         sample = profiles.filter(contract_base_salary__gt=0).first()
@@ -172,10 +202,10 @@ class PersonnelExcelImportRolesTests(TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['created_count'], 59)
+        self.assertEqual(data['created_count'], ROW_COUNT)
 
         profiles = PersonnelProfile.objects.filter(company=self.company)
-        self.assertEqual(profiles.count(), 59)
+        self.assertEqual(profiles.count(), ROW_COUNT)
 
     def test_accountant_forbidden_on_unauthorized_section(self):
         """اگر حسابدار بخواهد برای بخشی از یک شرکت دیگر که به آن دسترسی ندارد فایل را بارگذاری کند، با خطای ۴۰۳ مواجه می‌شود."""
@@ -205,10 +235,10 @@ class PersonnelExcelImportRolesTests(TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['created_count'], 59)
+        self.assertEqual(data['created_count'], ROW_COUNT)
 
         profiles = PersonnelProfile.objects.filter(section=self.section)
-        self.assertEqual(profiles.count(), 59)
+        self.assertEqual(profiles.count(), ROW_COUNT)
 
         # هیچ رکوردی نباید حقوق قرارداد شده ثبت شده داشته باشد چون اپراتور به حقوق دسترسی ندارد
         waged_count = profiles.filter(contract_base_salary__gt=0).count()
