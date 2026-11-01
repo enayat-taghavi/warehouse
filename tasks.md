@@ -5561,3 +5561,265 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `git status --short` shows nothing except runner files and `tests/playwright/tools/index.py`.
 
 6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+
+===
+
+Session 1 of 4 — File share F1: shareBlob, shareUrl, canShareFiles and the share offer hook in the shared file output, plus the share icon
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/core/platform/file-output.ts" "frontend/src/app/core/platform/file-output.spec.ts" "frontend/src/app/shared/icons/icon-registry.ts"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.ts --contains "export function canShareFiles" --contains "export async function shareBlob" --contains "export async function shareUrl" --contains "export function setFileShareOfferNotifier" --contains "export function setFileOutputInfoNotifier" --contains "offerShare" --contains "اشتراک‌گذاری" --absent "navigator.share({ url"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/icons/icon-registry.ts --contains "'share':" --count "10:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.spec.ts --count "30:it("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/core/platform/file-output.spec.ts" --include "src/app/shared/icons/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(share): shareBlob, shareUrl and share offer hook in file output"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only these three files: `frontend/src/app/core/platform/file-output.ts`, `frontend/src/app/core/platform/file-output.spec.ts`, `frontend/src/app/shared/icons/icon-registry.ts`. No other file, no new file except the temporary tsconfig of the Tool policy, which you delete before the commit. Never edit `backend/`, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- Do not change the existing behaviour of `saveBlob`, `saveUrl` or `printWindow` on native (Capacitor) platforms. Do not rename or remove any existing export. Do not delete or weaken any existing test.
+- Security: share only the file content. Never pass a server URL or any link to `navigator.share` or to the native share on web. Never put a token in a URL.
+- PERSIAN HALF-SPACES: Persian text uses the zero-width non-joiner (ZWNJ, U+200C), e.g. «اشتراک‌گذاری». Copy the Persian strings of this task exactly, with their ZWNJ. Never retype existing Persian text.
+
+2. Context:
+- Plan `Documents/File_Share/plan_file_share.md`, sections `## ۳.` and `## ۴.` (read only, do not edit).
+- `frontend/src/app/core/platform/file-output.ts` (whole file, about 225 lines): `fileOutputNativeBridge`, `setFileOutputErrorNotifier`, `notifyError`, `isCancelError`, `blobToBase64`, `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`.
+- `frontend/src/app/core/platform/file-output.spec.ts` (whole file): how the native bridge is spied and how `Capacitor` is faked on `globalThis`.
+- `frontend/src/app/shared/icons/icon-registry.ts`: the icon map; entries look like `'download': '<path .../>',` in alphabetical order.
+
+3. Task:
+- a) Icon. Add to the registry, in alphabetical position, the Lucide "share-2" icon under the name `share`:
+  `'share': '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>',`
+  If a spec counts the registry entries, update that number in the spec only if the spec file is inside `frontend/src/app/shared/icons/` and say so; otherwise do not add the icon to any other list.
+- b) Types and notifiers in `file-output.ts`:
+  - `export interface SaveOptions { offerShare?: boolean; }` (default: offer is on).
+  - `export interface ShareOffer { blob: Blob; filename: string; }`
+  - `export type ShareResult = 'shared' | 'cancelled' | 'downloaded' | 'offered';`
+  - `export function setFileShareOfferNotifier(fn: ((offer: ShareOffer) => void) | null): void` and `export function setFileOutputInfoNotifier(fn: ((message: string) => void) | null): void`, stored in module variables like the existing error notifier.
+- c) MIME helper (not exported is fine): `toShareFile(blob, filename): File` returns `new File([blob], filename, { type })` where `type` is `blob.type` if not empty, else by file extension: pdf `application/pdf`, xlsx `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, xls `application/vnd.ms-excel`, csv `text/csv`, txt `text/plain`, json `application/json`, zip `application/zip`, png `image/png`, jpg/jpeg `image/jpeg`, webp `image/webp`, docx `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, otherwise `application/octet-stream`.
+- d) `export function canShareFiles(): boolean`: on native return true. On web return true only when `navigator.share` and `navigator.canShare` are functions and `navigator.canShare({ files: [new File(['x'], 'x.txt', { type: 'text/plain' })] })` is true; wrap in try/catch and return false on any error or when `navigator` is undefined.
+- e) Native helper: move the existing write logic of `saveBlob` (Documents first, Data as fallback, path `CoManage/<filename>`) into a private `async function writeNativeFile(blob, filename): Promise<{ uri: string; usedFallback: boolean }>` and use it from `saveBlob` without changing what `saveBlob` does on native. All existing native tests must still pass unchanged.
+- f) `saveBlob(blob, filename, options?: SaveOptions)`: native path unchanged. Web path: after the anchor click (keep the existing code), if `options?.offerShare !== false` and `canShareFiles()` and a share offer notifier is set, call it with `{ blob, filename }`. Add the same optional third parameter to `FileOutputService.saveBlob` and pass it through. `saveUrl` does not offer.
+- g) `export async function shareBlob(blob: Blob, filename: string): Promise<ShareResult>`:
+  - Native: `writeNativeFile`, then `fileOutputNativeBridge.share({ title: filename, url: uri })` → `'shared'`; a cancel error (`isCancelError`) → `'cancelled'`; any other error → `notifyError('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.', err)` and rethrow.
+  - Web, when `canShareFiles()` and `navigator.canShare({ files: [file] })` is true for `file = toShareFile(blob, filename)`: `await navigator.share({ files: [file], title: filename })` → `'shared'`. Error name `AbortError` → `'cancelled'` (no message). Error name `NotAllowedError` (the click gesture expired during a slow download): if a share offer notifier is set, call it with `{ blob, filename }` and return `'offered'`; if none is set, fall through to the download fallback below. Any other error → `notifyError` with the Persian message above and rethrow.
+  - Web fallback (no file sharing, or this file type cannot be shared): `await saveBlob(blob, filename, { offerShare: false })`, then call the info notifier with `'مرورگر شما اشتراک‌گذاری این فایل را پشتیبانی نمی‌کند؛ فایل دانلود شد.'` and return `'downloaded'`.
+- h) Auth headers: move the token lookup of `saveUrl` into a private `authHeaders(): Record<string, string>` and use it in `saveUrl` (same behaviour).
+- i) `export async function shareUrl(url: string, filename?: string): Promise<ShareResult>`: resolve with `resolveServerUrl(url)`; for `data:` and `blob:` URLs fetch without headers, else `fetch(resolved, { headers: authHeaders() })`. If `!response.ok`, call `notifyError('اشتراک‌گذاری فایل انجام نشد. دوباره تلاش کنید.', err)` with the thrown error and throw. The file name is `filename` or the last path part of `url` without query, or `'file'`. Then `return shareBlob(blob, name)`.
+- j) Add `canShareFiles()`, `shareBlob(blob, filename)` and `shareUrl(url, filename?)` methods to `FileOutputService` that call the functions.
+- k) Tests in `file-output.spec.ts` (at least 10 new `it(` blocks; keep all old ones). Fake `navigator.share`/`navigator.canShare` with `vi.fn` via `Object.defineProperty(globalThis.navigator, ...)` with `configurable: true` and restore them in `afterEach`. Cover: canShareFiles true/false/throws on web and true on native; shareBlob web success passes a `File` with the right name and a MIME type from the extension when `blob.type` is empty; AbortError → 'cancelled' with no notifier call; NotAllowedError with an offer notifier → 'offered' and the notifier got the blob; NotAllowedError without notifier → download fallback; unsupported → 'downloaded' plus the info message; native shareBlob writes the file and calls the bridge share with the uri, and a cancel error → 'cancelled'; saveBlob on web calls the offer notifier when supported, not when `{ offerShare: false }`, and not on native; shareUrl sends the Authorization header for a server URL and no header for a `data:` URL, and rejects on a 404 response.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.f1tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/core/platform/file-output.spec.ts", "src/app/shared/icons/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.f1tmp.json --include="src/app/core/platform/file-output.spec.ts" --include="src/app/shared/icons/*.spec.ts"` once BEFORE your changes for the baseline, then after (at most 6 runs). Delete `frontend/tsconfig.f1tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs of the two patterns pass, guardian 52 passes.
+- `git status --short` shows only the three files (plus the pre-existing `tests/playwright/tools/index.py` and runner files); the temporary tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+feat(share): shareBlob, shareUrl and share offer hook in file output
+- Short English report: what changed, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+Session 2 of 4 — File share F2: the "file is ready, share it" bar shown after downloads, wired into the app shell
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.ts --contains "export function setFileShareOfferNotifier" --contains "export async function shareBlob"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/shared/components/share-offer-bar/*" "frontend/src/app/app.ts" "frontend/src/app/app.html"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.ts --contains "app-share-offer-bar" --contains "setFileShareOfferNotifier" --contains "shareBlob" --contains "اشتراک‌گذاری" --contains "aria-live" --contains "min-w-[40px]" --contains "<bdi>"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/app.html --contains "<app-share-offer-bar></app-share-offer-bar>"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/app.ts --contains "setFileOutputInfoNotifier" --contains "ShareOfferBarComponent" --count "1:‌"
+verify: python scripts/automation/verify_tools.py spec-check --file frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.spec.ts --min-tests 6
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/shared/components/share-offer-bar/*.spec.ts" --include "src/app/app.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(share): share offer bar after downloads"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Create exactly two new files: `frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.ts` and `frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.spec.ts`. Edit only `frontend/src/app/app.ts` and `frontend/src/app/app.html` besides them. Do not edit `file-output.ts` (session 1 already finished it). Never edit `backend/`, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- No inline svg paths: icons only with `<svg appIcon="name" ...>` (guardian 52). All user-facing text is Persian; copy the Persian strings of this task exactly, with their ZWNJ (U+200C), e.g. «اشتراک‌گذاری».
+
+2. Context:
+- Plan `Documents/File_Share/plan_file_share.md`, sections `## ۳.` items 2, 5, 6 and 7 (read only).
+- Pattern to copy (layout, classes, standalone component with inline template, signals, `pb-safe`, 40px buttons, icon-only on mobile and label from `sm`): `frontend/src/app/shared/components/webpush-bar/webpush-bar.component.ts` and its spec `webpush-bar.component.spec.ts`.
+- API from session 1 in `frontend/src/app/core/platform/file-output.ts`: `setFileShareOfferNotifier`, `ShareOffer`, `shareBlob`, `setFileOutputInfoNotifier`.
+- `frontend/src/app/app.ts` lines 1-45 (imports, `toast` injection, `setFileOutputErrorNotifier((m) => this.toast.error(m));` in the constructor) and `frontend/src/app/app.html` lines 1-10 (`<app-toast-container>`, `<app-update-bar>`, `<app-webpush-bar>`).
+- Toast API: `ToastService.show(type: 'success' | 'error' | 'warning' | 'info', message: string, durationMs = 4000)` in `frontend/src/app/shared/components/toast/toast.component.ts`.
+
+3. Task:
+- a) `ShareOfferBarComponent`, selector `app-share-offer-bar`, standalone, `imports: [SvgIconDirective]`, inline template.
+  - State: `offer = signal<ShareOffer | null>(null)`, `busy = signal(false)`, a hide timer.
+  - In the constructor call `setFileShareOfferNotifier((o) => this.show(o))`; in `ngOnDestroy` call `setFileShareOfferNotifier(null)` and clear the timer.
+  - `show(o)`: replaces any current offer (newest wins), restarts a 15000 ms timer that calls `close()`.
+  - `close()`: sets `offer` to null (this drops the blob reference) and clears the timer.
+  - `async onShare()`: if busy or no offer, return. Set busy, clear the timer, `await shareBlob(o.blob, o.filename)`, then `close()` unless the result is `'offered'` (a new offer was shown). Errors are already shown by file-output; catch them, keep the bar closed, and clear busy in `finally`.
+  - Template, only when `offer()` is set: same outer section as the webpush bar but `z-[90]`, `role="region"`, `aria-live="polite"`, `aria-label="اشتراک‌گذاری فایل دانلودشده"`, `data-testid="share-offer-bar"`. Content: an icon tile with `appIcon="share"`; a text `<p class="flex-1 min-w-0 font-bold truncate"><bdi>{{ offer()!.filename }}</bdi> آماده است.</p>`; a primary button `data-testid="share-offer-share"`, `title="اشتراک‌گذاری"`, `aria-label="اشتراک‌گذاری"`, `[disabled]="busy()"`, icon `share` on mobile and label `اشتراک‌گذاری` from `sm`; a secondary button `data-testid="share-offer-close"`, `title="بستن"`, `aria-label="بستن"`, icon `x` on mobile and label `بستن` from `sm`. Use the same classes as the webpush bar buttons (they already have `min-w-[40px] min-h-[40px]` and focus rings).
+- b) `app.html`: add `<app-share-offer-bar></app-share-offer-bar>` on the line after `<app-webpush-bar></app-webpush-bar>`.
+- c) `app.ts`: import `ShareOfferBarComponent` and add it to the component `imports`; import `setFileOutputInfoNotifier` and in the constructor, right after the existing `setFileOutputErrorNotifier(...)` line, add `setFileOutputInfoNotifier((m) => this.toast.show('info', m));`.
+- d) Spec `share-offer-bar.component.spec.ts` (at least 6 `it(` blocks, jsdom like the webpush spec; mock `shareBlob` with `vi.mock` of the file-output module path or spy on it; use fake timers for the timeout): hidden at start; the registered notifier shows the bar with the file name inside `<bdi>`; a second offer replaces the first; share click calls `shareBlob` with the blob and name and hides the bar; result `'offered'` does not hide a newly shown offer; close click hides it; the bar hides itself after 15000 ms; `ngOnDestroy` unregisters (calls `setFileShareOfferNotifier(null)`).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.f2tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/shared/components/share-offer-bar/*.spec.ts", "src/app/app.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.f2tmp.json --include="src/app/shared/components/share-offer-bar/*.spec.ts" --include="src/app/app.spec.ts"` once before your changes, then after (at most 6 runs). Delete `frontend/tsconfig.f2tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- Both spec patterns pass (app.spec.ts as on the baseline), guardian 52 passes.
+- `git status --short` shows only your four files (plus the pre-existing `tests/playwright/tools/index.py` and runner files); the temporary tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+feat(share): share offer bar after downloads
+- Short English report: what changed, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+Session 3 of 4 — File share F3: share button in the shared attachments list, and no share offer for backup files
+
+<!-- runner
+parallel: share-b
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.ts --contains "export function canShareFiles" --contains "offerShare"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/shared/components/attachments/*" "frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts" "frontend/src/app/core/services/offline-db.ts"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/attachments/attachments.component.html --contains "share(item)" --contains "اشتراک‌گذاری" --contains "min-h-[40px] min-w-[40px]" --count "3:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/attachments/attachments.component.ts --contains "shareBlob" --contains "canShareFiles" --contains "اشتراک‌گذاری پیوست انجام نشد" --count "6:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts --contains "offerShare: false" --count "24:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/services/offline-db.ts --contains "offerShare: false" --count "131:‌"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/shared/components/attachments/attachments.dom.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/attachments/attachments.dom.spec.ts --count "10:it("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/shared/components/attachments/*.spec.ts" --include "src/app/modules/common/components/settings/tabs/settings-backup-tab/*.spec.ts" --include "src/app/core/services/offline-db.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(share): share button on attachments, no share offer for backups"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only: the files in `frontend/src/app/shared/components/attachments/` (component ts, html and `attachments.dom.spec.ts`), `frontend/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts` and `frontend/src/app/core/services/offline-db.ts`. No new file except the temporary tsconfig of the Tool policy. Never edit `file-output.ts`, `backend/`, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- In `offline-db.ts` and `settings-backup-tab.ts` change exactly one call each (item b). Nothing else in those files.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: keep every existing ZWNJ (U+200C); the runner counts them per file (minimums in the runner comment). Copy the Persian strings of this task exactly. No inline svg paths (guardian 52).
+
+2. Context:
+- Plan `Documents/File_Share/plan_file_share.md`, section `## ۳.` items 3, 4 and 5 (read only).
+- `frontend/src/app/core/platform/file-output.ts` (from session 1): `canShareFiles()`, `shareBlob(blob, filename)`, `saveBlob(blob, filename, { offerShare: false })`.
+- `frontend/src/app/shared/components/attachments/attachments.component.ts` around lines 150-165, method `download(item)`; `attachments.component.html` around lines 36-41, the download button (classes, icon, `title`, `aria-label`, `<span class="hidden sm:inline">`).
+- `frontend/src/app/shared/components/attachments/attachments.dom.spec.ts` (whole file) for the test setup.
+- `settings-backup-tab.ts` around line 303: `void saveBlob(blob, fileName);` (whole system backup file `.wbak`).
+- `offline-db.ts` around line 1116 in `downloadLocalDatabaseSnapshotFile`: `await saveBlob(blob, fileName);` (local database snapshot).
+
+3. Task:
+- a) Attachments share button.
+  - In the ts add `readonly canShare = canShareFiles();` and `async share(item: AttachmentItem): Promise<void>` that mirrors `download(item)` (same busy guard, same `this.api.download(this.apiPath(item.download_url))`), then `await shareBlob(blob, item.original_name || 'attachment')`; on error `this.toast?.error(this.messageOf(err, 'اشتراک‌گذاری پیوست انجام نشد'))`; `finally` clears busy and calls `markForCheck` like download.
+  - In the html, right after the download button, add `@if (canShare) { ... }` with a button that copies the download button exactly (same classes, so it keeps `min-h-[40px] min-w-[40px]` and the focus ring) with `(click)="share(item)"`, `[disabled]="busy"`, `title="اشتراک‌گذاری"`, `aria-label="اشتراک‌گذاری"`, icon `appIcon="share"` and `<span class="hidden sm:inline">اشتراک‌گذاری</span>`.
+- b) No share offer for backups: change `void saveBlob(blob, fileName);` in `settings-backup-tab.ts` to `void saveBlob(blob, fileName, { offerShare: false });` and `await saveBlob(blob, fileName);` in `offline-db.ts` `downloadLocalDatabaseSnapshotFile` to `await saveBlob(blob, fileName, { offerShare: false });`. If a spec of those files asserts the exact `saveBlob` arguments, it is outside your scope only if it is not in the allowed files; report it instead of editing it.
+- c) Spec `attachments.dom.spec.ts`: add at least 3 `it(` blocks (keep all old ones): the share button is absent when `canShareFiles` returns false; present with `aria-label="اشتراک‌گذاری"` when true; clicking it downloads through the api and calls `shareBlob` with the blob and the original name; an api error shows the toast `اشتراک‌گذاری پیوست انجام نشد` (or the server detail). Mock `canShareFiles`/`shareBlob` with `vi.mock` of the file-output module path used by the component.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.f3tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/shared/components/attachments/*.spec.ts", "src/app/modules/common/components/settings/tabs/settings-backup-tab/*.spec.ts", "src/app/core/services/offline-db.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.f3tmp.json --include="src/app/shared/components/attachments/*.spec.ts" --include="src/app/modules/common/components/settings/tabs/settings-backup-tab/*.spec.ts" --include="src/app/core/services/offline-db.spec.ts"` once before your changes, then after (at most 6 runs). Delete `frontend/tsconfig.f3tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All three spec patterns pass as on the baseline, guardian 52 passes, ZWNJ counts are not lower than the runner numbers (check with `python -c "import sys;print(open(sys.argv[1],encoding='utf-8').read().count('‌'))" <file>`).
+- `git status --short` shows only the allowed files (plus the pre-existing `tests/playwright/tools/index.py` and runner files); the temporary tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+feat(share): share button on attachments, no share offer for backups
+- Short English report: what changed, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+Session 4 of 4 — File share F4: share buttons in the document preview toolbar and on chat attachments
+
+<!-- runner
+parallel: share-b
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+require: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.ts --contains "export function canShareFiles" --contains "export async function shareUrl"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/shared/components/document-preview/*" "frontend/src/app/modules/common/components/communications/chat-drawer/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/document-preview/document-preview.component.html --contains "shareCurrent()" --contains "اشتراک‌گذاری سند" --count "37:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/document-preview/document-preview.component.ts --contains "shareUrl" --contains "canShareFiles" --contains "shareCurrent" --count "64:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.html --contains "shareAttachment(att)" --contains "اشتراک‌گذاری" --count "53:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.ts --contains "shareAttachment" --contains "shareBlob" --contains "canShareFiles" --count "129:‌"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/shared/components/document-preview/document-preview.component.spec.ts frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/document-preview/document-preview.component.spec.ts --count "17:it("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts --count "32:it("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/shared/components/document-preview/*.spec.ts" --include "src/app/modules/common/components/communications/chat-drawer/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(share): share buttons in document preview and chat attachments"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside `frontend/src/app/shared/components/document-preview/` and `frontend/src/app/modules/common/components/communications/chat-drawer/` (component ts/html and the two specs named below). No new file except the temporary tsconfig of the Tool policy. Never edit `file-output.ts`, `backend/`, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Do not change any other behaviour of the chat drawer (sending, voice, offline queue, thumbnails, scrolling). Only add the share method and buttons.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: keep every existing ZWNJ (U+200C); the runner counts them per file (minimums in the runner comment). Copy the Persian strings of this task exactly. No inline svg paths (guardian 52).
+
+2. Context:
+- Plan `Documents/File_Share/plan_file_share.md`, section `## ۳.` items 3, 4 and 5 (read only).
+- `frontend/src/app/core/platform/file-output.ts` (from session 1): `canShareFiles()`, `shareBlob(blob, filename)`, `shareUrl(url, filename?)`.
+- `document-preview.component.ts` around lines 595-606: `downloadFile(url, filename)` and `downloadCurrent()` (uses `this.previewModal.fileUrl` and `this.current?.downloadName`). `document-preview.component.html` around lines 67-72: the download button in the toolbar (`[class]="toolButtonClass + ..."`, `<span class="sm:sr-only">`).
+- `chat-drawer.component.ts` around lines 1462-1475: `downloadAttachment(att)`; `chat-drawer.component.html` around lines 370-430: three `(click)="downloadAttachment(att)"` places. Two of them are small download icon buttons (around 374 and 425, icon `action-download`); the one around 411 is the large file preview tile.
+- Specs: `document-preview.component.spec.ts` and `chat-drawer.component.dom.spec.ts` (setup and existing download tests).
+
+3. Task:
+- a) Document preview.
+  - ts: import `canShareFiles` and `shareUrl`; add `readonly canShare = canShareFiles();` and `shareCurrent(): void { if (this.previewModal.fileUrl) { void shareUrl(this.previewModal.fileUrl, this.current?.downloadName).catch(() => undefined); } }` (file-output already shows the error toast).
+  - html: right after the download button add `<button *ngIf="canShare" type="button" (click)="shareCurrent()" [disabled]="!previewModal.fileUrl" aria-label="اشتراک‌گذاری سند" title="اشتراک‌گذاری سند" [class]="toolButtonClass + ' disabled:opacity-40 disabled:cursor-not-allowed'">` with `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" appIcon="share"></svg>` and `<span class="sm:sr-only">اشتراک‌گذاری</span>`. Use `@if` instead of `*ngIf` only if the surrounding toolbar uses `@if`.
+- b) Chat attachments.
+  - ts: import `canShareFiles` and `shareBlob`; add `public readonly canShare = canShareFiles();` and `public async shareAttachment(att: { download_url?: string; file_name?: string }): Promise<void>` that mirrors `downloadAttachment` (same "not ready" toast when there is no `download_url`, same api download), then `await shareBlob(blob, att.file_name || 'attachment')`; on error `this.toast.error('اشتراک‌گذاری فایل انجام نشد')`.
+  - html: next to each of the two small download icon buttons (around 374 and 425, not the large tile around 411) add, inside `@if (canShare)` or `*ngIf="canShare"` (match the surrounding syntax), a button that copies that download button's classes and size, with `(click)="shareAttachment(att)"`, `[attr.aria-label]="'اشتراک‌گذاری ' + att.file_name"`, `[title]="'اشتراک‌گذاری ' + att.file_name"` and an icon `appIcon="share"` of the same size as the download icon. If the button classes give less than 40×40 px, keep them as the download button has them and say so in the report.
+- c) Specs (keep all old tests): `document-preview.component.spec.ts` at least 2 new `it(`: share button hidden when `canShareFiles` is false; visible when true and its click calls `shareUrl` with the file url and download name. `chat-drawer.component.dom.spec.ts` at least 2 new `it(`: `shareAttachment` downloads through the api and calls `shareBlob` with the blob and the file name; without `download_url` it shows the "not ready" toast and does not call `shareBlob`. Mock file-output with `vi.mock` of the module path each component uses.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.f4tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/shared/components/document-preview/*.spec.ts", "src/app/modules/common/components/communications/chat-drawer/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.f4tmp.json --include="src/app/shared/components/document-preview/*.spec.ts" --include="src/app/modules/common/components/communications/chat-drawer/*.spec.ts"` once before your changes, then after (at most 6 runs). Delete `frontend/tsconfig.f4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- Both spec patterns pass as on the baseline, guardian 52 passes, ZWNJ counts are not lower than the runner numbers.
+- `git status --short` shows only the allowed files (plus the pre-existing `tests/playwright/tools/index.py` and runner files); the temporary tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+feat(share): share buttons in document preview and chat attachments
+- Short English report: what changed, test results, anything that differed from this task. End the turn after the commit and the report.
