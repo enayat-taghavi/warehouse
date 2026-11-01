@@ -9,7 +9,6 @@
         <label for="emp-inv-section" class="text-[11px] font-bold text-slate-500">بخش فعال:</label>
         <select
           id="emp-inv-section"
-          aria-label="انتخاب بخش"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
           class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
@@ -66,7 +65,8 @@
       <div class="relative w-full sm:w-80">
         <svg appIcon="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
-          type="search"
+          type="text"
+          inputmode="search"
           [(ngModel)]="invoiceSearch"
           (ngModelChange)="onSearchChange()"
           aria-label="جستجوی فاکتور"
@@ -681,22 +681,22 @@
             </p>
           }
           <div class="flex flex-wrap items-center gap-2">
-            <label class="md:hidden min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500">
+            <label class="relative md:hidden min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500">
               <input
                 type="file"
                 (change)="onInvoiceFileSelected($event)"
                 accept="image/*"
                 capture="environment"
-                class="sr-only peer" />
+                class="sr-only" />
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera" aria-hidden="true"></svg>
               <span>عکس با دوربین</span>
             </label>
-            <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500">
+            <label class="relative px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500">
               <input
                 type="file"
                 (change)="onInvoiceFileSelected($event)"
                 accept="image/*,.pdf"
-                class="sr-only peer" />
+                class="sr-only" />
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip" aria-hidden="true"></svg>
               <span>انتخاب فایل</span>
             </label>

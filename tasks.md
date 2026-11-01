@@ -4904,3 +4904,83 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only those files and commit with this message, without push:
 fix(finance): remove fake sample data from bank accounts, cheques, reconciliation, budget and contracts pages
 - Short English report: what changed per page, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — Overnight fixes O4-a: accessibility, RTL and state fixes on the five invoice list pages
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/*" --allow "frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/*" --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-invoices/*" --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*" --allow "frontend/src/app/modules/accounting/components/finance/invoice-receipt-button/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.html --contains "طرف‌حساب" --contains "aria-modal" --contains "sr-only" --absent "🔍" --absent "👤" --absent "🔒" --absent "👥" --absent "⬇️" --absent "⏳" --absent "min-h-[32px]" --absent "min-w-[32px]"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.html --contains "پاک‌سازی" --contains "انتخاب بخش" --absent "🔍" --absent "🧾" --absent "✅" --absent "🏦" --absent "✕" --absent "pr-9 pl-8"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.html --contains "طرف‌حساب" --contains "انتخاب بخش" --contains "در حال بارگذاری فاکتورها" --contains "<bdi"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/manager/manager-invoices/manager-invoices.html --contains "طرف‌حساب" --contains "نمی‌باشد" --contains "در حال بارگذاری فاکتورها" --absent "text-right"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/invoice-receipt-button/invoice-receipt-button.ts --contains "items.length > 1 ? 'menu' : null"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/manager/manager-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/invoice-receipt-button/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(invoices): a11y, RTL and loading states on invoice list pages"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these five folders (base `frontend/src/app/modules/accounting/components/finance/`): `employee/employee-invoices/`, `accountant/accountant-invoices/`, `manager/manager-invoices/`, `treasurer/treasurer-invoices/`, `invoice-receipt-button/`. No new files except a temporary tsconfig (see Tool policy) that you delete before the commit. Never edit `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components, routes or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: Persian text contains the zero-width non-joiner character (ZWNJ, U+200C), e.g. in «طرف‌حساب», «پاک‌سازی», «نمی‌باشد», «حساب‌ها». Keep every ZWNJ exactly as it is. Never retype existing Persian text; edit only the attributes and tags around it. In new Persian text, write the half-space as U+200C (e.g. «در حال بارگذاری فاکتورها...» has none; «پرداخت‌شده» has one). The previous task lost every ZWNJ and had to be fixed by hand — the runner checks this.
+- Icons only as `<svg appIcon="name" ...></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts`. Confirmed names: `search`, `x`, `file-text`, `user`, `lock`, `users`, `download`, `loader`, `check-circle`, `credit-card`, `building`. No inline `<svg>` with `<path>`. Decorative icons get `aria-hidden="true"`.
+- Do not change any behaviour, method name, input/output, or `(click)`/`(change)` handler. Do not delete or weaken any existing test. All user-facing text stays Persian.
+- If a real file differs from this task (line numbers, text), follow the real file and say so in the report. Skip an item only if it does not exist in the file, and say so.
+
+2. Context:
+- A static accessibility/RTL audit of the invoice list pages found the items below (plan findings ی۱۱–ی۲۲ in `Documents/Overnight_Fixes_2026_11/plan_overnight_fixes.md`; do not edit the plan). The app is Persian right-to-left; Tailwind logical classes (`start-*`, `end-*`, `ps-*`, `pe-*`, `text-start`, `text-end`) must be used instead of physical `left/right`, `pl/pr`, `text-left/right` in the touched elements.
+- Line numbers are approximate (from HEAD at task writing time).
+
+3. Task:
+- a) `employee/employee-invoices/employee-invoices.html`:
+  - Search box (~lines 64–81): replace the `<span ...>🔍</span>` with `<svg appIcon="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>`; on the input replace `pr-8 pl-8` with `ps-9 pe-10` and change `type="text"` to `type="search"`; move the clear button from `start-0` to `end-0` and add `focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl`, and add `aria-hidden="true"` to its svg.
+  - File attachment inputs (~lines 685–699): each `<input type="file" ... class="hidden">` → replace `hidden` with `sr-only peer`, and add `peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500` to the class of the wrapping `<label>` (if the input is not the first child of the label, put the input as the first child so `peer` works, keeping all attributes and handlers).
+  - Remove-attachment button (~line 707–709): replace its size classes `min-w-[32px] min-h-[32px]` with `w-10 h-10 inline-flex items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-500`, replace the `✕` text with `<svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>`; keep (or add) `title="حذف پیوست"` and `aria-label="حذف پیوست"` if no aria-label exists.
+  - Any other `min-h-[32px]` / `min-w-[32px]` in this file (~lines 419, 428) → `min-h-[40px]` / `min-w-[40px]`.
+  - Emoji icons: line ~194 `👤` → `<svg appIcon="user" class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>`; ~321 `🔒 قفل` → `lock` icon (same classes, `inline-block align-middle`) followed by the existing text «قفل»; ~772 `👥` → `users` icon (keep the size the emoji container had, e.g. `w-6 h-6`); ~849 `⬇️ دانلود فایل اصلی` → `download` icon + the existing text; ~893 `<div class="inline-block animate-spin text-2xl mb-2">⏳</div>` → `<svg appIcon="loader" class="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>`.
+  - Section select (~lines 10–13): add `id="emp-inv-section"` and `aria-label="انتخاب بخش"` to the `<select>`; change the sibling `<span>` label text holder to `<label for="emp-inv-section" ...>` with the same classes and text.
+  - «طرف‌حساب» label (~line 415): add `for="invoice_counterparty"` (the `app-search-select` there receives `inputId="invoice_counterparty"`; verify it, and if the id differs use the real one).
+  - Amount column (~lines 159 and 212): `text-left` → `text-end`. Where an amount is followed by «تومان» in the same text node (~line 217), wrap the number interpolation in `<bdi>…</bdi>`.
+  - Invoice number / tracking code in the mobile cards (~lines 102–103): wrap the interpolation in `<bdi dir="ltr">…</bdi>`.
+  - The two hand-built modals that lack dialog semantics (~line 824 and ~line 866, the `fixed inset-0` overlays): on the inner panel add `role="dialog" aria-modal="true" aria-labelledby="<id>"` and give the modal's title element (`<h3>`/`<h4>`) that id (`emp-inv-modal-3-title`, `emp-inv-modal-4-title`); on the overlay add `(keydown.escape)="<the same close method its close button already calls>()"` and `tabindex="-1"`. Do the same `(keydown.escape)` for the two other modals (~lines 384, 764) only if they already have `role="dialog"`, using their existing close method.
+- b) `accountant/accountant-invoices/accountant-invoices.html`:
+  - Section select (~lines 10–13): same as a) with id `acc-inv-section`.
+  - Search (~lines 58–73): same treatment as the employee search: `search` icon at `start-3`, input `ps-9 pe-10`, `type="search"`, keep its placeholder and add `aria-label="جستجوی فاکتور"` if missing; clear button → `class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl"` with the `x` icon (`w-3.5 h-3.5`, `aria-hidden="true"`) instead of `✕`; keep its title/aria-label «پاک‌سازی …» untouched.
+  - `🧾` (~line 90) → `<svg appIcon="file-text" ...>` sized like the emoji container (e.g. `w-8 h-8`), `aria-hidden="true"`.
+  - Status ternary (~line 158) contains `'✅ تسویه شده'` and `'🏦 آماده پرداخت'`: remove only the emoji and the following space from those two strings (keep the Persian words exactly), and before the interpolation add `<svg *ngIf="item.status === 'paid'" appIcon="check-circle" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>` and the same with `credit-card` for `item.status === 'ready_to_pay'`.
+  - Table (~line 99): `text-right` → `text-start`. Invoice number / tracking cells (~lines 116, 122): wrap the interpolation in `<bdi dir="ltr">…</bdi>`.
+- c) `treasurer/treasurer-invoices/treasurer-invoices.html`:
+  - Section select (~lines 10–13): same as a) with id `tr-inv-section`.
+  - Refresh button (~line 35): add `[busy]="isLoading"` if it is an `appAction`/`ActionButtonComponent` button (the accountant page does the same at ~line 47).
+  - Table body (~lines 47–112): after the `*ngFor` row add `<tr *ngIf="isLoading && invoices.length === 0"><td colspan="<number of columns>" class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری فاکتورها...</td></tr>` and `<tr *ngIf="!isLoading && invoices.length === 0"><td colspan="<number of columns>" class="p-10 text-center text-slate-400 text-xs">فاکتوری برای پرداخت وجود ندارد.</td></tr>`. Count the real `<th>` columns for colspan. Use the real list property name of the `*ngFor` (read `treasurer-invoices.ts`; if it is not `invoices`, use the real name).
+  - Sheba / invoice number / tracking code cells (~lines 83, 84, 108): wrap each interpolation in `<bdi dir="ltr">…</bdi>`.
+- d) `manager/manager-invoices/manager-invoices.html`:
+  - Table (~line 12): `text-right` → `text-start` (every `text-right` in this file → `text-start`).
+  - Empty row (~line 62): change its `*ngIf` to `!isLoading && <list>.length === 0` (keep the existing text «… نمی‌باشد.» exactly), and add before it a loading row `<tr *ngIf="isLoading && <list>.length === 0"><td colspan="<same colspan>" class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری فاکتورها...</td></tr>` (`<list>` = the real `*ngFor` list, e.g. `invoicesList`).
+  - Invoice number cells (~lines 28, 48): wrap in `<bdi dir="ltr">…</bdi>`.
+- e) `invoice-receipt-button/invoice-receipt-button.ts` (inline template ~lines 34–44): change `aria-haspopup` to `[attr.aria-haspopup]="items.length > 1 ? 'menu' : null"` and `aria-expanded` to `[attr.aria-expanded]="items.length > 1 ? menuOpen : null"` (use the real property names; if they differ, adapt and keep the text-check string `items.length > 1 ? 'menu' : null` exactly). If the existing DOM spec asserts `aria-haspopup` for a single-item case, keep the spec passing by asserting the new behaviour only if the old assertion contradicts it — and say so in the report.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. An unrelated spec `personnel-approval-cycle.spec.ts` has a pre-existing compile error, so create a temporary `frontend/tsconfig.o4tmp.json` (INSIDE `frontend/`, not in `scratch/`):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/manager/manager-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/invoice-receipt-button/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.o4tmp.json --include="src/app/modules/accounting/components/finance/**/*invoice*.spec.ts"` (at most 6 times; if the glob matches nothing, pass each folder's specs with separate `--include` flags). Delete `frontend/tsconfig.o4tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py` and `python scripts/e2e/guardian_56_change_integrity.py --base HEAD~0 --head HEAD` is NOT needed (runner does it).
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All specs in the five folders pass (same as before your change), guardian 52 passes.
+- In the touched html files: no emoji listed above remains; every ZWNJ word that existed before still exists (spot-check «طرف‌حساب», «پاک‌سازی», «نمی‌باشد», «پرداخت‌شده» with a search).
+- `git status --short` shows only files of the five folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit; `frontend/tsconfig.o4tmp.json` is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(invoices): a11y, RTL and loading states on invoice list pages
+- Short English report: what changed per file, test results, anything that differed from this task or was skipped. End the turn after the commit and the report.

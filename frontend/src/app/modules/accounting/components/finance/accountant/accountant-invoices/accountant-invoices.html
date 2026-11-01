@@ -9,7 +9,6 @@
         <label for="acc-inv-section" class="text-[11px] font-bold text-slate-500">بخش:</label>
         <select
           id="acc-inv-section"
-          aria-label="انتخاب بخش"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
           class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
@@ -59,7 +58,8 @@
       <div class="relative flex-1 min-w-[240px] max-w-md">
         <svg appIcon="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
-          type="search"
+          type="text"
+          inputmode="search"
           [(ngModel)]="searchQuery"
           (keyup.enter)="syncUrlParams()"
           aria-label="جستجوی فاکتور"
