@@ -926,37 +926,37 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   getWorkflowActionIcon(action?: string): string {
     switch (action) {
       case 'submit':
-        return '📤';
+        return 'send';
       case 'approve_supervisor':
       case 'approve_accountant':
       case 'approve_finance':
-        return '✓';
+        return 'check-circle';
       case 'approve_manager':
-        return '🌟';
+        return 'star';
       case 'batch_approve':
-        return '👥';
+        return 'users';
       case 'revision':
       case 'request_revision':
-        return '↩';
+        return 'undo';
       case 'reject':
       case 'purge':
       case 'delete':
       case 'change_request_rejected':
-        return '✕';
+        return 'x-circle';
       case 'cancel_change_request':
       case 'change_request_cancelled':
-        return '🚫';
+        return 'slash';
       case 'auto_pass':
-        return '⚡';
+        return 'zap';
       case 'reopen':
-        return '🔄';
+        return 'rotate-ccw';
       case 'end_collaboration':
-        return '⏹';
+        return 'pause';
       case 'create':
       case 'change_request_created':
-        return '📝';
+        return 'file-pen';
       default:
-        return '📋';
+        return 'circle';
     }
   }
 
@@ -2725,22 +2725,21 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   getStatusIcon(status?: string): string {
+    if (status && status.startsWith('pending')) {
+      return 'clock';
+    }
     switch (status) {
       case 'draft':
-        return '📝';
-      case 'pending_supervisor':
-      case 'pending_accountant':
-      case 'pending_manager':
-        return '⏳';
+        return 'file-pen';
       case 'manager_approved':
       case 'approved':
-        return '✓';
+        return 'check';
       case 'revision_required':
-        return '↩';
+        return 'undo';
       case 'rejected':
-        return '✕';
+        return 'x';
       default:
-        return '•';
+        return 'circle';
     }
   }
 

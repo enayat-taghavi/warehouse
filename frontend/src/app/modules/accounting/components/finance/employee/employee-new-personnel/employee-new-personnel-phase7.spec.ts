@@ -188,10 +188,10 @@ describe('EmployeeNewPersonnelHubComponent - Phase 7 Comprehensive Unit Tests', 
       expect(component.getWorkflowActionLabel('reject')).toBe('رد پرونده');
       expect(component.getWorkflowActionLabel('cancel_change_request')).toBe('ابطال درخواست تغییرات');
 
-      expect(component.getWorkflowActionIcon('submit')).toBe('📤');
-      expect(component.getWorkflowActionIcon('approve_manager')).toBe('🌟');
-      expect(component.getWorkflowActionIcon('reject')).toBe('✕');
-      expect(component.getWorkflowActionIcon('cancel_change_request')).toBe('🚫');
+      expect(component.getWorkflowActionIcon('submit')).toBe('send');
+      expect(component.getWorkflowActionIcon('approve_manager')).toBe('star');
+      expect(component.getWorkflowActionIcon('reject')).toBe('x-circle');
+      expect(component.getWorkflowActionIcon('cancel_change_request')).toBe('slash');
 
       expect(component.getWorkflowActionBadgeClass('submit')).toContain('purple');
       expect(component.getWorkflowActionBadgeClass('approve_manager')).toContain('emerald');

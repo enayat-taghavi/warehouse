@@ -10,16 +10,16 @@
         <div class="flex bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/80 items-center shrink-0">
           <button
             type="button"
-            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-white text-purple-700 shadow-sm cursor-default">
-            <span>👥</span>
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-white text-purple-700 shadow-sm cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg appIcon="users" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             <span>تعریف پرسنل</span>
           </button>
           <button
             type="button"
             (click)="navigateToVehicle()"
-            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             title="رفتن به صفحه تعریف خودرو">
-            <span>🚗</span>
+            <svg appIcon="truck" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             <span>تعریف خودرو</span>
           </button>
         </div>
@@ -96,7 +96,7 @@
       <div class="px-4 sm:px-5 py-3.5 sm:py-4 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-lg shadow-sm">
-            👤
+            <svg appIcon="user" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           </div>
           <div>
             <div class="flex items-center gap-2">
@@ -130,7 +130,9 @@
 
       <!-- هشدار دلیل عودت در صورت وجود در مودال -->
       <div *ngIf="rejectionReasonToDisplay" class="mx-4 sm:mx-5 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-amber-900 fade-in duration-200 shrink-0">
-        <span class="text-base text-amber-600 shrink-0">⚠️</span>
+        <span class="text-base text-amber-600 shrink-0">
+          <svg appIcon="alert-triangle" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        </span>
         <div class="text-xs space-y-1">
           <div class="font-black flex items-center gap-2">
             <span>دلیل عودت پرونده توسط سرپرست</span>
@@ -152,7 +154,9 @@
       <!-- بنر اطلاع‌رسانی ویرایش پرونده مصوب (ثبت تغییرات پیشنهادی) -->
       <div *ngIf="isApprovedRecord" class="mx-4 sm:mx-5 mt-3 p-3 bg-indigo-50/90 border border-indigo-200 rounded-2xl flex items-start justify-between gap-2.5 text-indigo-950 fade-in duration-200 shrink-0">
         <div class="flex items-start gap-2.5">
-          <span class="text-base text-indigo-600 shrink-0">ℹ️</span>
+          <span class="text-base text-indigo-600 shrink-0">
+            <svg appIcon="info" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          </span>
           <div class="text-xs space-y-1">
             <div class="font-black flex items-center gap-2">
               <span>ثبت درخواست تغییرات مشخصات پرسنل مصوب</span>
@@ -169,8 +173,8 @@
           *ngIf="editingPersonnelHasPendingChanges && editingPersonnel"
           type="button"
           (click)="openPendingDiffModal(editingPersonnel)"
-          class="px-2.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-[11px] font-bold shrink-0 transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1">
-          <span>⚡</span>
+          class="px-2.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-[11px] font-bold shrink-0 transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg appIcon="zap" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           <span>مشاهده/ابطال تغییرات</span>
         </button>
       </div>
@@ -197,11 +201,11 @@
           </div>
           <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
             <button type="button" (click)="restoreLocalDraft()"
-                    class="min-h-[40px] px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95">
+                    class="min-h-[40px] px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               بازیابی پیش‌نویس
             </button>
             <button type="button" (click)="discardLocalDraft()"
-                    class="min-h-[40px] px-3 py-1.5 bg-white border border-sky-200 text-sky-800 hover:bg-sky-100 rounded-xl text-xs font-bold transition-all cursor-pointer">
+                    class="min-h-[40px] px-3 py-1.5 bg-white border border-sky-200 text-sky-800 hover:bg-sky-100 rounded-xl text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               حذف پیش‌نویس محلی
             </button>
           </div>
@@ -224,7 +228,7 @@
             <div class="flex items-center gap-2">
               <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
                     [ngClass]="isFoundPersonnelRejected ? 'bg-amber-200 text-amber-900' : 'bg-purple-100 text-purple-700'">
-                {{ isFoundPersonnelRejected ? '⚠️' : '💡' }}
+                <svg [appIcon]="isFoundPersonnelRejected ? 'alert-triangle' : 'info'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               </span>
               <div>
                 <div class="text-xs font-bold" [ngClass]="isFoundPersonnelRejected ? 'text-amber-950' : 'text-purple-900'">
@@ -232,7 +236,7 @@
                   <span *ngIf="foundExistingPersonnel.current_section_name" class="text-[11px] font-normal opacity-85">
                     (بخش: {{ foundExistingPersonnel.current_section_name }})
                   </span>
-                  <span *ngIf="isFoundPersonnelRejected" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-200 text-rose-900 mr-1">
+                  <span *ngIf="isFoundPersonnelRejected" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-200 text-rose-900 ms-1">
                     وضعیت پرونده: رد شده
                   </span>
                 </div>
@@ -248,24 +252,25 @@
                 (click)="reopenRejectedPersonnel()"
                 [disabled]="isReopening"
                 [attr.aria-busy]="isReopening"
-                class="min-h-[40px] px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait">
-                <span>🔄</span>
+                class="min-h-[40px] px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg appIcon="refresh-cw" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>{{ isReopening ? 'در حال بازگشایی…' : 'بازگشایی و اصلاح پرونده' }}</span>
               </button>
               <button
                 *ngIf="!isFoundPersonnelRejected"
                 type="button"
                 (click)="applyFoundPersonnelData()"
-                class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95">
-                <span>📋</span>
+                class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg appIcon="copy" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>بازخوانی و پر کردن فرم</span>
               </button>
               <button
                 type="button"
                 (click)="dismissFoundPersonnelBanner()"
-                class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg text-xs cursor-pointer"
-                title="بستن">
-                ✕
+                class="inline-flex items-center justify-center w-10 h-10 text-slate-400 hover:text-slate-600 rounded-xl transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                title="بستن"
+                aria-label="بستن">
+                <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               </button>
             </div>
           </div>
@@ -291,12 +296,14 @@
                 placeholder="۰۱۲۳۴۵۶۷۸۹"
                 class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"
                 [ngClass]="{'border-rose-400 bg-rose-50/20': nationalCodeError || isFieldMissing('national_code')}" />
-              <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
-                ⚠️ {{ nationalCodeError }}
+              <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>{{ nationalCodeError }}</span>
               </p>
               <p *ngIf="isMasked(newPersonnel.national_code)" class="text-[11px] text-fg-muted font-bold mt-1">{{ maskedHint }}</p>
-              <p *ngIf="isApprovedRecord" class="text-[10px] text-slate-500 font-bold mt-1">
-                🔒 کد ملی در پرونده‌های مصوب غیرقابل تغییر است.
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-slate-500 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="lock" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>کد ملی در پرونده‌های مصوب غیرقابل تغییر است.</span>
               </p>
             </div>
 
@@ -459,7 +466,7 @@
             <button
               type="button"
               (click)="setActiveTab('job')"
-              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>گام بعدی: مشخصات شغلی</span>
               <span>◀</span>
             </button>
@@ -473,7 +480,9 @@
 
           <!-- بنر تفکیک وظایف SoD -->
           <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-2.5 text-slate-700 text-xs">
-            <span class="text-base">🛡️</span>
+            <span class="text-base">
+              <svg appIcon="shield-check" class="w-5 h-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            </span>
             <div>
               <strong class="font-bold">تفکیک وظایف (SoD):</strong>
               تعیین دستمزد، حقوق پایه و ردیف‌های بیمه‌ای منحصراً توسط حسابداری در مرحله بررسی مالی انجام می‌پذیرد.
@@ -499,8 +508,9 @@
                   <option *ngFor="let j of jobTitles" [value]="j">{{ j }}</option>
                 </datalist>
               </div>
-              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1">
-                🔒 سمت شغلی پروندهٔ مصوب فقط از مسیر درخواست تغییرات حسابداری عوض می‌شود.
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="lock" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>سمت شغلی پروندهٔ مصوب فقط از مسیر درخواست تغییرات حسابداری عوض می‌شود.</span>
               </p>
 
               <!-- انتخاب کدهای ۶ رقمی بیمه در صورت وجود چندین کد -->
@@ -513,7 +523,7 @@
                     (click)="selectJobCode(code)"
                     [disabled]="isReadOnlyMode || isApprovedRecord"
                     [ngClass]="newPersonnel.job_code === code ? 'bg-purple-600 text-white font-black shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                    class="px-2 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer">
+                    class="px-2 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                     کد: {{ code }}
                   </button>
                 </div>
@@ -538,8 +548,9 @@
               <p *ngIf="!isApprovedRecord" class="text-[10px] text-slate-400 mt-1">
                 در صورت خالی ماندن، در مرحله تصویب حسابداری با عنوان شغل همگام خواهد شد.
               </p>
-              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1">
-                🔒 کد شغل بیمه در پرونده‌های مصوب قفل بوده و صرفاً توسط حسابداری تعیین می‌گردد.
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="lock" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>کد شغل بیمه در پرونده‌های مصوب قفل بوده و صرفاً توسط حسابداری تعیین می‌گردد.</span>
               </p>
             </div>
 
@@ -554,8 +565,9 @@
                 <option value="hourly">ساعتی</option>
                 <option value="monthly">ماهانه</option>
               </select>
-              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1">
-                🔒 نوع قرارداد پروندهٔ مصوب را فقط حسابداری تعیین می‌کند.
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="lock" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>نوع قرارداد پروندهٔ مصوب را فقط حسابداری تعیین می‌کند.</span>
               </p>
             </div>
           </div>
@@ -565,14 +577,14 @@
             <button
               type="button"
               (click)="setActiveTab('identity')"
-              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>▶</span>
               <span>گام قبلی: اطلاعات هویتی</span>
             </button>
             <button
               type="button"
               (click)="setActiveTab('banking')"
-              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>گام بعدی: حساب‌های بانکی</span>
               <span>◀</span>
             </button>
@@ -588,7 +600,10 @@
           <div class="space-y-2">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-black text-slate-800 flex items-center gap-1.5">
-                <span>💳 حساب‌های بانکی ثبت‌شده پرسنل</span>
+                <span class="inline-flex items-center gap-1.5">
+                  <svg appIcon="credit-card" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>حساب‌های بانکی ثبت‌شده پرسنل</span>
+                </span>
                 <span class="text-[10px] font-normal text-slate-500">(یک حساب باید به عنوان حساب اصلی واریز حقوق انتخاب شود)</span>
               </label>
               <span *ngIf="bankAccounts.length > 0" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
@@ -598,7 +613,7 @@
 
             <!-- حالت خالی بودن لیست حساب‌ها -->
             <div *ngIf="bankAccounts.length === 0" class="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-center space-y-1">
-              <span class="text-xl">🏦</span>
+              <svg appIcon="credit-card" class="w-8 h-8 text-slate-400 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <p class="text-xs font-bold text-slate-600">هنوز حساب بانکی برای این پرسنل ثبت نشده است.</p>
               <p class="text-[11px] text-slate-400">اطلاعات حساب را در فرم زیر وارد کرده و دکمه «افزودن به لیست حساب‌ها» را بزنید.</p>
             </div>
@@ -610,19 +625,20 @@
                    [ngClass]="acc.is_primary ? 'bg-emerald-50/60 border-emerald-300 ring-1 ring-emerald-300/40' : 'bg-slate-50 border-slate-200'">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-lg shadow-sm shrink-0">
-                    🏦
+                    <svg appIcon="credit-card" class="w-5 h-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   </div>
                   <div class="space-y-0.5">
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-black text-slate-800">{{ acc.bank_name || 'بانک نامشخص' }}</span>
-                      <span *ngIf="acc.is_primary" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white shadow-sm">
-                        ⭐ حساب اصلی واریز
+                      <span *ngIf="acc.is_primary" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white shadow-sm inline-flex items-center gap-1">
+                        <svg appIcon="star" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                        <span>حساب اصلی واریز</span>
                       </span>
                     </div>
                     <div class="text-[11px] font-mono font-bold text-slate-600 flex items-center gap-2">
-                      <span>شماره حساب: {{ acc.account_number || '-' }}</span>
+                      <span>شماره حساب: <bdi dir="ltr">{{ acc.account_number || '-' }}</bdi></span>
                       <span class="text-slate-300">|</span>
-                      <span dir="ltr" class="text-slate-700">IR {{ acc.sheba_number }}</span>
+                      <span dir="ltr" class="text-slate-700"><bdi dir="ltr">IR {{ acc.sheba_number }}</bdi></span>
                     </div>
                   </div>
                 </div>
@@ -632,17 +648,19 @@
                     *ngIf="!acc.is_primary && !isReadOnlyMode"
                     type="button"
                     (click)="setPrimaryAccount(i)"
-                    class="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+                    class="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-all cursor-pointer shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 inline-flex items-center gap-1"
                     title="انتخاب به عنوان حساب اصلی جهت واریز حقوق">
-                    ⭐ تعیین به عنوان اصلی
+                    <svg appIcon="star" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>تعیین به عنوان اصلی</span>
                   </button>
                   <button
                     *ngIf="!isReadOnlyMode"
                     type="button"
                     (click)="removeBankAccount(i)"
-                    class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs transition-colors cursor-pointer"
-                    title="حذف حساب">
-                    🗑️
+                    class="inline-flex items-center justify-center w-10 h-10 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="حذف حساب"
+                    aria-label="حذف حساب">
+                    <svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   </button>
                 </div>
               </div>
@@ -652,7 +670,10 @@
           <!-- بخش دوم: فرم هوشمند ثبت/افزودن حساب بانکی جدید -->
           <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
             <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <span>➕ افزودن مشخصات حساب بانکی جدید:</span>
+              <span class="inline-flex items-center gap-1.5">
+                <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>افزودن مشخصات حساب بانکی جدید:</span>
+              </span>
             </div>
 
             <!-- فیلد شبا (همگام‌سازی دوطرفه، پیشوند IR، اعتبارسنجی زنده ISO 7064 Mod 97) -->
@@ -665,7 +686,10 @@
                   *ngIf="shebaValidationResult"
                   [ngClass]="shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-500'"
                   class="text-[10px] font-bold flex items-center gap-0.5">
-                  <span>{{ shebaValidationResult.isValid ? '✓ معتبر' : '✕ نامعتبر' }}</span>
+                  <span class="inline-flex items-center gap-1">
+                    <svg [appIcon]="shebaValidationResult.isValid ? 'check' : 'x'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>{{ shebaValidationResult.isValid ? 'معتبر' : 'نامعتبر' }}</span>
+                  </span>
                 </span>
               </div>
 
@@ -678,7 +702,7 @@
                   'opacity-80 bg-slate-100': isReadOnlyMode
                 }">
                 <!-- پیشوند ثابت IR -->
-                <div class="px-3 py-2 bg-slate-200/80 border-r border-slate-300 text-slate-700 font-mono font-black text-xs select-none flex items-center shrink-0">
+                <div class="px-3 py-2 bg-slate-200/80 border-e border-slate-300 text-slate-700 font-mono font-black text-xs select-none flex items-center shrink-0">
                   <span>IR</span>
                 </div>
 
@@ -696,16 +720,20 @@
                     maxlength="35"
                     dir="ltr"
                     placeholder="-- ---- ---- ---- ---- ----" 
-                    class="w-full bg-transparent border-0 text-left font-mono tracking-widest text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 font-bold disabled:text-slate-600"
+                    class="w-full bg-transparent border-0 text-left font-mono tracking-widest text-xs py-2 ps-3 pe-20 focus:outline-none text-slate-800 font-bold disabled:text-slate-600"
                   />
 
                   <!-- دکمه کپی و تیک وضعیت -->
-                  <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button *ngIf="newPersonnel.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-sm'" title="کپی شماره شبا">
-                      <span>{{ isShebaCopied ? '✓' : '📋' }}</span>
+                  <div class="absolute end-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button *ngIf="newPersonnel.sheba_number" type="button" (click)="copyShebaToClipboard()" class="inline-flex items-center justify-center w-10 h-10 rounded-xl transition-all cursor-pointer border text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-sm'" title="کپی شماره شبا" aria-label="کپی شماره شبا">
+                      <svg [appIcon]="isShebaCopied ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                     </button>
-                    <span *ngIf="shebaValidationResult?.isValid" class="text-emerald-600 font-black text-sm" title="شماره شبا معتبر است">✓</span>
-                    <span *ngIf="shebaDigitsDisplay && !shebaValidationResult?.isValid" class="text-rose-500 font-black text-sm" title="شماره شبا نامعتبر است">✕</span>
+                    <span *ngIf="shebaValidationResult?.isValid" class="text-emerald-600 font-black text-sm" title="شماره شبا معتبر است">
+                      <svg appIcon="check" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    </span>
+                    <span *ngIf="shebaDigitsDisplay && !shebaValidationResult?.isValid" class="text-rose-500 font-black text-sm" title="شماره شبا نامعتبر است">
+                      <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -713,11 +741,13 @@
               <!-- بازخورد اعتبارسنجی شبا -->
               <div *ngIf="shebaDigitsDisplay" class="pt-0.5">
                 <div *ngIf="shebaValidationResult?.isValid" class="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                  <span>{{ shebaValidationResult.bank?.icon || '🏦' }}</span>
+                  <span *ngIf="shebaValidationResult.bank?.icon">{{ shebaValidationResult.bank?.icon }}</span>
+                  <svg *ngIf="!shebaValidationResult.bank?.icon" appIcon="credit-card" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   <span>شماره شبا تایید شد (الگوریتم ISO 7064 Mod 97) - بانک: {{ shebaValidationResult.bank?.name }}</span>
                 </div>
                 <div *ngIf="!shebaValidationResult?.isValid && shebaValidationResult?.errorMessage" class="text-[10px] text-rose-600 font-bold flex items-center gap-1">
-                  <span>⚠️ {{ shebaValidationResult?.errorMessage }}</span>
+                  <svg appIcon="alert-triangle" class="w-3.5 h-3.5 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>{{ shebaValidationResult?.errorMessage }}</span>
                 </div>
               </div>
             </div>
@@ -737,11 +767,11 @@
                     placeholder="-- انتخاب بانک عامل --" 
                     class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-600" 
                   />
-                  <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[9px]">▲</span>
+                  <span class="absolute end-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[9px]">▲</span>
 
                   <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
 
-                  <div *ngIf="isBankDropdownOpen" class="absolute bottom-full mb-1.5 left-0 right-0 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1 divide-y divide-slate-50">
+                  <div *ngIf="isBankDropdownOpen" class="absolute bottom-full mb-1.5 start-0 end-0 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1 divide-y divide-slate-50">
                     <div *ngFor="let b of filteredBanks" (click)="selectBankFromDropdown(b, $event)" class="px-3 py-2 hover:bg-purple-50 cursor-pointer flex items-center justify-between transition-colors" [ngClass]="{'bg-purple-50 font-black text-purple-700': newPersonnel.bank_name === b.name}">
                       <span class="text-xs flex items-center gap-1.5">
                         <span>{{ b.icon }}</span>
@@ -756,7 +786,7 @@
                 </div>
               </div>
 
-              <!-- شماره حساب بانکی با دکمه‌های کپی و ⚡ -->
+              <!-- شماره حساب بانکی با دکمه‌های کپی و تبدیل به شبا -->
               <div>
                 <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی:</label>
                 <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-purple-500 transition-all" [ngClass]="{'opacity-80 bg-slate-100': isReadOnlyMode}">
@@ -770,14 +800,14 @@
                     (copy)="onAccountNumberCopy($event)"
                     placeholder="مثال: 0101111111001" 
                     dir="ltr"
-                    class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600" 
+                    class="w-full bg-transparent border-0 text-left font-mono text-xs py-2 ps-3 pe-20 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600" 
                   />
-                  <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button *ngIf="newPersonnel.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-sm'" title="کپی شماره حساب">
-                      <span>{{ isAccountCopied ? '✓' : '📋' }}</span>
+                  <div class="absolute end-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button *ngIf="newPersonnel.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="inline-flex items-center justify-center w-10 h-10 rounded-xl transition-all cursor-pointer border text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-sm'" title="کپی شماره حساب" aria-label="کپی شماره حساب">
+                      <svg [appIcon]="isAccountCopied ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                     </button>
-                    <button *ngIf="!isReadOnlyMode && newPersonnel.account_number && newPersonnel.bank_name" type="button" (click)="convertAccountToShebaNow()" class="w-6 h-6 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all flex items-center justify-center cursor-pointer shadow-sm text-xs font-bold" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
-                      <span>⚡</span>
+                    <button *ngIf="!isReadOnlyMode && newPersonnel.account_number && newPersonnel.bank_name" type="button" (click)="convertAccountToShebaNow()" class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all cursor-pointer shadow-sm text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل" aria-label="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
+                      <svg appIcon="zap" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                     </button>
                   </div>
                 </div>
@@ -790,8 +820,8 @@
                 type="button"
                 (click)="addCurrentAsNewAccount()"
                 [disabled]="isReadOnlyMode"
-                class="w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50">
-                <span>➕</span>
+                class="w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>افزودن این حساب به لیست حساب‌های پرسنل</span>
               </button>
             </div>
@@ -802,14 +832,14 @@
             <button
               type="button"
               (click)="setActiveTab('job')"
-              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>▶</span>
               <span>گام قبلی: مشخصات شغلی</span>
             </button>
             <button
               type="button"
               (click)="setActiveTab('address')"
-              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>گام بعدی: نشانی و تماس</span>
               <span>◀</span>
             </button>
@@ -838,21 +868,23 @@
                   (input)="onPhoneInput($event)"
                   [disabled]="isReadOnlyMode"
                   placeholder="۰۹۱۲..."
-                  class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-9 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600 font-bold" />
-                <div class="absolute right-1.5 top-1/2 -translate-y-1/2">
+                  class="w-full bg-transparent border-0 text-left font-mono text-xs py-2 ps-3 pe-12 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600 font-bold" />
+                <div class="absolute end-1.5 top-1/2 -translate-y-1/2">
                   <button
                     *ngIf="newPersonnel.phone_number"
                     type="button"
                     (click)="copyPhoneToClipboard()"
-                    class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs"
+                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl transition-all cursor-pointer border text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                     [ngClass]="isPhoneCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-sm'"
-                    title="کپی شماره همراه">
-                    <span>{{ isPhoneCopied ? '✓' : '📋' }}</span>
+                    title="کپی شماره همراه"
+                    aria-label="کپی شماره همراه">
+                    <svg [appIcon]="isPhoneCopied ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   </button>
                 </div>
               </div>
-              <p *ngIf="phoneError" class="text-[10px] text-rose-600 font-bold mt-1">
-                ⚠️ {{ phoneError }}
+              <p *ngIf="phoneError" class="text-[10px] text-rose-600 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>{{ phoneError }}</span>
               </p>
             </div>
 
@@ -873,8 +905,9 @@
                 placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰"
                 class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600 text-left"
                 [ngClass]="{'border-rose-400 bg-rose-50/20': postalCodeError || isFieldMissing('postal_code')}" />
-              <p *ngIf="postalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
-                ⚠️ {{ postalCodeError }}
+              <p *ngIf="postalCodeError" class="text-[10px] text-rose-600 font-bold mt-1 inline-flex items-center gap-1">
+                <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span>{{ postalCodeError }}</span>
               </p>
             </div>
           </div>
@@ -896,14 +929,14 @@
             <button
               type="button"
               (click)="setActiveTab('banking')"
-              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>▶</span>
               <span>گام قبلی: حساب‌های بانکی</span>
             </button>
             <button
               type="button"
               (click)="setActiveTab('documents')"
-              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>گام بعدی: مدارک و یادداشت</span>
               <span>◀</span>
             </button>
@@ -917,7 +950,7 @@
 
           <!-- هشدار آفلاین بودن -->
           <div *ngIf="isOffline" class="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-900 text-xs">
-            <span>⚠️</span>
+            <svg appIcon="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             <span>سامانه در وضعیت آفلاین است؛ امکان آپلود مدارک وجود ندارد. مشخصات متنی پرونده را ثبت فرمایید.</span>
           </div>
 
@@ -925,7 +958,10 @@
           <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-black text-slate-800 flex items-center gap-1.5">
-                <span>📎 پیوست مدارک هویتی و پرسنلی (چندگانه)</span>
+                <span class="inline-flex items-center gap-1.5">
+                  <svg appIcon="hero-paper-clip" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>پیوست مدارک هویتی و پرسنلی (چندگانه)</span>
+                </span>
               </label>
               <span class="text-[10px] text-slate-400 font-mono">حداکثر ۱۰ مگابایت برای هر فایل (تصویر / PDF)</span>
             </div>
@@ -952,7 +988,7 @@
                   (change)="onMultipleFilesSelected($event)"
                   [disabled]="isOffline"
                   accept="image/*,.pdf"
-                  class="w-full text-xs text-slate-500 file:mr-0 file:ml-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer" />
+                  class="w-full text-xs text-slate-500 file:ms-0 file:me-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer" />
               </div>
             </div>
 
@@ -968,7 +1004,9 @@
                          (click)="openLightbox(doc.previewUrl, doc.name)"
                          class="w-8 h-8 rounded-lg object-cover cursor-pointer hover:opacity-80 shrink-0 border"
                          alt="پیش‌نمایش" />
-                    <span *ngIf="!doc.previewUrl" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-xs shrink-0">📄</span>
+                    <span *ngIf="!doc.previewUrl" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-xs shrink-0">
+                      <svg appIcon="file-text" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    </span>
                     <div class="min-w-0">
                       <p class="text-xs font-bold text-slate-800 truncate">{{ doc.name }}</p>
                       <p class="text-[10px] text-slate-400 font-mono">{{ (doc.size / 1024).toFixed(0) }} KB</p>
@@ -977,9 +1015,10 @@
                   <button
                     type="button"
                     (click)="removePendingDocument(i)"
-                    class="text-rose-500 hover:text-rose-700 p-1 text-xs cursor-pointer"
-                    title="حذف از صف">
-                    ✕
+                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="حذف از صف"
+                    aria-label="حذف از صف">
+                    <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   </button>
                 </div>
               </div>
@@ -992,7 +1031,9 @@
                 <div *ngFor="let doc of existingDocuments"
                      class="p-2 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-2 shadow-sm">
                   <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs shrink-0">📄</span>
+                    <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs shrink-0">
+                      <svg appIcon="file-text" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    </span>
                     <div class="min-w-0">
                       <p class="text-xs font-bold text-slate-800 truncate">{{ doc.doc_type_display || doc.doc_type }}</p>
                       <p *ngIf="doc.file_name" class="text-[10px] text-slate-500 truncate text-end" dir="ltr">{{ doc.file_name }}</p>
@@ -1006,17 +1047,19 @@
                       *ngIf="doc.file"
                       type="button"
                       (click)="openLightbox(doc.file, doc.doc_type_display || 'مدرک')"
-                      class="p-1 text-slate-500 hover:text-purple-700 text-xs cursor-pointer"
-                      title="پیش‌نمایش">
-                      👁️
+                      class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      title="پیش‌نمایش"
+                      aria-label="پیش‌نمایش">
+                      <svg appIcon="eye" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                     </button>
                     <button
                       *ngIf="!isReadOnlyMode"
                       type="button"
                       (click)="deleteExistingDocument(doc)"
-                      class="p-1 text-rose-500 hover:text-rose-700 text-xs cursor-pointer"
-                      title="حذف مدرک">
-                      🗑️
+                      class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      title="حذف مدرک"
+                      aria-label="حذف مدرک">
+                      <svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                     </button>
                   </div>
                 </div>
@@ -1030,8 +1073,11 @@
 
             <!-- پیوست سنتی تک‌فایلی قبلی -->
             <div *ngIf="existingAttachmentUrl" class="pt-1">
-              <a [href]="existingAttachmentUrl" [appExternalLink]="existingAttachmentUrl" target="_blank" class="inline-flex items-center gap-1 text-xs text-purple-700 hover:underline font-bold">
-                <span>📎 مشاهده فایل پیوست تکمیلی قبلی</span>
+              <a [href]="existingAttachmentUrl" [appExternalLink]="existingAttachmentUrl" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-purple-700 hover:underline font-bold">
+                <span class="inline-flex items-center gap-1.5">
+                  <svg appIcon="hero-paper-clip" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>مشاهده فایل پیوست تکمیلی قبلی</span>
+                </span>
               </a>
             </div>
           </div>
@@ -1055,7 +1101,7 @@
             <button
               type="button"
               (click)="setActiveTab('address')"
-              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>▶</span>
               <span>گام قبلی: نشانی و تماس</span>
             </button>
@@ -1071,7 +1117,9 @@
         <!-- بنر نمایش اقلام ناقص جهت ارسال به سرپرست -->
         <div *ngIf="!isReadOnlyMode && !isApprovedRecord && missingFieldsList.length > 0"
              class="p-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
-          <span class="text-amber-600 font-bold shrink-0">⚠️</span>
+          <span class="text-amber-600 font-bold shrink-0">
+            <svg appIcon="alert-triangle" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          </span>
           <div class="leading-relaxed">
             <span class="font-bold">موارد ناقص جهت ارسال به سرپرست: </span>
             <span class="text-amber-950 font-bold">{{ missingFieldsList.join('، ') }}</span>
@@ -1082,7 +1130,7 @@
           <!-- در حالت فقط خواندنی -->
           <ng-container *ngIf="isReadOnlyMode">
             <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-              <span>🔒</span>
+              <svg appIcon="lock" class="w-4 h-4 text-slate-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <span>این پرونده در وضعیت «{{ getStatusLabel(editingPersonnelStatus || '') }}» قرار دارد و اطلاعات آن غیرقابل ویرایش است.</span>
             </div>
             <div class="flex items-center gap-2">
@@ -1093,13 +1141,13 @@
                 (click)="reopenEditingRejectedPersonnel()"
                 [disabled]="isReopening"
                 [attr.aria-busy]="isReopening"
-                class="min-h-[40px] px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-wait">
+                class="min-h-[40px] px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 {{ isReopening ? 'در حال بازگشایی…' : 'بازگشایی و اصلاح پرونده' }}
               </button>
               <button
                 type="button"
                 (click)="closeNewPersonnelModal()"
-                class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5">
+                class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 <span>بستن فرم</span>
               </button>
             </div>
@@ -1108,7 +1156,7 @@
           <!-- در حالت ویرایش پرسنل مصوب (ثبت پیشنهاد تغییرات برای مدیر) -->
           <ng-container *ngIf="!isReadOnlyMode && isApprovedRecord">
             <div class="text-[11px] text-indigo-700 font-medium flex items-center gap-1.5">
-              <span>🛡️</span>
+              <svg appIcon="shield-check" class="w-4 h-4 text-indigo-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <span>تغییرات شما جهت بررسی به کارتابل سرپرست و طی چرخه تایید مالی و مدیر ارسال می‌شود.</span>
             </div>
 
@@ -1139,7 +1187,7 @@
             <button
               type="button"
               (click)="resetForm()"
-              class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer transition-colors w-full sm:w-auto">
+              class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer transition-colors w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               پاکسازی فرم
             </button>
 
@@ -1194,19 +1242,21 @@
       
       <!-- ۱. سمت راست (RTL Start): ورودی جستجوی زنده -->
       <div class="relative w-full sm:w-80">
-        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+        <svg appIcon="search" class="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
           type="text"
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange()"
           placeholder="جستجوی نام، کد ملی، عنوان شغلی، شماره همراه..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
+          class="w-full ps-9 pe-10 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
         <button
           *ngIf="searchQuery"
           type="button"
           (click)="clearSearch()"
-          class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
-          ✕
+          title="پاک کردن جستجو"
+          aria-label="پاک کردن جستجو"
+          class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
 
@@ -1235,7 +1285,7 @@
 
     <!-- بدنه جدول برای دسکتاپ (hidden md:block) -->
     <div class="overflow-x-auto hidden md:block">
-      <table class="w-full text-right border-collapse text-xs">
+      <table class="w-full text-start border-collapse text-xs">
         <thead>
           <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
             <th class="py-3 px-3 text-center w-12">#</th>
@@ -1260,7 +1310,7 @@
             <!-- نام و نام خانوادگی -->
             <td class="py-2.5 px-3 font-bold text-slate-800 whitespace-nowrap">
               <div class="flex items-center gap-1.5">
-                <span class="text-slate-400 text-xs">👤</span>
+                <svg appIcon="user" class="w-3.5 h-3.5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>{{ p.full_name || (p.first_name + ' ' + p.last_name) }}</span>
                 <span *ngIf="p.father_name" class="text-[11px] text-slate-600 font-medium">
                   (فرزند {{ p.father_name }})
@@ -1271,21 +1321,29 @@
                       title="نیازمند بازبینی و اقدام"></span>
                 <span *ngIf="p.approval_status === 'draft' && isDraftReviewed(p.id)"
                       class="text-[10px] font-bold text-emerald-600 inline-block"
-                      title="بازبینی‌شده">✓</span>
+                      title="بازبینی‌شده">
+                  <svg appIcon="check" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                </span>
                 <a *ngIf="p.attachment"
                    [href]="p.attachment"
                    [appExternalLink]="p.attachment"
                    target="_blank"
-                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 text-[10px] font-bold border border-purple-200/80 transition-all mr-1 active:scale-95 shadow-sm"
+                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 text-[10px] font-bold border border-purple-200/80 transition-all ms-1 active:scale-95 shadow-sm"
                    title="مشاهده و دانلود مدارک هویتی پرسنل">
-                  <span>📎 مدرک</span>
+                  <span class="inline-flex items-center gap-1">
+                    <svg appIcon="hero-paper-clip" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>مدرک</span>
+                  </span>
                 </a>
               </div>
               <!-- نمایش دلیل عودت در صورت وجود پرونده نیازمند اصلاح یا رد شده -->
               <div *ngIf="p.rejection_reason && (p.approval_status === 'revision_required' || p.approval_status === 'rejected')"
                    class="mt-1 flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 max-w-xs"
                    [title]="p.rejection_reason">
-                <span class="shrink-0">⚠️ دلیل عودت:</span>
+                <span class="shrink-0 inline-flex items-center gap-1">
+                  <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>دلیل عودت:</span>
+                </span>
                 <span class="font-medium truncate">{{ p.rejection_reason }}</span>
               </div>
             </td>
@@ -1312,14 +1370,15 @@
             <!-- شماره همراه با کپی سریع -->
             <td class="py-2.5 px-3 whitespace-nowrap">
               <div *ngIf="p.phone_number; else noPhone" class="flex items-center gap-1.5 font-mono text-slate-700 text-[11px]">
-                <a [href]="getCleanTelUrl(p.phone_number)" class="hover:text-indigo-600 transition-colors" title="تماس مستقیم">{{ p.phone_number }}</a>
+                <a [href]="getCleanTelUrl(p.phone_number)" class="hover:text-indigo-600 transition-colors" title="تماس مستقیم"><bdi dir="ltr">{{ p.phone_number }}</bdi></a>
                 <button
                   type="button"
                   (click)="copyValue(p.phone_number, 'phone_' + p.id, 'شماره همراه')"
-                  class="cursor-pointer text-[10px] transition-colors"
+                  class="inline-flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [ngClass]="isKeyCopied('phone_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
-                  [title]="isKeyCopied('phone_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'">
-                  <span>{{ isKeyCopied('phone_' + p.id) ? '✓' : '📋' }}</span>
+                  [title]="isKeyCopied('phone_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'"
+                  [attr.aria-label]="isKeyCopied('phone_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'">
+                  <svg [appIcon]="isKeyCopied('phone_' + p.id) ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 </button>
               </div>
               <ng-template #noPhone>
@@ -1331,25 +1390,27 @@
             <td class="py-2.5 px-3 text-slate-600 text-[11px] whitespace-nowrap">
               <div *ngIf="p.bank_name" class="font-bold text-slate-800">{{ p.bank_name }}</div>
               <div *ngIf="p.sheba_number" class="flex items-center gap-1.5 mt-0.5">
-                <span class="font-mono text-[10px] text-slate-500 uppercase tracking-wider dir-ltr select-all">{{ isMasked(p.sheba_number) ? p.sheba_number : formatShebaDisplay(p.sheba_number) }}</span>
+                <span class="font-mono text-[10px] text-slate-500 uppercase tracking-wider select-all"><bdi dir="ltr">{{ isMasked(p.sheba_number) ? p.sheba_number : formatShebaDisplay(p.sheba_number) }}</bdi></span>
                 <button
                   type="button"
                   (click)="copyValue(p.sheba_number, 'sheba_' + p.id, 'شماره شبا')"
-                  class="cursor-pointer text-[10px] transition-colors"
+                  class="inline-flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [ngClass]="isKeyCopied('sheba_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
-                  [title]="isKeyCopied('sheba_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'">
-                  <span>{{ isKeyCopied('sheba_' + p.id) ? '✓' : '📋' }}</span>
+                  [title]="isKeyCopied('sheba_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'"
+                  [attr.aria-label]="isKeyCopied('sheba_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'">
+                  <svg [appIcon]="isKeyCopied('sheba_' + p.id) ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 </button>
               </div>
               <div *ngIf="p.account_number" class="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
-                <span class="font-mono dir-ltr select-all">حساب: {{ p.account_number }}</span>
+                <span class="font-mono select-all">حساب: <bdi dir="ltr">{{ p.account_number }}</bdi></span>
                 <button
                   type="button"
                   (click)="copyValue(p.account_number, 'acc_' + p.id, 'شماره حساب')"
-                  class="cursor-pointer text-[10px] transition-colors"
+                  class="inline-flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [ngClass]="isKeyCopied('acc_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
-                  [title]="isKeyCopied('acc_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'">
-                  <span>{{ isKeyCopied('acc_' + p.id) ? '✓' : '📋' }}</span>
+                  [title]="isKeyCopied('acc_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'"
+                  [attr.aria-label]="isKeyCopied('acc_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'">
+                  <svg [appIcon]="isKeyCopied('acc_' + p.id) ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 </button>
               </div>
               <div *ngIf="!p.bank_name && !p.sheba_number && !p.account_number" class="text-slate-300">—</div>
@@ -1361,13 +1422,13 @@
                 <span [ngClass]="getStatusBadgeClass(p.approval_status)"
                       class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-sm"
                       [title]="'وضعیت پرونده: ' + getFullStatusDescription(p.approval_status)">
-                  <span class="text-[11px]">{{ getStatusIcon(p.approval_status) }}</span>
+                  <svg [appIcon]="getStatusIcon(p.approval_status)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   <span>{{ getStatusLabel(p.approval_status) }}</span>
                 </span>
                 <span *ngIf="p.has_pending_changes"
                       class="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1 shadow-sm"
                       title="دارای ویرایش معلق در انتظار بررسی">
-                  <span class="text-[10px]">⚡</span>
+                  <svg appIcon="zap" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                   <span>تغییرات</span>
                 </span>
               </div>
@@ -1380,8 +1441,9 @@
                 <button
                   type="button"
                   (click)="openTimelineModal(p)"
-                  class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-700 border border-slate-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                  title="مشاهده تایملاین و تاریخچه گردش کار">
+                  class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-700 border border-slate-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  title="مشاهده تایملاین و تاریخچه گردش کار"
+                  aria-label="مشاهده تایملاین و تاریخچه گردش کار">
                   <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
                 </button>
                 <!-- ۱. وضعیت پیش‌نویس (draft): آیکون ویرایش + آیکون ارسال به سرپرست + آیکون حذف -->
@@ -1389,22 +1451,25 @@
                   <button
                     type="button"
                     (click)="openEditModal(p)"
-                    class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="ویرایش و بازبینی مشخصات">
+                    class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="ویرایش و بازبینی مشخصات"
+                    aria-label="ویرایش و بازبینی مشخصات">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
                   </button>
                   <button
                     type="button"
                     (click)="submitDraftToSupervisor(p)"
-                    class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="ارسال مستقیم به کارتابل سرپرست بخش">
+                    class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="ارسال مستقیم به کارتابل سرپرست بخش"
+                    aria-label="ارسال مستقیم به کارتابل سرپرست بخش">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-send"></svg>
                   </button>
                   <button
                     type="button"
                     (click)="deleteDraftPersonnel(p)"
-                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="حذف پرونده پیش‌نویس">
+                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="حذف پرونده پیش‌نویس"
+                    aria-label="حذف پرونده پیش‌نویس">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
                   </button>
                 </ng-container>
@@ -1414,15 +1479,17 @@
                   <button
                     type="button"
                     (click)="openEditModal(p)"
-                    class="w-7 h-7 rounded-lg bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="اصلاح پرونده و ارسال مجدد به سرپرست">
+                    class="w-7 h-7 rounded-lg bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="اصلاح پرونده و ارسال مجدد به سرپرست"
+                    aria-label="اصلاح پرونده و ارسال مجدد به سرپرست">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
                   </button>
                   <button
                     type="button"
                     (click)="deleteDraftPersonnel(p)"
-                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="حذف پرونده عودتی">
+                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="حذف پرونده عودتی"
+                    aria-label="حذف پرونده عودتی">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
                   </button>
                 </ng-container>
@@ -1432,8 +1499,9 @@
                   <button
                     type="button"
                     (click)="openEditModal(p)"
-                    class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    [title]="'مشاهده پرونده (' + getStatusLabel(p.approval_status) + ')'">
+                    class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    [title]="'مشاهده پرونده (' + getStatusLabel(p.approval_status) + ')'"
+                    [attr.aria-label]="'مشاهده پرونده (' + getStatusLabel(p.approval_status) + ')'">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                   </button>
                 </ng-container>
@@ -1443,16 +1511,18 @@
                   <button
                     type="button"
                     (click)="openEditModal(p)"
-                    class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="ویرایش مشخصات و ثبت پیشنهاد تغییرات">
+                    class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="ویرایش مشخصات و ثبت پیشنهاد تغییرات"
+                    aria-label="ویرایش مشخصات و ثبت پیشنهاد تغییرات">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
                   </button>
                   <button
                     *ngIf="p.has_pending_changes"
                     type="button"
                     (click)="openPendingDiffModal(p)"
-                    class="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="مشاهده جزئیات تغییرات پیشنهادی معلق">
+                    class="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="مشاهده جزئیات تغییرات پیشنهادی معلق"
+                    aria-label="مشاهده جزئیات تغییرات پیشنهادی معلق">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search"></svg>
                   </button>
                 </ng-container>
@@ -1462,8 +1532,9 @@
                   <button
                     type="button"
                     (click)="openEditModal(p)"
-                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all"
-                    title="مشاهده دلیل رد پرونده">
+                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    title="مشاهده دلیل رد پرونده"
+                    aria-label="مشاهده دلیل رد پرونده">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                   </button>
                 </ng-container>
@@ -1476,7 +1547,7 @@
           <tr *ngIf="filteredPersonnel.length === 0 && !isLoadingPersonnel">
             <td colspan="9" class="py-12 text-center text-slate-400">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-purple-50 text-purple-600 border border-purple-100/80 flex items-center justify-center text-2xl mb-3 shadow-sm">
-                👥
+                <svg appIcon="users" class="w-8 h-8 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               </div>
               <p class="font-black text-slate-700 text-xs">هیچ پرونده پرسنلی با فیلتر جاری یافت نشد</p>
               <p class="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
@@ -1487,14 +1558,15 @@
                   *ngIf="statusFilter !== 'all' || searchQuery"
                   type="button"
                   (click)="setStatusFilter('all'); clearSearch()"
-                  class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer active:scale-95">
+                  class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                   نمایش همه پرسنل
                 </button>
                 <button
                   type="button"
                   (click)="openNewPersonnelModal()"
-                  class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all shadow-sm cursor-pointer active:scale-95">
-                  + معرفی پرسنل جدید
+                  class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all shadow-sm cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 inline-flex items-center gap-1.5">
+                  <svg appIcon="plus" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>معرفی پرسنل جدید</span>
                 </button>
               </div>
             </td>
@@ -1518,7 +1590,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-xs font-mono text-slate-400">#{{ formatNumber(idx + 1) }}</span>
-            <span class="text-purple-600 text-xs">👤</span>
+            <svg appIcon="user" class="w-3.5 h-3.5 text-purple-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             <span class="font-black text-slate-900 text-xs">{{ p.full_name || (p.first_name + ' ' + p.last_name) }}</span>
             <span *ngIf="p.father_name" class="text-[10px] text-slate-500 font-medium">({{ p.father_name }})</span>
             <a *ngIf="p.attachment"
@@ -1527,20 +1599,20 @@
                target="_blank"
                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200 active:scale-95"
                title="دانلود مدارک">
-              📎
+              <svg appIcon="hero-paper-clip" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             </a>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             <span *ngIf="p.has_pending_changes"
                   class="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-sm inline-flex items-center gap-1"
                   title="دارای ویرایش معلق در انتظار بررسی">
-              <span class="text-[10px]">⚡</span>
+              <svg appIcon="zap" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <span>تغییرات</span>
             </span>
             <span [ngClass]="getStatusBadgeClass(p.approval_status)"
                   class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border shadow-sm inline-flex items-center gap-1"
                   [title]="'وضعیت پرونده: ' + getFullStatusDescription(p.approval_status)">
-              <span class="text-[11px]">{{ getStatusIcon(p.approval_status) }}</span>
+              <svg [appIcon]="getStatusIcon(p.approval_status)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <span>{{ getStatusLabel(p.approval_status) }}</span>
             </span>
           </div>
@@ -1562,16 +1634,16 @@
               <a [href]="getCleanTelUrl(p.phone_number)"
                  class="font-bold text-indigo-600 hover:text-indigo-800 active:scale-95 transition-transform"
                  title="تماس مستقیم با پرسنل">
-                <span>📞</span>
-                <span>{{ p.phone_number }}</span>
+                <bdi dir="ltr">{{ p.phone_number }}</bdi>
               </a>
               <button
                 type="button"
                 (click)="copyValue(p.phone_number, 'phone_mob_' + p.id, 'شماره همراه')"
-                class="cursor-pointer text-[10px] transition-colors"
+                class="inline-flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [ngClass]="isKeyCopied('phone_mob_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
-                [title]="isKeyCopied('phone_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'">
-                <span>{{ isKeyCopied('phone_mob_' + p.id) ? '✓' : '📋' }}</span>
+                [title]="isKeyCopied('phone_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'"
+                [attr.aria-label]="isKeyCopied('phone_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'">
+                <svg [appIcon]="isKeyCopied('phone_mob_' + p.id) ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               </button>
             </div>
             <ng-template #noPhoneMob>
@@ -1586,34 +1658,36 @@
             <div *ngIf="p.sheba_number" class="flex items-center justify-between gap-1.5">
               <div class="flex items-center gap-1 min-w-0">
                 <span class="text-slate-400 shrink-0">شبا:</span>
-                <span class="text-[10px] font-mono text-slate-600 uppercase tracking-wide truncate dir-ltr select-all">
-                  {{ isMasked(p.sheba_number) ? p.sheba_number : formatShebaDisplay(p.sheba_number) }}
+                <span class="text-[10px] font-mono text-slate-600 uppercase tracking-wide truncate select-all">
+                  <bdi dir="ltr">{{ isMasked(p.sheba_number) ? p.sheba_number : formatShebaDisplay(p.sheba_number) }}</bdi>
                 </span>
               </div>
               <button
                 type="button"
                 (click)="copyValue(p.sheba_number, 'sheba_mob_' + p.id, 'شماره شبا')"
-                class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer"
+                class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [ngClass]="isKeyCopied('sheba_mob_' + p.id) ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border-slate-200'"
-                [title]="isKeyCopied('sheba_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'">
-                <span>{{ isKeyCopied('sheba_mob_' + p.id) ? '✓' : '📋' }}</span>
+                [title]="isKeyCopied('sheba_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'"
+                [attr.aria-label]="isKeyCopied('sheba_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'">
+                <svg [appIcon]="isKeyCopied('sheba_mob_' + p.id) ? 'check' : 'copy'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>{{ isKeyCopied('sheba_mob_' + p.id) ? 'کپی شد' : 'کپی' }}</span>
               </button>
             </div>
             <div *ngIf="p.account_number" class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100">
               <div class="flex items-center gap-1 min-w-0">
                 <span class="text-slate-400 shrink-0">حساب:</span>
-                <span class="text-[10px] font-mono text-slate-600 truncate dir-ltr select-all">
-                  {{ p.account_number }}
+                <span class="text-[10px] font-mono text-slate-600 truncate select-all">
+                  <bdi dir="ltr">{{ p.account_number }}</bdi>
                 </span>
               </div>
               <button
                 type="button"
                 (click)="copyValue(p.account_number, 'acc_mob_' + p.id, 'شماره حساب')"
-                class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer"
+                class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 [ngClass]="isKeyCopied('acc_mob_' + p.id) ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border-slate-200'"
-                [title]="isKeyCopied('acc_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'">
-                <span>{{ isKeyCopied('acc_mob_' + p.id) ? '✓' : '📋' }}</span>
+                [title]="isKeyCopied('acc_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'"
+                [attr.aria-label]="isKeyCopied('acc_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'">
+                <svg [appIcon]="isKeyCopied('acc_mob_' + p.id) ? 'check' : 'copy'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>{{ isKeyCopied('acc_mob_' + p.id) ? 'کپی شد' : 'کپی' }}</span>
               </button>
             </div>
@@ -1624,7 +1698,10 @@
         <div *ngIf="p.rejection_reason && (p.approval_status === 'revision_required' || p.approval_status === 'rejected')"
              class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-0.5">
           <div class="font-bold flex items-center gap-1 text-amber-800">
-            <span>⚠️ دلیل عودت:</span>
+            <span class="inline-flex items-center gap-1">
+              <svg appIcon="alert-triangle" class="w-3.5 h-3.5 text-amber-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>دلیل عودت:</span>
+            </span>
           </div>
           <p class="leading-relaxed font-medium">{{ p.rejection_reason }}</p>
         </div>
@@ -1635,43 +1712,44 @@
           <button
             type="button"
             (click)="openTimelineModal(p)"
-            class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer"
-            title="تایملاین گردش کار">
+            class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            title="تایملاین گردش کار"
+            aria-label="تایملاین گردش کار">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
           </button>
 
           <ng-container *ngIf="p.approval_status === 'draft'">
-            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="ویرایش">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="ویرایش" aria-label="ویرایش">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
             </button>
-            <button type="button" (click)="submitDraftToSupervisor(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="ارسال به سرپرست">
+            <button type="button" (click)="submitDraftToSupervisor(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="ارسال به سرپرست" aria-label="ارسال به سرپرست">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-send"></svg>
             </button>
-            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="حذف">
+            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="حذف" aria-label="حذف">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'revision_required'">
-            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center shadow-sm active:scale-90 transition-all cursor-pointer" title="اصلاح و ارسال مجدد">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center shadow-sm active:scale-90 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="اصلاح و ارسال مجدد" aria-label="اصلاح و ارسال مجدد">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
             </button>
-            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="حذف">
+            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="حذف" aria-label="حذف">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'approved' || p.approval_status === 'manager_approved'">
-            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="ویرایش مشخصات و پیشنهاد تغییرات">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="ویرایش مشخصات و پیشنهاد تغییرات" aria-label="ویرایش مشخصات و پیشنهاد تغییرات">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
             </button>
-            <button *ngIf="p.has_pending_changes" type="button" (click)="openPendingDiffModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="مشاهده تغییرات معلق">
+            <button *ngIf="p.has_pending_changes" type="button" (click)="openPendingDiffModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="مشاهده تغییرات معلق" aria-label="مشاهده تغییرات معلق">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'pending_supervisor' || p.approval_status === 'pending_accountant' || p.approval_status === 'pending_manager' || p.approval_status === 'rejected'">
-            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer" title="مشاهده مشخصات">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center active:scale-90 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="مشاهده مشخصات" aria-label="مشاهده مشخصات">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
             </button>
           </ng-container>
@@ -1682,14 +1760,17 @@
     <!-- نمای خالی موبایل (md:hidden) -->
     <div *ngIf="filteredPersonnel.length === 0 && !isLoadingPersonnel" class="md:hidden p-8 text-center text-slate-400">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center text-xl mb-2">
-        👥
+        <svg appIcon="users" class="w-6 h-6 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
       </div>
       <p class="font-black text-slate-700 text-xs">هیچ پرونده پرسنلی یافت نشد</p>
       <button
         type="button"
         (click)="openNewPersonnelModal()"
-        class="mt-3 px-3.5 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-sm active:scale-95">
-        + معرفی پرسنل جدید
+        class="mt-3 px-3.5 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        <span class="inline-flex items-center gap-1.5">
+          <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>معرفی پرسنل جدید</span>
+        </span>
       </button>
     </div>
 
@@ -1703,30 +1784,31 @@
       <div class="px-5 py-4 bg-gradient-to-r from-amber-600 to-indigo-700 text-white flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-sm shadow-sm">
-            ⚡
+            <svg appIcon="zap" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           </div>
           <div>
             <h3 class="font-black text-sm">
               تغییرات معلق در انتظار تایید
             </h3>
             <p class="text-[11px] text-amber-100">
-              پرونده: {{ pendingDiffPersonnel.first_name }} {{ pendingDiffPersonnel.last_name }} ({{ pendingDiffPersonnel.national_code }})
+              پرونده: {{ pendingDiffPersonnel.first_name }} {{ pendingDiffPersonnel.last_name }} (<bdi dir="ltr">{{ pendingDiffPersonnel.national_code }}</bdi>)
             </p>
           </div>
         </div>
         <button
           type="button"
           (click)="closePendingDiffModal()"
-          class="text-white/80 hover:text-white text-lg p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
-          title="بستن (Esc)">
-          ✕
+          class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          title="بستن (Esc)"
+          aria-label="بستن (Esc)">
+          <svg appIcon="x" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
 
       <!-- محتوای مقایسه‌ای -->
       <div class="p-5 space-y-3.5 max-h-[70vh] overflow-y-auto">
         <div class="bg-amber-50 border border-amber-200/80 p-3 rounded-2xl flex items-center gap-2 text-xs text-amber-900">
-          <span>ℹ️</span>
+          <svg appIcon="info" class="w-4 h-4 text-amber-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           <span>این تغییرات توسط کارمند ثبت شده و در صورت تایید نهایی مدیر روی پرونده اصلی اعمال خواهد شد.</span>
         </div>
 
@@ -1762,17 +1844,17 @@
           type="button"
           (click)="cancelPendingChangeRequest(pendingDiffPersonnel)"
           [disabled]="isCancellingChangeRequest"
-          class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+          class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           title="ابطال این درخواست تغییرات و بازگرداندن پرونده به حالت قبلی">
           <span *ngIf="isCancellingChangeRequest" class="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></span>
-          <span *ngIf="!isCancellingChangeRequest">✕</span>
+          <svg *ngIf="!isCancellingChangeRequest" appIcon="x" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           <span>ابطال درخواست تغییرات</span>
         </button>
 
         <button
           type="button"
           (click)="closePendingDiffModal()"
-          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95">
+          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           بستن
         </button>
       </div>
@@ -1798,9 +1880,10 @@
         <button
           type="button"
           (click)="closeLightbox()"
-          class="text-slate-400 hover:text-white text-base cursor-pointer p-1 rounded-lg"
-          title="بستن">
-          ✕
+          class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          title="بستن"
+          aria-label="بستن">
+          <svg appIcon="x" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
       <div class="p-2 overflow-auto flex items-center justify-center bg-slate-100 min-h-[250px]">
@@ -1817,23 +1900,24 @@
       <div class="px-5 py-4 bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-900 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-base shadow-sm">
-            ⏱️
+            <svg appIcon="clock" class="w-5 h-5 text-purple-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           </div>
           <div>
             <h3 class="font-black text-sm">
               تاریخچه و تایملاین گردش کار پرونده
             </h3>
             <p class="text-[11px] text-purple-200">
-              {{ timelinePersonnel.first_name }} {{ timelinePersonnel.last_name }} (کد ملی: {{ timelinePersonnel.national_code }})
+              {{ timelinePersonnel.first_name }} {{ timelinePersonnel.last_name }} (کد ملی: <bdi dir="ltr">{{ timelinePersonnel.national_code }}</bdi>)
             </p>
           </div>
         </div>
         <button
           type="button"
           (click)="closeTimelineModal()"
-          class="text-white/80 hover:text-white text-lg p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
-          title="بستن (Esc)">
-          ✕
+          class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          title="بستن (Esc)"
+          aria-label="بستن (Esc)">
+          <svg appIcon="x" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         </button>
       </div>
 
@@ -1843,12 +1927,13 @@
           <span class="text-slate-500 font-bold">وضعیت فعلی پرونده:</span>
           <span [ngClass]="getStatusBadgeClass(timelinePersonnel.approval_status)"
                 class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-sm">
-            <span>{{ getStatusIcon(timelinePersonnel.approval_status) }}</span>
+            <svg [appIcon]="getStatusIcon(timelinePersonnel.approval_status)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             <span>{{ getStatusLabel(timelinePersonnel.approval_status) }}</span>
           </span>
         </div>
-        <div *ngIf="timelinePersonnel.has_pending_changes" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-          ⚡ دارای تغییرات معلق
+        <div *ngIf="timelinePersonnel.has_pending_changes" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+          <svg appIcon="zap" class="w-3 h-3 text-amber-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>دارای تغییرات معلق</span>
         </div>
       </div>
 
@@ -1862,20 +1947,20 @@
 
         <!-- بدون سابقه -->
         <div *ngIf="!isLoadingTimeline && timelineLogs.length === 0" class="py-10 text-center text-slate-400">
-          <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl mb-2">
-            📜
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mb-2">
+            <svg appIcon="file-text" class="w-6 h-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           </div>
           <p class="font-bold text-slate-700 text-xs">هیچ رخداد گردش کاری برای این پرونده ثبت نشده است.</p>
           <p class="text-[11px] text-slate-400 mt-1">با ثبت، ارسال یا تایید پرونده، سوابق اقدامات در این بخش ذخیره می‌گردد.</p>
         </div>
 
         <!-- لیست رویدادهای تایملاین -->
-        <div *ngIf="!isLoadingTimeline && timelineLogs.length > 0" class="relative pl-2 pr-6 space-y-5 before:absolute before:right-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+        <div *ngIf="!isLoadingTimeline && timelineLogs.length > 0" class="relative pe-2 ps-6 space-y-5 before:absolute before:start-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
           <div *ngFor="let log of timelineLogs; let lIdx = index" class="relative group">
             <!-- نشانگر رویداد روی خط عمودی -->
-            <div class="absolute -right-6 top-1 w-5 h-5 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[10px]"
+            <div class="absolute -start-6 top-1 w-5 h-5 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[10px]"
                  [ngClass]="getWorkflowActionBadgeClass(log.action)">
-              <span>{{ getWorkflowActionIcon(log.action) }}</span>
+              <svg [appIcon]="getWorkflowActionIcon(log.action)" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             </div>
 
             <!-- کارت جزئیات لاگ -->
@@ -1890,9 +1975,9 @@
                     توسط {{ log.actor_name || 'کاربر سیستم' }}
                   </span>
                 </div>
-                <span class="text-[10px] font-mono text-slate-500 dir-ltr">
+                <bdi dir="ltr" class="text-[10px] font-mono text-slate-500">
                   {{ log.created_at_shamsi || log.jalali_date || log.created_at }}
-                </span>
+                </bdi>
               </div>
 
               <!-- تغییر وضعیت از مبدا به مقصد -->
@@ -1918,7 +2003,7 @@
         <button
           type="button"
           (click)="closeTimelineModal()"
-          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95">
+          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
           بستن
         </button>
       </div>

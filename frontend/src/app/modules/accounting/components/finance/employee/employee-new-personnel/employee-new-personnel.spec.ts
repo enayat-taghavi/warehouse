@@ -516,8 +516,8 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
     it('getStatusLabel و getStatusBadgeClass و getStatusIcon باید برچسب و استایل‌های متناسب بازگردانند', () => {
       expect(component.getStatusLabel('draft')).toBe('پیش‌نویس');
       expect(component.getStatusLabel('approved')).toBe('مصوب');
-      expect(component.getStatusIcon('draft')).toBe('📝');
-      expect(component.getStatusIcon('approved')).toBe('✓');
+      expect(component.getStatusIcon('draft')).toBe('file-pen');
+      expect(component.getStatusIcon('approved')).toBe('check');
       expect(component.getStatusBadgeClass('draft')).toContain('bg-slate-100');
       expect(component.getStatusBadgeClass('approved')).toContain('bg-emerald-50');
     });
