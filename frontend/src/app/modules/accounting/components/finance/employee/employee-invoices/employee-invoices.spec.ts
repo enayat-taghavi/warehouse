@@ -216,6 +216,24 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(mockTreasuryOrgApi.getExpenseInvoicesPage.mock.lastCall[0]).not.toHaveProperty('status');
     });
 
+    it('تب وضعیت در انتظار مدیر باید در لیست تب‌ها وجود داشته باشد و فیلتر را اعمال کند', () => {
+      const pmTab = component.invoiceStatusTabs.find(t => t.id === 'pending_manager');
+      expect(pmTab).toBeDefined();
+      expect(pmTab?.label).toBe('در انتظار مدیر');
+      expect(pmTab?.shortLabel).toBe('مدیر');
+      expect(pmTab?.icon).toBe('role-manager');
+
+      component.setStatusFilter('pending_manager');
+      expect(component.statusFilter).toBe('pending_manager');
+      expect(component.page).toBe(1);
+      expect(mockRouter.navigate).toHaveBeenCalledWith([], {
+        relativeTo: mockRoute,
+        queryParams: { tab: 'pending_manager' },
+        queryParamsHandling: 'merge'
+      });
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, status: 'pending_manager' }));
+    });
+
     it('جستجو باید با تأخیر کوتاه به سرور فرستاده شود', () => {
       vi.useFakeTimers();
       try {
@@ -631,12 +649,14 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
     it('باید کلاس رنگی و برچسب وضعیت فاکتورها را به درستی برگرداند', () => {
       expect(component.getStatusBadgeClass('draft')).toContain('bg-slate-100');
       expect(component.getStatusBadgeClass('pending_supervisor')).toContain('bg-amber-50');
+      expect(component.getStatusBadgeClass('pending_manager')).toContain('bg-indigo-50');
       expect(component.getStatusBadgeClass('ready_to_pay')).toContain('bg-indigo-50');
       expect(component.getStatusBadgeClass('paid')).toContain('bg-emerald-50');
       expect(component.getStatusBadgeClass('rejected')).toContain('bg-rose-50');
 
       expect(component.getStatusLabel('draft')).toBe('پیش‌نویس کارمند');
       expect(component.getStatusLabel('pending_supervisor')).toBe('در انتظار تایید سرپرست');
+      expect(component.getStatusLabel('pending_manager')).toBe('در انتظار تایید مدیر');
       expect(component.getStatusLabel('ready_to_pay')).toBe('تایید مدیر / آماده پرداخت');
       expect(component.getStatusLabel('paid')).toBe('تسویه و پرداخت‌شده');
       expect(component.getStatusLabel('rejected')).toBe('رد شده');

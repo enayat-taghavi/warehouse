@@ -45,7 +45,7 @@ export interface InvoiceLineForm {
   expense_head: number | null;
 }
 
-export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
+export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'pending_manager' | 'ready_to_pay' | 'paid' | 'rejected';
 
 /** ارقام فارسی/عربی به لاتین (تاریخ تقویم) */
 function toAsciiDigits(v: string): string {
@@ -70,6 +70,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft' },
     { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending' },
     { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', icon: 'role-accountant' },
+    { id: 'pending_manager', label: 'در انتظار مدیر', shortLabel: 'مدیر', icon: 'role-manager' },
     { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', icon: 'status-approved' },
     { id: 'paid', label: 'پرداخت‌شده', icon: ACCOUNTING_ENTITY_ICONS.payroll },
   ];
@@ -220,6 +221,9 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
     this.loadMySections();
     this.route.queryParams.subscribe(params => {
+      if (params['tab'] && ['all', 'draft', 'pending_supervisor', 'pending_accountant', 'pending_manager', 'ready_to_pay', 'paid', 'rejected'].includes(params['tab'])) {
+        this.statusFilter = params['tab'] as InvoiceStatusTab;
+      }
       if (params['section_id']) {
         const sId = Number(params['section_id']);
         if (!isNaN(sId) && sId !== this.selectedSectionId) {
@@ -478,11 +482,17 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       tab === 'draft' ||
       tab === 'pending_supervisor' ||
       tab === 'pending_accountant' ||
+      tab === 'pending_manager' ||
       tab === 'ready_to_pay' ||
       tab === 'paid' ||
       tab === 'rejected'
     ) {
       this.statusFilter = tab;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { tab: tab !== 'all' ? tab : null },
+        queryParamsHandling: 'merge'
+      });
       this.page = 1;
       this.loadInvoices();
     }
@@ -1338,6 +1348,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'pending_accountant':
         return 'bg-sky-50 text-sky-700 border-sky-200';
+      case 'pending_manager':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'ready_to_pay':
         return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'partially_paid':
@@ -1359,6 +1371,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         return 'در انتظار تایید سرپرست';
       case 'pending_accountant':
         return 'در انتظار بررسی حسابدار';
+      case 'pending_manager':
+        return 'در انتظار تایید مدیر';
       case 'ready_to_pay':
         return 'تایید مدیر / آماده پرداخت';
       case 'partially_paid':
