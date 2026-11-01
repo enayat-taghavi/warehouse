@@ -2,168 +2,93 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <app-command-center rowFrom="lg">
-    <!-- سمت راست: نشان موجودی نقدینگی و تب‌های فرعی -->
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
-      <!-- کارت موجودی کل نقدینگی سازمان -->
-      <div class="flex items-center gap-2 bg-teal-50/60 border border-teal-200/80 px-3 py-1 rounded-xl">
-        <span class="text-xs font-bold text-teal-800">کل نقدینگی در دسترس:</span>
-        <span class="text-sm font-black font-mono text-teal-900">
-          {{ (totalLiquidity / 1000000) | number:'1.0-0' }} میلیون تومان
-        </span>
-      </div>
-
-      <!-- تب‌های فرعی در کپسول محصور (Subtabs Navigation) -->
-      <app-tab-bar
-        [tabs]="tabs"
-        [active]="activeSubTab"
-        mobile="short"
-        fullLabelFrom="lg"
-        (activeChange)="switchSubTab($event)"
-      />
+      <h1 class="text-sm font-black text-fg">حسابهای بانکی سازمان</h1>
+      <span class="text-xs text-fg-muted font-bold">({{ accounts.length }} حساب)</span>
     </div>
 
-    <!-- سمت چپ: دکمه‌های اکشن ۳گانه استاندارد -->
     <div cc-actions class="flex items-center gap-2 justify-end">
-      <!-- خروجی اکسل ۲ ردیفه -->
-      <button
-        type="button"
-        appAction="export-excel"
-        (click)="exportExcel()"
-      ></button>
-
-      <!-- بروزرسانی زنده -->
       <button
         type="button"
         appAction="refresh"
+        [busy]="isLoading"
         (click)="refreshData()"
       ></button>
     </div>
   </app-command-center>
 
-  <!-- ── ۲. جدول حساب‌های بانکی سازمان ── -->
-  <div *ngIf="activeSubTab === 'bank_accounts'" class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-      <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
-      <h2 class="text-sm font-black text-slate-900">حساب‌های بانکی فعال سازمان، شماره شبا و مانده موجودی</h2>
+  <!-- ── ۲. کارت محتوا (Loading, Error, Empty, List) ── -->
+  <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden">
+
+    <!-- حالت بارگذاری (Loading) -->
+    <div *ngIf="isLoading" class="p-8 flex items-center justify-center gap-3 text-fg-muted">
+      <svg appIcon="loader" class="w-5 h-5 animate-spin text-fg-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span class="text-xs font-bold text-fg">در حال دریافت حسابها…</span>
     </div>
 
-    <div class="overflow-x-auto">
+    <!-- حالت خطا (Error) -->
+    <div *ngIf="!isLoading && loadError" class="p-8 flex flex-col items-center justify-center gap-3 text-center">
+      <div class="flex items-center gap-2 text-rose-600">
+        <svg appIcon="alert-circle" class="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <span class="text-xs font-bold">{{ loadError }}</span>
+      </div>
+      <button
+        type="button"
+        class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-fg transition-colors cursor-pointer"
+        (click)="load()"
+      >تلاش دوباره</button>
+    </div>
+
+    <!-- حالت خالی (Empty) -->
+    <div *ngIf="!isLoading && !loadError && accounts.length === 0" class="p-8 flex flex-col items-center justify-center gap-2 text-center">
+      <svg appIcon="archive" class="w-10 h-10 text-fg-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <p class="text-sm font-bold text-fg">هنوز حساب بانکی برای شرکت ثبت نشده است.</p>
+      <p class="text-xs text-fg-muted">حسابها از بخش شرکتها، زبانهٔ خزانه ثبت میشوند.</p>
+    </div>
+
+    <!-- جدول حساب‌های بانکی سازمان (List) -->
+    <div *ngIf="!isLoading && !loadError && accounts.length > 0" class="overflow-x-auto">
       <table class="w-full text-right text-xs">
-        <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
+        <thead class="bg-slate-100/75 border-b border-line text-fg-muted font-black">
           <tr>
             <th class="py-3 px-3">ردیف</th>
-            <th class="py-3 px-3">نام بانک و شعبه</th>
-            <th class="py-3 px-3">کاربری حساب</th>
+            <th class="py-3 px-3">شرکت</th>
+            <th class="py-3 px-3">بانک</th>
+            <th class="py-3 px-3">عنوان حساب</th>
             <th class="py-3 px-3 font-mono">شماره حساب</th>
-            <th class="py-3 px-3 font-mono">شماره شبا رسمی</th>
-            <th class="py-3 px-3 font-mono">موجودی لحظه‌ای (تومان)</th>
-            <th class="py-3 px-3 font-mono">سقف برداشت روزانه (تومان)</th>
+            <th class="py-3 px-3 font-mono">شماره شبا</th>
             <th class="py-3 px-3 text-center">وضعیت</th>
-            <th class="py-3 px-3 text-center">عملیات انتقال</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr *ngFor="let item of bankAccounts; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-            <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-bold text-slate-900">{{ item.bank_name }} (شعبه {{ item.branch }})</td>
-            <td class="py-3 px-3 text-slate-700">{{ item.account_type }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-slate-800">{{ item.account_number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-600 text-[11px]">{{ item.sheba_number }}</td>
-            <td class="py-3 px-3 font-mono font-black text-teal-700 text-sm">{{ item.current_balance | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-600">{{ item.daily_withdrawal_limit | number }}</td>
+        <tbody class="divide-y divide-line">
+          <tr *ngFor="let acc of accounts; let idx = index; trackBy: trackById" class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-3 px-3 font-mono text-fg-muted">{{ idx + 1 }}</td>
+            <td class="py-3 px-3 font-bold text-fg">{{ acc.company_name || '—' }}</td>
+            <td class="py-3 px-3 font-bold text-fg">{{ acc.bank_name }}</td>
+            <td class="py-3 px-3 text-fg-muted">{{ acc.account_title || '—' }}</td>
+            <td class="py-3 px-3 font-mono font-bold text-fg" dir="ltr">{{ acc.account_number || '—' }}</td>
+            <td class="py-3 px-3 font-mono text-fg-muted text-[11px]" dir="ltr">{{ acc.sheba_number }}</td>
             <td class="py-3 px-3 text-center">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">فعال</span>
-            </td>
-            <td class="py-3 px-3 text-center">
-              <button
-                type="button"
-                appAction="send"
-                display="label"
-                label="انتقال وجه"
-                size="sm"
-                (click)="openTransferModal(item)">
-              </button>
+              <div class="inline-flex items-center justify-center gap-1">
+                <span
+                  *ngIf="acc.is_active"
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                >فعال</span>
+                <span
+                  *ngIf="!acc.is_active"
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"
+                >غیرفعال</span>
+                <span
+                  *ngIf="acc.is_primary"
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                >اصلی</span>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
 
-  <!-- ── ۳. جدول صندوق‌های نقدی پروژه‌ها ── -->
-  <div *ngIf="activeSubTab === 'project_cashboxes'" class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-      <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
-      <h2 class="text-sm font-black text-slate-900">صندوق‌های فیزیکی نقد در کارگاه‌ها و پایانه‌ها</h2>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
-        <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
-          <tr>
-            <th class="py-3 px-3">ردیف</th>
-            <th class="py-3 px-3">عنوان صندوق</th>
-            <th class="py-3 px-3">پروژه و کارگاه</th>
-            <th class="py-3 px-3">امین صندوق</th>
-            <th class="py-3 px-3 font-mono">موجودی نقدی فعلی (تومان)</th>
-            <th class="py-3 px-3 font-mono">سقف مجاز صندوق</th>
-            <th class="py-3 px-3 text-center font-mono">آخرین تاریخ شمارش و تطبیق</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr *ngFor="let box of cashboxes; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-            <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-bold text-slate-900">{{ box.title }}</td>
-            <td class="py-3 px-3 text-slate-600">{{ box.project_name }}</td>
-            <td class="py-3 px-3 font-bold text-slate-800">{{ box.custodian_name }}</td>
-            <td class="py-3 px-3 font-mono font-black text-teal-700">{{ box.current_cash | number }}</td>
-            <td class="py-3 px-3 font-mono text-slate-600">{{ box.ceiling_limit | number }}</td>
-            <td class="py-3 px-3 text-center font-mono text-slate-600">{{ box.last_audit_date }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ── ۴. مودال جابجایی وجه بین حساب‌ها ── -->
-  <div *ngIf="isTransferModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl border border-slate-200 shadow-xl p-5 space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="text-sm font-black text-slate-900">انتقال وجه بین‌بانکی سازمان</h3>
-        <button type="button" appAction="close" display="icon" (click)="closeTransferModal()"></button>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">از حساب مبدا:</label>
-          <div class="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-            {{ fromAccount?.bank_name }} — مانده: {{ fromAccount?.current_balance | number }} تومان
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">به حساب مقصد:</label>
-          <select [(ngModel)]="toAccount" class="w-full bg-white border border-slate-200 text-xs font-bold rounded-xl p-2 focus:outline-none focus:border-teal-500">
-            <option *ngFor="let acc of bankAccounts" [ngValue]="acc">
-              {{ acc.bank_name }} ({{ acc.account_type }})
-            </option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">مبلغ انتقال (تومان):</label>
-          <input
-            type="number"
-            [(ngModel)]="transferAmount"
-            class="w-full bg-white border border-slate-200 font-mono text-sm font-bold text-teal-700 rounded-xl p-2 focus:outline-none focus:border-teal-500">
-        </div>
-      </div>
-
-      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-        <button type="button" appAction="close" display="label" (click)="closeTransferModal()"></button>
-        <button type="button" appAction="send" display="label" label="ثبت انتقال" [busy]="isSubmittingTransfer" (click)="executeTransfer()"></button>
-      </div>
-    </div>
   </div>
 
 </div>
