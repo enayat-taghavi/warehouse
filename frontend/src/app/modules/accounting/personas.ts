@@ -124,7 +124,8 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     // حسابدار نباید به صفحات کارمند، سرپرست کارگاه، مدیر، خزانه‌دار دسترسی داشته باشد
     // گزارش‌های مدیریتی با مجوز perm_accounting_reports برای حسابدار هم باز است (طرح ۴.۷ د۸)
     const isReports = cleanRoute.endsWith('/manager-reports');
-    if ((cleanRoute.includes('/employee-') && !cleanRoute.endsWith('/employee-petty-cash') && !isSharedInvoiceRoute(cleanRoute)) || cleanRoute.includes('/supervisor-') || (cleanRoute.includes('/manager-') && !isReports) || cleanRoute.includes('/treasurer-')) {
+    const isAllowedEmployeeRoute = cleanRoute.endsWith('/employee-petty-cash') || isSharedInvoiceRoute(cleanRoute) || cleanRoute.endsWith('/employee-new-personnel');
+    if ((cleanRoute.includes('/employee-') && !isAllowedEmployeeRoute) || cleanRoute.includes('/supervisor-') || (cleanRoute.includes('/manager-') && !isReports) || cleanRoute.includes('/treasurer-')) {
       return true;
     }
     if (cleanRoute.includes('treasury-cartable') || cleanRoute.includes('manager-approvals') || cleanRoute.includes('/attendance') || cleanRoute.includes('/fleet')) {

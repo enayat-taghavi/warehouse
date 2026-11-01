@@ -2,6 +2,7 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { hasRoutePermission } from '../../../../../../core/auth/auth.guard';
+import { isAccountingRouteDeniedForRole } from '../../../../personas';
 import { ACCOUNTANT_NAV_ITEMS } from '../../../../nav-items';
 import { EmployeeNewPersonnelHubComponent } from './employee-new-personnel';
 import { of } from 'rxjs';
@@ -23,6 +24,8 @@ describe('Employee New Personnel - Role Access & Excel Import Verification (Supe
 
     it('حسابدار با دسترسی استاندارد مالی (view_sys_payroll) اکنون به روت ثبت پرسنل به تفکیک بخش دسترسی دارد', () => {
       expect(hasRoutePermission('employee-new-personnel', standardAccountantPerms)).toBe(true);
+      // بررسی عدم بانس و تفکیک نقش (SoD): نباید برای نقش حسابدار Denied شود
+      expect(isAccountingRouteDeniedForRole('accountant', '/app/finance/employee-new-personnel')).toBe(false);
     });
 
     it('حسابدار به روت بانک پرونده‌ها (profiles) دسترسی دارد چون دسترسی view_sys_personnel دارد', () => {
