@@ -10,6 +10,7 @@ import { ModalComponent } from '../../../../../../shared/components/modal/modal.
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
+import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
 export interface PettyCashRefillItem {
   id: number;
@@ -133,7 +134,7 @@ export class TreasurerPettyCashComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        if (!silent) this.toast.error('خطا در دریافت شارژهای تن‌خواه: ' + (err?.error?.error || err?.message || 'نامشخص'));
+        if (!silent) this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت شارژهای تن‌خواه.'));
         this.cdr.detectChanges();
       }
     });
@@ -183,7 +184,7 @@ export class TreasurerPettyCashComponent implements OnInit, OnDestroy {
         if (err?.status === 409 && err?.error?.code === 'ceiling_exceeded_at_pay') {
           this.toast.error('مبلغ این شارژ از سقف تنخواه بیشتر شده است. شارژ باید برگردانده شود و دوباره برای مدیر ارسال شود.');
         } else {
-          this.toast.error('خطا در ثبت شارژ تن‌خواه: ' + (err.error?.error || err.message || 'نامشخص'));
+          this.toast.error(attendanceActionErrorMessage(err, 'خطا در ثبت شارژ تن‌خواه.'));
         }
         this.cdr.detectChanges();
       }

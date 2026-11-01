@@ -12,6 +12,7 @@ import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.direct
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
+import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 
 /**
  * فهرست فقط‌خواندنی دوره‌های کارکرد بخش‌ها (۴.۴-ج).
@@ -69,6 +70,11 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    this.fiscalYear = String(j.jy);
+    this.selectedMonth = this.monthsList[j.jm - 1] || 'تیر';
+
     this.routeSub = this.route.queryParams.subscribe(params => {
       if (params['section_id']) {
         this.selectedSectionId = Number(params['section_id']);

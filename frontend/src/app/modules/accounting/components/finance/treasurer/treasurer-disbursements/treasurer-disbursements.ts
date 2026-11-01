@@ -19,6 +19,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 
 export const TREASURY_OFFLINE_HINT_FA = 'پرداخت فقط آنلاین ممکن است؛ اتصال را بررسی کنید.';
 export const TRACKING_CODE_REQUIRED_FA = 'وارد کردن کد رهگیری بانکی الزامی است.';
@@ -159,6 +160,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
   batchPaymentMethod = 'PAYA';
   isSubmittingBatch = false;
   private readonly batchFocus = new ModalFocus();
+  private readonly persianDatePipe = new PersianDatePipe();
 
   private routeSub?: Subscription;
   private docSub?: Subscription;
@@ -175,6 +177,11 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    this.fiscalYear = String(j.jy);
+    this.selectedMonth = FLEET_MONTH_NAMES_FA[j.jm - 1] || 'تیر';
+
     this.routeSub = this.route.queryParams.subscribe(params => {
       if (params['tab'] && ['pending_queue', 'disbursed_archive'].includes(params['tab'])) {
         this.activeSubTab = params['tab'];
@@ -184,6 +191,12 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       }
       if (params['q']) {
         this.searchQuery = params['q'];
+      }
+      if (params['year']) {
+        this.fiscalYear = params['year'];
+      }
+      if (params['month'] && FLEET_MONTH_NAMES_FA.includes(params['month'])) {
+        this.selectedMonth = params['month'];
       }
     });
 
@@ -212,6 +225,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
             },
             error: () => {
               this.isLoadingSections = false;
+              this.toast.error('دریافت فهرست بخش‌ها انجام نشد.');
+              this.refreshData();
             }
           });
           return;
@@ -220,6 +235,8 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingSections = false;
+        this.toast.error('دریافت فهرست بخش‌ها انجام نشد.');
+        this.refreshData();
       }
     });
   }
@@ -287,6 +304,10 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     return this.items
       .filter(x => x.status === 'pending_payment')
       .reduce((sum, item) => sum + item.amount, 0);
+  }
+
+  get pendingTotalMillionRials(): number {
+    return Math.round(this.pendingTotalAmount / 1000000);
   }
 
   private readonly network = NetworkStatusService.getInstance();
@@ -471,7 +492,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     this.personnelApi.disburseTreasury(payload).subscribe({
       next: () => {
         this.isSubmittingSingle = false;
-        this.toast.success(`پرداخت مبلغ ${this.payingItem?.amount.toLocaleString()} ریال با شناسه پیگیری ${this.trackingCodeInput} قطعی شد.`);
+        this.toast.success(`پرداخت مبلغ ${new Intl.NumberFormat('fa-IR').format(Number(this.payingItem?.amount ?? 0))} ریال با شناسه پیگیری ${this.trackingCodeInput} قطعی شد.`);
         this.closePayModal();
         this.refreshData();
       },
@@ -559,7 +580,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
               approved_by_manager: true,
               status: p.payment_status === 'PAID' ? 'paid' : 'pending_payment',
               tracking_code: p.payment_tracking_code || '',
-              payment_date: p.paid_at || '',
+              payment_date: p.paid_at ? this.persianDatePipe.transform(p.paid_at, 'short') : '',
               sheba_failed: p.payment_status === 'FAILED_SHEBA',
               failure_reason: p.payment_failure_reason || '',
               payment_status: p.payment_status,

@@ -33,7 +33,7 @@
         <input
           type="text"
           [(ngModel)]="searchQuery"
-          (input)="fetchFleetData()"
+          (input)="onSearchInput()"
           placeholder="جستجوی پلاک، مدل، راننده..."
           class="w-full bg-surface-alt text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
         <span class="absolute right-2.5 top-2 text-muted">

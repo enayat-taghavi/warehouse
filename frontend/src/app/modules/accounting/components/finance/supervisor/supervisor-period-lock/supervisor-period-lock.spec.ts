@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 import { SupervisorPeriodLockHubComponent } from './supervisor-period-lock';
 import { ProjectSection } from '../../../../models/personnel.model';
+import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 
 describe('SupervisorPeriodLockHubComponent (read-only period list)', () => {
   let component: SupervisorPeriodLockHubComponent;
@@ -38,9 +39,13 @@ describe('SupervisorPeriodLockHubComponent (read-only period list)', () => {
   });
 
   it('1. loads sections and the period list for the selected section and month', () => {
+    const t = new Date();
+    const j = gregorianToJalali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+    const expectedYearMonth = `${j.jy}/${String(j.jm).padStart(2, '0')}`;
+
     component.ngOnInit();
     expect(component.selectedSectionId).toBe(10);
-    expect(mockPersonnelApi.getWorkPeriods).toHaveBeenCalledWith({ year_month: '1405/04', section_id: 10 });
+    expect(mockPersonnelApi.getWorkPeriods).toHaveBeenCalledWith({ year_month: expectedYearMonth, section_id: 10 });
     expect(component.periods.length).toBe(1);
   });
 

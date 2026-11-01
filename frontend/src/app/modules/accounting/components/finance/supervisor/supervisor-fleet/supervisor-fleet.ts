@@ -4,7 +4,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
 import { FLEET_OFFLINE_HINT_FA, VEHICLE_FIELD_LABELS_FA, fleetWorkflowErrorText } from '../../fleet-workflow-ui';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -19,6 +20,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 
 export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
 
@@ -169,6 +171,8 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
 
   private routeSub?: Subscription;
   private wsSub?: Subscription;
+  private searchInput$ = new Subject<void>();
+  private searchSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -182,6 +186,10 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.searchSub = this.searchInput$.pipe(debounceTime(300)).subscribe(() => {
+      this.syncUrlParams();
+      this.fetchFleetData();
+    });
     this.routeSub = this.route.queryParams.subscribe(params => {
       if (params['tab'] && ['new', 'work_logs', 'changes', 'all'].includes(params['tab'])) {
         this.activeSubTab = params['tab'] as SupervisorFleetSubTab;
@@ -198,7 +206,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
       // ق۴: رویداد همین زبانه یا شرکت دیگر نادیده گرفته می‌شود
       if (this.ws.skipLiveEvent?.(msg)) return;
       if (msg && (msg.type_str === 'fleet_updated' || msg.type === 'fleet_updated' || msg.type_str === 'vehicle_updated')) {
-        if (!this.selectedSectionId || msg.section_id === this.selectedSectionId) {
+        if (!this.selectedSectionId || Number(msg.section_id) === Number(this.selectedSectionId)) {
           this.fetchFleetData();
         }
       }
@@ -210,6 +218,11 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     this.wsSub?.unsubscribe();
+    this.searchSub?.unsubscribe();
+  }
+
+  onSearchInput(): void {
+    this.searchInput$.next();
   }
 
   loadSections(): void {
@@ -278,6 +291,14 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
 
   fetchFleetData(): void {
     this.isLoading = true;
+    let completedRequests = 0;
+    const checkComplete = () => {
+      completedRequests++;
+      if (completedRequests === 4) {
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      }
+    };
     const baseParams: any = {};
     if (this.selectedSectionId) baseParams.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) baseParams.search = this.searchQuery.trim();
@@ -293,10 +314,11 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
             this.selectedVehicleIds.delete(id);
           }
         }
+        checkComplete();
       },
       error: () => {
-        this.newVehiclesList = [];
-        this.selectedVehicleIds.clear();
+        this.toast.showError('دریافت اطلاعات ناوگان انجام نشد.');
+        checkComplete();
       }
     });
 
@@ -312,9 +334,11 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         }));
         // ردیف کارکرد ماشین‌آلات وضعیت تأیید ندارد (تأیید در دورهٔ ماهانه است)؛ شمارندهٔ «در انتظار» نمی‌گیرد
         this.statusCounters.workLogsCount = 0;
+        checkComplete();
       },
       error: () => {
-        this.workLogsList = [];
+        this.toast.showError('دریافت اطلاعات ناوگان انجام نشد.');
+        checkComplete();
       }
     });
 
@@ -323,9 +347,11 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
       next: (crList: any[]) => {
         this.changeRequestsList = crList || [];
         this.statusCounters.changesCount = this.changeRequestsList.filter(c => c.status === 'pending_supervisor').length;
+        checkComplete();
       },
       error: () => {
-        this.changeRequestsList = [];
+        this.toast.showError('دریافت اطلاعات ناوگان انجام نشد.');
+        checkComplete();
       }
     });
 
@@ -334,13 +360,11 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
       next: (allList: any[]) => {
         this.allVehiclesList = allList || [];
         this.statusCounters.allCount = this.allVehiclesList.length;
-        this.isLoading = false;
-        this.cdr.markForCheck();
+        checkComplete();
       },
       error: () => {
-        this.allVehiclesList = [];
-        this.isLoading = false;
-        this.cdr.markForCheck();
+        this.toast.showError('دریافت اطلاعات ناوگان انجام نشد.');
+        checkComplete();
       }
     });
   }
@@ -648,7 +672,10 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportVehiclesExcel(params).subscribe({
       next: (blob: Blob) => {
         this.isExportingExcel = false;
-        void saveBlob(blob, `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        const now = new Date();
+        const j = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+        const dateStr = `${j.jy}-${String(j.jm).padStart(2, '0')}-${String(j.jd).padStart(2, '0')}`;
+        void saveBlob(blob, `Fleet_Vehicles_${dateStr}.xlsx`);
         this.toast.showSuccess('خروجی اکسل ناوگان با موفقیت صادر گردید.');
       },
       error: () => {
@@ -669,6 +696,8 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         if (id !== undefined && this.copiedId === id) this.copiedId = null;
         this.cdr.markForCheck();
       }, 2000);
+    }).catch(() => {
+      this.toast.showError('کپی انجام نشد.');
     });
   }
 
