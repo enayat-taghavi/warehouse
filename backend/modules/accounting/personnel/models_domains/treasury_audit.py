@@ -427,7 +427,7 @@ class InvoicePayment(models.Model):
     amount = models.DecimalField(max_digits=15, decimal_places=0, validators=[MinValueValidator(1)],
                                  verbose_name="مبلغ قسط (ریال)")
     payment_date_shamsi = models.CharField(max_length=10, verbose_name="تاریخ پرداخت (شمسی)")
-    tracking_code = models.CharField(max_length=100, verbose_name="شماره پیگیری / شماره چک")
+    tracking_code = models.CharField(max_length=100, blank=True, default='', verbose_name="شماره پیگیری / شماره چک")
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default=METHOD_TRANSFER, verbose_name="روش پرداخت")
     company_bank_account = models.ForeignKey(
         'personnel.CompanyBankAccount',

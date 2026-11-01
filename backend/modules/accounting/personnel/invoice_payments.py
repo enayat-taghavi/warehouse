@@ -121,9 +121,6 @@ def _clean_payment(invoice, data, *, legacy=False):
     company_id = _company_id(invoice)
     out = {}
     tracking = str(data.get('tracking_code') or data.get('payment_ref') or '').strip()
-    if not tracking:
-        raise ValidationError({'tracking_code': ['درج شماره پیگیری یا شماره سند بانکی الزامی است.'],
-                               'error': 'درج شماره پیگیری یا شماره سند بانکی الزامی است.'})
     out['tracking_code'] = tracking[:100]
 
     raw_date = data.get('payment_date_shamsi')

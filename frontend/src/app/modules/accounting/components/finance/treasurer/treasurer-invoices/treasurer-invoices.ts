@@ -451,7 +451,6 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     const amount = Number(String(this.payAmount ?? '').replace(/,/g, ''));
     if (!amount || amount <= 0) errors['amount'] = 'مبلغ قسط را وارد کنید.';
     else if (amount > item.remaining) errors['amount'] = 'مبلغ قسط از مانده بیشتر است.';
-    if (!this.payTracking.trim()) errors['tracking_code'] = 'کد پیگیری الزامی است.';
     if (this.needsCompanyAccount && !this.payCompanyAccount) errors['company_bank_account'] = 'حساب بانکی شرکت را انتخاب کنید.';
     const date = (this.payDateControl.value || '').trim();
     if (!date) errors['payment_date_shamsi'] = 'تاریخ پرداخت را وارد کنید.';

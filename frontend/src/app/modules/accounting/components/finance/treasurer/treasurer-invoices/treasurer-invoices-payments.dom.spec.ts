@@ -257,7 +257,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(fixture.nativeElement.querySelector('#pay-company-account')).not.toBeNull();
   });
 
-  it('d) submitting with an empty tracking code shows the field error element #pay-tracking-err and does not call addInvoicePayment', () => {
+  it('d) submitting with an empty tracking code is allowed (optional) and calls addInvoicePayment with tracking_code: ""', () => {
     component.payInvoice(component.invoices[0]);
     fixture.detectChanges();
 
@@ -266,6 +266,8 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     component.payCompanyAccount = 5;
     component.payDateControl.setValue('1405/04/15');
     component.payTracking = '';
+    const receipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
+    component.onPayReceiptChange({ target: { files: [receipt], value: 'receipt.pdf' } } as unknown as Event);
 
     const trackingInput = fixture.nativeElement.querySelector('#pay-tracking') as HTMLInputElement;
     if (trackingInput) {
@@ -273,13 +275,24 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
       trackingInput.dispatchEvent(new Event('input'));
     }
 
+    mockTreasuryOrgApi.addInvoicePayment.mockReturnValue(of({
+      message: 'قسط با موفقیت ثبت شد',
+      paid_amount: '600000',
+      remaining: '400000'
+    }));
+
     component.submitPayment();
     fixture.detectChanges();
 
     const trackingErr = fixture.nativeElement.querySelector('#pay-tracking-err');
-    expect(trackingErr).toBeTruthy();
-    expect(trackingErr.textContent).toContain('کد پیگیری');
-    expect(mockTreasuryOrgApi.addInvoicePayment).not.toHaveBeenCalled();
+    expect(trackingErr).toBeNull();
+    expect(mockTreasuryOrgApi.addInvoicePayment).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        tracking_code: ''
+      }),
+      receipt
+    );
   });
 
   it('e) a valid submit calls addInvoicePayment(7, body) with amount, payment_date_shamsi, tracking_code, method, company_bank_account: 5; when the result has remaining: \'0\' the modal closes', () => {

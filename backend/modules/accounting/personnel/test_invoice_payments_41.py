@@ -107,6 +107,14 @@ class InvoicePayments41Tests(TestCase):
         self.assertIsNotNone(wf)
         self.assertNotEqual(wf.status, WorkflowInstance.IN_PROGRESS)
 
+    def test_tracking_code_optional(self):
+        inv = self.payable_invoice('500')
+        res = self.pay(self.trs, inv, 500, code='')
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data['status'], 'paid')
+        payment = inv.payments.first()
+        self.assertEqual(payment.tracking_code, '')
+
     def test_amount_over_remaining_rejected(self):
         inv = self.payable_invoice('1000')
         res1 = self.pay(self.trs, inv, 400, 'T1')
