@@ -23,7 +23,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let inv of invoicesList" class="hover:bg-slate-50 transition-colors">
-            <td class="p-3 font-mono font-bold text-slate-900">
+            <td class="p-3 font-mono font-bold text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(inv, 'preview')" title="مشاهده پیش‌نمایش و سابقه فاکتور">
               <div *ngIf="inv.number"><bdi dir="ltr">{{ inv.number }}</bdi></div>
               <div [class.text-[10px]]="inv.number" [class.text-slate-500]="inv.number"><bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi></div>
               <div class="flex flex-wrap gap-1 mt-1 font-sans">
@@ -52,6 +52,8 @@
               <div class="flex items-center justify-center gap-1.5">
                 <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
                 <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
+                <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
+                <button type="button" appAction="history" label="سابقه" size="sm" (click)="openPreview(inv, 'history')"></button>
                 <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
                 <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
               </div>
@@ -75,4 +77,13 @@
     (confirmed)="onInvoiceReasonConfirmed($event)"
     (cancelled)="onInvoiceReasonCancelled()"
   ></app-workflow-reason-dialog>
+
+  <!-- مودال پیش‌نمایش و سابقه فاکتور -->
+  <app-invoice-preview-modal
+    [isOpen]="previewModalOpen"
+    [invoiceId]="previewInvoiceId"
+    [invoice]="previewInvoiceItem"
+    [initialTab]="previewInitialTab"
+    (closed)="closePreview()"
+  ></app-invoice-preview-modal>
 </div>

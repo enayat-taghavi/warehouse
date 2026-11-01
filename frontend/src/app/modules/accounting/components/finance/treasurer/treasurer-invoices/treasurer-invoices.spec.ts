@@ -35,4 +35,19 @@ describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پ
     expect(mockPersonnelApi.getPettyCashTransactions).not.toHaveBeenCalled();
     expect((component as any).tabs).toBeUndefined();
   });
+
+  it('opens and closes preview modal for invoice preview and history', () => {
+    const item = { id: 501, invoice_number: 'INV-PAY-1' } as any;
+    component.openPreview(item, 'preview');
+    expect(component.previewModalOpen).toBe(true);
+    expect(component.previewInvoiceId).toBe(501);
+    expect(component.previewInitialTab).toBe('preview');
+
+    component.openPreview(item, 'history');
+    expect(component.previewInitialTab).toBe('history');
+
+    component.closePreview();
+    expect(component.previewModalOpen).toBe(false);
+    expect(component.previewInvoiceId).toBeNull();
+  });
 });

@@ -10,6 +10,7 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
+import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
 
 /**
  * کارتابل فاکتور مدیر (صدور مجوز پرداخت)؛ از زیرتب «فاکتورهای هزینه» کارتابل تاییدات جدا شد
@@ -18,7 +19,7 @@ import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invo
 @Component({
   selector: 'app-manager-invoices',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent, InvoiceReceiptButtonComponent],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent, InvoiceReceiptButtonComponent, InvoicePreviewModalComponent],
   templateUrl: './manager-invoices.html',
 })
 export class ManagerInvoicesComponent implements OnInit, OnDestroy {
@@ -26,6 +27,25 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
 
   invoicesList: any[] = [];
   isLoading = false;
+
+  // مودال پیش‌نمایش و سابقه فاکتور
+  previewModalOpen = false;
+  previewInvoiceId: number | null = null;
+  previewInvoiceItem: any = null;
+  previewInitialTab: 'preview' | 'history' = 'preview';
+
+  openPreview(inv: any, tab: 'preview' | 'history' = 'preview'): void {
+    this.previewInvoiceId = inv.id || null;
+    this.previewInvoiceItem = inv;
+    this.previewInitialTab = tab;
+    this.previewModalOpen = true;
+  }
+
+  closePreview(): void {
+    this.previewModalOpen = false;
+    this.previewInvoiceId = null;
+    this.previewInvoiceItem = null;
+  }
 
   isInvoiceReasonOpen = false;
   invoiceReasonTitle = '';

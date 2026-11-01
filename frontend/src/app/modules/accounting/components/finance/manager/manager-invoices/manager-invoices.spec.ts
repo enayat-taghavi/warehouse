@@ -40,4 +40,19 @@ describe('ManagerInvoicesComponent — مجوز پرداخت فاکتور مدی
     component.onInvoiceReasonConfirmed('دلیل');
     expect(component.isInvoiceReasonOpen).toBe(false);
   });
+
+  it('opens and closes preview modal for invoice preview and history', () => {
+    const inv = { id: 201, invoice_number: 'INV-1' };
+    component.openPreview(inv, 'preview');
+    expect(component.previewModalOpen).toBe(true);
+    expect(component.previewInvoiceId).toBe(201);
+    expect(component.previewInitialTab).toBe('preview');
+
+    component.openPreview(inv, 'history');
+    expect(component.previewInitialTab).toBe('history');
+
+    component.closePreview();
+    expect(component.previewModalOpen).toBe(false);
+    expect(component.previewInvoiceId).toBeNull();
+  });
 });

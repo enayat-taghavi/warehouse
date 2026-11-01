@@ -29,6 +29,7 @@ import { WebSocketService } from '../../../../../../core/http/websocket.service'
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
+import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -62,7 +63,8 @@ export interface PayableInvoiceItem {
     WorkflowReasonDialogComponent,
     NgPersianDatepickerModule,
     SvgIconDirective,
-    InvoiceReceiptButtonComponent
+    InvoiceReceiptButtonComponent,
+    InvoicePreviewModalComponent
   ],
   templateUrl: './treasurer-invoices.html',
   styleUrl: './treasurer-invoices.css'
@@ -82,6 +84,25 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   isLoading = false;
 
   invoices: PayableInvoiceItem[] = [];
+
+  // مودال پیش‌نمایش و سابقه فاکتور
+  previewModalOpen = false;
+  previewInvoiceId: number | null = null;
+  previewInvoiceItem: any = null;
+  previewInitialTab: 'preview' | 'history' = 'preview';
+
+  openPreview(item: PayableInvoiceItem, tab: 'preview' | 'history' = 'preview'): void {
+    this.previewInvoiceId = item.id || null;
+    this.previewInvoiceItem = item;
+    this.previewInitialTab = tab;
+    this.previewModalOpen = true;
+  }
+
+  closePreview(): void {
+    this.previewModalOpen = false;
+    this.previewInvoiceId = null;
+    this.previewInvoiceItem = null;
+  }
 
   private routeSub?: Subscription;
   private docSub?: Subscription;

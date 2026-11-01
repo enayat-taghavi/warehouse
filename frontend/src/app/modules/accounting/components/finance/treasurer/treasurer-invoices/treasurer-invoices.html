@@ -64,7 +64,7 @@
         <tbody class="divide-y divide-slate-100">
           <tr *ngFor="let item of invoices; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-slate-900">
+            <td class="py-3 px-3 font-mono font-bold text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(item, 'preview')" title="مشاهده پیش‌نمایش و سابقه فاکتور">
               <div *ngIf="item.number"><bdi dir="ltr">{{ item.number }}</bdi></div>
               <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number"><bdi dir="ltr">{{ item.invoice_number }}</bdi></div>
             </td>
@@ -95,6 +95,20 @@
                   label="ثبت قسط"
                   size="sm"
                   (click)="payInvoice(item)"
+                ></button>
+                <button
+                  type="button"
+                  appAction="view"
+                  label="پیش‌نمایش"
+                  size="sm"
+                  (click)="openPreview(item, 'preview')"
+                ></button>
+                <button
+                  type="button"
+                  appAction="history"
+                  label="سابقه"
+                  size="sm"
+                  (click)="openPreview(item, 'history')"
                 ></button>
                 <button
                   type="button"
@@ -290,5 +304,14 @@
     (confirmed)="onVoidConfirmed($event)"
     (cancelled)="onVoidCancelled()"
   ></app-workflow-reason-dialog>
+
+  <!-- مودال پیش‌نمایش و سابقه فاکتور -->
+  <app-invoice-preview-modal
+    [isOpen]="previewModalOpen"
+    [invoiceId]="previewInvoiceId"
+    [invoice]="previewInvoiceItem"
+    [initialTab]="previewInitialTab"
+    (closed)="closePreview()"
+  ></app-invoice-preview-modal>
 
 </div>

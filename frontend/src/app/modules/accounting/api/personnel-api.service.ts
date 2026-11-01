@@ -239,6 +239,7 @@ export class PersonnelApiService {
   deletePartyBankAccount(id: number): Observable<void> { return this.treasuryOrg.deletePartyBankAccount(id); }
   getExpenseHeads(companyId: number, activeOnly = false): Observable<ExpenseHead[]> { return this.treasuryOrg.getExpenseHeads(companyId, activeOnly); }
   getExpenseInvoices(params?: { section_id?: number; status?: string; search?: string }): Observable<ExpenseInvoice[]> { return this.treasuryOrg.getExpenseInvoices(params); }
+  getExpenseInvoice(id: number): Observable<ExpenseInvoice> { return this.treasuryOrg.getExpenseInvoice(id); }
   createExpenseInvoice(data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> { return this.treasuryOrg.createExpenseInvoice(data); }
   updateExpenseInvoice(id: number, data: Partial<ExpenseInvoice> | FormData): Observable<ExpenseInvoice> { return this.treasuryOrg.updateExpenseInvoice(id, data); }
   deleteExpenseInvoice(id: number): Observable<void> { return this.treasuryOrg.deleteExpenseInvoice(id); }

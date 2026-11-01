@@ -105,7 +105,7 @@
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let item of items; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="p-3 font-mono font-bold text-slate-800">
+            <td class="p-3 font-mono font-bold text-slate-800 hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(item, 'preview')" title="مشاهده پیش‌نمایش و سابقه فاکتور">
               <div *ngIf="item.number">{{ item.number }}</div>
               <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number">{{ item.invoice_number }}</div>
               <div class="flex flex-wrap gap-1 mt-1 font-sans">
@@ -167,6 +167,8 @@
                 {{ item.status === 'paid' ? 'تسویه شده' : (item.status === 'rejected' ? 'ابطال شده' : 'ارسال شده') }}
               </div>
               <div class="flex items-center justify-center gap-1.5 mt-1.5">
+                <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(item, 'preview')"></button>
+                <button type="button" appAction="history" label="سابقه" size="sm" (click)="openPreview(item, 'history')"></button>
                 <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(item)"></button>
                 <app-invoice-receipt-button *ngIf="item.paid_amount && +item.paid_amount > 0" [invoiceId]="item.id"></app-invoice-receipt-button>
               </div>
@@ -186,5 +188,14 @@
     (confirmed)="onReasonConfirmed($event)"
     (cancelled)="onReasonCancelled()"
   ></app-workflow-reason-dialog>
+
+  <!-- مودال پیش‌نمایش و سابقه فاکتور -->
+  <app-invoice-preview-modal
+    [isOpen]="previewModalOpen"
+    [invoiceId]="previewInvoiceId"
+    [invoice]="previewInvoiceItem"
+    [initialTab]="previewInitialTab"
+    (closed)="closePreview()"
+  ></app-invoice-preview-modal>
 
 </div>

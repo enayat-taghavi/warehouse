@@ -1,0 +1,184 @@
+<app-modal
+  [isOpen]="isOpen"
+  size="xl"
+  [title]="modalTitle"
+  (closed)="close()"
+>
+  <div class="space-y-4" dir="rtl">
+    <!-- تب‌های فرعی در بالای مودال -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+      <app-tab-bar
+        [tabs]="tabs"
+        [active]="activeTab"
+        (activeChange)="onTabChange($event)"
+        mobile="short"
+      />
+    </div>
+
+    <!-- ── تب ۱: پیش‌نمایش فاکتور ── -->
+    <div *ngIf="activeTab === 'preview'" class="space-y-4">
+      <div *ngIf="isLoading && !invoiceDetail" class="py-12 text-center text-slate-500">
+        <svg appIcon="spinner" class="w-7 h-7 animate-spin mx-auto mb-2 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+        <p class="text-xs font-bold">در حال بارگذاری مشخصات فاکتور...</p>
+      </div>
+
+      <div *ngIf="invoiceDetail as inv" class="space-y-4">
+        <!-- کارت خلاصه مشخصات اصلی فاکتور -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70 text-xs">
+          <div>
+            <span class="text-slate-400 text-[11px] block font-medium">شماره فاکتور:</span>
+            <span class="font-mono font-bold text-slate-800"><bdi dir="ltr">{{ inv.invoice_number || '—' }}</bdi></span>
+          </div>
+
+          <div *ngIf="inv.number">
+            <span class="text-slate-400 text-[11px] block font-medium">شماره داخلی سیستم:</span>
+            <span class="font-mono font-bold text-slate-800"><bdi dir="ltr">{{ inv.number }}</bdi></span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 text-[11px] block font-medium">تاریخ فاکتور:</span>
+            <span class="font-mono font-bold text-slate-800">{{ inv.issue_date_shamsi || inv.date || inv.invoice_date_shamsi || '—' }}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 text-[11px] block font-medium">طرف‌حساب / فروشنده:</span>
+            <span class="font-bold text-slate-800">{{ inv.counterparty_name || inv.vendor_name || '—' }}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 text-[11px] block font-medium">بخش / پروژه:</span>
+            <span class="font-bold text-slate-800">{{ inv.section_name || '—' }} {{ inv.project_name ? ('(' + inv.project_name + ')') : '' }}</span>
+          </div>
+
+          <div *ngIf="inv.created_by_name">
+            <span class="text-slate-400 text-[11px] block font-medium">ثبت‌کننده:</span>
+            <span class="font-bold text-slate-700">{{ inv.created_by_name }}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 text-[11px] block font-medium">وضعیت گردش:</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block mt-0.5" [ngClass]="getStatusBadgeClass(inv.status)">
+              {{ inv.status_display || getStatusLabel(inv.status) }}
+            </span>
+          </div>
+
+          <div *ngIf="inv.possible_duplicate" class="col-span-2 sm:col-span-3 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-xl">
+            ⚠️ این فاکتور ممکن است تکراری باشد
+            <span *ngIf="inv.duplicate_reason" class="font-normal"> — دلیل: {{ inv.duplicate_reason }}</span>
+          </div>
+
+          <div *ngIf="inv.description" class="col-span-2 sm:col-span-3 pt-1 border-t border-slate-200/50">
+            <span class="text-slate-400 text-[11px] block font-medium">شرح هزینه:</span>
+            <span class="text-slate-700 font-medium">{{ inv.description }}</span>
+          </div>
+        </div>
+
+        <!-- جدول اقلام و ردیف‌های هزینه -->
+        <div *ngIf="inv.lines?.length" class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs">
+          <div class="px-3.5 py-2.5 bg-slate-100/70 border-b border-slate-200 text-xs font-black text-slate-800 flex items-center justify-between">
+            <span>اقلام و ردیف‌های هزینه ({{ faAmount(inv.lines.length) }} ردیف)</span>
+            <span class="text-[11px] text-slate-500 font-mono font-normal">جمع ردیف‌ها: {{ faAmount(inv.subtotal) }} ریال</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-[11px] text-start">
+              <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="py-2 px-3 text-center w-10">#</th>
+                  <th class="py-2 px-3">شرح کالا / خدمات</th>
+                  <th class="py-2 px-3 text-center">مقدار / تعداد</th>
+                  <th class="py-2 px-3 text-start">فی واحد (ریال)</th>
+                  <th class="py-2 px-3">سرفصل هزینه</th>
+                  <th class="py-2 px-3 text-end">مبلغ کل ردیف (ریال)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700">
+                <tr *ngFor="let line of inv.lines; let idx = index" class="hover:bg-slate-50/50">
+                  <td class="py-2 px-3 text-center font-mono text-slate-400">{{ line.position || (idx + 1) }}</td>
+                  <td class="py-2 px-3 font-medium text-slate-800">{{ line.description || '—' }}</td>
+                  <td class="py-2 px-3 text-center font-mono">{{ faAmount(line.quantity) }} {{ line.unit || '' }}</td>
+                  <td class="py-2 px-3 font-mono text-start">{{ faAmount(line.unit_price) }}</td>
+                  <td class="py-2 px-3">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200 font-sans">
+                      {{ line.expense_head_title || '—' }}
+                    </span>
+                  </td>
+                  <td class="py-2 px-3 text-end font-mono font-bold text-slate-900">{{ faAmount(line.line_amount) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- خلاصه مبالغ مالی، تخفیف و مالیات -->
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-slate-600">
+            <span>جمع کل ردیف‌ها:</span>
+            <span class="font-mono font-bold">{{ faAmount(inv.subtotal) }} ریال</span>
+          </div>
+          <div *ngIf="inv.discount_amount && +inv.discount_amount > 0" class="flex justify-between items-center text-rose-600">
+            <span>تخفیف:</span>
+            <span class="font-mono font-bold">- {{ faAmount(inv.discount_amount) }} ریال</span>
+          </div>
+          <div *ngIf="inv.vat_amount && +inv.vat_amount > 0" class="flex justify-between items-center text-sky-700">
+            <span class="flex items-center gap-1">
+              <span>مالیات بر ارزش افزوده:</span>
+              <span *ngIf="inv.vat_manual" class="text-[9px] px-1 py-0.2 rounded bg-sky-100 text-sky-800 font-bold border border-sky-200">دستی</span>
+            </span>
+            <span class="font-mono font-bold">+ {{ faAmount(inv.vat_amount) }} ریال</span>
+          </div>
+          <div class="flex justify-between items-center pt-2 border-t border-slate-200 font-black text-sm text-slate-900">
+            <span>مبلغ نهایی قابل پرداخت:</span>
+            <span class="font-mono text-emerald-700 text-base">{{ faAmount(inv.amount ?? inv.total_amount) }} ریال</span>
+          </div>
+          <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="flex justify-between items-center pt-1 text-slate-500 text-[11px]">
+            <span>پرداخت‌شده / مانده:</span>
+            <span class="font-mono font-bold">{{ faAmount(inv.paid_amount) }} / {{ faAmount(inv.remaining) }} ریال</span>
+          </div>
+        </div>
+
+        <!-- پیوست‌ها و مدارک فاکتور -->
+        <div *ngIf="inv.id" class="space-y-2 pt-2 border-t border-slate-100">
+          <h4 class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+            <svg appIcon="hero-paper-clip" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>مدارک و پیوست‌های فاکتور</span>
+          </h4>
+          <app-attachments kind="expense_invoice" [entityId]="inv.id" [canEdit]="false"></app-attachments>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── تب ۲: سابقه گردش کار ── -->
+    <div *ngIf="activeTab === 'history'" class="space-y-3">
+      <div *ngIf="invoiceId">
+        <app-workflow-history kind="expense_invoice" [entityId]="invoiceId"></app-workflow-history>
+      </div>
+      <div *ngIf="!invoiceId && invoiceDetail?.id">
+        <app-workflow-history kind="expense_invoice" [entityId]="invoiceDetail!.id"></app-workflow-history>
+      </div>
+    </div>
+  </div>
+
+  <!-- فوتر مودال -->
+  <div modal-footer class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+    <div class="text-[11px] text-slate-400 font-mono">
+      <span *ngIf="invoiceId || invoiceDetail?.id">شناسه سند: {{ invoiceId || invoiceDetail?.id }}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        appAction="print"
+        label="چاپ / PDF"
+        size="sm"
+        (click)="printInvoice()"
+      ></button>
+      <button
+        type="button"
+        appAction="close"
+        label="بستن"
+        size="sm"
+        (click)="close()"
+      ></button>
+    </div>
+  </div>
+</app-modal>
+

@@ -18,6 +18,7 @@ import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
+import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -31,6 +32,7 @@ import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invo
     CommandCenterComponent,
     WorkflowReasonDialogComponent,
     InvoiceReceiptButtonComponent,
+    InvoicePreviewModalComponent,
     SvgIconDirective
   ],
   templateUrl: './accountant-invoices.html',
@@ -271,6 +273,25 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  // مودال پیش‌نمایش و سابقه فاکتور
+  previewModalOpen = false;
+  previewInvoiceId: number | null = null;
+  previewInvoiceItem: ExpenseInvoice | null = null;
+  previewInitialTab: 'preview' | 'history' = 'preview';
+
+  openPreview(item: ExpenseInvoice, tab: 'preview' | 'history' = 'preview'): void {
+    this.previewInvoiceId = item.id || null;
+    this.previewInvoiceItem = item;
+    this.previewInitialTab = tab;
+    this.previewModalOpen = true;
+  }
+
+  closePreview(): void {
+    this.previewModalOpen = false;
+    this.previewInvoiceId = null;
+    this.previewInvoiceItem = null;
   }
 
   isReasonDialogOpen = false;
