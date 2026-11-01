@@ -55,7 +55,7 @@ const ROUTE_PERMISSIONS_LITERAL: Record<string, string[]> = {
   'employee-invoices': ['view_sys_personnel_attendance', 'perm_invoice_record', 'admin_all'],
   'employee-petty-cash': ['view_sys_personnel_attendance', 'perm_petty_cash_manage', 'perm_treasury_disburse_action', 'admin_all'],
   'employee-new-vehicle': ['view_sys_personnel_attendance', 'view_sys_fleet_attendance', 'admin_all'],
-  'employee-new-personnel': ['view_sys_personnel_attendance', 'admin_all'],
+  'employee-new-personnel': ['view_sys_personnel_attendance', 'view_sys_payroll', 'admin_all'],
   'supervisor-attendance': ['perm_approve_personnel_supervisor', 'admin_all'],
   'supervisor-fleet': ['perm_approve_fleet_supervisor', 'admin_all'],
   'supervisor-invoices': ['perm_invoice_approve', 'admin_all'],

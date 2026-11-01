@@ -45,7 +45,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     // خزانه‌دار شارژ و صورت‌حساب تنخواه را از مسیر «کارهای من» همین صفحه واریز می‌کند (canTreasuryPay)
     'employee-petty-cash': ['view_sys_personnel_attendance', 'perm_petty_cash_manage', 'perm_treasury_disburse_action', 'admin_all'],
     'employee-new-vehicle': ['view_sys_personnel_attendance', 'view_sys_fleet_attendance', 'admin_all'],
-    'employee-new-personnel': ['view_sys_personnel_attendance', 'admin_all'],
+    'employee-new-personnel': ['view_sys_personnel_attendance', 'view_sys_payroll', 'admin_all'],
     'supervisor-attendance': ['perm_approve_personnel_supervisor', 'admin_all'],
     'supervisor-fleet': ['perm_approve_fleet_supervisor', 'admin_all'],
     'supervisor-invoices': ['perm_invoice_approve', 'admin_all'],
