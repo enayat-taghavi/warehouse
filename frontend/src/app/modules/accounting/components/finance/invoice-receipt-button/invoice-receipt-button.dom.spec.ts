@@ -10,14 +10,6 @@ import { InvoiceReceiptButtonComponent, ReceiptItem } from './invoice-receipt-bu
 import { ApiService } from '../../../../../core/api/api.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 
-const { mockSaveBlob } = vi.hoisted(() => ({
-  mockSaveBlob: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../../../../../core/platform/file-output', () => ({
-  saveBlob: mockSaveBlob,
-}));
-
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
@@ -29,12 +21,20 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
   let mockToast: { info: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    if (typeof URL.createObjectURL !== 'function') {
+      (URL as any).createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
+    } else {
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    }
+    if (typeof URL.revokeObjectURL !== 'function') {
+      (URL as any).revokeObjectURL = vi.fn();
+    }
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
     mockToast = {
       info: vi.fn(),
       error: vi.fn(),
     };
-
-    mockSaveBlob.mockClear();
 
     await TestBed.configureTestingModule({
       imports: [InvoiceReceiptButtonComponent],
@@ -53,6 +53,7 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     fixture = TestBed.createComponent(InvoiceReceiptButtonComponent);
     component = fixture.componentInstance;
     component.invoiceId = 42;
+    vi.spyOn(component, 'downloadItem');
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
   });
@@ -92,7 +93,7 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockSaveBlob).toHaveBeenCalledWith(expect.any(Blob), 'receipt_42.pdf');
+    expect(component.downloadItem).toHaveBeenCalledWith(item);
     expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
   });
 
@@ -143,7 +144,7 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockSaveBlob).toHaveBeenCalledWith(expect.any(Blob), 'receipt_second.png');
+    expect(component.downloadItem).toHaveBeenCalledWith(items[1], expect.anything());
     expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
   });
 
