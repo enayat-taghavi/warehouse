@@ -100,6 +100,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   attendanceRows: AttendanceMatrixRow[] = [];
   filteredAttendanceRows: AttendanceMatrixRow[] = [];
   isAttendanceLoading = false;
+  loadError = '';
   isSavingAttendance = false;
   isPeriodLocked = false;
   periodStatus = 'OPEN';
@@ -335,7 +336,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
           if (notif.date_shamsi === this.selectedDateShamsi || (notif.year_month && notif.year_month === this.selectedYearMonth)) {
             if (this.hasUnsavedChanges) {
               this.hasRemoteConflict = true;
-              this.toast.show('warning', '⚠️ کارکرد پرسنل توسط همکار دیگری تغییر یافت. شما تغییرات ذخیره‌نشده دارید.');
+              this.toast.show('warning', 'کارکرد پرسنل توسط همکار دیگری تغییر یافت. شما تغییرات ذخیره‌نشده دارید.');
             } else {
               this.refreshAttendanceMatrixSilently();
             }
@@ -346,7 +347,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
           if (isMatchingMonth) {
             if (this.hasUnsavedMonthlyGrid) {
               this.hasRemoteConflict = true;
-              this.toast.show('warning', '⚠️ شیت ماهانه توسط کاربر دیگری تغییر یافت.');
+              this.toast.show('warning', 'شیت ماهانه توسط کاربر دیگری تغییر یافت.');
             } else {
               this.refreshMonthlyGridSilently();
             }
@@ -398,6 +399,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   loadAttendanceMatrix(): void {
     if (!this.selectedDateShamsi || !this.selectedSectionId) return;
     this.isAttendanceLoading = true;
+    this.loadError = '';
     this.selectedPersonnelIds.clear();
     this.selectAllChecked = false;
 
@@ -412,12 +414,14 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
         this.isPeriodLocked = !!res.is_locked || EmployeeAttendanceHubComponent.LOCKED_STATUSES.has(res.period_status);
         this.periodStatus = res.period_status || 'OPEN';
         this.isAttendanceLoading = false;
+        this.loadError = '';
         this.hasUnsavedChanges = false;
         this.applySearchFilter();
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isAttendanceLoading = false;
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
         this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در بارگذاری ماتریس کارکرد روزانه');
         this.cdr.detectChanges();
       }
@@ -627,6 +631,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   copyFromYesterday(): void {
     if (this.isPeriodLocked || !this.selectedSectionId) return;
     this.isAttendanceLoading = true;
+    this.loadError = '';
     const yesterdayStr = this.shiftShamsiDay(this.selectedDateShamsi, -1);
 
     this.personnelApi.getAttendanceMatrix(null, yesterdayStr, {
@@ -1804,8 +1809,16 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       this.isExcelPasteModalOpen = false;
       return;
     }
+    if (this.isExcelImportModalOpen) {
+      this.closeExcelImportModal();
+      return;
+    }
     if (this.isPrintModalOpen) {
-      this.isPrintModalOpen = false;
+      this.closePrintTimesheetModal();
+      return;
+    }
+    if (this.isSubmitModalOpen) {
+      this.isSubmitModalOpen = false;
       return;
     }
     this.isMonthPickerOpen = false;

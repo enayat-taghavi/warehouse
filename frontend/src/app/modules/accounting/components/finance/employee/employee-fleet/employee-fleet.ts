@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, Optional, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpContext } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -107,6 +107,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   selectedSectionId: number | null = null;
   selectedSection: ProjectSection | null = null;
   isLoadingSections = false;
+  loadError = '';
 
   // لیست انبارها (جهت فیلتر شناور)
   warehouses: any[] = [];
@@ -432,6 +433,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     if (!this.selectedSectionId) {
       this.vehicleRows = [];
       this.fleetMonthlyGridRows = [];
+      this.loadError = '';
       this.cdr.detectChanges();
       return;
     }
@@ -502,7 +504,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
           if (notif.date_shamsi === this.selectedDateShamsi) {
             if (this.hasUnsavedChanges) {
               this.hasRemoteConflict = true;
-              this.toast.show('warning', '⚠️ تردد ناوگان توسط کاربر دیگری ویرایش شد.');
+              this.toast.show('warning', 'تردد ناوگان توسط کاربر دیگری ویرایش شد.');
             } else {
               this.refreshVehicleMatrixSilently();
             }
@@ -513,7 +515,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
           if (isMatchingMonth) {
             if (this.hasUnsavedFleetMonthlyGrid) {
               this.hasRemoteConflict = true;
-              this.toast.show('warning', '⚠️ تقویم ماهانه ناوگان توسط کاربر دیگری تغییر یافت.');
+              this.toast.show('warning', 'تقویم ماهانه ناوگان توسط کاربر دیگری تغییر یافت.');
             } else {
               this.refreshFleetMonthlyGridSilently();
             }
@@ -541,6 +543,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   loadVehicleMatrix(): void {
     if (!this.selectedDateShamsi || !this.selectedSectionId) return;
     this.isVehicleLoading = true;
+    this.loadError = '';
     this.personnelApi.getVehicleMatrix(this.selectedWarehouseId, this.selectedDateShamsi, {
       status: this.fleetStatusFilter,
       section_id: this.selectedSectionId,
@@ -549,11 +552,13 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
       next: res => {
         this.vehicleRows = (res.rows || []).map(r => ({ ...r, _isDirty: false }));
         this.isVehicleLoading = false;
+        this.loadError = '';
         this.hasUnsavedChanges = false;
         this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.isVehicleLoading = false;
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
         this.toast.show('error', err?.error?.detail || err?.error?.error || 'خطا در بارگذاری ماتریس روزانه ناوگان');
         this.cdr.detectChanges();
       }
@@ -1428,5 +1433,29 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     if (!this.selectedWarehouseId) return 'همه انبارهای بخش';
     const wh = this.warehouses.find(w => w.id === this.selectedWarehouseId);
     return wh ? wh.name : 'انبار مشخص‌شده';
+  }
+
+  @HostListener('window:keydown.escape')
+  onGlobalEscape(): void {
+    if (this.isFleetDayDetailModalOpen) {
+      this.isFleetDayDetailModalOpen = false;
+      return;
+    }
+    if (this.isFleetExcelPasteModalOpen) {
+      this.isFleetExcelPasteModalOpen = false;
+      return;
+    }
+    if (this.isFleetPrintModalOpen) {
+      this.closeFleetPrintModal();
+      return;
+    }
+    if (this.isVehicleProfileModalOpen) {
+      this.isVehicleProfileModalOpen = false;
+      return;
+    }
+    if (this.isFleetAuditLogsModalOpen) {
+      this.closeFleetAuditLogs();
+      return;
+    }
   }
 }
