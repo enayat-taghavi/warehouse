@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { resolveServerUrl } from '../../../core/platform/server-origin';
-import { saveUrl } from '../../../core/platform/file-output';
+import { saveUrl, canShareFiles, shareUrl } from '../../../core/platform/file-output';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ServerUrlPipe } from '../../pipes/server-url.pipe';
 import { OverflowMenuComponent } from '../overflow-menu/overflow-menu.component';
@@ -73,6 +73,8 @@ export class DocumentPreviewComponent implements OnDestroy {
   @ViewChild('closeButton') private closeButton?: ElementRef<HTMLButtonElement>;
 
   readonly titleId = `document-preview-title-${nextPreviewId++}`;
+  readonly canShare = canShareFiles();
+  shareUrlFn = shareUrl;
 
   /** کلاس ابزارهای نوار: در موبایل ردیف برچسب‌دار منوی «بیشتر»، از sm دکمهٔ آیکونی تیره */
   readonly toolButtonClass =
@@ -600,6 +602,12 @@ export class DocumentPreviewComponent implements OnDestroy {
   }
 
   /** دانلود سند فعلی با نام فایلش (اگر میزبان داده باشد) */
+  shareCurrent(): void {
+    if (this.previewModal.fileUrl) {
+      void (this.shareUrlFn || shareUrl)(this.previewModal.fileUrl, this.current?.downloadName).catch(() => undefined);
+    }
+  }
+
   downloadCurrent(): void {
     this.downloadFile(this.previewModal.fileUrl, this.current?.downloadName);
   }

@@ -71,6 +71,12 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" appIcon="download"></svg>
             <span class="sm:sr-only">دانلود سند</span>
           </button>
+          <button *ngIf="canShare" type="button" (click)="shareCurrent()" [disabled]="!previewModal.fileUrl"
+                  aria-label="اشتراک‌گذاری سند" title="اشتراک‌گذاری سند"
+                  [class]="toolButtonClass + ' disabled:opacity-40 disabled:cursor-not-allowed'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" appIcon="share"></svg>
+            <span class="sm:sr-only">اشتراک‌گذاری</span>
+          </button>
           <button *ngIf="current?.messageId" type="button" (click)="requestGoToMessage()" data-testid="preview-goto"
                   aria-label="برو به پیام" title="برو به پیام"
                   [class]="toolButtonClass">

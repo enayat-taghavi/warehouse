@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { DocumentPreviewComponent } from './document-preview.component';
 
+
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
@@ -250,5 +251,25 @@ describe('DocumentPreviewComponent (لایت‌باکس مشترک پیش‌نم
     closeBtn.click();
     expect(component.previewModal.isOpen).toBe(false);
     expect(closed).toHaveBeenCalledTimes(2);
+  });
+
+  it('دکمهٔ اشتراک‌گذاری در صورت نبود پشتیبانی مرورگر پنهان است', () => {
+    component.open({ title: 'سند', url: '/media/a.pdf' });
+    fixture.detectChanges();
+    const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری سند"]');
+    expect(shareBtn).toBeNull();
+  });
+
+  it('دکمهٔ اشتراک‌گذاری در صورت پشتیبانی مرورگر دیده می‌شود و با کلیک shareUrl را فراخوانی می‌کند', () => {
+    (component as any).canShare = true;
+    component.open({ title: 'سند', url: '/media/a.pdf', downloadName: 'custom-doc.pdf' });
+    fixture.detectChanges();
+    const shareSpy = vi.fn().mockResolvedValue('shared');
+    component.shareUrlFn = shareSpy;
+    const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری سند"]') as HTMLButtonElement;
+    expect(shareBtn).not.toBeNull();
+    expect(shareBtn.disabled).toBe(false);
+    shareBtn.click();
+    expect(shareSpy).toHaveBeenCalledWith('/media/a.pdf', 'custom-doc.pdf');
   });
 });

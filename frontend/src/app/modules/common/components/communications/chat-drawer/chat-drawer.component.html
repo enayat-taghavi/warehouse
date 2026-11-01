@@ -376,6 +376,12 @@
                         class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
                 </button>
+                <button *ngIf="canShare" type="button" (click)="shareAttachment(att)"
+                        [attr.aria-label]="'اشتراک‌گذاری ' + att.file_name"
+                        [title]="'اشتراک‌گذاری ' + att.file_name"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="share" aria-hidden="true"></svg>
+                </button>
               </div>
 
               <!-- PDF -->
@@ -447,6 +453,15 @@
                   [attr.title]="'دانلود ' + att.file_name"
                   class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
+                </button>
+                <button
+                  *ngIf="canShare"
+                  type="button"
+                  (click)="shareAttachment(att)"
+                  [attr.aria-label]="'اشتراک‌گذاری ' + att.file_name"
+                  [title]="'اشتراک‌گذاری ' + att.file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="share"></svg>
                 </button>
               </div>
             </ng-container>

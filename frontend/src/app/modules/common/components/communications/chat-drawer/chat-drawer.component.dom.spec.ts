@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import { signal } from '@angular/core';
 
 import { ChatDrawerComponent } from './chat-drawer.component';
@@ -13,6 +13,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
+
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -513,5 +514,32 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     comm.conversations$.next([{ ...directConv(), last_message: { id: '1', text: '', sender_name: 'x', created_at: nowIso(), has_attachment: true } }]);
     await flush(fixture);
     expect(q('[data-testid="last-file"]')!.textContent).toContain('فایل');
+  });
+
+  it('shareAttachment: downloads attachment through api and calls shareBlob with blob and file name', async () => {
+    await setup({ conv: groupConv('member') });
+    const shareSpy = vi.fn().mockResolvedValue('shared');
+    fixture.componentInstance.shareBlobFn = shareSpy;
+    const fakeBlob = new Blob(['attachment payload'], { type: 'application/pdf' });
+    const api = TestBed.inject(ApiService) as any;
+    api.download = vi.fn().mockReturnValue(of(fakeBlob));
+
+    const att = { download_url: '/api/v1/chat/files/10/download/', file_name: 'invoice.pdf' };
+    await fixture.componentInstance.shareAttachment(att);
+
+    expect(api.download).toHaveBeenCalledWith('v1/chat/files/10/download/');
+    expect(shareSpy).toHaveBeenCalledWith(fakeBlob, 'invoice.pdf');
+  });
+
+  it('shareAttachment: shows not-ready toast and does not call shareBlob when download_url is missing', async () => {
+    await setup({ conv: groupConv('member') });
+    const shareSpy = vi.fn().mockResolvedValue('shared');
+    fixture.componentInstance.shareBlobFn = shareSpy;
+
+    const att = { file_name: 'pending.pdf' };
+    await fixture.componentInstance.shareAttachment(att);
+
+    expect(toast.error).toHaveBeenCalledWith('فایل هنوز آماده نیست؛ گفتگو را دوباره باز کنید');
+    expect(shareSpy).not.toHaveBeenCalled();
   });
 });
