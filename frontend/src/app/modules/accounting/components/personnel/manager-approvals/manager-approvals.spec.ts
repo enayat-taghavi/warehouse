@@ -39,6 +39,7 @@ describe('ManagerApprovals Unit Tests', () => {
         { id: 201, status: 'pending_manager', changes_payload: { first_name: { old: 'علی', new: 'علیرضا' } } }
       ] })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([])),
+      getWorkPeriods: vi.fn().mockReturnValue(of([])),
       getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({
         year_month: '1405/04',
         period_status: 'OPEN'

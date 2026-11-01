@@ -159,16 +159,8 @@ export class ExcelImportModal {
     this.isUploading = true;
     this.uploadProgress = 0;
 
-    const progressInterval = setInterval(() => {
-      if (this.uploadProgress < 90) {
-        this.uploadProgress += Math.random() * 15;
-        this.cdr.detectChanges();
-      }
-    }, 150);
-
     this.importFn(this.selectedFile, this.updateExisting, false).subscribe({
       next: (res) => {
-        clearInterval(progressInterval);
         this.uploadProgress = 100;
         this.isUploading = false;
         this.result = this.normalizeSummary(res);
@@ -177,7 +169,6 @@ export class ExcelImportModal {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        clearInterval(progressInterval);
         this.isUploading = false;
         this.uploadProgress = 0;
 

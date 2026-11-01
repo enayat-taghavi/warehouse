@@ -72,7 +72,9 @@ export function drawPure2DBarcode(ctx: CanvasRenderingContext2D, text: string, x
 }
 
 export function drawCanvas1DBarcode(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, w: number, h: number): void {
-  const clean = text.replace(/[^0-9]/g, '') || '1234567890';
+  // no code -> no barcode (never draw a fake sample number)
+  const clean = text.replace(/[^0-9]/g, '');
+  if (!clean) return;
   const pattern = [2, 1, 1, 2, 3, 1, 2, 2, 1, 3, 1, 2, 1, 3, 2, 1, 2, 1, 1, 3, 2, 2, 1, 1, 2, 3, 1, 1];
   let totalUnits = 0;
   for (let i = 0; i < 40; i++) {
@@ -102,7 +104,8 @@ export function drawCanvas2DBarcode(ctx: CanvasRenderingContext2D, text: string,
 }
 
 export function getBarcodeSvgString(code: string): string {
-  const clean = code.replace(/[^0-9]/g, '') || '1234567890';
+  const clean = code.replace(/[^0-9]/g, '');
+  if (!clean) return '';
   let totalUnits = 0;
   for (let i = 0; i < 35; i++) {
     const charCode = clean.charCodeAt(i % clean.length);

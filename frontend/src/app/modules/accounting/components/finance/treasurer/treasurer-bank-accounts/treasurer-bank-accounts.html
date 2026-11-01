@@ -3,7 +3,7 @@
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <app-command-center rowFrom="lg">
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
-      <h1 class="text-sm font-black text-fg">حسابهای بانکی سازمان</h1>
+      <h1 class="text-sm font-black text-fg">حساب‌های بانکی سازمان</h1>
       <span class="text-xs text-fg-muted font-bold">({{ accounts.length }} حساب)</span>
     </div>
 
@@ -21,20 +21,20 @@
   <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden">
 
     <!-- حالت بارگذاری (Loading) -->
-    <div *ngIf="isLoading" class="p-8 flex items-center justify-center gap-3 text-fg-muted">
+    <div *ngIf="isLoading" role="status" aria-live="polite" class="p-8 flex items-center justify-center gap-3 text-fg-muted">
       <svg appIcon="loader" class="w-5 h-5 animate-spin text-fg-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-      <span class="text-xs font-bold text-fg">در حال دریافت حسابها…</span>
+      <span class="text-xs font-bold text-fg">در حال دریافت حساب‌ها…</span>
     </div>
 
     <!-- حالت خطا (Error) -->
-    <div *ngIf="!isLoading && loadError" class="p-8 flex flex-col items-center justify-center gap-3 text-center">
+    <div *ngIf="!isLoading && loadError" role="alert" class="p-8 flex flex-col items-center justify-center gap-3 text-center">
       <div class="flex items-center gap-2 text-rose-600">
         <svg appIcon="alert-circle" class="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <span class="text-xs font-bold">{{ loadError }}</span>
       </div>
       <button
         type="button"
-        class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-fg transition-colors cursor-pointer"
+        class="tap-target px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-fg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         (click)="load()"
       >تلاش دوباره</button>
     </div>
@@ -43,7 +43,7 @@
     <div *ngIf="!isLoading && !loadError && accounts.length === 0" class="p-8 flex flex-col items-center justify-center gap-2 text-center">
       <svg appIcon="archive" class="w-10 h-10 text-fg-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
       <p class="text-sm font-bold text-fg">هنوز حساب بانکی برای شرکت ثبت نشده است.</p>
-      <p class="text-xs text-fg-muted">حسابها از بخش شرکتها، زبانهٔ خزانه ثبت میشوند.</p>
+      <p class="text-xs text-fg-muted">حساب‌ها از بخش شرکت‌ها، زبانهٔ خزانه ثبت می‌شوند.</p>
     </div>
 
     <!-- جدول حساب‌های بانکی سازمان (List) -->
@@ -66,8 +66,8 @@
             <td class="py-3 px-3 font-bold text-fg">{{ acc.company_name || '—' }}</td>
             <td class="py-3 px-3 font-bold text-fg">{{ acc.bank_name }}</td>
             <td class="py-3 px-3 text-fg-muted">{{ acc.account_title || '—' }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-fg" dir="ltr">{{ acc.account_number || '—' }}</td>
-            <td class="py-3 px-3 font-mono text-fg-muted text-[11px]" dir="ltr">{{ acc.sheba_number }}</td>
+            <td class="py-3 px-3 font-mono font-bold text-fg text-end" dir="ltr">{{ acc.account_number || '—' }}</td>
+            <td class="py-3 px-3 font-mono text-fg-muted text-[11px] text-end" dir="ltr">{{ acc.sheba_number }}</td>
             <td class="py-3 px-3 text-center">
               <div class="inline-flex items-center justify-center gap-1">
                 <span

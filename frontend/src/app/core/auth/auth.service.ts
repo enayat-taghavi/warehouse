@@ -25,7 +25,6 @@ const USER_KEY = 'wh_user_profile';
 
 /**
  * سرویس احراز هویت — آماده JWT
- * فعلاً با mock data کار می‌کند و با سوئیچ environment.useMockData به API واقعی وصل می‌شود
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -59,50 +58,6 @@ export class AuthService {
       localStorage.setItem(USER_KEY, JSON.stringify(updated));
     }
   }
-
-  /** Mock database — فقط در حالت useMockData */
-  private readonly mockUsers: Record<string, any> = {
-    saman_admin: {
-      password: '123456',
-      profile: {
-        id: 1, username: 'saman_admin', first_name: 'سامان', last_name: 'تقوی سوق',
-        avatar_letter: 'س', department: 'admin', role_titles: ['مدیریت کل سیستم (Admin)'], roles: ['admin'],
-        permissions: ['perm_sys_settings', 'perm_sys_logs', 'perm_wh_create', 'perm_wh_edit', 'perm_wh_freeze', 'perm_rec_import', 'perm_rec_dispatch', 'perm_rec_label', 'perm_rec_recount', 'perm_usr_add', 'perm_usr_edit', 'perm_usr_role'],
-      },
-    },
-    heydari_manager: {
-      password: '123456',
-      profile: {
-        id: 2, username: 'heydari_manager', first_name: 'ناصر', last_name: 'حیدری',
-        avatar_letter: 'ح', department: 'management', role_titles: ['مدیریت پروژه'], roles: ['manager'],
-        permissions: ['perm_wh_edit', 'perm_rec_dispatch', 'perm_rec_recount'],
-      },
-    },
-    ghasemi_exec: {
-      password: '123456',
-      profile: {
-        id: 3, username: 'ghasemi_exec', first_name: 'علی', last_name: 'قاسمی',
-        avatar_letter: 'ع', department: 'execution', role_titles: ['سرپرست اجرا'], roles: ['supervisor'],
-        permissions: ['perm_rec_label'],
-      } as any,
-    },
-    rezaei_docs: {
-      password: '123456',
-      profile: {
-        id: 4, username: 'rezaei_docs', first_name: 'فاطمه', last_name: 'رضایی',
-        avatar_letter: 'ف', department: 'documents', role_titles: ['کارشناس مدارک'], roles: ['document_expert'],
-        permissions: [],
-      },
-    },
-    karimi_feed: {
-      password: '123456',
-      profile: {
-        id: 5, username: 'karimi_feed', first_name: 'حسین', last_name: 'کریمی',
-        avatar_letter: 'ه', department: 'feeding', role_titles: ['اپراتور تغذیه MT'], roles: ['feeding_operator'],
-        permissions: [],
-      },
-    },
-  };
 
   constructor(
     private router: Router,
@@ -160,13 +115,9 @@ export class AuthService {
     } catch {}
   }
 
-  /** لاگین — mock یا API واقعی */
+  /** لاگین */
   login(username: string, password: string, deviceModel?: string): Observable<LoginResponse> {
     this._isLoading.set(true);
-
-    if (environment.useMockData) {
-      return this.mockLogin(username, password);
-    }
 
     const doLogin = (detectedModel?: string) => {
       const payload: any = { username, password };
@@ -199,7 +150,7 @@ export class AuthService {
 
   /** ثبت حضور فعال روزانه کاربر (یک‌بار در هر روز تقویمی) */
   sendDailyHeartbeat(): void {
-    if (environment.useMockData || !this.isLoggedIn()) return;
+    if (!this.isLoggedIn()) return;
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const lastHeartbeat = this.getItem('last_daily_heartbeat');
@@ -272,10 +223,6 @@ export class AuthService {
       return throwError(() => new Error('No refresh token'));
     }
 
-    if (environment.useMockData) {
-      return of('mock-access-token-refreshed');
-    }
-
     return this.http
       .post<{ access: string; refresh?: string }>(`${environment.apiUrl}/auth/refresh/`, { refresh }, {
         context: new HttpContext().set(SKIP_OFFLINE, true),
@@ -307,10 +254,6 @@ export class AuthService {
    * صدور و جایگزینی آنی توکن امضاشده برای سامانه مقصد (warehouse یا finance)
    */
   switchAppScope(targetApp: AppScope): Observable<any> {
-    if (environment.useMockData) {
-      return of({ success: true, active_app: targetApp });
-    }
-
     return this.http
       .post<{
         success: boolean;
@@ -377,16 +320,6 @@ export class AuthService {
   // ────────── Preferences ──────────
   
   updatePreferences(prefs: any): Observable<any> {
-    if (environment.useMockData) {
-      const u = this._user();
-      if (u) {
-        u.ui_preferences = { ...u.ui_preferences, ...prefs };
-        this._user.set({ ...u });
-        this.setItem(USER_KEY, JSON.stringify(u));
-      }
-      return of({ status: 'success', preferences: u?.ui_preferences });
-    }
-
     return this.http.post(`${environment.apiUrl}/auth/users/update_preferences/`, { preferences: prefs }).pipe(
       tap((res: any) => {
         const u = this._user();
@@ -423,26 +356,6 @@ export class AuthService {
   }
 
   // ────────── Private ──────────
-
-  private mockLogin(username: string, password: string): Observable<LoginResponse> {
-    return new Observable((subscriber) => {
-      setTimeout(() => {
-        const account = this.mockUsers[username];
-        if (account && account.password === password) {
-          const response: LoginResponse = {
-            tokens: { access: 'mock-access-token', refresh: 'mock-refresh-token' },
-            user: account.profile,
-          };
-          this.handleLoginSuccess(response);
-          subscriber.next(response);
-          subscriber.complete();
-        } else {
-          this._isLoading.set(false);
-          subscriber.error({ detail: 'نام کاربری یا رمز عبور نادرست است.' });
-        }
-      }, 800);
-    });
-  }
 
   /** توکن تازه را برای تب و همهٔ قلمروهای مجاز کاربر می‌نشاند (ورود، و توکن نوِ پس از تغییر رمز). */
   private storeTokens(tokens: { access: string; refresh: string }, allowedApps: string[]): void {

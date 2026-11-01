@@ -31,9 +31,7 @@ FRONT_APP_DIR = REPO_ROOT / "frontend" / "src" / "app"
 
 # فایل‌هایی (یا «فایل|کد») که آگاهانه ارجاع دارند؛ هر کدام دلیل دارد. فایل فهرست‌شده‌ای که دیگر ارجاعی ندارد، ورودی کهنه و شکست است.
 ALLOWED_FILES = {
-    "module_permission_literals": {
-        "front:core/auth/auth.service.ts": "دادهٔ کاربران mock حالت environment.useMockData (در هیچ environment روشن نیست)",
-    },
+    "module_permission_literals": {},
     # ارجاع بین‌ماژولی مجوز: از گام ۸ با alias مجوز (permission_aliases / permissionAliases) جایگزین شد؛
     # فقط اسکریپت توسعهٔ زیر می‌ماند که عمداً کاربر شمارشگر ماژول دیگر می‌سازد.
     "cross_module_permission_literals": {

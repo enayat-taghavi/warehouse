@@ -42,7 +42,7 @@ export class TreasurerBankAccountsComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: () => {
-        this.loadError = 'دریافت حسابهای بانکی انجام نشد.';
+        this.loadError = 'دریافت حساب‌های بانکی انجام نشد.';
         this.isLoading = false;
         this.cdr.markForCheck();
       }

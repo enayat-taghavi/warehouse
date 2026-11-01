@@ -222,6 +222,26 @@
   transition: width 0.3s ease;
 }
 
+/* پیشرفت واقعی آپلود معلوم نیست؛ نوار نامعین تا رسیدن پاسخ سرور */
+.progress-bar.indeterminate {
+  width: 40%;
+  animation: progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+/* با کاهش حرکت، نوار ثابت ۴۰٪ شبیه «۴۰٪ انجام شد» می‌شود؛ پر و کم‌رنگ نشان داده شود */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar.indeterminate {
+    width: 100%;
+    opacity: 0.5;
+    transform: none;
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% { transform: translateX(150%); }
+  100% { transform: translateX(-250%); }
+}
+
 .progress-text {
   font-size: 0.8rem;
   color: var(--text-secondary, #999);

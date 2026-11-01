@@ -191,11 +191,10 @@
       <!-- Uploading State during Commit -->
       <div *ngIf="isUploading" class="uploading-state" style="margin-top: 10px;">
         <div class="spinner"></div>
-        <p class="uploading-text" style="font-weight: bold;">در حال ذخیره و نهایی‌سازی در پایگاه‌داده...</p>
-        <div class="progress-bar-container">
-          <div class="progress-bar" [style.width.%]="uploadProgress"></div>
+        <p id="excel-import-uploading-text" class="uploading-text" style="font-weight: bold;">در حال ذخیره و نهایی‌سازی در پایگاه‌داده...</p>
+        <div class="progress-bar-container" role="progressbar" aria-busy="true" aria-labelledby="excel-import-uploading-text">
+          <div class="progress-bar indeterminate"></div>
         </div>
-        <span class="progress-text">{{ uploadProgress | number:'1.0-0' }}%</span>
       </div>
     </div>
 

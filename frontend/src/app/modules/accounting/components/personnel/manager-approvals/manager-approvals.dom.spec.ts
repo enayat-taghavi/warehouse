@@ -97,6 +97,7 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
       getPettyCashTransactions: vi.fn().mockReturnValue(of([
         { id: 301, title: 'خرید لوازم اداری و ملزومات', custodian_name: 'سعید احمدی', amount: 3500000, status: 'pending_manager', section_name: 'بخش اداری' }
       ])),
+      getWorkPeriods: vi.fn().mockReturnValue(of([])),
       getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({ year_month: '1405/04', period_status: 'OPEN' })),
       getWorkflowAuditLogs: vi.fn().mockReturnValue(of([
         { id: 1, actor_name: 'علی سرپرست', action: 'approve', action_display: 'تایید سرپرست', reason: 'سوابق تایید شد', created_at_jalali: '1405/04/10 10:30' },

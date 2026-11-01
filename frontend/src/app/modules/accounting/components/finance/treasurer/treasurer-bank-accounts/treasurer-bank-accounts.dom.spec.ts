@@ -94,7 +94,7 @@ describe('TreasurerBankAccountsComponent (DOM Specs)', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('دریافت حسابهای بانکی انجام نشد');
+    expect(text).toContain('دریافت حساب‌های بانکی انجام نشد');
 
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
     const retryBtn = buttons.find(b => b.textContent?.includes('تلاش دوباره'));

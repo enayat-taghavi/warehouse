@@ -23,11 +23,12 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { WorkflowReasonDialogComponent } from '../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
 
 @Component({
   selector: 'app-manager-approvals',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SvgIconDirective, TabBarComponent, ActionButtonComponent, WorkflowReasonDialogComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, SvgIconDirective, TabBarComponent, ActionButtonComponent, WorkflowReasonDialogComponent, PersianDatePipe],
   templateUrl: './manager-approvals.html',
   styleUrl: './manager-approvals.css'
 })
@@ -769,20 +770,20 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   // ─── 4. Work Periods ───────────────────────────────────────
   loadWorkPeriods(): void {
     this.isLoading = true;
-    this.api.getAttendanceMonthlySummary(this.selectedWarehouseId, this.fiscalYear + '/04').subscribe({
-      next: (res: any) => {
-        this.workPeriods = [{
-          id: 1,
-          warehouse_name: 'سراسری شرکت',
-          year_month: res.year_month || (this.fiscalYear + '/04'),
-          status: res.period_status || 'OPEN',
-          status_display: res.period_status === 'LOCKED' ? 'قفل شده' : 'باز',
-          submitted_at: new Date()
-        }];
+    // دوره‌های واقعی کارکرد (نه یک ردیف ساختگی با ماه و تاریخ ثابت)
+    this.api.getWorkPeriods({ warehouse_id: this.selectedWarehouseId }).subscribe({
+      next: (res: any[]) => {
+        this.workPeriods = (Array.isArray(res) ? res : [])
+          .map(p => ({ ...p, warehouse_name: p.section_name || p.project_title || p.warehouse_name || '' }))
+          .sort((a, b) => String(b.year_month || '').localeCompare(String(a.year_month || '')));
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: () => { this.isLoading = false; }
+      error: () => {
+        this.workPeriods = [];
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 

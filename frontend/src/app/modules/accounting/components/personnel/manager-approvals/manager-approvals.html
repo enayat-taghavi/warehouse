@@ -468,7 +468,7 @@
                   {{ wp.status_display || wp.status }}
                 </span>
               </td>
-              <td class="p-3.5 text-center font-mono text-slate-500">{{ (wp.submitted_at | date:'yyyy/MM/dd') || '—' }}</td>
+              <td class="p-3.5 text-center font-mono text-slate-500">{{ wp.submitted_at ? (wp.submitted_at | persianDate:'short') : '—' }}</td>
               <td class="p-3.5 text-center">
                 <a routerLink="/app/my-tasks" [queryParams]="{workflow: 'attendance_period'}"
                    class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-fg text-[11px] font-bold hover:bg-surface-muted"

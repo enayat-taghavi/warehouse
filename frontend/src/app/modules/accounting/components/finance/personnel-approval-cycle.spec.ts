@@ -57,6 +57,7 @@ describe('Personnel change request: read-only lists for accountant and manager (
       getPersonnelChangeRequestsPage: vi.fn().mockImplementation(() => page([activeCR])),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([])),
       getWorkflowAuditLogs: vi.fn().mockReturnValue(of([])),
+      getWorkPeriods: vi.fn().mockReturnValue(of([])),
       getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({ year_month: '1405/04', period_status: 'OPEN' })),
       getYearlySettings: vi.fn().mockReturnValue(of({ fiscal_year: '1405', job_grades: [] })),
       getMonthlyPayrollRecords: vi.fn().mockReturnValue(of([])),
