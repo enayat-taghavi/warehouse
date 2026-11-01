@@ -54,7 +54,8 @@ export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pe
     RouterLink
   ],
   templateUrl: './accountant-personnel.html',
-  styleUrl: './accountant-personnel.css'
+  styleUrl: './accountant-personnel.css',
+  host: { '(document:keydown.escape)': 'onGlobalEscape()' }
 })
 export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   activeSubTab: AccountantPersonnelSubTab = 'new';
@@ -77,7 +78,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   personnelCount = 0;
   changesPage = 1;
   changesCount = 0;
-  loadError = false;
+  loadError = '';
   readonly isMasked = isMaskedValue;
   yearlySettings: PayrollYearlySettings | null = null;
 
@@ -257,7 +258,9 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       next: (s) => {
         this.yearlySettings = s;
       },
-      error: () => {}
+      error: () => {
+        this.toast.showError('دریافت اطلاعات انجام نشد.');
+      }
     });
   }
 
@@ -354,7 +357,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
 
   fetchData(): void {
     this.isLoading = true;
-    this.loadError = false;
+    this.loadError = '';
     const baseParams: any = {};
     if (this.selectedSectionId) {
       baseParams.section_id = this.selectedSectionId;
@@ -373,6 +376,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     }
     this.personnelApi.getPersonnelProfilesPage(pParams).subscribe({
       next: (res) => {
+        this.loadError = '';
         this.personnelItems = res?.results || [];
         this.personnelCount = res?.count ?? this.personnelItems.length;
         if (this.activeSubTab === 'new') this.statusCounters.newPending = this.personnelCount;
@@ -386,7 +390,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
           this.fetchData();
           return;
         }
-        this.loadError = true;
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
         this.isLoading = false;
         this.cdr.detectChanges();
       }
@@ -395,13 +399,17 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     if (this.activeSubTab !== 'new') {
       this.personnelApi.getPersonnelProfilesPage({ ...baseParams, page: 1, page_size: 1, approval_status: pendingStatuses }).subscribe({
         next: (res) => { this.statusCounters.newPending = res?.count ?? 0; this.cdr.detectChanges(); },
-        error: () => {}
+        error: () => {
+          this.toast.showError('دریافت اطلاعات انجام نشد.');
+        }
       });
     }
     if (this.activeSubTab !== 'all' || this.statusFilter !== 'ALL') {
       this.personnelApi.getPersonnelProfilesPage({ ...baseParams, page: 1, page_size: 1 }).subscribe({
         next: (res) => { this.statusCounters.allTotal = res?.count ?? 0; this.cdr.detectChanges(); },
-        error: () => {}
+        error: () => {
+          this.toast.showError('دریافت اطلاعات انجام نشد.');
+        }
       });
     }
 
@@ -433,6 +441,8 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
           return;
         }
         this.changeRequests = [];
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -846,6 +856,17 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     this.isDiffModalOpen = false;
     this.selectedDiffCR = null;
     this.diffFieldRows = [];
+  }
+
+  onGlobalEscape(): void {
+    if (this.isDiffModalOpen) {
+      this.closeDiffModal();
+      return;
+    }
+    if (this.isPersonnelModalOpen) {
+      if (!this.isSavingPersonnel) this.closePersonnelModal();
+      return;
+    }
   }
 
   getFieldLabel(field: string): string {

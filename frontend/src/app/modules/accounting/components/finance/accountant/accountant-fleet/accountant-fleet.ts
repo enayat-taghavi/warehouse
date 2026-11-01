@@ -148,18 +148,34 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.loadAllVehiclesPage();
   }
   loadAllVehiclesPage(): void {
+    this.loadError = '';
     const params: any = { page: this.allPage, page_size: this.pageSize };
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) params.search = this.searchQuery.trim();
     this.personnelApi.getVehicleProfilesPage(params).subscribe({
       next: (res) => {
+        this.loadError = '';
         this.allVehiclesList = res?.results || [];
         this.allCount = res?.count ?? this.allVehiclesList.length;
         this.statusCounters.allTotal = this.allCount;
         this.cdr.detectChanges();
       },
       error: (err: any) => {
-        if (err?.status === 404 && this.allPage > 1) { this.allPage = 1; this.loadAllVehiclesPage(); }
+        if (err?.status === 404 && this.allPage > 1) {
+          this.allPage = 1;
+          this.loadAllVehiclesPage();
+          return;
+        }
+        if (err?.status === 404) {
+          this.loadError = '';
+          this.allVehiclesList = [];
+          this.allCount = 0;
+          this.statusCounters.allTotal = 0;
+          this.cdr.detectChanges();
+          return;
+        }
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -185,6 +201,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   }
   changeRequests: VehicleChangeRequest[] = [];
   allVehiclesList: VehicleDriverProfile[] = [];
+  loadError = '';
 
   // شمارنده‌های زنده
   statusCounters = {
@@ -302,7 +319,9 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         this.availableYears = mergeFiscalYears(res?.years, this.fiscalYear);
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => {
+        this.toast.showError('دریافت اطلاعات انجام نشد.');
+      }
     });
 
     const hasWhFilter = this.moduleRegistry?.getExtensions('scopeDirectory').some(e => !!e.extension.offersScopeFilter);
@@ -312,7 +331,9 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
           this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));
           this.cdr.detectChanges();
         },
-        error: () => {}
+        error: () => {
+          this.toast.showError('دریافت اطلاعات انجام نشد.');
+        }
       });
     }
 
@@ -676,11 +697,26 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   }
 
   onApprovalEscape(): void {
-    if (this.isApprovalModalOpen && !this.isApproving) this.closeApprovalModal();
-    if (this.isRejectModalOpen && !this.isSubmittingReject) this.closeRejectModal();
-    if (this.isVehicleModalOpen && !this.isSavingVehicle) this.closeVehicleModal();
-    if (this.isBatchApprovalModalOpen && !this.isBatchApproving) this.closeBatchApprovalModal();
-    if (this.isDiffModalOpen) this.closeDiffModal();
+    if (this.isApprovalModalOpen) {
+      if (!this.isApproving) this.closeApprovalModal();
+      return;
+    }
+    if (this.isDiffModalOpen) {
+      this.closeDiffModal();
+      return;
+    }
+    if (this.isBatchApprovalModalOpen) {
+      if (!this.isBatchApproving) this.closeBatchApprovalModal();
+      return;
+    }
+    if (this.isRejectModalOpen) {
+      if (!this.isSubmittingReject) this.closeRejectModal();
+      return;
+    }
+    if (this.isVehicleModalOpen) {
+      if (!this.isSavingVehicle) this.closeVehicleModal();
+      return;
+    }
   }
 
   onDocumentKeydown(event: KeyboardEvent): void {

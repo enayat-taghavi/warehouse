@@ -5,9 +5,9 @@
     <!-- سمت راست: سال مالی، ماه و تب‌های فرعی -->
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
-        <label for="acc-dsk-year" class="text-[11px] font-bold text-fg-muted">دوره مالی:</label>
+        <label for="ad-dsk-year" class="text-[11px] font-bold text-fg-muted">دوره مالی:</label>
         <select
-          id="acc-dsk-year"
+          id="ad-dsk-year"
           [(ngModel)]="fiscalYear"
           (change)="onPeriodChanged()"
           aria-label="سال مالی دوره"
@@ -16,7 +16,9 @@
             <option [value]="y">{{ y }}</option>
           }
         </select>
+        <label for="ad-dsk-month" class="sr-only">ماه دوره</label>
         <select
+          id="ad-dsk-month"
           [(ngModel)]="selectedMonth"
           (change)="onPeriodChanged()"
           aria-label="ماه دوره"
@@ -30,11 +32,12 @@
       <!-- دامنهٔ دوره: کل شرکت یا یک انبار -->
       @if (showWarehouseScope) {
         <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
-          <label for="acc-dsk-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
+          <label for="ad-dsk-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
           <select
-            id="acc-dsk-scope"
+            id="ad-dsk-scope"
             [(ngModel)]="selectedWarehouseId"
             (change)="onPeriodChanged()"
+            aria-label="دامنه انبار"
             class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
             <option [ngValue]="null">کل شرکت (سراسری)</option>
             @for (wh of warehouses; track wh.id) {
@@ -46,10 +49,12 @@
 
       <!-- انتخابگر پروژه -->
       <div *ngIf="projects.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-        <span class="text-[11px] font-bold text-slate-500">پروژه:</span>
+        <label for="ad-dsk-project" class="text-[11px] font-bold text-slate-500">پروژه:</label>
         <select
+          id="ad-dsk-project"
           [(ngModel)]="selectedProjectId"
           (change)="syncUrlParams()"
+          aria-label="پروژه مالی"
           class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
           <option *ngFor="let proj of projects" [value]="proj.id">
             {{ proj.code ? ('(' + proj.code + ') ') : '' }}{{ proj.name }}
@@ -88,20 +93,16 @@
   </app-command-center>
 
   <!-- وضعیت دوره: خروجی‌ها فقط برای دورهٔ محاسبه‌شده صادر می‌شوند -->
-  @if (!isLoading && periodLoadError) {
+  @if (!isLoading && (loadError || periodLoadError)) {
     <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-rose-800" role="alert">
-      <span class="font-bold">وضعیت دوره {{ selectedMonth }} {{ fiscalYear }} دریافت نشد؛ خروجی‌ها تا بارگذاری دوباره در دسترس نیستند.</span>
+      <span class="font-bold">{{ loadError || ('وضعیت دوره ' + selectedMonth + ' ' + fiscalYear + ' دریافت نشد؛ خروجی‌ها تا بارگذاری دوباره در دسترس نیستند.') }}</span>
       <button
         type="button"
-        appAction="refresh"
-        label="تلاش دوباره"
-        display="label"
-        size="sm"
-        [busy]="isLoading"
+        class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
         (click)="loadPeriod()"
-      ></button>
+      >تلاش دوباره</button>
     </div>
-  } @else if (!isLoading && !currentPeriodId) {
+  } @else if (!isLoading && !currentPeriodId && !loadError) {
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-2 text-xs text-amber-900" role="status">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
       <span>برای دوره {{ selectedMonth }} {{ fiscalYear }} در این دامنه هنوز حقوقی محاسبه نشده است؛ ابتدا از «حقوق و دستمزد ماهانه» محاسبه را اجرا کنید.</span>

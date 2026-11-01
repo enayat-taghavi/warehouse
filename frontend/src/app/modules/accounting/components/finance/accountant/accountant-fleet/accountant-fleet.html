@@ -8,8 +8,10 @@
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
         <!-- انتخابگر بخش فعال -->
         <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-surface-alt border border-line px-2.5 py-1.5 rounded-xl">
-          <span class="text-[11px] font-bold text-muted">بخش فعال:</span>
+          <label for="af-active-section" class="text-[11px] font-bold text-muted">بخش فعال:</label>
           <select
+            id="af-active-section"
+            aria-label="بخش فعال"
             [(ngModel)]="selectedSectionId"
             (change)="onSectionChanged()"
             class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
@@ -21,9 +23,9 @@
 
         <!-- دوره و دامنهٔ تسویه ناوگان -->
         <div class="flex items-center gap-1.5 bg-surface-alt border border-line px-2.5 py-1.5 rounded-xl">
-          <label for="acc-fleet-year" class="text-[11px] font-bold text-muted">دوره تسویه:</label>
+          <label for="af-fleet-year" class="text-[11px] font-bold text-muted">دوره تسویه:</label>
           <select
-            id="acc-fleet-year"
+            id="af-fleet-year"
             [(ngModel)]="fiscalYear"
             (change)="onPeriodChanged()"
             aria-label="سال دوره تسویه"
@@ -32,7 +34,9 @@
               <option [value]="y">{{ y }}</option>
             }
           </select>
+          <label for="af-fleet-month" class="sr-only">ماه دوره تسویه</label>
           <select
+            id="af-fleet-month"
             [(ngModel)]="selectedMonth"
             (change)="onPeriodChanged()"
             aria-label="ماه دوره تسویه"
@@ -45,11 +49,12 @@
 
         @if (showWarehouseScope) {
           <div class="flex items-center gap-1.5 bg-surface-alt border border-line px-2.5 py-1.5 rounded-xl">
-            <label for="acc-fleet-scope" class="text-[11px] font-bold text-muted">دامنه:</label>
+            <label for="af-fleet-scope" class="text-[11px] font-bold text-muted">دامنه:</label>
             <select
-              id="acc-fleet-scope"
+              id="af-fleet-scope"
               [(ngModel)]="selectedWarehouseId"
               (change)="onPeriodChanged()"
+              aria-label="دامنه انبار"
               class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
               <option [ngValue]="null">کل شرکت (سراسری)</option>
               @for (wh of warehouses; track wh.id) {
@@ -73,15 +78,17 @@
       <div class="flex items-center gap-2">
         <div class="relative w-48 md:w-60">
           <input
+            id="af-search-query"
             type="text"
             [(ngModel)]="searchQuery"
             (input)="fetchFleetData()"
             placeholder="جستجوی پلاک، مدل، راننده..."
-            class="w-full bg-surface-alt text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-          <span class="absolute right-2.5 top-2 text-muted">
+            aria-label="جستجوی پلاک، مدل، راننده"
+            class="w-full bg-surface-alt text-xs py-1.5 ps-8 pe-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+          <span class="absolute start-2.5 top-2 text-muted">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="w-3.5 h-3.5"></svg>
           </span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-muted hover:text-fg text-xs cursor-pointer flex items-center justify-center">
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute end-2.5 top-2 text-muted hover:text-fg text-xs cursor-pointer min-w-10 min-h-10 inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" class="w-3.5 h-3.5"></svg>
           </button>
         </div>
@@ -125,7 +132,7 @@
         {{ r.success ? 'تایید شد' : (r.error || 'تایید نشد') }}
       </li>
     </ul>
-    <button type="button" class="tap-target text-[11px] font-bold text-indigo-700 underline" (click)="batchResults = []" aria-label="بستن نتیجه" title="بستن نتیجه">بستن</button>
+    <button type="button" class="tap-target text-[11px] font-bold text-indigo-700 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded" (click)="batchResults = []" aria-label="بستن نتیجه" title="بستن نتیجه">بستن</button>
   </div>
 
   <!-- نوار عملیات گروهی تایید مالی (Batch Approval Floating Bar) -->
@@ -167,11 +174,13 @@
     <!-- جدول دسکتاپ -->
     <div *ngIf="newVehiclesList.length > 0" class="hidden md:block bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3 w-10 text-center">
                 <input
+                  id="af-select-all"
+                  aria-label="انتخاب همه خودروها"
                   type="checkbox"
                   [checked]="isAllSelected()"
                   (change)="toggleSelectAll()"
@@ -187,9 +196,11 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-line/60">
-            <tr *ngFor="let item of newVehiclesList" class="hover:bg-surface-alt/50 transition-all">
+            <tr *ngFor="let item of newVehiclesList; let i = index" class="hover:bg-surface-alt/50 transition-all">
               <td class="p-3 text-center">
                 <input
+                  id="af-vehicle-check-{{ i }}"
+                  [attr.aria-label]="'انتخاب خودرو ' + (item.plate_number || item.driver_name || '')"
                   type="checkbox"
                   [checked]="isSelected(item.id)"
                   [disabled]="!canSendToManager(item)"
@@ -198,13 +209,14 @@
               </td>
               <td class="p-3 font-mono font-bold text-fg">
                 <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-line bg-surface-alt">
-                  <span>{{ item.plate_number || '—' }}</span>
+                  <span><bdi dir="ltr">{{ item.plate_number || '—' }}</bdi></span>
                   <button
                     *ngIf="item.id"
                     type="button"
                     (click)="copyToClipboard(item.plate_number || '', item.id)"
-                    class="text-muted hover:text-indigo-600 cursor-pointer"
-                    title="کپی پلاک">
+                    class="text-muted hover:text-indigo-600 cursor-pointer min-w-10 min-h-10 inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
+                    title="کپی پلاک"
+                    aria-label="کپی پلاک">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3.5 h-3.5"></svg>
                   </button>
                 </div>
@@ -219,8 +231,8 @@
               </td>
               <td class="p-3">
                 <div *ngIf="item.sheba_number" class="flex items-center gap-1 font-mono text-[11px] font-bold text-fg">
-                  <span>IR{{ item.sheba_number }}</span>
-                  <button *ngIf="item.id" (click)="copyToClipboard('IR' + item.sheba_number, item.id)" title="کپی شبا" class="text-muted hover:text-indigo-600 cursor-pointer">
+                  <span><bdi dir="ltr">IR{{ item.sheba_number }}</bdi></span>
+                  <button *ngIf="item.id" type="button" (click)="copyToClipboard('IR' + item.sheba_number, item.id)" title="کپی شبا" aria-label="کپی شبا" class="text-muted hover:text-indigo-600 cursor-pointer min-w-10 min-h-10 inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3 h-3"></svg>
                   </button>
                 </div>
@@ -283,17 +295,19 @@
 
     <!-- کارت‌های موبایل (تسک ۹.۶) -->
     <div *ngIf="newVehiclesList.length > 0" class="md:hidden space-y-3">
-      <div *ngFor="let item of newVehiclesList" class="bg-surface rounded-2xl p-4 border border-line shadow-sm space-y-3">
+      <div *ngFor="let item of newVehiclesList; let i = index" class="bg-surface rounded-2xl p-4 border border-line shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <input
+              id="af-vehicle-card-check-{{ i }}"
+              [attr.aria-label]="'انتخاب خودرو ' + (item.plate_number || item.driver_name || '')"
               type="checkbox"
               [checked]="isSelected(item.id)"
               [disabled]="!canSendToManager(item)"
               (change)="toggleSelection(item.id)"
               class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-30" />
             <span class="font-mono font-bold text-fg bg-surface-alt px-2.5 py-1 rounded-lg border border-line text-xs">
-              {{ item.plate_number || '—' }}
+              <bdi dir="ltr">{{ item.plate_number || '—' }}</bdi>
             </span>
           </div>
           <span *ngIf="canSendToManager(item)" class="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800">
@@ -321,7 +335,7 @@
           </div>
           <div>
             <span class="text-muted block text-[10px]">شبا:</span>
-            <span class="font-mono text-muted text-[11px]">{{ item.sheba_number ? ('IR' + item.sheba_number) : 'فاقد شبا' }}</span>
+            <span class="font-mono text-muted text-[11px]"><bdi dir="ltr">{{ item.sheba_number ? ('IR' + item.sheba_number) : 'فاقد شبا' }}</bdi></span>
           </div>
         </div>
 
@@ -427,7 +441,7 @@
 
     <div *ngIf="settlementItems.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3">پلاک خودرو</th>
@@ -473,7 +487,7 @@
 
     <div *ngIf="changeRequests.length > 0" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3">شماره پلاک</th>
@@ -534,8 +548,15 @@
   <!-- زیرتب ۴: همه ناوگان -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
     <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs">
+      <div *ngIf="loadError" class="p-6 text-center text-xs text-rose-700 bg-rose-50 rounded-2xl border border-rose-200 m-3" role="alert">
+        <span>{{ loadError }}</span>
+        <button type="button" class="ms-2 min-h-10 px-3 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500" (click)="loadAllVehiclesPage()">تلاش دوباره</button>
+      </div>
+      <div *ngIf="allVehiclesList.length === 0 && !loadError" class="p-8 text-center text-muted">
+        <p class="font-bold text-sm">هیچ خودرویی یافت نشد.</p>
+      </div>
+      <div *ngIf="allVehiclesList.length > 0" class="overflow-x-auto">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3">پلاک خودرو</th>
@@ -565,14 +586,14 @@
       </div>
       <div *ngIf="allCount > pageSize" class="p-3 flex items-center justify-between gap-2 text-xs border-t border-line">
         <button type="button" (click)="goToAllPage(allPage - 1)" [disabled]="allPage <= 1"
-          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           title="صفحهٔ قبلی" aria-label="صفحهٔ قبلی">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
           <span class="hidden sm:inline">قبلی</span>
         </button>
         <span class="font-bold text-fg-muted tabular-nums">صفحهٔ {{ allPage | number }} از {{ allTotalPages | number }}</span>
         <button type="button" (click)="goToAllPage(allPage + 1)" [disabled]="allPage >= allTotalPages"
-          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500"
+          class="min-h-[40px] min-w-[40px] px-3 inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface text-fg font-bold disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           title="صفحهٔ بعد" aria-label="صفحهٔ بعد">
           <span class="hidden sm:inline">بعدی</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
@@ -583,11 +604,11 @@
 
   <!-- ── تسک ۹.۲ و ۹.۳: مودال تنظیم نرخ کرایه و شبا ناوگان + شاخص هم‌تیپ‌ها ── -->
   <div *ngIf="isVehicleModalOpen && editingVehicle" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-line overflow-hidden fade-in zoom-in duration-150">
+    <div role="dialog" aria-modal="true" aria-labelledby="af-modal-vehicle-title" class="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-line overflow-hidden fade-in zoom-in duration-150">
       
       <div class="p-4 bg-surface-alt border-b border-line flex items-center justify-between">
         <div>
-          <h3 class="text-sm font-black text-fg">
+          <h3 id="af-modal-vehicle-title" class="text-sm font-black text-fg">
             تنظیم نرخ کرایه و شبا: {{ editingVehicle.plate_number }}
           </h3>
           <span class="text-xs text-muted font-bold">{{ editingVehicle.vehicle_type_display || editingVehicle.vehicle_type }}</span>
@@ -627,9 +648,11 @@
 
         <!-- فیلد نرخ پایه هر سرویس -->
         <div>
-          <label class="block font-bold text-fg mb-1">نرخ پایه هر سرویس (ریال):</label>
+          <label for="af-default-service-rate" class="block font-bold text-fg mb-1">نرخ پایه هر سرویس (ریال):</label>
           <input
+            id="af-default-service-rate"
             type="number"
+            aria-label="نرخ پایه هر سرویس (ریال)"
             [(ngModel)]="editingVehicle.default_service_rate"
             placeholder="مثال: ۱۵۰۰۰۰۰..."
             class="w-full bg-surface-alt border border-line rounded-xl p-2.5 font-mono font-bold text-xs focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500 text-fg" />
@@ -641,8 +664,10 @@
         <!-- فیلدهای بانکی -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-fg mb-1">نام بانک:</label>
+            <label for="af-bank-name" class="block font-bold text-fg mb-1">نام بانک:</label>
             <select
+              id="af-bank-name"
+              aria-label="نام بانک"
               [(ngModel)]="editingVehicle.bank_name"
               (change)="onBankSelect()"
               class="w-full bg-surface-alt border border-line rounded-xl p-2 text-xs font-bold text-fg focus:bg-surface focus:outline-none cursor-pointer">
@@ -650,10 +675,12 @@
             </select>
           </div>
           <div>
-            <label class="block font-bold text-fg mb-1">شماره حساب بانکی:</label>
+            <label for="af-account-number" class="block font-bold text-fg mb-1">شماره حساب بانکی:</label>
             <div class="flex gap-1.5">
               <input
+                id="af-account-number"
                 type="text"
+                aria-label="شماره حساب بانکی"
                 [ngModel]="editingVehicle.account_number"
                 (ngModelChange)="onAccountNumberInput($event)"
                 placeholder="شماره حساب..."
@@ -664,15 +691,15 @@
                 (click)="copyToClipboard(editingVehicle.account_number || '', editingVehicle.id)"
                 title="کپی شماره حساب"
                 aria-label="کپی شماره حساب"
-                class="px-2.5 py-1.5 bg-surface-alt hover:bg-line border border-line rounded-xl text-muted hover:text-fg text-xs cursor-pointer flex items-center justify-center">
+                class="min-w-10 min-h-10 inline-flex items-center justify-center bg-surface-alt hover:bg-line border border-line rounded-xl text-muted hover:text-fg text-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3.5 h-3.5"></svg>
               </button>
               <button
                 type="button"
                 (click)="convertAccountToShebaNow()"
                 title="تولید شماره شبا از حساب و بانک"
-                aria-label="تولید شماره شبا"
-                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm flex items-center justify-center active:scale-95">
+                aria-label="تولید شماره شبا از حساب و بانک"
+                class="min-w-10 min-h-10 inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap" class="w-4 h-4"></svg>
               </button>
             </div>
@@ -680,11 +707,13 @@
         </div>
 
         <div>
-          <label class="block font-bold text-fg mb-1">شماره شبا (۲۴ رقم):</label>
+          <label for="af-sheba-number" class="block font-bold text-fg mb-1">شماره شبا (۲۴ رقم):</label>
           <div class="flex items-center gap-1 bg-surface-alt border border-line rounded-xl p-2">
             <span class="font-mono font-bold text-muted">IR</span>
             <input
+              id="af-sheba-number"
               type="text"
+              aria-label="شماره شبا (۲۴ رقم)"
               [ngModel]="shebaDigitsDisplay"
               (ngModelChange)="onShebaInput($event)"
               placeholder="شماره شبا..."
@@ -695,7 +724,7 @@
               (click)="copyToClipboard('IR' + (editingVehicle.sheba_number || shebaDigitsDisplay), editingVehicle.id)"
               title="کپی شماره شبا"
               aria-label="کپی شماره شبا"
-              class="p-1 text-muted hover:text-indigo-600 cursor-pointer">
+              class="min-w-10 min-h-10 inline-flex items-center justify-center text-muted hover:text-indigo-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3.5 h-3.5"></svg>
             </button>
           </div>
@@ -764,7 +793,7 @@
                   *ngIf="!acc.is_primary"
                   type="button"
                   (click)="setPrimaryBankAccount(acc)"
-                  class="px-2.5 py-1 rounded-lg bg-surface hover:bg-indigo-50 border border-line hover:border-indigo-300 text-indigo-700 font-bold text-[11px] cursor-pointer shadow-sm transition-colors">
+                  class="px-2.5 py-1 rounded-lg bg-surface hover:bg-indigo-50 border border-line hover:border-indigo-300 text-indigo-700 font-bold text-[11px] cursor-pointer shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                   تعیین به عنوان حساب اصلی
                 </button>
               </div>
@@ -797,10 +826,10 @@
 
   <!-- ── تسک ۹.۵: مودال ثبت علت رد یا عودت با انتخاب مقصد عودت ── -->
   <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
+    <div role="dialog" aria-modal="true" aria-labelledby="af-modal-reject-title" class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
-        <h3 class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده خودرو' : 'رد قطعی پرونده' }}</h3>
+        <h3 id="af-modal-reject-title" class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده خودرو' : 'رد قطعی پرونده' }}</h3>
         <button
           type="button"
           appAction="close"
@@ -811,8 +840,10 @@
       <div class="p-4 space-y-3 text-xs">
         <p class="font-bold text-fg">{{ rejectTarget?.title }}</p>
 
-        <label class="block font-bold text-fg">علت نقص مدارک یا دلیل عودت (الزامی):</label>
+        <label for="af-reject-reason" class="block font-bold text-fg">علت نقص مدارک یا دلیل عودت (الزامی):</label>
         <textarea
+          id="af-reject-reason"
+          aria-label="علت نقص مدارک یا دلیل عودت"
           [(ngModel)]="rejectReason"
           rows="3"
           placeholder="علت نقص مدارک، اصلاح نرخ یا دلیل عودت پرونده را بنویسید..."
@@ -841,9 +872,9 @@
 
   <!-- ── تسک ۹.۶: مودال تایید گروهی حسابدار ── -->
   <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
+    <div role="dialog" aria-modal="true" aria-labelledby="af-modal-batch-approval-title" class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
-        <h3 class="text-sm font-black text-indigo-950">تایید مالی گروهی {{ selectedVehicleIds.size }} خودرو</h3>
+        <h3 id="af-modal-batch-approval-title" class="text-sm font-black text-indigo-950">تایید مالی گروهی {{ selectedVehicleIds.size }} خودرو</h3>
         <button
           type="button"
           appAction="close"
@@ -855,8 +886,10 @@
         <p class="text-xs text-muted leading-relaxed">
           برای خودروهای انتخاب‌شده تایید مالی صادر شده و پرونده‌ها جهت تصویب نهایی به کارتابل مدیر ارسال خواهند شد.
         </p>
-        <label class="text-xs font-bold text-fg block">یادداشت تایید مالی (اختیاری):</label>
+        <label for="af-batch-approval-note" class="text-xs font-bold text-fg block">یادداشت تایید مالی (اختیاری):</label>
         <textarea
+          id="af-batch-approval-note"
+          aria-label="یادداشت تایید مالی"
           [(ngModel)]="batchApprovalNote"
           rows="3"
           placeholder="توضیحات مربوط به تایید مالی یا شرایط نرخ‌ها..."
@@ -885,9 +918,9 @@
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Viewer) ── -->
   <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
+    <div role="dialog" aria-modal="true" aria-labelledby="af-modal-diff-title" class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
-        <h3 class="text-sm font-black text-indigo-900">
+        <h3 id="af-modal-diff-title" class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌های ناوگان (Diff): {{ selectedDiffCR?.plate_number }}
         </h3>
         <button
@@ -898,7 +931,7 @@
         </button>
       </div>
       <div class="p-4 max-h-96 overflow-y-auto">
-        <table class="w-full text-right text-xs">
+        <table class="w-full text-start text-xs">
           <thead class="bg-surface-alt text-muted">
             <tr>
               <th class="p-2.5">عنوان فیلد</th>
@@ -943,7 +976,7 @@
   <!-- ── مودال تایید مالی با یادداشت اختیاری ── -->
   @if (isApprovalModalOpen && approvalTarget) {
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="acc-fleet-approve-title">
-      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" (click)="closeApprovalModal()"></div>
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" (click)="closeApprovalModal()" aria-hidden="true"></div>
       <div id="acc-fleet-approve-dialog" class="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col modal-enter p-5 gap-4">
         <div class="flex items-center justify-between border-b border-line pb-3">
           <h3 id="acc-fleet-approve-title" class="text-sm font-black text-fg">
@@ -961,6 +994,7 @@
         </label>
         <textarea
           id="acc-fleet-approve-note"
+          aria-label="یادداشت تایید مالی"
           [(ngModel)]="approvalNote"
           rows="3"
           class="w-full bg-surface-alt border border-line rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 text-fg"

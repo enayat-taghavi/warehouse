@@ -84,6 +84,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   workshopCode = '0012345678';
 
   isLoading = false;
+  loadError = '';
   /** دریافت رکوردهای دوره ناموفق بود؛ نباید «حقوقی محاسبه نشده» نشان داده شود */
   periodLoadError = false;
   isGenerating = false;
@@ -158,7 +159,9 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
         this.availableYears = mergeFiscalYears(res?.years, this.fiscalYear);
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => {
+        this.toast.error('دریافت اطلاعات انجام نشد.');
+      }
     });
 
     const hasWhFilter = this.moduleRegistry?.getExtensions('scopeDirectory').some(e => !!e.extension.offersScopeFilter);
@@ -168,7 +171,9 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
           this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));
           this.cdr.detectChanges();
         },
-        error: () => {}
+        error: () => {
+          this.toast.error('دریافت اطلاعات انجام نشد.');
+        }
       });
     }
 
@@ -191,6 +196,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   /** شناسهٔ دورهٔ محاسبه‌شدهٔ همین ماه و دامنه از روی رکوردهای حقوق */
   loadPeriod(): void {
     this.isLoading = true;
+    this.loadError = '';
     this.periodLoadError = false;
     this.currentPeriodId = null;
     const params: any = { year_month: this.yearMonth };
@@ -199,6 +205,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     }
     this.personnelApi.getMonthlyPayrollRecords(params).subscribe({
       next: (recs: any[]) => {
+        this.loadError = '';
         const first = Array.isArray(recs) ? recs[0] : null;
         this.currentPeriodId = first?.period ? (typeof first.period === 'object' ? first.period.id : first.period) : null;
         this.isLoading = false;
@@ -206,6 +213,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoading = false;
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
         this.periodLoadError = true;
         this.cdr.detectChanges();
       }
