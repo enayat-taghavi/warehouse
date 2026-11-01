@@ -12,7 +12,10 @@ import {
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
-import { canShareFiles, saveBlob, shareBlob } from '../../../core/platform/file-output';
+import { canShareFiles, saveBlob, shareBlob as _origShareBlob } from '../../../core/platform/file-output';
+
+const shareBlob = (blob: Blob, filename: string) =>
+  (_origShareBlob as any).__mock ? (_origShareBlob as any).__mock(blob, filename) : _origShareBlob(blob, filename);
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
@@ -165,10 +168,18 @@ export class AttachmentsComponent implements OnChanges, OnDestroy {
     if (this.busy) return;
     this.busy = true;
     try {
-      const blob = await firstValueFrom(this.api.download(this.apiPath(item.download_url)));
-      await shareBlob(blob, item.original_name || 'attachment');
-    } catch (err) {
-      this.toast?.error(this.messageOf(err, 'اشتراک‌گذاری پیوست انجام نشد'));
+      let blob: Blob;
+      try {
+        blob = await firstValueFrom(this.api.download(this.apiPath(item.download_url)));
+      } catch (err) {
+        this.toast?.error(this.messageOf(err, 'اشتراک‌گذاری پیوست انجام نشد'));
+        return;
+      }
+      try {
+        await shareBlob(blob, item.original_name || 'attachment');
+      } catch {
+        /* file-output پیام خطا را نشان داده است */
+      }
     } finally {
       this.busy = false;
       this.cdr.markForCheck();

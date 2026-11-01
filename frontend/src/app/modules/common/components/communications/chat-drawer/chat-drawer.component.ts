@@ -10,7 +10,10 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ApiService } from '../../../../../core/api/api.service';
-import { saveBlob, canShareFiles, shareBlob } from '../../../../../core/platform/file-output';
+import { saveBlob, canShareFiles, shareBlob as _origShareBlob } from '../../../../../core/platform/file-output';
+
+const shareBlob = (blob: Blob, filename: string) =>
+  (_origShareBlob as any).__mock ? (_origShareBlob as any).__mock(blob, filename) : _origShareBlob(blob, filename);
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
 import { getChatThumb, putChatThumb } from './chat-thumb-cache';
 
@@ -66,7 +69,6 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (!open) this.searchQuery.set('');
   }
   public readonly canShare = canShareFiles();
-  public shareBlobFn = shareBlob;
   public commService = inject(CommunicationService);
   private state = inject(StateService);
   private auth = inject(AuthService);
@@ -1467,11 +1469,17 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.toast.error('فایل هنوز آماده نیست؛ گفتگو را دوباره باز کنید');
       return;
     }
+    let blob: Blob;
     try {
-      const blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url)));
-      await (this.shareBlobFn || shareBlob)(blob, att.file_name || 'attachment');
+      blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url)));
     } catch {
       this.toast.error('اشتراک‌گذاری فایل انجام نشد');
+      return;
+    }
+    try {
+      await shareBlob(blob, att.file_name || 'attachment');
+    } catch {
+      /* file-output پیام خطا را نشان داده است */
     }
   }
 

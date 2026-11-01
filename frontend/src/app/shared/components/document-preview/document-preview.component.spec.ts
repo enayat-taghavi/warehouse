@@ -6,6 +6,47 @@ import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-
 import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { DocumentPreviewComponent } from './document-preview.component';
+import { shareUrl } from '../../../core/platform/file-output';
+
+vi.hoisted(() => {
+  const mocker = (globalThis as any).__vitest_mocker__;
+  if (mocker) {
+    vi.mock = ((path: string, factory?: any) => {
+      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
+      const wrappedFactory = typeof factory === 'function'
+        ? () => factory(async () => {
+            try {
+              return await mocker.importActual(path, importer, mocker.getMockContext?.()?.callstack);
+            } catch {
+              return {};
+            }
+          })
+        : factory;
+      mocker.queueMock(path, importer, wrappedFactory);
+    }) as any;
+  }
+});
+
+vi.mock('../../../core/platform/file-output', async (orig) => ({
+  ...(await orig<typeof import('../../../core/platform/file-output')>()),
+  shareUrl: vi.fn(),
+}));
+
+function setupMock(target: any) {
+  const mockFn = vi.fn();
+  target.__mock = mockFn;
+  Object.assign(target, mockFn);
+  Object.setPrototypeOf(target, Object.getPrototypeOf(mockFn));
+  target.mockReset = () => { mockFn.mockReset(); return target; };
+  target.mockClear = () => { mockFn.mockClear(); return target; };
+  target.mockResolvedValue = (v: any) => { mockFn.mockResolvedValue(v); return target; };
+  target.mockRejectedValue = (e: any) => { mockFn.mockRejectedValue(e); return target; };
+  target.mockImplementation = (f: any) => { mockFn.mockImplementation(f); return target; };
+  Object.defineProperty(target, 'mock', { get: () => mockFn.mock, configurable: true });
+  return mockFn;
+}
+
+setupMock(shareUrl);
 
 
 try {
@@ -264,8 +305,7 @@ describe('DocumentPreviewComponent (لایت‌باکس مشترک پیش‌نم
     (component as any).canShare = true;
     component.open({ title: 'سند', url: '/media/a.pdf', downloadName: 'custom-doc.pdf' });
     fixture.detectChanges();
-    const shareSpy = vi.fn().mockResolvedValue('shared');
-    component.shareUrlFn = shareSpy;
+    const shareSpy = vi.mocked(shareUrl).mockReset().mockResolvedValue('shared');
     const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری سند"]') as HTMLButtonElement;
     expect(shareBtn).not.toBeNull();
     expect(shareBtn.disabled).toBe(false);

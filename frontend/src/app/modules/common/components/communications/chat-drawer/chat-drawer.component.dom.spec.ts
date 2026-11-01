@@ -13,6 +13,47 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
+import { shareBlob } from '../../../../../core/platform/file-output';
+
+vi.hoisted(() => {
+  const mocker = (globalThis as any).__vitest_mocker__;
+  if (mocker) {
+    vi.mock = ((path: string, factory?: any) => {
+      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
+      const wrappedFactory = typeof factory === 'function'
+        ? () => factory(async () => {
+            try {
+              return await mocker.importActual(path, importer, mocker.getMockContext?.()?.callstack);
+            } catch {
+              return {};
+            }
+          })
+        : factory;
+      mocker.queueMock(path, importer, wrappedFactory);
+    }) as any;
+  }
+});
+
+vi.mock('../../../../../core/platform/file-output', async (orig) => ({
+  ...(await orig<typeof import('../../../../../core/platform/file-output')>()),
+  shareBlob: vi.fn(),
+}));
+
+function setupMock(target: any) {
+  const mockFn = vi.fn();
+  target.__mock = mockFn;
+  Object.assign(target, mockFn);
+  Object.setPrototypeOf(target, Object.getPrototypeOf(mockFn));
+  target.mockReset = () => { mockFn.mockReset(); return target; };
+  target.mockClear = () => { mockFn.mockClear(); return target; };
+  target.mockResolvedValue = (v: any) => { mockFn.mockResolvedValue(v); return target; };
+  target.mockRejectedValue = (e: any) => { mockFn.mockRejectedValue(e); return target; };
+  target.mockImplementation = (f: any) => { mockFn.mockImplementation(f); return target; };
+  Object.defineProperty(target, 'mock', { get: () => mockFn.mock, configurable: true });
+  return mockFn;
+}
+
+setupMock(shareBlob);
 
 
 try {
@@ -518,8 +559,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   it('shareAttachment: downloads attachment through api and calls shareBlob with blob and file name', async () => {
     await setup({ conv: groupConv('member') });
-    const shareSpy = vi.fn().mockResolvedValue('shared');
-    fixture.componentInstance.shareBlobFn = shareSpy;
+    const shareSpy = vi.mocked(shareBlob).mockReset().mockResolvedValue('shared');
     const fakeBlob = new Blob(['attachment payload'], { type: 'application/pdf' });
     const api = TestBed.inject(ApiService) as any;
     api.download = vi.fn().mockReturnValue(of(fakeBlob));
@@ -533,13 +573,26 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   it('shareAttachment: shows not-ready toast and does not call shareBlob when download_url is missing', async () => {
     await setup({ conv: groupConv('member') });
-    const shareSpy = vi.fn().mockResolvedValue('shared');
-    fixture.componentInstance.shareBlobFn = shareSpy;
+    const shareSpy = vi.mocked(shareBlob).mockReset().mockResolvedValue('shared');
 
     const att = { file_name: 'pending.pdf' };
     await fixture.componentInstance.shareAttachment(att);
 
     expect(toast.error).toHaveBeenCalledWith('فایل هنوز آماده نیست؛ گفتگو را دوباره باز کنید');
     expect(shareSpy).not.toHaveBeenCalled();
+  });
+
+  it('shareAttachment: shows no toast when shareBlob is rejected', async () => {
+    await setup({ conv: groupConv('member') });
+    const shareSpy = vi.mocked(shareBlob).mockReset().mockRejectedValue(new Error('share failed'));
+    const fakeBlob = new Blob(['attachment payload'], { type: 'application/pdf' });
+    const api = TestBed.inject(ApiService) as any;
+    api.download = vi.fn().mockReturnValue(of(fakeBlob));
+
+    const att = { download_url: '/api/v1/chat/files/10/download/', file_name: 'invoice.pdf' };
+    await fixture.componentInstance.shareAttachment(att);
+
+    expect(shareSpy).toHaveBeenCalledWith(fakeBlob, 'invoice.pdf');
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

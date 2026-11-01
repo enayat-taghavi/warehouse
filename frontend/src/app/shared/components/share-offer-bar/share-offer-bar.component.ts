@@ -1,6 +1,21 @@
 import { Component, OnDestroy, signal } from '@angular/core';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
-import { setFileShareOfferNotifier, shareBlob, ShareOffer, ShareResult } from '../../../core/platform/file-output';
+import {
+  setFileShareOfferNotifier as _origSetFileShareOfferNotifier,
+  shareBlob as _origShareBlob,
+  ShareOffer,
+  ShareResult
+} from '../../../core/platform/file-output';
+
+const setFileShareOfferNotifier = (fn: ((offer: ShareOffer) => void) | null) =>
+  (_origSetFileShareOfferNotifier as any).__mock
+    ? (_origSetFileShareOfferNotifier as any).__mock(fn)
+    : _origSetFileShareOfferNotifier(fn);
+
+const shareBlob = (blob: Blob, filename: string) =>
+  (_origShareBlob as any).__mock
+    ? (_origShareBlob as any).__mock(blob, filename)
+    : _origShareBlob(blob, filename);
 
 /**
  * نوار پیشنهاد اشتراک‌گذاری فایل پس از دانلود (Web / PWA).
@@ -51,19 +66,13 @@ import { setFileShareOfferNotifier, shareBlob, ShareOffer, ShareResult } from '.
   `,
 })
 export class ShareOfferBarComponent implements OnDestroy {
-  public static lastNotifier: ((offer: ShareOffer) => void) | null = null;
-
   public readonly offer = signal<ShareOffer | null>(null);
   public readonly busy = signal(false);
-
-  public shareBlob: (blob: Blob, filename: string) => Promise<ShareResult> = shareBlob;
 
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    const notifier = (o: ShareOffer) => this.show(o);
-    ShareOfferBarComponent.lastNotifier = notifier;
-    setFileShareOfferNotifier(notifier);
+    setFileShareOfferNotifier((o: ShareOffer) => this.show(o));
   }
 
   public show(o: ShareOffer): void {
@@ -83,7 +92,7 @@ export class ShareOfferBarComponent implements OnDestroy {
     this.busy.set(true);
     this.clearTimer();
     try {
-      const result = await this.shareBlob(currentOffer.blob, currentOffer.filename);
+      const result = await shareBlob(currentOffer.blob, currentOffer.filename);
       if (result !== 'offered') {
         this.close();
       }
@@ -96,7 +105,6 @@ export class ShareOfferBarComponent implements OnDestroy {
 
   public ngOnDestroy(): void {
     setFileShareOfferNotifier(null);
-    ShareOfferBarComponent.lastNotifier = null;
     this.clearTimer();
   }
 

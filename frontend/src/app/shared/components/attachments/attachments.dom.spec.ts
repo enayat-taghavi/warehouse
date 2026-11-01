@@ -9,12 +9,13 @@ import { AttachmentsComponent, AttachmentItem } from './attachments.component';
 import { ApiService } from '../../../core/api/api.service';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
+import { shareBlob } from '../../../core/platform/file-output';
 
 const { mockCanShareFiles, mockShareBlob, mockSaveBlob } = vi.hoisted(() => {
   const mocker = (globalThis as any).__vitest_mocker__;
   if (mocker) {
     vi.mock = ((path: string, factory?: any) => {
-      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/\\/g, '/');
+      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
       mocker.queueMock(path, importer, typeof factory === 'function' ? factory : undefined);
     }) as any;
   }
@@ -104,6 +105,7 @@ describe('AttachmentsComponent DOM Spec', () => {
   });
 
   beforeEach(async () => {
+    (shareBlob as any).__mock = mockShareBlob;
     setNavigatorShareSupport(false);
     mockCanShareFiles.mockReturnValue(false);
     mockShareBlob.mockReset().mockResolvedValue('shared');
@@ -296,5 +298,24 @@ describe('AttachmentsComponent DOM Spec', () => {
     fixture.detectChanges();
 
     expect(toast.error).toHaveBeenCalledWith('اشتراک‌گذاری پیوست انجام نشد');
+  });
+
+  it('shows no toast when shareBlob is rejected', async () => {
+    setNavigatorShareSupport(true);
+    mockCanShareFiles.mockReturnValue(true);
+    const dummyBlob = new Blob(['sample-data'], { type: 'application/pdf' });
+    api.download.mockReturnValue(of(dummyBlob));
+    mockShareBlob.mockRejectedValue(new Error('share failed'));
+    await createComponent();
+
+    const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]') as HTMLButtonElement;
+    expect(shareBtn).toBeTruthy();
+
+    await component.share(sampleItems[0]);
+    fixture.detectChanges();
+
+    expect(mockShareBlob).toHaveBeenCalledWith(dummyBlob, 'test-contract.pdf');
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(component.busy).toBe(false);
   });
 });
