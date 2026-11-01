@@ -300,7 +300,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
           }).format(now).replace(/[/\s:]/g, '-');
           const fileName = `warehouse_backup_${pDate}.wbak`;
 
-          void saveBlob(blob, fileName);
+          void saveBlob(blob, fileName, { offerShare: false });
 
           this.toast.show('success', 'نسخه پشتیبان با موفقیت ساخته و دانلود شد.');
           this.backupPassword = '';

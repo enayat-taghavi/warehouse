@@ -1113,7 +1113,7 @@ export async function downloadLocalDatabaseSnapshotFile(): Promise<{ fileName: s
   const fileName = `warehouse_indexeddb_snapshot_${dateSlug}.json`;
 
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json;charset=utf-8' });
-  await saveBlob(blob, fileName);
+  await saveBlob(blob, fileName, { offerShare: false });
 
   return { fileName, totalRecords: snapshot.metrics.totalRecords };
 }

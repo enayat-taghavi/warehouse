@@ -10,9 +10,50 @@ import { ApiService } from '../../../core/api/api.service';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
 
+const { mockCanShareFiles, mockShareBlob, mockSaveBlob } = vi.hoisted(() => {
+  const mocker = (globalThis as any).__vitest_mocker__;
+  if (mocker) {
+    vi.mock = ((path: string, factory?: any) => {
+      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/\\/g, '/');
+      mocker.queueMock(path, importer, typeof factory === 'function' ? factory : undefined);
+    }) as any;
+  }
+  return {
+    mockCanShareFiles: vi.fn(() => false),
+    mockShareBlob: vi.fn(),
+    mockSaveBlob: vi.fn(),
+  };
+});
+
+vi.mock('../../../core/platform/file-output', () => ({
+  canShareFiles: () => mockCanShareFiles(),
+  shareBlob: (...args: any[]) => mockShareBlob(...args),
+  saveBlob: (...args: any[]) => mockSaveBlob(...args),
+}));
+
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
+
+function setNavigatorShareSupport(supported: boolean): void {
+  if (supported) {
+    Object.defineProperty(navigator, 'share', {
+      value: vi.fn().mockResolvedValue(undefined),
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(navigator, 'canShare', {
+      value: vi.fn().mockReturnValue(true),
+      configurable: true,
+      writable: true,
+    });
+  } else {
+    try {
+      delete (navigator as any).share;
+      delete (navigator as any).canShare;
+    } catch {}
+  }
+}
 
 describe('AttachmentsComponent DOM Spec', () => {
   let fixture: ComponentFixture<AttachmentsComponent>;
@@ -63,6 +104,11 @@ describe('AttachmentsComponent DOM Spec', () => {
   });
 
   beforeEach(async () => {
+    setNavigatorShareSupport(false);
+    mockCanShareFiles.mockReturnValue(false);
+    mockShareBlob.mockReset().mockResolvedValue('shared');
+    mockSaveBlob.mockReset().mockResolvedValue(undefined);
+
     api = {
       get: vi.fn().mockReturnValue(of(sampleItems)),
       upload: vi.fn().mockReturnValue(of({})),
@@ -88,6 +134,7 @@ describe('AttachmentsComponent DOM Spec', () => {
   });
 
   afterEach(() => {
+    setNavigatorShareSupport(false);
     fixture?.destroy();
     TestBed.resetTestingModule();
   });
@@ -183,5 +230,71 @@ describe('AttachmentsComponent DOM Spec', () => {
     fixture.detectChanges();
 
     expect(api.get).toHaveBeenCalledWith('attachments', expect.objectContaining({ label: 'signature' }));
+  });
+
+  it('hides share button when canShareFiles returns false', async () => {
+    setNavigatorShareSupport(false);
+    mockCanShareFiles.mockReturnValue(false);
+    await createComponent();
+    expect(fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]')).toBeNull();
+  });
+
+  it('shows share button when canShareFiles returns true', async () => {
+    setNavigatorShareSupport(true);
+    mockCanShareFiles.mockReturnValue(true);
+    await createComponent();
+    const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]') as HTMLButtonElement;
+    expect(shareBtn).toBeTruthy();
+    expect(shareBtn.getAttribute('title')).toBe('اشتراک‌گذاری');
+  });
+
+  it('downloads through api and calls shareBlob on share click', async () => {
+    setNavigatorShareSupport(true);
+    mockCanShareFiles.mockReturnValue(true);
+    const dummyBlob = new Blob(['sample-data'], { type: 'application/pdf' });
+    api.download.mockReturnValue(of(dummyBlob));
+    await createComponent();
+
+    const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]') as HTMLButtonElement;
+    expect(shareBtn).toBeTruthy();
+
+    shareBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(api.download).toHaveBeenCalled();
+    const calledPath = api.download.mock.calls[0]?.[0];
+    expect(['attachments/1/download/', 'attachments/1/download']).toContain(calledPath);
+
+    if (mockShareBlob.mock.calls.length > 0) {
+      expect(mockShareBlob).toHaveBeenCalledWith(dummyBlob, 'test-contract.pdf');
+    } else {
+      expect((navigator as any).share).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'test-contract.pdf' })
+      );
+    }
+  });
+
+  it('shows toast on share download error', async () => {
+    setNavigatorShareSupport(true);
+    mockCanShareFiles.mockReturnValue(true);
+    api.download.mockReturnValue(throwError(() => ({ error: { detail: 'خطای سرور' } })));
+    await createComponent();
+
+    const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]') as HTMLButtonElement;
+    expect(shareBtn).toBeTruthy();
+
+    shareBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('خطای سرور');
+
+    api.download.mockReturnValue(throwError(() => new Error('network failure')));
+    shareBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('اشتراک‌گذاری پیوست انجام نشد');
   });
 });

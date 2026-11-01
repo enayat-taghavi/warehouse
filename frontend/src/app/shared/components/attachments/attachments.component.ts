@@ -12,7 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
-import { saveBlob } from '../../../core/platform/file-output';
+import { canShareFiles, saveBlob, shareBlob } from '../../../core/platform/file-output';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
@@ -62,6 +62,7 @@ export class AttachmentsComponent implements OnChanges, OnDestroy {
   loading = false;
   error = '';
   busy = false;
+  readonly canShare = canShareFiles();
   previews: Record<number, string> = {};
   private replaceTargetId: number | null = null;
   private loadSeq = 0;
@@ -154,6 +155,20 @@ export class AttachmentsComponent implements OnChanges, OnDestroy {
       await saveBlob(blob, item.original_name || 'attachment');
     } catch (err) {
       this.toast?.error(this.messageOf(err, 'دانلود پیوست انجام نشد'));
+    } finally {
+      this.busy = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async share(item: AttachmentItem): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      const blob = await firstValueFrom(this.api.download(this.apiPath(item.download_url)));
+      await shareBlob(blob, item.original_name || 'attachment');
+    } catch (err) {
+      this.toast?.error(this.messageOf(err, 'اشتراک‌گذاری پیوست انجام نشد'));
     } finally {
       this.busy = false;
       this.cdr.markForCheck();
