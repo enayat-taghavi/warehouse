@@ -78,9 +78,6 @@
               <div *ngIf="item.paid_amount > 0" class="text-[10px] font-bold text-slate-500">
                 پرداخت‌شده {{ item.paid_amount | number }} · مانده {{ item.remaining | number }}
               </div>
-              <div *ngIf="item.paid_amount > 0" class="mt-1">
-                <app-invoice-receipt-button [invoiceId]="item.id"></app-invoice-receipt-button>
-              </div>
             </td>
             <td class="py-3 px-3 font-mono text-slate-600 text-[11px]"><bdi dir="ltr">{{ item.sheba_number }}</bdi></td>
             <td class="py-3 px-3 text-center font-mono text-slate-600">{{ item.due_date }}</td>
@@ -106,6 +103,7 @@
                   size="sm"
                   (click)="printInvoice(item)"
                 ></button>
+                <app-invoice-receipt-button *ngIf="item.paid_amount > 0" [invoiceId]="item.id"></app-invoice-receipt-button>
               </div>
               <span *ngIf="item.status === 'paid'" class="text-[11px] font-mono text-emerald-600 font-bold"><bdi dir="ltr">{{ item.tracking_code }}</bdi></span>
             </td>

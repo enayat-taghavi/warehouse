@@ -14,7 +14,8 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob } from '../../../../../core/platform/file-output';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
-import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { ActionDisplay } from '../../../../../shared/components/action-button/action-catalog';
 import { PAYMENT_RECEIPT_LABEL } from '../../../payment-receipt';
 
 export interface ReceiptItem {
@@ -27,43 +28,22 @@ export interface ReceiptItem {
 @Component({
   selector: 'app-invoice-receipt-button',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective],
+  imports: [CommonModule, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="relative inline-block">
       <button
         #trigger
         type="button"
-        class="inline-flex items-center justify-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-bold text-fg hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none min-h-[40px] min-w-[40px]"
-        title="دانلود رسید پرداخت"
-        aria-label="دانلود رسید پرداخت"
-        [attr.aria-disabled]="busy || null"
-        [attr.aria-busy]="busy"
+        appAction="download"
+        label="دانلود رسید"
+        hint="دانلود رسید پرداخت"
+        size="sm"
+        [display]="display"
+        [busy]="busy"
         [attr.aria-expanded]="items.length > 1 ? menuOpen : null"
         [attr.aria-haspopup]="items.length > 1 ? 'menu' : null"
-        (click)="onButtonClick($event)">
-        <svg
-          *ngIf="!busy"
-          appIcon="download"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          class="w-4 h-4"
-          aria-hidden="true"
-        ></svg>
-        <svg
-          *ngIf="busy"
-          appIcon="loader"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          class="w-4 h-4 animate-spin"
-          aria-hidden="true"
-        ></svg>
-        <span class="hidden md:inline">دانلود رسید</span>
-      </button>
+        (click)="onButtonClick($event)"></button>
 
       <div
         *ngIf="menuOpen && items.length > 1"
@@ -89,6 +69,8 @@ export interface ReceiptItem {
 })
 export class InvoiceReceiptButtonComponent implements OnDestroy {
   @Input({ required: true }) invoiceId!: number | undefined;
+  /** same display as the neighbouring row buttons (e.g. icon in the mobile card) */
+  @Input() display: ActionDisplay = 'auto';
 
   busy = false;
   items: ReceiptItem[] = [];
@@ -97,7 +79,7 @@ export class InvoiceReceiptButtonComponent implements OnDestroy {
   menuBottom: number | null = null;
   menuRight: number | null = null;
 
-  @ViewChild('trigger') private trigger?: ElementRef<HTMLButtonElement>;
+  @ViewChild('trigger', { read: ElementRef }) private trigger?: ElementRef<HTMLButtonElement>;
 
   private readonly closeOnViewportChange = (): void => this.closeMenu(false);
 

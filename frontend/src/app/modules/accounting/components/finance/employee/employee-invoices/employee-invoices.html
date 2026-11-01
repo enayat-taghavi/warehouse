@@ -116,11 +116,6 @@
               @if (inv.paid_amount && +inv.paid_amount > 0) {
                 <p class="text-[10px] text-emerald-700">پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}</p>
               }
-              @if (inv.paid_amount && +inv.paid_amount > 0) {
-                <div class="mt-1">
-                  <app-invoice-receipt-button [invoiceId]="inv.id"></app-invoice-receipt-button>
-                </div>
-              }
             </div>
           </div>
           @if (inv.possible_duplicate || inv.vat_manual) {
@@ -138,6 +133,9 @@
               <button type="button" appAction="view" display="icon" label="تصویر فاکتور" size="sm" (click)="openAttachmentPreview(inv)"></button>
             }
             <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint" (click)="printInvoice(inv)"></button>
+            @if (inv.paid_amount && +inv.paid_amount > 0) {
+              <app-invoice-receipt-button [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
+            }
             <button type="button" appAction="history" display="icon" label="سابقه" size="sm" (click)="openInvoiceHistory(inv.id)"></button>
             @if (inv.status === 'draft') {
               <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)"></button>
@@ -222,9 +220,6 @@
                 پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}
                 <span *ngIf="inv.remaining && +inv.remaining > 0" class="text-amber-700"> | مانده: {{ formatNumber(inv.remaining) }}</span>
               </div>
-              <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="mt-1">
-                <app-invoice-receipt-button [invoiceId]="inv.id"></app-invoice-receipt-button>
-              </div>
             </td>
 
             <!-- پیوست -->
@@ -294,6 +289,9 @@
                   [disabled]="!canPrint"
                   hint="چاپ فاکتور (PDF)">
                 </button>
+
+                <!-- دانلود رسید پرداخت -->
+                <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
 
                 <!-- حذف فاکتور (فقط برای پیش‌نویس) -->
                 <button

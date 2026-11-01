@@ -190,9 +190,9 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
 
   it('has Persian aria-label and download icon', () => {
     const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.getAttribute('aria-label')).toBe('دانلود رسید پرداخت');
-    const svg = btn.querySelector('svg[appIcon="download"]');
-    expect(svg).not.toBeNull();
-    expect(svg!.getAttribute('appIcon')).toBe('download');
+    expect(btn.getAttribute('aria-label')).toBe('دانلود رسید');
+    expect(btn.getAttribute('title')).toBe('دانلود رسید پرداخت');
+    expect(btn.hasAttribute('appaction')).toBe(true);
+    expect(btn.querySelector('svg')).not.toBeNull();
   });
 });
