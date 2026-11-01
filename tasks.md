@@ -4832,3 +4832,75 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only those files and commit with this message, without push:
 feat(invoices): quick payment receipt download button on invoice lists
 - Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — Overnight fixes O8-a: remove fake sample data from five finance pages (bank accounts shows the real company bank accounts read-only; cheques, reconciliation, budget, contracts show an honest empty state)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-bank-accounts/*" --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-cheques/*" --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-reconciliation/*" --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-budget/*" --allow "frontend/src/app/modules/accounting/components/finance/manager/manager-contracts/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts.ts --contains getBankAccounts --absent "IR120120000000001234567890" --absent "current_balance" --absent "executeTransfer" --absent "setTimeout"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts.html --absent "totalLiquidity" --absent "openTransferModal" --absent "cashboxes"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-cheques/treasurer-cheques.ts --absent "toast.success" --absent "ChequeItem"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-reconciliation/treasurer-reconciliation.ts --absent "reconciledCount = 18" --absent "ReconciliationItem" --absent "toast.success"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/manager/manager-budget/manager-budget.ts --absent "SectionBudgetItem" --absent "toast.success"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/manager/manager-contracts/manager-contracts.ts --absent "PersonnelContractItem" --absent "FleetContractItem" --absent "toast.success"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-cheques/treasurer-cheques.html --contains archive --contains appIcon
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/treasurer/treasurer-bank-accounts/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(finance): remove fake sample data"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these five folders (base `frontend/src/app/modules/accounting/components/finance/`): `treasurer/treasurer-bank-accounts/`, `treasurer/treasurer-cheques/`, `treasurer/treasurer-reconciliation/`, `manager/manager-budget/`, `manager/manager-contracts/`. The only new file allowed is `treasurer/treasurer-bank-accounts/treasurer-bank-accounts.dom.spec.ts`. Never edit routes, menus, `module.ts`, `backend/`, `scripts/`, `tasks.md`, `tasks_history.md`, shared components or any other file.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- Keep each component's class name, `selector`, `templateUrl` and `styleUrl` unchanged (routes import the classes by name).
+- No inline `<svg>` with paths: icons only as `<svg appIcon="name" ...></svg>` with names that exist in `frontend/src/app/shared/icons/icon-registry.ts` (use `archive`, `alert-circle`, `loader`). Use semantic colour tokens (`bg-surface`, `text-fg`, `text-fg-muted`, `border-line`). All user-facing text stays Persian.
+- Do not delete or weaken any existing test (these five folders have no spec today).
+
+2. Context:
+- These five pages were built as visual mock-ups. They show invented data (hard-coded arrays of banks, cheques, budget lines, contracts, people's names, KPI numbers) and fake actions (methods that only change local arrays and then show a success toast, or a `setTimeout` "refresh/sync" toast). The user wants no fake data shown anywhere: either real server data or nothing.
+- Only the bank accounts page has a real backend: `CompanyApiService` (`frontend/src/app/core/api/company-api.service.ts`, class at line 26) method `getBankAccounts(companyId?: number)` (lines 276–286) returns `Observable<CompanyBankAccount[] | { results: CompanyBankAccount[]; count: number }>`. Model `CompanyBankAccount` is in `frontend/src/app/core/models/company.model.ts` lines 135–153 (`id`, `company`, `company_name`, `bank_name`, `account_number`, `sheba_number`, `account_title`, `is_primary`, `is_active`, `opening_balance`, ...). The server already limits the list to the user's companies; do not add any access logic. Call it WITHOUT a company id. If the module is not installed it throws `Error('accounting-module-not-installed')` — treat it like any error.
+- Bank page today: `treasurer-bank-accounts.ts` (211 lines: fake `bankAccounts` 88–122, fake `cashboxes` 124–143, transfer modal state 145–149, `totalLiquidity` 161–163, `switchSubTab` 165–169, transfer 171–197, `exportExcel` 199–201, fake `refreshData` 203–210) and `treasurer-bank-accounts.html` (169 lines: command center 4–41 with the liquidity badge 8–13, tab bar 16–22, export/refresh buttons 26–40; bank table 44–91; cashbox table 94–126; transfer modal 128–167).
+- Other four pages: `treasurer/treasurer-cheques/treasurer-cheques.{ts,html}`, `treasurer/treasurer-reconciliation/treasurer-reconciliation.{ts,html}`, `manager/manager-budget/manager-budget.{ts,html}`, `manager/manager-contracts/manager-contracts.{ts,html}`. They have NO backend at all. Read each `.ts` fully before editing.
+
+3. Task:
+- a) Bank accounts (`treasurer-bank-accounts.ts` and `.html`):
+  - Delete the fake arrays, the `ProjectCashboxItem` and `BankAccountItem` interfaces, the cashbox tab and sub-tab logic (`activeSubTab`, `tabs`, `switchSubTab`), the transfer modal (state, methods, template), `totalLiquidity`, `exportExcel` and the fake `refreshData`. Remove now-unused imports (`TabBarComponent`, `FormsModule`, `ReactiveFormsModule`, `ActivatedRoute`, `Router`, `Subscription`, `ProjectSection`, `PersonnelApiService`, `ACCOUNTING_ENTITY_ICONS` if unused) — keep `CommandCenterComponent`, `ActionButtonComponent` if still used.
+  - New state: `accounts: CompanyBankAccount[] = []`, `isLoading = false`, `loadError = ''`. Inject `CompanyApiService` and `ChangeDetectorRef`. `load()`: set `isLoading = true`, `loadError = ''`; subscribe to `getBankAccounts()`; on success `accounts = Array.isArray(res) ? res : (res?.results ?? [])`; on error `loadError = 'دریافت حساب‌های بانکی انجام نشد.'`; always `isLoading = false` and `cdr.markForCheck()`. Call `load()` in `ngOnInit`. Keep a real `refreshData()` that just calls `load()`.
+  - Template: keep `<app-command-center rowFrom="lg">`; in `cc-tabs` put a title `<h1 class="text-sm font-black text-fg">حساب‌های بانکی سازمان</h1>` plus a small muted count «{{ accounts.length }} حساب»; in `cc-actions` keep ONLY the refresh button (`appAction="refresh"`, `(click)="refreshData()"`, `[busy]="isLoading"` if `ActionButtonComponent` supports `busy` — it does in the old modal). Below it, one card (`bg-surface rounded-3xl border border-line shadow-sm overflow-hidden`):
+    - loading: a row with `<svg appIcon="loader" class="w-5 h-5 animate-spin" aria-hidden="true"></svg>` and «در حال دریافت حساب‌ها…»;
+    - error: `alert-circle` icon, the `loadError` text and a «تلاش دوباره» button calling `load()`;
+    - empty (not loading, no error, 0 accounts): `archive` icon and «هنوز حساب بانکی برای شرکت ثبت نشده است.» plus muted line «حساب‌ها از بخش شرکت‌ها، زبانهٔ خزانه ثبت می‌شوند.»;
+    - list: a read-only table (keep the old table classes, `text-right text-xs`, wrapper `overflow-x-auto`) with columns «ردیف», «شرکت» (`company_name`), «بانک» (`bank_name`), «عنوان حساب» (`account_title || '—'`), «شماره حساب» (`account_number || '—'`, `dir="ltr"`, `font-mono`), «شماره شبا» (`sheba_number`, `dir="ltr"`, `font-mono`), «وضعیت» (pill «فعال» emerald when `is_active` else pill «غیرفعال» slate; plus a small indigo pill «اصلی» when `is_primary`). No balances, no limits, no transfer, no export. Use `@for (acc of accounts; track acc.id; let i = $index)` or `*ngFor` with `trackBy` — match what the file already uses (`*ngFor`).
+  - New spec `treasurer-bank-accounts.dom.spec.ts` (Vitest + jsdom, `TestBed` with the standalone component, `provideRouter([])` if needed, a mocked `CompanyApiService` `{ getBankAccounts: vi.fn() }` provided with `useValue`, mocked `AuthService`/`StateService`/`ToastService` only if the constructor still needs them — better: remove them from the constructor if unused). Cases:
+    - `shows real accounts from the server`: `getBankAccounts` returns `of([{ id: 1, company: 1, company_name: 'شرکت الف', bank_name: 'بانک آزمون', sheba_number: 'IR000000000000000000000001', account_number: '123', account_title: 'جاری', is_primary: true, is_active: true }])`; text contains «بانک آزمون», «IR000000000000000000000001», «اصلی»; `getBankAccounts` called once with no argument.
+    - `accepts a paginated response`: returns `of({ count: 1, results: [ ...same item ] })`; text contains «بانک آزمون».
+    - `shows empty state`: returns `of([])`; text contains «هنوز حساب بانکی».
+    - `shows error with retry`: returns `throwError(() => new Error('x'))`; text contains «دریافت حساب‌های بانکی انجام نشد»; clicking the «تلاش دوباره» button calls `getBankAccounts` a second time.
+    - `no fake data`: with `of([])`, text contains none of «بانک ملت», «موجودی», «انتقال وجه», «صندوق».
+- b) Cheques, reconciliation, budget, contracts — same treatment for each of the four:
+  - `.ts`: delete every fake data array, every exported interface of fake rows, every fixed KPI number/getter, every filter/search/tab state that only filters the fake arrays, every method that only edits local fake state and/or shows a toast (approve, register, mark, export, refresh, sync, renew ...), modal state. Remove unused imports and constructor parameters. What remains is a minimal standalone component (`imports: [CommonModule, SvgIconDirective]` — import path for `SvgIconDirective` is `shared/icons/svg-icon.directive`, check the relative depth from other files in the same folder level, e.g. `../../../../../../shared/icons/svg-icon.directive`) with no `OnInit`/`OnDestroy` unless still needed. Keep class name, selector, `templateUrl`, `styleUrl`.
+  - `.html`: replace the whole template with one page wrapper `<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">` holding: a header card (`bg-surface rounded-2xl border border-line p-4`) with the page title as `<h1 class="text-sm font-black text-fg">` (cheques «چک‌ها»، reconciliation «مغایرت‌گیری بانکی»، budget «بودجه و مراکز هزینه»، contracts «قراردادها» — if the old template had a clearer Persian title use it), then an empty-state card (`bg-surface rounded-3xl border border-line p-8 flex flex-col items-center text-center gap-2`) with `<svg appIcon="archive" class="w-10 h-10 text-fg-muted" aria-hidden="true"></svg>`, `<p class="text-sm font-bold text-fg">این بخش هنوز به داده‌های واقعی سامانه وصل نشده است.</p>` and `<p class="text-xs text-fg-muted">پس از راه‌اندازی، اطلاعات واقعی اینجا نمایش داده می‌شود.</p>`. No buttons, no tabs, no numbers.
+  - `.css`: leave as is (or empty it if it only styled removed parts).
+
+4. Tool policy:
+- Reading files is unrestricted.
+- From `frontend`: `npx ng test --watch=false --include=src/app/modules/accounting/components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts.dom.spec.ts` (at most 8 times). NOTE: an unrelated spec `personnel-approval-cycle.spec.ts` has a pre-existing compile error; if `ng test` fails to compile because of it, create a temporary tsconfig at `scratch/tsconfig.o8.json` that extends `../frontend/tsconfig.spec.json` with `"include": ["../frontend/src/**/*.d.ts", "../frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts.dom.spec.ts"]` and pass `--ts-config ../scratch/tsconfig.o8.json` (it is outside git scope; delete it before the commit). Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- From `frontend`, once at the end: `npx tsc -p tsconfig.app.json --noEmit` to make sure the five components compile (report any error that is not in these five folders as pre-existing, do not fix it).
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If a real file differs from this task (line numbers, text), follow the real file and say so in the report.
+
+5. Before finishing:
+- The new spec passes and guardian 52 passes; `tsc` shows no error in the five folders.
+- `grep` the five `.ts` files: no `toast.success`, no `setTimeout`, no hard-coded Persian person or company names remain.
+- `git status --short` shows only files of the five folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files) before the commit.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(finance): remove fake sample data from bank accounts, cheques, reconciliation, budget and contracts pages
+- Short English report: what changed per page, test results, anything that differed from this task. End the turn after the commit and the report.
