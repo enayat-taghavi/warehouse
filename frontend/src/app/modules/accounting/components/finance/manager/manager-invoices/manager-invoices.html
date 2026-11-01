@@ -9,7 +9,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-right text-xs">
+      <table class="w-full text-start text-xs">
         <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
           <tr>
             <th class="p-3">شماره فاکتور</th>
@@ -24,8 +24,8 @@
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let inv of invoicesList" class="hover:bg-slate-50 transition-colors">
             <td class="p-3 font-mono font-bold text-slate-900">
-              <div *ngIf="inv.number">{{ inv.number }}</div>
-              <div [class.text-[10px]]="inv.number" [class.text-slate-500]="inv.number">{{ inv.invoice_number || inv.id }}</div>
+              <div *ngIf="inv.number"><bdi dir="ltr">{{ inv.number }}</bdi></div>
+              <div [class.text-[10px]]="inv.number" [class.text-slate-500]="inv.number"><bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi></div>
               <div class="flex flex-wrap gap-1 mt-1 font-sans">
                 <span *ngIf="inv.possible_duplicate" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="inv.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span>
                 <span *ngIf="inv.vat_manual" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات به‌صورت دستی تغییر کرده است">مالیات دستی</span>
@@ -59,7 +59,8 @@
               </div>
             </td>
           </tr>
-          <tr *ngIf="invoicesList.length === 0">
+          <tr *ngIf="isLoading && invoicesList.length === 0"><td colspan="7" class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری فاکتورها...</td></tr>
+          <tr *ngIf="!isLoading && invoicesList.length === 0">
             <td colspan="7" class="p-8 text-center text-slate-400 font-medium">هیچ فاکتوری در انتظار تصویب مدیر نمی‌باشد.</td>
           </tr>
         </tbody>

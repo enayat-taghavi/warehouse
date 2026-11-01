@@ -39,8 +39,8 @@ export interface ReceiptItem {
         aria-label="دانلود رسید پرداخت"
         [attr.aria-disabled]="busy || null"
         [attr.aria-busy]="busy"
-        [attr.aria-expanded]="menuOpen"
-        aria-haspopup="menu"
+        [attr.aria-expanded]="items.length > 1 ? menuOpen : null"
+        [attr.aria-haspopup]="items.length > 1 ? 'menu' : null"
         (click)="onButtonClick($event)">
         <svg
           *ngIf="!busy"

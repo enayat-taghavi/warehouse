@@ -13,6 +13,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
@@ -29,7 +30,8 @@ import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invo
     ActionButtonComponent,
     CommandCenterComponent,
     WorkflowReasonDialogComponent,
-    InvoiceReceiptButtonComponent
+    InvoiceReceiptButtonComponent,
+    SvgIconDirective
   ],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'

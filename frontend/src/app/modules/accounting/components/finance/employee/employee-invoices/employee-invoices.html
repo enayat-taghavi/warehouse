@@ -6,8 +6,10 @@
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <!-- انتخابگر بخش فعال (Guardian G1: Section Isolation) -->
       <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <label for="emp-inv-section" class="text-[11px] font-bold text-slate-500">بخش فعال:</label>
         <select
+          id="emp-inv-section"
+          aria-label="انتخاب بخش"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
           class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
@@ -62,22 +64,22 @@
       
       <!-- ورودی جستجوی زنده -->
       <div class="relative w-full sm:w-80">
-        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+        <svg appIcon="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <input
-          type="text"
+          type="search"
           [(ngModel)]="invoiceSearch"
           (ngModelChange)="onSearchChange()"
           aria-label="جستجوی فاکتور"
           placeholder="جستجوی شماره فاکتور، طرف‌حساب، شرح..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
+          class="w-full ps-9 pe-10 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
         <button
           *ngIf="invoiceSearch"
           type="button"
           (click)="clearSearch()"
           title="پاک کردن جستجو"
           aria-label="پاک کردن جستجو"
-          class="absolute start-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-fg-muted hover:text-fg cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-fg-muted hover:text-fg cursor-pointer focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" aria-hidden="true"></svg>
         </button>
       </div>
 
@@ -99,8 +101,8 @@
               <p class="text-sm font-black text-fg truncate">{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</p>
               <p class="mt-0.5 text-[11px] text-fg-muted">
                 <span class="tabular-nums">{{ inv.invoice_date_shamsi }}</span>
-                @if (inv.invoice_number) { · شماره {{ inv.invoice_number }} }
-                @if (inv.number) { · داخلی {{ inv.number }} }
+                @if (inv.invoice_number) { · شماره <bdi dir="ltr">{{ inv.invoice_number }}</bdi> }
+                @if (inv.number) { · داخلی <bdi dir="ltr">{{ inv.number }}</bdi> }
               </p>
             </div>
             <span [ngClass]="getStatusBadgeClass(inv.status)"
@@ -156,7 +158,7 @@
             <th class="py-3 px-3">طرف‌حساب</th>
             <th class="py-3 px-3">سرفصل هزینه</th>
             <th class="py-3 px-3">شرح هزینه</th>
-            <th class="py-3 px-3 text-left">مبلغ (ریال)</th>
+            <th class="py-3 px-3 text-end">مبلغ (ریال)</th>
             <th class="py-3 px-3 text-center">پیوست</th>
             <th class="py-3 px-3 text-center">وضعیت</th>
             <th class="py-3 px-3">ثبت‌کننده</th>
@@ -191,7 +193,7 @@
             <!-- طرف‌حساب -->
             <td class="py-2.5 px-3 font-bold text-slate-800 whitespace-nowrap">
               <span class="flex items-center gap-1.5">
-                <span class="text-slate-400 text-xs">👤</span>
+                <svg appIcon="user" class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 <span>{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</span>
               </span>
             </td>
@@ -209,12 +211,12 @@
             </td>
 
             <!-- مبلغ (ریال و تومان) -->
-            <td class="py-2.5 px-3 text-left whitespace-nowrap font-mono">
+            <td class="py-2.5 px-3 text-end whitespace-nowrap font-mono">
               <div class="font-black text-slate-900 text-xs" title="مبلغ قابل پرداخت">
                 {{ formatNumber(inv.amount) }}
               </div>
               <div class="text-[10px] text-fg-muted">
-                {{ formatNumber(Math.floor((inv.amount || 0) / 10)) }} تومان
+                <bdi>{{ formatNumber(Math.floor((inv.amount || 0) / 10)) }}</bdi> تومان
               </div>
               <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="text-[10px] text-emerald-700 mt-0.5">
                 پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}
@@ -317,8 +319,8 @@
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
-                <span *ngIf="!isEditable(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100">
-                  🔒 قفل
+                <span *ngIf="!isEditable(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
+                  <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg> قفل
                 </span>
               </div>
             </td>
@@ -381,7 +383,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- مودال ۱: ثبت فاکتور هزینه جدید (Guardian G2: Draft Invariant)       -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+  <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" tabindex="-1" (keydown.escape)="closeNewInvoiceModal()">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden fade-in max-h-[92vh] flex flex-col"
       role="dialog" aria-modal="true" [attr.aria-label]="editingInvoiceId ? 'ویرایش فاکتور پیش‌نویس' : 'ثبت فاکتور هزینه جدید'">
       
@@ -412,11 +414,11 @@
         <section class="p-3 rounded-2xl border border-line bg-surface-muted/30 space-y-3" aria-label="مشخصات فاکتور">
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="text-[11px] font-bold text-slate-700">طرف‌حساب (فروشگاه یا شخص) *</label>
+            <label for="invoice_counterparty" class="text-[11px] font-bold text-slate-700">طرف‌حساب (فروشگاه یا شخص) *</label>
             <div class="flex items-center gap-1">
             @if (canEditSelectedCounterparty) {
               <button type="button" (click)="openEditCounterpartyModal()"
-                class="min-h-[32px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                class="min-h-[40px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 title="ویرایش طرف‌حساب انتخاب‌شده" aria-label="ویرایش طرف‌حساب انتخاب‌شده">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit" aria-hidden="true"></svg>
                 <span>ویرایش</span>
@@ -425,7 +427,7 @@
             <button
               type="button"
               (click)="openQuickCounterpartyModal()"
-              class="min-h-[32px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              class="min-h-[40px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <span>+ طرف‌حساب جدید</span>
             </button>
             </div>
@@ -679,24 +681,24 @@
             </p>
           }
           <div class="flex flex-wrap items-center gap-2">
-            <label class="md:hidden min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera" aria-hidden="true"></svg>
-              <span>عکس با دوربین</span>
+            <label class="md:hidden min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500">
               <input
                 type="file"
                 (change)="onInvoiceFileSelected($event)"
                 accept="image/*"
                 capture="environment"
-                class="hidden" />
+                class="sr-only peer" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera" aria-hidden="true"></svg>
+              <span>عکس با دوربین</span>
             </label>
-            <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip" aria-hidden="true"></svg>
-              <span>انتخاب فایل</span>
+            <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500">
               <input
                 type="file"
                 (change)="onInvoiceFileSelected($event)"
                 accept="image/*,.pdf"
-                class="hidden" />
+                class="sr-only peer" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip" aria-hidden="true"></svg>
+              <span>انتخاب فایل</span>
             </label>
             <span *ngIf="attachmentFileName" class="text-xs text-indigo-700 font-bold flex items-center gap-1 bg-indigo-50 px-2.5 py-1.5 rounded-xl border border-indigo-100">
               <span>{{ attachmentFileName }}</span>
@@ -704,8 +706,8 @@
                 type="button"
                 (click)="removeSelectedAttachment()"
                 title="حذف فایل انتخاب‌شده" aria-label="حذف فایل انتخاب‌شده"
-                class="min-w-[32px] min-h-[32px] text-rose-500 hover:text-rose-700 font-black ms-1 cursor-pointer">
-                ✕
+                class="w-10 h-10 inline-flex items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-500 text-rose-500 hover:text-rose-700 font-black ms-1 cursor-pointer">
+                <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               </button>
             </span>
             <span *ngIf="!attachmentFileName" class="text-[11px] text-fg-muted">
@@ -761,7 +763,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- مودال ۲: تعریف سریع طرف‌حساب جدید                                       -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isQuickCounterpartyModalOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4">
+  <div *ngIf="isQuickCounterpartyModalOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4" tabindex="-1" (keydown.escape)="closeQuickCounterpartyModal()">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden fade-in flex flex-col"
       role="dialog" aria-modal="true" aria-labelledby="quick-cp-title">
       
@@ -769,7 +771,7 @@
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-sm">
-            👥
+            <svg appIcon="users" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           </div>
           <div>
             <h3 id="quick-cp-title" class="text-xs md:text-sm font-black text-slate-800">{{ editingCounterpartyId ? 'ویرایش طرف‌حساب' : 'تعریف سریع طرف‌حساب جدید' }}</h3>
@@ -821,10 +823,10 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- مودال ۳: پیش‌نمایش تصویر پیوست فاکتور                                 -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isAttachmentPreviewModalOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+  <div *ngIf="isAttachmentPreviewModalOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 p-4" tabindex="-1" (keydown.escape)="closeAttachmentPreview()">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]" role="dialog" aria-modal="true" aria-labelledby="emp-inv-modal-3-title">
       <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-        <h4 class="text-xs font-black text-slate-800">{{ previewInvoiceTitle }}</h4>
+        <h4 id="emp-inv-modal-3-title" class="text-xs font-black text-slate-800">{{ previewInvoiceTitle }}</h4>
         <button
           type="button"
           appAction="close"
@@ -845,8 +847,9 @@
           type="button"
           *ngIf="previewAttachmentUrl"
           (click)="downloadPreviewAttachment()"
-          class="text-indigo-600 font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded">
-          ⬇️ دانلود فایل اصلی
+          class="text-indigo-600 font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded inline-flex items-center gap-1.5">
+          <svg appIcon="download" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>دانلود فایل اصلی</span>
         </button>
         <button
           type="button"
@@ -863,8 +866,8 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- مودال ۴: جزئیات و سابقه گردش کار فاکتور                             -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isDetailPanelOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+  <div *ngIf="isDetailPanelOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4" tabindex="-1" (keydown.escape)="closeInvoiceDetail()">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]" role="dialog" aria-modal="true" aria-labelledby="emp-inv-modal-4-title">
       <!-- هدر -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -872,7 +875,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" aria-hidden="true"></svg>
           </div>
           <div>
-            <h3 class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار فاکتور</h3>
+            <h3 id="emp-inv-modal-4-title" class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار فاکتور</h3>
             <p class="text-[10px] text-fg-muted font-medium font-mono" *ngIf="selectedInvoiceDetail">
               شماره: {{ invoiceLabel(selectedInvoiceDetail) }}
             </p>
@@ -890,7 +893,7 @@
       <!-- بدنه -->
       <div class="p-5 space-y-4 overflow-y-auto flex-1">
         <div *ngIf="isLoadingDetail" class="py-8 text-center text-slate-500">
-          <div class="inline-block animate-spin text-2xl mb-2">⏳</div>
+          <svg appIcon="loader" class="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
           <p class="text-xs font-bold">در حال بارگذاری اطلاعات فاکتور...</p>
         </div>
 

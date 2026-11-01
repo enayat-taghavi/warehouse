@@ -6,8 +6,10 @@
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <!-- انتخابگر بخش فعال -->
       <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-        <span class="text-[11px] font-bold text-slate-500">بخش:</span>
+        <label for="tr-inv-section" class="text-[11px] font-bold text-slate-500">بخش:</label>
         <select
+          id="tr-inv-section"
+          aria-label="انتخاب بخش"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
           class="bg-transparent text-xs font-black text-teal-700 focus:outline-none cursor-pointer">
@@ -32,6 +34,7 @@
       <button
         type="button"
         appAction="refresh"
+        [busy]="isLoading"
         (click)="refreshData()"
       ></button>
     </div>
@@ -63,8 +66,8 @@
           <tr *ngFor="let item of invoices; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
             <td class="py-3 px-3 font-mono font-bold text-slate-900">
-              <div *ngIf="item.number">{{ item.number }}</div>
-              <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number">{{ item.invoice_number }}</div>
+              <div *ngIf="item.number"><bdi dir="ltr">{{ item.number }}</bdi></div>
+              <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number"><bdi dir="ltr">{{ item.invoice_number }}</bdi></div>
             </td>
             <td class="py-3 px-3 font-bold text-slate-800">{{ item.vendor_name }}</td>
             <td class="py-3 px-3">
@@ -80,7 +83,7 @@
                 <app-invoice-receipt-button [invoiceId]="item.id"></app-invoice-receipt-button>
               </div>
             </td>
-            <td class="py-3 px-3 font-mono text-slate-600 text-[11px]">{{ item.sheba_number }}</td>
+            <td class="py-3 px-3 font-mono text-slate-600 text-[11px]"><bdi dir="ltr">{{ item.sheba_number }}</bdi></td>
             <td class="py-3 px-3 text-center font-mono text-slate-600">{{ item.due_date }}</td>
             <td class="py-3 px-3 text-center">
               <span *ngIf="item.status === 'pending_payment'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">در انتظار پرداخت</span>
@@ -105,9 +108,11 @@
                   (click)="printInvoice(item)"
                 ></button>
               </div>
-              <span *ngIf="item.status === 'paid'" class="text-[11px] font-mono text-emerald-600 font-bold">{{ item.tracking_code }}</span>
+              <span *ngIf="item.status === 'paid'" class="text-[11px] font-mono text-emerald-600 font-bold"><bdi dir="ltr">{{ item.tracking_code }}</bdi></span>
             </td>
           </tr>
+          <tr *ngIf="isLoading && invoices.length === 0"><td colspan="9" class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری فاکتورها...</td></tr>
+          <tr *ngIf="!isLoading && invoices.length === 0"><td colspan="9" class="p-10 text-center text-slate-400 text-xs">فاکتوری برای پرداخت وجود ندارد.</td></tr>
         </tbody>
       </table>
     </div>
