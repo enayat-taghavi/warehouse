@@ -232,8 +232,9 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
     periodLockFixture.detectChanges();
 
     expect(periodLockComp.selectedSectionId).toBe(10);
+    // دوره پیش‌فرض ماه جاری شمسی است (ی۶۰)، نه یک ماه ثابت
     expect(mockPersonnelApi.getWorkPeriods).toHaveBeenCalledWith({
-      year_month: '1405/04',
+      year_month: `${periodLockComp.fiscalYear}/${periodLockComp.monthMap[periodLockComp.selectedMonth]}`,
       section_id: 10
     });
   });

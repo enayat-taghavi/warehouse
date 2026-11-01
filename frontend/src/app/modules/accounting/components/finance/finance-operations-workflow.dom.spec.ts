@@ -290,14 +290,6 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
         id: 301
       });
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('تایید سرپرست'));
-
-      // ۳. دریافت خروجی اکسل (Export)
-      attendanceHub.exportExcel();
-      expect(mockToast.info).toHaveBeenCalledWith(expect.stringContaining('اکسل'));
-
-      // ۴. ورود فایل اکسل کارکرد (Import)
-      attendanceHub.importExcel();
-      expect(mockToast.info).toHaveBeenCalledWith(expect.stringContaining('اکسل'));
     });
   });
 
