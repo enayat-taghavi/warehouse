@@ -211,10 +211,32 @@
             class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60" />
         </div>
         <div>
-          <label for="pam_sheba" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ شبا</label>
-          <input id="pam_sheba" type="text" dir="ltr" placeholder="IR..." [(ngModel)]="form.sheba" name="sheba" [disabled]="!canManageAccounts"
-            class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60" />
+          <div class="flex items-center justify-between mb-1">
+            <label for="pam_sheba" class="text-[11px] font-bold text-fg">شماره شبا (۲۴ رقم)</label>
+            <span *ngIf="shebaValidation" class="text-[10px] font-bold flex items-center gap-0.5"
+              [ngClass]="shebaValidation.isValid ? 'text-emerald-600' : 'text-rose-500'">
+              <svg [appIcon]="shebaValidation.isValid ? 'check' : 'x'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>{{ shebaValidation.isValid ? 'معتبر' : 'نامعتبر' }}</span>
+            </span>
+          </div>
+          <div class="relative flex items-center">
+            <input id="pam_sheba" type="text" dir="ltr" inputmode="numeric" maxlength="32" placeholder="000000000000000000000000"
+              [value]="shebaDigitsDisplay" (input)="onShebaInput($event)" [readonly]="isShebaMasked" [disabled]="!canManageAccounts"
+              class="w-full text-xs font-mono font-bold p-2.5 pl-10 min-h-[40px] rounded-xl border border-line bg-surface text-fg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60"
+              [ngClass]="shebaValidation?.isValid ? 'border-emerald-300' : (shebaValidation ? 'border-rose-300' : '')" />
+            <span class="absolute left-2.5 text-xs font-mono font-black text-fg-muted select-none" aria-hidden="true">IR-</span>
+          </div>
         </div>
+      </div>
+      <div *ngIf="shebaValidation" aria-live="polite">
+        <span *ngIf="shebaValidation.isValid" class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+          <svg appIcon="building" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>شبا معتبر: {{ shebaValidation.bank?.name }}</span>
+        </span>
+        <span *ngIf="!shebaValidation.isValid" class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200">
+          <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>{{ shebaValidation.errorMessage || 'شماره شبا نامعتبر است' }}</span>
+        </span>
       </div>
       <p class="text-[11px] text-fg-muted">کارت و شبا برای بیشتر کاربران پوشیده نمایش داده می‌شود؛ اگر دست نزنید، تغییری نمی‌کند.</p>
 

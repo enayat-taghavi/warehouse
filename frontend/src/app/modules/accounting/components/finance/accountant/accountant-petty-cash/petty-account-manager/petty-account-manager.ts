@@ -21,8 +21,10 @@ import {
   PettyCashBalanceSummary,
   PettyCashDebtSettlement,
   PettyCashReconciliation,
-  PettyCashTransaction
+  PettyCashTransaction,
+  isMaskedValue
 } from '../../../../../models/personnel.model';
+import { ShebaValidationResult, extractShebaDigits, validateSheba } from '../../../../../../../core/utils/sheba-utils';
 
 type ModalKind = 'form' | 'settle' | 'reconcile' | 'close' | 'handover';
 
@@ -102,6 +104,9 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   form = { ceiling: null as string | number | null, opening: null as string | number | null, openingDate: '', reason: '', card: '', sheba: '', description: '' };
   isFormDatePickerOpen = false;
   private original = { opening: 0, openingDate: '', card: '', sheba: '' };
+  // شبا مثل بقیهٔ برنامه: پیشوند ثابت IR، ۲۴ رقم گروه‌بندی‌شده، اعتبارسنجی زنده و نام بانک
+  shebaDigitsDisplay = '';
+  shebaValidation: ShebaValidationResult | null = null;
 
   // تسویه
   settleForm = { amount: null as string | number | null, method: 'cash' as 'cash' | 'charge_offset' | 'payroll', reference: '', charge: null as number | null, note: '' };
@@ -248,6 +253,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     this.custodianPick = [];
     this.form = { ceiling: null, opening: null, openingDate: '', reason: '', card: '', sheba: '', description: '' };
     this.original = { opening: 0, openingDate: '', card: '', sheba: '' };
+    this.loadSheba('');
     this.open('form', null);
   }
 
@@ -267,6 +273,9 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
       card: acc.card_or_account_number || '',
       sheba: acc.sheba_number || ''
     };
+    this.loadSheba(acc.sheba_number || '');
+    // مقدار نرمال‌شده مبنای مقایسه است تا بازکردن و بستن بدون تغییر، شبا را دوباره نفرستد
+    this.original.sheba = this.form.sheba;
     this.open('form', acc);
   }
 
@@ -308,6 +317,40 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     this.open('handover', acc);
   }
 
+  // ─── شبا ───
+  get isShebaMasked(): boolean {
+    return isMaskedValue(this.form.sheba);
+  }
+
+  private loadSheba(value: string): void {
+    this.shebaValidation = null;
+    this.shebaDigitsDisplay = '';
+    this.form.sheba = '';
+    if (isMaskedValue(value)) {
+      // مقدار پوشیده فقط نمایش داده می‌شود و دست‌نخورده می‌ماند
+      this.form.sheba = value;
+      this.shebaDigitsDisplay = value.replace(/^IR/i, '');
+    } else if (value) {
+      this.onShebaInput(value);
+    }
+  }
+
+  onShebaInput(event: any): void {
+    const raw = typeof event === 'string' ? event : (event?.target?.value || '');
+    const digits = extractShebaDigits(raw);
+    if (!digits) {
+      this.shebaValidation = null;
+      this.shebaDigitsDisplay = '';
+      this.form.sheba = '';
+    } else {
+      const res = validateSheba(digits);
+      this.shebaValidation = res;
+      this.shebaDigitsDisplay = res.formattedDigits || digits;
+      this.form.sheba = `IR${digits}`;
+    }
+    if (event?.target) event.target.value = this.shebaDigitsDisplay;
+  }
+
   // ─── ذخیرهٔ حساب ───
   get openingChanged(): boolean {
     return !!this.current && (this.num(this.form.opening) !== this.original.opening || this.form.openingDate !== this.original.openingDate);
@@ -328,6 +371,10 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     const opening = this.num(this.form.opening);
     if (opening > 0 && !this.form.openingDate) { this.modalError = 'برای موجودی اولیه، تاریخ آن لازم است.'; return; }
     if (!this.current && !this.custodianPick[0]) { this.modalError = 'تنخواه‌گردان را انتخاب کنید.'; return; }
+    if (this.form.sheba !== this.original.sheba && this.shebaValidation && !this.shebaValidation.isValid) {
+      this.modalError = this.shebaValidation.errorMessage || 'شماره شبا نامعتبر است.';
+      return;
+    }
     const body: Partial<PettyCashAccount> = {
       opening_balance: opening,
       opening_balance_date: this.form.openingDate || null,

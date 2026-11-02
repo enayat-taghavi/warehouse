@@ -126,6 +126,8 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   get newCounterparty(): Partial<Counterparty> { return this.cpForm.model; }
   set newCounterparty(value: Partial<Counterparty>) { this.cpForm.model = value; }
   editingCounterparty: Counterparty | null = null;
+  /** فرم ثبت/ویرایش پیش‌فرض بسته است و با دکمهٔ «طرف‌حساب جدید» یا ویرایش باز می‌شود. */
+  isFormOpen = false;
 
   // حساب‌های بانکی طرف حساب در حال ویرایش (ص۹ طرح ۳.۱)؛ فیلدهای بانکی فرم در ویرایش «حساب تازه» هستند
   bankAccounts: PartyBankAccount[] = [];
@@ -412,8 +414,17 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** فرم تعریف طرف‌حساب تازه را باز می‌کند (فرم پیش‌فرض بسته است). */
+  openNewCounterparty(): void {
+    this.resetForm();
+    this.isFormOpen = true;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.cdr.detectChanges();
+  }
+
   editCounterparty(cp: Counterparty): void {
     this.resetForm();
+    this.isFormOpen = true;
     this.editingCounterparty = cp;
     // فیلدهای بانکی فرم در ویرایش خالی می‌مانند و فقط حساب تازه می‌سازند؛ حساب‌های موجود در زیرفهرست‌اند
     this.cpForm.model = {
@@ -445,6 +456,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   }
 
   resetForm(): void {
+    this.isFormOpen = false;
     this.editingCounterparty = null;
     this.bankAccounts = [];
     this.isBankAccountsLoading = false;
