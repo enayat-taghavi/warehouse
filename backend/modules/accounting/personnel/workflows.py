@@ -115,6 +115,8 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     route='/app/finance/invoices?view=mine&invoice={id}',
     amount_field='amount',
     view_permission='perm_invoice_record',
+    # گام ط طرح اصلاح رسید: تنظیم شرکتی «ایجادکننده می‌تواند رسید خودش را تأیید کند»
+    company_self_approval=True,
 )
 
 

@@ -83,7 +83,7 @@ from ..workflow_engine import notify_document_changed
 from ..fiscal import ensure_period_open
 from ..invoice_services import (mark_invoice_updated_by, SHEBA_REQUIRED_CODE, SHEBA_REQUIRED_MESSAGE, counterparty_has_valid_sheba,
                                 duplicate_queryset, ensure_invoice_number, invoice_duplicates,
-                                void_invoice_number)
+                                invoice_changed_labels, void_invoice_number)
 from ..invoice_payments import (PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, RECEIPT_FIELD, add_payment,
                                 attach_receipt, invoice_remaining, read_receipt,
                                 void_payment)
@@ -98,6 +98,7 @@ INVOICE_PAYMENTS_PREFETCH = Prefetch(
 from ..models import normalize_invoice_number
 
 INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
+INVOICE_REVIEW_STEP = 'accountant_review'
 
 
 class InvoicePagePagination(OptionalPageNumberPagination):
@@ -685,6 +686,29 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             ensure_invoice_number(instance, user)
         notify_document_changed(instance, 'created')
 
+    def _review_accountant_task(self, invoice):
+        """
+        گام ط طرح اصلاح رسید: کار باز «بررسی حسابدار» این رسید اگر کاربر همین الان روی آن اقدام می‌تواند
+        (دریافت‌کنندهٔ اصلی یا جانشین؛ ثبت‌کننده فقط با تنظیم شرکتی؛ همان قاعدهٔ موتور)، وگرنه None.
+        """
+        if invoice.status != 'pending_accountant':
+            return None
+        task = wf_engine.open_task(INVOICE_WORKFLOW, invoice.pk)
+        if task is None or task.step_key != INVOICE_REVIEW_STEP or not wf_engine.can_act(self.request.user, task):
+            return None
+        return task
+
+    def get_object(self):
+        # ویرایش حسابدار مرحلهٔ بررسی که مجوز فهرست بخش رسید را ندارد: از راه کار باز همین رسید (مثل اقدام گردش)
+        if self.action in ('update', 'partial_update'):
+            pk = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+            if not self.filter_queryset(self.get_queryset()).filter(pk=pk).exists():
+                obj = self._workflow_invoice()
+                if self._review_accountant_task(obj) is None:
+                    raise Http404
+                return obj
+        return super().get_object()
+
     def perform_update(self, serializer):
         user = self.request.user
         instance = self.get_object()
@@ -696,18 +720,38 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if new_status and new_status != instance.status:
             # ت۲ طرح ۲.۳: وضعیت فاکتور فقط از راه گردش کار (ارسال، تأیید، عودت، رد، پرداخت، لغو) عوض می‌شود
             raise PermissionDenied("وضعیت رسید پرداخت فقط از راه گردش کار تغییر می‌کند.")
-        if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser:
-            raise PermissionDenied("رسید پرداخت در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
         if (instance.status in ('ready_to_pay', 'partially_paid', 'paid') or instance.paid_amount
                 or instance.payments.exists()):
             # در مرحلهٔ پرداخت حتی مدیر کل ویرایش نمی‌کند؛ ذخیرهٔ کامل ردیف قسط همزمان را بازنویسی می‌کرد
             raise PermissionDenied("برای این رسید پرداخت قسط پرداخت ثبت شده است و قابل ویرایش نیست.")
+        # گام ط: حسابدار مرحلهٔ بررسی (پیش از هر پرداخت) ویرایش می‌کند و در سابقهٔ گردش ثبت می‌شود
+        accountant_edit = instance.status not in INVOICE_EDITABLE_STATUSES and (
+            self._review_accountant_task(instance) is not None)
+        if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser and not accountant_edit:
+            raise PermissionDenied("رسید پرداخت در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
+        if accountant_edit and new_section is not None and new_section.pk != instance.section_id:
+            # بخش، دامنه و دریافت‌کنندگان گردش را عوض می‌کند؛ در میانهٔ گردش نه
+            raise PermissionDenied("بخش رسید پرداخت در جریان گردش کار تغییر نمی‌کند.")
         # سند نه از دورهٔ بسته بیرون می‌رود و نه به آن وارد می‌شود
         _ensure_invoice_open(instance)
         _ensure_doc_period_open(new_section or instance.section,
                                 serializer.validated_data.get('invoice_date_shamsi', instance.invoice_date_shamsi),
                                 'invoice_date_shamsi')
-        notify_document_changed(serializer.save(updated_by=user), 'updated')
+        if instance.status in INVOICE_EDITABLE_STATUSES:
+            notify_document_changed(serializer.save(updated_by=user), 'updated')
+            return
+        changed = invoice_changed_labels(instance, serializer.validated_data)
+        old_amount = instance.amount
+        with transaction.atomic():
+            saved = serializer.save(updated_by=user)
+            if changed:
+                reason = 'ویرایش در جریان گردش: ' + '، '.join(changed)
+                if saved.amount != old_amount:
+                    # مبلغ پیشین در سابقه می‌ماند (نمونهٔ گردش فقط مبلغ تازه را دارد)
+                    reason += f' (مبلغ از {old_amount:,.0f} به {saved.amount:,.0f})'
+                # خطای موتور (مثلاً مبلغی که تأیید گذشته را لازم می‌کند) کل ذخیره را برمی‌گرداند
+                _invoice_wf_call(lambda: wf_engine.record_edit(user, INVOICE_WORKFLOW, saved, reason), raise_drf=True)
+        notify_document_changed(saved, 'updated')
 
     def perform_destroy(self, instance):
         _ensure_invoice_open(instance)

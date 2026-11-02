@@ -33,6 +33,7 @@ from .models import (WorkflowCompanySettings, WorkflowInstance, WorkflowStep, Wo
                      WorkflowThreshold)
 from .queries import count_tasks_for_user, tasks_for_user, unassigned_open_tasks
 from .recipients import company_member_pairs, valid_rows_q
+from .recompute import safe_recompute
 from .registry import APPROVE, workflow_specs
 from .substitutes import (AUDIT_MODULE, create_substitute, is_live_superuser, list_substitutes, revoke_substitute,
                           serialize_substitute, substitute_candidates)
@@ -428,7 +429,8 @@ class ThresholdDetailView(WorkflowAPIView):
 
 def _settings_payload(row):
     return {'company_id': row.company_id, 'reminder_hours': row.reminder_hours,
-            'escalation_hours': row.escalation_hours, 'is_default': row.pk is None,
+            'escalation_hours': row.escalation_hours, 'creator_may_approve_own': row.creator_may_approve_own,
+            'is_default': row.pk is None,
             'updated_at': row.updated_at.isoformat() if row.updated_at else None}
 
 
@@ -445,19 +447,29 @@ class CompanySettingsView(WorkflowAPIView):
             row = (WorkflowCompanySettings.objects.select_for_update().filter(company_id=company_id).first()
                    or WorkflowCompanySettings(company_id=company_id))
             before = None if row.pk is None else {'reminder_hours': row.reminder_hours,
-                                                  'escalation_hours': row.escalation_hours}
+                                                  'escalation_hours': row.escalation_hours,
+                                                  'creator_may_approve_own': row.creator_may_approve_own}
+            was_self_approval = row.creator_may_approve_own
             reminder = _int(request.data.get('reminder_hours', row.reminder_hours), 'reminder_hours', required=True)
             escalation = _int(request.data.get('escalation_hours', row.escalation_hours), 'escalation_hours',
                               required=True)
             if not (1 <= reminder < escalation <= MAX_HOURS):
                 raise _bad('invalid_hours',
                            f'مدت یادآوری باید دست‌کم ۱ ساعت و کمتر از مدت خبر به بالاتر باشد و آن حداکثر {MAX_HOURS} ساعت')
+            self_approval = request.data.get('creator_may_approve_own', row.creator_may_approve_own)
+            if not isinstance(self_approval, bool):
+                raise _bad('invalid_creator_may_approve_own', 'مقدار «ایجادکننده سند خودش را تأیید کند» نامعتبر است')
             row.reminder_hours = reminder
             row.escalation_hours = escalation
+            row.creator_may_approve_own = self_approval
             row.updated_by = request.user
             row.save()
             _audit(request.user, 'UPDATE' if before else 'CREATE', 'WorkflowCompanySettings', row.pk, company_id,
-                   before=before, after={'reminder_hours': reminder, 'escalation_hours': escalation})
+                   before=before, after={'reminder_hours': reminder, 'escalation_hours': escalation,
+                                         'creator_may_approve_own': self_approval})
+            if self_approval != was_self_approval:
+                # گام ط: دریافت‌کنندگان کارهای باز این شرکت با تنظیم تازه (ثبت‌کننده افزوده یا کم می‌شود)
+                transaction.on_commit(lambda: safe_recompute(company_ids={company_id}))
         return Response(_settings_payload(row))
 
 

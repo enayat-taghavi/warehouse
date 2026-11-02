@@ -23,7 +23,7 @@ from accounts.scoped_permissions import effective_bundles
 
 from . import events
 from .errors import WorkflowError
-from .models import WorkflowInstance, WorkflowTask, WorkflowTaskRecipient
+from .models import WorkflowCompanySettings, WorkflowInstance, WorkflowTask, WorkflowTaskRecipient
 from .recipients import compute_recipients_batch, desired_rows, diff_rows, scope_triplet, write_row_changes
 from .registry import APPROVE, workflow_specs
 
@@ -124,6 +124,9 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         bundles = effective_bundles()
         items = []
         step_specs = {}
+        # گام ط طرح اصلاح رسید: شرکت‌های با تنظیم «ایجادکننده سند خودش را تأیید کند» (یک پرس‌وجو)
+        self_approval = WorkflowCompanySettings.self_approval_company_ids(
+            {instances[t.instance_id].company_id for t in tasks})
         for task in tasks:
             inst = instances[task.instance_id]
             target = task.target_user_id if task.track == WorkflowTask.TRACK_REFERRAL else None
@@ -131,7 +134,9 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
             step = spec.step(task.step_key) if spec is not None else None
             step_specs[task.pk] = step
             items.append((task.pk, scope_triplet(inst.section, inst.company_id), task.role, task.permission,
-                          inst.created_by_id, target, inst.allow_substitute, step is not None and step.creator_may_act))
+                          inst.created_by_id, target, inst.allow_substitute,
+                          step is not None and (step.creator_may_act or (
+                              spec.company_self_approval and inst.company_id in self_approval))))
         computed = compute_recipients_batch(items, bundles=bundles, today=today)
 
         existing = {}

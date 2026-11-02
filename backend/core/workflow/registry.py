@@ -84,6 +84,9 @@ class WorkflowSpec:
     amount_field: str | None = None
     view_permission: str | None = None
     referral_only: bool = False
+    # گام ط طرح اصلاح رسید: با تنظیم شرکتی creator_may_approve_own، ثبت‌کننده (نه مدیر کل) در همهٔ مرحله‌ها
+    # دریافت‌کنندهٔ اصلی می‌ماند و روی سند خودش اقدام می‌کند، مثل creator_may_act؛ خاموش یعنی رفتار پیشین
+    company_self_approval: bool = False
     _index: dict = field(default=None, init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self):

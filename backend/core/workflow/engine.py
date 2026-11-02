@@ -33,7 +33,7 @@ from platform_core.registry import is_entity_locked, resolve_entity
 from . import events
 from .errors import ReasonRequired, TaskAlreadyDone, WorkflowError, WorkflowPermissionDenied, WorkflowStateError
 from .models import (
-    WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient, WorkflowThreshold,
+    WorkflowCompanySettings, WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient, WorkflowThreshold,
 )
 from .recipients import (
     clear_task_recipients, company_member_pairs, compute_recipients_batch, creator_rank as _creator_rank,
@@ -204,13 +204,26 @@ def _close_task(task, outcome, user=None, now=None) -> set:
     return clear_task_recipients(task)
 
 
+def creator_may_act(spec, step, company_id) -> bool:
+    """
+    ثبت‌کننده دریافت‌کنندهٔ اصلی این مرحله می‌ماند و روی سند خودش اقدام می‌کند؟ مرحلهٔ creator_may_act، یا گردش
+    company_self_approval با تنظیم روشن شرکت سند (گام ط طرح اصلاح رسید). مدیر کل ثبت‌کننده در _authorize جداست.
+    """
+    if step is None:
+        return False
+    if step.creator_may_act:
+        return True
+    return bool(getattr(spec, 'company_self_approval', False) and company_id
+                and company_id in WorkflowCompanySettings.self_approval_company_ids({company_id}))
+
+
 def _compute_recipients(ctx, instance, step, today=None):
     """
     (دریافت‌کنندگان اصلی، ردیف‌های جانشین، دارندگان نقش) مرحله برای این نمونه؛ همان قاعدهٔ مسیر دسته‌ای
     (compute_recipients_batch با یک کار).
     """
     item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
-            getattr(instance, "allow_substitute", True), step.creator_may_act)
+            getattr(instance, "allow_substitute", True), creator_may_act(ctx.spec, step, ctx.company_id))
     return compute_recipients_batch([item], bundles=ctx.bundles, today=today)[0]
 
 
@@ -499,9 +512,10 @@ def _authorize(user, instance, task, ctx, today):
     if not getattr(user, 'is_active', False) or not user.pk:
         raise WorkflowPermissionDenied()
     step = ctx.spec.step(task.step_key)
-    # مدیر کلِ ثبت‌کننده هرگز روی سند خودش اقدام نمی‌کند؛ ثبت‌کنندهٔ دیگر فقط در مرحلهٔ creator_may_act و فقط
-    # اگر خودش دریافت‌کنندهٔ اصلی باشد (جانشینی ثبت‌کننده در compute_recipients_batch ساخته نمی‌شود)
-    own_step = step is not None and step.creator_may_act and not user.is_superuser
+    # مدیر کلِ ثبت‌کننده هرگز روی سند خودش اقدام نمی‌کند؛ ثبت‌کنندهٔ دیگر فقط در مرحلهٔ creator_may_act (یا با تنظیم
+    # شرکتی company_self_approval) و فقط اگر خودش دریافت‌کنندهٔ اصلی باشد. ثبت‌کننده هرگز جانشین کسی روی سند خودش
+    # نیست؛ ولی جانشینِ خودِ ثبت‌کننده (وقتی دریافت‌کنندهٔ اصلی است) به جای او اقدام می‌کند، مثل هر دریافت‌کنندهٔ اصلی
+    own_step = not user.is_superuser and creator_may_act(ctx.spec, step, ctx.company_id)
     if instance.created_by_id and user.pk == instance.created_by_id and not own_step:
         raise WorkflowPermissionDenied('self_approval', 'ثبت‌کنندهٔ سند نمی‌تواند روی سند خودش اقدام کند', 403)
     if user.is_superuser:
@@ -631,6 +645,42 @@ def open_at_step(workflow_key, obj, creator, step_key, *, reason=''):
         instance.save()
         _history(instance, WorkflowStep.AUTO, task=task, to_step=step_key, reason=reason, now=now)
     return task
+
+
+def record_edit(user, workflow_key, obj, reason, *, now=None):
+    """
+    گام ط طرح اصلاح رسید: سند در جریان گردش (مثلاً به دست حسابدار مرحلهٔ بررسی) ویرایش شد. مبلغ و خلاصهٔ نمونه
+    تازه می‌شوند و رد شدن‌های قاعدهٔ ۱ و ۲ فقط برای مرحله‌های پس از مرحلهٔ جاری با مبلغ تازه دوباره حساب می‌شوند
+    (تا افزایش مبلغ از تأیید لازمِ بعدی نگذرد). یک ردیف سابقهٔ «ویرایش سند». فراخوان درون همان تراکنش ذخیرهٔ سند
+    صدا می‌زند. بی نمونهٔ در جریان None.
+    """
+    spec = get_spec(workflow_key)
+    now = now or timezone.now()
+    instance = WorkflowInstance.objects.select_for_update().filter(
+        workflow_key=workflow_key, entity_kind=spec.entity_kind, entity_id=obj.pk,
+        status=WorkflowInstance.IN_PROGRESS).first()
+    if instance is None:
+        return None
+    instance.amount = _amount(spec, obj)
+    instance.summary = _summary(spec, obj)
+    old_plan = instance.skip_plan or {}
+    plan = _plan_skips(spec, instance.amount, instance.creator_rank,
+                       _thresholds(workflow_key, instance.section_id, instance.company_id), section_role_ranks(), obj)
+    later, earlier = [], list(instance.step_keys)
+    if instance.current_step in instance.step_keys:
+        index = instance.step_keys.index(instance.current_step)
+        earlier, later = instance.step_keys[:index], instance.step_keys[index + 1:]
+    for key in earlier:
+        if old_plan.get(key) == SKIP_THRESHOLD and plan.get(key) != SKIP_THRESHOLD:
+            # مبلغ تازه از سقف مرحلهٔ گذشته‌ای که به خاطر سقف رد شده بود بالاتر است؛ آن تأیید دور زده نمی‌شود
+            raise WorkflowError('edit_needs_earlier_approval',
+                                f'با این مبلغ «{spec.step(key).title_fa}» لازم می‌شود؛ رسید را برای اصلاح عودت دهید',
+                                400)
+    kept = {k: v for k, v in old_plan.items() if k not in later}
+    instance.skip_plan = {**kept, **{k: v for k, v in plan.items() if k in later}}
+    instance.save(update_fields=['amount', 'summary', 'skip_plan'])
+    return _history(instance, WorkflowStep.EDIT, actor=user, from_step=instance.current_step,
+                    to_step=instance.current_step, reason=reason, now=now)
 
 
 def _finish_task(instance, task, user, outcome, now):

@@ -95,6 +95,46 @@ def mark_invoice_updated_by(invoice, user):
     invoice.updated_by = user
 
 
+def _edit_repr(value):
+    if value is None or value == '':
+        return None
+    if hasattr(value, 'pk') and not isinstance(value, (str, int, float, Decimal)):
+        return value.pk
+    if isinstance(value, Decimal):
+        return value.normalize()
+    return str(value)
+
+
+def _line_key(line):
+    get = line.get if isinstance(line, dict) else (lambda k, d=None: getattr(line, k, d))
+    head = get('expense_head')
+    return (_edit_repr(head) if head is not None else get('expense_head_id'), get('description') or '',
+            _edit_repr(Decimal(str(get('quantity', None) or 1))), get('unit') or '',
+            _edit_repr(Decimal(str(get('unit_price', None) or 0))))
+
+
+def invoice_changed_labels(invoice, validated_data) -> list:
+    """
+    گام ط طرح اصلاح رسید: برچسب فارسی فیلدهایی که این ویرایش واقعاً عوض می‌کند (برای ردیف سابقه)؛ ردیف‌ها
+    یک برچسب «ردیف‌ها». پیش از save صدا زده می‌شود.
+    """
+    labels = []
+    for key, new_value in validated_data.items():
+        if key in ('status', 'updated_by'):
+            continue
+        if key == 'lines':
+            if new_value is not None and ([_line_key(x) for x in new_value]
+                                          != [_line_key(x) for x in invoice.lines.order_by('position')]):
+                labels.append('ردیف‌ها')
+            continue
+        if _edit_repr(getattr(invoice, key, None)) != _edit_repr(new_value):
+            try:
+                labels.append(str(invoice._meta.get_field(key).verbose_name))
+            except Exception:
+                labels.append(key)
+    return labels
+
+
 def ensure_invoice_number(invoice, user):
     """شمارهٔ داخلی در اولین ارسال (داخل تراکنش ارسال)؛ شمارهٔ موجود هرگز عوض نمی‌شود."""
     if invoice.issued_number_id:

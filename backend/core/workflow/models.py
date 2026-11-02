@@ -181,6 +181,7 @@ class WorkflowStep(models.Model):
     REFER = 'refer'
     DONE = 'done'
     SEEN = 'seen'
+    EDIT = 'edit'
     ACTION_CHOICES = [
         (SUBMIT, 'ارسال'),
         (ACT, 'اقدام'),
@@ -191,6 +192,7 @@ class WorkflowStep(models.Model):
         (REFER, 'ارجاع'),
         (DONE, 'انجام شد'),
         (SEEN, 'رؤیت شد'),
+        (EDIT, 'ویرایش سند'),
     ]
 
     instance = models.ForeignKey(WorkflowInstance, on_delete=models.CASCADE, related_name='steps',
@@ -256,6 +258,9 @@ class WorkflowCompanySettings(models.Model):
     reminder_hours = models.PositiveIntegerField(default=DEFAULT_REMINDER_HOURS, verbose_name='ساعت تا یادآوری')
     escalation_hours = models.PositiveIntegerField(default=DEFAULT_ESCALATION_HOURS,
                                                    verbose_name='ساعت تا خبر به بالاتر')
+    # گام ط طرح اصلاح رسید: فقط گردش‌های company_self_approval؛ False همان رفتار پیشین (ثبت‌کننده اقدام نمی‌کند)
+    creator_may_approve_own = models.BooleanField(default=False,
+                                                  verbose_name='ایجادکننده می‌تواند سند خودش را تأیید کند')
     updated_by = models.ForeignKey(USER, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
                                    verbose_name='آخرین ویرایش‌کننده')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='آخرین ویرایش')
@@ -268,6 +273,15 @@ class WorkflowCompanySettings(models.Model):
     def for_company(cls, company_id):
         """ردیف تنظیمات شرکت یا نمونهٔ ذخیره‌نشده با مقدارهای پیش‌فرض."""
         return cls.objects.filter(company_id=company_id).first() or cls(company_id=company_id)
+
+    @classmethod
+    def self_approval_company_ids(cls, company_ids) -> set:
+        """شرکت‌هایی از company_ids که تنظیم «ایجادکننده سند خودش را تأیید کند» در آن‌ها روشن است (یک پرس‌وجو)."""
+        ids = {c for c in company_ids if c}
+        if not ids:
+            return set()
+        return set(cls.objects.filter(company_id__in=ids, creator_may_approve_own=True)
+                   .values_list('company_id', flat=True))
 
 
 class WorkflowSubstitute(models.Model):
