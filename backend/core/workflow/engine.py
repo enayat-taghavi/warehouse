@@ -4,12 +4,13 @@
 قاعده‌ها:
 - ص۷ طرح ۳.۶: سند بی‌بخش با company_field «سطح شرکت» است (نمونه با section=None)؛ همهٔ قاعده‌ها روی زنجیرهٔ
   (None, None, company_id) یعنی فقط انتساب‌های سطح شرکت کار می‌کنند. ص۸: قلاب required مرحلهٔ «تأیید».
-- ت۳: دریافت‌کننده = نقش مرحله در بخش ∩ مجوز مرحله در همان بخش − ثبت‌کننده؛ مدیر کل دریافت‌کننده نیست ولی
-  روی هر کار جز سند خودش اقدام می‌کند (as_superuser در سابقه). مرحلهٔ «اجرا» با creator_may_act ثبت‌کننده را
-  کم نمی‌کند و او روی سند خودش اقدام می‌کند.
-- ت۶ (فقط مرحله‌های «تأیید»؛ «بررسی» و «اجرا» همیشه اجباری‌اند): ۱. سقف، ۲. سطح ثبت‌کننده (هنگام ارسال،
-  در skip_plan)، ۳. بی‌دریافت‌کننده (هنگام رسیدن به مرحله). قاعدهٔ ۳ برای «بررسی»/«اجرا» با
-  skip_when_creator_only فقط وقتی تنها دارندهٔ نقش ثبت‌کننده است (no_second_approval).
+- ت۳: دریافت‌کننده = نقش مرحله در بخش ∩ مجوز مرحله در همان بخش − ثبت‌کننده؛ مدیر کل دریافت‌کننده نیست و از
+  طرح نبودن نفر (بند ۴-۱) روی سند شرکت اقدام و ارجاع نمی‌کند (403 superuser_view_only؛ as_superuser فقط سابقهٔ
+  قدیم). مرحلهٔ creator_may_act یا تنظیم دوسطحی «تأیید سند خود» ثبت‌کننده را کم نمی‌کند.
+- ت۶ (فقط مرحله‌های «تأیید»): ۱. سقف، ۲. سطح ثبت‌کننده (هنگام ارسال، در skip_plan).
+- طرح نبودن نفر (بند ۴-۳): مرحلهٔ بی‌دریافت‌کنندهٔ اصلی با تنظیم مؤثر (policy.missing_action) رد می‌شود
+  (no_recipient یا no_second_approval) یا منتظر می‌ماند (wait_reason و خبر انتظار)؛ کار forced هرگز رد نمی‌شود.
+  رد شدن مرحلهٔ پرداخت = پایان با settled_outside.
 - ت۸: عودت و رد با دلیل؛ لغو فقط به دست ثبت‌کننده و پیش از اقدام نفر دیگر.
 - ت۱۳: هر اقدام در transaction.atomic با select_for_update روی نمونه و کار (به همین ترتیب) و سنجش revision.
 - ت۱۵: نمونهٔ باز با نسخهٔ قدیم پیش از هر اقدام به نسخهٔ تازه برده می‌شود.
@@ -20,6 +21,7 @@
 دوباره ثبت نمی‌شوند (یک بار در ردیف submit ثبت شده‌اند). to_step کلید مرحلهٔ رسیده یا وضعیت پایانی است.
 """
 import json
+import logging
 from decimal import Decimal
 
 from django.core.serializers.json import DjangoJSONEncoder
@@ -33,16 +35,18 @@ from platform_core.registry import is_entity_locked, resolve_entity
 from . import events
 from .errors import ReasonRequired, TaskAlreadyDone, WorkflowError, WorkflowPermissionDenied, WorkflowStateError
 from .models import (
-    WorkflowCompanySettings, WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient, WorkflowThreshold,
+    WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient, WorkflowThreshold,
 )
 from .recipients import (
     clear_task_recipients, company_member_pairs, compute_recipients_batch, creator_rank as _creator_rank,
     row_valid_on, scope_triplet, sync_task_recipients, valid_rows_q,
 )
 from .registry import (
-    ACT, APPROVE, CANCELLED, COMPLETED, REFER, REFERRAL_KINDS, REJECT, REJECTED, RETURN, RETURNED, get_spec,
-    workflow_specs,
+    ACT, APPROVE, CANCELLED, COMPLETED, REFER, REFERRAL_KINDS, REJECT, REJECTED, RETURN, RETURNED, SETTLED_OUTSIDE,
+    SKIP, get_spec, workflow_specs,
 )
+
+logger = logging.getLogger(__name__)
 
 # کدهای دلیل رد شدن مرحله (ت۱۴)
 SKIP_THRESHOLD = 'threshold'
@@ -51,6 +55,7 @@ SKIP_NO_RECIPIENT = 'no_recipient'
 SKIP_NO_SECOND_APPROVAL = 'no_second_approval'
 SKIP_VERSION_REMOVED = 'version_removed'
 SKIP_NOT_REQUIRED = 'not_required'
+SKIP_PAYMENT_OUTSIDE = 'payment_outside'
 
 RESTARTABLE = (WorkflowInstance.RETURNED, WorkflowInstance.CANCELLED)
 
@@ -69,6 +74,15 @@ class _Ctx:
         self.company_id = section.project.company_id if section is not None else company_id
         self._ranks = None
         self._bundles = None
+        self._policy = None
+
+    @property
+    def policy(self):
+        """تنظیم مؤثر نبودن نفر و تأیید خود برای (شرکت، گردش) این سند؛ یک بار در هر اقدام."""
+        if self._policy is None:
+            from .policy import effective_policy
+            self._policy = effective_policy(self.company_id, self.spec.key)
+        return self._policy
 
     @property
     def ranks(self):
@@ -204,17 +218,22 @@ def _close_task(task, outcome, user=None, now=None) -> set:
     return clear_task_recipients(task)
 
 
-def creator_may_act(spec, step, company_id) -> bool:
+def creator_may_act(spec, step, company_id, policy=None) -> bool:
     """
-    ثبت‌کننده دریافت‌کنندهٔ اصلی این مرحله می‌ماند و روی سند خودش اقدام می‌کند؟ مرحلهٔ creator_may_act، یا گردش
-    company_self_approval با تنظیم روشن شرکت سند (گام ط طرح اصلاح رسید). مدیر کل ثبت‌کننده در _authorize جداست.
+    ثبت‌کننده دریافت‌کنندهٔ اصلی این مرحله می‌ماند و روی سند خودش اقدام می‌کند؟ مرحلهٔ creator_may_act، یا تنظیم
+    دوسطحی «ایجادکننده می‌تواند سند خودش را تأیید کند» (گردش ← شرکت؛ طرح نبودن نفر بند ۴-۳). ستون قدیم
+    WorkflowCompanySettings.creator_may_approve_own و company_self_approval دیگر خوانده نمی‌شوند.
     """
     if step is None:
         return False
     if step.creator_may_act:
         return True
-    return bool(getattr(spec, 'company_self_approval', False) and company_id
-                and company_id in WorkflowCompanySettings.self_approval_company_ids({company_id}))
+    if not company_id:
+        return False
+    if policy is None:
+        from .policy import effective_policy
+        policy = effective_policy(company_id, spec.key)
+    return bool(policy.creator_may_approve_own)
 
 
 def _compute_recipients(ctx, instance, step, today=None):
@@ -223,7 +242,9 @@ def _compute_recipients(ctx, instance, step, today=None):
     (compute_recipients_batch با یک کار).
     """
     item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
-            getattr(instance, "allow_substitute", True), creator_may_act(ctx.spec, step, ctx.company_id))
+            getattr(instance, "allow_substitute", True),
+            bool(step.creator_may_act or (ctx.company_id and ctx.spec is not None
+                                          and ctx.policy.creator_may_approve_own)))
     return compute_recipients_batch([item], bundles=ctx.bundles, today=today)[0]
 
 
@@ -235,41 +256,92 @@ def _referral_recipients(instance, target_ids, today=None) -> dict:
 
 
 def no_recipient_reason(instance, holders):
-    """دلیل رد شدن مرحلهٔ تأیید بی‌دریافت‌کننده (قاعدهٔ ۳ ت۶)."""
+    """دلیل رد شدن مرحلهٔ بی‌دریافت‌کننده: no_second_approval اگر تنها دارندهٔ نقش ثبت‌کننده است."""
     creator = instance.created_by_id
     return SKIP_NO_SECOND_APPROVAL if creator and holders == {creator} else SKIP_NO_RECIPIENT
 
 
-def _open_task(ctx, instance, step, principals, subs, now):
+def wait_reason_for(instance, holders) -> str:
+    """دلیل انتظار کار بی‌دریافت‌کننده: creator_only (بند ۵ کاربر) یا no_holder."""
+    creator = instance.created_by_id
+    return WorkflowTask.WAIT_CREATOR_ONLY if creator and holders == {creator} else WorkflowTask.WAIT_NO_HOLDER
+
+
+class SettleBlocked(Exception):
+    """قلاب can_settle_outside ماژول بستن گردش با «پرداخت بیرون از سامانه» را نپذیرفت؛ کار منتظر می‌ماند."""
+
+
+def settle_block(ctx, instance):
+    """
+    پیام منع قلاب‌های `can_settle_outside:<entity_kind>` با fn(obj, instance) -> پیام یا None (مثلاً رسید با قسط
+    پرداخت‌شده)؛ None یعنی مجاز. خطای قلاب یعنی منع (هرگز بستن خودکار با خطا).
+    """
+    from platform_core.registry import contributions
+    for fn in contributions(f'can_settle_outside:{instance.entity_kind}'):
+        try:
+            message = fn(ctx.obj, instance)
+        except Exception:
+            logger.exception('[workflow] can_settle_outside hook failed for instance %s', instance.pk)
+            return 'hook_error'
+        if message:
+            return str(message)
+    return None
+
+
+def emit_waiting(instance, task, policy=None) -> None:
+    """
+    خبر انتظار (بند ۴-۳) فقط هنگام گذار به «منتظر»: به گیرندگان notify_mode همان شرکت و گردش؛ اگر کسی نبود،
+    به مدیران کل (to_superusers).
+    """
+    from .policy import waiting_targets
+    pair = (instance.company_id, instance.workflow_key)
+    users = waiting_targets([pair], {pair: policy} if policy is not None else None).get(pair) or set()
+    if users:
+        events.emit(events.WAITING, instance, task, users)
+    else:
+        events.emit(events.WAITING, instance, task, [], to_superusers=True)
+
+
+def _open_task(ctx, instance, step, principals, subs, now, *, forced=False, wait_reason=''):
     task = WorkflowTask.objects.create(
         instance=instance, step_key=step.key, step_kind=step.kind, role=step.role, permission=step.permission,
-        revision=instance.revision, is_open=True, has_recipients=bool(principals), opened_at=now,
+        revision=instance.revision, is_open=True, has_recipients=bool(principals), opened_at=now, forced=forced,
+        wait_reason='' if principals else wait_reason, superuser_alerted_at=None if principals else now,
     )
     received, _removed = sync_task_recipients(task, principals, subs)
     if principals:
         events.emit(events.RECEIVED, instance, task, received)
     else:
-        events.emit(events.SUPERUSER_ALERT, instance, task, [])
+        emit_waiting(instance, task, ctx.policy if instance.company_id else None)
     return task
 
 
 def _enter_step(ctx, instance, step, now, force=False):
     """
-    رسیدن به مرحله (قاعدهٔ ۳ ت۶). خروجی (task یا None، رد شدن رسیدن یا None).
-    force: مرحله حتماً باز شود (ت۱۵: آخرین مرحلهٔ نسخهٔ تازه؛ هرگز پایان خودکار).
+    رسیدن به مرحله (طرح نبودن نفر، بند ۴-۳). خروجی (task یا None، رد شدن رسیدن یا None).
+    بی‌دریافت‌کنندهٔ اصلی: تنظیم «رد شود» مرحله را رد می‌کند (مرحلهٔ پرداخت: payment_outside، مگر قلاب
+    can_settle_outside منع کند)؛ «منتظر بماند» کار را با wait_reason و خبر انتظار باز می‌کند.
+    force: مرحله حتماً باز شود و کار forced است (هرگز خودکار رد نمی‌شود؛ ت۱۵ و open_at_step).
     """
     principals, subs, holders = _compute_recipients(ctx, instance, step)
-    if not principals and not force and step.skips_without_recipient(instance.created_by_id, holders):
-        return None, {'step': step.key, 'reason': no_recipient_reason(instance, holders)}
+    if not principals and not force and ctx.policy.missing_action(step) == SKIP:
+        if not step.payment:
+            return None, {'step': step.key, 'reason': no_recipient_reason(instance, holders)}
+        if settle_block(ctx, instance) is None:
+            return None, {'step': step.key, 'reason': SKIP_PAYMENT_OUTSIDE}
     instance.current_step = step.key
-    task = _open_task(ctx, instance, step, principals, subs, now)
+    task = _open_task(ctx, instance, step, principals, subs, now, forced=force,
+                      wait_reason=wait_reason_for(instance, holders))
     ctx.spec.on_state_change(ctx.obj, step.key, instance)
     return task, None
 
 
-def _advance(ctx, instance, start_index, now):
+def _advance(ctx, instance, start_index, now, settled=False):
     """
     حرکت از مرحلهٔ start_index به بعد تا اولین مرحلهٔ باز؛ وگرنه پایان گردش.
+    مرحلهٔ پرداختِ ردشده (یا settled=True از skip_lost_task) پایان را «پرداخت بیرون از سامانه» می‌کند:
+    وضعیت همان completed، settled_outside=True و حالت on_state_change برابر SETTLED_OUTSIDE (ماژول پرداختی ثبت
+    نمی‌کند).
     خروجی (کار باز یا None، to_step، رد شدن‌های رسیدن).
     """
     skipped = []
@@ -280,14 +352,16 @@ def _advance(ctx, instance, start_index, now):
         task, skip = _enter_step(ctx, instance, step, now)
         if skip:
             skipped.append(skip)
+            settled = settled or skip['reason'] == SKIP_PAYMENT_OUTSIDE
             continue
         instance.save()
         return task, key, skipped
     instance.status = WorkflowInstance.COMPLETED
+    instance.settled_outside = settled
     instance.current_step = ''
     instance.closed_at = now
     instance.save()
-    ctx.spec.on_state_change(ctx.obj, COMPLETED, instance)
+    ctx.spec.on_state_change(ctx.obj, SETTLED_OUTSIDE if settled else COMPLETED, instance)
     if instance.created_by_id:
         # پایان گردش: رویداد «انجام شد» برای ثبت‌کننده با step_key='completed'
         events.emit(events.DONE, instance, None, [instance.created_by_id], step_key=COMPLETED)
@@ -305,35 +379,42 @@ def _history(instance, action, *, task=None, actor=None, on_behalf_of_id=None, a
 
 def skip_lost_task(ctx, instance, task, holders, now, from_step=None):
     """
-    ت۷ (قاعدهٔ ۳ ت۶ پس از رسیدن): کار باز مرحلهٔ «تأیید» (یا مرحلهٔ skip_when_creator_only) که دریافت‌کنندهٔ اصلی‌اش را از دست داد بسته می‌شود
-    (نتیجهٔ skipped)، گردش با _advance پیش می‌رود و ردیف auto با دلیل رد شدن ثبت می‌شود. نمونه و کار باید
-    قفل باشند (به همین ترتیب). خروجی کار باز تازه یا None.
+    کار باز بی‌دریافت‌کنندهٔ اصلی با تنظیم «رد شود» (طرح نبودن نفر بند ۴-۳؛ هرگز کار forced) بسته می‌شود
+    (نتیجهٔ skipped)، گردش با _advance پیش می‌رود و ردیف auto با دلیل رد شدن ثبت می‌شود. کار مرحلهٔ پرداخت
+    گردش را با «پرداخت بیرون از سامانه» می‌بندد، مگر قلاب can_settle_outside منع کند (SettleBlocked، پیش از هر
+    نوشتن). نمونه و کار باید قفل باشند (به همین ترتیب). خروجی کار باز تازه یا None.
     """
     step_key = task.step_key
+    step = ctx.spec.step(step_key)
+    payment = bool(step is not None and step.payment)
+    if payment and settle_block(ctx, instance) is not None:
+        raise SettleBlocked(step_key)
     old = _close_task(task, WorkflowTask.SKIPPED, None, now)
     events.emit(events.REMOVED, instance, task, old)
     instance.revision += 1
-    skipped = [{'step': step_key, 'reason': no_recipient_reason(instance, holders)}]
+    reason = SKIP_PAYMENT_OUTSIDE if payment else no_recipient_reason(instance, holders)
+    skipped = [{'step': step_key, 'reason': reason}]
     keys = instance.step_keys
     index = keys.index(step_key) + 1 if step_key in keys else len(keys)
-    new_task, to_step, arrival = _advance(ctx, instance, index, now)
+    new_task, to_step, arrival = _advance(ctx, instance, index, now, settled=payment)
     skipped.extend(arrival)
     _history(instance, WorkflowStep.AUTO, task=new_task, from_step=from_step or step_key, to_step=to_step,
              skipped=skipped, now=now)
     return new_task
 
 
-def mark_waiting(instance, task, now) -> bool:
+def mark_waiting(instance, task, now, holders=(), policy=None) -> bool:
     """
-    کار «بررسی» یا «اجرا» بی‌دریافت‌کنندهٔ اصلی منتظر می‌ماند؛ هشدار مدیر کل فقط هنگام گذار از «دارد» به
-    «ندارد» (نه در هر محاسبهٔ دوباره). True اگر هشدار داد.
+    کار بی‌دریافت‌کنندهٔ اصلی منتظر می‌ماند؛ خبر انتظار فقط هنگام گذار از «دارد» به «ندارد» (نه در هر محاسبهٔ
+    دوباره). True اگر خبر داد.
     """
     if not task.has_recipients:
         return False
     task.has_recipients = False
     task.superuser_alerted_at = now
-    task.save(update_fields=['has_recipients', 'superuser_alerted_at'])
-    events.emit(events.SUPERUSER_ALERT, instance, task, [])
+    task.wait_reason = wait_reason_for(instance, set(holders))
+    task.save(update_fields=['has_recipients', 'superuser_alerted_at', 'wait_reason'])
+    emit_waiting(instance, task, policy)
     return True
 
 
@@ -370,19 +451,23 @@ def _ensure_current_version(instance, ctx, now=None) -> bool:
             task.step_kind, task.role, task.permission = step.kind, step.role, step.permission
             task.save(update_fields=['step_kind', 'role', 'permission'])
             principals, subs, holders = _compute_recipients(ctx, instance, step)
-            if (not principals and task.has_recipients
-                    and step.skips_without_recipient(instance.created_by_id, holders)):
-                # قاعدهٔ ۳ ت۶ روی مرحلهٔ نگه‌داشته (ت۷)؛ skip_lost_task نمونه را ذخیره می‌کند
-                skip_lost_task(ctx, instance, task, holders, now)
-                return True
+            if not principals and not task.forced and ctx.policy.missing_action(step) == SKIP:
+                # تنظیم «رد شود» روی مرحلهٔ نگه‌داشته؛ skip_lost_task نمونه را ذخیره می‌کند. قلاب
+                # can_settle_outside پیش از هر نوشتن منع می‌کند و کار منتظر می‌ماند.
+                try:
+                    skip_lost_task(ctx, instance, task, holders, now)
+                    return True
+                except SettleBlocked:
+                    pass
             received, removed = sync_task_recipients(task, principals, subs)
             events.emit(events.RECEIVED, instance, task, received)
             events.emit(events.REMOVED, instance, task, removed)
             if principals and not task.has_recipients:
                 task.has_recipients = True
-                task.save(update_fields=['has_recipients'])
+                task.wait_reason = ''
+                task.save(update_fields=['has_recipients', 'wait_reason'])
             elif not principals:
-                mark_waiting(instance, task, now)
+                mark_waiting(instance, task, now, holders, ctx.policy)
         instance.save()
         return True
     # مرحلهٔ جاری برداشته شده
@@ -482,6 +567,7 @@ def submit(workflow_key, obj, user, *, restart_closed=False):
         instance.amount = _amount(spec, obj)
         instance.summary = _summary(spec, obj)
         instance.others_acted = False
+        instance.settled_outside = False
         instance.submitted_at = now
         instance.closed_at = None
         instance.revision += 1
@@ -501,6 +587,14 @@ def submit(workflow_key, obj, user, *, restart_closed=False):
     return instance
 
 
+SUPERUSER_VIEW_ONLY_FA = 'مدیر کل سامانه فقط سند را می‌بیند'
+
+
+def superuser_view_only():
+    """403 superuser_view_only (بند ۴-۱): مدیر کل روی سند شرکت اقدام و ارجاع نمی‌کند."""
+    return WorkflowPermissionDenied('superuser_view_only', SUPERUSER_VIEW_ONLY_FA, 403)
+
+
 def _task_id(task):
     return task.pk if isinstance(task, WorkflowTask) else int(task)
 
@@ -511,15 +605,16 @@ def _authorize(user, instance, task, ctx, today):
     """
     if not getattr(user, 'is_active', False) or not user.pk:
         raise WorkflowPermissionDenied()
+    if user.is_superuser:
+        # بند ۴-۱ طرح نبودن نفر: مدیر کل سامانه سند شرکت را فقط می‌بیند (as_superuser فقط در سابقهٔ قدیم)
+        raise superuser_view_only()
     step = ctx.spec.step(task.step_key)
-    # مدیر کلِ ثبت‌کننده هرگز روی سند خودش اقدام نمی‌کند؛ ثبت‌کنندهٔ دیگر فقط در مرحلهٔ creator_may_act (یا با تنظیم
-    # شرکتی company_self_approval) و فقط اگر خودش دریافت‌کنندهٔ اصلی باشد. ثبت‌کننده هرگز جانشین کسی روی سند خودش
-    # نیست؛ ولی جانشینِ خودِ ثبت‌کننده (وقتی دریافت‌کنندهٔ اصلی است) به جای او اقدام می‌کند، مثل هر دریافت‌کنندهٔ اصلی
-    own_step = not user.is_superuser and creator_may_act(ctx.spec, step, ctx.company_id)
+    # ثبت‌کننده فقط در مرحلهٔ creator_may_act یا با تنظیم دوسطحی «تأیید سند خود» و فقط اگر خودش دریافت‌کنندهٔ اصلی
+    # باشد. ثبت‌کننده هرگز جانشین کسی روی سند خودش نیست؛ ولی جانشینِ خودِ ثبت‌کننده (وقتی دریافت‌کنندهٔ اصلی است)
+    # به جای او اقدام می‌کند، مثل هر دریافت‌کنندهٔ اصلی
+    own_step = creator_may_act(ctx.spec, step, ctx.company_id, ctx.policy if ctx.company_id else None)
     if instance.created_by_id and user.pk == instance.created_by_id and not own_step:
         raise WorkflowPermissionDenied('self_approval', 'ثبت‌کنندهٔ سند نمی‌تواند روی سند خودش اقدام کند', 403)
-    if user.is_superuser:
-        return True, None
     principals, subs, _holders = _compute_recipients(ctx, instance, step, today=today)
     if user.pk in principals:
         return False, None
@@ -804,7 +899,7 @@ def open_task(workflow_key, entity_id):
 def can_act(user, task, action=None) -> bool:
     """
     فقط‌خواندنی و بی قفل: آیا کاربر همین الان می‌تواند روی این کار مرحله اقدام کند (همان قاعدهٔ `_authorize`:
-    دریافت‌کنندهٔ اصلی یا جانشین در بازهٔ امروز، مدیر کل، و هرگز ثبت‌کنندهٔ سند). با `action`، اقدام هم باید در
+    دریافت‌کنندهٔ اصلی یا جانشین در بازهٔ امروز؛ هرگز مدیر کل و ثبت‌کنندهٔ سند). با `action`، اقدام هم باید در
     مرحله مجاز باشد. ماژول برای کنش‌های میانیِ مرحله (که خودشان اقدام موتور نیستند) از این استفاده می‌کند.
     """
     if not isinstance(task, WorkflowTask):
@@ -890,12 +985,15 @@ def refer(user, instance_or_id, targets, *, kind, instruction='', due_at=None, p
     """
     ر۶: ارجاع سند به ۱ تا ۲۰ کاربر فعال و عضو شرکت نمونه؛ برای هر گیرنده یک شاخهٔ موازی (کار مسیر referral).
     ارجاع‌دهنده: دریافت‌کنندهٔ معتبر امروز یک کار باز همین نمونه (والد همان کار)، یا کسی که قلاب
-    can_refer:<entity_kind> اجازه دهد، یا مدیر کل فعال. ارجاع کار والد را نمی‌بندد. خروجی کارهای ساخته‌شده.
+    can_refer:<entity_kind> اجازه دهد؛ هرگز مدیر کل (بند ۴-۱ طرح نبودن نفر، 403 superuser_view_only). ارجاع کار
+    والد را نمی‌بندد. خروجی کارهای ساخته‌شده.
     """
     if kind not in REFERRAL_KINDS:
         raise WorkflowError('invalid_kind', 'نوع ارجاع باید «ارجاع» یا «برای اطلاع» باشد', 400)
     if not getattr(user, 'is_active', False) or not user.pk:
         raise WorkflowPermissionDenied()
+    if user.is_superuser:
+        raise superuser_view_only()
     target_ids = _clean_targets(user, targets)
     instruction = (instruction or '').strip()
     if len(instruction) > MAX_TEXT_LENGTH:
@@ -924,11 +1022,9 @@ def refer(user, instance_or_id, targets, *, kind, instruction='', due_at=None, p
             # دریافت‌کنندهٔ کار باز: والد همان کار (اگر داده نشده، اولین کار باز او در این سند)
             if parent is None:
                 parent = _lock_task(row.task_id)
-        elif user.is_superuser:
-            as_su = True
         elif parent is not None or not _hook_allows_refer(user, instance):
             raise _refer_not_allowed()
-        if not as_su and (user.pk, instance.company_id) not in company_member_pairs([user.pk], [instance.company_id]):
+        if (user.pk, instance.company_id) not in company_member_pairs([user.pk], [instance.company_id]):
             raise _refer_not_allowed()
         computed = _referral_recipients(instance, target_ids, today=today)
         if any(not computed[t][0] for t in target_ids):
@@ -953,11 +1049,13 @@ def refer(user, instance_or_id, targets, *, kind, instruction='', due_at=None, p
 
 def _authorize_referral(user, instance, task, today):
     """
-    ر۷: فقط گیرندهٔ کار یا جانشین معتبرش (اگر نمونه جانشین بپذیرد)، تازه در لحظهٔ اقدام؛ مدیر کل استثنا ندارد و
-    قاعدهٔ ثبت‌کننده نیست. خروجی on_behalf_of_id.
+    ر۷: فقط گیرندهٔ کار یا جانشین معتبرش (اگر نمونه جانشین بپذیرد)، تازه در لحظهٔ اقدام؛ مدیر کل هرگز (بند ۴-۱
+    طرح نبودن نفر) و قاعدهٔ ثبت‌کننده نیست. خروجی on_behalf_of_id.
     """
     if not getattr(user, 'is_active', False) or not user.pk:
         raise WorkflowPermissionDenied()
+    if user.is_superuser:
+        raise superuser_view_only()
     target = task.target_user_id
     principals, subs, _holders = _referral_recipients(instance, [target], today=today)[target]
     if user.pk in principals:

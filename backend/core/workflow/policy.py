@@ -136,6 +136,64 @@ def effective_policies(pairs) -> dict:
     return out
 
 
+# همان بخش و سطحی که تعیین نقش (companies/org_views.ensure_write و ensure_assignment) می‌سنجد
+ROLE_ASSIGNER_SECTION = 'projects'
+ROLE_ASSIGNER_LEVEL = 'write'
+
+
+def role_assigner_ids(company_ids) -> dict:
+    """
+    {company_id: {user_id}} تعیین‌کنندگان نقش هر شرکت (بند ۴-۶): کاربر فعال غیر مدیر کل با ردیف دسترسی
+    سطح «نوشتن» پروژه‌ها و بخش‌ها در شرکت فعال. یک پرس‌وجو.
+    """
+    from companies.models import UserCompanyAccess
+    company_ids = {c for c in company_ids if c}
+    out = {c: set() for c in company_ids}
+    if not company_ids:
+        return out
+    for uid, cid, levels in UserCompanyAccess.objects.filter(
+            company_id__in=list(company_ids), company__is_active=True, user__is_active=True,
+            user__is_superuser=False).values_list('user_id', 'company_id', 'section_levels'):
+        if isinstance(levels, dict) and levels.get(ROLE_ASSIGNER_SECTION) == ROLE_ASSIGNER_LEVEL:
+            out[cid].add(uid)
+    return out
+
+
+def waiting_targets(pairs, policies=None) -> dict:
+    """
+    {(company_id, workflow_key): {user_id}} گیرندگان خبر انتظار (بند ۴-۳): notify_mode='users' کاربران انتخاب‌شدهٔ
+    فعال و عضو فعال همان شرکت؛ وگرنه تعیین‌کنندگان نقش همان شرکت. مجموعهٔ خالی یعنی خبر به مدیران کل
+    (فراخوان با to_superusers). هرگز کاربر شرکت دیگر. شمار پرس‌وجو ثابت (ق۱۸).
+    """
+    from django.contrib.auth import get_user_model
+
+    from .models import WorkflowPolicy
+    from .recipients import company_member_pairs
+    pairs = {(c, k or '') for c, k in pairs if c}
+    if not pairs:
+        return {}
+    policies = policies if policies is not None else effective_policies(pairs)
+    chosen = {}
+    for pair in pairs:
+        pol = policies.get(pair) or effective_policy(*pair)
+        if pol.notify_mode == WorkflowPolicy.NOTIFY_USERS:
+            chosen[pair] = set(pol.notify_user_ids)
+    out = {}
+    if chosen:
+        wanted = set().union(*chosen.values())
+        active = set(get_user_model().objects.filter(
+            pk__in=list(wanted), is_active=True, is_superuser=False).values_list('pk', flat=True)) if wanted else set()
+        members = company_member_pairs(active, {c for c, _k in chosen}) if active else set()
+        for (cid, key), ids in chosen.items():
+            out[(cid, key)] = {u for u in ids if u in active and (u, cid) in members}
+    rest = [p for p in pairs if p not in chosen]
+    if rest:
+        assigners = role_assigner_ids({c for c, _k in rest})
+        for cid, key in rest:
+            out[(cid, key)] = set(assigners.get(cid, ()))
+    return out
+
+
 def effective_policy(company_id, workflow_key) -> EffectivePolicy:
     """تنظیم مؤثر یک جفت (شرکت، گردش)."""
     key = workflow_key or ''

@@ -72,7 +72,7 @@ class RealtimeTests(EngineBase):
             ('received', g(self.lead)), ('done', g(self.lead)), ('received', g(self.reviewer)),
             ('done', g(self.reviewer)), ('returned', g(self.member)), ('rejected', g(self.member)),
             ('removed', g(self.lead)), ('cancelled', g(self.member)),
-            ('superuser_alert', realtime.SUPERUSER_GROUP),
+            ('waiting', realtime.SUPERUSER_GROUP),
             ('reminder', g(self.lead)), ('reminder', g(self.boss)),
             ('escalation', g(self.boss)), ('escalation', realtime.SUPERUSER_GROUP),
         }
@@ -86,7 +86,7 @@ class RealtimeTests(EngineBase):
             self.assertEqual(msg['type'], 'send_notification')
             self.assertTrue(msg['message'])
             if group == realtime.SUPERUSER_GROUP:
-                self.assertIn(msg['workflow_event'], ('superuser_alert', 'escalation'))
+                self.assertIn(msg['workflow_event'], ('waiting', 'escalation'))
         # خبر به بالاتر به رئیس فقط برای کار سرپرست؛ کار رئیس به مدیران کل رفت
         esc = [(g_, m) for g_, m in self.layer.sent if m['workflow_event'] == 'escalation']
         self.assertEqual(len(esc), 2)

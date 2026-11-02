@@ -35,7 +35,10 @@ COMPLETED = 'completed'
 RETURNED = 'returned'
 REJECTED = 'rejected'
 CANCELLED = 'cancelled'
-TERMINAL_STATES = (COMPLETED, RETURNED, REJECTED, CANCELLED)
+# طرح نبودن نفر: پایان با رد شدن مرحلهٔ پرداخت (نمونه completed با settled_outside=True). فقط گردشی که مرحلهٔ
+# payment دارد این حالت را در on_state_change می‌گیرد، پس ماژولی که payment اعلام نکرده هرگز آن را نمی‌بیند.
+SETTLED_OUTSIDE = 'settled_outside'
+TERMINAL_STATES = (COMPLETED, RETURNED, REJECTED, CANCELLED, SETTLED_OUTSIDE)
 
 
 @dataclass(frozen=True)

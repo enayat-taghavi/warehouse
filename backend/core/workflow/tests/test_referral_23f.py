@@ -141,11 +141,14 @@ class InstanceCloseTests(ReferralBase):
         ref.refresh_from_db()
         self.assertEqual((ref.is_open, ref.outcome), (False, WorkflowTask.CANCELLED))
         with self.assertRaises(WorkflowStateError):
+            self.refer(self.lead, inst, [self.payer])
+        with self.assertRaises(WorkflowPermissionDenied) as cm:
             self.refer(self.su, inst, [self.payer])
+        self.assertEqual(cm.exception.code, 'superuser_view_only')
 
     def test_cancel_closes_referrals(self):
         _d, inst = self.submit()
-        ref = self.refer(self.su, inst, [self.payer])[0]
+        ref = self.refer(self.lead, inst, [self.payer])[0]
         engine.cancel(self.fresh(self.member), inst)
         ref.refresh_from_db()
         self.assertEqual(ref.outcome, WorkflowTask.CANCELLED)
@@ -211,7 +214,7 @@ class ReferralRecipientTests(ReferralBase):
         ref.refresh_from_db()
         self.assertEqual((ref.is_open, ref.has_recipients), (True, False))
         self.assertEqual(self.recipients(ref), set())
-        self.assertIn('superuser_alert', [e['kind'] for e in self.events])
+        self.assertIn('waiting', [e['kind'] for e in self.events])
         SectionAssignment.objects.filter(user=self.payer).update(is_active=True)
         recompute_open_tasks(company_ids={self.co.pk})
         ref.refresh_from_db()

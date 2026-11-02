@@ -120,7 +120,7 @@ class NotifyTests(EngineBase):
         for su in active_sus:
             su_notes = Notification.objects.filter(recipient=su)
             self.assertEqual(su_notes.count(), 1)
-            self.assertEqual(su_notes.first().title, notify.TITLES_FA[events.SUPERUSER_ALERT])
+            self.assertEqual(su_notes.first().title, notify.TITLES_FA[events.WAITING])
 
         self.assertEqual(Notification.objects.filter(recipient=inactive_su).count(), 0)
 

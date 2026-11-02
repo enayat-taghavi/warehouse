@@ -22,6 +22,7 @@ TITLES_FA = {
     events.REMINDER: 'یادآوری: کاری منتظر اقدام شماست',
     events.ESCALATION: 'کاری بیش از مدت مجاز منتظر مانده است',
     events.SUPERUSER_ALERT: 'کاری بی‌دریافت‌کننده مانده است',
+    events.WAITING: 'سندی منتظر تعیین نفر است',
     events.RETURNED: 'سند شما برای اصلاح عودت شد',
     events.REJECTED: 'سند شما رد شد',
 }
@@ -147,6 +148,19 @@ def _referral_body(event, body) -> str:
     return text
 
 
+WAIT_NO_HOLDER_FA = 'برای نقش این مرحله کسی تعیین نشده است. نفری با این نقش تعیین کنید.'
+# بند ۵ کاربر (طرح نبودن نفر، بند ۴-۳)
+WAIT_CREATOR_ONLY_FA = ('تنها دارندهٔ این نقش ثبت‌کنندهٔ سند است. تنظیم «ایجادکننده می‌تواند سند خودش را تأیید کند» '
+                        'را روشن کنید یا نفر دومی با این نقش تعیین کنید.')
+
+
+def _waiting_hint(event) -> str:
+    """راهنمای خبر انتظار بر پایهٔ wait_reason کار (یک پرس‌وجو)."""
+    from .models import WorkflowTask
+    reason = WorkflowTask.objects.filter(pk=event.get('task_id')).values_list('wait_reason', flat=True).first()
+    return WAIT_CREATOR_ONLY_FA if reason == WorkflowTask.WAIT_CREATOR_ONLY else WAIT_NO_HOLDER_FA
+
+
 def create_for_event(event) -> dict:
     """
     ساخت ردیف‌های اعلان یک رویداد کار و زمان‌بندی FCM. خروجی {user_id: Notification}؛ رویدادی که اعلان ندارد {}.
@@ -166,6 +180,8 @@ def create_for_event(event) -> dict:
             body = f'{body} — دلیل: {reason}'
     if _is_referral(event) and event.get('kind') in TASK_HOLDER_KINDS + (events.DONE,):
         body = _referral_body(event, body)
+    if event.get('kind') == events.WAITING:
+        body = f'{body} — {_waiting_hint(event)}'
     behalf = _behalf_names(event, user_ids)
     url = _url(event, spec)
 

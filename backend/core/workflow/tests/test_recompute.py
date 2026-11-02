@@ -79,7 +79,7 @@ class LostRecipientTests(RecomputeBase):
         self.assertEqual(self.recipients(task), set())
         self.assertIsNotNone(task.superuser_alerted_at)
         self.assertIn(('removed', (self.reviewer.pk,)), self.kinds())
-        self.assertEqual(sum(e['kind'] == 'superuser_alert' for e in self.events), 1)
+        self.assertEqual(sum(e['kind'] == 'waiting' for e in self.events), 1)
         self.assertEqual([t.pk for t in unassigned_open_tasks(self.su)], [task.pk])
         self.assertEqual([t.pk for t in unassigned_open_tasks(self.su, company_id=self.co.pk)], [task.pk])
         self.assertFalse(unassigned_open_tasks(self.su, company_id=self.co2.pk).exists())
@@ -87,7 +87,7 @@ class LostRecipientTests(RecomputeBase):
         self.assertFalse(unassigned_open_tasks(None).exists())
         with self.captureOnCommitCallbacks(execute=True):
             recompute_open_tasks(company_ids={self.co.pk})
-        self.assertEqual(sum(e['kind'] == 'superuser_alert' for e in self.events), 1)
+        self.assertEqual(sum(e['kind'] == 'waiting' for e in self.events), 1)
         self.events.clear()
         with self.captureOnCommitCallbacks(execute=True):
             # قلاب post_save انتساب خودش محاسبهٔ دوباره را اجرا می‌کند؛ اجرای دوم تکراری و بی‌رویداد است

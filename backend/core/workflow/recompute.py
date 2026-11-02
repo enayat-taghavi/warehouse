@@ -5,11 +5,13 @@
 تفاوت مجوز کاربر، جانشین یا غیرفعال شدن کاربر، ردیف‌های کارهای باز اثرپذیرفته با مجموعهٔ تازه یکی می‌شوند و:
 - به کسی که تازه ردیف معتبر امروز گرفت «رسید» و به کسی که ردیف معتبرش رفت «برداشته شد» می‌رسد (فقط از راه
   سیگنال task_event)؛ ردیف جانشینِ بازهٔ آینده رویدادی نمی‌گیرد (زمان‌بند ۲.۳-ب هنگام شروع بازه می‌فرستد)؛
-- کار «تأیید» که دریافت‌کنندهٔ اصلی‌اش را از دست داد با قاعدهٔ ۳ ت۶ رد می‌شود و گردش پیش می‌رود (ردیف auto)؛
-- کار «بررسی» و «اجرا» بی‌دریافت‌کننده منتظر می‌ماند و فقط هنگام گذار یک «هشدار مدیر کل» صادر می‌شود؛
+- کار بی‌دریافت‌کننده با تنظیم مؤثر «رد شود» (طرح نبودن نفر بند ۴-۳) رد می‌شود و گردش پیش می‌رود (ردیف auto)،
+  حتی اگر از قبل منتظر بوده؛ مرحلهٔ پرداخت با «پرداخت بیرون از سامانه» مگر قلاب can_settle_outside منع کند؛
+- با «منتظر بماند» کار منتظر می‌ماند و فقط هنگام گذار یک «خبر انتظار» (رویداد waiting) صادر می‌شود؛
 - کار منتظری که دریافت‌کننده پیدا کرد has_recipients=True و «رسید» می‌گیرد.
 
-کار «تأیید» که از پیش بی‌دریافت‌کننده باز شده (اجباری، ت۱۵) خودکار رد نمی‌شود تا گردش هرگز خودکار پایان نیابد.
+کار forced (open_at_step و آخرین مرحلهٔ نسخهٔ تازه) هرگز خودکار رد نمی‌شود تا گردش هرگز خودکار پایان نیابد.
+مرحله‌های گذشته دوباره باز نمی‌شوند و نمونهٔ بسته دست نمی‌خورد.
 قفل‌ها به ترتیب موتور: نخست نمونه‌ها (به ترتیب شناسه) و سپس کارها.
 """
 import logging
@@ -23,9 +25,10 @@ from accounts.scoped_permissions import effective_bundles
 
 from . import events
 from .errors import WorkflowError
-from .models import WorkflowCompanySettings, WorkflowInstance, WorkflowTask, WorkflowTaskRecipient
+from .models import WorkflowInstance, WorkflowTask, WorkflowTaskRecipient
+from .policy import effective_policies, waiting_targets
 from .recipients import compute_recipients_batch, desired_rows, diff_rows, scope_triplet, write_row_changes
-from .registry import APPROVE, workflow_specs
+from .registry import SKIP, workflow_specs
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +64,12 @@ def _version_sync(instance, stats) -> None:
         logger.warning('[workflow] version sync skipped for instance %s', instance.pk)
 
 
-def _skip_lost(spec, instance, task, holders, bundles, now, stats) -> bool:
-    """قاعدهٔ ۳ ت۶ روی کار «تأیید» (یا skip_when_creator_only) بی‌دریافت‌کننده. False اگر سند پیدا نشد (کار منتظر می‌ماند)."""
-    from .engine import _Ctx, _resolve, skip_lost_task
+def _skip_lost(spec, instance, task, holders, bundles, now, stats, policy=None) -> bool:
+    """
+    تنظیم «رد شود» روی کار بی‌دریافت‌کننده. False اگر سند پیدا نشد یا قلاب can_settle_outside منع کرد (کار
+    منتظر می‌ماند).
+    """
+    from .engine import SettleBlocked, _Ctx, _resolve, skip_lost_task
     try:
         obj = _resolve(spec, instance.entity_id, None)
     except WorkflowError:
@@ -71,7 +77,11 @@ def _skip_lost(spec, instance, task, holders, bundles, now, stats) -> bool:
         return False
     ctx = _Ctx(spec, obj, instance.section, instance.company_id)
     ctx._bundles = bundles
-    skip_lost_task(ctx, instance, task, holders, now)
+    ctx._policy = policy
+    try:
+        skip_lost_task(ctx, instance, task, holders, now)
+    except SettleBlocked:
+        return False
     stats['skipped'] += 1
     return True
 
@@ -84,6 +94,7 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
     شمار پرس‌وجو مستقل از شمار کارها و بخش‌هاست، به‌جز رد شدن‌های قاعدهٔ ۳ (برای هر کدام مسیر موتور).
     خروجی آمار: tasks، received، removed، skipped، alerts، gained، version_synced.
     """
+    from .engine import wait_reason_for
     stats = {'tasks': 0, 'received': 0, 'removed': 0, 'skipped': 0, 'alerts': 0, 'gained': 0, 'version_synced': 0}
     today = today or timezone.localdate()
     now = now or timezone.now()
@@ -124,19 +135,20 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
         bundles = effective_bundles()
         items = []
         step_specs = {}
-        # گام ط طرح اصلاح رسید: شرکت‌های با تنظیم «ایجادکننده سند خودش را تأیید کند» (یک پرس‌وجو)
-        self_approval = WorkflowCompanySettings.self_approval_company_ids(
-            {instances[t.instance_id].company_id for t in tasks})
+        # طرح نبودن نفر: تنظیم مؤثر همهٔ (شرکت، گردش)ها با یک پرس‌وجو (ق۱۸)
+        policies = effective_policies({(instances[t.instance_id].company_id, instances[t.instance_id].workflow_key)
+                                       for t in tasks})
         for task in tasks:
             inst = instances[task.instance_id]
             target = task.target_user_id if task.track == WorkflowTask.TRACK_REFERRAL else None
             spec = specs.get(inst.workflow_key) if target is None else None
             step = spec.step(task.step_key) if spec is not None else None
             step_specs[task.pk] = step
+            policy = policies.get((inst.company_id, inst.workflow_key))
             items.append((task.pk, scope_triplet(inst.section, inst.company_id), task.role, task.permission,
                           inst.created_by_id, target, inst.allow_substitute,
-                          step is not None and (step.creator_may_act or (
-                              spec.company_self_approval and inst.company_id in self_approval))))
+                          step is not None and (step.creator_may_act or bool(
+                              policy is not None and policy.creator_may_approve_own))))
         computed = compute_recipients_batch(items, bundles=bundles, today=today)
 
         existing = {}
@@ -151,10 +163,10 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
             inst = instances[task.instance_id]
             principals, subs, holders = computed[task.pk]
             step = step_specs[task.pk]
-            if (not principals and task.track == WorkflowTask.TRACK_STEP and task.has_recipients
-                    and inst.workflow_key in specs
-                    and (task.step_kind == APPROVE
-                         or (step is not None and step.skips_without_recipient(inst.created_by_id, holders)))):
+            policy = policies.get((inst.company_id, inst.workflow_key))
+            # تنظیم «رد شود»: کار بی‌دریافت‌کننده رد می‌شود حتی اگر از قبل منتظر بوده (بند ۴-۳)، هرگز کار forced
+            if (not principals and task.track == WorkflowTask.TRACK_STEP and not task.forced
+                    and step is not None and policy is not None and policy.missing_action(step) == SKIP):
                 lost.append((task, holders))
                 continue
             stale, new, changed, received, removed = diff_rows(
@@ -169,21 +181,25 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
             if principals and not task.has_recipients:
                 gained.append(task.pk)
             elif not principals and task.has_recipients:
-                alerted.append(task.pk)
-                events.emit(events.SUPERUSER_ALERT, inst, task, [])
+                alerted.append((task, wait_reason_for(inst, holders)))
         write_row_changes(all_stale, all_new, all_changed)
         if gained:
-            WorkflowTask.objects.filter(pk__in=gained).update(has_recipients=True)
-        if alerted:
-            WorkflowTask.objects.filter(pk__in=alerted).update(has_recipients=False, superuser_alerted_at=now)
+            WorkflowTask.objects.filter(pk__in=gained).update(has_recipients=True, wait_reason='')
+        for task, reason in alerted:
+            # گذار به «منتظر»: یک خبر انتظار (گیرندگان همهٔ شرکت‌ها با شمار پرس‌وجوی ثابت، پایین‌تر)
+            WorkflowTask.objects.filter(pk=task.pk).update(has_recipients=False, superuser_alerted_at=now,
+                                                           wait_reason=reason)
+        waiting = [(instances[t.instance_id], t) for t, _r in alerted]
         stats['gained'], stats['alerts'] = len(gained), len(alerted)
 
         for task, holders in lost:
             inst = instances[task.instance_id]
+            was_waiting = not task.has_recipients
             try:
                 # هر رد شدن در savepoint خودش: خطای یک سند (مثلاً on_state_change ماژول) نوشته‌های دیگر را برنمی‌گرداند
                 with transaction.atomic():
-                    skipped = _skip_lost(specs[inst.workflow_key], inst, task, holders, bundles, now, stats)
+                    skipped = _skip_lost(specs[inst.workflow_key], inst, task, holders, bundles, now, stats,
+                                         policies.get((inst.company_id, inst.workflow_key)))
             except Exception:
                 logger.exception('[workflow] skipping lost task %s failed; task left waiting', task.pk)
                 # تغییرهای حافظه‌ای رد شدن ناتمام برگشت‌خورده‌اند؛ نسخهٔ پایگاه داده معتبر است
@@ -191,14 +207,31 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
                 task.refresh_from_db()
                 skipped = False
             if not skipped:
-                # سند پیدا نشد یا رد شدن شکست خورد: مثل کار منتظر (ردیف‌ها برداشته و یک هشدار)
+                # سند پیدا نشد، قلاب can_settle_outside منع کرد یا رد شدن شکست خورد: مثل کار منتظر (ردیف‌ها
+                # برداشته و فقط هنگام گذار یک خبر انتظار)
                 from .recipients import sync_task_recipients
                 _received, removed = sync_task_recipients(task, set(), [], today=today)
                 events.emit(events.REMOVED, inst, task, removed)
-                WorkflowTask.objects.filter(pk=task.pk).update(has_recipients=False, superuser_alerted_at=now)
-                events.emit(events.SUPERUSER_ALERT, inst, task, [])
-                stats['alerts'] += 1
+                if not was_waiting:
+                    WorkflowTask.objects.filter(pk=task.pk).update(
+                        has_recipients=False, superuser_alerted_at=now, wait_reason=wait_reason_for(inst, holders))
+                    waiting.append((inst, task))
+                    stats['alerts'] += 1
+        _emit_waiting_batch(waiting, policies)
     return stats
+
+
+def _emit_waiting_batch(waiting, policies) -> None:
+    """خبر انتظار کارهایی که به «منتظر» رسیدند؛ گیرندگان همهٔ (شرکت، گردش)ها با شمار پرس‌وجوی ثابت."""
+    if not waiting:
+        return
+    targets = waiting_targets({(inst.company_id, inst.workflow_key) for inst, _t in waiting}, policies)
+    for inst, task in waiting:
+        users = targets.get((inst.company_id, inst.workflow_key)) or set()
+        if users:
+            events.emit(events.WAITING, inst, task, users)
+        else:
+            events.emit(events.WAITING, inst, task, [], to_superusers=True)
 
 
 def safe_recompute(**kwargs):

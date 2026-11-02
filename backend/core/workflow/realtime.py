@@ -36,6 +36,7 @@ MESSAGES_FA = {
     events.REMINDER: 'یادآوری: کاری در کارتابل شما منتظر اقدام است',
     events.ESCALATION: 'کاری بیش از مدت مجاز منتظر اقدام مانده است',
     events.SUPERUSER_ALERT: 'کاری بی‌دریافت‌کننده مانده است',
+    events.WAITING: 'سندی منتظر تعیین نفر است',
 }
 COMPLETED_FA = 'گردش سند شما پایان یافت'
 

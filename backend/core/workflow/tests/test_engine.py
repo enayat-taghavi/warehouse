@@ -161,10 +161,13 @@ class Rule3RecipientTests(EngineBase):
             self.act(self.lead, d)
         task = self.task(d)
         self.assertEqual((task.step_key, task.has_recipients), ('review', False))
-        self.assertIn('superuser_alert', [e['kind'] for e in self.events])
-        engine.act(self.fresh(self.su), task)
-        self.assertTrue(self.last_step(inst).as_superuser)
-        self.assertEqual(self.task(d).step_key, 'boss_ok')
+        self.assertIn('waiting', [e['kind'] for e in self.events])
+        self.assertNotIn('superuser_alert', [e['kind'] for e in self.events])
+        self.assertEqual(task.wait_reason, 'no_holder')
+        with self.assertRaises(WorkflowPermissionDenied) as cm:
+            engine.act(self.fresh(self.su), task)
+        self.assertEqual(cm.exception.code, 'superuser_view_only')
+        self.assertEqual(self.task(d).step_key, 'review')
 
     def test_creator_excluded_from_review_second_reviewer_gets_it(self):
         reviewer2 = self.user('reviewer2', 'wf_reviewer')
@@ -222,14 +225,17 @@ class ActionRuleTests(EngineBase):
             self.act(self.member, d)
         self.assertEqual(cm.exception.code, 'self_approval')
 
-    def test_superuser_acts_but_not_on_own_and_is_not_recipient(self):
+    def test_superuser_view_only_and_is_not_recipient(self):
         d, _ = self.submit()
         self.assertNotIn(self.su.pk, self.recipients(self.task(d)))
-        self.act(self.su, d)
+        with self.assertRaises(WorkflowPermissionDenied) as cm:
+            self.act(self.su, d)
+        self.assertEqual((cm.exception.code, cm.exception.status), ('superuser_view_only', 403))
+        self.assertFalse(engine.can_act(self.fresh(self.su), self.task(d)))
         d2, _ = self.submit(user=self.su)
         with self.assertRaises(WorkflowPermissionDenied) as cm:
             self.act(self.su, d2)
-        self.assertEqual(cm.exception.code, 'self_approval')
+        self.assertEqual(cm.exception.code, 'superuser_view_only')
 
     def test_cancel_rules(self):
         d, inst = self.submit()
@@ -407,7 +413,7 @@ class EventTests(EngineBase):
             with self.assertRaises(WorkflowPermissionDenied):
                 self.act(self.reviewer, d)
         self.assertEqual(self.events, [])
-        self.assertEqual(events.EVENT_KINDS[-1], 'superuser_alert')
+        self.assertEqual(events.EVENT_KINDS[-1], 'waiting')
 
 
 class PermissionHolderTests(EngineBase):
@@ -505,7 +511,17 @@ class CreatorFlagTests(EngineBase):
         self.specs[:] = [make_spec(steps=steps)]
         reset_workflow_cache()
 
+    def reviewer_skip_row(self):
+        from workflow.models import WorkflowPolicy
+        WorkflowPolicy.objects.create(company=self.co, workflow_key=WF, role_actions={'wf_reviewer': 'skip'})
+
+    def test_sole_reviewer_creator_waits_by_default(self):
+        d, _ = self.submit(user=self.reviewer)
+        task = self.task(d)
+        self.assertEqual((task.step_key, task.has_recipients, task.wait_reason), ('review', False, 'creator_only'))
+
     def test_sole_reviewer_creator_skips_review_no_second_approval(self):
+        self.reviewer_skip_row()
         d, inst = self.submit(user=self.reviewer)
         self.assertEqual(self.task(d).step_key, 'boss_ok')
         self.assertEqual(self.last_step(inst).skipped, [{'step': 'lead_ok', 'reason': 'creator_level'},
@@ -530,6 +546,7 @@ class CreatorFlagTests(EngineBase):
     def test_recompute_skips_review_when_only_creator_left(self):
         from companies.models import SectionAssignment
         from workflow.recompute import recompute_open_tasks
+        self.reviewer_skip_row()
         reviewer2 = self.user('reviewer2', 'wf_reviewer')
         d, inst = self.submit(user=self.reviewer)
         self.assertEqual(self.task(d).step_key, 'review')
@@ -572,7 +589,7 @@ class CreatorFlagTests(EngineBase):
         self.act(self.boss, d2)
         with self.assertRaises(WorkflowPermissionDenied) as cm:
             self.act(self.su, d2)
-        self.assertEqual(cm.exception.code, 'self_approval')
+        self.assertEqual(cm.exception.code, 'superuser_view_only')
 
     def test_flags_validated_by_step_kind(self):
         from dataclasses import replace

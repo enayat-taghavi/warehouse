@@ -113,11 +113,12 @@ class InvoiceWorkflowTests(TestCase):
         inv3 = self.invoice(self.sup)
         with mock.patch.object(events, 'emit', wraps=events.emit) as emit:
             self.post(self.sup, inv3, 'submit')
+        # role-policy B (t1): accountant default is skip, so the review step is skipped and the manager gets it
         task = wf_engine.open_task(INVOICE_WORKFLOW, inv3.pk)
-        self.assertEqual((task.step_key, task.has_recipients), ('accountant_review', False))
-        self.assertIn(events.SUPERUSER_ALERT, [c.args[0] for c in emit.call_args_list])
-        from workflow.serializers import history_instance
-        self.assertTrue(history_instance(task.instance, self.sup)['waiting_for_superuser'])
+        self.assertEqual((task.step_key, task.has_recipients), ('manager_ok', True))
+        self.assertNotIn(events.SUPERUSER_ALERT, [c.args[0] for c in emit.call_args_list])
+        skipped = WorkflowStep.objects.get(instance__entity_id=inv3.pk, action='submit').skipped
+        self.assertIn({'step': 'accountant_review', 'reason': 'no_recipient'}, skipped)
 
     def test_5_treasurer_invoice_keeps_manager_and_treasurer_pays_own(self):
         # ت۵: رتبهٔ خزانه‌دار (۳۰) از مدیر (۴۰) کمتر است؛ تأیید مدیر رد نمی‌شود، فقط سرپرست
@@ -144,7 +145,10 @@ class InvoiceWorkflowTests(TestCase):
         inv = self.invoice(self.mgr)
         self.post(self.mgr, inv, 'submit')
         self.post(self.acc, inv, 'approve')
-        self.assertEqual(self.step(inv), 'treasury_pay')  # مدیر دیگری نیست: «بدون تأیید دوم»
+        # role-policy B (t3): the only manager is the creator -> waits (manager default wait), reason creator_only
+        task = wf_engine.open_task(INVOICE_WORKFLOW, inv.pk)
+        self.assertEqual((task.step_key, task.has_recipients, task.wait_reason), ('manager_ok', False, 'creator_only'))
+        self.assertEqual(self.step(inv), 'manager_ok')  # مدیر دیگری نیست: منتظر می‌ماند (ت۳)
         mgr2 = self.user('mgr2', 'manager')
         inv2 = self.invoice(self.mgr)
         self.post(self.mgr, inv2, 'submit')

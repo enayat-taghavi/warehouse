@@ -26,7 +26,20 @@ SKIP_REASON_TITLES = {
     'no_second_approval': 'بدون تأیید دوم',
     'version_removed': 'حذف مرحله در تعریف تازه',
     'not_required': 'لازم نبود',
+    'payment_outside': 'تأییدشده، پرداخت بیرون از سامانه',
 }
+
+
+def _wait_reason(inst) -> str:
+    """دلیل انتظار کار مرحلهٔ باز بی‌دریافت‌کننده (no_holder | creator_only)، یا '' اگر چنین کاری نیست."""
+    if inst.status != inst.IN_PROGRESS:
+        return ''
+    from .models import WorkflowTask
+    row = (inst.tasks.filter(is_open=True, has_recipients=False, track=WorkflowTask.TRACK_STEP)
+           .values_list('wait_reason', flat=True).first())
+    if row is None:
+        return ''
+    return row or WorkflowTask.WAIT_NO_HOLDER
 
 
 def _dt(value):
@@ -186,9 +199,10 @@ def history_instance(inst, user) -> dict:
         'closed_at': _dt(inst.closed_at),
         'closed_at_shamsi': _shamsi_dt(inst.closed_at),
         'can_cancel': (inst.created_by_id == user.pk and inst.status == inst.IN_PROGRESS and not inst.others_acted),
-        # کار باز بی‌دریافت‌کننده (مثلاً ثبت‌کننده تنها دارندهٔ نقش مرحله است): فقط مدیر کل سامانه اقدام می‌کند
-        'waiting_for_superuser': (inst.status == inst.IN_PROGRESS
-                                  and inst.tasks.filter(is_open=True, has_recipients=False).exists()),
+        # ت۵ طرح نبودن نفر: کار باز بی‌دریافت‌کننده «منتظر تعیین نفر» است با دلیل (no_holder | creator_only)؛
+        # برچسب قدیم waiting_for_superuser برداشته شد (مدیر کل دیگر اقدام نمی‌کند)
+        'wait_reason': _wait_reason(inst),
+        'settled_outside': bool(getattr(inst, 'settled_outside', False)),
         'steps': [history_step(spec, s) for s in inst.steps.all()],
     }
 

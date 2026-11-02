@@ -26,6 +26,7 @@ from companies.org_roles import CoveringIndex, covering_assignment_rows
 
 from . import events
 from .models import WorkflowCompanySettings, WorkflowTask, WorkflowTaskRecipient
+from .policy import waiting_targets
 from .recipients import scope_chain_key, scope_triplet, valid_rows_q
 
 logger = logging.getLogger(__name__)
@@ -130,9 +131,13 @@ def send_escalations(now, today) -> tuple:
         if not tasks:
             return 0, 0
         targets = escalation_targets(tasks)
+        # طرح نبودن نفر (بند ۴-۳): بی دارندهٔ رتبهٔ بالاتر، به گیرندگان خبر انتظار همان شرکت و گردش؛ مدیر کل فقط اگر
+        # آن‌جا هم کسی نبود
+        fallback_pairs = {(t.instance.company_id, t.instance.workflow_key) for t in tasks if not targets.get(t.pk)}
+        fallback = waiting_targets(fallback_pairs) if fallback_pairs else {}
         to_su = 0
         for task in tasks:
-            users = targets.get(task.pk) or set()
+            users = targets.get(task.pk) or fallback.get((task.instance.company_id, task.instance.workflow_key))
             if users:
                 events.emit(events.ESCALATION, task.instance, task, users)
             else:

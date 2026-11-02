@@ -23,9 +23,13 @@ REJECTED = 'rejected'
 CANCELLED = 'cancelled'
 REMINDER = 'reminder'
 ESCALATION = 'escalation'
-SUPERUSER_ALERT = 'superuser_alert'
+SUPERUSER_ALERT = 'superuser_alert'  # فقط اعلان‌های قدیم؛ از طرح نبودن نفر موتور به جایش WAITING می‌فرستد
+# کار منتظر نفر (طرح نبودن نفر، بند ۴-۳): به گیرندگان خبر انتظار شرکت؛ بی گیرنده با to_superusers
+WAITING = 'waiting'
 
-EVENT_KINDS = (RECEIVED, DONE, REMOVED, RETURNED, REJECTED, CANCELLED, REMINDER, ESCALATION, SUPERUSER_ALERT)
+EVENT_KINDS = (RECEIVED, DONE, REMOVED, RETURNED, REJECTED, CANCELLED, REMINDER, ESCALATION, SUPERUSER_ALERT,
+               WAITING)
+TO_SUPERUSERS_KINDS = (ESCALATION, WAITING)
 
 
 def build_payload(kind, instance, task, user_ids, actor_id=None, step_key=None) -> dict:
@@ -60,8 +64,8 @@ def emit(kind, instance, task, user_ids, actor_id=None, step_key=None, *, to_sup
     payload = build_payload(kind, instance, task, [] if to_superusers else user_ids, actor_id=actor_id,
                             step_key=step_key)
     if to_superusers:
-        if kind != ESCALATION:
-            raise ValueError('to_superusers only for escalation')
+        if kind not in TO_SUPERUSERS_KINDS:
+            raise ValueError('to_superusers only for escalation or waiting')
         payload['to_superusers'] = True
     if not payload['user_ids'] and not goes_to_superusers(payload):
         return

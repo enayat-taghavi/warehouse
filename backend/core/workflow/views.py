@@ -178,7 +178,10 @@ class TaskActionView(WorkflowAPIView):
         revision = _int(request.data.get('revision'), 'revision')
         reason = str(request.data.get('reason') or request.data.get('reply') or '').strip()
         task = _visible_task(request.user, task_id)
-        if not task.is_open and not is_live_superuser(request.user):
+        if is_live_superuser(request.user):
+            # بند ۴-۱ طرح نبودن نفر: مدیر کل کار را می‌بیند ولی اقدام نمی‌کند (کار باز یا بسته)
+            raise engine.superuser_view_only()
+        if not task.is_open:
             # کار بسته: همان 409 موتور، بی‌اجرای موتور (هم‌سان‌سازی نسخه فقط برای کسی که اجازهٔ اقدام دارد)
             raise TaskAlreadyDone()
         if action in self.REFERRAL_ACTIONS:
