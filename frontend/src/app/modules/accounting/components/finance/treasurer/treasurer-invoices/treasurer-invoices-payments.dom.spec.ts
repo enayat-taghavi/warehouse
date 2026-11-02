@@ -555,7 +555,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(component.selectedCompanyBankUrl).toBeNull();
     const hint = fixture.nativeElement.querySelector('[data-company-bank-hint]') as HTMLElement;
     expect(hint).toBeTruthy();
-    expect(hint.textContent).toContain('آدرس سایت بانک برای این حساب ثبت نشده؛ از بخش حسابهای بانکی شرکت آن را وارد کنید.');
+    expect(hint.textContent).toContain('آدرس سایت بانک برای این حساب ثبت نشده؛ از بخش حساب‌های بانکی شرکت آن را وارد کنید.');
   });
 
   it('m) the company account details show bank name, account number and Sheba with copy buttons and copy the value without spaces', async () => {
