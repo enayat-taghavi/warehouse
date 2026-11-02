@@ -5,6 +5,7 @@ import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
+import { firstErrorText } from '../../../../../../core/services/offline/offline-conflict-manager';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
@@ -1188,7 +1189,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ثبت طرف‌حساب: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', 'خطا در ثبت طرف‌حساب: ' + (firstErrorText(err.error) || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
     });

@@ -33,6 +33,7 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
+import { firstErrorText } from '../../../../../../core/services/offline/offline-conflict-manager';
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
 import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
@@ -1306,7 +1307,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', 'خطا در ثبت طرف‌حساب: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.show('error', 'خطا در ثبت طرف‌حساب: ' + (firstErrorText(err.error) || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
     });

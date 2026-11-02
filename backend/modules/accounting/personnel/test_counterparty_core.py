@@ -60,6 +60,14 @@ class CounterpartyCoreTests(TestCase):
         self.assertFalse(res.data['bank_masked'])
         self.assertEqual(res.data['bank_accounts'][0]['sheba_number'], SHEBA)
 
+    def test_nested_bank_account_without_party_creates_primary(self):
+        # فرم حسابدار حساب اولیه را تو در تو و بی party می‌فرستد (خطای ۴۰۰ «bank_accounts» روی soft)
+        res = self._post(self.member, {'name': 'تودرتو', 'bank_accounts': [
+            {'bank_name': 'بانک ملت', 'account_number': '', 'sheba_number': SHEBA, 'card_number': '',
+             'owner_name': '', 'is_primary': True}]})
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(PartyBankAccount.objects.get(party_id=res.data['party']).sheba_number, SHEBA)
+
     def test_invalid_sheba_rejected(self):
         res = self._post(self.member, {'name': 'بد', 'sheba_number': 'IR000000000000000000000000'})
         self.assertEqual(res.status_code, 400)

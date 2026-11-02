@@ -130,12 +130,33 @@ export function extractServerErrorMessage(status: number, errorBody: any): strin
         : errorBody.detail;
   } else if (errorBody && typeof errorBody === 'object') {
     const firstField = Object.keys(errorBody)[0];
-    const firstError = errorBody[firstField];
-    serverMessage = Array.isArray(firstError)
-      ? `${firstField}: ${firstError[0]}`
-      : String(firstError);
+    const message = firstErrorText(errorBody[firstField]);
+    if (message) serverMessage = `${firstField}: ${message}`;
+  } else if (typeof errorBody === 'string' && errorBody) {
+    serverMessage = errorBody;
   }
   return serverMessage;
+}
+
+/** نخستین متن خطا از بدنهٔ تو در توی DRF (مثل bank_accounts: [{sheba_number: ['...']}])؛ نه [object Object]. */
+export function firstErrorText(value: any): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = firstErrorText(item);
+      if (text) return text;
+    }
+    return '';
+  }
+  if (typeof value === 'object') {
+    for (const key of Object.keys(value)) {
+      const text = firstErrorText(value[key]);
+      if (text) return text;
+    }
+    return '';
+  }
+  return String(value);
 }
 
 /**

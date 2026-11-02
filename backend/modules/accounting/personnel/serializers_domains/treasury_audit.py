@@ -108,6 +108,9 @@ class PartyBankAccountSerializer(serializers.ModelSerializer):
                   'is_primary', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
         extra_kwargs = {'party': {'required': False}, 'sheba_number': {'required': False}}
+        # اعتبارسنج خودکار UniqueConstraint(party, sheba) طرف را اجباری می‌کند و ردیف تو در توی ساخت طرف‌حساب
+        # (بی party) را با ۴۰۰ رد می‌کرد؛ شبای تکراری در validate بررسی می‌شود
+        validators = []
 
     def validate(self, attrs):
         for key in MASKABLE_BANK_FIELDS:
