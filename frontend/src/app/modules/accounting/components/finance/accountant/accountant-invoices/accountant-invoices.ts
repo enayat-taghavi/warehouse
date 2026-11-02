@@ -68,7 +68,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
         },
         {
           id: 'all',
-          label: 'کل فاکتورها',
+          label: 'کل رسیدهای پرداخت',
           shortLabel: 'همه',
           icon: STATUS_ICONS.all,
           count: sc.all,
@@ -238,7 +238,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isLoading = false;
         if (silent) return;
-        this.toast.error('خطا در دریافت فاکتورهای حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error('خطا در دریافت رسیدهای پرداخت حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
     });
@@ -267,7 +267,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.approveExpenseInvoice(item.id).subscribe({
       next: () => {
         this.isLoading = false;
-        this.toast.success(`سند حسابداری فاکتور ${item.invoice_number || ''} صادر و پرونده جهت تایید نهایی به مدیر ارسال شد.`);
+        this.toast.success(`سند حسابداری رسید پرداخت ${item.invoice_number || ''} صادر و پرونده جهت تایید نهایی به مدیر ارسال شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
@@ -299,15 +299,15 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
 
   isReasonDialogOpen = false;
   reasonDialogTitle = '';
-  reasonDialogConfirmLabel = 'عودت فاکتور';
+  reasonDialogConfirmLabel = 'عودت رسید پرداخت';
   reasonDialogServerError = '';
   pendingRejectInvoice: ExpenseInvoice | null = null;
 
   rejectDocument(item: ExpenseInvoice): void {
     if (!item.id) return;
     this.pendingRejectInvoice = item;
-    this.reasonDialogTitle = `علت عودت فاکتور شماره ${item.invoice_number || ''} برای اصلاح`;
-    this.reasonDialogConfirmLabel = 'عودت فاکتور';
+    this.reasonDialogTitle = `علت عودت رسید پرداخت شماره ${item.invoice_number || ''} برای اصلاح`;
+    this.reasonDialogConfirmLabel = 'عودت رسید پرداخت';
     this.reasonDialogServerError = '';
     this.isReasonDialogOpen = true;
   }
@@ -321,7 +321,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.isReasonDialogOpen = false;
         this.pendingRejectInvoice = null;
-        this.toast.warning(`فاکتور شماره ${invNumber} جهت بازنگری به سرپرست برگردانده شد.`);
+        this.toast.warning(`رسید پرداخت شماره ${invNumber} جهت بازنگری به سرپرست برگردانده شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
@@ -341,14 +341,14 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   exportExcel(): void {
-    this.toast.info('در حال تولید فایل اکسل ممیزی فاکتورها...');
+    this.toast.info('در حال تولید فایل اکسل ممیزی رسیدهای پرداخت...');
     this.personnelApi.exportExpenseInvoicesExcel({
       section_id: this.selectedSectionId || undefined,
       status: this.activeSubTab === 'pending_audit' ? 'pending_accountant' : undefined
     }).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `Accountant_Invoices_${this.selectedSectionId || 'all'}.xlsx`);
-        this.toast.success('فایل اکسل ممیزی فاکتورها دریافت شد.');
+        this.toast.success('فایل اکسل ممیزی رسیدهای پرداخت دریافت شد.');
       },
       error: () => {
         this.toast.error('خطا در دانلود فایل اکسل.');
@@ -357,7 +357,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   importExcel(): void {
-    this.toast.info('قالب اکسل فاکتورهای حسابداری آماده بارگیری است.');
+    this.toast.info('قالب اکسل رسیدهای پرداخت حسابداری آماده بارگیری است.');
   }
 
   clearSearch(): void {

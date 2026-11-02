@@ -382,7 +382,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   payInvoice(item: PayableInvoiceItem): void {
     if (this.isOffline()) {
-      this.toast.error('ثبت قسط فقط با اتصال به سرور ممکن است.');
+      this.toast.error('پرداخت فقط با اتصال به سرور ممکن است.');
       return;
     }
     this.payItem = item;
@@ -527,17 +527,17 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     const item = this.payItem;
     if (!item || this.isPaying) return;
     if (this.isOffline()) {
-      this.payGeneralError = 'اتصال به سرور برقرار نیست؛ ثبت قسط فقط آنلاین ممکن است.';
+      this.payGeneralError = 'اتصال به سرور برقرار نیست؛ پرداخت فقط آنلاین ممکن است.';
       return;
     }
     const errors: Record<string, string> = {};
     const amount = Number(String(this.payAmount ?? '').replace(/,/g, ''));
-    if (!amount || amount <= 0) errors['amount'] = 'مبلغ قسط را وارد کنید.';
-    else if (amount > item.remaining) errors['amount'] = 'مبلغ قسط از مانده بیشتر است.';
+    if (!amount || amount <= 0) errors['amount'] = 'مبلغ پرداخت را وارد کنید.';
+    else if (amount > item.remaining) errors['amount'] = 'مبلغ پرداخت از مانده بیشتر است.';
     if (this.needsCompanyAccount && !this.payCompanyAccount) errors['company_bank_account'] = 'حساب بانکی شرکت را انتخاب کنید.';
     const date = (this.payDateControl.value || '').trim();
     if (!date) errors['payment_date_shamsi'] = 'تاریخ پرداخت را وارد کنید.';
-    if (!this.payReceipt) errors['receipt'] = 'رسید پرداخت را پیوست کنید.';
+    if (!this.payReceipt) errors['receipt'] = 'سند واریز را پیوست کنید.';
     this.payFieldErrors = errors;
     this.payGeneralError = '';
     if (Object.keys(errors).length) return;
@@ -581,7 +581,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   private handlePayError(err: any): void {
     if (this.isUnreachable(err)) {
-      this.payGeneralError = 'اتصال به سرور برقرار نیست؛ ثبت قسط فقط آنلاین ممکن است.';
+      this.payGeneralError = 'اتصال به سرور برقرار نیست؛ پرداخت فقط آنلاین ممکن است.';
       return;
     }
     const body = err?.error;
@@ -596,11 +596,11 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
         errs['payment_date_shamsi'] = fiscalPeriodClosedMessage(err, 'payment_date_shamsi') || errs['payment_date_shamsi'];
       }
       this.payFieldErrors = errs;
-      this.payGeneralError = Object.keys(errs).length ? '' : this.errorText(err, 'ثبت قسط ناموفق بود.');
+      this.payGeneralError = Object.keys(errs).length ? '' : this.errorText(err, 'پرداخت ناموفق بود.');
       return;
     }
     // 403 و 409: {code, error}
-    this.payGeneralError = this.errorText(err, 'ثبت قسط ناموفق بود.');
+    this.payGeneralError = this.errorText(err, 'پرداخت ناموفق بود.');
   }
 
   // ── ابطال قسط ──
@@ -655,7 +655,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.personnelApi.exportExpenseInvoicesExcel().subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, 'treasury_expense_invoices.xlsx');
-        this.toast.success('فایل اکسل فاکتورهای هزینه دانلود شد.');
+        this.toast.success('فایل اکسل رسیدهای پرداخت هزینه دانلود شد.');
       },
       error: (err: any) => {
         const msg = (typeof err?.status === 'number' && isServerUnreachable(err.status))

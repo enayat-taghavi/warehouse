@@ -337,7 +337,7 @@ describe('EmployeeInvoicesHubComponent — Lines Form and Duplicate Dialog DOM S
 
       const dupBlock = fixture.nativeElement.querySelector('div[role="alert"].border-amber-300');
       expect(dupBlock).toBeTruthy();
-      expect(dupBlock.textContent).toContain('این شماره فاکتور برای این طرف حساب قبلاً ثبت شده است');
+      expect(dupBlock.textContent).toContain('این شماره رسید پرداخت برای این طرف حساب قبلاً ثبت شده است');
     } finally {
       vi.useRealTimers();
     }

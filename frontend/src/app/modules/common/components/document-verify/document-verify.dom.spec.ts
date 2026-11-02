@@ -127,7 +127,7 @@ describe('DocumentVerify DOM Spec', () => {
     req.flush({
       valid: true,
       number: '1405-9',
-      title: 'فاکتور هزینه',
+      title: 'رسید پرداخت هزینه',
       date: '1405/08/01',
       company_name: 'C',
       live: true,
@@ -154,7 +154,7 @@ describe('DocumentVerify DOM Spec', () => {
     req.flush({
       valid: true,
       number: '1405-9',
-      title: 'فاکتور هزینه',
+      title: 'رسید پرداخت هزینه',
       date: '1405/08/01',
       company_name: 'C',
       live: true,

@@ -175,7 +175,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(statusBadge.textContent).toContain('پرداخت ناقص');
 
     const payBtn = Array.from(fixture.nativeElement.querySelectorAll('tbody tr button') as NodeListOf<HTMLButtonElement>)
-      .find(b => b.textContent?.includes('ثبت قسط'));
+      .find(b => b.textContent?.includes('پرداخت'));
     expect(payBtn).toBeTruthy();
 
     payBtn!.click();
@@ -349,7 +349,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     (submit.closest('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     fixture.detectChanges();
     const err = fixture.nativeElement.querySelector('#pay-receipt-err');
-    expect(err?.textContent).toContain('رسید');
+    expect(err?.textContent).toContain('سند واریز');
     expect(mockTreasuryOrgApi.addInvoicePayment).not.toHaveBeenCalled();
 
     // انتخاب فایل از راه رویداد change خود input (مثل کاربر)

@@ -118,7 +118,7 @@ def _record_submit_reason(invoice, reason):
     step = (WorkflowStep.objects.filter(instance=wf_instance, action=WorkflowStep.SUBMIT)
             .order_by('-at', '-pk').first())
     if step is not None and not step.reason:
-        step.reason = f'دلیل ارسال فاکتور تکراری: {reason}'[:2000]
+        step.reason = f'دلیل ارسال رسید پرداخت تکراری: {reason}'[:2000]
         step.save(update_fields=['reason'])
 
 
@@ -651,9 +651,9 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if section and section.project and section.project.company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if section.project.company_id not in allowed_ids:
-                raise PermissionDenied("شما مجاز به ثبت فاکتور برای این شرکت نیستید.")
+                raise PermissionDenied("شما مجاز به ثبت رسید پرداخت برای این شرکت نیستید.")
         if not user.is_superuser and (section is None or not can(user, INVOICE_PERM, section)):
-            raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
+            raise PermissionDenied("شما مجوز ثبت رسید پرداخت در این بخش را ندارید.")
         _ensure_doc_period_open(section, serializer.validated_data.get('invoice_date_shamsi'), 'invoice_date_shamsi')
         # Guardian G2: default to draft status
         req_status = self.request.data.get('status')
@@ -675,17 +675,17 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         new_section = serializer.validated_data.get('section')
         if (new_section is not None and new_section.pk != instance.section_id and not user.is_superuser
                 and not can(user, INVOICE_PERM, new_section)):
-            raise PermissionDenied("شما مجوز ثبت فاکتور در بخش مقصد را ندارید.")
+            raise PermissionDenied("شما مجوز ثبت رسید پرداخت در بخش مقصد را ندارید.")
         new_status = serializer.validated_data.pop('status', None)
         if new_status and new_status != instance.status:
             # ت۲ طرح ۲.۳: وضعیت فاکتور فقط از راه گردش کار (ارسال، تأیید، عودت، رد، پرداخت، لغو) عوض می‌شود
-            raise PermissionDenied("وضعیت فاکتور فقط از راه گردش کار تغییر می‌کند.")
+            raise PermissionDenied("وضعیت رسید پرداخت فقط از راه گردش کار تغییر می‌کند.")
         if instance.status not in INVOICE_EDITABLE_STATUSES and not user.is_superuser:
-            raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
+            raise PermissionDenied("رسید پرداخت در جریان گردش کار یا بسته‌شده قابل ویرایش نیست.")
         if (instance.status in ('ready_to_pay', 'partially_paid', 'paid') or instance.paid_amount
                 or instance.payments.exists()):
             # در مرحلهٔ پرداخت حتی مدیر کل ویرایش نمی‌کند؛ ذخیرهٔ کامل ردیف قسط همزمان را بازنویسی می‌کرد
-            raise PermissionDenied("برای این فاکتور قسط پرداخت ثبت شده است و قابل ویرایش نیست.")
+            raise PermissionDenied("برای این رسید پرداخت قسط پرداخت ثبت شده است و قابل ویرایش نیست.")
         # سند نه از دورهٔ بسته بیرون می‌رود و نه به آن وارد می‌شود
         _ensure_invoice_open(instance)
         _ensure_doc_period_open(new_section or instance.section,
@@ -697,10 +697,10 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         _ensure_invoice_open(instance)
         if instance.status not in INVOICE_EDITABLE_STATUSES and not self.request.user.is_superuser:
             # مثل ویرایش: فاکتور در جریان گردش کار یا بسته‌شده حذف نمی‌شود (ردیف‌هایش CASCADE است)
-            raise PermissionDenied("فاکتور در جریان گردش کار یا بسته‌شده قابل حذف نیست.")
+            raise PermissionDenied("رسید پرداخت در جریان گردش کار یا بسته‌شده قابل حذف نیست.")
         if instance.payments.exists():
             # قسط حذف نمی‌شود (د۵)؛ پس فاکتور قسط‌دار هم حذف نمی‌شود (FK آن PROTECT است)
-            raise PermissionDenied("برای این فاکتور قسط پرداخت ثبت شده است و حذف نمی‌شود.")
+            raise PermissionDenied("برای این رسید پرداخت قسط پرداخت ثبت شده است و حذف نمی‌شود.")
         # in a transaction, so the event goes out only after the delete commits
         with transaction.atomic():
             notify_document_changed(instance, 'deleted')
@@ -734,7 +734,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         norm = normalize_invoice_number(request.query_params.get('invoice_number') or '')
         exclude = str(request.query_params.get('exclude') or '').strip()
         if not cp_id.isdigit() or (exclude and not exclude.isdigit()):
-            return Response({'code': 'invalid_params', 'error': 'طرف‌حساب یا شناسهٔ فاکتور نامعتبر است.'},
+            return Response({'code': 'invalid_params', 'error': 'طرف‌حساب یا شناسهٔ رسید پرداخت نامعتبر است.'},
                             status=status.HTTP_400_BAD_REQUEST)
         cp_qs = Counterparty.objects.select_related('party').filter(pk=int(cp_id))
         if cid:
@@ -785,7 +785,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     def _act_on_open_task(self, request, instance, fn):
         task = wf_engine.open_task(INVOICE_WORKFLOW, instance.pk)
         if task is None:
-            return Response({'code': 'task_already_done', 'error': 'این فاکتور کار بازی در گردش ندارد.'},
+            return Response({'code': 'task_already_done', 'error': 'این رسید پرداخت کار بازی در گردش ندارد.'},
                             status=status.HTTP_409_CONFLICT)
         revision = request.data.get('revision')
         revision = int(revision) if str(revision or '').isdigit() else None
@@ -796,10 +796,10 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         _ensure_invoice_open(instance)
         if instance.status not in INVOICE_EDITABLE_STATUSES:
-            return Response({'error': 'فقط فاکتورهای پیش‌نویس یا نیازمند بازنگری قابل ارسال هستند.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'فقط رسیدهای پرداخت پیش‌نویس یا نیازمند بازنگری قابل ارسال هستند.'}, status=status.HTTP_400_BAD_REQUEST)
         # ثبت‌کننده باید در بخش فاکتور «ثبت و دیدن فاکتور» داشته باشد (get_object همین را سنجیده است)
         if not request.user.is_superuser and not can(request.user, INVOICE_PERM, instance.section):
-            raise PermissionDenied("شما مجوز ثبت فاکتور در این بخش را ندارید.")
+            raise PermissionDenied("شما مجوز ثبت رسید پرداخت در این بخش را ندارید.")
         # پرداخت به طرف‌حساب بی شبای معتبر ممکن نیست؛ فاکتور بی آن به گردش نمی‌رود (پیش‌نویس می‌ماند)
         if not counterparty_has_valid_sheba(instance.counterparty):
             return Response({'code': SHEBA_REQUIRED_CODE, 'error': SHEBA_REQUIRED_MESSAGE},
@@ -810,7 +810,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         is_duplicate = matches.exists()
         if is_duplicate and not reason:
             return Response({'code': 'duplicate_reason_required',
-                             'error': 'این شمارهٔ فاکتور برای همین طرف‌حساب قبلاً ثبت شده است؛ دلیل ارسال را بنویسید.',
+                             'error': 'این شمارهٔ رسید پرداخت برای همین طرف‌حساب قبلاً ثبت شده است؛ دلیل ارسال را بنویسید.',
                              **self._duplicate_payload(matches)}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
             if is_duplicate:
@@ -828,7 +828,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if err is not None:
             instance.refresh_from_db()
             return err
-        return Response({'message': 'فاکتور با موفقیت به گردش کار ارسال شد.', 'status': instance.status,
+        return Response({'message': 'رسید پرداخت با موفقیت به گردش کار ارسال شد.', 'status': instance.status,
                          'number': instance.number})
 
     @action(detail=True, methods=['post'], url_path='approve')
@@ -840,7 +840,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             request.user, task, reason=notes, revision=rev, obj=instance))
         if err is not None:
             return err
-        return Response({'message': 'تایید فاکتور با موفقیت ثبت شد.', 'status': instance.status})
+        return Response({'message': 'تایید رسید پرداخت با موفقیت ثبت شد.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='reject')
     def reject_invoice(self, request, pk=None):
@@ -848,14 +848,14 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         _ensure_invoice_open(instance)
         reason = request.data.get('reason', '').strip()
         if not reason:
-            return Response({'error': 'درج دلیل رد فاکتور الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'درج دلیل رد رسید پرداخت الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
         err = self._act_on_open_task(request, instance, lambda task, rev: wf_engine.reject(
             request.user, task, reason, obj=instance, revision=rev))
         if err is not None:
             return err
         instance.rejection_reason = reason
         instance.save(update_fields=['rejection_reason', 'updated_at'])
-        return Response({'message': 'فاکتور هزینه رد گردید.', 'status': instance.status})
+        return Response({'message': 'رسید پرداخت هزینه رد گردید.', 'status': instance.status})
 
     @action(detail=True, methods=['post'], url_path='request-revision')
     def request_revision_invoice(self, request, pk=None):
@@ -872,7 +872,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             return err
         instance.rejection_reason = reason
         instance.save(update_fields=['rejection_reason', 'updated_at'])
-        return Response({'message': 'فاکتور با ثبت اشکال جهت بازنگری ارجاع شد.', 'status': instance.status})
+        return Response({'message': 'رسید پرداخت با ثبت اشکال جهت بازنگری ارجاع شد.', 'status': instance.status})
 
     @staticmethod
     def _payments_exist_response():
@@ -916,7 +916,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if err is not None:
             return err
         payment, invoice = result
-        return self._payment_result(request, payment, invoice, 'تسویه فاکتور با موفقیت در خزانه‌داری ثبت گردید.')
+        return self._payment_result(request, payment, invoice, 'تسویه رسید پرداخت با موفقیت در خزانه‌داری ثبت گردید.')
 
     @action(detail=True, methods=['get', 'post'], url_path='payments')
     def payments(self, request, pk=None):
@@ -937,7 +937,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if err is not None:
             return err
         payment, invoice = result
-        message = ('قسط ثبت شد و فاکتور کامل پرداخت شد.' if invoice.status == 'paid'
+        message = ('پرداخت ثبت شد و رسید پرداخت کامل پرداخت شد.' if invoice.status == 'paid'
                    else 'قسط پرداخت ثبت شد.')
         return self._payment_result(request, payment, invoice, message, code=status.HTTP_201_CREATED)
 
@@ -961,14 +961,14 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
             return self._payments_exist_response()
         wf_instance = wf_engine.instance_of(INVOICE_WORKFLOW, instance.pk)
         if wf_instance is None:
-            return Response({'code': 'cancel_not_allowed', 'error': 'این فاکتور در گردش کار نیست.'},
+            return Response({'code': 'cancel_not_allowed', 'error': 'این رسید پرداخت در گردش کار نیست.'},
                             status=status.HTTP_409_CONFLICT)
         err = _invoice_wf_call(lambda: wf_engine.cancel(request.user, wf_instance,
                                                         reason=(request.data.get('reason') or '').strip(),
                                                         obj=instance))
         if err is not None:
             return err
-        return Response({'message': 'گردش فاکتور لغو شد و فاکتور به پیش‌نویس برگشت.', 'status': instance.status})
+        return Response({'message': 'گردش رسید پرداخت لغو شد و رسید پرداخت به پیش‌نویس برگشت.', 'status': instance.status})
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
@@ -982,14 +982,14 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "فاکتورهای هزینه"
+        ws.title = "رسیدهای پرداخت هزینه"
         lines_ws = wb.create_sheet("ردیف‌ها")
 
         invoice_cols = [
             ('ردیف', 'row_num', 'num'),
             ('شمارهٔ داخلی', 'number', 'num'),
             ('شمارهٔ فاکتور فروشنده', 'invoice_number', 'num'),
-            ('تاریخ فاکتور (شمسی)', 'invoice_date_shamsi', 'num'),
+            ('تاریخ رسید پرداخت (شمسی)', 'invoice_date_shamsi', 'num'),
             ('پروژه', 'project_name', 'text'),
             ('بخش', 'section_name', 'text'),
             ('طرف‌حساب', 'counterparty_name', 'right'),

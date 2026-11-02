@@ -599,7 +599,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       const paidInv = sampleInvoices[2];
       component.sendToSupervisor(paidInv);
 
-      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('فقط فاکتورهای پیش‌نویس'));
+      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('فقط رسیدهای پرداخت پیش‌نویس'));
       expect(mockTreasuryOrgApi.submitExpenseInvoice).not.toHaveBeenCalled();
     });
 
@@ -615,7 +615,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       const paidInv = sampleInvoices[2];
       component.deleteDraftInvoice(paidInv);
 
-      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('فقط فاکتورهای در وضعیت پیش‌نویس'));
+      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('فقط رسیدهای پرداخت در وضعیت پیش‌نویس'));
       expect(mockPersonnelApi.deleteExpenseInvoice).not.toHaveBeenCalled();
     });
 

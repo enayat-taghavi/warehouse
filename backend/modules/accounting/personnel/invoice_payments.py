@@ -28,12 +28,12 @@ from .workflows import INVOICE_ENTITY, INVOICE_WORKFLOW
 PAY_STEP = 'treasury_pay'
 PAYABLE_STATUSES = ('ready_to_pay', 'partially_paid')
 PAYMENTS_EXIST_CODE = 'payments_exist'
-PAYMENTS_EXIST_MESSAGE = ('برای این فاکتور قسط پرداخت ثبت شده است؛ عودت یا لغو ممکن نیست. '
+PAYMENTS_EXIST_MESSAGE = ('برای این رسید پرداخت قسط پرداخت ثبت شده است؛ عودت یا لغو ممکن نیست. '
                           'قسط اشتباه را با ثبت دلیل باطل کنید.')
 # رسید پرداخت (۹ آبان ۱۴۰۵): در هر پرداخت اجباری است و پیوست هستهٔ همان سند با این برچسب می‌شود
 RECEIPT_LABEL = 'payment_receipt'
 RECEIPT_FIELD = 'receipt'
-RECEIPT_REQUIRED_MESSAGE = 'رسید پرداخت لازم است.'
+RECEIPT_REQUIRED_MESSAGE = 'سند واریز لازم است.'
 
 
 def read_receipt(upload):
@@ -80,10 +80,10 @@ def _ensure_treasurer(user, invoice, task):
     # ثبت‌کننده‌ای که خزانه‌دار همین بخش است فاکتور خودش را پرداخت می‌کند (creator_may_act مرحلهٔ پرداخت)؛
     # ثبت‌کنندهٔ بی‌نقش خزانه‌دار را can_act رد می‌کند
     if task is None or task.step_key != PAY_STEP or invoice.status not in PAYABLE_STATUSES:
-        raise WorkflowError('not_payable', 'فاکتور در مرحلهٔ پرداخت نیست یا کار پرداخت باز ندارد.', 409)
+        raise WorkflowError('not_payable', 'رسید پرداخت در مرحلهٔ پرداخت نیست یا کار پرداخت باز ندارد.', 409)
     if not wf_engine.can_act(user, task, ACT):
         raise WorkflowError('payment_not_allowed',
-                            'فقط خزانه‌دار این فاکتور یا جانشین او می‌تواند قسط ثبت یا باطل کند.', 403)
+                            'فقط خزانه‌دار این رسید پرداخت یا جانشین او می‌تواند قسط ثبت یا باطل کند.', 403)
 
 
 def _recompute(invoice):
@@ -185,7 +185,7 @@ def _audit(action, payment, invoice, user, details=None):
 
 
 INSTALLMENT_NOTIFICATION_TYPE = 'invoice_installment'
-INSTALLMENT_TITLE_FA = 'قسطی از فاکتور شما پرداخت شد'
+INSTALLMENT_TITLE_FA = 'قسطی از رسید پرداخت شما پرداخت شد'
 
 
 def _notify_creator_installment(invoice, payment, user):
@@ -199,7 +199,7 @@ def _notify_creator_installment(invoice, payment, user):
     if not creator_id or creator_id == getattr(user, 'pk', None):
         return
     label = invoice.number or invoice.invoice_number or str(invoice.pk)
-    message = (f'فاکتور «{label}»: {payment.amount:,.0f} ریال پرداخت شد؛ '
+    message = (f'رسید پرداخت «{label}»: {payment.amount:,.0f} ریال پرداخت شد؛ '
                f'مانده {invoice_remaining(invoice):,.0f} ریال.')
     notify_users(
         [creator_id], title=INSTALLMENT_TITLE_FA, message=message,
@@ -235,11 +235,11 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=
                 attach_receipt(user, INVOICE_ENTITY, invoice.pk, receipt, receipt_meta)
                 return None, invoice
             if amount <= 0:
-                raise WorkflowError('nothing_to_pay', 'مانده‌ای برای پرداخت این فاکتور نیست.', 409)
+                raise WorkflowError('nothing_to_pay', 'مانده‌ای برای پرداخت این رسید پرداخت نیست.', 409)
         else:
             amount = _parse_amount(data.get('amount'))
         if amount > remaining:
-            raise ValidationError({'amount': [f'مبلغ قسط از ماندهٔ فاکتور ({remaining:,.0f} ریال) بیشتر است.'],
+            raise ValidationError({'amount': [f'مبلغ قسط از ماندهٔ رسید پرداخت ({remaining:,.0f} ریال) بیشتر است.'],
                                    'code': 'amount_exceeds_remaining', 'remaining': str(remaining)})
         fields = _clean_payment(invoice, data, legacy=legacy)
         payment = InvoicePayment.objects.create(invoice=invoice, amount=amount, created_by=user, **fields)
@@ -273,7 +273,7 @@ def void_payment(user, invoice_id, payment_id, reason):
         if payment.voided_at is not None:
             raise WorkflowError('payment_already_voided', 'این قسط پیش‌تر باطل شده است.', 409)
         if invoice.status == 'paid':
-            raise WorkflowError('void_after_full_payment', 'فاکتور کامل پرداخت شده است؛ ابطال قسط ممکن نیست.', 409)
+            raise WorkflowError('void_after_full_payment', 'رسید پرداخت کامل پرداخت شده است؛ ابطال قسط ممکن نیست.', 409)
         _ensure_treasurer(user, invoice, task)
         ensure_period_open(_company_id(invoice), payment.payment_date_shamsi, 'payment_date_shamsi')
         payment.voided_at = timezone.now()

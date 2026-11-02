@@ -45,7 +45,7 @@ def _invoice_state_change(invoice, state, instance):
         paid = _locked_paid_amount(invoice)
         if (amount > 0 and paid != amount) or (amount <= 0 and not (invoice.payment_ref or '').strip()):
             raise WorkflowError('payment_required',
-                                'پرداخت فاکتور فقط با ثبت قسط‌ها از صفحهٔ فاکتور و تا صفر شدن مانده انجام می‌شود', 400)
+                                'پرداخت رسید پرداخت فقط با ثبت پرداخت‌ها از صفحهٔ رسید پرداخت و تا صفر شدن مانده انجام می‌شود', 400)
     elif state in (RETURNED, CANCELLED, REJECTED) and _locked_paid_amount(invoice) > 0:
         # بعد از اولین قسط باطل‌نشده، عودت، لغو و رد بسته است (اصلاح فقط با ابطال قسط)
         from .invoice_payments import PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE
@@ -80,7 +80,7 @@ def invoice_heads_summary(invoice):
 def _invoice_summary(invoice):
     counterparty = getattr(invoice, 'counterparty', None)
     return {
-        'title': f'فاکتور {invoice.invoice_number}' + (f' — {counterparty.name}' if counterparty else ''),
+        'title': f'رسید پرداخت {invoice.invoice_number}' + (f' — {counterparty.name}' if counterparty else ''),
         'amount': invoice.amount,
         'category': invoice_heads_summary(invoice),
         'date_shamsi': invoice.invoice_date_shamsi,
@@ -97,7 +97,7 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     key=INVOICE_WORKFLOW,
     version=1,
     entity_kind=INVOICE_ENTITY,
-    title_fa='فاکتور هزینه',
+    title_fa='رسید پرداخت هزینه',
     steps=(
         StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_invoice_approve', APPROVE),
         # حسابدارِ ثبت‌کننده‌ای که تنها حسابدار بخش است این مرحله را رد می‌کند (تصمیم کاربر ۹ آبان ۱۴۰۵)

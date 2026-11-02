@@ -103,8 +103,7 @@ describe('Personnel change request: read-only lists for accountant and manager (
       { show: vi.fn() } as any,
       mockCdr,
       mockRoute,
-      mockRouter,
-      { downloadPdf: vi.fn() } as any
+      mockRouter
     );
     managerComp.loadChangeRequests();
 
@@ -128,7 +127,7 @@ describe('Personnel change request: read-only lists for accountant and manager (
     const managerComp = new ManagerApprovals(
       mockState, mockAuth, mockPersonnelApi,
       { getAll: vi.fn().mockReturnValue(of([])) } as any,
-      mockToast, { show: vi.fn() } as any, mockCdr, mockRoute, mockRouter, { downloadPdf: vi.fn() } as any
+      mockToast, { show: vi.fn() } as any, mockCdr, mockRoute, mockRouter
     );
     expect(managerComp.workflowErrorText({ error: { code: 'wrong_step' } }, 'x')).toContain('کارهای من');
     expect(managerComp.workflowErrorText({ error: { code: 'action_blocked', error: 'ناقص', missing_fields: ['شبا'] } }, 'x')).toContain('شبا');

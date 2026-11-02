@@ -43,7 +43,7 @@
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
       <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
-      <h2 class="text-sm font-black text-slate-900">فاکتورهای تاییدشده توسط حسابدار و مدیر (آماده تسویه بانکی)</h2>
+      <h2 class="text-sm font-black text-slate-900">رسیدهای پرداخت تاییدشده توسط حسابدار و مدیر (آماده تسویه بانکی)</h2>
     </div>
 
     <!-- ── نمای کارتی در صفحه موبایل (Mobile Cards View) ── -->
@@ -56,7 +56,7 @@
               type="button"
               (click)="openPreview(item, 'preview')"
               class="text-start font-mono text-[11px] text-fg-muted hover:text-teal-700 transition-colors cursor-pointer mt-0.5 block"
-              title="مشاهده پیش‌نمایش و سابقه فاکتور">
+              title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
               <span *ngIf="item.number">داخلی: <bdi dir="ltr">{{ item.number }}</bdi> · </span>
               <span>شماره: <bdi dir="ltr">{{ item.invoice_number }}</bdi></span>
             </button>
@@ -97,7 +97,7 @@
             *ngIf="item.status === 'pending_payment' || item.status === 'partially_paid'"
             type="button"
             appAction="confirm"
-            label="ثبت قسط"
+            label="پرداخت"
             size="sm"
             (click)="payInvoice(item)"
           ></button>
@@ -134,7 +134,7 @@
         <thead class="bg-slate-100/75 border-b border-slate-200 text-slate-600 font-black">
           <tr>
             <th class="py-3 px-3">ردیف</th>
-            <th class="py-3 px-3 font-mono">شماره فاکتور</th>
+            <th class="py-3 px-3 font-mono">شماره رسید پرداخت</th>
             <th class="py-3 px-3">طرف‌حساب / فروشنده</th>
             <th class="py-3 px-3">سرفصل و بخش</th>
             <th class="py-3 px-3 font-mono">مبلغ قابل پرداخت (تومان)</th>
@@ -146,7 +146,7 @@
         <tbody class="divide-y divide-slate-100">
           <tr *ngFor="let item of invoices; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="py-3 px-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="py-3 px-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(item, 'preview')" (keydown.enter)="openPreview(item, 'preview')" (keydown.space)="$event.preventDefault(); openPreview(item, 'preview')" tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه فاکتور">
+            <td class="py-3 px-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(item, 'preview')" (keydown.enter)="openPreview(item, 'preview')" (keydown.space)="$event.preventDefault(); openPreview(item, 'preview')" tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
               <div *ngIf="item.number"><bdi dir="ltr">{{ item.number }}</bdi></div>
               <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number"><bdi dir="ltr">{{ item.invoice_number }}</bdi></div>
             </td>
@@ -173,7 +173,7 @@
                   *ngIf="item.status === 'pending_payment' || item.status === 'partially_paid'"
                   type="button"
                   appAction="confirm"
-                  label="ثبت قسط"
+                  label="پرداخت"
                   size="sm"
                   (click)="payInvoice(item)"
                 ></button>
@@ -203,15 +203,15 @@
               <span *ngIf="item.status === 'paid'" class="text-[11px] font-mono text-emerald-600 font-bold"><bdi dir="ltr">{{ item.tracking_code }}</bdi></span>
             </td>
           </tr>
-          <tr *ngIf="isLoading && invoices.length === 0"><td colspan="9" class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری فاکتورها...</td></tr>
-          <tr *ngIf="!isLoading && invoices.length === 0"><td colspan="9" class="p-10 text-center text-slate-400 text-xs">فاکتوری برای پرداخت وجود ندارد.</td></tr>
+          <tr *ngIf="isLoading && invoices.length === 0"><td colspan="9" class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری رسیدهای پرداخت...</td></tr>
+          <tr *ngIf="!isLoading && invoices.length === 0"><td colspan="9" class="p-10 text-center text-slate-400 text-xs">رسید پرداختی برای پرداخت وجود ندارد.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <!-- ── ۴. پنجرهٔ ثبت قسط و فهرست قسط‌ها ── -->
-  <app-modal [isOpen]="payModalOpen" size="lg" [title]="'ثبت قسط فاکتور ' + (payItem?.number || payItem?.invoice_number || '')" (closed)="closePayModal()">
+  <app-modal [isOpen]="payModalOpen" size="lg" [title]="'پرداخت رسید پرداخت ' + (payItem?.number || payItem?.invoice_number || '')" (closed)="closePayModal()">
     <div *ngIf="payItem as it" class="space-y-4 text-xs text-fg" dir="rtl">
       <!-- خلاصه -->
       <div class="grid grid-cols-3 gap-2 text-center">
@@ -284,16 +284,16 @@
       </div>
 
       <div>
-        <h3 class="text-xs font-black mb-1.5">رسیدهای پرداخت</h3>
+        <h3 class="text-xs font-black mb-1.5">سندهای واریز</h3>
         <app-attachments #payReceipts kind="expense_invoice" [entityId]="it.id" [label]="receiptLabel"></app-attachments>
       </div>
 
       <!-- فرم قسط تازه -->
       <form *ngIf="it.remaining > 0" (ngSubmit)="submitPayment()" class="space-y-3 border-t border-line pt-3" novalidate>
-        <h3 class="text-xs font-black">قسط تازه</h3>
+        <h3 class="text-xs font-black">پرداخت تازه</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label for="pay-amount" class="block font-bold mb-1">مبلغ قسط (ریال) <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <label for="pay-amount" class="block font-bold mb-1">مبلغ پرداخت (ریال) <span class="text-rose-500" aria-hidden="true">*</span></label>
             <app-amount-input name="payAmount" [(ngModel)]="payAmount" inputId="pay-amount" describedBy="pay-amount-err" [invalid]="!!payFieldErrors['amount']"></app-amount-input>
             <p *ngIf="payFieldErrors['amount']" id="pay-amount-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['amount'] }}</p>
           </div>
@@ -389,11 +389,11 @@
           </div>
 
           <div class="sm:col-span-2">
-            <label for="pay-receipt" class="block font-bold mb-1">رسید پرداخت <span class="text-rose-500" aria-hidden="true">*</span></label>
+            <label for="pay-receipt" class="block font-bold mb-1">سند واریز <span class="text-rose-500" aria-hidden="true">*</span></label>
             <input id="pay-receipt" name="payReceipt" type="file" [attr.accept]="receiptAccept" (change)="onPayReceiptChange($event)"
               aria-required="true" [attr.aria-invalid]="payFieldErrors['receipt'] ? 'true' : 'false'" [attr.aria-describedby]="payFieldErrors['receipt'] ? 'pay-receipt-hint pay-receipt-err' : 'pay-receipt-hint'"
               class="block w-full min-h-[40px] text-xs text-fg file:me-3 file:min-h-[40px] file:px-3 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-bold file:cursor-pointer cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl" />
-            <p id="pay-receipt-hint" class="mt-1 text-[10px] text-fg-muted">تصویر یا PDF رسید بانکی؛ همهٔ کسانی که در گردش این فاکتور بوده‌اند آن را می‌بینند.</p>
+            <p id="pay-receipt-hint" class="mt-1 text-[10px] text-fg-muted">تصویر یا PDF رسید بانکی؛ همهٔ کسانی که در گردش این رسید پرداخت بوده‌اند آن را می‌بینند.</p>
             <p *ngIf="payFieldErrors['receipt']" id="pay-receipt-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['receipt'] }}</p>
           </div>
         </div>
@@ -405,10 +405,10 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-end gap-2">
-          <p *ngIf="!payReceipt" id="pay-receipt-need" class="me-auto text-[11px] text-fg-muted">برای ثبت قسط، نخست رسید پرداخت را پیوست کنید.</p>
+          <p *ngIf="!payReceipt" id="pay-receipt-need" class="me-auto text-[11px] text-fg-muted">برای ثبت قسط، نخست سند واریز را پیوست کنید.</p>
           <button type="button" appAction="close" label="انصراف" size="sm" (click)="closePayModal()"></button>
-          <button type="submit" appAction="confirm" label="ثبت قسط" size="sm" [busy]="isPaying" [disabled]="!payReceipt"
-            [hint]="payReceipt ? '' : 'نخست رسید پرداخت را پیوست کنید'"></button>
+          <button type="submit" appAction="confirm" label="پرداخت" size="sm" [busy]="isPaying" [disabled]="!payReceipt"
+            [hint]="payReceipt ? '' : 'نخست سند واریز را پیوست کنید'"></button>
         </div>
       </form>
     </div>

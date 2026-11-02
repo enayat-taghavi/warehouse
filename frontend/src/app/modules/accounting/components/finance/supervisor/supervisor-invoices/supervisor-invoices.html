@@ -34,14 +34,14 @@
       <button
         type="button"
         appAction="export-excel"
-        label="خروجی گزارش فاکتورها"
+        label="خروجی گزارش رسیدهای پرداخت"
         (click)="exportExcel()"
       ></button>
 
       <button
         type="button"
         appAction="refresh"
-        label="تازه‌سازی فاکتورها"
+        label="تازه‌سازی رسیدهای پرداخت"
         [busy]="isLoading"
         (click)="fetchInvoices()"
       ></button>
@@ -57,7 +57,7 @@
           type="text"
           [(ngModel)]="searchQuery"
           (keyup.enter)="onSearch()"
-          placeholder="جستجو بر اساس شماره فاکتور، طرف‌حساب یا شرح هزینه..."
+          placeholder="جستجو بر اساس شماره رسید پرداخت، طرف‌حساب یا شرح هزینه..."
           class="w-full pr-9 pl-8 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-sans" />
         <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>
         <button
@@ -78,16 +78,16 @@
     <!-- بدنه جدول / وضعیت لودینگ و خالی -->
     <div *ngIf="isLoading" class="p-12 text-center space-y-3">
       <div class="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-      <p class="text-xs text-slate-500 font-bold">در حال بارگذاری فاکتورهای هزینه...</p>
+      <p class="text-xs text-slate-500 font-bold">در حال بارگذاری رسیدهای پرداخت هزینه...</p>
     </div>
 
     <div *ngIf="!isLoading && items.length === 0" class="p-12 text-center space-y-3">
       <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
         🧾
       </div>
-      <h3 class="text-sm font-black text-slate-800">هیچ فاکتور هزینه‌ای یافت نشد</h3>
+      <h3 class="text-sm font-black text-slate-800">هیچ رسید پرداخت هزینه‌ای یافت نشد</h3>
       <p class="text-xs text-slate-500 max-w-md mx-auto">
-        فاکتور جدیدی جهت بررسی سرپرست کارگاه موجود نیست.
+        رسید پرداخت جدیدی جهت بررسی سرپرست کارگاه موجود نیست.
       </p>
     </div>
 
@@ -101,7 +101,7 @@
               type="button"
               (click)="openPreview(item, 'preview')"
               class="text-start font-mono text-[11px] text-fg-muted hover:text-indigo-600 transition-colors cursor-pointer mt-0.5 block"
-              title="مشاهده پیش‌نمایش و سابقه فاکتور">
+              title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
               <span *ngIf="item.number">داخلی: <bdi dir="ltr">{{ item.number }}</bdi> · </span>
               <span>شماره: <bdi dir="ltr">{{ item.invoice_number }}</bdi></span>
             </button>
@@ -183,7 +183,7 @@
         <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-black">
           <tr>
             <th class="p-3">ردیف</th>
-            <th class="p-3">شماره فاکتور</th>
+            <th class="p-3">شماره رسید پرداخت</th>
             <th class="p-3">طرف‌حساب</th>
             <th class="p-3">پروژه / بخش</th>
             <th class="p-3">شرح هزینه</th>
@@ -195,7 +195,7 @@
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let item of items; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="p-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(item, 'preview')" (keydown.enter)="openPreview(item, 'preview')" (keydown.space)="$event.preventDefault(); openPreview(item, 'preview')" tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه فاکتور">
+            <td class="p-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(item, 'preview')" (keydown.enter)="openPreview(item, 'preview')" (keydown.space)="$event.preventDefault(); openPreview(item, 'preview')" tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
               <div *ngIf="item.number">{{ item.number }}</div>
               <div [class.text-[10px]]="item.number" [class.text-slate-500]="item.number">{{ item.invoice_number }}</div>
               <div class="flex flex-wrap gap-1 mt-1 font-sans">

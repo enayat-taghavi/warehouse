@@ -41,7 +41,7 @@ describe('InvoicesHubComponent — تب یکپارچهٔ فاکتورها', () =
     const { hub } = setup('supervisor', ['perm_invoice_record', 'perm_invoice_approve']);
     expect(hub.cartableRole()).toBe('supervisor');
     expect(hub.tabs().map(t => t.id)).toEqual(['cartable', 'mine']);
-    expect(hub.tabs()[0].label).toBe('تایید فاکتورها');
+    expect(hub.tabs()[0].label).toBe('تایید رسیدهای پرداخت');
     expect(hub.view()).toBe('cartable');
   });
 

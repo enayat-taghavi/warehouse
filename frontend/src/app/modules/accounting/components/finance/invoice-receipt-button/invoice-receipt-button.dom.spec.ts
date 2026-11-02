@@ -163,7 +163,7 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockToast.info).toHaveBeenCalledWith('رسیدی برای این فاکتور ثبت نشده است');
+    expect(mockToast.info).toHaveBeenCalledWith('سند واریزی برای این رسید پرداخت ثبت نشده است');
     expect(mockToast.error).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
   });
@@ -183,15 +183,15 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockToast.info).toHaveBeenCalledWith('رسیدی برای این فاکتور ثبت نشده است');
+    expect(mockToast.info).toHaveBeenCalledWith('سند واریزی برای این رسید پرداخت ثبت نشده است');
     expect(mockToast.error).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
   });
 
   it('has Persian aria-label and download icon', () => {
     const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.getAttribute('aria-label')).toBe('دانلود رسید');
-    expect(btn.getAttribute('title')).toBe('دانلود رسید پرداخت');
+    expect(btn.getAttribute('aria-label')).toBe('دانلود سند واریز');
+    expect(btn.getAttribute('title')).toBe('دانلود سند واریز');
     expect(btn.hasAttribute('appaction')).toBe(true);
     expect(btn.querySelector('svg')).not.toBeNull();
   });

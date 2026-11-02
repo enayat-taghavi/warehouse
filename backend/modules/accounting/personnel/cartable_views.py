@@ -108,7 +108,7 @@ def _invoice_engine_action(user, invoice, action_type, reason):
     if action_type != 'approve':
         invoice.rejection_reason = reason
         invoice.save(update_fields=['rejection_reason', 'updated_at'])
-    return Response({'message': 'اقدام روی فاکتور ثبت شد.', 'status': invoice.status})
+    return Response({'message': 'اقدام روی رسید پرداخت ثبت شد.', 'status': invoice.status})
 
 
 def _invoice_task_rows(user, step_key):
@@ -1084,7 +1084,7 @@ class TreasuryCartableAPIView(APIView):
         elif action == 'disburse_invoice':
             invoice_id = request.data.get('invoice_id')
             if not invoice_id:
-                raise ValidationError("شناسه فاکتور (invoice_id) الزامی است.")
+                raise ValidationError("شناسه رسید پرداخت (invoice_id) الزامی است.")
             # پرداخت فاکتور روی موتور گردش کار (ت۱۷ طرح ۲.۳): فقط دریافت‌کنندهٔ کار باز مرحلهٔ پرداخت
             from django.db import transaction
             from django.utils import timezone
@@ -1094,7 +1094,7 @@ class TreasuryCartableAPIView(APIView):
             invoice = ExpenseInvoice.objects.filter(pk=invoice_id).first()
             task = wf_engine.open_task(INVOICE_WORKFLOW, invoice_id) if invoice else None
             if invoice is None or task is None or task.step_key != 'treasury_pay':
-                raise ValidationError("فاکتور در مرحلهٔ پرداخت نیست یا یافت نشد.")
+                raise ValidationError("رسید پرداخت در مرحلهٔ پرداخت نیست یا یافت نشد.")
             _validate_instance_company_access(invoice, 'invoice', user)
             # د۵ طرح ۴.۱: همان مسیر pay/ قدیمی = یک قسط به اندازهٔ کل مانده (خزانه‌دار، نه ثبت‌کننده)
             from .invoice_payments import RECEIPT_FIELD, add_payment
@@ -1107,7 +1107,7 @@ class TreasuryCartableAPIView(APIView):
                                 status=exc.status)
             updated_invoice.refresh_from_db()
             return Response({
-                'message': f'فاکتور شماره «{invoice.number or invoice.invoice_number or invoice.pk}» با موفقیت تسویه و پرداخت شد.',
+                'message': f'رسید پرداخت شماره «{invoice.number or invoice.invoice_number or invoice.pk}» با موفقیت تسویه و پرداخت شد.',
                 'invoice': ExpenseInvoiceSerializer(updated_invoice).data
             })
 

@@ -24,7 +24,7 @@ class InvoiceVerifyLiveTests(TestCase):
             amount=Decimal('2500'), description='شرح داخلی')
 
     def verify(self, company_id=None):
-        token = verify_token(INVOICE_ENTITY, self.inv.pk, '1405-9', title='فاکتور هزینه',
+        token = verify_token(INVOICE_ENTITY, self.inv.pk, '1405-9', title='رسید پرداخت هزینه',
                              company_id=self.company.pk if company_id is None else company_id)
         res = APIClient().get(f'/api/public/verify/{token}/')
         self.assertEqual(res.status_code, 200)

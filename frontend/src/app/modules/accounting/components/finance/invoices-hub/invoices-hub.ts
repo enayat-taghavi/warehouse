@@ -21,10 +21,10 @@ export type InvoiceCartableRole = 'supervisor' | 'accountant' | 'manager' | 'tre
  * دقیقاً همان قاعدهٔ pagePermissions صفحهٔ قبلی بماند (route-access.ts).
  */
 export const INVOICE_CARTABLES: Record<InvoiceCartableRole, { page: string; label: string; shortLabel: string }> = {
-  supervisor: { page: 'supervisor-invoices', label: 'تایید فاکتورها', shortLabel: 'تایید' },
-  accountant: { page: 'accountant-invoices', label: 'ممیزی فاکتورها', shortLabel: 'ممیزی' },
-  manager: { page: 'manager-approvals', label: 'مجوز پرداخت فاکتورها', shortLabel: 'مجوز پرداخت' },
-  treasury: { page: 'treasurer-invoices', label: 'پرداخت فاکتورها', shortLabel: 'پرداخت' },
+  supervisor: { page: 'supervisor-invoices', label: 'تایید رسیدهای پرداخت', shortLabel: 'تایید' },
+  accountant: { page: 'accountant-invoices', label: 'ممیزی رسیدهای پرداخت', shortLabel: 'ممیزی' },
+  manager: { page: 'manager-approvals', label: 'مجوز پرداخت رسیدهای پرداخت', shortLabel: 'مجوز پرداخت' },
+  treasury: { page: 'treasurer-invoices', label: 'پرداخت رسیدهای پرداخت', shortLabel: 'پرداخت' },
 };
 
 const CARTABLE_ORDER: InvoiceCartableRole[] = ['supervisor', 'accountant', 'manager', 'treasury'];
@@ -90,7 +90,7 @@ export class InvoicesHubComponent {
       tabs.push({ id: 'cartable', label: c.label, shortLabel: c.shortLabel, icon: ACCOUNTING_ENTITY_ICONS.approvals });
     }
     if (this.canSeeMine()) {
-      tabs.push({ id: 'mine', label: 'فاکتورهای من', shortLabel: 'من', icon: ACCOUNTING_ENTITY_ICONS.invoices });
+      tabs.push({ id: 'mine', label: 'رسیدهای پرداخت من', shortLabel: 'من', icon: ACCOUNTING_ENTITY_ICONS.invoices });
     }
     return tabs;
   });

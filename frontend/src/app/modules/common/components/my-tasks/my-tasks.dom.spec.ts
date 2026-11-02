@@ -38,7 +38,7 @@ describe('MyTasksComponent DOM Spec', () => {
     instance_id: 201,
     revision: 1,
     workflow_key: 'expense_invoice',
-    workflow_title_fa: 'گردش فاکتور هزینه',
+    workflow_title_fa: 'گردش رسید پرداخت هزینه',
     entity_kind: 'expense_invoice',
     entity_id: 501,
     step_key: 'step_supervisor',
@@ -67,7 +67,7 @@ describe('MyTasksComponent DOM Spec', () => {
     instance_id: 202,
     revision: 1,
     workflow_key: 'expense_invoice',
-    workflow_title_fa: 'گردش فاکتور هزینه',
+    workflow_title_fa: 'گردش رسید پرداخت هزینه',
     entity_kind: 'expense_invoice',
     entity_id: 502,
     step_key: 'step_supervisor',
@@ -201,7 +201,7 @@ describe('MyTasksComponent DOM Spec', () => {
     expect(component.filteredCards.length).toBe(1);
 
     const card = component.filteredCards[0];
-    expect(card.workflow_title_fa).toBe('گردش فاکتور هزینه');
+    expect(card.workflow_title_fa).toBe('گردش رسید پرداخت هزینه');
     expect(card.company?.name).toBe('شرکت اصلی');
     expect(card.section?.name).toBe('بخش فناوری اطلاعات');
     expect(component.formatCardAmount(card.amount)).toMatch(/۱۲[,٬]۵۰۰[,٬]۰۰۰ ریال/);
@@ -280,8 +280,8 @@ describe('MyTasksComponent DOM Spec', () => {
     expect(mockTasksService.act).not.toHaveBeenCalled();
 
     // Confirming with reason calls act
-    component.onReasonConfirmed('فاکتور نیاز به اصلاح شرح دارد');
-    expect(mockTasksService.act).toHaveBeenCalledWith(card, 'return', 'فاکتور نیاز به اصلاح شرح دارد');
+    component.onReasonConfirmed('رسید پرداخت نیاز به اصلاح شرح دارد');
+    expect(mockTasksService.act).toHaveBeenCalledWith(card, 'return', 'رسید پرداخت نیاز به اصلاح شرح دارد');
   });
 
   it('calls act directly without dialog when clicking act action', async () => {

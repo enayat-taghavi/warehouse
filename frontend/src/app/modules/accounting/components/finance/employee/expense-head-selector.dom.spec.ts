@@ -111,7 +111,7 @@ describe('Expense Head Selector & Form Integration Specs (Release v1 step 3.4-c)
 
       expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
       expect(component.lineErrors[0]).toBe('سرفصل هزینهٔ این ردیف را انتخاب کنید.');
-      expect(mockToast.show).toHaveBeenCalledWith('warning', 'ردیف‌های فاکتور را کامل کنید.');
+      expect(mockToast.show).toHaveBeenCalledWith('warning', 'ردیف‌های رسید پرداخت را کامل کنید.');
 
       // ۲. با سرفصل ۱۱: فراخوانی با ردیف شامل expense_head و بدون فیلد category
       component.formLines[0].expense_head = 11;

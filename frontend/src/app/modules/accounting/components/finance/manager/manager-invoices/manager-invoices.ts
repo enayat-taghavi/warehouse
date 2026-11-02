@@ -83,7 +83,7 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        if (!silent) this.toast.show('error', err?.error?.error || 'خطا در دریافت لیست فاکتورهای هزینه');
+        if (!silent) this.toast.show('error', err?.error?.error || 'خطا در دریافت لیست رسیدهای پرداخت هزینه');
         this.cdr.detectChanges();
       }
     });
@@ -92,18 +92,18 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
   approveInvoiceManager(inv: any): void {
     this.api.postCartableAction('manager', { action: 'approve', model: 'invoice', id: inv.id }).subscribe({
       next: () => {
-        this.toast.show('success', `فاکتور هزینه «${inv.invoice_number || inv.id}» تایید و مجوز پرداخت صادر گردید.`);
+        this.toast.show('success', `رسید پرداخت هزینه «${inv.invoice_number || inv.id}» تایید و مجوز پرداخت صادر گردید.`);
         this.loadInvoices();
       },
       error: (err: any) => {
-        this.toast.show('error', err?.error?.error || 'خطا در صدور مجوز پرداخت فاکتور');
+        this.toast.show('error', err?.error?.error || 'خطا در صدور مجوز پرداخت رسید پرداخت');
       }
     });
   }
 
   rejectInvoiceManager(inv: any): void {
     this.pendingInvoiceRevision = inv;
-    this.invoiceReasonTitle = `علت بازنگری یا رد فاکتور «${inv.number || inv.invoice_number || inv.id}»`;
+    this.invoiceReasonTitle = `علت بازنگری یا رد رسید پرداخت «${inv.number || inv.invoice_number || inv.id}»`;
     this.invoiceReasonServerError = '';
     this.isInvoiceReasonOpen = true;
   }
@@ -115,11 +115,11 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
       next: () => {
         this.isInvoiceReasonOpen = false;
         this.pendingInvoiceRevision = null;
-        this.toast.show('warning', 'فاکتور هزینه جهت بازنگری عودت گردید.');
+        this.toast.show('warning', 'رسید پرداخت هزینه جهت بازنگری عودت گردید.');
         this.loadInvoices();
       },
       error: (err: any) => {
-        this.invoiceReasonServerError = err?.error?.error || err?.error?.detail || 'خطا در ارجاع بازنگری فاکتور';
+        this.invoiceReasonServerError = err?.error?.error || err?.error?.detail || 'خطا در ارجاع بازنگری رسید پرداخت';
         this.cdr.detectChanges();
       }
     });

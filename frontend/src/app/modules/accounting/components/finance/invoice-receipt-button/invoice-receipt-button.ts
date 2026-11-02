@@ -36,8 +36,8 @@ export interface ReceiptItem {
         #trigger
         type="button"
         appAction="download"
-        label="دانلود رسید"
-        hint="دانلود رسید پرداخت"
+        label="دانلود سند واریز"
+        hint="دانلود سند واریز"
         size="sm"
         [display]="display"
         [busy]="busy"
@@ -48,7 +48,7 @@ export interface ReceiptItem {
       <div
         *ngIf="menuOpen && items.length > 1"
         role="menu"
-        aria-label="رسیدهای پرداخت"
+        aria-label="سندهای واریز"
         class="fixed rounded-xl border border-line bg-surface shadow-lg p-1 z-50 min-w-[12rem] max-w-[calc(100vw-2rem)] flex flex-col gap-0.5"
         [style.top.px]="menuTop"
         [style.bottom.px]="menuBottom"
@@ -200,9 +200,9 @@ export class InvoiceReceiptButtonComponent implements OnDestroy {
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (status === 403) {
-        this.toast?.info('رسیدی برای این فاکتور ثبت نشده است');
+        this.toast?.info('سند واریزی برای این رسید پرداخت ثبت نشده است');
       } else {
-        this.toast?.error(this.messageOf(err, 'دریافت رسید انجام نشد'));
+        this.toast?.error(this.messageOf(err, 'دریافت سند واریز انجام نشد'));
       }
       this.busy = false;
       this.cdr.markForCheck();
@@ -214,7 +214,7 @@ export class InvoiceReceiptButtonComponent implements OnDestroy {
       this.menuOpen = false;
       this.busy = false;
       this.cdr.markForCheck();
-      this.toast?.info('رسیدی برای این فاکتور ثبت نشده است');
+      this.toast?.info('سند واریزی برای این رسید پرداخت ثبت نشده است');
       return;
     }
 
@@ -243,7 +243,7 @@ export class InvoiceReceiptButtonComponent implements OnDestroy {
       const blob = await firstValueFrom(this.api.download(this.apiPath(item.download_url)));
       await saveBlob(blob, item.original_name || 'attachment');
     } catch (err) {
-      this.toast?.error(this.messageOf(err, 'دانلود رسید انجام نشد'));
+      this.toast?.error(this.messageOf(err, 'دانلود سند واریز انجام نشد'));
     } finally {
       this.busy = false;
       this.cdr.markForCheck();

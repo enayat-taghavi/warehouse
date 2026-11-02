@@ -20,7 +20,7 @@ VAT_DEFAULT_RATE = 10
 MIN_LINES = 1
 MAX_LINES = 100
 DUPLICATE_EXCLUDED_STATUSES = ('rejected',)
-VOID_REASON_DELETE = 'حذف فاکتور'
+VOID_REASON_DELETE = 'حذف رسید پرداخت'
 
 VAT_RATE_SETTING = CompanySettingSpec(
     module=VAT_SETTING_MODULE, key=VAT_SETTING_KEY, default=VAT_DEFAULT_RATE, type='float',
@@ -28,7 +28,7 @@ VAT_RATE_SETTING = CompanySettingSpec(
 )
 
 INVOICE_NUMBER_SERIES = NumberSeriesSpec(
-    key=INVOICE_SERIES_KEY, title_fa='فاکتور هزینه', default_template='{period}/ف/{seq}',
+    key=INVOICE_SERIES_KEY, title_fa='رسید پرداخت هزینه', default_template='{period}/ف/{seq}',
     period_key=fiscal_period_key, manage_perm='',
 )
 
@@ -111,7 +111,7 @@ def void_invoice_number(invoice, user):
 
 
 SHEBA_REQUIRED_CODE = 'counterparty_sheba_required'
-SHEBA_REQUIRED_MESSAGE = 'طرف‌حساب این فاکتور شبای معتبر ندارد؛ پیش از ارسال، شمارهٔ شبای درست را برای او ثبت کنید.'
+SHEBA_REQUIRED_MESSAGE = 'طرف‌حساب این رسید پرداخت شبای معتبر ندارد؛ پیش از ارسال، شمارهٔ شبای درست را برای او ثبت کنید.'
 
 
 def counterparty_has_valid_sheba(counterparty) -> bool:

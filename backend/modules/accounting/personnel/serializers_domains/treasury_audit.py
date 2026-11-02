@@ -316,7 +316,7 @@ def _invoice_lines_input(data, instance=None):
             if len(existing) > 1:
                 # ویرایش کهنه روی فاکتور چندردیفی نباید ردیف‌ها را به یکی فرو بریزد؛ خطا به کاربر نشان داده می‌شود
                 raise serializers.ValidationError(
-                    {'lines': "این فاکتور چند ردیف دارد؛ برای ویرایش، ردیف‌ها را بفرستید."})
+                    {'lines': "این رسید پرداخت چند ردیف دارد؛ برای ویرایش، ردیف‌ها را بفرستید."})
             line0 = existing[0] if existing else None
         if has_amount:
             quantity, unit_price = '1', data.get('amount')
@@ -441,11 +441,11 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         if (instance is not None and instance.issued_number_id and 'section' in attrs
                 and _section_company_id(section) != _section_company_id(instance.section)):
             # شمارهٔ داخلی از سری شرکت فعلی صادر شده است (د۴)؛ فاکتور شماره‌دار به شرکت دیگر نمی‌رود
-            raise serializers.ValidationError({'section': "فاکتور شماره‌دار را نمی‌توان به بخشی از شرکت دیگر برد."})
+            raise serializers.ValidationError({'section': "رسید پرداخت شماره‌دار را نمی‌توان به بخشی از شرکت دیگر برد."})
         lines = attrs.get('lines')
         if lines is None:
             if instance is None:
-                raise serializers.ValidationError({'lines': "فاکتور دست‌کم یک ردیف لازم دارد."})
+                raise serializers.ValidationError({'lines': "رسید پرداخت دست‌کم یک ردیف لازم دارد."})
             amounts = [Decimal(str(line.line_amount or 0)) for line in instance.lines.all()]
             if 'section' in attrs and attrs['section'] != instance.section:
                 # جابه‌جایی بخش: سرفصل ردیف‌های موجود هم باید از شرکت بخش تازه باشد
@@ -457,7 +457,7 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         else:
             if not (MIN_LINES <= len(lines) <= MAX_LINES):
                 raise serializers.ValidationError(
-                    {'lines': f"فاکتور باید بین {MIN_LINES} تا {MAX_LINES} ردیف داشته باشد."})
+                    {'lines': f"رسید پرداخت باید بین {MIN_LINES} تا {MAX_LINES} ردیف داشته باشد."})
             previous_heads = set(instance.lines.values_list('expense_head_id', flat=True)) if instance else set()
             for idx, line in enumerate(lines):
                 head = line['expense_head']

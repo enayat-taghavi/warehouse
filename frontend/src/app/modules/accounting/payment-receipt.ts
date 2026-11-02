@@ -11,8 +11,8 @@ const MAX_RECEIPT_BYTES = 25 * 1024 * 1024;
 export function receiptFileError(file: File): string {
   const ext = (file.name.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
   if (!ext || !PAYMENT_RECEIPT_ACCEPT.split(',').includes(ext)) {
-    return 'نوع فایل رسید مجاز نیست (PDF، تصویر، Word، Excel یا فایل فشرده).';
+    return 'نوع فایل سند واریز مجاز نیست (PDF، تصویر، Word، Excel یا فایل فشرده).';
   }
-  if (file.size > MAX_RECEIPT_BYTES) return 'حجم فایل رسید نباید بیشتر از ۲۵ مگابایت باشد.';
+  if (file.size > MAX_RECEIPT_BYTES) return 'حجم فایل سند واریز نباید بیشتر از ۲۵ مگابایت باشد.';
   return '';
 }

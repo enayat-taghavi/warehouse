@@ -53,7 +53,7 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
   private docSub?: Subscription;
 
   readonly tabs: TabDef[] = [
-    { id: 'preview', label: 'پیش‌نمایش فاکتور', shortLabel: 'پیش‌نمایش', icon: ACTION_ICONS.view },
+    { id: 'preview', label: 'پیش‌نمایش رسید پرداخت', shortLabel: 'پیش‌نمایش', icon: ACTION_ICONS.view },
     { id: 'history', label: 'سابقه گردش کار', shortLabel: 'سابقه', icon: ACTION_ICONS.history },
   ];
 
@@ -66,9 +66,9 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
 
   get modalTitle(): string {
     const inv = this.invoiceDetail || this.invoice;
-    if (!inv) return 'مشاهده و سابقه فاکتور';
+    if (!inv) return 'مشاهده و سابقه رسید پرداخت';
     const num = inv.number || inv.invoice_number || inv.id;
-    return `پیش‌نمایش و سابقه فاکتور ${num}`;
+    return `پیش‌نمایش و سابقه رسید پرداخت ${num}`;
   }
 
   ngOnInit(): void {

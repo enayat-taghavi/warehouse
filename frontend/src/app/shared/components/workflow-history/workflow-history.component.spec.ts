@@ -24,7 +24,7 @@ describe('WorkflowHistoryComponent', () => {
       {
         instance_id: 456,
         workflow_key: 'expense_invoice',
-        workflow_title_fa: 'گردش کار فاکتور هزینه',
+        workflow_title_fa: 'گردش کار رسید پرداخت هزینه',
         version: 1,
         status: 'pending_supervisor',
         status_fa: 'در انتظار تأیید سرپرست',

@@ -237,7 +237,7 @@
       <!-- فهرست ریز صفحه‌بندی‌شده (ماندهٔ فاکتورها و پرداخت‌های بانکی) -->
       @if (detailPage(); as det) {
         <div class="pt-2 space-y-2">
-          <h3 class="text-xs font-black text-fg">{{ activeTab() === 'bank-payments' ? 'فهرست پرداخت‌ها' : 'فهرست فاکتورها' }}</h3>
+          <h3 class="text-xs font-black text-fg">{{ activeTab() === 'bank-payments' ? 'فهرست پرداخت‌ها' : 'فهرست رسیدهای پرداخت' }}</h3>
           @if (det.results.length === 0) {
             <p class="text-xs text-fg-muted py-4 text-center">مورد ریزی پیدا نشد.</p>
           } @else {
