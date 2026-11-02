@@ -18755,3 +18755,78 @@ test(invoices): live refresh, status tab after patch, open windows refetch
 کدهای مربوط به گام د قبلاً در کامیت `73451fb4` روی کامپوننت‌های چهار صفحه فاکتور (`employee`، `supervisor`، `accountant`، `treasurer`)،...
 
 ---
+
+### Task 1 of 1 — 2026-11-02 17:35:23
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `909ab1d3-a9ab-4abd-b163-833f63924550`
+- **Steps:** 417
+- **Tokens:** 876193
+- **Duration:** 64m 14s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 12/12 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Invoice fixes step F: wording of the expense-invoice feature in user-visible texts
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- You change ONLY Persian user-visible text inside string literals and template text. Never change code identifiers, variable or method names, API paths, model or table names, permission codes, `doc_type` strings, dictionary keys, query keys, CSS classes, icon names, test fixture keys, or Persian text inside comments.
+- Never edit any file under `backend/modules/accounting/personnel/models_domains/` or any `migrations/` folder, and never change `verbose_name`, `help_text` or `choices` labels on Django model fields (that would create a migration). Never edit permission display names (`PERMISSIONS` in `backend/modules/accounting/module.py`, permission tuples in `apps.py`): they are created once in the database.
+- Never edit files under `frontend/src/app/modules/warehouse/` or `backend/modules/warehouse/`. In `frontend/src/app/core/models/field-config.model.ts`, `frontend/src/app/modules/common/components/audit/audit.helpers.ts` and `frontend/src/app/modules/common/components/layout/layout.ts` the word often means warehouse documents: change only lines that clearly name the accounting expense invoice.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+
+2. Context: the user renamed the expense invoice feature (`ExpenseInvoice`, `expense_invoice`, pages under `frontend/src/app/modules/accounting/components/finance/`, backend under `backend/modules/accounting/personnel/`). Only the Persian words that users read change; the code stays the same.
+
+3. Definitions (old → new, in this exact order):
+- Step A, FIRST: the treasurer's payment attachment (the file the treasurer uploads as proof of a bank transfer) is now called «سند واریز». Its old label was «رسید پرداخت» (plural «رسیدهای پرداخت» → «سندهای واریز»). Known places: the `receiptLabel` strings in `finance/employee/employee-invoices/employee-invoices.ts` and their use near `employee-invoices.html` lines 1000-1010, the attachment label of the treasurer pay form in `finance/treasurer/treasurer-invoices/treasurer-invoices.ts` and `.html`, `finance/invoice-receipt-button/invoice-receipt-button.ts`, `frontend/src/app/modules/accounting/payment-receipt.ts`, and backend messages in `backend/modules/accounting/personnel/invoice_payments.py` that name this attachment. Do Step A before Step B, or the new texts of Step B collide with it.
+- Step B: «فاکتور» → «رسید پرداخت» for the expense invoice. Grammar forms: «فاکتورها» → «رسیدهای پرداخت»; «فاکتورهای من» → «رسیدهای پرداخت من»; «فاکتورِ» or «فاکتور» before an ezafe noun → «رسید پرداختِ»; «فاکتور هزینه» → «رسید پرداخت هزینه»; «این فاکتور» → «این رسید پرداخت»; «فاکتوری» → «رسید پرداختی». Keep sentences fluent Persian.
+- Step C: «ثبت قسط» → «پرداخت» (and «قسط جدید» in the same button or modal title → «پرداخت جدید» when it labels the same action).
+- Leave unchanged and list as skipped: «پیش‌فاکتور», «فاکتور فروش», comments, model field labels, and Google Drive folder names that already exist.
+
+4. Task:
+- Find every occurrence with a search tool that handles UTF-8 (not Windows `findstr`). Search roots: `frontend/src/app/modules/accounting/` (all `.ts` and `.html`, including `nav-items.ts`, `accounting.routes.ts`, `module.ts`, `personas.ts`, `route-access.ts`, `api/*.ts`, `models/*.ts`), `frontend/src/app/modules/common/components/` (`my-tasks`, `layout`, `audit`, `users`), `frontend/src/app/shared/`, and in the backend under `backend/modules/accounting/personnel/`: `workflows.py` (INVOICE spec `title_fa='فاکتور هزینه'` near line 100, its step titles and messages), `invoice_services.py` (line 31 series title and error messages), `invoice_payments.py`, `invoice_print.py`, `invoice_verify.py`, `cartable_views.py`, `views_domains/treasury_views.py`, `views_domains/report_views.py`, `accounting_reports.py`, `section_guardian.py`, `serializers_domains/treasury_audit.py` (error messages only), `expense_heads.py`, `counterparty_services.py`, `google_drive_path_resolver.py` (skip folder names), and `backend/modules/accounting/module.py` (only menu or contribution labels, not `PERMISSIONS`).
+- First write the full inventory to `scratch/invoice_wording_inventory.md` (one line per change: `file:line old → new`, then a "Skipped" section with file:line and reason). `scratch/` is git-ignored; do not stage it.
+- Apply the changes.
+- Specs and backend tests: where an existing test asserts an old text that you changed, update that assertion to the new text. Never delete an assertion or a test, and never weaken one (for example never replace an exact text with an empty check). Backend tests are `backend/modules/accounting/personnel/test_*.py`; frontend specs are the `*.spec.ts` files next to the changed files.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invFtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/**/*.spec.ts", "src/app/modules/common/components/my-tasks/*.spec.ts", "src/app/shared/components/workflow-history/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invFtmp.json --include="src/app/modules/accounting/components/finance/**/*.spec.ts" --include="src/app/modules/common/components/my-tasks/*.spec.ts" --include="src/app/shared/components/workflow-history/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Backend tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_invoice_workflow personnel.test_invoice_workflow_flow personnel.test_invoice_workflow_return personnel.test_invoice_installment_notify personnel.test_invoice_payments_41 personnel.test_invoice_payments_smoke_41b personnel.test_payment_receipts personnel.test_invoice_verify_o3 personnel.test_cartable_multitenant --keepdb` (always with labels, never without labels). Also run the label of any other `personnel.test_*` file whose assertion you changed.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all the tests above pass, the temporary tsconfig is deleted, and `git status --short` shows only your changed source and test files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(invoices): user wording, payment receipt, pay, deposit document
+- Short English report: number of changed lines per file, the skipped list, and the test results. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست‌های مربوط به بک‌اند (`manage.py test`) اجرا شده و در حال پردازش در پس‌زمینه هستند. به محض پایان اجرای آزمون‌ها و دریافت خروجی، ادامه مراحل ارزیابی و تست فرانت‌اند پیگیری خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+تست‌های فرانت‌اند (`ng test` با `vitest`) اجرا شده و در حال پردازش در پس‌زمینه هستند. به محض پایان اجرای آزمون‌ها، خروجی دریافت خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+آزمون `expense-head-selector.dom.spec.ts` به‌روزرسانی شد و آزمون‌های فرانت‌اند مجدداً در حال اجرا هستند. به محض پایان اجرای آزمون‌ها، خروجی دریافت خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح درخواست کاربر (Explain Simply)
+درخواست مربوط به گام نهایی اص...
+
+---

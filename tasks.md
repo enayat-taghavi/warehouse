@@ -6219,7 +6219,7 @@ test(invoices): live refresh, status tab after patch, open windows refetch
 
 ===
 
-[ ] Session 1 of 1 — Invoice fixes step F: wording of the expense-invoice feature in user-visible texts
+[DONE] [ ] Session 1 of 1 — Invoice fixes step F: wording of the expense-invoice feature in user-visible texts
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
