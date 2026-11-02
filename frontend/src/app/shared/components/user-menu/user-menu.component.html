@@ -21,112 +21,6 @@
     </div>
 
     <div class="p-2 flex flex-col space-y-0.5">
-      <!-- ویرایش تصویر پروفایل -->
-      <button (click)="openAvatarModal()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-circle"></svg>
-        <span>ویرایش تصویر پروفایل</span>
-      </button>
-
-      <!-- امضا و مهر -->
-      <button type="button" (click)="openSignatureModal()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-pen"></svg>
-        <span>امضا و مهر</span>
-      </button>
-
-      <!-- تغییر رمز ورود -->
-      <button (click)="goToChangePassword(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
-        <span>تغییر رمز ورود</span>
-      </button>
-
-      <div class="h-px bg-slate-100 my-1"></div>
-
-      <!-- اعلان روی این دستگاه (Web Push) -->
-      @if (pushState() !== 'unsupported') {
-        <button
-          type="button"
-          role="switch"
-          data-testid="user-menu-push-switch"
-          aria-label="اعلان روی این دستگاه"
-          [attr.aria-checked]="pushState() === 'on'"
-          [disabled]="webPush.busy()"
-          [attr.aria-disabled]="pushState() === 'blocked' ? 'true' : null"
-          (click)="onTogglePush()"
-          [attr.aria-describedby]="pushState() === 'blocked' || pushState() === 'ios-needs-install' ? 'user-menu-push-hint' : null"
-          class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
-          <span class="flex-1">اعلان روی این دستگاه</span>
-          <span data-testid="user-menu-push-label" aria-hidden="true" class="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                [ngClass]="pushState() === 'on' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'">{{ pushLabel() }}</span>
-        </button>
-        @if (pushState() === 'blocked') {
-          <p id="user-menu-push-hint" data-testid="user-menu-push-hint" class="px-3 pb-1 text-[10px] text-fg-muted">مسدود در تنظیمات مرورگر؛ برای روشن کردن، اجازهٔ اعلان را در تنظیمات مرورگر بدهید.</p>
-        } @else if (pushState() === 'ios-needs-install') {
-          <p id="user-menu-push-hint" data-testid="user-menu-push-hint" class="px-3 pb-1 text-[10px] text-fg-muted">روی آیفون اول برنامه را نصب کنید.</p>
-        }
-      }
-
-      @if (!isNative) {
-        <!-- نصب برنامه روی دستگاه (PWA) -->
-        @if (pwaInstall.isInstalled()) {
-          <button type="button" disabled data-testid="user-menu-install-done"
-            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold flex items-center gap-2.5 text-fg-muted bg-surface-muted opacity-80 cursor-not-allowed"
-            title="سامانه هم‌اکنون به صورت برنامه روی دستگاه شما نصب است">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-            <span class="flex-1">برنامه نصب شده است</span>
-          </button>
-        } @else if (pwaInstall.isIos()) {
-          <button type="button" data-testid="user-menu-install-ios"
-            (click)="iosGuideOpen = !iosGuideOpen"
-            [attr.aria-expanded]="iosGuideOpen"
-            aria-controls="user-menu-ios-guide"
-            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer text-blue-600 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-            title="راهنمای نصب روی آیفون">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-            <span class="flex-1">نصب برنامه روی دستگاه</span>
-          </button>
-          @if (iosGuideOpen) {
-            <div id="user-menu-ios-guide" data-testid="user-menu-ios-guide" class="mx-2 mb-1 p-2.5 rounded-xl bg-blue-50 text-[11px] text-fg leading-relaxed flex items-start gap-2">
-              <svg class="shrink-0 mt-0.5 text-blue-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload" aria-hidden="true"></svg>
-              <p>در <bdi>Safari</bdi> دکمهٔ <bdi>Share</bdi> را بزنید و سپس <bdi>Add to Home Screen</bdi> را انتخاب کنید.</p>
-            </div>
-          }
-        } @else {
-          <button type="button" data-testid="user-menu-install"
-            (click)="onInstallApp(); closeUserMenu()"
-            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 text-blue-600 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-            title="نصب سامانه به عنوان نرم‌افزار مجزا روی دسکتاپ یا موبایل">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-            <span class="flex-1">نصب برنامه روی دستگاه</span>
-            <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">PWA</span>
-          </button>
-        }
-
-        <!-- بروزرسانی نسخه برنامه (PWA) -->
-        <button data-testid="user-menu-pwa-update" (click)="onManualAppUpdate()" [disabled]="isCheckingAppUpdate" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-emerald-600 hover:bg-emerald-50 active:scale-95 cursor-pointer" title="استعلام و دریافت فوری آخرین نسخه فرانت‌اند">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.animate-spin]="isCheckingAppUpdate" appIcon="refresh-cw"></svg>
-          <span class="flex-1">بروزرسانی نسخه برنامه</span>
-          <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-badge" class="text-[10px] bg-emerald-700 text-white px-1.5 py-0.5 rounded-full font-bold">نسخهٔ تازه</span>
-          <span *ngIf="!hasPendingUpdate" class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">PWA</span>
-        </button>
-      }
-      <!-- درباره ما و شمارهٔ نسخه -->
-      <button type="button" data-testid="user-menu-about" (click)="openAbout()"
-        class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-        title="درباره ما و شمارهٔ نسخه">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
-        <span class="flex-1">درباره ما</span>
-        <span data-testid="user-menu-app-version" class="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full font-bold tabular-nums" dir="rtl">{{ versionLabel }}</span>
-      </button>
-
-      <!-- بروزرسانی عمیق داده‌ها -->
-      <button (click)="onDeepUpdate(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-orange-600 hover:bg-orange-50 cursor-pointer" [disabled]="isOffline || pendingCount > 0" [title]="isOffline ? 'در حالت آفلاین در دسترس نیست' : (pendingCount > 0 ? 'لطفا ابتدا تغییرات را Sync کنید' : 'بروزرسانی عمیق داده‌ها از سرور')" [class.opacity-50]="isOffline || pendingCount > 0" [class.cursor-not-allowed]="isOffline || pendingCount > 0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="dollar-sign-path"></svg>
-        <span>بروزرسانی عمیق</span>
-      </button>
-
-      <div class="h-px bg-slate-100 my-1"></div>
-
       <!-- کارهای من -->
       <button
         type="button"
@@ -163,12 +57,123 @@
         <span>پورتال لانچر برنامه‌ها</span>
       </button>
 
+      <div class="h-px bg-slate-100 my-1"></div>
+
+      <!-- ویرایش تصویر پروفایل -->
+      <button (click)="openAvatarModal()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-circle"></svg>
+        <span>ویرایش تصویر پروفایل</span>
+      </button>
+
+      <!-- امضا و مهر -->
+      <button type="button" (click)="openSignatureModal()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-pen"></svg>
+        <span>امضا و مهر</span>
+      </button>
+
+      <!-- تغییر رمز ورود -->
+      <button (click)="goToChangePassword(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
+        <span>تغییر رمز ورود</span>
+      </button>
+
+      <div class="h-px bg-slate-100 my-1"></div>
+
+      <!-- بخش سامانه و نگهداری (ابزارهای کم‌اهمیت‌تر، تفکیک‌شده) -->
+      <div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-slate-400 select-none">
+        تنظیمات و ابزارها
+      </div>
+
+      <!-- اعلان روی این دستگاه (Web Push) -->
+      @if (pushState() !== 'unsupported') {
+        <button
+          type="button"
+          role="switch"
+          data-testid="user-menu-push-switch"
+          aria-label="اعلان روی این دستگاه"
+          [attr.aria-checked]="pushState() === 'on'"
+          [disabled]="webPush.busy()"
+          [attr.aria-disabled]="pushState() === 'blocked' ? 'true' : null"
+          (click)="onTogglePush()"
+          [attr.aria-describedby]="pushState() === 'blocked' || pushState() === 'ios-needs-install' ? 'user-menu-push-hint' : null"
+          class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bell"></svg>
+          <span class="flex-1">اعلان روی این دستگاه</span>
+          <span data-testid="user-menu-push-label" aria-hidden="true" class="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
+                [ngClass]="pushState() === 'on' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/70' : 'bg-slate-100 text-slate-600'">{{ pushLabel() }}</span>
+        </button>
+        @if (pushState() === 'blocked') {
+          <p id="user-menu-push-hint" data-testid="user-menu-push-hint" class="px-3 pb-1 text-[10px] text-slate-500">مسدود در تنظیمات مرورگر؛ برای روشن کردن، اجازهٔ اعلان را در تنظیمات مرورگر بدهید.</p>
+        } @else if (pushState() === 'ios-needs-install') {
+          <p id="user-menu-push-hint" data-testid="user-menu-push-hint" class="px-3 pb-1 text-[10px] text-slate-500">روی آیفون اول برنامه را نصب کنید.</p>
+        }
+      }
+
+      @if (!isNative) {
+        <!-- نصب برنامه روی دستگاه (PWA) -->
+        @if (pwaInstall.isInstalled()) {
+          <button type="button" disabled data-testid="user-menu-install-done"
+            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold flex items-center gap-2.5 text-slate-400 bg-slate-50/50 cursor-not-allowed"
+            title="سامانه هم‌اکنون به صورت برنامه روی دستگاه شما نصب است">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
+            <span class="flex-1">برنامه نصب شده است</span>
+          </button>
+        } @else if (pwaInstall.isIos()) {
+          <button type="button" data-testid="user-menu-install-ios"
+            (click)="iosGuideOpen = !iosGuideOpen"
+            [attr.aria-expanded]="iosGuideOpen"
+            aria-controls="user-menu-ios-guide"
+            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            title="راهنمای نصب روی آیفون">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+            <span class="flex-1">نصب برنامه روی دستگاه</span>
+          </button>
+          @if (iosGuideOpen) {
+            <div id="user-menu-ios-guide" data-testid="user-menu-ios-guide" class="mx-2 mb-1 p-2.5 rounded-xl bg-blue-50 text-[11px] text-slate-700 leading-relaxed flex items-start gap-2">
+              <svg class="shrink-0 mt-0.5 text-blue-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload" aria-hidden="true"></svg>
+              <p>در <bdi>Safari</bdi> دکمهٔ <bdi>Share</bdi> را بزنید و سپس <bdi>Add to Home Screen</bdi> را انتخاب کنید.</p>
+            </div>
+          }
+        } @else {
+          <button type="button" data-testid="user-menu-install"
+            (click)="onInstallApp(); closeUserMenu()"
+            class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            title="نصب سامانه به عنوان نرم‌افزار مجزا روی دسکتاپ یا موبایل">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+            <span class="flex-1">نصب برنامه روی دستگاه</span>
+          </button>
+        }
+
+        <!-- بروزرسانی نسخه برنامه (PWA) -->
+        <button data-testid="user-menu-pwa-update" (click)="onManualAppUpdate()" [disabled]="isCheckingAppUpdate" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 cursor-pointer" title="استعلام و دریافت فوری آخرین نسخه فرانت‌اند">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.animate-spin]="isCheckingAppUpdate" appIcon="refresh-cw"></svg>
+          <span class="flex-1">بروزرسانی نسخه برنامه</span>
+          <span *ngIf="hasPendingUpdate" data-testid="user-menu-update-badge" class="text-[10px] bg-emerald-700 text-white px-1.5 py-0.5 rounded-full font-bold">نسخهٔ تازه</span>
+        </button>
+      }
+      <!-- بروزرسانی عمیق داده‌ها -->
+      <button (click)="onDeepUpdate(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer" [disabled]="isOffline || pendingCount > 0" [title]="isOffline ? 'در حالت آفلاین در دسترس نیست' : (pendingCount > 0 ? 'لطفا ابتدا تغییرات را Sync کنید' : 'بروزرسانی عمیق داده‌ها از سرور')" [class.opacity-50]="isOffline || pendingCount > 0" [class.cursor-not-allowed]="isOffline || pendingCount > 0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="database"></svg>
+        <span>بروزرسانی عمیق داده‌ها</span>
+      </button>
+
       <!-- راهنمای کلیدهای میانبر -->
       <button (click)="toggleShortcutsHelp(); closeUserMenu()" class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer" title="راهنمای کلیدهای میانبر">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="keyboard"></svg>
         <span class="flex-1">راهنمای کلیدهای میانبر</span>
-        <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono font-bold">Shift+?</span>
+        <span dir="ltr" class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-mono font-bold border border-slate-200/80 shadow-sm">Shift+?</span>
       </button>
+
+      <!-- درباره ما و شمارهٔ نسخه -->
+      <button type="button" data-testid="user-menu-about" (click)="openAbout()"
+        class="w-full text-right py-2.5 px-3 min-h-[40px] rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        title="درباره ما و شمارهٔ نسخه">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
+        <span class="flex-1">درباره ما</span>
+        <span data-testid="user-menu-app-version" class="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full font-bold tabular-nums" dir="rtl">{{ versionLabel }}</span>
+      </button>
+
+      <div class="h-px bg-slate-100 my-1"></div>
 
       <button 
         type="button"
@@ -181,7 +186,7 @@
 
       <!-- پلاک نسخه سامانه -->
       <div class="pt-2 mt-1 border-t border-slate-100 text-center select-none">
-        <span class="text-[9px] font-mono text-slate-400">{{ BRANDING.systemName }}</span>
+        <span class="text-[11px] text-slate-400 font-medium">{{ BRANDING.systemName }}</span>
       </div>
     </div>
   </div>

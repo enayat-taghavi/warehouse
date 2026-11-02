@@ -485,6 +485,16 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       component.goToMyTasks();
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/my-tasks']);
     });
+
+    it('navigates to /change-password when goToChangePassword is called', () => {
+      component.goToChangePassword();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/change-password']);
+    });
+
+    it('navigates to /app/launcher when goToLauncher is called', () => {
+      component.goToLauncher();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/launcher']);
+    });
   });
 
   describe('WorkflowSubstitutes "جانشین من" integration', () => {

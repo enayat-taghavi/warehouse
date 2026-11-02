@@ -854,7 +854,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   }
 
   public goToChangePassword(): void {
-    this.router.navigate(['/app/change-password']);
+    this.router.navigate(['/change-password']);
   }
 
   public goToMyTasks(): void {
