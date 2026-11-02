@@ -356,81 +356,42 @@
               <span>آدرس سایت بانک برای این حساب ثبت نشده؛ از بخش حساب‌های بانکی شرکت آن را وارد کنید.</span>
             </p>
 
-            <!-- مشخصات حساب مبدا شرکت با دکمه‌های کپی -->
-            <div *ngIf="selectedCompanyAccount as cacc" data-company-account-copy class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 flex flex-col gap-2 divide-y divide-line [&>*+*]:pt-2">
-              <div class="min-w-0" data-company-bank-name>
-                <span class="block text-[10px] text-fg-subtle">بانک</span>
-                <span class="font-bold text-xs text-fg break-words">{{ cacc.bank_name }}</span>
-              </div>
-              <div *ngIf="cacc.account_number" class="flex items-center justify-between gap-2 min-w-0">
-                <div class="min-w-0">
-                  <span class="block text-[10px] text-fg-subtle">شماره حساب</span>
-                  <bdi dir="ltr" class="font-mono text-xs font-bold text-fg break-all select-all">{{ cacc.account_number }}</bdi>
-                </div>
-                <button type="button" (click)="copyValue(cacc.account_number, 'company-account', 'شماره حساب')"
-                  class="shrink-0 min-w-[40px] min-h-[40px] px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
-                  title="کپی شماره حساب" aria-label="کپی شماره حساب" data-copy-company-account>
-                  <svg [appIcon]="copiedKey === 'company-account' ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                  <span class="hidden sm:inline">{{ copiedKey === 'company-account' ? 'کپی شد' : 'کپی' }}</span>
-                </button>
-              </div>
-              <div *ngIf="cacc.sheba_number" class="flex items-center justify-between gap-2 min-w-0">
-                <div class="min-w-0">
-                  <span class="block text-[10px] text-fg-subtle">شماره شبا</span>
-                  <bdi dir="ltr" class="font-mono text-xs font-bold text-fg break-all select-all">{{ cacc.sheba_number }}</bdi>
-                </div>
-                <button type="button" (click)="copyValue(cacc.sheba_number, 'company-sheba', 'شماره شبا')"
-                  class="shrink-0 min-w-[40px] min-h-[40px] px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
-                  title="کپی شماره شبا" aria-label="کپی شماره شبا" data-copy-company-sheba>
-                  <svg [appIcon]="copiedKey === 'company-sheba' ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                  <span class="hidden sm:inline">{{ copiedKey === 'company-sheba' ? 'کپی شد' : 'کپی' }}</span>
-                </button>
-              </div>
-            </div>
             <p *ngIf="payFieldErrors['company_bank_account']" id="pay-company-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['company_bank_account'] }}</p>
           </div>
 
-          <div>
+          <div class="sm:col-span-2">
             <label for="pay-party-account" class="block font-bold mb-1">حساب طرف‌حساب (اختیاری)</label>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
             <select id="pay-party-account" name="payPartyAccount" [(ngModel)]="payPartyAccount"
-              class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              class="w-full sm:w-2/5 sm:shrink-0 min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <option [ngValue]="null">بدون حساب</option>
               <option *ngFor="let a of partyAccounts" [ngValue]="a.id">{{ a.bank_name }} {{ a.owner_name ? '- ' + a.owner_name : '' }} {{ a.account_number || a.sheba_number }}</option>
             </select>
-            <p *ngIf="payFieldErrors['party_bank_account']" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['party_bank_account'] }}</p>
-
-            <!-- شماره حساب و شبای مقصد برای چسباندن در سایت بانک -->
-            <div *ngIf="selectedPartyAccount as acc" class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 flex flex-col gap-2 divide-y divide-line [&>*+*]:pt-2" data-party-account-copy>
-              <div class="min-w-0">
-                <span class="block text-[10px] text-fg-subtle">بانک</span>
-                <span class="font-bold text-xs text-fg break-words">{{ acc.bank_name }}</span>
-                <div *ngIf="acc.owner_name" class="text-[11px] text-fg-muted truncate">صاحب حساب: <span class="font-bold text-fg">{{ acc.owner_name }}</span></div>
-              </div>
-              <div *ngIf="acc.account_number" class="flex items-center justify-between gap-2 min-w-0">
-                <div class="min-w-0">
-                  <span class="block text-[10px] text-fg-subtle">شماره حساب</span>
-                  <bdi dir="ltr" class="font-mono text-xs font-bold text-fg break-all select-all">{{ acc.account_number }}</bdi>
-                </div>
+            <!-- شماره حساب و شبای مقصد در یک ردیف کم‌ارتفاع برای چسباندن در سایت بانک -->
+            <div *ngIf="selectedPartyAccount as acc" data-party-account-copy
+              class="flex-1 min-w-0 min-h-[40px] flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-surface-muted px-2.5 py-1 text-xs">
+              <span class="font-bold text-fg truncate max-w-[12rem]" [title]="acc.owner_name ? acc.bank_name + ' – ' + acc.owner_name : acc.bank_name">{{ acc.bank_name }}<span *ngIf="acc.owner_name" class="font-normal text-fg-muted"> – {{ acc.owner_name }}</span></span>
+              <span *ngIf="acc.account_number" class="inline-flex items-center gap-1 min-w-0">
+                <span class="text-[10px] text-fg-subtle">حساب</span>
+                <bdi dir="ltr" class="font-mono font-bold text-fg whitespace-nowrap select-all">{{ acc.account_number }}</bdi>
                 <button type="button" (click)="copyValue(acc.account_number, 'account', 'شماره حساب')"
-                  class="shrink-0 min-w-[40px] min-h-[40px] px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
-                  title="کپی شماره حساب" aria-label="کپی شماره حساب" data-copy-account>
+                  class="shrink-0 w-10 h-10 -my-2 inline-flex items-center justify-center rounded-lg text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
+                  [title]="copiedKey === 'account' ? 'کپی شد' : 'کپی شماره حساب'" aria-label="کپی شماره حساب" data-copy-account>
                   <svg [appIcon]="copiedKey === 'account' ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                  <span class="hidden sm:inline">{{ copiedKey === 'account' ? 'کپی شد' : 'کپی' }}</span>
                 </button>
-              </div>
-              <div *ngIf="acc.sheba_number" class="flex items-center justify-between gap-2 min-w-0">
-                <div class="min-w-0">
-                  <span class="block text-[10px] text-fg-subtle">شماره شبا</span>
-                  <bdi dir="ltr" class="font-mono text-xs font-bold text-fg break-all select-all">{{ acc.sheba_number }}</bdi>
-                </div>
+              </span>
+              <span *ngIf="acc.sheba_number" class="inline-flex items-center gap-1 min-w-0">
+                <span class="text-[10px] text-fg-subtle">شبا</span>
+                <bdi dir="ltr" class="font-mono font-bold text-fg whitespace-nowrap select-all">{{ acc.sheba_number }}</bdi>
                 <button type="button" (click)="copyValue(acc.sheba_number, 'sheba', 'شماره شبا')"
-                  class="shrink-0 min-w-[40px] min-h-[40px] px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
-                  title="کپی شماره شبا" aria-label="کپی شماره شبا" data-copy-sheba>
+                  class="shrink-0 w-10 h-10 -my-2 inline-flex items-center justify-center rounded-lg text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
+                  [title]="copiedKey === 'sheba' ? 'کپی شد' : 'کپی شماره شبا'" aria-label="کپی شماره شبا" data-copy-sheba>
                   <svg [appIcon]="copiedKey === 'sheba' ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                  <span class="hidden sm:inline">{{ copiedKey === 'sheba' ? 'کپی شد' : 'کپی' }}</span>
                 </button>
-              </div>
+              </span>
             </div>
+            </div>
+            <p *ngIf="payFieldErrors['party_bank_account']" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['party_bank_account'] }}</p>
           </div>
 
           <div>

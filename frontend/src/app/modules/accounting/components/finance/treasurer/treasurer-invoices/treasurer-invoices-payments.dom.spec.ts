@@ -558,10 +558,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(hint.textContent).toContain('آدرس سایت بانک برای این حساب ثبت نشده؛ از بخش حساب‌های بانکی شرکت آن را وارد کنید.');
   });
 
-  it('m) the company account details show bank name, account number and Sheba with copy buttons and copy the value without spaces', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true, writable: true });
-
+  it('m) the company account Sheba and account number are not shown in the pay form; the bank site link stays', async () => {
     component.payInvoice(component.invoices[0]);
     component.payMethod = 'transfer';
     component.companyAccounts = [
@@ -581,28 +578,12 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const box = fixture.nativeElement.querySelector('[data-company-account-copy]') as HTMLElement;
-    expect(box).toBeTruthy();
-    const bankCell = box.querySelector('[data-company-bank-name]') as HTMLElement;
-    expect(bankCell).toBeTruthy();
-    expect(bankCell.textContent).toContain('Mellat');
-    expect(box.textContent).toContain('1234 5678 90');
-    expect(box.textContent).toContain('IR12 0120 0000 0000 1234 5678 90');
-
-    const copyAccountBtn = box.querySelector('[data-copy-company-account]') as HTMLButtonElement;
-    expect(copyAccountBtn).toBeTruthy();
-    copyAccountBtn.click();
-    await fixture.whenStable();
-    expect(writeText).toHaveBeenLastCalledWith('1234567890');
-    expect(component.copiedKey).toBe('company-account');
-
-    const copyShebaBtn = box.querySelector('[data-copy-company-sheba]') as HTMLButtonElement;
-    expect(copyShebaBtn).toBeTruthy();
-    copyShebaBtn.click();
-    await fixture.whenStable();
-    expect(writeText).toHaveBeenLastCalledWith('IR120120000000001234567890');
-    expect(component.copiedKey).toBe('company-sheba');
-    expect(mockToast.success).toHaveBeenCalled();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-company-account-copy]')).toBeNull();
+    expect(root.querySelector('[data-copy-company-account]')).toBeNull();
+    expect(root.querySelector('[data-copy-company-sheba]')).toBeNull();
+    expect(root.textContent).not.toContain('IR12 0120 0000 0000 1234 5678 90');
+    expect(root.querySelector('[data-company-bank-link]')).toBeTruthy();
   });
 
   it('filters invoices client-side by section without re-fetching treasury cartable', () => {
