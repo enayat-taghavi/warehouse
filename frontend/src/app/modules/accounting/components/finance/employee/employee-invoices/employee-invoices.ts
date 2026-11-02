@@ -176,6 +176,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   isLoadingDetail: boolean = false;
 
   private docSub?: Subscription;
+  private liveSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -200,6 +201,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.docSub?.unsubscribe();
+    this.liveSub?.unsubscribe();
     this.invoiceDateSub?.unsubscribe();
     if (this.searchTimer) clearTimeout(this.searchTimer);
     if (this.duplicateTimer) clearTimeout(this.duplicateTimer);
@@ -213,9 +215,16 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.invoiceDateError = '';
     });
     // ص۶ طرح ۲.۵: فاکتوری از این بخش که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    this.liveSub = this.ws?.liveRefresh$?.().subscribe(() => this.loadInvoices(true));
     this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
+      // گام د: پنجرهٔ جزئیات باز همان فاکتور بی‌صدا تازه می‌شود
+      if (this.isDetailPanelOpen && this.selectedInvoiceDetail && Number(this.selectedInvoiceDetail.id) === Number(ev.doc_id)) {
+        this.openInvoiceDetail(ev.doc_id, true);
+      }
       if (patchDocumentRow(this.invoices, ev)) {
         this.cdr.detectChanges();
+        // در تب وضعیت، ردیفی که وضعیتش عوض شد باید از تب برود و شمارنده درست شود
+        if (this.statusFilter !== 'all') this.loadInvoices(true);
       } else if (!this.selectedSectionId || !ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId)) {
         this.loadInvoices(true);
       }
@@ -245,19 +254,23 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  openInvoiceDetail(id: number | undefined): void {
+  /** silent: تازه‌سازی پنجرهٔ باز پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
+  openInvoiceDetail(id: number | undefined, silent = false): void {
     if (!id) return;
-    this.isLoadingDetail = true;
+    if (!silent) this.isLoadingDetail = true;
     this.isDetailPanelOpen = true;
     if (this.treasuryOrgApi) {
       this.treasuryOrgApi.getExpenseInvoice(id).subscribe({
         next: (inv) => {
+          // پاسخ دیر، پس از بستن پنجره یا رفتن به فاکتور دیگر، نادیده گرفته می‌شود
+          if (silent && (!this.isDetailPanelOpen || Number(this.selectedInvoiceDetail?.id) !== Number(id))) return;
           this.selectedInvoiceDetail = inv;
           this.isLoadingDetail = false;
           this.cdr.detectChanges();
         },
         error: (err: any) => {
           this.isLoadingDetail = false;
+          if (silent) return;
           this.toast.show('error', 'خطا در بارگذاری جزئیات فاکتور: ' + (err.error?.error || err.message || 'نامشخص'));
           this.cdr.detectChanges();
         }

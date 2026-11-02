@@ -111,7 +111,8 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     ),
     on_state_change=_invoice_state_change,
     summary=_invoice_summary,
-    route='/app/finance/employee-invoices?invoice={id}',
+    # گام د طرح اصلاح فاکتور: صفحهٔ یکپارچهٔ «فاکتورها»، تب «فاکتورهای من»؛ مسیر قدیمی هنوز کار می‌کند
+    route='/app/finance/invoices?view=mine&invoice={id}',
     amount_field='amount',
     view_permission='perm_invoice_record',
 )

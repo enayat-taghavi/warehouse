@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { WorkflowApiService } from '../../../core/api/workflow-api.service';
 import { WorkflowTasksService } from '../../../core/services/workflow-tasks.service';
+import { WebSocketService } from '../../../core/http/websocket.service';
 import { WorkflowHistory, WorkflowHistoryInstance, WorkflowHistoryStep } from '../../../core/models/workflow.model';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
@@ -177,6 +178,8 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
   errorMessage = '';
 
   private eventSub?: Subscription;
+  private docSub?: Subscription;
+  private readonly ws = inject(WebSocketService, { optional: true });
 
   ngOnInit(): void {
     if (this.tasksService) {
@@ -186,6 +189,12 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
         }
       });
     }
+    // گام د: سابقهٔ باز با تغییر همان سند (از هر کاربر و دستگاه) بی‌صدا تازه می‌شود
+    this.docSub = this.ws?.documentChanges$?.([this.kind]).subscribe(ev => {
+      if (this.kind && this.entityId && ev.doc_type === this.kind && Number(ev.doc_id) === Number(this.entityId)) {
+        this.loadHistory(true);
+      }
+    });
     this.loadHistory();
   }
 
@@ -197,9 +206,10 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.eventSub?.unsubscribe();
+    this.docSub?.unsubscribe();
   }
 
-  loadHistory(): void {
+  loadHistory(silent = false): void {
     if (!this.kind || !this.entityId) {
       this.history = null;
       this.loading = false;
@@ -208,10 +218,12 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    this.loading = true;
-    this.notFound = false;
-    this.hasError = false;
-    this.errorMessage = '';
+    if (!silent) {
+      this.loading = true;
+      this.notFound = false;
+      this.hasError = false;
+      this.errorMessage = '';
+    }
 
     this.api.getHistory(this.kind, this.entityId).subscribe({
       next: (res) => {
@@ -221,6 +233,7 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
       },
       error: (err) => {
         this.loading = false;
+        if (silent) return;
         if (err?.status === 404) {
           this.notFound = true;
           this.history = null;

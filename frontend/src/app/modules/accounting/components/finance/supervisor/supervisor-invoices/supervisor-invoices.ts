@@ -94,6 +94,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
 
   private routeSub?: Subscription;
   private docSub?: Subscription;
+  private liveSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -133,6 +134,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     this.loadSections();
 
     // ص۶ طرح ۲.۵: فاکتوری که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
+    this.liveSub = this.ws?.liveRefresh$?.().subscribe(() => this.fetchInvoices(true));
     this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
       if (patchDocumentRow(this.allInvoices, ev)) {
         this.updateViewAndCounters();
@@ -146,6 +148,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     this.docSub?.unsubscribe();
+    this.liveSub?.unsubscribe();
   }
 
   loadSections(): void {

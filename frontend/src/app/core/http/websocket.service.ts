@@ -1,5 +1,5 @@
 import { Injectable, Injector, OnDestroy, inject } from '@angular/core';
-import { Subject, BehaviorSubject, Observable, filter } from 'rxjs';
+import { Subject, BehaviorSubject, Observable, filter, merge, debounceTime } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../../shared';
 import { wsUrl } from '../platform/server-origin';
@@ -37,6 +37,11 @@ export class WebSocketService implements OnDestroy {
   private ws: WebSocket | null = null;
   public notifications$ = new Subject<any>();
   public connected$ = new BehaviorSubject<boolean>(false);
+  /** وصل دوبارهٔ سوکت پس از یک اتصال موفق پیشین (شاید رویدادی از دست رفته باشد). */
+  public readonly reconnected$ = new Subject<void>();
+  /** بازگشت صفحه یا اپ بومی به جلو. */
+  public readonly appResumed$ = new Subject<void>();
+  private hasOpenedOnce = false;
 
   // شناسه یکتای تب مرورگر جهت جلوگیری از اکو روی همان تب بدون بلاک کردن سایر دستگاه‌های کاربر
   public readonly tabId: string = typeof window !== 'undefined'
@@ -73,6 +78,14 @@ export class WebSocketService implements OnDestroy {
     );
   }
 
+  /**
+   * گام د: نشانهٔ بازخوانی بی‌صدای فهرست‌ها، با وصل دوبارهٔ سوکت یا بازگشت به برنامه.
+   * این دو معمولاً با هم می‌آیند و یکی می‌شوند.
+   */
+  liveRefresh$(): Observable<void> {
+    return merge(this.reconnected$, this.appResumed$).pipe(debounceTime(800));
+  }
+
   private isExplicitlyClosed = false;
   private reconnectTimeout: any = null;
   private reconnectAttempts = 0;
@@ -99,6 +112,8 @@ export class WebSocketService implements OnDestroy {
 
     window.addEventListener('online', this.onNetworkOnline);
     document.addEventListener('visibilitychange', this.onVisibilityChange);
+    // Capacitor با برگشت اپ بومی به جلو رویداد 'resume' را روی document می‌فرستد
+    document.addEventListener('resume', this.onAppResume);
   }
 
   private cleanupListeners(): void {
@@ -106,7 +121,13 @@ export class WebSocketService implements OnDestroy {
 
     window.removeEventListener('online', this.onNetworkOnline);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    document.removeEventListener('resume', this.onAppResume);
   }
+
+  private onAppResume = (): void => {
+    if (this.isDestroyed) return;
+    this.appResumed$.next();
+  };
 
   private onNetworkOnline = (): void => {
     if (this.isExplicitlyClosed || this.isDestroyed) return;
@@ -117,7 +138,9 @@ export class WebSocketService implements OnDestroy {
   };
 
   private onVisibilityChange = (): void => {
-    if (this.isExplicitlyClosed || this.isDestroyed) return;
+    if (this.isDestroyed) return;
+    if (document.visibilityState === 'visible') this.appResumed$.next();
+    if (this.isExplicitlyClosed) return;
     if (document.visibilityState === 'visible') {
       if (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
         console.log('[WebSocket] 👁️ بازگشت به تب فعال — بازسازی اتصال سوکت...');
@@ -150,6 +173,8 @@ export class WebSocketService implements OnDestroy {
       this.ws.onopen = () => {
         console.log('[WebSocket] ⚡ اتصال با موفقیت برقرار شد.');
         this.connected$.next(true);
+        if (this.hasOpenedOnce) this.reconnected$.next();
+        this.hasOpenedOnce = true;
         this.reconnectAttempts = 0;
         this.startPing();
         this.switchAppChannel(activeApp);

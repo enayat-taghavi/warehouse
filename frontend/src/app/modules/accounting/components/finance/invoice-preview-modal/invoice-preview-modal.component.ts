@@ -4,6 +4,9 @@ import {
   Output,
   EventEmitter,
   OnChanges,
+  OnDestroy,
+  OnInit,
+  Optional,
   SimpleChanges,
   ChangeDetectorRef,
   inject,
@@ -19,6 +22,8 @@ import { WorkflowHistoryComponent } from '../../../../../shared/components/workf
 import { TreasuryOrgApiService } from '../../../api/treasury-org-api.service';
 import { PrintService } from '../../../../../core/services/print.service';
 import { ExpenseInvoice } from '../../../models/personnel.model';
+import { WebSocketService } from '../../../../../core/http/websocket.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-invoice-preview-modal',
@@ -34,7 +39,7 @@ import { ExpenseInvoice } from '../../../models/personnel.model';
   ],
   templateUrl: './invoice-preview-modal.component.html',
 })
-export class InvoicePreviewModalComponent implements OnChanges {
+export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isOpen = false;
   @Input() invoiceId: number | null | undefined = null;
   @Input() invoice: ExpenseInvoice | any = null;
@@ -45,6 +50,7 @@ export class InvoicePreviewModalComponent implements OnChanges {
   activeTab: 'preview' | 'history' = 'preview';
   invoiceDetail: any = null;
   isLoading = false;
+  private docSub?: Subscription;
 
   readonly tabs: TabDef[] = [
     { id: 'preview', label: 'پیش‌نمایش فاکتور', shortLabel: 'پیش‌نمایش', icon: ACTION_ICONS.view },
@@ -54,7 +60,8 @@ export class InvoicePreviewModalComponent implements OnChanges {
   constructor(
     private treasuryApi: TreasuryOrgApiService,
     private printService: PrintService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private ws?: WebSocketService | null
   ) {}
 
   get modalTitle(): string {
@@ -62,6 +69,18 @@ export class InvoicePreviewModalComponent implements OnChanges {
     if (!inv) return 'مشاهده و سابقه فاکتور';
     const num = inv.number || inv.invoice_number || inv.id;
     return `پیش‌نمایش و سابقه فاکتور ${num}`;
+  }
+
+  ngOnInit(): void {
+    // گام د: پنجرهٔ باز با تغییر همان فاکتور جای دیگر بی‌صدا تازه می‌شود
+    this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
+      const id = this.invoiceId || this.invoice?.id;
+      if (this.isOpen && id && Number(id) === Number(ev.doc_id)) this.loadInvoice(true);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.docSub?.unsubscribe();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -84,14 +103,14 @@ export class InvoicePreviewModalComponent implements OnChanges {
     }
   }
 
-  loadInvoice(): void {
+  loadInvoice(silent = false): void {
     const id = this.invoiceId || this.invoice?.id;
     if (!id) {
       this.invoiceDetail = this.invoice || null;
       return;
     }
 
-    this.isLoading = true;
+    if (!silent) this.isLoading = true;
     this.treasuryApi.getExpenseInvoice(id).subscribe({
       next: (inv) => {
         // پاسخ دیرِ فاکتور قبلی جای فاکتور تازه را نمی‌گیرد
@@ -102,6 +121,7 @@ export class InvoicePreviewModalComponent implements OnChanges {
       },
       error: () => {
         this.isLoading = false;
+        if (silent) return;
         if (this.invoice) {
           this.invoiceDetail = this.invoice;
         }

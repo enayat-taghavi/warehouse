@@ -109,6 +109,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   private routeSub?: Subscription;
   private docSub?: Subscription;
+  private liveSub?: Subscription;
 
   constructor(
     public auth: AuthService,
@@ -137,12 +138,14 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.loadSections();
 
     // ص۶ طرح ۲.۵: ردیف‌های این صفحه برچسب وضعیت خودشان را دارند، پس هر تغییر فاکتور = بازخوانی بی‌صدا
+    this.liveSub = this.ws?.liveRefresh$?.().subscribe(() => this.loadTreasuryData(true));
     this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(() => this.loadTreasuryData(true));
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     this.docSub?.unsubscribe();
+    this.liveSub?.unsubscribe();
     if (this.copiedTimer) clearTimeout(this.copiedTimer);
   }
 

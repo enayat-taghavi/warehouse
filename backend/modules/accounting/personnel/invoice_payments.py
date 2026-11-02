@@ -184,6 +184,30 @@ def _audit(action, payment, invoice, user, details=None):
     )
 
 
+INSTALLMENT_NOTIFICATION_TYPE = 'invoice_installment'
+INSTALLMENT_TITLE_FA = 'قسطی از فاکتور شما پرداخت شد'
+
+
+def _notify_creator_installment(invoice, payment, user):
+    """
+    گام د طرح اصلاح فاکتور: اعلان قسط فقط به ثبت‌کنندهٔ همان فاکتور (نه پرداخت‌کنندهٔ خودش)، پس از commit.
+    قسط آخر اعلان جدا ندارد: پایان گردش همان «گردش سند شما پایان یافت» را به ثبت‌کننده می‌فرستد.
+    """
+    from notifications.services import notify_users
+    from .workflows import INVOICE_WORKFLOW_SPEC
+    creator_id = invoice.created_by_id
+    if not creator_id or creator_id == getattr(user, 'pk', None):
+        return
+    label = invoice.number or invoice.invoice_number or str(invoice.pk)
+    message = (f'فاکتور «{label}»: {payment.amount:,.0f} ریال پرداخت شد؛ '
+               f'مانده {invoice_remaining(invoice):,.0f} ریال.')
+    notify_users(
+        [creator_id], title=INSTALLMENT_TITLE_FA, message=message,
+        notification_type=INSTALLMENT_NOTIFICATION_TYPE, target_model='ExpenseInvoice', target_id=invoice.pk,
+        url=INVOICE_WORKFLOW_SPEC.route.replace('{id}', str(invoice.pk)), company_id=_company_id(invoice),
+    )
+
+
 def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=None):
     """
     ثبت یک قسط. legacy=True (اکشن قدیمی pay/) یعنی کل مانده در یک قسط. خروجی (قسط، فاکتور به‌روز).
@@ -231,6 +255,7 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=
                 invoice.status = 'partially_paid'
                 invoice.save(update_fields=['status', 'updated_at'])
             notify_document_changed(invoice, 'updated')
+            _notify_creator_installment(invoice, payment, user)
     return payment, invoice
 
 
