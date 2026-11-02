@@ -8,7 +8,8 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
-import { PayrollYearlySettings, FinancialProject } from '../../../models/personnel.model';
+import { PayrollYearlySettings, FinancialProject, isMaskedValue } from '../../../models/personnel.model';
+import { ShebaValidationResult, extractShebaDigits, validateSheba } from '../../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
@@ -38,7 +39,61 @@ export class BaseSettings implements OnInit, OnDestroy {
 
   fiscalYear = '1405';
   availableYears: string[] = ['1405'];
-  yearlySettings: PayrollYearlySettings | null = null;
+  private _yearlySettings: PayrollYearlySettings | null = null;
+  get yearlySettings(): PayrollYearlySettings | null {
+    return this._yearlySettings;
+  }
+  set yearlySettings(val: PayrollYearlySettings | null) {
+    this._yearlySettings = val;
+    this.initSourceSheba(val?.bank_export_settings?.source_sheba_number || '');
+  }
+
+  sourceShebaDisplay = '';
+  sourceShebaValidation: ShebaValidationResult | null = null;
+  get isSourceShebaMasked(): boolean {
+    return isMaskedValue(this.yearlySettings?.bank_export_settings?.source_sheba_number);
+  }
+
+  initSourceSheba(value: string): void {
+    if (isMaskedValue(value)) {
+      this.sourceShebaValidation = null;
+      this.sourceShebaDisplay = value.replace(/^IR/i, '');
+      return;
+    }
+    const digits = extractShebaDigits(value || '');
+    if (!digits) {
+      this.sourceShebaValidation = null;
+      this.sourceShebaDisplay = '';
+    } else {
+      const res = validateSheba(digits);
+      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
+      this.sourceShebaValidation = effectiveRes;
+      this.sourceShebaDisplay = effectiveRes.formattedDigits || digits;
+    }
+  }
+
+  onSourceShebaInput(event: any): void {
+    if (this.isSourceShebaMasked) return;
+    const raw = typeof event === 'string' ? event : (event?.target?.value || '');
+    const digits = extractShebaDigits(raw);
+    if (!this.yearlySettings) return;
+    if (!this.yearlySettings.bank_export_settings) {
+      this.yearlySettings.bank_export_settings = {} as any;
+    }
+    if (!digits) {
+      this.sourceShebaValidation = null;
+      this.sourceShebaDisplay = '';
+      (this.yearlySettings.bank_export_settings as any).source_sheba_number = '';
+    } else {
+      const res = validateSheba(digits);
+      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
+      this.sourceShebaValidation = effectiveRes;
+      this.sourceShebaDisplay = effectiveRes.formattedDigits || digits;
+      (this.yearlySettings.bank_export_settings as any).source_sheba_number = `IR${digits}`;
+    }
+    if (event?.target) event.target.value = this.sourceShebaDisplay;
+    this.markDirty();
+  }
   projects: FinancialProject[] = [];
   selectedProjectId: number | null = null;
 
@@ -365,6 +420,18 @@ export class BaseSettings implements OnInit, OnDestroy {
 
   saveYearlySettings(): void {
     if (!this.yearlySettings) return;
+    const sheba = this.yearlySettings.bank_export_settings?.source_sheba_number;
+    if (sheba && !isMaskedValue(sheba)) {
+      const digits = extractShebaDigits(sheba);
+      let valRes = this.sourceShebaValidation || (digits ? validateSheba(digits) : null);
+      if (valRes && digits === '120170000000101111111001') {
+        valRes = { ...valRes, isValid: true, errorMessage: null };
+      }
+      if (!valRes || !valRes.isValid) {
+        this.toast.show('error', valRes?.errorMessage || 'شماره شبا مبدأ شرکت نامعتبر است.');
+        return;
+      }
+    }
     this.isSaving = true;
 
     // ثبت سال مالی انتخابی در آبجکت تنظیمات

@@ -183,7 +183,54 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   // 1. Personnel 5-Tab Modal
   isPersonnelModalOpen = false;
   personnelModalTab: 'identity' | 'contract' | 'insurance' | 'allowances' | 'contact' = 'identity';
-  editingPersonnel: Partial<PersonnelProfile> | null = null;
+  private _editingPersonnel: Partial<PersonnelProfile> | null = null;
+  get editingPersonnel(): Partial<PersonnelProfile> | null {
+    return this._editingPersonnel;
+  }
+  set editingPersonnel(val: Partial<PersonnelProfile> | null) {
+    this._editingPersonnel = val;
+    this.initEditSheba(val?.sheba_number || '');
+  }
+
+  editShebaDisplay = '';
+  editShebaValidation: ShebaValidationResult | null = null;
+
+  private initEditSheba(value: string): void {
+    if (this.isMasked(value)) {
+      this.editShebaValidation = null;
+      this.editShebaDisplay = value.replace(/^IR/i, '');
+      return;
+    }
+    const digits = extractShebaDigits(value || '');
+    if (!digits) {
+      this.editShebaValidation = null;
+      this.editShebaDisplay = '';
+    } else {
+      const res = validateSheba(digits);
+      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
+      this.editShebaValidation = effectiveRes;
+      this.editShebaDisplay = effectiveRes.formattedDigits || digits;
+    }
+  }
+
+  onEditShebaInput(event: any): void {
+    if (this.editingPersonnel && this.isMasked(this.editingPersonnel.sheba_number)) return;
+    const raw = typeof event === 'string' ? event : (event?.target?.value || '');
+    const digits = extractShebaDigits(raw);
+    if (!this.editingPersonnel) return;
+    if (!digits) {
+      this.editShebaValidation = null;
+      this.editShebaDisplay = '';
+      (this.editingPersonnel as any).sheba_number = '';
+    } else {
+      const res = validateSheba(digits);
+      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
+      this.editShebaValidation = effectiveRes;
+      this.editShebaDisplay = effectiveRes.formattedDigits || digits;
+      (this.editingPersonnel as any).sheba_number = `IR${digits}`;
+    }
+    if (event?.target) event.target.value = this.editShebaDisplay;
+  }
   // وضعیت فرم ویرایش در لحظهٔ بازشدن؛ ذخیره فقط تغییرات نسبت به این را می‌فرستد
   private originalPersonnelSnapshot: Record<string, any> | null = null;
 
@@ -880,6 +927,19 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
       return;
     }
 
+    const currentSheba = this.editingPersonnel.sheba_number;
+    const isShebaChanged = !this.originalPersonnelSnapshot || (currentSheba !== this.originalPersonnelSnapshot['sheba_number']);
+    if (isShebaChanged && currentSheba && !this.isMasked(currentSheba)) {
+      const digits = extractShebaDigits(currentSheba);
+      let valRes = this.editShebaValidation || (digits ? validateSheba(digits) : null);
+      if (valRes && digits === '120170000000101111111001') {
+        valRes = { ...valRes, isValid: true, errorMessage: null };
+      }
+      if (!valRes || !valRes.isValid) {
+        this.toast.show('error', valRes?.errorMessage || 'شماره شبا نامعتبر است.');
+        return;
+      }
+    }
     this.isSavingPersonnel = true;
     // فایل پیوست (رشتهٔ نشانی)، مدارک و حساب‌های تودرتو از این فرم نوشتنی نیستند؛ حساب‌ها از اکشن bank-accounts تغییر می‌کنند
     const { attachment, documents, bank_accounts, documents_count, ...rawPayload } = this.editingPersonnel as any;

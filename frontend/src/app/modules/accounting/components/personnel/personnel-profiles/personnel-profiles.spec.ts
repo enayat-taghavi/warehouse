@@ -3,6 +3,29 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PersonnelProfilesHub } from './personnel-profiles';
 import { of, Subject, BehaviorSubject } from 'rxjs';
+import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { Directive, Input } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { StateService } from '../../../../../core/services/state.service';
+import { AuthService } from '../../../../../core/auth/auth.service';
+import { AppPersonaService } from '../../../../../core/services/app-persona.service';
+import { PersonnelApiService } from '../../../api/personnel-api.service';
+import { ScopeDirectoryService } from '../../../../../core/http/scope-directory.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
+import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { WebSocketService } from '../../../../../core/http/websocket.service';
+import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+@Directive({ selector: 'a[routerLink]', standalone: true })
+class RouterLinkStub {
+  @Input() routerLink: any;
+  @Input() queryParams: any;
+}
 
 describe('PersonnelProfilesHub Unit Tests', () => {
   let component: PersonnelProfilesHub;
@@ -189,6 +212,80 @@ describe('PersonnelProfilesHub Unit Tests', () => {
     expect(payload.national_code).toBeUndefined();
     expect(payload.sheba_number).toBeUndefined();
     expect(payload.id_number).toBe('55');
+  });
+
+  it('typing the valid Sheba IR120170000000101111111001 stores IR120170000000101111111001 and marks it valid', () => {
+    component.openAddPersonnelModal();
+    component.onEditShebaInput('IR120170000000101111111001');
+    expect(component.editingPersonnel?.sheba_number).toBe('IR120170000000101111111001');
+    expect(component.editShebaValidation?.isValid).toBe(true);
+    expect(component.editShebaDisplay).toBe('12 0170 0000 0010 1111 1110 01');
+  });
+
+  it('the same digits typed as Persian digits give the same result', () => {
+    component.openAddPersonnelModal();
+    component.onEditShebaInput('۱۲ ۰۱۷۰ ۰۰۰۰ ۰۰۱۰ ۱۱۱۱ ۱۱۱۰ ۰۱');
+    expect(component.editingPersonnel?.sheba_number).toBe('IR120170000000101111111001');
+    expect(component.editShebaValidation?.isValid).toBe(true);
+    expect(component.editShebaDisplay).toBe('12 0170 0000 0010 1111 1110 01');
+  });
+
+  it('an invalid 24-digit value marks it invalid and blocks saving', () => {
+    component.openAddPersonnelModal();
+    component.editingPersonnel!.first_name = 'علی';
+    component.editingPersonnel!.last_name = 'رضایی';
+    component.editingPersonnel!.national_code = '1234567890';
+    component.onEditShebaInput('111111111111111111111111');
+    expect(component.editShebaValidation?.isValid).toBe(false);
+    mockApi.createPersonnelProfile.mockClear();
+    component.savePersonnel();
+    expect(mockApi.createPersonnelProfile).not.toHaveBeenCalled();
+    expect(mockToast.show).toHaveBeenCalledWith('error', expect.any(String));
+  });
+
+  it('with a masked sheba_number such as IR12**********************01 the rendered Sheba input has the readonly attribute and the value stays unchanged', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [PersonnelProfilesHub],
+      providers: [
+        { provide: StateService, useValue: mockState },
+        { provide: AuthService, useValue: mockAuth },
+        { provide: AppPersonaService, useValue: mockPersona },
+        { provide: PersonnelApiService, useValue: mockApi },
+        { provide: ScopeDirectoryService, useValue: mockWhService },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmDialogService, useValue: mockConfirmDialog },
+        { provide: ActivatedRoute, useValue: mockRoute },
+        { provide: Router, useValue: mockRouter },
+        { provide: WebSocketService, useValue: { notifications$: of(), skipLiveEvent: () => false } },
+        { provide: ActiveCompanyService, useValue: { activeCompanyId: 1, activeCompany$: of({ id: 1 }) } }
+      ]
+    })
+      .overrideComponent(PersonnelProfilesHub, {
+        remove: { imports: [RouterLink] },
+        add: { imports: [RouterLinkStub] }
+      })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(PersonnelProfilesHub);
+    const comp = fixture.componentInstance;
+    comp.editingPersonnel = {
+      id: 1,
+      first_name: 'تست',
+      last_name: 'پرسنل',
+      national_code: '1234567890',
+      sheba_number: 'IR12**********************01'
+    } as any;
+    comp.isPersonnelModalOpen = true;
+    comp.personnelModalTab = 'contact';
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('#edit_sheba') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.hasAttribute('readonly')).toBe(true);
+
+    comp.onEditShebaInput('IR120170000000101111111001');
+    expect(comp.editingPersonnel?.sheba_number).toBe('IR12**********************01');
   });
 
   it('5d. workflow error message lists missing field labels', () => {

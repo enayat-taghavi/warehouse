@@ -428,8 +428,31 @@
           <input type="text" [(ngModel)]="yearlySettings.bank_export_settings.source_account_number" (ngModelChange)="markDirty()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5">شماره شبا مبدأ شرکت (IR):</label>
-          <input type="text" [(ngModel)]="yearlySettings.bank_export_settings.source_sheba_number" (ngModelChange)="markDirty()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold dir-ltr text-right" placeholder="IR..." />
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="source_sheba" class="block text-xs font-bold text-slate-600">شماره شبا مبدأ شرکت (۲۴ رقم)</label>
+            <span *ngIf="sourceShebaValidation" class="text-[10px] font-bold flex items-center gap-0.5"
+              [ngClass]="sourceShebaValidation.isValid ? 'text-emerald-600' : 'text-rose-500'">
+              <svg [appIcon]="sourceShebaValidation.isValid ? 'check' : 'x'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>{{ sourceShebaValidation.isValid ? 'معتبر' : 'نامعتبر' }}</span>
+            </span>
+          </div>
+          <div class="relative flex items-center">
+            <input id="source_sheba" type="text" dir="ltr" inputmode="numeric" maxlength="32" placeholder="000000000000000000000000"
+              [value]="sourceShebaDisplay" (input)="onSourceShebaInput($event)" [readonly]="isSourceShebaMasked"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2 text-xs font-mono font-bold text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [ngClass]="sourceShebaValidation?.isValid ? 'border-emerald-300' : (sourceShebaValidation ? 'border-rose-300' : '')" />
+            <span class="absolute left-2.5 text-xs font-mono font-black text-slate-400 select-none" aria-hidden="true">IR-</span>
+          </div>
+          <div *ngIf="sourceShebaValidation" class="mt-1.5" aria-live="polite">
+            <span *ngIf="sourceShebaValidation.isValid" class="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+              <svg appIcon="building" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>شبا معتبر: {{ sourceShebaValidation.bank?.name }}</span>
+            </span>
+            <span *ngIf="!sourceShebaValidation.isValid" class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200">
+              <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <span>{{ sourceShebaValidation.errorMessage || 'شماره شبا نامعتبر است' }}</span>
+            </span>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-600 mb-1.5">شناسه واریز پیش‌فرض:</label>
