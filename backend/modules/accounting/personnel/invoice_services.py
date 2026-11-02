@@ -86,6 +86,15 @@ def refresh_duplicate_flag(invoice):
     return flag
 
 
+def mark_invoice_updated_by(invoice, user):
+    """گام ح: آخرین تغییردهنده؛ update مستقیم تا ذخیرهٔ همزمان فیلدهای دیگر بازنویسی نشود."""
+    if invoice is None or not getattr(user, 'pk', None):
+        return
+    from .models import ExpenseInvoice
+    ExpenseInvoice.objects.filter(pk=invoice.pk).update(updated_by=user)
+    invoice.updated_by = user
+
+
 def ensure_invoice_number(invoice, user):
     """شمارهٔ داخلی در اولین ارسال (داخل تراکنش ارسال)؛ شمارهٔ موجود هرگز عوض نمی‌شود."""
     if invoice.issued_number_id:

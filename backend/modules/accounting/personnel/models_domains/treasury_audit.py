@@ -255,6 +255,14 @@ class ExpenseInvoice(models.Model):
         related_name='created_invoices',
         verbose_name="ثبت‌کننده فاکتور"
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="آخرین تغییردهنده"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

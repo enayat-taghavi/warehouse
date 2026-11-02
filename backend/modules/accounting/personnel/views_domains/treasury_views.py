@@ -81,7 +81,7 @@ from ..workflows import (INVOICE_ENTITY, INVOICE_WORKFLOW, can_view_invoice, can
                          can_view_petty_tx)
 from ..workflow_engine import notify_document_changed
 from ..fiscal import ensure_period_open
-from ..invoice_services import (SHEBA_REQUIRED_CODE, SHEBA_REQUIRED_MESSAGE, counterparty_has_valid_sheba,
+from ..invoice_services import (mark_invoice_updated_by, SHEBA_REQUIRED_CODE, SHEBA_REQUIRED_MESSAGE, counterparty_has_valid_sheba,
                                 duplicate_queryset, ensure_invoice_number, invoice_duplicates,
                                 void_invoice_number)
 from ..invoice_payments import (PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE, RECEIPT_FIELD, add_payment,
@@ -616,7 +616,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     مدیریت فاکتورهای هزینه‌ای بخش‌ها
     """
     queryset = (ExpenseInvoice.objects.all()
-                .select_related('section', 'section__project', 'counterparty__party', 'created_by', 'paid_by')
+                .select_related('section', 'section__project', 'counterparty__party', 'created_by', 'updated_by', 'paid_by')
                 .prefetch_related('lines__expense_head__parent', INVOICE_PAYMENTS_PREFETCH))
     serializer_class = ExpenseInvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -658,9 +658,9 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         # Guardian G2: default to draft status
         req_status = self.request.data.get('status')
         if not user.is_superuser:
-            instance = serializer.save(created_by=user, status='draft')
+            instance = serializer.save(created_by=user, updated_by=user, status='draft')
         else:
-            instance = serializer.save(created_by=user, status=req_status or 'draft')
+            instance = serializer.save(created_by=user, updated_by=user, status=req_status or 'draft')
         if req_status and req_status != 'draft':
             # ثبت مستقیم با وضعیت غیر پیش‌نویس (فقط مدیر کل) = ارسال به گردش موتور هسته
             instance.status = 'draft'
@@ -691,7 +691,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         _ensure_doc_period_open(new_section or instance.section,
                                 serializer.validated_data.get('invoice_date_shamsi', instance.invoice_date_shamsi),
                                 'invoice_date_shamsi')
-        notify_document_changed(serializer.save(), 'updated')
+        notify_document_changed(serializer.save(updated_by=user), 'updated')
 
     def perform_destroy(self, instance):
         _ensure_invoice_open(instance)
@@ -789,7 +789,10 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_409_CONFLICT)
         revision = request.data.get('revision')
         revision = int(revision) if str(revision or '').isdigit() else None
-        return _invoice_wf_call(lambda: fn(task, revision))
+        err = _invoice_wf_call(lambda: fn(task, revision))
+        if err is None:
+            mark_invoice_updated_by(instance, request.user)
+        return err
 
     @action(detail=True, methods=['post'], url_path='submit')
     def submit_invoice(self, request, pk=None):
@@ -825,6 +828,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
                     _record_submit_reason(instance, instance.duplicate_reason)
                 # د۴: شمارهٔ داخلی در اولین ارسال و در همین تراکنش؛ ارسال دوباره همان شماره را نگه می‌دارد
                 ensure_invoice_number(instance, request.user)
+                mark_invoice_updated_by(instance, request.user)
         if err is not None:
             instance.refresh_from_db()
             return err
@@ -968,6 +972,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
                                                         obj=instance))
         if err is not None:
             return err
+        mark_invoice_updated_by(instance, request.user)
         return Response({'message': 'گردش رسید پرداخت لغو شد و رسید پرداخت به پیش‌نویس برگشت.', 'status': instance.status})
 
     @action(detail=False, methods=['get'], url_path='export-excel')

@@ -230,7 +230,8 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=
                 invoice.payment_ref = fields['tracking_code']
                 invoice.paid_at = timezone.now()
                 invoice.paid_by = user
-                invoice.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_at'])
+                invoice.updated_by = user
+                invoice.save(update_fields=['payment_ref', 'paid_at', 'paid_by', 'updated_by', 'updated_at'])
                 wf_engine.act(user, task, reason=fields['notes'], revision=revision, obj=invoice)
                 attach_receipt(user, INVOICE_ENTITY, invoice.pk, receipt, receipt_meta)
                 return None, invoice
@@ -245,7 +246,8 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=
         payment = InvoicePayment.objects.create(invoice=invoice, amount=amount, created_by=user, **fields)
         attach_receipt(user, INVOICE_ENTITY, invoice.pk, receipt, receipt_meta, payment_id=payment.pk)
         _recompute(invoice)
-        invoice.save(update_fields=['paid_amount', 'payment_ref', 'paid_at', 'paid_by', 'updated_at'])
+        invoice.updated_by = user
+        invoice.save(update_fields=['paid_amount', 'payment_ref', 'paid_at', 'paid_by', 'updated_by', 'updated_at'])
         _audit('invoice_payment_added', payment, invoice, user)
         if invoice_remaining(invoice) == 0:
             # مانده صفر: پایان گردش در همین تراکنش؛ قلاب وضعیت را «پرداخت‌شده» می‌کند و رویداد زنده می‌فرستد
@@ -282,7 +284,8 @@ def void_payment(user, invoice_id, payment_id, reason):
         payment.save(update_fields=['voided_at', 'voided_by', 'void_reason'])
         _recompute(invoice)
         invoice.status = 'partially_paid' if invoice.paid_amount > 0 else 'ready_to_pay'
-        invoice.save(update_fields=['paid_amount', 'payment_ref', 'paid_at', 'paid_by', 'status', 'updated_at'])
+        invoice.updated_by = user
+        invoice.save(update_fields=['paid_amount', 'payment_ref', 'paid_at', 'paid_by', 'status', 'updated_by', 'updated_at'])
         _audit('invoice_payment_voided', payment, invoice, user, details={'reason': payment.void_reason})
         notify_document_changed(invoice, 'updated')
     return payment, invoice

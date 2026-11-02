@@ -105,6 +105,8 @@ def _invoice_engine_action(user, invoice, action_type, reason):
             wf_engine.reject(user, task, reason, obj=invoice)
     except WorkflowError as exc:
         return Response({'code': exc.code, 'error': exc.message_fa, 'detail': exc.message_fa}, status=exc.status)
+    from .invoice_services import mark_invoice_updated_by
+    mark_invoice_updated_by(invoice, user)
     if action_type != 'approve':
         invoice.rejection_reason = reason
         invoice.save(update_fields=['rejection_reason', 'updated_at'])

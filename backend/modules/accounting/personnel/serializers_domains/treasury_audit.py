@@ -404,6 +404,7 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     counterparty_name = serializers.CharField(source='counterparty.party.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
     paid_by_name = serializers.SerializerMethodField()
     lines = ExpenseInvoiceLineSerializer(many=True, required=False)
     # د۵ طرح ۴.۱: مانده و قسط‌ها (فقط خواندنی؛ ثبت از اکشن payments)
@@ -418,7 +419,7 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         fields = '__all__'
         # فیلدهای پرداخت و رد فقط از اکشن‌های گردش کار نوشته می‌شوند (ت۲ طرح ۲.۳)؛
         # جمع‌ها، شمارهٔ داخلی و پرچم تکراری را سرور می‌نویسد (د۱ تا د۴ طرح ۴.۱)
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'payment_ref', 'paid_at', 'paid_by',
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'updated_by', 'payment_ref', 'paid_at', 'paid_by',
                             'rejection_reason', 'amount', 'subtotal', 'vat_rate', 'vat_manual',
                             'invoice_number_norm', 'possible_duplicate', 'duplicate_reason', 'number',
                             'issued_number', 'paid_amount']
@@ -533,6 +534,11 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     def get_created_by_name(self, obj):
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.username
+        return None
+
+    def get_updated_by_name(self, obj):
+        if obj.updated_by:
+            return f"{obj.updated_by.first_name} {obj.updated_by.last_name}".strip() or obj.updated_by.username
         return None
 
     def get_paid_by_name(self, obj):
