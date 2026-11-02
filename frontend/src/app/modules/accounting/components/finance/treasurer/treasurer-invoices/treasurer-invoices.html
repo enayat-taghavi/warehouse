@@ -117,10 +117,12 @@
           ></button>
           <button
             type="button"
-            appAction="history"
-            label="سابقه"
+            appAction="share"
+            label="همرسانی"
             size="sm"
-            (click)="openPreview(item, 'history')"
+            [busy]="sharingId === item.id"
+            (click)="shareInvoice(item)"
+            hint="همرسانی PDF رسید پرداخت"
           ></button>
           <button
             type="button"
@@ -198,10 +200,12 @@
                 ></button>
                 <button
                   type="button"
-                  appAction="history"
-                  label="سابقه"
+                  appAction="share"
+                  label="همرسانی"
                   size="sm"
-                  (click)="openPreview(item, 'history')"
+                  [busy]="sharingId === item.id"
+                  (click)="shareInvoice(item)"
+                  hint="همرسانی PDF رسید پرداخت"
                 ></button>
                 <button
                   type="button"

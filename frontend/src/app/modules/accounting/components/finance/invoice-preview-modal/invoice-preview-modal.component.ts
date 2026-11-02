@@ -13,7 +13,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
-import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ACTION_ICONS } from '../../../../../shared/icons/semantic-icons';
@@ -32,7 +31,6 @@ import { Subscription } from 'rxjs';
   imports: [
     CommonModule,
     ModalComponent,
-    TabBarComponent,
     ActionButtonComponent,
     SvgIconDirective,
     AttachmentsComponent,
@@ -49,15 +47,10 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
 
   @Output() closed = new EventEmitter<void>();
 
-  activeTab: 'preview' | 'history' = 'preview';
   invoiceDetail: any = null;
   isLoading = false;
+  sharingId: number | null = null;
   private docSub?: Subscription;
-
-  readonly tabs: TabDef[] = [
-    { id: 'preview', label: 'پیش‌نمایش رسید پرداخت', shortLabel: 'پیش‌نمایش', icon: ACTION_ICONS.view },
-    { id: 'history', label: 'سابقه گردش کار', shortLabel: 'سابقه', icon: ACTION_ICONS.history },
-  ];
 
   constructor(
     private treasuryApi: TreasuryOrgApiService,
@@ -86,23 +79,23 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['initialTab'] && this.initialTab) {
-      this.activeTab = this.initialTab;
-    }
     if (changes['invoice'] && this.invoice) {
       this.invoiceDetail = this.invoice;
     }
     if ((changes['isOpen'] && this.isOpen) || (changes['invoiceId'] && this.invoiceId)) {
-      // هر بار بازشدن از همان تبی شروع می‌شود که صفحه خواسته، نه تب دفعهٔ قبل
-      this.activeTab = this.initialTab || 'preview';
       this.loadInvoice();
+      if (this.initialTab === 'history') {
+        this.scrollToHistory();
+      }
+    } else if (changes['initialTab'] && this.initialTab === 'history' && this.isOpen) {
+      this.scrollToHistory();
     }
   }
 
-  onTabChange(tabId: string): void {
-    if (tabId === 'preview' || tabId === 'history') {
-      this.activeTab = tabId;
-    }
+  private scrollToHistory(): void {
+    setTimeout(() => {
+      document.getElementById('inv-preview-history')?.scrollIntoView?.({ block: 'start' });
+    }, 0);
   }
 
   loadInvoice(silent = false): void {
@@ -120,6 +113,9 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
         this.invoiceDetail = inv;
         this.isLoading = false;
         this.cdr.detectChanges();
+        if (this.isOpen && this.initialTab === 'history') {
+          this.scrollToHistory();
+        }
       },
       error: () => {
         this.isLoading = false;
@@ -136,6 +132,21 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
     const id = this.invoiceId || this.invoiceDetail?.id || this.invoice?.id;
     if (id) {
       void this.printService.downloadPdf('expense_invoice', id);
+    }
+  }
+
+  async shareInvoice(): Promise<void> {
+    const id = this.invoiceId || this.invoiceDetail?.id || this.invoice?.id;
+    if (!id || this.sharingId) return;
+    this.sharingId = Number(id);
+    this.cdr.detectChanges();
+    try {
+      const inv = this.invoiceDetail || this.invoice || {};
+      const num = inv.number || inv.invoice_number || id;
+      await this.printService.sharePdf('expense_invoice', id, `payment-receipt-${num}.pdf`);
+    } finally {
+      this.sharingId = null;
+      this.cdr.detectChanges();
     }
   }
 

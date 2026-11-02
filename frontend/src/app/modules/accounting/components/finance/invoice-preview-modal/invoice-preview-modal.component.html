@@ -5,18 +5,8 @@
   (closed)="close()"
 >
   <div class="space-y-4" dir="rtl">
-    <!-- تب‌های فرعی در بالای مودال -->
-    <div class="flex items-center justify-between pb-2 border-b border-line">
-      <app-tab-bar
-        [tabs]="tabs"
-        [active]="activeTab"
-        (activeChange)="onTabChange($event)"
-        mobile="short"
-      />
-    </div>
-
-    <!-- ── تب ۱: پیش‌نمایش فاکتور ── -->
-    <div *ngIf="activeTab === 'preview'" class="space-y-4">
+    <!-- پیش‌نمایش فاکتور و سابقه گردش کار -->
+    <div class="space-y-4">
       <div *ngIf="isLoading && !invoiceDetail" class="py-12 text-center text-fg-muted">
         <svg appIcon="spinner" class="w-7 h-7 animate-spin mx-auto mb-2 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
         <p class="text-xs font-bold">در حال بارگذاری مشخصات رسید پرداخت...</p>
@@ -181,16 +171,20 @@
           </h4>
           <app-attachments kind="expense_invoice" [entityId]="inv.id" [canEdit]="false"></app-attachments>
         </div>
-      </div>
-    </div>
 
-    <!-- ── تب ۲: سابقه گردش کار ── -->
-    <div *ngIf="activeTab === 'history'" class="space-y-3">
-      <div *ngIf="invoiceId">
-        <app-workflow-history kind="expense_invoice" [entityId]="invoiceId"></app-workflow-history>
-      </div>
-      <div *ngIf="!invoiceId && invoiceDetail?.id">
-        <app-workflow-history kind="expense_invoice" [entityId]="invoiceDetail!.id"></app-workflow-history>
+        <!-- سابقه گردش کار -->
+        <section id="inv-preview-history" aria-label="سابقه گردش کار" class="space-y-2 pt-2 border-t border-line">
+          <h4 class="text-xs font-black text-fg flex items-center gap-1.5">
+            <svg appIcon="file-lines" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <span>سابقه گردش کار</span>
+          </h4>
+          <div *ngIf="invoiceId">
+            <app-workflow-history kind="expense_invoice" [entityId]="invoiceId"></app-workflow-history>
+          </div>
+          <div *ngIf="!invoiceId && (inv.id || invoiceDetail?.id)">
+            <app-workflow-history kind="expense_invoice" [entityId]="inv.id || invoiceDetail!.id"></app-workflow-history>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -201,6 +195,14 @@
       <span *ngIf="invoiceId || invoiceDetail?.id">شناسه سند: {{ invoiceId || invoiceDetail?.id }}</span>
     </div>
     <div class="flex items-center gap-2">
+      <button
+        type="button"
+        appAction="share"
+        label="همرسانی"
+        size="sm"
+        [busy]="sharingId === (invoiceId || invoiceDetail?.id || invoice?.id)"
+        (click)="shareInvoice()"
+      ></button>
       <button
         type="button"
         appAction="print"

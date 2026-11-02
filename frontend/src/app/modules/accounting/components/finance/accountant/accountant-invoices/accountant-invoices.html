@@ -176,7 +176,7 @@
             ></button>
           </div>
           <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(item, 'preview')"></button>
-          <button type="button" appAction="history" label="سابقه" size="sm" (click)="openPreview(item, 'history')"></button>
+          <button type="button" appAction="share" label="همرسانی" size="sm" [busy]="sharingId === item.id" (click)="shareInvoice(item)" hint="همرسانی PDF رسید پرداخت"></button>
           <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(item)"></button>
           <app-invoice-receipt-button *ngIf="item.paid_amount && +item.paid_amount > 0" [invoiceId]="item.id"></app-invoice-receipt-button>
         </div>
@@ -257,7 +257,7 @@
               </div>
               <div class="flex items-center justify-center gap-1.5 mt-1.5">
                 <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(item, 'preview')"></button>
-                <button type="button" appAction="history" label="سابقه" size="sm" (click)="openPreview(item, 'history')"></button>
+                <button type="button" appAction="share" label="همرسانی" size="sm" [busy]="sharingId === item.id" (click)="shareInvoice(item)" hint="همرسانی PDF رسید پرداخت"></button>
                 <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(item)"></button>
                 <app-invoice-receipt-button *ngIf="item.paid_amount && +item.paid_amount > 0" [invoiceId]="item.id"></app-invoice-receipt-button>
               </div>

@@ -125,6 +125,22 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     if (item.id) void this.printService.downloadPdf('expense_invoice', item.id);
   }
 
+  sharingId: number | null = null;
+
+  async shareInvoice(item: ExpenseInvoice): Promise<void> {
+    const id = item?.id;
+    if (!id || this.sharingId) return;
+    this.sharingId = id;
+    this.cdr.detectChanges();
+    try {
+      const num = item.number || (item as any).invoice_number || id;
+      await this.printService.sharePdf('expense_invoice', id, `payment-receipt-${num}.pdf`);
+    } finally {
+      this.sharingId = null;
+      this.cdr.detectChanges();
+    }
+  }
+
   ngOnInit(): void {
     if (this.embedded) return;
     this.routeSub = this.route.queryParams.subscribe(params => {

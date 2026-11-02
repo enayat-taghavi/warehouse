@@ -60,7 +60,7 @@
           <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
           <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
           <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
-          <button type="button" appAction="history" label="سابقه" size="sm" (click)="openPreview(inv, 'history')"></button>
+          <button type="button" appAction="share" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
           <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
           <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
         </div>
@@ -118,7 +118,7 @@
                 <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
                 <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
                 <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
-                <button type="button" appAction="history" label="سابقه" size="sm" (click)="openPreview(inv, 'history')"></button>
+                <button type="button" appAction="share" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
                 <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
                 <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
               </div>

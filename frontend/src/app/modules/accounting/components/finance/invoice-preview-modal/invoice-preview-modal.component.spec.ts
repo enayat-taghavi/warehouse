@@ -65,6 +65,7 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     };
     mockPrintService = {
       downloadPdf: vi.fn().mockReturnValue(Promise.resolve()),
+      sharePdf: vi.fn().mockReturnValue(Promise.resolve(true)),
     };
     mockCdr = {
       detectChanges: vi.fn(),
@@ -73,12 +74,28 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     component = new InvoicePreviewModalComponent(mockTreasuryApi, mockPrintService, mockCdr);
   });
 
-  it('1. should create component with default preview tab', () => {
-    expect(component).toBeTruthy();
-    expect(component.tabs.length).toBe(2);
-    expect(component.tabs[0].id).toBe('preview');
-    expect(component.tabs[1].id).toBe('history');
-    expect(component.activeTab).toBe('preview');
+  it('1. component creates and renders no app-tab-bar', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [InvoicePreviewModalComponent],
+      providers: [
+        { provide: TreasuryOrgApiService, useValue: mockTreasuryApi },
+        { provide: PrintService, useValue: mockPrintService },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    TestBed.overrideComponent(InvoicePreviewModalComponent, {
+      set: {
+        imports: [CommonModule, StubModalComponent, PersianDatePipe],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+    const fixture = TestBed.createComponent(InvoicePreviewModalComponent);
+    fixture.componentInstance.isOpen = true;
+    fixture.detectChanges();
+    expect(fixture.componentInstance).toBeTruthy();
+    const tabBar = fixture.nativeElement.querySelector('app-tab-bar');
+    expect(tabBar).toBeNull();
   });
 
   it('2. loads invoice details via treasuryApi on changes when open', () => {
@@ -106,23 +123,60 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     expect(component.isLoading).toBe(false);
   });
 
-  it('4. sets initialTab to history when specified', () => {
-    component.initialTab = 'history';
-    component.ngOnChanges({
-      initialTab: { currentValue: 'history', previousValue: 'preview', firstChange: true, isFirstChange: () => true },
-    });
-    expect(component.activeTab).toBe('history');
+  it('4. with initialTab: history opening scrolls #inv-preview-history into view', () => {
+    vi.useFakeTimers();
+    try {
+      const scrollSpy = vi.fn();
+      const el = document.createElement('div');
+      el.id = 'inv-preview-history';
+      el.scrollIntoView = scrollSpy;
+      document.body.appendChild(el);
+
+      component.isOpen = true;
+      component.initialTab = 'history';
+      component.ngOnChanges({
+        isOpen: { currentValue: true, previousValue: false, firstChange: true, isFirstChange: () => true },
+        initialTab: { currentValue: 'history', previousValue: 'preview', firstChange: true, isFirstChange: () => true },
+      });
+
+      vi.runAllTimers();
+      expect(scrollSpy).toHaveBeenCalledWith({ block: 'start' });
+      el.remove();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('5. allows switching between preview and history tabs', () => {
-    component.onTabChange('history');
-    expect(component.activeTab).toBe('history');
+  it('5. preview content and app-workflow-history are both rendered at the same time', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [InvoicePreviewModalComponent],
+      providers: [
+        { provide: TreasuryOrgApiService, useValue: mockTreasuryApi },
+        { provide: PrintService, useValue: mockPrintService },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    TestBed.overrideComponent(InvoicePreviewModalComponent, {
+      set: {
+        imports: [CommonModule, StubModalComponent, PersianDatePipe],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+    const fixture = TestBed.createComponent(InvoicePreviewModalComponent);
+    fixture.componentInstance.isOpen = true;
+    fixture.componentInstance.invoiceId = 101;
+    fixture.componentInstance.invoiceDetail = sampleInvoice;
+    fixture.detectChanges();
 
-    component.onTabChange('preview');
-    expect(component.activeTab).toBe('preview');
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('فروشگاه آذرخش');
+    expect(text).toContain('شماره رسید پرداخت:');
 
-    component.onTabChange('invalid');
-    expect(component.activeTab).toBe('preview');
+    const historySection = fixture.nativeElement.querySelector('#inv-preview-history');
+    expect(historySection).not.toBeNull();
+    const wfHistory = fixture.nativeElement.querySelector('app-workflow-history');
+    expect(wfHistory).not.toBeNull();
   });
 
   it('6. modalTitle formats title with document/invoice number', () => {
@@ -206,13 +260,46 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     doc$.next({ doc_type: 'expense_invoice', doc_id: 5 });
     expect(mockTreasuryApi.getExpenseInvoice).not.toHaveBeenCalled();
   });
+
+  it('share button calls PrintService.sharePdf with expense_invoice and the id', async () => {
+    mockPrintService.sharePdf = vi.fn().mockResolvedValue(true);
+    component.invoiceId = 101;
+    component.invoiceDetail = sampleInvoice;
+    await component.shareInvoice();
+    expect(mockPrintService.sharePdf).toHaveBeenCalledWith(
+      'expense_invoice',
+      101,
+      'payment-receipt-DOC-101.pdf'
+    );
+  });
+
+  it('share button is busy and ignores a second click while sharing', async () => {
+    let resolveShare: (val: boolean) => void = () => {};
+    const sharePromise = new Promise<boolean>((resolve) => {
+      resolveShare = resolve;
+    });
+    mockPrintService.sharePdf = vi.fn().mockReturnValue(sharePromise);
+
+    component.invoiceId = 101;
+    component.invoiceDetail = sampleInvoice;
+
+    const firstCall = component.shareInvoice();
+    expect(component.sharingId).toBe(101);
+
+    await component.shareInvoice();
+    expect(mockPrintService.sharePdf).toHaveBeenCalledTimes(1);
+
+    resolveShare(true);
+    await firstCall;
+    expect(component.sharingId).toBeNull();
+  });
 });
 
 @Component({
   selector: 'app-modal',
   standalone: true,
   imports: [CommonModule],
-  template: '<div *ngIf="isOpen"><ng-content></ng-content></div>',
+  template: '<div *ngIf="isOpen"><ng-content></ng-content><ng-content select="[modal-footer]"></ng-content></div>',
 })
 class StubModalComponent {
   @Input() isOpen = false;
