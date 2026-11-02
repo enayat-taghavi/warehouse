@@ -6664,7 +6664,7 @@ feat(invoices): J frontend - share button and history inside preview
 
 ===
 
-[ ] Session 1 of 1 — Release main on the local app environment for invoice step K (invoice fixes E to J: history, wording, treasurer pay form, merged list with filter, accountant edit and company setting, payment notifications, share button; HEAD cfc72c15): backup, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] [ ] Session 1 of 1 — Release main on the local app environment for invoice step K (invoice fixes E to J: history, wording, treasurer pay form, merged list with filter, accountant edit and company setting, payment notifications, share button; HEAD cfc72c15): backup, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md

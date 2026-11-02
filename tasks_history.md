@@ -19364,3 +19364,64 @@ feat(invoices): J frontend - share button and history inside preview
 - با مستندسازی و ارجاع نام متد `openInvoiceHistory` در سرتیتر بخش مودال سابقه گردش کار در فایل `employ...
 
 ---
+
+### Task 1 of 1 — 2026-11-03 00:13:49
+- **Status:** DONE
+- **Conversation:** `1a91b074-b676-4c06-93e3-614eaa283219`
+- **Steps:** 16
+- **Tokens:** 47049
+- **Duration:** 2m 53s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release main on the local app environment for invoice step K (invoice fixes E to J: history, wording, treasurer pay form, merged list with filter, accountant edit and company setting, payment notifications, share button; HEAD cfc72c15): backup, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`. Do not build an APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: backend Python code and frontend files changed since the last release. The only new migration (`workflow.0002`) was already applied on this database in an earlier step, so the migration check must show everything applied. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app invoice K'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. In `backend`, with `PYTHONUTF8=1`, run `.\venv\Scripts\python.exe manage.py showmigrations --plan` and confirm that no line starts with `[ ]`. If any line starts with `[ ]`, stop and report those lines; do not migrate.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the migration check result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+عملیات پشتیبان‌گیری دیتابیس با موفقیت انجام شد و تمامی مایگریشن‌ها بررسی و تأیید شدند. هم‌اکنون فرآیند بیلد فرانت‌اند (`npx ng build --delete-output-path=false`) در حال اجراست و به محض اتمام، پچ `ngsw` اعمال و گزارش نهایی ثبت خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+### گزارش انتشار نسخه لوکال برنامه (Release Report - Invoice Step K)
+
+۱. **توضیح کوتاه به فارسی:**
+عملیات رهاسازی (Release) نسخه لوکال برای مرحله فاکتور K شامل پشتیبان‌گیری پایگاه داده، ارزیابی مایگریشن‌ها، بیلد فرانت‌اند و اجرای اسکریپت پچ Service Worker با موفقیت کامل انجام شد.
+
+---
+
+### Release Summary
+
+- **Database Backup:**
+  - Filename: `backup_20261103_001129.dump`
+  - Size: `1,744,67...
+
+---
