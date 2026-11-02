@@ -5564,7 +5564,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 
 ===
 
-Session 1 of 4 — File share F1: shareBlob, shareUrl, canShareFiles and the share offer hook in the shared file output, plus the share icon
+[DONE] Session 1 of 4 — File share F1: shareBlob, shareUrl, canShareFiles and the share offer hook in the shared file output, plus the share icon
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
@@ -5635,7 +5635,7 @@ feat(share): shareBlob, shareUrl and share offer hook in file output
 
 ===
 
-Session 2 of 4 — File share F2: the "file is ready, share it" bar shown after downloads, wired into the app shell
+[DONE] Session 2 of 4 — File share F2: the "file is ready, share it" bar shown after downloads, wired into the app shell
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
@@ -5698,7 +5698,7 @@ feat(share): share offer bar after downloads
 
 ===
 
-Session 3 of 4 — File share F3: share button in the shared attachments list, and no share offer for backup files
+[DONE] Session 3 of 4 — File share F3: share button in the shared attachments list, and no share offer for backup files
 
 <!-- runner
 parallel: share-b
@@ -5761,7 +5761,7 @@ feat(share): share button on attachments, no share offer for backups
 
 ===
 
-Session 4 of 4 — File share F4: share buttons in the document preview toolbar and on chat attachments
+[DONE] Session 4 of 4 — File share F4: share buttons in the document preview toolbar and on chat attachments
 
 <!-- runner
 parallel: share-b
@@ -5823,3 +5823,119 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only those files and commit with this message, without push:
 feat(share): share buttons in document preview and chat attachments
 - Short English report: what changed, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — File share F5: review fixes — no double error toast after a failed share, no test-only fields in production components, comment back on its method
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/shared/components/attachments/*" "frontend/src/app/modules/common/components/communications/chat-drawer/*" "frontend/src/app/shared/components/document-preview/*" "frontend/src/app/shared/components/share-offer-bar/*"
+verify: python scripts/automation/verify_tools.py glob-absent --root frontend/src/app --glob "**/*.ts" --regex "lastNotifier|shareBlobFn|shareUrlFn"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.ts --absent "public shareBlob" --contains "setFileShareOfferNotifier" --count "9:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/attachments/attachments.component.ts --contains "shareBlob" --count "6:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.ts --contains "shareBlob(" --count "129:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/document-preview/document-preview.component.ts --contains "shareUrl(" --count "65:‌"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/shared/components/attachments/attachments.dom.spec.ts frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts frontend/src/app/shared/components/document-preview/document-preview.component.spec.ts frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/attachments/attachments.dom.spec.ts --count "12:it("
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts --count "33:it("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/shared/components/attachments/*.spec.ts" --include "src/app/modules/common/components/communications/chat-drawer/*.spec.ts" --include "src/app/shared/components/document-preview/*.spec.ts" --include "src/app/shared/components/share-offer-bar/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(share): single error toast and no test-only fields"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only files inside these four folders: `frontend/src/app/shared/components/attachments/`, `frontend/src/app/modules/common/components/communications/chat-drawer/`, `frontend/src/app/shared/components/document-preview/`, `frontend/src/app/shared/components/share-offer-bar/`. No new file except the temporary tsconfig of the Tool policy. Never edit `file-output.ts`, `backend/`, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Change only what the items below say. Do not change templates. Do not delete or weaken any test; rewrite a test only to use `vi.mock` instead of a removed field, keeping what it asserts.
+- The file `tests/playwright/tools/index.py` belongs to another session: never touch, stage or commit it.
+- PERSIAN HALF-SPACES: keep every existing ZWNJ (U+200C); the runner counts them per file. Copy the Persian strings of this task exactly.
+
+2. Context:
+- These four components were changed by the commits `86111c19..225aced1` (file share sessions F1-F4). Read their current code and specs first.
+- `frontend/src/app/core/platform/file-output.ts` (read only): `shareBlob` and `shareUrl` already show their own Persian error toast through the file-output error notifier before they rethrow, and they return a result for cancel, so callers must not show a second toast for a share failure.
+
+3. Task:
+- a) Double error toast. In `attachments.component.ts` `share(item)` and in `chat-drawer.component.ts` `shareAttachment(att)`: keep the existing toast only for a failure of the api download step (the `firstValueFrom(this.api.download(...))` call). A failure thrown by `shareBlob` must be caught and ignored (no second toast). Simplest form: the download inside its own try/catch that shows the existing toast and returns; then `try { await shareBlob(...) } catch { /* file-output پیام خطا را نشان داده است */ }`. Keep busy handling and `markForCheck` in attachments as they are.
+- b) Test-only fields. Remove `public shareBlobFn = shareBlob;` from `chat-drawer.component.ts` and call `shareBlob(...)` directly. Remove `shareUrlFn = shareUrl;` from `document-preview.component.ts` and call `shareUrl(...)` directly. In `share-offer-bar.component.ts` remove `public static lastNotifier` (and its two assignments) and the public `shareBlob` field; call the imported `shareBlob` directly. Update the specs to mock the file-output module with `vi.mock('<relative path to core/platform/file-output>', async (orig) => ({ ...(await orig()), shareBlob: vi.fn(), ... }))`, mocking only the functions each spec needs (`shareBlob`, `shareUrl`, `setFileShareOfferNotifier`, `canShareFiles`). In the share-offer-bar spec get the registered notifier from `vi.mocked(setFileShareOfferNotifier).mock.calls`. Keep every existing assertion.
+- c) Comment. In `document-preview.component.ts` the Persian doc comment `/** دانلود سند فعلی با نام فایلش (اگر میزبان داده باشد) */` now sits above `shareCurrent()`. Move it back directly above `downloadCurrent()` and put `/** اشتراک‌گذاری سند فعلی با نام فایلش؛ پیام خطا را file-output نشان می‌دهد */` above `shareCurrent()`.
+- d) New tests (keep the old ones): in `attachments.dom.spec.ts` one `it(` that a rejected `shareBlob` shows no toast; in `chat-drawer.component.dom.spec.ts` one `it(` that a rejected `shareBlob` shows no toast.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.f5tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/shared/components/attachments/*.spec.ts", "src/app/modules/common/components/communications/chat-drawer/*.spec.ts", "src/app/shared/components/document-preview/*.spec.ts", "src/app/shared/components/share-offer-bar/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.f5tmp.json --include="src/app/shared/components/attachments/*.spec.ts" --include="src/app/modules/common/components/communications/chat-drawer/*.spec.ts" --include="src/app/shared/components/document-preview/*.spec.ts" --include="src/app/shared/components/share-offer-bar/*.spec.ts"` once before your changes, then after (at most 6 runs). Delete `frontend/tsconfig.f5tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All four spec patterns pass, guardian 52 passes, no `lastNotifier`, `shareBlobFn` or `shareUrlFn` is left anywhere under `frontend/src/app`.
+- `git status --short` shows only files of the four folders (plus the pre-existing `tests/playwright/tools/index.py` and runner files); the temporary tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only those files and commit with this message, without push:
+fix(share): single error toast and no test-only fields
+- Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] Session 1 of 1 — File share F6: replace the __mock wrappers with the injectable FileOutputService in the four share components
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py frontend/src/app/shared/components/user-menu/user-menu.component.html
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/core/platform/file-output.ts" "frontend/src/app/core/platform/file-output.spec.ts" "frontend/src/app/shared/components/attachments/*" "frontend/src/app/modules/common/components/communications/chat-drawer/*" "frontend/src/app/shared/components/document-preview/*" "frontend/src/app/shared/components/share-offer-bar/*"
+verify: python scripts/automation/verify_tools.py glob-absent --root frontend/src/app --glob "**/*.ts" --regex "__mock|_origShare|_origSetFile|lastNotifier|shareBlobFn|shareUrlFn"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/platform/file-output.ts --contains "setShareOfferNotifier(" --contains "export function setFileShareOfferNotifier"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/attachments/attachments.component.ts --contains "inject(FileOutputService)" --contains "fileOutput.shareBlob(" --contains "fileOutput.canShareFiles()" --count "6:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.ts --contains "inject(FileOutputService)" --contains "fileOutput.shareBlob(" --contains "fileOutput.canShareFiles()" --count "129:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/document-preview/document-preview.component.ts --contains "inject(FileOutputService)" --contains "fileOutput.shareUrl(" --contains "fileOutput.canShareFiles()" --count "65:‌"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.ts --contains "inject(FileOutputService)" --contains "fileOutput.shareBlob(" --contains "fileOutput.setShareOfferNotifier(" --count "9:‌"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/core/platform/file-output.spec.ts frontend/src/app/shared/components/attachments/attachments.dom.spec.ts frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts frontend/src/app/shared/components/document-preview/document-preview.component.spec.ts frontend/src/app/shared/components/share-offer-bar/share-offer-bar.component.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/core/platform/file-output.spec.ts" --include "src/app/shared/components/attachments/*.spec.ts" --include "src/app/modules/common/components/communications/chat-drawer/*.spec.ts" --include "src/app/shared/components/document-preview/*.spec.ts" --include "src/app/shared/components/share-offer-bar/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(share): inject FileOutputService instead of mock wrappers"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py frontend/src/app/shared/components/user-menu/user-menu.component.html
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. No push.
+- Edit only: `frontend/src/app/core/platform/file-output.ts`, `frontend/src/app/core/platform/file-output.spec.ts` and files inside `frontend/src/app/shared/components/attachments/`, `frontend/src/app/modules/common/components/communications/chat-drawer/`, `frontend/src/app/shared/components/document-preview/`, `frontend/src/app/shared/components/share-offer-bar/`. No new file except the temporary tsconfig of the Tool policy. Never edit `backend/`, `scripts/`, `Documents/`, `tasks.md` or `tasks_history.md`.
+- Two files belong to other sessions and have uncommitted changes: `tests/playwright/tools/index.py` and `frontend/src/app/shared/components/user-menu/user-menu.component.html`. Never touch, stage or commit them.
+- Production code must contain no test hooks: no `__mock`, no `_orig...` aliases, no static or public fields that exist only for tests. Tests replace behaviour only through Angular dependency injection (TestBed providers) or `vi.spyOn` on an object instance.
+- Do not change any template and do not change the behaviour of the components (same toasts, same busy handling, same results). Do not delete or weaken any test assertion.
+- PERSIAN HALF-SPACES: keep every existing ZWNJ (U+200C); the runner counts them per file.
+
+2. Context:
+- The previous session added, in four components, wrappers like `const shareBlob = (blob, filename) => (_origShareBlob as any).__mock ? ... : _origShareBlob(...)` placed between import lines, because `vi.mock` of a relative module does not work in this project's Angular unit-test builder. This is the pattern to remove.
+- `frontend/src/app/core/platform/file-output.ts` end of file: `@Injectable({ providedIn: 'root' }) export class FileOutputService` with methods `saveBlob`, `saveUrl`, `canShareFiles`, `shareBlob`, `shareUrl`, `print`.
+- Components: `attachments.component.ts` (`canShare` field, `share(item)`), `chat-drawer.component.ts` (`canShare` field, `shareAttachment(att)`), `document-preview.component.ts` (`canShare` field, `shareCurrent()`), `share-offer-bar.component.ts` (constructor registers the offer notifier, `onShare()`, `ngOnDestroy()`), and their specs `attachments.dom.spec.ts`, `chat-drawer.component.dom.spec.ts`, `document-preview.component.spec.ts`, `share-offer-bar.component.spec.ts`.
+
+3. Task:
+- a) In `FileOutputService` add `setShareOfferNotifier(fn: ((offer: ShareOffer) => void) | null): void { setFileShareOfferNotifier(fn); }`. Add one `it(` in `file-output.spec.ts` that the service method registers the notifier (a following web `saveBlob` with sharing supported calls it). Keep all other tests.
+- b) In each of the four components: remove the `_orig...` imports and the wrapper consts; add `private readonly fileOutput = inject(FileOutputService);` (import `inject` from `@angular/core` and `FileOutputService` from the same file-output path) declared BEFORE the `canShare` field; set `canShare = this.fileOutput.canShareFiles()`; call `this.fileOutput.shareBlob(...)` / `this.fileOutput.shareUrl(...)`; in `share-offer-bar` call `this.fileOutput.setShareOfferNotifier(...)` in the constructor and `this.fileOutput.setShareOfferNotifier(null)` in `ngOnDestroy`. Keep the plain `saveBlob`/`saveUrl` function imports that the download code already uses. Keep the import block contiguous (no code between import lines).
+- c) Specs: remove every `__mock` assignment and every custom `vi.mock` override function. Create `const fileOutput = new FileOutputService();` in each spec, `vi.spyOn(fileOutput, 'shareBlob')` (or `shareUrl`, `canShareFiles`, `setShareOfferNotifier`) with the needed return values, and provide it with `{ provide: FileOutputService, useValue: fileOutput }` in `TestBed.configureTestingModule`. For "button hidden when sharing is not supported" set `canShareFiles` to return false before the component is created. In the share-offer-bar spec read the registered notifier from the spy's `mock.calls`. Every existing test name and assertion stays.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.f6tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/core/platform/file-output.spec.ts", "src/app/shared/components/attachments/*.spec.ts", "src/app/modules/common/components/communications/chat-drawer/*.spec.ts", "src/app/shared/components/document-preview/*.spec.ts", "src/app/shared/components/share-offer-bar/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.f6tmp.json --include="src/app/core/platform/file-output.spec.ts" --include="src/app/shared/components/attachments/*.spec.ts" --include="src/app/modules/common/components/communications/chat-drawer/*.spec.ts" --include="src/app/shared/components/document-preview/*.spec.ts" --include="src/app/shared/components/share-offer-bar/*.spec.ts"` once before your changes, then after (at most 6 runs). Delete `frontend/tsconfig.f6tmp.json` before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing:
+- All five spec patterns pass, guardian 52 passes, no `__mock`, `_origShare`, `_origSetFile`, `lastNotifier`, `shareBlobFn` or `shareUrlFn` is left anywhere under `frontend/src/app` (specs included).
+- `git status --short` shows only your files plus the two files of other sessions and runner files; the temporary tsconfig is deleted.
+
+6. Output and stop condition:
+- Stage only your files and commit with this message, without push:
+refactor(share): inject FileOutputService instead of mock wrappers
+- Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
