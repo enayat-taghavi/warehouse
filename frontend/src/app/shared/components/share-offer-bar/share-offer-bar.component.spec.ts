@@ -4,54 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ShareOfferBarComponent } from './share-offer-bar.component';
-import { setFileShareOfferNotifier, shareBlob } from '../../../core/platform/file-output';
-
-vi.hoisted(() => {
-  const mocker = (globalThis as any).__vitest_mocker__;
-  if (mocker) {
-    vi.mock = ((path: string, factory?: any) => {
-      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
-      const wrappedFactory = typeof factory === 'function'
-        ? () => factory(async () => {
-            try {
-              return await mocker.importActual(path, importer, mocker.getMockContext?.()?.callstack);
-            } catch {
-              return {};
-            }
-          })
-        : factory;
-      mocker.queueMock(path, importer, wrappedFactory);
-    }) as any;
-  }
-});
-
-vi.mock('../../../core/platform/file-output', async (orig) => ({
-  ...(await orig<typeof import('../../../core/platform/file-output')>()),
-  setFileShareOfferNotifier: vi.fn(),
-  shareBlob: vi.fn(),
-}));
-
-function setupMock(target: any) {
-  const mockFn = vi.fn();
-  target.__mock = mockFn;
-  Object.assign(target, mockFn);
-  Object.setPrototypeOf(target, Object.getPrototypeOf(mockFn));
-  target.mockReset = () => { mockFn.mockReset(); return target; };
-  target.mockClear = () => { mockFn.mockClear(); return target; };
-  target.mockResolvedValue = (v: any) => { mockFn.mockResolvedValue(v); return target; };
-  target.mockRejectedValue = (e: any) => { mockFn.mockRejectedValue(e); return target; };
-  target.mockImplementation = (f: any) => { mockFn.mockImplementation(f); return target; };
-  Object.defineProperty(target, 'mock', { get: () => mockFn.mock, configurable: true });
-  return mockFn;
-}
-
-setupMock(setFileShareOfferNotifier);
-setupMock(shareBlob);
-
-const getRegisteredNotifier = (): ((offer: any) => void) | null => {
-  const calls = vi.mocked(setFileShareOfferNotifier).mock.calls;
-  return calls.length > 0 ? calls[calls.length - 1][0] : null;
-};
+import { FileOutputService } from '../../../core/platform/file-output';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -60,17 +13,29 @@ try {
 describe('ShareOfferBarComponent (DOM)', () => {
   let fixture: ComponentFixture<ShareOfferBarComponent>;
   let component: ShareOfferBarComponent;
+  let fileOutput: FileOutputService;
+  let setNotifierSpy: ReturnType<typeof vi.spyOn>;
+  let shareBlobSpy: ReturnType<typeof vi.spyOn>;
+
+  const getRegisteredNotifier = (): ((offer: any) => void) | null => {
+    const calls = setNotifierSpy?.mock?.calls || [];
+    return calls.length > 0 ? calls[calls.length - 1][0] : null;
+  };
 
   const q = (id: string): HTMLElement | null => fixture.nativeElement.querySelector(`[data-testid="${id}"]`);
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.mocked(shareBlob).mockReset();
-    vi.mocked(setFileShareOfferNotifier).mockClear();
+    fileOutput = new FileOutputService();
+    setNotifierSpy = vi.spyOn(fileOutput, 'setShareOfferNotifier');
+    shareBlobSpy = vi.spyOn(fileOutput, 'shareBlob');
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ShareOfferBarComponent],
+      providers: [
+        { provide: FileOutputService, useValue: fileOutput }
+      ]
     });
     fixture = TestBed.createComponent(ShareOfferBarComponent);
     component = fixture.componentInstance;
@@ -119,7 +84,7 @@ describe('ShareOfferBarComponent (DOM)', () => {
 
   it('کلیک روی دکمه اشتراک‌گذاری، shareBlob را صدا زده و نوار را پنهان می‌کند', async () => {
     const blob = new Blob(['data'], { type: 'text/plain' });
-    const shareSpy = vi.mocked(shareBlob).mockResolvedValue('shared');
+    const shareSpy = shareBlobSpy.mockResolvedValue('shared');
 
     getRegisteredNotifier()!({ blob, filename: 'report.xlsx' });
     fixture.detectChanges();
@@ -142,7 +107,7 @@ describe('ShareOfferBarComponent (DOM)', () => {
     const blob1 = new Blob(['file 1'], { type: 'text/plain' });
     const blob2 = new Blob(['file 2'], { type: 'text/plain' });
 
-    const shareSpy = vi.mocked(shareBlob).mockImplementation(async () => {
+    const shareSpy = shareBlobSpy.mockImplementation(async () => {
       getRegisteredNotifier()!({ blob: blob2, filename: 'new-file.pdf' });
       return 'offered';
     });
@@ -164,7 +129,7 @@ describe('ShareOfferBarComponent (DOM)', () => {
 
   it('در صورت بروز خطا در shareBlob، نوار بسته شده و busy ریست می‌شود', async () => {
     const blob = new Blob(['data'], { type: 'text/plain' });
-    vi.mocked(shareBlob).mockRejectedValue(new Error('Share failed'));
+    shareBlobSpy.mockRejectedValue(new Error('Share failed'));
 
     getRegisteredNotifier()!({ blob, filename: 'error.pdf' });
     fixture.detectChanges();

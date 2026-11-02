@@ -12,10 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
-import { canShareFiles, saveBlob, shareBlob as _origShareBlob } from '../../../core/platform/file-output';
-
-const shareBlob = (blob: Blob, filename: string) =>
-  (_origShareBlob as any).__mock ? (_origShareBlob as any).__mock(blob, filename) : _origShareBlob(blob, filename);
+import { FileOutputService, saveBlob } from '../../../core/platform/file-output';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
@@ -60,12 +57,13 @@ export class AttachmentsComponent implements OnChanges, OnDestroy {
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private toast = inject(ToastService, { optional: true });
   private cdr = inject(ChangeDetectorRef);
+  private readonly fileOutput = inject(FileOutputService);
 
   items: AttachmentItem[] = [];
   loading = false;
   error = '';
   busy = false;
-  readonly canShare = canShareFiles();
+  readonly canShare = this.fileOutput.canShareFiles();
   previews: Record<number, string> = {};
   private replaceTargetId: number | null = null;
   private loadSeq = 0;
@@ -176,7 +174,7 @@ export class AttachmentsComponent implements OnChanges, OnDestroy {
         return;
       }
       try {
-        await shareBlob(blob, item.original_name || 'attachment');
+        await this.fileOutput.shareBlob(blob, item.original_name || 'attachment');
       } catch {
         /* file-output پیام خطا را نشان داده است */
       }

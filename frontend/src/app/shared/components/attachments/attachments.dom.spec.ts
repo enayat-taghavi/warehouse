@@ -9,28 +9,7 @@ import { AttachmentsComponent, AttachmentItem } from './attachments.component';
 import { ApiService } from '../../../core/api/api.service';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { ToastService } from '../toast/toast.component';
-import { shareBlob } from '../../../core/platform/file-output';
-
-const { mockCanShareFiles, mockShareBlob, mockSaveBlob } = vi.hoisted(() => {
-  const mocker = (globalThis as any).__vitest_mocker__;
-  if (mocker) {
-    vi.mock = ((path: string, factory?: any) => {
-      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
-      mocker.queueMock(path, importer, typeof factory === 'function' ? factory : undefined);
-    }) as any;
-  }
-  return {
-    mockCanShareFiles: vi.fn(() => false),
-    mockShareBlob: vi.fn(),
-    mockSaveBlob: vi.fn(),
-  };
-});
-
-vi.mock('../../../core/platform/file-output', () => ({
-  canShareFiles: () => mockCanShareFiles(),
-  shareBlob: (...args: any[]) => mockShareBlob(...args),
-  saveBlob: (...args: any[]) => mockSaveBlob(...args),
-}));
+import { FileOutputService } from '../../../core/platform/file-output';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -67,6 +46,9 @@ describe('AttachmentsComponent DOM Spec', () => {
   };
   let confirmDialog: { open: ReturnType<typeof vi.fn> };
   let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let fileOutput: FileOutputService;
+  let shareBlobSpy: ReturnType<typeof vi.spyOn>;
+  let canShareFilesSpy: ReturnType<typeof vi.spyOn>;
 
   const sampleItems: AttachmentItem[] = [
     {
@@ -105,11 +87,10 @@ describe('AttachmentsComponent DOM Spec', () => {
   });
 
   beforeEach(async () => {
-    (shareBlob as any).__mock = mockShareBlob;
     setNavigatorShareSupport(false);
-    mockCanShareFiles.mockReturnValue(false);
-    mockShareBlob.mockReset().mockResolvedValue('shared');
-    mockSaveBlob.mockReset().mockResolvedValue(undefined);
+    fileOutput = new FileOutputService();
+    canShareFilesSpy = vi.spyOn(fileOutput, 'canShareFiles').mockReturnValue(false);
+    shareBlobSpy = vi.spyOn(fileOutput, 'shareBlob').mockResolvedValue('shared');
 
     api = {
       get: vi.fn().mockReturnValue(of(sampleItems)),
@@ -130,7 +111,8 @@ describe('AttachmentsComponent DOM Spec', () => {
       providers: [
         { provide: ApiService, useValue: api },
         { provide: ConfirmDialogService, useValue: confirmDialog },
-        { provide: ToastService, useValue: toast }
+        { provide: ToastService, useValue: toast },
+        { provide: FileOutputService, useValue: fileOutput }
       ]
     }).compileComponents();
   });
@@ -236,14 +218,14 @@ describe('AttachmentsComponent DOM Spec', () => {
 
   it('hides share button when canShareFiles returns false', async () => {
     setNavigatorShareSupport(false);
-    mockCanShareFiles.mockReturnValue(false);
+    canShareFilesSpy.mockReturnValue(false);
     await createComponent();
     expect(fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]')).toBeNull();
   });
 
   it('shows share button when canShareFiles returns true', async () => {
     setNavigatorShareSupport(true);
-    mockCanShareFiles.mockReturnValue(true);
+    canShareFilesSpy.mockReturnValue(true);
     await createComponent();
     const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]') as HTMLButtonElement;
     expect(shareBtn).toBeTruthy();
@@ -252,7 +234,7 @@ describe('AttachmentsComponent DOM Spec', () => {
 
   it('downloads through api and calls shareBlob on share click', async () => {
     setNavigatorShareSupport(true);
-    mockCanShareFiles.mockReturnValue(true);
+    canShareFilesSpy.mockReturnValue(true);
     const dummyBlob = new Blob(['sample-data'], { type: 'application/pdf' });
     api.download.mockReturnValue(of(dummyBlob));
     await createComponent();
@@ -268,18 +250,12 @@ describe('AttachmentsComponent DOM Spec', () => {
     const calledPath = api.download.mock.calls[0]?.[0];
     expect(['attachments/1/download/', 'attachments/1/download']).toContain(calledPath);
 
-    if (mockShareBlob.mock.calls.length > 0) {
-      expect(mockShareBlob).toHaveBeenCalledWith(dummyBlob, 'test-contract.pdf');
-    } else {
-      expect((navigator as any).share).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'test-contract.pdf' })
-      );
-    }
+    expect(shareBlobSpy).toHaveBeenCalledWith(dummyBlob, 'test-contract.pdf');
   });
 
   it('shows toast on share download error', async () => {
     setNavigatorShareSupport(true);
-    mockCanShareFiles.mockReturnValue(true);
+    canShareFilesSpy.mockReturnValue(true);
     api.download.mockReturnValue(throwError(() => ({ error: { detail: 'خطای سرور' } })));
     await createComponent();
 
@@ -302,10 +278,10 @@ describe('AttachmentsComponent DOM Spec', () => {
 
   it('shows no toast when shareBlob is rejected', async () => {
     setNavigatorShareSupport(true);
-    mockCanShareFiles.mockReturnValue(true);
+    canShareFilesSpy.mockReturnValue(true);
     const dummyBlob = new Blob(['sample-data'], { type: 'application/pdf' });
     api.download.mockReturnValue(of(dummyBlob));
-    mockShareBlob.mockRejectedValue(new Error('share failed'));
+    shareBlobSpy.mockRejectedValue(new Error('share failed'));
     await createComponent();
 
     const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری"]') as HTMLButtonElement;
@@ -314,7 +290,7 @@ describe('AttachmentsComponent DOM Spec', () => {
     await component.share(sampleItems[0]);
     fixture.detectChanges();
 
-    expect(mockShareBlob).toHaveBeenCalledWith(dummyBlob, 'test-contract.pdf');
+    expect(shareBlobSpy).toHaveBeenCalledWith(dummyBlob, 'test-contract.pdf');
     expect(toast.error).not.toHaveBeenCalled();
     expect(component.busy).toBe(false);
   });

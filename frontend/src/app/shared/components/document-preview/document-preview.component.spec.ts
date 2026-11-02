@@ -6,47 +6,7 @@ import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-
 import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { DocumentPreviewComponent } from './document-preview.component';
-import { shareUrl } from '../../../core/platform/file-output';
-
-vi.hoisted(() => {
-  const mocker = (globalThis as any).__vitest_mocker__;
-  if (mocker) {
-    vi.mock = ((path: string, factory?: any) => {
-      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
-      const wrappedFactory = typeof factory === 'function'
-        ? () => factory(async () => {
-            try {
-              return await mocker.importActual(path, importer, mocker.getMockContext?.()?.callstack);
-            } catch {
-              return {};
-            }
-          })
-        : factory;
-      mocker.queueMock(path, importer, wrappedFactory);
-    }) as any;
-  }
-});
-
-vi.mock('../../../core/platform/file-output', async (orig) => ({
-  ...(await orig<typeof import('../../../core/platform/file-output')>()),
-  shareUrl: vi.fn(),
-}));
-
-function setupMock(target: any) {
-  const mockFn = vi.fn();
-  target.__mock = mockFn;
-  Object.assign(target, mockFn);
-  Object.setPrototypeOf(target, Object.getPrototypeOf(mockFn));
-  target.mockReset = () => { mockFn.mockReset(); return target; };
-  target.mockClear = () => { mockFn.mockClear(); return target; };
-  target.mockResolvedValue = (v: any) => { mockFn.mockResolvedValue(v); return target; };
-  target.mockRejectedValue = (e: any) => { mockFn.mockRejectedValue(e); return target; };
-  target.mockImplementation = (f: any) => { mockFn.mockImplementation(f); return target; };
-  Object.defineProperty(target, 'mock', { get: () => mockFn.mock, configurable: true });
-  return mockFn;
-}
-
-setupMock(shareUrl);
+import { FileOutputService } from '../../../core/platform/file-output';
 
 
 try {
@@ -57,12 +17,18 @@ describe('DocumentPreviewComponent (لایت‌باکس مشترک پیش‌نم
   let fixture: ComponentFixture<DocumentPreviewComponent>;
   let component: DocumentPreviewComponent;
   let backSpy: ReturnType<typeof vi.spyOn>;
+  let fileOutput: FileOutputService;
 
   beforeEach(async () => {
     backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    fileOutput = new FileOutputService();
+    vi.spyOn(fileOutput, 'canShareFiles').mockReturnValue(false);
     await TestBed.configureTestingModule({
       imports: [DocumentPreviewComponent],
-      providers: [{ provide: HttpClient, useValue: { get: vi.fn().mockReturnValue(of(new ArrayBuffer(8))) } }]
+      providers: [
+        { provide: HttpClient, useValue: { get: vi.fn().mockReturnValue(of(new ArrayBuffer(8))) } },
+        { provide: FileOutputService, useValue: fileOutput }
+      ]
     }).compileComponents();
     fixture = TestBed.createComponent(DocumentPreviewComponent);
     component = fixture.componentInstance;
@@ -295,6 +261,10 @@ describe('DocumentPreviewComponent (لایت‌باکس مشترک پیش‌نم
   });
 
   it('دکمهٔ اشتراک‌گذاری در صورت نبود پشتیبانی مرورگر پنهان است', () => {
+    vi.spyOn(fileOutput, 'canShareFiles').mockReturnValue(false);
+    fixture = TestBed.createComponent(DocumentPreviewComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
     component.open({ title: 'سند', url: '/media/a.pdf' });
     fixture.detectChanges();
     const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری سند"]');
@@ -305,7 +275,7 @@ describe('DocumentPreviewComponent (لایت‌باکس مشترک پیش‌نم
     (component as any).canShare = true;
     component.open({ title: 'سند', url: '/media/a.pdf', downloadName: 'custom-doc.pdf' });
     fixture.detectChanges();
-    const shareSpy = vi.mocked(shareUrl).mockReset().mockResolvedValue('shared');
+    const shareSpy = vi.spyOn(fileOutput, 'shareUrl').mockResolvedValue('shared');
     const shareBtn = fixture.nativeElement.querySelector('button[aria-label="اشتراک‌گذاری سند"]') as HTMLButtonElement;
     expect(shareBtn).not.toBeNull();
     expect(shareBtn.disabled).toBe(false);

@@ -10,10 +10,7 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ApiService } from '../../../../../core/api/api.service';
-import { saveBlob, canShareFiles, shareBlob as _origShareBlob } from '../../../../../core/platform/file-output';
-
-const shareBlob = (blob: Blob, filename: string) =>
-  (_origShareBlob as any).__mock ? (_origShareBlob as any).__mock(blob, filename) : _origShareBlob(blob, filename);
+import { saveBlob, FileOutputService } from '../../../../../core/platform/file-output';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
 import { getChatThumb, putChatThumb } from './chat-thumb-cache';
 
@@ -68,7 +65,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.searchOpen.set(open);
     if (!open) this.searchQuery.set('');
   }
-  public readonly canShare = canShareFiles();
+  private readonly fileOutput = inject(FileOutputService);
+  public readonly canShare = this.fileOutput.canShareFiles();
   public commService = inject(CommunicationService);
   private state = inject(StateService);
   private auth = inject(AuthService);
@@ -1477,7 +1475,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       return;
     }
     try {
-      await shareBlob(blob, att.file_name || 'attachment');
+      await this.fileOutput.shareBlob(blob, att.file_name || 'attachment');
     } catch {
       /* file-output پیام خطا را نشان داده است */
     }

@@ -4,10 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { resolveServerUrl } from '../../../core/platform/server-origin';
-import { saveUrl, canShareFiles, shareUrl as _origShareUrl } from '../../../core/platform/file-output';
-
-const shareUrl = (url: string, filename?: string) =>
-  (_origShareUrl as any).__mock ? (_origShareUrl as any).__mock(url, filename) : _origShareUrl(url, filename);
+import { saveUrl, FileOutputService } from '../../../core/platform/file-output';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ServerUrlPipe } from '../../pipes/server-url.pipe';
 import { OverflowMenuComponent } from '../overflow-menu/overflow-menu.component';
@@ -76,7 +73,8 @@ export class DocumentPreviewComponent implements OnDestroy {
   @ViewChild('closeButton') private closeButton?: ElementRef<HTMLButtonElement>;
 
   readonly titleId = `document-preview-title-${nextPreviewId++}`;
-  readonly canShare = canShareFiles();
+  private readonly fileOutput = inject(FileOutputService);
+  readonly canShare = this.fileOutput.canShareFiles();
 
   /** کلاس ابزارهای نوار: در موبایل ردیف برچسب‌دار منوی «بیشتر»، از sm دکمهٔ آیکونی تیره */
   readonly toolButtonClass =
@@ -606,7 +604,7 @@ export class DocumentPreviewComponent implements OnDestroy {
   /** اشتراک‌گذاری سند فعلی با نام فایلش؛ پیام خطا را file-output نشان می‌دهد */
   shareCurrent(): void {
     if (this.previewModal.fileUrl) {
-      void shareUrl(this.previewModal.fileUrl, this.current?.downloadName).catch(() => undefined);
+      void this.fileOutput.shareUrl(this.previewModal.fileUrl, this.current?.downloadName).catch(() => undefined);
     }
   }
 

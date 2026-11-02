@@ -1091,5 +1091,42 @@ describe('file-output', () => {
       await service.saveBlob(blob, 'test.pdf', { offerShare: true });
       expect(offerNotifier).toHaveBeenCalledWith({ blob, filename: 'test.pdf' });
     });
+
+    it('35. FileOutputService registers the offer notifier and a following web saveBlob with sharing supported calls it', async () => {
+      const service = new FileOutputService();
+      const offerNotifier = vi.fn();
+      service.setShareOfferNotifier(offerNotifier);
+
+      Object.defineProperty(globalThis.navigator, 'share', {
+        value: vi.fn(),
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(globalThis.navigator, 'canShare', {
+        value: vi.fn().mockReturnValue(true),
+        configurable: true,
+        writable: true,
+      });
+
+      const origCreate = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const el = origCreate(tag);
+        if (tag.toLowerCase() === 'a') {
+          vi.spyOn(el, 'click').mockImplementation(() => {});
+          vi.spyOn(el, 'remove').mockImplementation(() => {});
+        }
+        return el;
+      });
+
+      const blob = new Blob(['offer test']);
+      await saveBlob(blob, 'offer-service.pdf');
+      expect(offerNotifier).toHaveBeenCalledTimes(1);
+      expect(offerNotifier).toHaveBeenCalledWith({ blob, filename: 'offer-service.pdf' });
+
+      service.setShareOfferNotifier(null);
+      offerNotifier.mockClear();
+      await saveBlob(blob, 'offer-service-cleared.pdf');
+      expect(offerNotifier).not.toHaveBeenCalled();
+    });
   });
 });

@@ -410,6 +410,10 @@ export class FileOutputService {
     return shareUrl(url, filename);
   }
 
+  setShareOfferNotifier(fn: ((offer: ShareOffer) => void) | null): void {
+    setFileShareOfferNotifier(fn);
+  }
+
   print(target?: Window | null): Promise<void> | void {
     return printWindow(target);
   }

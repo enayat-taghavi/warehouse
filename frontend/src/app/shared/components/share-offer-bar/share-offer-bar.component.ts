@@ -1,21 +1,10 @@
-import { Component, OnDestroy, signal } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import {
-  setFileShareOfferNotifier as _origSetFileShareOfferNotifier,
-  shareBlob as _origShareBlob,
+  FileOutputService,
   ShareOffer,
   ShareResult
 } from '../../../core/platform/file-output';
-
-const setFileShareOfferNotifier = (fn: ((offer: ShareOffer) => void) | null) =>
-  (_origSetFileShareOfferNotifier as any).__mock
-    ? (_origSetFileShareOfferNotifier as any).__mock(fn)
-    : _origSetFileShareOfferNotifier(fn);
-
-const shareBlob = (blob: Blob, filename: string) =>
-  (_origShareBlob as any).__mock
-    ? (_origShareBlob as any).__mock(blob, filename)
-    : _origShareBlob(blob, filename);
 
 /**
  * نوار پیشنهاد اشتراک‌گذاری فایل پس از دانلود (Web / PWA).
@@ -66,13 +55,14 @@ const shareBlob = (blob: Blob, filename: string) =>
   `,
 })
 export class ShareOfferBarComponent implements OnDestroy {
+  private readonly fileOutput = inject(FileOutputService);
   public readonly offer = signal<ShareOffer | null>(null);
   public readonly busy = signal(false);
 
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    setFileShareOfferNotifier((o: ShareOffer) => this.show(o));
+    this.fileOutput.setShareOfferNotifier((o: ShareOffer) => this.show(o));
   }
 
   public show(o: ShareOffer): void {
@@ -92,7 +82,7 @@ export class ShareOfferBarComponent implements OnDestroy {
     this.busy.set(true);
     this.clearTimer();
     try {
-      const result = await shareBlob(currentOffer.blob, currentOffer.filename);
+      const result = await this.fileOutput.shareBlob(currentOffer.blob, currentOffer.filename);
       if (result !== 'offered') {
         this.close();
       }
@@ -104,7 +94,7 @@ export class ShareOfferBarComponent implements OnDestroy {
   }
 
   public ngOnDestroy(): void {
-    setFileShareOfferNotifier(null);
+    this.fileOutput.setShareOfferNotifier(null);
     this.clearTimer();
   }
 

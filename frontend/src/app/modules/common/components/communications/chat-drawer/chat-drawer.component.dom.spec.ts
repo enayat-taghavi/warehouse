@@ -13,47 +13,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
-import { shareBlob } from '../../../../../core/platform/file-output';
-
-vi.hoisted(() => {
-  const mocker = (globalThis as any).__vitest_mocker__;
-  if (mocker) {
-    vi.mock = ((path: string, factory?: any) => {
-      const importer = ((import.meta as any).filename || (import.meta as any).url || '').replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
-      const wrappedFactory = typeof factory === 'function'
-        ? () => factory(async () => {
-            try {
-              return await mocker.importActual(path, importer, mocker.getMockContext?.()?.callstack);
-            } catch {
-              return {};
-            }
-          })
-        : factory;
-      mocker.queueMock(path, importer, wrappedFactory);
-    }) as any;
-  }
-});
-
-vi.mock('../../../../../core/platform/file-output', async (orig) => ({
-  ...(await orig<typeof import('../../../../../core/platform/file-output')>()),
-  shareBlob: vi.fn(),
-}));
-
-function setupMock(target: any) {
-  const mockFn = vi.fn();
-  target.__mock = mockFn;
-  Object.assign(target, mockFn);
-  Object.setPrototypeOf(target, Object.getPrototypeOf(mockFn));
-  target.mockReset = () => { mockFn.mockReset(); return target; };
-  target.mockClear = () => { mockFn.mockClear(); return target; };
-  target.mockResolvedValue = (v: any) => { mockFn.mockResolvedValue(v); return target; };
-  target.mockRejectedValue = (e: any) => { mockFn.mockRejectedValue(e); return target; };
-  target.mockImplementation = (f: any) => { mockFn.mockImplementation(f); return target; };
-  Object.defineProperty(target, 'mock', { get: () => mockFn.mock, configurable: true });
-  return mockFn;
-}
-
-setupMock(shareBlob);
+import { FileOutputService } from '../../../../../core/platform/file-output';
 
 
 try {
@@ -73,6 +33,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
   let comm: any;
   let toast: any;
   let canCreate: boolean;
+  let fileOutput: FileOutputService;
 
   const groupConv = (role: 'owner' | 'admin' | 'member' = 'member', extra: Partial<Conversation> = {}): Conversation => ({
     id: 'g1', conv_type: 'group', title: 'گروه تست', participants: [1, 2, 3], is_active: true,
@@ -94,6 +55,8 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   async function setup(opts: { canCreate?: boolean; role?: 'owner' | 'admin' | 'member'; conv?: Conversation } = {}) {
     canCreate = opts.canCreate ?? false;
+    fileOutput = new FileOutputService();
+    vi.spyOn(fileOutput, 'shareBlob').mockResolvedValue('shared');
     toast = { show: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
     const convs = new BehaviorSubject<Conversation[]>([]);
     const active = new BehaviorSubject<Conversation | null>(null);
@@ -140,7 +103,8 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
         { provide: AuthService, useValue: { user: () => ({ id: 1, username: 'me', first_name: '', last_name: '' }) } },
         { provide: ToastService, useValue: toast },
         { provide: ApiService, useValue: { download: vi.fn() } },
-        { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } }
+        { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } },
+        { provide: FileOutputService, useValue: fileOutput }
       ]
     }).compileComponents();
 
@@ -559,7 +523,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   it('shareAttachment: downloads attachment through api and calls shareBlob with blob and file name', async () => {
     await setup({ conv: groupConv('member') });
-    const shareSpy = vi.mocked(shareBlob).mockReset().mockResolvedValue('shared');
+    const shareSpy = vi.spyOn(fileOutput, 'shareBlob').mockResolvedValue('shared');
     const fakeBlob = new Blob(['attachment payload'], { type: 'application/pdf' });
     const api = TestBed.inject(ApiService) as any;
     api.download = vi.fn().mockReturnValue(of(fakeBlob));
@@ -573,7 +537,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   it('shareAttachment: shows not-ready toast and does not call shareBlob when download_url is missing', async () => {
     await setup({ conv: groupConv('member') });
-    const shareSpy = vi.mocked(shareBlob).mockReset().mockResolvedValue('shared');
+    const shareSpy = vi.spyOn(fileOutput, 'shareBlob').mockResolvedValue('shared');
 
     const att = { file_name: 'pending.pdf' };
     await fixture.componentInstance.shareAttachment(att);
@@ -584,7 +548,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
 
   it('shareAttachment: shows no toast when shareBlob is rejected', async () => {
     await setup({ conv: groupConv('member') });
-    const shareSpy = vi.mocked(shareBlob).mockReset().mockRejectedValue(new Error('share failed'));
+    const shareSpy = vi.spyOn(fileOutput, 'shareBlob').mockRejectedValue(new Error('share failed'));
     const fakeBlob = new Blob(['attachment payload'], { type: 'application/pdf' });
     const api = TestBed.inject(ApiService) as any;
     api.download = vi.fn().mockReturnValue(of(fakeBlob));
