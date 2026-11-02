@@ -357,7 +357,7 @@
             </p>
 
             <!-- مشخصات حساب مبدا شرکت با دکمه‌های کپی -->
-            <div *ngIf="selectedCompanyAccount as cacc" data-company-account-copy class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div *ngIf="selectedCompanyAccount as cacc" data-company-account-copy class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 flex flex-col gap-2 divide-y divide-line [&>*+*]:pt-2">
               <div class="min-w-0" data-company-bank-name>
                 <span class="block text-[10px] text-fg-subtle">بانک</span>
                 <span class="font-bold text-xs text-fg break-words">{{ cacc.bank_name }}</span>
@@ -400,7 +400,7 @@
             <p *ngIf="payFieldErrors['party_bank_account']" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['party_bank_account'] }}</p>
 
             <!-- شماره حساب و شبای مقصد برای چسباندن در سایت بانک -->
-            <div *ngIf="selectedPartyAccount as acc" class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2" data-party-account-copy>
+            <div *ngIf="selectedPartyAccount as acc" class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 flex flex-col gap-2 divide-y divide-line [&>*+*]:pt-2" data-party-account-copy>
               <div class="min-w-0">
                 <span class="block text-[10px] text-fg-subtle">بانک</span>
                 <span class="font-bold text-xs text-fg break-words">{{ acc.bank_name }}</span>
