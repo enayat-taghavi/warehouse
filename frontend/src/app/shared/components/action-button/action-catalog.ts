@@ -142,6 +142,12 @@ export const ACTION_CATALOG = {
     tone: 'slate',
     sensitive: false,
   },
+  'share': {
+    icon: ACTION_ICONS['share'],
+    defaultLabel: 'همرسانی',
+    tone: 'slate',
+    sensitive: false,
+  },
   'view': {
     icon: ACTION_ICONS['view'],
     defaultLabel: 'مشاهده',

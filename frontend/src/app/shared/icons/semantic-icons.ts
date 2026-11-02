@@ -25,6 +25,7 @@ export const ACTION_ICONS = {
   'send': 'send',
   'print': 'printer',
   'copy': 'copy',
+  'share': 'share',
   'view': 'eye',
   'hide': 'eye-off',
   'search': 'search',

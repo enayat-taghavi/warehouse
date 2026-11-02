@@ -18,13 +18,14 @@ try {
 describe('PrintService', () => {
   let service: PrintService;
   let httpMock: HttpTestingController;
-  let fakeFileOutput: { saveBlob: ReturnType<typeof vi.fn> };
+  let fakeFileOutput: { saveBlob: ReturnType<typeof vi.fn>; shareBlob: ReturnType<typeof vi.fn> };
   let fakeToast: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     TestBed.resetTestingModule();
     fakeFileOutput = {
       saveBlob: vi.fn().mockResolvedValue(undefined),
+      shareBlob: vi.fn().mockResolvedValue('shared'),
     };
     fakeToast = {
       error: vi.fn(),
@@ -107,5 +108,38 @@ describe('PrintService', () => {
     const result = await promise;
     expect(result).toBe(false);
     expect(fakeToast.error).toHaveBeenCalledWith('ساخت فایل PDF ناموفق بود');
+  });
+  it('sharePdf fetches the pdf and hands it to the share sheet', async () => {
+    const promise = service.sharePdf('zz_doc', 7, 'receipt-7.pdf');
+
+    const req = httpMock.expectOne((r) => r.url.includes('/api/print/zz_doc/7/pdf/'));
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['%PDF']));
+
+    expect(await promise).toBe(true);
+    expect(fakeFileOutput.shareBlob).toHaveBeenCalledWith(expect.any(Blob), 'receipt-7.pdf');
+    expect(fakeFileOutput.saveBlob).not.toHaveBeenCalled();
+  });
+
+  it('sharePdf share error shows no second toast', async () => {
+    fakeFileOutput.shareBlob.mockRejectedValue(new Error('boom'));
+    const promise = service.sharePdf('zz_doc', 7);
+
+    httpMock.expectOne((r) => r.url.includes('/api/print/zz_doc/7/pdf/')).flush(new Blob(['%PDF']));
+
+    expect(await promise).toBe(false);
+    expect(fakeFileOutput.shareBlob).toHaveBeenCalledWith(expect.any(Blob), 'zz_doc-7.pdf');
+    expect(fakeToast.error).not.toHaveBeenCalled();
+  });
+
+  it('sharePdf 404 shows not available toast and shares nothing', async () => {
+    const promise = service.sharePdf('zz_doc', 7);
+
+    httpMock.expectOne((r) => r.url.includes('/api/print/zz_doc/7/pdf/'))
+      .flush(new Blob(['']), { status: 404, statusText: 'Not Found' });
+
+    expect(await promise).toBe(false);
+    expect(fakeFileOutput.shareBlob).not.toHaveBeenCalled();
+    expect(fakeToast.error).toHaveBeenCalledOnce();
   });
 });

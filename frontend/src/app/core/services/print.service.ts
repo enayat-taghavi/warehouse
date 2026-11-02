@@ -30,6 +30,23 @@ export class PrintService {
   }
 
   async downloadPdf(kind: string, id: string | number, size: PrintPaperSize = 'A4'): Promise<boolean> {
+    return this.withPdf(kind, id, size, (blob) => this.files.saveBlob(blob, `${kind}-${id}.pdf`));
+  }
+
+  /**
+   * همرسانی PDF سند با برگهٔ اشتراک‌گذاری گوشی (Web Share / بومی)؛ اگر پشتیبانی نشود فایل دانلود می‌شود.
+   * لغو برگه به دست کاربر خطا نیست.
+   */
+  async sharePdf(kind: string, id: string | number, filename?: string, size: PrintPaperSize = 'A4'): Promise<boolean> {
+    return this.withPdf(kind, id, size, async (blob) => {
+      await this.files.shareBlob(blob, filename || `${kind}-${id}.pdf`);
+    }, false);
+  }
+
+  private async withPdf(
+    kind: string, id: string | number, size: PrintPaperSize, use: (blob: Blob) => Promise<void>,
+    useErrorToast = true,
+  ): Promise<boolean> {
     if (!this.network.isBrowserOnline || this.network.state === 'offline') {
       this.toast.error('اتصال به سرور برقرار نیست؛ چاپ در حالت آفلاین ممکن نیست');
       return false;
@@ -37,15 +54,14 @@ export class PrintService {
     const url =
       `${environment.apiUrl}/print/${encodeURIComponent(kind)}/${encodeURIComponent(String(id))}/pdf/` +
       `?size=${size === 'A5' ? 'A5' : 'A4'}`;
+    let blob: Blob;
     try {
-      const blob = await firstValueFrom(
+      blob = await firstValueFrom(
         this.http.get(url, {
           responseType: 'blob',
           context: new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true),
         }),
       );
-      await this.files.saveBlob(blob, `${kind}-${id}.pdf`);
-      return true;
     } catch (err) {
       const status = (err as { status?: number } | null)?.status;
       if (typeof status === 'number' && isServerUnreachable(status)) {
@@ -55,6 +71,14 @@ export class PrintService {
       } else {
         this.toast.error('ساخت فایل PDF ناموفق بود');
       }
+      return false;
+    }
+    try {
+      await use(blob);
+      return true;
+    } catch {
+      // همرسانی خطای خودش را نشان می‌دهد (shareBlob)؛ فقط ذخیره پیام جدا می‌خواهد
+      if (useErrorToast) this.toast.error('ساخت فایل PDF ناموفق بود');
       return false;
     }
   }
