@@ -240,8 +240,10 @@ describe('AccountantPersonnelHubComponent Phase 9 Tests', () => {
 
   it('Task 9.8: should provide 1-click copy helper with transient visual feedback', async () => {
     const writeTextSpy = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: { writeText: writeTextSpy }
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextSpy },
+      configurable: true,
+      writable: true,
     });
 
     component.copyField('IR123456789012345678901234', 'sh-101', 'شماره شبا');

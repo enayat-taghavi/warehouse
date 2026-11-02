@@ -164,16 +164,4 @@ export class InvoicesHubComponent {
       queryParamsHandling: 'merge',
     });
   }
-
-  switchView(next: string): void {
-    if (next === 'cartable') {
-      const role = this.cartableRole();
-      if (role === 'treasury') this.switchFilter('pay');
-      else this.switchFilter('approve');
-    } else if (next === 'mine') {
-      this.switchFilter('mine');
-    } else {
-      this.switchFilter(next);
-    }
-  }
 }

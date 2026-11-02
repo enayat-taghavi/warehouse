@@ -441,7 +441,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
   it('i) the payee primary account is preselected and its account number and Sheba are copied without spaces', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true, writable: true });
     mockPersonnelApi.getCounterparties.mockReturnValue(of([{ id: 3, party: 9 }]));
     mockPersonnelApi.getPartyBankAccounts.mockReturnValue(of([
       { id: 10, party: 9, bank_name: 'Saderat', account_number: '111', sheba_number: 'IR000000000000000000000001', is_primary: false, is_active: true },
@@ -560,7 +560,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
   it('m) the company account details show bank name, account number and Sheba with copy buttons and copy the value without spaces', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true, writable: true });
 
     component.payInvoice(component.invoices[0]);
     component.payMethod = 'transfer';

@@ -217,7 +217,7 @@ describe('SupervisorPersonnelHubComponent - Phase 8 Comprehensive Tests', () => 
   describe('Task 8.6: Ergonomic Mobile & Quick Copy', () => {
     it('should copy field text to clipboard and provide temporary feedback', async () => {
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
-      Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: writeTextMock }, configurable: true, writable: true });
 
       component.copyField('09123456789', 'mob_101');
       expect(writeTextMock).toHaveBeenCalledWith('09123456789');
