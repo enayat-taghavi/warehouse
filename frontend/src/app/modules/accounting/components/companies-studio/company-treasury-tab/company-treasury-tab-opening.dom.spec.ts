@@ -75,6 +75,8 @@ describe('CompanyTreasuryTabComponent — موجودی اولیه حساب با�
   });
 
   it('a) ساخت حساب: نبود تاریخ موجودی اولیه فراخوانی API را متوقف و پیام خطا را نمایش می‌دهد؛ با تاریخ، متد فراخوانی می‌شود', async () => {
+    component.openNewAccount();
+    fixture.detectChanges();
     component.onShebaInput('IR160120000000001234567890');
     component.newAccount.opening_balance_date = '';
     component.newAccount.opening_balance = '';

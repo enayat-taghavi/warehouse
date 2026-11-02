@@ -183,6 +183,67 @@ describe('CompanyProjectsTabComponent (تب «پروژه‌ها و بخش‌ها
     expect(fixture.nativeElement.textContent).toContain('رضا بهرامی');
   });
 
+  it('فرم پروژه در بارگذاری اولیه در DOM نیست و پس از کلیک دکمهٔ ایجاد باز می‌شود', () => {
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-projects form')).toBeNull();
+    const createBtn = Array.from(fixture.nativeElement.querySelectorAll('#co-projects-panel-projects button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.getAttribute('appaction') === 'create' && b.textContent?.includes('پروژهٔ جدید'));
+    expect(createBtn).toBeTruthy();
+    createBtn!.click();
+    fixture.detectChanges();
+    expect(component.isProjectFormOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-projects form')).not.toBeNull();
+  });
+
+  it('فرم پروژه پس از cancelEditProject() بسته می‌شود', () => {
+    component.openNewProject();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-projects form')).not.toBeNull();
+    component.cancelEditProject();
+    fixture.detectChanges();
+    expect(component.isProjectFormOpen).toBe(false);
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-projects form')).toBeNull();
+  });
+
+  it('editProject(...) فرم پروژه را باز می‌کند', () => {
+    expect(component.isProjectFormOpen).toBe(false);
+    component.editProject(projects[0]);
+    fixture.detectChanges();
+    expect(component.isProjectFormOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-projects form')).not.toBeNull();
+  });
+
+  it('فرم بخش در بارگذاری اولیه در DOM نیست و پس از کلیک دکمهٔ ایجاد باز می‌شود', () => {
+    component.switchSubTab('sections');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-sections form')).toBeNull();
+    const createBtn = Array.from(fixture.nativeElement.querySelectorAll('#co-projects-panel-sections button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.getAttribute('appaction') === 'create' && b.textContent?.includes('بخش جدید'));
+    expect(createBtn).toBeTruthy();
+    createBtn!.click();
+    fixture.detectChanges();
+    expect(component.isSectionFormOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-sections form')).not.toBeNull();
+  });
+
+  it('فرم بخش پس از cancelEditSection() بسته می‌شود', () => {
+    component.switchSubTab('sections');
+    component.openNewSection();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-sections form')).not.toBeNull();
+    component.cancelEditSection();
+    fixture.detectChanges();
+    expect(component.isSectionFormOpen).toBe(false);
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-sections form')).toBeNull();
+  });
+
+  it('editSection(...) فرم بخش را باز می‌کند', () => {
+    component.switchSubTab('sections');
+    expect(component.isSectionFormOpen).toBe(false);
+    component.editSection(sections[0]);
+    fixture.detectChanges();
+    expect(component.isSectionFormOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('#co-projects-panel-sections form')).not.toBeNull();
+  });
   it('ثبت پروژهٔ تازه زیر شرکت همین استودیو و ثبت بخش و فیلتر جستجو', () => {
     component.newProject = { name: 'پروژه پایانه', code: 'bnd-۱', description: '', is_active: true };
     component.saveProject();

@@ -12,6 +12,13 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="status-warning" aria-hidden="true"></svg>
         <span>پس از ثبت اولیه شرکت، امکان تعریف چند شماره شبا فعال می‌گردد.</span>
       </div>
+      <button
+        *ngIf="companyId && canWriteBank && canWriteSheba && !isAccountFormOpen"
+        type="button"
+        appAction="create"
+        label="حساب بانکی جدید"
+        (click)="openNewAccount()">
+      </button>
     </div>
 
     <!-- وضعیت در حال بارگذاری حساب‌ها -->
@@ -23,7 +30,7 @@
       <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
     </div>
     <div *ngIf="companyId && !isLoadingBankAccounts && !loadError && companyBankAccounts.length === 0" class="py-6 px-3 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
-      {{ canWriteBank && canWriteSheba ? 'هنوز حساب بانکی برای این شرکت ثبت نشده است. از فرم زیر نخستین حساب را بیفزایید.' : 'هنوز حساب بانکی برای این شرکت ثبت نشده است.' }}
+      {{ canWriteBank && canWriteSheba ? 'هنوز حساب بانکی برای این شرکت ثبت نشده است. با دکمهٔ «حساب بانکی جدید» حساب اضافه کنید.' : 'هنوز حساب بانکی برای این شرکت ثبت نشده است.' }}
     </div>
 
     <!-- فهرست کارت‌های حساب بانکی شرکت -->
@@ -130,19 +137,17 @@
     </div>
 
     <!-- فرم ثبت یا ویرایش حساب بانکی -->
-    <div *ngIf="companyId && canWriteBank && (isEditingAccount || canWriteSheba)" class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3 mt-3">
+    <div *ngIf="companyId && canWriteBank && (isEditingAccount || canWriteSheba) && isAccountFormOpen" class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3 mt-3">
       <div class="flex items-center justify-between">
         <span class="text-xs font-black text-slate-800">
           <span class="inline-flex items-center gap-1.5"><svg *ngIf="isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg><svg *ngIf="!isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-create" aria-hidden="true"></svg><span>{{ isEditingAccount ? 'ویرایش اطلاعات حساب بانکی' : 'افزودن حساب بانکی / شبای جدید' }}</span></span>
         </span>
         <button
-          *ngIf="isEditingAccount"
           type="button"
-          (click)="cancelEditAccount()"
-          title="انصراف از ویرایش حساب"
-          aria-label="انصراف از ویرایش"
-          class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
+          appAction="close"
+          display="label"
+          label="انصراف"
+          (click)="cancelEditAccount()">
         </button>
       </div>
 

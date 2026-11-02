@@ -52,13 +52,17 @@
   @if (activeSubTab === 'projects') {
     <div class="space-y-4" role="tabpanel" id="co-projects-panel-projects" aria-labelledby="co-projects-tab-projects">
       @if (canWrite) {
-        <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 space-y-3" (ngSubmit)="saveProject()">
-          <div class="flex items-center justify-between gap-2 border-b border-line-subtle pb-2">
-            <h4 class="text-xs font-black text-fg">{{ editingProject ? 'ویرایش پروژه' : 'تعریف پروژهٔ تازه' }}</h4>
-            @if (editingProject) {
-              <button type="button" appAction="close" display="label" label="انصراف از ویرایش پروژه" (click)="cancelEditProject()"></button>
-            }
+        @if (!isProjectFormOpen) {
+          <div class="flex justify-end">
+            <button type="button" appAction="create" label="پروژهٔ جدید" (click)="openNewProject()"></button>
           </div>
+        }
+        @if (isProjectFormOpen) {
+          <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 space-y-3" (ngSubmit)="saveProject()">
+            <div class="flex items-center justify-between gap-2 border-b border-line-subtle pb-2">
+              <h4 class="text-xs font-black text-fg">{{ editingProject ? 'ویرایش پروژه' : 'تعریف پروژهٔ تازه' }}</h4>
+              <button type="button" appAction="close" display="label" label="انصراف" (click)="cancelEditProject()"></button>
+            </div>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label for="co-proj-code" class="block text-xs font-bold text-fg-muted mb-1">کد پروژه (یکتا در شرکت)</label>
@@ -81,6 +85,7 @@
             </div>
           </div>
         </form>
+        }
       }
 
       <div class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
@@ -173,13 +178,17 @@
             <button type="button" appAction="create" display="label" label="تعریف پروژه" (click)="switchSubTab('projects')"></button>
           </div>
         } @else if (projects.length > 0) {
-          <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 space-y-3" (ngSubmit)="saveSection()">
-            <div class="flex items-center justify-between gap-2 border-b border-line-subtle pb-2">
-              <h4 class="text-xs font-black text-fg">{{ editingSection ? 'ویرایش بخش' : 'تعریف بخش تازه' }}</h4>
-              @if (editingSection) {
-                <button type="button" appAction="close" display="label" label="انصراف از ویرایش بخش" (click)="cancelEditSection()"></button>
-              }
+          @if (!isSectionFormOpen) {
+            <div class="flex justify-end">
+              <button type="button" appAction="create" label="بخش جدید" (click)="openNewSection()"></button>
             </div>
+          }
+          @if (isSectionFormOpen) {
+            <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 space-y-3" (ngSubmit)="saveSection()">
+              <div class="flex items-center justify-between gap-2 border-b border-line-subtle pb-2">
+                <h4 class="text-xs font-black text-fg">{{ editingSection ? 'ویرایش بخش' : 'تعریف بخش تازه' }}</h4>
+                <button type="button" appAction="close" display="label" label="انصراف" (click)="cancelEditSection()"></button>
+              </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
                 <label for="co-sec-project" class="block text-xs font-bold text-fg-muted mb-1">پروژهٔ والد</label>
@@ -205,6 +214,7 @@
               </div>
             </div>
           </form>
+          }
         }
       }
 

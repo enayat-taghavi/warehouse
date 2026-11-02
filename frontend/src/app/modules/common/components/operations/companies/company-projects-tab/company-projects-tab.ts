@@ -163,6 +163,8 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
   ];
 
   // فرم‌های پروژه و بخش
+  isProjectFormOpen = false;
+  isSectionFormOpen = false;
   newProject: Partial<OrgProject> = this.emptyProject();
   editingProject: OrgProject | null = null;
   newSection: { project: number | null; code: string; name: string; is_active: boolean } = this.emptySection(null);
@@ -350,8 +352,9 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
   isFormDirty(): boolean {
     const p = this.newProject;
     const s = this.newSection;
-    return !!(this.editingProject || this.editingSection || p.code?.trim() || p.name?.trim() || p.description?.trim()
-      || s.code?.trim() || s.name?.trim());
+    const pDirty = this.isProjectFormOpen && !!(this.editingProject || p.code?.trim() || p.name?.trim() || p.description?.trim());
+    const sDirty = this.isSectionFormOpen && !!(this.editingSection || s.code?.trim() || s.name?.trim());
+    return pDirty || sDirty;
   }
 
   switchSubTab(tab: string): void {
@@ -815,15 +818,24 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     });
   }
 
+  openNewProject(): void {
+    this.cancelEditProject();
+    this.isProjectFormOpen = true;
+    this.cdr.markForCheck();
+  }
+
   editProject(proj: OrgProject): void {
+    this.isProjectFormOpen = true;
     this.editingProject = proj;
     this.newProject = { ...proj };
     this.cdr.markForCheck();
   }
 
   cancelEditProject(): void {
+    this.isProjectFormOpen = false;
     this.editingProject = null;
     this.newProject = this.emptyProject();
+    this.cdr.markForCheck();
   }
 
   private async confirm(title: string, message: string, confirmText: string): Promise<boolean> {
@@ -899,6 +911,7 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
           ? this.sections.map(s => s.id === editId ? (queued ? { ...s, ...payload, project_name: projectName, _offlinePending: true } : { ...s, ...saved }) : s)
           : [{ project_name: projectName, ...saved }, ...this.sections.filter(s => s.id !== saved.id)];
         this.editingSection = null;
+        this.isSectionFormOpen = false;
         this.newSection = this.emptySection(project);
         // شمار بخش‌های پروژه از سرور می‌آید (فقط آنلاین)
         if (!queued) this.loadProjects();
@@ -912,15 +925,24 @@ export class CompanyProjectsTabComponent implements OnInit, OnChanges, OnDestroy
     });
   }
 
+  openNewSection(): void {
+    this.cancelEditSection();
+    this.isSectionFormOpen = true;
+    this.cdr.markForCheck();
+  }
+
   editSection(sec: OrgProjectSection): void {
+    this.isSectionFormOpen = true;
     this.editingSection = sec;
     this.newSection = { project: sec.project ?? this.selectedProjectId, code: sec.code, name: sec.name, is_active: sec.is_active !== false };
     this.cdr.markForCheck();
   }
 
   cancelEditSection(): void {
+    this.isSectionFormOpen = false;
     this.editingSection = null;
     this.newSection = this.emptySection(this.selectedProjectId ?? this.projects[0]?.id ?? null);
+    this.cdr.markForCheck();
   }
 
   async deleteSection(sec: OrgProjectSection): Promise<void> {

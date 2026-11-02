@@ -97,7 +97,7 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
         ...component.companyBankAccounts,
         { id: -5, company: 1, bank_name: 'بانک تجارت', sheba_number: 'IR220180000000009876543210', is_primary: false, is_active: true, _offlinePending: true } as any
       ];
-      fixture.changeDetectorRef.markForCheck();
+      (component as any).cdr.markForCheck();
       fixture.detectChanges();
       const cards = Array.from(fixture.nativeElement.querySelectorAll('.grid > div')) as HTMLElement[];
       const pendingCard = cards.find(c => c.textContent?.includes('بانک تجارت'))!;
@@ -122,7 +122,36 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
       expect(mockToast.success).not.toHaveBeenCalled();
     });
 
+    it('کارت فرم حساب بانکی در بارگذاری اولیه در DOM نیست، پس از کلیک دکمهٔ ایجاد باز و پس از انصراف بسته می‌شود', () => {
+      expect(component.isAccountFormOpen).toBe(false);
+      expect(fixture.nativeElement.querySelector('#treasury_sheba')).toBeNull();
+
+      const createBtn = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.getAttribute('appaction') === 'create' && b.textContent?.includes('حساب بانکی جدید'));
+      expect(createBtn).toBeTruthy();
+      createBtn!.click();
+      fixture.detectChanges();
+
+      expect(component.isAccountFormOpen).toBe(true);
+      expect(fixture.nativeElement.querySelector('#treasury_sheba')).not.toBeNull();
+
+      component.cancelEditAccount();
+      fixture.detectChanges();
+
+      expect(component.isAccountFormOpen).toBe(false);
+      expect(fixture.nativeElement.querySelector('#treasury_sheba')).toBeNull();
+    });
+
+    it('editAccount(...) کارت فرم حساب بانکی را باز می‌کند', () => {
+      expect(component.isAccountFormOpen).toBe(false);
+      component.editAccount(component.companyBankAccounts[0]);
+      fixture.detectChanges();
+      expect(component.isAccountFormOpen).toBe(true);
+      expect(fixture.nativeElement.querySelector('#treasury_sheba')).not.toBeNull();
+    });
     it('A16 و ت۷: ظرف شبا LTR است و شمارنده فارسی', () => {
+      component.openNewAccount();
+      fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement;
       const input = el.querySelector('#treasury_sheba') as HTMLInputElement;
       expect(input.closest('[dir="ltr"]')).not.toBeNull();

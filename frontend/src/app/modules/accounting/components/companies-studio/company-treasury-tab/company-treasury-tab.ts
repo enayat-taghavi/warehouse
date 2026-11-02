@@ -68,6 +68,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   loadError = false;
   isSavingBankAccount = false;
   isEditingAccount = false;
+  isAccountFormOpen = false;
   editingAccountId: number | null = null;
   shebaValidationResult: ShebaValidationResult | null = null;
   shebaDigitsDisplay = '';
@@ -520,9 +521,16 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
     }
   }
 
+  openNewAccount(): void {
+    this.cancelEditAccount();
+    this.isAccountFormOpen = true;
+    this.cdr.markForCheck();
+  }
+
   editAccount(acc: CompanyBankAccount): void {
     // ویرایش رکورد آفلاین به نشانی شناسهٔ موقت می‌رود و هنگام ارسال ۴۰۴ می‌گیرد (E2)
     if (this.isPendingRecord(acc)) return;
+    this.isAccountFormOpen = true;
     this.isEditingAccount = true;
     this.editingAccountId = acc.id || null;
     this.newAccount = {
@@ -541,6 +549,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   }
 
   cancelEditAccount(): void {
+    this.isAccountFormOpen = false;
     this.isEditingAccount = false;
     this.editingAccountId = null;
     this.newAccount = this.getEmptyBankAccountData();
