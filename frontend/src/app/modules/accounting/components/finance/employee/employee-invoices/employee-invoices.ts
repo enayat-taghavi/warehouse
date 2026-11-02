@@ -162,6 +162,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   };
   /** شناسهٔ فاکتوری که در حال ویرایش است (null = فاکتور تازه) */
   editingInvoiceId: number | null = null;
+  editingInFlow = false;
   /** کاربر شرح کلی را خودش نوشته؛ تا وقتی false است شرح کلی از شرح ردیف اول پر می‌شود */
   descriptionTouched = false;
   // ─── ردیف‌ها، تخفیف و مالیات (۴.۱-ج؛ جمع‌های نهایی را سرور حساب می‌کند) ───
@@ -723,6 +724,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     }
     this.resetFormExtras();
     this.editingInvoiceId = null;
+    this.editingInFlow = false;
     this.newInvoice = {
       invoice_number: '',
       invoice_date_shamsi: this.todayShamsi,
@@ -750,14 +752,26 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     return inv.status === 'draft' || inv.status === 'revision_required';
   }
 
-  /** ویرایش پیش‌نویس (ردیف‌ها با یک درخواست جایگزین می‌شوند) */
+  /** رسید در مرحلهٔ بررسی حسابدار بدون پرداخت: امکان ویرایش مستقیم توسط حسابدار بررسی‌کننده */
+  isReviewEditable(inv: ExpenseInvoice): boolean {
+    if (!inv) return false;
+    const hasPaid = +(inv.paid_amount || 0) > 0;
+    return inv.my_step === 'accountant_review' && inv.status === 'pending_accountant' && !hasPaid;
+  }
+
+  canEditInvoice(inv: ExpenseInvoice): boolean {
+    return this.isEditable(inv) || this.isReviewEditable(inv);
+  }
+
+  /** ویرایش پیش‌نویس یا ویرایش رسید در مرحلهٔ بررسی حسابدار */
   openEditInvoiceModal(inv: ExpenseInvoice): void {
-    if (!inv.id || !this.isEditable(inv)) {
+    if (!inv.id || !this.canEditInvoice(inv)) {
       this.toast.show('warning', 'فقط رسیدهای پرداخت پیش‌نویس قابل ویرایش‌اند.');
       return;
     }
     this.resetFormExtras();
     this.editingInvoiceId = inv.id;
+    this.editingInFlow = !this.isEditable(inv);
     this.newInvoice = {
       section: inv.section,
       counterparty: inv.counterparty,
@@ -799,6 +813,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   closeNewInvoiceModal(): void {
     this.isNewInvoiceModalOpen = false;
     this.editingInvoiceId = null;
+    this.editingInFlow = false;
     if (this.duplicateTimer) clearTimeout(this.duplicateTimer);
     this.cdr.detectChanges();
   }
@@ -1193,6 +1208,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     const lines = this.linesPayload();
     const totals = this.totalsPayload();
     const editingId = this.editingInvoiceId;
+    const isReviewEdit = this.editingInFlow;
     const savedSectionId = this.formSectionId;
 
     // در صورت وجود پیوست از FormData استفاده می‌کنیم (`lines` به‌صورت رشتهٔ JSON؛ سرور می‌پذیرد)
@@ -1233,15 +1249,20 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         this.isSaving = false;
         if (!editingId) this.rememberSection(savedSectionId);
         const keptDate = this.newInvoice.invoice_date_shamsi || this.todayShamsi;
+        const invLbl = this.invoiceLabel(saved) || this.invoiceLabel(this.newInvoice);
         this.closeNewInvoiceModal();
         if (mode === 'send' && saved?.id) {
           // ارسال همان مسیر دکمهٔ «ارسال» است (دلیل تکراری و خطاها را خودش نشان می‌دهد)
           this.submitInvoice(saved);
           return;
         }
-        this.toast.show('success', editingId
-          ? `رسید پرداخت «${this.invoiceLabel(saved) || this.invoiceLabel(this.newInvoice)}» ویرایش شد.`
-          : `رسید پرداخت${this.invoiceLabel(saved) ? ` «${this.invoiceLabel(saved)}»` : ''} با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
+        if (isReviewEdit) {
+          this.toast.show('success', `تغییرات رسید پرداخت «${invLbl}» ذخیره شد و در سابقه ثبت شد.`);
+        } else {
+          this.toast.show('success', editingId
+            ? `رسید پرداخت «${invLbl}» ویرایش شد.`
+            : `رسید پرداخت${this.invoiceLabel(saved) ? ` «${this.invoiceLabel(saved)}»` : ''} با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
+        }
         if (mode === 'new') {
           this.openNewInvoiceModal();
           this.newInvoice.invoice_date_shamsi = keptDate;
@@ -1268,6 +1289,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
           this.showTotalsExtras = true;
           this.vatError = firstOf(e.vat_amount);
           this.toast.show('error', this.vatError);
+        } else if (e?.detail) {
+          this.toast.show('error', e.detail);
         } else {
           this.toast.show('error', 'خطا در ثبت رسید پرداخت: ' + (e?.error || err.message || 'نامشخص'));
         }

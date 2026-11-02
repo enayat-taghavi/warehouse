@@ -161,6 +161,9 @@
               <button type="button" appAction="send" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)"></button>
               <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)"></button>
             }
+            @if (isReviewEditable(inv)) {
+              <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)"></button>
+            }
             @if (inv.attachment) {
               <button type="button" appAction="view" display="icon" label="تصویر رسید پرداخت" size="sm" (click)="openAttachmentPreview(inv)"></button>
             }
@@ -332,6 +335,18 @@
                   hint="ویرایش رسید پرداخت پیش‌نویس">
                 </button>
 
+                <!-- ویرایش رسید در مرحلهٔ بررسی حسابدار -->
+                <button
+                  *ngIf="isReviewEditable(inv)"
+                  type="button"
+                  appAction="edit"
+                  label="ویرایش"
+                  size="sm"
+                  (click)="openEditInvoiceModal(inv)"
+                  [disabled]="isSaving"
+                  hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)">
+                </button>
+
                 <!-- چاپ / PDF -->
                 <button
                   type="button"
@@ -370,7 +385,7 @@
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
-                <span *ngIf="!isEditable(inv) && !roleActionsFor(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
+                <span *ngIf="!canEditInvoice(inv) && !roleActionsFor(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
                   <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg> قفل
                 </span>
               </div>
@@ -436,7 +451,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" tabindex="-1" (keydown.escape)="closeNewInvoiceModal()">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden fade-in max-h-[92vh] flex flex-col"
-      role="dialog" aria-modal="true" [attr.aria-label]="editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید'">
+      role="dialog" aria-modal="true" [attr.aria-label]="editingInFlow ? 'ویرایش رسید پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید')">
       
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -445,7 +460,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg>
           </div>
           <div>
-            <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید' }}</h3>
+            <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInFlow ? 'ویرایش رسید پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید') }}</h3>
             <p class="text-[11px] text-fg-muted font-medium">{{ formSection ? ('بخش «' + formSection.name + '» · ') : '' }}ذخیره به‌صورت پیش‌نویس</p>
           </div>
         </div>
@@ -471,7 +486,8 @@
               id="invoice_project"
               [(ngModel)]="formProjectId"
               (ngModelChange)="onFormProjectChange()"
-              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              [disabled]="editingInFlow"
+              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60">
               <option [ngValue]="null" disabled>پروژه را انتخاب کنید</option>
               @for (p of formProjects; track p.id) {
                 <option [ngValue]="p.id">{{ p.name }}</option>
@@ -484,7 +500,7 @@
               id="invoice_section"
               [(ngModel)]="formSectionId"
               (ngModelChange)="onFormSectionChange()"
-              [disabled]="!formProjectId"
+              [disabled]="editingInFlow || !formProjectId"
               class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60">
               <option [ngValue]="null" disabled>{{ formProjectId ? 'بخش را انتخاب کنید' : 'نخست پروژه را انتخاب کنید' }}</option>
               @for (s of formProjectSections; track s.id) {
@@ -822,21 +838,23 @@
         <button
           type="button"
           appAction="save"
-          label="ذخیره پیش‌نویس"
+          [label]="editingInFlow ? 'ذخیرهٔ تغییرات' : 'ذخیره پیش‌نویس'"
           tone="indigo"
           [busy]="isSaving"
           (click)="saveInvoice()">
         </button>
-        <button
-          type="button"
-          appAction="send"
-          label="ذخیره و ارسال به سرپرست"
-          tone="primary"
-          [hint]="isOffline ? 'ارسال فقط در حالت آنلاین ممکن است' : counterpartyShebaMissing ? 'طرف‌حساب شبای معتبر ندارد' : 'ذخیره و ارسال فوری به کارتابل سرپرست'"
-          [disabled]="isOffline || counterpartyShebaMissing"
-          [busy]="isSaving"
-          (click)="saveInvoice('send')">
-        </button>
+        @if (!editingInFlow) {
+          <button
+            type="button"
+            appAction="send"
+            label="ذخیره و ارسال به سرپرست"
+            tone="primary"
+            [hint]="isOffline ? 'ارسال فقط در حالت آنلاین ممکن است' : counterpartyShebaMissing ? 'طرف‌حساب شبای معتبر ندارد' : 'ذخیره و ارسال فوری به کارتابل سرپرست'"
+            [disabled]="isOffline || counterpartyShebaMissing"
+            [busy]="isSaving"
+            (click)="saveInvoice('send')">
+          </button>
+        }
       </div>
 
     </div>

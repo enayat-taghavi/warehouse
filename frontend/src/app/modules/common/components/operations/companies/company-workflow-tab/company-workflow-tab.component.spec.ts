@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Injector, runInInjectionContext } from '@angular/core';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { of, throwError } from 'rxjs';
 import { CompanyWorkflowTabComponent } from './company-workflow-tab.component';
 import { WorkflowApiService } from '../../../../../../core/api/workflow-api.service';
@@ -14,7 +15,12 @@ import {
   WorkflowDefinition
 } from '../../../../../../core/models/workflow.model';
 
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
 describe('CompanyWorkflowTabComponent', () => {
+  let fixture: ComponentFixture<CompanyWorkflowTabComponent>;
   let component: CompanyWorkflowTabComponent;
   let mockWorkflowApi: any;
   let mockOrgApi: any;
@@ -25,6 +31,7 @@ describe('CompanyWorkflowTabComponent', () => {
     company_id: 1,
     reminder_hours: 24,
     escalation_hours: 48,
+    creator_may_approve_own: false,
     is_default: false,
     updated_at: '2026-10-24T12:00:00Z'
   };
@@ -75,7 +82,7 @@ describe('CompanyWorkflowTabComponent', () => {
     { id: 102, name: 'بخش انبار مرکزی' }
   ];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockWorkflowApi = {
       getCompanySettings: vi.fn().mockReturnValue(of(sampleSettings)),
       saveCompanySettings: vi.fn().mockReturnValue(of(sampleSettings)),
@@ -97,19 +104,23 @@ describe('CompanyWorkflowTabComponent', () => {
       show: vi.fn()
     };
 
-    const injector = Injector.create({
+    await TestBed.configureTestingModule({
+      imports: [CompanyWorkflowTabComponent],
       providers: [
         { provide: WorkflowApiService, useValue: mockWorkflowApi },
         { provide: OrgStructureApiService, useValue: mockOrgApi },
         { provide: ConfirmDialogService, useValue: mockConfirmDialog },
         { provide: ToastService, useValue: mockToast }
       ]
-    });
+    }).compileComponents();
 
-    runInInjectionContext(injector, () => {
-      component = new CompanyWorkflowTabComponent();
-      component.companyId = 1;
-    });
+    fixture = TestBed.createComponent(CompanyWorkflowTabComponent);
+    component = fixture.componentInstance;
+    component.companyId = 1;
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('1. loads settings, definitions, sections and thresholds on init', () => {
@@ -170,7 +181,8 @@ describe('CompanyWorkflowTabComponent', () => {
 
     expect(mockWorkflowApi.saveCompanySettings).toHaveBeenCalledWith(1, {
       reminder_hours: 12,
-      escalation_hours: 48
+      escalation_hours: 48,
+      creator_may_approve_own: false
     });
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('ذخیره شد'));
   });
@@ -223,5 +235,54 @@ describe('CompanyWorkflowTabComponent', () => {
 
     expect(component.is403).toBe(true);
     expect(component.forbiddenMessage).toBe('اجازهٔ ویرایش تنظیمات گردش کار این شرکت را ندارید');
+  });
+
+  it('loads creator_may_approve_own into the checkbox', async () => {
+    mockWorkflowApi.getCompanySettings.mockReturnValue(
+      of({ ...sampleSettings, creator_may_approve_own: true })
+    );
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const checkbox = fixture.nativeElement.querySelector('#cwf-creator-self-approval') as HTMLInputElement;
+    expect(component.creatorMayApproveOwn).toBe(true);
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('save sends creator_may_approve_own', () => {
+    component.reminderHours = 24;
+    component.escalationHours = 48;
+    component.creatorMayApproveOwn = true;
+
+    component.saveCompanySettings();
+
+    expect(mockWorkflowApi.saveCompanySettings).toHaveBeenCalledWith(1, {
+      reminder_hours: 24,
+      escalation_hours: 48,
+      creator_may_approve_own: true
+    });
+    expect(mockToast.show).toHaveBeenCalledWith('success', 'تنظیمات گردش کار با موفقیت ذخیره شد.');
+  });
+
+  it('checkbox defaults to unchecked when the field is missing', async () => {
+    mockWorkflowApi.getCompanySettings.mockReturnValue(
+      of({
+        company_id: 1,
+        reminder_hours: 24,
+        escalation_hours: 48,
+        is_default: false,
+        updated_at: null
+      } as any)
+    );
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const checkbox = fixture.nativeElement.querySelector('#cwf-creator-self-approval') as HTMLInputElement;
+    expect(component.creatorMayApproveOwn).toBe(false);
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.checked).toBe(false);
   });
 });

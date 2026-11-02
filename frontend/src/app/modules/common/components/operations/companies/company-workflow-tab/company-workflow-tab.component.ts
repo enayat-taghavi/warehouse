@@ -55,6 +55,7 @@ export class CompanyWorkflowTabComponent implements OnInit, OnChanges {
   settings: WorkflowCompanySettings | null = null;
   reminderHours: number = 24;
   escalationHours: number = 72;
+  creatorMayApproveOwn: boolean = false;
   settingsErrors: { reminder?: string; escalation?: string } = {};
 
   // سقف‌های تایید مبلغ
@@ -108,6 +109,7 @@ export class CompanyWorkflowTabComponent implements OnInit, OnChanges {
         this.settings = res;
         this.reminderHours = res.reminder_hours;
         this.escalationHours = res.escalation_hours;
+        this.creatorMayApproveOwn = !!res?.creator_may_approve_own;
         this.loading = false;
         this.cdr?.markForCheck();
       },
@@ -201,13 +203,14 @@ export class CompanyWorkflowTabComponent implements OnInit, OnChanges {
     this.workflowApi
       .saveCompanySettings(this.companyId, {
         reminder_hours: Number(this.reminderHours),
-        escalation_hours: Number(this.escalationHours)
-      })
+        escalation_hours: Number(this.escalationHours),
+        creator_may_approve_own: !!this.creatorMayApproveOwn
+      } as any)
       .subscribe({
         next: (res) => {
           this.savingSettings = false;
           this.settings = res;
-          this.toast?.show?.('success', 'تنظیمات یادآوری با موفقیت ذخیره شد.');
+          this.toast?.show?.('success', 'تنظیمات گردش کار با موفقیت ذخیره شد.');
           this.cdr?.markForCheck();
         },
         error: (err) => {

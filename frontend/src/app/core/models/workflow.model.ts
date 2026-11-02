@@ -186,6 +186,8 @@ export interface WorkflowCompanySettings {
   company_id: number;
   reminder_hours: number;
   escalation_hours: number;
+  /** امکان تأیید رسید پرداخت توسط ایجادکننده */
+  creator_may_approve_own: boolean;
   /** هنوز ذخیره نشده و پیش‌فرض است */
   is_default: boolean;
   updated_at: string | null;
