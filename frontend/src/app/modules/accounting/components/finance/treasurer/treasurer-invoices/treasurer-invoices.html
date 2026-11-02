@@ -405,7 +405,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-end gap-2">
-          <p *ngIf="!payReceipt" id="pay-receipt-need" class="me-auto text-[11px] text-fg-muted">برای ثبت قسط، نخست سند واریز را پیوست کنید.</p>
+          <p *ngIf="!payReceipt" id="pay-receipt-need" class="me-auto text-[11px] text-fg-muted">برای پرداخت، نخست سند واریز را پیوست کنید.</p>
           <button type="button" appAction="close" label="انصراف" size="sm" (click)="closePayModal()"></button>
           <button type="submit" appAction="confirm" label="پرداخت" size="sm" [busy]="isPaying" [disabled]="!payReceipt"
             [hint]="payReceipt ? '' : 'نخست سند واریز را پیوست کنید'"></button>
