@@ -9,6 +9,7 @@ import { WorkflowHistoryComponent } from './workflow-history.component';
 import { WorkflowApiService } from '../../../core/api/workflow-api.service';
 import { WorkflowTasksService } from '../../../core/services/workflow-tasks.service';
 import { WorkflowHistory, WorkflowTaskEvent } from '../../../core/models/workflow.model';
+import { WebSocketService } from '../../../core/http/websocket.service';
 
 describe('WorkflowHistoryComponent', () => {
   let component: WorkflowHistoryComponent;
@@ -143,6 +144,61 @@ describe('WorkflowHistoryComponent', () => {
     // When can_cancel is false
     instance!.can_cancel = false;
     expect(instance?.can_cancel).toBe(false);
+  });
+
+  it('refetches history on document_changed for open entity silently, ignores other ids, and keeps history on error', () => {
+    const doc$ = new Subject<any>();
+    const mockWs = {
+      documentChanges$: vi.fn(() => doc$.asObservable())
+    };
+
+    let loadingDuringCall: boolean | undefined;
+    const historyApi = {
+      getHistory: vi.fn().mockImplementation(() => {
+        loadingDuringCall = comp.loading;
+        return of(sampleHistory);
+      })
+    };
+
+    const injector = Injector.create({
+      providers: [
+        { provide: WorkflowApiService, useValue: historyApi },
+        { provide: WorkflowTasksService, useValue: { events$: new Subject() } },
+        { provide: WebSocketService, useValue: mockWs }
+      ]
+    });
+
+    let comp!: WorkflowHistoryComponent;
+    runInInjectionContext(injector, () => {
+      comp = new WorkflowHistoryComponent();
+    });
+
+    comp.kind = 'expense_invoice';
+    comp.entityId = 7;
+    comp.ngOnInit();
+
+    expect(historyApi.getHistory).toHaveBeenCalledWith('expense_invoice', 7);
+    expect(comp.history).toEqual(sampleHistory);
+    historyApi.getHistory.mockClear();
+
+    // 1. Event for doc_id 7 calls getHistory again and loading stays false during call
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 7 });
+    expect(historyApi.getHistory).toHaveBeenCalledTimes(1);
+    expect(historyApi.getHistory).toHaveBeenCalledWith('expense_invoice', 7);
+    expect(loadingDuringCall).toBe(false);
+    expect(comp.loading).toBe(false);
+
+    // 2. Event for doc_id 8 makes no call
+    historyApi.getHistory.mockClear();
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 8 });
+    expect(historyApi.getHistory).not.toHaveBeenCalled();
+
+    // 3. Silent reload that errors keeps previous history and leaves hasError false
+    historyApi.getHistory.mockReturnValue(throwError(() => new Error('Server error')));
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 7 });
+    expect(comp.history).toEqual(sampleHistory);
+    expect(comp.hasError).toBe(false);
+    expect(comp.loading).toBe(false);
   });
 });
 

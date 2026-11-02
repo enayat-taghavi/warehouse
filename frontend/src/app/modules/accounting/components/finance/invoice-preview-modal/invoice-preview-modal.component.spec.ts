@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { InvoicePreviewModalComponent } from './invoice-preview-modal.component';
 
 describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه فاکتور', () => {
@@ -165,5 +165,39 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     expect(component.faAmount('')).toBe('—');
     const formatted = component.faAmount(15000000);
     expect(formatted.replace(/[\u06F0-\u06F90-9,\u066C]/g, '')).toBe('');
+  });
+
+  it('11. live refetch: event for open invoice silently reloads details, other events or when closed do not, and unsubscribes on destroy', () => {
+    const doc$ = new Subject<any>();
+    const mockWs = {
+      documentChanges$: vi.fn(() => doc$.asObservable())
+    };
+    const modal = new InvoicePreviewModalComponent(mockTreasuryApi, mockPrintService, mockCdr, mockWs as any);
+    modal.ngOnInit();
+
+    modal.isOpen = true;
+    modal.invoiceId = 5;
+    mockTreasuryApi.getExpenseInvoice.mockClear();
+
+    // Event with doc_id 5 when isOpen = true
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 5 });
+    expect(mockTreasuryApi.getExpenseInvoice).toHaveBeenCalledWith(5);
+    expect(modal.isLoading).toBe(false);
+
+    // Event with doc_id 6 when isOpen = true -> no call
+    mockTreasuryApi.getExpenseInvoice.mockClear();
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 6 });
+    expect(mockTreasuryApi.getExpenseInvoice).not.toHaveBeenCalled();
+
+    // Event with doc_id 5 when isOpen = false -> no call
+    modal.isOpen = false;
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 5 });
+    expect(mockTreasuryApi.getExpenseInvoice).not.toHaveBeenCalled();
+
+    // After ngOnDestroy -> no call even when open
+    modal.isOpen = true;
+    modal.ngOnDestroy();
+    doc$.next({ doc_type: 'expense_invoice', doc_id: 5 });
+    expect(mockTreasuryApi.getExpenseInvoice).not.toHaveBeenCalled();
   });
 });

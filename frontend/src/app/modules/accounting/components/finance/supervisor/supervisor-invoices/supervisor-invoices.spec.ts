@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { SupervisorInvoicesHubComponent } from './supervisor-invoices';
 
 describe('SupervisorInvoicesHubComponent — تایید فاکتورهای سرپرست و پیش‌نمایش/سابقه', () => {
@@ -99,6 +99,34 @@ describe('SupervisorInvoicesHubComponent — تایید فاکتورهای سر�
     expect(compWithInvalidQuery.selectedSectionId).toBeNull();
     const lastCall = mockPersonnelApi.getExpenseInvoices.mock.calls.at(-1)?.[0];
     expect(lastCall).not.toHaveProperty('section_id');
+  });
+
+  it('emitting on the live subject after ngOnInit() calls getExpenseInvoices again; after ngOnDestroy() it does not', () => {
+    const live$ = new Subject<void>();
+    const mockWs = {
+      liveRefresh$: vi.fn(() => live$.asObservable())
+    };
+    const compWithWs = new SupervisorInvoicesHubComponent(
+      {} as any,
+      {} as any,
+      mockToast,
+      mockPersonnelApi,
+      { navigate: vi.fn() } as any,
+      { queryParams: of({}) } as any,
+      { detectChanges: vi.fn() } as any,
+      mockPrintService,
+      mockWs as any
+    );
+
+    compWithWs.ngOnInit();
+    const callsAfterInit = mockPersonnelApi.getExpenseInvoices.mock.calls.length;
+
+    live$.next();
+    expect(mockPersonnelApi.getExpenseInvoices).toHaveBeenCalledTimes(callsAfterInit + 1);
+
+    compWithWs.ngOnDestroy();
+    live$.next();
+    expect(mockPersonnelApi.getExpenseInvoices).toHaveBeenCalledTimes(callsAfterInit + 1);
   });
 });
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { TreasurerInvoicesComponent } from './treasurer-invoices';
 
 describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پرداخت', () => {
@@ -49,5 +49,30 @@ describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پ
     component.closePreview();
     expect(component.previewModalOpen).toBe(false);
     expect(component.previewInvoiceId).toBeNull();
+  });
+
+  it('emitting on the live subject after ngOnInit() calls getTreasuryCartable again; after ngOnDestroy() it does not', () => {
+    const live$ = new Subject<void>();
+    const mockWs = {
+      liveRefresh$: vi.fn(() => live$.asObservable())
+    };
+    const comp = new TreasurerInvoicesComponent(
+      {} as any, {} as any, mockToast, mockPersonnelApi,
+      {} as any, {} as any, {} as any,
+      { navigate: vi.fn() } as any,
+      { queryParams: of({}) } as any,
+      { detectChanges: vi.fn() } as any,
+      mockWs as any
+    );
+
+    comp.ngOnInit();
+    const callsAfterInit = mockPersonnelApi.getTreasuryCartable.mock.calls.length;
+
+    live$.next();
+    expect(mockPersonnelApi.getTreasuryCartable).toHaveBeenCalledTimes(callsAfterInit + 1);
+
+    comp.ngOnDestroy();
+    live$.next();
+    expect(mockPersonnelApi.getTreasuryCartable).toHaveBeenCalledTimes(callsAfterInit + 1);
   });
 });

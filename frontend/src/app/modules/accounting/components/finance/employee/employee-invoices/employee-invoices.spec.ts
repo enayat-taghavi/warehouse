@@ -846,5 +846,119 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
     });
   });
+
+  describe('Live refresh after reconnect/resume and status tab / open detail patch (Step D)', () => {
+    let live$: Subject<void>;
+    let doc$: Subject<any>;
+    let mockWs: any;
+    let liveComponent: EmployeeInvoicesHubComponent;
+
+    beforeEach(() => {
+      live$ = new Subject<void>();
+      doc$ = new Subject<any>();
+      mockWs = {
+        liveRefresh$: vi.fn(() => live$.asObservable()),
+        documentChanges$: vi.fn(() => doc$.asObservable())
+      };
+      mockTreasuryOrgApi.getExpenseInvoice = vi.fn().mockReturnValue(of({ id: 5, invoice_number: 'INV-5' }));
+
+      liveComponent = new EmployeeInvoicesHubComponent(
+        mockAuth,
+        mockPersonnelApi,
+        mockToast,
+        mockCdr,
+        mockRoute,
+        mockRouter,
+        undefined,
+        mockTreasuryOrgApi,
+        undefined,
+        mockWs
+      );
+    });
+
+    it('(a) after ngOnInit(), emitting on the live subject calls getExpenseInvoicesPage once more', () => {
+      liveComponent.ngOnInit();
+      const initialCalls = mockTreasuryOrgApi.getExpenseInvoicesPage.mock.calls.length;
+      live$.next();
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledTimes(initialCalls + 1);
+    });
+
+    it('(b) with invoices = [{ id: 1, status: "pending_supervisor" }] and statusFilter = "pending_supervisor", a status_changed event for id 1 with status: "pending_accountant" sets the row status to pending_accountant and calls getExpenseInvoicesPage again', () => {
+      liveComponent.ngOnInit();
+      const row = { id: 1, status: 'pending_supervisor' };
+      liveComponent.invoices = [row as any];
+      liveComponent.statusFilter = 'pending_supervisor';
+      mockTreasuryOrgApi.getExpenseInvoicesPage.mockImplementation(() => of({
+        count: 1,
+        results: [row]
+      }));
+      const callsBefore = mockTreasuryOrgApi.getExpenseInvoicesPage.mock.calls.length;
+
+      doc$.next({
+        action: 'status_changed',
+        doc_type: 'expense_invoice',
+        doc_id: 1,
+        status: 'pending_accountant'
+      });
+
+      expect(row.status).toBe('pending_accountant');
+      expect(liveComponent.invoices[0].status).toBe('pending_accountant');
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledTimes(callsBefore + 1);
+    });
+
+    it('(c) the same event with statusFilter = "all" patches the row and does NOT call getExpenseInvoicesPage', () => {
+      liveComponent.ngOnInit();
+      const row = { id: 1, status: 'pending_supervisor' };
+      liveComponent.invoices = [row as any];
+      liveComponent.statusFilter = 'all';
+      const callsBefore = mockTreasuryOrgApi.getExpenseInvoicesPage.mock.calls.length;
+
+      doc$.next({
+        action: 'status_changed',
+        doc_type: 'expense_invoice',
+        doc_id: 1,
+        status: 'pending_accountant'
+      });
+
+      expect(row.status).toBe('pending_accountant');
+      expect(liveComponent.invoices[0].status).toBe('pending_accountant');
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledTimes(callsBefore);
+    });
+
+    it('(d) with isDetailPanelOpen = true and selectedInvoiceDetail = { id: 5 }, an event with doc_id: 5 calls getExpenseInvoice(5) and isLoadingDetail stays false; an event with doc_id: 6 does not call getExpenseInvoice', () => {
+      liveComponent.ngOnInit();
+      liveComponent.isDetailPanelOpen = true;
+      liveComponent.selectedInvoiceDetail = { id: 5 } as any;
+
+      doc$.next({
+        action: 'status_changed',
+        doc_type: 'expense_invoice',
+        doc_id: 5,
+        status: 'pending_supervisor'
+      });
+
+      expect(mockTreasuryOrgApi.getExpenseInvoice).toHaveBeenCalledWith(5);
+      expect(liveComponent.isLoadingDetail).toBe(false);
+
+      mockTreasuryOrgApi.getExpenseInvoice.mockClear();
+
+      doc$.next({
+        action: 'status_changed',
+        doc_type: 'expense_invoice',
+        doc_id: 6,
+        status: 'pending_supervisor'
+      });
+
+      expect(mockTreasuryOrgApi.getExpenseInvoice).not.toHaveBeenCalled();
+    });
+
+    it('(e) after ngOnDestroy(), emitting on the live subject makes no new call', () => {
+      liveComponent.ngOnInit();
+      liveComponent.ngOnDestroy();
+      const callsBefore = mockTreasuryOrgApi.getExpenseInvoicesPage.mock.calls.length;
+      live$.next();
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledTimes(callsBefore);
+    });
+  });
 });
 

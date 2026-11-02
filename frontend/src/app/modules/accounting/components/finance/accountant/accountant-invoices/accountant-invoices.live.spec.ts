@@ -17,11 +17,13 @@ describe('AccountantInvoicesHubComponent live document_changed', () => {
   let api: any;
   let ws: any;
   let subject: Subject<any>;
+  let liveSubject: Subject<void>;
   let toast: any;
   let router: any;
 
   beforeEach(() => {
     subject = new Subject<any>();
+    liveSubject = new Subject<void>();
 
     api = {
       getMySections: vi.fn(() => of([{ id: 11 }])),
@@ -33,7 +35,8 @@ describe('AccountantInvoicesHubComponent live document_changed', () => {
     };
 
     ws = {
-      documentChanges$: vi.fn(() => subject.asObservable())
+      documentChanges$: vi.fn(() => subject.asObservable()),
+      liveRefresh$: vi.fn(() => liveSubject.asObservable())
     };
 
     toast = {
@@ -121,6 +124,18 @@ describe('AccountantInvoicesHubComponent live document_changed', () => {
       section_id: 12
     });
 
+    expect(api.getExpenseInvoices).not.toHaveBeenCalled();
+  });
+
+  it('5. emitting on the live subject after ngOnInit calls getExpenseInvoices again', () => {
+    liveSubject.next();
+    expect(api.getExpenseInvoices).toHaveBeenCalledTimes(1);
+  });
+
+  it('6. after ngOnDestroy emitting on the live subject makes no call', () => {
+    fixture.destroy();
+    api.getExpenseInvoices.mockClear();
+    liveSubject.next();
     expect(api.getExpenseInvoices).not.toHaveBeenCalled();
   });
 });
