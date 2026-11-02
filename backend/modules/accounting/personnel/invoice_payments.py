@@ -186,26 +186,57 @@ def _audit(action, payment, invoice, user, details=None):
 
 INSTALLMENT_NOTIFICATION_TYPE = 'invoice_installment'
 INSTALLMENT_TITLE_FA = 'قسطی از رسید پرداخت شما پرداخت شد'
+PATH_PAYMENT_TITLE_FA = 'پرداختی برای رسید پرداخت ثبت شد'
 
 
-def _notify_creator_installment(invoice, payment, user):
+def _path_user_ids(invoice):
     """
-    گام د طرح اصلاح فاکتور: اعلان قسط فقط به ثبت‌کنندهٔ همان فاکتور (نه پرداخت‌کنندهٔ خودش)، پس از commit.
-    قسط آخر اعلان جدا ندارد: پایان گردش همان «گردش سند شما پایان یافت» را به ثبت‌کننده می‌فرستد.
+    افراد مسیر رسید: ثبت‌کننده، انجام‌دهندگان و صاحبان کار (به جانشینی) در ارسال/تأیید/ویرایش گردش همین رسید،
+    و پرداخت‌کنندگان قسط‌های پیشین (باطل‌نشده).
     """
+    from workflow.models import WorkflowStep
+    ids = {invoice.created_by_id}
+    steps = WorkflowStep.objects.filter(
+        instance__workflow_key=INVOICE_WORKFLOW, instance__entity_kind=INVOICE_ENTITY,
+        instance__entity_id=invoice.pk,
+        action__in=(WorkflowStep.SUBMIT, WorkflowStep.ACT, WorkflowStep.EDIT),
+    ).values_list('actor_id', 'on_behalf_of_id')
+    for actor_id, principal_id in steps:
+        ids.update((actor_id, principal_id))
+    ids.update(invoice.payments.filter(voided_at__isnull=True).values_list('created_by_id', flat=True))
+    ids.discard(None)
+    return ids
+
+
+def _notify_path_payment(invoice, payment, user, *, final=False):
+    """
+    گام ی طرح اصلاح فاکتور: با هر پرداخت خزانه‌دار، اعلان به همهٔ افراد مسیر جز خود پرداخت‌کننده؛ فقط کاربران
+    فعال با عضویت فعال در شرکت رسید (همان قاعدهٔ گیرندگان موتور). پس از commit فرستاده می‌شود.
+    پرداخت آخر برای ثبت‌کننده اعلان جدا ندارد (پایان گردش خبرش می‌دهد)؛ بقیهٔ مسیر آن را هم می‌گیرند.
+    """
+    from django.contrib.auth import get_user_model
     from notifications.services import notify_users
+    from workflow.recipients import company_member_pairs
     from .workflows import INVOICE_WORKFLOW_SPEC
-    creator_id = invoice.created_by_id
-    if not creator_id or creator_id == getattr(user, 'pk', None):
+    company_id = _company_id(invoice)
+    ids = _path_user_ids(invoice)
+    ids.discard(getattr(user, 'pk', None))
+    if not ids:
         return
+    active = set(get_user_model().objects.filter(pk__in=ids, is_active=True).values_list('pk', flat=True))
+    allowed = {u for u, _c in company_member_pairs(active, {company_id})}
+    creator_id = invoice.created_by_id
     label = invoice.number or invoice.invoice_number or str(invoice.pk)
     message = (f'رسید پرداخت «{label}»: {payment.amount:,.0f} ریال پرداخت شد؛ '
                f'مانده {invoice_remaining(invoice):,.0f} ریال.')
-    notify_users(
-        [creator_id], title=INSTALLMENT_TITLE_FA, message=message,
-        notification_type=INSTALLMENT_NOTIFICATION_TYPE, target_model='ExpenseInvoice', target_id=invoice.pk,
-        url=INVOICE_WORKFLOW_SPEC.route.replace('{id}', str(invoice.pk)), company_id=_company_id(invoice),
-    )
+    common = dict(message=message, notification_type=INSTALLMENT_NOTIFICATION_TYPE, target_model='ExpenseInvoice',
+                  target_id=invoice.pk, url=INVOICE_WORKFLOW_SPEC.route.replace('{id}', str(invoice.pk)),
+                  company_id=company_id)
+    if creator_id in allowed and not final:
+        notify_users([creator_id], title=INSTALLMENT_TITLE_FA, **common)
+    others = sorted(allowed - {creator_id})
+    if others:
+        notify_users(others, title=PATH_PAYMENT_TITLE_FA, **common)
 
 
 def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=None):
@@ -252,12 +283,13 @@ def add_payment(user, invoice_id, data, *, revision=None, legacy=False, receipt=
         if invoice_remaining(invoice) == 0:
             # مانده صفر: پایان گردش در همین تراکنش؛ قلاب وضعیت را «پرداخت‌شده» می‌کند و رویداد زنده می‌فرستد
             wf_engine.act(user, task, reason=fields['notes'], revision=revision, obj=invoice)
+            _notify_path_payment(invoice, payment, user, final=True)
         else:
             if invoice.status != 'partially_paid':
                 invoice.status = 'partially_paid'
                 invoice.save(update_fields=['status', 'updated_at'])
             notify_document_changed(invoice, 'updated')
-            _notify_creator_installment(invoice, payment, user)
+            _notify_path_payment(invoice, payment, user)
     return payment, invoice
 
 
