@@ -28,6 +28,7 @@ A chain whose state file does not exist yet is NO_STATE, so its task is gated be
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -145,6 +146,19 @@ def peek():
     return 'BUSY' if now() - since < timedelta(hours=STALE_HOURS) else 'STALE'
 
 
+def chain_of_task(prompt):
+    """Chain of a scheduled-task prompt: exact task name, or the name without a recreated-task suffix
+    (`invoice-fixes-chain-2` -> `invoice-fixes-chain`); None for any other prompt."""
+    m = re.search(r'<scheduled-task name="([^"]+)"', prompt)
+    if not m:
+        return None
+    name = m.group(1)
+    if name in CHAINS:
+        return name
+    base = re.sub(r'-\d+$', '', name)
+    return base if base in CHAINS else None
+
+
 def gate():
     """UserPromptSubmit hook: stop a scheduled chain run before the model is called when there is nothing to do.
 
@@ -152,7 +166,7 @@ def gate():
     """
     try:
         prompt = json.load(sys.stdin).get('prompt') or ''
-        name = next((n for n in CHAINS if f'<scheduled-task name="{n}"' in prompt), None)
+        name = chain_of_task(prompt)
         if name is None:
             return 0
         select_chain(name)
