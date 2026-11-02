@@ -323,12 +323,21 @@
 
           <div *ngIf="needsCompanyAccount">
             <label for="pay-company-account" class="block font-bold mb-1">حساب بانکی شرکت <span class="text-rose-500" aria-hidden="true">*</span></label>
-            <select id="pay-company-account" name="payCompanyAccount" [(ngModel)]="payCompanyAccount" aria-describedby="pay-company-err"
-              class="w-full min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              [class.border-rose-400]="payFieldErrors['company_bank_account']">
-              <option [ngValue]="null">انتخاب حساب...</option>
-              <option *ngFor="let a of companyAccounts" [ngValue]="a.id">{{ a.bank_name }}{{ a.account_title ? ' - ' + a.account_title : '' }}</option>
-            </select>
+            <div class="flex items-center gap-2">
+              <select id="pay-company-account" name="payCompanyAccount" [(ngModel)]="payCompanyAccount" aria-describedby="pay-company-err"
+                class="flex-1 min-w-0 min-h-[40px] bg-surface border border-line rounded-xl px-3 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                [class.border-rose-400]="payFieldErrors['company_bank_account']">
+                <option [ngValue]="null">انتخاب حساب...</option>
+                <option *ngFor="let a of companyAccounts" [ngValue]="a.id">{{ a.bank_name }}{{ a.account_title ? ' - ' + a.account_title : '' }}</option>
+              </select>
+              <!-- ورود به سایت اینترنت‌بانک حساب انتخاب‌شده در تب تازه -->
+              <a *ngIf="selectedCompanyBankUrl as bankUrl" [href]="bankUrl" target="_blank" rel="noopener noreferrer" data-company-bank-link
+                title="ورود به سایت بانک (تب تازه)" aria-label="ورود به سایت بانک (تب تازه)"
+                class="shrink-0 inline-flex items-center justify-center gap-1.5 min-h-[40px] min-w-[40px] px-2 sm:px-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg appIcon="external-link" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <span class="hidden sm:inline">ورود به سایت بانک</span>
+              </a>
+            </div>
             <p *ngIf="payFieldErrors['company_bank_account']" id="pay-company-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['company_bank_account'] }}</p>
           </div>
 

@@ -476,4 +476,43 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('TRK-777');
   });
+
+  it('k) the bank website link shows only for a company account with a safe https URL and opens in a new tab', async () => {
+    component.payInvoice(component.invoices[0]);
+    component.payMethod = 'transfer';
+    component.companyAccounts = [
+      { id: 5, company: 1, bank_name: 'Mellat', sheba_number: 'IR1', is_primary: true, is_active: true, internet_bank_url: 'https://ib.bankmellat.ir' },
+      { id: 6, company: 1, bank_name: 'Melli', sheba_number: 'IR2', is_primary: false, is_active: true, internet_bank_url: '' },
+      { id: 7, company: 1, bank_name: 'Tejarat', sheba_number: 'IR3', is_primary: false, is_active: true, internet_bank_url: 'javascript:alert(1)' }
+    ];
+    component.payCompanyAccount = 5;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // pick through the select so the ngModel event also refreshes the modal view
+    const pickCompanyAccount = async (id: number) => {
+      const select = fixture.nativeElement.querySelector('#pay-company-account') as HTMLSelectElement;
+      const index = component.companyAccounts.findIndex(a => a.id === id) + 1;
+      select.value = select.options[index].value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    const link = fixture.nativeElement.querySelector('[data-company-bank-link]') as HTMLAnchorElement;
+    expect(link).toBeTruthy();
+    expect(link.getAttribute('href')).toBe('https://ib.bankmellat.ir');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.getAttribute('aria-label')).toBeTruthy();
+
+    await pickCompanyAccount(6);
+    expect(component.payCompanyAccount).toBe(6);
+    expect(fixture.nativeElement.querySelector('[data-company-bank-link]')).toBeNull();
+
+    await pickCompanyAccount(7);
+    expect(component.payCompanyAccount).toBe(7);
+    expect(fixture.nativeElement.querySelector('[data-company-bank-link]')).toBeNull();
+  });
 });

@@ -13,7 +13,7 @@ import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { ProjectSection, InvoicePayment, InvoicePaymentMethod, PartyBankAccount } from '../../../../models/personnel.model';
 import { TreasuryOrgApiService } from '../../../../api/treasury-org-api.service';
 import { CompanyApiService } from '../../../../../../core/api/company-api.service';
-import { CompanyBankAccount } from '../../../../../../core/models/company.model';
+import { CompanyBankAccount, isSafeBankUrl } from '../../../../../../core/models/company.model';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
 import { AmountInputComponent } from '../../../../../../shared/components/amount-input/amount-input.component';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
@@ -272,6 +272,16 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   get selectedPartyAccount(): PartyBankAccount | null {
     return this.partyAccounts.find(a => a.id === this.payPartyAccount) || null;
+  }
+
+  get selectedCompanyAccount(): CompanyBankAccount | null {
+    return this.companyAccounts.find(a => a.id === this.payCompanyAccount) || null;
+  }
+
+  /** آدرس سایت بانکِ حساب انتخاب‌شدهٔ شرکت؛ فقط https (دفاع دوم پس از سرور) */
+  get selectedCompanyBankUrl(): string | null {
+    const url = (this.selectedCompanyAccount?.internet_bank_url || '').trim();
+    return isSafeBankUrl(url) ? url : null;
   }
 
   /** کلیدِ آخرین مقدار کپی‌شده برای نشانهٔ «کپی شد» کنار همان دکمه */

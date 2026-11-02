@@ -204,7 +204,7 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'company', 'company_name', 'bank_name', 'account_number',
             'sheba_number', 'account_title', 'is_primary', 'is_active',
-            'opening_balance', 'opening_balance_date', 'has_movements',
+            'opening_balance', 'opening_balance_date', 'internet_bank_url', 'has_movements',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -235,6 +235,21 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
         if not day:
             raise serializers.ValidationError("تاریخ نامعتبر است.")
         return day
+
+    def validate_internet_bank_url(self, value):
+        # فقط https با میزبان معتبر؛ javascript:، http: و آدرس بی میزبان رد می‌شوند (گام ب طرح اصلاح فاکتور)
+        value = (value or '').strip()
+        if not value:
+            return ''
+        from urllib.parse import urlsplit
+        try:
+            parts = urlsplit(value)
+            host = parts.hostname
+        except ValueError:
+            parts, host = None, None
+        if not parts or parts.scheme.lower() != 'https' or not host or any(ch.isspace() for ch in value):
+            raise serializers.ValidationError("آدرس سایت بانک باید با https:// شروع شود.")
+        return value
 
     def validate_sheba_number(self, value):
         if not value:

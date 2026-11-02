@@ -94,6 +94,8 @@ class CompanyBankAccount(models.Model):
     # موجودی اولیه (ص۱ طرح ۳.۳): ریال، منفی نه؛ فقط با کنش «تغییر موجودی اولیه» عوض می‌شود
     opening_balance = models.DecimalField(max_digits=15, decimal_places=0, default=0, verbose_name="موجودی اولیه (ریال)")
     opening_balance_date = models.CharField(max_length=10, null=True, blank=True, verbose_name="تاریخ موجودی اولیه (شمسی)")
+    # آدرس سایت اینترنت‌بانک (گام ب طرح اصلاح فاکتور): فقط https، در سریالایزر بررسی می‌شود
+    internet_bank_url = models.CharField(max_length=300, blank=True, default='', verbose_name="آدرس سایت بانک")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
 

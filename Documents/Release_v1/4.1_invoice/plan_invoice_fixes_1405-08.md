@@ -32,4 +32,12 @@
 - بررسی‌نشده: آیفون واقعی و صفحه‌های پشت ورود (کاربر یا Antigravity باید روی آیفون ببیند).
 - بعدی: گام ب با `scratch/brief_invoice_fix_B.md`.
 
+### گام ب — انجام شد (۱۱ آبان ۱۴۰۵)
+- مدل: `CompanyBankAccount.internet_bank_url` (`CharField(300, blank, default='')`)؛ مهاجرت افزایشی `personnel/0002_companybankaccount_internet_bank_url` (فقط `ADD COLUMN`، بی بازنویسی داده؛ نام با رکوردهای `django_migrations` برخورد ندارد). روی پایگاه `app` با پشتیبان پیش از آن اجرا شد؛ `soft` هنوز نه (با انتشار بعدی).
+- سریالایزر: `validate_internet_bank_url` فقط `https://` با میزبان؛ `http:`، `javascript:`، `data:`، بی میزبان و فاصله رد؛ خالی = `''`.
+- فرانت: تابع مشترک `isSafeBankUrl` در `core/models/company.model.ts`؛ فیلد «آدرس سایت بانک (اختیاری)» در فرم حساب شرکت (ساخت و ویرایش، خطای درجا)؛ در فرم پرداخت خزانه‌دار کنار حساب شرکت پیوند «ورود به سایت بانک» (`target=_blank`، `rel="noopener noreferrer"`، آیکن `external-link`، برچسب فقط از `sm` به بالا، ۴۰×۴۰) فقط برای آدرس امن.
+- تست‌ها: `personnel.test_company_bank_url` (۴ سبز)؛ تست k در `treasurer-invoices-payments.dom.spec.ts`؛ سه فایل، ۴۰ تست سبز (tsconfig موقت، پاک شد). نگهبان‌های ۲۹، ۵۲، ۵۶ (`--base 5678685c`)، ۵۷، ۵۸ سبز؛ `manage.py check` سالم.
+- بررسی‌نشده: نمای واقعی فرم پشت ورود (Antigravity یا کاربر).
+- بعدی: گام ج با `scratch/brief_invoice_fix_C.md`.
+
 </div>

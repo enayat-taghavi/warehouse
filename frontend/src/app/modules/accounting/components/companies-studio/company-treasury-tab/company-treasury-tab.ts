@@ -6,7 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CompaniesStudioFacade } from '../companies-studio.facade';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
-import { CompanyBankAccount, CompanyBankOpeningBalancePayload, CompanyBankOpeningHistoryEntry } from '../../../../../core/models/company.model';
+import { CompanyBankAccount, CompanyBankOpeningBalancePayload, CompanyBankOpeningHistoryEntry, isSafeBankUrl } from '../../../../../core/models/company.model';
 import { CompanyStudioContextService } from '../../../../../core/services/company-studio-context.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
@@ -81,7 +81,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
 
   newAccount = this.getEmptyBankAccountData();
   /** خطای کنار فیلدهای موجودی اولیه در فرم ساخت (۳.۳) */
-  createFieldErrors: Partial<Record<'opening_balance' | 'opening_balance_date', string>> = {};
+  createFieldErrors: Partial<Record<'opening_balance' | 'opening_balance_date' | 'internet_bank_url', string>> = {};
   isCreateDatePickerOpen = false;
   createDateControl = new FormControl('');
 
@@ -189,7 +189,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   hasPendingForm(): boolean {
     const acc = this.newAccount;
     return this.isEditingAccount || !!this.openingAccount
-      || !!(acc.bank_name || acc.sheba_number || acc.account_number || acc.account_title || acc.opening_balance || acc.opening_balance_date);
+      || !!(acc.bank_name || acc.sheba_number || acc.account_number || acc.account_title || acc.internet_bank_url || acc.opening_balance || acc.opening_balance_date);
   }
 
   /** شمارندهٔ تب از context به هستهٔ استودیو می‌رسد */
@@ -419,6 +419,12 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
     }
 
     this.createFieldErrors = {};
+    const bankUrl = (this.newAccount.internet_bank_url || '').trim();
+    if (bankUrl && !isSafeBankUrl(bankUrl)) {
+      this.createFieldErrors = { internet_bank_url: 'آدرس سایت بانک باید با https:// شروع شود.' };
+      this.cdr.markForCheck();
+      return;
+    }
     if (!this.isEditingAccount && !this.newAccount.opening_balance_date) {
       this.createFieldErrors = { opening_balance_date: 'تاریخ موجودی اولیه الزامی است.' };
       this.cdr.markForCheck();
@@ -446,6 +452,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       account_number: this.newAccount.account_number.trim() || shebaVal.accountNumber || null,
       sheba_number: shebaVal.formattedSheba.replace(/\s+/g, ''),
       account_title: this.newAccount.account_title?.trim() || null,
+      internet_bank_url: bankUrl,
       is_primary: this.newAccount.is_primary,
       is_active: true
     };
@@ -539,6 +546,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       account_number: acc.account_number || '',
       sheba_number: acc.sheba_number,
       account_title: acc.account_title || '',
+      internet_bank_url: acc.internet_bank_url || '',
       is_primary: acc.is_primary,
       opening_balance: null,
       opening_balance_date: ''
@@ -737,6 +745,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       account_number: '',
       sheba_number: '',
       account_title: '',
+      internet_bank_url: '',
       is_primary: false,
       opening_balance: null as string | null,
       opening_balance_date: ''

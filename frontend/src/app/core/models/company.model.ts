@@ -146,6 +146,8 @@ export interface CompanyBankAccount {
   opening_balance?: string | null;
   /** تاریخ موجودی اولیه `YYYY/MM/DD`؛ null یعنی پوشیده یا «ثبت نشده» (حساب قدیمی) */
   opening_balance_date?: string | null;
+  /** آدرس سایت اینترنت‌بانک (فقط https)؛ خالی یعنی ثبت نشده */
+  internet_bank_url?: string;
   /** حساب گردش دارد (فقط‌خواندنی) */
   has_movements?: boolean;
   created_at?: string;
@@ -317,4 +319,16 @@ export interface OrgSectionAssignment {
   updated_at?: string;
   /** ردیف وصله‌شدهٔ محلی که تغییرش هنوز در صف آفلاین است */
   _offlinePending?: boolean;
+}
+
+/** فقط https با میزبان؛ همان قاعدهٔ سرور (validate_internet_bank_url) */
+export function isSafeBankUrl(url: string | null | undefined): boolean {
+  const value = (url || '').trim();
+  if (!value || /\s/.test(value)) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' && !!parsed.hostname;
+  } catch {
+    return false;
+  }
 }

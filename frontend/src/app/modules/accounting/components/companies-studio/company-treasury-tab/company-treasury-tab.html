@@ -270,6 +270,23 @@
           />
         </div>
 
+        <!-- آدرس سایت اینترنت‌بانک؛ در فرم پرداخت خزانه‌دار دکمهٔ «ورود به سایت بانک» می‌شود -->
+        <div>
+          <label for="treasury_internet_bank_url" class="block text-[11px] font-bold text-slate-700 mb-1">آدرس سایت بانک (اختیاری)</label>
+          <input
+            id="treasury_internet_bank_url"
+            type="url"
+            dir="ltr"
+            maxlength="300"
+            [(ngModel)]="newAccount.internet_bank_url"
+            placeholder="https://"
+            [attr.aria-invalid]="createFieldErrors.internet_bank_url ? 'true' : null"
+            [attr.aria-describedby]="createFieldErrors.internet_bank_url ? 'bank_internet_url_error' : null"
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white text-left"
+          />
+          <p *ngIf="createFieldErrors.internet_bank_url" id="bank_internet_url_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ createFieldErrors.internet_bank_url }}</p>
+        </div>
+
         <!-- موجودی اولیه فقط هنگام ساخت؛ پس از آن از «تغییر موجودی اولیه» (۳.۳) -->
         <ng-container *ngIf="!isEditingAccount">
           <div>
