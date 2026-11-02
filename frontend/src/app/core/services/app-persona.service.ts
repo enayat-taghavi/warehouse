@@ -234,7 +234,8 @@ export class AppPersonaService {
     if (targetModule?.personas) {
       const roleCodes = targetModule.personas.resolveRoleCodes({
         perms, userRoles, permissionAliases: (capability: string) => getPermissionAliases(capability, this.moduleRegistry),
-        companySectionLevel: (section: string) => this.companySectionLevel(section)
+        companySectionLevel: (section: string) => this.companySectionLevel(section),
+        assignmentRoles: this.auth.user()?.permission_map?.assignment_roles ?? []
       });
       for (const code of roleCodes) {
         const persona = targetModule.personas.roles.find(r => r.code === code);

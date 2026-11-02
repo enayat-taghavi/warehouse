@@ -18,9 +18,15 @@ def resolve_personnel_roles(user, spec=None) -> list[str]:
         roles.append('manager')
     if user.has_perm('accounts.perm_treasury_disburse_action'):
         roles.append('treasury')
-    if not roles and not is_org_admin and (user.has_perm('accounts.view_sys_personnel_attendance') or user.has_perm('accounts.view_sys_personnel')):
-        roles.append('operator')
+    can_record = user.has_perm('accounts.view_sys_personnel_attendance') or user.has_perm('accounts.view_sys_personnel')
+    # انتساب صریح «کارمند» نقش کارمند را کنار نقش‌های دیگر هم نشان می‌دهد (تصمیم کاربر، ۱۱ آبان ۱۴۰۵)
+    from accounts.scoped_permissions import active_assignment_roles
+    has_employee_assignment = 'employee' in active_assignment_roles(user)
+    add_operator = can_record and (has_employee_assignment or (not roles and not is_org_admin))
     # در ابتدای فهرست تا «آخرین نقش معتبر» (پیش‌فرض resolve_effective_role) برای کاربر چندنقشه عوض نشود
     if is_org_admin:
         roles.insert(0, 'org_admin')
+    # کارمند همیشه اول: نقش پیش‌فرض (آخرین) همان می‌ماند که بی انتساب کارمند بود
+    if add_operator:
+        roles.insert(0, 'operator')
     return roles

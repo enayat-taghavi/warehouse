@@ -25,6 +25,8 @@ export interface ModulePersonas {
     userRoles: string[];
     permissionAliases?: (capability: string) => string[];
     companySectionLevel?: (section: string) => 'none' | 'read' | 'write';
+    /** کلید نقش انتساب‌های فعال کاربر (permission_map.assignment_roles) */
+    assignmentRoles?: string[];
   }) => string[];
   sodProhibitions?: Record<string, string[]>;
   isRouteDeniedForRole?: (role: string, cleanRoute: string) => boolean;

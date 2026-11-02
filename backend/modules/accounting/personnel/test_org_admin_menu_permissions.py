@@ -26,7 +26,7 @@ User = get_user_model()
 PROJECTS_WRITE = {'projects': 'write'}
 
 
-def _grant(user, codenames, company):
+def _grant(user, codenames, company, role='employee'):
     """
     مجوزهای بخشی فقط از انتساب (+ تفاوت کاربر برای همان شرکت) می‌آیند (طرح ۲.۲، ت۱): انتساب سطح شرکت با دقیقاً
     همین مجوزهای بخشی؛ مجوز سامانه‌ای مثل پیش تیک مستقیم می‌خورد.
@@ -36,7 +36,7 @@ def _grant(user, codenames, company):
     section_codes = section_permission_codes()
     scoped = [c for c in codenames if c in section_codes]
     if scoped:
-        grant_section_perms(user, scoped, company=company, exact=True)
+        grant_section_perms(user, scoped, company=company, role=role, exact=True)
     for codename in codenames:
         if codename not in section_codes:
             user.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label='accounts'))
@@ -69,11 +69,11 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         self.finance_approver = self._user('fin_user', ['perm_approve_personnel_finance'])
         self.plain = self._user('plain_user', [])
 
-    def _user(self, username, codenames, levels=None):
+    def _user(self, username, codenames, levels=None, role='employee'):
         u = User.objects.create_user(username=username, password='password123', email=f'{username}@test.com')
         UserCompanyAccess.objects.create(user=u, company=self.company, is_default=True, section_levels=levels or {})
         grant_membership(u, self.company)
-        _grant(u, codenames, self.company)
+        _grant(u, codenames, self.company, role)
         return User.objects.get(pk=u.pk)
 
     # ─── نقش‌های معتبر ───
@@ -81,7 +81,8 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         self.assertEqual(get_user_valid_roles_for_app(self.org_admin, 'accounting'), ['org_admin'])
 
     def test_org_admin_does_not_get_operator_fallback(self):
-        u = self._user('org_admin_personnel', ['view_sys_personnel'], levels=PROJECTS_WRITE)
+        # non-employee assignment: an explicit employee assignment deliberately shows the operator role
+        u = self._user('org_admin_personnel', ['view_sys_personnel'], levels=PROJECTS_WRITE, role='manager')
         self.assertEqual(get_user_valid_roles_for_app(u, 'accounting'), ['org_admin'])
 
     def test_org_admin_first_so_default_role_is_unchanged(self):
@@ -90,6 +91,28 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
         self.assertEqual(roles, ['org_admin', 'accountant'])
         self.assertEqual(resolve_effective_role(u, '', 'accounting'), 'accountant')
         self.assertEqual(resolve_effective_role(u, 'org_admin', 'accounting'), 'org_admin')
+
+    def test_employee_assignment_shows_operator_beside_other_roles(self):
+        # انتساب صریح «کارمند» در کنار سرپرست و خزانه‌دار (کاربر e.taghavi روی soft)؛ پیش‌فرض همان بالاترین نقش
+        from accounts.scoped_permissions import user_permission_map
+        u = self._user('emp_multi', [])
+        for role in ('employee', 'supervisor', 'treasury'):
+            SectionAssignment.objects.create(user=u, company=self.company, role=role, is_active=True)
+        u = User.objects.get(pk=u.pk)
+        self.assertEqual(get_user_valid_roles_for_app(u, 'accounting'), ['operator', 'supervisor', 'treasury'])
+        self.assertEqual(resolve_effective_role(u, '', 'accounting'), 'treasury')
+        self.assertEqual(user_permission_map(u)['assignment_roles'], ['employee', 'supervisor', 'treasury'])
+
+    def test_org_admin_with_employee_assignment_keeps_org_admin_default(self):
+        u = self._user('org_admin_emp', ['view_sys_personnel_attendance'], levels=PROJECTS_WRITE)
+        self.assertEqual(get_user_valid_roles_for_app(u, 'accounting'), ['operator', 'org_admin'])
+        self.assertEqual(resolve_effective_role(u, '', 'accounting'), 'org_admin')
+
+    def test_supervisor_without_employee_assignment_has_no_operator(self):
+        u = self._user('sup_only', [])
+        SectionAssignment.objects.create(user=u, company=self.company, role='supervisor', is_active=True)
+        u = User.objects.get(pk=u.pk)
+        self.assertEqual(get_user_valid_roles_for_app(u, 'accounting'), ['supervisor'])
 
     def test_superuser_can_act_as_org_admin(self):
         su = User.objects.create_superuser(username='su_org', password='password123', email='su@test.com')

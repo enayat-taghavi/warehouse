@@ -63,6 +63,7 @@ export function resolveAccountingRoleCodes(ctx: {
   perms: string[];
   userRoles: string[];
   companySectionLevel?: (section: string) => 'none' | 'read' | 'write';
+  assignmentRoles?: string[];
 }): string[] {
   const { perms, userRoles } = ctx;
   const roles: string[] = [];
@@ -103,6 +104,12 @@ export function resolveAccountingRoleCodes(ctx: {
   // خزانه‌دار
   if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('perm_treasury_disburse_action')) {
     roles.push('treasury');
+  }
+
+  // انتساب صریح «کارمند» نقش کارمند را کنار نقش‌های دیگر هم نشان می‌دهد (همتای role_resolver بک‌اند)؛
+  // پس از نقش‌های دیگر تا نقش پیش‌فرض (نخستین) همان بماند
+  if (hasOperatorPerm && !roles.includes('operator') && ctx.assignmentRoles?.includes('employee')) {
+    roles.push('operator');
   }
 
   // راهبر تشکیلات: آخر فهرست تا نقش عملیاتی کاربر چندنقشه پیش‌فرض بماند

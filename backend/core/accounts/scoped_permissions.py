@@ -152,7 +152,7 @@ def validate_user_override(permission, company_id):
 
 class _State:
     __slots__ = ('base', 'system', 'system_codenames', 'company', 'project', 'section',
-                 'project_company', 'section_chain', 'any_section', 'chains', 'all_names')
+                 'project_company', 'section_chain', 'any_section', 'assignment_roles', 'chains', 'all_names')
 
     def __init__(self):
         self.base = None                # همان شیء user._perm_cache جنگو؛ برای تشخیص کهنه شدن
@@ -164,6 +164,7 @@ class _State:
         self.project_company = {}       # {project_id: company_id} پروژه‌های انتساب‌ها
         self.section_chain = {}         # {section_id: (project_id, company_id)} بخش‌های انتساب‌ها
         self.any_section = set()        # مجوزهای بخشی که دست‌کم در یک بخش دارد
+        self.assignment_roles = set()   # کلید نقش انتساب‌های فعال (مثلاً برای نمایش نقش در فرانت)
         self.chains = {}                # کش (project_id, company_id) بخش‌های پرسیده‌شده
         self.all_names = None           # کش خروجی all_permission_names
 
@@ -212,6 +213,7 @@ def _build_state(user, base):
     bundles = effective_bundles()
     empty = frozenset()
     for role, c_id, p_id, p_cid, s_id, s_pid, s_cid in rows:
+        state.assignment_roles.add(role)
         codes = bundles.get(role, empty)
         if s_id is not None:
             state.section.setdefault(s_id, set()).update(codes)
@@ -248,6 +250,13 @@ def _state(user):
         state = _build_state(user, base)
         setattr(user, _CACHE_ATTR, state)
     return state
+
+
+def active_assignment_roles(user) -> set:
+    """کلید نقش انتساب‌های فعال کاربر (از همان وضعیت کش‌شدهٔ درخواست؛ پرس‌وجوی اضافه ندارد)."""
+    if not _is_live(user) or user.is_superuser:
+        return set()
+    return set(_state(user).assignment_roles)
 
 
 def clear_scoped_permission_cache(user):
@@ -438,13 +447,15 @@ def user_permission_map(user) -> dict:
       'project': {project_id: [codename, ...]},   # از انتساب‌های سطح پروژه
       'section': {section_id: [codename, ...]},   # از انتساب‌های سطح بخش
       'all':     [codename, ...],                 # اجتماع همه (برای منوها)
+      'assignment_roles': [role_key, ...],        # نقش انتساب‌های فعال کاربر
     }
     تفاوت‌های کاربر از پیش در هر سطحِ شرکت مربوط اعمال شده‌اند، پس فرانت فقط اجتماع می‌گیرد:
     can(code, sectionId) = code ∈ system (اگر سامانه‌ای) یا code ∈ company[cid] ∪ project[pid] ∪ section[sid]
     که pid و cid از دادهٔ سازمانی خود فرانت می‌آیند. سطح‌های بی‌مجوز حذف می‌شوند. کلیدها عددی‌اند (در JSON رشته).
     مدیر کل سامانه: is_superuser=True، سطح‌ها خالی و all همهٔ کدهای شناخته؛ فرانت برایش همیشه true بدهد.
     """
-    empty = {'is_superuser': False, 'system': [], 'company': {}, 'project': {}, 'section': {}, 'all': []}
+    empty = {'is_superuser': False, 'system': [], 'company': {}, 'project': {}, 'section': {}, 'all': [],
+             'assignment_roles': []}
     if not _is_live(user):
         return empty
     if user.is_superuser:
@@ -463,6 +474,7 @@ def user_permission_map(user) -> dict:
         'project': level(state.project),
         'section': level(state.section),
         'all': sorted(set(system) | state.any_section),
+        'assignment_roles': sorted(state.assignment_roles),
     }
 
 

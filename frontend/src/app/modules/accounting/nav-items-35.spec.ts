@@ -96,6 +96,13 @@ describe('accounting role menus spec (step 3.5-c)', () => {
     ]);
   });
 
+  it('employee assignment shows operator beside supervisor and treasury', () => {
+    const perms = ['view_sys_personnel_attendance', 'perm_approve_personnel_supervisor', 'perm_treasury_disburse_action'];
+    expect(resolveAccountingRoleCodes({ perms, userRoles: [] })).toEqual(['supervisor', 'treasury']);
+    expect(resolveAccountingRoleCodes({ perms, userRoles: [], assignmentRoles: ['employee', 'supervisor', 'treasury'] }))
+      .toEqual(['supervisor', 'treasury', 'operator']);
+  });
+
   it('b) supervisor bundle: resolves supervisor persona and supervisor menu items', () => {
     const roles = resolveAccountingRoleCodes({ perms: supervisorPerms, userRoles: [] });
     expect(roles).toEqual(['supervisor']);

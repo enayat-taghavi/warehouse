@@ -18,6 +18,8 @@ export interface PermissionMap {
   section: Record<string, string[]>;
   /** اجتماع همه (برای منوها: «دست‌کم در یک بخش دارد») */
   all: string[];
+  /** کلید نقش انتساب‌های فعال کاربر (مثلاً employee)؛ پاسخ سرورهای قدیمی‌تر ندارد */
+  assignment_roles?: string[];
   /** چکیدهٔ نقشه؛ فقط وقتی نقشه عوض شود تغییر می‌کند */
   version?: string;
 }
