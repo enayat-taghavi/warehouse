@@ -18989,3 +18989,175 @@ feat(invoices): one invoices list with filter and tracking fields
 - **خطای دوم (`ng-test-compare`):** در تست `accountant-personnel-phase9.spec.ts` انتساب `Object.assign(navigator, { clipboard })` به...
 
 ---
+
+### Task 1 of 1 — 2026-11-02 19:47:45
+- **Status:** DONE
+- **Conversation:** `5789344a-d0d4-4ab3-bf91-3a9b07ff3f78`
+- **Steps:** 16
+- **Tokens:** 26364
+- **Duration:** 3m 52s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Release main on the local app environment so the running Daphne picks up the bank-account website field (Daphne started before that commit and silently drops the field): backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: Daphne on port 8000 has been running since 05:21 today, before commit "feat(treasury): internet bank website URL on company bank accounts" (14:09) and the invoice step H commits. All personnel migrations up to `0003_expenseinvoice_updated_by` are already applied. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app bank url'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+عملیات پشتیبان‌گیری و بررسی مایگریشن‌ها با موفقیت انجام شد. بیلد فرانت‌اند (`npx ng build --delete-output-path=false`) آغاز گردید و منتظر اتمام آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### گزارش فرایند انتشار محلی (Release Report)
+
+۱. **توضیح درخواست کاربر:** اجرای مراحل ریلیز نسخهٔ جاری بر روی محیط لوکال `app` شامل پشتیبان‌گیری از دیتابیس، بررسی وضعیت مایگریشن‌ها، بیلد فرانت‌اند و اجرای اسکریپت پچ Service Worker بدون دستکاری سرویس‌ها و فایل‌های در حال اجرا.
+۲. **اعتبارسنجی:** تمامی دستورات مطابق پروتکل بدون تغییر در درخت گیت و با موفقیت کامل اجرا شدند. هیچ مایگریشن معوقی وجود ندارد و بیلد و پچ فرانت‌اند با موفقیت انجام شدند.
+
+---
+
+</div>
+
+### Release S...
+
+---
+
+### Task 1 of 1 — 2026-11-02 19:59:26
+- **Status:** DONE
+- **Conversation:** `9cc7cadb-c1ca-4624-b18a-c9831a742933`
+- **Steps:** 14
+- **Tokens:** 44372
+- **Duration:** 3m 59s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 2/2 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Frontend-only release of main on the local app environment (treasurer pay form account card layout fix, commit 190bbc7f): backup, patched frontend build; the runner runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: only one frontend template changed since the last release (no backend change, no migration). Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app pay form layout'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+Building frontend (`npx ng build --delete-output-path=false`). Waiting for the build to finish...
+### Release Report: Local App Frontend Build & Patch
+
+- **Database Backup:**
+  - Filename: `backup_20261102_195614.dump`
+  - Size: `1,743,576` bytes (1.74 MB)
+
+- **Frontend Build:**
+  - Command: `npx ng build --delete-output-path=false`
+  - Errors: 0
+  - Warnings: 2 (CommonJS optimization bailout warnings for `path2d-polyfill` and `pdfjs-dist`)
+  - Status: Succeeded (Exit code 0)
+
+- **Service Worker Patch:**
+  - `[patch-ngsw-530] ✔ ngsw-worker.js patched successfully (Cloudflare 5xx degradation prevented).`
+
+- **Git Status:** Clean with respect to release scope (only the 3 exempted files and run...
+
+---
+
+### Task 1 of 1 — 2026-11-02 20:06:31
+- **Status:** DONE
+- **Conversation:** `39610e56-6005-4f8d-bc95-80a463b2b432`
+- **Steps:** 14
+- **Tokens:** 21717
+- **Duration:** 4m 7s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 2/2 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Frontend-only release of main on the local app environment (treasurer pay form: company account numbers hidden, party account in one compact row, commit e5bff467): backup, patched frontend build; the runner runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: only one frontend template changed since the last release (no backend change, no migration). Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app pay form compact row'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+The frontend build (`npx ng build --delete-output-path=false`) has been started and is running. Waiting for the build to finish...
+### Release Summary (Frontend-only Release on Local App Environment)
+
+- **Database Backup:**
+  - Filename: `backup_20261102_200309.dump`
+  - Size: `1743853` bytes
+
+- **Frontend Build (`npx ng build --delete-output-path=false`):**
+  - Errors: 0
+  - Warnings: 2 (CommonJS dependency ESM warnings for `path2d-polyfill` and `pdfjs-dist`)
+  - Status: Completed successfully (Application bundle generation complete in 142.84s)
+
+- **Service Worker Patch (`node tools/patch-ngsw-530.js`):**
+  - Result: `[patch-ngsw-530] ✔ ngsw-worker.js patched successfully (Cloudflare 5xx de...
+
+---
