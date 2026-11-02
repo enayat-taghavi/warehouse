@@ -5939,3 +5939,41 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only your files and commit with this message, without push:
 refactor(share): inject FileOutputService instead of mock wrappers
 - Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
+
+
+===
+
+[DONE] Session 1 of 1 — File share F7: release the file share feature F1-F6 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py frontend/src/app/shared/components/user-menu/user-menu.component.html
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py frontend/src/app/shared/components/user-menu/user-menu.component.html
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- The files `tests/playwright/tools/index.py` and `frontend/src/app/shared/components/user-menu/user-menu.component.html` belong to other sessions and have uncommitted changes: never touch them. The build includes the user-menu change on purpose.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`. Do not build an APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: the file share sessions F1 to F6 changed only frontend files (file output, a share offer bar, share buttons) and added no migration. Commits after the last release on main also include small backend and frontend changes by other sessions; release the current main as it is. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app file share F1-F6'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files and the two files of other sessions.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
