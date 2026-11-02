@@ -21,6 +21,9 @@ class PersonnelConfig(AppConfig):
         # نقش‌های انتساب به بخش؛ پروژه، بخش و منبع عضویتِ انتساب در هسته‌اند (طرح Project_Section_To_Core)
         from personnel.company_access import SECTION_ROLES
         _contribute('section_roles', SECTION_ROLES)
+        # طرح نبودن نفر (۱۲ آبان ۱۴۰۵): پیش‌فرض «رد شود / منتظر بماند» هر نقش وقتی شرکت تنظیمی نگذاشته است
+        _contribute('workflow_role_defaults', {'supervisor': 'skip', 'accountant': 'skip',
+                                               'manager': 'wait', 'treasury': 'wait'})
         # مسیرهای بخش‌های شرکتِ حسابداری خودشان دروازهٔ بخش دارند؛ middleware برای آن‌ها «پیوند» را کافی می‌داند
         _contribute('company_link_api_prefixes', '/api/personnel/compan')
         _contribute('company_link_api_prefixes', '/api/personnel/user-company-access')

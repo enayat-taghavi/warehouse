@@ -51,6 +51,8 @@ class WorkflowInstance(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان بسته شدن')
     # ر۴ طرح ۲.۳-و: False یعنی هیچ کار این نمونه (مرحله و ارجاع) به جانشین نمی‌رسد (سند محرمانه)
     allow_substitute = models.BooleanField(default=True, verbose_name='جانشین مجاز است')
+    # طرح نبودن نفر (۱۲ آبان ۱۴۰۵): مرحلهٔ پرداخت رد شد؛ وضعیت همان completed است و پرداخت بیرون از سامانه بوده
+    settled_outside = models.BooleanField(default=False, verbose_name='پرداخت بیرون از سامانه')
 
     class Meta:
         verbose_name = 'نمونهٔ گردش کار'
@@ -123,6 +125,12 @@ class WorkflowTask(models.Model):
     instruction = models.TextField(blank=True, default='', verbose_name='دستور')
     due_at = models.DateTimeField(null=True, blank=True, verbose_name='مهلت')
     reply = models.TextField(blank=True, default='', verbose_name='پاسخ')
+    # طرح نبودن نفر: کار اجباری (open_at_step و آخرین مرحلهٔ نسخهٔ تازه) که هرگز خودکار رد نمی‌شود
+    forced = models.BooleanField(default=False, verbose_name='کار اجباری')
+    # دلیل انتظار کار بی‌دریافت‌کنندهٔ اصلی: no_holder یا creator_only؛ خالی یعنی منتظر نیست
+    WAIT_NO_HOLDER = 'no_holder'
+    WAIT_CREATOR_ONLY = 'creator_only'
+    wait_reason = models.CharField(max_length=16, blank=True, default='', verbose_name='دلیل انتظار')
 
     class Meta:
         verbose_name = 'کار گردش'
@@ -282,6 +290,45 @@ class WorkflowCompanySettings(models.Model):
             return set()
         return set(cls.objects.filter(company_id__in=ids, creator_may_approve_own=True)
                    .values_list('company_id', flat=True))
+
+
+class WorkflowPolicy(models.Model):
+    """
+    تنظیم «نبودن نفر در مرحله» و «تأیید سند خود» (طرح ۱۲ آبان ۱۴۰۵). workflow_key خالی = پیش‌فرض شرکت؛
+    هر مقدار خالی (نقش نیامده، None) از سطح بالاتر ارث می‌برد (workflow/policy.py). هسته نام نقش نمی‌شناسد.
+    """
+    SKIP = 'skip'
+    WAIT = 'wait'
+    MISSING_ACTIONS = (SKIP, WAIT)
+    NOTIFY_ROLE_ASSIGNERS = 'role_assigners'
+    NOTIFY_USERS = 'users'
+    NOTIFY_CHOICES = [
+        (NOTIFY_ROLE_ASSIGNERS, 'تعیین‌کنندگان نقش'),
+        (NOTIFY_USERS, 'کاربران انتخاب‌شده'),
+    ]
+
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name='workflow_policies',
+                                verbose_name='شرکت')
+    workflow_key = models.CharField(max_length=64, blank=True, default='', verbose_name='کلید گردش (خالی = پیش‌فرض شرکت)')
+    role_actions = models.JSONField(default=dict, blank=True, verbose_name='رد شود یا منتظر بماند برای هر نقش')
+    creator_may_approve_own = models.BooleanField(null=True, blank=True, default=None,
+                                                  verbose_name='ایجادکننده می‌تواند سند خودش را تأیید کند')
+    notify_mode = models.CharField(max_length=16, choices=NOTIFY_CHOICES, null=True, blank=True, default=None,
+                                   verbose_name='گیرندهٔ خبر انتظار')
+    notify_user_ids = models.JSONField(default=list, blank=True, verbose_name='کاربران خبر انتظار')
+    updated_by = models.ForeignKey(USER, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+                                   verbose_name='آخرین ویرایش‌کننده')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='آخرین ویرایش')
+
+    class Meta:
+        verbose_name = 'سیاست گردش کار'
+        verbose_name_plural = 'سیاست‌های گردش کار'
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'workflow_key'], name='workflow_policy_unique_company_key'),
+        ]
+
+    def __str__(self):
+        return f'{self.company_id}:{self.workflow_key or "*"}'
 
 
 class WorkflowSubstitute(models.Model):

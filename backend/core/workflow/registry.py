@@ -15,6 +15,11 @@ REVIEW = 'review'
 EXECUTE = 'execute'
 STEP_KINDS = (APPROVE, REVIEW, EXECUTE)
 
+# رفتار مرحلهٔ بی‌دریافت‌کنندهٔ اصلی (طرح نبودن نفر): رد شود یا منتظر بماند
+SKIP = 'skip'
+WAIT = 'wait'
+MISSING_ACTIONS = (SKIP, WAIT)
+
 ACT = 'act'
 RETURN = 'return'
 REJECT = 'reject'
@@ -49,6 +54,10 @@ class StepSpec:
     skip_when_creator_only: bool = False
     # فقط «اجرا»: ثبت‌کننده هم دریافت‌کنندهٔ این مرحله است و روی سند خودش اقدام می‌کند (مرحله‌های پیش تأیید شده‌اند)
     creator_may_act: bool = False
+    # طرح نبودن نفر (۱۲ آبان ۱۴۰۵): مرحلهٔ پرداخت؛ فقط «اجرا» و آخرین مرحله. رد شدنش = پرداخت بیرون از سامانه
+    payment: bool = False
+    # None یعنی تنظیم شرکت/گردش؛ 'wait' یا 'skip' گزینهٔ قفل‌شده برای این مرحله (س۱)
+    fixed_missing_action: str | None = None
 
     def skips_without_recipient(self, creator_id, holders) -> bool:
         """مرحلهٔ بی‌دریافت‌کنندهٔ اصلی رد می‌شود؟ «تأیید» همیشه (قاعدهٔ ۳ ت۶)؛ بقیه فقط با skip_when_creator_only."""
@@ -143,6 +152,10 @@ def _validate_step(spec, step, ranks, perm_specs):
         _fail(f'{where}: skip_when_creator_only برای مرحلهٔ «تأیید» لازم نیست (قاعدهٔ ۳ ت۶)')
     if step.creator_may_act and step.kind != EXECUTE:
         _fail(f'{where}: creator_may_act فقط برای مرحلهٔ «اجرا» مجاز است')
+    if step.payment and (step.kind != EXECUTE or spec.steps[-1] is not step):
+        _fail(f'{where}: payment فقط برای آخرین مرحله و از نوع «اجرا» مجاز است')
+    if step.fixed_missing_action not in (None,) + MISSING_ACTIONS:
+        _fail(f'{where}: fixed_missing_action باید None یا یکی از {MISSING_ACTIONS} باشد')
 
 
 def validate_specs(items=None) -> dict:

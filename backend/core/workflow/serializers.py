@@ -206,13 +206,17 @@ def instance_state(inst) -> dict:
 
 
 def definition(spec) -> dict:
+    from companies.models import _section_role_specs
+    role_titles = {code: label for code, label, _rank in _section_role_specs()}
     return {
         'key': spec.key,
         'version': spec.version,
         'entity_kind': spec.entity_kind,
         'title_fa': spec.title_fa,
         'has_amount': spec.amount_field is not None,
-        'steps': [{'key': s.key, 'title_fa': s.title_fa, 'kind': s.kind, 'role': s.role, 'actions': list(s.actions)}
+        'steps': [{'key': s.key, 'title_fa': s.title_fa, 'kind': s.kind, 'role': s.role,
+                   'role_title_fa': role_titles.get(s.role, s.role), 'actions': list(s.actions),
+                   'payment': s.payment, 'fixed_missing_action': s.fixed_missing_action}
                   for s in spec.steps],
     }
 

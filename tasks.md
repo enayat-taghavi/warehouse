@@ -6697,3 +6697,76 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
 
 6. Output and stop condition: a short English report with the backup filename and size, the migration check result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Role-policy plan step A tests: new test file for the WorkflowPolicy inheritance resolver (backend/core/workflow/policy.py), the new StepSpec validation and the 0003 data migration
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/core/workflow/tests/test_policy_resolver.py"
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: set DB_TEST_NAME=test_agy_rpA&& python scripts/automation/verify_tools.py django-tests --labels workflow.tests.test_policy_resolver workflow.tests.test_registry --min-tests 20
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(workflow): role-policy A resolver, registry and migration tests"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 10 apply.
+- Create ONLY the new file `backend/core/workflow/tests/test_policy_resolver.py`. Never edit any other file (no production code, no other test, no migration).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never run `manage.py test` without labels (it would run root scripts against the real database). Never run `migrate`, `makemigrations` or `flush`.
+- If production code looks wrong, do not fix it: write the test for the behaviour described in sections 3 and 4, and name the failing test and the reason in your report.
+
+2. Context (read these exact ranges, nothing broader):
+- `backend/core/workflow/policy.py` (whole file, about 150 lines): `role_defaults()`, `EffectivePolicy` (`role_action(role, kind)`, `missing_action(step)`, properties `creator_may_approve_own`, `notify_mode`, `notify_user_ids`, method `source(name)` returning `'own'`, `'company'` or `'default'`), `effective_policies(pairs)` and `effective_policy(company_id, workflow_key)`. Constants `OWN`, `COMPANY`, `DEFAULT`.
+- `backend/core/workflow/models.py`: class `WorkflowPolicy` (search `class WorkflowPolicy`), fields `forced` and `wait_reason` on `WorkflowTask`, `settled_outside` on `WorkflowInstance`, and class `WorkflowCompanySettings`.
+- `backend/core/workflow/registry.py` lines 1-70 (`SKIP`, `WAIT`, `MISSING_ACTIONS`, `StepSpec.payment`, `StepSpec.fixed_missing_action`) and `_validate_step` (search `def _validate_step`).
+- `backend/core/workflow/migrations/0003_role_policies.py`: functions `copy_self_approval(apps, schema_editor)` and `mark_forced_tasks(apps, schema_editor)`.
+- `backend/core/workflow/tests/base.py` lines 1-145 (`WorkflowTestBase`, `make_spec`, `STEPS`, `ROLES`, `WF`, `KIND`, `self.co`, `self.co2`, `self.specs`, how contributions are patched with `mock.patch.dict(preg._CONTRIBUTIONS, ...)`).
+- `backend/core/workflow/tests/test_registry.py` lines 1-60 (how invalid specs are asserted with `ImproperlyConfigured` and `validate_specs([spec])`).
+
+3. Definitions:
+- Inheritance order of every value: workflow row (`WorkflowPolicy(company, workflow_key=<key>)`) -> company default row (`workflow_key=''`) -> module role default (`contributions('workflow_role_defaults')`, a dict role -> 'skip' or 'wait') -> step-kind default (`APPROVE` -> 'skip', `REVIEW` and `EXECUTE` -> 'wait'). `StepSpec.fixed_missing_action` ('skip' or 'wait') wins over everything.
+- For `workflow_key=''` the company row is the "own" row: `source()` gives 'own' when that row sets the value.
+- Module defaults: always patch them inside the test, never rely on the installed module. In your own `setUp` (after `super().setUp()`) or inside a test, start `mock.patch.dict(preg._CONTRIBUTIONS, {'workflow_role_defaults': [...]})` and stop it with `addCleanup`. Use `[]` when a test needs no module default.
+
+4. Task: create `backend/core/workflow/tests/test_policy_resolver.py` with one class `PolicyResolverTests(WorkflowTestBase)` (import from `.base`) and these tests (names exactly as given):
+- `test_no_rows_uses_module_default`: module defaults {'wf_reviewer': 'skip'}; no rows; REVIEW step of role wf_reviewer -> 'skip'; `source('wf_reviewer') == 'default'`.
+- `test_no_rows_no_module_default_uses_step_kind`: no module default; APPROVE step -> 'skip', REVIEW step -> 'wait', EXECUTE step -> 'wait'.
+- `test_company_row_overrides_module_default`: module {'wf_boss': 'wait'}, company row role_actions {'wf_boss': 'skip'} -> 'skip' with `source == 'company'` for workflow key `WF`, and `source == 'own'` for key ''.
+- `test_workflow_row_overrides_company_row`: company row {'wf_boss': 'skip'}, workflow row (key `WF`) {'wf_boss': 'wait'} -> 'wait', `source == 'own'`.
+- `test_role_missing_in_workflow_row_inherits_company`: workflow row {'wf_boss': 'wait'}, company row {'wf_lead': 'wait'} -> wf_lead 'wait' with source 'company'.
+- `test_invalid_stored_value_is_ignored`: workflow row {'wf_boss': 'maybe'}, company row {'wf_boss': 'skip'} -> 'skip'.
+- `test_fixed_missing_action_wins`: rows say 'skip' for the role at both levels and a `StepSpec(..., fixed_missing_action='wait')` -> `missing_action` gives 'wait'; the opposite ('skip' fixed, rows 'wait') gives 'skip'.
+- `test_creator_may_approve_own_inherits_and_overrides`: no rows -> False, source 'default'; company row True -> True (source 'company'); add workflow row False -> False (source 'own'); workflow row None with company True -> True.
+- `test_notify_mode_inherits`: no rows -> 'role_assigners' and `notify_user_ids == []`; company row notify_mode 'users' with notify_user_ids [self.boss.pk] -> key WF gives 'users' and [self.boss.pk] with source 'company'; then a workflow row notify_mode 'role_assigners' -> 'role_assigners'.
+- `test_other_company_untouched`: rows only for `self.co`; `effective_policies([(self.co2.pk, WF)])` gives defaults (source 'default' for the role).
+- `test_one_query_for_many_pairs`: rows for both companies; `with self.assertNumQueries(1): effective_policies([(self.co.pk, WF), (self.co.pk, ''), (self.co2.pk, WF), (self.co2.pk, 'other')])`; the result has the 4 keys.
+- `test_effective_policy_without_company`: `effective_policy(None, WF)` makes no query (`assertNumQueries(0)`) and returns step-kind or module defaults.
+- `test_module_default_conflict_raises`: two contributions {'wf_boss': 'skip'} and {'wf_boss': 'wait'} -> `role_defaults()` raises `ImproperlyConfigured`; an invalid value {'wf_boss': 'x'} also raises.
+- `test_registry_rejects_payment_on_non_execute`: `make_spec(steps=...)` where an APPROVE step has `payment=True` -> `validate_specs([spec])` raises `ImproperlyConfigured`.
+- `test_registry_rejects_payment_not_last`: an EXECUTE step with `payment=True` that is not the last step -> raises.
+- `test_registry_accepts_payment_last_execute`: the last EXECUTE step (`pay` in `STEPS`, rebuilt with `payment=True` via `dataclasses.replace`) -> `validate_specs` returns the spec.
+- `test_registry_rejects_bad_fixed_missing_action`: `fixed_missing_action='maybe'` -> raises; 'wait' and 'skip' are accepted.
+- `test_migration_copies_self_approval`: load the migration module with `importlib.import_module('workflow.migrations.0003_role_policies')`; make the registered spec use `company_self_approval=True` (replace the items of `self.specs` in place with `make_spec(company_self_approval=True)` and call `reset_workflow_cache()`); create `WorkflowCompanySettings(company=self.co, creator_may_approve_own=True)` and `WorkflowCompanySettings(company=self.co2, creator_may_approve_own=False)`; call `mod.copy_self_approval(django.apps.apps, None)` twice (idempotent) -> exactly one `WorkflowPolicy` row (company self.co, workflow_key WF, creator_may_approve_own True), no row for self.co2, and both settings rows unchanged.
+- `test_migration_marks_forced_tasks`: create instances by hand for documents of `self.co` (fields: workflow_key WF, entity_kind `KIND`, distinct entity_id, company, step_keys = the 4 keys of `STEPS`, current_step as below), each with one step task (`WorkflowTask(instance=..., step_key=..., step_kind=..., role=..., permission=...)`):
+  - instance 1: open task on 'review' plus `WorkflowStep(instance, task=task1, action='auto', from_step='', to_step='review')`;
+  - instance 2: open task on 'review' with only `WorkflowStep(action='submit', task=task2)`;
+  - instance 3: open task on 'pay' plus `WorkflowStep(action='auto', task=task3, from_step='old_removed', to_step='pay')`;
+  - instance 4: closed task (`is_open=False`) plus an auto row with empty from_step.
+  Call `mod.mark_forced_tasks(django.apps.apps, None)` -> task1 and task3 `forced` True; task2 and task4 False.
+Use `self.co`, `self.co2`, `WF` and the users from the base class. Every test asserts with `assertEqual`, `assertTrue` or `assertRaises` (no bare `print`).
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test workflow.tests.test_policy_resolver workflow.tests.test_registry --keepdb` (always with labels; at most 6 runs). In PowerShell use `$env:PYTHONUTF8='1';` instead of `set`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all tests in both labels pass (if one fails only because production code differs from sections 3 and 4, keep the test and report it), and `git status --short` shows only the new test file, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the new test file and commit with this message, without push:
+test(workflow): role-policy A resolver, registry and migration tests
+- Short English report: test names, test results, any test that fails and why. End the turn after the commit and the report.
