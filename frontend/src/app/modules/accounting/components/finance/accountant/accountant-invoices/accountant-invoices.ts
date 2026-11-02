@@ -19,6 +19,7 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
 import { PrintService } from '../../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
+import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -33,7 +34,8 @@ import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoic
     WorkflowReasonDialogComponent,
     InvoiceReceiptButtonComponent,
     InvoicePreviewModalComponent,
-    SvgIconDirective
+    SvgIconDirective,
+    PersianDatePipe
   ],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'

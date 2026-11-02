@@ -30,6 +30,7 @@ import { AttachmentsComponent } from '../../../../../../shared/components/attach
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
+import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -47,6 +48,10 @@ export interface PayableInvoiceItem {
   counterparty_id?: number | null;
   paid_amount: number;
   remaining: number;
+  created_by_name?: string;
+  created_at?: string;
+  updated_by_name?: string;
+  updated_at?: string;
 }
 
 @Component({
@@ -65,7 +70,8 @@ export interface PayableInvoiceItem {
     NgPersianDatepickerModule,
     SvgIconDirective,
     InvoiceReceiptButtonComponent,
-    InvoicePreviewModalComponent
+    InvoicePreviewModalComponent,
+    PersianDatePipe
   ],
   templateUrl: './treasurer-invoices.html',
   styleUrl: './treasurer-invoices.css'

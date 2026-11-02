@@ -18,6 +18,7 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
 import { PrintService } from '../../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
+import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
 @Component({
@@ -33,6 +34,7 @@ import { attendanceActionErrorMessage } from '../../../../attendance-period-erro
     WorkflowReasonDialogComponent,
     InvoiceReceiptButtonComponent,
     InvoicePreviewModalComponent,
+    PersianDatePipe,
   ],
   templateUrl: './supervisor-invoices.html',
   styleUrl: './supervisor-invoices.css'

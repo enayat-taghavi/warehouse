@@ -1,3 +1,9 @@
+import { Component, EventEmitter, Input, Output, NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TestBed } from '@angular/core/testing';
+import { TreasuryOrgApiService } from '../../../api/treasury-org-api.service';
+import { PrintService } from '../../../../../core/services/print.service';
+import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -199,5 +205,74 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     modal.ngOnDestroy();
     doc$.next({ doc_type: 'expense_invoice', doc_id: 5 });
     expect(mockTreasuryApi.getExpenseInvoice).not.toHaveBeenCalled();
+  });
+});
+
+@Component({
+  selector: 'app-modal',
+  standalone: true,
+  imports: [CommonModule],
+  template: '<div *ngIf="isOpen"><ng-content></ng-content></div>',
+})
+class StubModalComponent {
+  @Input() isOpen = false;
+  @Input() size = 'md';
+  @Input() title = '';
+  @Output() closed = new EventEmitter<void>();
+}
+
+describe('InvoicePreviewModalComponent DOM tracking block', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [InvoicePreviewModalComponent],
+      providers: [
+        { provide: TreasuryOrgApiService, useValue: { getExpenseInvoice: vi.fn().mockReturnValue(of({})) } },
+        { provide: PrintService, useValue: { downloadPdf: vi.fn() } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+    TestBed.overrideComponent(InvoicePreviewModalComponent, {
+      set: {
+        imports: [CommonModule, StubModalComponent, PersianDatePipe],
+        schemas: [NO_ERRORS_SCHEMA],
+      },
+    });
+  });
+
+  it('shows creator, created date, last modifier and last modified date', () => {
+    const fixture = TestBed.createComponent(InvoicePreviewModalComponent);
+    fixture.componentInstance.isOpen = true;
+    fixture.componentInstance.invoiceDetail = {
+      id: 101,
+      created_by_name: 'رضا کمالی',
+      created_at: '2026-11-01T10:30:00Z',
+      updated_by_name: 'محمد علوی',
+      updated_at: '2026-11-02T14:45:00Z',
+    };
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('ثبت‌کننده:');
+    expect(text).toContain('رضا کمالی');
+    expect(text).toContain('تاریخ ثبت:');
+    expect(text).toContain('آخرین تغییردهنده:');
+    expect(text).toContain('محمد علوی');
+    expect(text).toContain('تاریخ آخرین تغییر:');
+  });
+
+  it('shows a dash when updated_by_name is empty', () => {
+    const fixture = TestBed.createComponent(InvoicePreviewModalComponent);
+    fixture.componentInstance.isOpen = true;
+    fixture.componentInstance.invoiceDetail = {
+      id: 102,
+      created_by_name: 'رضا کمالی',
+      created_at: '2026-11-01T10:30:00Z',
+      updated_by_name: null,
+      updated_at: null,
+    };
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('آخرین تغییردهنده:');
+    expect(text).toContain('—');
   });
 });

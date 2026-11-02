@@ -128,6 +128,12 @@
               @if (inv.vat_manual) { <span class="px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span> }
             </div>
           }
+          <div class="text-[10px] text-fg-muted flex flex-wrap gap-x-2 gap-y-0.5 pt-0.5 border-t border-line">
+            <span>ثبت‌کننده: <b class="text-fg">{{ inv.created_by_name || '—' }}</b></span>
+            <span>تاریخ ثبت: <b class="font-mono text-fg">{{ inv.created_at ? (inv.created_at | persianDate:'short-time') : '—' }}</b></span>
+            <span>آخرین تغییردهنده: <b class="text-fg">{{ inv.updated_by_name || '—' }}</b></span>
+            <span>تاریخ آخرین تغییر: <b class="font-mono text-fg">{{ inv.updated_at ? (inv.updated_at | persianDate:'short-time') : '—' }}</b></span>
+          </div>
           <div class="flex flex-wrap items-center gap-1.5 pt-1">
             @if (isEditable(inv)) {
               <button type="button" appAction="send" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)"></button>
@@ -164,7 +170,7 @@
             <th class="py-3 px-3 text-end">مبلغ (ریال)</th>
             <th class="py-3 px-3 text-center">پیوست</th>
             <th class="py-3 px-3 text-center">وضعیت</th>
-            <th class="py-3 px-3">ثبت‌کننده</th>
+            <th class="py-3 px-3">ثبت و آخرین تغییر</th>
             <th class="py-3 px-3 text-center w-28">عملیات</th>
           </tr>
         </thead>
@@ -256,9 +262,10 @@
               </span>
             </td>
 
-            <!-- ثبت‌کننده -->
+            <!-- ثبت و آخرین تغییر -->
             <td class="py-2.5 px-3 text-slate-500 text-[11px] whitespace-nowrap">
-              {{ inv.created_by_name || 'سیستم' }}
+              <div><span class="text-slate-400">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-slate-400">({{ inv.created_at | persianDate:'short-time' }})</span></div>
+              <div class="mt-0.5 text-slate-400 text-[10px]"><span class="text-slate-400">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
             </td>
 
             <!-- عملیات -->

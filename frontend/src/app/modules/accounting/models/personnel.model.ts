@@ -1130,6 +1130,8 @@ export interface ExpenseInvoice {
   created_by?: number | null;
   created_by_name?: string;
   created_at?: string;
+  updated_by?: number | null;
+  updated_by_name?: string | null;
   updated_at?: string;
 }
 

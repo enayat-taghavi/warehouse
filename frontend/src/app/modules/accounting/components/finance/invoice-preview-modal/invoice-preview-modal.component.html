@@ -50,9 +50,24 @@
             <span class="font-bold text-fg">{{ inv.section_name || '—' }} {{ inv.project_name ? ('(' + inv.project_name + ')') : '' }}</span>
           </div>
 
-          <div *ngIf="inv.created_by_name">
+          <div>
             <span class="text-fg-subtle text-[11px] block font-medium">ثبت‌کننده:</span>
-            <span class="font-bold text-fg">{{ inv.created_by_name }}</span>
+            <span class="font-bold text-fg">{{ inv.created_by_name || '—' }}</span>
+          </div>
+
+          <div>
+            <span class="text-fg-subtle text-[11px] block font-medium">تاریخ ثبت:</span>
+            <span class="font-mono font-bold text-fg">{{ inv.created_at ? (inv.created_at | persianDate:'short-time') : '—' }}</span>
+          </div>
+
+          <div>
+            <span class="text-fg-subtle text-[11px] block font-medium">آخرین تغییردهنده:</span>
+            <span class="font-bold text-fg">{{ inv.updated_by_name || '—' }}</span>
+          </div>
+
+          <div>
+            <span class="text-fg-subtle text-[11px] block font-medium">تاریخ آخرین تغییر:</span>
+            <span class="font-mono font-bold text-fg">{{ inv.updated_at ? (inv.updated_at | persianDate:'short-time') : '—' }}</span>
           </div>
 
           <div>
