@@ -438,4 +438,42 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
   it('h) the component source has no window.prompt call for invoices: read nothing from disk; instead assert vi.spyOn(window, \'prompt\') is never called during a) to g) (put the spy in beforeEach)', () => {
     expect(promptSpy).not.toHaveBeenCalled();
   });
+
+  it('i) the payee primary account is preselected and its account number and Sheba are copied without spaces', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mockPersonnelApi.getCounterparties.mockReturnValue(of([{ id: 3, party: 9 }]));
+    mockPersonnelApi.getPartyBankAccounts.mockReturnValue(of([
+      { id: 10, party: 9, bank_name: 'Saderat', account_number: '111', sheba_number: 'IR000000000000000000000001', is_primary: false, is_active: true },
+      { id: 11, party: 9, bank_name: 'Melli', account_number: '0123 456 789', sheba_number: 'IR12 0170 0000 0000 0000 0000 01', owner_name: 'Ali', is_primary: true, is_active: true }
+    ]));
+    component.payInvoice({ ...component.invoices[0], counterparty_id: 3 });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockPersonnelApi.getPartyBankAccounts).toHaveBeenCalledWith(9);
+    expect(component.payPartyAccount).toBe(11);
+    const box = fixture.nativeElement.querySelector('[data-party-account-copy]') as HTMLElement;
+    expect(box).toBeTruthy();
+    expect(box.textContent).toContain('0123 456 789');
+
+    (box.querySelector('[data-copy-account]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(writeText).toHaveBeenLastCalledWith('0123456789');
+    (box.querySelector('[data-copy-sheba]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(writeText).toHaveBeenLastCalledWith('IR120170000000000000000001');
+    expect(component.copiedKey).toBe('sheba');
+    expect(mockToast.success).toHaveBeenCalled();
+  });
+
+  it('j) the treasurer list no longer shows the payment tracking code as the vendor Sheba', () => {
+    mockPersonnelApi.getTreasuryCartable.mockReturnValue(of({
+      invoices: [{ id: 8, invoice_number: 'F-8', amount: 5, paid_amount: 0, remaining: 5, status: 'ready_to_pay', payment_ref: 'TRK-777', counterparty: null }]
+    }));
+    component.loadTreasuryData();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('TRK-777');
+  });
 });

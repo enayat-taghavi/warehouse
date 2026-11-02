@@ -499,6 +499,19 @@ ng-persian-datepicker {
   height: calc(100dvh - var(--domain-banner-h, 0px));
 }
 
+/* ریشهٔ صفحه‌ها `min-h-screen` (100vh) دارد، ولی داخل #content-container که به اندازهٔ سربرگ و فاصله کوتاه‌تر است؛
+   پس هر صفحه حتی کم‌محتوا اسکرول اضافه داشت (در آیفون 100vh از صفحهٔ دیدنی هم بلندتر است). */
+#content-container .min-h-screen {
+  min-height: 0;
+}
+
+/* صفحهٔ ورود: ارتفاع واقعی صفحه در آیفون (بی نوار نشانی مرورگر) */
+@supports (height: 100dvh) {
+  #login-screen {
+    min-height: 100dvh;
+  }
+}
+
 @media (min-width: 768px) {
   #app-screen > #sidebar {
     height: calc(100vh - var(--domain-banner-h, 0px)) !important;

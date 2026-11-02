@@ -39,7 +39,6 @@ export interface PayableInvoiceItem {
   section_name: string;
   amount: number;
   due_date: string;
-  sheba_number: string;
   status: 'pending_payment' | 'partially_paid' | 'paid';
   tracking_code?: string;
   number?: string | null;
@@ -140,6 +139,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     this.docSub?.unsubscribe();
+    if (this.copiedTimer) clearTimeout(this.copiedTimer);
   }
 
   loadSections(): void {
@@ -211,7 +211,6 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
           section_name: inv.section_name || '',
           amount: inv.amount,
           due_date: inv.invoice_date_shamsi,
-          sheba_number: inv.payment_ref || '',
           status: inv.status === 'paid' ? 'paid' : (inv.status === 'partially_paid' ? 'partially_paid' : 'pending_payment'),
           tracking_code: inv.payment_ref,
           number: inv.number || null,
@@ -269,6 +268,56 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
 
   get needsCompanyAccount(): boolean {
     return this.payMethod !== 'cash';
+  }
+
+  get selectedPartyAccount(): PartyBankAccount | null {
+    return this.partyAccounts.find(a => a.id === this.payPartyAccount) || null;
+  }
+
+  /** کلیدِ آخرین مقدار کپی‌شده برای نشانهٔ «کپی شد» کنار همان دکمه */
+  copiedKey: string | null = null;
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** کپی شماره حساب یا شبا برای چسباندن در سایت بانک؛ مرورگر بی Clipboard API (آیفون قدیمی) از execCommand */
+  async copyValue(value: string | null | undefined, key: string, labelFa: string): Promise<void> {
+    const text = (value || '').replace(/\s+/g, '');
+    if (!text) return;
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch { ok = false; }
+    if (!ok) ok = this.legacyCopy(text);
+    if (!ok) {
+      this.toast.error('کپی ممکن نشد؛ شماره را دستی انتخاب کنید.');
+      return;
+    }
+    this.copiedKey = key;
+    this.toast.success(`${labelFa} کپی شد.`);
+    if (this.copiedTimer) clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => {
+      this.copiedKey = null;
+      this.cdr.detectChanges();
+    }, 2000);
+    this.cdr.detectChanges();
+  }
+
+  private legacyCopy(text: string): boolean {
+    if (typeof document === 'undefined') return false;
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
   }
 
   faAmount(value: string | number | null | undefined): string {
@@ -348,7 +397,15 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
         if (!cp?.party) return;
         this.personnelApi.getPartyBankAccounts(cp.party).subscribe({
           next: (accs) => {
+            // پاسخ دیرِ فاکتور قبلی جای حساب‌های فاکتور تازه را نمی‌گیرد
+            if (this.payItem?.id !== item.id) return;
             this.partyAccounts = (accs || []).filter(a => a.is_active !== false);
+            // حساب اصلی (یا تنها حساب) طرف‌حساب از پیش انتخاب می‌شود تا شماره‌اش برای کپی دیده شود
+            if (this.payPartyAccount === null) {
+              const preferred = this.partyAccounts.find(a => a.is_primary)
+                || (this.partyAccounts.length === 1 ? this.partyAccounts[0] : undefined);
+              this.payPartyAccount = preferred?.id ?? null;
+            }
             this.cdr.detectChanges();
           },
           error: () => { /* اختیاری */ }
