@@ -286,14 +286,14 @@ describe('EmployeeInvoicesHubComponent — Lines Form and Duplicate Dialog DOM S
 
     expect(fixture.nativeElement.querySelector('#invoice_vat')).toBeNull();
     // discount/VAT section is collapsed by default
-    expect(fixture.nativeElement.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('input[type="checkbox"]:not([data-only-mine])')).toBeNull();
     const toggle = fixture.nativeElement.querySelector('button[aria-controls="invoice_totals_extras"]') as HTMLButtonElement;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     toggle.click();
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
 
-    const vatCheckbox = fixture.nativeElement.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const vatCheckbox = fixture.nativeElement.querySelector('input[type="checkbox"]:not([data-only-mine])') as HTMLInputElement;
     expect(vatCheckbox).toBeTruthy();
 
     vatCheckbox.click();

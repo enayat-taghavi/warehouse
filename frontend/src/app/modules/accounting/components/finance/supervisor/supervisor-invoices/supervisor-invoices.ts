@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -40,6 +40,11 @@ import { attendanceActionErrorMessage } from '../../../../attendance-period-erro
   styleUrl: './supervisor-invoices.css'
 })
 export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
+  /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
+  @Input() embedded = false;
+  /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */
+  @Output() changed = new EventEmitter<void>();
+
   // Subtabs navigation
   activeSubTab: 'pending' | 'approved' | 'all' = 'pending';
 
@@ -121,6 +126,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (this.embedded) return;
     this.routeSub = this.route.queryParams.subscribe(params => {
       if (params['tab'] && ['pending', 'approved', 'all'].includes(params['tab'])) {
         this.activeSubTab = params['tab'];
@@ -224,6 +230,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
 
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   fetchInvoices(silent = false): void {
+    if (this.embedded) { this.cdr.markForCheck(); this.changed.emit(); return; }
     if (!silent) this.isLoading = true;
     const params: { section_id?: number; search?: string } = {};
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;

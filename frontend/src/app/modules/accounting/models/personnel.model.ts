@@ -1133,6 +1133,8 @@ export interface ExpenseInvoice {
   updated_by?: number | null;
   updated_by_name?: string | null;
   updated_at?: string;
+  /** مرحلهٔ کار باز کاربر جاری روی این فاکتور (فقط‌خواندنی، سرور)؛ null یعنی کاری با او نیست */
+  my_step?: 'supervisor_ok' | 'accountant_review' | 'manager_ok' | 'treasury_pay' | null;
 }
 
 /** سرفصل هزینهٔ شرکت (۳.۴)؛ ردیف بی والد «گروه» است و روی سند انتخاب نمی‌شود */

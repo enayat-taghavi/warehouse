@@ -1,4 +1,5 @@
-<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl" [class.contents]="embedded">
+  @if (!embedded) {
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <app-command-center rowFrom="lg">
@@ -175,8 +176,8 @@
               <span *ngIf="item.status === 'paid'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">تسویه شد</span>
             </td>
             <td class="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
-              <div><span class="text-slate-400">ثبت‌کننده: </span>{{ item.created_by_name || '—' }} <span *ngIf="item.created_at" class="font-mono text-[10px] text-slate-400">({{ item.created_at | persianDate:'short-time' }})</span></div>
-              <div class="text-[10px] text-slate-400 mt-0.5"><span class="text-slate-400">آخرین تغییردهنده: </span>{{ item.updated_by_name || '—' }} <span *ngIf="item.updated_at" class="font-mono">({{ item.updated_at | persianDate:'short-time' }})</span></div>
+              <div><span class="text-fg-muted">ثبت‌کننده: </span>{{ item.created_by_name || '—' }} <span *ngIf="item.created_at" class="font-mono text-[10px] text-fg-muted">({{ item.created_at | persianDate:'short-time' }})</span></div>
+              <div class="text-[10px] text-fg-muted mt-0.5"><span class="text-fg-muted">آخرین تغییردهنده: </span>{{ item.updated_by_name || '—' }} <span *ngIf="item.updated_at" class="font-mono">({{ item.updated_at | persianDate:'short-time' }})</span></div>
             </td>
             <td class="py-3 px-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
@@ -220,6 +221,8 @@
       </table>
     </div>
   </div>
+
+  }
 
   <!-- ── ۴. پنجرهٔ ثبت قسط و فهرست قسط‌ها ── -->
   <app-modal [isOpen]="payModalOpen" size="lg" [title]="'پرداخت رسید پرداخت ' + (payItem?.number || payItem?.invoice_number || '')" (closed)="closePayModal()">
@@ -372,19 +375,19 @@
               class="flex-1 min-w-0 min-h-[40px] flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-surface-muted px-2.5 py-1 text-xs">
               <span class="font-bold text-fg truncate max-w-[12rem]" [title]="acc.owner_name ? acc.bank_name + ' – ' + acc.owner_name : acc.bank_name">{{ acc.bank_name }}<span *ngIf="acc.owner_name" class="font-normal text-fg-muted"> – {{ acc.owner_name }}</span></span>
               <span *ngIf="acc.account_number" class="inline-flex items-center gap-1 min-w-0">
-                <span class="text-[10px] text-fg-subtle">حساب</span>
+                <span class="text-[10px] text-fg-muted">حساب</span>
                 <bdi dir="ltr" class="font-mono font-bold text-fg whitespace-nowrap select-all">{{ acc.account_number }}</bdi>
                 <button type="button" (click)="copyValue(acc.account_number, 'account', 'شماره حساب')"
-                  class="shrink-0 w-10 h-10 -my-2 inline-flex items-center justify-center rounded-lg text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
+                  class="shrink-0 w-10 h-10 inline-flex items-center justify-center rounded-lg text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
                   [title]="copiedKey === 'account' ? 'کپی شد' : 'کپی شماره حساب'" aria-label="کپی شماره حساب" data-copy-account>
                   <svg [appIcon]="copiedKey === 'account' ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 </button>
               </span>
               <span *ngIf="acc.sheba_number" class="inline-flex items-center gap-1 min-w-0">
-                <span class="text-[10px] text-fg-subtle">شبا</span>
+                <span class="text-[10px] text-fg-muted">شبا</span>
                 <bdi dir="ltr" class="font-mono font-bold text-fg whitespace-nowrap select-all">{{ acc.sheba_number }}</bdi>
                 <button type="button" (click)="copyValue(acc.sheba_number, 'sheba', 'شماره شبا')"
-                  class="shrink-0 w-10 h-10 -my-2 inline-flex items-center justify-center rounded-lg text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
+                  class="shrink-0 w-10 h-10 inline-flex items-center justify-center rounded-lg text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
                   [title]="copiedKey === 'sheba' ? 'کپی شد' : 'کپی شماره شبا'" aria-label="کپی شماره شبا" data-copy-sheba>
                   <svg [appIcon]="copiedKey === 'sheba' ? 'check' : 'copy'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
                 </button>

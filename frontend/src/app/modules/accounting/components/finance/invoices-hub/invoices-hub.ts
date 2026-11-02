@@ -1,47 +1,52 @@
-import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import { map } from 'rxjs';
+import { ChangeDetectorRef, Component, ViewChild, computed, inject } from '@angular/core';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { hasRoutePermission } from '../../../../../core/auth/auth.guard';
 import { AppPersonaService } from '../../../../../core/services/app-persona.service';
-import { EmployeeInvoicesHubComponent } from '../employee/employee-invoices/employee-invoices';
+import {
+  EmployeeInvoicesHubComponent,
+  InvoiceRoleAction,
+  InvoiceRoleActionKind,
+  InvoiceRoleStep,
+} from '../employee/employee-invoices/employee-invoices';
 import { SupervisorInvoicesHubComponent } from '../supervisor/supervisor-invoices/supervisor-invoices';
 import { AccountantInvoicesHubComponent } from '../accountant/accountant-invoices/accountant-invoices';
 import { TreasurerInvoicesComponent } from '../treasurer/treasurer-invoices/treasurer-invoices';
 import { ManagerInvoicesComponent } from '../manager/manager-invoices/manager-invoices';
 
-export type InvoiceFilter = 'all' | 'mine' | 'approve' | 'pay';
-export type InvoicesView = 'cartable' | 'mine';
 export type InvoiceCartableRole = 'supervisor' | 'accountant' | 'manager' | 'treasury';
 
-export interface InvoiceFilterChip {
-  id: InvoiceFilter;
-  label: string;
-}
-
 /**
- * کارتابل فاکتور هر نقش؛ `page` شناسهٔ صفحهٔ قبلی همان نقش است تا مجوز زیرتب
+ * کارتابل فاکتور هر نقش؛ `page` شناسهٔ صفحهٔ قبلی همان نقش است تا مجوز کار نقش
  * دقیقاً همان قاعدهٔ pagePermissions صفحهٔ قبلی بماند (route-access.ts).
  */
-export const INVOICE_CARTABLES: Record<InvoiceCartableRole, { page: string; label: string; shortLabel: string }> = {
-  supervisor: { page: 'supervisor-invoices', label: 'تایید رسیدهای پرداخت', shortLabel: 'تایید' },
-  accountant: { page: 'accountant-invoices', label: 'ممیزی رسیدهای پرداخت', shortLabel: 'ممیزی' },
-  manager: { page: 'manager-approvals', label: 'مجوز پرداخت رسیدهای پرداخت', shortLabel: 'مجوز پرداخت' },
-  treasury: { page: 'treasurer-invoices', label: 'پرداخت رسیدهای پرداخت', shortLabel: 'پرداخت' },
+export const INVOICE_CARTABLES: Record<InvoiceCartableRole, { page: string }> = {
+  supervisor: { page: 'supervisor-invoices' },
+  accountant: { page: 'accountant-invoices' },
+  manager: { page: 'manager-approvals' },
+  treasury: { page: 'treasurer-invoices' },
 };
 
 const CARTABLE_ORDER: InvoiceCartableRole[] = ['supervisor', 'accountant', 'manager', 'treasury'];
 
-const FILTER_LABELS: Record<InvoiceFilter, string> = {
-  all: 'همه',
-  mine: 'مال من',
-  approve: 'منتظر تأیید من',
-  pay: 'منتظر پرداخت',
+/** مرحلهٔ کار هر نقش (همان my_step سرور) */
+export const INVOICE_ROLE_STEP: Record<InvoiceCartableRole, InvoiceRoleStep> = {
+  supervisor: 'supervisor_ok',
+  accountant: 'accountant_review',
+  manager: 'manager_ok',
+  treasury: 'treasury_pay',
+};
+
+/** کار ردیف ← متد همان کار در کامپوننت نقش (حالت embedded) */
+const ROLE_DISPATCH: Record<InvoiceCartableRole, Partial<Record<InvoiceRoleActionKind, string>>> = {
+  supervisor: { approve: 'approveSingle', return: 'rejectSingle' },
+  accountant: { approve: 'bookDocument', return: 'rejectDocument' },
+  manager: { approve: 'approveInvoiceManager', return: 'rejectInvoiceManager' },
+  treasury: { pay: 'payExpenseInvoice' },
 };
 
 /**
- * تب یکپارچهٔ «فاکتورها» در منوی سرپرست، حسابدار، مدیر و خزانه‌دار همراه با چیپ‌های فیلتر.
+ * تب یکپارچهٔ «فاکتورها» (ح۲): یک فهرست با تب‌های وضعیت و تیک «فقط رسیدهای خودم»؛
+ * کار نقش (تأیید، عودت، مجوز، پرداخت) روی همان ردیف و با پنجره‌های کامپوننت نقش (embedded) انجام می‌شود.
  */
 @Component({
   selector: 'app-invoices-hub',
@@ -58,20 +63,10 @@ const FILTER_LABELS: Record<InvoiceFilter, string> = {
 export class InvoicesHubComponent {
   private readonly auth = inject(AuthService);
   private readonly persona = inject(AppPersonaService);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
 
-  readonly INVOICE_CARTABLES = INVOICE_CARTABLES;
-
-  private readonly requestedFilter = toSignal(
-    this.route.queryParamMap.pipe(map(p => p.get('filter'))),
-    { initialValue: this.route.snapshot.queryParamMap.get('filter') }
-  );
-
-  private readonly requestedView = toSignal(
-    this.route.queryParamMap.pipe(map(p => p.get('view'))),
-    { initialValue: this.route.snapshot.queryParamMap.get('view') }
-  );
+  @ViewChild('invoiceList') invoiceList?: EmployeeInvoicesHubComponent;
+  /** کامپوننت نقش فعال در حالت embedded (فقط کارها و پنجره‌ها) */
+  @ViewChild('roleActions') roleActions?: unknown;
 
   private canOpen(page: string): boolean {
     return this.auth.isSuperuser() || hasRoutePermission(page, this.auth.userPermissions());
@@ -89,79 +84,28 @@ export class InvoicesHubComponent {
 
   readonly canSeeMine = computed(() => this.canOpen('employee-invoices'));
 
-  /** چیپ‌ها فقط برای فیلترهایی که کاربر مجاز است نمایش داده می‌شوند */
-  readonly allowedFilters = computed<InvoiceFilter[]>(() => {
-    const others: InvoiceFilter[] = [];
-    if (this.canSeeMine()) {
-      others.push('mine');
-    }
+  /** مرحله‌ای که دکمه‌هایش روی ردیف‌های فهرست دیده می‌شود */
+  readonly actionStep = computed<InvoiceRoleStep | null>(() => {
     const role = this.cartableRole();
-    if (role === 'supervisor' || role === 'accountant' || role === 'manager') {
-      others.push('approve');
-    } else if (role === 'treasury') {
-      others.push('pay');
-    }
-
-    const result: InvoiceFilter[] = [];
-    if (others.length >= 2) {
-      result.push('all');
-    }
-    result.push(...others);
-    return result;
+    return role ? INVOICE_ROLE_STEP[role] : null;
   });
 
-  readonly chips = computed<InvoiceFilterChip[]>(() => {
-    return this.allowedFilters().map(id => ({ id, label: FILTER_LABELS[id] }));
-  });
+  /** کار ردیف را به متد کامپوننت نقش فعال می‌سپارد */
+  onRoleAction(event: InvoiceRoleAction): void {
+    const role = this.cartableRole();
+    if (!role || !event?.inv) return;
+    if (event.inv.my_step !== INVOICE_ROLE_STEP[role]) return;
+    const method = ROLE_DISPATCH[role][event.kind];
+    const target = this.roleActions as (Record<string, unknown> & { cdr?: ChangeDetectorRef }) | undefined;
+    const fn = method && target ? target[method] : undefined;
+    if (typeof fn !== 'function') return;
+    fn.call(target, event.inv);
+    // کامپوننت نقش OnPush است و کلیک در فهرست آن را کثیف نمی‌کند؛ پنجرهٔ تازه‌باز باید کشیده شود
+    target?.cdr?.markForCheck?.();
+  }
 
-  readonly filter = computed<InvoiceFilter | null>(() => {
-    const allowed = this.allowedFilters();
-    if (allowed.length === 0) return null;
-
-    const reqFilter = this.requestedFilter() as InvoiceFilter | null;
-    if (reqFilter && allowed.includes(reqFilter)) {
-      return reqFilter;
-    }
-
-    // نگاشت پارامترهای قدیمی view: view=mine -> mine، view=cartable -> approve یا pay
-    const reqView = this.requestedView();
-    if (reqView === 'mine' && allowed.includes('mine')) {
-      return 'mine';
-    }
-    if (reqView === 'cartable') {
-      if (allowed.includes('approve')) return 'approve';
-      if (allowed.includes('pay')) return 'pay';
-    }
-
-    // پیش‌فرض: all در صورت مجاز بودن، در غیر این صورت نخستین فیلتر مجاز
-    if (allowed.includes('all')) {
-      return 'all';
-    }
-    return allowed[0] ?? null;
-  });
-
-  /** سازگاری با تست‌ها یا ارجاعات احتمالی قبلی */
-  readonly view = computed<InvoicesView | null>(() => {
-    const f = this.filter();
-    if (f === 'mine') return 'mine';
-    if (f === 'approve' || f === 'pay') return 'cartable';
-    if (f === 'all') return this.cartableRole() ? 'cartable' : 'mine';
-    return null;
-  });
-
-  readonly tabs = computed(() => {
-    return this.chips().map(c => ({ id: c.id, label: c.label }));
-  });
-
-  switchFilter(next: string): void {
-    const target = next as InvoiceFilter;
-    if (!this.allowedFilters().includes(target)) return;
-    if (target === this.filter()) return;
-
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { filter: target, view: null, tab: null, q: null, invoice: null },
-      queryParamsHandling: 'merge',
-    });
+  /** پس از کار موفق نقش، فهرست دوباره خوانده می‌شود */
+  reloadList(): void {
+    this.invoiceList?.loadInvoices();
   }
 }

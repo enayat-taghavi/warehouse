@@ -27,6 +27,17 @@
         fullLabelFrom="xl"
         (activeChange)="setStatusFilter($event)"
       ></app-tab-bar>
+
+      <!-- فقط رسیدهایی که خود کاربر ثبت کرده (روی همهٔ تب‌ها) -->
+      <label class="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg cursor-pointer select-none focus-within:ring-2 focus-within:ring-indigo-500">
+        <input
+          type="checkbox"
+          data-only-mine
+          [checked]="onlyMine"
+          (change)="setOnlyMine($any($event.target).checked)"
+          class="w-4 h-4 accent-indigo-600 cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1" />
+        <span>فقط رسیدهای خودم</span>
+      </label>
     </div>
 
     <!-- سمت چپ: دکمه‌های عملیاتی استاندارد ۳‌گانه (Action Buttons) -->
@@ -135,6 +146,17 @@
             <span>تاریخ آخرین تغییر: <b class="font-mono text-fg">{{ inv.updated_at ? (inv.updated_at | persianDate:'short-time') : '—' }}</b></span>
           </div>
           <div class="flex flex-wrap items-center gap-1.5 pt-1">
+            @if (roleActionsFor(inv); as ra) {
+              @if (ra.approve) {
+                <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
+              }
+              @if (ra.ret) {
+                <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
+              }
+              @if (ra.pay) {
+                <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
+              }
+            }
             @if (isEditable(inv)) {
               <button type="button" appAction="send" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)"></button>
               <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)"></button>
@@ -171,7 +193,7 @@
             <th class="py-3 px-3 text-center">پیوست</th>
             <th class="py-3 px-3 text-center">وضعیت</th>
             <th class="py-3 px-3">ثبت و آخرین تغییر</th>
-            <th class="py-3 px-3 text-center w-28">عملیات</th>
+            <th class="py-3 px-3 text-center">عملیات</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -264,14 +286,27 @@
 
             <!-- ثبت و آخرین تغییر -->
             <td class="py-2.5 px-3 text-slate-500 text-[11px] whitespace-nowrap">
-              <div><span class="text-slate-400">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-slate-400">({{ inv.created_at | persianDate:'short-time' }})</span></div>
-              <div class="mt-0.5 text-slate-400 text-[10px]"><span class="text-slate-400">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
+              <div><span class="text-fg-muted">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-fg-muted">({{ inv.created_at | persianDate:'short-time' }})</span></div>
+              <div class="mt-0.5 text-fg-muted text-[10px]"><span class="text-fg-muted">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
             </td>
 
             <!-- عملیات -->
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
               <div class="flex items-center justify-center gap-1">
-                
+
+                <!-- کار نقش روی این ردیف (فهرست یکپارچه، ح۲) -->
+                @if (roleActionsFor(inv); as ra) {
+                  @if (ra.approve) {
+                    <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
+                  }
+                  @if (ra.ret) {
+                    <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
+                  }
+                  @if (ra.pay) {
+                    <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
+                  }
+                }
+
                 <!-- ارسال به سرپرست (فقط برای پیش‌نویس) -->
                 <button
                   *ngIf="isEditable(inv)"
@@ -335,7 +370,7 @@
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
-                <span *ngIf="!isEditable(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
+                <span *ngIf="!isEditable(inv) && !roleActionsFor(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
                   <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg> قفل
                 </span>
               </div>

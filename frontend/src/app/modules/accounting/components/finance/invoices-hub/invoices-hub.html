@@ -1,76 +1,26 @@
 <div dir="rtl">
-  @if (chips().length > 1) {
-    <div class="px-3 md:px-6 pt-3 md:pt-6">
-      <div
-        role="radiogroup"
-        aria-label="فیلتر رسیدهای پرداخت"
-        class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 w-fit text-xs font-bold"
-      >
-        @for (chip of chips(); track chip.id) {
-          <button
-            type="button"
-            role="radio"
-            [attr.aria-checked]="filter() === chip.id"
-            [attr.aria-pressed]="filter() === chip.id"
-            (click)="switchFilter(chip.id)"
-            [class.bg-white]="filter() === chip.id"
-            [class.text-indigo-700]="filter() === chip.id"
-            [class.shadow-sm]="filter() === chip.id"
-            [class.text-slate-600]="filter() !== chip.id"
-            class="px-3 py-1.5 min-h-[40px] inline-flex items-center justify-center rounded-lg transition-all cursor-pointer hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          >
-            {{ chip.label }}
-          </button>
-        }
-      </div>
-    </div>
-  }
-
-  @switch (filter()) {
-    @case ('all') {
-      <div class="space-y-6">
-        @if (cartableRole(); as role) {
-          <section aria-labelledby="cartable-section-heading">
-            <div class="px-3 md:px-6 pt-3 md:pt-4">
-              <h2 id="cartable-section-heading" class="text-sm font-black text-slate-800">
-                {{ INVOICE_CARTABLES[role].label }}
-              </h2>
-            </div>
-            @switch (role) {
-              @case ('supervisor') { <app-supervisor-invoices-hub /> }
-              @case ('accountant') { <app-accountant-invoices-hub /> }
-              @case ('manager') { <app-manager-invoices /> }
-              @case ('treasury') { <app-treasurer-invoices-hub /> }
-            }
-          </section>
-        }
-        @if (canSeeMine()) {
-          <section aria-labelledby="mine-section-heading">
-            <div class="px-3 md:px-6 pt-2">
-              <h2 id="mine-section-heading" class="text-sm font-black text-slate-800">
-                رسیدهای پرداخت من
-              </h2>
-            </div>
-            <app-employee-invoices-hub />
-          </section>
-        }
-      </div>
+  @if (canSeeMine()) {
+    <app-employee-invoices-hub
+      #invoiceList
+      [actionStep]="actionStep()"
+      (roleAction)="onRoleAction($event)"
+    />
+    <!-- کامپوننت نقش فقط برای کارها و پنجره‌ها (تأیید، دلیل عودت، پرداخت) -->
+    @switch (cartableRole()) {
+      @case ('supervisor') { <app-supervisor-invoices-hub #roleActions [embedded]="true" (changed)="reloadList()" /> }
+      @case ('accountant') { <app-accountant-invoices-hub #roleActions [embedded]="true" (changed)="reloadList()" /> }
+      @case ('manager') { <app-manager-invoices #roleActions [embedded]="true" (changed)="reloadList()" /> }
+      @case ('treasury') { <app-treasurer-invoices-hub #roleActions [embedded]="true" (changed)="reloadList()" /> }
     }
-    @case ('approve') {
-      @switch (cartableRole()) {
-        @case ('supervisor') { <app-supervisor-invoices-hub /> }
-        @case ('accountant') { <app-accountant-invoices-hub /> }
-        @case ('manager') { <app-manager-invoices /> }
-      }
+  } @else if (cartableRole(); as role) {
+    <!-- بی مجوز فهرست رسیدها: همان کارتابل قبلی نقش -->
+    @switch (role) {
+      @case ('supervisor') { <app-supervisor-invoices-hub /> }
+      @case ('accountant') { <app-accountant-invoices-hub /> }
+      @case ('manager') { <app-manager-invoices /> }
+      @case ('treasury') { <app-treasurer-invoices-hub /> }
     }
-    @case ('pay') {
-      <app-treasurer-invoices-hub />
-    }
-    @case ('mine') {
-      <app-employee-invoices-hub />
-    }
-    @default {
-      <p class="p-8 text-center text-sm text-slate-500">دسترسی به رسیدهای پرداخت برای نقش فعلی تعریف نشده است.</p>
-    }
+  } @else {
+    <p class="p-8 text-center text-sm text-fg-muted">دسترسی به رسیدهای پرداخت برای نقش فعلی تعریف نشده است.</p>
   }
 </div>

@@ -249,7 +249,7 @@ export class TreasuryOrgApiService {
   }
 
   /** صفحه‌بندی فقط وقتی `page` فرستاده شود (۴.۱) */
-  getExpenseInvoicesPage(params: { page: number; page_size?: number; section_id?: number; status?: string; search?: string }): Observable<PagedResult<ExpenseInvoice>> {
+  getExpenseInvoicesPage(params: { page: number; page_size?: number; section_id?: number; status?: string; search?: string; mine?: 1 }): Observable<PagedResult<ExpenseInvoice>> {
     return this.api.get<PagedResult<ExpenseInvoice>>(`${this.baseUrl}/expense-invoices`, params as Record<string, unknown>);
   }
 

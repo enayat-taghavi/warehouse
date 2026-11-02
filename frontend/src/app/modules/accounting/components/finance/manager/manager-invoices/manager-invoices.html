@@ -1,4 +1,5 @@
-<div class="p-3 md:p-6 space-y-4" dir="rtl">
+<div class="p-3 md:p-6 space-y-4" dir="rtl" [class.contents]="embedded">
+  @if (!embedded) {
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
       <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
@@ -109,8 +110,8 @@
               </span>
             </td>
             <td class="p-3 text-[11px] text-slate-500 whitespace-nowrap">
-              <div><span class="text-slate-400">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-slate-400">({{ inv.created_at | persianDate:'short-time' }})</span></div>
-              <div class="text-[10px] text-slate-400 mt-0.5"><span class="text-slate-400">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
+              <div><span class="text-fg-muted">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-fg-muted">({{ inv.created_at | persianDate:'short-time' }})</span></div>
+              <div class="text-[10px] text-fg-muted mt-0.5"><span class="text-fg-muted">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
             </td>
             <td class="p-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
@@ -131,6 +132,8 @@
       </table>
     </div>
   </div>
+
+  }
 
   <!-- دلیل بازنگری فاکتور -->
   <app-workflow-reason-dialog

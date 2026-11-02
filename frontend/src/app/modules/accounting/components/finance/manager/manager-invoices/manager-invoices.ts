@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -24,6 +24,11 @@ import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pip
   templateUrl: './manager-invoices.html',
 })
 export class ManagerInvoicesComponent implements OnInit, OnDestroy {
+  /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
+  @Input() embedded = false;
+  /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */
+  @Output() changed = new EventEmitter<void>();
+
   readonly invoiceIcon = ACCOUNTING_ENTITY_ICONS.invoices;
 
   invoicesList: any[] = [];
@@ -64,6 +69,7 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    if (this.embedded) return;
     this.loadInvoices();
     // فاکتوری که جای دیگری عوض شد فهرست را بی‌صدا تازه می‌کند
     this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(() => this.loadInvoices(true));
@@ -75,6 +81,7 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
 
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   loadInvoices(silent = false): void {
+    if (this.embedded) { this.cdr.markForCheck(); this.changed.emit(); return; }
     if (!silent) this.isLoading = true;
     this.api.getExpenseInvoices({ status: 'pending_manager' }).subscribe({
       next: (res: any) => {

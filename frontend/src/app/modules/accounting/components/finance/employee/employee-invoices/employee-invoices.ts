@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter } from '@angular/core';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_LABEL } from '../../../../payment-receipt';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
@@ -49,6 +49,40 @@ export interface InvoiceLineForm {
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'pending_manager' | 'ready_to_pay' | 'paid' | 'rejected';
 
+/** مرحلهٔ کار نقش روی فاکتور (همان my_step سرور) */
+export type InvoiceRoleStep = 'supervisor_ok' | 'accountant_review' | 'manager_ok' | 'treasury_pay';
+export type InvoiceRoleActionKind = 'approve' | 'return' | 'pay';
+export interface InvoiceRoleAction { kind: InvoiceRoleActionKind; inv: ExpenseInvoice; }
+interface RoleActionButton { label: string; hint: string; }
+export interface InvoiceRoleActionSet { approve?: RoleActionButton; ret?: RoleActionButton; pay?: RoleActionButton; }
+
+/** دکمه‌های ردیف برای هر مرحلهٔ نقش (فهرست یکپارچهٔ فاکتورها، ح۲) */
+export const INVOICE_ROLE_ACTIONS: Record<InvoiceRoleStep, InvoiceRoleActionSet> = {
+  supervisor_ok: {
+    approve: { label: 'تأیید', hint: 'تأیید رسید پرداخت و ارسال به حسابدار' },
+    ret: { label: 'عودت', hint: 'عودت رسید پرداخت برای اصلاح' },
+  },
+  accountant_review: {
+    approve: { label: 'صدور', hint: 'صدور سند' },
+    ret: { label: 'عودت', hint: 'عودت رسید پرداخت برای اصلاح' },
+  },
+  manager_ok: {
+    approve: { label: 'مجوز', hint: 'مجوز پرداخت' },
+    ret: { label: 'بازنگری', hint: 'بازگرداندن برای بازنگری' },
+  },
+  treasury_pay: {
+    pay: { label: 'پرداخت', hint: 'پرداخت رسید پرداخت' },
+  },
+};
+
+/** تب وضعیتی که کارتابل هر نقش را نشان می‌دهد (نگاشت پیوندهای قدیمی filter=approve / view=cartable) */
+const ROLE_STEP_TAB: Record<InvoiceRoleStep, InvoiceStatusTab> = {
+  supervisor_ok: 'pending_supervisor',
+  accountant_review: 'pending_accountant',
+  manager_ok: 'pending_manager',
+  treasury_pay: 'ready_to_pay',
+};
+
 /** ارقام فارسی/عربی به لاتین (تاریخ تقویم) */
 function toAsciiDigits(v: string): string {
   return v.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
@@ -97,6 +131,14 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   // ─── جستجو و فیلتر کارتابل ───
   invoiceSearch: string = '';
   statusFilter: InvoiceStatusTab = 'all';
+  /** «فقط رسیدهای خودم»: هر تب به رسیدهایی که خود کاربر ثبت کرده محدود می‌شود (mine=1) */
+  onlyMine = false;
+
+  // ─── کار نقش روی ردیف (فهرست یکپارچهٔ فاکتورها، ح۲) ───
+  /** مرحله‌ای که میزبان می‌تواند رویش کار کند؛ دکمه فقط وقتی my_step ردیف همین باشد دیده می‌شود */
+  @Input() actionStep: string | null = null;
+  @Output() roleAction = new EventEmitter<InvoiceRoleAction>();
+  private legacyParamsRead = false;
 
   // ─── لیست طرف‌های حساب ───
   counterparties: Counterparty[] = [];
@@ -232,8 +274,28 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
     this.loadMySections();
     this.route.queryParams.subscribe(params => {
+      let legacyChanged = false;
       if (params['tab'] && ['all', 'draft', 'pending_supervisor', 'pending_accountant', 'pending_manager', 'ready_to_pay', 'paid', 'rejected'].includes(params['tab'])) {
         this.statusFilter = params['tab'] as InvoiceStatusTab;
+      } else if (!this.legacyParamsRead) {
+        // فقط نخستین بار: پس از آن تب را خود کاربر عوض می‌کند
+        const legacyTab = this.legacyStatusTab(params['filter'], params['view']);
+        if (legacyTab && legacyTab !== this.statusFilter) {
+          this.statusFilter = legacyTab;
+          legacyChanged = true;
+        }
+      }
+      this.legacyParamsRead = true;
+      // پیوند قدیمی filter=mine همان تیک «فقط رسیدهای خودم» است؛ view=mine (پیوند اعلان) فهرست ساده است
+      const mine = String(params['mine'] ?? '') === '1' || params['filter'] === 'mine';
+      if (mine !== this.onlyMine) {
+        this.onlyMine = mine;
+        legacyChanged = true;
+      }
+      // فهرستی که پیش از خواندن نشانی بار شده (پاسخ هم‌زمان بخش‌ها) با فیلتر نشانی دوباره خوانده می‌شود
+      if (legacyChanged && this.mySections.length > 0) {
+        this.page = 1;
+        this.loadInvoices();
       }
       if (params['section_id']) {
         const sId = Number(params['section_id']);
@@ -253,6 +315,38 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  /** پیوندهای قدیمی چیپ‌ها: filter=approve یا view=cartable = تب کارتابل نقش فعال، filter=pay = آمادهٔ پرداخت */
+  private legacyStatusTab(filter: unknown, view: unknown): InvoiceStatusTab | null {
+    if (filter === 'pay') return 'ready_to_pay';
+    if (filter === 'approve' || view === 'cartable') {
+      return ROLE_STEP_TAB[this.actionStep as InvoiceRoleStep] ?? null;
+    }
+    return null;
+  }
+
+  /** دکمه‌های کار نقش برای ردیف؛ فقط وقتی کار باز کاربر روی همین ردیف همان مرحلهٔ میزبان باشد */
+  roleActionsFor(inv: ExpenseInvoice): InvoiceRoleActionSet | null {
+    const step = inv?.my_step;
+    if (!step || !this.actionStep || step !== this.actionStep) return null;
+    return INVOICE_ROLE_ACTIONS[step] ?? null;
+  }
+
+  emitRoleAction(kind: InvoiceRoleActionKind, inv: ExpenseInvoice): void {
+    this.roleAction.emit({ kind, inv });
+  }
+
+  /** تیک «فقط رسیدهای خودم» */
+  setOnlyMine(on: boolean): void {
+    this.onlyMine = !!on;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mine: this.onlyMine ? 1 : null, filter: null },
+      queryParamsHandling: 'merge'
+    });
+    this.page = 1;
+    this.loadInvoices();
   }
 
   /** silent: تازه‌سازی پنجرهٔ باز پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
@@ -502,12 +596,15 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       this.isLoading = true;
       this.loadError = '';
     }
-    const params: { page: number; page_size: number; section_id?: number; status?: string; search?: string } = {
+    const params: { page: number; page_size: number; section_id?: number; status?: string; search?: string; mine?: 1 } = {
       page: this.page,
       page_size: this.pageSize
     };
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;
-    if (this.statusFilter !== 'all') params.status = this.statusFilter;
+    // «آماده پرداخت» پرداخت ناقص را هم نشان می‌دهد (هر دو کار باز خزانه‌اند)
+    if (this.statusFilter === 'ready_to_pay') params.status = 'ready_to_pay,partially_paid';
+    else if (this.statusFilter !== 'all') params.status = this.statusFilter;
+    if (this.onlyMine) params.mine = 1;
     const q = this.invoiceSearch.trim();
     if (q) params.search = q;
     this.treasuryOrgApi.getExpenseInvoicesPage(params).subscribe({

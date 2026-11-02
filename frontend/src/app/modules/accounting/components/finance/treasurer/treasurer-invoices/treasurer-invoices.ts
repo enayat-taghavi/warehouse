@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, Input, Output, EventEmitter } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
@@ -10,7 +10,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, InvoicePayment, InvoicePaymentMethod, PartyBankAccount } from '../../../../models/personnel.model';
+import { ProjectSection, InvoicePayment, InvoicePaymentMethod, PartyBankAccount, ExpenseInvoice } from '../../../../models/personnel.model';
 import { TreasuryOrgApiService } from '../../../../api/treasury-org-api.service';
 import { CompanyApiService } from '../../../../../../core/api/company-api.service';
 import { CompanyBankAccount, isSafeBankUrl } from '../../../../../../core/models/company.model';
@@ -77,6 +77,11 @@ export interface PayableInvoiceItem {
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
+  /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
+  @Input() embedded = false;
+  /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */
+  @Output() changed = new EventEmitter<void>();
+
   // Section Isolation
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -132,6 +137,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    if (this.embedded) return;
     this.routeSub = this.route.queryParams.subscribe(params => {
       if (params['section_id']) {
         this.selectedSectionId = Number(params['section_id']);
@@ -217,29 +223,40 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** ردیف فاکتور (کارتابل خزانه یا فهرست یکپارچه) به ردیف قابل پرداخت */
+  toPayableItem(inv: any): PayableInvoiceItem {
+    return {
+      id: inv.id,
+      invoice_number: inv.invoice_number,
+      vendor_name: inv.counterparty_name || 'طرف‌حساب',
+      category: inv.category,
+      section_id: inv.section ?? null,
+      project_name: inv.project_name || '',
+      section_name: inv.section_name || '',
+      amount: inv.amount,
+      due_date: inv.invoice_date_shamsi,
+      status: inv.status === 'paid' ? 'paid' : (inv.status === 'partially_paid' ? 'partially_paid' : 'pending_payment'),
+      tracking_code: inv.payment_ref,
+      number: inv.number || null,
+      counterparty_id: inv.counterparty ?? null,
+      paid_amount: Number(inv.paid_amount || 0),
+      remaining: inv.remaining !== undefined && inv.remaining !== null ? Number(inv.remaining) : Number(inv.amount || 0) - Number(inv.paid_amount || 0)
+    };
+  }
+
+  /** پرداخت از فهرست یکپارچهٔ فاکتورها (حالت embedded) */
+  payExpenseInvoice(inv: ExpenseInvoice): void {
+    this.payInvoice(this.toPayableItem(inv));
+  }
+
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   loadTreasuryData(silent = false): void {
+    if (this.embedded) { this.cdr.markForCheck(); this.changed.emit(); return; }
     if (!silent) this.isLoading = true;
     this.personnelApi.getTreasuryCartable().subscribe({
       next: (res: any) => {
         const rawInvoices = res?.invoices || [];
-        this.allInvoices = rawInvoices.map((inv: any) => ({
-          id: inv.id,
-          invoice_number: inv.invoice_number,
-          vendor_name: inv.counterparty_name || 'طرف‌حساب',
-          category: inv.category,
-          section_id: inv.section ?? null,
-          project_name: inv.project_name || '',
-          section_name: inv.section_name || '',
-          amount: inv.amount,
-          due_date: inv.invoice_date_shamsi,
-          status: inv.status === 'paid' ? 'paid' : (inv.status === 'partially_paid' ? 'partially_paid' : 'pending_payment'),
-          tracking_code: inv.payment_ref,
-          number: inv.number || null,
-          counterparty_id: inv.counterparty ?? null,
-          paid_amount: Number(inv.paid_amount || 0),
-          remaining: inv.remaining !== undefined && inv.remaining !== null ? Number(inv.remaining) : Number(inv.amount || 0) - Number(inv.paid_amount || 0)
-        }));
+        this.allInvoices = rawInvoices.map((inv: any) => this.toPayableItem(inv));
 
         this.isLoading = false;
         this.applySectionFilter();
