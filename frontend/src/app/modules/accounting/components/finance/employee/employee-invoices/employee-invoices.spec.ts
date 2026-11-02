@@ -753,5 +753,98 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       expect(mockToast.show).toHaveBeenCalledWith('warning', expect.stringContaining('امکان لغو وجود ندارد'));
     });
   });
+
+  describe('۸. انتخابگر «پروژه ◀ بخش» و پیش‌فرض همه بخش‌ها (Step C)', () => {
+    it('(a) with route query params without section_id, ngOnInit() leaves selectedSectionId null and getExpenseInvoicesPage is called with exactly { page: 1, page_size: 25 }', () => {
+      const route = { queryParams: of({}) } as any;
+      const comp = new EmployeeInvoicesHubComponent(
+        mockAuth,
+        mockPersonnelApi,
+        mockToast,
+        mockCdr,
+        route,
+        mockRouter,
+        undefined,
+        mockTreasuryOrgApi
+      );
+      comp.ngOnInit();
+      expect(comp.selectedSectionId).toBeNull();
+      expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledWith({ page: 1, page_size: 25 });
+    });
+
+    it('(b) after ngOnInit() with selectedSectionId = null and stubbed localStorage holding 20, openNewInvoiceModal() sets formSectionId to 20 and formProjectId to 1', () => {
+      const store = new Map<string, string>();
+      store.set(`invoice:lastSection:${mockAuth.user().id}:all`, '20');
+      vi.stubGlobal('localStorage', {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => { store.set(k, v); }
+      });
+      try {
+        const route = { queryParams: of({}) } as any;
+        const comp = new EmployeeInvoicesHubComponent(
+          mockAuth,
+          mockPersonnelApi,
+          mockToast,
+          mockCdr,
+          route,
+          mockRouter,
+          undefined,
+          mockTreasuryOrgApi
+        );
+        comp.ngOnInit();
+        expect(comp.selectedSectionId).toBeNull();
+        comp.openNewInvoiceModal();
+        expect(comp.formSectionId).toBe(20);
+        expect(comp.formProjectId).toBe(1);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('(c) the same with a stored 999 leaves formSectionId null', () => {
+      const store = new Map<string, string>();
+      store.set(`invoice:lastSection:${mockAuth.user().id}:all`, '999');
+      vi.stubGlobal('localStorage', {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => { store.set(k, v); }
+      });
+      try {
+        const route = { queryParams: of({}) } as any;
+        const comp = new EmployeeInvoicesHubComponent(
+          mockAuth,
+          mockPersonnelApi,
+          mockToast,
+          mockCdr,
+          route,
+          mockRouter,
+          undefined,
+          mockTreasuryOrgApi
+        );
+        comp.ngOnInit();
+        expect(comp.selectedSectionId).toBeNull();
+        comp.openNewInvoiceModal();
+        expect(comp.formSectionId).toBeNull();
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('(d) give mySections a second project, set formProjectId = 2, call onFormProjectChange(), and formSectionId becomes 30', () => {
+      component.mySections = [
+        ...sampleSections,
+        { id: 30, name: 'بخش برق', code: 'ELE', project: 2, project_name: 'پروژه پرند', is_active: true }
+      ];
+      component.formProjectId = 2;
+      component.onFormProjectChange();
+      expect(component.formSectionId).toBe(30);
+    });
+
+    it('(e) saveInvoice() with formSectionId null calls toast.show with warning and does not call createExpenseInvoice', () => {
+      component.formSectionId = null;
+      component.saveInvoice();
+      expect(mockToast.show).toHaveBeenCalledWith('warning', expect.any(String));
+      expect(mockPersonnelApi.createExpenseInvoice).not.toHaveBeenCalled();
+    });
+  });
 });
 

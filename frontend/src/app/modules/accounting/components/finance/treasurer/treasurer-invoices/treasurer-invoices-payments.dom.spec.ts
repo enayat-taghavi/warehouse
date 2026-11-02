@@ -515,4 +515,31 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(component.payCompanyAccount).toBe(7);
     expect(fixture.nativeElement.querySelector('[data-company-bank-link]')).toBeNull();
   });
+
+  it('filters invoices client-side by section without re-fetching treasury cartable', () => {
+    mockPersonnelApi.getTreasuryCartable.mockReturnValue(of({
+      invoices: [
+        { id: 101, invoice_number: 'INV-10', section: 10, amount: 1000 },
+        { id: 102, invoice_number: 'INV-20', section: 20, amount: 2000 }
+      ]
+    }));
+    component.loadTreasuryData();
+    expect(component.allInvoices.length).toBe(2);
+    expect(component.invoices.length).toBe(2);
+
+    const callsBeforeFilter = mockPersonnelApi.getTreasuryCartable.mock.calls.length;
+    component.selectedSectionId = 20;
+    component.onSectionChanged();
+
+    expect(component.invoices.length).toBe(1);
+    expect(component.invoices[0].id).toBe(102);
+    expect(component.invoices[0].section_id).toBe(20);
+    expect(mockPersonnelApi.getTreasuryCartable.mock.calls.length).toBe(callsBeforeFilter);
+
+    component.selectedSectionId = null;
+    component.onSectionChanged();
+
+    expect(component.invoices.length).toBe(2);
+    expect(mockPersonnelApi.getTreasuryCartable.mock.calls.length).toBe(callsBeforeFilter);
+  });
 });

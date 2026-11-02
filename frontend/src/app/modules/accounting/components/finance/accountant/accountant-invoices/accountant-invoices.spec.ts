@@ -59,5 +59,48 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
     expect(component.previewInvoiceId).toBeNull();
     expect(component.previewInvoiceItem).toBeNull();
   });
+
+  it('(a) with no query params, after ngOnInit() selectedSectionId is null and the last getExpenseInvoices call argument has no section_id property', () => {
+    component.ngOnInit();
+    expect(component.selectedSectionId).toBeNull();
+    const lastCall = mockPersonnelApi.getExpenseInvoices.mock.calls.at(-1)?.[0];
+    expect(lastCall).not.toHaveProperty('section_id');
+  });
+
+  it('(b) with route queryParams: of({ section_id: \'10\' }) (10 is returned by getMySections) the call contains section_id: 10', () => {
+    mockPersonnelApi.getMySections.mockReturnValue(of([{ id: 10, name: 'کارگاه ۱' }]));
+    const compWithQuery = new AccountantInvoicesHubComponent(
+      {} as any,
+      {} as any,
+      mockToast,
+      mockPersonnelApi,
+      { navigate: vi.fn() } as any,
+      { queryParams: of({ section_id: '10' }) } as any,
+      { detectChanges: vi.fn() } as any,
+      mockPrintService
+    );
+    compWithQuery.ngOnInit();
+    expect(compWithQuery.selectedSectionId).toBe(10);
+    const lastCall = mockPersonnelApi.getExpenseInvoices.mock.calls.at(-1)?.[0];
+    expect(lastCall).toEqual(expect.objectContaining({ section_id: 10 }));
+  });
+
+  it('(c) with section_id: \'999\' (not in the list) selectedSectionId becomes null and no section_id is sent', () => {
+    mockPersonnelApi.getMySections.mockReturnValue(of([{ id: 10, name: 'کارگاه ۱' }]));
+    const compWithInvalidQuery = new AccountantInvoicesHubComponent(
+      {} as any,
+      {} as any,
+      mockToast,
+      mockPersonnelApi,
+      { navigate: vi.fn() } as any,
+      { queryParams: of({ section_id: '999' }) } as any,
+      { detectChanges: vi.fn() } as any,
+      mockPrintService
+    );
+    compWithInvalidQuery.ngOnInit();
+    expect(compWithInvalidQuery.selectedSectionId).toBeNull();
+    const lastCall = mockPersonnelApi.getExpenseInvoices.mock.calls.at(-1)?.[0];
+    expect(lastCall).not.toHaveProperty('section_id');
+  });
 });
 
