@@ -367,7 +367,8 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         { id: 11, company: 1, parent: 1, code: '1001', title: 'تعمیرات', is_active: true },
         { id: 12, company: 1, parent: 1, code: '1002', title: 'سوخت', is_active: true }
       ]));
-      component.selectedSection = { ...(component.selectedSection as any), company_id: 77 };
+      // سرفصل‌ها از شرکت بخش فرم («پروژه ◀ بخش») می‌آیند، نه از فیلتر فهرست
+      component.mySections = component.mySections.map(s => ({ ...s, company_id: 77 }));
       component.openNewInvoiceModal();
       expect(component.formLines[0].expense_head).toBeNull();
       component.formLines[0].expense_head = 12;

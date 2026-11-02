@@ -6,12 +6,14 @@
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <!-- انتخابگر بخش فعال (Guardian G1: Section Isolation) -->
       <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <label for="sup-inv-section" class="text-[11px] font-bold text-slate-500">بخش:</label>
         <select
+          id="sup-inv-section"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
-          class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
-          <option *ngFor="let sec of mySections" [value]="sec.id">
+          class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+          <option [ngValue]="null">همه بخش‌ها</option>
+          <option *ngFor="let sec of mySections" [ngValue]="sec.id">
             {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
           </option>
         </select>
@@ -128,6 +130,11 @@
 
         <p *ngIf="item.description" class="text-xs text-fg-muted line-clamp-2">{{ item.description }}</p>
 
+        <p *ngIf="item.section_name" class="text-[11px] text-fg-muted" data-col="section">
+          <span class="text-fg-subtle">بخش:</span>
+          <span class="font-bold text-fg">{{ item.project_name ? (item.project_name + ' ◀ ') : '' }}{{ item.section_name }}</span>
+        </p>
+
         <div *ngIf="item.possible_duplicate || item.vat_manual" class="flex flex-wrap gap-1">
           <span *ngIf="item.possible_duplicate" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="item.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span>
           <span *ngIf="item.vat_manual" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات دستی">مالیات دستی</span>
@@ -178,6 +185,7 @@
             <th class="p-3">ردیف</th>
             <th class="p-3">شماره فاکتور</th>
             <th class="p-3">طرف‌حساب</th>
+            <th class="p-3">پروژه / بخش</th>
             <th class="p-3">شرح هزینه</th>
             <th class="p-3">مبلغ (ریال)</th>
             <th class="p-3">وضعیت</th>
@@ -196,6 +204,10 @@
               </div>
             </td>
             <td class="p-3 font-bold text-slate-700">{{ item.counterparty_name }}</td>
+            <td class="p-3" data-col="section">
+              <div class="text-[10px] text-slate-500">{{ item.project_name || '—' }}</div>
+              <div class="font-bold text-slate-700">{{ item.section_name || '—' }}</div>
+            </td>
             <td class="p-3">{{ item.description }}</td>
             <td class="p-3 font-mono font-bold text-emerald-600">
               <div>{{ item.amount | number }}</div>

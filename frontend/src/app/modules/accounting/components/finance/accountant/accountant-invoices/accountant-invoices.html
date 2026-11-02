@@ -11,8 +11,9 @@
           id="acc-inv-section"
           [(ngModel)]="selectedSectionId"
           (change)="onSectionChanged()"
-          class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
-          <option *ngFor="let sec of mySections" [value]="sec.id">
+          class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+          <option [ngValue]="null">همه بخش‌ها</option>
+          <option *ngFor="let sec of mySections" [ngValue]="sec.id">
             {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
           </option>
         </select>
@@ -183,6 +184,7 @@
             <th class="p-3">ردیف</th>
             <th class="p-3">شماره فاکتور</th>
             <th class="p-3">طرف‌حساب</th>
+            <th class="p-3">پروژه / بخش</th>
             <th class="p-3">شرح هزینه</th>
             <th class="p-3">مبلغ (ریال)</th>
             <th class="p-3">تاییدکننده سرپرست</th>
@@ -201,6 +203,10 @@
               </div>
             </td>
             <td class="p-3 font-bold text-slate-700">{{ item.counterparty_name }}</td>
+            <td class="p-3" data-col="section">
+              <div class="text-[10px] text-slate-500">{{ item.project_name || '—' }}</div>
+              <div class="font-bold text-slate-700">{{ item.section_name || '—' }}</div>
+            </td>
             <td class="p-3">{{ item.description }}</td>
             <td class="p-3 font-mono font-bold text-emerald-600">
               <div>{{ item.amount | number }}</div>

@@ -216,7 +216,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.docSub = this.ws?.documentChanges$?.(['expense_invoice']).subscribe(ev => {
       if (patchDocumentRow(this.invoices, ev)) {
         this.cdr.detectChanges();
-      } else if (this.selectedSectionId && (!ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId))) {
+      } else if (!this.selectedSectionId || !ev.section_id || Number(ev.section_id) === Number(this.selectedSectionId)) {
         this.loadInvoices(true);
       }
     });
@@ -366,23 +366,26 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * پیش‌فرض فهرست «همه بخش‌ها» (null)؛ section_id نشانی فقط وقتی بخش در فهرست کاربر باشد می‌ماند.
+   * دامنهٔ فهرست بی section_id را سرور (scope_invoices_for_user) محدود می‌کند.
+   */
   private pickDefaultSection(): void {
+    if (this.selectedSectionId && !this.mySections.some(s => s.id === this.selectedSectionId)) {
+      this.selectedSectionId = null;
+    }
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     if (this.mySections.length > 0) {
-      if (!this.selectedSectionId || !this.mySections.some(s => s.id === this.selectedSectionId)) {
-        this.selectedSectionId = this.mySections[0]?.id ?? null;
-      }
-      this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
-      if (this.selectedSectionId) {
-        this.loadInvoices();
-        this.loadCounterparties();
-      }
+      this.loadInvoices();
+      this.loadCounterparties();
     }
     this.isLoadingSections = false;
     this.cdr.detectChanges();
   }
 
   onSectionChanged(): void {
-    this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
+    this.selectedSectionId = this.selectedSectionId ? Number(this.selectedSectionId) : null;
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { section_id: this.selectedSectionId },
@@ -390,22 +393,106 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     });
     this.page = 1;
     this.loadInvoices();
-    this.loadCounterparties();
   }
 
-  // ─── بارگذاری فاکتورهای بخش فعال (Guardian G1: Section Isolation) ───
+  // ─── انتخاب «پروژه ◀ بخش» در فرم ثبت ───
+  /** بخش فرم (جدا از فیلتر فهرست) */
+  formSectionId: number | null = null;
+  formProjectId: number | null = null;
+
+  private sectionProjectId(s: ProjectSection): number | null {
+    return s.project_id ?? s.project ?? null;
+  }
+
+  /** پروژه‌های بخش‌های مجاز کاربر، یکتا و به ترتیب فهرست */
+  get formProjects(): { id: number; name: string }[] {
+    const seen = new Map<number, string>();
+    for (const s of this.mySections) {
+      const pid = this.sectionProjectId(s);
+      if (pid != null && !seen.has(pid)) seen.set(pid, s.project_name || `پروژه ${pid}`);
+    }
+    return [...seen].map(([id, name]) => ({ id, name }));
+  }
+
+  get formProjectSections(): ProjectSection[] {
+    if (!this.formProjectId) return [];
+    return this.mySections.filter(s => this.sectionProjectId(s) === this.formProjectId);
+  }
+
+  get formSection(): ProjectSection | null {
+    return this.mySections.find(s => s.id === this.formSectionId) || null;
+  }
+
+  /** بخش فرم را می‌گذارد و پروژه را از آن درمی‌آورد */
+  private setFormSection(sectionId: number | null): void {
+    const sec = this.mySections.find(s => s.id === sectionId) || null;
+    this.formSectionId = sec?.id ?? null;
+    this.formProjectId = sec ? this.sectionProjectId(sec) : (this.formProjects.length === 1 ? this.formProjects[0].id : null);
+    if (!sec && this.formProjectSections.length === 1) this.formSectionId = this.formProjectSections[0].id ?? null;
+    this.newInvoice.section = this.formSectionId ?? undefined;
+  }
+
+  onFormProjectChange(): void {
+    const keep = this.formProjectSections.some(s => s.id === this.formSectionId);
+    if (!keep) {
+      const only = this.formProjectSections.length === 1 ? (this.formProjectSections[0].id ?? null) : null;
+      this.formSectionId = only;
+    }
+    this.onFormSectionChange();
+  }
+
+  onFormSectionChange(): void {
+    this.formSectionId = this.formSectionId ? Number(this.formSectionId) : null;
+    this.newInvoice.section = this.formSectionId ?? undefined;
+    // سرفصل‌های شرکت دیگر برای بخش تازه معتبر نیستند
+    const prevCompany = this.expenseHeadsCompanyId;
+    if (prevCompany && this.sectionCompanyId && prevCompany !== this.sectionCompanyId) {
+      this.formLines.forEach(l => { l.expense_head = null; });
+    }
+    this.loadExpenseHeads();
+  }
+
+  /** کلید آخرین بخش فرم به ازای کاربر و شرکت فعال؛ فقط شناسهٔ بخش ذخیره می‌شود */
+  private get lastSectionKey(): string | null {
+    const userId = this.auth.user()?.id;
+    if (!userId) return null;
+    return `invoice:lastSection:${userId}:${this.activeCompanyService?.activeCompanyId ?? 'all'}`;
+  }
+
+  private readLastSection(): number | null {
+    const key = this.lastSectionKey;
+    if (!key) return null;
+    try {
+      const v = Number(localStorage.getItem(key));
+      return Number.isFinite(v) && v > 0 && this.mySections.some(s => s.id === v) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private rememberSection(sectionId: number | null): void {
+    const key = this.lastSectionKey;
+    if (!key || !sectionId) return;
+    try {
+      localStorage.setItem(key, String(sectionId));
+    } catch {
+      // حافظهٔ مرورگر در دسترس نیست؛ فقط پیش‌فرض از دست می‌رود
+    }
+  }
+
+  // ─── بارگذاری فاکتورها (بخش انتخاب‌شده یا همهٔ بخش‌های دامنهٔ کاربر) ───
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   loadInvoices(silent = false): void {
-    if (!this.selectedSectionId || !this.treasuryOrgApi) return;
+    if (!this.treasuryOrgApi) return;
     if (!silent) {
       this.isLoading = true;
       this.loadError = '';
     }
-    const params: { page: number; page_size: number; section_id: number; status?: string; search?: string } = {
+    const params: { page: number; page_size: number; section_id?: number; status?: string; search?: string } = {
       page: this.page,
-      page_size: this.pageSize,
-      section_id: this.selectedSectionId
+      page_size: this.pageSize
     };
+    if (this.selectedSectionId) params.section_id = this.selectedSectionId;
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
     const q = this.invoiceSearch.trim();
     if (q) params.search = q;
@@ -519,21 +606,22 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   openNewInvoiceModal(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
+    if (this.mySections.length === 0) {
+      this.toast.show('warning', 'بخشی برای ثبت فاکتور به شما داده نشده است.');
       return;
     }
     this.resetFormExtras();
-    this.loadExpenseHeads();
     this.editingInvoiceId = null;
     this.newInvoice = {
-      section: this.selectedSectionId,
       invoice_number: '',
       invoice_date_shamsi: this.todayShamsi,
       counterparty: undefined,
       description: '',
       status: 'draft' // Guardian G2: تحمیل وضعیت پیش‌نویس
     };
+    // بخش فرم: فیلتر فهرست، وگرنه آخرین بخش ذخیره‌شده (اگر هنوز مجاز است)، وگرنه تنها گزینه
+    this.setFormSection(this.selectedSectionId || this.readLastSection());
+    this.loadExpenseHeads();
     this.formLines = [this.blankLine(this.defaultExpenseHeadId)];
     this.descriptionTouched = false;
     this.invoiceDateControl.setValue(this.todayShamsi, { emitEvent: false });
@@ -558,7 +646,6 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       return;
     }
     this.resetFormExtras();
-    this.loadExpenseHeads();
     this.editingInvoiceId = inv.id;
     this.newInvoice = {
       section: inv.section,
@@ -568,6 +655,13 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       description: inv.description || '',
       status: 'draft'
     };
+    this.setFormSection(inv.section);
+    // بخشی که دیگر در فهرست کاربر نیست: همان بخش فاکتور می‌ماند (سرور اجازه را می‌سنجد)
+    if (!this.formSectionId && inv.section) {
+      this.formSectionId = inv.section;
+      this.newInvoice.section = inv.section;
+    }
+    this.loadExpenseHeads();
     const lines = (inv.lines || []).map(l => ({
       description: l.description,
       quantity: l.quantity,
@@ -845,9 +939,9 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   /** پیام کنار انتخابگر سرفصل هزینه */
   expenseHeadError = '';
 
-  /** شرکت بخش انتخاب‌شده (برای فهرست سرفصل)؛ وگرنه شرکت فعال */
+  /** شرکت بخش فرم (برای فهرست سرفصل)؛ وگرنه شرکت فعال */
   private get sectionCompanyId(): number | null {
-    return this.selectedSection?.company_id ?? this.activeCompanyService?.activeCompanyId ?? null;
+    return this.formSection?.company_id ?? this.activeCompanyService?.activeCompanyId ?? null;
   }
 
   /** سرفصل‌های فعال شرکت بخش؛ از کش خواندن آفلاین هم پر می‌شود */
@@ -965,8 +1059,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   /** mode: close = فقط ذخیره؛ send = ذخیره و ارسال به سرپرست (فقط آنلاین)؛ new = ذخیره و فرم خالی برای فاکتور بعدی */
   saveInvoice(mode: 'close' | 'send' | 'new' = 'close'): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'بخش فعال مشخص نیست.');
+    if (!this.formSectionId) {
+      this.toast.show('warning', 'لطفاً پروژه و بخش فاکتور را انتخاب کنید.');
       return;
     }
     if (mode === 'send' && this.isOffline) {
@@ -988,12 +1082,13 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     const lines = this.linesPayload();
     const totals = this.totalsPayload();
     const editingId = this.editingInvoiceId;
+    const savedSectionId = this.formSectionId;
 
     // در صورت وجود پیوست از FormData استفاده می‌کنیم (`lines` به‌صورت رشتهٔ JSON؛ سرور می‌پذیرد)
     let payload: Partial<ExpenseInvoice> | FormData;
     if (this.selectedInvoiceAttachment) {
       const formData = new FormData();
-      formData.append('section', String(this.selectedSectionId));
+      formData.append('section', String(this.formSectionId));
       formData.append('counterparty', String(this.newInvoice.counterparty));
       formData.append('invoice_number', (this.newInvoice.invoice_number || '').trim());
       formData.append('invoice_date_shamsi', this.newInvoice.invoice_date_shamsi!.trim());
@@ -1007,7 +1102,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       payload = formData;
     } else {
       const body: Partial<ExpenseInvoice> = {
-        section: this.selectedSectionId,
+        section: savedSectionId ?? undefined,
         counterparty: this.newInvoice.counterparty,
         invoice_number: (this.newInvoice.invoice_number || '').trim(),
         invoice_date_shamsi: this.newInvoice.invoice_date_shamsi!.trim(),
@@ -1025,6 +1120,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     request$.subscribe({
       next: (saved: ExpenseInvoice) => {
         this.isSaving = false;
+        if (!editingId) this.rememberSection(savedSectionId);
         const keptDate = this.newInvoice.invoice_date_shamsi || this.todayShamsi;
         this.closeNewInvoiceModal();
         if (mode === 'send' && saved?.id) {
@@ -1319,19 +1415,16 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   // ─── خروجی اکسل استاندارد فاکتورها ───
   exportExcel(): void {
-    if (!this.selectedSectionId) {
-      this.toast.show('warning', 'لطفاً ابتدا یک بخش را انتخاب کنید.');
-      return;
-    }
+    // بی بخش: همهٔ فاکتورهای دامنهٔ کاربر (همان queryset دامنه‌دار فهرست در سرور)
     const params = {
-      section_id: this.selectedSectionId,
+      section_id: this.selectedSectionId || undefined,
       status: this.statusFilter !== 'all' ? this.statusFilter : undefined
     };
 
     this.toast.show('info', 'در حال تولید فایل اکسل فاکتورهای هزینه...');
     this.personnelApi.exportExpenseInvoicesExcel(params).subscribe({
       next: (blob: Blob) => {
-        void saveBlob(blob, `expense_invoices_${this.selectedSection?.code || 'section'}.xlsx`);
+        void saveBlob(blob, `expense_invoices_${this.selectedSection?.code || 'all'}.xlsx`);
         this.toast.show('success', 'فایل اکسل با موفقیت دانلود شد.');
       },
       error: (err: any) => {

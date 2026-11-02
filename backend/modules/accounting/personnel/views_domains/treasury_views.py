@@ -629,10 +629,11 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         cid = validate_user_company_access(user, get_request_company_id(self.request))
         qs = scope_invoices_for_user(user, qs, cid)
-        section_id = self.request.query_params.get('section_id')
+        # فیلتر بخش/پروژه فقط دامنه را تنگ می‌کند؛ بی آن «همه بخش‌ها»ی همان دامنه (گام ج طرح اصلاح فاکتور)
+        section_id = _section_id(self.request.query_params.get('section_id'))
         if section_id:
             qs = qs.filter(section_id=section_id)
-        project_id = self.request.query_params.get('project_id')
+        project_id = _section_id(self.request.query_params.get('project_id'))
         if project_id:
             qs = qs.filter(section__project_id=project_id)
         inv_status = self.request.query_params.get('status')

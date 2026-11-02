@@ -175,19 +175,19 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** پیش‌فرض «همه بخش‌ها» (null)؛ section_id نشانی فقط وقتی بخش در فهرست کاربر باشد می‌ماند */
   private pickDefaultSection(): void {
-    if (this.mySections.length > 0) {
-      if (!this.selectedSectionId || !this.mySections.some(s => s.id === this.selectedSectionId)) {
-        this.selectedSectionId = this.mySections[0]?.id ?? null;
-      }
-      this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
+    if (this.selectedSectionId && !this.mySections.some(s => s.id === this.selectedSectionId)) {
+      this.selectedSectionId = null;
     }
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     this.isLoadingSections = false;
     this.fetchInvoices();
   }
 
   onSectionChanged(): void {
-    this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
+    this.selectedSectionId = this.selectedSectionId ? Number(this.selectedSectionId) : null;
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     this.syncUrlParams();
     this.fetchInvoices();
   }

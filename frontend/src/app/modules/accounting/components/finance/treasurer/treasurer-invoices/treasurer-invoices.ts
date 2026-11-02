@@ -36,6 +36,8 @@ export interface PayableInvoiceItem {
   invoice_number: string;
   vendor_name: string;
   category: string;
+  section_id?: number | null;
+  project_name?: string;
   section_name: string;
   amount: number;
   due_date: string;
@@ -82,6 +84,8 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   // State
   isLoading = false;
 
+  /** همهٔ فاکتورهای کارتابل (دامنهٔ سرور)؛ invoices همین فهرست با فیلتر بخش انتخاب‌شده است */
+  allInvoices: PayableInvoiceItem[] = [];
   invoices: PayableInvoiceItem[] = [];
 
   // مودال پیش‌نمایش و سابقه فاکتور
@@ -169,21 +173,28 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** پیش‌فرض «همه بخش‌ها» (null)؛ section_id نشانی فقط وقتی بخش در فهرست کاربر باشد می‌ماند */
   private pickDefaultSection(): void {
-    if (this.mySections.length > 0) {
-      if (!this.selectedSectionId || !this.mySections.some(s => s.id === this.selectedSectionId)) {
-        this.selectedSectionId = this.mySections[0]?.id ?? null;
-      }
-      this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
+    if (this.selectedSectionId && !this.mySections.some(s => s.id === this.selectedSectionId)) {
+      this.selectedSectionId = null;
     }
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     this.isLoadingSections = false;
     this.loadTreasuryData();
   }
 
   onSectionChanged(): void {
-    this.selectedSection = this.mySections.find(s => s.id === Number(this.selectedSectionId)) || null;
+    this.selectedSectionId = this.selectedSectionId ? Number(this.selectedSectionId) : null;
+    this.selectedSection = this.mySections.find(s => s.id === this.selectedSectionId) || null;
     this.syncUrlParams();
-    this.loadTreasuryData();
+    this.applySectionFilter();
+  }
+
+  /** کارتابل خزانه بخش نمی‌گیرد؛ فیلتر بخش سمت کاربر و فقط روی فهرست دامنه‌دار سرور اعمال می‌شود */
+  private applySectionFilter(): void {
+    const sid = this.selectedSectionId;
+    this.invoices = sid ? this.allInvoices.filter(i => Number(i.section_id) === sid) : [...this.allInvoices];
+    this.cdr.detectChanges();
   }
 
   syncUrlParams(): void {
@@ -203,11 +214,13 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.personnelApi.getTreasuryCartable().subscribe({
       next: (res: any) => {
         const rawInvoices = res?.invoices || [];
-        this.invoices = rawInvoices.map((inv: any) => ({
+        this.allInvoices = rawInvoices.map((inv: any) => ({
           id: inv.id,
           invoice_number: inv.invoice_number,
           vendor_name: inv.counterparty_name || 'طرف‌حساب',
           category: inv.category,
+          section_id: inv.section ?? null,
+          project_name: inv.project_name || '',
           section_name: inv.section_name || '',
           amount: inv.amount,
           due_date: inv.invoice_date_shamsi,
@@ -220,7 +233,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
         }));
 
         this.isLoading = false;
-        this.cdr.detectChanges();
+        this.applySectionFilter();
       },
       error: (err: any) => {
         this.isLoading = false;
