@@ -18908,3 +18908,84 @@ fix(invoices): treasurer pay form bank hint and bank details copy
 در فرم پرداخت فاکتور توسط خزانه‌دار (`treasurer pay form`)، چنانچه برای حساب مبدأ انتخاب‌شدهٔ شرکت آدرس اینترنت‌بانک ثبت نشده یا آدرس نامعتبر باشد، لینک ورود به س...
 
 ---
+
+### Task 1 of 1 — 2026-11-02 19:24:59
+- **Status:** DONE
+- **Conversation:** `423715cc-71e2-4337-94db-49522e59244f`
+- **Steps:** 618
+- **Tokens:** 925555
+- **Duration:** 62m 48s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/9 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 5cb3845b --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/**/*.spec.ts"`
+    - FAILED (exit 1): `python scripts/e2e/guardian_56_change_integrity.py --base 5cb3845b --head HEAD`
+  - verify round 1: 9/9 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Invoice fixes step H: one invoices list with filter chips, and tracking fields (creator, created, last modifier, last modified) everywhere
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Change ONLY files inside `frontend/src/app/modules/accounting/components/finance/`, the `ExpenseInvoice` interface in `frontend/src/app/modules/accounting/models/personnel.model.ts` (line ~1081-1135), and the new backend test file `backend/modules/accounting/personnel/test_invoice_updated_by_h.py`. Never edit other backend files, migrations, API services or other folders.
+- Icons only via `<svg appIcon="name">` with names that already exist in `frontend/src/app/shared/icons/`. Never add inline svg paths.
+- Every icon-only button: at least 40x40px, Persian `title` and `aria-label`. Use the semantic color tokens (`surface`, `fg`, `line`) like the existing markup. All user-facing text in Persian.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never delete or weaken an existing test or assertion. If an existing hub spec checks the old tab bar, keep its assertion intent and adapt only the selector to the new chips; say so in the report.
+
+2. Context:
+- The backend now returns, for every expense invoice (payment receipt), `created_by_name`, `created_at`, `updated_by` (id or null), `updated_by_name` (string or null) and `updated_at`. `updated_by` is set on create, edit, submit, approve, reject, return for fix, cancel, payment add and payment void (commit `51e8d94d`).
+- `invoices-hub/invoices-hub.ts` (108 lines) and `invoices-hub.html` (28 lines) today show a tab bar with two tabs: `cartable` (the active role's cartable component: supervisor / accountant / manager / treasurer) and `mine` (`<app-employee-invoices-hub />`). The view comes from the `view` query param (`switchView`, line ~97-107). `cartableRole()` and `canSeeMine()` decide what the user may see; keep these permission checks exactly as they are.
+- The preview modal `invoice-preview-modal/invoice-preview-modal.component.html` shows `created_by_name` at line ~53.
+
+3. Definitions:
+- Filter values and labels (in this order): `all` = «همه», `mine` = «مال من», `approve` = «منتظر تأیید من», `pay` = «منتظر پرداخت». Default = `all`.
+- "approval cartable" = the cartable component of role supervisor, accountant or manager. "payment cartable" = the treasurer cartable (`app-treasurer-invoices-hub`).
+- "tracking block" = four labelled values: «ثبت‌کننده» (`created_by_name`), «تاریخ ثبت» (`created_at`), «آخرین تغییردهنده» (`updated_by_name`), «تاریخ آخرین تغییر» (`updated_at`). Dates in Shamsi with time, using the same date pipe or helper the file already uses for dates (grep `jalali`, `shamsi` or `persianDate` in the same component first and reuse it). Empty value shows «—».
+
+4. Task:
+- A) Interface: in `ExpenseInvoice` add `updated_by?: number | null;` and `updated_by_name?: string | null;` (keep existing fields; add `updated_at?: string;` / `created_at?: string;` only if missing).
+- B) Hub: replace the tab bar with filter chips (follow the existing chip/segmented pattern in the finance folder; grep `role="radiogroup"` or `aria-pressed` in `frontend/src/app/modules/accounting/components/finance` and copy that markup; if none exists use `app-tab-bar` with the four ids). Chips are shown only for filters the user may see: `mine` needs `canSeeMine()`; `approve` needs `cartableRole()` in supervisor/accountant/manager; `pay` needs `cartableRole() === 'treasury'`; `all` is shown when at least two other chips are shown. Content per filter: `mine` = `<app-employee-invoices-hub />`; `approve` / `pay` = the role cartable component (same `@switch (cartableRole())` as today); `all` = the role cartable section first (with a small heading equal to the cartable label from `INVOICE_CARTABLES`), then the mine section (heading «رسیدهای پرداخت من»), stacked in one page. The query param is renamed to `filter` (values above); the old `view=cartable` maps to `approve` or `pay` by role and `view=mine` maps to `mine`, so old links keep working. Default (no param) = `all` when allowed, else the first allowed filter. Keep the "no access" message for users with none.
+- C) Tracking block in the preview modal: next to the existing creator line (~53), show the full tracking block (four values).
+- D) Tracking in lists: in the invoice list rows/cards of `employee/employee-invoices/employee-invoices.html`, `treasurer/treasurer-invoices/treasurer-invoices.html`, `supervisor/supervisor-invoices/`, `accountant/accountant-invoices/` and `manager/manager-invoices/` templates, show the four tracking values compactly (desktop: one small muted line or table columns, matching the file's layout; mobile: a small muted line under the row). Where the file already shows the creator, add only the missing values. Do not change any action button or handler.
+- E) After async replies that change what a template shows, follow the existing `cdr.detectChanges()` pattern of that component.
+- F) DOM specs:
+  - in `invoices-hub/invoices-hub.spec.ts`: `default filter is all when both cartable and mine are allowed`, `chips shown per role (treasury shows pay, supervisor shows approve, employee-only shows only mine with no chips row)`, `old view=mine and view=cartable query params map to the new filters`, `all shows the cartable section before the mine section`.
+  - in `invoice-preview-modal/invoice-preview-modal.component.spec.ts`: `shows creator, created date, last modifier and last modified date`, `shows a dash when updated_by_name is empty`.
+  - one list spec (employee invoices, in its existing spec file or a new `employee-invoices-tracking.dom.spec.ts` next to it): `row shows last modifier name`.
+- G) Backend test file `backend/modules/accounting/personnel/test_invoice_updated_by_h.py`: copy the setup of `backend/modules/accounting/personnel/test_invoice_workflow_flow.py` (users, company, section, permissions, API client). Tests: `test_create_sets_updated_by_to_creator`, `test_edit_by_other_user_sets_updated_by`, `test_approve_sets_updated_by_to_approver`, `test_serializer_returns_updated_by_name`. Run with `PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py test personnel.test_invoice_updated_by_h --keepdb` from `backend` (never an unlabelled `manage.py test`). If one fails because the backend does not set `updated_by` on that path, do NOT change backend code: mark that test `@unittest.expectedFailure` with a comment `# manager: path not covered` and list it in the report.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invHtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/**/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invHtmp.json --include="src/app/modules/accounting/components/finance/**/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Run `python scripts/e2e/guardian_52_icon_registry.py` and `python scripts/e2e/guardian_57_front_module_fence.py` before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all finance specs pass (no new failures), the backend test file passes, the temporary tsconfig is deleted, and `git status --short` shows only your changed files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+feat(invoices): one invoices list with filter and tracking fields
+- Short English report: changed files, new test names, test results, any adapted old assertion, any expectedFailure. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+دستور بررسی مقایسه‌ای تست‌ها (`ng-test-compare`) در حال اجراست و به محض اتمام خروجی آن بررسی و نتیجه نهایی گزارش خواهد شد.
+</div>
+<div dir="rtl" align="right">
+فرآیند ساخت و اجرای تست‌ها در حال اتمام است.
+</div>
+<div dir="rtl" align="right">
+
+### رفع خطاهای اعتبارسنجی (Fix Round 1)
+
+۱. **توضیح ساده:**
+- **خطای اول (نگهبان ۵۶):** متد `switchView()` پس از مهاجرت تب‌بار به فیلترچیپ‌ها دیگر در تمپلیت استفاده نمی‌شد، ولی در کلاس کامپوننت باقی مانده بود که توسط نگهبان ۵۶ به عنوان فراخوانی گمشده شناسایی شد. این متد استفاده‌نشده حذف گردید.
+- **خطای دوم (`ng-test-compare`):** در تست `accountant-personnel-phase9.spec.ts` انتساب `Object.assign(navigator, { clipboard })` به...
+
+---

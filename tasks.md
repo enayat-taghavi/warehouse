@@ -6333,7 +6333,7 @@ fix(invoices): treasurer pay form bank hint and bank details copy
 
 ===
 
-[ ] Session 1 of 1 — Invoice fixes step H: one invoices list with filter chips, and tracking fields (creator, created, last modifier, last modified) everywhere
+[DONE] [ ] Session 1 of 1 — Invoice fixes step H: one invoices list with filter chips, and tracking fields (creator, created, last modifier, last modified) everywhere
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
