@@ -663,21 +663,17 @@ def record_edit(user, workflow_key, obj, reason, *, now=None):
         return None
     instance.amount = _amount(spec, obj)
     instance.summary = _summary(spec, obj)
-    old_plan = instance.skip_plan or {}
-    plan = _plan_skips(spec, instance.amount, instance.creator_rank,
-                       _thresholds(workflow_key, instance.section_id, instance.company_id), section_role_ranks(), obj)
-    later, earlier = [], list(instance.step_keys)
+    # مرحله‌های گذشته دوباره باز نمی‌شوند (تصمیم کاربر ۱۱ آبان ۱۴۰۵: حسابدار مبلغ را بالا هم می‌برد؛ ویرایشگر
+    # خودش از مرحله‌های گذشته بالاتر است و مبلغ پیشین در سابقه می‌ماند)
+    later = []
     if instance.current_step in instance.step_keys:
-        index = instance.step_keys.index(instance.current_step)
-        earlier, later = instance.step_keys[:index], instance.step_keys[index + 1:]
-    for key in earlier:
-        if old_plan.get(key) == SKIP_THRESHOLD and plan.get(key) != SKIP_THRESHOLD:
-            # مبلغ تازه از سقف مرحلهٔ گذشته‌ای که به خاطر سقف رد شده بود بالاتر است؛ آن تأیید دور زده نمی‌شود
-            raise WorkflowError('edit_needs_earlier_approval',
-                                f'با این مبلغ «{spec.step(key).title_fa}» لازم می‌شود؛ رسید را برای اصلاح عودت دهید',
-                                400)
-    kept = {k: v for k, v in old_plan.items() if k not in later}
-    instance.skip_plan = {**kept, **{k: v for k, v in plan.items() if k in later}}
+        later = instance.step_keys[instance.step_keys.index(instance.current_step) + 1:]
+    if later:
+        plan = _plan_skips(spec, instance.amount, instance.creator_rank,
+                           _thresholds(workflow_key, instance.section_id, instance.company_id),
+                           section_role_ranks(), obj)
+        kept = {k: v for k, v in (instance.skip_plan or {}).items() if k not in later}
+        instance.skip_plan = {**kept, **{k: v for k, v in plan.items() if k in later}}
     instance.save(update_fields=['amount', 'summary', 'skip_plan'])
     return _history(instance, WorkflowStep.EDIT, actor=user, from_step=instance.current_step,
                     to_step=instance.current_step, reason=reason, now=now)

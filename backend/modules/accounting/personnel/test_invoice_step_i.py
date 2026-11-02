@@ -169,18 +169,19 @@ class InvoiceStepITests(TestCase):
         self.assertEqual(self.post(self.acc, inv, 'approve').status_code, 200)
         self.assertEqual(self.step(inv), 'manager_ok')
 
-    def test_amount_past_skipped_earlier_threshold_is_refused(self):
+    def test_amount_past_skipped_earlier_threshold_is_allowed_and_logged(self):
+        # تصمیم کاربر ۱۱ آبان ۱۴۰۵: حسابدار مبلغ را بالا می‌برد؛ مرحلهٔ گذشته دوباره باز نمی‌شود، مبلغ پیشین در سابقه
         WorkflowThreshold.objects.create(workflow_key=INVOICE_WORKFLOW, company=self.company,
                                          step_key='supervisor_ok', amount=Decimal('5000'))
         inv = self.at_accountant()
-        res = self.patch(self.acc, inv, {'description': 'x', 'lines': self.lines(9000)})
-        self.assertEqual(res.status_code, 400)
+        self.assertEqual(self.patch(self.acc, inv, {'lines': self.lines(9000)}).status_code, 200)
         inv.refresh_from_db()
-        self.assertEqual((inv.amount, inv.description), (Decimal('1000'), 'd'))
-        self.assertFalse(WorkflowStep.objects.filter(instance__entity_id=inv.pk, action='edit').exists())
-        self.assertEqual(self.patch(self.acc, inv, {'lines': self.lines(4000)}).status_code, 200)
+        self.assertEqual(inv.amount, Decimal('9000'))
         row = WorkflowStep.objects.get(instance__entity_id=inv.pk, action='edit')
-        self.assertIn('4,000', row.reason)
+        self.assertIn('1,000', row.reason)
+        self.assertIn('9,000', row.reason)
+        self.assertEqual(self.post(self.acc, inv, 'approve').status_code, 200)
+        self.assertEqual(self.step(inv), 'manager_ok')
 
     def test_others_cannot_edit_at_review(self):
         inv = self.at_accountant()

@@ -749,7 +749,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
                 if saved.amount != old_amount:
                     # مبلغ پیشین در سابقه می‌ماند (نمونهٔ گردش فقط مبلغ تازه را دارد)
                     reason += f' (مبلغ از {old_amount:,.0f} به {saved.amount:,.0f})'
-                # خطای موتور (مثلاً مبلغی که تأیید گذشته را لازم می‌کند) کل ذخیره را برمی‌گرداند
+                # خطای موتور کل ذخیره را برمی‌گرداند
                 _invoice_wf_call(lambda: wf_engine.record_edit(user, INVOICE_WORKFLOW, saved, reason), raise_drf=True)
         notify_document_changed(saved, 'updated')
 
