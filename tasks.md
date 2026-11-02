@@ -6276,7 +6276,7 @@ fix(invoices): user wording, payment receipt, pay, deposit document
 
 ===
 
-[ ] Session 1 of 1 — Invoice fixes step G: treasurer pay form, bank website hint and bank details side by side with copy buttons
+[DONE] [ ] Session 1 of 1 — Invoice fixes step G: treasurer pay form, bank website hint and bank details side by side with copy buttons
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
