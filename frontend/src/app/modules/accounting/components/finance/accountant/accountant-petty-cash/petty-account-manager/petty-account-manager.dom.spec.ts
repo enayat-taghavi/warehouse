@@ -334,87 +334,65 @@ describe('PettyAccountManagerComponent DOM Specs', () => {
   });
 
   it('i) after openCreate(), onShebaInput sets form.sheba and shebaValidation.isValid; Persian digits give same result; invalid 24-digit stops saveAccount; masked sheba in openEdit is readonly and not sent in saveAccount', () => {
-    const origOnSheba = component.onShebaInput.bind(component);
-    const shebaSpy = vi.spyOn(component, 'onShebaInput').mockImplementation((event: any) => {
-      origOnSheba(event);
-      const digits = component.form.sheba.replace(/^IR/i, '');
-      if (digits === '120170000000101111111001') {
-        component.shebaValidation = {
-          isValid: true,
-          rawSheba: 'IR120170000000101111111001',
-          shebaDigitsOnly: '120170000000101111111001',
-          accountNumber: '101111111001',
-          formattedDigits: '12 0170 0000 0010 1111 1110 01',
-          formattedSheba: 'IR12 0170 0000 0010 1111 1110 01',
-          bank: { code: '017', name: 'بانک ملی ایران' } as any,
-          errorMessage: null
-        };
-      }
-    });
+    // 1. after openCreate(), onShebaInput('IR780170000000101111111001') sets form.sheba to IR780170000000101111111001 and shebaValidation.isValid to true
+    component.openCreate();
+    fixture.detectChanges();
 
-    try {
-      // 1. after openCreate(), onShebaInput('IR120170000000101111111001') sets form.sheba to IR120170000000101111111001 and shebaValidation.isValid to true
-      component.openCreate();
-      fixture.detectChanges();
+    component.onShebaInput('IR780170000000101111111001');
+    expect(component.form.sheba).toBe('IR780170000000101111111001');
+    expect(component.shebaValidation?.isValid).toBe(true);
 
-      component.onShebaInput('IR120170000000101111111001');
-      expect(component.form.sheba).toBe('IR120170000000101111111001');
-      expect(component.shebaValidation?.isValid).toBe(true);
+    // 2. Persian digits ۷۸۰۱۷۰۰۰۰۰۰۰۱۰۱۱۱۱۱۱۱۰۰۱ give the same result
+    component.onShebaInput('۷۸۰۱۷۰۰۰۰۰۰۰۱۰۱۱۱۱۱۱۱۰۰۱');
+    expect(component.form.sheba).toBe('IR780170000000101111111001');
+    expect(component.shebaValidation?.isValid).toBe(true);
 
-      // 2. Persian digits ۱۲۰۱۷۰۰۰۰۰۰۰۱۰۱۱۱۱۱۱۱۰۰۱ give the same result
-      component.onShebaInput('۱۲۰۱۷۰۰۰۰۰۰۰۱۰۱۱۱۱۱۱۱۰۰۱');
-      expect(component.form.sheba).toBe('IR120170000000101111111001');
-      expect(component.shebaValidation?.isValid).toBe(true);
+    // 3. an invalid 24-digit value makes saveAccount() set modalError and not call createPettyCashAccount
+    component.custodianPick = [{ id: 5, full_name: 'علی' } as any];
+    component.onShebaInput('111111111111111111111111');
+    expect(component.shebaValidation?.isValid).toBe(false);
 
-      // 3. an invalid 24-digit value makes saveAccount() set modalError and not call createPettyCashAccount
-      component.custodianPick = [{ id: 5, full_name: 'علی' } as any];
-      component.onShebaInput('111111111111111111111111');
-      expect(component.shebaValidation?.isValid).toBe(false);
+    component.saveAccount();
+    fixture.detectChanges();
 
-      component.saveAccount();
-      fixture.detectChanges();
+    expect(component.modalError).toBeTruthy();
+    expect(mockApi.createPettyCashAccount).not.toHaveBeenCalled();
 
-      expect(component.modalError).toBeTruthy();
-      expect(mockApi.createPettyCashAccount).not.toHaveBeenCalled();
+    // 4. openEdit() with a masked sheba_number such as IR12**********************01 leaves form.sheba unchanged, renders the input with the readonly attribute, and a following saveAccount() sends no sheba_number
+    component.closeModal();
+    fixture.detectChanges();
 
-      // 4. openEdit() with a masked sheba_number such as IR12**********************01 leaves form.sheba unchanged, renders the input with the readonly attribute, and a following saveAccount() sends no sheba_number
-      component.closeModal();
-      fixture.detectChanges();
+    const accWithMaskedSheba = {
+      id: 11,
+      company: 3,
+      custodian: 5,
+      custodian_name: 'Ali',
+      ceiling_amount: 50000000,
+      opening_balance: 0,
+      debt: 2000000,
+      is_closed: false,
+      sheba_number: 'IR12**********************01'
+    };
+    component.openEdit(accWithMaskedSheba as any);
+    fixture.detectChanges();
 
-      const accWithMaskedSheba = {
-        id: 11,
-        company: 3,
-        custodian: 5,
-        custodian_name: 'Ali',
-        ceiling_amount: 50000000,
-        opening_balance: 0,
-        debt: 2000000,
-        is_closed: false,
-        sheba_number: 'IR12**********************01'
-      };
-      component.openEdit(accWithMaskedSheba as any);
-      fixture.detectChanges();
+    expect(component.form.sheba).toBe('IR12**********************01');
+    expect(component.isShebaMasked).toBe(true);
 
-      expect(component.form.sheba).toBe('IR12**********************01');
-      expect(component.isShebaMasked).toBe(true);
+    const shebaInput = fixture.nativeElement.querySelector('#pam_sheba') as HTMLInputElement;
+    expect(shebaInput).not.toBeNull();
+    expect(Boolean(shebaInput.readOnly || (shebaInput as any).readonly || shebaInput.hasAttribute('readonly') || component.isShebaMasked)).toBe(true);
 
-      const shebaInput = fixture.nativeElement.querySelector('#pam_sheba') as HTMLInputElement;
-      expect(shebaInput).not.toBeNull();
-      expect(Boolean(shebaInput.readOnly || (shebaInput as any).readonly || shebaInput.hasAttribute('readonly') || component.isShebaMasked)).toBe(true);
+    mockApi.updatePettyCashAccount.mockClear();
+    component.saveAccount();
+    fixture.detectChanges();
 
-      mockApi.updatePettyCashAccount.mockClear();
-      component.saveAccount();
-      fixture.detectChanges();
-
-      expect(mockApi.updatePettyCashAccount).toHaveBeenCalled();
-      const updatePayload = mockApi.updatePettyCashAccount.mock.calls[0][1];
-      expect(updatePayload.sheba_number).toBeUndefined();
-      expect(mockApi.updatePettyCashAccount).toHaveBeenCalledWith(
-        11,
-        expect.not.objectContaining({ sheba_number: expect.anything() })
-      );
-    } finally {
-      shebaSpy.mockRestore();
-    }
+    expect(mockApi.updatePettyCashAccount).toHaveBeenCalled();
+    const updatePayload = mockApi.updatePettyCashAccount.mock.calls[0][1];
+    expect(updatePayload.sheba_number).toBeUndefined();
+    expect(mockApi.updatePettyCashAccount).toHaveBeenCalledWith(
+      11,
+      expect.not.objectContaining({ sheba_number: expect.anything() })
+    );
   });
 });

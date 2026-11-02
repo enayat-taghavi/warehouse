@@ -66,9 +66,8 @@ export class BaseSettings implements OnInit, OnDestroy {
       this.sourceShebaDisplay = '';
     } else {
       const res = validateSheba(digits);
-      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
-      this.sourceShebaValidation = effectiveRes;
-      this.sourceShebaDisplay = effectiveRes.formattedDigits || digits;
+      this.sourceShebaValidation = res;
+      this.sourceShebaDisplay = res.formattedDigits || digits;
     }
   }
 
@@ -86,9 +85,8 @@ export class BaseSettings implements OnInit, OnDestroy {
       (this.yearlySettings.bank_export_settings as any).source_sheba_number = '';
     } else {
       const res = validateSheba(digits);
-      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
-      this.sourceShebaValidation = effectiveRes;
-      this.sourceShebaDisplay = effectiveRes.formattedDigits || digits;
+      this.sourceShebaValidation = res;
+      this.sourceShebaDisplay = res.formattedDigits || digits;
       (this.yearlySettings.bank_export_settings as any).source_sheba_number = `IR${digits}`;
     }
     if (event?.target) event.target.value = this.sourceShebaDisplay;
@@ -423,10 +421,7 @@ export class BaseSettings implements OnInit, OnDestroy {
     const sheba = this.yearlySettings.bank_export_settings?.source_sheba_number;
     if (sheba && !isMaskedValue(sheba)) {
       const digits = extractShebaDigits(sheba);
-      let valRes = this.sourceShebaValidation || (digits ? validateSheba(digits) : null);
-      if (valRes && digits === '120170000000101111111001') {
-        valRes = { ...valRes, isValid: true, errorMessage: null };
-      }
+      const valRes = this.sourceShebaValidation || (digits ? validateSheba(digits) : null);
       if (!valRes || !valRes.isValid) {
         this.toast.show('error', valRes?.errorMessage || 'شماره شبا مبدأ شرکت نامعتبر است.');
         return;

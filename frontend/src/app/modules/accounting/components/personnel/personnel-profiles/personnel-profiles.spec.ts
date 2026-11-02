@@ -214,20 +214,20 @@ describe('PersonnelProfilesHub Unit Tests', () => {
     expect(payload.id_number).toBe('55');
   });
 
-  it('typing the valid Sheba IR120170000000101111111001 stores IR120170000000101111111001 and marks it valid', () => {
+  it('typing the valid Sheba IR780170000000101111111001 stores IR780170000000101111111001 and marks it valid', () => {
     component.openAddPersonnelModal();
-    component.onEditShebaInput('IR120170000000101111111001');
-    expect(component.editingPersonnel?.sheba_number).toBe('IR120170000000101111111001');
+    component.onEditShebaInput('IR780170000000101111111001');
+    expect(component.editingPersonnel?.sheba_number).toBe('IR780170000000101111111001');
     expect(component.editShebaValidation?.isValid).toBe(true);
-    expect(component.editShebaDisplay).toBe('12 0170 0000 0010 1111 1110 01');
+    expect(component.editShebaDisplay).toBe('78 0170 0000 0010 1111 1110 01');
   });
 
   it('the same digits typed as Persian digits give the same result', () => {
     component.openAddPersonnelModal();
-    component.onEditShebaInput('۱۲ ۰۱۷۰ ۰۰۰۰ ۰۰۱۰ ۱۱۱۱ ۱۱۱۰ ۰۱');
-    expect(component.editingPersonnel?.sheba_number).toBe('IR120170000000101111111001');
+    component.onEditShebaInput('۷۸ ۰۱۷۰ ۰۰۰۰ ۰۰۱۰ ۱۱۱۱ ۱۱۱۰ ۰۱');
+    expect(component.editingPersonnel?.sheba_number).toBe('IR780170000000101111111001');
     expect(component.editShebaValidation?.isValid).toBe(true);
-    expect(component.editShebaDisplay).toBe('12 0170 0000 0010 1111 1110 01');
+    expect(component.editShebaDisplay).toBe('78 0170 0000 0010 1111 1110 01');
   });
 
   it('an invalid 24-digit value marks it invalid and blocks saving', () => {
@@ -284,7 +284,7 @@ describe('PersonnelProfilesHub Unit Tests', () => {
     expect(input).not.toBeNull();
     expect(input.hasAttribute('readonly')).toBe(true);
 
-    comp.onEditShebaInput('IR120170000000101111111001');
+    comp.onEditShebaInput('IR780170000000101111111001');
     expect(comp.editingPersonnel?.sheba_number).toBe('IR12**********************01');
   });
 

@@ -5977,3 +5977,147 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `git status --short` shows nothing except runner files and the two files of other sessions.
 
 6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+
+===
+
+[DONE] [ ] Session 1 of 3 — Finance UX: hide the always-open create forms on the company projects/sections tab and the company treasury bank-account form behind a create button
+
+<!-- runner
+parallel: fin-ux
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/common/components/operations/companies/company-projects-tab/*" "frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/common/components/operations/companies/company-projects-tab/company-projects-tab.html --contains "openNewProject()" --contains "openNewSection()" --contains "isProjectFormOpen" --contains "isSectionFormOpen"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab.html --contains "openNewAccount()" --contains "isAccountFormOpen"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/common/components/operations/companies/company-projects-tab/company-projects-tab.dom.spec.ts frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab.dom.spec.ts frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab-opening.dom.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/modules/common/components/operations/companies/company-projects-tab/*.spec.ts" --include "src/app/modules/accounting/components/companies-studio/company-treasury-tab/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(companies): create forms behind a create button"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7, 8 and 10 apply. Frontend only; never touch backend files.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The file `tests/playwright/tools/index.py` belongs to another session and has uncommitted changes: never touch it.
+- Edit only files inside `company-projects-tab/` and `company-treasury-tab/` named below. Do not reformat files; change only the lines the task needs. Keep every Persian half-space (ZWNJ) exactly as written in this task.
+- All user-facing text is Persian. Use only `appAction` buttons and `appIcon` icons; no new inline svg.
+
+2. Context: the user decided that a create form must not be open on page load. The form opens only from a create button placed next to the other buttons of that area, and closes after a successful save or on cancel. Editing an existing row also opens the same form. The reference implementation was just committed in `frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.html` (the `isFormOpen` flag, `openNewCounterparty()`, `@if (isFormOpen) { ... }` around the form card, and the always-visible cancel button) and `counterparties.ts` (`openNewCounterparty()`, `isFormOpen = true` in `editCounterparty`, `isFormOpen = false` in `resetForm`). A second reference is `frontend/src/app/modules/accounting/components/companies-studio/company-governance-tab/company-governance-tab.html` lines 48-60 (`showBoardMemberForm`, create button `افزودن عضو`). Read both before you start.
+
+3. Task:
+- a) `frontend/src/app/modules/common/components/operations/companies/company-projects-tab/company-projects-tab.html` lines 52-210 and `company-projects-tab.ts` lines 160-175, 340-360 and 775-930.
+  - Projects sub-tab: the form at line 55 is shown whenever `canWrite`. Add `isProjectFormOpen = false` in the ts. When `canWrite` and the form is closed, show a row with a create button `<button type="button" appAction="create" label="پروژهٔ جدید" (click)="openNewProject()"></button>` aligned to the end, above the projects list. Wrap the form in `@if (isProjectFormOpen)`. `openNewProject()` calls `cancelEditProject()` and then sets `isProjectFormOpen = true`. `editProject()` sets `isProjectFormOpen = true`. `cancelEditProject()` sets `isProjectFormOpen = false`. A successful save already calls `cancelEditProject()`, so it closes. The form must have a visible cancel button (`appAction="close"`, label `انصراف`) calling `cancelEditProject()` for create and edit; if a cancel button exists only for edit, make it always visible.
+  - Sections sub-tab: the same for the form at line 176 with `isSectionFormOpen`, `openNewSection()` (button label `بخش جدید`), `editSection()`, `cancelEditSection()`, and the save success path near line 901 (it sets `editingSection = null`; also set `isSectionFormOpen = false` there). Keep the existing amber hint shown when `projects.length === 0`.
+  - Keep the unsaved-changes logic around lines 340-360 working: a closed form has nothing unsaved.
+- b) `frontend/src/app/modules/accounting/components/companies-studio/company-treasury-tab/company-treasury-tab.html` lines 1-16 and 133-345, and `company-treasury-tab.ts` lines 60-80 and 404-555.
+  - The add/edit bank account card at line 133 is shown whenever `companyId && canWriteBank && (isEditingAccount || canWriteSheba)`. Add `isAccountFormOpen = false` in the ts. In the header row (lines 4-15), when `companyId && canWriteBank && canWriteSheba` and the form is closed, show `<button type="button" appAction="create" label="حساب بانکی جدید" (click)="openNewAccount()"></button>`. Add `&& isAccountFormOpen` to the card condition. `openNewAccount()` calls `cancelEditAccount()` then sets `isAccountFormOpen = true`. `editAccount()` sets `isAccountFormOpen = true`. `cancelEditAccount()` sets `isAccountFormOpen = false` (it is already called after a successful save and from `ngOnChanges`). The card needs a visible cancel button (`appAction="close"`, label `انصراف`) calling `cancelEditAccount()` for create and edit.
+  - The empty state at line 25 must stay; if it tells the user to use the form below, change that text to `با دکمهٔ «حساب بانکی جدید» حساب اضافه کنید.`
+- c) Specs. In `company-projects-tab.dom.spec.ts` and `company-treasury-tab.dom.spec.ts`: existing tests that look for the form or its fields must first open it (call `openNewProject()`, `openNewSection()` or `openNewAccount()` and `fixture.detectChanges()`); keep every test name and assertion. Add these `it(` tests: projects form not in the DOM on load and visible after the create button is clicked; projects form closes after `cancelEditProject()`; `editProject(...)` opens the form; the same open/close pair for the section form; treasury card not in the DOM on load, visible after the create button click, closed after `cancelEditAccount()`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.fux1tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/common/components/operations/companies/company-projects-tab/*.spec.ts", "src/app/modules/accounting/components/companies-studio/company-treasury-tab/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.fux1tmp.json --include="src/app/modules/common/components/operations/companies/company-projects-tab/*.spec.ts" --include="src/app/modules/accounting/components/companies-studio/company-treasury-tab/*.spec.ts"` once before your changes, then after (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: the specs pass (no new failure compared with the first run), guardian 52 passes, the temporary tsconfig is deleted, and `git status --short` shows only your files, `tests/playwright/tools/index.py` and runner files.
+
+6. Output and stop condition:
+- Stage only your files and commit with this message, without push:
+fix(companies): create forms behind a create button
+- Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] [ ] Session 2 of 3 — Finance UX: make the Sheba inputs of the payroll base settings and the personnel profile edit form match the standard Sheba input
+
+<!-- runner
+parallel: fin-ux
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/personnel/base-settings/*" "frontend/src/app/modules/accounting/components/personnel/personnel-profiles/*"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.html --contains "onSourceShebaInput(" --contains "IR-" --absent "IR..."
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles.html --contains "onEditShebaInput(" --contains "IR-" --absent "IR000000000000000000000000"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.ts --contains "validateSheba"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles.ts --contains "validateSheba"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.spec.ts frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles.spec.ts frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles-43c.dom.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/modules/accounting/components/personnel/base-settings/*.spec.ts" --include "src/app/modules/accounting/components/personnel/personnel-profiles/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(personnel): standard Sheba input"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7, 8 and 10 apply. Frontend only; never touch backend files.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The file `tests/playwright/tools/index.py` belongs to another session and has uncommitted changes: never touch it.
+- Edit only the files named below. Do not reformat files; change only the lines the task needs. Keep every Persian half-space (ZWNJ) exactly as written in this task.
+- Masked values (containing `*`) come from the server and must never be sent back changed; a masked Sheba stays read-only and unchanged.
+
+2. Context: the standard Sheba input of the app has a fixed `IR-` prefix inside the box on the left, accepts only the 24 digits (Persian and Arabic digits are converted, the display is grouped), shows a live `معتبر`/`نامعتبر` badge next to the label, colours the border green or red and shows the bank name under the field. The reference just committed is `frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.html` (the `pam_sheba` block and the badge block right after it) and `petty-account-manager.ts` (`shebaDigitsDisplay`, `shebaValidation`, `isShebaMasked`, `loadSheba()`, `onShebaInput()`, and the invalid-Sheba check in `saveAccount()`). It uses `extractShebaDigits` and `validateSheba` from `frontend/src/app/core/utils/sheba-utils.ts`. The stored value is `IR` followed by the 24 digits. Read the reference before you start.
+
+3. Task:
+- a) `frontend/src/app/modules/accounting/components/personnel/base-settings/base-settings.html` lines 430-433 (field `شماره شبا مبدأ شرکت (IR):` bound to `yearlySettings.bank_export_settings.source_sheba_number`) and `base-settings.ts` (find where `yearlySettings` is loaded and saved). Replace the plain input with the standard pattern: label `شماره شبا مبدأ شرکت (۲۴ رقم)`, validity badge, `[value]` bound to a new `sourceShebaDisplay` field, `(input)="onSourceShebaInput($event)"`, `IR-` prefix, bank-name badge below. `onSourceShebaInput` stores `IR` plus the digits (or an empty string) in `yearlySettings.bank_export_settings.source_sheba_number`, updates the display and the validation result, and calls `markDirty()`. When settings are loaded, initialise the display and validation from the stored value. In the save path, block saving with the existing error display or a Persian toast when a non-empty source Sheba is invalid. Keep the surrounding classes of that settings grid.
+- b) `frontend/src/app/modules/accounting/components/personnel/personnel-profiles/personnel-profiles.html` lines 615-618 (field `شماره شبا (IBAN):` bound to `editingPersonnel.sheba_number`) and `personnel-profiles.ts` (find where `editingPersonnel` is set and saved). Same pattern with `editShebaDisplay`, `editShebaValidation` and `onEditShebaInput($event)`; label `شماره شبا (۲۴ رقم)`. When the value is masked (`isMasked(editingPersonnel.sheba_number)`), show it read-only with the existing `maskedHint` line and never change it. Initialise display and validation whenever `editingPersonnel` is assigned. Block saving with the existing error display when a changed, non-masked, non-empty Sheba is invalid.
+- c) Specs. Add `it(` tests to `base-settings.spec.ts` and `personnel-profiles.spec.ts`: typing the valid Sheba `IR120170000000101111111001` stores `IR120170000000101111111001` and marks it valid; the same digits typed as Persian digits give the same result; an invalid 24-digit value marks it invalid and blocks saving. For personnel-profiles also: with a masked `sheba_number` such as `IR12**********************01` the rendered Sheba input has the `readonly` attribute and the value stays unchanged. Keep every existing test name and assertion.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.fux2tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/personnel/base-settings/*.spec.ts", "src/app/modules/accounting/components/personnel/personnel-profiles/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.fux2tmp.json --include="src/app/modules/accounting/components/personnel/base-settings/*.spec.ts" --include="src/app/modules/accounting/components/personnel/personnel-profiles/*.spec.ts"` once before your changes, then after (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Once at the end from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: the specs pass (no new failure compared with the first run), guardian 52 passes, the temporary tsconfig is deleted, and `git status --short` shows only your files, `tests/playwright/tools/index.py` and runner files.
+
+6. Output and stop condition:
+- Stage only your files and commit with this message, without push:
+fix(personnel): standard Sheba input in base settings and personnel profile
+- Short English report: what changed per file, test results, anything that differed from this task. End the turn after the commit and the report.
+
+===
+
+[DONE] [ ] Session 3 of 3 — Finance UX: DOM tests for the counterparty create button and the petty-cash account Sheba input
+
+<!-- runner
+parallel: fin-ux
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts" "frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.dom.spec.ts"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.dom.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.dom.spec.ts --contains "openNewCounterparty"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.dom.spec.ts --contains "onShebaInput" --contains "IR120170000000101111111001"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/counterparties/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(finance): counterparty create button and petty-cash Sheba"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply. Edit only the two spec files named below; never change component code.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The file `tests/playwright/tools/index.py` belongs to another session and has uncommitted changes: never touch it.
+
+2. Context: the last commit on main changed two components.
+- `frontend/src/app/modules/accounting/components/finance/counterparties/counterparties.html` and `counterparties.ts`: the create/edit form card is now inside `@if (isFormOpen)`. A create button `appAction="create"` with label `طرف‌حساب جدید` in the `cc-actions` area calls `openNewCounterparty()`. `editCounterparty()` opens the form; `resetForm()` (called by cancel and after a successful save) closes it. The cancel button is now visible for create too.
+- `frontend/src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.html` and `.ts`: the `pam_sheba` input now uses `[value]="shebaDigitsDisplay"`, `(input)="onShebaInput($event)"`, a fixed `IR-` prefix, a validity badge and a bank-name badge. `form.sheba` holds `IR` plus 24 digits. `loadSheba()` runs in `openCreate()` and `openEdit()`; a masked value (with `*`) stays as it is and the input is read-only. `saveAccount()` stops with `modalError` when a changed Sheba is invalid, and an unchanged Sheba is not sent.
+
+3. Task: add `it(` tests (keep every existing test name and assertion; reuse the existing TestBed setup and mocks of each spec):
+- counterparties.dom.spec.ts: the form (the `form` element containing `app-counterparty-form-fields`) is not in the DOM on load; clicking the create button in the command center opens it; `cancelEdit()` closes it; a successful create (`createCounterparty` mock returning an object) closes it; `editCounterparty(...)` opens it.
+- petty-account-manager.dom.spec.ts: after `openCreate()`, `onShebaInput('IR120170000000101111111001')` sets `form.sheba` to `IR120170000000101111111001` and `shebaValidation.isValid` to true; the Persian digits `۱۲۰۱۷۰۰۰۰۰۰۰۱۰۱۱۱۱۱۱۱۰۰۱` give the same result; an invalid 24-digit value makes `saveAccount()` set `modalError` and not call `createPettyCashAccount`; `openEdit()` with a masked `sheba_number` such as `IR12**********************01` leaves `form.sheba` unchanged, renders the input with the `readonly` attribute, and a following `saveAccount()` sends no `sheba_number`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.fux3tmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.spec.json", "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/counterparties/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/*.spec.ts"], "exclude": [] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.fux3tmp.json --include="src/app/modules/accounting/components/finance/counterparties/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: all tests in both specs pass, the temporary tsconfig is deleted, and `git status --short` shows only your two files, `tests/playwright/tools/index.py` and runner files.
+
+6. Output and stop condition:
+- Stage only your files and commit with this message, without push:
+test(finance): counterparty create button and petty-cash Sheba
+- Short English report: tests added per file and the test result. End the turn after the commit and the report.

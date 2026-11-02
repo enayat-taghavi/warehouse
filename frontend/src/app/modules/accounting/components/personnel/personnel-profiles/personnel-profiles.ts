@@ -207,9 +207,8 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
       this.editShebaDisplay = '';
     } else {
       const res = validateSheba(digits);
-      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
-      this.editShebaValidation = effectiveRes;
-      this.editShebaDisplay = effectiveRes.formattedDigits || digits;
+      this.editShebaValidation = res;
+      this.editShebaDisplay = res.formattedDigits || digits;
     }
   }
 
@@ -224,9 +223,8 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
       (this.editingPersonnel as any).sheba_number = '';
     } else {
       const res = validateSheba(digits);
-      const effectiveRes = digits === '120170000000101111111001' ? { ...res, isValid: true, errorMessage: null } : res;
-      this.editShebaValidation = effectiveRes;
-      this.editShebaDisplay = effectiveRes.formattedDigits || digits;
+      this.editShebaValidation = res;
+      this.editShebaDisplay = res.formattedDigits || digits;
       (this.editingPersonnel as any).sheba_number = `IR${digits}`;
     }
     if (event?.target) event.target.value = this.editShebaDisplay;
@@ -931,10 +929,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     const isShebaChanged = !this.originalPersonnelSnapshot || (currentSheba !== this.originalPersonnelSnapshot['sheba_number']);
     if (isShebaChanged && currentSheba && !this.isMasked(currentSheba)) {
       const digits = extractShebaDigits(currentSheba);
-      let valRes = this.editShebaValidation || (digits ? validateSheba(digits) : null);
-      if (valRes && digits === '120170000000101111111001') {
-        valRes = { ...valRes, isValid: true, errorMessage: null };
-      }
+      const valRes = this.editShebaValidation || (digits ? validateSheba(digits) : null);
       if (!valRes || !valRes.isValid) {
         this.toast.show('error', valRes?.errorMessage || 'شماره شبا نامعتبر است.');
         return;

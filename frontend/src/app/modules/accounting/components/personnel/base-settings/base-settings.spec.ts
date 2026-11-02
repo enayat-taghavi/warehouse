@@ -254,20 +254,20 @@ describe('BaseSettings Unit Tests', () => {
     expect(component.showCreateYearModal).toBe(false);
   });
 
-  it('typing the valid Sheba IR120170000000101111111001 stores IR120170000000101111111001 and marks it valid', () => {
+  it('typing the valid Sheba IR780170000000101111111001 stores IR780170000000101111111001 and marks it valid', () => {
     component.ngOnInit();
-    component.onSourceShebaInput('IR120170000000101111111001');
-    expect(component.yearlySettings?.bank_export_settings?.source_sheba_number).toBe('IR120170000000101111111001');
+    component.onSourceShebaInput('IR780170000000101111111001');
+    expect(component.yearlySettings?.bank_export_settings?.source_sheba_number).toBe('IR780170000000101111111001');
     expect(component.sourceShebaValidation?.isValid).toBe(true);
-    expect(component.sourceShebaDisplay).toBe('12 0170 0000 0010 1111 1110 01');
+    expect(component.sourceShebaDisplay).toBe('78 0170 0000 0010 1111 1110 01');
   });
 
   it('the same digits typed as Persian digits give the same result', () => {
     component.ngOnInit();
-    component.onSourceShebaInput('۱۲ ۰۱۷۰ ۰۰۰۰ ۰۰۱۰ ۱۱۱۱ ۱۱۱۰ ۰۱');
-    expect(component.yearlySettings?.bank_export_settings?.source_sheba_number).toBe('IR120170000000101111111001');
+    component.onSourceShebaInput('۷۸ ۰۱۷۰ ۰۰۰۰ ۰۰۱۰ ۱۱۱۱ ۱۱۱۰ ۰۱');
+    expect(component.yearlySettings?.bank_export_settings?.source_sheba_number).toBe('IR780170000000101111111001');
     expect(component.sourceShebaValidation?.isValid).toBe(true);
-    expect(component.sourceShebaDisplay).toBe('12 0170 0000 0010 1111 1110 01');
+    expect(component.sourceShebaDisplay).toBe('78 0170 0000 0010 1111 1110 01');
   });
 
   it('an invalid 24-digit value marks it invalid and blocks saving', () => {
