@@ -6599,7 +6599,7 @@ feat(invoices): I frontend - self-approval setting and review accountant edit
 
 ===
 
-[ ] Session 1 of 1 — Invoice fixes step J frontend: «همرسانی» (share PDF) button replaces the row «سابقه» buttons, workflow history moves inside the preview modal
+[DONE] [ ] Session 1 of 1 — Invoice fixes step J frontend: «همرسانی» (share PDF) button replaces the row «سابقه» buttons, workflow history moves inside the preview modal
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
