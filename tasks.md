@@ -6121,3 +6121,155 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only your files and commit with this message, without push:
 test(finance): counterparty create button and petty-cash Sheba
 - Short English report: tests added per file and the test result. End the turn after the commit and the report.
+
+===
+
+[DONE] [ ] Session 1 of 1 — Invoice fixes step C: specs for the all-sections default, the treasurer section filter and the employee project-to-section picker
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/supervisor-invoices.spec.ts" "frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.spec.ts" "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts" "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/supervisor-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts --contains "invoice:lastSection:" --contains "onFormProjectChange"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts --contains "allInvoices"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(invoices): all-sections default and project-to-section picker"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply. Edit only the four spec files named in section 3; never change component code, templates or other specs.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+
+2. Context: commit `f1bc0190` on main changed four invoice pages under `frontend/src/app/modules/accounting/components/finance/`.
+- `supervisor/supervisor-invoices/supervisor-invoices.ts` and `accountant/accountant-invoices/accountant-invoices.ts`: `pickDefaultSection()` no longer picks the first section. `selectedSectionId` stays `null` (all sections) and `fetchInvoices()` then calls `personnelApi.getExpenseInvoices` WITHOUT a `section_id` key. A `section_id` query param is kept only when that id is in `mySections`; otherwise it is reset to `null`. `onSectionChanged()` converts the value with `Number(...)` or `null`.
+- `treasurer/treasurer-invoices/treasurer-invoices.ts`: `loadTreasuryData()` stores the mapped cartable rows in `allInvoices` (each row now has `section_id` taken from the raw `section` field, and `project_name`). `invoices` is `allInvoices` filtered by `selectedSectionId` (all rows when it is `null`). `onSectionChanged()` re-filters without a new request. Default is `null`.
+- `employee/employee-invoices/employee-invoices.ts`: the list default is also `null`; `loadInvoices()` calls `getExpenseInvoicesPage({ page, page_size })` without `section_id` when `selectedSectionId` is `null`. The create form has its own `formProjectId` and `formSectionId`, getters `formProjects`, `formProjectSections` and `formSection`, and handlers `onFormProjectChange()` and `onFormSectionChange()`. `openNewInvoiceModal()` picks the form section in this order: `selectedSectionId`, then the remembered id from the `localStorage` key `invoice:lastSection:<auth.user().id>:<activeCompanyId or all>` (used only if that id is in `mySections`), then the only section of the only project. `saveInvoice()` sends `section: formSectionId` and, after a successful create (not an edit), writes `formSectionId` to that key. It shows a warning toast and does not save when `formSectionId` is null.
+
+3. Task: add `it(` tests. Keep every existing test name and assertion. Reuse the existing setup and mocks of each spec; add mock fields such as `section`, `project`, `project_name` or `company_id` locally inside the new tests when needed.
+- `supervisor/supervisor-invoices/supervisor-invoices.spec.ts`: (a) with no query params, after `ngOnInit()` `selectedSectionId` is `null` and the last `getExpenseInvoices` call argument has no `section_id` property; (b) with route `queryParams: of({ section_id: '10' })` (10 is returned by `getMySections`) the call contains `section_id: 10`; (c) with `section_id: '999'` (not in the list) `selectedSectionId` becomes `null` and no `section_id` is sent.
+- `accountant/accountant-invoices/accountant-invoices.spec.ts`: the same three cases (a), (b) and (c) for `fetchInvoices`.
+- `treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts`: make the cartable return two invoices with `section: 10` and `section: 20`; after the load, `allInvoices.length` and `invoices.length` are both 2; set `selectedSectionId = 20`, call `onSectionChanged()`, and `invoices` holds only the section-20 row while `getTreasuryCartable` was not called again; setting it back to `null` and calling `onSectionChanged()` restores both rows.
+- `employee/employee-invoices/employee-invoices.spec.ts` (constructor-based; `sampleSections` has sections 10 and 20 of project 1): (a) with route query params without `section_id`, `ngOnInit()` leaves `selectedSectionId` null and `getExpenseInvoicesPage` is called with exactly `{ page: 1, page_size: 25 }`; (b) after `ngOnInit()` with `selectedSectionId = null` and a stubbed `localStorage` (use `vi.stubGlobal` like the existing test that stubs it, and call `vi.unstubAllGlobals()` at the end) whose key `invoice:lastSection:<user id>:all` holds `'20'`, `openNewInvoiceModal()` sets `formSectionId` to 20 and `formProjectId` to 1; make `auth.user()` return an object with an `id` if the existing mock does not; (c) the same with a stored `'999'` leaves `formSectionId` null; (d) give `mySections` a second project (for example section 30 with `project: 2`), set `formProjectId = 2`, call `onFormProjectChange()`, and `formSectionId` becomes 30 (the only section of project 2); (e) `saveInvoice()` with `formSectionId` null calls `toast.show` with `'warning'` as the first argument and does not call `createExpenseInvoice`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invCtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invCtmp.json --include="src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: all tests in these spec folders pass, the temporary tsconfig is deleted, and `git status --short` shows only your four files, the three files named in section 1 and runner files.
+
+6. Output and stop condition:
+- Stage only your four files and commit with this message, without push:
+test(invoices): all-sections default and project-to-section picker
+- Short English report: tests added per file and the test result. End the turn after the commit and the report.
+
+===
+
+[DONE] [ ] Session 1 of 1 — Invoice fixes step D: specs for live refresh after reconnect and resume, the status tab after a live patch, and refetch of the open detail, preview and history
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts" "frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/supervisor-invoices.spec.ts" "frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts" "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.spec.ts" "frontend/src/app/modules/accounting/components/finance/invoice-preview-modal/invoice-preview-modal.component.spec.ts" "frontend/src/app/shared/components/workflow-history/workflow-history.component.spec.ts"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/supervisor-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/invoice-preview-modal/invoice-preview-modal.component.spec.ts frontend/src/app/shared/components/workflow-history/workflow-history.component.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts --contains "liveRefresh$" --contains "statusFilter"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/components/finance/invoice-preview-modal/invoice-preview-modal.component.spec.ts --contains "documentChanges$"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/workflow-history/workflow-history.component.spec.ts --contains "documentChanges$"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include "src/app/modules/accounting/components/finance/invoice-preview-modal/*.spec.ts" --include "src/app/shared/components/workflow-history/*.spec.ts" --include "src/app/core/http/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(invoices): live refresh, status tab after patch, open windows refetch"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply. Edit only the six spec files named in section 3; never change component code, templates, services or other specs.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+
+2. Context: commit `73451fb4` on main (read its diff with `git show 73451fb4`).
+- `frontend/src/app/core/http/websocket.service.ts`: new `reconnected$` and `appResumed$` subjects and the method `liveRefresh$()` (merge of both with `debounceTime(800)`). Its own spec `websocket.live-refresh.spec.ts` already exists; do not change it.
+- The four invoice pages subscribe in `ngOnInit` with `this.liveSub = this.ws?.liveRefresh$?.().subscribe(...)` and unsubscribe `liveSub` in `ngOnDestroy`: employee `employee/employee-invoices/employee-invoices.ts` calls `loadInvoices(true)` (which calls `treasuryOrgApi.getExpenseInvoicesPage`), supervisor `supervisor/supervisor-invoices/supervisor-invoices.ts` and accountant `accountant/accountant-invoices/accountant-invoices.ts` call `fetchInvoices(true)` (which calls `personnelApi.getExpenseInvoices`), treasurer `treasurer/treasurer-invoices/treasurer-invoices.ts` calls `loadTreasuryData(true)`.
+- Employee page `documentChanges$` handler: (1) if `isDetailPanelOpen` is true and `selectedInvoiceDetail.id` equals `ev.doc_id`, it calls `openInvoiceDetail(ev.doc_id, true)`; with `silent = true` that method does not set `isLoadingDetail` to true and shows no error toast, and it calls `treasuryOrgApi.getExpenseInvoice(id)`. (2) If `patchDocumentRow(this.invoices, ev)` patches a row (event `action: 'status_changed'` with a `status`, and the row id equals `doc_id`), it then calls `loadInvoices(true)` only when `statusFilter !== 'all'`.
+- `finance/invoice-preview-modal/invoice-preview-modal.component.ts`: constructor is now `(treasuryApi, printService, cdr, ws?)` (the 4th argument is optional). `ngOnInit()` subscribes to `ws.documentChanges$(['expense_invoice'])`; on an event whose `doc_id` equals `invoiceId` (or `invoice.id`) while `isOpen` is true, it calls `loadInvoice(true)`, which calls `treasuryApi.getExpenseInvoice(id)` without setting `isLoading` to true. `ngOnDestroy()` unsubscribes.
+- `frontend/src/app/shared/components/workflow-history/workflow-history.component.ts`: it injects `WebSocketService` with `inject(WebSocketService, { optional: true })`. In `ngOnInit()` it subscribes to `ws.documentChanges$([this.kind])`; on an event whose `doc_type` equals `kind` and `doc_id` equals `entityId`, it calls `loadHistory(true)`, which calls `api.getHistory(kind, entityId)` without setting `loading` to true; on a silent error it keeps the current `history` and sets neither `hasError` nor `notFound`.
+
+3. Task: add `it(` tests. Keep every existing test name and assertion. Reuse the existing setup and mocks of each spec. Where a WebSocket mock exists, add `liveRefresh$: vi.fn(() => live.asObservable())` with a local `const live = new Subject<void>()` (and a `Subject` for `documentChanges$` where needed); where no mock exists, provide one in the new tests only.
+- `finance/employee/employee-invoices/employee-invoices.spec.ts` (constructor-based; read the constructor of the component to place the ws mock at the right argument): (a) after `ngOnInit()`, emitting on the live subject calls `getExpenseInvoicesPage` once more; (b) with `invoices = [{ id: 1, status: 'pending_supervisor' }]` and `statusFilter = 'pending_supervisor'`, a `status_changed` event for id 1 with `status: 'pending_accountant'` sets the row status to `pending_accountant` and calls `getExpenseInvoicesPage` again; (c) the same event with `statusFilter = 'all'` patches the row and does NOT call `getExpenseInvoicesPage`; (d) with `isDetailPanelOpen = true` and `selectedInvoiceDetail = { id: 5 }`, an event with `doc_id: 5` calls `getExpenseInvoice(5)` and `isLoadingDetail` stays false; an event with `doc_id: 6` does not call `getExpenseInvoice`; (e) after `ngOnDestroy()`, emitting on the live subject makes no new call.
+- `finance/supervisor/supervisor-invoices/supervisor-invoices.spec.ts`: emitting on the live subject after `ngOnInit()` calls `getExpenseInvoices` again; after `ngOnDestroy()` it does not.
+- `finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts`: the same two cases for the accountant page.
+- `finance/treasurer/treasurer-invoices/treasurer-invoices.spec.ts`: emitting on the live subject after `ngOnInit()` calls the treasurer cartable API used by `loadTreasuryData` again (read the component to find the method); after `ngOnDestroy()` it does not.
+- `finance/invoice-preview-modal/invoice-preview-modal.component.spec.ts` (constructor-based): pass a ws mock as the 4th constructor argument; call `ngOnInit()`; with `isOpen = true` and `invoiceId = 5`, an event `{ doc_type: 'expense_invoice', doc_id: 5 }` calls `getExpenseInvoice(5)` and `isLoading` stays false; with `doc_id: 6` or with `isOpen = false` no call; after `ngOnDestroy()` no call.
+- `shared/components/workflow-history/workflow-history.component.spec.ts`: provide a WebSocketService mock; with `kind = 'expense_invoice'` and `entityId = 7`, after init an event `{ doc_type: 'expense_invoice', doc_id: 7 }` calls `getHistory('expense_invoice', 7)` again and `loading` stays false during the call; an event for `doc_id: 8` makes no call; a silent reload that errors keeps the previous `history` and leaves `hasError` false.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invDtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/invoice-preview-modal/*.spec.ts", "src/app/shared/components/workflow-history/*.spec.ts", "src/app/core/http/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invDtmp.json --include="src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/invoice-preview-modal/*.spec.ts" --include="src/app/shared/components/workflow-history/*.spec.ts" --include="src/app/core/http/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: all tests in these spec folders pass, the temporary tsconfig is deleted, and `git status --short` shows only your six files, the three files named in section 1 and runner files.
+
+6. Output and stop condition:
+- Stage only your six files and commit with this message, without push:
+test(invoices): live refresh, status tab after patch, open windows refetch
+- Short English report: tests added per file and the test result. End the turn after the commit and the report.
+
+===
+
+[ ] Session 1 of 1 — Invoice fixes step F: wording of the expense-invoice feature in user-visible texts
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/**" "frontend/src/app/modules/common/**" "frontend/src/app/shared/**" "frontend/src/app/core/models/field-config.model.ts" "backend/modules/accounting/**"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "." --path backend/modules/accounting/personnel/models_domains backend/modules/accounting/personnel/migrations frontend/src/app/modules/warehouse backend/modules/warehouse
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-check --modules all accounting
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.spec.ts frontend/src/app/modules/accounting/components/finance/invoice-preview-modal/invoice-preview-modal.component.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/**/*.spec.ts" --include "src/app/modules/common/components/my-tasks/*.spec.ts" --include "src/app/shared/components/workflow-history/*.spec.ts"
+verify: set DB_TEST_NAME=test_agy_invF&& python scripts/automation/verify_tools.py django-tests --labels personnel.test_invoice_workflow personnel.test_invoice_workflow_flow personnel.test_invoice_workflow_return personnel.test_invoice_installment_notify personnel.test_invoice_payments_41 personnel.test_invoice_payments_smoke_41b personnel.test_payment_receipts personnel.test_invoice_verify_o3 personnel.test_cartable_multitenant --min-tests 20
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(invoices): user wording, payment receipt, pay, deposit document"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- You change ONLY Persian user-visible text inside string literals and template text. Never change code identifiers, variable or method names, API paths, model or table names, permission codes, `doc_type` strings, dictionary keys, query keys, CSS classes, icon names, test fixture keys, or Persian text inside comments.
+- Never edit any file under `backend/modules/accounting/personnel/models_domains/` or any `migrations/` folder, and never change `verbose_name`, `help_text` or `choices` labels on Django model fields (that would create a migration). Never edit permission display names (`PERMISSIONS` in `backend/modules/accounting/module.py`, permission tuples in `apps.py`): they are created once in the database.
+- Never edit files under `frontend/src/app/modules/warehouse/` or `backend/modules/warehouse/`. In `frontend/src/app/core/models/field-config.model.ts`, `frontend/src/app/modules/common/components/audit/audit.helpers.ts` and `frontend/src/app/modules/common/components/layout/layout.ts` the word often means warehouse documents: change only lines that clearly name the accounting expense invoice.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+
+2. Context: the user renamed the expense invoice feature (`ExpenseInvoice`, `expense_invoice`, pages under `frontend/src/app/modules/accounting/components/finance/`, backend under `backend/modules/accounting/personnel/`). Only the Persian words that users read change; the code stays the same.
+
+3. Definitions (old → new, in this exact order):
+- Step A, FIRST: the treasurer's payment attachment (the file the treasurer uploads as proof of a bank transfer) is now called «سند واریز». Its old label was «رسید پرداخت» (plural «رسیدهای پرداخت» → «سندهای واریز»). Known places: the `receiptLabel` strings in `finance/employee/employee-invoices/employee-invoices.ts` and their use near `employee-invoices.html` lines 1000-1010, the attachment label of the treasurer pay form in `finance/treasurer/treasurer-invoices/treasurer-invoices.ts` and `.html`, `finance/invoice-receipt-button/invoice-receipt-button.ts`, `frontend/src/app/modules/accounting/payment-receipt.ts`, and backend messages in `backend/modules/accounting/personnel/invoice_payments.py` that name this attachment. Do Step A before Step B, or the new texts of Step B collide with it.
+- Step B: «فاکتور» → «رسید پرداخت» for the expense invoice. Grammar forms: «فاکتورها» → «رسیدهای پرداخت»; «فاکتورهای من» → «رسیدهای پرداخت من»; «فاکتورِ» or «فاکتور» before an ezafe noun → «رسید پرداختِ»; «فاکتور هزینه» → «رسید پرداخت هزینه»; «این فاکتور» → «این رسید پرداخت»; «فاکتوری» → «رسید پرداختی». Keep sentences fluent Persian.
+- Step C: «ثبت قسط» → «پرداخت» (and «قسط جدید» in the same button or modal title → «پرداخت جدید» when it labels the same action).
+- Leave unchanged and list as skipped: «پیش‌فاکتور», «فاکتور فروش», comments, model field labels, and Google Drive folder names that already exist.
+
+4. Task:
+- Find every occurrence with a search tool that handles UTF-8 (not Windows `findstr`). Search roots: `frontend/src/app/modules/accounting/` (all `.ts` and `.html`, including `nav-items.ts`, `accounting.routes.ts`, `module.ts`, `personas.ts`, `route-access.ts`, `api/*.ts`, `models/*.ts`), `frontend/src/app/modules/common/components/` (`my-tasks`, `layout`, `audit`, `users`), `frontend/src/app/shared/`, and in the backend under `backend/modules/accounting/personnel/`: `workflows.py` (INVOICE spec `title_fa='فاکتور هزینه'` near line 100, its step titles and messages), `invoice_services.py` (line 31 series title and error messages), `invoice_payments.py`, `invoice_print.py`, `invoice_verify.py`, `cartable_views.py`, `views_domains/treasury_views.py`, `views_domains/report_views.py`, `accounting_reports.py`, `section_guardian.py`, `serializers_domains/treasury_audit.py` (error messages only), `expense_heads.py`, `counterparty_services.py`, `google_drive_path_resolver.py` (skip folder names), and `backend/modules/accounting/module.py` (only menu or contribution labels, not `PERMISSIONS`).
+- First write the full inventory to `scratch/invoice_wording_inventory.md` (one line per change: `file:line old → new`, then a "Skipped" section with file:line and reason). `scratch/` is git-ignored; do not stage it.
+- Apply the changes.
+- Specs and backend tests: where an existing test asserts an old text that you changed, update that assertion to the new text. Never delete an assertion or a test, and never weaken one (for example never replace an exact text with an empty check). Backend tests are `backend/modules/accounting/personnel/test_*.py`; frontend specs are the `*.spec.ts` files next to the changed files.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invFtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/**/*.spec.ts", "src/app/modules/common/components/my-tasks/*.spec.ts", "src/app/shared/components/workflow-history/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invFtmp.json --include="src/app/modules/accounting/components/finance/**/*.spec.ts" --include="src/app/modules/common/components/my-tasks/*.spec.ts" --include="src/app/shared/components/workflow-history/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Backend tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_invoice_workflow personnel.test_invoice_workflow_flow personnel.test_invoice_workflow_return personnel.test_invoice_installment_notify personnel.test_invoice_payments_41 personnel.test_invoice_payments_smoke_41b personnel.test_payment_receipts personnel.test_invoice_verify_o3 personnel.test_cartable_multitenant --keepdb` (always with labels, never without labels). Also run the label of any other `personnel.test_*` file whose assertion you changed.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all the tests above pass, the temporary tsconfig is deleted, and `git status --short` shows only your changed source and test files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(invoices): user wording, payment receipt, pay, deposit document
+- Short English report: number of changed lines per file, the skipped list, and the test results. End the turn after the commit and the report.

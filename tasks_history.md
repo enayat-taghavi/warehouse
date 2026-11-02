@@ -18635,3 +18635,123 @@ test(finance): counterparty create button and petty-cash Sheba
 در قالب کامپوننت (`counterparties.html`)، دکمهٔ ایجاد در بخش دستورات (`[cc-actions] button[appAction="create"]`) هنگام کلیک تابع `openNewCounterparty()` را فراخوانی می‌کند. اسپای (`vi.spyOn(component, 'openNewCounterparty')`) اضافه شد و فراخوانی آن بر اثر کلیک روی دکمه در تست اعتبارسنجی گردید. هم...
 
 ---
+
+### Task 1 of 1 — 2026-11-02 14:54:21
+- **Status:** DONE
+- **Conversation:** `6839533d-d847-469e-8c9c-cd9a6898569f`
+- **Steps:** 146
+- **Tokens:** 258024
+- **Duration:** 15m 7s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/7 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Invoice fixes step C: specs for the all-sections default, the treasurer section filter and the employee project-to-section picker
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply. Edit only the four spec files named in section 3; never change component code, templates or other specs.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+
+2. Context: commit `f1bc0190` on main changed four invoice pages under `frontend/src/app/modules/accounting/components/finance/`.
+- `supervisor/supervisor-invoices/supervisor-invoices.ts` and `accountant/accountant-invoices/accountant-invoices.ts`: `pickDefaultSection()` no longer picks the first section. `selectedSectionId` stays `null` (all sections) and `fetchInvoices()` then calls `personnelApi.getExpenseInvoices` WITHOUT a `section_id` key. A `section_id` query param is kept only when that id is in `mySections`; otherwise it is reset to `null`. `onSectionChanged()` converts the value with `Number(...)` or `null`.
+- `treasurer/treasurer-invoices/treasurer-invoices.ts`: `loadTreasuryData()` stores the mapped cartable rows in `allInvoices` (each row now has `section_id` taken from the raw `section` field, and `project_name`). `invoices` is `allInvoices` filtered by `selectedSectionId` (all rows when it is `null`). `onSectionChanged()` re-filters without a new request. Default is `null`.
+- `employee/employee-invoices/employee-invoices.ts`: the list default is also `null`; `loadInvoices()` calls `getExpenseInvoicesPage({ page, page_size })` without `section_id` when `selectedSectionId` is `null`. The create form has its own `formProjectId` and `formSectionId`, getters `formProjects`, `formProjectSections` and `formSection`, and handlers `onFormProjectChange()` and `onFormSectionChange()`. `openNewInvoiceModal()` picks the form section in this order: `selectedSectionId`, then the remembered id from the `localStorage` key `invoice:lastSection:<auth.user().id>:<activeCompanyId or all>` (used only if that id is in `mySections`), then the only section of the only project. `saveInvoice()` sends `section: formSectionId` and, after a successful create (not an edit), writes `formSectionId` to that key. It shows a warning toast and does not save when `formSectionId` is null.
+
+3. Task: add `it(` tests. Keep every existing test name and assertion. Reuse the existing setup and mocks of each spec; add mock fields such as `section`, `project`, `project_name` or `company_id` locally inside the new tests when needed.
+- `supervisor/supervisor-invoices/supervisor-invoices.spec.ts`: (a) with no query params, after `ngOnInit()` `selectedSectionId` is `null` and the last `getExpenseInvoices` call argument has no `section_id` property; (b) with route `queryParams: of({ section_id: '10' })` (10 is returned by `getMySections`) the call contains `section_id: 10`; (c) with `section_id: '999'` (not in the list) `selectedSectionId` becomes `null` and no `section_id` is sent.
+- `accountant/accountant-invoices/accountant-invoices.spec.ts`: the same three cases (a), (b) and (c) for `fetchInvoices`.
+- `treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts`: make the cartable return two invoices with `section: 10` and `section: 20`; after the load, `allInvoices.length` and `invoices.length` are both 2; set `selectedSectionId = 20`, call `onSectionChanged()`, and `invoices` holds only the section-20 row while `getTreasuryCartable` was not called again; setting it back to `null` and calling `onSectionChanged()` restores both rows.
+- `employee/employee-invoices/employee-invoices.spec.ts` (constructor-based; `sampleSections` has sections 10 and 20 of project 1): (a) with route query params without `section_id`, `ngOnInit()` leaves `selectedSectionId` null and `getExpenseInvoicesPage` is called with exactly `{ page: 1, page_size: 25 }`; (b) after `ngOnInit()` with `selectedSectionId = null` and a stubbed `localStorage` (use `vi.stubGlobal` like the existing test that stubs it, and call `vi.unstubAllGlobals()` at the end) whose key `invoice:lastSection:<user id>:all` holds `'20'`, `openNewInvoiceModal()` sets `formSectionId` to 20 and `formProjectId` to 1; make `auth.user()` return an object with an `id` if the existing mock does not; (c) the same with a stored `'999'` leaves `formSectionId` null; (d) give `mySections` a second project (for example section 30 with `project: 2`), set `formProjectId = 2`, call `onFormProjectChange()`, and `formSectionId` becomes 30 (the only section of project 2); (e) `saveInvoice()` with `formSectionId` null calls `toast.show` with `'warning'` as the first argument and does not call `createExpenseInvoice`.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invCtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invCtmp.json --include="src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: all tests in these spec folders pass, the temporary tsconfig is deleted, and `git status --short` shows only your four files, the three files named in section 1 and runner files.
+
+6. Output and stop condition:
+- Stage only your four files and commit with this message, without push:
+test(invoices): all-sections default and project-to-section picker
+- Short English report: tests added per file and the test result. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح درخواست (Explain Simply)
+کاربر درخواست نوشتن تست‌های واحد (Unit Specs) در فاز C فاکتورهای مالی را داشت؛ شامل تنظیم مقدار پیش‌فرض «همه بخش‌ها» (`selectedSectionId = null`) در فاکتورهای سرپرست و حسابدار، فیلتر کلاینتی فاکتورهای خزانه بر اساس بخش بدون فراخوانی مجدد سرور، و تست‌های رفتار فرم ثبت فاکتور کارمند در انتخابگر پروژه به بخش، حافظهٔ محلی (`localStorage`)، پیش‌فرض‌ها و اعتبارسنجی ثبت فاکتور.
+
+### ۲. اعتبارسنجی فنی (Verify Immediately)
+تغییرات کامیت `f1bc0190` در ۴ کامپوننت مورد نظر بررسی و رفتارهای جدید تأیید شدند:
+- در فاکتورهای سرپرست و حسابدار، در صورت نبود پارامتر کوئری یا نامعتبر بودن آن، مقدار `selectedSectionId` برابر `null` مانده و فیلد...
+
+---
+
+### Task 1 of 1 — 2026-11-02 15:33:26
+- **Status:** DONE
+- **Conversation:** `578a2fde-4e40-497c-b4be-ca1a517e0135`
+- **Steps:** 256
+- **Tokens:** 478496
+- **Duration:** 23m 0s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Invoice fixes step D: specs for live refresh after reconnect and resume, the status tab after a live patch, and refetch of the open detail, preview and history
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply. Edit only the six spec files named in section 3; never change component code, templates, services or other specs.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+
+2. Context: commit `73451fb4` on main (read its diff with `git show 73451fb4`).
+- `frontend/src/app/core/http/websocket.service.ts`: new `reconnected$` and `appResumed$` subjects and the method `liveRefresh$()` (merge of both with `debounceTime(800)`). Its own spec `websocket.live-refresh.spec.ts` already exists; do not change it.
+- The four invoice pages subscribe in `ngOnInit` with `this.liveSub = this.ws?.liveRefresh$?.().subscribe(...)` and unsubscribe `liveSub` in `ngOnDestroy`: employee `employee/employee-invoices/employee-invoices.ts` calls `loadInvoices(true)` (which calls `treasuryOrgApi.getExpenseInvoicesPage`), supervisor `supervisor/supervisor-invoices/supervisor-invoices.ts` and accountant `accountant/accountant-invoices/accountant-invoices.ts` call `fetchInvoices(true)` (which calls `personnelApi.getExpenseInvoices`), treasurer `treasurer/treasurer-invoices/treasurer-invoices.ts` calls `loadTreasuryData(true)`.
+- Employee page `documentChanges$` handler: (1) if `isDetailPanelOpen` is true and `selectedInvoiceDetail.id` equals `ev.doc_id`, it calls `openInvoiceDetail(ev.doc_id, true)`; with `silent = true` that method does not set `isLoadingDetail` to true and shows no error toast, and it calls `treasuryOrgApi.getExpenseInvoice(id)`. (2) If `patchDocumentRow(this.invoices, ev)` patches a row (event `action: 'status_changed'` with a `status`, and the row id equals `doc_id`), it then calls `loadInvoices(true)` only when `statusFilter !== 'all'`.
+- `finance/invoice-preview-modal/invoice-preview-modal.component.ts`: constructor is now `(treasuryApi, printService, cdr, ws?)` (the 4th argument is optional). `ngOnInit()` subscribes to `ws.documentChanges$(['expense_invoice'])`; on an event whose `doc_id` equals `invoiceId` (or `invoice.id`) while `isOpen` is true, it calls `loadInvoice(true)`, which calls `treasuryApi.getExpenseInvoice(id)` without setting `isLoading` to true. `ngOnDestroy()` unsubscribes.
+- `frontend/src/app/shared/components/workflow-history/workflow-history.component.ts`: it injects `WebSocketService` with `inject(WebSocketService, { optional: true })`. In `ngOnInit()` it subscribes to `ws.documentChanges$([this.kind])`; on an event whose `doc_type` equals `kind` and `doc_id` equals `entityId`, it calls `loadHistory(true)`, which calls `api.getHistory(kind, entityId)` without setting `loading` to true; on a silent error it keeps the current `history` and sets neither `hasError` nor `notFound`.
+
+3. Task: add `it(` tests. Keep every existing test name and assertion. Reuse the existing setup and mocks of each spec. Where a WebSocket mock exists, add `liveRefresh$: vi.fn(() => live.asObservable())` with a local `const live = new Subject<void>()` (and a `Subject` for `documentChanges$` where needed); where no mock exists, provide one in the new tests only.
+- `finance/employee/employee-invoices/employee-invoices.spec.ts` (constructor-based; read the constructor of the component to place the ws mock at the right argument): (a) after `ngOnInit()`, emitting on the live subject calls `getExpenseInvoicesPage` once more; (b) with `invoices = [{ id: 1, status: 'pending_supervisor' }]` and `statusFilter = 'pending_supervisor'`, a `status_changed` event for id 1 with `status: 'pending_accountant'` sets the row status to `pending_accountant` and calls `getExpenseInvoicesPage` again; (c) the same event with `statusFilter = 'all'` patches the row and does NOT call `getExpenseInvoicesPage`; (d) with `isDetailPanelOpen = true` and `selectedInvoiceDetail = { id: 5 }`, an event with `doc_id: 5` calls `getExpenseInvoice(5)` and `isLoadingDetail` stays false; an event with `doc_id: 6` does not call `getExpenseInvoice`; (e) after `ngOnDestroy()`, emitting on the live subject makes no new call.
+- `finance/supervisor/supervisor-invoices/supervisor-invoices.spec.ts`: emitting on the live subject after `ngOnInit()` calls `getExpenseInvoices` again; after `ngOnDestroy()` it does not.
+- `finance/accountant/accountant-invoices/accountant-invoices.live.spec.ts`: the same two cases for the accountant page.
+- `finance/treasurer/treasurer-invoices/treasurer-invoices.spec.ts`: emitting on the live subject after `ngOnInit()` calls the treasurer cartable API used by `loadTreasuryData` again (read the component to find the method); after `ngOnDestroy()` it does not.
+- `finance/invoice-preview-modal/invoice-preview-modal.component.spec.ts` (constructor-based): pass a ws mock as the 4th constructor argument; call `ngOnInit()`; with `isOpen = true` and `invoiceId = 5`, an event `{ doc_type: 'expense_invoice', doc_id: 5 }` calls `getExpenseInvoice(5)` and `isLoading` stays false; with `doc_id: 6` or with `isOpen = false` no call; after `ngOnDestroy()` no call.
+- `shared/components/workflow-history/workflow-history.component.spec.ts`: provide a WebSocketService mock; with `kind = 'expense_invoice'` and `entityId = 7`, after init an event `{ doc_type: 'expense_invoice', doc_id: 7 }` calls `getHistory('expense_invoice', 7)` again and `loading` stays false during the call; an event for `doc_id: 8` makes no call; a silent reload that errors keeps the previous `history` and leaves `hasError` false.
+
+4. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invDtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts", "src/app/modules/accounting/components/finance/invoice-preview-modal/*.spec.ts", "src/app/shared/components/workflow-history/*.spec.ts", "src/app/core/http/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invDtmp.json --include="src/app/modules/accounting/components/finance/employee/employee-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/supervisor/supervisor-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/accountant/accountant-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/*.spec.ts" --include="src/app/modules/accounting/components/finance/invoice-preview-modal/*.spec.ts" --include="src/app/shared/components/workflow-history/*.spec.ts" --include="src/app/core/http/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: all tests in these spec folders pass, the temporary tsconfig is deleted, and `git status --short` shows only your six files, the three files named in section 1 and runner files.
+
+6. Output and stop condition:
+- Stage only your six files and commit with this message, without push:
+test(invoices): live refresh, status tab after patch, open windows refetch
+- Short English report: tests added per file and the test result. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده نیازمندی (Explain Simply)
+کاربر درخواست افزودن تست‌های واحد Vitest (بخش د رفع باگ‌های فاکتورها) در شش فایل spec بدون تغییر کدهای اصلی کامپوننت‌ها یا سرویس‌ها را داشت:
+- بازخوانی خودکار و بی‌صدا پس از اتصال مجدد سوکت یا بازگشت اپ (`liveRefresh$`).
+- پچ شدن ردیف فاکتور و بازخوانی فهرست در تب‌های وضعیت غیر از همه (`statusFilter !== 'all'`).
+- بازخوانی بی‌صدای پنجره‌های بازِ جزئیات فاکتور، پیش‌نمایش و سابقه گردش کار (`workflow-history`) هنگام دریافت رویداد تغییر سند باز.
+
+### ۲. اعتبارسنجی فنی (Verify Immediately)
+کدهای مربوط به گام د قبلاً در کامیت `73451fb4` روی کامپوننت‌های چهار صفحه فاکتور (`employee`، `supervisor`، `accountant`، `treasurer`)،...
+
+---
