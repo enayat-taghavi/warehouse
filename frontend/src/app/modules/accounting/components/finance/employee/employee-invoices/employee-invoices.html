@@ -171,7 +171,8 @@
             @if (inv.paid_amount && +inv.paid_amount > 0) {
               <app-invoice-receipt-button [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
             }
-            <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت" title="همرسانی PDF رسید پرداخت" aria-label="همرسانی PDF رسید پرداخت"></button>
+            <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="openInvoiceHistory(inv.id)" hint="جزئیات و سابقه گردش کار رسید پرداخت"></button>
+            <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
             @if (inv.status === 'draft') {
               <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)"></button>
             }
@@ -373,6 +374,16 @@
                   hint="حذف رسید پرداخت پیش‌نویس">
                 </button>
 
+                <!-- پیش‌نمایش: جزئیات و سابقه گردش کار -->
+                <button
+                  type="button"
+                  appAction="view"
+                  label="پیش‌نمایش"
+                  size="sm"
+                  (click)="openInvoiceHistory(inv.id)"
+                  hint="جزئیات و سابقه گردش کار رسید پرداخت">
+                </button>
+
                 <!-- همرسانی رسید پرداخت -->
                 <button
                   type="button"
@@ -382,8 +393,7 @@
                   size="sm"
                   [busy]="sharingId === inv.id"
                   (click)="shareInvoice(inv)"
-                  hint="همرسانی PDF رسید پرداخت"
-                  title="همرسانی PDF رسید پرداخت">
+                  hint="همرسانی PDF رسید پرداخت">
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
@@ -969,7 +979,7 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- مودال ۴: جزئیات و سابقه گردش کار فاکتور (openInvoiceHistory)        -->
+  <!-- مودال ۴: جزئیات و سابقه گردش کار فاکتور (openInvoiceHistory، دکمهٔ پیش‌نمایش ردیف) -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isDetailPanelOpen" class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4" tabindex="-1" (keydown.escape)="closeInvoiceDetail()">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]" role="dialog" aria-modal="true" aria-labelledby="emp-inv-modal-4-title">

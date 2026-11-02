@@ -172,20 +172,16 @@
           <app-attachments kind="expense_invoice" [entityId]="inv.id" [canEdit]="false"></app-attachments>
         </div>
 
-        <!-- سابقه گردش کار -->
-        <section id="inv-preview-history" aria-label="سابقه گردش کار" class="space-y-2 pt-2 border-t border-line">
-          <h4 class="text-xs font-black text-fg flex items-center gap-1.5">
-            <svg appIcon="file-lines" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-            <span>سابقه گردش کار</span>
-          </h4>
-          <div *ngIf="invoiceId">
-            <app-workflow-history kind="expense_invoice" [entityId]="invoiceId"></app-workflow-history>
-          </div>
-          <div *ngIf="!invoiceId && (inv.id || invoiceDetail?.id)">
-            <app-workflow-history kind="expense_invoice" [entityId]="inv.id || invoiceDetail!.id"></app-workflow-history>
-          </div>
-        </section>
       </div>
+
+      <!-- سابقه گردش کار: بیرون از بلوک مشخصات، تا اگر بارگذاری مشخصات خطا داد هم دیده شود -->
+      <section *ngIf="invoiceId || invoiceDetail?.id as hid" id="inv-preview-history" aria-label="سابقه گردش کار" class="space-y-2 pt-2 border-t border-line">
+        <h4 class="text-xs font-black text-fg flex items-center gap-1.5">
+          <svg appIcon="file-lines" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>سابقه گردش کار</span>
+        </h4>
+        <app-workflow-history kind="expense_invoice" [entityId]="hid"></app-workflow-history>
+      </section>
     </div>
   </div>
 
@@ -201,6 +197,8 @@
         label="همرسانی"
         size="sm"
         [busy]="sharingId === (invoiceId || invoiceDetail?.id || invoice?.id)"
+        [disabled]="!(invoiceId || invoiceDetail?.id || invoice?.id)"
+        hint="همرسانی PDF رسید پرداخت"
         (click)="shareInvoice()"
       ></button>
       <button
