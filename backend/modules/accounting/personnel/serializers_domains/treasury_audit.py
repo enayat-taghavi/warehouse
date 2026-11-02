@@ -406,6 +406,8 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     updated_by_name = serializers.SerializerMethodField()
     paid_by_name = serializers.SerializerMethodField()
+    # گام ح۲: کلید مرحلهٔ کار باز کاربر جاری روی این رسید (یا null)؛ فقط در فهرست و جزئیات
+    my_step = serializers.SerializerMethodField()
     lines = ExpenseInvoiceLineSerializer(many=True, required=False)
     # د۵ طرح ۴.۱: مانده و قسط‌ها (فقط خواندنی؛ ثبت از اکشن payments)
     remaining = serializers.SerializerMethodField()
@@ -540,6 +542,12 @@ class ExpenseInvoiceSerializer(serializers.ModelSerializer):
         if obj.updated_by:
             return f"{obj.updated_by.first_name} {obj.updated_by.last_name}".strip() or obj.updated_by.username
         return None
+
+    def get_my_step(self, obj):
+        steps = self.context.get('my_invoice_steps')
+        if not steps:
+            return None
+        return steps.get(str(obj.pk)) or steps.get(obj.pk)
 
     def get_paid_by_name(self, obj):
         if obj.paid_by:

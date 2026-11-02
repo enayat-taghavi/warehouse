@@ -624,6 +624,17 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
     # د۶ طرح ۴.۱: صفحه‌بندی فقط با ?page=؛ بی آن همان فهرست کامل قبلی
     pagination_class = InvoicePagePagination
 
+    def get_serializer_context(self):
+        # گام ح۲: مرحلهٔ کار باز همین کاربر روی هر رسید (my_step) تا فهرست یکپارچه فقط دکمه‌های مجاز را نشان دهد؛
+        # فقط نمایشی است و هر اقدام را سرور دوباره می‌سنجد. یک پرس‌وجو برای کل صفحه.
+        context = super().get_serializer_context()
+        if self.action in ('list', 'retrieve') and getattr(self.request, 'user', None) is not None:
+            from workflow.queries import tasks_for_user
+            context['my_invoice_steps'] = dict(
+                tasks_for_user(self.request.user).filter(instance__workflow_key=INVOICE_WORKFLOW)
+                .values_list('instance__entity_id', 'step_key'))
+        return context
+
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
@@ -636,9 +647,14 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         project_id = _section_id(self.request.query_params.get('project_id'))
         if project_id:
             qs = qs.filter(section__project_id=project_id)
+        # چند وضعیت با ویرگول (مثل «آماده پرداخت» = ready_to_pay,partially_paid)؛ فقط تنگ‌کننده
         inv_status = self.request.query_params.get('status')
         if inv_status:
-            qs = qs.filter(status=inv_status)
+            statuses = [s.strip() for s in inv_status.split(',') if s.strip()]
+            qs = qs.filter(status__in=statuses) if len(statuses) > 1 else qs.filter(status=inv_status.strip())
+        # گام ح۲: تیک «فقط رسیدهای خودم» داخل همان دامنه
+        if self.request.query_params.get('mine') in ('1', 'true'):
+            qs = qs.filter(created_by=user)
         search = self.request.query_params.get('search')
         if search:
             qs = qs.filter(Q(invoice_number__icontains=search) | Q(number__icontains=search)

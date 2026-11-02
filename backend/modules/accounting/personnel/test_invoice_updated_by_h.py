@@ -122,3 +122,58 @@ class InvoiceUpdatedByHTests(TestCase):
         self.assertEqual(res.data['updated_by'], self.sup.pk)
         expected_name = f"{self.sup.first_name} {self.sup.last_name}".strip() or self.sup.username
         self.assertEqual(res.data['updated_by_name'], expected_name)
+
+    # گام ح۲: پارامترهای تنگ‌کنندهٔ فهرست (mine=1 و چند وضعیت با ویرگول)
+    def list_ids(self, user, query):
+        c = APIClient()
+        c.force_authenticate(user)
+        res = c.get(f'{BASE}?{query}', HTTP_X_COMPANY_ID=str(self.company.pk))
+        self.assertEqual(res.status_code, 200)
+        rows = res.data['results'] if isinstance(res.data, dict) else res.data
+        return {r['id'] for r in rows}
+
+    def test_mine_filter_returns_only_own_invoices(self):
+        own = self.invoice(self.sup)
+        other = self.invoice(self.emp)
+        self.assertEqual(self.list_ids(self.sup, ''), {own.pk, other.pk})
+        self.assertEqual(self.list_ids(self.sup, 'mine=1'), {own.pk})
+        self.assertEqual(self.list_ids(self.sup, 'mine=1&page=1'), {own.pk})
+
+    def test_mine_filter_never_widens_scope(self):
+        project2 = Project.objects.create(company=self.company, code='IUH-P2', name='پروژه ۲')
+        sec2 = ProjectSection.objects.create(project=project2, code='IUH-S2', name='بخش ۲')
+        outside = self.invoice(self.sup, section=sec2)
+        visible = self.invoice(self.sup)
+        self.assertEqual(self.list_ids(self.sup, 'mine=1'), {visible.pk})
+        self.assertNotIn(outside.pk, self.list_ids(self.sup, 'mine=1&status=draft'))
+
+    def test_comma_status_filter(self):
+        ready = self.invoice(self.emp)
+        partial = self.invoice(self.emp)
+        draft = self.invoice(self.emp)
+        ExpenseInvoice.objects.filter(pk=ready.pk).update(status='ready_to_pay')
+        ExpenseInvoice.objects.filter(pk=partial.pk).update(status='partially_paid')
+        self.assertEqual(self.list_ids(self.trs, 'status=ready_to_pay,partially_paid'), {ready.pk, partial.pk})
+        self.assertEqual(self.list_ids(self.trs, 'status=ready_to_pay'), {ready.pk})
+        self.assertNotIn(draft.pk, self.list_ids(self.trs, 'status=ready_to_pay,partially_paid&page=1'))
+
+    def test_my_step_marks_only_recipient_rows(self):
+        inv = self.invoice(self.emp, amount='5000')
+        c_emp = APIClient()
+        c_emp.force_authenticate(self.emp)
+        with self.captureOnCommitCallbacks(execute=True):
+            res = c_emp.post(f'{BASE}{inv.pk}/submit/', {}, HTTP_X_COMPANY_ID=str(self.company.pk))
+        self.assertEqual(res.status_code, 200)
+        draft = self.invoice(self.emp)
+
+        c_sup = APIClient()
+        c_sup.force_authenticate(self.sup)
+        res = c_sup.get(f'{BASE}?page=1', HTTP_X_COMPANY_ID=str(self.company.pk))
+        steps = {r['id']: r['my_step'] for r in res.data['results']}
+        self.assertEqual(steps[inv.pk], 'supervisor_ok')
+        self.assertIsNone(steps[draft.pk])
+        res = c_sup.get(f'{BASE}{inv.pk}/', HTTP_X_COMPANY_ID=str(self.company.pk))
+        self.assertEqual(res.data['my_step'], 'supervisor_ok')
+
+        res = c_emp.get(f'{BASE}?page=1', HTTP_X_COMPANY_ID=str(self.company.pk))
+        self.assertTrue(all(r['my_step'] is None for r in res.data['results']))
