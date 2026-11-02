@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
@@ -169,6 +170,8 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
   @Output() cancelRequested = new EventEmitter<number>();
 
   private readonly api = inject(WorkflowApiService);
+  // گام ه: پاسخ سابقه می‌رسید ولی نما بازبینی نمی‌شد و روی «در حال بارگذاری» می‌ماند
+  private readonly cdr = inject(ChangeDetectorRef, { optional: true });
   private readonly tasksService = inject(WorkflowTasksService, { optional: true });
 
   history: WorkflowHistory | null = null;
@@ -204,7 +207,10 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  private destroyed = false;
+
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.eventSub?.unsubscribe();
     this.docSub?.unsubscribe();
   }
@@ -230,19 +236,27 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
         this.loading = false;
         this.history = res;
         this.notFound = !res || !res.instances || res.instances.length === 0;
+        this.render();
       },
       error: (err) => {
         this.loading = false;
-        if (silent) return;
-        if (err?.status === 404) {
-          this.notFound = true;
-          this.history = null;
-        } else {
-          this.hasError = true;
-          this.errorMessage = err?.error?.detail || err?.message || 'خطا در بارگذاری سابقه';
+        if (!silent) {
+          if (err?.status === 404) {
+            this.notFound = true;
+            this.history = null;
+          } else {
+            this.hasError = true;
+            this.errorMessage = err?.error?.detail || err?.message || 'خطا در بارگذاری سابقه';
+          }
         }
+        this.render();
       }
     });
+  }
+
+  /** صفحه‌های میزبان (مسیر نگه‌داشته‌شده) خودکار بازبینی نمی‌شوند؛ مثل خود آن‌ها مستقیم بازبینی می‌کنیم */
+  private render(): void {
+    if (!this.destroyed) this.cdr?.detectChanges();
   }
 
   onCancelInstance(instanceId: number): void {

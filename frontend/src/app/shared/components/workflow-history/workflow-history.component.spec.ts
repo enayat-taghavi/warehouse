@@ -238,4 +238,37 @@ describe('WorkflowHistoryComponent (DOM): no-recipient note', () => {
     expect(await hasNote(true)).toBe(true);
     expect(await hasNote(false)).toBe(false);
   });
+
+  // گام ه: پاسخ دیررس بدون بازبینی صفحهٔ میزبان هم نما را از «در حال بارگذاری» بیرون می‌آورد
+  it('renders a late history reply without the host running change detection', () => {
+    const reply$ = new Subject<WorkflowHistory>();
+    TestBed.configureTestingModule({
+      imports: [WorkflowHistoryComponent],
+      providers: [
+        { provide: WorkflowApiService, useValue: { getHistory: vi.fn().mockReturnValue(reply$) } },
+        { provide: WorkflowTasksService, useValue: { events$: new Subject() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(WorkflowHistoryComponent);
+    fixture.componentInstance.kind = 'k';
+    fixture.componentInstance.entityId = 1;
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('در حال بارگذاری');
+
+    reply$.next({
+      entity_kind: 'k', entity_id: 1,
+      instances: [{
+        instance_id: 1, workflow_key: 'k', workflow_title_fa: 'گردش نمونه', version: 1, status: 'in_progress', status_fa: 's',
+        current_step: 'review', current_step_title_fa: 'r', revision: 1, created_by: null, company: null, section: null,
+        amount: null, submitted_at: null, submitted_at_shamsi: '', closed_at: null, closed_at_shamsi: '',
+        can_cancel: false, waiting_for_superuser: false, steps: [],
+      }],
+    } as any);
+
+    // بی fixture.detectChanges()
+    expect(el.textContent).not.toContain('در حال بارگذاری');
+    expect(el.textContent).toContain('گردش نمونه');
+    TestBed.resetTestingModule();
+  });
 });
