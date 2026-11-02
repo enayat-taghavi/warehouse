@@ -461,7 +461,7 @@
           </div>
           <div>
             <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInFlow ? 'ویرایش رسید پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید') }}</h3>
-            <p class="text-[11px] text-fg-muted font-medium">{{ formSection ? ('بخش «' + formSection.name + '» · ') : '' }}ذخیره به‌صورت پیش‌نویس</p>
+            <p class="text-[11px] text-fg-muted font-medium">{{ formSection ? ('بخش «' + formSection.name + '» · ') : '' }}{{ editingInFlow ? 'تغییر در سابقه ثبت می‌شود' : 'ذخیره به‌صورت پیش‌نویس' }}</p>
           </div>
         </div>
         <button
@@ -486,7 +486,7 @@
               id="invoice_project"
               [(ngModel)]="formProjectId"
               (ngModelChange)="onFormProjectChange()"
-              [disabled]="editingInFlow"
+              [disabled]="editingInFlow" [attr.aria-describedby]="editingInFlow ? 'invoice_scope_locked' : null"
               class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60">
               <option [ngValue]="null" disabled>پروژه را انتخاب کنید</option>
               @for (p of formProjects; track p.id) {
@@ -500,13 +500,16 @@
               id="invoice_section"
               [(ngModel)]="formSectionId"
               (ngModelChange)="onFormSectionChange()"
-              [disabled]="editingInFlow || !formProjectId"
+              [disabled]="editingInFlow || !formProjectId" [attr.aria-describedby]="editingInFlow ? 'invoice_scope_locked' : null"
               class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60">
               <option [ngValue]="null" disabled>{{ formProjectId ? 'بخش را انتخاب کنید' : 'نخست پروژه را انتخاب کنید' }}</option>
               @for (s of formProjectSections; track s.id) {
                 <option [ngValue]="s.id">{{ s.name }}</option>
               }
             </select>
+            @if (editingInFlow) {
+              <p id="invoice_scope_locked" class="mt-1 text-[11px] text-fg-muted">پروژه و بخش در این مرحله قابل تغییر نیست.</p>
+            }
           </div>
         </div>
 

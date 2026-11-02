@@ -105,7 +105,7 @@ export class WorkflowApiService {
     return this.api.get<WorkflowCompanySettings>(`${WF}/settings/${companyId}`, undefined, WorkflowApiService.direct());
   }
 
-  saveCompanySettings(companyId: number, body: { reminder_hours: number; escalation_hours: number }): Observable<WorkflowCompanySettings> {
+  saveCompanySettings(companyId: number, body: { reminder_hours: number; escalation_hours: number; creator_may_approve_own?: boolean }): Observable<WorkflowCompanySettings> {
     return this.api.put<WorkflowCompanySettings>(`${WF}/settings/${companyId}`, body, WorkflowApiService.direct());
   }
 

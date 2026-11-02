@@ -205,7 +205,7 @@ export class CompanyWorkflowTabComponent implements OnInit, OnChanges {
         reminder_hours: Number(this.reminderHours),
         escalation_hours: Number(this.escalationHours),
         creator_may_approve_own: !!this.creatorMayApproveOwn
-      } as any)
+      })
       .subscribe({
         next: (res) => {
           this.savingSettings = false;
