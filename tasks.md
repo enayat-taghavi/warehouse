@@ -6273,3 +6273,60 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 - Stage only your changed files and commit with this message, without push:
 fix(invoices): user wording, payment receipt, pay, deposit document
 - Short English report: number of changed lines per file, the skipped list, and the test results. End the turn after the commit and the report.
+
+===
+
+[ ] Session 1 of 1 — Invoice fixes step G: treasurer pay form, bank website hint and bank details side by side with copy buttons
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/**"
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices-payments.dom.spec.ts frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.spec.ts
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/modules/accounting/components/finance/treasurer/**/*.spec.ts"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(invoices): treasurer pay form bank hint and bank details copy"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Change ONLY files inside `frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/`. Never edit backend files, models, API services or any other folder.
+- Icons only via `<svg appIcon="name">` with names that already exist in `frontend/src/app/shared/icons/` (`copy`, `check`, `external-link`, `info` or similar; check the registry). Never add inline svg paths.
+- Every icon-only button: at least 40x40px (`min-w-[40px] min-h-[40px]`), Persian `title` and `aria-label`. Use the semantic color tokens (`surface`, `fg`, `line`) like the existing markup.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never delete or weaken an existing test or assertion.
+
+2. Context: in the treasurer pay form (`treasurer-invoices.html` lines 325-380) the treasurer picks a company bank account (`<select id="pay-company-account">`, line ~327). A link `<a data-company-bank-link>` (line ~334) opens the bank website, but only when `selectedCompanyBankUrl` (`treasurer-invoices.ts` line ~298) returns a safe https URL. Diagnosis: on the test server every company bank account has an empty `internet_bank_url`, so the link never shows and the user sees nothing. The party account card (`data-party-account-copy`, lines ~356-377) already shows account number and Sheba with copy buttons using `copyValue(value, key, labelFa)` and `copiedKey` (`treasurer-invoices.ts` lines ~304-330).
+
+3. Definitions:
+- "selected company account" = the getter `selectedCompanyAccount` (`treasurer-invoices.ts` line ~293). Its type `CompanyBankAccount` has `bank_name`, `account_number`, `sheba_number` (check the interface for exact field names, e.g. `sheba` vs `sheba_number`, and use what exists).
+- "hint text" = exactly: «آدرس سایت بانک برای این حساب ثبت نشده؛ از بخش حساب‌های بانکی شرکت آن را وارد کنید.»
+
+4. Task:
+- A) Hint: directly under the company account select row (after the `</div>` that closes the `flex items-center gap-2` row, before the error `<p id="pay-company-err">`), add `<p *ngIf="selectedCompanyAccount && !selectedCompanyBankUrl" data-company-bank-hint class="mt-1 text-[11px] text-fg-muted flex items-center gap-1">` with a small `info` icon (if that icon name exists; otherwise no icon) and the hint text.
+- B) Company account details: below the hint (still inside the same company account block), add `<div *ngIf="selectedCompanyAccount as cacc" data-company-account-copy class="mt-2 rounded-xl border border-line bg-surface-muted p-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2">` with three cells side by side on `sm` and stacked on mobile: bank name (`data-company-bank-name`, plain text, no copy button), account number (`data-copy-company-account`, copy key `'company-account'`, label «شماره حساب»), Sheba (`data-copy-company-sheba`, copy key `'company-sheba'`, label «شماره شبا»). Show the account number and Sheba cells only when the value is not empty. Reuse exactly the existing cell and button markup of the party card (lines ~361-377: small label span, `<bdi dir="ltr" class="font-mono ...">`, the copy button with `[appIcon]="copiedKey === '<key>' ? 'check' : 'copy'"`, `title`/`aria-label` «کپی شماره حساب» / «کپی شماره شبا», `<span class="hidden sm:inline">` text). Keep each cell `min-w-0` so long Sheba numbers wrap with `break-all`.
+- C) Party account card: change its container from `space-y-2` to the same `grid grid-cols-1 sm:grid-cols-3 gap-2` layout: cell 1 bank name (`acc.bank_name`) plus owner name under it, cell 2 account number, cell 3 Sheba. Keep the existing attributes `data-party-account-copy`, `data-copy-account`, `data-copy-sheba` and copy keys `'account'` / `'sheba'` unchanged (existing tests use them).
+- D) After any async reply that changes what the template shows, the component already calls `cdr.detectChanges()` where needed; if your specs show the new elements are not rendered after async loading, call `fixture.detectChanges()` in the spec (not new component code).
+- E) DOM specs in `treasurer-invoices-payments.dom.spec.ts` next to test `k)` (line ~480), copying its setup:
+  - `l) shows the bank website hint when the selected company account has no URL and hides it when it has a safe https URL` (also: no hint when no account is selected).
+  - `m) the company account details show bank name, account number and Sheba with copy buttons and copy the value without spaces` (click `[data-copy-company-account]` and `[data-copy-company-sheba]`, assert the clipboard spy got the values, like test `i)`).
+  - `n) the party account card still has the copy buttons after the layout change` only if test `i)` does not already cover `data-copy-account` and `data-copy-sheba`; otherwise skip and say so in the report.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invGtmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/treasurer/**/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invGtmp.json --include="src/app/modules/accounting/components/finance/treasurer/**/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Run `python scripts/e2e/guardian_52_icon_registry.py` before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all treasurer specs pass, the temporary tsconfig is deleted, and `git status --short` shows only your changed files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(invoices): treasurer pay form bank hint and bank details copy
+- Short English report: changed files, new test names, test results. End the turn after the commit and the report.
