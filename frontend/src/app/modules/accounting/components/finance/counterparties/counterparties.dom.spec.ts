@@ -407,4 +407,69 @@ describe('CounterpartiesComponent DOM Spec (Release v1 step 3.1-c: bank-accounts
     );
     expect(mockToast.show).toHaveBeenCalledWith('info', expect.stringContaining('تکراری'));
   });
+
+  it('the form is not in the DOM on load; clicking create button opens it; cancelEdit() closes it; editCounterparty(...) opens it; successful create closes it', () => {
+    // 1. the form (the form element containing app-counterparty-form-fields) is not in the DOM on load
+    expect(component.isFormOpen).toBe(false);
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-counterparty-form-fields')).toBeNull();
+
+    // 2. clicking the create button in the command center opens it (calls openNewCounterparty)
+    const createBtn = fixture.nativeElement.querySelector('[cc-actions] button[appAction="create"]') as HTMLButtonElement;
+    expect(createBtn).not.toBeNull();
+    const openNewSpy = vi.spyOn(component, 'openNewCounterparty');
+    createBtn.click();
+    expect(openNewSpy).toHaveBeenCalled();
+    fixture.detectChanges();
+
+    expect(component.isFormOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-counterparty-form-fields')).not.toBeNull();
+
+    // 3. cancelEdit() closes it
+    component.cancelEdit();
+    fixture.detectChanges();
+
+    expect(component.isFormOpen).toBe(false);
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-counterparty-form-fields')).toBeNull();
+
+    // 4. editCounterparty(...) opens it
+    const sampleCp: Counterparty = {
+      id: 50,
+      party: 22,
+      name: 'طرف‌حساب نمونه',
+      counterparty_type: 'contractor',
+      is_active: true
+    };
+    component.editCounterparty(sampleCp);
+    fixture.detectChanges();
+
+    expect(component.isFormOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('form')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-counterparty-form-fields')).not.toBeNull();
+
+    // 5. a successful create (createCounterparty mock returning an object) closes it
+    createBtn.click();
+    fixture.detectChanges();
+    expect(component.isFormOpen).toBe(true);
+    expect(component.editingCounterparty).toBeNull();
+
+    component.newCounterparty.name = 'طرف‌حساب جدید تستی';
+    component.newCounterparty.counterparty_type = 'contractor';
+    mockPersonnelApi.createCounterparty.mockReturnValue(of({
+      id: 888,
+      name: 'طرف‌حساب جدید تستی',
+      counterparty_type: 'contractor',
+      is_active: true
+    }));
+
+    component.saveCounterparty();
+    fixture.detectChanges();
+
+    expect(mockPersonnelApi.createCounterparty).toHaveBeenCalled();
+    expect(component.isFormOpen).toBe(false);
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-counterparty-form-fields')).toBeNull();
+  });
 });
