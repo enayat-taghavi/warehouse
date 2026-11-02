@@ -19214,3 +19214,75 @@ The frontend build (`npx ng build --delete-output-path=false`) has been started 
 ### ۲. اعتبارسنجی و اجر...
 
 ---
+
+### Task 1 of 1 — 2026-11-02 22:42:06
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `f2a012bc-8c7b-4399-8e9e-bd5d6dc403cd`
+- **Steps:** 412
+- **Tokens:** 747504
+- **Duration:** 30m 31s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 10/10 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Invoice fixes step I: company setting checkbox «creator may approve own receipt» and the review accountant's edit button for receipts in review
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7 and 10 apply.
+- Change ONLY these files: `frontend/src/app/core/models/workflow.model.ts` (interface `WorkflowCompanySettings`, line ~183-192), the three files of `frontend/src/app/modules/common/components/operations/companies/company-workflow-tab/`, and files inside `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/` (plus a new spec file there). Never edit backend files, migrations, API services or other folders.
+- Icons only via existing `appAction` buttons or `<svg appIcon="name">` with names that already exist in `frontend/src/app/shared/icons/`. Never add inline svg paths.
+- Every icon-only button: at least 40x40px, Persian `title` and `aria-label`. Use the semantic color tokens (`surface`, `fg`, `line`) like the existing markup. All user-facing text in Persian.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never delete or weaken an existing test or assertion.
+
+2. Context (backend already done in commit `167a6824`):
+- `GET/PUT /api/workflow/settings/<company_id>/` now returns and accepts `creator_may_approve_own` (boolean, default `false`). PUT with a non-boolean value returns 400. When it is `true`, the creator of an expense invoice (payment receipt) may approve or review their own receipt (system admins never).
+- `PATCH /api/personnel/expense-invoices/<id>/` is now allowed for the accountant of the open review step while the receipt has status `pending_accountant`: the list/retrieve payload has `my_step === 'accountant_review'` for exactly that user. The PATCH must NOT send `status` (the server returns 403 if `status` differs) and must not change `section` (403). The server writes a history row «ویرایش سند». If the new amount would need an earlier approval that had been skipped, the server returns 400 with `detail` (a Persian message): show it in a toast like other errors.
+- `company-workflow-tab.component.ts`: `loadSettings()` (~line 105) copies `reminder_hours`/`escalation_hours` into fields; `saveCompanySettings()` (~line 197-225) sends `{reminder_hours, escalation_hours}`. The html has the settings card with the save button «ذخیرهٔ مهلت‌ها» (~line 110-120).
+- `employee/employee-invoices/employee-invoices.ts`: `isEditable(inv)` (~line 748) = draft or revision_required; `openEditInvoiceModal(inv)` (~line 754) refuses other statuses and sets `newInvoice.status = 'draft'`; `saveInvoice(mode)` (~line 1172-1260) sends no `status` when `editingInvoiceId` is set (keep it that way); after save with `mode === 'send'` it calls `submitInvoice`. The html shows the row edit buttons inside `@if (isEditable(inv))` (~line 159-162, desktop) and `*ngIf="isEditable(inv)"` (~line 324-333, mobile/card), the modal title (~line 439 and 448) and the footer buttons (~line 805-840: «ذخیره و رسید پرداخت بعدی» only when not editing, «ذخیره پیش‌نویس», «ذخیره و ارسال به سرپرست»). This component is also embedded as the role list (`my_step` is already used at ~line 331 of the ts).
+
+3. Definitions:
+- "review edit" = editing a receipt whose `my_step === 'accountant_review'` and whose `status === 'pending_accountant'` and that has no payment (`!(+(inv.paid_amount || 0) > 0)`).
+
+4. Task:
+- A) `WorkflowCompanySettings` interface: add `creator_may_approve_own: boolean;` with a Persian doc comment.
+- B) Company workflow tab: add a field `creatorMayApproveOwn = false`; set it in `loadSettings()` from `res.creator_may_approve_own` (false when missing); send it as `creator_may_approve_own` in `saveCompanySettings()`. In the settings card, above the save button, add a checkbox row (copy an existing checkbox pattern from the same folder or `frontend/src/app/modules/common/components/operations/companies/`; if none, a native `<input type="checkbox">` with `id="cwf-creator-self-approval"` and a `<label for>`), label «ایجادکننده می‌تواند رسید پرداخت خودش را تأیید کند», and a small muted help line «اگر روشن باشد، کسی که رسید را ثبت کرده در مرحله‌های تأیید و بررسی همان رسید هم کار را می‌گیرد. مدیر کل سامانه هرگز سند خودش را تأیید نمی‌کند.». Rename the save button label to «ذخیرهٔ تنظیمات» and the success toast to «تنظیمات گردش کار با موفقیت ذخیره شد.».
+- C) Employee invoices (review edit):
+  - add `isReviewEditable(inv: ExpenseInvoice): boolean` per the definition and `canEditInvoice(inv) = this.isEditable(inv) || this.isReviewEditable(inv)`.
+  - add a field `editingInFlow = false`. `openEditInvoiceModal(inv)` accepts `canEditInvoice(inv)` (keep the warning toast for others) and sets `editingInFlow = !this.isEditable(inv)`; reset it to false wherever `editingInvoiceId` is reset to null (~line 725 and ~801).
+  - rows: next to the existing `isEditable` edit buttons (desktop and card), show for `isReviewEditable(inv)` only an edit button (same `appAction="edit"` markup as the existing one, label «ویرایش», hint «ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)»), never the «ارسال» button.
+  - modal: when `editingInFlow`, the title is «ویرایش رسید پرداخت در مرحلهٔ بررسی» (both places, including the aria-label), the «ذخیره و ارسال به سرپرست» button is hidden, the «ذخیره پیش‌نویس» button label becomes «ذخیرهٔ تغییرات», and the project/section selector is disabled (find the section select in the modal and add `[disabled]="editingInFlow"`; if it is a custom component without a disabled input, wrap it so it is not editable and show the current section name read-only).
+  - success toast after a review edit: «تغییرات رسید پرداخت «…» ذخیره شد و در سابقه ثبت شد.» (use the same `invoiceLabel` pattern as the existing edit toast).
+  - after async replies, follow the existing `cdr.detectChanges()` pattern of the component.
+- D) DOM specs:
+  - in `company-workflow-tab.component.spec.ts`: `loads creator_may_approve_own into the checkbox`, `save sends creator_may_approve_own`, `checkbox defaults to unchecked when the field is missing`.
+  - new `employee/employee-invoices/employee-invoices-review-edit.dom.spec.ts` (copy the TestBed setup of the closest existing employee-invoices spec in the same folder): `review accountant row shows edit but not send`, `row with my_step other than accountant_review shows no edit button for pending_accountant`, `no edit button when a payment exists`, `review edit modal hides send and shows save changes label`, `review edit PATCH payload has no status field`.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Specs: from `frontend`. Create a temporary `frontend/tsconfig.invItmp.json` (overwrite if it exists):
+  `{ "extends": "./tsconfig.json", "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] }, "include": ["src/**/*.d.ts", "src/app/modules/accounting/components/finance/**/*.spec.ts", "src/app/modules/common/components/operations/companies/company-workflow-tab/*.spec.ts"] }`
+  and run `npx ng test --watch=false --ts-config tsconfig.invItmp.json --include="src/app/modules/accounting/components/finance/**/*.spec.ts" --include="src/app/modules/common/components/operations/companies/company-workflow-tab/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Run `python scripts/e2e/guardian_52_icon_registry.py` and `python scripts/e2e/guardian_57_front_module_fence.py` before the commit.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all specs above pass (no new failures), the temporary tsconfig is deleted, and `git status --short` shows only your changed files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+feat(invoices): I frontend - self-approval setting and review accountant edit
+- Short English report: changed files, new test names, test results. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست
+کاربر در این گام دو ویژگی برای رسیدهای پرداخت هزینه درخواست کرد:
+۱. در تنظیمات گردش کار شرکت، فیلد و چک‌باکس «ایجادکننده می‌تواند رسید پرداخت خودش را تأیید کند» (`creator_may_approve_own`) افزوده شود تا در صورت فعال بودن، سازندهٔ سند در مراحل بررسی و تأیید همان رسید بتواند اقدام کند؛ به همراه تغییر عنوان دکمهٔ ذخیره به «ذخیرهٔ تنظیمات» و پیام توست متناسب.
+۲. حسابدار مسئول بررسی در مرحلهٔ `pending_accountant` (با شرط `my_step === 'accountant_review'` و فاقد پرداخت قبلی) بتواند رسید را ویرایش کند (`review edit`). در این حالت، دکمهٔ ویرایش در سطر نمایش داده شده، مودال با عنوان مناسب باز شده، فیلد پروژه و بخش قفل شده، دکمهٔ ارسال مخفی شده...
+
+---

@@ -6534,7 +6534,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 
 ===
 
-[ ] Session 1 of 1 — Invoice fixes step I: company setting checkbox «creator may approve own receipt» and the review accountant's edit button for receipts in review
+[DONE] [ ] Session 1 of 1 — Invoice fixes step I: company setting checkbox «creator may approve own receipt» and the review accountant's edit button for receipts in review
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
