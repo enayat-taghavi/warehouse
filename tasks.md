@@ -6498,7 +6498,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 
 ===
 
-[ ] Session 1 of 1 — Release main on the local app environment for invoice step H2 (backend list filters mine=1, comma statuses and my_step per row, commit be93a869; frontend one invoice list with role row actions, commit ed3e8458): backup, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] [ ] Session 1 of 1 — Release main on the local app environment for invoice step H2 (backend list filters mine=1, comma statuses and my_step per row, commit be93a869; frontend one invoice list with role row actions, commit ed3e8458): backup, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
