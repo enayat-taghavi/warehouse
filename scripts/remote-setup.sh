@@ -145,10 +145,11 @@ timedatectl set-timezone Asia/Tehran || true
 
 # 2. Package Management & Dependencies (including rsync)
 echo "--> Updating package repository..."
-apt-get update -y
+# A fresh server often runs unattended-upgrades on first boot; wait for its dpkg lock instead of failing.
+apt-get -o DPkg::Lock::Timeout=900 update -y
 
 echo "--> Installing system runtime packages and security tools..."
-apt-get install -y --no-install-recommends \
+apt-get -o DPkg::Lock::Timeout=900 install -y --no-install-recommends \
     -o Dpkg::Options::="--force-confdef" \
     -o Dpkg::Options::="--force-confold" \
     python3 \
