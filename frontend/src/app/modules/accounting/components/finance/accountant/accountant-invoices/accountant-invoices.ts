@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter, inject } from '@angular/core';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -41,6 +42,7 @@ import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pip
   styleUrl: './accountant-invoices.css'
 })
 export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
+  protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;
   /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */

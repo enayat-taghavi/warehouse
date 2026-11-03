@@ -185,6 +185,7 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
     switch (status) {
       case 'READY_TO_PAY':
       case 'PAID':
+      case 'SETTLED_OUTSIDE':
       case 'LOCKED':
       case 'FINALIZED':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';

@@ -44,6 +44,7 @@
     <div cc-actions class="flex items-center gap-2 justify-end">
       <!-- دکمه ثبت فاکتور جدید -->
       <button
+        *ngIf="perm.canWriteDocuments()"
         type="button"
         appAction="create"
         label="رسید پرداخت جدید"
@@ -147,21 +148,21 @@
           </div>
           <div class="flex flex-wrap items-center gap-1.5 pt-1">
             @if (roleActionsFor(inv); as ra) {
-              @if (ra.approve) {
+              @if (ra.approve && perm.canWriteDocuments()) {
                 <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
               }
-              @if (ra.ret) {
+              @if (ra.ret && perm.canWriteDocuments()) {
                 <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
               }
-              @if (ra.pay) {
+              @if (ra.pay && perm.canWriteDocuments()) {
                 <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
               }
             }
-            @if (isEditable(inv)) {
+            @if (isEditable(inv) && perm.canWriteDocuments()) {
               <button type="button" appAction="send" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)"></button>
               <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)"></button>
             }
-            @if (isReviewEditable(inv)) {
+            @if (isReviewEditable(inv) && perm.canWriteDocuments()) {
               <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)"></button>
             }
             @if (inv.attachment) {
@@ -173,7 +174,7 @@
             }
             <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="openInvoiceHistory(inv.id)" hint="جزئیات و سابقه گردش کار رسید پرداخت"></button>
             <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
-            @if (inv.status === 'draft') {
+            @if (inv.status === 'draft' && perm.canWriteDocuments()) {
               <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)"></button>
             }
           </div>
@@ -300,20 +301,20 @@
 
                 <!-- کار نقش روی این ردیف (فهرست یکپارچه، ح۲) -->
                 @if (roleActionsFor(inv); as ra) {
-                  @if (ra.approve) {
+                  @if (ra.approve && perm.canWriteDocuments()) {
                     <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
                   }
-                  @if (ra.ret) {
+                  @if (ra.ret && perm.canWriteDocuments()) {
                     <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
                   }
-                  @if (ra.pay) {
+                  @if (ra.pay && perm.canWriteDocuments()) {
                     <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
                   }
                 }
 
                 <!-- ارسال به سرپرست (فقط برای پیش‌نویس) -->
                 <button
-                  *ngIf="isEditable(inv)"
+                  *ngIf="isEditable(inv) && perm.canWriteDocuments()"
                   type="button"
                   appAction="send"
                   display="label"
@@ -326,7 +327,7 @@
 
                 <!-- ویرایش پیش‌نویس -->
                 <button
-                  *ngIf="isEditable(inv)"
+                  *ngIf="isEditable(inv) && perm.canWriteDocuments()"
                   type="button"
                   appAction="edit"
                   label="ویرایش"
@@ -338,7 +339,7 @@
 
                 <!-- ویرایش رسید در مرحلهٔ بررسی حسابدار -->
                 <button
-                  *ngIf="isReviewEditable(inv)"
+                  *ngIf="isReviewEditable(inv) && perm.canWriteDocuments()"
                   type="button"
                   appAction="edit"
                   label="ویرایش"
@@ -364,7 +365,7 @@
 
                 <!-- حذف فاکتور (فقط برای پیش‌نویس) -->
                 <button
-                  *ngIf="inv.status === 'draft'"
+                  *ngIf="inv.status === 'draft' && perm.canWriteDocuments()"
                   type="button"
                   appAction="delete"
                   label="حذف"
@@ -839,7 +840,7 @@
           label="انصراف"
           (click)="closeNewInvoiceModal()">
         </button>
-        @if (!editingInvoiceId) {
+        @if (!editingInvoiceId && perm.canWriteDocuments()) {
           <button
             type="button"
             appAction="create"
@@ -851,6 +852,7 @@
           </button>
         }
         <button
+          *ngIf="perm.canWriteDocuments()"
           type="button"
           appAction="save"
           [label]="editingInFlow ? 'ذخیرهٔ تغییرات' : 'ذخیره پیش‌نویس'"
@@ -858,7 +860,7 @@
           [busy]="isSaving"
           (click)="saveInvoice()">
         </button>
-        @if (!editingInFlow) {
+        @if (!editingInFlow && perm.canWriteDocuments()) {
           <button
             type="button"
             appAction="send"

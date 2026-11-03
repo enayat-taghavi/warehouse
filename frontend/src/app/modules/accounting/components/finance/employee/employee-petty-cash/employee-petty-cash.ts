@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, inject } from '@angular/core';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
@@ -64,6 +65,7 @@ import { AmountInputComponent } from '../../../../../../shared/components/amount
   styleUrl: './employee-petty-cash.css'
 })
 export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
+  protected perm = inject(PermissionService);
   private readonly confirmDialog = (() => { try { return inject(ConfirmDialogService); } catch { return undefined as unknown as ConfirmDialogService; } })();
   readonly Math = Math;
 
@@ -689,14 +691,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   statementStatusLabel(status: string): string {
     const map: Record<string, string> = {
-      draft: 'پیش‌نویس', submitted: 'در بررسی', approved: 'تأییدشده', paid: 'پرداخت‌شده', returned: 'عودت‌شده'
+      draft: 'پیش‌نویس', submitted: 'در بررسی', approved: 'تأییدشده', paid: 'پرداخت‌شده', settled_outside: 'تأییدشده، پرداخت بیرون از سامانه', returned: 'عودت‌شده'
     };
     return map[status] || status;
   }
 
   chargeStatusLabel(t: PettyCashTransaction): string {
     const map: Record<string, string> = {
-      draft: 'پیش‌نویس', approved: 'تأییدشده', rejected: 'ردشده', paid: 'پرداخت‌شده',
+      draft: 'پیش‌نویس', approved: 'تأییدشده', rejected: 'ردشده', paid: 'پرداخت‌شده', settled_outside: 'تأییدشده، پرداخت بیرون از سامانه',
       pending_supervisor: 'در انتظار سرپرست', pending_accountant: 'در بررسی حسابدار',
       pending_manager: 'در انتظار مدیر', revision_required: 'نیازمند بازنگری'
     };

@@ -53,6 +53,8 @@ export class StatusBadgeComponent {
       completed: { label: 'تکمیل شده', color: 'emerald' },
       feeding: { label: 'در جریان تغذیه', color: 'amber' },
       archived: { label: 'آرشیو نهایی', color: 'purple' },
+      settled_outside: { label: 'تأییدشده، پرداخت بیرون از سامانه', color: 'emerald' },
+      SETTLED_OUTSIDE: { label: 'تأییدشده، پرداخت بیرون از سامانه', color: 'emerald' },
     },
     field: {
       waiting: { label: 'در انتظار', color: 'slate' },
@@ -64,6 +66,8 @@ export class StatusBadgeComponent {
       waiting: { label: 'در انتظار', color: 'slate' },
       processing: { label: 'در دست بررسی', color: 'amber' },
       done: { label: 'تکمیل اسناد', color: 'emerald' },
+      settled_outside: { label: 'تأییدشده، پرداخت بیرون از سامانه', color: 'emerald' },
+      SETTLED_OUTSIDE: { label: 'تأییدشده، پرداخت بیرون از سامانه', color: 'emerald' },
     },
     label: {
       pending: { label: 'چاپ نشده', color: 'slate' },

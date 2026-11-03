@@ -186,6 +186,7 @@
                   </td>
                   <td class="py-3 px-3 text-center">
                     <button
+                      *ngIf="perm.canWriteDocuments()"
                       type="button"
                       appAction="confirm"
                       label="پرداخت دوره"
@@ -239,6 +240,7 @@
                   <td class="py-3 px-3 tabular-nums font-black text-emerald-700">{{ fp.total_payable | number }}</td>
                   <td class="py-3 px-3 text-center">
                     <button
+                      *ngIf="perm.canWriteDocuments()"
                       type="button"
                       appAction="confirm"
                       label="پرداخت دوره"
@@ -325,6 +327,7 @@
                   <span class="text-[11px] font-bold text-fg-muted">با «پرداخت دوره» پرداخت می‌شود</span>
                 } @else {
                   <button
+                    *ngIf="perm.canWriteDocuments()"
                     type="button"
                     appAction="confirm"
                     [label]="item.sheba_failed ? 'پرداخت دوباره' : 'ثبت واریز'"
@@ -431,6 +434,7 @@
           (click)="closePayModal()"
         ></button>
         <button
+          *ngIf="perm.canWriteDocuments()"
           type="button"
           appAction="confirm"
           label="ثبت واریز"
@@ -515,6 +519,7 @@
             (click)="closeBatchModal()"
           ></button>
           <button
+            *ngIf="perm.canWriteDocuments()"
             type="button"
             appAction="confirm"
             label="ثبت واریز"

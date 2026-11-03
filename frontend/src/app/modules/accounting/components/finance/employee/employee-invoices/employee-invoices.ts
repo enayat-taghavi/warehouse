@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter, inject } from '@angular/core';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_LABEL } from '../../../../payment-receipt';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
@@ -96,6 +97,7 @@ function toAsciiDigits(v: string): string {
   styleUrl: './employee-invoices.css'
 })
 export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
+  protected perm = inject(PermissionService);
   /** برچسب پیوست رسید پرداخت (فهرست فقط خواندنی در جزئیات فاکتور) */
   readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
   readonly Math = Math;
@@ -1599,6 +1601,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       case 'partially_paid':
         return 'bg-teal-50 text-teal-700 border-teal-200';
       case 'paid':
+      case 'settled_outside':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'rejected':
         return 'bg-rose-50 text-rose-700 border-rose-200';
@@ -1623,6 +1626,8 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         return 'پرداخت ناقص';
       case 'paid':
         return 'تسویه و پرداخت‌شده';
+      case 'settled_outside':
+        return 'تأییدشده، پرداخت بیرون از سامانه';
       case 'rejected':
         return 'رد شده';
       default:

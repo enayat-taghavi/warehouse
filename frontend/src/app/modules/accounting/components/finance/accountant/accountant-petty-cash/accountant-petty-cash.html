@@ -169,7 +169,7 @@
               </span>
             </td>
             <td class="p-3 text-center">
-              <div *ngIf="item.status === 'pending_accountant'" class="flex items-center justify-center gap-1.5">
+              <div *ngIf="item.status === 'pending_accountant' && perm.canWriteDocuments()" class="flex items-center justify-center gap-1.5">
                 <button
                   type="button"
                   appAction="approve"

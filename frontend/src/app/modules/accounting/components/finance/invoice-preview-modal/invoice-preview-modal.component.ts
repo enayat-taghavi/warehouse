@@ -176,6 +176,7 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
       case 'partially_paid':
         return 'bg-teal-50 text-teal-700 border-teal-200';
       case 'paid':
+      case 'settled_outside':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'revision_required':
         return 'bg-amber-100 text-amber-900 border-amber-300';
@@ -203,6 +204,8 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
         return 'پرداخت ناقص';
       case 'paid':
         return 'تسویه و پرداخت‌شده';
+      case 'settled_outside':
+        return 'تأییدشده، پرداخت بیرون از سامانه';
       case 'revision_required':
         return 'نیازمند بازنگری';
       case 'rejected':

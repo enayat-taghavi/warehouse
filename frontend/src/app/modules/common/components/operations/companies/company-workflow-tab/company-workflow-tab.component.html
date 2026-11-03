@@ -107,8 +107,6 @@
         </div>
       </div>
 
-      <!-- «ایجادکننده می‌تواند سند خودش را تأیید کند» به کارت «وقتی کسی برای مرحله نیست» رفت -->
-
       <div class="flex items-center justify-end pt-2">
         <button
           type="button"
@@ -119,6 +117,461 @@
           (click)="saveCompanySettings()"
           [busy]="savingSettings"
         ></button>
+      </div>
+    </div>
+
+    <!-- کارت «وقتی کسی برای مرحله نیست» -->
+    <div
+      class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 space-y-4"
+      data-testid="policy-card"
+    >
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield-check" class="text-indigo-600"></svg>
+          <div>
+            <h4 class="text-xs font-black text-slate-800">وقتی کسی برای مرحله نیست</h4>
+            <p class="text-[11px] text-fg-muted mt-0.5">اگر کسی نقش یک مرحله را نداشته باشد، آن مرحله رد شود یا منتظر بماند.</p>
+          </div>
+        </div>
+        <div *ngIf="policyLoading" class="text-[11px] text-slate-500 font-bold">در حال بارگذاری...</div>
+      </div>
+
+      <div *ngIf="policyError" role="alert" class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700">
+        {{ policyError }}
+      </div>
+
+      <div *ngIf="policies" class="space-y-6">
+        <!-- بخش «پیشفرض شرکت» -->
+        <section data-testid="policy-company" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-black text-slate-800">پیشفرض شرکت</h5>
+          </div>
+
+          <!-- ردیف نقش‌های شرکت -->
+          <div class="space-y-2">
+            <h6 class="text-[11px] font-bold text-slate-600">اقدام در صورت نبود دارندهٔ نقش</h6>
+            <div class="space-y-2.5">
+              <fieldset *ngFor="let role of policies.company_default.roles" class="border-0 p-0 m-0">
+                <legend class="sr-only">{{ role.role_title_fa }}</legend>
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="font-bold text-slate-700 min-w-[90px]">{{ role.role_title_fa }}</span>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      [name]="'company-role-' + role.role"
+                      value="skip"
+                      [checked]="companyDraft?.roleActions?.[role.role] === 'skip'"
+                      (change)="setRoleAction(companyPolicyKey, role.role, 'skip')"
+                      class="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>رد شود</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      [name]="'company-role-' + role.role"
+                      value="wait"
+                      [checked]="companyDraft?.roleActions?.[role.role] === 'wait'"
+                      (change)="setRoleAction(companyPolicyKey, role.role, 'wait')"
+                      class="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>منتظر بماند</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      [name]="'company-role-' + role.role"
+                      value="null"
+                      [checked]="companyDraft?.roleActions?.[role.role] === null || companyDraft?.roleActions?.[role.role] === undefined"
+                      (change)="setRoleAction(companyPolicyKey, role.role, null)"
+                      class="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>پیشفرض سامانه ({{ actionLabel(role.effective) }})</span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+
+          <!-- تایید سند خود توسط ایجادکننده -->
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="text-[11px] font-bold text-slate-700 mb-1">ایجادکننده میتواند سند خودش را تأیید کند</legend>
+            <div class="flex items-center gap-4 flex-wrap text-xs">
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="company-creator"
+                  value="true"
+                  [checked]="companyDraft?.creatorMayApproveOwn === true"
+                  (change)="companyDraft && (companyDraft.creatorMayApproveOwn = true)"
+                  class="text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>بله</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="company-creator"
+                  value="false"
+                  [checked]="companyDraft?.creatorMayApproveOwn === false"
+                  (change)="companyDraft && (companyDraft.creatorMayApproveOwn = false)"
+                  class="text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>خیر</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="company-creator"
+                  value="null"
+                  [checked]="companyDraft?.creatorMayApproveOwn === null"
+                  (change)="companyDraft && (companyDraft.creatorMayApproveOwn = null)"
+                  class="text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>پیشفرض سامانه ({{ policies.company_default.creator_may_approve_own.effective ? 'بله' : 'خیر' }})</span>
+              </label>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">
+              اگر «بله» باشد، کسی که سند را ثبت کرده در مرحلههای تأیید و بررسی همان سند هم کار را میگیرد. مدیر کل سامانه هرگز سند را تأیید نمیکند.
+            </p>
+          </fieldset>
+
+          <!-- گیرندهٔ خبر انتظار -->
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="text-[11px] font-bold text-slate-700 mb-1">گیرندهٔ خبر انتظار</legend>
+            <div class="flex items-center gap-4 flex-wrap text-xs">
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="company-notify"
+                  value="role_assigners"
+                  [checked]="companyDraft?.notifyMode === 'role_assigners'"
+                  (change)="setNotifyMode(companyPolicyKey, 'role_assigners')"
+                  class="text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>تعیینکنندگان نقش</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="company-notify"
+                  value="users"
+                  [checked]="companyDraft?.notifyMode === 'users'"
+                  (change)="setNotifyMode(companyPolicyKey, 'users')"
+                  class="text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>کاربران انتخابشده</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="company-notify"
+                  value="null"
+                  [checked]="companyDraft?.notifyMode === null"
+                  (change)="setNotifyMode(companyPolicyKey, null)"
+                  class="text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>پیشفرض سامانه ({{ policies.company_default.notify.effective_mode === 'role_assigners' ? 'تعیینکنندگان نقش' : 'کاربران انتخابشده' }})</span>
+              </label>
+            </div>
+            <div *ngIf="companyDraft?.notifyMode === 'users'" class="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+              <div *ngIf="policies.notify_candidates?.length; else emptyCompanyNotifyCandidates" class="flex flex-col gap-2 max-h-40 overflow-y-auto">
+                <label *ngFor="let c of policies.notify_candidates" class="inline-flex items-center gap-2 cursor-pointer text-xs">
+                  <input
+                    type="checkbox"
+                    [checked]="companyDraft?.notifyUserIds?.includes(c.id)"
+                    (change)="toggleNotifyUser(companyPolicyKey, c.id)"
+                    class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                  />
+                  <span>{{ c.name }}</span>
+                </label>
+              </div>
+              <ng-template #emptyCompanyNotifyCandidates>
+                <p class="text-[11px] text-slate-500">کاربر فعالی در این شرکت نیست</p>
+              </ng-template>
+            </div>
+          </fieldset>
+
+          <!-- خطای اعتبارسنجی -->
+          <p *ngIf="policyFormErrors[companyPolicyKey]" role="alert" class="text-[10px] text-rose-600 font-bold mt-1">
+            {{ policyFormErrors[companyPolicyKey] }}
+          </p>
+
+          <!-- دکمه ذخیره پیش‌فرض شرکت -->
+          <div class="flex items-center justify-end pt-2">
+            <button
+              type="button"
+              appAction="save"
+              display="label"
+              label="ذخیره"
+              size="sm"
+              (click)="savePolicy(companyPolicyKey)"
+              [busy]="savingPolicyKey === companyPolicyKey"
+              [disabled]="savingPolicyKey !== null"
+            ></button>
+          </div>
+        </section>
+
+        <!-- بخش «گردشها» -->
+        <section data-testid="policy-workflows" class="space-y-4 pt-4 border-t border-slate-200">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-black text-slate-800">گردشها</h5>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              *ngFor="let wf of policies.workflows"
+              [attr.data-testid]="'policy-wf-' + wf.key"
+              class="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-3"
+            >
+              <!-- سربرگ ردیف گردش کار -->
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black text-slate-800">{{ wf.title_fa }}</span>
+                  <span
+                    *ngIf="wf.has_own_row"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  >
+                    تنظیم جدا
+                  </span>
+                  <span
+                    *ngIf="!wf.has_own_row"
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"
+                  >
+                    پیشفرض شرکت
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  (click)="toggleWorkflowPolicy(wf.key)"
+                  [attr.aria-expanded]="expandedWorkflowKey === wf.key"
+                  title="{{ expandedWorkflowKey === wf.key ? 'بستن' : 'ویرایش' }}"
+                  aria-label="{{ (expandedWorkflowKey === wf.key ? 'بستن تنظیمات ' : 'ویرایش تنظیمات ') + wf.title_fa }}"
+                  class="px-2.5 py-1 min-h-[32px] text-xs font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                >
+                  <span>{{ expandedWorkflowKey === wf.key ? 'بستن' : 'ویرایش' }}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" [class.rotate-180]="expandedWorkflowKey === wf.key" class="transition-transform"></svg>
+                </button>
+              </div>
+
+              <!-- محتوای بازشده گردش کار -->
+              <div *ngIf="expandedWorkflowKey === wf.key" class="space-y-4 pt-3 border-t border-slate-200">
+                <!-- نقش‌های این گردش -->
+                <div class="space-y-2">
+                  <h6 class="text-[11px] font-bold text-slate-600">اقدام در صورت نبود دارندهٔ نقش</h6>
+                  <div class="space-y-2">
+                    <fieldset *ngFor="let role of wf.roles" class="border-0 p-0 m-0">
+                      <legend class="sr-only">{{ role.role_title_fa }}</legend>
+                      <div class="flex items-center gap-3 flex-wrap">
+                        <span class="font-bold text-slate-700 min-w-[90px]">{{ role.role_title_fa }}</span>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            [name]="'wf-role-' + wf.key + '-' + role.role"
+                            value="skip"
+                            [checked]="workflowDrafts[wf.key]?.roleActions?.[role.role] === 'skip'"
+                            (change)="setRoleAction(wf.key, role.role, 'skip')"
+                            class="text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>رد شود</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            [name]="'wf-role-' + wf.key + '-' + role.role"
+                            value="wait"
+                            [checked]="workflowDrafts[wf.key]?.roleActions?.[role.role] === 'wait'"
+                            (change)="setRoleAction(wf.key, role.role, 'wait')"
+                            class="text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>منتظر بماند</span>
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            [name]="'wf-role-' + wf.key + '-' + role.role"
+                            value="null"
+                            [checked]="workflowDrafts[wf.key]?.roleActions?.[role.role] === null || workflowDrafts[wf.key]?.roleActions?.[role.role] === undefined"
+                            (change)="setRoleAction(wf.key, role.role, null)"
+                            class="text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>مثل پیشفرض شرکت ({{ actionLabel(role.effective) }})</span>
+                        </label>
+                      </div>
+                    </fieldset>
+                  </div>
+                </div>
+
+                <!-- مراحل این گردش کار -->
+                <div class="space-y-2">
+                  <h6 class="text-[11px] font-bold text-slate-600">مراحل گردش کار</h6>
+                  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                    <table class="w-full text-start border-collapse text-xs">
+                      <thead>
+                        <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] font-bold">
+                          <th class="py-2 px-3">عنوان مرحله</th>
+                          <th class="py-2 px-3">نقش</th>
+                          <th class="py-2 px-3">عمل مؤثر</th>
+                          <th class="py-2 px-3">منبع</th>
+                          <th class="py-2 px-3">وضعیت / توضیحات</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
+                        <tr *ngFor="let step of wf.steps" class="hover:bg-slate-50/50">
+                          <td class="py-2 px-3 font-bold text-slate-800">{{ step.title_fa }}</td>
+                          <td class="py-2 px-3 text-slate-600">{{ step.role_title_fa }}</td>
+                          <td class="py-2 px-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                              [ngClass]="step.effective === 'skip' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200'">
+                              {{ actionLabel(step.effective) }}
+                            </span>
+                          </td>
+                          <td class="py-2 px-3 text-slate-500">{{ sourceLabel(step.source) }}</td>
+                          <td class="py-2 px-3">
+                            <div *ngIf="step.locked" class="flex items-center gap-1.5 text-amber-700 text-[11px]">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock" class="shrink-0 text-amber-600"></svg>
+                              <span>{{ lockReason(step) }}</span>
+                            </div>
+                            <span *ngIf="stepSkipNote(step)" class="text-[10px] text-emerald-600 font-bold block">
+                              {{ stepSkipNote(step) }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- تایید ایجادکننده در سطح گردش -->
+                <fieldset class="border-0 p-0 m-0">
+                  <legend class="text-[11px] font-bold text-slate-700 mb-1">ایجادکننده میتواند سند خودش را تأیید کند</legend>
+                  <div class="flex items-center gap-4 flex-wrap text-xs">
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        [name]="'wf-creator-' + wf.key"
+                        value="true"
+                        [checked]="workflowDrafts[wf.key]?.creatorMayApproveOwn === true"
+                        (change)="workflowDrafts[wf.key] && (workflowDrafts[wf.key].creatorMayApproveOwn = true)"
+                        class="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>بله</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        [name]="'wf-creator-' + wf.key"
+                        value="false"
+                        [checked]="workflowDrafts[wf.key]?.creatorMayApproveOwn === false"
+                        (change)="workflowDrafts[wf.key] && (workflowDrafts[wf.key].creatorMayApproveOwn = false)"
+                        class="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>خیر</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        [name]="'wf-creator-' + wf.key"
+                        value="null"
+                        [checked]="workflowDrafts[wf.key]?.creatorMayApproveOwn === null"
+                        (change)="workflowDrafts[wf.key] && (workflowDrafts[wf.key].creatorMayApproveOwn = null)"
+                        class="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>مثل پیشفرض شرکت ({{ wf.creator_may_approve_own.effective ? 'بله' : 'خیر' }})</span>
+                    </label>
+                  </div>
+                  <p class="text-[10px] text-slate-500 mt-1">
+                    اگر «بله» باشد، کسی که سند را ثبت کرده در مرحلههای تأیید و بررسی همان سند هم کار را میگیرد. مدیر کل سامانه هرگز سند را تأیید نمیکند.
+                  </p>
+                </fieldset>
+
+                <!-- گیرندهٔ خبر انتظار در سطح گردش -->
+                <fieldset class="border-0 p-0 m-0">
+                  <legend class="text-[11px] font-bold text-slate-700 mb-1">گیرندهٔ خبر انتظار</legend>
+                  <div class="flex items-center gap-4 flex-wrap text-xs">
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        [name]="'wf-notify-' + wf.key"
+                        value="role_assigners"
+                        [checked]="workflowDrafts[wf.key]?.notifyMode === 'role_assigners'"
+                        (change)="setNotifyMode(wf.key, 'role_assigners')"
+                        class="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>تعیینکنندگان نقش</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        [name]="'wf-notify-' + wf.key"
+                        value="users"
+                        [checked]="workflowDrafts[wf.key]?.notifyMode === 'users'"
+                        (change)="setNotifyMode(wf.key, 'users')"
+                        class="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>کاربران انتخابشده</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        [name]="'wf-notify-' + wf.key"
+                        value="null"
+                        [checked]="workflowDrafts[wf.key]?.notifyMode === null"
+                        (change)="setNotifyMode(wf.key, null)"
+                        class="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>مثل پیشفرض شرکت ({{ wf.notify.effective_mode === 'role_assigners' ? 'تعیینکنندگان نقش' : 'کاربران انتخابشده' }})</span>
+                    </label>
+                  </div>
+                  <div *ngIf="workflowDrafts[wf.key]?.notifyMode === 'users'" class="mt-2 p-2.5 bg-white border border-slate-200 rounded-xl">
+                    <div *ngIf="policies.notify_candidates?.length; else emptyWfNotifyCandidates" class="flex flex-col gap-2 max-h-40 overflow-y-auto">
+                      <label *ngFor="let c of policies.notify_candidates" class="inline-flex items-center gap-2 cursor-pointer text-xs">
+                        <input
+                          type="checkbox"
+                          [checked]="workflowDrafts[wf.key]?.notifyUserIds?.includes(c.id)"
+                          (change)="toggleNotifyUser(wf.key, c.id)"
+                          class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                        />
+                        <span>{{ c.name }}</span>
+                      </label>
+                    </div>
+                    <ng-template #emptyWfNotifyCandidates>
+                      <p class="text-[11px] text-slate-500">کاربر فعالی در این شرکت نیست</p>
+                    </ng-template>
+                  </div>
+                </fieldset>
+
+                <!-- خطای اعتبارسنجی گردش -->
+                <p *ngIf="policyFormErrors[wf.key]" role="alert" class="text-[10px] text-rose-600 font-bold mt-1">
+                  {{ policyFormErrors[wf.key] }}
+                </p>
+
+                <!-- دکمه‌های عملیاتی گردش -->
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                  <button
+                    *ngIf="wf.has_own_row"
+                    type="button"
+                    (click)="resetWorkflowPolicy(wf.key)"
+                    [disabled]="savingPolicyKey !== null"
+                    class="px-3 py-1.5 min-h-[32px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl active:scale-95 transition-all cursor-pointer"
+                  >
+                    برگشت به پیشفرض شرکت
+                  </button>
+                  <button
+                    type="button"
+                    appAction="save"
+                    display="label"
+                    label="ذخیره"
+                    size="sm"
+                    (click)="savePolicy(wf.key)"
+                    [busy]="savingPolicyKey === wf.key"
+                    [disabled]="savingPolicyKey !== null"
+                  ></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 

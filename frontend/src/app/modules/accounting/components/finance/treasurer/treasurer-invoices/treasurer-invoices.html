@@ -66,9 +66,9 @@
             [ngClass]="{
               'bg-amber-50 text-amber-700 border-amber-200': item.status === 'pending_payment',
               'bg-sky-50 text-sky-700 border-sky-200': item.status === 'partially_paid',
-              'bg-emerald-50 text-emerald-700 border-emerald-200': item.status === 'paid'
+              'bg-emerald-50 text-emerald-700 border-emerald-200': item.status === 'paid' || item.status === 'settled_outside'
             }">
-            {{ item.status === 'pending_payment' ? 'در انتظار پرداخت' : (item.status === 'partially_paid' ? 'پرداخت ناقص' : 'تسویه شد') }}
+            {{ item.status === 'pending_payment' ? 'در انتظار پرداخت' : (item.status === 'partially_paid' ? 'پرداخت ناقص' : (item.status === 'settled_outside' ? 'تأییدشده، پرداخت بیرون از سامانه' : 'تسویه شد')) }}
           </span>
         </div>
 
@@ -101,7 +101,7 @@
 
         <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-line">
           <button
-            *ngIf="item.status === 'pending_payment' || item.status === 'partially_paid'"
+            *ngIf="(item.status === 'pending_payment' || item.status === 'partially_paid') && perm.canWriteDocuments()"
             type="button"
             appAction="confirm"
             label="پرداخت"
@@ -176,6 +176,7 @@
               <span *ngIf="item.status === 'pending_payment'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">در انتظار پرداخت</span>
               <span *ngIf="item.status === 'partially_paid'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">پرداخت ناقص</span>
               <span *ngIf="item.status === 'paid'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">تسویه شد</span>
+              <span *ngIf="item.status === 'settled_outside'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">تأییدشده، پرداخت بیرون از سامانه</span>
             </td>
             <td class="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
               <div><span class="text-fg-muted">ثبت‌کننده: </span>{{ item.created_by_name || '—' }} <span *ngIf="item.created_at" class="font-mono text-[10px] text-fg-muted">({{ item.created_at | persianDate:'short-time' }})</span></div>
@@ -184,7 +185,7 @@
             <td class="py-3 px-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
                 <button
-                  *ngIf="item.status === 'pending_payment' || item.status === 'partially_paid'"
+                  *ngIf="(item.status === 'pending_payment' || item.status === 'partially_paid') && perm.canWriteDocuments()"
                   type="button"
                   appAction="confirm"
                   label="پرداخت"
@@ -428,7 +429,7 @@
         <div class="flex flex-wrap items-center justify-end gap-2">
           <p *ngIf="!payReceipt" id="pay-receipt-need" class="me-auto text-[11px] text-fg-muted">برای پرداخت، نخست سند واریز را پیوست کنید.</p>
           <button type="button" appAction="close" label="انصراف" size="sm" (click)="closePayModal()"></button>
-          <button type="submit" appAction="confirm" label="پرداخت" size="sm" [busy]="isPaying" [disabled]="!payReceipt"
+          <button *ngIf="perm.canWriteDocuments()" type="submit" appAction="confirm" label="پرداخت" size="sm" [busy]="isPaying" [disabled]="!payReceipt"
             [hint]="payReceipt ? '' : 'نخست سند واریز را پیوست کنید'"></button>
         </div>
       </form>

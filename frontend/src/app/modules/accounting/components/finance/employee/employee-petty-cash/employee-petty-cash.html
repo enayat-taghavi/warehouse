@@ -52,8 +52,8 @@
     <div cc-actions class="flex items-center gap-2">
       <button type="button" appAction="export-excel" (click)="exportExcel()"></button>
       <button type="button" appAction="refresh" [busy]="isLoading || isLoadingBalance" (click)="refreshData()"></button>
-      <button type="button" appAction="send" display="label" label="درخواست شارژ" [disabled]="accountClosed" (click)="openChargeModal()"></button>
-      <button type="button" appAction="create" label="ثبت هزینه" [disabled]="accountClosed" (click)="openNewExpenseModal()"></button>
+      <button *ngIf="perm.canWriteDocuments()" type="button" appAction="send" display="label" label="درخواست شارژ" [disabled]="accountClosed" (click)="openChargeModal()"></button>
+      <button *ngIf="perm.canWriteDocuments()" type="button" appAction="create" label="ثبت هزینه" [disabled]="accountClosed" (click)="openNewExpenseModal()"></button>
     </div>
   </app-command-center>
 
@@ -315,7 +315,7 @@
                       @if (tx.attachment) {
                         <button type="button" appAction="view" display="icon" size="sm" (click)="openAttachmentPreview(tx)" hint="مشاهده تصویر فاکتور/رسید"></button>
                       }
-                      @if (canModifyExpense(tx)) {
+                      @if (canModifyExpense(tx) && perm.canWriteDocuments()) {
                         <button type="button" appAction="delete" display="icon" size="sm" (click)="deleteDraftTransaction(tx)" hint="حذف پیش‌نویس"></button>
                       } @else if (tx.is_locked) {
                         <span class="inline-flex items-center justify-center min-w-10 min-h-10 text-slate-500" role="img" [attr.title]="lockedTitle" [attr.aria-label]="lockedTitle">
@@ -357,7 +357,7 @@
     <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
       <div class="p-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
         <h2 class="text-sm font-black text-slate-800">درخواست‌های شارژ تنخواه</h2>
-        <button type="button" appAction="send" display="label" label="درخواست شارژ" size="sm" [disabled]="accountClosed" (click)="openChargeModal()"></button>
+        <button *ngIf="perm.canWriteDocuments()" type="button" appAction="send" display="label" label="درخواست شارژ" size="sm" [disabled]="accountClosed" (click)="openChargeModal()"></button>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-end text-xs">
@@ -429,7 +429,7 @@
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-slate-700 font-bold">انتخاب‌شده: {{ selectedLineIds.size }} ردیف، {{ faAmount(selectedTotal) }} ریال</span>
-          <button type="button" appAction="send" display="label" label="ساخت و ارسال صورت‌حساب" size="sm" [busy]="isCreatingStatement" [disabled]="selectedLineIds.size === 0" (click)="createStatement()"></button>
+          <button *ngIf="perm.canWriteDocuments()" type="button" appAction="send" display="label" label="ساخت و ارسال صورت‌حساب" size="sm" [busy]="isCreatingStatement" [disabled]="selectedLineIds.size === 0" (click)="createStatement()"></button>
         </div>
       </div>
       @if (openExpenses.length === 0) {
@@ -508,7 +508,7 @@
                     <div class="flex items-center justify-center gap-1">
                       <button type="button" appAction="history" display="icon" size="sm" (click)="openDetail('petty_cash_statement', st.id)" hint="جزئیات و سابقهٔ گردش کار"></button>
                       <button type="button" appAction="print" display="icon" size="sm" (click)="printStatement(st)" hint="چاپ صورت‌حساب"></button>
-                      @if (st.status === 'draft' && !st.is_locked) {
+                      @if (st.status === 'draft' && !st.is_locked && perm.canWriteDocuments()) {
                         <button type="button" appAction="send" display="label" label="ارسال" size="sm" [busy]="isActing" (click)="resendStatement(st)" hint="ارسال دوبارهٔ صورت‌حساب"></button>
                       }
                     </div>
@@ -566,7 +566,7 @@
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">باز</span>
                         }
                       </td>
-                      @if (canRejectLines) {
+                      @if (canRejectLines && perm.canWriteDocuments()) {
                         <td class="py-2 px-3 text-center">
                           @if (ln.line_status !== 'rejected') {
                             <button type="button" appAction="reject" display="label" label="رد ردیف" size="sm" (click)="startRejectLine(ln)" hint="رد این ردیف با دلیل"></button>
@@ -581,7 +581,7 @@
               </table>
             </div>
 
-            @if (rejectLineId) {
+            @if (rejectLineId && perm.canWriteDocuments()) {
               <div class="bg-rose-50/60 border border-rose-200 rounded-xl p-3 space-y-2">
                 <label for="rejectReason" class="block font-bold text-slate-700">دلیل رد ردیف <span class="text-rose-600">*</span></label>
                 <textarea id="rejectReason" rows="2" [(ngModel)]="rejectReason" (ngModelChange)="rejectReasonError = ''"
@@ -597,7 +597,7 @@
               </div>
             }
 
-            @if (canPayStatement) {
+            @if (canPayStatement && perm.canWriteDocuments()) {
               <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 space-y-2">
                 <label for="trackingCodeSt" class="block font-bold text-slate-700">شمارهٔ پیگیری یا سند بانکی (شارژ دوباره) <span class="text-rose-600">*</span></label>
                 <input id="trackingCodeSt" type="text" [(ngModel)]="trackingCode" (ngModelChange)="trackingError = ''"
@@ -630,7 +630,7 @@
                 <div><span class="block text-[11px] text-slate-500">مبلغ (ریال)</span><span class="font-mono font-bold">{{ faAmount(detailTx.amount) }}</span></div>
                 <div><span class="block text-[11px] text-slate-500">تاریخ</span><span class="font-mono">{{ detailTx.transaction_date_shamsi }}</span></div>
               </div>
-              @if (canPayCharge) {
+              @if (canPayCharge && perm.canWriteDocuments()) {
                 <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 space-y-2">
                   <label for="trackingCodeCh" class="block font-bold text-slate-700">شمارهٔ پیگیری یا سند بانکی واریز <span class="text-rose-600">*</span></label>
                   <input id="trackingCodeCh" type="text" [(ngModel)]="trackingCode" (ngModelChange)="trackingError = ''"
@@ -815,7 +815,7 @@
         </div>
       <div modal-footer class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
         <button type="button" appAction="close" display="label" label="انصراف" size="sm" (click)="closeNewExpenseModal()"></button>
-        <button type="button" appAction="save" display="label" label="ثبت هزینه (پیش‌نویس)" tone="amber" [busy]="isSaving" (click)="saveExpense()"></button>
+        <button *ngIf="perm.canWriteDocuments()" type="button" appAction="save" display="label" label="ثبت هزینه (پیش‌نویس)" tone="amber" [busy]="isSaving" (click)="saveExpense()"></button>
       </div>
     </app-modal>
   }
@@ -851,7 +851,7 @@
         </div>
       <div modal-footer class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
         <button type="button" appAction="close" display="label" label="انصراف" size="sm" (click)="closeChargeModal()"></button>
-        <button type="button" appAction="send" display="label" label="ارسال درخواست شارژ" tone="primary" [busy]="isSaving" (click)="submitCharge()"></button>
+        <button *ngIf="perm.canWriteDocuments()" type="button" appAction="send" display="label" label="ارسال درخواست شارژ" tone="primary" [busy]="isSaving" (click)="submitCharge()"></button>
       </div>
     </app-modal>
   }

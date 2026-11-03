@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, Input, Output, EventEmitter, inject } from '@angular/core';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 import { FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
@@ -42,7 +43,7 @@ export interface PayableInvoiceItem {
   section_name: string;
   amount: number;
   due_date: string;
-  status: 'pending_payment' | 'partially_paid' | 'paid';
+  status: 'pending_payment' | 'partially_paid' | 'paid' | 'settled_outside';
   tracking_code?: string;
   number?: string | null;
   counterparty_id?: number | null;
@@ -77,6 +78,7 @@ export interface PayableInvoiceItem {
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
+  protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;
   /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */
@@ -235,7 +237,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
       section_name: inv.section_name || '',
       amount: inv.amount,
       due_date: inv.invoice_date_shamsi,
-      status: inv.status === 'paid' ? 'paid' : (inv.status === 'partially_paid' ? 'partially_paid' : 'pending_payment'),
+      status: inv.status === 'paid' ? 'paid' : (inv.status === 'settled_outside' ? 'settled_outside' : (inv.status === 'partially_paid' ? 'partially_paid' : 'pending_payment')),
       tracking_code: inv.payment_ref,
       number: inv.number || null,
       counterparty_id: inv.counterparty ?? null,

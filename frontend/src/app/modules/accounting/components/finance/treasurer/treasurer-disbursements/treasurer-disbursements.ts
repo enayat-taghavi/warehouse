@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -105,6 +106,7 @@ export interface ReadyPayrollPeriod {
   host: { '(document:keydown.escape)': 'onEscapeKey()', '(document:keydown)': 'onDocumentKeydown($event)' }
 })
 export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
+  protected perm = inject(PermissionService);
   activeSubTab: 'pending_queue' | 'disbursed_archive' = 'pending_queue';
 
   readonly tabs: TabDef[] = [

@@ -379,4 +379,113 @@ describe('CompanyWorkflowTabComponent', () => {
     expect(component.workflowDrafts['expense_invoice'].roleActions['accountant']).toBe('skip');
     expect(component.savingPolicyKey).toBeNull();
   });
+
+  // ─── DOM specs (گام ه رابط کاربری) ───
+
+  it('policy card renders company roles and workflow badges', async () => {
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const policyCard = el.querySelector('[data-testid="policy-card"]');
+    expect(policyCard).toBeTruthy();
+    expect(policyCard?.textContent).toContain('وقتی کسی برای مرحله نیست');
+
+    const companySec = el.querySelector('[data-testid="policy-company"]');
+    expect(companySec).toBeTruthy();
+    expect(companySec?.textContent).toContain('حسابدار');
+    expect(companySec?.textContent).toContain('خزانه‌دار');
+
+    const wfRow = el.querySelector('[data-testid="policy-wf-expense_invoice"]');
+    expect(wfRow).toBeTruthy();
+    expect(wfRow?.textContent).toContain('تنظیم جدا');
+  });
+
+  it('expanding a workflow shows its steps and the reset button', async () => {
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const wfRow = fixture.nativeElement.querySelector('[data-testid="policy-wf-expense_invoice"]');
+    const toggleBtn: HTMLButtonElement | null = wfRow?.querySelector('button[aria-expanded]');
+    expect(toggleBtn).toBeTruthy();
+    toggleBtn?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const text = wfRow?.textContent || '';
+    expect(text).toContain('بررسی حسابدار');
+    expect(text).toContain('برگشت به پیشفرض شرکت');
+  });
+
+  it('choosing «رد شود» updates the company draft', async () => {
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const treasurerSkipRadio: HTMLInputElement | null = fixture.nativeElement.querySelector(
+      'input[name="company-role-treasurer"][value="skip"]'
+    );
+    expect(treasurerSkipRadio).toBeTruthy();
+    treasurerSkipRadio!.checked = true;
+    treasurerSkipRadio!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.companyDraft?.roleActions['treasurer']).toBe('skip');
+  });
+
+  it('users notify mode lists notify candidates', async () => {
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.toggleWorkflowPolicy('expense_invoice');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const wfRow = fixture.nativeElement.querySelector('[data-testid="policy-wf-expense_invoice"]');
+    expect(wfRow?.textContent).toContain('کاربر هفت');
+    const user7Checkbox: HTMLInputElement | null = wfRow?.querySelector('input[type="checkbox"]');
+    expect(user7Checkbox).toBeTruthy();
+    expect(user7Checkbox?.checked).toBe(true);
+  });
+
+  it('locked step shows the lock reason', async () => {
+    const lockedPolicies: WorkflowCompanyPolicies = JSON.parse(JSON.stringify(samplePolicies));
+    lockedPolicies.workflows[0].steps[0].locked = 'wait';
+    mockWorkflowApi.getCompanyPolicies.mockReturnValue(of(lockedPolicies));
+
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.toggleWorkflowPolicy('expense_invoice');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const reason = component.lockReason(lockedPolicies.workflows[0].steps[0]);
+    const wfRow = fixture.nativeElement.querySelector('[data-testid="policy-wf-expense_invoice"]');
+    expect(wfRow?.textContent).toContain(reason);
+
+    const table = wfRow?.querySelector('table');
+    expect(table?.querySelector('input[type="radio"]')).toBeNull();
+  });
+
+  it('save button calls savePolicy for the company level', async () => {
+    component.ngOnInit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const spy = vi.spyOn(component, 'savePolicy').mockResolvedValue(undefined as any);
+    const companySec = fixture.nativeElement.querySelector('[data-testid="policy-company"]');
+    const saveBtn: HTMLButtonElement | null = companySec?.querySelector('button[appAction="save"]');
+    expect(saveBtn).toBeTruthy();
+    saveBtn?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(spy).toHaveBeenCalledWith('');
+  });
 });

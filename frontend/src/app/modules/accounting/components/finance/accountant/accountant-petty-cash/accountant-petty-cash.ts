@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -37,6 +38,7 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
   styleUrl: './accountant-petty-cash.css'
 })
 export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
+  protected perm = inject(PermissionService);
   loadError = '';
   activeSubTab: 'pending_review' | 'settled' | 'all' | 'accounts' = 'pending_review';
 

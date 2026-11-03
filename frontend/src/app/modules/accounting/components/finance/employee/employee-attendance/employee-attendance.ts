@@ -116,6 +116,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     SUBMITTED_ACCOUNTANT: 'در انتظار تأیید مدیر',
     READY_TO_PAY: 'آمادهٔ پرداخت',
     PAID: 'پرداخت‌شده',
+    SETTLED_OUTSIDE: 'تأییدشده، پرداخت بیرون از سامانه',
     LOCKED: 'قفل‌شده',
     FINALIZED: 'نهایی‌شده',
     REVISION_REQUIRED: 'نیازمند اصلاح',
@@ -123,7 +124,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   };
 
   private static readonly LOCKED_STATUSES = new Set([
-    'SUBMITTED', 'SUBMITTED_SUPERVISOR', 'SUBMITTED_ACCOUNTANT', 'READY_TO_PAY', 'PAID', 'LOCKED', 'FINALIZED'
+    'SUBMITTED', 'SUBMITTED_SUPERVISOR', 'SUBMITTED_ACCOUNTANT', 'READY_TO_PAY', 'PAID', 'SETTLED_OUTSIDE', 'LOCKED', 'FINALIZED'
   ]);
 
   get periodStatusLabel(): string {

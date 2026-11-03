@@ -157,7 +157,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-line">
-          <div *ngIf="item.status === 'pending_accountant'" class="flex items-center gap-1.5">
+          <div *ngIf="item.status === 'pending_accountant' && perm.canWriteDocuments()" class="flex items-center gap-1.5">
             <button
               type="button"
               appAction="approve"
@@ -231,7 +231,7 @@
               <div class="text-[10px] text-fg-muted mt-0.5"><span class="text-fg-muted">آخرین تغییردهنده: </span>{{ item.updated_by_name || '—' }} <span *ngIf="item.updated_at" class="font-mono">({{ item.updated_at | persianDate:'short-time' }})</span></div>
             </td>
             <td class="p-3 text-center">
-              <div *ngIf="item.status === 'pending_accountant'" class="flex items-center justify-center gap-1.5">
+              <div *ngIf="item.status === 'pending_accountant' && perm.canWriteDocuments()" class="flex items-center justify-center gap-1.5">
                 <button
                   type="button"
                   appAction="approve"
