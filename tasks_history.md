@@ -19608,3 +19608,90 @@ Result: `Ran 22 tests in 32.145s - OK` (All 22 passed, 0 failures, 0 errors).
 3. `test_review...
 
 ---
+
+### Task 1 of 1 — 2026-11-03 03:50:14
+- **Status:** DONE
+- **Conversation:** `256ecdda-81a9-46ea-8300-6c8f8100b094`
+- **Steps:** 94
+- **Tokens:** 216640
+- **Duration:** 7m 40s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Role-policy plan step C tests: new API test file for the company workflow-policy settings (GET, preview, PUT, DELETE, preview_stale, audit, scoped recompute) and the backward-compatible company settings field
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 10 apply.
+- Create ONLY the new file `backend/core/workflow/tests/test_policy_api.py`. Never edit any other file (no production code, no other test, no migration).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never run `manage.py test` without labels (it would run root scripts against the real database). Never run `migrate`, `makemigrations` or `flush`.
+- If production code looks wrong, do not fix it: write the test for the behaviour described in sections 3 and 4, and name the failing test and the reason in your report.
+
+2. Context (read these exact ranges, nothing broader):
+- `backend/core/workflow/policy_admin.py` (whole file, about 330 lines): `clean_values`, `company_policy`, `simulate`, `apply`, `PreviewStale`, `set_company_creator_flag`, `company_creator_flag`, effect names `advance`, `recipients_changed`, `waiting`.
+- `backend/core/workflow/views.py`: `can_edit_company_settings`, `CompanySettingsView`, `CompanyPolicyView`, `CompanyPolicyPreviewView`, `WorkflowPolicyView`, `_policy_values`, `_confirm_token` (search `def can_edit_company_settings` and read to the line `# ─── جانشین موقت`).
+- `backend/core/workflow/urls.py` (whole file): routes `company-policies/<company_id>/`, `.../preview/`, `.../<workflow_key>/`.
+- `backend/core/workflow/recompute.py` lines 40-60 and the signature of `recompute_open_tasks` (new `workflow_keys` parameter).
+- `backend/core/workflow/models.py`: `WorkflowPolicy` (search `class WorkflowPolicy`), `WorkflowTask.forced`.
+- `backend/core/workflow/tests/base.py` lines 1-145 (`WorkflowTestBase`, `make_spec`, `STEPS`, `WF`, `KIND`, `self.co`, `self.co2`, `self.sec`, `self.other_sec`, users `self.lead`, `self.reviewer`, `self.boss`, `self.payer`, `self.member`, `self.su`, `self.doc()`, `self.user()`).
+- `backend/core/workflow/tests/test_api.py` lines 1-50 (`ApiBase`, `API`, `client_for`, `get`, `post`) and lines 211-282 (`SettingsApiTests`: how `self.editor` (member with `perm_workflow_thresholds`) and `self.no_member_editor` (same permission, member of `self.co2` only) are created).
+- `backend/core/workflow/tests/test_engine.py` lines 20-35 (`EngineBase.submit`, `task`, `act`).
+- `backend/core/workflow/tests/test_missing_role_engine.py` lines 1-60 (patching `workflow_role_defaults` to `[]` in `setUp`, deactivating a role holder with `SectionAssignment.objects.filter(user=...).update(is_active=False)`).
+
+3. Definitions:
+- Base path: `API + f'company-policies/{company_id}/'` where `API = '/api/workflow/'`.
+- Editor: live superuser, or a user with `accounts.perm_workflow_thresholds` who is an active member of that company. Everybody else gets 403 with body code `not_allowed`, the same for a non-member and for a company id that does not exist.
+- GET returns `company_id`, `role_defaults`, `company_default` and `workflows` (one entry per installed workflow with steps: `key`, `title_fa`, `has_own_row`, `roles` [{`role`, `role_title_fa`, `value`, `effective`, `source`}], `creator_may_approve_own` {`value`, `effective`, `source`}, `notify` {`mode`, `user_ids`, `effective_mode`, `effective_user_ids`, `source`}, `steps` [{`key`, `role`, `payment`, `locked`, `effective`, `source`}]). `source` is `own`, `company` or `default` (`locked` for a step with `fixed_missing_action`).
+- Preview: `POST base + 'preview/'` with `{'workflow_key': WF, 'values': {...}}` (or `workflow_key: ''` for the company default) or `{'workflow_key': WF, 'reset': True}`. No database write and no event. Returns `counts` {`advance`, `recipients_changed`, `waiting`}, `per_workflow`, `samples` (at most 20, each with `instance_id`, `workflow_key`, `title`, `step_key`, `effect`) and `token`.
+- Values: `role_actions` {role: 'skip'|'wait'|null}, `creator_may_approve_own` true/false/null, `notify_mode` null|'role_assigners'|'users', `notify_user_ids` (required non-empty when mode is 'users'; every id must be an active non-superuser member of the same company, else 400 `notify_user_not_member`). Unknown role 400 `unknown_role`; bad action 400 `invalid_action`; unknown workflow 400 `unknown_workflow`; `reset` with empty workflow key 400 `invalid_reset`.
+- Save: `PUT base` (company default) or `PUT base + f'{WF}/'` with `{'values': {...}, 'confirm_token': token}`; `DELETE base + f'{WF}/?confirm_token=<token>'` removes the workflow row (back to company default). Missing token 400 `confirm_token_required`. A token that no longer matches (another change happened, or a task changed) gives 409 with code `preview_stale` and a fresh `preview` in the body. On success 200 with the GET body plus `applied` (the preview) and `stats` (recompute stats: `skipped`, `alerts`, ...).
+- Each save writes one `AuditLog` row with `module='workflow'`, `target_model='WorkflowPolicy'`, action `CREATE`/`UPDATE`/`DELETE`, and before/after state (fields `before_state`, `after_state`; check the field names in `backend/core/accounts/models.py` class `AuditLog`).
+- Recompute after save runs only for that company and only for the saved workflow (all workflows for the company default).
+- Old endpoint `PUT API + f'settings/{company_id}/'` with `creator_may_approve_own` writes the company default `WorkflowPolicy` row (`workflow_key=''`); GET of the same endpoint reads it.
+- To build a waiting review task: deactivate the reviewer's assignment, submit a document, and let the lead act (`self.act(self.lead, d)`); the open task is on `review` with `has_recipients=False` (REVIEW default is 'wait').
+
+4. Task: create `backend/core/workflow/tests/test_policy_api.py` with one class `PolicyApiTests(ApiBase)` (import `ApiBase` and `API` from `.test_api`). In `setUp`: patch `workflow_role_defaults` to `[]`, create `self.editor` and `self.no_member_editor` exactly like `SettingsApiTests.setUp`. Tests (names exactly as given):
+- `test_permissions`: GET, preview and PUT by `self.lead` (no permission) -> 403; by `self.no_member_editor` on `self.co` -> 403; by `self.editor` on company id 999999 -> 403 with the same body as the non-member; `self.su` and `self.editor` on `self.co` -> 200 for GET; `self.no_member_editor` on `self.co2` -> 200.
+- `test_get_sources`: company row `role_actions={'wf_reviewer': 'skip'}` and workflow row `role_actions={'wf_lead': 'wait'}` -> in the WF entry `wf_reviewer` has `source='company'`, effective 'skip'; `wf_lead` `source='own'`, effective 'wait'; `wf_boss` `source='default'`, effective 'skip'; `has_own_row` True; in `company_default` `wf_reviewer` has `source='own'`.
+- `test_invalid_values_400`: unknown role, action 'x', unknown workflow key (path and preview), `creator_may_approve_own='yes'`, `notify_mode='other'` -> 400 with the codes of section 3; no `WorkflowPolicy` row created.
+- `test_notify_users_outside_company_400`: `notify_mode='users'` with `self.outsider` (member of co2 only) -> 400 `notify_user_not_member`; with `self.su` -> 400; with an empty list -> 400 `notify_users_required`; with `self.lead` -> preview 200.
+- `test_preview_writes_nothing`: waiting review task; preview `{'wf_reviewer': 'skip'}` -> `counts['advance'] == 1`, the sample has the instance id and `effect='advance'`; afterwards no `WorkflowPolicy` row, the task is still open on `review`, and no `AuditLog` row with `target_model='WorkflowPolicy'`.
+- `test_confirm_applies_and_counts_match`: preview then PUT with the token -> 200, `stats['skipped'] == preview counts['advance']`, the open task is on `boss_ok`.
+- `test_missing_token_400`: PUT without `confirm_token` -> 400 `confirm_token_required`.
+- `test_preview_stale_409`: take a preview token; then change the state (create a company default row directly, or deactivate the lead of another open document); PUT with the old token -> 409 `preview_stale`, body has `preview.token` different from the old one; no workflow row saved.
+- `test_audit_row_before_after`: PUT create then PUT update (each with a fresh preview token) -> two `AuditLog` rows; the second has `before_state['role_actions']` and `after_state['role_actions']` with the old and new values.
+- `test_delete_resets_to_company_default`: workflow row exists; preview with `reset: True`, DELETE with the token -> 200, the row is gone, GET shows `has_own_row` False and sources `company`/`default`; an audit row with action `DELETE`.
+- `test_recompute_scoped_to_company_and_workflow`: a waiting review task in `self.co` and another in `self.co2` (document in `self.other_sec`; deactivate the co2 reviewer too, if any) -> save `{'wf_reviewer': 'skip'}` for `self.co` -> the co task moves to `boss_ok`, the co2 task stays open on `review`. Also call `recompute_open_tasks(company_ids=[self.co.pk], workflow_keys=['other_key'])` on a fresh waiting task with a skip row -> the task is untouched (stats `tasks == 0`).
+- `test_forced_task_not_skipped`: `engine.open_at_step(WF, doc, self.member, 'boss_ok')` with no boss (task `forced=True`); preview `{'wf_boss': 'skip'}` -> `counts['advance'] == 0`; after save the task is still open.
+- `test_company_default_put`: PUT `base` with `{'values': {'role_actions': {'wf_reviewer': 'skip'}}, 'confirm_token': <token of preview with workflow_key ''>}` -> 200 and the row with `workflow_key=''` exists.
+- `test_old_settings_endpoint_writes_policy_row`: `PUT settings/<co>/` with `creator_may_approve_own=True` -> 200, response field True, `WorkflowPolicy(company=co, workflow_key='').creator_may_approve_own` True, the old column `WorkflowCompanySettings.creator_may_approve_own` stays False; GET returns True.
+- `test_superuser_can_change_settings`: `self.su` preview and PUT -> 200.
+Every test asserts with `assertEqual`, `assertTrue`, `assertFalse`, `assertIn` or `assertRaises` (no bare `print`). Use `self.client_for(user)` with `format='json'` for PUT/POST bodies.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test workflow.tests.test_policy_api --keepdb` (always with the label; at most 8 runs). In PowerShell use `$env:PYTHONUTF8='1';` instead of `set`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all tests pass (if one fails only because production code differs from sections 3 and 4, keep the test and report it), and `git status --short` shows only the new test file, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the new test file and commit with this message, without push:
+test(workflow): role-policy C policy settings API tests
+- Short English report: test names, test results, any test that fails and why. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست
+درخواست شامل پیاده‌سازی آزمون‌های API تنظیمات سیاست نبودن نفر در گردش کار (طرح نبودن نفر - گام C) در قالب فایل جدید `backend/core/workflow/tests/test_policy_api.py` بود؛ شامل پوشش دسترسی‌ها، خواندن مقادیر مؤثر و ارث‌بری منابع (source)، اعتبارسنجی مقادیر نامعتبر، اعتبارسنجی اعضای خبر انتظار، پیش‌نمایش بدون تغییر داده، ذخیره با توکن تأیید، کنترل کهنگی توکن (کد ۴۰۹)، ثبت گزارش ممیزی (AuditLog)، حذف و بازگشت به پیش‌فرض شرکت، محاسبه مجدد محدود به شرکت و گردش (scoped recompute)، کارهای اجباری (forced)، و سازگاری با endpoint قدیمی تنظیمات شرکت بود.
+
+### ۲. اعتبارسنجی فنی و بررسی کد
+- ساختار نماها در `backend/core/workflow/views.py` (`Company...
+
+---

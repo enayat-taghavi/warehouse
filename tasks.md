@@ -6852,7 +6852,7 @@ test(workflow): role-policy B missing-role engine tests
 
 ===
 
-[ ] Session 1 of 1 — Role-policy plan step C tests: new API test file for the company workflow-policy settings (GET, preview, PUT, DELETE, preview_stale, audit, scoped recompute) and the backward-compatible company settings field
+[DONE] [ ] Session 1 of 1 — Role-policy plan step C tests: new API test file for the company workflow-policy settings (GET, preview, PUT, DELETE, preview_stale, audit, scoped recompute) and the backward-compatible company settings field
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
