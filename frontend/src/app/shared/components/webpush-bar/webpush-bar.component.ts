@@ -31,7 +31,7 @@ function readDismissed(): boolean {
         aria-live="polite"
         aria-label="درخواست اجازهٔ اعلان"
         data-testid="webpush-bar"
-        class="fixed inset-x-0 bottom-0 z-[89] pb-safe px-3 sm:px-4">
+        class="above-bottom-nav fixed inset-x-0 bottom-0 z-[89] pb-safe px-3 sm:px-4">
         <div class="max-w-3xl mx-auto mb-3 bg-surface border border-line rounded-2xl shadow-lg px-3 py-2 flex items-center gap-2.5 text-xs text-fg">
           <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <svg appIcon="bell" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>

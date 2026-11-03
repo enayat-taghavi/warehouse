@@ -565,6 +565,14 @@ ng-persian-datepicker {
   }
 }
 
+/* نوار ثابت پایین صفحه (مثل اعلان یک‌باره): در موبایل، وقتی نوار تب‌های پایین دیده می‌شود، روی آن ننشیند */
+@media (max-width: 767.98px) {
+  body:has(nav.mobile-bottom-nav) .above-bottom-nav {
+    bottom: var(--mobile-bottom-nav-height);
+    padding-bottom: 0;
+  }
+}
+
 /* Edge elements: mobile bottom navigation */
 .bottom-nav,
 .mobile-bottom-nav {

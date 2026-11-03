@@ -35,7 +35,7 @@ function badgeText(n: number): string | null {
 
 /**
  * نوار تب‌های پایین موبایل (سبک واتساپ، فقط زیر md): چت، اعلان، دو گزینهٔ اول منو و «بیشتر».
- * بدون دسترسی به چت، گزینهٔ سوم منو جای آن را می‌گیرد. داخل یک گفت‌وگوی چت پنهان می‌شود.
+ * بدون دسترسی به چت، گزینهٔ سوم منو جای آن را می‌گیرد. با باز شدن چت پنهان می‌شود (بستن با دکمهٔ بستن چت).
  * پوسته فقط گزینه‌ها و کار «بیشتر» را می‌دهد؛ چت و اعلان را خود نوار باز و بسته می‌کند.
  */
 @Component({
@@ -44,7 +44,7 @@ function badgeText(n: number): string | null {
   imports: [NgClass, SvgIconDirective],
   host: { class: 'md:hidden shrink-0 relative z-[45]' },
   template: `
-    @if (!commService.hasActiveConversation()) {
+    @if (!commService.hasActiveConversation() && !commService.isChatDrawerOpen()) {
       <nav class="mobile-bottom-nav flex items-stretch pt-[3px] bg-surface border-t border-line shadow-[0_-2px_8px_rgba(15,23,42,0.06)]"
            dir="rtl" aria-label="ناوبری اصلی" data-testid="mobile-bottom-nav">
         @for (entry of tabs(); track entry.id) {
@@ -141,25 +141,18 @@ export class MobileBottomNavComponent {
         this.commService.toggleChatDrawer();
         break;
       case 'notifications':
-        this.closeChat();
         this.overlayOpen.emit();
         this.notifications()?.toggleDropdown(event);
         break;
       case 'item':
-        this.closeChat();
         this.closeNotifications();
         this.itemSelect.emit(tab.id.slice('item-'.length));
         break;
       case 'more':
-        this.closeChat();
         this.closeNotifications();
         this.moreToggle.emit();
         break;
     }
-  }
-
-  private closeChat(): void {
-    if (this.commService.isChatDrawerOpen()) this.commService.toggleChatDrawer();
   }
 
   private closeNotifications(): void {

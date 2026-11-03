@@ -63,7 +63,7 @@ export function isInAppUrl(url: unknown): url is string {
         *ngIf="isOpen()"
         id="notification-center-panel"
         data-back-closes
-        [ngClass]="{'max-md:!fixed max-md:!inset-x-2 max-md:!w-auto max-md:!top-[var(--mobile-top-chrome-height)]': hideTriggerOnMobile()}"
+        [ngClass]="{'max-md:!fixed max-md:!inset-x-0 max-md:!w-auto max-md:!top-[var(--mobile-top-chrome-height)] max-md:!bottom-[var(--mobile-bottom-nav-height)] max-md:!mt-0 max-md:!rounded-none max-md:!border-x-0 max-md:!border-b-0 max-md:!shadow-none max-md:flex max-md:flex-col': hideTriggerOnMobile()}"
         class="fixed inset-x-2 top-[calc(4rem+env(safe-area-inset-top,0px))] sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
@@ -86,7 +86,7 @@ export function isInAppUrl(url: unknown): url is string {
         </div>
 
         <!-- Body: Notification List -->
-        <div class="max-h-80 overflow-y-auto overflow-x-hidden divide-y divide-line-subtle dark:divide-slate-800/60">
+        <div [ngClass]="{'max-md:max-h-none max-md:flex-1 max-md:min-h-0': hideTriggerOnMobile()}" class="max-h-80 overflow-y-auto overflow-x-hidden divide-y divide-line-subtle dark:divide-slate-800/60">
           <div *ngIf="isLoading()" class="p-6 text-center text-xs text-fg-muted">
             در حال بارگذاری اعلان‌ها...
           </div>
@@ -148,7 +148,7 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   private moduleRegistry = inject(ModuleRegistryService);
   private commService = inject(CommunicationService, { optional: true });
 
-  /** در موبایل زنگوله در هدر پنهان است و پنل با تب «اعلان» نوار پایین باز می‌شود (زیر نوار برند و هدر) */
+  /** در موبایل زنگوله در هدر پنهان است و پنل با تب «اعلان» نوار پایین به‌شکل صفحهٔ کامل میان هدر و نوار پایین باز می‌شود */
   hideTriggerOnMobile = input<boolean>(false);
   isOpen = signal<boolean>(false);
   isLoading = signal<boolean>(false);

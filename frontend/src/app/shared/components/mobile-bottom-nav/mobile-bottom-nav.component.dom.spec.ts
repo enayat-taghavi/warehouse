@@ -105,6 +105,13 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="mobile-bottom-nav"]')).toBeNull();
   });
 
+  it('3b. chat drawer open (conversation list): no element [data-testid="mobile-bottom-nav"]', () => {
+    mockComm.hasActiveConversation.set(false);
+    mockComm.isChatDrawerOpen.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="mobile-bottom-nav"]')).toBeNull();
+  });
+
   it('4. clicking the chat tab calls toggleChatDrawer once and emits overlayOpen', () => {
     mockComm.isChatAvailable.set(true);
     mockComm.hasActiveConversation.set(false);
@@ -124,10 +131,10 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
     expect(overlayOpened).toBe(true);
   });
 
-  it('5. clicking the notifications tab calls toggleDropdown once; when the chat drawer is open it also calls toggleChatDrawer', () => {
+  it('5. clicking the notifications tab calls toggleDropdown once and does not touch the chat drawer', () => {
     mockComm.isChatAvailable.set(true);
     mockComm.hasActiveConversation.set(false);
-    mockComm.isChatDrawerOpen.set(true);
+    mockComm.isChatDrawerOpen.set(false);
     fixture.componentRef.setInput('items', sampleItems);
     fixture.componentRef.setInput('notifications', fakeNotif as unknown as NotificationCenterComponent);
     fixture.detectChanges();
@@ -142,7 +149,7 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
     notifBtn.click();
 
     expect(fakeNotif.toggleDropdown).toHaveBeenCalledTimes(1);
-    expect(mockComm.toggleChatDrawer).toHaveBeenCalledTimes(1);
+    expect(mockComm.toggleChatDrawer).not.toHaveBeenCalled();
     expect(overlayOpened).toBe(true);
   });
 
