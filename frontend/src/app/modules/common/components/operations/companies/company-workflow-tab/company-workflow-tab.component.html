@@ -133,18 +133,21 @@
             <p class="text-[11px] text-fg-muted mt-0.5">اگر کسی نقش یک مرحله را نداشته باشد، آن مرحله رد شود یا منتظر بماند.</p>
           </div>
         </div>
-        <div *ngIf="policyLoading" class="text-[11px] text-slate-500 font-bold">در حال بارگذاری...</div>
+        <div *ngIf="policyLoading && policies" class="text-[11px] text-slate-500 font-bold">در حال بارگذاری...</div>
       </div>
 
-      <div *ngIf="policyError" role="alert" class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700">
-        {{ policyError }}
+      <app-loading-skeleton *ngIf="policyLoading && !policies" type="text" [lines]="4"></app-loading-skeleton>
+
+      <div *ngIf="policyError" role="alert" class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700 flex items-center justify-between gap-2 flex-wrap">
+        <span>{{ policyError }}</span>
+        <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" [busy]="policyLoading" (click)="loadPolicies()"></button>
       </div>
 
       <div *ngIf="policies" class="space-y-6">
-        <!-- بخش «پیشفرض شرکت» -->
+        <!-- بخش «پیش‌فرض شرکت» -->
         <section data-testid="policy-company" class="space-y-4">
           <div class="flex items-center justify-between">
-            <h5 class="text-xs font-black text-slate-800">پیشفرض شرکت</h5>
+            <h5 class="text-xs font-black text-slate-800">پیش‌فرض شرکت</h5>
           </div>
 
           <!-- ردیف نقش‌های شرکت -->
@@ -186,7 +189,7 @@
                       (change)="setRoleAction(companyPolicyKey, role.role, null)"
                       class="text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span>پیشفرض سامانه ({{ actionLabel(role.effective) }})</span>
+                    <span>پیش‌فرض سامانه ({{ actionLabel(role.effective) }})</span>
                   </label>
                 </div>
               </fieldset>
@@ -195,7 +198,7 @@
 
           <!-- تایید سند خود توسط ایجادکننده -->
           <fieldset class="border-0 p-0 m-0">
-            <legend class="text-[11px] font-bold text-slate-700 mb-1">ایجادکننده میتواند سند خودش را تأیید کند</legend>
+            <legend class="text-[11px] font-bold text-slate-700 mb-1">ایجادکننده می‌تواند سند خودش را تأیید کند</legend>
             <div class="flex items-center gap-4 flex-wrap text-xs">
               <label class="inline-flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -228,11 +231,11 @@
                   (change)="companyDraft && (companyDraft.creatorMayApproveOwn = null)"
                   class="text-indigo-600 focus:ring-indigo-500"
                 />
-                <span>پیشفرض سامانه ({{ policies.company_default.creator_may_approve_own.effective ? 'بله' : 'خیر' }})</span>
+                <span>پیش‌فرض سامانه ({{ policies.company_default.creator_may_approve_own.effective ? 'بله' : 'خیر' }})</span>
               </label>
             </div>
             <p class="text-[10px] text-slate-500 mt-1">
-              اگر «بله» باشد، کسی که سند را ثبت کرده در مرحلههای تأیید و بررسی همان سند هم کار را میگیرد. مدیر کل سامانه هرگز سند را تأیید نمیکند.
+              اگر «بله» باشد، کسی که سند را ثبت کرده در مرحله‌های تأیید و بررسی همان سند هم کار را می‌گیرد. مدیر کل سامانه هرگز سند را تأیید نمی‌کند.
             </p>
           </fieldset>
 
@@ -249,7 +252,7 @@
                   (change)="setNotifyMode(companyPolicyKey, 'role_assigners')"
                   class="text-indigo-600 focus:ring-indigo-500"
                 />
-                <span>تعیینکنندگان نقش</span>
+                <span>تعیین‌کنندگان نقش</span>
               </label>
               <label class="inline-flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -260,7 +263,7 @@
                   (change)="setNotifyMode(companyPolicyKey, 'users')"
                   class="text-indigo-600 focus:ring-indigo-500"
                 />
-                <span>کاربران انتخابشده</span>
+                <span>کاربران انتخاب‌شده</span>
               </label>
               <label class="inline-flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -271,7 +274,7 @@
                   (change)="setNotifyMode(companyPolicyKey, null)"
                   class="text-indigo-600 focus:ring-indigo-500"
                 />
-                <span>پیشفرض سامانه ({{ policies.company_default.notify.effective_mode === 'role_assigners' ? 'تعیینکنندگان نقش' : 'کاربران انتخابشده' }})</span>
+                <span>پیش‌فرض سامانه ({{ policies.company_default.notify.effective_mode === 'role_assigners' ? 'تعیین‌کنندگان نقش' : 'کاربران انتخاب‌شده' }})</span>
               </label>
             </div>
             <div *ngIf="companyDraft?.notifyMode === 'users'" class="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
@@ -312,13 +315,16 @@
           </div>
         </section>
 
-        <!-- بخش «گردشها» -->
+        <!-- بخش «گردش‌ها» -->
         <section data-testid="policy-workflows" class="space-y-4 pt-4 border-t border-slate-200">
           <div class="flex items-center justify-between">
-            <h5 class="text-xs font-black text-slate-800">گردشها</h5>
+            <h5 class="text-xs font-black text-slate-800">گردش‌ها</h5>
           </div>
 
           <div class="space-y-3">
+            <p *ngIf="!policies.workflows.length" class="p-3 text-[11px] text-fg-muted bg-slate-50/70 border border-slate-200/80 rounded-xl">
+              گردشی برای این شرکت تعریف نشده است.
+            </p>
             <div
               *ngFor="let wf of policies.workflows"
               [attr.data-testid]="'policy-wf-' + wf.key"
@@ -338,7 +344,7 @@
                     *ngIf="!wf.has_own_row"
                     class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"
                   >
-                    پیشفرض شرکت
+                    پیش‌فرض شرکت
                   </span>
                 </div>
                 <button
@@ -347,7 +353,7 @@
                   [attr.aria-expanded]="expandedWorkflowKey === wf.key"
                   title="{{ expandedWorkflowKey === wf.key ? 'بستن' : 'ویرایش' }}"
                   aria-label="{{ (expandedWorkflowKey === wf.key ? 'بستن تنظیمات ' : 'ویرایش تنظیمات ') + wf.title_fa }}"
-                  class="px-2.5 py-1 min-h-[32px] text-xs font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  class="px-2.5 py-1 min-h-[32px] text-xs font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
                   <span>{{ expandedWorkflowKey === wf.key ? 'بستن' : 'ویرایش' }}</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" [class.rotate-180]="expandedWorkflowKey === wf.key" class="transition-transform"></svg>
@@ -395,7 +401,7 @@
                             (change)="setRoleAction(wf.key, role.role, null)"
                             class="text-indigo-600 focus:ring-indigo-500"
                           />
-                          <span>مثل پیشفرض شرکت ({{ actionLabel(role.effective) }})</span>
+                          <span>مثل پیش‌فرض شرکت ({{ actionLabel(role.effective) }})</span>
                         </label>
                       </div>
                     </fieldset>
@@ -432,7 +438,7 @@
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock" class="shrink-0 text-amber-600"></svg>
                               <span>{{ lockReason(step) }}</span>
                             </div>
-                            <span *ngIf="stepSkipNote(step)" class="text-[10px] text-emerald-600 font-bold block">
+                            <span *ngIf="stepSkipNote(step)" class="text-[10px] text-emerald-700 font-bold block">
                               {{ stepSkipNote(step) }}
                             </span>
                           </td>
@@ -444,7 +450,7 @@
 
                 <!-- تایید ایجادکننده در سطح گردش -->
                 <fieldset class="border-0 p-0 m-0">
-                  <legend class="text-[11px] font-bold text-slate-700 mb-1">ایجادکننده میتواند سند خودش را تأیید کند</legend>
+                  <legend class="text-[11px] font-bold text-slate-700 mb-1">ایجادکننده می‌تواند سند خودش را تأیید کند</legend>
                   <div class="flex items-center gap-4 flex-wrap text-xs">
                     <label class="inline-flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -477,11 +483,11 @@
                         (change)="workflowDrafts[wf.key] && (workflowDrafts[wf.key].creatorMayApproveOwn = null)"
                         class="text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span>مثل پیشفرض شرکت ({{ wf.creator_may_approve_own.effective ? 'بله' : 'خیر' }})</span>
+                      <span>مثل پیش‌فرض شرکت ({{ wf.creator_may_approve_own.effective ? 'بله' : 'خیر' }})</span>
                     </label>
                   </div>
                   <p class="text-[10px] text-slate-500 mt-1">
-                    اگر «بله» باشد، کسی که سند را ثبت کرده در مرحلههای تأیید و بررسی همان سند هم کار را میگیرد. مدیر کل سامانه هرگز سند را تأیید نمیکند.
+                    اگر «بله» باشد، کسی که سند را ثبت کرده در مرحله‌های تأیید و بررسی همان سند هم کار را می‌گیرد. مدیر کل سامانه هرگز سند را تأیید نمی‌کند.
                   </p>
                 </fieldset>
 
@@ -498,7 +504,7 @@
                         (change)="setNotifyMode(wf.key, 'role_assigners')"
                         class="text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span>تعیینکنندگان نقش</span>
+                      <span>تعیین‌کنندگان نقش</span>
                     </label>
                     <label class="inline-flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -509,7 +515,7 @@
                         (change)="setNotifyMode(wf.key, 'users')"
                         class="text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span>کاربران انتخابشده</span>
+                      <span>کاربران انتخاب‌شده</span>
                     </label>
                     <label class="inline-flex items-center gap-1.5 cursor-pointer">
                       <input
@@ -520,7 +526,7 @@
                         (change)="setNotifyMode(wf.key, null)"
                         class="text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span>مثل پیشفرض شرکت ({{ wf.notify.effective_mode === 'role_assigners' ? 'تعیینکنندگان نقش' : 'کاربران انتخابشده' }})</span>
+                      <span>مثل پیش‌فرض شرکت ({{ wf.notify.effective_mode === 'role_assigners' ? 'تعیین‌کنندگان نقش' : 'کاربران انتخاب‌شده' }})</span>
                     </label>
                   </div>
                   <div *ngIf="workflowDrafts[wf.key]?.notifyMode === 'users'" class="mt-2 p-2.5 bg-white border border-slate-200 rounded-xl">
@@ -551,12 +557,14 @@
                   <button
                     *ngIf="wf.has_own_row"
                     type="button"
+                    appAction="restore"
+                    display="label"
+                    label="برگشت به پیش‌فرض شرکت"
+                    size="sm"
                     (click)="resetWorkflowPolicy(wf.key)"
+                    [busy]="savingPolicyKey === wf.key"
                     [disabled]="savingPolicyKey !== null"
-                    class="px-3 py-1.5 min-h-[32px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl active:scale-95 transition-all cursor-pointer"
-                  >
-                    برگشت به پیشفرض شرکت
-                  </button>
+                  ></button>
                   <button
                     type="button"
                     appAction="save"

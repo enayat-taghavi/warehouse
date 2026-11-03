@@ -3,6 +3,22 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of } from 'rxjs';
 import { AccountantInvoicesHubComponent } from './accountant-invoices';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حسابدار و پیش‌نمایش/سابقه', () => {
   let component: AccountantInvoicesHubComponent;
@@ -23,7 +39,7 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
     };
     mockPrintService = { downloadPdf: vi.fn() };
 
-    component = new AccountantInvoicesHubComponent(
+    component = __inCtx(() => new AccountantInvoicesHubComponent(
       {} as any,
       {} as any,
       mockToast,
@@ -32,7 +48,7 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any,
       mockPrintService
-    );
+    ));
   });
 
   it('loads sections and accountant invoices', () => {
@@ -69,7 +85,7 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
 
   it('(b) with route queryParams: of({ section_id: \'10\' }) (10 is returned by getMySections) the call contains section_id: 10', () => {
     mockPersonnelApi.getMySections.mockReturnValue(of([{ id: 10, name: 'کارگاه ۱' }]));
-    const compWithQuery = new AccountantInvoicesHubComponent(
+    const compWithQuery = __inCtx(() => new AccountantInvoicesHubComponent(
       {} as any,
       {} as any,
       mockToast,
@@ -78,7 +94,7 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
       { queryParams: of({ section_id: '10' }) } as any,
       { detectChanges: vi.fn() } as any,
       mockPrintService
-    );
+    ));
     compWithQuery.ngOnInit();
     expect(compWithQuery.selectedSectionId).toBe(10);
     const lastCall = mockPersonnelApi.getExpenseInvoices.mock.calls.at(-1)?.[0];
@@ -87,7 +103,7 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
 
   it('(c) with section_id: \'999\' (not in the list) selectedSectionId becomes null and no section_id is sent', () => {
     mockPersonnelApi.getMySections.mockReturnValue(of([{ id: 10, name: 'کارگاه ۱' }]));
-    const compWithInvalidQuery = new AccountantInvoicesHubComponent(
+    const compWithInvalidQuery = __inCtx(() => new AccountantInvoicesHubComponent(
       {} as any,
       {} as any,
       mockToast,
@@ -96,7 +112,7 @@ describe('AccountantInvoicesHubComponent — ممیزی فاکتورهای حس�
       { queryParams: of({ section_id: '999' }) } as any,
       { detectChanges: vi.fn() } as any,
       mockPrintService
-    );
+    ));
     compWithInvalidQuery.ngOnInit();
     expect(compWithInvalidQuery.selectedSectionId).toBeNull();
     const lastCall = mockPersonnelApi.getExpenseInvoices.mock.calls.at(-1)?.[0];

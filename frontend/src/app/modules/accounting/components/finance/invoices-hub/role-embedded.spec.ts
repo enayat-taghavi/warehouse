@@ -13,6 +13,16 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
 import { PersonnelApiService } from '../../../api/personnel-api.service';
 import { PrintService } from '../../../../../core/services/print.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -79,7 +89,7 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
 
   it('accountant: embedded does not fetch; book and return emit changed', () => {
     const m = mocks();
-    const cmp = new AccountantInvoicesHubComponent({} as any, {} as any, m.toast, m.personnelApi, m.router, m.route, m.cdr, {} as any, m.ws);
+    const cmp = __inCtx(() => new AccountantInvoicesHubComponent({} as any, {} as any, m.toast, m.personnelApi, m.router, m.route, m.cdr, {} as any, m.ws));
     cmp.embedded = true;
     const changed = vi.fn();
     cmp.changed.subscribe(changed);
@@ -96,7 +106,7 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
     const m = mocks();
     const treasuryApi: any = { getInvoicePayments: vi.fn().mockReturnValue(of({ results: [], paid_amount: 0, remaining: 900 })) };
     const companyApi: any = { getBankAccounts: vi.fn().mockReturnValue(of([])) };
-    const cmp = new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, treasuryApi, companyApi, {} as any, m.router, m.route, m.cdr, m.ws);
+    const cmp = __inCtx(() => new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, treasuryApi, companyApi, {} as any, m.router, m.route, m.cdr, m.ws));
     cmp.embedded = true;
     const changed = vi.fn();
     cmp.changed.subscribe(changed);
@@ -116,7 +126,7 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
 
   it('treasurer: toPayableItem keeps the old cartable mapping', () => {
     const m = mocks();
-    const cmp = new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, {} as any, {} as any, {} as any, m.router, m.route, m.cdr, m.ws);
+    const cmp = __inCtx(() => new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, {} as any, {} as any, {} as any, m.router, m.route, m.cdr, m.ws));
     expect(cmp.toPayableItem({ id: 1, status: 'ready_to_pay', amount: 500, paid_amount: 200 })).toEqual(expect.objectContaining({
       id: 1, status: 'pending_payment', vendor_name: 'طرف‌حساب', paid_amount: 200, remaining: 300, section_id: null, counterparty_id: null, number: null,
     }));

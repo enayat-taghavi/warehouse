@@ -18,6 +18,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { NetworkStatusService } from '../../../../../../core/services/network-status.service';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -76,7 +77,7 @@ describe('TreasurerDisbursementsComponent (Release v1 step 4.5-d DOM specs)', ()
 
     await TestBed.configureTestingModule({
       imports: [TreasurerDisbursementsComponent],
-      providers: [
+      providers: [ { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
         provideRouter([]),
         { provide: AuthService, useValue: { user: vi.fn(), userPermissions: vi.fn().mockReturnValue([]) } },
         { provide: StateService, useValue: {} },

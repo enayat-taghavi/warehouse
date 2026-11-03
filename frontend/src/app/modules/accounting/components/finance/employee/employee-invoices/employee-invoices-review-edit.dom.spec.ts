@@ -20,6 +20,7 @@ import { ConfirmDialogService } from '../../../../../../shared/components/confir
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { ProjectSection, ExpenseInvoice } from '../../../../models/personnel.model';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -150,7 +151,7 @@ describe('EmployeeInvoicesHubComponent - Review Accountant Edit DOM Specs', () =
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, ReactiveFormsModule, EmployeeInvoicesHubComponent],
-      providers: [
+      providers: [ { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
         { provide: AuthService, useValue: mockAuth },
         { provide: StateService, useValue: { user: { id: 1 } } },
         { provide: PersonnelApiService, useValue: mockPersonnelApi },

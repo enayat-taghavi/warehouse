@@ -19,6 +19,7 @@ import { CompanyApiService } from '../../../../../../core/api/company-api.servic
 import { PrintService } from '../../../../../../core/services/print.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -150,7 +151,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, ReactiveFormsModule, TreasurerInvoicesComponent],
-      providers: [
+      providers: [ { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
         { provide: AuthService, useValue: mockAuth },
         { provide: StateService, useValue: mockState },
         { provide: ToastService, useValue: mockToast },

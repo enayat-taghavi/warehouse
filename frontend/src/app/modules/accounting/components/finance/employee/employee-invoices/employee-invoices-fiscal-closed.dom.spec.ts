@@ -5,6 +5,22 @@ import { of, throwError } from 'rxjs';
 
 import { EmployeeInvoicesHubComponent } from './employee-invoices';
 import { Counterparty, ProjectSection } from '../../../../models/personnel.model';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 step 3.2-c)', () => {
   let component: EmployeeInvoicesHubComponent;
@@ -66,7 +82,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       submitExpenseInvoice: vi.fn().mockReturnValue(of({ id: 77, status: 'pending_supervisor' }))
     };
 
-    component = new EmployeeInvoicesHubComponent(
+    component = __inCtx(() => new EmployeeInvoicesHubComponent(
       mockAuth,
       mockPersonnelApi,
       mockToast,
@@ -76,7 +92,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
       undefined,
       mockTreasuryOrgApi,
       mockConfirm
-    );
+    ));
 
     component.ngOnInit();
   });

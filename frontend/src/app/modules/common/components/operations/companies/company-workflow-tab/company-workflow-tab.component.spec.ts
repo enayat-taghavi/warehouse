@@ -416,7 +416,7 @@ describe('CompanyWorkflowTabComponent', () => {
 
     const text = wfRow?.textContent || '';
     expect(text).toContain('بررسی حسابدار');
-    expect(text).toContain('برگشت به پیشفرض شرکت');
+    expect(text).toContain('برگشت به پیش‌فرض شرکت');
   });
 
   it('choosing «رد شود» updates the company draft', async () => {

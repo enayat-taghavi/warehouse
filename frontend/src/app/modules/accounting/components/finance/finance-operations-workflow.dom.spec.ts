@@ -9,6 +9,22 @@ import { EmployeeInvoicesHubComponent } from './employee/employee-invoices/emplo
 import { TreasurerDisbursementsComponent } from './treasurer/treasurer-disbursements/treasurer-disbursements';
 import { ProjectSection, FinancialProject } from '../../models/personnel.model';
 import { OfflineSyncService } from '../../../../core/services/offline-sync.service';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -342,7 +358,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
   // ════════════════════════════════════════════════════════════════════════
   describe('۳. خزانه‌داری - باز کردن فرم اسناد پرداخت، ذخیره تسویه و فیلترها', () => {
     it('اسناد پرداختی خزانه‌داری را بارگذاری کرده، فیلتر و تسویه پرداخت را تایید و ذخیره می‌کند', () => {
-      const disbursementsComp = new TreasurerDisbursementsComponent(
+      const disbursementsComp = __inCtx(() => new TreasurerDisbursementsComponent(
         mockAuth,
         mockState,
         mockToast,
@@ -350,7 +366,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
         mockRouter,
         mockRoute,
         mockCdr
-      );
+      ));
 
       disbursementsComp.ngOnInit();
 
@@ -389,14 +405,14 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
   // ════════════════════════════════════════════════════════════════════════
   describe('۴. تنخواه گردان - ثبت درخواست، پیوست فاکتور، ذخیره‌سازی و فیلترها', () => {
     it('فرم ثبت تنخواه را باز کرده، فیلتر وضعیت را اعمال و هزینه جدید را ذخیره می‌کند', () => {
-      const pettyCashHub = new EmployeePettyCashHubComponent(
+      const pettyCashHub = __inCtx(() => new EmployeePettyCashHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
         mockCdr,
         mockRoute,
         mockRouter
-      );
+      ));
 
       pettyCashHub.ngOnInit();
 
@@ -445,7 +461,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
       const mockTreasuryApi = {
         getExpenseInvoicesPage: vi.fn().mockReturnValue(of({ count: 1, next: null, previous: null, results: sectionInvoices }))
       };
-      const invoicesHub = new EmployeeInvoicesHubComponent(
+      const invoicesHub = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -454,7 +470,7 @@ describe('عملیات جامع صفحات مالی: تردد، مأموریت�
         mockRouter,
         undefined,
         mockTreasuryApi as any
-      );
+      ));
 
       invoicesHub.ngOnInit();
 

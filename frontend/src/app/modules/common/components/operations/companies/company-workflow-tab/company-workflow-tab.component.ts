@@ -45,6 +45,7 @@ import { ConfirmDialogService } from '../../../../../../shared/components/confir
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
+import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { normalizeDigits } from '../../../../../../core/utils/date-utils';
 
 @Component({
@@ -54,7 +55,8 @@ import { normalizeDigits } from '../../../../../../core/utils/date-utils';
     CommonModule,
     FormsModule,
     SvgIconDirective,
-    ActionButtonComponent
+    ActionButtonComponent,
+    LoadingSkeletonComponent
   ],
   templateUrl: './company-workflow-tab.component.html'
 })

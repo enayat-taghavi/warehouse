@@ -10,6 +10,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 
 describe('AccountantInvoicesHubComponent live document_changed', () => {
   let fixture: ComponentFixture<AccountantInvoicesHubComponent>;
@@ -53,7 +54,7 @@ describe('AccountantInvoicesHubComponent live document_changed', () => {
 
     TestBed.configureTestingModule({
       imports: [AccountantInvoicesHubComponent],
-      providers: [
+      providers: [ { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
         { provide: PersonnelApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { queryParams: of({}) } },
         { provide: Router, useValue: router },

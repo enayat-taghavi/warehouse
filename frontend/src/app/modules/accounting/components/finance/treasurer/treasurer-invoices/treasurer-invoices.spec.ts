@@ -3,6 +3,22 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, Subject } from 'rxjs';
 import { TreasurerInvoicesComponent } from './treasurer-invoices';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پرداخت', () => {
   let component: TreasurerInvoicesComponent;
@@ -20,13 +36,13 @@ describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پ
       approvePettyCashTransaction: vi.fn().mockReturnValue(of({ message: 'ok' }))
     };
 
-    component = new TreasurerInvoicesComponent(
+    component = __inCtx(() => new TreasurerInvoicesComponent(
       {} as any, {} as any, mockToast, mockPersonnelApi,
       {} as any, {} as any, {} as any,
       { navigate: vi.fn() } as any,
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any
-    );
+    ));
   });
 
   it('1. loads only payable invoices; petty cash refills moved to their own treasurer page', () => {
@@ -56,14 +72,14 @@ describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پ
     const mockWs = {
       liveRefresh$: vi.fn(() => live$.asObservable())
     };
-    const comp = new TreasurerInvoicesComponent(
+    const comp = __inCtx(() => new TreasurerInvoicesComponent(
       {} as any, {} as any, mockToast, mockPersonnelApi,
       {} as any, {} as any, {} as any,
       { navigate: vi.fn() } as any,
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any,
       mockWs as any
-    );
+    ));
 
     comp.ngOnInit();
     const callsAfterInit = mockPersonnelApi.getTreasuryCartable.mock.calls.length;

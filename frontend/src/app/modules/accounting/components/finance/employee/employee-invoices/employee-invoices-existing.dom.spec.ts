@@ -5,6 +5,22 @@ import { of } from 'rxjs';
 
 import { EmployeeInvoicesHubComponent } from './employee-invoices';
 import { Counterparty, ProjectSection } from '../../../../models/personnel.model';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('EmployeeInvoicesHubComponent - Quick Counterparty Modal existing Spec (Release v1 step 3.1-c)', () => {
   let component: EmployeeInvoicesHubComponent;
@@ -54,14 +70,14 @@ describe('EmployeeInvoicesHubComponent - Quick Counterparty Modal existing Spec 
       navigate: vi.fn()
     };
 
-    component = new EmployeeInvoicesHubComponent(
+    component = __inCtx(() => new EmployeeInvoicesHubComponent(
       mockAuth,
       mockPersonnelApi,
       mockToast,
       mockCdr,
       mockRoute,
       mockRouter
-    );
+    ));
 
     component.ngOnInit();
   });

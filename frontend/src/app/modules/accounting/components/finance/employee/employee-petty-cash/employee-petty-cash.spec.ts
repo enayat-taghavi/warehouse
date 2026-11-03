@@ -10,6 +10,22 @@ import {
   Counterparty,
   ProjectSection
 } from '../../../../models/personnel.model';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('EmployeePettyCashHubComponent Vitest Suite', () => {
   let component: EmployeePettyCashHubComponent;
@@ -177,14 +193,14 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
       navigate: vi.fn()
     };
 
-    component = new EmployeePettyCashHubComponent(
+    component = __inCtx(() => new EmployeePettyCashHubComponent(
       mockAuth,
       mockPersonnelApi,
       mockToast,
       mockCdr,
       mockRoute,
       mockRouter
-    );
+    ));
   });
 
   it('1. should initialize with shamsi date and load company-level data without a section', () => {

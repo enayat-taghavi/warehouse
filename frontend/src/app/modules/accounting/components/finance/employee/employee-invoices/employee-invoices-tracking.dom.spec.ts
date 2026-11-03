@@ -16,6 +16,7 @@ import { TreasuryOrgApiService } from '../../../../api/treasury-org-api.service'
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
+import { PermissionService } from '../../../../../../core/services/permission.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -97,7 +98,7 @@ describe('EmployeeInvoicesHubComponent tracking values DOM spec', () => {
 
     TestBed.configureTestingModule({
       imports: [EmployeeInvoicesHubComponent],
-      providers: [
+      providers: [ { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
         { provide: AuthService, useValue: mockAuth },
         { provide: PersonnelApiService, useValue: mockPersonnelApi },
         { provide: ToastService, useValue: mockToast },

@@ -6998,7 +6998,7 @@ test(personnel): role-policy D payment and superuser fence tests
 
 ===
 
-[ ] Session 1 of 1 — Role-policy plan step E frontend UI: card «وقتی کسی برای مرحله نیست» in the company workflow tab, settled-outside status labels, superuser view-only buttons, DOM specs
+[DONE] [ ] Session 1 of 1 — Role-policy plan step E frontend UI: card «وقتی کسی برای مرحله نیست» in the company workflow tab, settled-outside status labels, superuser view-only buttons, DOM specs
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md

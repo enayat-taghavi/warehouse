@@ -19789,3 +19789,101 @@ test(personnel): role-policy D payment and superuser fence tests
 کاربر درخواست پیاده‌سازی آزمون‌های گام D از طرح سیاست نقش‌ها (Role-policy plan step D) را دارد که شامل آزمون‌های رد شدن مرحلهٔ پرداخت و تسویه بیرون از سامانه (`settled_outside`) در ۵ گردش کار مالی، بررسی قلاب‌های منع تسویه (`can_settle_outside`)، عدم تغییر مانده تنخواه، عملکرد حصار دسترسی نوشتن مدیر کل (`superuser write fence`)، د...
 
 ---
+
+### Task 1 of 1 — 2026-11-03 06:25:30
+- **Status:** DONE
+- **Conversation:** `71ed554a-1afc-49ea-ab90-073f2ba5f943`
+- **Steps:** 682
+- **Tokens:** 1137763
+- **Duration:** 42m 49s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/9 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 1c0feb03 --no-skip --max-failed 0 --include "src/app/modules/common/components/operations/companies/company-workflow-tab/*.spec.ts" --include "src/app/shared/components/status-badge/*.spec.ts" --include "src/app/modules/accounting/components/finance/**/*.spec.ts"`
+  - verify round 1: 9/9 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Role-policy plan step E frontend UI: card «وقتی کسی برای مرحله نیست» in the company workflow tab, settled-outside status labels, superuser view-only buttons, DOM specs
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 7 apply. All user-facing text is Persian, exactly as given below.
+- Edit only files under: `frontend/src/app/modules/common/components/operations/companies/company-workflow-tab/`, `frontend/src/app/modules/accounting/components/`, `frontend/src/app/shared/components/status-badge/`, `frontend/src/app/shared/components/workflow-history/` (template only). Never edit `frontend/src/app/core/**`, any backend file, or any migration.
+- Do NOT change the TypeScript logic already written in `company-workflow-tab.component.ts` (methods `loadPolicies`, `applyPolicies`, `draftFromLevel`, `valuesFromDraft`, `draftFor`, `workflowPolicy`, `toggleWorkflowPolicy`, `setRoleAction`, `setNotifyMode`, `toggleNotifyUser`, `sourceLabel`, `actionLabel`, `lockReason`, `stepSkipNote`, `previewMessage`, `previewSamples`, `savePolicy`, `resetWorkflowPolicy`, `runConfirmed`, `confirmPreview`). Only bind to them from the template. You may add small template-only getters if strictly needed.
+- Never remove or weaken an existing `it(...)` or `expect(...)` in any spec. Only add new ones.
+- New inline `<svg>` is forbidden: use `<svg appIcon="name" ...>` with an icon that already exists in `frontend/src/app/shared/icons/` (guardian 52). Use `lock` for locked steps if it exists in the registry; otherwise `shield-check`.
+- Run every command in the foreground and wait until it finishes. Never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session: never touch or stage them.
+- Never run `prettier --write`. Do not reformat unrelated lines.
+
+2. Context (read these exact ranges, nothing broader):
+- `frontend/src/app/core/models/workflow.model.ts`: the block from `// ─── سیاست «وقتی کسی برای مرحله نیست»` to `WorkflowPolicyStaleError` (types `WorkflowCompanyPolicies`, `WorkflowPolicyLevel`, `WorkflowPolicyWorkflow`, `WorkflowPolicyStep`, `WorkflowPolicyRole`).
+- `frontend/src/app/modules/common/components/operations/companies/company-workflow-tab/company-workflow-tab.component.ts` (whole file, about 520 lines) and `.html` (whole file) and `.spec.ts` (whole file; the policy logic specs are already there).
+- `frontend/src/app/core/services/permission.service.ts` lines 75-95 (`canWriteDocuments` computed signal: false for the system superuser).
+- `frontend/src/app/shared/components/status-badge/status-badge.component.ts` lines 1-80.
+- Status label maps (each exact place below; read 15 lines around each):
+  - `frontend/src/app/modules/accounting/components/finance/invoice-preview-modal/invoice-preview-modal.component.ts` around lines 165-210 (two `switch` blocks with `case 'paid':`).
+  - `frontend/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.ts` around lines 1590-1630 (two `switch` blocks with `case 'paid':`) and line 111 (sub-tab list).
+  - `frontend/src/app/modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.ts` lines 688-705 (two label maps with `paid:` and `approved:`).
+  - `frontend/src/app/modules/accounting/components/finance/employee/employee-attendance/employee-attendance.ts` lines 110-122 (payroll row map with `READY_TO_PAY` and `PAID`).
+  - `frontend/src/app/modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.ts` lines 180-195 (`case 'READY_TO_PAY':` / `case 'PAID':`).
+  - `frontend/src/app/modules/accounting/components/finance/treasurer/treasurer-invoices/treasurer-invoices.ts` line 238.
+
+3. Definitions:
+- Levels: "company default" = key `''` (`companyPolicyKey`), draft `companyDraft`, data `policies.company_default`. "Workflow level" = `policies.workflows[i]`, draft `workflowDrafts[wf.key]`.
+- Per role choice values: `'skip'` = «رد شود», `'wait'` = «منتظر بماند», `null` = inherit. Inherit label: on the company level «پیش‌فرض سامانه»; on a workflow level «مثل پیش‌فرض شرکت». Next to the inherit option show the inherited effective value in parentheses using `actionLabel(role.effective)` (for example «مثل پیش‌فرض شرکت (رد شود)»).
+- Creator toggle «ایجادکننده می‌تواند سند خودش را تأیید کند», three states via a small select or radio group: «بله» (`true`), «خیر» (`false`), inherit (`null`, same inherit labels as above). Help text: «اگر «بله» باشد، کسی که سند را ثبت کرده در مرحله‌های تأیید و بررسی همان سند هم کار را می‌گیرد. مدیر کل سامانه هرگز سند را تأیید نمی‌کند.»
+- Wait notice recipients «گیرندهٔ خبر انتظار»: `'role_assigners'` = «تعیین‌کنندگان نقش», `'users'` = «کاربران انتخاب‌شده», `null` = inherit. When `'users'`, show a checkbox list of `policies.notify_candidates` (id, name) bound with `toggleNotifyUser(key, c.id)` and checked when `draft.notifyUserIds.includes(c.id)`. Empty list text: «کاربر فعالی در این شرکت نیست».
+- Badges per workflow row: `wf.has_own_row` true = «تنظیم جدا» (indigo), false = «پیش‌فرض شرکت» (slate).
+- Locked step (`step.locked` truthy): show `appIcon` lock + `lockReason(step)` text, no radio for it. Payment step note: `stepSkipNote(step)` when not empty (emerald small text).
+- Busy state: buttons of a level are disabled and show busy while `savingPolicyKey === key`; while `savingPolicyKey !== null` every save/reset button is disabled.
+- Errors: `policyFormErrors[key]` shown under that level with `role="alert"` (rose small text). `policyError` (load error) shown at the top of the card. `policyLoading` shows a small «در حال بارگذاری...» line.
+- Settled-outside status: invoice/petty charge/petty statement status value `'settled_outside'`, payroll row status `'SETTLED_OUTSIDE'`, label exactly «تأییدشده، پرداخت بیرون از سامانه», color emerald/teal like the `paid` badge in the same map (it is a final state).
+
+4. Task:
+4-1. In `company-workflow-tab.component.html`, insert a new card between card 1 (comment `<!-- کارت ۱`) and card 2 (comment `<!-- کارت ۲`), with the same card container classes as card 1 and `data-testid="policy-card"`:
+- Header: `appIcon` (an existing icon such as `users` or `shield-check`) + title «وقتی کسی برای مرحله نیست» + one-line help «اگر کسی نقش یک مرحله را نداشته باشد، آن مرحله رد شود یا منتظر بماند.»
+- Section «پیش‌فرض شرکت» (`data-testid="policy-company"`): one row per `policies.company_default.roles` (label `role.role_title_fa`, radio group with the three choices of section 3, `name` unique per role, bound with `(change)="setRoleAction(companyPolicyKey, role.role, value)"` and `[checked]` from `companyDraft.roleActions[role.role]`); creator choice bound to `companyDraft.creatorMayApproveOwn`; notify choice with `setNotifyMode(companyPolicyKey, mode)`; error line; save button `appAction="save" display="label" label="ذخیره" size="sm" (click)="savePolicy(companyPolicyKey)" [busy]="savingPolicyKey === companyPolicyKey"`.
+- Section «گردش‌ها» (`data-testid="policy-workflows"`): one row per `policies.workflows` (`data-testid="policy-wf-{{wf.key}}"`) with title `wf.title_fa`, the badge of section 3, and a toggle button (label «ویرایش» / «بستن», icon `chevron-down` or an existing equivalent, `aria-expanded`) calling `toggleWorkflowPolicy(wf.key)`. When `expandedWorkflowKey === wf.key`, show: the role rows for `wf.roles` (same three choices, inherit = «مثل پیش‌فرض شرکت»), the step list `wf.steps` (step title, role title, effective `actionLabel(step.effective)`, `sourceLabel(step.source)`, lock reason or payment note), creator choice and notify choice for `workflowDrafts[wf.key]`, error line, the save button `(click)="savePolicy(wf.key)"`, and when `wf.has_own_row` a secondary button «برگشت به پیش‌فرض شرکت» `(click)="resetWorkflowPolicy(wf.key)"`.
+- Follow the responsive rules of `.claude/skills/design-system/SKILL.md` (icon + short label on desktop; touch targets ≥ 40×40px for icon-only; Persian `title` and `aria-label` on icon buttons; radio groups inside `<fieldset>` with a `<legend>`).
+4-2. Add `settled_outside` (and `SETTLED_OUTSIDE` for payroll rows) with the exact label of section 3 to: `status-badge.component.ts` map, and every label map / `switch` listed in section 2 (in a `switch` add a `case` next to `case 'paid':` / `case 'PAID':` returning the label or the same color class as paid). In `employee-invoices.ts` do not add a new sub-tab.
+4-3. Superuser view-only buttons: in these accounting pages hide document write buttons (new/create, edit, submit/send, approve, return, reject, pay, refer) when `!perm.canWriteDocuments()`; inject `PermissionService` (`frontend/src/app/core/services/permission.service.ts`) as `protected perm = inject(PermissionService)` if the component does not have it yet. Pages: `finance/employee/employee-invoices`, `finance/employee/employee-petty-cash`, `finance/treasurer/treasurer-invoices`, `finance/treasurer/treasurer-disbursements`, `finance/accountant/accountant-invoices`, `finance/accountant/accountant-petty-cash`. Wrap only the button elements (or their existing `*ngIf` condition with `&& perm.canWriteDocuments()`); never remove a button, a handler, or a closing tag (guardian 56). Settings pages are not touched.
+4-4. DOM specs (add to `company-workflow-tab.component.spec.ts`, using the existing mocks `samplePolicies` / `samplePreview`; after `component.ngOnInit(); fixture.detectChanges(); await fixture.whenStable();`):
+- `policy card renders company roles and workflow badges` (title text «وقتی کسی برای مرحله نیست», two company role rows, «تنظیم جدا» badge for `expense_invoice`).
+- `expanding a workflow shows its steps and the reset button` (click the toggle, then «بررسی حسابدار» and «برگشت به پیش‌فرض شرکت» are present).
+- `choosing «رد شود» updates the company draft` (change the accountant/treasurer radio, `component.companyDraft.roleActions['treasurer']` is `'skip'`).
+- `users notify mode lists notify candidates` (set workflow notify to users, «کاربر هفت» checkbox is checked).
+- `locked step shows the lock reason` (use a copy of `samplePolicies` with `locked: 'wait'` on the step; text of `lockReason` is rendered and no radio exists for it).
+- `save button calls savePolicy for the company level` (spy on `component.savePolicy`, click, called with `''`).
+Add one spec to `status-badge` spec file if it exists (or create `status-badge.component.spec.ts` next to it, same style as other DOM specs): `settled_outside shows the outside-payment label`.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Frontend tests: create a temporary tsconfig `frontend/tsconfig.rpEtmp.json` that extends `./tsconfig.spec.json` and includes only `src/**/*.d.ts` and the spec files you touch, then from `frontend` run `npx ng test --watch=false --ts-config tsconfig.rpEtmp.json --include="src/app/modules/common/components/operations/companies/company-workflow-tab/*.spec.ts" --include="src/app/shared/components/status-badge/*.spec.ts"` (at most 6 runs). Delete the temporary tsconfig before the commit.
+- Type check: from `frontend`, `npx tsc -p tsconfig.app.json --noEmit` must exit 0.
+- Guardians from the repository root: `python scripts/e2e/guardian_52_icon_registry.py`, `python scripts/e2e/guardian_56_change_integrity.py --base HEAD~0 --head HEAD` after your commit is not possible, so before committing run `python scripts/e2e/guardian_57_front_module_fence.py` and `python scripts/e2e/guardian_52_icon_registry.py`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: specs pass, type check passes, guardians 52 and 57 pass, the temporary tsconfig is deleted, and `git status --short` shows only your changed files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+feat(frontend): role-policy E policy card, settled-outside labels, superuser view-only buttons
+- Short English report: files changed, specs added, test results, any page where a write button could not be found. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+در حال اجرای آزمون‌های تطبیقی `ng-test-compare` برای اعتبارسنجی تمام آزمون‌های مالی و برطرف شدن خطای تزریق `PermissionService`...
+</div>
+<div dir="rtl" align="right">
+
+### گام اول: توضیح سادهٔ علت خطا و رفع آن
+در دور بررسی ابزار تأیید (`ng-test-compare`)، ۵۲ آزمون در کامپوننت‌های مالی با خطاهای زیر شکست خورده بودند:
+- `TypeError: this.auth.isSuperuser is not a function`
+- `TypeError: this.auth.user is not a function`
+
+**ریشهٔ مشکل:**
+آزمون‌های واحد قدیمی در ماژول مالی هنگام تنظیم تست‌بد (`TestBed.configureTestingModule`) یک شیء ماک ناقص برای `AuthService` ارسال کرده بودند (فاقد متدهای `isSuperuser` و `user`). وقتی `PermissionService` در این ۶ کامپوننت تزریق شد، ...
+
+---

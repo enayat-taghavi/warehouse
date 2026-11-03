@@ -7,6 +7,22 @@ import { buildExpenseHeadOptions } from '../expense-head-options';
 import { EmployeeInvoicesHubComponent } from './employee-invoices/employee-invoices';
 import { EmployeePettyCashHubComponent } from './employee-petty-cash/employee-petty-cash';
 import { ExpenseHead, ProjectSection } from '../../../models/personnel.model';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('Expense Head Selector & Form Integration Specs (Release v1 step 3.4-c)', () => {
   describe('buildExpenseHeadOptions', () => {
@@ -73,7 +89,7 @@ describe('Expense Head Selector & Form Integration Specs (Release v1 step 3.4-c)
       mockRouter = { navigate: vi.fn() };
       mockConfirm = { open: vi.fn().mockResolvedValue(true) };
 
-      component = new EmployeeInvoicesHubComponent(
+      component = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -83,7 +99,7 @@ describe('Expense Head Selector & Form Integration Specs (Release v1 step 3.4-c)
         undefined,
         undefined,
         mockConfirm
-      );
+      ));
 
       component.ngOnInit();
       component.selectedSectionId = 10;
@@ -179,14 +195,14 @@ describe('Expense Head Selector & Form Integration Specs (Release v1 step 3.4-c)
       mockRoute = { queryParams: of({}) };
       mockRouter = { navigate: vi.fn() };
 
-      component = new EmployeePettyCashHubComponent(
+      component = __inCtx(() => new EmployeePettyCashHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
         mockCdr,
         mockRoute,
         mockRouter
-      );
+      ));
 
       component.ngOnInit();
       component.selectedSectionId = 10;

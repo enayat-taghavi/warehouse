@@ -11,6 +11,22 @@ import {
   ProjectSection
 } from '../../../../models/personnel.model';
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('EmployeePettyCashHubComponent 3.6-d', () => {
   let component: EmployeePettyCashHubComponent;
@@ -178,14 +194,14 @@ describe('EmployeePettyCashHubComponent 3.6-d', () => {
       navigate: vi.fn()
     };
 
-    component = new EmployeePettyCashHubComponent(
+    component = __inCtx(() => new EmployeePettyCashHubComponent(
       mockAuth,
       mockPersonnelApi,
       mockToast,
       mockCdr,
       mockRoute,
       mockRouter
-    );
+    ));
   });
 
   it('a) charge request: sets amount, submits charge, calls requestPettyCashCharge once, and shows success toast', () => {
@@ -385,14 +401,14 @@ describe('EmployeePettyCashHubComponent 3.6-d', () => {
       ...mockPersonnelApi,
       getPettyCashTransactions: vi.fn().mockReturnValue(txSubject.asObservable())
     };
-    const chargeComponent = new EmployeePettyCashHubComponent(
+    const chargeComponent = __inCtx(() => new EmployeePettyCashHubComponent(
       mockAuth,
       mockApiForCharge,
       mockToast,
       mockCdr,
       mockRouteCharge,
       mockRouter
-    );
+    ));
     chargeComponent.ngOnInit();
     expect(chargeComponent.activeView).toBe('charges');
     expect(chargeComponent.detailKind).toBe('petty_cash_charge');

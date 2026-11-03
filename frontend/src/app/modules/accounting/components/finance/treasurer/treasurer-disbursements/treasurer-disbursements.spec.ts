@@ -3,6 +3,22 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 import { TreasurerDisbursementsComponent } from './treasurer-disbursements';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('TreasurerDisbursementsComponent — قابلیت‌های منتقل‌شده از کارتابل خزانه‌داری قدیمی', () => {
   let component: TreasurerDisbursementsComponent;
@@ -40,12 +56,12 @@ describe('TreasurerDisbursementsComponent — قابلیت‌های منتقل�
     (window.URL as any).createObjectURL = vi.fn().mockReturnValue('blob:x');
     (window.URL as any).revokeObjectURL = vi.fn();
 
-    component = new TreasurerDisbursementsComponent(
+    component = __inCtx(() => new TreasurerDisbursementsComponent(
       {} as any, {} as any, mockToast, mockPersonnelApi,
       { navigate: vi.fn() } as any,
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any
-    );
+    ));
     component.refreshData();
   });
 

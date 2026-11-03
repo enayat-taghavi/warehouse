@@ -4,6 +4,22 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EmployeeInvoicesHubComponent } from './employee-invoices';
 import { of, Subject } from 'rxjs';
 import { ExpenseInvoice, Counterparty, ProjectSection } from '../../../../models/personnel.model';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { PermissionService } from '../../../../../../core/services/permission.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
+
+function __inCtx<T>(factory: () => T): T {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+  });
+  return TestBed.runInInjectionContext(factory);
+}
+
 
 describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
   let component: EmployeeInvoicesHubComponent;
@@ -134,7 +150,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       submitExpenseInvoice: vi.fn().mockReturnValue(of({ ...sampleInvoices[0], status: 'pending_supervisor' }))
     };
 
-    component = new EmployeeInvoicesHubComponent(
+    component = __inCtx(() => new EmployeeInvoicesHubComponent(
       mockAuth,
       mockPersonnelApi,
       mockToast,
@@ -143,7 +159,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       mockRouter,
       undefined,
       mockTreasuryOrgApi
-    );
+    ));
   });
 
   describe('۱. مقداردهی اولیه و ایزولاسیون قلمرو بخش (Guardian G1: Section Isolation)', () => {
@@ -688,7 +704,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       const routeWithInvoice = {
         queryParams: of({ section_id: '10', invoice: '1' })
       };
-      const comp = new EmployeeInvoicesHubComponent(
+      const comp = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -698,7 +714,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         undefined,
         mockTreasuryApi,
         mockConfirm
-      );
+      ));
 
       comp.ngOnInit();
 
@@ -708,7 +724,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
     });
 
     it('جریان لغو فاکتور باید پس از تایید دیالوگ خطر، cancelExpenseInvoice را فراخوانی کرده و لیست را بروزرسانی کند', async () => {
-      const comp = new EmployeeInvoicesHubComponent(
+      const comp = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -718,7 +734,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         undefined,
         mockTreasuryApi,
         mockConfirm
-      );
+      ));
       comp.selectedInvoiceDetail = sampleInvoices[0];
 
       await comp.onCancelInvoice();
@@ -735,7 +751,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         error: { detail: 'امکان لغو وجود ندارد چون مرحله بعد اقدام شده است.' }
       })));
 
-      const comp = new EmployeeInvoicesHubComponent(
+      const comp = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -745,7 +761,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         undefined,
         mockTreasuryApi,
         mockConfirm
-      );
+      ));
       comp.selectedInvoiceDetail = sampleInvoices[0];
 
       await comp.onCancelInvoice();
@@ -757,7 +773,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
   describe('۸. انتخابگر «پروژه ◀ بخش» و پیش‌فرض همه بخش‌ها (Step C)', () => {
     it('(a) with route query params without section_id, ngOnInit() leaves selectedSectionId null and getExpenseInvoicesPage is called with exactly { page: 1, page_size: 25 }', () => {
       const route = { queryParams: of({}) } as any;
-      const comp = new EmployeeInvoicesHubComponent(
+      const comp = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -766,7 +782,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         mockRouter,
         undefined,
         mockTreasuryOrgApi
-      );
+      ));
       comp.ngOnInit();
       expect(comp.selectedSectionId).toBeNull();
       expect(mockTreasuryOrgApi.getExpenseInvoicesPage).toHaveBeenCalledWith({ page: 1, page_size: 25 });
@@ -781,7 +797,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       });
       try {
         const route = { queryParams: of({}) } as any;
-        const comp = new EmployeeInvoicesHubComponent(
+        const comp = __inCtx(() => new EmployeeInvoicesHubComponent(
           mockAuth,
           mockPersonnelApi,
           mockToast,
@@ -790,7 +806,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
           mockRouter,
           undefined,
           mockTreasuryOrgApi
-        );
+        ));
         comp.ngOnInit();
         expect(comp.selectedSectionId).toBeNull();
         comp.openNewInvoiceModal();
@@ -810,7 +826,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       });
       try {
         const route = { queryParams: of({}) } as any;
-        const comp = new EmployeeInvoicesHubComponent(
+        const comp = __inCtx(() => new EmployeeInvoicesHubComponent(
           mockAuth,
           mockPersonnelApi,
           mockToast,
@@ -819,7 +835,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
           mockRouter,
           undefined,
           mockTreasuryOrgApi
-        );
+        ));
         comp.ngOnInit();
         expect(comp.selectedSectionId).toBeNull();
         comp.openNewInvoiceModal();
@@ -862,7 +878,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
       };
       mockTreasuryOrgApi.getExpenseInvoice = vi.fn().mockReturnValue(of({ id: 5, invoice_number: 'INV-5' }));
 
-      liveComponent = new EmployeeInvoicesHubComponent(
+      liveComponent = __inCtx(() => new EmployeeInvoicesHubComponent(
         mockAuth,
         mockPersonnelApi,
         mockToast,
@@ -873,7 +889,7 @@ describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
         mockTreasuryOrgApi,
         undefined,
         mockWs
-      );
+      ));
     });
 
     it('(a) after ngOnInit(), emitting on the live subject calls getExpenseInvoicesPage once more', () => {
