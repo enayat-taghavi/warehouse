@@ -172,4 +172,48 @@ describe('PwaUpdateService', () => {
     // نباید مدال اتوماتیک تایید باز شده باشد
     expect(mockConfirmDialog.open).not.toHaveBeenCalled();
   });
+
+  it('در زمان بروزرسانی دستی، رویداد VERSION_DETECTED باید پیام دانلود را نشان داده و سرور را آفلاین نکند', async () => {
+    const net = NetworkStatusService.getInstance();
+    vi.spyOn(net, 'isBrowserOnline', 'get').mockReturnValue(true);
+    vi.spyOn(net, 'isServerUnreachable', 'get').mockReturnValue(false);
+    const reportSpy = vi.spyOn(net, 'reportServerUnreachable').mockImplementation(() => {});
+
+    mockSwUpdate.checkForUpdate.mockImplementation(async () => {
+      // شبیه‌سازی رویداد یافتن نسخه جدید و سپس آماده شدن
+      versionUpdates$.next({ type: 'VERSION_DETECTED', version: { hash: '2' } });
+      versionUpdates$.next({ type: 'VERSION_READY', currentVersion: { hash: '1' }, latestVersion: { hash: '2' } });
+      return true;
+    });
+
+    await service.checkAndApplyManualUpdate();
+
+    expect(reportSpy).not.toHaveBeenCalled();
+    expect(mockToast.show).toHaveBeenCalledWith(
+      'info',
+      expect.stringContaining('در حال دریافت بسته‌ها')
+    );
+    expect(mockSwUpdate.activateUpdate).toHaveBeenCalled();
+  });
+
+  it('در صورت بروز خطا پس از VERSION_DETECTED، نباید سرور را آفلاین گزارش کند', async () => {
+    const net = NetworkStatusService.getInstance();
+    vi.spyOn(net, 'isBrowserOnline', 'get').mockReturnValue(true);
+    vi.spyOn(net, 'isServerUnreachable', 'get').mockReturnValue(false);
+    const reportSpy = vi.spyOn(net, 'reportServerUnreachable').mockImplementation(() => {});
+
+    mockSwUpdate.checkForUpdate.mockImplementation(async () => {
+      versionUpdates$.next({ type: 'VERSION_DETECTED', version: { hash: '2' } });
+      versionUpdates$.next({ type: 'VERSION_INSTALLATION_FAILED', version: { hash: '2' }, error: 'Fetch failed' });
+      return false;
+    });
+
+    await service.checkAndApplyManualUpdate();
+
+    expect(reportSpy).not.toHaveBeenCalled();
+    expect(mockToast.show).toHaveBeenCalledWith(
+      'error',
+      expect.stringContaining('دریافت برخی از فایل‌های نسخه جدید با اختلال مواجه شد')
+    );
+  });
 });

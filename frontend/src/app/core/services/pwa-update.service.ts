@@ -41,11 +41,6 @@ export class PwaUpdateService implements OnDestroy {
     const versionSub = this.swUpdate.versionUpdates
       .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
       .subscribe(async (evt) => {
-        // اگر بروزرسانی دستی در جریان است، مدال مزاحم را باز نکن (چون خودش هندل می‌کند)
-        if (this.isManualUpdateInProgress) {
-          return;
-        }
-
         // به‌جای مدال، نوار ماندگار پایین صفحه (UpdateBarComponent) این وضعیت را نشان می‌دهد
         this.ngZone.run(() => {
           this.updateReady.set(true);
@@ -185,20 +180,73 @@ export class PwaUpdateService implements OnDestroy {
     this.isChecking.set(true);
     this.isManualUpdateInProgress = true;
 
-    // سقف زمانی ۱۰ ثانیه جهت پیشگیری از انجماد در شرایط قطعی نیمه‌کاره شبکه (Lie-Fi)
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT_SERVER_UNRESPONSIVE')), 10000)
-    );
+    let versionDetected = false;
+    let versionReadyReceived = false;
+    let versionInstallFailed = false;
+    let onVersionDetected: (() => void) | null = null;
+
+    // شنونده رویدادهای Service Worker در طول استعلام و دریافت نسخه
+    const updateEventsSub = this.swUpdate.versionUpdates.subscribe((evt) => {
+      if (evt.type === 'VERSION_DETECTED') {
+        versionDetected = true;
+        this.toast.show('info', 'نسخه جدید برنامه یافت شد؛ در حال دریافت بسته‌ها و فایل‌های به‌روزرسانی...');
+        if (onVersionDetected) {
+          onVersionDetected();
+        }
+      } else if (evt.type === 'VERSION_READY') {
+        versionReadyReceived = true;
+        this.ngZone.run(() => {
+          this.updateReady.set(true);
+          this.updateDismissed.set(false);
+        });
+      } else if (evt.type === 'VERSION_INSTALLATION_FAILED') {
+        versionInstallFailed = true;
+      }
+    });
 
     try {
       this.toast.show('info', 'در حال استعلام آخرین نسخه برنامه از سرور...');
 
-      const updateFound = await Promise.race([
-        this.swUpdate.checkForUpdate(),
-        timeoutPromise
-      ]);
+      let manifestTimer: ReturnType<typeof setTimeout> | null = null;
+      let downloadTimer: ReturnType<typeof setTimeout> | null = null;
 
-      if (updateFound) {
+      const checkPromise = this.swUpdate.checkForUpdate();
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        // مرحله ۱: سقف ۱۵ ثانیه برای استعلام manifest اولیه (جلوگیری از انجماد Lie-Fi در برقراری ارتباط)
+        manifestTimer = setTimeout(() => {
+          reject(new Error('TIMEOUT_SERVER_UNRESPONSIVE'));
+        }, 15000);
+
+        // مرحله ۲: به محض دریافت رویداد VERSION_DETECTED، تایمر استعلام لغو و سقف ۹۰ ثانیه برای دانلود فایل‌ها اعمال می‌شود
+        const startDownloadTimer = () => {
+          if (manifestTimer) {
+            clearTimeout(manifestTimer);
+            manifestTimer = null;
+          }
+          if (!downloadTimer) {
+            downloadTimer = setTimeout(() => {
+              reject(new Error('TIMEOUT_DOWNLOAD_ASSETS'));
+            }, 90000);
+          }
+        };
+
+        if (versionDetected) {
+          startDownloadTimer();
+        } else {
+          onVersionDetected = startDownloadTimer;
+        }
+      });
+
+      const updateFound = await Promise.race([
+        checkPromise,
+        timeoutPromise
+      ]).finally(() => {
+        if (manifestTimer) clearTimeout(manifestTimer);
+        if (downloadTimer) clearTimeout(downloadTimer);
+      });
+
+      if (updateFound || versionReadyReceived || this.updateReady()) {
         this.toast.show('info', 'نسخه جدید دریافت شد! در حال فعال‌سازی دارایی‌ها...');
         try {
           await this.swUpdate.activateUpdate();
@@ -212,25 +260,42 @@ export class PwaUpdateService implements OnDestroy {
         return;
       }
 
+      if (versionInstallFailed) {
+        this.toast.show('error', 'دریافت برخی از فایل‌های نسخه جدید با اختلال مواجه شد. لطفاً بعداً دوباره امتحان کنید.');
+        return;
+      }
+
       this.toast.show('success', 'شما هم‌اکنون در حال استفاده از آخرین نسخه برنامه هستید.');
     } catch (err: any) {
       console.warn('[PwaUpdate] خطا در بررسی دستی نسخه:', err);
       const errMsg = String(err?.message || err || '');
+
+      if (errMsg.includes('TIMEOUT_DOWNLOAD_ASSETS')) {
+        this.toast.show(
+          'warning',
+          'دانلود بسته‌های نسخه جدید به دلیل کندی شبکه زمان‌بر شد؛ دانلود در پس‌زمینه ادامه دارد و پس از پایان، پیام به‌روزرسانی فعال خواهد شد.'
+        );
+        return;
+      }
+
       const isCloudflareOrNetErr =
-        /50[234]|52[0-9]|530|Failed to fetch|NetworkError|TIMEOUT|Failed to update a ServiceWorker|bad HTTP response/i.test(
+        /50[234]|52[0-9]|530|Failed to fetch|NetworkError|TIMEOUT_SERVER_UNRESPONSIVE|Failed to update a ServiceWorker|bad HTTP response/i.test(
           errMsg
         );
 
-      if (isCloudflareOrNetErr) {
+      if (isCloudflareOrNetErr && !versionDetected) {
         network.reportServerUnreachable();
         this.toast.show(
           'warning',
           'سرور اصلی موقتاً در دسترس نیست (کد ۵xx یا خطای شبکه). نسخه محلی برنامه فعال و پایدار است.'
         );
+      } else if (versionDetected) {
+        this.toast.show('error', 'خطا در تکمیل دانلود نسخه جدید. نسخه محلی بدون اختلال به کار خود ادامه می‌دهد.');
       } else {
         this.toast.show('error', 'عدم امکان بررسی نسخه جدید: ' + (err?.message || 'پاسخی از سرور دریافت نشد'));
       }
     } finally {
+      updateEventsSub.unsubscribe();
       this.isChecking.set(false);
       this.isManualUpdateInProgress = false;
     }

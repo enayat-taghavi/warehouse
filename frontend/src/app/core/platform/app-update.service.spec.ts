@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { AppUpdateService } from './app-update.service';
 import { PwaUpdateService } from '../services/pwa-update.service';
 import { liveUpdateController } from './live-update';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
 
 describe('AppUpdateService', () => {
   let mockPwaUpdate: any;
@@ -30,6 +35,7 @@ describe('AppUpdateService', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     delete (globalThis as any).Capacitor;
+    TestBed.resetTestingModule();
   });
 
   it('1. should delegate init call to PwaUpdateService', () => {
