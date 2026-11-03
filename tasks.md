@@ -7429,7 +7429,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 
 ===
 
-[ ] Session 1 of 2 — Release main on the local app environment for the mobile navigation follow-up (chat hides the bottom bar, full-page notifications, notification prompt above the bottom bar): backup and patched frontend build only; the runner checks the release
+[DONE] [ ] Session 1 of 2 — Release main on the local app environment for the mobile navigation follow-up (chat hides the bottom bar, full-page notifications, notification prompt above the bottom bar): backup and patched frontend build only; the runner checks the release
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md
@@ -7462,7 +7462,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 
 ===
 
-[ ] Session 2 of 2 — Mobile navigation follow-up visual check on app.farsalish.ir at 375x812 and 1440x900 with a ready Playwright script, using temporary QA users that are deleted at the end
+[DONE] [ ] Session 2 of 2 — Mobile navigation follow-up visual check on app.farsalish.ir at 375x812 and 1440x900 with a ready Playwright script, using temporary QA users that are deleted at the end
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md
