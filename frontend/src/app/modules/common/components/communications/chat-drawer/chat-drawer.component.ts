@@ -909,7 +909,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       const name = err?.name;
       if (name === 'NotAllowedError' || name === 'SecurityError') {
         if (isNativePlatform()) {
-          this.toast.error('اجازهٔ میکروفون داده نشده. از تنظیمات گوشی › برنامهها › کومنیج › مجوزها، میکروفون را روشن کنید.');
+          this.toast.error('اجازهٔ میکروفون داده نشده. از تنظیمات گوشی › برنامه‌ها › کومنیج › مجوزها، میکروفون را روشن کنید.');
         } else {
           this.toast.error('اجازهٔ میکروفون داده نشده. آن را از تنظیمات سایت در مرورگر روشن کنید.');
         }
@@ -1534,9 +1534,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         return url;
       })
       .catch((err) => {
-        const status = typeof err?.status === 'number' ? err.status : (typeof err === 'number' ? err : undefined);
-        const unreachable = (typeof status === 'number' && isServerUnreachable(status)) || (isServerUnreachable as any)(err) === true;
-        if (isAudio && unreachable) {
+        if (isAudio && typeof err?.status === 'number' && isServerUnreachable(err.status)) {
           throw new Error('OFFLINE_AUDIO_NOT_CACHED');
         }
         throw err;
