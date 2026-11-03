@@ -1,7 +1,7 @@
 """
 کلیدهای تنظیم شرکت ماژول نامه (ن۱۲ طرح plan_letters.md)؛ نوشتن فقط با perm_letters_settings در همان شرکت.
 
-سربرگ و مهر شناسهٔ پیوست تصویرند (پیوست با entity_kind='letters.secretariat'، همیشه روی سرور)؛ ۰ یعنی «تنظیم نشده».
+سربرگ و مهر شناسهٔ پیوست تصویرند (پیوست با entity_kind='letters_secretariat'، همیشه روی سرور)؛ ۰ یعنی «تنظیم نشده».
 سنجش اینکه شناسه واقعاً پیوست همان شرکت است در ل-ح انجام می‌شود.
 """
 from settings_core.company_settings import CompanySettingSpec
