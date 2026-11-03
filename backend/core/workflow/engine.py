@@ -187,12 +187,16 @@ def _plan_skips(spec, amount, creator_rank, thresholds, ranks, obj=None) -> dict
         if step.key in by_threshold:
             plan[step.key] = SKIP_THRESHOLD
             continue
+        if step.assignees is not None:
+            # ل-۰: امضاکنندهٔ انتخابی با رتبهٔ ثبت‌کننده رد نمی‌شود (نقش مرحله فقط برچسب است)
+            continue
         rank = ranks.get(step.role) or 0
         if rank < creator_rank:
             plan[step.key] = SKIP_CREATOR_LEVEL
         elif rank == creator_rank:
             higher_later = any(
-                s.kind == APPROVE and s.key not in by_threshold and (ranks.get(s.role) or 0) > rank
+                s.kind == APPROVE and s.key not in by_threshold and s.assignees is None
+                and (ranks.get(s.role) or 0) > rank
                 for s in steps[i + 1:]
             )
             if higher_later:
@@ -236,12 +240,20 @@ def creator_may_act(spec, step, company_id, policy=None) -> bool:
     return bool(policy.creator_may_approve_own)
 
 
-def _compute_recipients(ctx, instance, step, today=None):
+def _compute_recipients(ctx, instance, step, today=None, target=None):
     """
     (دریافت‌کنندگان اصلی، ردیف‌های جانشین، دارندگان نقش) مرحله برای این نمونه؛ همان قاعدهٔ مسیر دسته‌ای
     (compute_recipients_batch با یک کار).
+    ل-۰: مرحلهٔ assignees فقط کاربر انتخاب‌شدهٔ کار (target) را می‌گیرد، اگر فعال و عضو فعال شرکت نمونه باشد (همان
+    قاعدهٔ کار ارجاع، با جانشین طبق allow_substitute)؛ بی target هیچ گیرنده‌ای ندارد و هرگز به دارندگان نقش نمی‌رسد.
     """
-    item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
+    if step.assignees is not None:
+        if not target:
+            return set(), [], set()
+        item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id,
+                target, getattr(instance, "allow_substitute", True))
+        return compute_recipients_batch([item], today=today)[0]
+    item =(0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
             getattr(instance, "allow_substitute", True),
             bool(step.creator_may_act or (ctx.company_id and ctx.spec is not None
                                           and ctx.policy.creator_may_approve_own)))
@@ -302,9 +314,43 @@ def emit_waiting(instance, task, policy=None) -> None:
         events.emit(events.WAITING, instance, task, [], to_superusers=True)
 
 
-def _open_task(ctx, instance, step, principals, subs, now, *, forced=False, wait_reason=''):
+def pending_assignees(ctx, instance, step) -> list:
+    """
+    ل-۰: کاربران انتخاب‌شدهٔ مرحلهٔ assignees که در دور جاری گردش (کارهای باز شده از submitted_at) هنوز کارشان
+    انجام یا رد نشده، به ترتیب قلاب. برای مرحلهٔ نقش‌محور [].
+    """
+    if step is None or step.assignees is None:
+        return []
+    chosen = []
+    for uid in step.assignees(ctx.obj) or ():
+        uid = getattr(uid, 'pk', uid)
+        if uid and int(uid) not in chosen:
+            chosen.append(int(uid))
+    if not chosen:
+        return []
+    done = WorkflowTask.objects.filter(
+        instance=instance, track=WorkflowTask.TRACK_STEP, step_key=step.key, is_open=False,
+        outcome__in=(WorkflowTask.ACTED, WorkflowTask.SKIPPED), target_user_id__isnull=False,
+    )
+    if instance.submitted_at is not None:
+        done = done.filter(opened_at__gte=instance.submitted_at)
+    done = set(done.values_list('target_user_id', flat=True))
+    return [uid for uid in chosen if uid not in done]
+
+
+def _next_index(ctx, instance, step_key) -> int:
+    """نمایهٔ شروع _advance پس از بسته شدن کار این مرحله: همان مرحله اگر امضاکنندهٔ انتخابی دیگری مانده (ل-۰)."""
+    keys = instance.step_keys
+    if step_key not in keys:
+        return len(keys)
+    index = keys.index(step_key)
+    return index if pending_assignees(ctx, instance, ctx.spec.step(step_key)) else index + 1
+
+
+def _open_task(ctx, instance, step, principals, subs, now, *, forced=False, wait_reason='', target=None):
     task = WorkflowTask.objects.create(
         instance=instance, step_key=step.key, step_kind=step.kind, role=step.role, permission=step.permission,
+        target_user_id=target,
         revision=instance.revision, is_open=True, has_recipients=bool(principals), opened_at=now, forced=forced,
         wait_reason='' if principals else wait_reason, superuser_alerted_at=None if principals else now,
     )
@@ -323,7 +369,14 @@ def _enter_step(ctx, instance, step, now, force=False):
     can_settle_outside منع کند)؛ «منتظر بماند» کار را با wait_reason و خبر انتظار باز می‌کند.
     force: مرحله حتماً باز شود و کار forced است (هرگز خودکار رد نمی‌شود؛ ت۱۵ و open_at_step).
     """
-    principals, subs, holders = _compute_recipients(ctx, instance, step)
+    target = None
+    if step.assignees is not None:
+        # ل-۰: نفر بعدی فهرست انتخاب‌شده؛ فهرست خالی (یا همه انجام‌شده) یعنی رد شدن مرحله، مگر force
+        pending = pending_assignees(ctx, instance, step)
+        if not pending and not force:
+            return None, {'step': step.key, 'reason': SKIP_NO_RECIPIENT}
+        target = pending[0] if pending else None
+    principals, subs, holders = _compute_recipients(ctx, instance, step, target=target)
     if not principals and not force and ctx.policy.missing_action(step) == SKIP:
         if not step.payment:
             return None, {'step': step.key, 'reason': no_recipient_reason(instance, holders)}
@@ -331,7 +384,7 @@ def _enter_step(ctx, instance, step, now, force=False):
             return None, {'step': step.key, 'reason': SKIP_PAYMENT_OUTSIDE}
     instance.current_step = step.key
     task = _open_task(ctx, instance, step, principals, subs, now, forced=force,
-                      wait_reason=wait_reason_for(instance, holders))
+                      wait_reason=wait_reason_for(instance, holders), target=target)
     ctx.spec.on_state_change(ctx.obj, step.key, instance)
     return task, None
 
@@ -394,8 +447,7 @@ def skip_lost_task(ctx, instance, task, holders, now, from_step=None):
     instance.revision += 1
     reason = SKIP_PAYMENT_OUTSIDE if payment else no_recipient_reason(instance, holders)
     skipped = [{'step': step_key, 'reason': reason}]
-    keys = instance.step_keys
-    index = keys.index(step_key) + 1 if step_key in keys else len(keys)
+    index = _next_index(ctx, instance, step_key)
     new_task, to_step, arrival = _advance(ctx, instance, index, now, settled=payment)
     skipped.extend(arrival)
     _history(instance, WorkflowStep.AUTO, task=new_task, from_step=from_step or step_key, to_step=to_step,
@@ -450,7 +502,7 @@ def _ensure_current_version(instance, ctx, now=None) -> bool:
         if task is not None:
             task.step_kind, task.role, task.permission = step.kind, step.role, step.permission
             task.save(update_fields=['step_kind', 'role', 'permission'])
-            principals, subs, holders = _compute_recipients(ctx, instance, step)
+            principals, subs, holders = _compute_recipients(ctx, instance, step, target=task.target_user_id)
             if not principals and not task.forced and ctx.policy.missing_action(step) == SKIP:
                 # تنظیم «رد شود» روی مرحلهٔ نگه‌داشته؛ skip_lost_task نمونه را ذخیره می‌کند. قلاب
                 # can_settle_outside پیش از هر نوشتن منع می‌کند و کار منتظر می‌ماند.
@@ -612,10 +664,12 @@ def _authorize(user, instance, task, ctx, today):
     # ثبت‌کننده فقط در مرحلهٔ creator_may_act یا با تنظیم دوسطحی «تأیید سند خود» و فقط اگر خودش دریافت‌کنندهٔ اصلی
     # باشد. ثبت‌کننده هرگز جانشین کسی روی سند خودش نیست؛ ولی جانشینِ خودِ ثبت‌کننده (وقتی دریافت‌کنندهٔ اصلی است)
     # به جای او اقدام می‌کند، مثل هر دریافت‌کنندهٔ اصلی
-    own_step = creator_may_act(ctx.spec, step, ctx.company_id, ctx.policy if ctx.company_id else None)
+    # ل-۰: در مرحلهٔ assignees خودِ نفر انتخاب‌شده (حتی ثبت‌کننده) اقدام می‌کند
+    own_step = (step.assignees is not None and user.pk == task.target_user_id) or creator_may_act(
+        ctx.spec, step, ctx.company_id, ctx.policy if ctx.company_id else None)
     if instance.created_by_id and user.pk == instance.created_by_id and not own_step:
         raise WorkflowPermissionDenied('self_approval', 'ثبت‌کنندهٔ سند نمی‌تواند روی سند خودش اقدام کند', 403)
-    principals, subs, _holders = _compute_recipients(ctx, instance, step, today=today)
+    principals, subs, _holders = _compute_recipients(ctx, instance, step, today=today, target=task.target_user_id)
     if user.pk in principals:
         return False, None
     # جانشین: همان قاعدهٔ ردیف‌ها (لغونشده، شرکت نمونه یا همه، عضو شرکت نمونه) و بازهٔ امروز
@@ -791,7 +845,7 @@ def act(user, task, *, reason='', revision=None, obj=None):
         instance, task, ctx, (as_su, behalf) = _begin_action(user, task, revision, obj, ACT, reason, False)
         from_step = task.step_key
         _finish_task(instance, task, user, WorkflowTask.ACTED, now)
-        index = instance.step_keys.index(from_step) + 1
+        index = _next_index(ctx, instance, from_step)
         _new_task, to_step, arrival = _advance(ctx, instance, index, now)
         _history(instance, WorkflowStep.ACT, task=task, actor=user, on_behalf_of_id=behalf, as_superuser=as_su,
                  from_step=from_step, to_step=to_step, reason=reason, skipped=arrival, now=now)
