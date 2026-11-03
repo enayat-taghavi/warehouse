@@ -519,7 +519,7 @@
     - مهلت پیش‌فرض فقط برای ارجاع ریشه؛ ارجاع شاخه فقط مهلت صریح.
   - **تست‌ها** (با `WH_MODULES=warehouse,accounting,letters`):
     - ۱۵ تست تازه در `letters/tests/test_referral_le.py` (درخت و شاخه، دیدن پس از بستن کار، مهلت، ارجاع خودکار، بخشنامه و اعلان، بستن با بایگانی و ابطال، شرکت دیگر و غیرفعال، مدیر کل، رویداد زنده، جانشینِ نامهٔ محرمانه در ارسال اول و دوباره).
-    - `manage.py test letters`: ۸۶ تست سبز. `manage.py test workflow`: نتیجه در پایین.
+    - `manage.py test letters`: ۸۶ تست سبز. `manage.py test workflow`: ۲۸۲ تست سبز.
     - `manage.py check` سبز در پیش‌فرض، `accounting,letters` و `warehouse` (فقط هشدار Redis). `makemigrations --check --dry-run`: بی‌تغییر.
     - نگهبان‌های 29، 57 و 58 سبز.
     - خودبازبینی با فهرست `tenant-scope-reviewer` و `data-loss-reviewer`: یافتهٔ تأییدشده‌ای نبود (همهٔ مسیرها از `visible_letters`؛ گیرنده و بخش مخاطب فقط از شرکت نامه؛ هیچ حذف کار، نامه یا شماره؛ بی‌migration).
