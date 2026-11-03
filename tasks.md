@@ -7239,3 +7239,31 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
 
 6. Output and stop condition: a short English report with the backup filename and size, the migration check result, the build result (errors and warnings count), the patch script line and the full `workflow_policy_report` output. Write the report only after the build, the patch and the report command have finished. No commit. End the turn after the report.
+
+===
+
+[DONE] [ ] Session 1 of 1 — Restart the local app backend so the receipt signature setting (commits 370b1038 and 7fa64a4d, backend only) is live; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md tasks.md
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md tasks.md
+-->
+
+1. Critical rules:
+- Run every command in the foreground and wait until it finishes. Never end your turn while a command is still running.
+- Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` have uncommitted changes from another session: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`, `migrate`, `makemigrations`, any `manage.py test`, or a frontend build.
+
+2. Context: the last two commits changed only backend Python files and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task:
+- a) In `backend`, with `PYTHONUTF8=1`, run `.\venv\Scripts\python.exe manage.py check` and confirm it ends with `System check identified 1 issue (0 silenced).` or `no issues`.
+- b) In `backend`, with `PYTHONUTF8=1`, run `.\venv\Scripts\python.exe manage.py showmigrations --plan` and confirm that no line starts with `[ ]`. If any does, stop and report those lines; do not migrate.
+
+4. Tool policy: only the commands above and `git status --short`. If a command fails, read its output, do not repeat it unchanged, and report the exact error.
+
+5. Output and stop condition: a short English report with the result of a) and b) and the `git status --short` output. No commit. End the turn after the report.
