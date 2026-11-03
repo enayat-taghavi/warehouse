@@ -140,6 +140,8 @@ export interface FrontendModuleSpec {
 export interface ModuleNavItem {
   id: string;
   label: string;
+  /** نام مختصر برای نوار تبهای پایین موبایل؛ بدون آن همان label نمایش داده میشود */
+  shortLabel?: string;
   icon: string;
   permission: string;
   /** آیتم با داشتن هر یک از این مجوزها دیده می‌شود (به‌جای permission تنها) */
