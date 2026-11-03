@@ -7311,7 +7311,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 
 ===
 
-[ ] Session 1 of 1 — Mobile navigation phase 4: DOM specs for the shared mobile bottom nav and brand bar, the two shells (layout, operations-layout) and the chat drawer active-conversation signal (specs only, no production code)
+[x] Session 1 of 1 — Mobile navigation phase 4: DOM specs for the shared mobile bottom nav and brand bar, the two shells (layout, operations-layout) and the chat drawer active-conversation signal (specs only, no production code)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md

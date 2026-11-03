@@ -23,7 +23,7 @@
 
 ## فاز ۴: رفع تداخل نوارهای شناور پایین، تست‌های DOM و نگهبان‌ها
 - [x] تنظیم فاصلهٔ نوارهای شناور پایین صفحه در `employee-attendance.html` و `users.html` نسبت به نوار تب‌های پایین در موبایل
-- [ ] نوشتن و به‌روزرسانی تست‌های واحد DOM (Vitest) در `layout-modular.dom.spec.ts` و `operations-layout.dom.spec.ts`
+- [x] نوشتن و به‌روزرسانی تست‌های واحد DOM (Vitest) در `layout-modular.dom.spec.ts` و `operations-layout.dom.spec.ts`
 - [x] اجرای نگهبان‌های تغییر و ارگونومی (`guardian_56_change_integrity.py`، `guardian_52_icon_registry.py`، `guardian_55_clickable_ergonomics.py`)
 - [x] اجرای بیلد بدون خطای فرانت‌اند (`npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`)
 
