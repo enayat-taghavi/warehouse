@@ -176,8 +176,11 @@ def _apply(letter, data, user, links):
 
 
 def _keep_copy(letter, user, raw, reason):
-    """متن رسیده را در LetterDraftCopy نگه می‌دارد (ن۱۱)؛ اگر متنی نیامده باشد None."""
-    if not isinstance(raw, dict) or not any(f in raw for f in TEXT_FIELDS):
+    """متن رسیده را در LetterDraftCopy نگه می‌دارد (ن۱۱)؛ اگر متنی نیامده باشد None.
+
+    فقط برای نویسنده و هم‌نویسنده: بیننده‌ای که حق ویرایش ندارد نسخه در دید نویسنده نمی‌گذارد (403 می‌گیرد).
+    """
+    if not isinstance(raw, dict) or not any(f in raw for f in TEXT_FIELDS) or not access.is_editor(user, letter):
         return None
     subject = raw.get('subject', letter.subject)
     body = raw.get('body', letter.body)
@@ -349,6 +352,8 @@ class LetterDetailView(APIView):
         """نامهٔ در امضا، ثبت‌شده یا باطل: متن رسیده نسخهٔ ناهمگام می‌شود؛ بقیهٔ فیلدهای قفل 400؛ فقط پروژه آزاد."""
         locked = [f for f in data if f in LOCKED_FIELDS]
         if locked and set(locked) <= set(TEXT_FIELDS):
+            if not editor:
+                raise PermissionDenied('فقط نویسنده و هم‌نویسنده‌ها متن نامه را ویرایش می‌کنند.')
             return _conflict(letter, user, raw, 'not_draft')
         if locked:
             raise ValidationError({f: 'این نامه دیگر پیش‌نویس نیست و این بخش قفل است.' for f in locked})

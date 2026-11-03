@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 
 from contacts.models import ExternalParty
 
-from letters.models import Letter, LetterDraftCopy, LetterRecipient
+from letters.models import LETTER_ENTITY, Letter, LetterDraftCopy, LetterRecipient
 from letters.serializers import validate_body
 from letters.tests.test_access_lc import LettersBase
 
@@ -261,3 +261,31 @@ class NoNPlusOneTests(ApiBase):
 
     def test_list_query_count_is_constant(self):
         self.assertEqual(self._count(1), self._count(5))
+
+
+class ReviewFixesTests(ApiBase):
+    """یافته‌های بازبین دامنه در ادغام ل-ج."""
+
+    def test_superuser_cannot_attach_to_letter(self):
+        from platform_core.registry import can_attach
+        d = self.letter()
+        self.assertFalse(can_attach(self.fresh(self.admin), LETTER_ENTITY, d.pk))
+        self.assertTrue(can_attach(self.fresh(self.author), LETTER_ENTITY, d.pk))
+
+    def test_reader_patch_leaves_no_copy(self):
+        d = self.registered()
+        LetterRecipient.objects.create(letter=d, target_type=LetterRecipient.TARGET_USER, user=self.reader)
+        res = self.api(self.reader).patch(f'/api/letters/{d.pk}/', {'subject': 'spam', 'body': BODY}, format='json')
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(LetterDraftCopy.objects.filter(letter=d).exists())
+        # نویسنده: متن رسیده همچنان نسخهٔ ناهمگام می‌شود (ن۱۱)
+        res = self.api(self.author).patch(f'/api/letters/{d.pk}/', {'subject': 'late', 'body': BODY}, format='json')
+        self.assertEqual((res.status_code, res.json()['conflict_reason']), (200, 'not_draft'))
+        self.assertEqual(LetterDraftCopy.objects.get(letter=d).subject, 'late')
+
+    def test_masked_national_id_not_searchable(self):
+        ExternalParty.objects.create(company=self.co_a, kind=ExternalParty.KIND_PERSON, name='person',
+                                     national_id='0012345678', is_active=True)
+        params = {'company': self.co_a.pk, 'q': '00123'}
+        self.assertEqual(self.api(self.author).get('/api/letters/parties/', params).json(), [])
+        self.assertEqual(len(self.api(self.secretary).get('/api/letters/parties/', params).json()), 1)

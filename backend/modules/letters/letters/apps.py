@@ -26,6 +26,8 @@ class LettersConfig(AppConfig):
         # دیدن و پیوست (ن۹، ل-ج): True یا False صریح، تا سابقه و پیوست نامهٔ منع‌شده پنهان بماند
         contribute(f'can_view:{LETTER_ENTITY}', can_view_letter)
         contribute(f'can_attach:{LETTER_ENTITY}', can_attach_letter)
+        # مدیر کل پیوست نامه را هم عوض نمی‌کند (ق۷)؛ هسته برای مدیر کل پیش از قلاب can_attach تصمیم می‌گیرد
+        contribute('superuser_view_only_kinds', LETTER_ENTITY)
         contribute(f'company_of:{LETTER_ENTITY}', letter_company_id)
         contribute(f'is_locked:{LETTER_ENTITY}', letter_is_locked)
         contribute(f'is_confidential:{LETTER_ENTITY}', letter_is_confidential)

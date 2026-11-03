@@ -13,13 +13,19 @@ MAX_RESULTS = 50
 
 
 def parties_for(user, company_id, query=''):
-    """طرف‌های فعال همان شرکت (فقط اگر کاربر عضو آن است)، با جست‌وجوی نام یا شناسه."""
+    """طرف‌های فعال همان شرکت (فقط اگر کاربر عضو آن است)، با جست‌وجوی نام یا شناسه.
+
+    جست‌وجو با کد ملی شخص حقیقی فقط برای کسی که آن را می‌بیند؛ وگرنه با پیشوند حرف‌به‌حرف لو می‌رفت (ق۱۶).
+    """
     if not company_id or company_id not in member_company_ids(user) and not getattr(user, 'is_superuser', False):
         return ExternalParty.objects.none()
     qs = ExternalParty.objects.filter(company_id=company_id, is_active=True)
     query = str(query or '').strip()
     if query:
-        qs = qs.filter(Q(name__icontains=query) | Q(national_id__startswith=query) | Q(economic_code=query))
+        by_id = Q(national_id__startswith=query)
+        if not has_company_perm(user, company_id, SECRETARIAT_PERM):
+            by_id &= Q(kind=ExternalParty.KIND_LEGAL)
+        qs = qs.filter(Q(name__icontains=query) | by_id | Q(economic_code=query))
     return qs.order_by('name', 'id')[:MAX_RESULTS]
 
 
