@@ -62,7 +62,13 @@
               </button>
             </div>
           </div>
-          <div class="flex items-center justify-end text-xs text-slate-400 pt-1">
+          <div class="flex items-center justify-between gap-2 text-xs text-slate-400 pt-1">
+            <label *ngIf="canUseBiometrics" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-2 cursor-pointer select-none hover:text-slate-200 transition-colors"
+                   title="پس از ورود، رمز در همین گوشی ذخیره شود تا دفعهٔ بعد با اثر انگشت یا چهره وارد شوید">
+              <input type="checkbox" name="saveBiometric" [(ngModel)]="saveBiometric" class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
+              ورود با اثر انگشت
+            </label>
+            <span *ngIf="!canUseBiometrics"></span>
             <a href="#" (click)="showForgotPasswordDialog($event)" class="min-h-[40px] sm:min-h-[36px] flex items-center text-indigo-400 hover:text-indigo-300 transition-colors">فراموشی رمز عبور</a>
           </div>
 

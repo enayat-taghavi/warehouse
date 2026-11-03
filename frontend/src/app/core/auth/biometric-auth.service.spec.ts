@@ -163,61 +163,57 @@ describe('BiometricAuthService', () => {
     });
   });
 
-  describe('Web Platform Fallback', () => {
-    it('8. isAvailable delegates to PublicKeyCredential when in browser', async () => {
+  describe('Web Platform (disabled)', () => {
+    const LEGACY_KEYS = ['bio_web_cipher', 'bio_web_iv', 'bio_web_username', 'bio_web_salt', 'bio_web_credential_id'];
+
+    function seedLegacyWebKeys() {
+      for (const key of LEGACY_KEYS) localStorage.setItem(key, '1,2,3');
+    }
+
+    afterEach(() => {
+      delete (window as any).PublicKeyCredential;
+    });
+
+    it('8. isAvailable is false in the browser even with a platform authenticator', async () => {
       (window as any).PublicKeyCredential = {
         isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true)
       };
 
-      const available = await service.isAvailable();
-      expect(available).toBe(true);
+      expect(await service.isAvailable()).toBe(false);
     });
 
     it('9. hasSavedCredentials returns false when web storage is empty', async () => {
-      const hasSaved = await service.hasSavedCredentials();
-      expect(hasSaved).toBe(false);
+      expect(await service.hasSavedCredentials()).toBe(false);
     });
 
-    it('10. clearCredentials cleans up localStorage keys on web', async () => {
-      localStorage.setItem('bio_web_cipher', 'dummy-cipher');
-      localStorage.setItem('bio_web_iv', 'dummy-iv');
-      localStorage.setItem('bio_web_username', 'user1');
-      localStorage.setItem('bio_web_credential_id', '1,2,3');
+    it('10. clearCredentials removes every legacy web key', async () => {
+      seedLegacyWebKeys();
 
       await service.clearCredentials();
-      expect(localStorage.getItem('bio_web_cipher')).toBeNull();
-      expect(localStorage.getItem('bio_web_iv')).toBeNull();
-      expect(localStorage.getItem('bio_web_username')).toBeNull();
-      expect(localStorage.getItem('bio_web_credential_id')).toBeNull();
+      for (const key of LEGACY_KEYS) expect(localStorage.getItem(key)).toBeNull();
     });
 
-    it('11. hasSavedCredentials purges orphaned ciphers without passkey ID and returns false', async () => {
+    it('11. hasSavedCredentials purges a complete legacy web record and returns false', async () => {
       (window as any).PublicKeyCredential = {};
-      localStorage.setItem('bio_web_cipher', 'cipher-bytes');
-      localStorage.setItem('bio_web_iv', 'iv-bytes');
-      localStorage.setItem('bio_web_username', 'user1');
+      seedLegacyWebKeys();
 
-      const hasSaved = await service.hasSavedCredentials();
-      expect(hasSaved).toBe(false);
-      // Confirms orphaned ciphers were cleared
-      expect(localStorage.getItem('bio_web_cipher')).toBeNull();
-      expect(localStorage.getItem('bio_web_iv')).toBeNull();
+      expect(await service.hasSavedCredentials()).toBe(false);
+      for (const key of LEGACY_KEYS) expect(localStorage.getItem(key)).toBeNull();
     });
 
-    it('12. authenticate returns null when navigator.credentials.get fails or is cancelled', async () => {
+    it('12. saveCredentials stores nothing and authenticate never decrypts on web', async () => {
       (window as any).PublicKeyCredential = {};
-      localStorage.setItem('bio_web_cipher', '1,2,3');
-      localStorage.setItem('bio_web_iv', '4,5,6');
-      localStorage.setItem('bio_web_username', 'user1');
-      localStorage.setItem('bio_web_salt', '7,8,9');
-      localStorage.setItem('bio_web_credential_id', '10,11,12');
+      const get = vi.fn();
+      const create = vi.fn();
+      (navigator as any).credentials = { get, create };
 
-      (navigator as any).credentials = {
-        get: vi.fn().mockRejectedValue(new Error('User cancelled biometric prompt'))
-      };
+      expect(await service.saveCredentials('user1', 'secret')).toBe(false);
+      expect(mockStorage.length).toBe(0);
 
-      const result = await service.authenticate();
-      expect(result).toBeNull();
+      seedLegacyWebKeys();
+      expect(await service.authenticate()).toBeNull();
+      expect(get).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
     });
   });
 });

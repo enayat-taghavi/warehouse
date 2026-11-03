@@ -139,7 +139,7 @@ describe('Login Destination Characterization Spec', () => {
     };
 
     const component = TestBed.runInInjectionContext(() =>
-      new Login(mockAuth, mockRouter, mockToast, mockCdr as any, mockConfigApi, mockRoute)
+      new Login(mockAuth as any, mockRouter as any, mockToast as any, mockCdr as any, mockConfigApi as any, mockRoute as any)
     );
     component.username = 'testuser';
     component.password = 'password123';

@@ -33,6 +33,8 @@ export class Login implements OnInit, OnDestroy {
   isBiometricAuthenticating = false;
   canUseBiometrics = false;
   hasBiometricCredentials = false;
+  /** رضایت کاربر برای ذخیرهٔ رمز جهت ورود بیومتریک؛ بدون تیک هیچ رمزی ذخیره نمی‌شود */
+  saveBiometric = false;
   loginErrorMessage: string | null = null;
   showForgotModal = false;
   readonly branding = BRANDING;
@@ -141,6 +143,7 @@ export class Login implements OnInit, OnDestroy {
       ]);
       this.canUseBiometrics = available;
       this.hasBiometricCredentials = hasSaved;
+      this.saveBiometric = available && hasSaved;
 
       if (hasSaved && !this.username) {
         const bioUser = await this.biometricAuth.getSavedUsername();
@@ -227,13 +230,14 @@ export class Login implements OnInit, OnDestroy {
           }
         }
 
-        // ذخیرهٔ امن بیومتریک در صورت ورود دستی (در ورود بیومتریک نیازی به ذخیره مجدد نیست)
-        if (!isBiometricLogin) {
+        // ذخیرهٔ بیومتریک فقط در ورود دستی و فقط با تیک کاربر؛ برداشتن تیک رمز ذخیره‌شده را پاک می‌کند
+        if (!isBiometricLogin && this.canUseBiometrics) {
           try {
-            const canBio = await this.biometricAuth.isAvailable();
-            if (canBio) {
-              await this.biometricAuth.saveCredentials(trimmedUsername, this.password);
-              this.hasBiometricCredentials = true;
+            if (this.saveBiometric) {
+              this.hasBiometricCredentials = await this.biometricAuth.saveCredentials(trimmedUsername, this.password);
+            } else if (this.hasBiometricCredentials) {
+              await this.biometricAuth.clearCredentials();
+              this.hasBiometricCredentials = false;
             }
           } catch (e) {
             console.debug('[Login] Biometric credential save error:', e);

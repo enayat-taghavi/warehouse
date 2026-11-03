@@ -133,8 +133,9 @@ describe('Login Component', () => {
     expect(component.username).toBe('previous_user');
   });
 
-  it('3. saves last_username and triggers biometric save on successful login', async () => {
-    biometricAuthMock.isAvailable.mockResolvedValue(true);
+  it('3. saves last_username and triggers biometric save on successful login when opted in', async () => {
+    component.canUseBiometrics = true;
+    component.saveBiometric = true;
     component.username = 'manager';
     component.password = 'pass123';
 
@@ -147,6 +148,22 @@ describe('Login Component', () => {
     expect(routerMock.navigateByUrl).toHaveBeenCalledWith(expect.any(String), { replaceUrl: true });
   });
 
+  it('3b. never saves the password for biometrics without the opt-in, and clears it when unticked', async () => {
+    component.canUseBiometrics = true;
+    component.saveBiometric = false;
+    component.hasBiometricCredentials = true;
+    component.username = 'manager';
+    component.password = 'pass123';
+
+    await component.handleLogin();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(biometricAuthMock.saveCredentials).not.toHaveBeenCalled();
+    expect(biometricAuthMock.clearCredentials).toHaveBeenCalled();
+    expect(component.hasBiometricCredentials).toBe(false);
+  });
+
   it('4. detects biometric capability and enables biometric login option', async () => {
     biometricAuthMock.isAvailable.mockResolvedValue(true);
     biometricAuthMock.hasSavedCredentials.mockResolvedValue(true);
@@ -156,6 +173,7 @@ describe('Login Component', () => {
 
     expect(component.canUseBiometrics).toBe(true);
     expect(component.hasBiometricCredentials).toBe(true);
+    expect(component.saveBiometric).toBe(true);
     expect(component.username).toBe('bio_user');
   });
 
