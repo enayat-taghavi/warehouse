@@ -6923,3 +6923,75 @@ Every test asserts with `assertEqual`, `assertTrue`, `assertFalse`, `assertIn` o
 - Stage only the new test file and commit with this message, without push:
 test(workflow): role-policy C policy settings API tests
 - Short English report: test names, test results, any test that fails and why. End the turn after the commit and the report.
+
+===
+
+[ ] Session 1 of 1 — Role-policy plan step D tests: payment step skipped = settled outside (5 payment workflows), settle-outside hooks, petty balance unchanged, superuser write fence, legacy notifications without superusers
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "backend/modules/accounting/personnel/test_role_policy_payment.py"
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: set DB_TEST_NAME=test_agy_rpD&& python scripts/automation/verify_tools.py django-tests --labels personnel.test_role_policy_payment --min-tests 14
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(personnel): role-policy D payment and superuser fence tests"
+verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 10 apply.
+- Create ONLY the new file `backend/modules/accounting/personnel/test_role_policy_payment.py`. Never edit any other file (no production code, no other test, no migration).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never run `manage.py test` without labels (it would run root scripts against the real database). Never run `migrate`, `makemigrations` or `flush`.
+- If production code looks wrong, do not fix it: write the test for the behaviour described in sections 3 and 4, and name the failing test and the reason in your report.
+
+2. Context (read these exact ranges, nothing broader):
+- `backend/modules/accounting/personnel/workflows.py`: `INVOICE_STEP_STATUS`, `_invoice_state_change`, `can_settle_invoice_outside`, `INVOICE_WORKFLOW_SPEC` (lines 1-140); `can_settle_charge_outside`, `_charge_state_change`, `PETTY_CHARGE_WORKFLOW_SPEC`, `_settle_statement_outside`, `_statement_state_change`, `PETTY_STATEMENT_WORKFLOW_SPEC`, `petty_fund_level_breakdown` (search each name); `PAYROLL_SETTLED_OUTSIDE`, `can_settle_payroll_outside`, `_payroll_state_change`, `is_payroll_locked`, `is_payroll_period_closed`; `_fleet_state_change`, `is_fleet_locked`.
+- `backend/core/workflow/engine.py` lines 260-405 (`settle_block`, `_enter_step`, `_advance`, `skip_lost_task`, `SKIP_PAYMENT_OUTSIDE`).
+- `backend/core/accounts/superuser_fence.py` (whole file) and `backend/modules/accounting/module.py` (`SUPERUSER_WRITE_FENCE`, `SUPERUSER_WRITE_ALLOWLIST`).
+- `backend/core/platform_core/registry.py`: function `can_attach`.
+- `backend/modules/accounting/personnel/lifecycle_services.py`: function `_workflow_recipient_ids`.
+- Fixtures to copy (setUp patterns only): `backend/modules/accounting/personnel/test_invoice_workflow_flow.py` lines 1-90 (invoice with supervisor/accountant/manager/treasury users and sections); `backend/modules/accounting/personnel/test_petty_cash_workflow_36.py` lines 1-90 (petty account, charge, statement); `backend/modules/accounting/personnel/test_payroll_45_workflow.py` lines 1-110 (`_PayrollFixtureMixin`, period with READY_TO_PAY rows); `backend/modules/accounting/personnel/test_fleet_46_workflow.py` lines 1-90 (fleet period with trips).
+- `backend/core/workflow/tests/test_missing_role_engine.py` lines 1-60 (how a role holder is removed: `SectionAssignment.objects.filter(user=...).update(is_active=False)`; company policy row `WorkflowPolicy(company=..., workflow_key='', role_actions={...})`).
+
+3. Definitions:
+- "No treasurer": deactivate every assignment that gives the treasury permission in that section/company, and set the company default row `WorkflowPolicy(company=co, workflow_key='', role_actions={'treasury': 'skip'})` (module default for treasury is 'wait').
+- Settled outside: `WorkflowInstance.status == 'completed'`, `settled_outside is True`, the last `WorkflowStep` row has action `auto` and its `skipped` list contains `{'step': 'treasury_pay', 'reason': 'payment_outside'}`.
+- Expected document state per workflow when settled outside:
+  - invoice: `status == 'settled_outside'`, `paid_amount` unchanged (0), no `InvoicePayment` row, `payment_ref` empty.
+  - petty charge: `status == 'settled_outside'`, `receipt_number` empty, `petty_fund_level_breakdown(account)['received_total']` unchanged.
+  - petty statement: `status == 'settled_outside'`, open lines become `line_status='approved'`, no new `PettyCashTransaction` with `source='statement_refill'`.
+  - payroll: rows that were `READY_TO_PAY` become `SETTLED_OUTSIDE` (none `PAID`), `payment_tracking_code` empty, `is_payroll_locked(period)` True, `is_payroll_period_closed(period.pk)` True.
+  - fleet: every trip keeps `is_settled=False` and empty `payment_tracking_code`; `is_fleet_locked(period)` True.
+- Hooks (instance stays `in_progress`, task open on `treasury_pay` with `has_recipients=False`): invoice with a recorded installment (`paid_amount > 0`); petty charge with a `PettyCashDebtSettlement(method='charge_offset', status='pending')`; payroll period whose READY_TO_PAY row has non-empty `petty_settlement_ids`.
+- Superuser fence: a live superuser (`is_superuser=True`) gets 403 with JSON `code == 'superuser_view_only'` on POST/PUT/PATCH/DELETE under `/api/personnel/` and on `/api/workflow/tasks/<id>/action/`; allowlisted macro routes (e.g. `PATCH /api/personnel/companies/<id>/`, `POST /api/personnel/expense-heads/`) are not blocked by the fence (status is not 403 with that code); GET on `/api/personnel/expense-invoices/` returns 200 for the superuser.
+- Attachments: `platform_core.registry.can_attach(superuser, 'expense_invoice', id)` is False; `can_attach(superuser, 'user', id)` is True.
+
+4. Task: create `backend/modules/accounting/personnel/test_role_policy_payment.py` (Django `TestCase` classes; reuse the fixture patterns of section 2, copied into this file). Tests (names exactly as given):
+- `test_invoice_settled_outside_without_treasurer`
+- `test_invoice_with_installment_waits`
+- `test_invoice_settled_outside_is_locked` (`is_invoice_locked(pk)` True; PATCH by the creator is rejected)
+- `test_petty_charge_settled_outside_balance_unchanged`
+- `test_petty_charge_with_offset_waits`
+- `test_petty_statement_settled_outside_no_refill`
+- `test_payroll_settled_outside_rows`
+- `test_payroll_with_petty_deduction_waits`
+- `test_fleet_settled_outside_trips_unsettled`
+- `test_treasury_wait_policy_keeps_task_open` (default policy, no treasurer: task open on `treasury_pay`, `wait_reason == 'no_holder'`, instance in progress)
+- `test_superuser_write_fence_blocks_documents` (sample: POST expense-invoices, PATCH expense-invoices/<id>/, POST petty-cash-transactions, POST counterparties, POST workflow task action -> 403 `superuser_view_only`)
+- `test_superuser_allowlisted_and_read_routes` (allowlisted routes not blocked by the fence; GET list 200)
+- `test_superuser_cannot_attach_accounting_document`
+- `test_legacy_notifications_skip_superusers` (`_workflow_recipient_ids('pending_supervisor', company_id, section_id, None)` does not contain any superuser id, and still contains the section supervisor)
+Every test asserts with `assertEqual`, `assertTrue`, `assertFalse`, `assertIn`, `assertNotIn` or `assertRaises` (no bare `print`). Use `rest_framework.test.APIClient` with `force_authenticate` and `format='json'`.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test personnel.test_role_policy_payment --keepdb` (always with the label; at most 8 runs). In PowerShell use `$env:PYTHONUTF8='1';` instead of `set`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all tests pass (if one fails only because production code differs from sections 3 and 4, keep the test and report it), and `git status --short` shows only the new test file, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the new test file and commit with this message, without push:
+test(personnel): role-policy D payment and superuser fence tests
+- Short English report: test names, test results, any test that fails and why. End the turn after the commit and the report.
