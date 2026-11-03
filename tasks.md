@@ -7497,7 +7497,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 
 ===
 
-[ ] Session 1 of 1 — Mobile navigation access check on app.farsalish.ir at 375x812: attendance page and companies shell with every temporary QA user (ready Playwright script), QA users deleted at the end
+[DONE] [ ] Session 1 of 1 — Mobile navigation access check on app.farsalish.ir at 375x812: attendance page and companies shell with every temporary QA user (ready Playwright script), QA users deleted at the end
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md
@@ -7529,3 +7529,39 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 5. Before finishing: step d done; `scratch/logs/mobile_nav2/result.json` exists; `git status --short` shows nothing except the two files named in section 1 and runner files.
 
 6. Output and stop condition: a short English report: the usernames created, the summary line of `mobile_nav2_run.txt`, the full content of `scratch/logs/mobile_nav2/result.json`, the list of PNG files in `scratch/logs/mobile_nav2/`, and the last lines of `mobile_nav2_purge.txt`. No commit. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Mobile navigation companies shell check on app.farsalish.ir at 375x812: one temporary QA user gets read access to the QA company documents, then the ready Playwright script runs; QA data deleted at the end
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md
+verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Operational task on the local test environment `app` (test data only). Never connect to `soft.farsalish.ir` or `soft.comanage.ir`. Do not build anything.
+- Run every command in the foreground and wait until it finishes. Never use `Start-Sleep` or `sleep` longer than 15 seconds.
+- Do not edit, create, stage or commit any tracked file. Never edit `scratch/heavy/mobile_nav_check2.mjs`. Write only under `scratch/logs/`. The files `Documents/implementation_plan.md` and `Documents/task.md` belong to another session: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`.
+- Do not run `migrate`, `makemigrations`, `flush`, any `manage.py test`, or delete files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Test passwords are in `scratch/qa_scenario_credentials.txt`. Never print a password or the content of that file. The script reads it itself.
+
+2. Context:
+- The current frontend is already released on `https://app.farsalish.ir`. Do not build.
+- `scratch/heavy/mobile_nav_check2.mjs` logs in with Playwright (Chrome), logs in with every qa_scn user in turn and checks the attendance page and the companies shell at 375x812, saves screenshots to `scratch/logs/mobile_nav2/` and writes `scratch/logs/mobile_nav2/result.json`. It prints one summary line (`checks: N, failed: ...`).
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order:
+- a) QA data, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario > ..\scratch\logs\mobile_nav3_seed.txt 2>&1`, then read that file and note only the usernames it created.
+- a2) Company documents access for one QA user, in `backend`: `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py shell -c "from django.contrib.auth import get_user_model; from companies.models import Company, UserCompanyAccess; u = get_user_model().objects.get(username='qa_scn_employee'); c = Company.objects.get(code='QA-SCN'); a, _ = UserCompanyAccess.objects.get_or_create(user=u, company=c); a.section_levels = {'founding_docs': 'read', 'identity': 'read'}; a.save(); print('access ok', a.id)" > ..\scratch\logs\mobile_nav3_grant.txt 2>&1`, then read that file; it must contain `access ok`. This row is deleted with the QA company in step d.
+- b) From the repo root: `node scratch/heavy/mobile_nav_check2.mjs > scratch\logs\mobile_nav3_run.txt 2>&1`, then read that file.
+- c) If the summary line shows `ERROR`, read the `error` field of `scratch/logs/mobile_nav2/result.json`. If it is a login or timeout problem, run step b once more unchanged. Do not change the script.
+- d) Delete the QA data, in `backend`, ALWAYS (even if earlier steps failed): `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\mobile_nav3_purge.txt 2>&1`, then read that file.
+
+4. Tool policy: only the commands above, `git status --short`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. Run the script at most twice. If a step fails twice, report the exact error and continue with step d.
+
+5. Before finishing: step d done; `scratch/logs/mobile_nav2/result.json` exists; `git status --short` shows nothing except the two files named in section 1 and runner files.
+
+6. Output and stop condition: a short English report: the usernames created, the summary line of `mobile_nav3_run.txt`, the full content of `scratch/logs/mobile_nav2/result.json`, the list of PNG files in `scratch/logs/mobile_nav2/`, and the last lines of `mobile_nav3_purge.txt`. No commit. End the turn after the report.
