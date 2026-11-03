@@ -19979,3 +19979,123 @@ docs(release-v1): role-policy F glossary terms and manual test section
   python scripts/automation/verify_tools.py text-check --file Documents/Release_v1/manual_test_guide.md --contains "## بخش ۱-ب. وقتی کسی برای مرحله نیست" --contains "| ۱ب.۸ |" --cont...
 
 ---
+
+### Task 1 of 2 — 2026-11-03 08:11:10
+- **Status:** DONE
+- **Conversation:** `b582fa32-907b-4df7-9ec0-2036dd87b423`
+- **Steps:** 204
+- **Tokens:** 313663
+- **Duration:** 12m 20s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 2 — Role-policy plan step G: update 11 stale personnel tests to the new missing-role policies and the superuser view-only fence (tests only, no production code)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 10 apply.
+- Edit ONLY these six test files under `backend/modules/accounting/personnel/`: `test_role_based_cartables.py`, `test_invoice_step_i.py`, `test_attendance_approval_workflow.py`, `test_cartable_section_scope.py`, `test_invoice_workflow_return.py`, `test_three_level_assignments.py`.
+- Never change production code to make a test pass; fix the test setup or the expectation as described in section 4.
+- Never remove an assertion or a test. You may change an expected value only where section 4 says so; everywhere else keep the original assertion and change the setup so that it holds again.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never run `manage.py test` without labels (it would run root scripts against the real database). Never run `migrate`, `makemigrations` or `flush`.
+
+2. Context. The role-policy plan changed engine behaviour on purpose; these 11 tests still expect the old behaviour:
+- Missing-role policy: when a workflow step has no recipient, the effective policy decides `skip` (the step is passed with an auto row) or `wait` (the task stays open with no recipient). Inheritance: the workflow row `WorkflowPolicy(company, workflow_key=<key>)`, then the company default row `WorkflowPolicy(company, workflow_key='')`, then module role defaults (accounting module: supervisor `skip`, accountant `skip`, manager `wait`, treasury `wait`), then step kind. Model: `backend/core/workflow/models.py` (search `class WorkflowPolicy`; field `role_actions` is a dict role -> 'skip' or 'wait', field `creator_may_approve_own` is True, False or None). Read `backend/core/workflow/policy.py` lines 1-80 for the resolver.
+- "Creator may approve own" moved from `WorkflowCompanySettings.creator_may_approve_own` to `WorkflowPolicy(company, workflow_key='').creator_may_approve_own`. The engine no longer reads `WorkflowCompanySettings` for this.
+- The system superuser is view-only on company documents: any write action on a company document by a superuser now returns 403 with code `superuser_view_only` (central fence; search `superuser_view_only` in `backend`).
+- Existing pattern for granting a non-superuser a role on a section: `from personnel.scoped_test_support import grant_section_perms` and `grant_section_perms(user, ('perm_...',), section=..., exact=False, role='...')` (see `test_role_based_cartables.py` lines 35-40 for an example with the manager).
+
+3. Definitions: "policy row" means `WorkflowPolicy.objects.update_or_create(company=<company>, workflow_key='', defaults={...})` (import from `workflow.models`) created in `setUp` or at the start of the test, before the document is submitted. When a test needs the old behaviour of a role, set that role explicitly in `role_actions` (for example `{'accountant': 'wait'}`). After changing a policy for a document that is already open, call `from workflow.recompute import recompute_open_tasks` and `recompute_open_tasks(company_ids=[<company id>])`.
+
+4. Task (11 failing tests; run each file first to see the failure, then fix):
+- `test_invoice_step_i.py`: the helper `set_self_approval(self, on)` (line ~74) must write `WorkflowPolicy.objects.update_or_create(company=self.company, workflow_key='', defaults={'creator_may_approve_own': on})` instead of `WorkflowCompanySettings`. In `test_setting_of_other_company_has_no_effect` create `WorkflowPolicy(company=other, workflow_key='', creator_may_approve_own=True)` instead of the settings row. This should fix `test_setting_on_creator_reviews_own_invoice`, `test_setting_on_sole_accountant_creator_is_not_skipped` and `test_creator_accountant_edits_only_with_setting`; if `test_setting_on_sole_accountant_creator_is_not_skipped` still skips the accountant step, also put `role_actions={'accountant': 'wait'}` in the policy row of that test. In `test_superuser_creator_never_self_approves` change only the expected tuple to `(403, 'superuser_view_only')` and add a comment that the central superuser fence now answers first.
+- `test_role_based_cartables.py` (`test_02_supervisor_approval_flow`, `test_03_finance_and_manager_approval_flow`, `test_04_change_requests_diff_and_approval`): the client is authenticated as a superuser, which is now view-only. Keep the superuser `self.admin` for `test_01` (a GET). For the write calls in tests 02-04, create non-superuser users in `setUp` with `grant_section_perms` on `self.section`: role `supervisor` (perm `perm_approve_personnel_supervisor`), role `accountant` (find the permission codename checked by the `approve-finance` action: search `approve_finance` in `backend/modules/accounting/personnel/`), and use the existing `self.wf_manager` for the manager calls; authenticate a separate `APIClient` per user with `force_authenticate`. If the personnel profile, the vehicle or the change request has no section or company, set them to `self.section` and `self.company` in `setUp` so the scoped permission applies. Keep every status assertion. Add one new check at the start of test_02: the superuser POST to `approve-supervisor` returns 403 with `res.data.get('code') == 'superuser_view_only'` and the profile status is unchanged.
+- `test_attendance_approval_workflow.py` `test_06_period_lock_barrier_succeeds_when_all_approved` (line ~262 expects `'SUBMITTED_SUPERVISOR'`, got `'SUBMITTED_ACCOUNTANT'` because the accountant step is now skipped when no accountant exists): add a policy row for the test company with `role_actions={'accountant': 'wait'}` before the supervisor approve call; keep the assertion.
+- `test_cartable_section_scope.py` `test_cannot_approve_s2_petty_cash_or_invoice` (expects `'pending_accountant'`, got `'pending_manager'` because the s2 documents have no accountant and the accountant step is skipped by default): add a policy row `role_actions={'accountant': 'wait'}` for the company in `setUp` before the documents are submitted; keep the assertions; run the whole file to make sure the other tests still pass.
+- `test_invoice_workflow_return.py` `test_scenario_4_manager_invoice_without_other_manager_shows_no_second_approval` (expects `'treasury_pay'`, got `'manager_ok'` because the manager role now waits by default): add a policy row `role_actions={'manager': 'skip'}` for the company at the start of this test; keep the assertions. Then add a new test `test_scenario_4b_manager_default_waits_at_manager_step` that repeats the submit and accountant approve without the row and asserts the step stays `'manager_ok'` and its open task has no recipient (`WorkflowTask` with `is_open=True` and `has_recipients=False`).
+- `test_three_level_assignments.py` `test_routing_query_count_is_constant` (line ~141 `assertNumQueries(5)`, now 4 queries): change the expected number to 4 and add a short comment that routing now needs 4 queries. This is the only expected-number change allowed in this file.
+
+5. Tool policy:
+- Reading files is unrestricted. Edit only the six files of section 1.
+- Test command, from `backend`, PowerShell: `$env:PYTHONUTF8='1'; $env:DB_TEST_NAME='test_agy_rpG'; .\venv\Scripts\python.exe manage.py test personnel.test_role_based_cartables personnel.test_invoice_step_i personnel.test_attendance_approval_workflow personnel.test_cartable_section_scope personnel.test_invoice_workflow_return personnel.test_three_level_assignments --keepdb`
+- If a command fails, read its output, do not repeat it unchanged, and change approach. If a test cannot be fixed without production code changes, leave it failing, and name it and the reason in your report.
+
+6. Before finishing: all six files pass, no assertion was removed, and `git status --short` shows only the six files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the six files and commit with this message, without push:
+test(personnel): role-policy G stale tests follow missing-role policies and superuser fence
+- Short English report: per test what you changed, test results. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانه اجرایی (4-Step Execution Protocol)
+
+1. **توضیح ساده (Explain Simply):**
+در این گام، ۱۱ تست قدیمی در ماژول پرسنلی به دلیل تغییرات جدید در سیاست نقش‌های غایب (`missing-role policies`: پیش‌فرض رد شدن برای سرپرست/حسابدار و انتظار برای مدیر/خزانه‌دار، انتقال تنظیم تایید رسید توسط ثبت‌کننده به `WorkflowPolicy`) و حصار فقط‌خواندنی کاربر ریشه/سوپریوزر بر اسناد شرکتی (`superuser_view_only`) با شکست مواجه می‌شدند. هدف این نشست به‌روزرسانی تنظیمات و پیش‌فرض‌های تست‌ها برای انطباق کامل با موتور گردش‌کار جدید، بدون تغییر در کدهای محیط پروداکشن و بدون حذف هیچ‌گونه اعتبارسنجی بود.
+
+2. **اعتبارسنجی اولیه (Verify Immediately):**
+با اجرای اولیه سوئیت تست مرب...
+
+---
+
+### Task 2 of 2 — 2026-11-03 08:14:04
+- **Status:** DONE
+- **Conversation:** `f985258d-be3e-4b46-9019-fc951b5aae74`
+- **Steps:** 18
+- **Tokens:** 30087
+- **Duration:** 2m 49s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Release main on the local app environment for the role-policy plan (missing-role step policies, company workflow policy card, settled-outside payment status, superuser view-only fence, report commands): backup, migration check, patched frontend build, read-only policy report; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`. Do not build an APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, `apply_workflow_policies`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+- Never change production code.
+
+2. Context: backend and frontend files changed since the last release. The new migrations (`workflow.0003_role_policies` and `personnel.0004_settled_outside_status_choices`) were already applied on this database in earlier steps, so the migration check must show everything applied. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app role-policy G'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. In `backend`, with `PYTHONUTF8=1`, run `.\venv\Scripts\python.exe manage.py showmigrations --plan` and confirm that no line starts with `[ ]`. If any line starts with `[ ]`, stop and report those lines; do not migrate.
+- c) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- d) Read-only report. In `backend`, with `PYTHONUTF8=1`, run `.\venv\Scripts\python.exe manage.py workflow_policy_report` and copy its whole output into your report.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except the three files named in section 1 and runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the migration check result, the build result (errors and warnings count), the patch script line and the full `workflow_policy_report` output. Write the report only after the build, the patch and the report command have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+فرایند بیلد فرانت‌اند (`npx ng build --delete-output-path=false`) آغاز شده و در حال اجرا در پس‌زمینه است. منتظر اتمام بیلد برای ادامه مراحل هستیم.
+
+</div>
+
+Frontend build has been launched in the foreground and is currently compiling. Waiting for build completion...
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explanation)
+کاربر درخواست اجرای جلسه دوم انتشار (Session 2 of 2: Release) روی محیط محلی `app` را داشت: شامل تهیه نسخه پشتیبان دیتابیس (Backup)، بررسی اعمال بودن تمام مایگریشن‌ها (Migration check)، بیلد مجدد فرانت‌اند بدون حذف دایرکتوری خروجی و اعمال پچ سرویس ورکر (Patched frontend build)، و در نهایت اجرای گزارش فقط‌خواندنی پالیسی‌های گردش‌کار (`work...
+
+---

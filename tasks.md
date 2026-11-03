@@ -7154,7 +7154,7 @@ docs(release-v1): role-policy F glossary terms and manual test section
 
 ===
 
-[ ] Session 1 of 2 — Role-policy plan step G: update 11 stale personnel tests to the new missing-role policies and the superuser view-only fence (tests only, no production code)
+[DONE] [ ] Session 1 of 2 — Role-policy plan step G: update 11 stale personnel tests to the new missing-role policies and the superuser view-only fence (tests only, no production code)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
@@ -7204,7 +7204,7 @@ test(personnel): role-policy G stale tests follow missing-role policies and supe
 
 ===
 
-[ ] Session 2 of 2 — Release main on the local app environment for the role-policy plan (missing-role step policies, company workflow policy card, settled-outside payment status, superuser view-only fence, report commands): backup, migration check, patched frontend build, read-only policy report; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] [ ] Session 2 of 2 — Release main on the local app environment for the role-policy plan (missing-role step policies, company workflow policy card, settled-outside payment status, superuser view-only fence, report commands): backup, migration check, patched frontend build, read-only policy report; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
