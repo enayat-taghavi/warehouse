@@ -1,12 +1,12 @@
 <!-- Backdrop -->
 <div *ngIf="commService.isChatDrawerOpen()" 
      (click)="closeDrawer()" 
-     class="fixed inset-0 max-md:top-[var(--mobile-top-chrome-height)] bg-slate-950/40 backdrop-blur-sm z-50 transition-opacity duration-300">
+     class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 transition-opacity duration-300">
 </div>
 
 <!-- Slide Drawer Panel -->
 <div *ngIf="commService.isChatDrawerOpen()" 
-     class="chat-drawer-panel fixed top-0 left-0 bottom-0 pt-safe pb-safe max-md:top-[var(--mobile-top-chrome-height)] max-md:pt-0 w-full sm:w-[400px] bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col border-r border-slate-200 dark:border-slate-800 animate-slide-in"
+     class="chat-drawer-panel fixed top-0 left-0 bottom-0 pt-safe pb-safe w-full sm:w-[400px] bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col border-r border-slate-200 dark:border-slate-800 animate-slide-in"
      (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
      dir="rtl">
 
@@ -17,11 +17,12 @@
     <span class="text-sm font-bold text-indigo-700 dark:text-indigo-200">فایل‌ها را اینجا رها کنید</span>
   </div>
 
-  <!-- ─── Drawer Header ─── -->
-  <div class="h-16 px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur">
+  <!-- ─── Drawer Header: عنوان فهرست وسط، دکمه‌ها دو طرف (موبایل: تمام‌صفحه روی نوار برند و هدر) ─── -->
+  <div class="relative h-14 sm:h-16 px-2 sm:px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur">
     
     <!-- Title or Back Button -->
     <div class="flex items-center gap-2">
+      <button *ngIf="activeTab() === 'conversations'" appAction="close" display="icon" (click)="closeDrawer()"></button>
       <button *ngIf="activeTab() === 'chat' || activeTab() === 'contacts'" appAction="back" display="icon" (click)="backToList()" data-testid="drawer-back"></button>
 
       <div *ngIf="activeTab() === 'chat' && activeConv()" class="flex items-center gap-2.5">
@@ -53,13 +54,13 @@
         </div>
       </div>
 
-      <div *ngIf="activeTab() === 'conversations'" class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+      <div *ngIf="activeTab() === 'conversations'" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[55%] flex items-center gap-2 pointer-events-none">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-chat"></svg>
         </div>
-        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">پیام‌رسان سازمانی</h2>
+        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">پیام‌رسان سازمانی</h2>
       </div>
-      <h2 *ngIf="activeTab() === 'contacts'" data-testid="contacts-title" class="text-sm font-bold text-fg">همکاران و پرسنل</h2>
+      <h2 *ngIf="activeTab() === 'contacts'" data-testid="contacts-title" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[55%] truncate pointer-events-none text-sm font-bold text-fg">همکاران و پرسنل</h2>
     </div>
 
     <!-- Actions: Search, Mute & Close -->
@@ -88,7 +89,7 @@
         <svg *ngIf="commService.isMuted()" class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
       </button>
 
-      <button appAction="close" display="icon" (click)="closeDrawer()"></button>
+      <button *ngIf="activeTab() !== 'conversations'" appAction="close" display="icon" (click)="closeDrawer()"></button>
     </div>
   </div>
 

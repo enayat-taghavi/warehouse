@@ -20484,3 +20484,68 @@ Waiting for the frontend build (`npx ng build --delete-output-path=false`) to fi
 مراحل سناریو به ترتیب و مطابق ض...
 
 ---
+
+### Task 1 of 1 — 2026-11-04 03:02:02
+- **Status:** DONE
+- **Conversation:** `27d5cc51-ca68-41fa-9efb-6ea78fa49995`
+- **Steps:** 238
+- **Tokens:** 372266
+- **Duration:** 33m 37s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/7 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md`
+  - verify round 1: 7/7 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Mobile navigation phase 5: DOM specs for the brand bar hamburger, the new «بیشتر» icon sheet (mobile-more-sheet) and the bottom nav opening it, plus shell wiring checks (specs only, no production code)
+
+
+
+1. Critical rules:
+- Edit or create only these files: new `frontend/src/app/shared/components/mobile-bottom-nav/mobile-more-sheet.component.dom.spec.ts`, and the existing `frontend/src/app/shared/components/mobile-bottom-nav/mobile-bottom-nav.component.dom.spec.ts`, `frontend/src/app/shared/components/mobile-bottom-nav/mobile-brand-bar.component.dom.spec.ts`, `frontend/src/app/modules/common/components/layout/layout-modular.dom.spec.ts`, `frontend/src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts`. Never edit production code (any non-spec file). `Documents/implementation_plan.md` and `Documents/task.md` have uncommitted changes from another session: never touch, stage or commit them.
+- Never remove or weaken an existing `it(...)` or `expect(...)`. Only add new `it(...)` blocks (inside new `describe` blocks if you like).
+- Persian strings in assertions: never type a Persian text that contains a zero-width non-joiner by hand (for example the sheet heading). Assert on a part without it (for example `textContent` contains `بخش`) or read the value from test data you defined. `منوی کامل`, `بیشتر`, `چت`, `اعلان` have no zero-width non-joiner and may be typed directly.
+- Tests use Vitest with jsdom like the neighbouring `*.dom.spec.ts` files (TestBed, `fixture.nativeElement.querySelector`). Follow their setup and mocking style; reuse the existing `mockComm` setup in `mobile-bottom-nav.component.dom.spec.ts`.
+
+2. Context (already implemented and committed by Claude; read these files first):
+- `frontend/src/app/shared/components/mobile-bottom-nav/mobile-brand-bar.component.ts`: new icon button `data-testid="mobile-brand-menu"` with `title` and `aria-label` `منوی کامل`, `aria-expanded` bound to the new input `menuExpanded` (default false); click emits the new output `menuOpen`.
+- `frontend/src/app/shared/components/mobile-bottom-nav/mobile-more-sheet.component.ts`: `MobileMoreSheetComponent` (`app-mobile-more-sheet`). Input `items: MobileBottomNavItem[]`; outputs `itemSelect` (item id) and `closed`. Backdrop `data-testid="mobile-more-backdrop"` (click emits `closed`); panel `data-testid="mobile-more-sheet"` with `role="dialog"`, `aria-modal="true"`, attribute `data-back-closes`, `aria-labelledby="mobile-more-sheet-title"`; heading `#mobile-more-sheet-title`; close button `data-testid="mobile-more-close"` (emits `closed`); grid `ul[data-testid="mobile-more-grid"]` with class `grid-cols-4`; one button per item `data-testid="mobile-more-item-<id>"` with `title` and `aria-label` = item `title`, visible text = item `label`, `aria-current="page"` only on the active item; click emits `itemSelect` with the id. Empty list shows `data-testid="mobile-more-empty"` and no grid. `document` keydown `Escape` emits `closed`.
+- `frontend/src/app/shared/components/mobile-bottom-nav/mobile-bottom-nav.component.ts`: input `moreOpen` and output `moreToggle` were removed. New public signal `sheetOpen`, computed `sheetItems` (= `items().slice(2)` with chat available, `items().slice(3)` without) and method `closeSheet()`. The «بیشتر» tab (`bottom-nav-more`) toggles `sheetOpen`; when opening it also emits `overlayOpen` and closes notifications; `aria-expanded` of the tab follows `sheetOpen`. The sheet `app-mobile-more-sheet` renders while `sheetOpen()` is true and the chat drawer is closed. Selecting a sheet item closes the sheet and emits `itemSelect` with the id. Clicking the chat, notifications or an item tab closes the sheet; an effect also closes it when `isChatDrawerOpen()` becomes true.
+- `layout.html`: `<app-mobile-brand-bar ... [menuExpanded]="isSidebarOpen" (menuOpen)="toggleSidebar()">`; `layout.ts` `mobileBottomNavItems()` now returns the full deduped menu list (no `.slice(0, 3)` and no limit on other-module items).
+- `operations-layout.html`: `<app-mobile-brand-bar [menuExpanded]="isMobileMenuOpen()" (menuOpen)="toggleMobileMenu()">`; `operations-layout.ts` `mobileBottomNavItems()` maps all `navItems` (no slice).
+
+3. Task — add these tests:
+- a) New `mobile-more-sheet.component.dom.spec.ts` (exactly 7 `it(` blocks), with test data of 5 items you define (ids `a`..`e`, `c` active, labels and titles without zero-width non-joiner):
+  1. renders the dialog: `role="dialog"`, `aria-modal="true"`, has `data-back-closes`, heading text contains `بخش`.
+  2. renders exactly 5 item buttons in a `ul` with class `grid-cols-4`, each with `title`/`aria-label` = the item title and text = the item label.
+  3. only item `c` has `aria-current="page"`.
+  4. clicking item `b` emits `itemSelect` with `b`.
+  5. clicking the close button emits `closed`; clicking the backdrop emits `closed`.
+  6. dispatching `new KeyboardEvent('keydown', { key: 'Escape' })` on `document` emits `closed`.
+  7. with an empty list, `mobile-more-empty` is shown and the grid is absent.
+- b) `mobile-brand-bar.component.dom.spec.ts`: (1) the menu button exists with `title` and `aria-label` `منوی کامل`; (2) clicking it emits `menuOpen`; (3) `aria-expanded` is `false` by default and `true` after `setInput('menuExpanded', true)`.
+- c) `mobile-bottom-nav.component.dom.spec.ts`, with a list of 6 items: (1) chat available: after clicking `bottom-nav-more`, the sheet shows exactly items 3 to 6 and not items 1 and 2; (2) chat not available: the sheet shows items 4 to 6; (3) clicking a sheet item emits `itemSelect` with its id and the sheet is gone (`sheetOpen()` false); (4) clicking `bottom-nav-more` emits `overlayOpen`; clicking it again closes the sheet; (5) Escape on `document` closes the sheet; (6) with the sheet open, clicking `bottom-nav-chat` closes it.
+- d) `layout-modular.dom.spec.ts`, using the existing setup: (1) triggering `menuOpen` on the `app-mobile-brand-bar` debug element (`triggerEventHandler('menuOpen')`) calls `toggleSidebar` (spy); (2) for the warehouse system menu, `mobileBottomNavItems().length` is greater than 3 when the visible menu has more than 3 items (use the same data the existing mobile nav test uses).
+- e) `operations-layout.dom.spec.ts`: (1) `mobileBottomNavItems().length` equals `component.navItems.length`; (2) triggering `menuOpen` on `app-mobile-brand-bar` toggles `isMobileMenuOpen()` from false to true.
+- f) Commit only these spec files with the message `test(nav): mobile more sheet and brand bar menu DOM specs`. No `Co-Authored-By` line. Do not push.
+
+4. Tool policy: read the files named above, then write the specs. Run only the touched specs while working, from the repo root: `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include <glob>`. If a test fails, read the error, fix the test (never the production code), and do not rerun unchanged more than once. If a scenario truly cannot be tested with the existing setup, skip only that scenario and say why in the report.
+
+5. Before finishing: all new tests pass, no existing test was removed or weakened, `git status --short` shows nothing except `Documents/implementation_plan.md`, `Documents/task.md` and `tasks.md`.
+
+6. Output and stop condition: a short English report with the commit hash, the new test count per file, the test run result and any skipped scenario with its reason. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانهٔ پروتکل اجرایی (رفع خطای رانر)
+
+1. **توضیح ساده (آنچه کاربر گزارش داد):**
+   دستور رانر `python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md` شکست خورده بود، زیرا فایل‌های موقت و ناتمام مربوط به تغییرات موازی فاز ۵-ب (`task_mobile_navigation.md`، `walkthrough_mobile_navigation.md`، `chat-drawer.component.html` و `mobile-more-sheet.component.ts`) در درخت کاری بدون کامیت باقی مانده بودند.
+
+2. **اعتبارسنجی فنی:**
+   - فایل‌های کاری فاز ۵-ب نباید در دامنهٔ کامیت این تسک قرار می‌گرفتند (زیرا دستور `scope` تنها فایل‌های spec مجاز را می‌پذیرد).
+   - برای جلوگیری از حذف یا از دست ...
+
+---

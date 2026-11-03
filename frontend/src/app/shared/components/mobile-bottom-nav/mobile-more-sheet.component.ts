@@ -5,7 +5,7 @@ import type { MobileBottomNavItem } from './mobile-bottom-nav.component';
 
 /**
  * پنل آیکونی «بیشتر» در موبایل: گزینه‌های منو که در نوار پایین جا نشده‌اند، در شبکهٔ چهارستونی.
- * از پایین باز می‌شود و تقریباً کل صفحه (زیر نوار بالا تا بالای نوار پایین) را می‌گیرد.
+ * از پایین باز می‌شود و تمام صفحه را تا بالای نوار پایین می‌گیرد (نوار برند و هدر را هم می‌پوشاند؛ حاشیهٔ امن بالا با pt-safe).
  * با انتخاب گزینه، Escape (و دکمهٔ برگشت اندروید)، لمس پس‌زمینه یا دکمهٔ بستن بسته می‌شود.
  */
 @Component({
@@ -15,18 +15,18 @@ import type { MobileBottomNavItem } from './mobile-bottom-nav.component';
   template: `
     <div class="fixed inset-x-0 top-0 bottom-[var(--mobile-bottom-nav-height)] z-50 bg-slate-900/60 fade-in"
          (click)="closed.emit()" aria-hidden="true" data-testid="mobile-more-backdrop"></div>
-    <div class="fixed inset-x-0 top-[calc(var(--mobile-top-chrome-height)+0.5rem)] bottom-[var(--mobile-bottom-nav-height)] z-50 flex flex-col bg-surface rounded-t-2xl border-t border-line shadow-2xl animate-[slideInUp_0.25s_cubic-bezier(0.16,1,0.3,1)]"
+    <div class="fixed inset-x-0 top-0 bottom-[var(--mobile-bottom-nav-height)] pt-safe z-50 flex flex-col bg-surface animate-[slideInUp_0.25s_cubic-bezier(0.16,1,0.3,1)]"
          #panel dir="rtl" role="dialog" aria-modal="true" aria-labelledby="mobile-more-sheet-title" data-back-closes data-testid="mobile-more-sheet"
          (keydown.tab)="trapFocus($event)" (keydown.shift.tab)="trapFocus($event)">
-      <div class="shrink-0 flex items-center justify-between gap-2 ps-4 pe-1 pt-1">
-        <h2 id="mobile-more-sheet-title" class="text-sm font-black text-fg">همهٔ بخش‌ها</h2>
+      <div class="relative shrink-0 h-14 px-2 flex items-center border-b border-line">
+        <h2 id="mobile-more-sheet-title" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-black text-fg pointer-events-none">همهٔ بخش‌ها</h2>
         <button #closeBtn type="button" (click)="closed.emit()"
                 class="tap-target w-10 h-10 flex items-center justify-center rounded-xl text-fg-muted hover:bg-surface-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 title="بستن" aria-label="بستن" data-testid="mobile-more-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" appIcon="x"></svg>
         </button>
       </div>
-      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pt-2 pb-4">
+      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pt-4 pb-4">
         @if (items().length) {
           <ul class="grid grid-cols-4 gap-x-1 gap-y-4" role="list" data-testid="mobile-more-grid">
             @for (it of items(); track it.id) {
