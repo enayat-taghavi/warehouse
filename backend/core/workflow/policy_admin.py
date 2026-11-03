@@ -179,6 +179,15 @@ def company_policy(company_id) -> dict:
 
 # ─── پیش‌نمایش ────────────────────────────────────────────────────────────────
 
+def _settle_blocked(spec, instance) -> bool:
+    """همان قلاب can_settle_outside موتور (رسید با قسط و…): مرحلهٔ پرداختِ منع‌شده جلو نمی‌رود و منتظر می‌ماند."""
+    from types import SimpleNamespace
+    from .engine import settle_block
+    from platform_core.registry import resolve_entity
+    obj = resolve_entity(spec.entity_kind, instance.entity_id)
+    return settle_block(SimpleNamespace(obj=obj), instance) is not None
+
+
 def simulate(company_id, workflow_key, proposed, today=None) -> dict:
     """
     اثر تغییر یک ردیف (proposed=None یعنی حذف ردیف گردش) روی کارهای مرحلهٔ باز همان شرکت و همان گردش(ها)، با
@@ -227,7 +236,8 @@ def simulate(company_id, workflow_key, proposed, today=None) -> dict:
         new_principals = computed[('new', task.pk)][0]
         effect = None
         if not new_principals:
-            if not task.forced and new_pol[inst.workflow_key].missing_action(step) == SKIP:
+            if (not task.forced and new_pol[inst.workflow_key].missing_action(step) == SKIP
+                    and not (step.payment and _settle_blocked(spec, inst))):
                 effect = ADVANCE
             elif task.has_recipients:
                 effect = WAITING

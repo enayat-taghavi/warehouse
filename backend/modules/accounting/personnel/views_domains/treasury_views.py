@@ -720,7 +720,7 @@ class ExpenseInvoiceViewSet(viewsets.ModelViewSet):
         if new_status and new_status != instance.status:
             # ت۲ طرح ۲.۳: وضعیت فاکتور فقط از راه گردش کار (ارسال، تأیید، عودت، رد، پرداخت، لغو) عوض می‌شود
             raise PermissionDenied("وضعیت رسید پرداخت فقط از راه گردش کار تغییر می‌کند.")
-        if (instance.status in ('ready_to_pay', 'partially_paid', 'paid') or instance.paid_amount
+        if (instance.status in ('ready_to_pay', 'partially_paid', 'paid', 'settled_outside') or instance.paid_amount
                 or instance.payments.exists()):
             # در مرحلهٔ پرداخت حتی مدیر کل ویرایش نمی‌کند؛ ذخیرهٔ کامل ردیف قسط همزمان را بازنویسی می‌کرد
             raise PermissionDenied("برای این رسید پرداخت قسط پرداخت ثبت شده است و قابل ویرایش نیست.")

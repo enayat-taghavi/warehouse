@@ -50,6 +50,24 @@ ACCOUNTING_SPEC = ModuleSpec(
 MODULE_SPEC = ACCOUNTING_SPEC
 SPEC = ACCOUNTING_SPEC
 
+# حصار نوشتن مدیر کل (طرح نبودن نفر ۱۴۰۵-۰۸، بند ۴-۶ و س۴): هر POST/PUT/PATCH/DELETE مدیر کل زیر این پیشوند
+# 403 superuser_view_only می‌گیرد، مگر مسیر در فهرست استثنا باشد. نگهبان ۶۰ مسیر بی‌حصار و الگوی کهنه را می‌گیرد.
+SUPERUSER_WRITE_FENCE = ('/api/personnel/',)
+SUPERUSER_WRITE_ALLOWLIST = (
+    # کار کلان (بند ۴-۱ و س۴): تنظیمات شرکت (پرونده، اسناد، حساب‌های بانکی، هیئت‌مدیره، درایو، پروفایل حقوق)،
+    # دورهٔ مالی، سرفصل‌های هزینه، دسترسی کاربران به شرکت و تنظیمات حقوق
+    r'^/api/personnel/companies/',
+    r'^/api/personnel/company-documents/',
+    r'^/api/personnel/company-bank-accounts/',
+    r'^/api/personnel/company-board-members/',
+    r'^/api/personnel/company-fiscal-periods/',
+    r'^/api/personnel/expense-heads/',
+    r'^/api/personnel/user-company-access/',
+    r'^/api/personnel/settings/',
+    # POST فقط‌خواندنی: برآورد هزینهٔ پرسنل (چیزی ذخیره نمی‌شود)
+    r'^/api/personnel/profiles/cost-estimate/$',
+)
+
 ACCOUNTING_PERMISSION_CODENAMES = (
     'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
     'view_sys_payroll', 'view_sys_fleet_settlement',

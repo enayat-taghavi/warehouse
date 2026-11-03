@@ -16,7 +16,8 @@ from django.utils import timezone
 
 ZERO = Decimal('0')
 MONEY = DecimalField(max_digits=18, decimal_places=0)
-APPROVED_INVOICE_STATUSES = ('ready_to_pay', 'partially_paid', 'paid')
+# settled_outside: هزینه تأیید شده ولی پرداخت بیرون از سامانه بوده است (طرح نبودن نفر، س۳)؛ در «پرداخت‌نشده» نیست
+APPROVED_INVOICE_STATUSES = ('ready_to_pay', 'partially_paid', 'paid', 'settled_outside')
 UNPAID_INVOICE_STATUSES = ('ready_to_pay', 'partially_paid')
 OPEN_STATEMENT_STATUSES = ('draft', 'submitted', 'approved')
 PAYABLE_OWNERSHIP = ('contract', 'personal')

@@ -169,6 +169,18 @@ class PersonnelConfig(AppConfig):
         contribute(f'can_attach:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.can_attach_payroll_period)
         contribute(f'is_locked:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.is_payroll_period_closed)
         contribute(f'company_of:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.payroll_period_company_id)
+        # طرح نبودن نفر (س۳): سندی که پرداخت ناقص یا کسر بدهی دارد با «پرداخت بیرون از سامانه» بسته نمی‌شود
+        contribute(f'can_settle_outside:{INVOICE_ENTITY}', _wf.can_settle_invoice_outside)
+        contribute(f'can_settle_outside:{_wf.PETTY_CHARGE_ENTITY}', _wf.can_settle_charge_outside)
+        contribute(f'can_settle_outside:{_wf.PAYROLL_PERIOD_ENTITY}', _wf.can_settle_payroll_outside)
+        # «مدیر کل فقط می‌بیند» (طرح نبودن نفر بند ۴-۶): پیوست هیچ سند گردش این ماژول را عوض نمی‌کند؛ حصار مسیرها
+        # از SUPERUSER_WRITE_FENCE / SUPERUSER_WRITE_ALLOWLIST در module.py می‌آید
+        for _wf_spec in (INVOICE_WORKFLOW_SPEC, _wf.PETTY_CHARGE_WORKFLOW_SPEC, _wf.PETTY_STATEMENT_WORKFLOW_SPEC,
+                         _wf.PERSONNEL_PROFILE_WORKFLOW_SPEC, _wf.PERSONNEL_CHANGE_WORKFLOW_SPEC,
+                         _wf.VEHICLE_PROFILE_WORKFLOW_SPEC, _wf.VEHICLE_CHANGE_WORKFLOW_SPEC,
+                         _wf.ATTENDANCE_PERIOD_WORKFLOW_SPEC, _wf.PAYROLL_PERIOD_WORKFLOW_SPEC,
+                         _wf.FLEET_PERIOD_WORKFLOW_SPEC):
+            contribute('superuser_view_only_kinds', _wf_spec.entity_kind)
         # کارکرد ماهانهٔ ناوگان: نمونهٔ جدا روی همان دوره، با گیت شبای حسابدار (د۵ طرح ۴.۶)
         contribute('workflows', _wf.FLEET_PERIOD_WORKFLOW_SPEC)
         contribute(f'entity_resolver:{_wf.FLEET_PERIOD_ENTITY}', _wf.resolve_fleet_period)

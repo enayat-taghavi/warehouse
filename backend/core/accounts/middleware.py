@@ -230,7 +230,12 @@ class AuditContextMiddleware:
                         request.user = resolved_user
                 except Exception:
                     pass
-            
+
+        # حصار مرکزی «مدیر کل فقط می‌بیند» (طرح نبودن نفر بند ۴-۶): نوشتن روی مسیرهای سند ماژول‌ها و کارهای گردش
+        from accounts.superuser_fence import blocks as _superuser_fence_blocks, forbidden_response
+        if _superuser_fence_blocks(user, request.method, request.path):
+            return forbidden_response()
+
         ip = get_client_ip(request)
         ua = request.META.get('HTTP_USER_AGENT', '')
         

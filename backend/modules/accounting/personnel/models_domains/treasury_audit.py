@@ -187,6 +187,7 @@ class ExpenseInvoice(models.Model):
         ('ready_to_pay', 'تایید مدیر / آماده پرداخت'),
         ('partially_paid', 'پرداخت ناقص'),
         ('paid', 'پرداخت‌شده توسط خزانه‌دار'),
+        ('settled_outside', 'تأییدشده، پرداخت بیرون از سامانه'),
         ('revision_required', 'نیازمند بازنگری و اصلاح'),
         ('rejected', 'رد شده'),
     )
@@ -640,6 +641,7 @@ class PettyCashStatement(models.Model):
         ('submitted', 'ارسال‌شده'),
         ('approved', 'تأییدشده'),
         ('paid', 'پرداخت‌شده'),
+        ('settled_outside', 'تأییدشده، پرداخت بیرون از سامانه'),
         ('returned', 'عودت‌شده'),
     )
 
@@ -735,6 +737,7 @@ class PettyCashTransaction(models.Model):
         ('pending_supervisor', 'در انتظار تایید سرپرست'),
         ('pending_accountant', 'در انتظار بررسی حسابدار'),
         ('approved', 'تایید نهایی / تسویه قطعی'),
+        ('settled_outside', 'تأییدشده، پرداخت بیرون از سامانه'),
         ('rejected', 'رد شده'),
     )
 

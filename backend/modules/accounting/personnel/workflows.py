@@ -8,7 +8,7 @@ on_state_change را صدا می‌زند تا وضعیت خود سند (Expense
 from decimal import Decimal
 
 from workflow.registry import (APPROVE, CANCELLED, COMPLETED, EXECUTE, REJECTED, RETURN, ACT, RETURNED, REVIEW,
-                               TERMINAL_STATES, StepSpec, WorkflowSpec)
+                               SETTLED_OUTSIDE, TERMINAL_STATES, StepSpec, WorkflowSpec)
 
 INVOICE_WORKFLOW = 'expense_invoice'
 INVOICE_ENTITY = 'expense_invoice'
@@ -22,6 +22,7 @@ INVOICE_STEP_STATUS = {
     'manager_ok': 'pending_manager',
     'treasury_pay': 'ready_to_pay',
     COMPLETED: 'paid',
+    SETTLED_OUTSIDE: 'settled_outside',
     RETURNED: 'revision_required',
     REJECTED: 'rejected',
     CANCELLED: 'draft',
@@ -58,6 +59,23 @@ def _invoice_state_change(invoice, state, instance):
         invoice.save(update_fields=['status', 'updated_at'])
         from .workflow_engine import notify_document_changed
         notify_document_changed(invoice)
+
+
+def can_settle_invoice_outside(invoice, instance):
+    """قلاب can_settle_outside (س۳): رسیدی که قسطی از آن پرداخت شده هرگز خودکار بسته نمی‌شود (کار منتظر می‌ماند)."""
+    if invoice is None:
+        return 'سند پیدا نشد.'
+    from django.db import transaction
+    from .models import ExpenseInvoice
+    if transaction.get_connection().in_atomic_block:
+        paid = _locked_paid_amount(invoice)
+    else:
+        # پیش‌نمایش تنظیم‌ها (بی تراکنش): خواندن ساده
+        paid = Decimal(str(ExpenseInvoice.objects.filter(pk=invoice.pk).values_list('paid_amount', flat=True)
+                           .first() or 0))
+    if paid > 0:
+        return 'برای این رسید پرداخت قسط ثبت شده است؛ پرداخت باقی‌مانده فقط به دست خزانه‌دار انجام می‌شود.'
+    return None
 
 
 def invoice_heads_summary(invoice):
@@ -107,7 +125,7 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
         # پرداخت فقط از اکشن pay فاکتور (شمارهٔ پیگیری لازم است)؛ رد قطعی در این مرحله نیست. خزانه‌دارِ ثبت‌کننده
         # فاکتور خودش را پس از تأیید حسابدار و مدیر پرداخت می‌کند (creator_may_act)
         StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', 'perm_treasury_disburse_action', EXECUTE,
-                 actions=(ACT, RETURN), creator_may_act=True),
+                 actions=(ACT, RETURN), creator_may_act=True, payment=True),
     ),
     on_state_change=_invoice_state_change,
     summary=_invoice_summary,
@@ -125,7 +143,7 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
 # بیرون از این دامنه None (بی‌نظر) تا قاعدهٔ گردش کار (دریافت‌کنندهٔ مرحله و…) دست نخورد.
 INVOICE_PERM = 'perm_invoice_record'
 INVOICE_EDITABLE_STATUSES = ('draft', 'revision_required')
-INVOICE_LOCKED_STATUSES = ('paid',)
+INVOICE_LOCKED_STATUSES = ('paid', 'settled_outside')
 
 
 def invoice_company_id(entity_id):
@@ -209,7 +227,7 @@ PETTY_TREASURY_PERM = 'perm_treasury_disburse_action'
 # دیدن تنخواه دیگران در سطح شرکت: مدیریت تنخواه یا یکی از مجوزهای مرحله‌های گردش
 PETTY_COMPANY_VIEW_PERMS = (PETTY_CASH_PERM, PETTY_REVIEW_PERM, PETTY_MANAGER_PERM, PETTY_TREASURY_PERM)
 PETTY_EDITABLE_STATUSES = ('draft',)
-PETTY_STATEMENT_LOCKED_STATUSES = ('paid',)
+PETTY_STATEMENT_LOCKED_STATUSES = ('paid', 'settled_outside')
 PETTY_STATEMENT_LINE_REJECT_STEPS = ('accountant_review', 'manager_ok')
 
 
@@ -301,6 +319,9 @@ def _charge_state_change(tx, state, instance):
         if not (tx.receipt_number or '').strip() or not getattr(tx, '_payment_receipt_checked', False):
             _tracking_required()
         new_status = 'approved'
+    elif state == SETTLED_OUTSIDE:
+        # پرداخت بیرون از سامانه (س۳): بی رسید و بی کسر بدهی؛ در موجودی تنخواه شمرده نمی‌شود (فقط approved/paid)
+        new_status = 'settled_outside'
     elif state == REJECTED:
         new_status = 'rejected'
     elif state in (RETURNED, CANCELLED):
@@ -313,6 +334,15 @@ def _charge_state_change(tx, state, instance):
         tx.save(update_fields=['status', 'updated_at'])
         from .workflow_engine import notify_document_changed
         notify_document_changed(tx)
+
+
+def can_settle_charge_outside(tx, instance):
+    """قلاب can_settle_outside: شارژی که کسر بدهی (charge_offset) دارد خودکار بسته نمی‌شود تا کسر معلق نماند."""
+    if tx is None:
+        return 'سند پیدا نشد.'
+    if petty_charge_offset_total(tx) > 0:
+        return 'از این شارژ بدهی تنخواه کسر می‌شود؛ واریز آن فقط به دست خزانه‌دار انجام می‌شود.'
+    return None
 
 
 def _person_name(user):
@@ -344,7 +374,8 @@ PETTY_CHARGE_WORKFLOW_SPEC = WorkflowSpec(
                  skip_when_creator_only=True),
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', PETTY_MANAGER_PERM, APPROVE, required=_charge_needs_manager),
         # واریز فقط از اکشن pay-charge (شمارهٔ پیگیری لازم است)
-        StepSpec('treasury_pay', 'واریز خزانه‌دار', 'treasury', PETTY_TREASURY_PERM, EXECUTE, actions=(ACT, RETURN)),
+        StepSpec('treasury_pay', 'واریز خزانه‌دار', 'treasury', PETTY_TREASURY_PERM, EXECUTE, actions=(ACT, RETURN),
+                 payment=True),
     ),
     on_state_change=_charge_state_change,
     summary=_charge_summary,
@@ -410,9 +441,20 @@ def petty_allocation_category(source):
 STATEMENT_STEP_STATUS = {COMPLETED: 'paid', RETURNED: 'returned', REJECTED: 'returned', CANCELLED: 'draft'}
 
 
+def _settle_statement_outside(statement):
+    """س۳: ردیف‌های باز تأیید می‌شوند ولی شارژ دوباره ساخته نمی‌شود (پرداخت بیرون از سامانه)."""
+    statement.lines.filter(line_status='open').update(line_status='approved')
+    statement.lines.filter(line_status='approved').update(status='approved')
+    statement.lines.filter(line_status='rejected').update(status='rejected')
+    recompute_statement(statement, save=False)
+    statement.status = 'settled_outside'
+
+
 def _statement_state_change(statement, state, instance):
     if state == COMPLETED:
         _execute_statement(statement)
+    elif state == SETTLED_OUTSIDE:
+        _settle_statement_outside(statement)
     else:
         if state in (RETURNED, REJECTED):
             _release_statement_lines(statement)
@@ -446,7 +488,7 @@ PETTY_STATEMENT_WORKFLOW_SPEC = WorkflowSpec(
         # سقف مبلغ شرکت (WorkflowThreshold) این مرحله را برای صورت‌حساب کوچک رد می‌کند
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', PETTY_MANAGER_PERM, APPROVE),
         StepSpec('treasury_pay', 'شارژ دوباره به دست خزانه‌دار', 'treasury', PETTY_TREASURY_PERM, EXECUTE,
-                 actions=(ACT, RETURN)),
+                 actions=(ACT, RETURN), payment=True),
     ),
     on_state_change=_statement_state_change,
     summary=_statement_summary,
@@ -618,8 +660,9 @@ CHANGE_APPROVER_FIELDS = {
 def _personnel_steps():
     return (
         StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_approve_personnel_supervisor', APPROVE),
-        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)؛ گیت فیلدهای مالی با قلاب can_act
-        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_personnel_finance', REVIEW),
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷، س۱ طرح نبودن نفر: قفل «منتظر بماند»)؛ گیت فیلدهای مالی با قلاب can_act
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_personnel_finance', REVIEW,
+                 fixed_missing_action='wait'),
         StepSpec('manager_ok', 'تصویب مدیر', 'manager', 'perm_approve_personnel_manager', APPROVE),
     )
 
@@ -911,8 +954,9 @@ def _fleet_steps():
     # مرحله فقط یک مجوز بخشی می‌گیرد؛ نام مستعار مدیر (manager_approver) در موتور سنجیده نمی‌شود (مثل پرونده)
     return (
         StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_approve_fleet_supervisor', APPROVE),
-        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)؛ گیت نرخ و شبا با قلاب can_act
-        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_fleet_finance', REVIEW),
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷، س۱ طرح نبودن نفر: قفل «منتظر بماند»)؛ گیت نرخ و شبا با قلاب can_act
+        StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', 'perm_approve_fleet_finance', REVIEW,
+                 fixed_missing_action='wait'),
         StepSpec('manager_ok', 'تصویب مدیر', 'manager', 'perm_approve_fleet_manager', APPROVE),
     )
 
@@ -1347,6 +1391,9 @@ PAYROLL_VIEW_PERM = 'view_sys_payroll'
 PAYROLL_MANAGER_PERM = 'perm_manager_payment_authorize'
 PAYROLL_TREASURY_PERM = 'perm_treasury_disburse_action'
 PAYROLL_LOCK_STEPS = ('manager_ok', 'treasury_pay')
+PAYROLL_SETTLED_OUTSIDE = 'SETTLED_OUTSIDE'
+# ردیف‌هایی که حقوق دوره را قفل می‌کنند (تأیید مدیر گرفته، پرداخت‌شده یا پرداخت بیرون از سامانه)
+PAYROLL_LOCKED_ROW_STATUSES = ('READY_TO_PAY', 'PAID', PAYROLL_SETTLED_OUTSIDE)
 PAYROLL_LOCKED_CODE = 'payroll_locked'
 PAYROLL_LOCKED_MESSAGE = ('حقوق این دوره تأیید مدیر گرفته یا پرداخت شده است و تغییر نمی‌کند؛ '
                           'برای اصلاح، مدیر یا خزانه‌دار باید آن را عودت دهد.')
@@ -1385,6 +1432,18 @@ def _payroll_rows_to(period, from_statuses, to_status):
     return qs.update(payment_status=to_status, updated_at=timezone.now())
 
 
+def can_settle_payroll_outside(period, instance):
+    """قلاب can_settle_outside: حقوقی که کسر تنخواه دارد خودکار بسته نمی‌شود تا کسرها معلق نمانند."""
+    from .models import MonthlyPayrollRecord
+    if period is None:
+        return 'سند پیدا نشد.'
+    rows = MonthlyPayrollRecord.objects.filter(period_id=period.pk, payment_status='READY_TO_PAY') \
+        .values_list('petty_settlement_ids', flat=True)
+    if any(ids for ids in rows):
+        return 'در حقوق این دوره کسر تنخواه هست؛ پرداخت آن فقط به دست خزانه‌دار انجام می‌شود.'
+    return None
+
+
 def _payroll_state_change(period, state, instance):
     from django.utils import timezone
     from workflow.errors import WorkflowError
@@ -1409,6 +1468,10 @@ def _payroll_state_change(period, state, instance):
         user = payment.get('user') or _last_closer(instance)
         period._wf_payment_result = execute_period_payment(
             period, user, tracking_code, payment.get('batch_id') or '')
+    elif state == SETTLED_OUTSIDE:
+        # س۳: ردیف‌های آمادهٔ پرداخت «پرداخت بیرون از سامانه» می‌شوند، نه PAID؛ بی کد رهگیری و بی رویداد پرداخت.
+        # دورهٔ حقوقِ دارای کسر تنخواه با قلاب can_settle_outside منتظر می‌ماند (کسرها هرگز معلق نمی‌مانند)
+        _payroll_rows_to(period, ('READY_TO_PAY',), PAYROLL_SETTLED_OUTSIDE)
     elif state in (RETURNED, CANCELLED, REJECTED):
         # عودت: ردیف‌ها دوباره در انتظار و محاسبهٔ دوباره آزاد (هیچ ردیفی حذف نمی‌شود)
         _payroll_rows_to(period, ('READY_TO_PAY',), 'PENDING')
@@ -1427,7 +1490,7 @@ PAYROLL_PERIOD_WORKFLOW_SPEC = WorkflowSpec(
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', PAYROLL_MANAGER_PERM, APPROVE, actions=(ACT, RETURN)),
         # پرداخت فقط با کد رهگیری (کارتابل خزانه)؛ اقدام عمومی «کارهای من» بی کد 400 tracking_code_required
         StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', PAYROLL_TREASURY_PERM, EXECUTE,
-                 actions=(ACT, RETURN)),
+                 actions=(ACT, RETURN), payment=True),
     ),
     on_state_change=_payroll_state_change,
     summary=_payroll_summary,
@@ -1450,7 +1513,7 @@ def payroll_instance(period_id):
 
 
 def is_payroll_locked(period) -> bool:
-    """د۵: کار باز حقوق از manager_ok به بعد، یا ردیف READY_TO_PAY/PAID، یا دورهٔ PAID."""
+    """د۵: کار باز حقوق از manager_ok به بعد، یا ردیف READY_TO_PAY/PAID/SETTLED_OUTSIDE، یا دورهٔ PAID."""
     if period is None:
         return False
     if period.status == 'PAID':
@@ -1458,7 +1521,7 @@ def is_payroll_locked(period) -> bool:
     task = payroll_open_task(period.pk)
     if task is not None and task.step_key in PAYROLL_LOCK_STEPS:
         return True
-    return period.payroll_records.filter(payment_status__in=('READY_TO_PAY', 'PAID')).exists()
+    return period.payroll_records.filter(payment_status__in=PAYROLL_LOCKED_ROW_STATUSES).exists()
 
 
 def payroll_manager_approved(period, records=None) -> bool:
@@ -1473,7 +1536,7 @@ def payroll_manager_approved(period, records=None) -> bool:
             instance.status == WorkflowInstance.IN_PROGRESS and instance.current_step == 'treasury_pay')
     if period.status == 'PAID':
         return True
-    approved = ('READY_TO_PAY', 'PAID')
+    approved = PAYROLL_LOCKED_ROW_STATUSES
     if records is not None:
         return any(r.period_id == period.id and r.payment_status in approved for r in records)
     return period.payroll_records.filter(payment_status__in=approved).exists()
@@ -1504,9 +1567,13 @@ def can_attach_payroll_period(user, entity_id):
 
 
 def is_payroll_period_closed(entity_id):
-    """دورهٔ پرداخت‌شده در گردش حقوق جابه‌جا نمی‌شود (قفل موتور)؛ قفل محاسبه (د۵) جداست."""
+    """دورهٔ پرداخت‌شده (یا پرداخت بیرون از سامانه) در گردش حقوق جابه‌جا نمی‌شود (قفل موتور)؛ قفل محاسبه (د۵) جداست."""
+    from workflow.models import WorkflowInstance
     from .models import MonthlyWorkPeriod
-    return MonthlyWorkPeriod.objects.filter(pk=entity_id, status='PAID').exists()
+    if MonthlyWorkPeriod.objects.filter(pk=entity_id, status='PAID').exists():
+        return True
+    instance = payroll_instance(entity_id)
+    return bool(instance is not None and instance.status == WorkflowInstance.COMPLETED and instance.settled_outside)
 
 
 def submit_payroll_period(user, period):
@@ -1624,19 +1691,21 @@ def _fleet_state_change(period, state, instance):
         period._wf_payment_result = TreasuryDisbursementService.settle_fleet_trips(
             fleet_payable_trips(period).filter(is_settled=False).values_list('id', flat=True), user, tracking_code,
             payment.get('batch_id') or f'FLEET-P{period.pk}')
+    # SETTLED_OUTSIDE (س۳): ترددها تسویه‌نشده می‌مانند؛ دوره با گردش پایان‌یافته بسته و قفل است (is_fleet_locked)
     notify_document_changed(period)
 
 
 def _fleet_steps():
     return (
         StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', FLEET_SUPERVISOR_PERM, APPROVE, actions=(ACT, RETURN)),
-        # بررسی حسابدار هرگز رد نمی‌شود (ق۷)؛ گیت شبا با قلاب can_act:fleet_period
+        # بررسی حسابدار هرگز رد نمی‌شود (ق۷، س۱ طرح نبودن نفر: قفل «منتظر بماند»)؛ گیت شبا با قلاب can_act:fleet_period
         StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', FLEET_FINANCE_PERM, REVIEW,
-                 actions=(ACT, RETURN)),
+                 actions=(ACT, RETURN), fixed_missing_action='wait'),
         # مدیر کارکرد ناوگان را رد نمی‌کند، فقط برای اصلاح عودت می‌دهد
         StepSpec('manager_ok', 'تأیید مدیر', 'manager', FLEET_MANAGER_PERM, APPROVE, actions=(ACT, RETURN)),
         # پرداخت فقط با کد رهگیری (کارتابل خزانه)؛ اقدام عمومی «کارهای من» بی کد 400 tracking_code_required
-        StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', FLEET_TREASURY_PERM, EXECUTE, actions=(ACT, RETURN)),
+        StepSpec('treasury_pay', 'پرداخت خزانه‌دار', 'treasury', FLEET_TREASURY_PERM, EXECUTE, actions=(ACT, RETURN),
+                 payment=True),
     )
 
 

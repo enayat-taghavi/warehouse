@@ -313,6 +313,7 @@ class MonthlyPayrollRecord(models.Model):
         ('PENDING', 'در انتظار تایید'),
         ('READY_TO_PAY', 'تایید مدیر / آماده پرداخت'),
         ('PAID', 'پرداخت و تسویه شده'),
+        ('SETTLED_OUTSIDE', 'تأییدشده، پرداخت بیرون از سامانه'),
         ('FAILED_SHEBA', 'خطای شماره شبا / حساب بانکی'),
         ('REJECTED', 'رد شده'),
     )

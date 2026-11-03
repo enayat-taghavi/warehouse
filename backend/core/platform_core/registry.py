@@ -221,7 +221,8 @@ def can_attach(user, kind: str, entity_id) -> bool:
     if user is None or not getattr(user, 'is_active', False):
         return False
     if getattr(user, 'is_superuser', False):
-        return True
+        # طرح نبودن نفر بند ۴-۶: مدیر کل پیوست سندهایی را که ماژول «فقط دیدنی» اعلام کرده عوض نمی‌کند
+        return str(kind) not in {str(k) for k in contributions('superuser_view_only_kinds')}
     if not kind or not entity_id:
         return False
     allowed = False

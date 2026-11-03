@@ -19,6 +19,8 @@ MODULE_PERMISSIONS: dict[str, tuple[tuple[str, str], ...]] = {}
 MODULE_PERMISSION_SPECS: dict[str, tuple[dict, ...]] = {}
 # دسته‌های مجوز هر ماژول (`PERMISSION_CATEGORIES` مانیفست): key، label_fa، order، menu و module
 MODULE_PERMISSION_CATEGORIES: dict[str, tuple[dict, ...]] = {}
+# حصار نوشتن مدیر کل هر ماژول: (SUPERUSER_WRITE_FENCE، SUPERUSER_WRITE_ALLOWLIST) مانیفست
+MODULE_SUPERUSER_FENCE: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {}
 
 PERMISSION_SCOPES = ('section', 'system')
 
@@ -170,6 +172,9 @@ def _discover_modules() -> None:
         MODULE_PERMISSIONS[dir_code] = custom
         # هر مجوز سفارشی ماژول جزو کدهای همان ماژول هم هست (برای دفاع در عمق)
         MODULE_PERMISSION_CODENAMES[dir_code] = tuple(dict.fromkeys((*perms, *(c for c, _ in custom))))
+        # حصار نوشتن مدیر کل (طرح نبودن نفر بند ۴-۶): پیشوندهای سند و الگوهای استثنا از مانیفست
+        MODULE_SUPERUSER_FENCE[dir_code] = (tuple(getattr(mod, 'SUPERUSER_WRITE_FENCE', ()) or ()),
+                                            tuple(getattr(mod, 'SUPERUSER_WRITE_ALLOWLIST', ()) or ()))
 
 
 _discover_modules()

@@ -943,29 +943,26 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
     if section_codes and (section_id or company_id):
         candidate_ids = _section_perm_holder_ids(section_codes, section_id, company_id)
 
-    # مدیر کل سامانه و مجوزهای سامانه‌ای (مثلاً نام مستعار مجوز از ماژول دیگر) مثل پیش
-    has_perm_q = Q(is_superuser=True)
+    # مجوزهای سامانه‌ای (مثلاً نام مستعار مجوز از ماژول دیگر) مثل پیش. مدیر کل سامانه دیگر گیرندهٔ اعلان مرحله
+    # نیست (طرح نبودن نفر بند ۴-۶: مدیر کل فقط سند را می‌بیند و روی آن اقدام نمی‌کند)
+    system_ids = set()
     if system_codes:
-        has_perm_q |= Q(user_permissions__codename__in=system_codes) | Q(groups__permissions__codename__in=system_codes)
-    users = User.objects.filter(has_perm_q, is_active=True)
-    if company_id:
-        # عضو شرکت فقط از منبع‌های خودکار (طرح مجوزهای بخش‌به‌بخش، ق۲)
-        from platform_core.registry import contributions
-        # انتساب سازمانی در هر سطح (شرکت، پروژه یا بخش) از سازندهٔ هسته (build_section_member_q) می‌آید
-        in_company_q = Q(is_superuser=True)
-        for builder in contributions('company_member_q_builders'):
-            builder_q = builder({company_id})
-            if builder_q is not None:
-                in_company_q |= builder_q
-        users = users.filter(in_company_q)
-    else:
-        users = users.filter(is_superuser=True)
-    system_ids = set(users.values_list('id', flat=True).distinct())
+        has_perm_q = Q(user_permissions__codename__in=system_codes) | Q(groups__permissions__codename__in=system_codes)
+        users = User.objects.filter(has_perm_q, is_active=True, is_superuser=False)
+        if company_id:
+            # عضو شرکت فقط از منبع‌های خودکار (طرح مجوزهای بخش‌به‌بخش، ق۲)
+            from platform_core.registry import contributions
+            # انتساب سازمانی در هر سطح (شرکت، پروژه یا بخش) از سازندهٔ هسته (build_section_member_q) می‌آید
+            in_company_q = Q(pk__in=[])
+            for builder in contributions('company_member_q_builders'):
+                builder_q = builder({company_id})
+                if builder_q is not None:
+                    in_company_q |= builder_q
+            system_ids = set(users.filter(in_company_q).values_list('id', flat=True).distinct())
 
     # سرپرست با مجوز سامانه‌ای: اگر کاربر انتساب سازمانی دارد، فقط کسی اعلان می‌گیرد که بخشِ پرونده را پوشش می‌دهد
     # (انتساب مستقیم بخش یا انتساب سطح پروژه یا شرکتِ آن؛ طرح ۲.۱)
     if stage in ('pending_supervisor', 'change_request_created') and section_id and system_ids:
-        superuser_ids = set(User.objects.filter(id__in=system_ids, is_superuser=True).values_list('id', flat=True))
         users_with_any_section = set(
             SectionAssignment.objects.filter(user_id__in=system_ids, is_active=True).values_list('user_id', flat=True)
         )
@@ -974,7 +971,7 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
         )
         system_ids = {
             uid for uid in system_ids
-            if uid in superuser_ids or uid in users_in_this_section or uid not in users_with_any_section
+            if uid in users_in_this_section or uid not in users_with_any_section
         }
     candidate_ids |= system_ids
     return candidate_ids

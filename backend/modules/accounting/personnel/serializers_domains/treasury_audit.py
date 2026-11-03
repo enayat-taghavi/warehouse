@@ -881,7 +881,7 @@ class PettyCashStatementSerializer(serializers.ModelSerializer):
         return None
 
     def get_is_locked(self, obj):
-        return obj.status == 'paid' or _petty_locked(self, obj.company_id, obj.statement_date_shamsi)
+        return obj.status in ('paid', 'settled_outside') or _petty_locked(self, obj.company_id, obj.statement_date_shamsi)
 
     def get_lines_count(self, obj):
         annotated = getattr(obj, 'lines_count', None)
