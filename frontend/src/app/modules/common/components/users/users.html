@@ -617,7 +617,7 @@
 
             <!-- نوار شناور عملیات گروهی (Floating Bulk Action Bar) -->
             <div *ngIf="selectedUserIds.size > 0"
-                 class="fixed inset-x-3 bottom-safe-3 sm:inset-x-0 sm:mx-auto sm:w-fit z-50 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-wrap justify-center items-center gap-3.5 transition-all duration-300 fade-in slide-in-from-bottom-4">
+                 class="fixed inset-x-3 bottom-safe-3 max-md:bottom-nav-offset-3 sm:inset-x-0 sm:mx-auto sm:w-fit z-50 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-wrap justify-center items-center gap-3.5 transition-all duration-300 fade-in slide-in-from-bottom-4">
               <div class="flex items-center gap-2 border-e border-slate-700 pe-3">
                 <span class="w-6 h-6 rounded-full bg-indigo-500 text-white font-mono font-black text-xs flex items-center justify-center">
                   {{ selectedUserIds.size }}

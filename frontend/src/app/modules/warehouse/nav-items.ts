@@ -34,7 +34,7 @@ export const WAREHOUSE_SYSTEM_NAV_ITEMS: NavItem[] = [
   { id: 'count-tracking', label: 'پیگیری وضعیت شمارش', shortLabel: 'پیگیری شمارش', icon: WAREHOUSE_ENTITY_ICONS.countTracking, permission: 'view_sys_manager_review', anyPermissions: COUNT_TRACKING_PERMISSIONS, module: 'warehouse' },
   { id: 'audit', label: 'رهگیری تغییرات', shortLabel: 'رهگیری', icon: PLATFORM_ENTITY_ICONS.audit, permission: 'view_wh_audit', anyPermissions: AUDIT_PERMISSIONS, module: 'warehouse' },
   { id: 'health', label: 'پایش سلامت سامانه', shortLabel: 'سلامت', icon: PLATFORM_ENTITY_ICONS.health, permission: 'view_sys_settings', module: 'warehouse' },
-  { id: 'reports', label: 'گزارش‌ساز', shortLabel: 'گزارشها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'view_sys_reports', module: 'warehouse' },
+  { id: 'reports', label: 'گزارش‌ساز', shortLabel: 'گزارش‌ها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'view_sys_reports', module: 'warehouse' },
   { id: 'settings', label: 'تنظیمات سیستم', shortLabel: 'تنظیمات', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_sys_settings', module: 'warehouse' },
 ];
 
@@ -50,6 +50,6 @@ export const WAREHOUSE_CONTEXT_NAV_ITEMS: NavItem[] = [
   { id: 'feeding', label: 'مدیریت و تغذیه MT26/49 (به‌زودی)', shortLabel: 'تغذیه داده', icon: 'database', permission: 'view_wh_feeding', module: 'warehouse' },
   { id: 'audit', label: 'رهگیری تغییرات', shortLabel: 'رهگیری', icon: PLATFORM_ENTITY_ICONS.audit, permission: 'view_wh_audit', anyPermissions: AUDIT_PERMISSIONS, module: 'warehouse' },
   { id: 'health', label: 'پایش سلامت سامانه', shortLabel: 'سلامت', icon: PLATFORM_ENTITY_ICONS.health, permission: 'view_wh_settings', module: 'warehouse' },
-  { id: 'reports', label: 'گزارش‌ساز', shortLabel: 'گزارشها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'view_sys_reports', module: 'warehouse' },
+  { id: 'reports', label: 'گزارش‌ساز', shortLabel: 'گزارش‌ها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'view_sys_reports', module: 'warehouse' },
   { id: 'wh-settings', label: 'تنظیمات انبار', shortLabel: 'تنظیمات', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_wh_settings', module: 'warehouse' },
 ];

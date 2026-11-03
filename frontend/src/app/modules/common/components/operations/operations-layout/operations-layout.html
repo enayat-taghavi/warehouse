@@ -86,15 +86,18 @@
   <!-- ناحیه سمت چپ شامل هدر بالای صفحه و محتوای کارگاهی -->
   <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-slate-50 relative overflow-hidden">
 
+    <!-- نوار برند موبایل (حاشیهٔ امن بالا روی همین نوار است) -->
+    <app-mobile-brand-bar />
+
     <!-- نوار بالای صفحه با تم رسمی و اداری یکپارچه کل سیستم (Unified Enterprise Header) -->
-    <header class="bg-white border-b border-slate-200 p-4 h-[70px] flex items-center justify-between shadow-sm relative z-[45] shrink-0 transition-all">
+    <header class="bg-white border-b border-slate-200 px-2 py-2 md:p-4 h-[56px] md:h-[70px] flex items-center justify-between shadow-sm relative z-[45] shrink-0 transition-all">
 
       <!-- Right Side (RTL Start): Mobile Toggle, Desktop Toggle, User Menu, Chat, Network Badge -->
-      <div class="flex items-center gap-2 md:gap-4 flex-1 justify-start shrink-0">
-        <!-- دکمه منوی همبرگر موبایل -->
+      <div class="flex items-center gap-0.5 sm:gap-2 md:gap-4 flex-1 justify-start shrink-0">
+        <!-- دکمه منوی همبرگر تبلت (در موبایل «بیشتر» نوار پایین جای آن است) -->
         <button
           (click)="toggleMobileMenu()"
-          class="lg:hidden p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer tap-target"
+          class="max-md:hidden lg:hidden p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer tap-target"
           title="نمایش منو"
           aria-label="نمایش منو"
         >
@@ -121,7 +124,7 @@
         <button
           *ngIf="commService.isChatAvailable()"
           (click)="toggleChatDrawer()"
-          class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 tap-target"
+          class="relative max-md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 tap-target"
           title="پیام‌رسان سازمانی"
           aria-label="پیام‌رسان سازمانی">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="message-square"></svg>
@@ -131,6 +134,9 @@
             {{ commService.totalUnreadCount() }}
           </span>
         </button>
+
+        <!-- ─── مرکز اعلان‌ها: فقط برای تب «اعلان» نوار پایین موبایل (دسکتاپ مرکز عملیات بدون تغییر) ─── -->
+        <app-notification-center #notifCenter class="shrink-0 md:hidden" [hideTriggerOnMobile]="true"></app-notification-center>
 
         <!-- Dynamic Unified Network, Queue & Sync Hub -->
         <app-offline-pending-badge mode="header" />
@@ -184,16 +190,25 @@
       <router-outlet></router-outlet>
     </main>
 
+    <!-- نوار تب‌های پایین موبایل: چت، اعلان، دو گزینهٔ اول منو، بیشتر -->
+    <app-mobile-bottom-nav
+      [items]="mobileBottomNavItems()"
+      [notifications]="notifCenter"
+      [moreOpen]="isMobileMenuOpen()"
+      (itemSelect)="onMobileBottomNavItem($event)"
+      (moreToggle)="toggleMobileMenu()"
+      (overlayOpen)="closeMobileMenu()" />
+
   </div>
 
   <!-- دراور منوی موبایل -->
   <div
     *ngIf="isMobileMenuOpen()"
-    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm lg:hidden"
+    class="fixed inset-0 z-[55] bg-slate-900/60 backdrop-blur-sm lg:hidden"
     (click)="closeMobileMenu()"
   >
     <div
-      class="w-72 h-full bg-slate-900 border-l border-slate-800 p-4 flex flex-col justify-between overflow-y-auto"
+      class="w-72 h-full px-4 pt-safe-3 pb-safe-3 bg-slate-900 border-l border-slate-800 flex flex-col justify-between overflow-y-auto"
       (click)="$event.stopPropagation()"
     >
       <div class="flex-1 flex flex-col min-h-0">

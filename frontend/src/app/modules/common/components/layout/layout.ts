@@ -37,6 +37,13 @@ import { ModuleNavItem, WhFrontendModule } from '../../../../core/modules/module
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { IconName } from '../../../../shared/icons/icon-registry';
 import { NotificationCenterComponent } from '../../../../shared/components/notification-center/notification-center.component';
+import { MobileBottomNavComponent, MobileBottomNavItem } from '../../../../shared/components/mobile-bottom-nav/mobile-bottom-nav.component';
+import { MobileBrandBarComponent } from '../../../../shared/components/mobile-bottom-nav/mobile-brand-bar.component';
+
+/** شناسه‌های تب‌های ویژهٔ نوار پایین موبایل (جدا از شناسهٔ منوها) */
+const MOBILE_NAV_COMPANIES = '__companies';
+const MOBILE_NAV_COMPANY_DOCS = '__company-docs';
+const MOBILE_NAV_MODULE_PREFIX = '__module:';
 
 @Component({
   selector: 'app-layout',
@@ -47,6 +54,8 @@ import { NotificationCenterComponent } from '../../../../shared/components/notif
     UserMenuComponent,
     OfflinePendingBadgeComponent,
     NotificationCenterComponent,
+    MobileBottomNavComponent,
+    MobileBrandBarComponent,
     ChatDrawerComponent,
     AppRoleSwitcherComponent,
     CompanySwitcherComponent,
@@ -389,17 +398,7 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   toggleChatDrawer() {
-    const nextState = !this.commService.isChatDrawerOpen();
-    this.commService.isChatDrawerOpen.set(nextState);
-    if (nextState) {
-      this.commService.hasNewIncomingPulse.set(false);
-      const active = this.commService.activeConversation$.value;
-      if (active) {
-        this.commService.markAsRead(active.id);
-      }
-    } else {
-      this.commService.closeActiveConversation();
-    }
+    this.commService.toggleChatDrawer();
     this.cdr.detectChanges();
   }
 
@@ -1197,6 +1196,60 @@ export class Layout implements OnInit, OnDestroy {
 
   openSidebar() { this.store.openSidebar(); }
   closeSidebar() { this.store.closeSidebar(); }
+  toggleSidebar() { if (this.isSidebarOpen) this.closeSidebar(); else this.openSidebar(); }
+
+  /**
+   * تب‌های پویای نوار پایین موبایل: گزینه‌های منوی فعال به ترتیب سایدبار (نام مختصر)؛
+   * پوستهٔ شرکت‌ها: «شرکت‌ها» و در صورت دسترسی «مدارک شرکت». نوار خودش دو یا سه مورد اول را برمی‌دارد.
+   */
+  readonly mobileBottomNavItems = computed<MobileBottomNavItem[]>(() => {
+    if (this.isCompaniesShell) {
+      const items: MobileBottomNavItem[] = [
+        { id: MOBILE_NAV_COMPANIES, label: 'شرکت‌ها', title: 'فهرست شرکت‌های من', icon: 'building', active: true }
+      ];
+      if (this.isCompanyDocumentsArchiveSupported && this.hasCompanyDocumentsAccess) {
+        items.push({ id: MOBILE_NAV_COMPANY_DOCS, label: 'مدارک شرکت', title: 'بایگانی اسناد و مدارک رسمی شرکت‌ها', icon: 'file-text', active: false });
+      }
+      return items;
+    }
+    const tabItems = [
+      ...this.primaryNavItems(),
+      ...this.orgAdminNavItems(),
+      ...this.employeeNavItems(),
+      ...this.supervisorNavItems(),
+      ...this.accountantNavItems(),
+      ...this.managerNavItems(),
+      ...this.treasurerNavItems(),
+    ].filter((item, i, all) => !item.isPending && all.findIndex(x => x.id === item.id) === i).slice(0, 3);
+    const items: MobileBottomNavItem[] = tabItems.map(item => ({
+      id: item.id, label: item.shortLabel || item.label, title: item.label,
+      icon: this.menuIcon(item.icon, 'box') as string, active: this.currentTab === item.id
+    }));
+    for (const sec of this.otherModuleNavSections()) {
+      for (const item of sec.items) {
+        if (items.length >= 3) return items;
+        items.push({
+          id: `${MOBILE_NAV_MODULE_PREFIX}${sec.module.code}:${item.id}`, label: item.shortLabel || item.label, title: item.label,
+          icon: this.menuIcon(item.icon, 'box') as string, active: this.isModuleNavItemActive(sec.module.code, item)
+        });
+      }
+    }
+    return items;
+  });
+
+  onMobileBottomNavItem(id: string): void {
+    if (id === MOBILE_NAV_COMPANIES) {
+      this.openCompaniesList();
+    } else if (id === MOBILE_NAV_COMPANY_DOCS) {
+      this.openCompanyDocuments();
+    } else if (id.startsWith(MOBILE_NAV_MODULE_PREFIX)) {
+      const [code, ...rest] = id.slice(MOBILE_NAV_MODULE_PREFIX.length).split(':');
+      const item = this.otherModuleNavSections().find(s => s.module.code === code)?.items.find(i => i.id === rest.join(':'));
+      if (item) this.openModuleNavItem(code, item);
+    } else {
+      this.switchTab(id);
+    }
+  }
 
   /** ماژولی که تب را در منوهای نقش یا extraRouteTabs خود اعلام کرده است */
   private tabOwnerModule(tabId: string): WhFrontendModule | undefined {

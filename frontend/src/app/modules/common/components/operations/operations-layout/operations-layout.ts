@@ -1,5 +1,5 @@
 import { IconName } from '../../../../../shared/icons/icon-registry';
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../../../../core/auth/auth.service';
@@ -10,6 +10,9 @@ import { CommunicationService } from '../../../../../core/services/communication
 import { AppRoleSwitcherComponent } from '../../../../../shared/components/app-role-switcher/app-role-switcher.component';
 import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { ChatDrawerComponent } from '../../communications/chat-drawer/chat-drawer.component';
+import { NotificationCenterComponent } from '../../../../../shared/components/notification-center/notification-center.component';
+import { MobileBottomNavComponent, MobileBottomNavItem } from '../../../../../shared/components/mobile-bottom-nav/mobile-bottom-nav.component';
+import { MobileBrandBarComponent } from '../../../../../shared/components/mobile-bottom-nav/mobile-brand-bar.component';
 import { UserMenuComponent } from '../../../../../shared/components/user-menu/user-menu.component';
 import { CompanySwitcherComponent } from '../../organization/company-switcher/company-switcher';
 import { CompanySelectionModalComponent } from '../../organization/company-selection-modal/company-selection-modal';
@@ -23,6 +26,8 @@ import { ACTION_ICONS, PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons
 interface NavItem {
   id: string;
   label: string;
+  /** نام مختصر برای نوار تب‌های پایین موبایل */
+  shortLabel: string;
   route: string;
   icon: string;
   badge?: string;
@@ -46,6 +51,9 @@ export interface OperationsQuickLink {
     AppRoleSwitcherComponent,
     OfflinePendingBadgeComponent,
     ChatDrawerComponent,
+    NotificationCenterComponent,
+    MobileBottomNavComponent,
+    MobileBrandBarComponent,
     UserMenuComponent,
     CompanySwitcherComponent,
     CompanySelectionModalComponent,
@@ -141,6 +149,7 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     {
       id: 'cockpit',
       label: 'اتاق فرماندهی کل',
+      shortLabel: 'فرماندهی',
       route: '/app/operations/cockpit',
       icon: PLATFORM_ENTITY_ICONS.dashboard,
       badge: 'زنده',
@@ -149,36 +158,42 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     {
       id: 'snapshots',
       label: 'پشتیبان‌گیری و اسنپ‌شات‌های سرور',
+      shortLabel: 'پشتیبان‌گیری',
       route: '/app/operations/snapshots',
       icon: PLATFORM_ENTITY_ICONS.backup
     },
     {
       id: 'users',
       label: 'مدیریت کاربران و نقش‌ها',
+      shortLabel: 'کاربران',
       route: '/app/operations/users',
       icon: PLATFORM_ENTITY_ICONS.users
     },
     {
       id: 'companies',
       label: 'مدیریت شرکت‌ها و هلدینگ',
+      shortLabel: 'شرکت‌ها',
       route: '/app/operations/companies',
       icon: PLATFORM_ENTITY_ICONS.company
     },
     {
       id: 'health',
       label: 'ماتریس سلامت و تست همروندی',
+      shortLabel: 'سلامت',
       route: '/app/operations/health',
       icon: PLATFORM_ENTITY_ICONS.health
     },
     {
       id: 'audit',
       label: 'ممیزی امنیتی و ثبت رویدادها',
+      shortLabel: 'ممیزی',
       route: '/app/operations/audit',
       icon: PLATFORM_ENTITY_ICONS.audit
     },
     {
       id: 'sync-monitor',
       label: 'مانیتورینگ کلاینت‌ها و تداخل',
+      shortLabel: 'همگام‌سازی',
       route: '/app/operations/sync-monitor',
       icon: ACTION_ICONS.sync
     }
@@ -223,17 +238,20 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   }
 
   public toggleChatDrawer(): void {
-    const nextState = !this.commService.isChatDrawerOpen();
-    this.commService.isChatDrawerOpen.set(nextState);
-    if (nextState) {
-      this.commService.hasNewIncomingPulse.set(false);
-      const active = this.commService.activeConversation$.value;
-      if (active) {
-        this.commService.markAsRead(active.id);
-      }
-    } else {
-      this.commService.closeActiveConversation();
-    }
+    this.commService.toggleChatDrawer();
+  }
+
+  /** تب‌های پویای نوار پایین موبایل؛ نوار خودش دو یا سه مورد اول را برمی‌دارد */
+  public mobileBottomNavItems = computed<MobileBottomNavItem[]>(() => {
+    const active = this.activeRoute();
+    return this.navItems.slice(0, 3).map(item => ({
+      id: item.id, label: item.shortLabel, title: item.label, icon: item.icon, active: active === item.id
+    }));
+  });
+
+  public onMobileBottomNavItem(id: string): void {
+    const item = this.navItems.find(i => i.id === id);
+    if (item) this.navigateTo(item.route);
   }
 
   public navigateTo(route: string): void {

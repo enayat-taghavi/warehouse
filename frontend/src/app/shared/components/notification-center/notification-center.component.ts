@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, HostListener, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, HostListener, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -41,7 +41,7 @@ export function isInAppUrl(url: unknown): url is string {
         type="button"
         (click)="toggleDropdown($event)"
         class="relative w-10 h-10 rounded-xl hover:bg-surface-muted dark:hover:bg-slate-800 text-fg-muted dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        [ngClass]="{'bg-surface-muted dark:bg-slate-800 text-brand-600': isOpen()}"
+        [ngClass]="{'bg-surface-muted dark:bg-slate-800 text-brand-600': isOpen(), 'max-md:hidden': hideTriggerOnMobile()}"
         [attr.aria-expanded]="isOpen()"
         aria-controls="notification-center-panel"
         aria-haspopup="true"
@@ -63,6 +63,7 @@ export function isInAppUrl(url: unknown): url is string {
         *ngIf="isOpen()"
         id="notification-center-panel"
         data-back-closes
+        [ngClass]="{'max-md:!fixed max-md:!inset-x-2 max-md:!w-auto max-md:!top-[var(--mobile-top-chrome-height)]': hideTriggerOnMobile()}"
         class="fixed inset-x-2 top-[calc(4rem+env(safe-area-inset-top,0px))] sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
@@ -147,6 +148,8 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   private moduleRegistry = inject(ModuleRegistryService);
   private commService = inject(CommunicationService, { optional: true });
 
+  /** در موبایل زنگوله در هدر پنهان است و پنل با تب «اعلان» نوار پایین باز می‌شود (زیر نوار برند و هدر) */
+  hideTriggerOnMobile = input<boolean>(false);
   isOpen = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   unreadCount = signal<number>(0);

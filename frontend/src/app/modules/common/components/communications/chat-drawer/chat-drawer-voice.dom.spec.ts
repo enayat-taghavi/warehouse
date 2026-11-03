@@ -122,6 +122,7 @@ describe('ChatDrawerComponent - Voice Messages (DOM Specs)', () => {
 
     comm = {
       isChatDrawerOpen: signal(true),
+      hasActiveConversation: signal(false),
       isMuted: signal(false),
       conversations$: convs,
       activeConversation$: active,

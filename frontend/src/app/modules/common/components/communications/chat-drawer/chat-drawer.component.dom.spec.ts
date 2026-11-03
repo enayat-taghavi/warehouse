@@ -63,6 +63,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     const drafts = new Map<string, { files: File[]; text: string }>();
     comm = {
       isChatDrawerOpen: signal(true),
+      hasActiveConversation: signal(false),
       isMuted: signal(false),
       conversations$: convs,
       activeConversation$: active,

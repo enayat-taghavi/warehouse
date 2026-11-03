@@ -7267,3 +7267,44 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow tests/playw
 4. Tool policy: only the commands above and `git status --short`. If a command fails, read its output, do not repeat it unchanged, and report the exact error.
 
 5. Output and stop condition: a short English report with the result of a) and b) and the `git status --short` output. No commit. End the turn after the report.
+
+===
+
+[DONE] (stopped by Claude after all checks passed except clean-tree, which saw Claude own parallel edits; ZWNJ in short labels fixed by Claude) [ ] Session 1 of 1 — Mobile navigation phase 1: optional `shortLabel` field on menu items and the exact short Persian labels for every warehouse, accounting and showcase menu item
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow frontend/src/app/core/modules/module-contract.ts frontend/src/app/modules/warehouse/nav-items.ts frontend/src/app/modules/accounting/nav-items.ts frontend/src/app/modules/showcase/nav-items.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/core/modules/module-contract.ts --contains "shortLabel?: string;"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/warehouse/nav-items.ts --contains "shortLabel?: string;" --count "25:shortLabel: '"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/accounting/nav-items.ts --contains "shortLabel?: string;" --count "36:shortLabel: '"
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/modules/showcase/nav-items.ts --count "2:shortLabel: '"
+verify: node frontend/node_modules/typescript/bin/tsc -p frontend/tsconfig.app.json --noEmit
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(nav): shortLabel for menu items"
+verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md
+-->
+
+1. Critical rules:
+- Edit only these four files: `frontend/src/app/core/modules/module-contract.ts`, `frontend/src/app/modules/warehouse/nav-items.ts`, `frontend/src/app/modules/accounting/nav-items.ts`, `frontend/src/app/modules/showcase/nav-items.ts`. Never edit any other file. `Documents/implementation_plan.md` and `Documents/task.md` have uncommitted changes from another session: never touch, stage or commit them.
+- Do not change any existing field value (`id`, `label`, `icon`, `permission`, `anyPermissions`, `module`, `isAccounting`, `sectionKey`, `route`), any item order, or any function. Only add the new field.
+- Copy every Persian short label below character by character (they contain the zero-width non-joiner in «تن‌خواه», «پرداخت‌ها», «گزارش‌ها», «طرف‌حساب», «پرونده‌ها», «دیسکت‌ها»). Do not reformat the files.
+
+2. Context: a mobile bottom tab bar (built later by another agent) shows two menu items with a short label under the icon. The full `label` stays for the sidebar; the new optional `shortLabel` is used only in the bottom bar.
+
+3. Task:
+- a) In `module-contract.ts`, interface `ModuleNavItem` (near line 140): add directly after the line `label: string;` the two lines
+  `  /** نام مختصر برای نوار تب‌های پایین موبایل؛ بدون آن همان label نمایش داده می‌شود */`
+  `  shortLabel?: string;`
+- b) In `warehouse/nav-items.ts` and `accounting/nav-items.ts`, interface `NavItem`: add the same two lines directly after `label: string;`.
+- c) In every item object of those files add `shortLabel: '<value>'` directly after the item's `label: '...'` property, on the same line, written as `label: '...', shortLabel: '<value>', icon: ...`. Values by item `id` (the same id in several arrays gets the same value):
+  - warehouse (both `WAREHOUSE_SYSTEM_NAV_ITEMS`, 12 items, and `WAREHOUSE_CONTEXT_NAV_ITEMS`, 13 items): `dashboard` → داشبورد; `users` → کاربران; `projects` → انبارها; `docs` → کالاها; `dispatch` → تخصیص; `counter` → شمارش; `customs` → مالی انبار; `supervisor` → سرپرست; `manager-review` → بررسی مدیر; `count-tracking` → پیگیری شمارش; `feeding` → تغذیه داده; `audit` → رهگیری; `health` → سلامت; `reports` → گزارش‌ها; `settings` → تنظیمات; `wh-settings` → تنظیمات.
+  - accounting (36 items over `ORG_ADMIN_NAV_ITEMS`, `EMPLOYEE_NAV_ITEMS`, `SUPERVISOR_NAV_ITEMS`, `ACCOUNTANT_NAV_ITEMS`, `MANAGER_NAV_ITEMS`, `TREASURER_NAV_ITEMS`): `projects-and-sections` → پروژه‌ها; `employee-attendance` → کارکرد; `employee-fleet` → ناوگان; `employee-invoices` → رسیدها; `invoices` → رسیدها; `employee-petty-cash`, `supervisor-petty-cash`, `accountant-petty-cash`, `treasurer-petty-cash` → تن‌خواه; `employee-new-vehicle` → خودرو جدید; `employee-new-personnel` → پرسنل جدید; `supervisor-personnel`, `accountant-personnel`, `manager-personnel` → پرسنل; `supervisor-fleet`, `accountant-fleet`, `manager-fleet` → ناوگان; `supervisor-period-lock` → بستن دوره; `accountant-payroll` → حقوق; `accountant-diskettes` → دیسکت‌ها; `accountant-counterparties` → طرف‌حساب; `profiles` → پرونده‌ها; `base-settings` → تنظیمات پایه; `manager-reports` → گزارش‌ها; `manager-dashboard` → داشبورد; `manager-approvals` → تاییدات; `manager-budget` → بودجه; `treasurer-disbursements` → پرداخت‌ها; `treasurer-bank-accounts` → حساب بانکی; `treasurer-cheques` → چک و اسناد; `treasurer-reconciliation` → مغایرت‌گیری.
+  - showcase (`SHOWCASE_SYSTEM_NAV_ITEMS` and `SHOWCASE_CONTEXT_NAV_ITEMS`, one item each, id `overview`): → نمایشی. These use `ModuleNavItem`, so no interface change there.
+- d) Commit only the four files with the message `feat(nav): shortLabel for menu items (mobile bottom bar)`. No `Co-Authored-By` line. Do not push.
+
+4. Tool policy: read the four files, edit them, then run `node frontend/node_modules/typescript/bin/tsc -p frontend/tsconfig.app.json --noEmit` from the repo root (must exit 0) and `git status --short`. If a command fails, read its output, fix the cause, and do not repeat it unchanged more than once.
+
+5. Before finishing: every item object in the three nav-items files has exactly one `shortLabel`; warehouse has 25, accounting 36, showcase 2. `git status --short` shows nothing except `Documents/implementation_plan.md`, `Documents/task.md` and `tasks.md`.
+
+6. Output and stop condition: a short English report with the commit hash, the shortLabel count per file and the tsc result. End the turn after the report.

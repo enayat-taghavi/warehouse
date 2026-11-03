@@ -19,14 +19,14 @@ export interface NavItem {
 export const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   // تعریف پروژه و بخش در تب «پروژه‌ها و بخش‌ها» استودیوی شرکت (هسته) است؛ این مسیر به همان تب هدایت می‌شود.
   // دسترسی از سطح «نوشتن» بخش projects شرکت می‌آید، نه از مجوز؛ پرسونای فعال org_admin خودش نشانگر است
-  { id: 'projects-and-sections', label: 'پروژه‌ها و بخش‌ها', shortLabel: 'پروژهها', icon: PLATFORM_ENTITY_ICONS.projects, permission: '', module: 'accounting', isAccounting: true },
+  { id: 'projects-and-sections', label: 'پروژه‌ها و بخش‌ها', shortLabel: 'پروژه‌ها', icon: PLATFORM_ENTITY_ICONS.projects, permission: '', module: 'accounting', isAccounting: true },
 ];
 
 export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
   { id: 'employee-attendance', label: 'کارکرد پرسنل', shortLabel: 'کارکرد', icon: ACCOUNTING_ENTITY_ICONS.attendance, permission: 'view_sys_personnel_attendance', module: 'accounting', isAccounting: true },
   { id: 'employee-fleet', label: 'تردد ناوگان', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'view_sys_fleet_attendance', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'employee-invoices', label: 'ثبت رسید پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_invoice_record', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
-  { id: 'employee-petty-cash', label: 'مدیریت تن‌خواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_petty_cash_manage', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
+  { id: 'employee-petty-cash', label: 'مدیریت تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_petty_cash_manage', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
   { id: 'employee-new-vehicle', label: 'تعریف خودرو', shortLabel: 'خودرو جدید', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'view_sys_fleet_attendance', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'employee-new-personnel', label: 'تعریف پرسنل', shortLabel: 'پرسنل جدید', icon: ACCOUNTING_ENTITY_ICONS.newPersonnel, permission: 'view_sys_personnel_attendance', module: 'accounting', isAccounting: true },
 ];
@@ -35,7 +35,7 @@ export const SUPERVISOR_NAV_ITEMS: NavItem[] = [
   { id: 'supervisor-personnel', label: 'پرسنل', shortLabel: 'پرسنل', icon: ACCOUNTING_ENTITY_ICONS.personnel, permission: 'perm_approve_personnel_supervisor', module: 'accounting', isAccounting: true },
   { id: 'supervisor-fleet', label: 'ناوگان', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'perm_approve_fleet_supervisor', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'invoices', label: 'رسیدهای پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_invoice_approve', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
-  { id: 'supervisor-petty-cash', label: 'تایید تن‌خواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_invoice_approve', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
+  { id: 'supervisor-petty-cash', label: 'تایید تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_invoice_approve', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
   { id: 'supervisor-period-lock', label: 'بستن دوره ماهانه', shortLabel: 'بستن دوره', icon: ACCOUNTING_ENTITY_ICONS.periodLock, permission: 'perm_lock_work_period', module: 'accounting', isAccounting: true },
 ];
 
@@ -44,12 +44,12 @@ export const ACCOUNTANT_NAV_ITEMS: NavItem[] = [
   { id: 'accountant-payroll', label: 'حقوق و دستمزد', shortLabel: 'حقوق', icon: ACCOUNTING_ENTITY_ICONS.payroll, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
   { id: 'accountant-fleet', label: 'ناوگان', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'view_sys_fleet_settlement', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'invoices', label: 'رسیدهای پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_invoice_review', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
-  { id: 'accountant-petty-cash', label: 'رسیدگی تن‌خواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_invoice_review', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
-  { id: 'accountant-diskettes', label: 'دیسکت‌های بیمه و مالیات', shortLabel: 'دیسکتها', icon: ACCOUNTING_ENTITY_ICONS.diskettes, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
-  { id: 'accountant-counterparties', label: 'طرف‌حساب‌های مالی', shortLabel: 'طرفحساب', icon: ACCOUNTING_ENTITY_ICONS.counterparties, permission: 'perm_counterparty_manage', module: 'accounting', isAccounting: true },
-  { id: 'profiles', label: 'بانک پرونده‌ها', shortLabel: 'پروندهها', icon: ACCOUNTING_ENTITY_ICONS.profilesArchive, permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
+  { id: 'accountant-petty-cash', label: 'رسیدگی تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_invoice_review', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
+  { id: 'accountant-diskettes', label: 'دیسکت‌های بیمه و مالیات', shortLabel: 'دیسکت‌ها', icon: ACCOUNTING_ENTITY_ICONS.diskettes, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+  { id: 'accountant-counterparties', label: 'طرف‌حساب‌های مالی', shortLabel: 'طرف‌حساب', icon: ACCOUNTING_ENTITY_ICONS.counterparties, permission: 'perm_counterparty_manage', module: 'accounting', isAccounting: true },
+  { id: 'profiles', label: 'بانک پرونده‌ها', shortLabel: 'پرونده‌ها', icon: ACCOUNTING_ENTITY_ICONS.profilesArchive, permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
   { id: 'base-settings', label: 'تنظیمات پایه حقوق', shortLabel: 'تنظیمات پایه', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
-  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', shortLabel: 'گزارشها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
+  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', shortLabel: 'گزارش‌ها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
 ];
 
 export const MANAGER_NAV_ITEMS: NavItem[] = [
@@ -59,17 +59,17 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
   { id: 'manager-approvals', label: 'کارتابل تاییدات', shortLabel: 'تاییدات', icon: ACCOUNTING_ENTITY_ICONS.approvals, permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
   { id: 'invoices', label: 'رسیدهای پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
   { id: 'manager-budget', label: 'کنترل بودجه', shortLabel: 'بودجه', icon: ACCOUNTING_ENTITY_ICONS.budget, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
-  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', shortLabel: 'گزارشها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
+  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', shortLabel: 'گزارش‌ها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
   { id: 'base-settings', label: 'تنظیمات پایه حقوق', shortLabel: 'تنظیمات پایه', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
 ];
 
 export const TREASURER_NAV_ITEMS: NavItem[] = [
-  { id: 'treasurer-disbursements', label: 'پرداخت حقوق و ناوگان', shortLabel: 'پرداختها', icon: ACCOUNTING_ENTITY_ICONS.payroll, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
+  { id: 'treasurer-disbursements', label: 'پرداخت حقوق و ناوگان', shortLabel: 'پرداخت‌ها', icon: ACCOUNTING_ENTITY_ICONS.payroll, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
   { id: 'invoices', label: 'رسیدهای پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
-  { id: 'treasurer-petty-cash', label: 'تن‌خواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
+  { id: 'treasurer-petty-cash', label: 'تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
   { id: 'treasurer-bank-accounts', label: 'حساب‌های بانکی و صندوق', shortLabel: 'حساب بانکی', icon: ACCOUNTING_ENTITY_ICONS.bankAccounts, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
   { id: 'treasurer-cheques', label: 'مدیریت چک و اسناد', shortLabel: 'چک و اسناد', icon: ACCOUNTING_ENTITY_ICONS.cheques, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
-  { id: 'treasurer-reconciliation', label: 'مغایرت‌گیری و نقدینگی', shortLabel: 'مغایرتگیری', icon: ACCOUNTING_ENTITY_ICONS.reconciliation, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
+  { id: 'treasurer-reconciliation', label: 'مغایرت‌گیری و نقدینگی', shortLabel: 'مغایرت‌گیری', icon: ACCOUNTING_ENTITY_ICONS.reconciliation, permission: 'perm_treasury_disburse_action', module: 'accounting', isAccounting: true },
 ];
 
 /** نشانگرهای هر نقش؛ همان مجوزهایی که پرسونای نقش را برای کاربر فعال می‌کنند (app-persona.service). */

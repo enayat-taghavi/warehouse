@@ -307,14 +307,14 @@
 
   <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-slate-50 relative">
     
+    <!-- نوار برند موبایل (حاشیهٔ امن بالا روی همین نوار است) -->
+    <app-mobile-brand-bar [badge]="store.isWarehouseContext() ? currentWarehouse?.name : null" [badgeColor]="currentWarehouse?.color" />
+
     <!-- Top Header -->
-    <header class="layout-header bg-white border-b border-slate-200 px-2 sm:px-4 py-2 sm:py-4 h-[64px] sm:h-[70px] flex items-center justify-between shadow-sm relative z-[45] transition-all" [style.borderTop]="store.isWarehouseContext() ? '4px solid ' + (currentWarehouse?.color || '#4f46e5') : ''">
+    <header class="layout-header bg-white border-b border-slate-200 px-2 md:px-4 py-2 md:py-4 h-[56px] md:h-[70px] flex items-center justify-between shadow-sm relative z-[45] transition-all" [style.borderTop]="store.isWarehouseContext() ? '4px solid ' + (currentWarehouse?.color || '#4f46e5') : ''">
       
-      <!-- Right Side (RTL Start): Mobile Toggle, User, Notifications, Progress -->
+      <!-- Right Side (RTL Start): User, Notifications, Progress (موبایل: منو، چت و اعلان در نوار پایین) -->
       <div class="flex items-center gap-0.5 sm:gap-3 flex-1 justify-start min-w-0 shrink-0">
-        <button (click)="openSidebar()" class="md:hidden p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer tap-target" title="نمایش منو" aria-label="نمایش منو">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
-        </button>
         <button (click)="toggleDesktopSidebar()" class="hidden md:block p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 transition-colors cursor-pointer" title="نمایش/مخفی کردن منو" aria-label="نمایش/مخفی کردن منو">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
         </button>
@@ -329,7 +329,7 @@
         <button 
           *ngIf="commService.isChatAvailable()"
           (click)="toggleChatDrawer()" 
-          class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 tap-target"
+          class="relative max-md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 tap-target"
           title="پیام‌رسان سازمانی"
           aria-label="پیام‌رسان سازمانی">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="message-square"></svg>
@@ -341,7 +341,7 @@
         </button>
 
         <!-- ─── مرکز اعلان‌های بلادرنگ سامانه ─── -->
-        <app-notification-center class="shrink-0"></app-notification-center>
+        <app-notification-center #notifCenter class="shrink-0" [hideTriggerOnMobile]="true"></app-notification-center>
 
         <!-- Dynamic Unified Network, Queue & Sync Hub -->
         <app-offline-pending-badge mode="header" />
@@ -447,11 +447,6 @@
       <span>{{syncSuccessMessage}}</span>
     </div>
 
-    <div *ngIf="store.isWarehouseContext()" class="p-3 block sm:hidden flex items-center justify-center gap-2 shadow-inner border-b" [style.background]="currentWarehouse?.color || '#4f46e5'" [style.borderColor]="'rgba(0,0,0,0.1)'">
-       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" appIcon="home"></svg>
-       <span class="text-[12px] font-black text-white shrink-0">{{currentWarehouse?.name}}</span>
-    </div>
-
     <div class="flex-1 p-4 md:p-6 overflow-y-auto bg-slate-50 relative" id="content-container">
       
       <!-- Breadcrumbs -->
@@ -465,6 +460,15 @@
 
       <router-outlet></router-outlet>
     </div>
+
+    <!-- نوار تب‌های پایین موبایل: چت، اعلان، دو گزینهٔ اول منو، بیشتر -->
+    <app-mobile-bottom-nav
+      [items]="mobileBottomNavItems()"
+      [notifications]="notifCenter"
+      [moreOpen]="isSidebarOpen"
+      (itemSelect)="onMobileBottomNavItem($event)"
+      (moreToggle)="toggleSidebar()"
+      (overlayOpen)="closeSidebar()" />
   </div>
 </div>
 

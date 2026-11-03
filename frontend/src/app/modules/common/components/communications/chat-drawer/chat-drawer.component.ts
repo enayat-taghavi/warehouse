@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -91,6 +91,12 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public activeTab = signal<'conversations' | 'contacts' | 'chat'>('conversations');
   public conversations = signal<Conversation[]>([]);
   public activeConv = signal<Conversation | null>(null);
+  /** پوسته‌ها می‌دانند کاربر داخل گفت‌وگوست یا فهرست؛ نوار تب‌های پایین موبایل داخل گفت‌وگو پنهان می‌شود */
+  private readonly syncActiveConversation = effect(() => {
+    this.commService.hasActiveConversation.set(
+      this.commService.isChatDrawerOpen() && this.activeTab() === 'chat' && this.activeConv() !== null
+    );
+  });
   public messages = signal<ChatMessage[]>([]);
   public contacts = signal<UserShort[]>([]);
   
@@ -364,6 +370,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   ngOnDestroy(): void {
+    this.commService.hasActiveConversation.set(false);
     const cur = this.activeConv();
     if (cur) {
       this.commService.leaveConversation(cur.id);

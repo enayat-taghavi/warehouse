@@ -170,6 +170,8 @@ export class CommunicationService implements OnDestroy {
 
   // وضعیت‌ها و سیگنال‌ها
   public isChatDrawerOpen = signal<boolean>(false);
+  /** کاربر داخل یک گفت‌وگوی کشوی چت است (نه فهرست)؛ نوار تب‌های پایین موبایل آن وقت پنهان می‌شود */
+  public hasActiveConversation = signal<boolean>(false);
   public isMuted = signal<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('wh_chat_muted') === 'true' : false);
   public isChatEnabled = signal<boolean>(true);
   /** دسترسی کاربر فعلی به پیام‌رسان (طرح دسترسی به چت، ت۲)؛ تا پاسخ سرور باز فرض می‌شود */
@@ -940,6 +942,21 @@ export class CommunicationService implements OnDestroy {
     if (active) {
       this.leaveConversation(active.id);
       this.activeConversation$.next(null);
+    }
+  }
+
+  /** باز/بسته کردن کشوی چت از هدر یا نوار تب‌های پایین؛ با باز شدن، گفت‌وگوی باز خوانده می‌شود */
+  public toggleChatDrawer(): void {
+    const nextState = !this.isChatDrawerOpen();
+    this.isChatDrawerOpen.set(nextState);
+    if (nextState) {
+      this.hasNewIncomingPulse.set(false);
+      const active = this.activeConversation$.value;
+      if (active) {
+        this.markAsRead(active.id);
+      }
+    } else {
+      this.closeActiveConversation();
     }
   }
 

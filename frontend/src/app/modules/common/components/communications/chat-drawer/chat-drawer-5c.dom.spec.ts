@@ -74,6 +74,7 @@ describe('ChatDrawerComponent - Attachments & Media (chat stage 5-c)', () => {
     const drafts = new Map<string, { files: File[]; text: string }>();
     comm = {
       isChatDrawerOpen: signal(true),
+      hasActiveConversation: signal(false),
       isMuted: signal(false),
       conversations$: convs,
       activeConversation$: active,

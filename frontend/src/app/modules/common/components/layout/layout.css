@@ -45,15 +45,16 @@
 
 /* ==========================================================================
    SAFE-AREA INSETS FOR LAYOUT HEADER (Notched phones & iPhone home-screen)
+   موبایل (< 768px): حاشیهٔ امن بالا روی نوار برند (app-mobile-brand-bar) است، پس هدر خالص ۵۶px می‌ماند.
    ========================================================================== */
 .layout-header {
-  padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)) !important;
-  height: calc(64px + env(safe-area-inset-top, 0px)) !important;
+  padding-top: 0.5rem !important;
+  height: 56px !important;
   padding-inline-start: max(0.5rem, calc(0.5rem + env(safe-area-inset-right, 0px))) !important;
   padding-inline-end: max(0.5rem, calc(0.5rem + env(safe-area-inset-left, 0px))) !important;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .layout-header {
     padding-top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
     height: calc(70px + env(safe-area-inset-top, 0px)) !important;
