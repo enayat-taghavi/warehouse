@@ -53,15 +53,22 @@ describe('Invoice Share Buttons & Template Verifications (Step J)', () => {
 
   describe('Static template checks across 5 role views', () => {
     templates.forEach(({ role, path: relPath }) => {
-      it(`verifies ${role} template has no appAction="history", no 'history') call, and at least one appAction="share"`, () => {
+      it(`verifies ${role} template has no appAction="history", no 'history') call, and uses the shared list with its share output`, () => {
         const fullPath = path.resolve(__dirname, relPath);
         expect(fs.existsSync(fullPath)).toBe(true);
         const content = fs.readFileSync(fullPath, 'utf-8');
 
         expect(content).not.toContain('appAction="history"');
         expect(content).not.toContain("'history')");
-        expect(content).toContain('appAction="share"');
+        expect(content).toContain('<app-payment-receipt-list');
+        expect(content).toContain('(share)="shareInvoice($event)"');
       });
+    });
+
+    it('the shared payment-receipt list owns the share button', () => {
+      const content = fs.readFileSync(path.resolve(__dirname, 'payment-receipt-list/payment-receipt-list.component.html'), 'utf-8');
+      expect(content).toContain('appAction="share"');
+      expect(content).toContain('share.emit(row)');
     });
   });
 

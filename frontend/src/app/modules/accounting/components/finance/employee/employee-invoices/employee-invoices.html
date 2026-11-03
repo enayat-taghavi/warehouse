@@ -105,327 +105,74 @@
       </div>
     </div>
 
-    <!-- موبایل: هر فاکتور یک کارت -->
-    <ul class="md:hidden divide-y divide-line" aria-label="فهرست رسیدهای پرداخت">
-      @for (inv of invoices; track inv.id) {
-        <li class="p-3 space-y-2">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-sm font-black text-fg truncate">{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</p>
-              <p class="mt-0.5 text-[11px] text-fg-muted">
-                <span class="tabular-nums">{{ inv.invoice_date_shamsi }}</span>
-                @if (inv.invoice_number) { · <bdi dir="ltr">{{ inv.invoice_number }}</bdi> }
-                @if (inv.number) { · <bdi dir="ltr" title="شمارهٔ داخلی">{{ inv.number }}</bdi> }
-              </p>
-            </div>
-            <span [ngClass]="getStatusBadgeClass(inv.status)" [title]="getStatusLabel(inv.status)"
-                  class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border">{{ statusShort(inv.status, inv.status_display) }}</span>
-          </div>
-          <p class="text-xs text-fg line-clamp-2">{{ inv.description || '-' }}</p>
-          @if (inv.section_name) {
-            <p class="text-[11px] text-fg-muted" data-col="section">بخش: <span class="font-bold text-fg">{{ inv.project_name ? (inv.project_name + ' ◀ ') : '' }}{{ inv.section_name }}</span></p>
+    @if (invoices.length > 0) {
+      <app-payment-receipt-list [rows]="invoices" [indexOffset]="(page - 1) * pageSize" [sharingId]="sharingId" [canPrint]="canPrint" [headsOf]="headsColumn" (preview)="openInvoiceHistory($event.id)" (share)="shareInvoice($event)" (print)="printInvoice($event)">
+        <ng-template #rowActions let-inv>
+          @if (roleActionsFor(inv); as ra) {
+            @if (ra.approve && perm.canWriteDocuments()) {
+              <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
+            }
+            @if (ra.ret && perm.canWriteDocuments()) {
+              <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
+            }
+            @if (ra.pay && perm.canWriteDocuments()) {
+              <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
+            }
           }
-          <div class="flex items-end justify-between gap-2">
-            <span class="px-2 py-0.5 rounded-lg bg-surface-muted text-[11px] font-bold text-fg-muted truncate">{{ headsSummary(inv) }}</span>
-            <div class="text-end shrink-0">
-              <p class="text-sm font-black text-fg tabular-nums">{{ formatNumber(inv.amount) }} <span class="text-[10px] font-medium text-fg-muted">ریال</span></p>
-              @if (inv.paid_amount && +inv.paid_amount > 0) {
-                <p class="text-[10px] text-emerald-700">پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}</p>
-              }
-            </div>
-          </div>
-          @if (inv.possible_duplicate || inv.vat_manual) {
-            <div class="flex flex-wrap gap-1">
-              @if (inv.possible_duplicate) { <span class="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">تکراری</span> }
-              @if (inv.vat_manual) { <span class="px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span> }
-            </div>
+          @if (isEditable(inv) && perm.canWriteDocuments()) {
+            <button type="button" appAction="send" display="label" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)" hint="ارسال رسید پرداخت به کارتابل سرپرست کارگاه"></button>
+            <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید پرداخت پیش‌نویس"></button>
           }
-          <div class="flex flex-wrap items-center justify-end gap-1.5 pt-1 border-t border-line">
-            <span class="me-auto text-[11px] text-fg-muted inline-flex items-center gap-1 min-w-0" [title]="creatorHint(inv)" [attr.aria-label]="'ایجادکننده: ' + (inv.created_by_name || '—') + ' — ' + creatorHint(inv)">
-              <svg appIcon="user" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-              <b class="text-fg truncate">{{ inv.created_by_name || '—' }}</b>
+          @if (isReviewEditable(inv) && perm.canWriteDocuments()) {
+            <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)"></button>
+          }
+          @if (inv.attachment) {
+            <button type="button" appAction="view" display="icon" label="تصویر رسید پرداخت" size="sm" (click)="openAttachmentPreview(inv)" hint="مشاهده تصویر رسید پرداخت"></button>
+          }
+          @if (inv.status === 'draft' && perm.canWriteDocuments()) {
+            <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)" hint="حذف رسید پرداخت پیش‌نویس"></button>
+          }
+        </ng-template>
+        <ng-template #rowExtra let-inv>
+          @if (!canEditInvoice(inv) && !roleActionsFor(inv)) {
+            <span class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
+              <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg> قفل
             </span>
-            @if (roleActionsFor(inv); as ra) {
-              @if (ra.approve && perm.canWriteDocuments()) {
-                <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
-              }
-              @if (ra.ret && perm.canWriteDocuments()) {
-                <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
-              }
-              @if (ra.pay && perm.canWriteDocuments()) {
-                <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
-              }
-            }
-            @if (isEditable(inv) && perm.canWriteDocuments()) {
-              <button type="button" appAction="send" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)"></button>
-              <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)"></button>
-            }
-            @if (isReviewEditable(inv) && perm.canWriteDocuments()) {
-              <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)"></button>
-            }
-            @if (inv.attachment) {
-              <button type="button" appAction="view" display="icon" label="تصویر رسید پرداخت" size="sm" (click)="openAttachmentPreview(inv)"></button>
-            }
-            <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint" (click)="printInvoice(inv)"></button>
-            @if (inv.paid_amount && +inv.paid_amount > 0) {
-              <app-invoice-receipt-button [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
-            }
-            <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="openInvoiceHistory(inv.id)" hint="جزئیات و سابقه گردش کار رسید پرداخت"></button>
-            <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
-            @if (inv.status === 'draft' && perm.canWriteDocuments()) {
-              <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)"></button>
-            }
-          </div>
-        </li>
-      }
-    </ul>
+          }
+        </ng-template>
+      </app-payment-receipt-list>
+    }
 
-    <!-- بدنه جدول -->
-    <div class="overflow-x-auto">
-      <table class="w-full text-start border-collapse text-xs">
-        <thead class="hidden md:table-header-group">
-          <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
-            <th class="py-3 px-3 text-center w-12">#</th>
-            <th class="py-3 px-3">شماره رسید پرداخت</th>
-            <th class="py-3 px-3">تاریخ شمسی</th>
-            <th class="py-3 px-3">طرف‌حساب</th>
-            <th class="py-3 px-3">پروژه / بخش</th>
-            <th class="py-3 px-3">سرفصل هزینه</th>
-            <th class="py-3 px-3">شرح هزینه</th>
-            <th class="py-3 px-3 text-end">مبلغ (ریال)</th>
-            <th class="py-3 px-3 text-center">پیوست</th>
-            <th class="py-3 px-3 text-center">وضعیت</th>
-            <th class="py-3 px-3">ایجادکننده</th>
-            <th class="py-3 px-3 text-center">عملیات</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
-          <tr *ngFor="let inv of invoices; let idx = index" class="hidden md:table-row hover:bg-slate-50/80 transition-colors whitespace-nowrap">
-            
-            <!-- ردیف -->
-            <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">
-              {{ formatNumber((page - 1) * pageSize + idx + 1) }}
-            </td>
-
-            <!-- شماره فاکتور -->
-            <td class="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-              <span class="inline-flex items-center gap-1.5">
-                <span class="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px]">{{ inv.invoice_number || '—' }}</span>
-                <span *ngIf="inv.number" class="text-[10px] text-fg-muted" title="شمارهٔ داخلی رسید پرداخت">{{ inv.number }}</span>
-                <span *ngIf="inv.possible_duplicate" class="font-sans px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">تکراری</span>
-                <span *ngIf="inv.vat_manual" class="font-sans px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span>
-              </span>
-            </td>
-
-            <!-- تاریخ شمسی -->
-            <td class="py-2.5 px-3 font-mono text-slate-600 whitespace-nowrap">
-              {{ inv.invoice_date_shamsi }}
-            </td>
-
-            <!-- طرف‌حساب -->
-            <td class="py-2.5 px-3 font-bold text-slate-800 whitespace-nowrap">
-              <span class="flex items-center gap-1.5">
-                <svg appIcon="user" class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-                <span>{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</span>
-              </span>
-            </td>
-
-            <!-- پروژه / بخش -->
-            <td class="py-2.5 px-3 whitespace-nowrap max-w-[12rem] truncate" data-col="section" [title]="(inv.project_name ? inv.project_name + ' ◀ ' : '') + (inv.section_name || '')">
-              <span *ngIf="inv.project_name" class="text-[10px] text-slate-500">{{ inv.project_name }} ◀ </span>
-              <span class="font-bold text-slate-700">{{ inv.section_name || '—' }}</span>
-            </td>
-
-            <!-- سرفصل هزینه -->
-            <td class="py-2.5 px-3 whitespace-nowrap">
-              <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200/60">
-                {{ headsSummary(inv) }}
-              </span>
-            </td>
-
-            <!-- شرح هزینه -->
-            <td class="py-2.5 px-3 text-slate-600 max-w-xs truncate" [title]="inv.description || ''">
-              {{ inv.description || '-' }}
-            </td>
-
-            <!-- مبلغ (ریال و تومان) -->
-            <td class="py-2.5 px-3 text-end whitespace-nowrap font-mono" [title]="formatNumber(Math.floor((inv.amount || 0) / 10)) + ' تومان' + (inv.paid_amount && +inv.paid_amount > 0 ? ' — پرداخت‌شده ' + formatNumber(inv.paid_amount) : '')">
-              <span class="font-black text-slate-900 text-xs">{{ formatNumber(inv.amount) }}</span>
-              <span *ngIf="inv.remaining && +inv.remaining > 0 && inv.paid_amount && +inv.paid_amount > 0" class="font-sans text-[10px] text-amber-700 ms-1">مانده {{ formatNumber(inv.remaining) }}</span>
-            </td>
-
-            <!-- پیوست -->
-            <td class="py-2.5 px-3 text-center whitespace-nowrap">
-              <button
-                *ngIf="inv.attachment"
-                type="button"
-                appAction="view"
-                display="label"
-                label="تصویر"
-                size="sm"
-                (click)="openAttachmentPreview(inv)"
-                hint="مشاهده تصویر رسید پرداخت">
-              </button>
-              <span *ngIf="!inv.attachment" class="text-slate-300 text-[11px]">-</span>
-            </td>
-
-            <!-- وضعیت -->
-            <td class="py-2.5 px-3 text-center whitespace-nowrap">
-              <span [ngClass]="getStatusBadgeClass(inv.status)" [title]="getStatusLabel(inv.status)"
-                    class="px-2.5 py-1 rounded-full text-[10px] font-bold border inline-block shadow-sm">
-                {{ statusShort(inv.status, inv.status_display) }}
-              </span>
-            </td>
-
-            <!-- ایجادکننده؛ تاریخ دقیق و آخرین تغییر در راهنمای نشانگر -->
-            <td class="py-2.5 px-3 text-slate-600 text-[11px] whitespace-nowrap max-w-[10rem] truncate" [title]="creatorHint(inv)">{{ inv.created_by_name || '—' }}</td>
-
-            <!-- عملیات -->
-            <td class="py-2.5 px-3 text-center whitespace-nowrap">
-              <div class="flex items-center justify-center gap-1">
-
-                <!-- کار نقش روی این ردیف (فهرست یکپارچه، ح۲) -->
-                @if (roleActionsFor(inv); as ra) {
-                  @if (ra.approve && perm.canWriteDocuments()) {
-                    <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
-                  }
-                  @if (ra.ret && perm.canWriteDocuments()) {
-                    <button type="button" appAction="return" size="sm" data-role-action="return" [label]="ra.ret.label" [hint]="ra.ret.hint" (click)="emitRoleAction('return', inv)"></button>
-                  }
-                  @if (ra.pay && perm.canWriteDocuments()) {
-                    <button type="button" appAction="confirm" size="sm" data-role-action="pay" [label]="ra.pay.label" [hint]="ra.pay.hint" (click)="emitRoleAction('pay', inv)"></button>
-                  }
-                }
-
-                <!-- ارسال به سرپرست (فقط برای پیش‌نویس) -->
-                <button
-                  *ngIf="isEditable(inv) && perm.canWriteDocuments()"
-                  type="button"
-                  appAction="send"
-                  display="label"
-                  label="ارسال"
-                  size="sm"
-                  (click)="sendToSupervisor(inv)"
-                  [disabled]="isSaving"
-                  hint="ارسال رسید پرداخت به کارتابل سرپرست کارگاه">
-                </button>
-
-                <!-- ویرایش پیش‌نویس -->
-                <button
-                  *ngIf="isEditable(inv) && perm.canWriteDocuments()"
-                  type="button"
-                  appAction="edit"
-                  label="ویرایش"
-                  size="sm"
-                  (click)="openEditInvoiceModal(inv)"
-                  [disabled]="isSaving"
-                  hint="ویرایش رسید پرداخت پیش‌نویس">
-                </button>
-
-                <!-- ویرایش رسید در مرحلهٔ بررسی حسابدار -->
-                <button
-                  *ngIf="isReviewEditable(inv) && perm.canWriteDocuments()"
-                  type="button"
-                  appAction="edit"
-                  label="ویرایش"
-                  size="sm"
-                  (click)="openEditInvoiceModal(inv)"
-                  [disabled]="isSaving"
-                  hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)">
-                </button>
-
-                <!-- چاپ / PDF -->
-                <button
-                  type="button"
-                  appAction="print"
-                  display="icon"
-                  label="چاپ / PDF"
-                  size="sm"
-                  (click)="printInvoice(inv)"
-                  [disabled]="!canPrint"
-                  hint="چاپ رسید پرداخت (PDF)">
-                </button>
-
-                <!-- دانلود رسید پرداخت -->
-                <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
-
-                <!-- حذف فاکتور (فقط برای پیش‌نویس) -->
-                <button
-                  *ngIf="inv.status === 'draft' && perm.canWriteDocuments()"
-                  type="button"
-                  appAction="delete"
-                  label="حذف"
-                  size="sm"
-                  (click)="deleteDraftInvoice(inv)"
-                  [disabled]="isSaving"
-                  hint="حذف رسید پرداخت پیش‌نویس">
-                </button>
-
-                <!-- پیش‌نمایش: جزئیات و سابقه گردش کار -->
-                <button
-                  type="button"
-                  appAction="view"
-                  display="icon"
-                  label="پیش‌نمایش"
-                  size="sm"
-                  (click)="openInvoiceHistory(inv.id)"
-                  hint="جزئیات و سابقه گردش کار رسید پرداخت">
-                </button>
-
-                <!-- همرسانی رسید پرداخت -->
-                <button
-                  type="button"
-                  appAction="share"
-                  display="icon"
-                  label="همرسانی"
-                  size="sm"
-                  [busy]="sharingId === inv.id"
-                  (click)="shareInvoice(inv)"
-                  hint="همرسانی PDF رسید پرداخت">
-                </button>
-
-                <!-- وضعیت قفل‌شده برای مراحل بعد -->
-                <span *ngIf="!canEditInvoice(inv) && !roleActionsFor(inv)" class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
-                  <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg> قفل
-                </span>
-              </div>
-            </td>
-
-          </tr>
-
-          <!-- حالت خالی -->
-          <tr *ngIf="invoices.length === 0 && !isLoading && !loadError">
-            <td colspan="12" class="py-12 text-center text-fg-muted">
+    <!-- حالت خالی -->
+    @if (invoices.length === 0 && !isLoading && !loadError) {
+      <div class="py-12 text-center text-fg-muted">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-surface-muted flex items-center justify-center mb-3">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
               </div>
               <p class="font-bold text-fg text-xs">هیچ رسید پرداختی در این وضعیت یا جستجو یافت نشد.</p>
               <p class="text-[11px] text-fg-muted mt-1">با فشردن دکمهٔ «رسید پرداخت جدید» می‌توانید رسید پرداخت ثبت کنید.</p>
-            </td>
-          </tr>
+            </div>
+    }
 
-          <!-- حالت بارگذاری -->
-          <tr *ngIf="isLoading">
-            <td colspan="12" class="py-12 text-center text-fg-muted" role="status">
+    <!-- حالت بارگذاری -->
+    @if (isLoading) {
+      <div class="py-12 text-center text-fg-muted" role="status">
               <svg class="inline-block animate-spin mb-2" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="loader"></svg>
               <p class="text-xs font-bold">در حال بارگذاری رسیدهای پرداخت بخش...</p>
-            </td>
-          </tr>
+            </div>
+    }
 
-          <!-- حالت خطا / آفلاین -->
-          <tr *ngIf="loadError && !isLoading">
-            <td colspan="12" class="py-10 text-center" role="alert">
+    <!-- حالت خطا / آفلاین -->
+    @if (loadError && !isLoading) {
+      <div class="py-10 text-center" role="alert">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center mb-3">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
               </div>
               <p class="font-bold text-fg text-xs">{{ loadError }}</p>
               <p *ngIf="isOffline" class="text-[11px] text-fg-muted mt-1">دستگاه آفلاین است؛ رسیدهای پرداخت ثبت‌شدهٔ آفلاین پس از اتصال همگام می‌شوند.</p>
               <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" class="mt-3" (click)="loadInvoices()"></button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </div>
+    }
 
     <!-- صفحه‌بندی -->
     <div *ngIf="totalCount > pageSize" class="p-3 border-t border-line flex items-center justify-between gap-2 text-xs">

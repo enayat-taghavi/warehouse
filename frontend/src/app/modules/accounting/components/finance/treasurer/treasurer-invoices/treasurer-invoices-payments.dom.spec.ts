@@ -171,7 +171,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
   });
 
   it('a) the row shows the label for partially_paid and a button whose text contains the payment label; clicking it opens the modal (app-modal content visible) and calls getInvoicePayments(7); the amount input default equals the remaining 600000', async () => {
-    const statusBadge = fixture.nativeElement.querySelector('tbody tr td span.bg-sky-50');
+    const statusBadge = fixture.nativeElement.querySelector('tbody tr td span.bg-teal-50');
     expect(statusBadge).toBeTruthy();
     expect(statusBadge.textContent).toContain('پرداخت ناقص');
 

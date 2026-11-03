@@ -1,0 +1,127 @@
+<!-- موبایل: هر رسید پرداخت یک کارت -->
+<ul class="md:hidden divide-y divide-line" aria-label="فهرست رسیدهای پرداخت">
+  @for (row of rows(); track row.id) {
+    <li class="p-3 space-y-2">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="text-sm font-black text-fg truncate">{{ row.counterparty_name || 'طرف‌حساب نامشخص' }}</p>
+          <button type="button" (click)="preview.emit(row)"
+            class="text-start text-[11px] text-fg-muted hover:text-indigo-600 transition-colors cursor-pointer mt-0.5 block"
+            title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
+            <span class="tabular-nums">{{ dateOf(row) }}</span>
+            <span class="font-mono"> · <bdi dir="ltr">{{ row.invoice_number || row.id }}</bdi></span>
+            @if (row.number) { <span class="font-mono" title="شمارهٔ داخلی"> · <bdi dir="ltr">{{ row.number }}</bdi></span> }
+          </button>
+        </div>
+        <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border" [ngClass]="statusClass(row.status)" [title]="row.status_display || ''">{{ statusShort(row.status, row.status_display) }}</span>
+      </div>
+
+      @if (showDescription() && row.description) {
+        <p class="text-xs text-fg line-clamp-2">{{ row.description }}</p>
+      }
+      @if (row.section_name) {
+        <p class="text-[11px] text-fg-muted" data-col="section">بخش: <span class="font-bold text-fg">{{ sectionText(row) }}</span></p>
+      }
+
+      <div class="flex items-end justify-between gap-2">
+        <div class="flex flex-wrap gap-1 min-w-0">
+          @if (headsOf(); as heads) { <span class="px-2 py-0.5 rounded-lg bg-surface-muted text-[11px] font-bold text-fg-muted truncate">{{ heads(row) }}</span> }
+          @if (extraColumn(); as col) { <span class="text-[11px] text-fg-muted">{{ col.label }}: <b class="text-fg">{{ col.value(row) }}</b></span> }
+          @if (row.possible_duplicate) { <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="row.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span> }
+          @if (row.vat_manual) { <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات به‌صورت دستی تغییر کرده است">مالیات دستی</span> }
+        </div>
+        <div class="text-end shrink-0" [title]="amountHint(row)">
+          <p class="text-sm font-black text-fg tabular-nums">{{ fa(amountOf(row)) }} <span class="text-[10px] font-medium text-fg-muted">ریال</span></p>
+          @if (isPaidPart(row)) { <p class="text-[10px] text-amber-700">مانده: {{ fa(row.remaining) }}</p> }
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-line">
+        <span class="me-auto text-[11px] text-fg-muted inline-flex items-center gap-1 min-w-0" [title]="creatorHint(row)" [attr.aria-label]="'ایجادکننده: ' + (row.created_by_name || '—') + ' — ' + creatorHint(row)">
+          <svg appIcon="user" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <b class="text-fg truncate">{{ row.created_by_name || '—' }}</b>
+        </span>
+        <ng-container *ngTemplateOutlet="actions; context: { $implicit: row }"></ng-container>
+      </div>
+    </li>
+  }
+</ul>
+
+<!-- تبلت و دسکتاپ: هر رسید پرداخت یک ردیف یک‌خطی؛ جزئیات در راهنمای نشانگر -->
+<div class="hidden md:block overflow-x-auto">
+  <table class="w-full text-start border-collapse text-xs">
+    <thead>
+      <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
+        <th class="py-3 px-3 text-center w-12">#</th>
+        <th class="py-3 px-3">شماره رسید پرداخت</th>
+        <th class="py-3 px-3">تاریخ</th>
+        <th class="py-3 px-3">طرف‌حساب</th>
+        <th class="py-3 px-3">پروژه / بخش</th>
+        @if (headsOf()) { <th class="py-3 px-3">سرفصل هزینه</th> }
+        @if (showDescription()) { <th class="py-3 px-3">شرح هزینه</th> }
+        <th class="py-3 px-3 text-end">مبلغ (ریال)</th>
+        @if (extraColumn(); as col) { <th class="py-3 px-3">{{ col.label }}</th> }
+        <th class="py-3 px-3 text-center">وضعیت</th>
+        <th class="py-3 px-3">ایجادکننده</th>
+        <th class="py-3 px-3 text-center">عملیات</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+      @for (row of rows(); track row.id; let idx = $index) {
+        <tr class="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
+          <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">{{ fa(indexOffset() + idx + 1) }}</td>
+          <td class="py-2.5 px-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer"
+            (click)="preview.emit(row)" (keydown.enter)="preview.emit(row)" (keydown.space)="$event.preventDefault(); preview.emit(row)"
+            tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
+            <span class="inline-flex items-center gap-1.5">
+              <bdi dir="ltr">{{ row.invoice_number || row.id }}</bdi>
+              @if (row.number) { <span class="text-[10px] text-slate-500" title="شمارهٔ داخلی"><bdi dir="ltr">{{ row.number }}</bdi></span> }
+              @if (row.possible_duplicate) { <span class="font-sans px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="row.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span> }
+              @if (row.vat_manual) { <span class="font-sans px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات به‌صورت دستی تغییر کرده است">مالیات دستی</span> }
+            </span>
+          </td>
+          <td class="py-2.5 px-3 font-mono text-slate-600">{{ dateOf(row) }}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800 max-w-[12rem] truncate" [title]="row.counterparty_name || ''">{{ row.counterparty_name || 'طرف‌حساب نامشخص' }}</td>
+          <td class="py-2.5 px-3 max-w-[12rem] truncate" data-col="section" [title]="sectionText(row)">
+            @if (row.project_name) { <span class="text-[10px] text-slate-500">{{ row.project_name }} ◀ </span> }
+            <span class="font-bold text-slate-700">{{ row.section_name || '—' }}</span>
+          </td>
+          @if (headsOf(); as heads) {
+            <td class="py-2.5 px-3 max-w-[10rem] truncate" [title]="heads(row)">
+              <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200/60">{{ heads(row) }}</span>
+            </td>
+          }
+          @if (showDescription()) {
+            <td class="py-2.5 px-3 text-slate-600 max-w-xs truncate" [title]="row.description || ''">{{ row.description || '—' }}</td>
+          }
+          <td class="py-2.5 px-3 text-end font-mono" [title]="amountHint(row)">
+            <span class="font-black text-slate-900">{{ fa(amountOf(row)) }}</span>
+            @if (isPaidPart(row)) { <span class="font-sans text-[10px] text-amber-700 ms-1">مانده {{ fa(row.remaining) }}</span> }
+          </td>
+          @if (extraColumn(); as col) {
+            <td class="py-2.5 px-3 text-slate-600 max-w-[10rem] truncate" [title]="col.value(row)">{{ col.value(row) }}</td>
+          }
+          <td class="py-2.5 px-3 text-center">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block" [ngClass]="statusClass(row.status)" [title]="row.status_display || ''">{{ statusShort(row.status, row.status_display) }}</span>
+          </td>
+          <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-[10rem] truncate" [title]="creatorHint(row)">{{ row.created_by_name || '—' }}</td>
+          <td class="py-2.5 px-3 text-center">
+            <div class="flex items-center justify-center gap-1">
+              <ng-container *ngTemplateOutlet="actions; context: { $implicit: row }"></ng-container>
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- دکمه‌های هر ردیف: کار نقش، سپس دکمه‌های مشترک، سپس نشان‌های پایانی -->
+<ng-template #actions let-row>
+  @if (actionsTpl(); as tpl) { <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }"></ng-container> }
+  <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="preview.emit(row)" hint="جزئیات و سابقه گردش کار رسید پرداخت"></button>
+  <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId() === row.id" (click)="share.emit(row)" hint="همرسانی PDF رسید پرداخت"></button>
+  <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint()" (click)="print.emit(row)" hint="چاپ رسید پرداخت (PDF)"></button>
+  @if (isPaidPart(row)) { <app-invoice-receipt-button [invoiceId]="row.id!" display="icon"></app-invoice-receipt-button> }
+  @if (extraTpl(); as tpl) { <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }"></ng-container> }
+</ng-template>

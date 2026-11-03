@@ -4,14 +4,13 @@ import { Subscription } from 'rxjs';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
+import { PaymentReceiptListComponent } from '../../payment-receipt-list/payment-receipt-list.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
-import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
-import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
 
 /**
  * کارتابل فاکتور مدیر (صدور مجوز پرداخت)؛ از زیرتب «فاکتورهای هزینه» کارتابل تاییدات جدا شد
@@ -20,13 +19,10 @@ import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../..
 @Component({
   selector: 'app-manager-invoices',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent, InvoiceReceiptButtonComponent, InvoicePreviewModalComponent],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, PaymentReceiptListComponent, WorkflowReasonDialogComponent, InvoicePreviewModalComponent],
   templateUrl: './manager-invoices.html',
 })
 export class ManagerInvoicesComponent implements OnInit, OnDestroy {
-  readonly statusShort = invoiceStatusShort;
-  readonly creatorHint = invoiceCreatorHint;
-  readonly amountHint = invoiceAmountHint;
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;
   /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */

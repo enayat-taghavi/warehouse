@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, Input, Output, EventEmitter, inject } from '@angular/core';
 import { PermissionService } from '../../../../../../core/services/permission.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
-import { PAYMENT_RECEIPT_LABEL, invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
+import { PAYMENT_RECEIPT_LABEL, invoiceStatusClass } from '../../../../payment-receipt';
 import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
@@ -18,10 +18,10 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { validateSheba } from '../../../../../../core/utils/sheba-utils';
 import { SearchSelectComponent, SearchSelectOption } from '../../../../../../shared/components/search-select/search-select.component';
-import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { CounterpartyFormFieldsComponent } from '../../counterparties/counterparty-form/counterparty-form-fields.component';
 import { CounterpartyFormState, emptyCounterpartyForm, isMaskedValue } from '../../counterparties/counterparty-form/counterparty-form.state';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
+import { PaymentReceiptListComponent } from '../../payment-receipt-list/payment-receipt-list.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
@@ -91,14 +91,13 @@ function toAsciiDigits(v: string): string {
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent, InvoiceReceiptButtonComponent],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, PaymentReceiptListComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
 export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
-  readonly statusShort = invoiceStatusShort;
-  readonly creatorHint = invoiceCreatorHint;
-  readonly amountHint = invoiceAmountHint;
+  /** ستون سرفصل در فهرست مشترک رسیدهای پرداخت */
+  readonly headsColumn = (inv: ExpenseInvoice) => this.headsSummary(inv);
   protected perm = inject(PermissionService);
   /** برچسب پیوست رسید پرداخت (فهرست فقط خواندنی در جزئیات فاکتور) */
   readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
@@ -1589,27 +1588,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   // ─── برچسب‌ها و استایل‌های وضعیت فاکتور ───
   getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'draft':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
-      case 'pending_supervisor':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'pending_accountant':
-        return 'bg-sky-50 text-sky-700 border-sky-200';
-      case 'pending_manager':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'ready_to_pay':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'partially_paid':
-        return 'bg-teal-50 text-teal-700 border-teal-200';
-      case 'paid':
-      case 'settled_outside':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'rejected':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      default:
-        return 'bg-slate-50 text-slate-600 border-slate-200';
-    }
+    return invoiceStatusClass(status);
   }
 
   getStatusLabel(status: string): string {

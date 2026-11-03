@@ -10,6 +10,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { ProjectSection, ExpenseInvoice } from '../../../../models/personnel.model';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
+import { PaymentReceiptListComponent } from '../../payment-receipt-list/payment-receipt-list.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
@@ -18,9 +19,7 @@ import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.direct
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
-import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
-import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -30,10 +29,9 @@ import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../..
     FormsModule,
     ReactiveFormsModule,
     TabBarComponent,
-    ActionButtonComponent,
+    ActionButtonComponent, PaymentReceiptListComponent,
     CommandCenterComponent,
     WorkflowReasonDialogComponent,
-    InvoiceReceiptButtonComponent,
     InvoicePreviewModalComponent,
     SvgIconDirective
   ],
@@ -41,9 +39,8 @@ import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../..
   styleUrl: './accountant-invoices.css'
 })
 export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
-  readonly statusShort = invoiceStatusShort;
-  readonly creatorHint = invoiceCreatorHint;
-  readonly amountHint = invoiceAmountHint;
+  /** ستون ویژهٔ حسابدار در فهرست مشترک رسیدهای پرداخت */
+  readonly approverColumn = { label: 'تاییدکننده سرپرست', value: (r: any) => r.supervisor_approver_name || 'سرپرست کارگاه' };
   protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;

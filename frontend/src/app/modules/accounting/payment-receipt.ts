@@ -38,6 +38,25 @@ export function invoiceStatusShort(status?: string | null, fallback?: string | n
   return (status && INVOICE_STATUS_SHORT[status]) || fallback || status || 'نامشخص';
 }
 
+const INVOICE_STATUS_CLASS: Record<string, string> = {
+  draft: 'bg-slate-100 text-slate-700 border-slate-200',
+  pending_supervisor: 'bg-amber-50 text-amber-700 border-amber-200',
+  pending_accountant: 'bg-sky-50 text-sky-700 border-sky-200',
+  pending_manager: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  ready_to_pay: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  pending_payment: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  partially_paid: 'bg-teal-50 text-teal-700 border-teal-200',
+  paid: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  settled_outside: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  revision_required: 'bg-amber-100 text-amber-900 border-amber-300',
+  rejected: 'bg-rose-50 text-rose-700 border-rose-200',
+};
+
+/** رنگ نشان وضعیت رسید پرداخت؛ یک‌جا برای همهٔ صفحه‌ها */
+export function invoiceStatusClass(status?: string | null): string {
+  return (status && INVOICE_STATUS_CLASS[status]) || 'bg-slate-50 text-slate-600 border-slate-200';
+}
+
 const DATE_PIPE = new PersianDatePipe();
 
 /** راهنمای نشانگر ایجادکننده: تاریخ دقیق ثبت و آخرین تغییر */
@@ -60,6 +79,7 @@ function faNum(v: unknown): string {
 
 /** راهنمای نشانگر مبلغ: جزئیاتی که در ردیف یک‌خطی دیده نمی‌شود */
 export function invoiceAmountHint(row: {
+  amount?: unknown;
   lines?: unknown[] | null;
   subtotal?: unknown;
   discount_amount?: unknown;
@@ -68,6 +88,7 @@ export function invoiceAmountHint(row: {
   remaining?: unknown;
 }): string {
   const parts: string[] = [];
+  if (row.amount != null && !isNaN(Number(row.amount))) parts.push(`${faNum(Math.floor(Number(row.amount) / 10))} تومان`);
   if (row.lines?.length) parts.push(`${faNum(row.lines.length)} ردیف · جمع ردیف‌ها ${faNum(row.subtotal)}`);
   if (row.discount_amount && +row.discount_amount > 0) parts.push(`تخفیف ${faNum(row.discount_amount)}`);
   if (row.vat_amount && +row.vat_amount > 0) parts.push(`مالیات ${faNum(row.vat_amount)}`);

@@ -24,12 +24,12 @@ import { isServerUnreachable } from '../../../../../../core/services/server-reac
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { PaymentReceiptListComponent } from '../../payment-receipt-list/payment-receipt-list.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
-import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError, invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
-import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
+import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
 
 export interface PayableInvoiceItem {
@@ -52,6 +52,13 @@ export interface PayableInvoiceItem {
   created_at?: string;
   updated_by_name?: string;
   updated_at?: string;
+  /* the shared payment-receipt list reads these */
+  counterparty_name?: string;
+  invoice_date_shamsi?: string;
+  status_display?: string;
+  possible_duplicate?: boolean;
+  duplicate_reason?: string;
+  vat_manual?: boolean;
 }
 
 @Component({
@@ -62,23 +69,21 @@ export interface PayableInvoiceItem {
     AttachmentsComponent,
     FormsModule,
     ReactiveFormsModule,
-    ActionButtonComponent,
+    ActionButtonComponent, PaymentReceiptListComponent,
     CommandCenterComponent,
     ModalComponent,
     AmountInputComponent,
     WorkflowReasonDialogComponent,
     NgPersianDatepickerModule,
     SvgIconDirective,
-    InvoiceReceiptButtonComponent,
     InvoicePreviewModalComponent
   ],
   templateUrl: './treasurer-invoices.html',
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
-  readonly statusShort = invoiceStatusShort;
-  readonly creatorHint = invoiceCreatorHint;
-  readonly amountHint = invoiceAmountHint;
+  /** ستون سرفصل در فهرست مشترک رسیدهای پرداخت */
+  readonly categoryOf = (r: PayableInvoiceItem) => r.category || '—';
   protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;
@@ -243,6 +248,16 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
       number: inv.number || null,
       counterparty_id: inv.counterparty ?? null,
       paid_amount: Number(inv.paid_amount || 0),
+      counterparty_name: inv.counterparty_name || 'طرف‌حساب',
+      invoice_date_shamsi: inv.invoice_date_shamsi,
+      status_display: inv.status_display,
+      possible_duplicate: !!inv.possible_duplicate,
+      duplicate_reason: inv.duplicate_reason,
+      vat_manual: !!inv.vat_manual,
+      created_by_name: inv.created_by_name,
+      created_at: inv.created_at,
+      updated_by_name: inv.updated_by_name,
+      updated_at: inv.updated_at,
       remaining: inv.remaining !== undefined && inv.remaining !== null ? Number(inv.remaining) : Number(inv.amount || 0) - Number(inv.paid_amount || 0)
     };
   }
