@@ -115,17 +115,24 @@ describe('native-shell', () => {
       return Promise.resolve({ remove: vi.fn() });
     });
 
-    initNativeShell();
+    const origPath = window.location.pathname;
+    window.history.pushState({}, '', '/app/warehouse/items');
 
-    const historyBackSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
-    Object.defineProperty(window.history, 'length', { value: 3, configurable: true });
+    try {
+      initNativeShell();
 
-    backHandler?.({ canGoBack: true });
-    expect(historyBackSpy).toHaveBeenCalled();
-    expect(minimizeAppSpy).not.toHaveBeenCalled();
+      const historyBackSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+      Object.defineProperty(window.history, 'length', { value: 3, configurable: true });
+
+      backHandler?.({ canGoBack: true });
+      expect(historyBackSpy).toHaveBeenCalled();
+      expect(minimizeAppSpy).not.toHaveBeenCalled();
+    } finally {
+      window.history.pushState({}, '', origPath);
+    }
   });
 
-  it('5. back button calls minimizeApp when canGoBack is false and no modal is open', () => {
+  it('5. back button does not call minimizeApp and does not navigate back when canGoBack is false or at root', () => {
     (globalThis as any).Capacitor = {
       isNativePlatform: () => true,
       getPlatform: () => 'android',
@@ -145,7 +152,7 @@ describe('native-shell', () => {
 
     backHandler?.({ canGoBack: false });
     expect(historyBackSpy).not.toHaveBeenCalled();
-    expect(minimizeAppSpy).toHaveBeenCalled();
+    expect(minimizeAppSpy).not.toHaveBeenCalled();
   });
 
   it('6. with OS dark mode mocked (matchMedia returning matches: true) and no dark class, setStyle gets Style.Light', () => {
@@ -227,6 +234,46 @@ describe('native-shell', () => {
     } finally {
       panel.remove();
       document.removeEventListener('keydown', keydownListener);
+    }
+  });
+
+  it('9. popstate event closes open modal with Escape and re-pushes history state', () => {
+    const pushStateSpy = vi.spyOn(window.history, 'pushState').mockImplementation(() => {});
+    let escapeCount = 0;
+    const keydownListener = (e: Event) => {
+      if ((e as KeyboardEvent).key === 'Escape') escapeCount++;
+    };
+    document.addEventListener('keydown', keydownListener);
+
+    const modal = document.createElement('div');
+    modal.setAttribute('aria-modal', 'true');
+    document.body.appendChild(modal);
+
+    try {
+      initNativeShell();
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      expect(escapeCount).toBe(1);
+      expect(pushStateSpy).toHaveBeenCalled();
+    } finally {
+      modal.remove();
+      document.removeEventListener('keydown', keydownListener);
+      pushStateSpy.mockRestore();
+    }
+  });
+
+  it('10. popstate event on root launcher page keeps user on page with pushState', () => {
+    const pushStateSpy = vi.spyOn(window.history, 'pushState').mockImplementation(() => {});
+    const origPath = window.location.pathname;
+    try {
+      window.history.pushState({}, '', '/app/launcher');
+      initNativeShell();
+      pushStateSpy.mockClear();
+
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      expect(pushStateSpy).toHaveBeenCalled();
+    } finally {
+      window.history.pushState({}, '', origPath);
+      pushStateSpy.mockRestore();
     }
   });
 });

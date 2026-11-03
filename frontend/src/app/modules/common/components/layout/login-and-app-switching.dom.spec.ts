@@ -153,7 +153,7 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
 
       // هدایت به سامانه مالی
       expect(mockAuth.login).toHaveBeenCalledWith('m.bagheri', '1234567', expect.any(String));
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/finance');
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/finance', { replaceUrl: true });
       expect(localStorage.getItem('active_app_module')).toBe('personnel');
 
       // اعتبارسنجی پرسونای کاربر در سرویس اپلیکییشن
@@ -211,7 +211,7 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
       await loginComp.handleLogin();
 
       // هدایت مستقیم به داشبورد انبار
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/warehouse/dashboard');
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/warehouse/dashboard', { replaceUrl: true });
       expect(localStorage.getItem('active_app_module')).toBe('warehouse');
 
       // اعتبارسنجی پرسونای کاربر در سرویس اپلیکیشن
@@ -264,7 +264,7 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
       await loginComp.handleLogin();
 
       // سوپریوزر به لانچر هدایت می‌شود
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/launcher');
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/launcher', { replaceUrl: true });
 
       // ایجاد سرویس پرسونا برای کاربر سوپریوزر
       const activeAppSignal = signal<'warehouse' | 'personnel' | 'operations'>('warehouse');

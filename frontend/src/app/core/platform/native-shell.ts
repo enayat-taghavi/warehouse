@@ -32,13 +32,63 @@ export const nativeShellBridge: NativeShellBridge = {
   },
 };
 
+let cleanupShield: (() => void) | null = null;
+
+/**
+ * مدیریت یکپارچه سپر تاریخچه برای تمام پلتفرم‌ها (مرورگر، PWA، اندروید)
+ * الف) بستن مودال‌ها و پنل‌های باز با کلید Escape
+ * ب) بازگشت در تاریخچه در صفحات داخلی
+ * ج) عدم خروج و عدم بازگشت به /login در صفحات اصلی و ریشه با سپر تاریخچه (pushState)
+ */
+export function initBackNavigationShield(): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  if (cleanupShield) {
+    cleanupShield();
+    cleanupShield = null;
+  }
+
+  const pushShieldState = () => {
+    try {
+      window.history.pushState({ appShield: true }, '', window.location.href);
+    } catch { }
+  };
+
+  pushShieldState();
+
+  const handlePopState = () => {
+    const openModal = document.querySelector('[aria-modal="true"], [data-back-closes]');
+    if (openModal) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      pushShieldState();
+      return;
+    }
+
+    const path = window.location.pathname;
+    const isRootPage = path === '/app/launcher' || path === '/app' || path === '/' || path === '/login';
+    if (isRootPage) {
+      pushShieldState();
+      return;
+    }
+  };
+
+  window.addEventListener('popstate', handlePopState);
+  cleanupShield = () => {
+    window.removeEventListener('popstate', handlePopState);
+  };
+  return cleanupShield;
+}
+
 /**
  * Initializes native mobile shell capabilities (Capacitor runtime):
- * - Android back button handling: navigates back in window history when possible, or minimizes the app.
+ * - Android back button handling: navigates back in window history when possible, never minimizes/exits at root.
  * - Status bar styling matching theme appearance.
  * - Hides the splash screen once the Angular application becomes stable.
  */
 export function initNativeShell(appRef?: ApplicationRef): void {
+  // راه‌اندازی سپر تاریخچه برای وب، PWA و اندروید
+  initBackNavigationShield();
+
   if (!isNativePlatform()) {
     return;
   }
@@ -47,7 +97,7 @@ export function initNativeShell(appRef?: ApplicationRef): void {
   try {
     nativeShellBridge.addListener('backButton', ({ canGoBack }) => {
       // پنجره‌های modal و پنل‌های بدون aria-modal (منوی کاربر، پنل اعلان، dropdown) که با
-      // data-back-closes علامت خورده‌اند، با Escape بسته می‌شوند پیش از برگشت یا کوچک کردن برنامه
+      // data-back-closes علامت خورده‌اند، با Escape بسته می‌شوند پیش از برگشت
       const openModal =
         typeof document !== 'undefined'
           ? document.querySelector('[aria-modal="true"], [data-back-closes]')
@@ -56,13 +106,14 @@ export function initNativeShell(appRef?: ApplicationRef): void {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         return;
       }
-      if (canGoBack && typeof window !== 'undefined' && window.history.length > 1) {
+
+      const path = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isRootPage = path === '/app/launcher' || path === '/app' || path === '/' || path === '/login';
+
+      if (canGoBack && typeof window !== 'undefined' && window.history.length > 1 && !isRootPage) {
         window.history.back();
-      } else {
-        nativeShellBridge.minimizeApp().catch((err) => {
-          console.warn('[NativeShell] minimizeApp error:', err);
-        });
       }
+      // در غیر این صورت (صفحه اصلی / ریشه)، فراخوانی minimizeApp حذف شده است تا برنامه هرگز بسته نشود
     }).catch((err) => {
       console.warn('[NativeShell] backButton listener registration error:', err);
     });

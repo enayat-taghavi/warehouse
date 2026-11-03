@@ -18,6 +18,7 @@ import { APP_VERSION } from '../../../../core/platform/app-version';
 import { formatVersionFa } from '../../../../core/platform/release-notes';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
 import { resolveLoginLanding } from '../../../../core/modules/login-landing';
+import { BiometricAuthService } from '../../../../core/auth/biometric-auth.service';
 @Component({
   selector: 'app-login',
   imports: [CommonModule, FormsModule, RouterLink, SvgIconDirective],
@@ -29,11 +30,15 @@ export class Login implements OnInit, OnDestroy {
   password = '';
   passwordFieldType = 'password';
   isLoggingIn = false;
+  isBiometricAuthenticating = false;
+  canUseBiometrics = false;
+  hasBiometricCredentials = false;
   loginErrorMessage: string | null = null;
   showForgotModal = false;
   readonly branding = BRANDING;
   readonly versionLabel = `نسخهٔ ${formatVersionFa(APP_VERSION)}`;
   private activeCompany = inject(ActiveCompanyService);
+  private biometricAuth = inject(BiometricAuthService, { optional: true }) ?? new BiometricAuthService();
 
   constructor(
     private auth: AuthService,
@@ -72,6 +77,16 @@ export class Login implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // بازیابی آخرین نام کاربری استفاده‌شده
+    if (typeof localStorage !== 'undefined') {
+      const lastUser = localStorage.getItem('last_username');
+      if (lastUser && !this.username) {
+        this.username = lastUser;
+      }
+    }
+
+    void this.initBiometricState();
+
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash;
       const match = hash.match(/#\/?verify-card(?:\/([^/?#]+))?/);
@@ -118,13 +133,64 @@ export class Login implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  async initBiometricState() {
+    try {
+      const [available, hasSaved] = await Promise.all([
+        this.biometricAuth.isAvailable(),
+        this.biometricAuth.hasSavedCredentials(),
+      ]);
+      this.canUseBiometrics = available;
+      this.hasBiometricCredentials = hasSaved;
+
+      if (hasSaved && !this.username) {
+        const bioUser = await this.biometricAuth.getSavedUsername();
+        if (bioUser) {
+          this.username = bioUser;
+        }
+      }
+      this.cdr.detectChanges();
+    } catch (err) {
+      console.debug('[Login] Biometric state init error:', err);
+    }
+  }
+
+  async loginWithBiometrics() {
+    if (this.isLoggingIn || this.isBiometricAuthenticating) return;
+    this.isBiometricAuthenticating = true;
+    this.loginErrorMessage = null;
+    this.cdr.detectChanges();
+
+    try {
+      const creds = await this.biometricAuth.authenticate({
+        title: 'ورود با اثر انگشت یا تشخیص چهره',
+        subtitle: 'برای ورود به سامانه هویت خود را تأیید کنید',
+        cancelButtonText: 'انصراف'
+      });
+
+      if (!creds || !creds.username || !creds.password) {
+        this.isBiometricAuthenticating = false;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      this.username = creds.username;
+      this.password = creds.password;
+      this.isBiometricAuthenticating = false;
+      await this.handleLogin(true);
+    } catch (err: any) {
+      this.isBiometricAuthenticating = false;
+      this.loginErrorMessage = 'احراز هویت بیومتریک با خطا مواجه شد.';
+      this.cdr.detectChanges();
+    }
+  }
+
   showForgotPasswordDialog(event: Event) {
     event.preventDefault();
     this.showForgotModal = true;
     this.cdr.detectChanges();
   }
 
-  async handleLogin() {
+  async handleLogin(isBiometricLogin: boolean = false) {
     const trimmedUsername = this.username ? this.username.trim() : '';
     if (!trimmedUsername || !this.password) {
       this.loginErrorMessage = 'لطفاً نام کاربری و رمز عبور را وارد کنید.';
@@ -137,9 +203,43 @@ export class Login implements OnInit, OnDestroy {
     const deviceModel = await detectClientDeviceModel();
 
     this.auth.login(trimmedUsername, this.password, deviceModel).subscribe({
-      next: () => {
+      next: async () => {
         this.isLoggingIn = false;
-        
+
+        // ذخیرهٔ امن نام کاربری در localStorage
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('last_username', trimmedUsername);
+          }
+        } catch { }
+
+        // ثبت در سیستم مدیریت رمز عبور اندروید و مرورگر (Credential Management API)
+        if (typeof window !== 'undefined' && 'credentials' in navigator && (window as any).PasswordCredential) {
+          try {
+            const cred = new (window as any).PasswordCredential({
+              id: trimmedUsername,
+              password: this.password,
+              name: trimmedUsername,
+            });
+            await navigator.credentials.store(cred);
+          } catch (e) {
+            console.debug('[Login] PasswordCredential store ignored:', e);
+          }
+        }
+
+        // ذخیرهٔ امن بیومتریک در صورت ورود دستی (در ورود بیومتریک نیازی به ذخیره مجدد نیست)
+        if (!isBiometricLogin) {
+          try {
+            const canBio = await this.biometricAuth.isAvailable();
+            if (canBio) {
+              await this.biometricAuth.saveCredentials(trimmedUsername, this.password);
+              this.hasBiometricCredentials = true;
+            }
+          } catch (e) {
+            console.debug('[Login] Biometric credential save error:', e);
+          }
+        }
+
         const perms = this.auth.userPermissions();
         if (perms.length === 0) {
             // بی مجوز سامانه، دارندهٔ مجوز بخش‌های شرکت به حالت محدود استودیو می‌رود (ق۳)
@@ -147,11 +247,11 @@ export class Login implements OnInit, OnDestroy {
               next: (companies) => {
                 if (companies.length > 0 && !this.auth.user()?.requires_password_change) {
                   this.toast.success('ورود موفقیت‌آمیز بود');
-                  this.router.navigateByUrl('/app/companies');
+                  this.router.navigateByUrl('/app/companies', { replaceUrl: true });
                   return;
                 }
                 if (companies.length > 0) {
-                  this.router.navigate(['/change-password']);
+                  this.router.navigate(['/change-password'], { replaceUrl: true });
                   return;
                 }
                 this.auth.logout();
@@ -169,10 +269,10 @@ export class Login implements OnInit, OnDestroy {
         }
 
         this.toast.success('ورود موفقیت‌آمیز بود');
-        
+
         const user = this.auth.user();
         if (user?.requires_password_change) {
-          this.router.navigate(['/change-password']);
+          this.router.navigate(['/change-password'], { replaceUrl: true });
           return;
         }
 
@@ -188,7 +288,7 @@ export class Login implements OnInit, OnDestroy {
           targetRoute = returnUrl;
         }
 
-        this.router.navigateByUrl(targetRoute).then((navigated) => {
+        this.router.navigateByUrl(targetRoute, { replaceUrl: true }).then((navigated) => {
           if (!navigated && (this.router.url === '/login' || this.router.url === '/')) {
               this.auth.logout();
               this.loginErrorMessage = 'شما دسترسی ورود به هیچ‌کدام از بخش‌های سامانه را ندارید.';

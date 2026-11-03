@@ -68,7 +68,7 @@
 
           <button
             type="submit"
-            [disabled]="isLoggingIn"
+            [disabled]="isLoggingIn || isBiometricAuthenticating"
             class="w-full min-h-[48px] py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-[.98] mt-1 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             style="background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 8px 25px rgba(99,102,241,.4)"
             [style.opacity]="isLoggingIn ? '0.85' : '1'"
@@ -78,6 +78,22 @@
             <svg *ngIf="!isLoggingIn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
             <svg *ngIf="isLoggingIn" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="action-loading"></svg>
           </button>
+
+          <!-- دکمهٔ ورود بیومتریک (اثر انگشت / تشخیص چهره) -->
+          <div *ngIf="canUseBiometrics && hasBiometricCredentials" class="pt-2">
+            <button
+              type="button"
+              (click)="loginWithBiometrics()"
+              [disabled]="isLoggingIn || isBiometricAuthenticating"
+              class="w-full min-h-[44px] py-2.5 px-4 rounded-xl text-xs font-bold text-indigo-300 hover:text-white bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-500/30 hover:border-indigo-400/60 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed shadow-sm active:scale-[.98]"
+              title="ورود با اثر انگشت یا تشخیص چهره"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="fingerprint" class="shrink-0 text-indigo-400"></svg>
+              <span *ngIf="!isBiometricAuthenticating">ورود با اثر انگشت / تشخیص چهره</span>
+              <span *ngIf="isBiometricAuthenticating">در حال تأیید سنسور بیومتریک...</span>
+              <svg *ngIf="isBiometricAuthenticating" class="animate-spin h-4 w-4 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="action-loading"></svg>
+            </button>
+          </div>
         </form>
 
         <div class="mt-4 pt-3 border-t border-slate-700/50 flex flex-wrap items-center justify-center gap-2">
@@ -95,7 +111,7 @@
 </div>
 
 <!-- فراموشی رمز عبور مودال -->
-<div *ngIf="showForgotModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+<div *ngIf="showForgotModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" role="dialog" aria-modal="true" data-back-closes>
   <div class="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl relative">
     <div class="w-12 h-12 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-400">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="message-square"></svg>

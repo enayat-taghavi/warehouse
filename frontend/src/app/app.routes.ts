@@ -9,6 +9,7 @@ import { MyTasksComponent } from './modules/common/components/my-tasks/my-tasks'
 import { ChangePassword } from './modules/common/components/change-password/change-password';
 import { VerifyCard } from './modules/common/components/verify-card/verify-card';
 import { AuthGuard, AuthGuardChild, moduleCompanyGuard } from './core/auth/auth.guard';
+import { LoginGuard } from './core/auth/login.guard';
 import { companyHasModule } from './core/models/company.model';
 import { OperationsGuard, OperationsGuardChild, CompaniesManageGuard } from './core/guards/operations.guard';
 import { OperationsLayoutComponent } from './modules/common/components/operations/operations-layout/operations-layout';
@@ -51,7 +52,7 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
 
 export const routes: Routes = [
   // ─── احراز هویت و صفحات عمومی ─────────────────────────
-  { path: 'login', component: Login },
+  { path: 'login', component: Login, canActivate: [LoginGuard] },
   {
     path: 'download',
     loadComponent: () => import('./modules/common/components/app-download/app-download.component').then(m => m.AppDownloadComponent),
