@@ -340,6 +340,56 @@ def set_company_creator_flag(user, company_id, value) -> bool:
     return old != value
 
 
+# ─── گزارش پیش از انتشار (طرح نبودن نفر بند ۷ و ۸) ──────────────────────────────
+
+def policy_report(company_ids=None, workflow_keys=None, today=None) -> list:
+    """
+    گزارش فقط‌خواندنی هر شرکت فعال با کار مرحلهٔ باز: اثر تنظیم مؤثر فعلی روی سندهای باز (همان simulate با
+    ردیف فعلی، پس بی‌تغییر) و شمار سندهای باز ساختهٔ مدیر کل و کارهایی که تنها دارندهٔ آن‌ها مدیر کل است.
+    همه چیز درون تراکنشی که برگردانده می‌شود اجرا می‌شود تا هیچ نوشتنی نماند.
+    """
+    from django.db.models import Exists, OuterRef
+    from companies.models import Company
+    from .models import WorkflowTaskRecipient
+    specs = step_workflows()
+    keys = [k for k in (workflow_keys or sorted(specs)) if k in specs]
+    out = []
+    with transaction.atomic():
+        open_tasks = WorkflowTask.objects.filter(
+            is_open=True, track=WorkflowTask.TRACK_STEP, instance__status=WorkflowInstance.IN_PROGRESS,
+            instance__workflow_key__in=keys)
+        companies = Company.objects.filter(
+            is_active=True, pk__in=open_tasks.values('instance__company_id')).order_by('pk')
+        if company_ids:
+            companies = companies.filter(pk__in=list(company_ids))
+        for company in companies:
+            current = {k: _row_values(r) for k, r in _rows(company.pk).items()}
+            per_workflow = {}
+            for key in keys:
+                preview = simulate(company.pk, key, current.get(key), today=today)
+                counts = dict(preview['counts'])
+                counts['waiting_now'] = open_tasks.filter(
+                    instance__company_id=company.pk, instance__workflow_key=key, has_recipients=False).count()
+                if any(counts.values()):
+                    per_workflow[key] = counts
+            company_tasks = open_tasks.filter(instance__company_id=company.pk)
+            superuser_only = company_tasks.filter(
+                Exists(WorkflowTaskRecipient.objects.filter(task_id=OuterRef('pk'))),
+            ).exclude(
+                Exists(WorkflowTaskRecipient.objects.filter(task_id=OuterRef('pk'), user__is_superuser=False)),
+            ).count()
+            out.append({
+                'company_id': company.pk, 'company': str(company),
+                'workflows': per_workflow,
+                'superuser_created_open': WorkflowInstance.objects.filter(
+                    company_id=company.pk, status=WorkflowInstance.IN_PROGRESS, workflow_key__in=keys,
+                    created_by__is_superuser=True).count(),
+                'superuser_only_tasks': superuser_only,
+            })
+        transaction.set_rollback(True)
+    return out
+
+
 def company_creator_flag(company_id) -> bool:
     row = WorkflowPolicy.objects.filter(company_id=company_id, workflow_key='').only('creator_may_approve_own').first()
     return bool(row and row.creator_may_approve_own)

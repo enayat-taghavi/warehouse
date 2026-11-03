@@ -19887,3 +19887,95 @@ feat(frontend): role-policy E policy card, settled-outside labels, superuser vie
 آزمون‌های واحد قدیمی در ماژول مالی هنگام تنظیم تست‌بد (`TestBed.configureTestingModule`) یک شیء ماک ناقص برای `AuthService` ارسال کرده بودند (فاقد متدهای `isSuperuser` و `user`). وقتی `PermissionService` در این ۶ کامپوننت تزریق شد، ...
 
 ---
+
+### Task 1 of 1 — 2026-11-03 06:53:00
+- **Status:** DONE
+- **Conversation:** `5650bbbc-9616-46fa-84a1-c50d2dfca9b2`
+- **Steps:** 143
+- **Tokens:** 221928
+- **Duration:** 7m 50s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/5 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py text-check --file Documents/Release_v1/manual_test_guide.md --contains "## بخش ۱-ب. وقتی کسی برای مرحله نیست" --contains "| ۱ب.۸ |" --contains "مدیر کل سامانه فقط سند را می‌بیند" --contains "## بخش اندروید" --contains "</div>"`
+  - verify round 1: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Role-policy plan step F docs: glossary terms and a manual test section for missing-role step policies
+
+
+
+1. Critical rules:
+- Edit only these two files: `Documents/Release_v1/glossary.md` and `Documents/Release_v1/manual_test_guide.md`. Never edit code, tests, `tasks.md` or any other document.
+- Write the Persian text exactly as given below (copy it character by character, including the zero-width non-joiner inside words such as «می‌بیند» and «پیش‌فرض»). Write it with your file editing tool, never through a shell command (the shell garbles Persian).
+- Keep the existing `<div dir="rtl" align="right">` at the top and `</div>` at the end of both files. Do not change or reorder any existing line.
+- Never change production code to make a test pass. This task has no code at all.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session: never touch or stage them.
+- Run every command in the foreground and wait until it finishes.
+
+2. Context (read these exact ranges, nothing broader):
+- `Documents/Release_v1/glossary.md` whole file (about 104 lines): a markdown table with columns «اصطلاح | معنا | به این‌ها نگویید | نام در کد».
+- `Documents/Release_v1/manual_test_guide.md` lines 40-95: section «## بخش ۱. کاربران، شرکت و دسترسی» (starts line 46) with a steps table «| # | لینک | با کدام کاربر | چه کار کنید | چه چیزی باید ببینید | نتیجه |», then a line `---`, then «## بخش اندروید. اپ اندروید روی گوشی» (line 91).
+
+3. Definitions: none beyond the text below.
+
+4. Task:
+4-1. In `Documents/Release_v1/glossary.md`, append these 8 rows at the end of the existing table (directly after its last row, before any blank line or `</div>` that follows the table). Copy exactly:
+
+| وقتی کسی برای مرحله نیست | حالتی که هیچ کاربر فعالی نقش لازم یک مرحله را در آن بخش یا شرکت ندارد. شرکت برای هر نقش تعیین می‌کند آن مرحله «رد شود» یا «منتظر بماند». | مرحلهٔ یتیم، مرحلهٔ خالی | `WorkflowPolicy` |
+| رد شود | اگر کسی برای مرحله نباشد، گردش کار از آن مرحله می‌گذرد و به مرحلهٔ بعد می‌رود. | حذف مرحله، پرش | `'skip'` |
+| منتظر بماند | اگر کسی برای مرحله نباشد، سند همان‌جا می‌ماند تا کسی آن نقش را بگیرد. به تعیین‌کنندگان نقش (یا کاربران انتخاب‌شده) خبر داده می‌شود. مرحله‌های قفل‌شده همیشه منتظر می‌مانند. | معلق، متوقف | `'wait'` |
+| پیش‌فرض شرکت | تنظیم «رد شود / منتظر بماند» و «ایجادکننده می‌تواند سند خودش را تأیید کند» که برای همهٔ گردش‌های یک شرکت به کار می‌رود، مگر گردشی تنظیم جدا داشته باشد. اگر شرکت چیزی نگذارد، پیش‌فرض سامانه به کار می‌رود. | تنظیم کلی | `company_default` |
+| تنظیم جدا | تنظیمی که فقط برای یک گردش کار در یک شرکت گذاشته شده و بر پیش‌فرض شرکت مقدم است. | استثنا، سفارشی | `has_own_row` |
+| برگشت به پیش‌فرض شرکت | پاک کردن تنظیم جدای یک گردش تا دوباره از پیش‌فرض شرکت پیروی کند. | ریست | `resetWorkflowPolicy` |
+| تأییدشده، پرداخت بیرون از سامانه | وضعیت پایانی سندی که مرحلهٔ پرداختش رد شده است. مبلغی در سامانه پرداخت نمی‌شود و مانده تنخواه تغییر نمی‌کند. | پرداخت‌شده، تسویه‌شده | `settled_outside` / `SETTLED_OUTSIDE` |
+| مدیر کل سامانه فقط سند را می‌بیند | مدیر کل سامانه سندهای شرکت‌ها را می‌بیند ولی آن‌ها را ثبت، تأیید، برگشت یا پرداخت نمی‌کند. فقط سندهای قدیمی خودش را می‌تواند لغو کند. | — | `superuser_fence` |
+
+4-2. In `Documents/Release_v1/manual_test_guide.md`, insert a new section between the end of «بخش ۱» and the `---` line that comes right before «## بخش اندروید». Insert exactly this block (keep one blank line before and after it):
+
+## بخش ۱-ب. وقتی کسی برای مرحله نیست
+
+**هدف:** ببینید شرکت می‌تواند برای هر نقش بگوید مرحله «رد شود» یا «منتظر بماند»، و مدیر کل سامانه سندها را فقط می‌بیند.
+
+**پیش‌نیاز:** شرکت و کاربرهای بخش ۱. برای قدم ۱ب.۴ یک شرکت دوم («شرکت تست ۲») بسازید که حسابدار ندارد و `t_treasury` در آن خزانه‌دار است.
+
+### قدم‌ها
+
+| # | لینک | با کدام کاربر | چه کار کنید | چه چیزی باید ببینید | نتیجه |
+|---|---|---|---|---|---|
+| ۱ب.۱ | شرکت تست ← تب «گردش کار» | مدیر کل | کارت «وقتی کسی برای مرحله نیست» را باز کنید | در «پیش‌فرض شرکت» برای هر نقش سه گزینه دیده شود: «رد شود»، «منتظر بماند» و «پیش‌فرض سامانه» | |
+| ۱ب.۲ | همان کارت | مدیر کل | برای خزانه‌دار «رد شود» را بزنید و «ذخیره» کنید | پیش از ذخیره، پیش‌نمایش تعداد سندهای در جریانی را که عوض می‌شوند نشان دهد؛ بعد از تأیید، پیام ذخیره بیاید | |
+| ۱ب.۳ | همان کارت ← بخش «گردش‌ها» | مدیر کل | یک گردش را با «ویرایش» باز کنید، یک نقش را جدا تنظیم و ذخیره کنید؛ بعد «برگشت به پیش‌فرض شرکت» را بزنید | بعد از ذخیره نشان «تنظیم جدا» بیاید؛ بعد از برگشت نشان «پیش‌فرض شرکت» برگردد | |
+| ۱ب.۴ | دریافت در «شرکت تست ۲» | `t_treasury` | یک دریافت ثبت کنید | چون حسابدار نیست و نقش حسابدار «منتظر بماند» است، سند در مرحلهٔ حسابدار منتظر بماند | |
+| ۱ب.۵ | زنگولهٔ اعلان | مدیر کل و تعیین‌کنندهٔ نقش شرکت | اعلان‌ها را ببینید | به تعیین‌کنندگان نقش خبر انتظار برسد؛ به مدیر کل سامانه خبری نرسد | |
+| ۱ب.۶ | شرکت تست ← تب «گردش کار» | مدیر کل | برای حسابدار «رد شود» بگذارید و قدم ۱ب.۴ را در شرکتی بی‌حسابدار تکرار کنید | سند از مرحلهٔ حسابدار بگذرد و به مرحلهٔ بعد برود | |
+| ۱ب.۷ | فاکتور یا تنخواهی که مرحلهٔ پرداختش رد می‌شود | ثبت‌کننده | سند را تا آخر ببرید | وضعیت پایانی «تأییدشده، پرداخت بیرون از سامانه» باشد و مانده تنخواه عوض نشود | |
+| ۱ب.۸ | یک سند شرکت (فاکتور یا تنخواه) | مدیر کل | سند را باز کنید | سند دیده شود ولی دکمهٔ ثبت، تأیید، برگشت یا پرداخت نباشد؛ اگر کاری را از راه دیگری بزنید پیام «مدیر کل سامانه فقط سند را می‌بیند» بیاید | |
+
+5. Tool policy:
+- Reading files is unrestricted. Edit only the two files of section 1.
+- After editing, run from the repository root:
+  `python scripts/automation/verify_tools.py text-check --file Documents/Release_v1/glossary.md --contains "| رد شود |" --contains "</div>"`
+  `python scripts/automation/verify_tools.py text-check --file Documents/Release_v1/manual_test_guide.md --contains "| ۱ب.۸ |" --contains "## بخش اندروید"`
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: both checks pass, the markdown tables have no broken rows (every new row has the same number of `|` as the header), and `git status --short` shows only the two files, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the two files and commit with this message, without push:
+docs(release-v1): role-policy F glossary terms and manual test section
+- Short English report: rows added, section inserted, check results. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ علت خطا
+خطای تست به دلیل نبود نیم‌فاصله (`ZWNJ` / `\u200c`) در کلمهٔ «می‌بیند» در قدم ۱ب.۸ فایل [manual_test_guide.md](file:///E:/comanager/Documents/Release_v1/manual_test_guide.md) بود؛ دستور تست دقیقاً عبارت `مدیر کل سامانه فقط سند را می‌بیند` (با نیم‌فاصله) را بررسی می‌کرد.
+
+### ۲. اعتبارسنجی و تصحیح
+- کلمهٔ «میبیند» در خط مربوط به قدم ۱ب.۸ با استفاده از ابزار ویرایش فایل به «می‌بیند» اصلاح شد.
+- دستور بررسی شکست‌خورده فوراً اجرا و با موفقیت پاس شد:
+  ```bash
+  python scripts/automation/verify_tools.py text-check --file Documents/Release_v1/manual_test_guide.md --contains "## بخش ۱-ب. وقتی کسی برای مرحله نیست" --contains "| ۱ب.۸ |" --cont...
+
+---
