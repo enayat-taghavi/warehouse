@@ -253,7 +253,7 @@ def _compute_recipients(ctx, instance, step, today=None, target=None):
         item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id,
                 target, getattr(instance, "allow_substitute", True))
         return compute_recipients_batch([item], today=today)[0]
-    item =(0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
+    item = (0, scope_triplet(ctx.section, ctx.company_id), step.role, step.permission, instance.created_by_id, None,
             getattr(instance, "allow_substitute", True),
             bool(step.creator_may_act or (ctx.company_id and ctx.spec is not None
                                           and ctx.policy.creator_may_approve_own)))
