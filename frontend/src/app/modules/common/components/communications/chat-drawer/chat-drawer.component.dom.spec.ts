@@ -531,7 +531,7 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     const att = { download_url: '/api/v1/chat/files/10/download/', file_name: 'invoice.pdf' };
     await fixture.componentInstance.shareAttachment(att);
 
-    expect(api.download).toHaveBeenCalledWith('v1/chat/files/10/download/');
+    expect(api.download).toHaveBeenCalledWith('v1/chat/files/10/download/', undefined, expect.anything());
     expect(shareSpy).toHaveBeenCalledWith(fakeBlob, 'invoice.pdf');
   });
 

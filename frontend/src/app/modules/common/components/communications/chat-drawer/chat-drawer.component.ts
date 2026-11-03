@@ -17,6 +17,8 @@ import { getChatThumb, putChatThumb } from './chat-thumb-cache';
 import { getChatAudio, putChatAudio } from './chat-audio-cache';
 import { SKIP_OFFLINE } from '../../../../../core/interceptors/offline.interceptor';
 import { NetworkStatusService } from '../../../../../core/services/network-status.service';
+import { isServerUnreachable } from '../../../../../core/services/server-reachability';
+import { isNativePlatform } from '../../../../../core/platform/platform';
 
 /** بخشی از متن پیام: متن ساده یا نشانی http/https */
 export interface TextSegment { url: boolean; text: string }
@@ -306,7 +308,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   /** پیش‌دریافت آرام پیام‌های صوتی در پس‌زمینه تا در صورت قطع شبکه در انبار یا اندروید، آماده پخش باشند */
   private prefetchAudios(msgs: ChatMessage[]): void {
-    if (!NetworkStatusService.getInstance().isBrowserOnline) return;
+    if (!NetworkStatusService.getInstance().isOnline) return;
     const uid = this.currentUserId();
     if (!uid) return;
     for (const msg of msgs) {
@@ -315,7 +317,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
           const id = String(att.id);
           if (this.attachmentFull.has(id)) continue;
           void getChatAudio(uid, id).then((cached) => {
-            if (!cached && NetworkStatusService.getInstance().isBrowserOnline) {
+            if (!cached && NetworkStatusService.getInstance().isOnline) {
               const context = new HttpContext().set(SKIP_OFFLINE, true);
               firstValueFrom(this.api.download(this.apiPath(att.download_url || ''), undefined, { context }))
                 .then((blob) => {
@@ -903,8 +905,21 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      this.toast.error('دسترسی به میکروفون داده نشد. اجازهٔ میکروفون را در تنظیمات مرورگر یا برنامه روشن کنید.');
+    } catch (err: any) {
+      const name = err?.name;
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        if (isNativePlatform()) {
+          this.toast.error('اجازهٔ میکروفون داده نشده. از تنظیمات گوشی › برنامهها › کومنیج › مجوزها، میکروفون را روشن کنید.');
+        } else {
+          this.toast.error('اجازهٔ میکروفون داده نشده. آن را از تنظیمات سایت در مرورگر روشن کنید.');
+        }
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        this.toast.error('میکروفونی روی این دستگاه پیدا نشد.');
+      } else if (name === 'NotReadableError' || name === 'AbortError') {
+        this.toast.error('میکروفون در دست برنامهٔ دیگری است. آن را ببندید و دوباره تلاش کنید.');
+      } else {
+        this.toast.error('دسترسی به میکروفون داده نشد. اجازهٔ میکروفون را در تنظیمات مرورگر یا برنامه روشن کنید.');
+      }
       return;
     }
     const mime = this.pickRecordMime();
@@ -1036,11 +1051,16 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       const url = await this.fullAttachmentUrl(att);
       await this.playUrl(id, url, att.duration || 0);
     } catch (err: any) {
-      this.playingAudioId.set(null);
-      if (err?.message === 'OFFLINE_AUDIO_NOT_CACHED') {
-        this.toast.show('warning', 'این پیام صوتی هنوز روی دستگاه ذخیره نشده است. پس از برقراری اتصال دوباره تلاش کنید.');
+      if (err?.name === 'NotAllowedError') {
+        this.audioEl?.pause();
+        this.toast.show('info', 'برای پخش، دوباره بزنید');
       } else {
-        this.toast.error('پخش پیام صوتی انجام نشد');
+        this.playingAudioId.set(null);
+        if (err?.message === 'OFFLINE_AUDIO_NOT_CACHED') {
+          this.toast.show('warning', 'این پیام صوتی هنوز روی دستگاه ذخیره نشده است. پس از برقراری اتصال دوباره تلاش کنید.');
+        } else {
+          this.toast.error('پخش پیام صوتی انجام نشد');
+        }
       }
     } finally {
       this.audioLoadingId.set(null);
@@ -1062,9 +1082,14 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (!url) { url = URL.createObjectURL(p.file); this.pickAudioUrls.set(p.key, url); }
     try {
       await this.playUrl(id, url, this.voiceNameSeconds(p.file.name));
-    } catch {
-      this.playingAudioId.set(null);
-      this.toast.error('پخش پیام صوتی انجام نشد');
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        this.audioEl?.pause();
+        this.toast.show('info', 'برای پخش، دوباره بزنید');
+      } else {
+        this.playingAudioId.set(null);
+        this.toast.error('پخش پیام صوتی انجام نشد');
+      }
     }
   }
 
@@ -1493,7 +1518,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
     // ۲. اگر کاربر آفلاین است و فایل روی دستگاه موجود نیست
     const network = NetworkStatusService.getInstance();
-    if (!network.isBrowserOnline && isAudio) {
+    if (!network.isOnline && isAudio) {
       throw new Error('OFFLINE_AUDIO_NOT_CACHED');
     }
 
@@ -1507,6 +1532,14 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         const url = URL.createObjectURL(blob);
         this.fullBlobUrls.push(url);
         return url;
+      })
+      .catch((err) => {
+        const status = typeof err?.status === 'number' ? err.status : (typeof err === 'number' ? err : undefined);
+        const unreachable = (typeof status === 'number' && isServerUnreachable(status)) || (isServerUnreachable as any)(err) === true;
+        if (isAudio && unreachable) {
+          throw new Error('OFFLINE_AUDIO_NOT_CACHED');
+        }
+        throw err;
       });
     p.catch(() => this.attachmentFull.delete(id));
     this.attachmentFull.set(id, p);

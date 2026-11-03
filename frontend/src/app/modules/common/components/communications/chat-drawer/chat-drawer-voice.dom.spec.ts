@@ -18,6 +18,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
+import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -458,5 +459,128 @@ describe('ChatDrawerComponent - Voice Messages (DOM Specs)', () => {
     component.openAttachment(makeMsg('m9', '', [att]), att);
     expect(toggle).toHaveBeenCalledWith(att);
     expect(download).not.toHaveBeenCalled();
+  });
+
+  it('1. getUserMedia rejects with name NotAllowedError on native -> toast text contains "مجوزها"', async () => {
+    (globalThis as any).Capacitor = { isNativePlatform: () => true };
+    try {
+      fakeGetUserMedia.mockRejectedValue({ name: 'NotAllowedError' });
+      await component.startRecording();
+      expect(toast.error).toHaveBeenCalled();
+      const lastCall = (toast.error as any).mock.calls.at(-1)?.[0] || '';
+      expect(lastCall).toContain('مجوزها');
+    } finally {
+      delete (globalThis as any).Capacitor;
+    }
+  });
+
+  it('2. getUserMedia rejects with NotFoundError -> toast text contains "پیدا نشد"', async () => {
+    fakeGetUserMedia.mockRejectedValue({ name: 'NotFoundError' });
+    await component.startRecording();
+    expect(toast.error).toHaveBeenCalled();
+    const lastCall = (toast.error as any).mock.calls.at(-1)?.[0] || '';
+    expect(lastCall).toContain('پیدا نشد');
+  });
+
+  it('3. audio play() rejects with NotAllowedError -> playingAudioId() stays set, info toast shown; a second toggleAudio call calls play() again without a new download', async () => {
+    const att: MessageAttachment = {
+      id: '501',
+      file_name: 'voice_x_10s.webm',
+      file_size: 10000,
+      content_type: 'audio/webm',
+      duration: 10,
+      download_url: '/api/communications/attachments/501/download/'
+    };
+    const api = TestBed.inject(ApiService) as any;
+    const fakeBlob = new Blob(['audio-data'], { type: 'audio/webm' });
+    api.download = vi.fn().mockReturnValue(new BehaviorSubject(fakeBlob));
+
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play');
+    playSpy.mockRejectedValueOnce(Object.assign(new Error('Autoplay blocked'), { name: 'NotAllowedError' }));
+    playSpy.mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+
+    await component.toggleAudio(att);
+
+    expect(component.playingAudioId()).toBe('501');
+    expect(toast.show).toHaveBeenCalledWith('info', 'برای پخش، دوباره بزنید');
+    expect(api.download).toHaveBeenCalledTimes(1);
+
+    // Second toggleAudio call calls play() again without a new download
+    await component.toggleAudio(att);
+    expect(api.download).toHaveBeenCalledTimes(1);
+    expect(playSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('4. NetworkStatusService state "server-unreachable" + audio not cached -> warning toast "هنوز روی دستگاه ذخیره نشده" and api.download is NOT called', async () => {
+    const net = NetworkStatusService.getInstance();
+    vi.spyOn(net, 'state', 'get').mockReturnValue('server-unreachable');
+    vi.spyOn(net, 'isOnline', 'get').mockReturnValue(false);
+    const api = TestBed.inject(ApiService) as any;
+    api.download = vi.fn();
+
+    const att: MessageAttachment = {
+      id: '502',
+      file_name: 'voice_x_10s.webm',
+      file_size: 10000,
+      content_type: 'audio/webm',
+      duration: 10,
+      download_url: '/api/communications/attachments/502/download/'
+    };
+
+    await component.toggleAudio(att);
+
+    expect(api.download).not.toHaveBeenCalled();
+    expect(toast.show).toHaveBeenCalledWith(
+      'warning',
+      expect.stringContaining('هنوز روی دستگاه ذخیره نشده')
+    );
+  });
+
+  it('5. prefetchAudios does not call api.download when state is "server-unreachable"', async () => {
+    const net = NetworkStatusService.getInstance();
+    vi.spyOn(net, 'state', 'get').mockReturnValue('server-unreachable');
+    vi.spyOn(net, 'isOnline', 'get').mockReturnValue(false);
+    const api = TestBed.inject(ApiService) as any;
+    api.download = vi.fn();
+
+    const att: MessageAttachment = {
+      id: '503',
+      file_name: 'voice_x_10s.webm',
+      file_size: 10000,
+      content_type: 'audio/webm',
+      duration: 10,
+      download_url: '/api/communications/attachments/503/download/'
+    };
+    const msg = makeMsg('m503', '', [att]);
+
+    (component as any).prefetchAudios([msg]);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(api.download).not.toHaveBeenCalled();
+  });
+
+  it('audio download failure with isServerUnreachable true rejects with OFFLINE_AUDIO_NOT_CACHED and shows warning toast', async () => {
+    const api = TestBed.inject(ApiService) as any;
+    const { throwError } = await import('rxjs');
+    api.download = vi.fn().mockReturnValue(throwError(() => ({ status: 504 })));
+
+    const att: MessageAttachment = {
+      id: '504',
+      file_name: 'voice_x_10s.webm',
+      file_size: 10000,
+      content_type: 'audio/webm',
+      duration: 10,
+      download_url: '/api/communications/attachments/504/download/'
+    };
+
+    await component.toggleAudio(att);
+
+    expect(api.download).toHaveBeenCalledTimes(1);
+    expect(toast.show).toHaveBeenCalledWith(
+      'warning',
+      expect.stringContaining('هنوز روی دستگاه ذخیره نشده')
+    );
+    expect(component.playingAudioId()).toBeNull();
   });
 });
