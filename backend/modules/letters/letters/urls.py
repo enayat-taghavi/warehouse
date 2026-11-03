@@ -14,4 +14,13 @@ urlpatterns = [
     path('<int:pk>/lock/', views.LetterLockView.as_view(), name='letter-lock'),
     path('<int:pk>/unlock/', views.LetterUnlockView.as_view(), name='letter-unlock'),
     path('<int:pk>/discard/', views.LetterDiscardView.as_view(), name='letter-discard'),
+    # چرخهٔ نامه (ل-د)
+    path('<int:pk>/submit/', views.LetterSubmitView.as_view(), name='letter-submit'),
+    path('<int:pk>/sign/', views.LetterSignView.as_view(), name='letter-sign'),
+    path('<int:pk>/return/', views.LetterReturnView.as_view(), name='letter-return'),
+    path('<int:pk>/register/', views.LetterRegisterView.as_view(), name='letter-register-one'),
+    path('<int:pk>/send/', views.LetterSendView.as_view(), name='letter-send'),
+    path('<int:pk>/archive/', views.LetterArchiveView.as_view(), name='letter-archive'),
+    path('<int:pk>/unarchive/', views.LetterUnarchiveView.as_view(), name='letter-unarchive'),
+    path('<int:pk>/void/', views.LetterVoidView.as_view(), name='letter-void'),
 ]

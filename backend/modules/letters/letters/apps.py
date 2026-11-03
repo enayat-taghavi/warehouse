@@ -37,3 +37,9 @@ class LettersConfig(AppConfig):
             contribute('numbering_series', _series)
         for _setting in LETTER_COMPANY_SETTINGS:
             contribute('company_settings', _setting)
+
+        # ل-د: گردش امضای خطی (ن۶، س۱ = الف) و قلاب پیش از اقدام (امضای الکترونیکی بی‌تصویر = 400)
+        from .workflows import LETTER_SIGN_WORKFLOW_SPEC, LETTER_SIGN_ROLES, can_act_letter
+        contribute('section_roles', LETTER_SIGN_ROLES)
+        contribute('workflows', LETTER_SIGN_WORKFLOW_SPEC)
+        contribute(f'can_act:{LETTER_ENTITY}', can_act_letter)

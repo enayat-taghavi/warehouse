@@ -110,6 +110,18 @@ class Letter(models.Model):
     client_temp_id = models.UUIDField(null=True, blank=True, verbose_name='شناسهٔ موقت دستگاه')
     source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default=SOURCE_INTERNAL, verbose_name='منبع')
 
+    # ارسال صادره به دست دبیرخانه (ن۳، س۹): روش و زمان؛ بایگانی بازگشت‌پذیر از روی همین به «ارسال‌شده» برمی‌گردد
+    SEND_IN_PERSON, SEND_POST, SEND_COURIER, SEND_EMAIL = 'in_person', 'post', 'courier', 'email'
+    SEND_METHOD_CHOICES = (
+        (SEND_IN_PERSON, 'حضوری'),
+        (SEND_POST, 'پست'),
+        (SEND_COURIER, 'پیک'),
+        (SEND_EMAIL, 'ایمیل دستی'),
+    )
+    sent_method = models.CharField(max_length=16, choices=SEND_METHOD_CHOICES, blank=True, default='',
+                                   verbose_name='روش ارسال')
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان ارسال')
+
     void_reason = models.TextField(blank=True, default='', verbose_name='دلیل ابطال')
     voided_at = models.DateTimeField(null=True, blank=True, verbose_name='زمان ابطال')
     voided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
