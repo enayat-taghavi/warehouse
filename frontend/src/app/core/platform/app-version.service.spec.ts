@@ -119,8 +119,8 @@ describe('AppVersionService & version comparison', () => {
     service.applyConfig({
       system_version: '1.0.0',
       system_name: 'انبار',
-      app_min_version: '1.1.0',
-      app_recommended_version: '1.2.0',
+      app_min_version: '99.1.0',
+      app_recommended_version: '99.2.0',
     });
 
     expect(service.state()).toBe('locked');
@@ -135,7 +135,7 @@ describe('AppVersionService & version comparison', () => {
       system_version: '1.0.0',
       system_name: 'انبار',
       app_min_version: '1.0.0',
-      app_recommended_version: '1.0.1',
+      app_recommended_version: '99.0.1',
     });
 
     expect(service.state()).toBe('recommend');

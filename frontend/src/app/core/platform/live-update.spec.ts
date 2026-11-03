@@ -31,7 +31,7 @@ describe('live-update', () => {
     });
     downloadSpy = vi.spyOn(liveUpdateBridge, 'download').mockResolvedValue({
       id: 'bundle-uuid-1',
-      version: '1.1.0',
+      version: '99.1.0',
     });
     nextSpy = vi.spyOn(liveUpdateBridge, 'next').mockResolvedValue(undefined as any);
     getAppInfoSpy = vi.spyOn(liveUpdateBridge, 'getAppInfo').mockResolvedValue({
@@ -44,11 +44,11 @@ describe('live-update', () => {
     fetchSpy = vi.spyOn(liveUpdateBridge, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
-        version: '1.1.0',
-        file: '1.1.0.zip',
+        version: '99.1.0',
+        file: '99.1.0.zip',
         sha256: 'a1b2c3d4e5f6',
         min_native_version: '1.0.0',
-        url: 'https://app.farsalish.ir/api/public/mobile-files/updates/1.1.0.zip',
+        url: 'https://app.farsalish.ir/api/public/mobile-files/updates/99.1.0.zip',
       }),
     } as any);
 
@@ -81,8 +81,8 @@ describe('live-update', () => {
 
     expect(fetchSpy).toHaveBeenCalled();
     expect(downloadSpy).toHaveBeenCalledWith({
-      url: 'https://app.farsalish.ir/api/public/mobile-files/updates/1.1.0.zip',
-      version: '1.1.0',
+      url: 'https://app.farsalish.ir/api/public/mobile-files/updates/99.1.0.zip',
+      version: '99.1.0',
       checksum: 'a1b2c3d4e5f6',
     });
     expect(nextSpy).toHaveBeenCalledWith({ id: 'bundle-uuid-1' });
@@ -129,8 +129,8 @@ describe('live-update', () => {
     fetchSpy.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        version: '1.2.0',
-        min_native_version: '2.0.0',
+        version: '99.2.0',
+        min_native_version: '100.0.0',
         url: 'https://app.farsalish.ir/bundle.zip',
       }),
     } as any);

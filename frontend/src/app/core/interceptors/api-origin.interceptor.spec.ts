@@ -5,6 +5,7 @@ import { HttpRequest } from '@angular/common/http';
 import { of } from 'rxjs';
 import { apiOriginInterceptor } from './api-origin.interceptor';
 import { SERVER_ORIGIN_STORAGE_KEY } from '../platform/server-origin';
+import { APP_VERSION } from '../platform/app-version';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -71,7 +72,7 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).not.toBe(originalReq);
     expect(handledReq?.url).toBe('https://api.farsalish.ir/api/v1/warehouses/');
-    expect(handledReq?.headers.get('X-App-Version')).toBe('1.0.0');
+    expect(handledReq?.headers.get('X-App-Version')).toBe(APP_VERSION);
     expect(handledReq?.headers.get('X-App-Platform')).toBe('android');
   });
 
@@ -90,7 +91,7 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).not.toBe(originalReq);
     expect(handledReq?.url).toBe('https://api.farsalish.ir/media/attachments/doc.pdf');
-    expect(handledReq?.headers.get('X-App-Version')).toBe('1.0.0');
+    expect(handledReq?.headers.get('X-App-Version')).toBe(APP_VERSION);
     expect(handledReq?.headers.get('X-App-Platform')).toBe('android');
   });
 
