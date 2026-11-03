@@ -6926,7 +6926,7 @@ test(workflow): role-policy C policy settings API tests
 
 ===
 
-[ ] Session 1 of 1 — Role-policy plan step D tests: payment step skipped = settled outside (5 payment workflows), settle-outside hooks, petty balance unchanged, superuser write fence, legacy notifications without superusers
+[DONE] [ ] Session 1 of 1 — Role-policy plan step D tests: payment step skipped = settled outside (5 payment workflows), settle-outside hooks, petty balance unchanged, superuser write fence, legacy notifications without superusers
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
