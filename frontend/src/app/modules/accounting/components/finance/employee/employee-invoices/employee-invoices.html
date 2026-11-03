@@ -197,8 +197,8 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- مودال ۱: ثبت فاکتور هزینه جدید (Guardian G2: Draft Invariant)       -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" tabindex="-1" (keydown.escape)="closeNewInvoiceModal()">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden fade-in max-h-[92vh] flex flex-col"
+  <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4" tabindex="-1" (keydown.escape)="closeNewInvoiceModal()">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl overflow-hidden fade-in max-h-[92vh] flex flex-col"
       role="dialog" aria-modal="true" [attr.aria-label]="editingInFlow ? 'ویرایش رسید پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید')">
       
       <!-- هدر مودال -->
@@ -222,118 +222,115 @@
       </div>
 
       <!-- بدنه فرم -->
-      <div class="p-5 space-y-4 overflow-y-auto flex-1">
+      <div class="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1">
         
         <!-- مشخصات فاکتور -->
-        <section class="p-3 rounded-2xl border border-line bg-surface-muted/30 space-y-3" aria-label="مشخصات رسید پرداخت">
-        <!-- پروژه ◀ بخش فاکتور -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label for="invoice_project" class="block text-[11px] font-bold text-slate-700 mb-1">پروژه *</label>
-            <select
-              id="invoice_project"
-              [(ngModel)]="formProjectId"
-              (ngModelChange)="onFormProjectChange()"
-              [disabled]="editingInFlow" [attr.aria-describedby]="editingInFlow ? 'invoice_scope_locked' : null"
-              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60">
-              <option [ngValue]="null" disabled>پروژه را انتخاب کنید</option>
-              @for (p of formProjects; track p.id) {
-                <option [ngValue]="p.id">{{ p.name }}</option>
+        <section class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/60 space-y-3" aria-label="مشخصات رسید پرداخت">
+          <!-- ردیف ۱: پروژه، بخش، تاریخ، شماره رسید -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div>
+              <label for="invoice_project" class="block text-[11px] font-bold text-slate-700 mb-1">پروژه *</label>
+              <select
+                id="invoice_project"
+                [(ngModel)]="formProjectId"
+                (ngModelChange)="onFormProjectChange()"
+                [disabled]="editingInFlow" [attr.aria-describedby]="editingInFlow ? 'invoice_scope_locked' : null"
+                class="min-h-[40px] w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60 shadow-sm font-medium">
+                <option [ngValue]="null" disabled>پروژه را انتخاب کنید</option>
+                @for (p of formProjects; track p.id) {
+                  <option [ngValue]="p.id">{{ p.name }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="invoice_section" class="block text-[11px] font-bold text-slate-700 mb-1">بخش *</label>
+              <select
+                id="invoice_section"
+                [(ngModel)]="formSectionId"
+                (ngModelChange)="onFormSectionChange()"
+                [disabled]="editingInFlow || !formProjectId" [attr.aria-describedby]="editingInFlow ? 'invoice_scope_locked' : null"
+                class="min-h-[40px] w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60 shadow-sm font-medium">
+                <option [ngValue]="null" disabled>{{ formProjectId ? 'بخش را انتخاب کنید' : 'نخست پروژه را انتخاب کنید' }}</option>
+                @for (s of formProjectSections; track s.id) {
+                  <option [ngValue]="s.id">{{ s.name }}</option>
+                }
+              </select>
+              @if (editingInFlow) {
+                <p id="invoice_scope_locked" class="mt-1 text-[11px] text-fg-muted">پروژه و بخش در این مرحله قابل تغییر نیست.</p>
               }
-            </select>
-          </div>
-          <div>
-            <label for="invoice_section" class="block text-[11px] font-bold text-slate-700 mb-1">بخش *</label>
-            <select
-              id="invoice_section"
-              [(ngModel)]="formSectionId"
-              (ngModelChange)="onFormSectionChange()"
-              [disabled]="editingInFlow || !formProjectId" [attr.aria-describedby]="editingInFlow ? 'invoice_scope_locked' : null"
-              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-60">
-              <option [ngValue]="null" disabled>{{ formProjectId ? 'بخش را انتخاب کنید' : 'نخست پروژه را انتخاب کنید' }}</option>
-              @for (s of formProjectSections; track s.id) {
-                <option [ngValue]="s.id">{{ s.name }}</option>
+            </div>
+            <div>
+              <label for="invoice_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ رسید پرداخت (شمسی) *</label>
+              <div class="relative datepicker-left">
+                <ng-persian-datepicker [dateFormat]="'YYYY/MM/DD'" [uiHideAfterSelectDate]="true">
+                  <input
+                    id="invoice_date"
+                    type="text"
+                    [formControl]="invoiceDateControl"
+                    placeholder="۱۴۰۵/۰۱/۰۱"
+                    autocomplete="off"
+                    [attr.aria-invalid]="!!invoiceDateError"
+                    [attr.aria-describedby]="invoiceDateError ? 'invoice_date_error' : null"
+                    [class.border-rose-400]="!!invoiceDateError"
+                    class="min-h-[40px] font-mono w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium" />
+                </ng-persian-datepicker>
+              </div>
+              @if (invoiceDateError) {
+                <p id="invoice_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ invoiceDateError }}</p>
               }
-            </select>
-            @if (editingInFlow) {
-              <p id="invoice_scope_locked" class="mt-1 text-[11px] text-fg-muted">پروژه و بخش در این مرحله قابل تغییر نیست.</p>
-            }
-          </div>
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label for="invoice_counterparty" class="text-[11px] font-bold text-slate-700">طرف‌حساب (فروشگاه یا شخص) *</label>
-            <div class="flex items-center gap-1">
-            @if (canEditSelectedCounterparty) {
-              <button type="button" (click)="openEditCounterpartyModal()"
-                class="min-h-[40px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                title="ویرایش طرف‌حساب انتخاب‌شده" aria-label="ویرایش طرف‌حساب انتخاب‌شده">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit" aria-hidden="true"></svg>
-                <span>ویرایش</span>
-              </button>
-            }
-            <button
-              type="button"
-              (click)="openQuickCounterpartyModal()"
-              class="min-h-[40px] px-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-              <span>+ طرف‌حساب جدید</span>
-            </button>
+            </div>
+            <div>
+              <label for="invoice_number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره رسید پرداخت <span class="font-normal text-fg-muted">(اختیاری)</span></label>
+              <input
+                id="invoice_number"
+                type="text"
+                [(ngModel)]="newInvoice.invoice_number"
+                (ngModelChange)="onDuplicateKeyChange()"
+                aria-label="شماره رسید پرداخت"
+                placeholder="اگر رسید پرداخت شماره دارد"
+                class="min-h-[40px] w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium" />
             </div>
           </div>
-          <app-search-select
-            inputId="invoice_counterparty"
-            ariaLabel="طرف‌حساب"
-            [options]="counterpartyOptions"
-            [ngModel]="newInvoice.counterparty"
-            [ngModelOptions]="{standalone: true}"
-            (selected)="onCounterpartySelected($event)"
-            [placeholder]="counterparties.length ? 'نام، کد ملی یا تلفن طرف‌حساب را بنویسید...' : 'طرف‌حسابی ثبت نشده است'"
-            emptyText="طرف‌حسابی پیدا نشد"
-            inputClass="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          ></app-search-select>
-          @if (counterpartyShebaMissing) {
-            <p class="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800" role="status">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0" aria-hidden="true"></svg>
-              <span>این طرف‌حساب شبای معتبر ندارد؛ رسید پرداخت ذخیره می‌شود اما ارسال به سرپرست پس از ثبت شبا ممکن است.</span>
-            </p>
-          }
-        </div>
 
-        <!-- شماره فاکتور و تاریخ شمسی -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- ردیف ۲: طرف‌حساب -->
           <div>
-            <label for="invoice_number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره رسید پرداخت <span class="font-normal text-fg-muted">(اختیاری)</span></label>
-            <input
-              id="invoice_number"
-              type="text"
-              [(ngModel)]="newInvoice.invoice_number"
-              (ngModelChange)="onDuplicateKeyChange()"
-              aria-label="شماره رسید پرداخت"
-              placeholder="اگر رسید پرداخت شماره دارد"
-              class="min-h-[40px] w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-          </div>
-          <div>
-            <label for="invoice_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ رسید پرداخت (شمسی) *</label>
-            <div class="relative datepicker-left">
-              <ng-persian-datepicker [dateFormat]="'YYYY/MM/DD'" [uiHideAfterSelectDate]="true">
-                <input
-                  id="invoice_date"
-                  type="text"
-                  [formControl]="invoiceDateControl"
-                  placeholder="۱۴۰۵/۰۱/۰۱"
-                  autocomplete="off"
-                  [attr.aria-invalid]="!!invoiceDateError"
-                  [attr.aria-describedby]="invoiceDateError ? 'invoice_date_error' : null"
-                  [class.border-rose-400]="!!invoiceDateError"
-                  class="min-h-[40px] font-mono w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
-              </ng-persian-datepicker>
+            <div class="flex items-center justify-between mb-1">
+              <label for="invoice_counterparty" class="text-[11px] font-bold text-slate-700">طرف‌حساب (فروشگاه یا شخص) *</label>
+              <div class="flex items-center gap-1">
+                @if (canEditSelectedCounterparty) {
+                  <button type="button" (click)="openEditCounterpartyModal()"
+                    class="min-h-[38px] px-2 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
+                    title="ویرایش طرف‌حساب انتخاب‌شده" aria-label="ویرایش طرف‌حساب انتخاب‌شده">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit" aria-hidden="true"></svg>
+                    <span>ویرایش</span>
+                  </button>
+                }
+                <button
+                  type="button"
+                  (click)="openQuickCounterpartyModal()"
+                  class="min-h-[38px] px-2 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors">
+                  <span>+ طرف‌حساب جدید</span>
+                </button>
+              </div>
             </div>
-            @if (invoiceDateError) {
-              <p id="invoice_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ invoiceDateError }}</p>
+            <app-search-select
+              inputId="invoice_counterparty"
+              ariaLabel="طرف‌حساب"
+              [options]="counterpartyOptions"
+              [ngModel]="newInvoice.counterparty"
+              [ngModelOptions]="{standalone: true}"
+              (selected)="onCounterpartySelected($event)"
+              [placeholder]="counterparties.length ? 'نام، کد ملی یا تلفن طرف‌حساب را بنویسید...' : 'طرف‌حسابی ثبت نشده است'"
+              emptyText="طرف‌حسابی پیدا نشد"
+              inputClass="min-h-[40px] w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium"
+            ></app-search-select>
+            @if (counterpartyShebaMissing) {
+              <p class="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800" role="status">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0" aria-hidden="true"></svg>
+                <span>این طرف‌حساب شبای معتبر ندارد؛ رسید پرداخت ذخیره می‌شود اما ارسال به سرپرست پس از ثبت شبا ممکن است.</span>
+              </p>
             }
           </div>
-        </div>
         </section>
 
         <!-- هشدار فاکتور تکراری (فقط هشدار است؛ ثبت رد نمی‌شود) -->
@@ -360,50 +357,63 @@
         }
 
         <!-- ردیف‌های فاکتور (۱ تا ۱۰۰ ردیف) -->
-        <div>
-          <h4 class="mb-1 text-[11px] font-bold text-slate-700">ردیف‌های رسید پرداخت *</h4>
+        <div class="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden">
+          <div class="px-3.5 py-2.5 bg-slate-100/75 border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-slate-800">ردیف‌های رسید پرداخت *</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                {{ formatNumber(formLines.length) }} ردیف
+              </span>
+            </div>
+            <button type="button" appAction="create" display="label" label="افزودن ردیف" size="sm" tone="indigo"
+              [disabled]="formLines.length >= maxLines" (click)="addLine()"></button>
+          </div>
+
           @if (linesError) {
-            <p class="mb-2 text-[11px] font-bold text-rose-700" role="alert">{{ linesError }}</p>
+            <p class="p-2.5 text-[11px] font-bold text-rose-700 bg-rose-50 border-b border-rose-100" role="alert">{{ linesError }}</p>
           }
           @if (!isLoadingExpenseHeads && expenseHeadGroups.length === 0) {
-            <p class="mb-2 text-[11px] text-fg-muted">برای این شرکت سرفصل فعالی تعریف نشده است؛ از استودیوی شرکت، تب «سرفصل‌های هزینه» تعریف کنید.</p>
+            <p class="p-2.5 text-[11px] text-fg-muted bg-amber-50/60 border-b border-amber-100">برای این شرکت سرفصل فعالی تعریف نشده است؛ از استودیوی شرکت، تب «سرفصل‌های هزینه» تعریف کنید.</p>
           }
 
           <!-- سرستون‌ها فقط در دسکتاپ -->
-          <div class="hidden md:grid grid-cols-12 gap-2 px-1.5 pb-1 text-[11px] font-bold text-fg-muted">
-            <span class="col-span-3">شرح</span>
-            <span class="col-span-1">تعداد</span>
-            <span class="col-span-1">واحد</span>
+          <div class="hidden md:grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50/80 border-b border-slate-200/70 text-[11px] font-bold text-slate-500">
+            <span class="col-span-4">شرح</span>
+            <span class="col-span-1 text-center">تعداد</span>
+            <span class="col-span-1 text-center">واحد</span>
             <span class="col-span-2">فی (ریال)</span>
             <span class="col-span-2">سرفصل هزینه</span>
-            <span class="col-span-2 text-end">مبلغ ردیف</span>
-            <span class="col-span-1"></span>
+            <span class="col-span-1 text-end">مبلغ ردیف</span>
+            <span class="col-span-1 text-center">حذف</span>
           </div>
 
-          <div class="space-y-2">
+          <div class="p-2.5 space-y-2">
             @for (line of formLines; track $index; let i = $index) {
-              <div class="rounded-2xl border border-line bg-surface-muted/40 p-2.5 md:p-1.5 md:bg-transparent md:border-0 md:rounded-none"
+              <div class="rounded-xl border border-slate-200/70 bg-slate-50/40 md:bg-white p-2.5 md:p-1.5 hover:bg-slate-50/70 transition-colors"
                    [class.border-rose-400]="!!lineErrors[i]">
-                <p class="md:hidden mb-1.5 text-[11px] font-black text-fg-muted">ردیف {{ formatNumber(i + 1) }}</p>
-                <div class="grid grid-cols-2 md:grid-cols-12 gap-2 items-start" (keydown.enter)="onLineEnter(i, $event)">
-                  <div class="col-span-2 md:col-span-3">
+                <p class="md:hidden mb-1.5 text-[11px] font-black text-slate-700 flex items-center justify-between">
+                  <span>ردیف {{ formatNumber(i + 1) }}</span>
+                  <span class="text-indigo-700 font-mono">{{ formatNumber(lineAmount(line)) }} ریال</span>
+                </p>
+                <div class="grid grid-cols-2 md:grid-cols-12 gap-2 items-center" (keydown.enter)="onLineEnter(i, $event)">
+                  <div class="col-span-2 md:col-span-4">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_desc_' + i">شرح</label>
                     <input type="text" [id]="'line_desc_' + i" [(ngModel)]="line.description" [name]="'line_desc_' + i"
                       (ngModelChange)="onLineDescriptionChange(i, $event)"
                       placeholder="شرح کالا یا خدمت" aria-label="شرح ردیف"
-                      class="w-full min-h-[40px] px-3 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+                      class="w-full min-h-[40px] px-3 text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium" />
                   </div>
-                  <div class="md:col-span-1">
+                  <div class="col-span-1 md:col-span-1">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_qty_' + i">تعداد</label>
                     <input type="number" min="0" step="any" inputmode="decimal" [id]="'line_qty_' + i" [(ngModel)]="line.quantity" [name]="'line_qty_' + i"
                       aria-label="تعداد" dir="ltr"
-                      class="w-full min-h-[40px] px-2 text-xs text-end tabular-nums bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+                      class="w-full min-h-[40px] px-2 text-xs text-center tabular-nums bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-mono" />
                   </div>
-                  <div class="md:col-span-1">
+                  <div class="col-span-1 md:col-span-1">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_unit_' + i">واحد</label>
                     <input type="text" [id]="'line_unit_' + i" [(ngModel)]="line.unit" [name]="'line_unit_' + i" maxlength="30"
                       placeholder="عدد، متر..." aria-label="واحد"
-                      class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+                      class="w-full min-h-[40px] px-2 text-xs text-center bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium" />
                   </div>
                   <div class="col-span-2 md:col-span-2">
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_price_' + i">فی (ریال)</label>
@@ -414,7 +424,7 @@
                     <label class="md:hidden block text-[11px] font-bold text-fg-muted mb-0.5" [attr.for]="'line_head_' + i">سرفصل هزینه</label>
                     <select [id]="'line_head_' + i" [(ngModel)]="line.expense_head" [name]="'line_head_' + i"
                       (ngModelChange)="onLineHeadChange($event)" aria-label="سرفصل هزینهٔ ردیف"
-                      class="w-full min-h-[40px] px-2 text-xs bg-surface border border-line rounded-xl text-fg focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                      class="w-full min-h-[40px] px-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium">
                       <option [ngValue]="null" disabled>{{ isLoadingExpenseHeads ? 'در حال بارگذاری...' : 'انتخاب سرفصل' }}</option>
                       @for (group of expenseHeadGroups; track group.id) {
                         <optgroup [label]="group.label">
@@ -425,13 +435,13 @@
                       }
                     </select>
                   </div>
-                  <div class="col-span-1 md:col-span-2 flex items-center md:justify-end min-h-[40px]">
+                  <div class="col-span-1 md:col-span-1 flex items-center justify-end min-h-[40px]">
                     <span class="md:hidden text-[11px] font-bold text-fg-muted me-2">مبلغ ردیف:</span>
-                    <span class="text-xs font-black text-fg tabular-nums">{{ formatNumber(lineAmount(line)) }}</span>
+                    <span class="text-xs font-black text-slate-800 tabular-nums">{{ formatNumber(lineAmount(line)) }}</span>
                   </div>
-                  <div class="col-span-1 md:col-span-1 flex items-center justify-end">
+                  <div class="col-span-1 md:col-span-1 flex items-center justify-center">
                     <button type="button" (click)="removeLine(i)" [disabled]="formLines.length <= 1"
-                      class="w-10 h-10 min-w-[40px] min-h-[40px] inline-flex items-center justify-center gap-1 rounded-xl text-rose-700 hover:bg-rose-50 disabled:opacity-40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      class="w-10 h-10 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl text-rose-600 hover:bg-rose-50 disabled:opacity-20 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
                       title="حذف این ردیف" aria-label="حذف این ردیف">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
                     </button>
@@ -443,126 +453,157 @@
               </div>
             }
           </div>
-          <button type="button" appAction="create" display="label" label="افزودن ردیف" size="sm" tone="indigo"
-            class="mt-2" [disabled]="formLines.length >= maxLines" (click)="addLine()"></button>
         </div>
 
-        <!-- شرح کلی: خودکار از شرح ردیف اول، قابل ویرایش -->
-        <div>
-          <label for="invoice_description" class="block text-[11px] font-bold text-slate-700 mb-1">شرح کلی رسید پرداخت</label>
-          <textarea
-            id="invoice_description"
-            rows="2"
-            aria-describedby="invoice_description_hint"
-            [(ngModel)]="newInvoice.description"
-            (ngModelChange)="onDescriptionInput($event)"
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
-          <p id="invoice_description_hint" class="mt-1 text-[11px] text-fg-muted">از شرح ردیف اول پر می‌شود؛ اگر خودتان تغییرش دهید، دیگر عوض نمی‌شود.</p>
-        </div>
+        <!-- چیدمان متوازن ۲ ستونه بخش پایینی: شرح و پیوست (راست) / تخفیف و جمع کل (چپ) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
+          
+          <!-- ستون راست: شرح کلی و فایل پیوست -->
+          <div class="lg:col-span-7 space-y-3">
+            
+            <!-- شرح کلی: خودکار از شرح ردیف اول، قابل ویرایش -->
+            <div class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/50">
+              <div class="flex items-center justify-between mb-1">
+                <label for="invoice_description" class="text-[11px] font-bold text-slate-700">شرح کلی رسید پرداخت</label>
+                <span class="text-[10px] text-fg-muted font-medium">پر شدن خودکار از ردیف اول</span>
+              </div>
+              <textarea
+                id="invoice_description"
+                rows="2"
+                aria-describedby="invoice_description_hint"
+                [(ngModel)]="newInvoice.description"
+                (ngModelChange)="onDescriptionInput($event)"
+                placeholder="شرح کلی رسید پرداخت..."
+                class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium"></textarea>
+              <p id="invoice_description_hint" class="mt-1 text-[10px] text-fg-muted">از شرح ردیف اول پر می‌شود؛ اگر خودتان تغییرش دهید، دیگر عوض نمی‌شود.</p>
+            </div>
 
-        <!-- تخفیف و مالیات (پیش‌فرض بسته) -->
-        <button type="button" (click)="showTotalsExtras = !showTotalsExtras"
-          [attr.aria-expanded]="showTotalsExtras" aria-controls="invoice_totals_extras"
-          class="min-h-[40px] inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" aria-hidden="true"
-            class="transition-transform" [class.rotate-180]="showTotalsExtras"></svg>
-          <span>تخفیف و مالیات</span>
-          @if (!showTotalsExtras && (discountAmount > 0 || vatApplicable)) {
-            <span class="font-medium text-fg-muted">(دارد)</span>
-          }
-        </button>
-        @if (showTotalsExtras) {
-        <div id="invoice_totals_extras" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label for="invoice_discount" class="block text-[11px] font-bold text-slate-700 mb-1">تخفیف کل رسید پرداخت (ریال)</label>
-            <app-amount-input inputId="invoice_discount" ariaLabel="تخفیف کل رسید پرداخت (ریال)" placeholder="۰"
-              [invalid]="!!discountError" [describedBy]="discountError ? 'invoice_discount_error' : null"
-              [(ngModel)]="discountInput" [ngModelOptions]="{standalone: true}" (ngModelChange)="discountError = ''"></app-amount-input>
-            @if (discountError) {
-              <p id="invoice_discount_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ discountError }}</p>
-            }
-          </div>
-          <div>
-            <label class="flex items-center gap-2 min-h-[40px] text-[11px] font-bold text-slate-700 cursor-pointer">
-              <input type="checkbox" [(ngModel)]="vatApplicable" [ngModelOptions]="{standalone: true}" class="w-4 h-4 accent-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
-              <span>مشمول مالیات بر ارزش افزوده</span>
-            </label>
-            @if (vatApplicable) {
-              <label for="invoice_vat" class="block text-[11px] text-fg-muted mb-1">مبلغ مالیات (ریال) - پیشنهاد: {{ formatNumber(suggestedVat) }} ({{ formatNumber(vatRate) }}٪)</label>
-              <app-amount-input inputId="invoice_vat" ariaLabel="مبلغ مالیات (ریال)" placeholder="۰"
-                [invalid]="!!vatError" [describedBy]="vatError ? 'invoice_vat_error' : null"
-                [ngModel]="vatDisplay" [ngModelOptions]="{standalone: true}" (ngModelChange)="onVatInput($event)"></app-amount-input>
-              @if (isVatManual) {
-                <p class="mt-1 text-[11px] text-sky-800 font-bold">
-                  مالیات دستی اصلاح شده است.
-                  <button type="button" (click)="resetVatToSuggested()" class="underline min-h-[40px] cursor-pointer">بازگشت به مبلغ پیشنهادی</button>
+            <!-- فایل پیوست فاکتور (در ویرایش، فایل تازه جای پیوست فعلی را می‌گیرد) -->
+            <div class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/50">
+              <label class="block text-[11px] font-bold text-slate-700 mb-1.5">تصویر یا فایل پیوست رسید پرداخت</label>
+              @if (editingInvoiceId && existingAttachmentUrl && !attachmentFileName) {
+                <p class="mb-1.5 text-[11px] text-fg-muted">
+                  پیوست فعلی:
+                  <a [href]="existingAttachmentUrl | serverUrl" target="_blank" rel="noopener" class="font-bold text-indigo-700 underline">مشاهده</a>
+                  — برای جایگزینی، فایل تازه انتخاب کنید.
                 </p>
               }
-              @if (vatError) {
-                <p id="invoice_vat_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ vatError }}</p>
-              }
-            }
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="relative md:hidden min-h-[40px] px-3 py-2 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500">
+                  <input
+                    type="file"
+                    (change)="onInvoiceFileSelected($event)"
+                    accept="image/*"
+                    capture="environment"
+                    class="sr-only" />
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera" aria-hidden="true"></svg>
+                  <span>عکس با دوربین</span>
+                </label>
+                <label class="relative min-h-[40px] px-3 py-2 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500">
+                  <input
+                    type="file"
+                    (change)="onInvoiceFileSelected($event)"
+                    accept="image/*,.pdf"
+                    class="sr-only" />
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip" aria-hidden="true"></svg>
+                  <span>انتخاب فایل</span>
+                </label>
+                <span *ngIf="attachmentFileName" class="text-xs text-indigo-700 font-bold flex items-center gap-1 bg-indigo-50 px-2.5 py-1.5 rounded-xl border border-indigo-100">
+                  <span>{{ attachmentFileName }}</span>
+                  <button
+                    type="button"
+                    (click)="removeSelectedAttachment()"
+                    title="حذف فایل انتخاب‌شده" aria-label="حذف فایل انتخاب‌شده"
+                    class="w-10 h-10 inline-flex items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-500 text-rose-500 hover:text-rose-700 font-black ms-1 cursor-pointer">
+                    <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  </button>
+                </span>
+                <span *ngIf="!attachmentFileName" class="text-[11px] text-fg-muted">
+                  فرمت‌های مجاز: JPG, PNG, PDF (حداکثر ۱۰ مگابایت)
+                </span>
+              </div>
+            </div>
+
           </div>
-        </div>
-        }
 
-        <!-- جمع‌های زنده (جمع نهایی را سرور حساب می‌کند) -->
-        <dl class="p-3 rounded-2xl border border-line bg-surface-muted/50 text-xs space-y-1" aria-live="polite">
-          <div class="flex justify-between"><dt class="text-fg-muted">جمع ردیف‌ها</dt><dd class="font-bold tabular-nums">{{ formatNumber(subtotal) }}</dd></div>
-          @if (discountAmount > 0) {
-            <div class="flex justify-between"><dt class="text-fg-muted">تخفیف</dt><dd class="font-bold tabular-nums">{{ formatNumber(discountAmount) }}</dd></div>
-          }
-          @if (vatApplicable) {
-            <div class="flex justify-between"><dt class="text-fg-muted">مالیات</dt><dd class="font-bold tabular-nums">{{ formatNumber(vatAmount) }}</dd></div>
-          }
-          <div class="flex justify-between pt-1 border-t border-line text-sm"><dt class="font-black text-fg">مبلغ قابل پرداخت (ریال)</dt><dd class="font-black text-emerald-700 tabular-nums">{{ formatNumber(payableAmount) }}</dd></div>
-          <p class="text-[11px] text-emerald-700 font-bold" *ngIf="payableAmount > 0">معادل: {{ formatNumber(Math.floor(payableAmount / 10)) }} تومان</p>
-        </dl>
-
-        <!-- فایل پیوست فاکتور (در ویرایش، فایل تازه جای پیوست فعلی را می‌گیرد) -->
-        <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">تصویر یا فایل پیوست رسید پرداخت</label>
-          @if (editingInvoiceId && existingAttachmentUrl && !attachmentFileName) {
-            <p class="mb-1.5 text-[11px] text-fg-muted">
-              پیوست فعلی:
-              <a [href]="existingAttachmentUrl | serverUrl" target="_blank" rel="noopener" class="font-bold text-indigo-700 underline">مشاهده</a>
-              — برای جایگزینی، فایل تازه انتخاب کنید.
-            </p>
-          }
-          <div class="flex flex-wrap items-center gap-2">
-            <label class="relative md:hidden min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500">
-              <input
-                type="file"
-                (change)="onInvoiceFileSelected($event)"
-                accept="image/*"
-                capture="environment"
-                class="sr-only" />
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera" aria-hidden="true"></svg>
-              <span>عکس با دوربین</span>
-            </label>
-            <label class="relative px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors inline-flex items-center gap-1.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500">
-              <input
-                type="file"
-                (change)="onInvoiceFileSelected($event)"
-                accept="image/*,.pdf"
-                class="sr-only" />
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip" aria-hidden="true"></svg>
-              <span>انتخاب فایل</span>
-            </label>
-            <span *ngIf="attachmentFileName" class="text-xs text-indigo-700 font-bold flex items-center gap-1 bg-indigo-50 px-2.5 py-1.5 rounded-xl border border-indigo-100">
-              <span>{{ attachmentFileName }}</span>
-              <button
-                type="button"
-                (click)="removeSelectedAttachment()"
-                title="حذف فایل انتخاب‌شده" aria-label="حذف فایل انتخاب‌شده"
-                class="w-10 h-10 inline-flex items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-500 text-rose-500 hover:text-rose-700 font-black ms-1 cursor-pointer">
-                <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <!-- ستون چپ: تخفیف، مالیات و خلاصه مبالغ -->
+          <div class="lg:col-span-5 space-y-3">
+            
+            <!-- تخفیف و مالیات (پیش‌فرض بسته) -->
+            <div class="rounded-2xl border border-slate-200/90 bg-slate-50/50 p-2.5">
+              <button type="button" (click)="showTotalsExtras = !showTotalsExtras"
+                [attr.aria-expanded]="showTotalsExtras" aria-controls="invoice_totals_extras"
+                class="w-full flex items-center justify-between min-h-[38px] px-2 text-xs font-bold text-slate-700 hover:text-indigo-700 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors">
+                <div class="flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" aria-hidden="true"
+                    class="transition-transform duration-200" [class.rotate-180]="showTotalsExtras"></svg>
+                  <span>تخفیف و مالیات</span>
+                </div>
+                @if (!showTotalsExtras && (discountAmount > 0 || vatApplicable)) {
+                  <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">اعمال‌شده</span>
+                }
               </button>
-            </span>
-            <span *ngIf="!attachmentFileName" class="text-[11px] text-fg-muted">
-              فرمت‌های مجاز: JPG, PNG, PDF (حداکثر ۱۰ مگابایت)
-            </span>
+              @if (showTotalsExtras) {
+              <div id="invoice_totals_extras" class="pt-2 mt-1.5 border-t border-slate-200 space-y-2.5">
+                <div>
+                  <label for="invoice_discount" class="block text-[11px] font-bold text-slate-700 mb-1">تخفیف کل رسید پرداخت (ریال)</label>
+                  <app-amount-input inputId="invoice_discount" ariaLabel="تخفیف کل رسید پرداخت (ریال)" placeholder="۰"
+                    [invalid]="!!discountError" [describedBy]="discountError ? 'invoice_discount_error' : null"
+                    [(ngModel)]="discountInput" [ngModelOptions]="{standalone: true}" (ngModelChange)="discountError = ''"></app-amount-input>
+                  @if (discountError) {
+                    <p id="invoice_discount_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ discountError }}</p>
+                  }
+                </div>
+                <div>
+                  <label class="flex items-center gap-2 min-h-[38px] text-[11px] font-bold text-slate-700 cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="vatApplicable" [ngModelOptions]="{standalone: true}" class="w-4 h-4 accent-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
+                    <span>مشمول مالیات بر ارزش افزوده</span>
+                  </label>
+                  @if (vatApplicable) {
+                    <label for="invoice_vat" class="block text-[11px] text-fg-muted mb-1">مبلغ مالیات (ریال) - پیشنهاد: {{ formatNumber(suggestedVat) }} ({{ formatNumber(vatRate) }}٪)</label>
+                    <app-amount-input inputId="invoice_vat" ariaLabel="مبلغ مالیات (ریال)" placeholder="۰"
+                      [invalid]="!!vatError" [describedBy]="vatError ? 'invoice_vat_error' : null"
+                      [ngModel]="vatDisplay" [ngModelOptions]="{standalone: true}" (ngModelChange)="onVatInput($event)"></app-amount-input>
+                    @if (isVatManual) {
+                      <p class="mt-1 text-[11px] text-sky-800 font-bold">
+                        مالیات دستی اصلاح شده است.
+                        <button type="button" (click)="resetVatToSuggested()" class="underline min-h-[36px] cursor-pointer">بازگشت به مبلغ پیشنهادی</button>
+                      </p>
+                    }
+                    @if (vatError) {
+                      <p id="invoice_vat_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ vatError }}</p>
+                    }
+                  }
+                </div>
+              </div>
+              }
+            </div>
+
+            <!-- جمع‌های زنده (جمع نهایی را سرور حساب می‌کند) -->
+            <dl class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/70 text-xs space-y-2 shadow-sm" aria-live="polite">
+              <div class="flex justify-between items-center"><dt class="text-slate-500 font-medium text-[11px]">جمع ردیف‌ها</dt><dd class="font-bold tabular-nums text-slate-800">{{ formatNumber(subtotal) }}</dd></div>
+              @if (discountAmount > 0) {
+                <div class="flex justify-between items-center text-rose-600"><dt class="font-medium text-[11px]">تخفیف</dt><dd class="font-bold tabular-nums">{{ formatNumber(discountAmount) }}</dd></div>
+              }
+              @if (vatApplicable) {
+                <div class="flex justify-between items-center text-indigo-700"><dt class="font-medium text-[11px]">مالیات</dt><dd class="font-bold tabular-nums">{{ formatNumber(vatAmount) }}</dd></div>
+              }
+              <div class="pt-2 border-t border-slate-200/80 bg-emerald-50/70 -mx-3.5 -mb-3.5 p-3 rounded-b-2xl border-t-emerald-100">
+                <div class="flex justify-between items-baseline">
+                  <dt class="font-black text-xs text-emerald-950">مبلغ قابل پرداخت (ریال)</dt>
+                  <dd class="font-black text-base text-emerald-700 tabular-nums">{{ formatNumber(payableAmount) }}</dd>
+                </div>
+                <p class="text-[10px] text-emerald-700 font-bold mt-0.5 text-end" *ngIf="payableAmount > 0">
+                  معادل: {{ formatNumber(Math.floor(payableAmount / 10)) }} تومان
+                </p>
+                <p class="text-[11px] text-emerald-900 font-bold mt-1 text-end leading-relaxed" *ngIf="payableAmount > 0" data-invoice-words>
+                  به حروف: {{ payableAmount | persianWords:'rial':true }}
+                </p>
+              </div>
+            </dl>
+
           </div>
+
         </div>
 
       </div>
@@ -803,6 +844,9 @@
                 <div class="flex justify-between"><dt class="text-fg-muted">تخفیف</dt><dd class="tabular-nums">{{ formatNumber(selectedInvoiceDetail.discount_amount) }}</dd></div>
                 <div class="flex justify-between"><dt class="text-fg-muted">مالیات<span *ngIf="selectedInvoiceDetail.vat_manual"> (دستی)</span></dt><dd class="tabular-nums">{{ formatNumber(selectedInvoiceDetail.vat_amount) }}</dd></div>
                 <div class="flex justify-between font-black"><dt>مبلغ قابل پرداخت</dt><dd class="tabular-nums">{{ formatNumber(selectedInvoiceDetail.amount) }}</dd></div>
+                <div class="text-[10px] text-emerald-800 font-bold text-end leading-relaxed mt-0.5" *ngIf="selectedInvoiceDetail.amount" data-detail-words>
+                  به حروف: {{ selectedInvoiceDetail.amount | persianWords:'rial':true }}
+                </div>
                 <div class="flex justify-between" *ngIf="+(selectedInvoiceDetail.paid_amount || 0) > 0"><dt class="text-fg-muted">پرداخت‌شده / مانده</dt><dd class="tabular-nums">{{ formatNumber(selectedInvoiceDetail.paid_amount) }} / {{ formatNumber(selectedInvoiceDetail.remaining) }}</dd></div>
               </dl>
             </div>

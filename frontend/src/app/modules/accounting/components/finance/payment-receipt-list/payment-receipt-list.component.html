@@ -63,12 +63,12 @@
         @if (extraColumn(); as col) { <th class="py-3 px-3">{{ col.label }}</th> }
         <th class="py-3 px-3 text-center">وضعیت</th>
         <th class="py-3 px-3">ایجادکننده</th>
-        <th class="py-3 px-3 text-center">عملیات</th>
+        <th class="py-3 px-3 text-center sticky left-0 z-10 bg-surface-muted min-w-[140px]">عملیات</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
       @for (row of rows(); track row.id; let idx = $index) {
-        <tr class="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
+        <tr class="group hover:bg-slate-50/80 transition-colors whitespace-nowrap">
           <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">{{ fa(indexOffset() + idx + 1) }}</td>
           <td class="py-2.5 px-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer"
             (click)="preview.emit(row)" (keydown.enter)="preview.emit(row)" (keydown.space)="$event.preventDefault(); preview.emit(row)"
@@ -105,8 +105,8 @@
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block" [ngClass]="statusClass(row.status)" [title]="row.status_display || ''">{{ statusShort(row.status, row.status_display) }}</span>
           </td>
           <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-[10rem] truncate" [title]="creatorHint(row)">{{ row.created_by_name || '—' }}</td>
-          <td class="py-2.5 px-3 text-center">
-            <div class="flex items-center justify-center gap-1">
+          <td class="py-2.5 px-3 text-center sticky left-0 z-10 bg-surface group-hover:bg-surface-muted transition-colors min-w-[140px]">
+            <div class="flex items-center justify-center gap-1 min-w-max">
               <ng-container *ngTemplateOutlet="actions; context: { $implicit: row }"></ng-container>
             </div>
           </td>

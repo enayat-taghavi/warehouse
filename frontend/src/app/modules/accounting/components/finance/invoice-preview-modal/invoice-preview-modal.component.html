@@ -157,6 +157,9 @@
             <span>مبلغ نهایی قابل پرداخت:</span>
             <span class="font-mono text-emerald-700 text-base">{{ faAmount(inv.amount ?? inv.total_amount) }} ریال</span>
           </div>
+          <div *ngIf="inv.amount ?? inv.total_amount" class="text-[11px] text-emerald-800 font-bold text-end leading-relaxed mt-0.5" data-preview-words>
+            به حروف: {{ (inv.amount ?? inv.total_amount) | persianWords:'rial':true }}
+          </div>
           <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="flex justify-between items-center pt-1 text-fg-muted text-[11px]">
             <span>پرداخت‌شده / مانده:</span>
             <span class="font-mono font-bold">{{ faAmount(inv.paid_amount) }} / {{ faAmount(inv.remaining) }} ریال</span>

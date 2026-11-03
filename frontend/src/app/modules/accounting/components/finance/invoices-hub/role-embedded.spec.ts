@@ -104,9 +104,8 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
 
   it('treasurer: embedded does not fetch; payExpenseInvoice opens the pay modal with the mapped row', () => {
     const m = mocks();
-    const treasuryApi: any = { getInvoicePayments: vi.fn().mockReturnValue(of({ results: [], paid_amount: 0, remaining: 900 })) };
-    const companyApi: any = { getBankAccounts: vi.fn().mockReturnValue(of([])) };
-    const cmp = __inCtx(() => new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, treasuryApi, companyApi, {} as any, m.router, m.route, m.cdr, m.ws));
+    // قسط‌ها و حساب‌ها را بخش مشترک پرداخت درون پنجره می‌خواند (treasurer-invoices-payments.dom.spec)
+    const cmp = __inCtx(() => new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, {} as any, m.router, m.route, m.cdr, m.ws));
     cmp.embedded = true;
     const changed = vi.fn();
     cmp.changed.subscribe(changed);
@@ -117,7 +116,6 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
     cmp.payExpenseInvoice({ id: 12, invoice_number: 'P-12', counterparty_name: 'فروشنده', status: 'partially_paid', amount: 1000, paid_amount: 100, remaining: 900, section: 4, counterparty: 7 } as any);
     expect(cmp.payModalOpen).toBe(true);
     expect(cmp.payItem).toEqual(expect.objectContaining({ id: 12, vendor_name: 'فروشنده', status: 'partially_paid', remaining: 900, section_id: 4, counterparty_id: 7 }));
-    expect(treasuryApi.getInvoicePayments).toHaveBeenCalledWith(12);
 
     cmp.loadTreasuryData(true);
     expect(changed).toHaveBeenCalledTimes(1);
@@ -126,7 +124,7 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
 
   it('treasurer: toPayableItem keeps the old cartable mapping', () => {
     const m = mocks();
-    const cmp = __inCtx(() => new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, {} as any, {} as any, {} as any, m.router, m.route, m.cdr, m.ws));
+    const cmp = __inCtx(() => new TreasurerInvoicesComponent({} as any, {} as any, m.toast, m.personnelApi, {} as any, m.router, m.route, m.cdr, m.ws));
     expect(cmp.toPayableItem({ id: 1, status: 'ready_to_pay', amount: 500, paid_amount: 200 })).toEqual(expect.objectContaining({
       id: 1, status: 'pending_payment', vendor_name: 'طرف‌حساب', paid_amount: 200, remaining: 300, section_id: null, counterparty_id: null, number: null,
     }));

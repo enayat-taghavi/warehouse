@@ -38,7 +38,7 @@ describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پ
 
     component = __inCtx(() => new TreasurerInvoicesComponent(
       {} as any, {} as any, mockToast, mockPersonnelApi,
-      {} as any, {} as any, {} as any,
+      {} as any,
       { navigate: vi.fn() } as any,
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any
@@ -74,7 +74,7 @@ describe('TreasurerInvoicesComponent — فقط فاکتورهای آماده پ
     };
     const comp = __inCtx(() => new TreasurerInvoicesComponent(
       {} as any, {} as any, mockToast, mockPersonnelApi,
-      {} as any, {} as any, {} as any,
+      {} as any,
       { navigate: vi.fn() } as any,
       { queryParams: of({}) } as any,
       { detectChanges: vi.fn() } as any,

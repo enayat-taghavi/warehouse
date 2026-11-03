@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { TreasuryOrgApiService } from '../../../api/treasury-org-api.service';
 import { PrintService } from '../../../../../core/services/print.service';
 import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
+import { PersianWordsPipe } from '../../../../../shared/pipes/persian-words.pipe';
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -88,7 +89,7 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     });
     TestBed.overrideComponent(InvoicePreviewModalComponent, {
       set: {
-        imports: [CommonModule, StubModalComponent, PersianDatePipe],
+        imports: [CommonModule, StubModalComponent, PersianDatePipe, PersianWordsPipe],
         schemas: [NO_ERRORS_SCHEMA],
       },
     });
@@ -161,7 +162,7 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     });
     TestBed.overrideComponent(InvoicePreviewModalComponent, {
       set: {
-        imports: [CommonModule, StubModalComponent, PersianDatePipe],
+        imports: [CommonModule, StubModalComponent, PersianDatePipe, PersianWordsPipe],
         schemas: [NO_ERRORS_SCHEMA],
       },
     });
@@ -323,7 +324,7 @@ describe('InvoicePreviewModalComponent DOM tracking block', () => {
     });
     TestBed.overrideComponent(InvoicePreviewModalComponent, {
       set: {
-        imports: [CommonModule, StubModalComponent, PersianDatePipe],
+        imports: [CommonModule, StubModalComponent, PersianDatePipe, PersianWordsPipe],
         schemas: [NO_ERRORS_SCHEMA],
       },
     });

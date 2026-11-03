@@ -33,6 +33,7 @@ import { ManagerReportsComponent } from './components/finance/manager/manager-re
 import { TreasurerDisbursementsComponent } from './components/finance/treasurer/treasurer-disbursements/treasurer-disbursements';
 import { TreasurerPettyCashComponent } from './components/finance/treasurer/treasurer-petty-cash/treasurer-petty-cash';
 import { InvoicesHubComponent } from './components/finance/invoices-hub/invoices-hub';
+import { InvoicePaymentPageComponent } from './components/finance/invoice-payment-page/invoice-payment-page.component';
 import { TreasurerBankAccountsComponent } from './components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts';
 import { TreasurerChequesComponent } from './components/finance/treasurer/treasurer-cheques/treasurer-cheques';
 import { TreasurerReconciliationComponent } from './components/finance/treasurer/treasurer-reconciliation/treasurer-reconciliation';
@@ -49,6 +50,8 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'employee-invoices', component: EmployeeInvoicesHubComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
   // تب یکپارچهٔ «فاکتورها» (سرپرست، حسابدار، مدیر، خزانه‌دار)؛ صفحه‌های فاکتور قبلی هر نقش به آن هدایت می‌شوند
   { path: 'invoices', component: InvoicesHubComponent, data: { reuse: true, sectionKey: 'accounting.invoices' } },
+  { path: 'invoices/:id/pay', component: InvoicePaymentPageComponent, data: { reuse: false, sectionKey: 'accounting.invoices' } },
+  { path: 'treasurer-invoices/:id/pay', redirectTo: 'invoices/:id/pay' },
   { path: 'employee-petty-cash', component: EmployeePettyCashHubComponent, data: { reuse: true, sectionKey: 'accounting.petty_cash' } },
   { path: 'employee-new-vehicle', component: EmployeeNewVehicleHubComponent, data: { reuse: true, sectionKey: 'accounting.fleet' } },
   { path: 'employee-new-personnel', component: EmployeeNewPersonnelHubComponent, data: { reuse: true } },

@@ -10,6 +10,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { TreasurerInvoicesComponent } from './treasurer-invoices';
+import { By } from '@angular/platform-browser';
+import { InvoicePaymentPanelComponent } from '../../invoice-payment-panel/invoice-payment-panel.component';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -39,6 +41,9 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
   let mockRoute: any;
   let mockConfirm: any;
   let promptSpy: any;
+  /** فرم و قسط‌ها در بخش مشترک پرداخت درون پنجره‌اند */
+  const panel = (): InvoicePaymentPanelComponent =>
+    fixture.debugElement.query(By.directive(InvoicePaymentPanelComponent)).componentInstance;
 
   beforeAll(async () => {
     Object.defineProperty(TreasurerInvoicesComponent, 'ɵfac', {
@@ -48,8 +53,6 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
           ɵɵdirectiveInject(StateService),
           ɵɵdirectiveInject(ToastService),
           ɵɵdirectiveInject(PersonnelApiService),
-          ɵɵdirectiveInject(TreasuryOrgApiService),
-          ɵɵdirectiveInject(CompanyApiService),
           ɵɵdirectiveInject(PrintService),
           ɵɵdirectiveInject(Router),
           ɵɵdirectiveInject(ActivatedRoute),
@@ -193,7 +196,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     const modalDialog = fixture.nativeElement.querySelector('app-modal [role="dialog"]');
     expect(modalDialog).toBeTruthy();
 
-    expect(component.payAmount).toBe('600000');
+    expect(panel().payAmount).toBe('600000');
     const amountInput = fixture.nativeElement.querySelector('#pay-amount') as HTMLInputElement;
     expect(amountInput).toBeTruthy();
     expect(amountInput.value.replace(/,/g, '')).toBe('600000');
@@ -250,13 +253,13 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
     methodSelect.value = 'cash';
     methodSelect.dispatchEvent(new Event('change'));
-    component.payMethod = 'cash';
+    panel().payMethod = 'cash';
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#pay-company-account')).toBeNull();
 
     methodSelect.value = 'transfer';
     methodSelect.dispatchEvent(new Event('change'));
-    component.payMethod = 'transfer';
+    panel().payMethod = 'transfer';
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#pay-company-account')).not.toBeNull();
   });
@@ -265,13 +268,13 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     component.payInvoice(component.invoices[0]);
     fixture.detectChanges();
 
-    component.payAmount = '600000';
-    component.payMethod = 'transfer';
-    component.payCompanyAccount = 5;
-    component.payDateControl.setValue('1405/04/15');
-    component.payTracking = '';
+    panel().payAmount = '600000';
+    panel().payMethod = 'transfer';
+    panel().payCompanyAccount = 5;
+    panel().payDateControl.setValue('1405/04/15');
+    panel().payTracking = '';
     const receipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
-    component.onPayReceiptChange({ target: { files: [receipt], value: 'receipt.pdf' } } as unknown as Event);
+    panel().onPayReceiptChange({ target: { files: [receipt], value: 'receipt.pdf' } } as unknown as Event);
 
     const trackingInput = fixture.nativeElement.querySelector('#pay-tracking') as HTMLInputElement;
     if (trackingInput) {
@@ -285,7 +288,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
       remaining: '400000'
     }));
 
-    component.submitPayment();
+    panel().submitPayment();
     fixture.detectChanges();
 
     const trackingErr = fixture.nativeElement.querySelector('#pay-tracking-err');
@@ -303,13 +306,13 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     component.payInvoice(component.invoices[0]);
     fixture.detectChanges();
 
-    component.payAmount = '600000';
-    component.payTracking = 'TR-555';
-    component.payMethod = 'transfer';
-    component.payCompanyAccount = 5;
-    component.payDateControl.setValue('1405/04/15');
+    panel().payAmount = '600000';
+    panel().payTracking = 'TR-555';
+    panel().payMethod = 'transfer';
+    panel().payCompanyAccount = 5;
+    panel().payDateControl.setValue('1405/04/15');
     const receipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
-    component.onPayReceiptChange({ target: { files: [receipt], value: 'receipt.pdf' } } as unknown as Event);
+    panel().onPayReceiptChange({ target: { files: [receipt], value: 'receipt.pdf' } } as unknown as Event);
 
     mockTreasuryOrgApi.addInvoicePayment.mockReturnValue(of({
       message: 'قسط با موفقیت ثبت شد',
@@ -317,7 +320,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
       remaining: '0'
     }));
 
-    component.submitPayment();
+    panel().submitPayment();
     fixture.detectChanges();
 
     expect(mockTreasuryOrgApi.addInvoicePayment).toHaveBeenCalledWith(
@@ -337,10 +340,10 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
   it('g) without a receipt the submit button is disabled, submit shows #pay-receipt-err and does not call addInvoicePayment', () => {
     component.payInvoice(component.invoices[0]);
     fixture.detectChanges();
-    component.payAmount = '600000';
-    component.payTracking = 'TR-1';
-    component.payCompanyAccount = 5;
-    component.payDateControl.setValue('1405/04/15');
+    panel().payAmount = '600000';
+    panel().payTracking = 'TR-1';
+    panel().payCompanyAccount = 5;
+    panel().payDateControl.setValue('1405/04/15');
     fixture.detectChanges();
 
     const input = fixture.nativeElement.querySelector('#pay-receipt') as HTMLInputElement;
@@ -360,7 +363,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     Object.defineProperty(input, 'files', { value: [new File(['%PDF'], 'r.pdf')], configurable: true });
     input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
-    expect(component.payReceipt?.name).toBe('r.pdf');
+    expect(panel().payReceipt?.name).toBe('r.pdf');
     expect(submit.disabled).toBe(false);
   });
 
@@ -368,19 +371,19 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     component.payInvoice(component.invoices[0]);
     fixture.detectChanges();
 
-    component.payAmount = '600000';
-    component.payTracking = 'TR-555';
-    component.payMethod = 'transfer';
-    component.payCompanyAccount = 5;
-    component.payDateControl.setValue('1405/04/15');
-    component.payReceipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
+    panel().payAmount = '600000';
+    panel().payTracking = 'TR-555';
+    panel().payMethod = 'transfer';
+    panel().payCompanyAccount = 5;
+    panel().payDateControl.setValue('1405/04/15');
+    panel().payReceipt = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' });
 
     mockTreasuryOrgApi.addInvoicePayment.mockReturnValue(throwError(() => ({
       status: 400,
       error: { amount: ['too much'] }
     })));
 
-    component.submitPayment();
+    panel().submitPayment();
     fixture.detectChanges();
 
     const amountErr = fixture.nativeElement.querySelector('#pay-amount-err');
@@ -388,18 +391,18 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(amountErr.textContent).toContain('too much');
 
     // Test 409 on void
-    component.pendingVoid = { id: 101, amount: 250000 } as any;
-    component.voidDialogOpen = true;
+    panel().pendingVoid = { id: 101, amount: 250000 } as any;
+    panel().voidDialogOpen = true;
 
     mockTreasuryOrgApi.voidInvoicePayment.mockReturnValue(throwError(() => ({
       status: 409,
       error: { code: 'void_after_full_payment', error: 'X' }
     })));
 
-    component.onVoidConfirmed('اشتباه');
+    panel().onVoidConfirmed('اشتباه');
     fixture.detectChanges();
 
-    expect(component.voidDialogServerError).toBe('X');
+    expect(panel().voidDialogServerError).toBe('X');
     const reasonDialogEl = fixture.nativeElement.querySelector('app-workflow-reason-dialog');
     expect(reasonDialogEl).toBeTruthy();
     expect(reasonDialogEl.textContent).toContain('X');
@@ -432,10 +435,10 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     voidBtn!.click();
     fixture.detectChanges();
 
-    expect(component.voidDialogOpen).toBe(true);
-    expect(component.pendingVoid?.id).toBe(101);
+    expect(panel().voidDialogOpen).toBe(true);
+    expect(panel().pendingVoid?.id).toBe(101);
 
-    component.onVoidConfirmed('اشتباه در ثبت');
+    panel().onVoidConfirmed('اشتباه در ثبت');
     expect(mockTreasuryOrgApi.voidInvoicePayment).toHaveBeenCalledWith(7, 101, 'اشتباه در ثبت');
   });
 
@@ -457,7 +460,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     fixture.detectChanges();
 
     expect(mockPersonnelApi.getPartyBankAccounts).toHaveBeenCalledWith(9);
-    expect(component.payPartyAccount).toBe(11);
+    expect(panel().payPartyAccount).toBe(11);
     const box = fixture.nativeElement.querySelector('[data-party-account-copy]') as HTMLElement;
     expect(box).toBeTruthy();
     expect(box.textContent).toContain('0123 456 789');
@@ -468,7 +471,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     (box.querySelector('[data-copy-sheba]') as HTMLButtonElement).click();
     await fixture.whenStable();
     expect(writeText).toHaveBeenLastCalledWith('IR120170000000000000000001');
-    expect(component.copiedKey).toBe('sheba');
+    expect(panel().copiedKey).toBe('sheba');
     expect(mockToast.success).toHaveBeenCalled();
   });
 
@@ -483,13 +486,14 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
   it('k) the bank website link shows only for a company account with a safe https URL and opens in a new tab', async () => {
     component.payInvoice(component.invoices[0]);
-    component.payMethod = 'transfer';
-    component.companyAccounts = [
+    fixture.detectChanges();
+    panel().payMethod = 'transfer';
+    panel().companyAccounts = [
       { id: 5, company: 1, bank_name: 'Mellat', sheba_number: 'IR1', is_primary: true, is_active: true, internet_bank_url: 'https://ib.bankmellat.ir' },
       { id: 6, company: 1, bank_name: 'Melli', sheba_number: 'IR2', is_primary: false, is_active: true, internet_bank_url: '' },
       { id: 7, company: 1, bank_name: 'Tejarat', sheba_number: 'IR3', is_primary: false, is_active: true, internet_bank_url: 'javascript:alert(1)' }
     ];
-    component.payCompanyAccount = 5;
+    panel().payCompanyAccount = 5;
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -497,7 +501,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     // pick through the select so the ngModel event also refreshes the modal view
     const pickCompanyAccount = async (id: number) => {
       const select = fixture.nativeElement.querySelector('#pay-company-account') as HTMLSelectElement;
-      const index = component.companyAccounts.findIndex(a => a.id === id) + 1;
+      const index = panel().companyAccounts.findIndex(a => a.id === id) + 1;
       select.value = select.options[index].value;
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
@@ -512,29 +516,30 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(link.getAttribute('aria-label')).toBeTruthy();
 
     await pickCompanyAccount(6);
-    expect(component.payCompanyAccount).toBe(6);
+    expect(panel().payCompanyAccount).toBe(6);
     expect(fixture.nativeElement.querySelector('[data-company-bank-link]')).toBeNull();
 
     await pickCompanyAccount(7);
-    expect(component.payCompanyAccount).toBe(7);
+    expect(panel().payCompanyAccount).toBe(7);
     expect(fixture.nativeElement.querySelector('[data-company-bank-link]')).toBeNull();
   });
 
   it('l) shows the bank website hint when the selected company account has no URL and hides it when it has a safe https URL', async () => {
     component.payInvoice(component.invoices[0]);
-    component.payMethod = 'transfer';
-    component.companyAccounts = [
+    fixture.detectChanges();
+    panel().payMethod = 'transfer';
+    panel().companyAccounts = [
       { id: 5, company: 1, bank_name: 'Mellat', sheba_number: 'IR1', is_primary: true, is_active: true, internet_bank_url: 'https://ib.bankmellat.ir' },
       { id: 6, company: 1, bank_name: 'Melli', sheba_number: 'IR2', is_primary: false, is_active: true, internet_bank_url: '' }
     ];
-    component.payCompanyAccount = null;
+    panel().payCompanyAccount = null;
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     const pickCompanyAccount = async (id: number | null) => {
       const select = fixture.nativeElement.querySelector('#pay-company-account') as HTMLSelectElement;
-      const index = id === null ? 0 : component.companyAccounts.findIndex(a => a.id === id) + 1;
+      const index = id === null ? 0 : panel().companyAccounts.findIndex(a => a.id === id) + 1;
       select.value = select.options[index].value;
       select.dispatchEvent(new Event('change'));
       fixture.detectChanges();
@@ -544,19 +549,19 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
     // 1. No account selected: no hint
     await pickCompanyAccount(null);
-    expect(component.selectedCompanyAccount).toBeNull();
+    expect(panel().selectedCompanyAccount).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-company-bank-hint]')).toBeNull();
 
     // 2. Account with safe https URL: no hint
     await pickCompanyAccount(5);
-    expect(component.selectedCompanyAccount?.id).toBe(5);
-    expect(component.selectedCompanyBankUrl).toBe('https://ib.bankmellat.ir');
+    expect(panel().selectedCompanyAccount?.id).toBe(5);
+    expect(panel().selectedCompanyBankUrl).toBe('https://ib.bankmellat.ir');
     expect(fixture.nativeElement.querySelector('[data-company-bank-hint]')).toBeNull();
 
     // 3. Account with empty URL: shows hint text
     await pickCompanyAccount(6);
-    expect(component.selectedCompanyAccount?.id).toBe(6);
-    expect(component.selectedCompanyBankUrl).toBeNull();
+    expect(panel().selectedCompanyAccount?.id).toBe(6);
+    expect(panel().selectedCompanyBankUrl).toBeNull();
     const hint = fixture.nativeElement.querySelector('[data-company-bank-hint]') as HTMLElement;
     expect(hint).toBeTruthy();
     expect(hint.textContent).toContain('آدرس سایت بانک برای این حساب ثبت نشده؛ از بخش حساب‌های بانکی شرکت آن را وارد کنید.');
@@ -564,8 +569,9 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
   it('m) the company account Sheba and account number are not shown in the pay form; the bank site link stays', async () => {
     component.payInvoice(component.invoices[0]);
-    component.payMethod = 'transfer';
-    component.companyAccounts = [
+    fixture.detectChanges();
+    panel().payMethod = 'transfer';
+    panel().companyAccounts = [
       {
         id: 5,
         company: 1,
@@ -577,7 +583,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
         internet_bank_url: 'https://ib.bankmellat.ir'
       }
     ];
-    component.payCompanyAccount = 5;
+    panel().payCompanyAccount = 5;
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

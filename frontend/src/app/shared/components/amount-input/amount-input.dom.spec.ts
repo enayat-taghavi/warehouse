@@ -100,4 +100,14 @@ describe('AmountInputComponent DOM Spec', () => {
     const inputEl = fixture.nativeElement.querySelector('input') as HTMLInputElement;
     expect(inputEl.disabled).toBe(true);
   });
+
+  it('showWords defaults to false and wordsText is empty', () => {
+    component.writeValue(12500000);
+    fixture.detectChanges();
+
+    expect(component.showWords()).toBe(false);
+    expect(component.wordsText()).toBe('');
+    const wordsEl = fixture.nativeElement.querySelector('[data-words]');
+    expect(wordsEl).toBeNull();
+  });
 });

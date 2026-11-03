@@ -19,6 +19,7 @@ import { ACTION_ICONS } from '../../../../../shared/icons/semantic-icons';
 import { AttachmentsComponent } from '../../../../../shared/components/attachments/attachments.component';
 import { WorkflowHistoryComponent } from '../../../../../shared/components/workflow-history/workflow-history.component';
 import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
+import { PersianWordsPipe } from '../../../../../shared/pipes/persian-words.pipe';
 import { TreasuryOrgApiService } from '../../../api/treasury-org-api.service';
 import { PrintService } from '../../../../../core/services/print.service';
 import { ExpenseInvoice } from '../../../models/personnel.model';
@@ -36,6 +37,7 @@ import { Subscription } from 'rxjs';
     AttachmentsComponent,
     WorkflowHistoryComponent,
     PersianDatePipe,
+    PersianWordsPipe,
   ],
   templateUrl: './invoice-preview-modal.component.html',
 })

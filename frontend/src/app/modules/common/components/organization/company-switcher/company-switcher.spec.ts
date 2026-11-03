@@ -24,6 +24,7 @@ describe('CompanySwitcherComponent', () => {
       isSuperuser: false,
       isSuperuser$: of(false),
       selectCompany: vi.fn(),
+      switchCompany: vi.fn().mockResolvedValue(true),
       openSwitchModal: vi.fn(),
       loadAvailableCompanies: vi.fn().mockReturnValue(of({ companies: [{ id: 1, name: 'شرکت اول', code: 'C01' }] }))
     };
@@ -135,5 +136,21 @@ describe('CompanySwitcherComponent', () => {
 
     expect(mockCompanyService.loadAvailableCompanies).toHaveBeenCalled();
     expect(component.isOpen).toBe(true);
+  });
+  it('با فراخوانی selectCompany، متد switchCompany سرویس (تعویض با بارگذاری دوباره) فراخوانی شده و دراپ‌داون بسته می‌شود', () => {
+    component.isOpen = true;
+    const targetComp = { id: 2, name: 'شرکت دوم', code: 'C02' };
+    component.selectCompany(targetComp as any);
+
+    expect(mockCompanyService.switchCompany).toHaveBeenCalledWith(targetComp);
+    expect(component.isOpen).toBe(false);
+  });
+
+  it('با فراخوانی openModal، دراپ‌داون بسته شده و مودال انتخاب شرکت باز می‌شود', () => {
+    component.isOpen = true;
+    component.openModal();
+
+    expect(mockCompanyService.openSwitchModal).toHaveBeenCalled();
+    expect(component.isOpen).toBe(false);
   });
 });

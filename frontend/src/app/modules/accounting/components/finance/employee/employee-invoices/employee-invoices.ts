@@ -26,6 +26,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
+import { PersianWordsPipe } from '../../../../../../shared/pipes/persian-words.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob, saveUrl } from '../../../../../../core/platform/file-output';
 import { WorkflowHistoryComponent } from '../../../../../../shared/components/workflow-history/workflow-history.component';
@@ -91,7 +92,7 @@ function toAsciiDigits(v: string): string {
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, PaymentReceiptListComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent],
+  imports: [CommonModule, FormsModule, AttachmentsComponent, SvgIconDirective, ActionButtonComponent, PaymentReceiptListComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, PersianWordsPipe, WorkflowHistoryComponent, WorkflowReasonDialogComponent, AmountInputComponent, ReactiveFormsModule, NgPersianDatepickerModule, CounterpartyFormFieldsComponent, SearchSelectComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })

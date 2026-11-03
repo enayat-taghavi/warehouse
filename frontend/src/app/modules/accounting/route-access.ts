@@ -36,6 +36,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'employee-attendance': ['view_sys_personnel_attendance', 'admin_all'],
     'employee-fleet': ['view_sys_personnel_attendance', 'view_sys_fleet_attendance', 'admin_all'],
     'employee-invoices': ['view_sys_personnel_attendance', 'perm_invoice_record', 'admin_all'],
+    'invoices/:id/pay': ['perm_treasury_disburse_action', 'view_sys_payroll', 'admin_all'],
     // تب یکپارچهٔ «فاکتورها»: اجتماع مجوز صفحه‌های قبلی؛ هر زیرتب با کلید صفحهٔ قبلی خودش (زیر) سنجیده می‌شود
     'invoices': [
       'view_sys_personnel_attendance', 'perm_invoice_record', 'perm_invoice_approve', 'view_sys_payroll', 'perm_invoice_review',

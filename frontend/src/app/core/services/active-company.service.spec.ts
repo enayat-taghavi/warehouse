@@ -9,6 +9,7 @@ import { ActiveCompanyService } from './active-company.service';
 import { SessionTabService } from './session-tab.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
 import { Company } from '../models/company.model';
+import { ConfirmDialogService } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -213,5 +214,74 @@ describe('ActiveCompanyService (Tab Isolation & Multi-Tenant State)', () => {
     service.selectCompany({ id: 5, name: 'قدیمی', code: 'OLD' } as Company);
     expect(service.isModuleEnabled('warehouse')).toBe(true);
     expect(service.isModuleEnabled('accounting')).toBe(true);
+  });
+  it('۱۰. با فراخوانی selectCompany با triggerReload=true در صورت تغییر شرکت باید اقدام به بازخوانی صفحه کند', () => {
+    service.selectCompany(mockCompanyA, false);
+
+    const originalLocation = window.location;
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload: reloadSpy }
+    });
+
+    try {
+      service.selectCompany(mockCompanyB, true);
+      expect(service.activeCompanyId).toBe(2);
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation
+      });
+    }
+  });
+
+  it('۱۱. در صورت انتخاب همان شرکت فعال فعلی با triggerReload=true، بازخوانی مجدد صفحه انجام نمی‌شود', () => {
+    service.selectCompany(mockCompanyA, false);
+
+    const originalLocation = window.location;
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload: reloadSpy }
+    });
+
+    try {
+      service.selectCompany(mockCompanyA, true);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation
+      });
+    }
+  });
+
+  it('۱۲. switchCompany با فیلد تغییریافتهٔ ذخیره‌نشده اول تایید می‌گیرد؛ با «ماندن» شرکت عوض نمی‌شود', async () => {
+    service.selectCompany(mockCompanyA, false);
+    const dialog = TestBed.inject(ConfirmDialogService);
+    const openSpy = vi.spyOn(dialog, 'open').mockResolvedValue(false);
+    const selectSpy = vi.spyOn(service, 'selectCompany');
+    const input = document.createElement('input');
+    input.className = 'ng-dirty';
+    document.body.appendChild(input);
+    try {
+      await expect(service.switchCompany(mockCompanyB)).resolves.toBe(false);
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(selectSpy).not.toHaveBeenCalled();
+      expect(service.activeCompanyId).toBe(1);
+    } finally {
+      input.remove();
+    }
+  });
+
+  it('۱۳. switchCompany بدون فیلد تغییریافته بی‌پرسش با بارگذاری دوباره عوض می‌کند', async () => {
+    service.selectCompany(mockCompanyA, false);
+    const openSpy = vi.spyOn(TestBed.inject(ConfirmDialogService), 'open');
+    const selectSpy = vi.spyOn(service, 'selectCompany').mockImplementation(() => {});
+    await expect(service.switchCompany(mockCompanyB)).resolves.toBe(true);
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(selectSpy).toHaveBeenCalledWith(mockCompanyB, true);
   });
 });

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, forwardRef, input, signal, viewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { numberToPersianWords } from '../../../core/utils/number-to-words';
 
 const PERSIAN_ZERO = 0x06f0;
 const ARABIC_ZERO = 0x0660;
@@ -54,6 +55,9 @@ function group(digits: string): string {
       @if (tomanText(); as t) {
         <p class="text-[11px] text-fg-muted mt-1 tabular-nums">{{ t }}</p>
       }
+      @if (showWords() && wordsText(); as w) {
+        <p class="text-[11px] text-indigo-700 font-medium mt-1 leading-relaxed" data-words>{{ w }}</p>
+      }
     </div>
   `,
 })
@@ -64,6 +68,17 @@ export class AmountInputComponent implements ControlValueAccessor {
   /** شناسهٔ پیام خطای کنار فیلد */
   readonly describedBy = input<string | null>(null);
   readonly invalid = input(false);
+  readonly showWords = input(false);
+  readonly wordsUnit = input<'rial' | 'toman'>('rial');
+  readonly wordsText = computed(() => {
+    if (!this.showWords()) return '';
+    const d = this.digits();
+    if (!d) return '';
+    return numberToPersianWords(d, {
+      unit: this.wordsUnit(),
+      showTomanEquivalent: this.wordsUnit() === 'rial',
+    });
+  });
 
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
   private readonly digits = signal('');

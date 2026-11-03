@@ -15,7 +15,7 @@ export class CompanySelectionModalComponent {
   public companyService = inject(ActiveCompanyService);
 
   onSelect(company: Company): void {
-    this.companyService.selectCompany(company);
+    void this.companyService.switchCompany(company);
   }
 
   onClose(): void {

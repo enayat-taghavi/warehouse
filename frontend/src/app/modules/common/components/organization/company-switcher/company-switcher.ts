@@ -84,7 +84,7 @@ export class CompanySwitcherComponent implements OnInit, OnDestroy {
   }
 
   selectCompany(company: Company | null): void {
-    this.companyService.selectCompany(company);
+    void this.companyService.switchCompany(company);
     this.isOpen = false;
   }
 

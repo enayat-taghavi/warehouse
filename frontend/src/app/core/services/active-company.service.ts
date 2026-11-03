@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { Company, UserAvailableCompaniesResponse } from '../models/company.model';
 import { SessionTabService } from './session-tab.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
+import { ConfirmDialogService } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Injectable({
   providedIn: 'root'
@@ -93,6 +94,34 @@ export class ActiveCompanyService {
 
   private sessionTab = inject(SessionTabService, { optional: true });
   private router = inject(Router, { optional: true });
+  private confirmDialog = inject(ConfirmDialogService, { optional: true });
+
+  /**
+   * تعویض شرکت به دست کاربر (فهرست شرکت‌ها): صفحه از نو بارگذاری می‌شود؛
+   * اگر فرمی تغییر ذخیره‌نشده دارد، اول تایید می‌گیرد. false یعنی کاربر ماندن را انتخاب کرد.
+   */
+  public async switchCompany(company: Company | null): Promise<boolean> {
+    const current = this.activeCompanySubject.value;
+    const isSameId = (current?.id ?? null) === (company?.id ?? null);
+    if (!isSameId && this.hasUnsavedInput() && this.confirmDialog) {
+      const ok = await this.confirmDialog.open({
+        title: 'تغییرات ذخیره نشده',
+        message: 'با تعویض شرکت صفحه از نو باز می‌شود و نوشته‌های ذخیره‌نشده از بین می‌رود.',
+        type: 'warning',
+        confirmText: 'تعویض شرکت',
+        cancelText: 'ماندن',
+      });
+      if (ok !== true) return false;
+    }
+    this.selectCompany(company, true);
+    return true;
+  }
+
+  /** فیلدی که کاربر تغییرش داده و هنوز روی صفحه است (کلاس ng-dirty انگولار) */
+  private hasUnsavedInput(): boolean {
+    return typeof document !== 'undefined'
+      && !!document.querySelector('form.ng-dirty, input.ng-dirty, textarea.ng-dirty, select.ng-dirty');
+  }
 
   constructor() {
     this.restoreActiveCompany();
@@ -338,7 +367,7 @@ export class ActiveCompanyService {
     return this.inFlightAvailableRequest$;
   }
 
-  public selectCompany(company: Company | null): void {
+  public selectCompany(company: Company | null, triggerReload: boolean = false): void {
     const current = this.activeCompanySubject.value;
     const isSameId = (current?.id ?? null) === (company?.id ?? null);
 
@@ -366,6 +395,7 @@ export class ActiveCompanyService {
       }
 
       // همگام‌سازی URL با کوئری‌پارامتر ?cid=... تنها در صورت مغایرت برای جلوگیری از ناوبری مکرر
+      let targetUrl = window.location.href;
       try {
         const url = new URL(window.location.href);
         const currentCid = url.searchParams.get('cid');
@@ -376,9 +406,10 @@ export class ActiveCompanyService {
           } else {
             url.searchParams.delete('cid');
           }
-          window.history.replaceState({}, '', url.toString());
+          targetUrl = url.toString();
+          window.history.replaceState({}, '', targetUrl);
 
-          if (this.router) {
+          if (this.router && !triggerReload) {
             this.router.navigate([], {
               queryParams: { cid: company ? company.id : null },
               queryParamsHandling: 'merge',
@@ -391,6 +422,32 @@ export class ActiveCompanyService {
       // انتشار رویداد سفارشی در پنجره مرورگر فقط در صورت تغییر شناسه شرکت
       if (!isSameId) {
         window.dispatchEvent(new CustomEvent('company_context_changed', { detail: company }));
+      }
+
+      // در صورت درخواست بازخوانی صفحه و تغییر شناسه شرکت، کش روت‌ها پاک شده و صفحه از نو بارگذاری می‌شود
+      if (triggerReload && !isSameId) {
+        try {
+          const strategy = this.router?.routeReuseStrategy as any;
+          if (strategy && typeof strategy.clear === 'function') {
+            strategy.clear();
+          }
+        } catch {}
+
+        try {
+          if (typeof window.location.reload === 'function') {
+            window.location.reload();
+          } else if (targetUrl) {
+            window.location.href = targetUrl;
+          }
+        } catch {
+          if (this.router) {
+            this.router.navigate([], {
+              queryParams: { cid: company ? company.id : null },
+              queryParamsHandling: 'merge',
+              replaceUrl: true
+            }).catch(() => {});
+          }
+        }
       }
     }
   }
