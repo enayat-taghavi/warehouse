@@ -23,10 +23,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.audit_utils import log_audit_event
 from platform_core.registry import record_entity_view
 
 from . import access
+from .services import lifecycle
 from .links import link_kinds, validate_link
 from .models import (
     LETTER_ENTITY, Letter, LetterDraftCopy, LetterEditor, LetterLink, LetterRecipient, LetterSigner, Secretariat,
@@ -50,11 +50,7 @@ MAX_COPY_JSON = 400_000
 
 
 def _audit(user, letter, action, **details):
-    log_audit_event(
-        module='letters', action=action, target_model='Letter', target_object_id=str(letter.pk),
-        target_repr=letter.number_display or f'نامه #{letter.pk}', user=user, company_id=letter.company_id,
-        details={'entity_kind': LETTER_ENTITY, 'status': letter.status, **details},
-    )
+    lifecycle.audit(user, letter, action, **details)
 
 
 def _int(value):
@@ -508,3 +504,77 @@ __all__ = [
     'LetterListCreateView', 'LetterDetailView', 'LetterLockView', 'LetterUnlockView', 'LetterDiscardView',
     'SecretariatRegisterView', 'LetterProjectsView', 'LinkKindsView', 'PartiesView', 'get_object_or_404',
 ]
+
+
+# ─── چرخهٔ نامه (ل-د): ارسال برای امضا، امضا، عودت، ثبت، ارسال، بایگانی و ابطال ─────────────────
+
+class _LifecycleView(APIView):
+    """
+    کنش چرخه. نامهٔ نادیدنی 404. خطای موتور گردش با همان کد و وضعیت موتور برمی‌گردد.
+    lock_letter=False برای امضا و عودت: ترتیب قفل «نمونهٔ گردش ← نامه» است (قلاب موتور نامه را قفل می‌کند).
+    """
+    permission_classes = (IsAuthenticated, LettersPermission)
+    lock_letter = True
+
+    def post(self, request, pk):
+        from workflow.errors import WorkflowError
+        raw = request.data if isinstance(request.data, dict) else {}
+        try:
+            with transaction.atomic():
+                letter = _visible_or_404(request.user, pk, for_update=self.lock_letter)
+                letter = self.act(request.user, letter, raw)
+        except WorkflowError as exc:
+            return Response(exc.as_dict(), status=exc.status)
+        return Response(_detail(letter, request.user))
+
+
+class LetterSubmitView(_LifecycleView):
+    def act(self, user, letter, raw):
+        return lifecycle.submit_for_signing(user, letter)
+
+
+class LetterSignView(_LifecycleView):
+    lock_letter = False
+
+    def act(self, user, letter, raw):
+        return lifecycle.sign(user, letter, reason=raw.get('reason', ''), revision=_int(raw.get('task_revision')))
+
+
+class LetterReturnView(_LifecycleView):
+    lock_letter = False
+
+    def act(self, user, letter, raw):
+        return lifecycle.return_for_fix(user, letter, raw.get('reason'), revision=_int(raw.get('task_revision')))
+
+
+class LetterRegisterView(_LifecycleView):
+    def act(self, user, letter, raw):
+        return lifecycle.register_incoming(user, letter)
+
+
+class LetterSendView(_LifecycleView):
+    def act(self, user, letter, raw):
+        sent_at = None
+        if raw.get('sent_at'):
+            from django.utils.dateparse import parse_datetime
+            sent_at = parse_datetime(str(raw['sent_at']))
+            if sent_at is None:
+                raise ValidationError({'sent_at': 'زمان ارسال نامعتبر است.'})
+            if timezone.is_naive(sent_at):
+                sent_at = timezone.make_aware(sent_at)
+        return lifecycle.send(user, letter, str(raw.get('method') or ''), sent_at)
+
+
+class LetterArchiveView(_LifecycleView):
+    def act(self, user, letter, raw):
+        return lifecycle.archive(user, letter)
+
+
+class LetterUnarchiveView(_LifecycleView):
+    def act(self, user, letter, raw):
+        return lifecycle.unarchive(user, letter)
+
+
+class LetterVoidView(_LifecycleView):
+    def act(self, user, letter, raw):
+        return lifecycle.void(user, letter, raw.get('reason'))
