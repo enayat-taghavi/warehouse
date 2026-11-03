@@ -7308,3 +7308,53 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 5. Before finishing: every item object in the three nav-items files has exactly one `shortLabel`; warehouse has 25, accounting 36, showcase 2. `git status --short` shows nothing except `Documents/implementation_plan.md`, `Documents/task.md` and `tasks.md`.
 
 6. Output and stop condition: a short English report with the commit hash, the shortLabel count per file and the tsc result. End the turn after the report.
+
+===
+
+[ ] Session 1 of 1 — Mobile navigation phase 4: DOM specs for the shared mobile bottom nav and brand bar, the two shells (layout, operations-layout) and the chat drawer active-conversation signal (specs only, no production code)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow "frontend/src/app/shared/components/mobile-bottom-nav/*.spec.ts" frontend/src/app/modules/common/components/layout/layout-modular.dom.spec.ts frontend/src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file frontend/src/app/modules/common/components/layout/layout-modular.dom.spec.ts frontend/src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file frontend/src/app/shared/components/mobile-bottom-nav/mobile-bottom-nav.component.dom.spec.ts --count "8:it("
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --no-skip --max-failed 0 --include "src/app/shared/components/mobile-bottom-nav/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/modules/common/components/operations/operations-layout/*.spec.ts" --include "src/app/modules/common/components/communications/chat-drawer/*.spec.ts"
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(nav): mobile bottom nav DOM specs"
+verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md tasks.md
+-->
+
+1. Critical rules:
+- Edit or create only these files: new `frontend/src/app/shared/components/mobile-bottom-nav/mobile-bottom-nav.component.dom.spec.ts`, new `frontend/src/app/shared/components/mobile-bottom-nav/mobile-brand-bar.component.dom.spec.ts`, and the existing `frontend/src/app/modules/common/components/layout/layout-modular.dom.spec.ts`, `frontend/src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts`, `frontend/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.dom.spec.ts`. Never edit production code (any non-spec file). `Documents/implementation_plan.md` and `Documents/task.md` have uncommitted changes from another session: never touch, stage or commit them.
+- Never remove or weaken an existing `it(...)` or `expect(...)`. Only add new `it(...)` blocks (inside new `describe` blocks if you like).
+- Persian strings in assertions: never type a Persian label that contains a zero-width non-joiner by hand. Read the expected value from the source instead (for example `WAREHOUSE_SYSTEM_NAV_ITEMS[0].shortLabel`, or the component's own `navItems`). Persian strings without it (`چت`, `اعلان`, `بیشتر`, `اتوماسیون شرکت`, `فرماندهی`) may be typed directly.
+- Tests use Vitest with jsdom like the neighbouring `*.dom.spec.ts` files (TestBed, `fixture.nativeElement.querySelector`). Follow their setup and mocking style.
+
+2. Context (already implemented by Claude, read these files first):
+- `frontend/src/app/shared/components/mobile-bottom-nav/mobile-bottom-nav.component.ts`: `MobileBottomNavComponent` (`app-mobile-bottom-nav`). Inputs `items: MobileBottomNavItem[]` (`{id, label, title, icon, active}`), `notifications: NotificationCenterComponent | null`, `moreOpen: boolean`. Outputs `itemSelect` (item id), `moreToggle`, `overlayOpen`. It injects `CommunicationService` and reads `isChatAvailable()`, `isChatDrawerOpen()`, `totalUnreadCount()`, `hasNewIncomingPulse()`, `hasActiveConversation()`, and calls `toggleChatDrawer()`. Tabs have `data-testid` `bottom-nav-chat`, `bottom-nav-notifications`, `bottom-nav-item-<id>`, `bottom-nav-more`; the nav is `data-testid="mobile-bottom-nav"`; the dot on «بیشتر» is `data-testid="bottom-nav-more-dot"`. With chat available it shows the first 2 items, without chat the first 3. Inside a chat conversation (`hasActiveConversation()` true) the nav is not rendered.
+- `frontend/src/app/shared/components/mobile-bottom-nav/mobile-brand-bar.component.ts`: `MobileBrandBarComponent` (`app-mobile-brand-bar`), text `اتوماسیون شرکت` (`data-testid="mobile-brand-bar"`), optional badge input `badge` shown as `data-testid="mobile-brand-badge"`.
+- `layout.ts` / `layout.html`: computed `mobileBottomNavItems()` (menu items with `label = shortLabel || label`, `title = label`), handler `onMobileBottomNavItem(id)` (calls `switchTab(id)` for menu ids), `toggleSidebar()`. The header no longer has the mobile hamburger button `(click)="openSidebar()"` (title «نمایش منو»); the chat button has class `max-md:hidden`; `<app-notification-center>` gets `[hideTriggerOnMobile]="true"`.
+- `operations-layout.ts` / `.html`: every `navItems` entry has `shortLabel`; computed `mobileBottomNavItems()` maps the first 3 nav items; `onMobileBottomNavItem(id)` navigates to that item's route.
+- `chat-drawer.component.ts`: an effect sets `commService.hasActiveConversation` to `isChatDrawerOpen() && activeTab() === 'chat' && activeConv() !== null`; `ngOnDestroy` sets it to false. Its spec mock already has `hasActiveConversation: signal(false)`.
+
+3. Task — add these tests:
+- a) `mobile-bottom-nav.component.dom.spec.ts` (at least 8 `it(` blocks), with a mock `CommunicationService` built from Angular `signal`s and a `vi.fn()` `toggleChatDrawer`, and a fake notification center object `{ isOpen: signal(false), unreadCount: signal(0), hasNewPulse: signal(false), toggleDropdown: vi.fn() }`:
+  1. chat available + notifications given + 3 items: tab order is chat, notifications, item 1, item 2, more (read the `data-testid`s in DOM order); item 3 is absent.
+  2. chat unavailable: 3 item tabs and no chat tab.
+  3. `hasActiveConversation` true: no element `[data-testid="mobile-bottom-nav"]`.
+  4. clicking the chat tab calls `toggleChatDrawer` once and emits `overlayOpen`.
+  5. clicking the notifications tab calls `toggleDropdown` once; when the chat drawer is open it also calls `toggleChatDrawer` (to close it).
+  6. clicking an item tab emits `itemSelect` with the item id; clicking more emits `moreToggle`.
+  7. the active item tab has `aria-current="page"`; the more dot is shown when no item is active and hidden when one is active.
+  8. labels: an item tab shows its short `label` as text and its full `title` in `title` and `aria-label`; unread count 5 shows badge text `5` on chat and 120 shows `+99`.
+- b) `mobile-brand-bar.component.dom.spec.ts`: text `اتوماسیون شرکت` is rendered; no badge by default; badge input `انبار مرکزی` renders the badge with that text.
+- c) `layout-modular.dom.spec.ts`: using the existing setup of the file, add tests that (1) the template renders `app-mobile-brand-bar` and `app-mobile-bottom-nav`; (2) no header button has `title="نمایش منو"`; (3) for the warehouse system menu, `mobileBottomNavItems()` labels equal the source `shortLabel` values of the first visible items and `title` equals the full `label`; (4) `onMobileBottomNavItem(id)` with a menu id calls `switchTab` with that id (spy).
+- d) `operations-layout.dom.spec.ts`: (1) every entry of `component.navItems` has a non-empty `shortLabel`; (2) `mobileBottomNavItems()[0]` has id `cockpit`, label `فرماندهی` and `active` true when the active route is cockpit; (3) `app-mobile-brand-bar` and `app-mobile-bottom-nav` are rendered; (4) `onMobileBottomNavItem('snapshots')` navigates to `/app/operations/snapshots` (router spy, as the file already does for navigation if it does; otherwise spy `navigateTo`).
+- e) `chat-drawer.component.dom.spec.ts`: with the drawer open, setting `activeTab` to `chat` and `activeConv` to a conversation makes `comm.hasActiveConversation()` true after `fixture.detectChanges()`; calling `backToList()` makes it false; destroying the fixture makes it false.
+- f) Commit only these spec files with the message `test(nav): mobile bottom nav DOM specs (bar, brand bar, shells, chat signal)`. No `Co-Authored-By` line. Do not push.
+
+4. Tool policy: read the files named above, then write the specs. Run only the touched specs while working, from `frontend`, with the runner's own config: `npx ng test --watch=false --ts-config tsconfig.runner.spec.json --include <spec path>` if `frontend/tsconfig.runner.spec.json` exists; otherwise `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include <glob>` from the repo root. If a test fails, read the error, fix the test (never the production code), and do not rerun unchanged more than once. If a scenario truly cannot be tested with the existing setup, skip only that scenario and say why in the report.
+
+5. Before finishing: all new tests pass, no existing test was removed or changed, `git status --short` shows nothing except `Documents/implementation_plan.md`, `Documents/task.md` and `tasks.md`.
+
+6. Output and stop condition: a short English report with the commit hash, the new test count per file, the test run result and any skipped scenario with its reason. End the turn after the report.
