@@ -108,8 +108,8 @@ export const offlineInterceptor: HttpInterceptorFn = (
     return next(req);
   }
 
-  // اگر SKIP_OFFLINE تنظیم شده یا آدرس سیستمی/گذرا است، از مدار آفلاین رد شو
-  if (req.context.get(SKIP_OFFLINE) || isNonQueueableEndpoint(req.url)) {
+  // اگر SKIP_OFFLINE تنظیم شده یا آدرس سیستمی/گذرا است یا دریافت فایل باینری (blob) است، از مدار آفلاین رد شو
+  if (req.context.get(SKIP_OFFLINE) || isNonQueueableEndpoint(req.url) || req.responseType === 'blob') {
     return next(req);
   }
 

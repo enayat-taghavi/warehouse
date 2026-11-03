@@ -72,19 +72,29 @@ export class ApiService {
   /**
    * دانلود فایل (Excel, PDF) به صورت Blob
    */
-  download(endpoint: string, params?: Record<string, unknown>): Observable<Blob> {
+  download(
+    endpoint: string,
+    params?: Record<string, unknown>,
+    options?: { context?: HttpContext },
+  ): Observable<Blob> {
     return this.http.get(this.url(endpoint), {
       params: this.buildParams(params),
       responseType: 'blob',
+      context: options?.context,
     });
   }
 
   /** دانلود فایل همراه سربرگ‌های پاسخ (مثلاً هشدارهای خروجی دیسکت) */
-  downloadWithHeaders(endpoint: string, params?: Record<string, unknown>): Observable<HttpResponse<Blob>> {
+  downloadWithHeaders(
+    endpoint: string,
+    params?: Record<string, unknown>,
+    options?: { context?: HttpContext },
+  ): Observable<HttpResponse<Blob>> {
     return this.http.get(this.url(endpoint), {
       params: this.buildParams(params),
       responseType: 'blob',
       observe: 'response',
+      context: options?.context,
     });
   }
 

@@ -12,7 +12,11 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob, FileOutputService } from '../../../../../core/platform/file-output';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
+import { HttpContext } from '@angular/common/http';
 import { getChatThumb, putChatThumb } from './chat-thumb-cache';
+import { getChatAudio, putChatAudio } from './chat-audio-cache';
+import { SKIP_OFFLINE } from '../../../../../core/interceptors/offline.interceptor';
+import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 
 /** بخشی از متن پیام: متن ساده یا نشانی http/https */
 export interface TextSegment { url: boolean; text: string }
@@ -281,6 +285,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   /** تغییر فهرست پیام‌ها: فقط وقتی کاربر پایین است (یا پیام از خودش است) به پایین می‌رود */
   private onMessagesChanged(msgs: ChatMessage[]): void {
     this.messages.set(msgs);
+    this.prefetchAudios(msgs);
     if (this.isLoadingOlder()) return; // بعد از افزودن پیام‌های قدیمی، جای اسکرول حفظ می‌شود
     const last = msgs.length ? msgs[msgs.length - 1] : null;
     const key = last ? String(last.id || last.client_temp_id || '') : '';
@@ -296,6 +301,31 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.shouldScrollBottom = true;
     } else if (!last.is_system) {
       this.showNewBtn.set(true);
+    }
+  }
+
+  /** پیش‌دریافت آرام پیام‌های صوتی در پس‌زمینه تا در صورت قطع شبکه در انبار یا اندروید، آماده پخش باشند */
+  private prefetchAudios(msgs: ChatMessage[]): void {
+    if (!NetworkStatusService.getInstance().isBrowserOnline) return;
+    const uid = this.currentUserId();
+    if (!uid) return;
+    for (const msg of msgs) {
+      for (const att of msg.attachments || []) {
+        if (this.attachmentKind(att) === 'audio' && att.id && att.download_url) {
+          const id = String(att.id);
+          if (this.attachmentFull.has(id)) continue;
+          void getChatAudio(uid, id).then((cached) => {
+            if (!cached && NetworkStatusService.getInstance().isBrowserOnline) {
+              const context = new HttpContext().set(SKIP_OFFLINE, true);
+              firstValueFrom(this.api.download(this.apiPath(att.download_url || ''), undefined, { context }))
+                .then((blob) => {
+                  void putChatAudio(uid, id, blob);
+                })
+                .catch(() => {});
+            }
+          });
+        }
+      }
     }
   }
 
@@ -1005,9 +1035,13 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     try {
       const url = await this.fullAttachmentUrl(att);
       await this.playUrl(id, url, att.duration || 0);
-    } catch {
+    } catch (err: any) {
       this.playingAudioId.set(null);
-      this.toast.error('پخش پیام صوتی انجام نشد');
+      if (err?.message === 'OFFLINE_AUDIO_NOT_CACHED') {
+        this.toast.show('warning', 'این پیام صوتی هنوز روی دستگاه ذخیره نشده است. پس از برقراری اتصال دوباره تلاش کنید.');
+      } else {
+        this.toast.error('پخش پیام صوتی انجام نشد');
+      }
     } finally {
       this.audioLoadingId.set(null);
     }
@@ -1322,7 +1356,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const isThumb = !!att.thumbnail_url && url === att.thumbnail_url;
     const attId = String(att.id);
     const uid = this.currentUserId();
-    firstValueFrom(this.api.download(this.apiPath(url)))
+    const context = new HttpContext().set(SKIP_OFFLINE, true);
+    firstValueFrom(this.api.download(this.apiPath(url), undefined, { context }))
       .then((blob) => {
         this.attachmentPreviews.set(key, URL.createObjectURL(blob));
         if (isThumb) void putChatThumb(uid, attId, blob);
@@ -1433,12 +1468,42 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   /** فایل کامل پیوست با توکن (هرگز نشانی خام media)؛ نتیجه برای باز کردن دوباره نگه داشته می‌شود */
-  private fullAttachmentUrl(att: MessageAttachment): Promise<string> {
+  private async fullAttachmentUrl(att: MessageAttachment): Promise<string> {
     const id = String(att.id);
     const cached = this.attachmentFull.get(id);
     if (cached) return cached;
-    const p = firstValueFrom(this.api.download(this.apiPath(att.download_url || '')))
+
+    const uid = this.currentUserId();
+    const isAudio = this.attachmentKind(att) === 'audio';
+
+    // ۱. بررسی کش محلی پایدار CacheStorage (امکان پخش آفلاین در انبار / اندروید)
+    if (isAudio) {
+      try {
+        const cachedBlob = await getChatAudio(uid, id);
+        if (cachedBlob) {
+          const url = URL.createObjectURL(cachedBlob);
+          this.fullBlobUrls.push(url);
+          this.attachmentFull.set(id, Promise.resolve(url));
+          return url;
+        }
+      } catch {
+        /* در صورت اشکال در CacheStorage، به دریافت از سرور ادامه می‌دهد */
+      }
+    }
+
+    // ۲. اگر کاربر آفلاین است و فایل روی دستگاه موجود نیست
+    const network = NetworkStatusService.getInstance();
+    if (!network.isBrowserOnline && isAudio) {
+      throw new Error('OFFLINE_AUDIO_NOT_CACHED');
+    }
+
+    // ۳. دریافت با HttpContext و SKIP_OFFLINE: true تا با مدار اینترسپتور آفلاین و blob تداخل نکند
+    const context = new HttpContext().set(SKIP_OFFLINE, true);
+    const p = firstValueFrom(this.api.download(this.apiPath(att.download_url || ''), undefined, { context }))
       .then((blob) => {
+        if (isAudio) {
+          void putChatAudio(uid, id, blob);
+        }
         const url = URL.createObjectURL(blob);
         this.fullBlobUrls.push(url);
         return url;
@@ -1469,7 +1534,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     }
     let blob: Blob;
     try {
-      blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url)));
+      const context = new HttpContext().set(SKIP_OFFLINE, true);
+      blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url), undefined, { context }));
     } catch {
       this.toast.error('اشتراک‌گذاری فایل انجام نشد');
       return;
@@ -1488,7 +1554,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       return;
     }
     try {
-      const blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url)));
+      const context = new HttpContext().set(SKIP_OFFLINE, true);
+      const blob = await firstValueFrom(this.api.download(this.apiPath(att.download_url), undefined, { context }));
       await saveBlob(blob, att.file_name || 'attachment');
     } catch {
       this.toast.error('دانلود فایل انجام نشد');
