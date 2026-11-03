@@ -434,5 +434,34 @@
   - PR 3 در `main` ادغام شد. تست سریع روی کپی در `scratch/` با `WH_MODULES=warehouse,accounting,letters`: `manage.py test letters numbering settings_core workflow` ۳۸۹ تست سبز؛ `check` و `makemigrations --check` بی‌مشکل.
   - رد شدن نگهبان 57 از این PR نیست: از `layout-modular.dom.spec.ts` (commit `870b6b97`، ناوبری موبایل) می‌آید و کار جداگانهٔ ناوبری در حال درست کردن آن است.
   - **اقدام بعدی:** ل-ج در گفتگوی ابری تازه طبق `Documents/Release_v1/letters_module/cloud_brief_lc.md`.
+- **۱۳ آبان ۱۴۰۵ (۴ نوامبر ۲۰۲۶) — ل-ج انجام شد** (گفتگوی ابری، شاخهٔ `claude/clever-goldberg-tuydj6`؛ هسته دست نخورد، بی‌migration).
+  - **کار:**
+    - `access.py`: `visible_letters` (یک queryset با زیرکوئری‌های `pk__in`، بی‌ردیف تکراری)، `can_view_letter` و `can_attach_letter` (همیشه True یا False صریح)، `is_editor`. در `apps.py` با `contribute` ثبت شدند.
+    - `serializers.py`: اعتبارسنجی متن بلوکی ن۱۴ (پاراگراف با تراز، فهرست، جدول؛ سقف ۲۰۰ بلوک و ۱۰۰ هزار نویسه؛ فقط کلیدهای مجاز می‌مانند)، خروجی فهرست و جزئیات، ردیف دفتر با پوشش «نامهٔ محرمانه».
+    - `views.py` و `urls.py`: همهٔ API ل-ج به‌اضافهٔ `GET /api/letters/register/?company=` (دفتر دبیرخانه). `url_includes` در `module.py`.
+    - `links.py`: نوع‌های قابل پیوند از رجیستری (`audit_entity_kinds` با `entity_resolver` و `can_view`)؛ پیوند فقط به سند همان شرکت که کاربر می‌بیند؛ بیننده‌ی بی‌دسترسی فقط «سند پیوندشده (بی‌دسترسی)» می‌بیند.
+    - `parties.py`: روی سرویس `contacts`؛ طرف تکراری با همان شناسهٔ ملی همان را با 200 برمی‌گرداند؛ کد ملی حقیقی بی‌مجوز دبیرخانه پوشیده.
+    - `permissions.py`: دروازهٔ API (لایهٔ دوم کنار حصار مدیر کل).
+    - سابقه با `log_audit_event` (ساخت، ویرایش، برخورد، کنار گذاشتن) بی‌موضوع نامه در `target_repr`. باز کردن نامهٔ محرمانه با `record_entity_view` ثبت می‌شود.
+  - **انتخاب‌ها و انحراف‌ها:**
+    - **نوع سند `letters.letter` به `letters_letter` (و `letters.secretariat` به `letters_secretariat`) عوض شد:** API پیوست هسته نوع را فقط با `^[a-z][a-z0-9_]{0,49}$` می‌پذیرد. فقط ثابت ماژول است؛ در پایگاه داده چیزی ذخیره نشده بود، پس migration لازم نشد. متن طرح (ن۲، ن۹، ن۱۲) هنوز نام قدیم را دارد.
+    - گیرنده، رونوشت و مخاطب بخشنامه فقط نامهٔ ثبت‌شده را می‌بینند. دبیرخانه فقط نامهٔ عادیِ ثبت‌شده یا وارده را کامل می‌بیند (پیش‌نویس دیگران را نه).
+    - انتساب سطح شرکت همهٔ بخش‌های شرکت را می‌پوشاند، پس نامه به یک بخش برای همهٔ اعضای سطح شرکت هم دیده می‌شود (قاعدهٔ `user_sections` هسته).
+    - برخورد ویرایش همیشه 200 با `conflict` است (`stale_revision`، `edit_locked`، `not_draft`)، نه 409. هر ویرایش ردشده (400 یا 403) هم متن رسیده را در `LetterDraftCopy` نگه می‌دارد (savepoint، تا نسخه با rollback پاک نشود).
+    - `revision` در PATCH لازم است. فقط `project` پس از ثبت عوض می‌شود (نویسنده، هم‌نویسنده یا دبیرخانه). `kind` و شرکت پس از ساخت عوض نمی‌شوند.
+    - فهرست گیرنده، امضاکنندهٔ `pending`، هم‌نویسنده و پیوند در پیش‌نویس با ویرایش صریح کاربر جایگزین می‌شوند (ردیف فرزند حذف می‌شود). نامه و `LetterDraftCopy` هرگز حذف نمی‌شوند.
+    - قفل ویرایش: گرفتن یا آزاد کردن قفل دیگری 409 است (اقدام آنلاین). ذخیرهٔ دارندهٔ قفل آن را ۱۵ دقیقه تمدید می‌کند.
+  - **تست‌ها** (با `WH_MODULES=warehouse,accounting,letters`):
+    - ۳۲ تست تازه: `tests/test_access_lc.py` (۱۳) و `tests/test_api_lc.py` (۱۹).
+    - `manage.py test letters attachments contacts`: ۸۵ تست سبز.
+    - `manage.py check` سبز در پیش‌فرض، `WH_MODULES=accounting,letters` و `WH_MODULES=warehouse` (فقط هشدار Redis). `makemigrations --check --dry-run`: بی‌تغییر.
+    - نگهبان‌های 29، 57 و 58 سبز (57 هم این بار سبز بود).
+    - بازبینی خودم با فهرست `tenant-scope-reviewer` و `data-loss-reviewer`: یک یافته درست شد (نسخهٔ ناهمگامِ ویرایشِ ردشده با rollback پاک می‌شد).
+  - **مسائل باز:**
+    - PATCH روی نامه‌ای که کاربر دیگر نمی‌بیند (مثلاً از شرکت رفته) 404 است و متن ذخیره نمی‌شود. فرانت (ل-و) باید این ردیف صف را نگه دارد و به کاربر نشان دهد.
+    - محدودیت برچسب پیوست پس از ثبت (فقط `signed_scan` و `after_register`) هنوز نیست: قلاب `can_attach` برچسب را نمی‌بیند. در ل-د یا ل-ح با `is_locked` یا راه دیگر بسته شود.
+    - فیلتر ورود `view_letters_hub` روی API سنجیده نمی‌شود؛ دیدن فقط با `can_view` است.
+    - `setup_cloud_env.sh` هنوز `import-linter==2.3` را نصب نمی‌کند (دستی نصب شد).
+  - **اقدام بعدی:** ل-د (امضا، ثبت و شماره).
 
 </div>
