@@ -43,9 +43,15 @@ try {
 } catch {}
 
 describe("WhatsNewComponent (Release v1 step 5-b)", () => {
+  // نسخهٔ اصلاحی ممکن است عمداً یادداشت نداشته باشد؛ آزمون‌ها به یادداشت نسخهٔ فعلی وابسته نیستند
+  const hadNotes = Object.prototype.hasOwnProperty.call(RELEASE_NOTES, APP_VERSION);
+
   beforeEach(async () => {
     localStorage.clear();
     liveUpdateReady.set(null);
+    if (!hadNotes) {
+      RELEASE_NOTES[APP_VERSION] = ['یادداشت آزمایشی'];
+    }
     await TestBed.configureTestingModule({
       imports: [WhatsNewComponent],
     }).compileComponents();
@@ -54,6 +60,9 @@ describe("WhatsNewComponent (Release v1 step 5-b)", () => {
   afterEach(() => {
     localStorage.clear();
     liveUpdateReady.set(null);
+    if (!hadNotes) {
+      delete RELEASE_NOTES[APP_VERSION];
+    }
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
   });
