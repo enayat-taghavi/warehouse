@@ -138,7 +138,8 @@ class SupervisorRoutingInheritanceTests(ThreeLevelAssignmentFixture):
         self.assertEqual(ids, {self.sup_company.id, self.sup_section.id})
 
     def test_routing_query_count_is_constant(self):
-        with self.assertNumQueries(5):
+        # Routing now needs 4 queries
+        with self.assertNumQueries(4):
             _workflow_recipient_ids('pending_supervisor', self.company_a.id, self.s1.id, None)
 
 

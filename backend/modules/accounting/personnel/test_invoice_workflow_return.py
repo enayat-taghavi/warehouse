@@ -15,7 +15,8 @@ from personnel.models import Counterparty, ExpenseInvoice
 from personnel.scoped_test_support import give_valid_sheba, grant_section_perms
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
-from workflow.models import WorkflowStep, WorkflowSubstitute, WorkflowThreshold
+from workflow.models import (WorkflowPolicy, WorkflowStep, WorkflowSubstitute,
+                             WorkflowTask, WorkflowThreshold)
 
 User = get_user_model()
 BASE = '/api/personnel/expense-invoices/'
@@ -95,6 +96,9 @@ class InvoiceReturnScenarioTests(TestCase):
         آیتم‌های ردشده حاوی مرحلهٔ manager_ok با دلیل no_second_approval و «بدون تأیید دوم» هستند؛
         فاکتور در هیچ نقطه‌ای پس از ارسال در کارتابل مدیر قرار نمی‌گیرد.
         """
+        WorkflowPolicy.objects.update_or_create(
+            company=self.company, workflow_key='', defaults={'role_actions': {'manager': 'skip'}}
+        )
         inv = self.invoice(self.mgr)
         self.assertEqual(self.post(self.mgr, inv, 'submit').status_code, 200)
         # پس از ارسال، فاکتور در کارتابل مدیر ثبت‌کننده نیست
@@ -116,6 +120,19 @@ class InvoiceReturnScenarioTests(TestCase):
 
         # فاکتور در کارتابل مدیر نیست
         self.assertNotIn(inv.pk, self.cartable(self.mgr))
+
+    def test_scenario_4b_manager_default_waits_at_manager_step(self):
+        """
+        پیش‌فرض نقش مدیر wait است: فاکتور مدیر ثبت‌کننده بدون مدیر دیگر در گام manager_ok
+        منتظر می‌ماند و کار باز آن گیرنده ندارد.
+        """
+        inv = self.invoice(self.mgr)
+        self.assertEqual(self.post(self.mgr, inv, 'submit').status_code, 200)
+        self.assertEqual(self.post(self.acc, inv, 'approve').status_code, 200)
+        self.assertEqual(self.step(inv), 'manager_ok')
+        task = WorkflowTask.objects.get(instance__entity_id=inv.pk, is_open=True)
+        self.assertTrue(task.is_open)
+        self.assertFalse(task.has_recipients)
 
     def test_scenario_7_return_for_fix_restarts_from_creator_level(self):
         """

@@ -17,6 +17,7 @@ from personnel.models import (
 )
 from personnel.payroll_engine import PayrollCalculationEngine, get_effective_payroll_settings
 from django.apps import apps
+from workflow.models import WorkflowPolicy
 
 # انبار از راه رجیستری اپ‌ها، بی import مستقیم ماژول انبار (حصار ماژول)
 Warehouse = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
@@ -250,6 +251,9 @@ class AttendanceApprovalWorkflowTests(TestCase):
             approval_status='APPROVED'
         )
 
+        WorkflowPolicy.objects.update_or_create(
+            company=self.company, workflow_key='', defaults={'role_actions': {'accountant': 'wait'}}
+        )
         res = self.client.post('/api/personnel/cartable/supervisor/', {
             'action': 'approve',
             'model': 'period',

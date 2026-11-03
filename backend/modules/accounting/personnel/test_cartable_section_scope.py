@@ -21,6 +21,7 @@ from personnel.scoped_test_support import _permission, grant_section_perms, expe
 from personnel.serializers import ExpenseInvoiceSerializer, PettyCashTransactionSerializer
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
+from workflow.models import WorkflowPolicy
 
 User = get_user_model()
 URL = '/api/personnel/cartable/accountant/'
@@ -47,6 +48,10 @@ class AccountantCartableSectionScopeTests(TestCase):
         for sec in (self.s1, self.s2):
             grant_section_perms(self.creator, [], section=sec, role='employee', exact=False)
         self.cp = Counterparty.objects.create(company=self.company, name='طرف یک', counterparty_type='other')
+
+        WorkflowPolicy.objects.update_or_create(
+            company=self.company, workflow_key='', defaults={'role_actions': {'accountant': 'wait'}}
+        )
 
         self.inv = {}
         self.pc = {}

@@ -15,7 +15,7 @@ from personnel.scoped_test_support import (expense_head_id, give_valid_sheba, gr
                                            temp_media)
 from personnel.workflows import INVOICE_WORKFLOW
 from workflow import engine as wf_engine
-from workflow.models import WorkflowCompanySettings, WorkflowStep, WorkflowThreshold
+from workflow.models import WorkflowCompanySettings, WorkflowPolicy, WorkflowStep, WorkflowThreshold
 
 User = get_user_model()
 BASE = '/api/personnel/expense-invoices/'
@@ -72,8 +72,8 @@ class InvoiceStepITests(TestCase):
         return task.step_key if task else None
 
     def set_self_approval(self, on):
-        WorkflowCompanySettings.objects.update_or_create(company=self.company,
-                                                         defaults={'creator_may_approve_own': on})
+        WorkflowPolicy.objects.update_or_create(company=self.company, workflow_key='',
+                                                 defaults={'creator_may_approve_own': on})
 
     def at_accountant(self, creator=None):
         inv = self.invoice(creator or self.emp)
@@ -107,7 +107,7 @@ class InvoiceStepITests(TestCase):
 
     def test_setting_of_other_company_has_no_effect(self):
         other = Company.objects.create(code='IST2', name='دیگر', is_active=True)
-        WorkflowCompanySettings.objects.create(company=other, creator_may_approve_own=True)
+        WorkflowPolicy.objects.create(company=other, workflow_key='', creator_may_approve_own=True)
         inv = self.at_accountant(self.acc)
         self.assertEqual(self.post(self.acc, inv, 'approve').status_code, 403)
 
@@ -120,7 +120,8 @@ class InvoiceStepITests(TestCase):
         task = wf_engine.open_task(INVOICE_WORKFLOW, inv.pk)
         self.assertIsNotNone(task)
         res = self.post(root, inv, 'approve')
-        self.assertEqual((res.status_code, res.data.get('code')), (403, 'self_approval'))
+        # Central superuser fence now answers first
+        self.assertEqual((res.status_code, res.data.get('code')), (403, 'superuser_view_only'))
 
     def test_toggle_recomputes_open_task_recipients(self):
         inv = self.at_accountant(self.acc)
