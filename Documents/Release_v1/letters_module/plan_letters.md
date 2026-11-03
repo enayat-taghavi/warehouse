@@ -404,5 +404,31 @@
   - مشکل‌های `setup_cloud_env.sh` (root، پایتون ۳.۱۳، `pg_trgm`) در commit `1bd3f2b6` درست شد.
   - موجودی ابر پیش از ل-ب: ۴۰ دلار.
   - **اقدام بعدی:** ل-ب در گفتگوی ابری تازه طبق `Documents/Release_v1/letters_module/cloud_brief_lb.md`.
+- **۱۲ آبان ۱۴۰۵ (۳ نوامبر ۲۰۲۶) — ل-ب انجام شد** (گفتگوی ابری، شاخهٔ `claude/youthful-ritchie-k20hhk`؛ هسته دست نخورد).
+  - **کار:**
+    - `backend/modules/letters/module.py`: `ModuleSpec` با `opt_in=True` (س۸)، `SUPERUSER_WRITE_FENCE = ('/api/letters/',)`، دستهٔ مجوز `letters` و پنج مجوز بخشی ن۹ (دبیرخانه بی‌بستهٔ پیش‌فرض؛ بخشنامه و تنظیمات فقط مدیر؛ ورود و نوشتن همهٔ نقش‌ها).
+    - `models.py`: `Secretariat`، `Letter` (همهٔ فیلدهای ن۲، با `project` و پنج شاخص روی شرکت)، `LetterRecipient`، `LetterSigner`، `LetterEditor`، `LetterLink`، `LetterDraftCopy`، `CircularAudience`.
+    - `migrations/0001_initial.py`: فقط ۸ `CreateModel`، ۱۱ `AddIndex` و ۶ `AddConstraint` روی جدول‌های تازه؛ وابسته به `companies`، `contacts`، `numbering` و مدل کاربر. همهٔ کلیدهای خارجی `PROTECT` (هیچ `CASCADE`)؛ بی migration داده.
+    - `numbering.py`: پنج سری `letters.<kind>` با `manage_perm='perm_letters_settings'` و دورهٔ سال شمسی.
+    - `settings_spec.py`: چهار کلید ن۱۲ (`letterhead_a4`، `letterhead_a5`، `secretariat_stamp`، `default_due_days`) با مجوز `perm_letters_settings`.
+    - `hooks.py` و `apps.py`: `entity_resolver`، `company_of`، `is_locked`، `is_confidential` برای `letters.letter` و `audit_entity_kinds` (`Letter`). در برابر شناسهٔ بد یا نامهٔ ناموجود بسته‌اند (قفل و محرمانه = True).
+  - **انتخاب‌ها و انحراف‌ها:**
+    - پیشوند پیش‌فرض داخل قالب است (`{period}/ص/{seq}`)، چون هسته برای سری بی‌تنظیم پیشوند خالی می‌دهد و `{period}/{prefix}/{seq}` به `1405//1` می‌رسید. مدیر شرکت در «شماره‌گذاری اسناد» می‌تواند قالب و پیشوند را عوض کند.
+    - کلیدهای سربرگ و مهر نوع `int` با پیش‌فرض ۰ («تنظیم نشده»)، چون API تنظیمات مقدار `null` را برای `int` نمی‌پذیرد.
+    - `url_includes` هنوز نیست (`letters/urls.py` در ل-ج ساخته می‌شود)؛ دستهٔ مجوز هنوز `menu` ندارد (ل-و).
+    - قیدهای پایگاه داده: یکتایی `(author, client_temp_id)`، امضاکننده و هم‌نویسندهٔ یکتا در هر نامه، پیوند یکتا، گیرنده فقط با فیلد نوع خودش، مخاطب بخشنامه با `section_id` فقط برای `section`.
+  - **تست‌ها** (با `WH_MODULES=warehouse,accounting,letters`، چون ماژول opt-in است):
+    - ۲۱ تست تازه در `letters/tests/test_models_lb.py`.
+    - `manage.py test letters numbering settings_core workflow`: ۳۸۹ تست سبز.
+    - `manage.py check` سبز در پیش‌فرض، `WH_MODULES=accounting,letters` و `WH_MODULES=warehouse` (فقط هشدار Redis).
+    - `makemigrations --check --dry-run` با `accounting,letters` و با هر سه ماژول: بی‌تغییر.
+    - نگهبان 29 و 58 سبز. نگهبان 57 رد است: «ایمپورت از هسته/مشترک به ماژول (الف)» در فرانت، ۰ ← ۱. این PR فرانت را عوض نمی‌کند، پس این خطا از پیش در `main` بوده است.
+    - بازبینی خودم با فهرست `data-loss-reviewer`: یافته‌ای نبود (فقط جدول تازه، بی `CASCADE`، بی signal). با فهرست `tenant-scope-reviewer`: view و serializer در این گام نیست.
+  - **مسائل باز:**
+    - **ل-ج باید `can_view:letters.letter` را با API بدهد:** نبودن قلاب در لاگ ممیزی یعنی «بی‌نظر = نمایش». تا ل-ج API نیست، پس ردیف ممیزی نامه هم ساخته نمی‌شود.
+    - ل-ج باید بسنجد که `project`، `sender_party`، `party` و `user` گیرنده از همان شرکت نامه باشند.
+    - نگهبان 57 (فرانت) جدا از این کار بررسی شود.
+    - `setup_cloud_env.sh` بستهٔ `import-linter==2.3` را نصب نمی‌کند؛ برای نگهبان 29 دستی نصب شد.
+  - **اقدام بعدی:** ل-ج (API، دسترسی و `can_view`).
 
 </div>
