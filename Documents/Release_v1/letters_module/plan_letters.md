@@ -463,5 +463,13 @@
     - فیلتر ورود `view_letters_hub` روی API سنجیده نمی‌شود؛ دیدن فقط با `can_view` است.
     - `setup_cloud_env.sh` هنوز `import-linter==2.3` را نصب نمی‌کند (دستی نصب شد).
   - **اقدام بعدی:** ل-د (امضا، ثبت و شماره).
+- **۱۳ آبان ۱۴۰۵ (۴ نوامبر ۲۰۲۶) — ادغام ل-ج، ۴۵۳ تست سبز و سه اصلاح بازبین** (گفتگوی مدیر، روی کامپیوتر محلی).
+  - PR 4 در `main` ادغام شد. تست سریع روی کپی در `scratch/` با `WH_MODULES=warehouse,accounting,letters`: `manage.py test letters attachments contacts numbering settings_core workflow` ۴۵۳ تست سبز.
+  - `tenant-scope-reviewer` روی diff: یافتهٔ بین‌شرکتی نبود؛ سه یافتهٔ متوسط درست شد:
+    - مدیر کل می‌توانست از راه `/api/attachments/` به نامه پیوست بزند: `contribute('superuser_view_only_kinds', LETTER_ENTITY)` در `apps.py`.
+    - کد ملی پوشیدهٔ شخص حقیقی با جست‌وجوی پیشوندی حرف‌به‌حرف لو می‌رفت: در `parties.py` جست‌وجو با کد ملی بی‌مجوز دبیرخانه فقط برای طرف حقوقی.
+    - بیننده‌ای که حق ویرایش ندارد با PATCH نسخهٔ ناهمگام در دید نویسنده می‌ساخت: `_keep_copy` فقط برای نویسنده و هم‌نویسنده؛ ویرایش متن نامهٔ قفل از غیرنویسنده 403.
+  - سه تست تازه (`ReviewFixesTests` در `test_api_lc.py`)؛ `manage.py test letters` ۵۶ تست سبز؛ `makemigrations --check` بی‌تغییر؛ نگهبان‌های 29، 57 و 58 سبز.
+  - **اقدام بعدی:** ل-د در گفتگوی ابری تازه طبق `Documents/Release_v1/letters_module/cloud_brief_ld.md`.
 
 </div>
