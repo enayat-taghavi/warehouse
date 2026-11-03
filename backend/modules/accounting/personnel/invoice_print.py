@@ -57,6 +57,48 @@ def _signers(invoice):
     return signers
 
 
+def _approval_steps_table(invoice):
+    """جدول مراحل تایید از سابقهٔ گردش همین فاکتور (تنظیم شرکت)؛ بی گردش یا بی سابقه None.
+
+    زیر رسید می‌آید و اگر جا نبود با سرستون تکراری به برگهٔ بعد می‌رود؛ ردیف‌ها نصف نمی‌شوند.
+    """
+    from reports import pdf as report_pdf
+    from reports.document_pdf import DocTable, fa_digits
+    from workflow import engine as wf_engine
+    from workflow.models import WorkflowStep
+    instance = wf_engine.instance_of(INVOICE_WORKFLOW, invoice.pk)
+    if instance is None:
+        return None
+    titles = {step.key: step.title_fa for step in INVOICE_WORKFLOW_SPEC.steps}
+    steps = (WorkflowStep.objects.filter(instance=instance)
+             .exclude(action__in=(WorkflowStep.SEEN, WorkflowStep.EDIT))
+             .select_related('actor', 'on_behalf_of').order_by('at', 'pk'))
+    rows = []
+    for idx, step in enumerate(steps, start=1):
+        stage = 'ثبت و ارسال' if step.action == WorkflowStep.SUBMIT else titles.get(step.from_step, step.from_step)
+        action = 'تایید' if step.action == WorkflowStep.ACT else step.get_action_display()
+        actor = _name(step.actor) or 'سامانه'
+        if step.on_behalf_of_id:
+            actor = f'{actor} (به جانشینی از {_name(step.on_behalf_of)})'
+        rows.append([fa_digits(idx), stage or '', action, actor,
+                     fa_digits(report_pdf._fmt_datetime(step.at)), step.reason or ''])
+    if not rows:
+        return None
+    return DocTable(
+        title='مراحل تایید',
+        headers=['ردیف', 'مرحله', 'اقدام', 'اقدام‌کننده', 'تاریخ و ساعت', 'توضیح'],
+        rows=rows,
+        col_widths=[0.6, 1.8, 1.3, 2.2, 1.7, 2.6],
+        center_cols=[0, 2, 4],
+    )
+
+
+def _print_approval_steps(company_id) -> bool:
+    from settings_core.company_settings import get_company_setting
+    from .invoice_services import PRINT_APPROVAL_STEPS_KEY, VAT_SETTING_MODULE
+    return bool(company_id) and get_company_setting(company_id, VAT_SETTING_MODULE, PRINT_APPROVAL_STEPS_KEY) is True
+
+
 def printable_invoice(user, entity_id):
     from reports.document_pdf import DocTable, PrintableDocument, fa_digits
     from .invoice_payments import invoice_remaining
@@ -109,8 +151,14 @@ def printable_invoice(user, entity_id):
             center_cols=[0, 1],
         ))
 
+    company_id = invoice.section.project.company_id
+    if _print_approval_steps(company_id):
+        approval_table = _approval_steps_table(invoice)
+        if approval_table is not None:
+            extra_tables.append(approval_table)
+
     return PrintableDocument(
-        company_id=invoice.section.project.company_id,
+        company_id=company_id,
         title='رسید پرداخت هزینه',
         number=invoice.number or invoice.invoice_number,
         date=invoice.invoice_date_shamsi,

@@ -122,6 +122,27 @@ class InvoicePaymentSmokeTests(TestCase):
         self.assertEqual(len(res.data['results']), 2)
         self.assertEqual(res.data['remaining'], '0')
 
+    def test_print_approval_steps_company_setting(self):
+        from reports.document_pdf import render_document_pdf
+        from settings_core.company_settings import company_setting_specs
+        from settings_core.models import CompanySetting
+        from personnel.invoice_print import printable_invoice
+        spec = company_setting_specs()[('accounting', 'invoice_print_approval_steps')]
+        self.assertIs(spec.default, False)
+        inv = self.payable_invoice()
+        titles = lambda doc: [t.title for t in doc.extra_tables]  # noqa: E731
+        self.assertNotIn('مراحل تایید', titles(printable_invoice(self.acc, inv.pk)))  # پیش‌فرض خاموش
+        CompanySetting.objects.create(company=self.company, module='accounting',
+                                      key='invoice_print_approval_steps', value=True)
+        doc = printable_invoice(self.acc, inv.pk)
+        table = next(t for t in doc.extra_tables if t.title == 'مراحل تایید')
+        self.assertEqual([r[2] for r in table.rows], ['ارسال', 'تایید', 'تایید', 'تایید'])
+        self.assertEqual(table.rows[0][1], 'ثبت و ارسال')
+        self.assertTrue(render_document_pdf(doc).startswith(b'%PDF'))
+        # جدول بلند به برگهٔ بعد می‌رود و می‌شکند، خطا نمی‌دهد
+        table.rows = table.rows * 40
+        self.assertGreater(render_document_pdf(doc).count(b'/Type /Page\n'), 1)
+
     def test_print_and_excel(self):
         import io
         import openpyxl

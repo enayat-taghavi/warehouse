@@ -27,6 +27,12 @@ VAT_RATE_SETTING = CompanySettingSpec(
     title_fa='نرخ مالیات بر ارزش افزوده (درصد)', perm='perm_manager_payment_authorize',
 )
 
+PRINT_APPROVAL_STEPS_KEY = 'invoice_print_approval_steps'
+PRINT_APPROVAL_STEPS_SETTING = CompanySettingSpec(
+    module=VAT_SETTING_MODULE, key=PRINT_APPROVAL_STEPS_KEY, default=False, type='bool',
+    title_fa='چاپ رسید پرداخت همراه با مراحل تایید', perm='perm_manager_payment_authorize',
+)
+
 INVOICE_NUMBER_SERIES = NumberSeriesSpec(
     key=INVOICE_SERIES_KEY, title_fa='رسید پرداخت هزینه', default_template='{period}/ف/{seq}',
     period_key=fiscal_period_key, manage_perm='',

@@ -106,8 +106,11 @@ class PersonnelConfig(AppConfig):
         from personnel.invoice_verify import invoice_verify_summary
         contribute(f'verify_summary:{INVOICE_ENTITY}', invoice_verify_summary)
         # نرخ مالیات شرکت و سری شمارهٔ داخلی فاکتور (د۲ و د۴ طرح ۴.۱)
-        from personnel.invoice_services import INVOICE_NUMBER_SERIES, VAT_RATE_SETTING
+        from personnel.invoice_services import (
+            INVOICE_NUMBER_SERIES, PRINT_APPROVAL_STEPS_SETTING, VAT_RATE_SETTING,
+        )
         contribute('company_settings', VAT_RATE_SETTING)
+        contribute('company_settings', PRINT_APPROVAL_STEPS_SETTING)
         contribute('numbering_series', INVOICE_NUMBER_SERIES)
         # تنخواه سطح شرکت: شارژ و صورت‌حساب روی موتور، با دیدن، پیوست و قفل (ص۲ تا ص۴ و ص۱۱ طرح ۳.۶)
         from personnel import workflows as _wf
