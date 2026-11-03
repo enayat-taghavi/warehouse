@@ -228,4 +228,141 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
     fixture.detectChanges();
     expect(chatBtn.textContent).toContain('+99');
   });
+
+  describe('Mobile more sheet integration (6 items)', () => {
+    const sixItems: MobileBottomNavItem[] = [
+      { id: 'it1', label: 'یک', title: 'مورد یک', icon: 'package', active: false },
+      { id: 'it2', label: 'دو', title: 'مورد دو', icon: 'grid', active: false },
+      { id: 'it3', label: 'سه', title: 'مورد سه', icon: 'users', active: false },
+      { id: 'it4', label: 'چهار', title: 'مورد چهار', icon: 'settings', active: false },
+      { id: 'it5', label: 'پنج', title: 'مورد پنج', icon: 'box', active: false },
+      { id: 'it6', label: 'شش', title: 'مورد شش', icon: 'activity', active: false },
+    ];
+
+    it('(1) chat available: after clicking bottom-nav-more, the sheet shows exactly items 3 to 6 and not items 1 and 2', () => {
+      mockComm.isChatAvailable.set(true);
+      fixture.componentRef.setInput('items', sixItems);
+      fixture.detectChanges();
+
+      const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
+      expect(moreBtn).not.toBeNull();
+      moreBtn.click();
+      fixture.detectChanges();
+
+      expect(component.sheetOpen()).toBe(true);
+      const sheet = fixture.nativeElement.querySelector('[data-testid="mobile-more-sheet"]');
+      expect(sheet).not.toBeNull();
+
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it1"]')).toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it2"]')).toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it3"]')).not.toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it4"]')).not.toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it5"]')).not.toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it6"]')).not.toBeNull();
+    });
+
+    it('(2) chat not available: the sheet shows items 4 to 6', () => {
+      mockComm.isChatAvailable.set(false);
+      fixture.componentRef.setInput('items', sixItems);
+      fixture.detectChanges();
+
+      const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
+      expect(moreBtn).not.toBeNull();
+      moreBtn.click();
+      fixture.detectChanges();
+
+      expect(component.sheetOpen()).toBe(true);
+      const sheet = fixture.nativeElement.querySelector('[data-testid="mobile-more-sheet"]');
+      expect(sheet).not.toBeNull();
+
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it1"]')).toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it2"]')).toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it3"]')).toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it4"]')).not.toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it5"]')).not.toBeNull();
+      expect(sheet.querySelector('[data-testid="mobile-more-item-it6"]')).not.toBeNull();
+    });
+
+    it('(3) clicking a sheet item emits itemSelect with its id and the sheet is gone (sheetOpen() false)', () => {
+      mockComm.isChatAvailable.set(true);
+      fixture.componentRef.setInput('items', sixItems);
+      fixture.detectChanges();
+
+      const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
+      moreBtn.click();
+      fixture.detectChanges();
+      expect(component.sheetOpen()).toBe(true);
+
+      let selectedId: string | null = null;
+      component.itemSelect.subscribe(id => {
+        selectedId = id;
+      });
+
+      const sheetItem = fixture.nativeElement.querySelector('[data-testid="mobile-more-item-it3"]') as HTMLButtonElement;
+      expect(sheetItem).not.toBeNull();
+      sheetItem.click();
+      fixture.detectChanges();
+
+      expect(selectedId).toBe('it3');
+      expect(component.sheetOpen()).toBe(false);
+      expect(fixture.nativeElement.querySelector('[data-testid="mobile-more-sheet"]')).toBeNull();
+    });
+
+    it('(4) clicking bottom-nav-more emits overlayOpen; clicking it again closes the sheet', () => {
+      mockComm.isChatAvailable.set(true);
+      fixture.componentRef.setInput('items', sixItems);
+      fixture.detectChanges();
+
+      let overlayCount = 0;
+      component.overlayOpen.subscribe(() => {
+        overlayCount++;
+      });
+
+      const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
+      moreBtn.click();
+      fixture.detectChanges();
+
+      expect(overlayCount).toBe(1);
+      expect(component.sheetOpen()).toBe(true);
+
+      moreBtn.click();
+      fixture.detectChanges();
+
+      expect(component.sheetOpen()).toBe(false);
+    });
+
+    it('(5) Escape on document closes the sheet', () => {
+      mockComm.isChatAvailable.set(true);
+      fixture.componentRef.setInput('items', sixItems);
+      fixture.detectChanges();
+
+      const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
+      moreBtn.click();
+      fixture.detectChanges();
+      expect(component.sheetOpen()).toBe(true);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+
+      expect(component.sheetOpen()).toBe(false);
+    });
+
+    it('(6) with the sheet open, clicking bottom-nav-chat closes it', () => {
+      mockComm.isChatAvailable.set(true);
+      fixture.componentRef.setInput('items', sixItems);
+      fixture.detectChanges();
+
+      const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
+      moreBtn.click();
+      fixture.detectChanges();
+      expect(component.sheetOpen()).toBe(true);
+
+      const chatBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-chat"]') as HTMLButtonElement;
+      expect(chatBtn).not.toBeNull();
+      chatBtn.click();
+      fixture.detectChanges();
+
+      expect(component.sheetOpen()).toBe(false);
+    });
+  });
 });

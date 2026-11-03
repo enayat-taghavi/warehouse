@@ -25,6 +25,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { SwUpdate } from '@angular/service-worker';
+import { By } from '@angular/platform-browser';
 /** نمونهٔ منوی اصلی (پوسته نباید از ماژول ایمپورت کند؛ نگهبان ۵۷) */
 const SAMPLE_PRIMARY_NAV_ITEMS = [
   { id: 'sample-a', label: 'نمونهٔ نخست با نام کامل', shortLabel: 'نخست', icon: 'box' },
@@ -563,6 +564,36 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
       const switchTabSpy = vi.spyOn(component, 'switchTab');
       component.onMobileBottomNavItem('dashboard');
       expect(switchTabSpy).toHaveBeenCalledWith('dashboard');
+    });
+
+    it('triggering menuOpen on the app-mobile-brand-bar debug element calls toggleSidebar', () => {
+      const brandBarDe = fixture.debugElement.query(By.css('app-mobile-brand-bar'));
+      expect(brandBarDe).not.toBeNull();
+      const spy = vi.spyOn(fixture.componentInstance, 'toggleSidebar');
+      brandBarDe.triggerEventHandler('menuOpen', null);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('for the warehouse system menu, mobileBottomNavItems().length is greater than 3 when the visible menu has more than 3 items', () => {
+      mockStore.isWarehouseContext.mockReturnValue(false);
+      mockRegistry.getExtensions.mockImplementation((extKey: string) => {
+        if (extKey === 'layoutNav') {
+          return [
+            {
+              moduleCode: 'warehouse',
+              extension: {
+                showWarehouseSwitcher: true,
+                defaultExitRoute: '/app/warehouse/projects',
+                primaryItems: SAMPLE_PRIMARY_NAV_ITEMS
+              }
+            }
+          ];
+        }
+        return [];
+      });
+
+      const items = component.mobileBottomNavItems();
+      expect(items.length).toBeGreaterThan(3);
     });
   });
 });

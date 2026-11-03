@@ -21,6 +21,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { SwUpdate } from '@angular/service-worker';
+import { By } from '@angular/platform-browser';
 
 
 @Component({
@@ -308,6 +309,50 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     it('onMobileBottomNavItem("snapshots") navigates to /app/operations/snapshots', () => {
       component.onMobileBottomNavItem('snapshots');
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/operations/snapshots']);
+    });
+
+    it('mobileBottomNavItems().length equals component.navItems.length', () => {
+      expect(component.mobileBottomNavItems().length).toBe(component.navItems.length);
+    });
+
+    it('triggering menuOpen on app-mobile-brand-bar toggles isMobileMenuOpen() from false to true', async () => {
+      TestBed.overrideComponent(OperationsLayoutComponent, {
+        set: {
+          imports: [CommonModule, MobileBrandBarComponent, MobileBottomNavComponent, StubNotificationCenterComponent],
+          schemas: [NO_ERRORS_SCHEMA]
+        }
+      });
+
+      await TestBed.configureTestingModule({
+        imports: [OperationsLayoutComponent],
+        providers: [
+          { provide: Router, useValue: mockRouter },
+          { provide: ActivatedRoute, useValue: { snapshot: { data: {} } } },
+          { provide: AuthService, useValue: mockAuth },
+          { provide: AppPersonaService, useValue: mockPersona },
+          { provide: SystemHealthService, useValue: mockHealth },
+          { provide: NavigationHistoryService, useValue: { getRecentBreadcrumbs: () => [], canGoBack: () => false, canGoForward: () => false } },
+          { provide: CommunicationService, useValue: mockComm },
+          { provide: ActiveCompanyService, useValue: mockActiveCompany },
+          { provide: ModuleRegistryService, useValue: mockRegistry },
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: SwUpdate, useValue: { isEnabled: false } }
+        ]
+      }).compileComponents();
+
+      const fixture = TestBed.createComponent(OperationsLayoutComponent);
+      fixture.detectChanges();
+
+      const opComp = fixture.componentInstance;
+      expect(opComp.isMobileMenuOpen()).toBe(false);
+
+      const brandBarDe = fixture.debugElement.query(By.css('app-mobile-brand-bar'));
+      expect(brandBarDe).not.toBeNull();
+      brandBarDe.triggerEventHandler('menuOpen', null);
+      fixture.detectChanges();
+
+      expect(opComp.isMobileMenuOpen()).toBe(true);
     });
   });
 });
