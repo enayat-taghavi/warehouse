@@ -687,25 +687,6 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.voidDialogServerError = '';
   }
 
-  printInvoice(item: PayableInvoiceItem): void {
-    void this.printService.downloadPdf('expense_invoice', item.id);
-  }
-
-  sharingId: number | null = null;
-
-  async shareInvoice(item: PayableInvoiceItem): Promise<void> {
-    const id = item?.id;
-    if (!id || this.sharingId) return;
-    this.sharingId = id;
-    this.cdr.detectChanges();
-    try {
-      const num = item.number || (item as any).invoice_number || id;
-      await this.printService.sharePdf('expense_invoice', id, `payment-receipt-${num}.pdf`);
-    } finally {
-      this.sharingId = null;
-      this.cdr.detectChanges();
-    }
-  }
 
   /** خروجی اکسل فاکتورهای هزینهٔ در دسترس خزانه‌دار (پیش‌تر فقط پیام موفقیت نشان می‌داد و فایلی نمی‌ساخت) */
   exportExcel(): void {

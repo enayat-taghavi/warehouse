@@ -101,7 +101,7 @@
     </div>
 
     @if (!isLoading && items.length > 0) {
-      <app-payment-receipt-list [rows]="items" [sharingId]="sharingId" [extraColumn]="approverColumn" (preview)="openPreview($event, 'preview')" (share)="shareInvoice($event)" (print)="printInvoice($event)">
+      <app-payment-receipt-list [rows]="items" [extraColumn]="approverColumn" (preview)="openPreview($event, 'preview')">
         <ng-template #rowActions let-item>
           @if (item.status === 'pending_accountant' && perm.canWriteDocuments()) {
             <button type="button" appAction="approve" label="صدور سند" display="label" size="sm" (click)="bookDocument(item)"></button>

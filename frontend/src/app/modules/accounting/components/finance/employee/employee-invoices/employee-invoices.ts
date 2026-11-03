@@ -1499,24 +1499,9 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   printInvoice(inv: ExpenseInvoice | null | undefined): void {
     if (!inv?.id || !this.printService) return;
-    void this.printService.downloadPdf('expense_invoice', inv.id);
+    void this.printService.printPdf('expense_invoice', inv.id);
   }
 
-  sharingId: number | null = null;
-
-  async shareInvoice(inv: ExpenseInvoice | null | undefined): Promise<void> {
-    const id = inv?.id;
-    if (!id || !this.printService || this.sharingId) return;
-    this.sharingId = id;
-    this.cdr.detectChanges();
-    try {
-      const num = inv.number || (inv as any).invoice_number || id;
-      await this.printService.sharePdf('expense_invoice', id, `payment-receipt-${num}.pdf`);
-    } finally {
-      this.sharingId = null;
-      this.cdr.detectChanges();
-    }
-  }
 
   // ─── حذف فاکتور پیش‌نویس ───
   async deleteDraftInvoice(invoice: ExpenseInvoice): Promise<void> {

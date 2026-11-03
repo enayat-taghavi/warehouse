@@ -1,7 +1,8 @@
-import { Component, TemplateRef, contentChild, input, output } from '@angular/core';
+import { Component, TemplateRef, contentChild, inject, input, output, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { PrintService } from '../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../invoice-receipt-button/invoice-receipt-button';
 import { invoiceAmountHint, invoiceCreatorHint, invoiceStatusClass, invoiceStatusShort } from '../../../payment-receipt';
 
@@ -57,8 +58,6 @@ export class PaymentReceiptListComponent<T extends PaymentReceiptListRow = Payme
   readonly rows = input.required<T[]>();
   /** شمارهٔ ردیف پیش از این صفحه (صفحه‌بندی) */
   readonly indexOffset = input(0);
-  readonly sharingId = input<number | null>(null);
-  readonly canPrint = input(true);
   readonly showDescription = input(true);
   /** ستون «سرفصل» وقتی داده شود */
   readonly headsOf = input<((row: T) => string) | null>(null);
@@ -66,11 +65,30 @@ export class PaymentReceiptListComponent<T extends PaymentReceiptListRow = Payme
   readonly extraColumn = input<PaymentReceiptListColumn<T> | null>(null);
 
   readonly preview = output<T>();
-  readonly share = output<T>();
-  readonly print = output<T>();
 
   readonly actionsTpl = contentChild<TemplateRef<{ $implicit: T }>>('rowActions');
   readonly extraTpl = contentChild<TemplateRef<{ $implicit: T }>>('rowExtra');
+
+  private readonly printService = inject(PrintService);
+  /** ردیفی که PDFش در حال همرسانی است */
+  readonly sharingId = signal<number | null>(null);
+  /** چاپ و همرسانی به سرور نیاز دارند */
+  readonly canPrint = this.printService.isOnline;
+
+  /** پیش‌نمایش چاپ (رایانه) یا نمایشگر PDF دستگاه (گوشی) */
+  print(row: T): void {
+    if (row.id) void this.printService.printPdf('expense_invoice', row.id);
+  }
+
+  async share(row: T): Promise<void> {
+    if (!row.id || this.sharingId()) return;
+    this.sharingId.set(row.id);
+    try {
+      await this.printService.sharePdf('expense_invoice', row.id, `payment-receipt-${row.number || row.invoice_number || row.id}.pdf`);
+    } finally {
+      this.sharingId.set(null);
+    }
+  }
 
   readonly statusShort = invoiceStatusShort;
   readonly statusClass = invoiceStatusClass;

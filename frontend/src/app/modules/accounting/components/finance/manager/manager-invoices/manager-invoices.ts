@@ -144,23 +144,4 @@ export class ManagerInvoicesComponent implements OnInit, OnDestroy {
     return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
   }
 
-  printInvoice(inv: any): void {
-    void this.printService.downloadPdf('expense_invoice', inv.id);
-  }
-
-  sharingId: number | null = null;
-
-  async shareInvoice(inv: any): Promise<void> {
-    const id = inv?.id;
-    if (!id || this.sharingId) return;
-    this.sharingId = id;
-    this.cdr.detectChanges();
-    try {
-      const num = inv.number || inv.invoice_number || id;
-      await this.printService.sharePdf('expense_invoice', id, `payment-receipt-${num}.pdf`);
-    } finally {
-      this.sharingId = null;
-      this.cdr.detectChanges();
-    }
-  }
 }

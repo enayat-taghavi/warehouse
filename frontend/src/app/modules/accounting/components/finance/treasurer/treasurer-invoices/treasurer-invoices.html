@@ -52,7 +52,7 @@
     } @else if (invoices.length === 0) {
       <p class="p-10 text-center text-slate-400 text-xs">رسید پرداختی برای پرداخت وجود ندارد.</p>
     } @else {
-      <app-payment-receipt-list [rows]="invoices" [sharingId]="sharingId" [showDescription]="false" [headsOf]="categoryOf" (preview)="openPreview($event, 'preview')" (share)="shareInvoice($event)" (print)="printInvoice($event)">
+      <app-payment-receipt-list [rows]="invoices" [showDescription]="false" [headsOf]="categoryOf" (preview)="openPreview($event, 'preview')">
         <ng-template #rowActions let-item>
           @if ((item.status === 'pending_payment' || item.status === 'partially_paid') && perm.canWriteDocuments()) {
             <button type="button" appAction="confirm" label="پرداخت" size="sm" (click)="payInvoice(item)"></button>

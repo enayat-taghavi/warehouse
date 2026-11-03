@@ -65,6 +65,8 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
     };
     mockPrintService = {
       downloadPdf: vi.fn().mockReturnValue(Promise.resolve()),
+      printPdf: vi.fn().mockResolvedValue(true),
+      isOnline: vi.fn().mockReturnValue(true),
       sharePdf: vi.fn().mockReturnValue(Promise.resolve(true)),
     };
     mockCdr = {
@@ -194,7 +196,7 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
   it('7. printInvoice calls PrintService with expense_invoice and id', () => {
     component.invoiceId = 101;
     component.printInvoice();
-    expect(mockPrintService.downloadPdf).toHaveBeenCalledWith('expense_invoice', 101);
+    expect(mockPrintService.printPdf).toHaveBeenCalledWith('expense_invoice', 101);
   });
 
   it('8. close emits closed event', () => {

@@ -61,14 +61,13 @@ describe('Invoice Share Buttons & Template Verifications (Step J)', () => {
         expect(content).not.toContain('appAction="history"');
         expect(content).not.toContain("'history')");
         expect(content).toContain('<app-payment-receipt-list');
-        expect(content).toContain('(share)="shareInvoice($event)"');
       });
     });
 
     it('the shared payment-receipt list owns the share button', () => {
       const content = fs.readFileSync(path.resolve(__dirname, 'payment-receipt-list/payment-receipt-list.component.html'), 'utf-8');
       expect(content).toContain('appAction="share"');
-      expect(content).toContain('share.emit(row)');
+      expect(content).toContain('share(row)');
     });
   });
 
@@ -173,6 +172,8 @@ describe('Invoice Share Buttons & Template Verifications (Step J)', () => {
 
       mockPrintService = {
         downloadPdf: vi.fn().mockResolvedValue(undefined),
+        printPdf: vi.fn().mockResolvedValue(true),
+        isOnline: vi.fn().mockReturnValue(true),
         sharePdf: vi.fn().mockResolvedValue(true),
       };
 

@@ -93,7 +93,7 @@
     </div>
 
     @if (!isLoading && items.length > 0) {
-      <app-payment-receipt-list [rows]="items" [sharingId]="sharingId" (preview)="openPreview($event, 'preview')" (share)="shareInvoice($event)" (print)="printInvoice($event)">
+      <app-payment-receipt-list [rows]="items" (preview)="openPreview($event, 'preview')">
         <ng-template #rowActions let-item>
           @if (item.status === 'pending_supervisor') {
             <button type="button" appAction="approve" size="sm" display="label" (click)="approveSingle(item)"></button>

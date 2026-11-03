@@ -131,7 +131,7 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
   printInvoice(): void {
     const id = this.invoiceId || this.invoiceDetail?.id || this.invoice?.id;
     if (id) {
-      void this.printService.downloadPdf('expense_invoice', id);
+      void this.printService.printPdf('expense_invoice', id);
     }
   }
 

@@ -133,7 +133,10 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     };
 
     mockPrintService = {
-      downloadPdf: vi.fn().mockResolvedValue(undefined)
+      downloadPdf: vi.fn().mockResolvedValue(undefined),
+      printPdf: vi.fn().mockResolvedValue(true),
+      sharePdf: vi.fn().mockResolvedValue(true),
+      isOnline: vi.fn().mockReturnValue(true),
     };
 
     mockRouter = {

@@ -127,25 +127,6 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
   }
 
-  printInvoice(item: ExpenseInvoice): void {
-    if (item.id) void this.printService.downloadPdf('expense_invoice', item.id);
-  }
-
-  sharingId: number | null = null;
-
-  async shareInvoice(item: ExpenseInvoice): Promise<void> {
-    const id = item?.id;
-    if (!id || this.sharingId) return;
-    this.sharingId = id;
-    this.cdr.detectChanges();
-    try {
-      const num = item.number || (item as any).invoice_number || id;
-      await this.printService.sharePdf('expense_invoice', id, `payment-receipt-${num}.pdf`);
-    } finally {
-      this.sharingId = null;
-      this.cdr.detectChanges();
-    }
-  }
 
   ngOnInit(): void {
     if (this.embedded) return;

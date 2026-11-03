@@ -14,7 +14,7 @@
     } @else if (invoicesList.length === 0) {
       <p class="p-8 text-center text-slate-400 font-medium">هیچ رسید پرداختی در انتظار تصویب مدیر نمی‌باشد.</p>
     } @else {
-      <app-payment-receipt-list [rows]="invoicesList" [sharingId]="sharingId" (preview)="openPreview($event, 'preview')" (share)="shareInvoice($event)" (print)="printInvoice($event)">
+      <app-payment-receipt-list [rows]="invoicesList" (preview)="openPreview($event, 'preview')">
         <ng-template #rowActions let-inv>
           <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
           <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>

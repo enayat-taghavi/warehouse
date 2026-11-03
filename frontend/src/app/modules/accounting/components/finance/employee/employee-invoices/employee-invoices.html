@@ -106,7 +106,7 @@
     </div>
 
     @if (invoices.length > 0) {
-      <app-payment-receipt-list [rows]="invoices" [indexOffset]="(page - 1) * pageSize" [sharingId]="sharingId" [canPrint]="canPrint" [headsOf]="headsColumn" (preview)="openInvoiceHistory($event.id)" (share)="shareInvoice($event)" (print)="printInvoice($event)">
+      <app-payment-receipt-list [rows]="invoices" [indexOffset]="(page - 1) * pageSize" [headsOf]="headsColumn" (preview)="openInvoiceHistory($event.id)">
         <ng-template #rowActions let-inv>
           @if (roleActionsFor(inv); as ra) {
             @if (ra.approve && perm.canWriteDocuments()) {
