@@ -580,8 +580,10 @@ def _ensure_not_locked(kind, entity_id):
         raise WorkflowStateError('entity_locked', 'این سند قفل است و کنش گردش روی آن انجام نمی‌شود.', 409)
 
 
-def submit(workflow_key, obj, user, *, restart_closed=False):
+def submit(workflow_key, obj, user, *, restart_closed=False, allow_substitute=None):
     """
+    allow_substitute (ل-ه نامه‌ها): اگر None نباشد، پرچم جانشین نمونه پیش از باز شدن نخستین کار گذاشته می‌شود؛
+    پس جانشینِ سند محرمانه هیچ کار یا اعلانی نمی‌گیرد، حتی در نخستین ارسال.
     ارسال (یا ارسال دوباره پس از عودت یا لغو) سند به گردش؛ ثبت‌کننده = کاربر ارسال‌کننده.
     مجوز ارسال را ماژول می‌سنجد. نمونهٔ در جریان یا بسته (پایان‌یافته/ردشده) 409 already_in_progress می‌دهد.
     restart_closed (طرح ۴.۳): نمونهٔ پایان‌یافته یا ردشده هم از نو شروع می‌شود؛ فقط وقتی ماژول خودش سند را به
@@ -608,6 +610,10 @@ def submit(workflow_key, obj, user, *, restart_closed=False):
             for stale in WorkflowTask.objects.select_for_update().filter(
                     instance=instance, is_open=True, track=WorkflowTask.TRACK_STEP):
                 _close_task(stale, WorkflowTask.SUPERSEDED, None, now)
+        flag_changed = False
+        if allow_substitute is not None and instance.allow_substitute != bool(allow_substitute):
+            instance.allow_substitute = bool(allow_substitute)
+            flag_changed = instance.pk is not None
         instance.version = spec.version
         instance.company_id = company_id
         instance.section = section
@@ -636,6 +642,10 @@ def submit(workflow_key, obj, user, *, restart_closed=False):
         task, to_step, arrival = _advance(ctx, instance, 0, now)
         _history(instance, WorkflowStep.SUBMIT, task=task, actor=user, to_step=to_step,
                  skipped=planned + arrival, now=now)
+        if flag_changed:
+            # ارجاع‌های بازِ ماندهٔ نمونه (ر۹) ردیف جانشین را طبق پرچم تازه می‌گیرند یا از دست می‌دهند
+            from .recompute import recompute_open_tasks
+            recompute_open_tasks(company_ids=[company_id])
     return instance
 
 

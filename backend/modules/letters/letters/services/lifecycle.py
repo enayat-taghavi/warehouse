@@ -37,6 +37,9 @@ def audit(user, letter, action, **details):
         target_repr=letter.number_display or f'نامه #{letter.pk}', user=user, company_id=letter.company_id,
         details={'entity_kind': LETTER_ENTITY, 'status': letter.status, **details},
     )
+    # ل-ه: هر تغییر نامه رویداد زندهٔ «سند تغییر کرد» را پس از commit می‌فرستد (پایان ن۱۶)
+    from ..referral import emit_letter_changed
+    emit_letter_changed(letter, str(details.get('event') or action).lower())
 
 
 def _reason(value, required=True):
@@ -101,6 +104,10 @@ def register_in_tx(letter, user, now=None):
     letter.revision += 1
     letter.save()
     audit(user, letter, 'APPROVE', event='register', number=issued.display)
+    # ل-ه (ن۷، ن۱۸): داخلی و صورت‌جلسه در همین تراکنش به گیرنده‌ها ارجاع می‌شوند؛ بخشنامه فقط اعلان یک‌باره
+    from .. import circulars, referral
+    referral.auto_refer_in_tx(letter, user)
+    circulars.notify_on_register(letter)
     return letter
 
 
@@ -128,14 +135,9 @@ def submit_for_signing(user, letter):
     count = LetterSigner.objects.filter(letter_id=letter.pk).count()
     if not 1 <= count <= MAX_SIGNERS:
         raise ValidationError({'signers': f'نامه باید ۱ تا {MAX_SIGNERS} امضاکننده داشته باشد.'})
-    allow_sub = not letter.is_confidential
-    instance = engine.instance_of(key, letter.pk)
-    if instance is not None and instance.allow_substitute != allow_sub:
-        engine.set_allow_substitute(instance, allow_sub)
-    instance = engine.submit(key, letter, user)
-    if instance.allow_substitute != allow_sub:
-        # اولین ارسال: نمونه تازه ساخته شد؛ ردیف جانشین کار اول در همین تراکنش برداشته می‌شود
-        engine.set_allow_substitute(instance, allow_sub)
+    # پرچم جانشین پیش از باز شدن نخستین کار امضا، حتی در نخستین ارسال: جانشینِ امضاکنندهٔ نامهٔ محرمانه هیچ کار
+    # یا اعلانی نمی‌گیرد (یافتهٔ بازبینی ل-د)
+    engine.submit(key, letter, user, allow_substitute=not letter.is_confidential)
     letter.refresh_from_db()
     audit(user, letter, 'UPDATE', event='submit')
     return letter
@@ -215,7 +217,9 @@ def archive(user, letter):
     letter.status = Letter.STATUS_ARCHIVED
     letter.revision += 1
     letter.save(update_fields=['status', 'revision', 'updated_at'])
-    audit(user, letter, 'UPDATE', event='archive')
+    from ..referral import close_open_referrals
+    closed = close_open_referrals(letter, user)
+    audit(user, letter, 'UPDATE', event='archive', closed_referrals=closed)
     return letter
 
 
@@ -262,5 +266,7 @@ def void(user, letter, reason):
     _clear_edit_lock(letter)
     letter.revision += 1
     letter.save()
-    audit(user, letter, 'UPDATE', event='void')
+    from ..referral import close_open_referrals
+    closed = close_open_referrals(letter, user)
+    audit(user, letter, 'UPDATE', event='void', closed_referrals=closed)
     return letter

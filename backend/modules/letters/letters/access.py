@@ -67,10 +67,16 @@ def _workflow_letter_ids(user):
         user_id=user.pk, task__is_open=True, task__instance__entity_kind=LETTER_ENTITY,
     ).filter(Q(on_behalf_of__isnull=True) | Q(valid_from__lte=today, valid_to__gte=today)
              ).values('task__instance__entity_id')
+    from workflow.models import WorkflowStep
+    # ر۱۱ (referral_grants_view): گیرندهٔ کار ارجاع (باز یا بسته)، یا کسی که به جانشینی روی کار ارجاع اقدام کرده
+    acted_for = WorkflowStep.objects.filter(
+        actor_id=user.pk, on_behalf_of__isnull=False, task__track=WorkflowTask.TRACK_REFERRAL,
+        instance__entity_kind=LETTER_ENTITY,
+    ).values('instance__entity_id')
     referrals = WorkflowTask.objects.filter(
         track=WorkflowTask.TRACK_REFERRAL, instance__entity_kind=LETTER_ENTITY, target_user_id=user.pk,
     ).values('instance__entity_id')
-    return open_tasks, referrals
+    return open_tasks, referrals, acted_for
 
 
 def visible_letters(user, base=None):
@@ -105,8 +111,8 @@ def visible_letters(user, base=None):
         | Q(pk__in=CircularAudience.objects.filter(scope=CircularAudience.SCOPE_SECTION,
                                                    section_id__in=sections).values('letter_id'))
     )
-    open_tasks, referrals = _workflow_letter_ids(user)
-    workflow = Q(pk__in=open_tasks) | Q(pk__in=referrals)
+    open_tasks, referrals, acted_for = _workflow_letter_ids(user)
+    workflow = Q(pk__in=open_tasks) | Q(pk__in=referrals) | Q(pk__in=acted_for)
 
     cond = personal | recipient | audience | workflow
     sec_companies = secretariat_company_ids(user, companies)

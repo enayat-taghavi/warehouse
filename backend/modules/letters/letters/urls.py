@@ -23,4 +23,10 @@ urlpatterns = [
     path('<int:pk>/archive/', views.LetterArchiveView.as_view(), name='letter-archive'),
     path('<int:pk>/unarchive/', views.LetterUnarchiveView.as_view(), name='letter-unarchive'),
     path('<int:pk>/void/', views.LetterVoidView.as_view(), name='letter-void'),
+    # ارجاع، بخشنامه و «چه کسی دید» (ل-ه)
+    path('circulars/', views.CircularListView.as_view(), name='letter-circulars'),
+    path('<int:pk>/refer/', views.LetterReferView.as_view(), name='letter-refer'),
+    path('<int:pk>/referrals/', views.LetterReferralsView.as_view(), name='letter-referrals'),
+    path('<int:pk>/audience/', views.LetterAudienceView.as_view(), name='letter-audience'),
+    path('<int:pk>/viewers/', views.LetterViewersView.as_view(), name='letter-viewers'),
 ]

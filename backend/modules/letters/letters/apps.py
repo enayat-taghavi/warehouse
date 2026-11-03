@@ -43,3 +43,8 @@ class LettersConfig(AppConfig):
         contribute('section_roles', LETTER_SIGN_ROLES)
         contribute('workflows', LETTER_SIGN_WORKFLOW_SPEC)
         contribute(f'can_act:{LETTER_ENTITY}', can_act_letter)
+
+        # ل-ه: درخت ارجاع روی موتور هسته (ن۷)؛ ارجاع ریشه با قلاب can_refer (دبیرخانه، نویسنده، امضاکننده‌ها)
+        from .referral import LETTER_REFERRAL_WORKFLOW_SPEC, can_refer_letter
+        contribute('workflows', LETTER_REFERRAL_WORKFLOW_SPEC)
+        contribute(f'can_refer:{LETTER_ENTITY}', can_refer_letter)
