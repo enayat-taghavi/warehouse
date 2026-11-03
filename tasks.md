@@ -7532,7 +7532,7 @@ verify: python scripts/automation/verify_tools.py clean-tree --allow Documents/i
 
 ===
 
-[ ] Session 1 of 1 — Mobile navigation companies shell check on app.farsalish.ir at 375x812: one temporary QA user gets read access to the QA company documents, then the ready Playwright script runs; QA data deleted at the end
+[DONE] [ ] Session 1 of 1 — Mobile navigation companies shell check on app.farsalish.ir at 375x812: one temporary QA user gets read access to the QA company documents, then the ready Playwright script runs; QA data deleted at the end
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow Documents/implementation_plan.md Documents/task.md
