@@ -94,6 +94,22 @@ class PolicyApiTests(ApiBase):
         cd_roles = {item['role']: item for item in r.data['company_default']['roles']}
         self.assertEqual(cd_roles['wf_reviewer']['source'], 'own')
 
+    def test_notify_candidates_are_active_company_members(self):
+        # Step E: options for «کاربران انتخاب‌شده» follow the same rule as clean_values
+        r = self.get(self.editor, f'company-policies/{self.co.pk}/')
+        self.assertEqual(r.status_code, 200)
+        ids = {c['id'] for c in r.data['notify_candidates']}
+        self.assertIn(self.lead.pk, ids)
+        self.assertIn(self.editor.pk, ids)
+        self.assertNotIn(self.outsider.pk, ids)
+        self.assertNotIn(self.su.pk, ids)
+        self.assertNotIn(self.no_member_editor.pk, ids)
+        self.assertTrue(all(set(c) == {'id', 'name'} for c in r.data['notify_candidates']))
+        self.lead.is_active = False
+        self.lead.save(update_fields=['is_active'])
+        r2 = self.get(self.editor, f'company-policies/{self.co.pk}/')
+        self.assertNotIn(self.lead.pk, {c['id'] for c in r2.data['notify_candidates']})
+
     def test_invalid_values_400(self):
         cases = [
             ({'workflow_key': WF, 'values': {'role_actions': {'unknown_role': 'skip'}}}, 'unknown_role'),

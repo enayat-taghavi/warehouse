@@ -12,7 +12,9 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import {
   WorkflowCompanySettings,
   WorkflowThreshold,
-  WorkflowDefinition
+  WorkflowDefinition,
+  WorkflowCompanyPolicies,
+  WorkflowPolicyPreview
 } from '../../../../../../core/models/workflow.model';
 
 try {
@@ -77,6 +79,43 @@ describe('CompanyWorkflowTabComponent', () => {
     }
   ];
 
+  const samplePolicies: WorkflowCompanyPolicies = {
+    company_id: 1,
+    role_defaults: { accountant: 'skip', treasurer: 'wait' },
+    company_default: {
+      roles: [
+        { role: 'accountant', role_title_fa: 'حسابدار', value: 'skip', effective: 'skip', source: 'own' },
+        { role: 'treasurer', role_title_fa: 'خزانه‌دار', value: null, effective: 'wait', source: 'default' }
+      ],
+      creator_may_approve_own: { value: null, effective: false, source: 'default' },
+      notify: { mode: null, user_ids: null, effective_mode: 'role_assigners', effective_user_ids: [], source: 'default' }
+    },
+    workflows: [
+      {
+        key: 'expense_invoice',
+        title_fa: 'فاکتور هزینه',
+        has_own_row: true,
+        roles: [
+          { role: 'accountant', role_title_fa: 'حسابدار', value: 'wait', effective: 'wait', source: 'own' }
+        ],
+        creator_may_approve_own: { value: true, effective: true, source: 'own' },
+        notify: { mode: 'users', user_ids: [7], effective_mode: 'users', effective_user_ids: [7], source: 'own' },
+        steps: [
+          { key: 'step_accountant', title_fa: 'بررسی حسابدار', kind: 'review', role: 'accountant', role_title_fa: 'حسابدار',
+            payment: false, locked: null, effective: 'wait', source: 'own' }
+        ]
+      }
+    ],
+    notify_candidates: [{ id: 7, name: 'کاربر هفت' }]
+  };
+
+  const samplePreview: WorkflowPolicyPreview = {
+    counts: { advance: 3, recipients_changed: 1, waiting: 0 },
+    per_workflow: {},
+    samples: [{ instance_id: 5, workflow_key: 'expense_invoice', title: 'فاکتور ۵', step_key: 'step_accountant', effect: 'advance' }],
+    token: 'tok-1'
+  };
+
   const sampleSections = [
     { id: 101, name: 'بخش کارگاه مرکزی' },
     { id: 102, name: 'بخش انبار مرکزی' }
@@ -89,7 +128,11 @@ describe('CompanyWorkflowTabComponent', () => {
       getThresholds: vi.fn().mockReturnValue(of(sampleThresholds)),
       saveThreshold: vi.fn().mockReturnValue(of(sampleThresholds[0])),
       deleteThreshold: vi.fn().mockReturnValue(of(undefined)),
-      getDefinitions: vi.fn().mockReturnValue(of(sampleDefinitions))
+      getDefinitions: vi.fn().mockReturnValue(of(sampleDefinitions)),
+      getCompanyPolicies: vi.fn().mockReturnValue(of(samplePolicies)),
+      previewCompanyPolicy: vi.fn().mockReturnValue(of(samplePreview)),
+      saveCompanyPolicy: vi.fn().mockReturnValue(of(samplePolicies)),
+      resetWorkflowPolicy: vi.fn().mockReturnValue(of(samplePolicies))
     };
 
     mockOrgApi = {
@@ -181,8 +224,7 @@ describe('CompanyWorkflowTabComponent', () => {
 
     expect(mockWorkflowApi.saveCompanySettings).toHaveBeenCalledWith(1, {
       reminder_hours: 12,
-      escalation_hours: 48,
-      creator_may_approve_own: false
+      escalation_hours: 48
     });
     expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('ذخیره شد'));
   });
@@ -237,52 +279,104 @@ describe('CompanyWorkflowTabComponent', () => {
     expect(component.forbiddenMessage).toBe('اجازهٔ ویرایش تنظیمات گردش کار این شرکت را ندارید');
   });
 
-  it('loads creator_may_approve_own into the checkbox', async () => {
-    mockWorkflowApi.getCompanySettings.mockReturnValue(
-      of({ ...sampleSettings, creator_may_approve_own: true })
-    );
-    component.ngOnInit();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const checkbox = fixture.nativeElement.querySelector('#cwf-creator-self-approval') as HTMLInputElement;
-    expect(component.creatorMayApproveOwn).toBe(true);
-    expect(checkbox).not.toBeNull();
-    expect(checkbox.checked).toBe(true);
-  });
-
-  it('save sends creator_may_approve_own', () => {
+  it('company settings save no longer sends creator_may_approve_own (moved to the policy card)', () => {
     component.reminderHours = 24;
     component.escalationHours = 48;
-    component.creatorMayApproveOwn = true;
-
     component.saveCompanySettings();
-
-    expect(mockWorkflowApi.saveCompanySettings).toHaveBeenCalledWith(1, {
-      reminder_hours: 24,
-      escalation_hours: 48,
-      creator_may_approve_own: true
-    });
-    expect(mockToast.show).toHaveBeenCalledWith('success', 'تنظیمات گردش کار با موفقیت ذخیره شد.');
+    const body = mockWorkflowApi.saveCompanySettings.mock.calls[0][1];
+    expect('creator_may_approve_own' in body).toBe(false);
   });
 
-  it('checkbox defaults to unchecked when the field is missing', async () => {
-    mockWorkflowApi.getCompanySettings.mockReturnValue(
-      of({
-        company_id: 1,
-        reminder_hours: 24,
-        escalation_hours: 48,
-        is_default: false,
-        updated_at: null
-      } as any)
-    );
-    component.ngOnInit();
-    fixture.detectChanges();
-    await fixture.whenStable();
+  // ─── «وقتی کسی برای مرحله نیست» (طرح نبودن نفر ۱۴۰۵-۰۸) ───
 
-    const checkbox = fixture.nativeElement.querySelector('#cwf-creator-self-approval') as HTMLInputElement;
-    expect(component.creatorMayApproveOwn).toBe(false);
-    expect(checkbox).not.toBeNull();
-    expect(checkbox.checked).toBe(false);
+  it('loads policies and builds drafts from stored values (null = inherit)', () => {
+    component.ngOnInit();
+    expect(mockWorkflowApi.getCompanyPolicies).toHaveBeenCalledWith(1);
+    expect(component.companyDraft?.roleActions).toEqual({ accountant: 'skip', treasurer: null });
+    expect(component.companyDraft?.creatorMayApproveOwn).toBeNull();
+    expect(component.workflowDrafts['expense_invoice'].notifyMode).toBe('users');
+    expect(component.workflowDrafts['expense_invoice'].notifyUserIds).toEqual([7]);
+  });
+
+  it('valuesFromDraft drops inherited roles and clears user ids unless mode is users', () => {
+    const values = component.valuesFromDraft({
+      roleActions: { accountant: 'wait', treasurer: null },
+      creatorMayApproveOwn: true,
+      notifyMode: 'role_assigners',
+      notifyUserIds: [7]
+    });
+    expect(values).toEqual({
+      role_actions: { accountant: 'wait' },
+      creator_may_approve_own: true,
+      notify_mode: 'role_assigners',
+      notify_user_ids: []
+    });
+  });
+
+  it('save: preview first, confirm with counts, then PUT with the preview token', async () => {
+    component.ngOnInit();
+    component.setRoleAction('', 'treasurer', 'skip');
+    await component.savePolicy('');
+
+    expect(mockWorkflowApi.previewCompanyPolicy).toHaveBeenCalledWith(1, {
+      workflow_key: '',
+      values: expect.objectContaining({ role_actions: { accountant: 'skip', treasurer: 'skip' } })
+    });
+    const dialog = mockConfirmDialog.open.mock.calls[0][0];
+    expect(dialog.message).toContain('۳ سند جلو می‌رود');
+    expect(dialog.message).toContain('۱ سند گیرنده‌اش عوض می‌شود');
+    expect(mockWorkflowApi.saveCompanyPolicy).toHaveBeenCalledWith(1, '', expect.any(Object), 'tok-1');
+    expect(mockToast.show).toHaveBeenCalledWith('success', 'تنظیم ذخیره شد.');
+    expect(component.savingPolicyKey).toBeNull();
+  });
+
+  it('cancel in the preview dialog writes nothing', async () => {
+    component.ngOnInit();
+    mockConfirmDialog.open.mockResolvedValue(false);
+    await component.savePolicy('expense_invoice');
+    expect(mockWorkflowApi.previewCompanyPolicy).toHaveBeenCalled();
+    expect(mockWorkflowApi.saveCompanyPolicy).not.toHaveBeenCalled();
+  });
+
+  it('409 preview_stale shows the fresh counts and saves with the fresh token', async () => {
+    component.ngOnInit();
+    const fresh: WorkflowPolicyPreview = { ...samplePreview, counts: { advance: 5, recipients_changed: 0, waiting: 2 }, token: 'tok-2' };
+    mockWorkflowApi.saveCompanyPolicy
+      .mockReturnValueOnce(throwError(() => ({ status: 409, error: { code: 'preview_stale', preview: fresh } })))
+      .mockReturnValueOnce(of(samplePolicies));
+    await component.savePolicy('expense_invoice');
+
+    expect(mockConfirmDialog.open).toHaveBeenCalledTimes(2);
+    const second = mockConfirmDialog.open.mock.calls[1][0];
+    expect(second.message).toContain('۵ سند جلو می‌رود');
+    expect(second.message).toContain('۲ سند منتظر می‌ماند');
+    expect(mockWorkflowApi.saveCompanyPolicy.mock.calls[1][3]).toBe('tok-2');
+  });
+
+  it('users mode without anyone selected is blocked before preview', async () => {
+    component.ngOnInit();
+    component.setNotifyMode('', 'users');
+    await component.savePolicy('');
+    expect(component.policyFormErrors['']).toContain('دست‌کم یک کاربر');
+    expect(mockWorkflowApi.previewCompanyPolicy).not.toHaveBeenCalled();
+  });
+
+  it('reset: preview with reset flag, then DELETE with the token', async () => {
+    component.ngOnInit();
+    await component.resetWorkflowPolicy('expense_invoice');
+    expect(mockWorkflowApi.previewCompanyPolicy).toHaveBeenCalledWith(1, { workflow_key: 'expense_invoice', reset: true });
+    expect(mockWorkflowApi.resetWorkflowPolicy).toHaveBeenCalledWith(1, 'expense_invoice', 'tok-1');
+  });
+
+  it('save error keeps the draft and shows the server message', async () => {
+    component.ngOnInit();
+    mockWorkflowApi.saveCompanyPolicy.mockReturnValue(
+      throwError(() => ({ status: 400, error: { code: 'notify_user_not_member', detail: 'گیرنده عضو نیست' } }))
+    );
+    component.setRoleAction('expense_invoice', 'accountant', 'skip');
+    await component.savePolicy('expense_invoice');
+    expect(component.policyFormErrors['expense_invoice']).toBe('گیرنده عضو نیست');
+    expect(component.workflowDrafts['expense_invoice'].roleActions['accountant']).toBe('skip');
+    expect(component.savingPolicyKey).toBeNull();
   });
 });

@@ -102,13 +102,13 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           </div>
 
           <p
-            *ngIf="instance.waiting_for_superuser"
+            *ngIf="waitText(instance) as text"
             class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2 flex items-start gap-1.5"
             role="note"
-            data-waiting-superuser
+            data-waiting-reason
           >
             <svg appIcon="alert-triangle" class="w-3.5 h-3.5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-            <span>در این بخش کس دیگری برای اقدام روی این مرحله نیست (ثبت‌کننده نمی‌تواند سند خودش را بررسی کند). مدیر کل سامانه باخبر شده و اقدام می‌کند؛ برای رفع دائمی، نفر دوم یا جانشینی با همین نقش به بخش اضافه کنید.</span>
+            <span>{{ text }}</span>
           </p>
 
           <!-- خط زمان عمودی مراحل (Vertical Timeline) -->
@@ -261,6 +261,18 @@ export class WorkflowHistoryComponent implements OnInit, OnChanges, OnDestroy {
 
   onCancelInstance(instanceId: number): void {
     this.cancelRequested.emit(instanceId);
+  }
+
+  /** پیام انتظار مرحلهٔ باز بی‌دریافت‌کننده (طرح نبودن نفر ۱۴۰۵-۰۸)؛ '' = منتظر نیست */
+  waitText(instance: WorkflowHistoryInstance): string {
+    switch (instance.wait_reason) {
+      case 'no_holder':
+        return 'این مرحله منتظر است: در این بخش کسی این نقش را ندارد. کسانی که نقش می‌دهند باخبر شده‌اند؛ با دادن نقش به یک نفر، سند جلو می‌رود.';
+      case 'creator_only':
+        return 'این مرحله منتظر است: فقط ثبت‌کننده این نقش را دارد و نمی‌تواند سند خودش را بررسی کند. کسانی که نقش می‌دهند باخبر شده‌اند؛ با دادن نقش به نفر دوم، سند جلو می‌رود.';
+      default:
+        return '';
+    }
   }
 
   statusBadgeClass(status: string): string {

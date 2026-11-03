@@ -207,14 +207,14 @@ describe('WorkflowHistoryComponent (DOM): no-recipient note', () => {
     getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
   } catch {}
 
-  async function hasNote(waiting: boolean): Promise<boolean> {
+  async function noteText(waitReason: string): Promise<string | null> {
     const history = {
       entity_kind: 'k', entity_id: 1,
       instances: [{
         instance_id: 1, workflow_key: 'k', workflow_title_fa: 't', version: 1, status: 'in_progress', status_fa: 's',
         current_step: 'review', current_step_title_fa: 'r', revision: 1, created_by: null, company: null, section: null,
         amount: null, submitted_at: null, submitted_at_shamsi: '', closed_at: null, closed_at_shamsi: '',
-        can_cancel: false, waiting_for_superuser: waiting, steps: [],
+        can_cancel: false, wait_reason: waitReason, steps: [],
       }],
     };
     TestBed.configureTestingModule({
@@ -229,14 +229,19 @@ describe('WorkflowHistoryComponent (DOM): no-recipient note', () => {
     fixture.componentInstance.entityId = 1;
     fixture.detectChanges();
     fixture.detectChanges();
-    const found = !!(fixture.nativeElement as HTMLElement).querySelector('[data-waiting-superuser]');
+    const note = (fixture.nativeElement as HTMLElement).querySelector('[data-waiting-reason]');
     TestBed.resetTestingModule();
-    return found;
+    return note ? (note.textContent || '').trim() : null;
   }
 
-  it('shows the note only when the open step has nobody to act', async () => {
-    expect(await hasNote(true)).toBe(true);
-    expect(await hasNote(false)).toBe(false);
+  it('shows the note only when the open step has nobody to act, with a text per wait reason', async () => {
+    const noHolder = await noteText('no_holder');
+    const creatorOnly = await noteText('creator_only');
+    expect(noHolder).toBeTruthy();
+    expect(creatorOnly).toBeTruthy();
+    expect(noHolder).not.toBe(creatorOnly);
+    expect(noHolder).not.toContain('مدیر کل');
+    expect(await noteText('')).toBeNull();
   });
 
   // گام ه: پاسخ دیررس بدون بازبینی صفحهٔ میزبان هم نما را از «در حال بارگذاری» بیرون می‌آورد
@@ -262,7 +267,7 @@ describe('WorkflowHistoryComponent (DOM): no-recipient note', () => {
         instance_id: 1, workflow_key: 'k', workflow_title_fa: 'گردش نمونه', version: 1, status: 'in_progress', status_fa: 's',
         current_step: 'review', current_step_title_fa: 'r', revision: 1, created_by: null, company: null, section: null,
         amount: null, submitted_at: null, submitted_at_shamsi: '', closed_at: null, closed_at_shamsi: '',
-        can_cancel: false, waiting_for_superuser: false, steps: [],
+        can_cancel: false, wait_reason: '', steps: [],
       }],
     } as any);
 

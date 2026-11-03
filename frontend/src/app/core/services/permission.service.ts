@@ -81,6 +81,12 @@ export class PermissionService {
   readonly isStale = this._isStale.asReadonly();
   readonly version = computed(() => this._map()?.version ?? null);
   readonly isSuperuser = computed(() => this._map()?.is_superuser === true || this.auth.isSuperuser());
+  /**
+   * ثبت، ویرایش، ارسال، تأیید، عودت، رد، پرداخت و ارجاع سند شرکت (طرح نبودن نفر ۱۴۰۵-۰۸، بند ۴-۶):
+   * مدیر کل سامانه سند را فقط می‌بیند؛ سرور هم با 403 superuser_view_only جلوی آن را می‌گیرد.
+   * تنظیم‌ها (شرکت، گردش، سقف) به این وابسته نیستند.
+   */
+  readonly canWriteDocuments = computed(() => !this.isSuperuser());
   /** اجتماع همهٔ مجوزها؛ بدون نقشه، همان فهرست پروفایل لاگین */
   readonly all = computed<ReadonlySet<string>>(() => new Set(this._map()?.all ?? this.auth.userPermissions()));
 

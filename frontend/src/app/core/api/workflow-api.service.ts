@@ -5,8 +5,12 @@ import { ApiService } from './api.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import {
+  WorkflowCompanyPolicies,
   WorkflowCompanySettings,
   WorkflowDefinition,
+  WorkflowPolicyPreview,
+  WorkflowPolicyPreviewInput,
+  WorkflowPolicyValues,
   WorkflowHistory,
   WorkflowInstanceState,
   WorkflowPerson,
@@ -107,6 +111,33 @@ export class WorkflowApiService {
 
   saveCompanySettings(companyId: number, body: { reminder_hours: number; escalation_hours: number; creator_may_approve_own?: boolean }): Observable<WorkflowCompanySettings> {
     return this.api.put<WorkflowCompanySettings>(`${WF}/settings/${companyId}`, body, WorkflowApiService.direct());
+  }
+
+  // ─── «وقتی کسی برای مرحله نیست» (طرح نبودن نفر ۱۴۰۵-۰۸) ───
+  // ذخیره و برگشت فقط با token پیش‌نمایش؛ 409 preview_stale پیش‌نمایش تازه را در بدنه دارد (WorkflowPolicyStaleError).
+
+  getCompanyPolicies(companyId: number): Observable<WorkflowCompanyPolicies> {
+    return this.api.get<WorkflowCompanyPolicies>(`${WF}/company-policies/${companyId}`, undefined, WorkflowApiService.direct());
+  }
+
+  /** فقط محاسبه، بی‌نوشتن؛ workflow_key '' = پیش‌فرض شرکت */
+  previewCompanyPolicy(companyId: number, body: WorkflowPolicyPreviewInput): Observable<WorkflowPolicyPreview> {
+    return this.api.post<WorkflowPolicyPreview>(`${WF}/company-policies/${companyId}/preview`, body, WorkflowApiService.direct());
+  }
+
+  /** workflowKey '' = پیش‌فرض شرکت؛ پاسخ همان GET به‌روز است */
+  saveCompanyPolicy(companyId: number, workflowKey: string, values: WorkflowPolicyValues, confirmToken: string): Observable<WorkflowCompanyPolicies> {
+    const path = workflowKey
+      ? `${WF}/company-policies/${companyId}/${encodeURIComponent(workflowKey)}`
+      : `${WF}/company-policies/${companyId}`;
+    return this.api.put<WorkflowCompanyPolicies>(path, { values, confirm_token: confirmToken }, WorkflowApiService.direct());
+  }
+
+  /** «برگشت به پیش‌فرض شرکت» برای یک گردش */
+  resetWorkflowPolicy(companyId: number, workflowKey: string, confirmToken: string): Observable<WorkflowCompanyPolicies> {
+    return this.api.delete<WorkflowCompanyPolicies>(
+      `${WF}/company-policies/${companyId}/${encodeURIComponent(workflowKey)}`,
+      { ...WorkflowApiService.direct(), params: { confirm_token: confirmToken } });
   }
 
   // ─── جانشین موقت ───

@@ -107,25 +107,7 @@
         </div>
       </div>
 
-      <!-- تأیید رسید پرداخت توسط ایجادکننده -->
-      <div class="pt-2 border-t border-slate-100">
-        <label for="cwf-creator-self-approval" class="flex items-start gap-2.5 cursor-pointer">
-          <input
-            id="cwf-creator-self-approval"
-            type="checkbox"
-            [(ngModel)]="creatorMayApproveOwn"
-            class="rounded text-indigo-600 focus:ring-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 w-4 h-4 mt-0.5"
-          />
-          <div>
-            <span class="block text-xs font-bold text-slate-700">
-              ایجادکننده می‌تواند رسید پرداخت خودش را تأیید کند
-            </span>
-            <p class="text-[11px] text-fg-muted mt-0.5">
-              اگر روشن باشد، کسی که رسید را ثبت کرده در مرحله‌های تأیید و بررسی همان رسید هم کار را می‌گیرد. مدیر کل سامانه هرگز سند خودش را تأیید نمی‌کند.
-            </p>
-          </div>
-        </label>
-      </div>
+      <!-- «ایجادکننده می‌تواند سند خودش را تأیید کند» به کارت «وقتی کسی برای مرحله نیست» رفت -->
 
       <div class="flex items-center justify-end pt-2">
         <button

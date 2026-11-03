@@ -174,7 +174,21 @@ def company_policy(company_id) -> dict:
         'company_default': _block(_policy(company_id, '', values, defaults), rows.get(''),
                                   workflow_roles(specs), titles),
         'workflows': workflows,
+        'notify_candidates': notify_candidates(company_id),
     }
+
+
+def notify_candidates(company_id) -> list:
+    """گزینه‌های «کاربران انتخاب‌شده» برای خبر انتظار؛ همان شرط clean_values: فعال، غیر مدیر کل و عضو فعال
+    همین شرکت. فقط [{id, name}] (دو پرس‌وجو)."""
+    from django.db.models import Q
+    from companies.models import SectionAssignment
+    ids = set(SectionAssignment.objects.filter(
+        Q(company_id=company_id) | Q(project__company_id=company_id) | Q(section__project__company_id=company_id),
+        is_active=True, user__is_active=True, user__is_superuser=False,
+    ).values_list('user_id', flat=True))
+    users = get_user_model().objects.filter(pk__in=ids).order_by('first_name', 'last_name', 'username')
+    return [{'id': u.pk, 'name': (u.get_full_name() or '').strip() or u.username} for u in users]
 
 
 # ─── پیش‌نمایش ────────────────────────────────────────────────────────────────

@@ -14,6 +14,10 @@ import { isServerUnreachable } from '../services/server-reachability';
 
 export const SKIP_GLOBAL_ERROR_TOAST = new HttpContextToken<boolean>(() => false);
 
+/** کد 403 حصار نوشتن مدیر کل (backend: accounts/superuser_fence.py) */
+export const SUPERUSER_VIEW_ONLY_CODE = 'superuser_view_only';
+export const SUPERUSER_VIEW_ONLY_MESSAGE = 'مدیر کل سامانه فقط سند را می‌بیند؛ ثبت و اقدام با کاربران همان شرکت است.';
+
 /**
  * یک صفحه ممکن است چند GET موازی بزند و آفلاین همه با هم شکست بخورند.
  * ToastService نه de-dup دارد نه تایمرش را می‌شود متوقف کرد، پس فاصله‌گذاری
@@ -92,6 +96,9 @@ export const errorInterceptor: HttpInterceptorFn = (
         // کاربر «با پشتیبانی تماس بگیرید» می‌دید؛ در حالی که بک‌اند هیچ خطایی
         // نداده — درخواست هرگز به آن نرسیده است. مقصر اتصال است، نه سرور.
         message = 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.';
+      } else if (error.status === 403 && error.error?.code === SUPERUSER_VIEW_ONLY_CODE) {
+        // حصار نوشتن مدیر کل (طرح نبودن نفر ۱۴۰۵-۰۸): خطای مجوز نیست، مدیر کل فقط می‌بیند
+        message = SUPERUSER_VIEW_ONLY_MESSAGE;
       } else if (error.status === 403) {
         message = 'شما مجوز دسترسی به این عملیات را ندارید.';
       } else if (error.status === 404) {

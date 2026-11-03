@@ -118,8 +118,8 @@ export interface WorkflowHistoryInstance {
   closed_at_shamsi: string;
   /** ثبت‌کننده، گردش باز، و هنوز نفر دیگری اقدام نکرده */
   can_cancel: boolean;
-  /** کار باز کسی را برای اقدام ندارد (مثلاً ثبت‌کننده تنها دارندهٔ نقش مرحله است)؛ فقط مدیر کل اقدام می‌کند */
-  waiting_for_superuser?: boolean;
+  /** کار باز کسی را برای اقدام ندارد: no_holder = کسی این نقش را ندارد، creator_only = فقط ثبت‌کننده دارد؛ '' = منتظر نیست */
+  wait_reason?: WorkflowWaitReason | '';
   steps: WorkflowHistoryStep[];
 }
 
@@ -191,6 +191,127 @@ export interface WorkflowCompanySettings {
   /** هنوز ذخیره نشده و پیش‌فرض است */
   is_default: boolean;
   updated_at: string | null;
+}
+
+// ─── سیاست «وقتی کسی برای مرحله نیست» (طرح نبودن نفر ۱۴۰۵-۰۸) ───
+
+export type WorkflowWaitReason = 'no_holder' | 'creator_only';
+
+/** skip = «رد شود»، wait = «منتظر بماند» */
+export type WorkflowRoleAction = 'skip' | 'wait';
+
+/** own = تنظیم جدای همین گردش، company = پیش‌فرض شرکت، default = پیش‌فرض سامانه، locked = قفل مرحله (س۱) */
+export type WorkflowPolicySource = 'own' | 'company' | 'default' | 'locked';
+
+/** گیرندهٔ خبر انتظار: role_assigners = تعیین‌کنندگان نقش، users = کاربران انتخاب‌شده */
+export type WorkflowNotifyMode = 'role_assigners' | 'users';
+
+export interface WorkflowPolicyRole {
+  role: string;
+  role_title_fa: string;
+  /** مقدار ذخیره‌شده در همین سطح؛ null = از سطح بالاتر */
+  value: WorkflowRoleAction | null;
+  effective: WorkflowRoleAction;
+  source: WorkflowPolicySource;
+}
+
+export interface WorkflowPolicyFlag {
+  value: boolean | null;
+  effective: boolean;
+  source: WorkflowPolicySource;
+}
+
+export interface WorkflowPolicyNotify {
+  mode: WorkflowNotifyMode | null;
+  user_ids: number[] | null;
+  effective_mode: WorkflowNotifyMode;
+  effective_user_ids: number[];
+  source: WorkflowPolicySource;
+}
+
+export interface WorkflowPolicyStep {
+  key: string;
+  title_fa: string;
+  kind: string;
+  role: string;
+  role_title_fa: string;
+  /** مرحلهٔ پرداخت: «رد شود» = تأییدشده، پرداخت بیرون از سامانه */
+  payment: boolean;
+  /** مرحلهٔ قفل (س۱): مقدار ثابت مرحله ('wait')، یا '' / null اگر قفل نیست؛ تنظیم آن را عوض نمی‌کند */
+  locked: WorkflowRoleAction | '' | null;
+  effective: WorkflowRoleAction;
+  source: WorkflowPolicySource;
+}
+
+export interface WorkflowPolicyLevel {
+  roles: WorkflowPolicyRole[];
+  creator_may_approve_own: WorkflowPolicyFlag;
+  notify: WorkflowPolicyNotify;
+}
+
+export interface WorkflowPolicyWorkflow extends WorkflowPolicyLevel {
+  key: string;
+  title_fa: string;
+  /** true = «تنظیم جدا»، false = «پیش‌فرض شرکت» */
+  has_own_row: boolean;
+  steps: WorkflowPolicyStep[];
+}
+
+/** GET company-policies/<company>/ */
+export interface WorkflowCompanyPolicies {
+  company_id: number;
+  role_defaults: Record<string, WorkflowRoleAction>;
+  company_default: WorkflowPolicyLevel;
+  workflows: WorkflowPolicyWorkflow[];
+  /** گزینه‌های «کاربران انتخاب‌شده» برای خبر انتظار: کاربران فعال و عضو همین شرکت */
+  notify_candidates: WorkflowPerson[];
+}
+
+/** کل ردیف پیشنهادی (جایگزین ردیف ذخیره‌شده)؛ کلید نبوده یا null = از سطح بالاتر */
+export interface WorkflowPolicyValues {
+  role_actions?: Record<string, WorkflowRoleAction | null>;
+  creator_may_approve_own?: boolean | null;
+  notify_mode?: WorkflowNotifyMode | null;
+  notify_user_ids?: number[] | null;
+}
+
+/** بدنهٔ POST preview/؛ workflow_key '' = پیش‌فرض شرکت */
+export type WorkflowPolicyPreviewInput =
+  | { workflow_key: string; values: WorkflowPolicyValues }
+  | { workflow_key: string; reset: true };
+
+export interface WorkflowPolicyPreviewSample {
+  instance_id: number;
+  workflow_key: string;
+  title: string;
+  step_key: string;
+  /** advance | recipients_changed | waiting */
+  effect: string;
+}
+
+export interface WorkflowPolicyCounts {
+  /** سندهایی که جلو می‌روند */
+  advance: number;
+  /** سندهایی که گیرنده‌شان عوض می‌شود */
+  recipients_changed: number;
+  /** سندهایی که منتظر می‌شوند */
+  waiting: number;
+}
+
+export interface WorkflowPolicyPreview {
+  counts: WorkflowPolicyCounts;
+  per_workflow: Record<string, WorkflowPolicyCounts>;
+  /** تا ۲۰ نمونه */
+  samples: WorkflowPolicyPreviewSample[];
+  /** برای confirm_token ذخیره */
+  token: string;
+}
+
+/** بدنهٔ 409 preview_stale: شمارها عوض شد؛ پیش‌نمایش تازه دوباره نشان داده شود */
+export interface WorkflowPolicyStaleError {
+  code: 'preview_stale';
+  detail?: string;
+  preview: WorkflowPolicyPreview;
 }
 
 /** جانشین موقت (ت۱۰) */
